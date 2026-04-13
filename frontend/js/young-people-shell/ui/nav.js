@@ -38,55 +38,106 @@ import { loadManager } from "../features/manager.js";
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
 
 /**
- * Temporary placeholder loaders until dedicated files are created.
- * Replace these with real imports once the new manager / RI views are built.
+ * Temporary placeholder loaders until dedicated feature files are created.
+ * Replace these with real imports as each section is built.
  */
-async function loadHomeDashboard() {
+async function renderPlaceholderSection({
+  eyebrow = "Section",
+  title = "Coming next",
+  subtitle = "This section is wired and ready.",
+  icon = "•",
+} = {}) {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
-          <div class="eyebrow">Home dashboard</div>
-          <h2>Home-wide oversight</h2>
-          <p>A management view across the home, staffing, risks, actions, compliance and reporting.</p>
+          <div class="eyebrow">${escapeHtml(eyebrow)}</div>
+          <h2>${escapeHtml(title)}</h2>
+          <p>${escapeHtml(subtitle)}</p>
         </div>
       </div>
 
       <div class="empty-state">
         <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">▥</div>
-          <h3>Home dashboard coming next</h3>
-          <p>This scope is wired and ready. The dedicated dashboard content can be added next.</p>
+          <div class="empty-state-icon" aria-hidden="true">${escapeHtml(icon)}</div>
+          <h3>${escapeHtml(title)}</h3>
+          <p>${escapeHtml(subtitle)}</p>
         </div>
       </div>
     </section>
   `;
 }
 
+async function loadHomeDashboard() {
+  return renderPlaceholderSection({
+    eyebrow: "Home dashboard",
+    title: "Home-wide oversight",
+    subtitle:
+      "A management view across the home, staffing, risks, actions, compliance and reporting.",
+    icon: "▥",
+  });
+}
+
 async function loadQualityDashboard() {
-  if (!els.viewContent) return;
+  return renderPlaceholderSection({
+    eyebrow: "Quality and RI",
+    title: "Quality dashboard",
+    subtitle:
+      "A regulator and quality view across compliance, audits, themes, reports and service oversight.",
+    icon: "▦",
+  });
+}
 
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="overview-panel-head">
-        <div>
-          <div class="eyebrow">Quality and RI</div>
-          <h2>Quality dashboard</h2>
-          <p>A regulator and quality view across compliance, audits, themes, reports and service oversight.</p>
-        </div>
-      </div>
+async function loadDocuments() {
+  return renderPlaceholderSection({
+    eyebrow: "Documents",
+    title: "Documents and uploads",
+    subtitle:
+      "Upload, organise and review statutory and supporting documents for the child or service.",
+    icon: "▣",
+  });
+}
 
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">▦</div>
-          <h3>Quality dashboard coming next</h3>
-          <p>This scope is wired and ready. The dedicated RI and quality view can be added next.</p>
-        </div>
-      </div>
-    </section>
-  `;
+async function loadCommunication() {
+  return renderPlaceholderSection({
+    eyebrow: "Communication",
+    title: "Professional communication",
+    subtitle:
+      "Log liaison with professionals, families and partner agencies in one clear place.",
+    icon: "✉",
+  });
+}
+
+async function loadTherapy() {
+  return renderPlaceholderSection({
+    eyebrow: "Therapy",
+    title: "Therapeutic services",
+    subtitle:
+      "Track therapeutic input, recommendations, emotional wellbeing support and follow-up.",
+    icon: "✦",
+  });
+}
+
+async function loadTeam() {
+  return renderPlaceholderSection({
+    eyebrow: "Team",
+    title: "Team and staffing",
+    subtitle:
+      "A whole-home view of staffing, deployment, sickness, vacancies and workforce context.",
+    icon: "◍",
+  });
+}
+
+async function loadSupervision() {
+  return renderPlaceholderSection({
+    eyebrow: "Supervision",
+    title: "Supervision and development",
+    subtitle:
+      "Track supervision, appraisal, training, capability and workforce development.",
+    icon: "⬢",
+  });
 }
 
 const SECTION_LOADERS = {
@@ -103,7 +154,11 @@ const SECTION_LOADERS = {
   readiness: loadReadiness,
   manager: loadManager,
 
-  // scoped manager / RI placeholders
+  documents: loadDocuments,
+  communication: loadCommunication,
+  therapy: loadTherapy,
+  team: loadTeam,
+  supervision: loadSupervision,
   "home-dashboard": loadHomeDashboard,
   quality: loadQualityDashboard,
 };
@@ -135,6 +190,16 @@ const MOBILE_BOTTOM_BY_SCOPE = {
   home: ["home-dashboard", "manager", "readiness", "reports", "calendar"],
   quality: ["quality", "reports", "manager", "readiness", "calendar"],
 };
+
+let navEventsBound = false;
+let selectorEventsBound = false;
+let composerEventsBound = false;
+let refreshEventsBound = false;
+let recordEventsBound = false;
+let youngPersonEventsBound = false;
+let drawerEventsBound = false;
+let suggestionEventsBound = false;
+let quickActionEventsBound = false;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -179,13 +244,10 @@ function getScopedNavGroups() {
   const allowed = getAllowedSectionIdsForScope();
 
   return (NAV_GROUPS_CONFIG || [])
-    .map((group) => {
-      const items = (group.items || []).filter((item) => allowed.has(item.id));
-      return {
-        ...group,
-        items,
-      };
-    })
+    .map((group) => ({
+      ...group,
+      items: (group.items || []).filter((item) => allowed.has(item.id)),
+    }))
     .filter((group) => group.items.length > 0);
 }
 
@@ -203,7 +265,9 @@ function renderNavItem(item, { compact = false } = {}) {
   const isActive = item.id === getCurrentSection();
   const description = item.description || item.label || item.id;
   const label = item.label || item.id;
-  const meta = compact ? "" : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
+  const meta = compact
+    ? ""
+    : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
 
   return `
     <button
@@ -224,43 +288,34 @@ function renderNavItem(item, { compact = false } = {}) {
 
 function buildDesktopNavHtml() {
   return getScopedNavGroups()
-    .map((group) => {
-      const itemsHtml = (group.items || []).map((item) => renderNavItem(item)).join("");
-
-      return `
-        <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-          <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-          <div class="nav-section-items">
-            ${itemsHtml}
-          </div>
-        </section>
-      `;
-    })
+    .map((group) => `
+      <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+        <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+        <div class="nav-section-items">
+          ${(group.items || []).map((item) => renderNavItem(item)).join("")}
+        </div>
+      </section>
+    `)
     .join("");
 }
 
 function buildMobileDrawerNavHtml() {
   return getScopedNavGroups()
-    .map((group) => {
-      const itemsHtml = (group.items || []).map((item) => renderNavItem(item)).join("");
-
-      return `
-        <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-          <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-          <div class="nav-section-items">
-            ${itemsHtml}
-          </div>
-        </section>
-      `;
-    })
+    .map((group) => `
+      <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+        <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
+        <div class="nav-section-items">
+          ${(group.items || []).map((item) => renderNavItem(item)).join("")}
+        </div>
+      </section>
+    `)
     .join("");
 }
 
 function buildMobileBottomBarHtml() {
   const byId = new Map(getScopedNavSections().map((item) => [item.id, item]));
-  const bottomSections = getMobileBottomSections();
 
-  return bottomSections
+  return getMobileBottomSections()
     .map((sectionId) => {
       const item = byId.get(sectionId);
       if (!item) return "";
@@ -381,27 +436,28 @@ export async function loadSection(section) {
 }
 
 export async function reloadCurrentSection() {
-  const section = ensureValidCurrentSection();
-  await loadSection(section);
-}
-
-function bindNavButtonsIn(container) {
-  container?.querySelectorAll("[data-nav-section]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const section = button.dataset.navSection;
-      if (!section) return;
-      await loadSection(section);
-    });
-  });
+  await loadSection(ensureValidCurrentSection());
 }
 
 function bindNavButtons() {
-  bindNavButtonsIn(els.desktopNav);
-  bindNavButtonsIn(els.mobileNavContent);
-  bindNavButtonsIn(els.mobileBottomBar);
+  if (navEventsBound) return;
+  navEventsBound = true;
+
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-nav-section]");
+    if (!button) return;
+
+    const section = button.dataset.navSection;
+    if (!section) return;
+
+    await loadSection(section);
+  });
 }
 
 function bindSelectorControls() {
+  if (selectorEventsBound) return;
+  selectorEventsBound = true;
+
   const goToSelector = async () => {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
@@ -412,8 +468,8 @@ function bindSelectorControls() {
     state.activeRecordType = null;
     state.activeRecordItem = null;
 
-    if (els.workspaceScreen) els.workspaceScreen.classList.add("hidden");
-    if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
+    els.workspaceScreen?.classList.add("hidden");
+    els.selectorScreen?.classList.remove("hidden");
 
     goBackToSelector?.();
     updateYoungPersonChrome({});
@@ -422,7 +478,7 @@ function bindSelectorControls() {
     try {
       await loadYoungPersonSelector?.();
       renderNavigation();
-      bindNavButtons();
+      markActiveNav(getCurrentSection());
     } catch (error) {
       showError(error?.message || "Failed to load young people.");
     }
@@ -453,6 +509,9 @@ function bindSelectorControls() {
 }
 
 function bindQuickActionButtons() {
+  if (quickActionEventsBound) return;
+  quickActionEventsBound = true;
+
   document.querySelectorAll("[data-quick-action]").forEach((button) => {
     const action = getActionForQuickButton(button.dataset.quickAction || "", {
       section: button.dataset.section || getCurrentSection(),
@@ -471,6 +530,9 @@ function bindQuickActionButtons() {
 }
 
 function bindComposerControls() {
+  if (composerEventsBound) return;
+  composerEventsBound = true;
+
   els.closeComposerBtn?.addEventListener("click", () => {
     closeComposer(true);
   });
@@ -499,17 +561,10 @@ function bindComposerControls() {
 }
 
 function bindRefreshControls() {
-  els.refreshBtn?.addEventListener("click", async () => {
-    try {
-      await reloadCurrentSection();
-      showMessage("Workspace refreshed.");
-    } catch (error) {
-      console.error("[nav] refresh failed", error);
-      showError(error?.message || "Failed to refresh workspace.");
-    }
-  });
+  if (refreshEventsBound) return;
+  refreshEventsBound = true;
 
-  els.refreshWorkspaceBtn?.addEventListener("click", async () => {
+  const refresh = async () => {
     try {
       await reloadCurrentSection();
       showMessage("Workspace refreshed.");
@@ -517,11 +572,15 @@ function bindRefreshControls() {
       console.error("[nav] refresh failed", error);
       showError(error?.message || "Failed to refresh workspace.");
     }
-  });
+  };
+
+  els.refreshBtn?.addEventListener("click", refresh);
+  els.refreshWorkspaceBtn?.addEventListener("click", refresh);
 }
 
 function bindOpenRecordEvents() {
-  if (!els.viewContent) return;
+  if (recordEventsBound || !els.viewContent) return;
+  recordEventsBound = true;
 
   els.viewContent.addEventListener("click", async (event) => {
     const trigger = event.target.closest("[data-record-id], [data-open-record]");
@@ -552,7 +611,7 @@ function bindOpenRecordEvents() {
     }
   });
 
-  els.viewContent.addEventListener("keydown", async (event) => {
+  els.viewContent.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
 
     const trigger = event.target.closest("[data-record-id], [data-open-record]");
@@ -564,6 +623,9 @@ function bindOpenRecordEvents() {
 }
 
 function bindYoungPersonOpen() {
+  if (youngPersonEventsBound) return;
+  youngPersonEventsBound = true;
+
   document.addEventListener("click", async (event) => {
     const trigger = event.target.closest("[data-open-young-person]");
     if (!trigger) return;
@@ -574,8 +636,8 @@ function bindYoungPersonOpen() {
     try {
       await openYoungPerson?.(id);
 
-      if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
-      if (els.workspaceScreen) els.workspaceScreen.classList.remove("hidden");
+      els.selectorScreen?.classList.add("hidden");
+      els.workspaceScreen?.classList.remove("hidden");
 
       state.currentScope = "child";
       state.currentSection = getDefaultSectionForScope("child");
@@ -587,7 +649,7 @@ function bindYoungPersonOpen() {
       clearStatus();
 
       renderNavigation();
-      bindNavButtons();
+      markActiveNav(getCurrentSection());
 
       await loadSection(getCurrentSection());
     } catch (error) {
@@ -598,6 +660,9 @@ function bindYoungPersonOpen() {
 }
 
 function bindDrawerCallbacks() {
+  if (drawerEventsBound) return;
+  drawerEventsBound = true;
+
   bindRecordDrawerEvents({
     onEdit: async (recordType, item) => {
       const { openComposerFor } = await import("./composer.js");
@@ -622,13 +687,16 @@ export function bindNavEvents() {
   bindOpenRecordEvents();
   bindYoungPersonOpen();
   bindDrawerCallbacks();
-  bindSuggestionEvents();
+
+  if (!suggestionEventsBound) {
+    bindSuggestionEvents();
+    suggestionEventsBound = true;
+  }
 }
 
 export function rerenderNavigationForScope() {
   ensureValidCurrentSection();
   renderNavigation();
-  bindNavButtons();
   markActiveNav(getCurrentSection());
   updateSectionChrome(getCurrentSection());
 }
@@ -656,8 +724,8 @@ export async function initialiseShellNavigation() {
   if (!state.youngPersonId) {
     try {
       await loadYoungPersonSelector?.();
-      if (els.workspaceScreen) els.workspaceScreen.classList.add("hidden");
-      if (els.selectorScreen) els.selectorScreen.classList.remove("hidden");
+      els.workspaceScreen?.classList.add("hidden");
+      els.selectorScreen?.classList.remove("hidden");
     } catch (error) {
       console.error("[nav] selector load failed", error);
       showError(error?.message || "Unable to load young people.");
@@ -666,8 +734,8 @@ export async function initialiseShellNavigation() {
   }
 
   try {
-    if (els.selectorScreen) els.selectorScreen.classList.add("hidden");
-    if (els.workspaceScreen) els.workspaceScreen.classList.remove("hidden");
+    els.selectorScreen?.classList.add("hidden");
+    els.workspaceScreen?.classList.remove("hidden");
     await loadSection(getCurrentSection());
   } catch (error) {
     console.error("[nav] initial section load failed", error);
