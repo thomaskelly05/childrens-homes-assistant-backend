@@ -1,4 +1,5 @@
-import { state } from "../state.js";
+import { state, setAssistantDerivedState, setAssistantScopeBundle, setAssistantScopeBundleError, setAssistantScopeBundleLoading } from "../state.js";
+import { fetchAssistantScopeBundle } from "../core/api.js";
 import {
   buildAssistantEvidenceSet,
   mapReadinessEvidence,
@@ -61,14 +62,6 @@ function unique(values = []) {
 function parseDateValue(value) {
   const time = Date.parse(value || "");
   return Number.isNaN(time) ? 0 : time;
-}
-
-function normaliseToken(value = "") {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
 }
 
 function getScopeLabel(scope) {
@@ -339,6 +332,29 @@ function buildSystemPrompt(context, options = {}) {
   ].join(" ");
 }
 
+function dedupeEvidence(items = []) {
+  const seen = new Set();
+
+  return items.filter((item) => {
+    const key = [
+      item.record_type || "",
+      item.source_id || item.id || "",
+      item.date || "",
+      item.title || "",
+    ].join("::");
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function mergeEvidenceSources(...chunks) {
+  return dedupeEvidence(
+    chunks.flatMap((chunk) => (Array.isArray(chunk) ? chunk : []))
+  );
+}
+
 function normaliseEvidenceInput(input = {}) {
   const evidence = [];
 
@@ -362,24 +378,50 @@ function normaliseEvidenceInput(input = {}) {
     evidence.push(...buildAssistantEvidenceSet(input.records_payload));
   }
 
+  if (input.scope_bundle) {
+    evidence.push(...buildAssistantEvidenceSet(input.scope_bundle));
+  }
+
+  if (state.scopeBundle) {
+    evidence.push(...buildAssistantEvidenceSet(state.scopeBundle));
+  }
+
   return dedupeEvidence(evidence);
 }
 
-function dedupeEvidence(items = []) {
-  const seen = new Set();
+async function resolveScopeBundle(options = {}) {
+  if (options.scope_bundle && typeof options.scope_bundle === "object") {
+    return options.scope_bundle;
+  }
 
-  return items.filter((item) => {
-    const key = [
-      item.record_type || "",
-      item.source_id || item.id || "",
-      item.date || "",
-      item.title || "",
-    ].join("::");
+  if (state.scopeBundle && typeof state.scopeBundle === "object") {
+    return state.scopeBundle;
+  }
 
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  if (options.fetchScopeBundle === false) {
+    return null;
+  }
+
+  try {
+    setAssistantScopeBundleLoading(true);
+    const bundle = await fetchAssistantScopeBundle({
+      scope: state.currentScope,
+      current_scope: state.currentScope,
+      young_person_id: state.youngPersonId || null,
+      home_id: state.homeId || null,
+    });
+
+    if (bundle) {
+      setAssistantScopeBundle(bundle);
+      return bundle;
+    }
+  } catch (error) {
+    setAssistantScopeBundleError(error?.message || "Failed to load scoped records.");
+  } finally {
+    setAssistantScopeBundleLoading(false);
+  }
+
+  return null;
 }
 
 function filterEvidenceByScope(evidence = [], context = buildAssistantContext()) {
@@ -389,6 +431,7 @@ function filterEvidenceByScope(evidence = [], context = buildAssistantContext())
     return evidence.filter((item) => {
       const raw = item.raw || {};
       const youngPersonId =
+        item.young_person_id ??
         raw.young_person_id ??
         raw.child_id ??
         raw.person_id ??
@@ -406,7 +449,11 @@ function filterEvidenceByScope(evidence = [], context = buildAssistantContext())
 
   return evidence.filter((item) => {
     const raw = item.raw || {};
-    const itemHomeId = raw.home_id ?? raw.service_id ?? null;
+    const itemHomeId =
+      item.home_id ??
+      raw.home_id ??
+      raw.service_id ??
+      null;
 
     if (itemHomeId === null || itemHomeId === undefined) return true;
     return String(itemHomeId) === String(homeId);
@@ -585,33 +632,13 @@ function summariseEvidence(evidence = []) {
       tags[tag] = (tags[tag] || 0) + 1;
     }
 
-    if ((item.record_type || "") === "task" && item.tags?.includes("open_task")) {
-      openTasks += 1;
-    }
-
-    if ((item.record_type || "") === "incident") {
-      incidents += 1;
-    }
-
-    if ((item.record_type || "") === "appointment") {
-      appointments += 1;
-    }
-
-    if ((item.record_type || "") === "document" || (item.record_type || "") === "statutory_document") {
-      documents += 1;
-    }
-
-    if ((item.record_type || "") === "compliance_item") {
-      compliance += 1;
-    }
-
-    if (item.tags?.includes("safeguarding")) {
-      safeguarding += 1;
-    }
-
-    if (item.tags?.includes("status:overdue")) {
-      overdue += 1;
-    }
+    if ((item.record_type || "") === "task" && item.tags?.includes("open_task")) openTasks += 1;
+    if ((item.record_type || "") === "incident") incidents += 1;
+    if ((item.record_type || "") === "appointment") appointments += 1;
+    if ((item.record_type || "") === "document" || (item.record_type || "") === "statutory_document") documents += 1;
+    if ((item.record_type || "") === "compliance_item") compliance += 1;
+    if (item.tags?.includes("safeguarding")) safeguarding += 1;
+    if (item.tags?.includes("status:overdue")) overdue += 1;
   }
 
   return {
@@ -655,10 +682,7 @@ function nextUpcomingByType(evidence = [], recordType = "") {
 
   return [...evidence]
     .filter((item) => item.record_type === recordType && item.date)
-    .filter((item) => {
-      const t = parseDateValue(item.date);
-      return t > now;
-    })
+    .filter((item) => parseDateValue(item.date) > now)
     .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date))[0] || null;
 }
 
@@ -737,12 +761,7 @@ function buildEvidenceSummaryLines(evidence = [], limit = 5) {
 
 function buildChronologyLines(chronology = [], limit = 8) {
   const lines = chronology.slice(0, limit).map((item) => {
-    const bits = [
-      item.date || "",
-      item.title || "Record",
-      item.summary || "",
-    ].filter(Boolean);
-
+    const bits = [item.date || "", item.title || "Record", item.summary || ""].filter(Boolean);
     return `• ${bits.join(" - ")}`;
   });
 
@@ -753,25 +772,11 @@ function getTopConcerns(evidence = []) {
   const concerns = [];
   const sorted = evidence.slice(0, 10);
 
-  if (sorted.some((item) => item.tags?.includes("safeguarding"))) {
-    concerns.push("Safeguarding-linked evidence needs attention.");
-  }
-
-  if (sorted.some((item) => item.tags?.includes("status:overdue"))) {
-    concerns.push("There are overdue items in the current evidence set.");
-  }
-
-  if (sorted.some((item) => item.tags?.includes("severity:critical"))) {
-    concerns.push("Critical severity evidence is present.");
-  }
-
-  if (sorted.some((item) => item.tags?.includes("severity:high"))) {
-    concerns.push("High severity evidence is present.");
-  }
-
-  if (sorted.some((item) => item.tags?.includes("open_task"))) {
-    concerns.push("There are open tasks requiring follow-up.");
-  }
+  if (sorted.some((item) => item.tags?.includes("safeguarding"))) concerns.push("Safeguarding-linked evidence needs attention.");
+  if (sorted.some((item) => item.tags?.includes("status:overdue"))) concerns.push("There are overdue items in the current evidence set.");
+  if (sorted.some((item) => item.tags?.includes("severity:critical"))) concerns.push("Critical severity evidence is present.");
+  if (sorted.some((item) => item.tags?.includes("severity:high"))) concerns.push("High severity evidence is present.");
+  if (sorted.some((item) => item.tags?.includes("open_task"))) concerns.push("There are open tasks requiring follow-up.");
 
   return unique(concerns).slice(0, 5);
 }
@@ -837,9 +842,7 @@ function buildFallbackReply(message, context, runtime = {}) {
         context.scope === "child"
           ? `Hello. I’m ready to help with ${context.person.name}. I can provide a full summary, chronology, dates, incidents, appointments, risks, family contact themes, or a handover using the whole scoped record set where available.`
           : `Hello. I’m ready to help with ${context.home.home_name}. I can provide summaries, chronology, dates, compliance themes, risks, and management-focused updates using the whole scoped record set where available.`,
-      suggested_actions: [
-        { type: "draft_summary", label: "Draft summary" },
-      ],
+      suggested_actions: [{ type: "draft_summary", label: "Draft summary" }],
     };
   }
 
@@ -907,9 +910,7 @@ function buildFallbackReply(message, context, runtime = {}) {
         `Evidence reviewed: ${evidenceSummary.total} item(s).`,
         `Confidence: ${confidence}.`,
       ].join("\n"),
-      suggested_actions: [
-        { type: "draft_summary", label: "Draft chronology summary" },
-      ],
+      suggested_actions: [{ type: "draft_summary", label: "Draft chronology summary" }],
     };
   }
 
@@ -946,9 +947,7 @@ function buildFallbackReply(message, context, runtime = {}) {
         "",
         `Evidence reviewed: ${evidenceSummary.total} item(s).`,
       ].join("\n"),
-      suggested_actions: [
-        { type: "draft_summary", label: "Draft summary" },
-      ],
+      suggested_actions: [{ type: "draft_summary", label: "Draft summary" }],
     };
   }
 
@@ -957,7 +956,9 @@ function buildFallbackReply(message, context, runtime = {}) {
       answer: [
         `Risk view for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
         "",
-        ...(topConcerns.length ? topConcerns.map((item) => `• ${item}`) : ["• No clear high-priority risk theme is visible in the current evidence set."]),
+        ...(topConcerns.length
+          ? topConcerns.map((item) => `• ${item}`)
+          : ["• No clear high-priority risk theme is visible in the current evidence set."]),
         "",
         "Use this risk thinking structure:",
         "• What is the concern?",
@@ -1015,9 +1016,7 @@ function buildFallbackReply(message, context, runtime = {}) {
         `Evidence confidence: ${confidence}`,
         ...buildEvidenceSummaryLines(evidence, 5),
       ].join("\n"),
-      suggested_actions: [
-        { type: "draft_summary", label: "Draft summary" },
-      ],
+      suggested_actions: [{ type: "draft_summary", label: "Draft summary" }],
     };
   }
 
@@ -1134,7 +1133,7 @@ function buildAssistantContextMeta(context, runtime = {}) {
   };
 }
 
-export function buildAssistantEvidenceContext(options = {}) {
+export async function buildAssistantEvidenceContext(options = {}) {
   const context = buildAssistantContext();
   const message = options.message || "";
   const intent = options.intent || detectAssistantIntent(message);
@@ -1142,7 +1141,13 @@ export function buildAssistantEvidenceContext(options = {}) {
   const outputMode = options.output_mode || detectOutputMode(intent);
   const dateRange = resolveDateRange(message, options);
 
-  const rawEvidence = normaliseEvidenceInput(options);
+  const fetchedScopeBundle = await resolveScopeBundle(options);
+
+  const rawEvidence = mergeEvidenceSources(
+    normaliseEvidenceInput(options),
+    fetchedScopeBundle ? buildAssistantEvidenceSet(fetchedScopeBundle) : []
+  );
+
   const scoped = filterEvidenceByScope(rawEvidence, context);
   const dateFiltered = filterEvidenceByDateRange(scoped, dateRange);
 
@@ -1165,6 +1170,7 @@ export function buildAssistantEvidenceContext(options = {}) {
     retrieval_mode: retrievalMode,
     output_mode: outputMode,
     date_range: dateRange,
+    scope_bundle: fetchedScopeBundle || state.scopeBundle || null,
     evidence: ranked,
     chronology,
     facts,
@@ -1179,8 +1185,8 @@ export function buildAssistantEvidenceContext(options = {}) {
   };
 }
 
-export function buildMorningBriefContext(options = {}) {
-  const runtime = buildAssistantEvidenceContext({
+export async function buildMorningBriefContext(options = {}) {
+  const runtime = await buildAssistantEvidenceContext({
     ...options,
     message: options.message || "morning brief",
     intent: ASSISTANT_INTENT.morning_brief,
@@ -1206,8 +1212,8 @@ export function buildMorningBriefContext(options = {}) {
   };
 }
 
-export function buildManagerBriefContext(options = {}) {
-  const runtime = buildAssistantEvidenceContext({
+export async function buildManagerBriefContext(options = {}) {
+  const runtime = await buildAssistantEvidenceContext({
     ...options,
     intent: ASSISTANT_INTENT.management,
     output_mode: OUTPUT_MODE.management_brief,
@@ -1226,8 +1232,8 @@ export function buildManagerBriefContext(options = {}) {
   };
 }
 
-export function buildQualityBriefContext(options = {}) {
-  const runtime = buildAssistantEvidenceContext({
+export async function buildQualityBriefContext(options = {}) {
+  const runtime = await buildAssistantEvidenceContext({
     ...options,
     intent: ASSISTANT_INTENT.quality,
     output_mode: OUTPUT_MODE.quality_brief,
@@ -1247,7 +1253,7 @@ export function buildQualityBriefContext(options = {}) {
 }
 
 export async function runAssistantMessage(message, options = {}) {
-  const runtime = buildAssistantEvidenceContext({
+  const runtime = await buildAssistantEvidenceContext({
     ...options,
     message,
   });
@@ -1258,6 +1264,7 @@ export async function runAssistantMessage(message, options = {}) {
     retrieval_mode,
     output_mode,
     date_range,
+    scope_bundle,
     evidence,
     chronology,
     facts,
@@ -1266,6 +1273,32 @@ export async function runAssistantMessage(message, options = {}) {
     system_prompt,
     summary,
   } = runtime;
+
+  state.assistantMeta.intent = intent;
+  state.assistantMeta.retrieval_mode = retrieval_mode;
+  state.assistantMeta.output_mode = output_mode;
+  state.assistantMeta.chronology = chronology;
+  state.assistantMeta.facts = facts;
+  state.assistantMeta.care_domains = care_domains;
+  state.assistantMeta.evidence_summary = summary;
+  state.assistantMeta.evidence_sufficiency = evidence_sufficiency;
+  state.assistantMeta.last_bundle_refresh_at = state.scopeBundleLoadedAt || null;
+  state.assistantMeta.last_analysis_at = new Date().toISOString();
+
+  setAssistantDerivedState({
+    chronology,
+    facts,
+    care_domains,
+    live_summary: {
+      scope: context.scope,
+      section: context.section,
+      confidence: evidence_sufficiency.confidence,
+      evidence_count: evidence.length,
+      overdue_items: summary.overdue_items,
+      incident_items: summary.incident_items,
+      open_tasks: summary.open_tasks,
+    },
+  });
 
   const useApi = options.useApi === true;
 
@@ -1283,6 +1316,7 @@ export async function runAssistantMessage(message, options = {}) {
           retrieval_mode,
           output_mode,
           date_range,
+          scope_bundle,
           system_prompt,
           evidence,
           chronology,
