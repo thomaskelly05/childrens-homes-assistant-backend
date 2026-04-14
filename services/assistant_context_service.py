@@ -663,8 +663,8 @@ def build_young_person_context(
     return {
         "scope": {
             "scope_type": "young_person",
+            "home_id": _safe_int(young_person.get("home_id")),
             "young_person_id": young_person_id,
-            "home_id": young_person.get("home_id"),
             "record_type": scope.get("record_type"),
             "record_id": scope.get("record_id"),
         },
@@ -682,7 +682,12 @@ def build_young_person_context(
     }
 
 
-def build_home_os_context(conn, *, user_id: int, scope: dict[str, Any] | None = None) -> dict[str, Any]:
+def build_home_os_context(
+    conn,
+    *,
+    user_id: int,
+    scope: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     scope = _normalise_scope(scope)
     home_id = _get_user_home(conn, user_id)
 
@@ -779,8 +784,9 @@ def build_home_os_context(conn, *, user_id: int, scope: dict[str, Any] | None = 
 
     return {
         "scope": {
-            "scope_type": "global",
+            "scope_type": "home",
             "home_id": home_id,
+            "young_person_id": None,
             "record_type": scope.get("record_type"),
             "record_id": scope.get("record_id"),
         },
@@ -800,12 +806,13 @@ def build_public_context(*, scope: dict[str, Any] | None = None) -> dict[str, An
     Strictly public assistant context.
     Never expose OS records, home data, young person data, or scoped record data.
     """
-    scope = _normalise_scope(scope)
+    _ = _normalise_scope(scope)
 
     return {
         "scope": {
             "scope_type": "global",
             "home_id": None,
+            "young_person_id": None,
             "record_type": None,
             "record_id": None,
         },
@@ -841,6 +848,8 @@ def build_assistant_context(
             raise PermissionError("Public assistant does not support scoped OS access")
         if scope.get("home_id") is not None or scope.get("young_person_id") is not None:
             raise PermissionError("Public assistant cannot access home or young person records")
+        if scope.get("record_type") or scope.get("record_id") is not None:
+            raise PermissionError("Public assistant cannot access scoped record context")
         return build_public_context(scope=scope)
 
     if assistant_type != "young_people_os":
@@ -857,8 +866,11 @@ def build_assistant_context(
             scope=scope,
         )
 
-    return build_home_os_context(
-        conn,
-        user_id=user_id,
-        scope=scope,
-    )
+    if scope_type == "global":
+        return build_home_os_context(
+            conn,
+            user_id=user_id,
+            scope=scope,
+        )
+
+    raise ValueError("Unsupported scope_type for young people assistant")
