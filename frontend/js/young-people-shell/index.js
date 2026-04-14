@@ -68,7 +68,15 @@ function normaliseRole(role) {
     return "ri";
   }
 
-  return rawRole || "staff";
+  if (
+    rawRole === "rsw" ||
+    rawRole === "residential_support_worker" ||
+    rawRole === "staff"
+  ) {
+    return "staff";
+  }
+
+  return "staff";
 }
 
 function readSessionUser() {
@@ -156,11 +164,11 @@ function getAllowedScopesForRole() {
     return ROLE_SCOPE_ACCESS[role];
   }
 
-  if (role === "admin") {
+  if (role === "admin" || role === "manager" || role === "ri") {
     return ["child", "home", "quality"];
   }
 
-  return ["child"];
+  return ["child", "home"];
 }
 
 function canAccessScope(scope) {
@@ -242,6 +250,7 @@ function syncScopeButtons() {
 
 function refreshAllChrome() {
   ensureValidScopeForRole();
+  ensureInitialSectionForScope();
   syncDomDatasetFromState();
   refreshShellChrome();
   refreshAssistantUi();
@@ -426,6 +435,8 @@ async function bootstrap() {
     } else {
       showWorkspace();
     }
+
+    syncVisibleScreen();
 
     await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
