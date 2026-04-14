@@ -24,6 +24,7 @@ import {
   ROLE_SCOPE_ACCESS,
   SCOPE_DEFAULT_SECTION,
 } from "./core/config.js";
+import { initWorkspaceMenubar } from "./workspace-menubar.js";
 
 let scopeEventsBound = false;
 let bootstrapped = false;
@@ -61,10 +62,7 @@ function normaliseRole(role) {
     return "manager";
   }
 
-  if (
-    rawRole === "ri" ||
-    rawRole === "responsible_individual"
-  ) {
+  if (rawRole === "ri" || rawRole === "responsible_individual") {
     return "ri";
   }
 
@@ -150,7 +148,9 @@ function syncDomDatasetFromState() {
   els.app.dataset.userRole = normaliseRole(state.userRole || "staff");
   els.app.dataset.scope = state.currentScope || "child";
   els.app.dataset.homeId = state.homeId ? String(state.homeId) : "";
-  els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
+  els.app.dataset.youngPersonId = state.youngPersonId
+    ? String(state.youngPersonId)
+    : "";
 }
 
 function getCurrentRole() {
@@ -387,6 +387,29 @@ function syncVisibleScreen() {
   showWorkspace();
 }
 
+function bindWorkspaceMenuSectionRouting() {
+  document.addEventListener("click", async (event) => {
+    const trigger = event.target.closest("[data-nav-section]");
+    if (!trigger) return;
+
+    const targetSection = String(trigger.dataset.navSection || "").trim();
+    if (!targetSection) return;
+
+    try {
+      state.currentSection = targetSection;
+      state.activeSection = targetSection;
+      state.currentView = targetSection;
+
+      syncDomDatasetFromState();
+      refreshAllChrome();
+      await loadSection(targetSection);
+    } catch (error) {
+      console.error("[index] failed loading menu section", error);
+      showError(error?.message || "Failed to open section.");
+    }
+  });
+}
+
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
@@ -398,7 +421,11 @@ async function bootstrap() {
 
     if (!state.currentScope || state.currentScope === "child") {
       const currentRole = getCurrentRole();
-      if (currentRole === "admin" || currentRole === "manager" || currentRole === "ri") {
+      if (
+        currentRole === "admin" ||
+        currentRole === "manager" ||
+        currentRole === "ri"
+      ) {
         state.currentScope = getDefaultScopeForRole();
       }
     }
@@ -421,6 +448,7 @@ async function bootstrap() {
     bindAssistantUi();
     bindAssistantEvents();
     bindScopeEvents();
+    bindWorkspaceMenuSectionRouting();
 
     refreshAllChrome();
 
@@ -440,6 +468,9 @@ async function bootstrap() {
 
     await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
+
+    initWorkspaceMenubar();
+
     refreshAllChrome();
     refreshWorkspaceSummary();
   } catch (error) {
