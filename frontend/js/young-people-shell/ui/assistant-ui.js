@@ -148,7 +148,7 @@ function renderAssistantRichText(text = "") {
         html += "</ul>";
         inList = false;
       }
-      html += `<p><strong>${line.replace(/^(\d+\.)\s+/, "$1 ")}</strong></p>`;
+      html += `<p>${line}</p>`;
       continue;
     }
 
@@ -194,27 +194,38 @@ function buildIntroMessageHtml() {
   const scope = getCurrentScope();
 
   return `
-    <article class="assistant-message assistant-message-system">
-      <div class="assistant-message-role">Assistant</div>
-      <div class="assistant-message-body">
-        ${
-          scope === "child"
-            ? state.youngPersonId
-              ? `<p>Ask a question about ${escapeHtml(getPersonLabel())}.</p>`
-              : `<p>Select a young person to start.</p>`
-            : scope === "home"
-            ? `<p>Ask about ${escapeHtml(getHomeLabel())}, staffing, compliance or management oversight.</p>`
-            : `<p>Ask about ${escapeHtml(getHomeLabel())}, quality themes, audit readiness or RI oversight.</p>`
-        }
-      </div>
-    </article>
+    <div class="assistant-helper-text">
+      ${
+        scope === "child"
+          ? state.youngPersonId
+            ? `
+              <p><strong>Ask about ${escapeHtml(getPersonLabel())}.</strong></p>
+              <p>You can ask for a full summary, chronology, important dates, risks, appointments, family contact themes, or a handover.</p>
+            `
+            : `<p>Select a young person to start.</p>`
+          : scope === "home"
+          ? `
+            <p><strong>Ask about ${escapeHtml(getHomeLabel())}.</strong></p>
+            <p>You can ask for staffing, compliance, chronology, overdue items, management priorities, or a full home summary.</p>
+          `
+          : `
+            <p><strong>Ask about ${escapeHtml(getHomeLabel())} quality and oversight.</strong></p>
+            <p>You can ask for audit themes, compliance gaps, chronology, inspection readiness, or RI-focused summaries.</p>
+          `
+      }
+    </div>
   `;
 }
 
 function renderMessageList(host, messages = []) {
   if (!host) return;
 
-  host.innerHTML = buildIntroMessageHtml() + messages.map(renderMessage).join("");
+  host.innerHTML = `
+    ${buildIntroMessageHtml()}
+    <div class="assistant-history">
+      ${messages.map(renderMessage).join("")}
+    </div>
+  `;
   host.scrollTop = host.scrollHeight;
 }
 
@@ -290,12 +301,12 @@ function renderContextText() {
 
   if (scope === "child") {
     contextText = state.youngPersonId
-      ? `Scoped to ${getPersonLabel()} • current section: ${section}`
+      ? `Scoped to ${getPersonLabel()} • whole OS by default • current section: ${section}`
       : "No young person selected.";
   } else if (scope === "home") {
-    contextText = `Scoped to ${getHomeLabel()} • home oversight • section: ${section}`;
+    contextText = `Scoped to ${getHomeLabel()} • whole-home OS view • section: ${section}`;
   } else if (scope === "quality") {
-    contextText = `Scoped to ${getHomeLabel()} • quality and RI • section: ${section}`;
+    contextText = `Scoped to ${getHomeLabel()} • quality and RI • full oversight view • section: ${section}`;
   }
 
   contextEl.textContent = contextText;
@@ -314,9 +325,9 @@ function buildScopeSummaryCards() {
       text:
         scope === "child"
           ? state.youngPersonId
-            ? `Young person: ${getPersonLabel()} • section: ${normaliseSectionLabel(getCurrentSection())}`
+            ? `Young person: ${getPersonLabel()} • whole OS scope • section: ${normaliseSectionLabel(getCurrentSection())}`
             : "No young person selected."
-          : `${getScopeLabel()} • ${getHomeLabel()} • section: ${normaliseSectionLabel(
+          : `${getScopeLabel()} • ${getHomeLabel()} • whole OS scope • section: ${normaliseSectionLabel(
               getCurrentSection()
             )}`,
     },
@@ -349,7 +360,9 @@ function buildScopeSummaryCards() {
       text:
         assistantContext.next_steps ||
         (Array.isArray(meta.suggested_actions) && meta.suggested_actions.length
-          ? meta.suggested_actions.join(" • ")
+          ? meta.suggested_actions
+              .map((item) => (typeof item === "string" ? item : item?.label || "Suggested action"))
+              .join(" • ")
           : "Suggested next actions will appear here after the assistant responds."),
     },
   ];
