@@ -125,6 +125,7 @@ let suggestionsBound = false;
 let scopeSwitchBound = false;
 let workspaceMenusBound = false;
 let overlayDismissBound = false;
+let workspaceMenuLinksBound = false;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -210,6 +211,8 @@ function renderNavItem(item, { compact = false } = {}) {
       class="nav-btn ${isActive ? "active" : ""}"
       type="button"
       data-nav-section="${escapeHtml(item.id)}"
+      data-nav-key="${escapeHtml(item.id)}"
+      data-view-key="${escapeHtml(item.id)}"
       aria-pressed="${isActive ? "true" : "false"}"
       title="${escapeHtml(description)}"
     >
@@ -260,6 +263,8 @@ function buildMobileBottomBarHtml() {
           class="nav-btn ${isActive ? "active" : ""}"
           type="button"
           data-nav-section="${escapeHtml(item.id)}"
+          data-nav-key="${escapeHtml(item.id)}"
+          data-view-key="${escapeHtml(item.id)}"
           aria-pressed="${isActive ? "true" : "false"}"
           title="${escapeHtml(item.label || item.id)}"
         >
@@ -378,8 +383,12 @@ function requireChildContext() {
   return Boolean(state.youngPersonId);
 }
 
+function getWorkspaceMenus() {
+  return Array.from(document.querySelectorAll(".workspace-menu"));
+}
+
 function closeAllWorkspaceMenus(except = null) {
-  document.querySelectorAll("[data-workspace-menu]").forEach((menu) => {
+  getWorkspaceMenus().forEach((menu) => {
     if (except && menu === except) return;
     menu.removeAttribute("open");
   });
@@ -389,24 +398,80 @@ function bindWorkspaceMenuBehaviour() {
   if (workspaceMenusBound) return;
   workspaceMenusBound = true;
 
-  document.addEventListener("toggle", (event) => {
-    const menu = event.target;
-    if (!(menu instanceof HTMLDetailsElement)) return;
-    if (!menu.matches("[data-workspace-menu]")) return;
-    if (!menu.open) return;
+  document.addEventListener(
+    "toggle",
+    (event) => {
+      const menu = event.target;
+      if (!(menu instanceof HTMLDetailsElement)) return;
+      if (!menu.classList.contains("workspace-menu")) return;
+      if (!menu.open) return;
 
-    closeAllWorkspaceMenus(menu);
-  }, true);
+      closeAllWorkspaceMenus(menu);
+    },
+    true
+  );
 
   document.addEventListener("click", (event) => {
-    const insideMenu = event.target.closest("[data-workspace-menu]");
-    if (!insideMenu) {
+    const insideMenubar = event.target.closest(".workspace-menubar");
+    if (!insideMenubar) {
       closeAllWorkspaceMenus();
     }
   });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      closeAllWorkspaceMenus();
+    }
+  });
+}
+
+function findNavTarget(navSection) {
+  if (!navSection) return null;
+
+  return (
+    document.querySelector(`[data-nav-section="${navSection}"]`) ||
+    document.querySelector(`[data-nav-key="${navSection}"]`) ||
+    document.querySelector(`[data-view-key="${navSection}"]`) ||
+    document.querySelector(`[data-view="${navSection}"]`) ||
+    null
+  );
+}
+
+function bindWorkspaceMenuLinks() {
+  if (workspaceMenuLinksBound) return;
+  workspaceMenuLinksBound = true;
+
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest(".workspace-menu-link");
+    if (!button) return;
+
+    const actionRouter = button.dataset.actionRouter;
+    const navSection = button.dataset.navSection;
+
+    if (actionRouter) {
+      const target = document.querySelector(
+        `[data-action-router="${actionRouter}"]`
+      );
+
+      if (target && target !== button && typeof target.click === "function") {
+        target.click();
+        closeAllWorkspaceMenus();
+        return;
+      }
+    }
+
+    if (navSection) {
+      if (isSectionAllowed(navSection, getCurrentScope())) {
+        await loadSection(navSection);
+        closeAllWorkspaceMenus();
+        return;
+      }
+
+      const navTarget = findNavTarget(navSection);
+      if (navTarget && navTarget !== button && typeof navTarget.click === "function") {
+        navTarget.click();
+      }
+
       closeAllWorkspaceMenus();
     }
   });
@@ -448,7 +513,6 @@ function bindOverlayDismiss() {
 
   document.addEventListener("click", (event) => {
     const assistantModal = document.getElementById("assistantModal");
-    const assistantShell = assistantModal?.querySelector(".assistant-shell");
     if (
       assistantModal &&
       !assistantModal.classList.contains("hidden") &&
@@ -460,7 +524,6 @@ function bindOverlayDismiss() {
     }
 
     const composerPanel = document.getElementById("composerPanel");
-    const composerShell = composerPanel?.querySelector(".composer-shell");
     if (
       composerPanel &&
       !composerPanel.classList.contains("hidden") &&
@@ -851,6 +914,7 @@ export function bindNavEvents() {
   bindQuickActionRouter();
   bindScopeSwitch();
   bindWorkspaceMenuBehaviour();
+  bindWorkspaceMenuLinks();
   bindOverlayDismiss();
 
   if (!suggestionsBound) {
