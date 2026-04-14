@@ -152,13 +152,14 @@ function isSectionAllowed(sectionId, scope = getCurrentScope()) {
 }
 
 function ensureValidCurrentSection() {
+  const scope = getCurrentScope();
   const current = getCurrentSection();
 
-  if (isSectionAllowed(current)) {
+  if (isSectionAllowed(current, scope)) {
     return current;
   }
 
-  const fallback = getDefaultSectionForScope();
+  const fallback = getDefaultSectionForScope(scope);
   state.currentSection = fallback;
   state.activeSection = fallback;
   state.currentView = fallback;
@@ -362,6 +363,7 @@ function markActiveScopeButtons() {
     const isActive = scope === value;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
   });
 }
 
@@ -404,17 +406,24 @@ async function applyScopeChange(scope) {
   }
 
   showWorkspaceScreen();
-  await onAssistantScopeChanged();
+
+  try {
+    await onAssistantScopeChanged();
+  } catch (error) {
+    console.error("[nav] assistant scope change failed", error);
+  }
+
   renderAssistantControllerPanels();
   await loadSection(getCurrentSection());
 }
 
 export async function loadSection(section) {
-  const safeSection = isSectionAllowed(section)
+  const scope = getCurrentScope();
+  const safeSection = isSectionAllowed(section, scope)
     ? section
-    : getDefaultSectionForScope();
+    : getDefaultSectionForScope(scope);
 
-  if (isChildScope() && !requireChildContext()) {
+  if (scope === "child" && !requireChildContext()) {
     showError("Select a young person first.");
     showSelectorScreen();
     resetWorkspaceSummaryStrip();
@@ -619,11 +628,10 @@ function bindYoungPersonOpen() {
 
     try {
       state.currentScope = "child";
+      updateSectionState(getDefaultSectionForScope("child"));
       await openYoungPerson(id);
 
       showWorkspaceScreen();
-      updateSectionState(getDefaultSectionForScope("child"));
-
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
       clearStatus();
@@ -632,6 +640,12 @@ function bindYoungPersonOpen() {
       renderNavigation();
       markActiveNav(getCurrentSection());
       markActiveScopeButtons();
+
+      try {
+        await onAssistantScopeChanged();
+      } catch (error) {
+        console.error("[nav] assistant scope update failed", error);
+      }
 
       await loadSection(getCurrentSection());
     } catch (error) {
@@ -741,7 +755,13 @@ export async function initialiseShellNavigation() {
 
   try {
     showWorkspaceScreen();
-    await onAssistantScopeChanged();
+
+    try {
+      await onAssistantScopeChanged();
+    } catch (error) {
+      console.error("[nav] assistant scope init failed", error);
+    }
+
     await loadSection(getCurrentSection());
   } catch (error) {
     console.error("[nav] initial section load failed", error);
