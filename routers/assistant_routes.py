@@ -131,6 +131,7 @@ def get_assistant_context(
             message="Provide assistant context only.",
             scope=scope,
             history=[],
+            assistant_type="public",
         )
 
         return {
@@ -174,6 +175,7 @@ def build_prompt(
             message=payload.message.strip(),
             scope=scope,
             history=history,
+            assistant_type="public",
         )
 
         return {
