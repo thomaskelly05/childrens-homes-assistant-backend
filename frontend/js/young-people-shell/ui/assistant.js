@@ -26,6 +26,10 @@ const ASSISTANT_INTENT = {
   unknown: "unknown",
 };
 
+const MAX_SAFE_MESSAGE_LENGTH = 3000;
+const MAX_SOURCE_ITEMS = 12;
+const MAX_SOURCE_EXCERPT = 240;
+
 function getCurrentScope() {
   return state.currentScope || "child";
 }
@@ -91,6 +95,7 @@ function ensureAssistantState() {
       assistant_scope: {},
       assistant_context: {},
       suggested_actions: [],
+      scrubber_reverse_map: {},
     };
   }
 }
@@ -147,6 +152,10 @@ function mergeAssistantMeta(nextMeta = {}) {
     suggested_actions: Array.isArray(nextMeta.suggested_actions)
       ? nextMeta.suggested_actions
       : previous.suggested_actions || [],
+    scrubber_reverse_map:
+      nextMeta.scrubber_reverse_map && typeof nextMeta.scrubber_reverse_map === "object"
+        ? nextMeta.scrubber_reverse_map
+        : previous.scrubber_reverse_map || {},
   };
 }
 
@@ -731,13 +740,74 @@ function buildAssistantContextPayload(message = "") {
   };
 }
 
+function trimForOutbound(value = "", max = MAX_SAFE_MESSAGE_LENGTH) {
+  return String(value || "").slice(0, max);
+}
+
+function buildCitationRef(source = {}, index = 0) {
+  const recordType = source.record_type || source.type || "record";
+  const recordId = source.record_id || source.id || `idx_${index + 1}`;
+  return `${recordType}:${recordId}`;
+}
+
+function sanitiseSourcesForUi(sources = []) {
+  return (Array.isArray(sources) ? sources : []).slice(0, MAX_SOURCE_ITEMS).map((source, index) => ({
+    ...source,
+    citation_ref: source.citation_ref || buildCitationRef(source, index),
+    excerpt: String(source.excerpt || "").slice(0, MAX_SOURCE_EXCERPT),
+  }));
+}
+
+function buildSafeAssistantRequestPayload(payload) {
+  const context = payload?.context || {};
+
+  return {
+    message: trimForOutbound(payload?.message || ""),
+    response_mode: payload?.response_mode || "balanced",
+    context: {
+      scope: context.scope || null,
+      scope_type: context.scope_type || null,
+      current_view: context.current_view || null,
+      shift_context: context.shift_context || null,
+      young_person_id: context.young_person_id || null,
+      young_person_name: context.young_person_name || null,
+      home_id: context.home_id || null,
+      home_name: context.home_name || null,
+      placement_status: context.placement_status || null,
+      summary_risk_level: context.summary_risk_level || null,
+      composer_record_type: context.composer_record_type || null,
+      record_type: context.record_type || null,
+      record_id: context.record_id || null,
+      current_scope: context.current_scope || null,
+      current_section: context.current_section || null,
+      user_role: context.user_role || "staff",
+      assistant_intent: context.assistant_intent || "summary",
+      retrieval_mode: context.retrieval_mode || "whole_scope",
+      output_mode: context.output_mode || "answer",
+      whole_os_default: Boolean(context.whole_os_default),
+      section_only_requested: Boolean(context.section_only_requested),
+      use_whole_scope_records: Boolean(context.use_whole_scope_records),
+      ask_for_dates: Boolean(context.ask_for_dates),
+      ask_for_chronology: Boolean(context.ask_for_chronology),
+      ask_for_summary: Boolean(context.ask_for_summary),
+      ask_for_review_pack: Boolean(context.ask_for_review_pack),
+      ask_for_compliance_view: Boolean(context.ask_for_compliance_view),
+      suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
+        ? context.suggested_prompts_ui_only.slice(0, 8)
+        : [],
+    },
+  };
+}
+
 function scrubAssistantRequestPayload(payload) {
+  const safeBasePayload = buildSafeAssistantRequestPayload(payload);
+
   try {
     if (typeof aiScrubber.scrubAssistantPayload === "function") {
-      const result = aiScrubber.scrubAssistantPayload(payload);
+      const result = aiScrubber.scrubAssistantPayload(safeBasePayload);
 
       return {
-        payload: result?.safePayload || payload,
+        payload: result?.safePayload || safeBasePayload,
         reverseMap: result?.reverseMap || {},
         meta: {
           enabled: true,
@@ -748,11 +818,11 @@ function scrubAssistantRequestPayload(payload) {
 
     if (typeof aiScrubber.createScrubber === "function") {
       const scrubber = aiScrubber.createScrubber();
-      scrubber.registerContext(payload?.context || {});
-      const safePayload = scrubber.scrubPayload(payload);
+      scrubber.registerContext(safeBasePayload?.context || {});
+      const safePayload = scrubber.scrubPayload(safeBasePayload);
 
       return {
-        payload: safePayload || payload,
+        payload: safePayload || safeBasePayload,
         reverseMap: typeof scrubber.reverseMap === "function" ? scrubber.reverseMap() : {},
         meta: {
           enabled: true,
@@ -762,7 +832,7 @@ function scrubAssistantRequestPayload(payload) {
     }
 
     return {
-      payload,
+      payload: safeBasePayload,
       reverseMap: {},
       meta: {
         enabled: false,
@@ -773,7 +843,7 @@ function scrubAssistantRequestPayload(payload) {
     console.error("[assistant] ai scrubber failed", error);
 
     return {
-      payload,
+      payload: safeBasePayload,
       reverseMap: {},
       meta: {
         enabled: false,
@@ -801,7 +871,13 @@ function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
 }
 
 function applyAssistantMeta(meta = {}) {
-  mergeAssistantMeta(meta);
+  const nextMeta = { ...meta };
+
+  if (nextMeta.sources) {
+    nextMeta.sources = sanitiseSourcesForUi(nextMeta.sources);
+  }
+
+  mergeAssistantMeta(nextMeta);
   syncAssistantUi();
 }
 
@@ -856,10 +932,15 @@ export async function askAssistant(question) {
 
     const scrubbed = scrubAssistantRequestPayload(outboundPayload);
 
+    mergeAssistantMeta({
+      scrubber_reverse_map: scrubbed.reverseMap || {},
+    });
+
     await apiStreamAssistant(scrubbed.payload, {
       onMeta: (meta) => {
         applyAssistantMeta({
           ...meta,
+          sources: sanitiseSourcesForUi(meta?.sources || []),
           runtime: {
             ...(meta?.runtime || {}),
             assistant_intent: contextPayload.assistant_intent,
@@ -887,6 +968,7 @@ export async function askAssistant(question) {
             ...(meta?.assistant_scope || {}),
             scrubber_meta: scrubbed.meta || {},
           },
+          scrubber_reverse_map: scrubbed.reverseMap || {},
         });
       },
       onProgress: () => {},
