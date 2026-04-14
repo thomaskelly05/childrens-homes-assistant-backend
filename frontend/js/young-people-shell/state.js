@@ -4,6 +4,7 @@ export const DEFAULT_ROLE = "staff";
 
 export function createAssistantMeta() {
   return {
+    // UI / evidence
     sources: [],
     runtime: {},
     explainability: {},
@@ -11,7 +12,7 @@ export function createAssistantMeta() {
     assistant_context: {},
     suggested_actions: [],
 
-    // New assistant intelligence fields
+    // Intelligence / derived assistant state
     intent: null,
     retrieval_mode: "whole_scope",
     output_mode: "answer",
@@ -21,6 +22,13 @@ export function createAssistantMeta() {
     evidence_summary: {},
     evidence_sufficiency: {},
     live_summary: null,
+
+    // Scrubber / privacy metadata
+    scrubber_enabled: false,
+    scrubber_meta: {},
+    scrubber_reverse_map: {},
+
+    // Timing
     last_bundle_refresh_at: null,
     last_analysis_at: null,
   };
@@ -54,7 +62,7 @@ export function createAssistantBundleState() {
     scopeBundleLoading: false,
     scopeBundleError: null,
 
-    // Optional derived caches for future real-time / morning brief support
+    // Derived assistant caches
     latestChronology: [],
     latestFacts: {},
     latestCareDomains: {},
@@ -105,15 +113,17 @@ export const state = {
   userId: null,
   staffId: null,
 
-  // Assistant state
+  // Assistant chat state
   assistantMessages: [],
   assistantModalMessages: [],
+  assistantSending: false,
+  assistantMeta: createAssistantMeta(),
+
+  // Legacy compatibility fields
   assistantContext: null,
   assistantSources: [],
   assistantRuntime: null,
   assistantExplainability: null,
-  assistantSending: false,
-  assistantMeta: createAssistantMeta(),
 
   // Whole-scope assistant bundle / live intelligence state
   ...createAssistantBundleState(),
@@ -152,17 +162,20 @@ export function getDefaultSectionForScope(scope = state.currentScope) {
 export function resetAssistantState() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
+  state.assistantSending = false;
+  state.assistantMeta = createAssistantMeta();
+
+  // Legacy compatibility fields
   state.assistantContext = null;
   state.assistantSources = [];
   state.assistantRuntime = null;
   state.assistantExplainability = null;
-  state.assistantSending = false;
-  state.assistantMeta = createAssistantMeta();
 
   state.scopeBundle = null;
   state.scopeBundleLoadedAt = null;
   state.scopeBundleLoading = false;
   state.scopeBundleError = null;
+
   state.latestChronology = [];
   state.latestFacts = {};
   state.latestCareDomains = {};
@@ -298,14 +311,17 @@ export function setAssistantDerivedState({
 } = {}) {
   if (Array.isArray(chronology)) {
     state.latestChronology = chronology;
+    state.assistantMeta.chronology = chronology;
   }
 
   if (facts && typeof facts === "object") {
     state.latestFacts = facts;
+    state.assistantMeta.facts = facts;
   }
 
   if (care_domains && typeof care_domains === "object") {
     state.latestCareDomains = care_domains;
+    state.assistantMeta.care_domains = care_domains;
   }
 
   if (morning_brief !== null) {
@@ -329,7 +345,6 @@ export function setAssistantDerivedState({
 
 export function pushAssistantLiveUpdate(update = null) {
   if (!update || typeof update !== "object") return;
-
   state.liveUpdates = [update, ...(state.liveUpdates || [])].slice(0, 50);
 }
 
