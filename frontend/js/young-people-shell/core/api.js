@@ -28,12 +28,11 @@ function buildErrorMessage(response, data) {
 }
 
 const API_ROUTE_ALIASES = [
+  // ------------------------------
+  // Young person aliases
+  // ------------------------------
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
-
-  // Appointments
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
-
-  // Handover fallback
   [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
 
   // Health
@@ -48,18 +47,17 @@ const API_ROUTE_ALIASES = [
   // Family
   [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
 
-  // Timeline-related fallbacks
+  // Timeline / safeguarding
   [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/safeguarding$/, "/young-people/$1/incidents"],
 
   // Readiness / action fallbacks
-  [/\/young-people\/(\d+)\/tasks$/, "/young-people/$1/tasks"],
   [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
-
-  // Manager / review fallbacks
   [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/child-compliance$/, "/young-people/$1/compliance"],
 
   // Planning / risk
   [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
@@ -68,16 +66,45 @@ const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
   [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
 
-  // Wider shell aliases
+  // Optional unsupported child routes -> safe fallbacks
+  [/\/young-people\/(\d+)\/communications$/, "/young-people/$1/family"],
+  [/\/young-people\/(\d+)\/therapy$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/keywork$/, "/young-people/$1/timeline"],
+
+  // ------------------------------
+  // Home aliases
+  // ------------------------------
   [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
+  [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
+
+  // Stable direct home routes
   [/\/homes\/(\d+)\/communications$/, "/homes/$1/communications"],
   [/\/homes\/(\d+)\/documents$/, "/homes/$1/documents"],
   [/\/homes\/(\d+)\/therapy$/, "/homes/$1/therapy"],
   [/\/homes\/(\d+)\/team$/, "/homes/$1/team"],
   [/\/homes\/(\d+)\/supervisions$/, "/homes/$1/supervisions"],
   [/\/homes\/(\d+)\/reports$/, "/homes/$1/reports"],
-  [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
-  [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
+  [/\/homes\/(\d+)\/quality$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/compliance$/, "/homes/$1/compliance"],
+
+  // Home unsupported workflow routes -> safe fallbacks
+  [/\/homes\/(\d+)\/tasks$/, "/homes/$1/compliance"],
+  [/\/homes\/(\d+)\/incidents$/, "/homes/$1/dashboard"],
+  [/\/homes\/(\d+)\/manager-actions$/, "/homes/$1/compliance"],
+  [/\/homes\/(\d+)\/risks$/, "/homes/$1/compliance"],
+  [/\/homes\/(\d+)\/daily-notes$/, "/homes/$1/dashboard"],
+  [/\/homes\/(\d+)\/keywork$/, "/homes/$1/dashboard"],
+  [/\/homes\/(\d+)\/training$/, "/homes/$1/team"],
+  [/\/homes\/(\d+)\/probations$/, "/homes/$1/team"],
+  [/\/homes\/(\d+)\/inductions$/, "/homes/$1/team"],
+  [/\/homes\/(\d+)\/staff$/, "/homes/$1/team"],
+  [/\/homes\/(\d+)\/staff-documents$/, "/homes/$1/documents"],
+  [/\/homes\/(\d+)\/notifications$/, "/homes/$1/communications"],
+  [/\/homes\/(\d+)\/inspection-readiness$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/audits$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/safeguarding$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/child-compliance$/, "/homes/$1/compliance"],
 ];
 
 function shouldResolveAlias(method = "GET") {
@@ -219,13 +246,16 @@ function makeAdults(homeId = 1) {
     { id: 1, full_name: "Sarah Jones", role: "Registered Manager", status: "On shift", home_id: homeId },
     { id: 2, full_name: "Tom Patel", role: "Deputy Manager", status: "On shift", home_id: homeId },
     { id: 3, full_name: "Leah Brown", role: "Senior Residential Worker", status: "On shift", home_id: homeId },
-    { id: 4, full_name: "Amir Hussain", role: "Residential Worker", status: "Off shift", home_id: homeId },
+    { id: 4, full_name: "Amir Hussain", role: "Residential Worker", status: "On shift", home_id: homeId },
     { id: 5, full_name: "Chloe Davies", role: "Residential Worker", status: "On shift", home_id: homeId },
-    { id: 6, full_name: "Michael Osei", role: "Waking Night", status: "Annual leave", home_id: homeId },
-    { id: 7, full_name: "Priya Shah", role: "Therapist", status: "Visiting professional", home_id: homeId },
-    { id: 8, full_name: "Danielle Green", role: "Education Lead", status: "Working remotely", home_id: homeId },
-    { id: 9, full_name: "Helen Morris", role: "Administrator", status: "On shift", home_id: homeId },
-    { id: 10, full_name: "Chris Walker", role: "Bank Staff", status: "Available", home_id: homeId },
+    { id: 6, full_name: "Michael Osei", role: "Waking Night Residential Worker", status: "On shift", home_id: homeId },
+    { id: 7, full_name: "Danielle Green", role: "Residential Worker", status: "On shift", home_id: homeId },
+    { id: 8, full_name: "Helen Morris", role: "Residential Worker", status: "On shift", home_id: homeId },
+    { id: 9, full_name: "Chris Walker", role: "Residential Worker", status: "Off shift", home_id: homeId },
+    { id: 10, full_name: "Priya Shah", role: "Therapist", status: "Visiting professional", home_id: homeId },
+    { id: 11, full_name: "Jade Collins", role: "Residential Worker", status: "On shift", home_id: homeId },
+    { id: 12, full_name: "Mason Reed", role: "Residential Worker", status: "Annual leave", home_id: homeId },
+    { id: 13, full_name: "Olivia Bennett", role: "Residential Worker", status: "On shift", home_id: homeId },
   ];
 }
 
@@ -271,46 +301,34 @@ function makeYoungPeople(homeId = 1) {
       placement_status: "active",
       summary_risk_level: "low",
       home_name: "IndiCare House",
-      primary_keyworker_id: 4,
-    },
-    {
-      id: 104,
-      home_id: homeId,
-      first_name: "Maya",
-      last_name: "Johnson",
-      preferred_name: "Maya",
-      full_name: "Maya Johnson",
-      date_of_birth: "2010-01-30",
-      gender: "Female",
-      placement_status: "active",
-      summary_risk_level: "medium",
-      home_name: "IndiCare House",
-      primary_keyworker_id: 3,
+      primary_keyworker_id: 11,
     },
   ];
 }
 
 function makeDocuments(homeId = 1) {
   const areas = [
-    "Placement",
-    "Risk",
-    "Health",
-    "Education",
-    "Family",
-    "Behaviour Support",
-    "Safeguarding",
-    "Missing From Care",
-    "Governance",
-    "Compliance",
+    "Placement Plan",
+    "Risk Assessment",
+    "Health Care Plan",
+    "PEP",
+    "Family Contact Plan",
+    "Behaviour Support Plan",
+    "Safeguarding Chronology",
+    "Missing From Care Protocol",
+    "Statement of Purpose",
+    "Location Risk Assessment",
+    "Fire Safety Record",
+    "Safer Recruitment Audit",
   ];
 
   return areas.map((area, i) => ({
     id: 1000 + i + 1,
     home_id: homeId,
-    title: `${area} Document ${i + 1}`,
+    title: `${area}`,
     document_type: area,
-    summary: `${area} document available for review and inspection evidence.`,
-    status: i % 4 === 0 ? "review_due" : i % 5 === 0 ? "expired" : "active",
+    summary: `${area} available for review and inspection evidence.`,
+    status: i % 5 === 0 ? "review_due" : i % 6 === 0 ? "expired" : "active",
     review_date: dateOnly(i - 3),
     record_type: "statutory_document",
     source_table: "statutory_documents",
@@ -318,12 +336,28 @@ function makeDocuments(homeId = 1) {
 }
 
 function makeTeam(homeId = 1) {
-  return makeAdults(homeId).map((a) => ({
+  return makeAdults(homeId).map((a, i) => ({
     id: a.id,
     home_id: a.home_id,
     staff_member: a.full_name,
+    full_name: a.full_name,
     role: a.role,
     status: a.status,
+    employment_status:
+      a.status === "Annual leave"
+        ? "active"
+        : a.role === "Therapist"
+        ? "active"
+        : i === 8
+        ? "agency"
+        : "active",
+    line_manager:
+      a.role === "Registered Manager"
+        ? "Tom Kelly"
+        : a.role === "Deputy Manager"
+        ? "Sarah Jones"
+        : "Tom Patel",
+    start_date: dateOnly(-(40 + i * 18)),
     record_type: "team",
     source_table: "team",
   }));
@@ -335,8 +369,10 @@ function makeSupervisions(homeId = 1) {
     home_id: homeId,
     staff_member: a.full_name,
     role: a.role,
-    status: i % 3 === 0 ? "overdue" : i % 3 === 1 ? "due_soon" : "active",
+    status: i % 4 === 0 ? "overdue" : i % 4 === 1 ? "due_soon" : "active",
     due_date: dateOnly(i - 4),
+    next_due_date: dateOnly(i - 4),
+    summary: `${a.full_name} supervision ${i % 4 === 0 ? "overdue" : i % 4 === 1 ? "due soon" : "up to date"}.`,
     record_type: "supervision",
     source_table: "supervisions",
   }));
@@ -354,6 +390,8 @@ function makeCommunications(homeId = 1) {
     "Health appointment confirmation",
     "PEP planning email",
     "Placement review invite",
+    "Regulation 44 follow-up",
+    "Commissioning update",
   ];
 
   return subjects.map((title, i) => ({
@@ -407,6 +445,8 @@ function makeCompliance(homeId = 1) {
     "Location risk review",
     "Supervision tracker review",
     "Safer recruitment audit",
+    "Missing from care audit",
+    "Child file compliance spot-check",
   ];
 
   return titles.map((title, i) => ({
@@ -649,10 +689,11 @@ function getDemoResponse(url, method = "GET") {
       young_people: makeYoungPeople(homeId),
       items: [],
       summary: {
-        occupancy: 4,
-        incidents_last_7_days: 6,
-        overdue_items: 5,
+        occupancy: 3,
+        incidents_last_7_days: 5,
+        overdue_items: 4,
         staffing_pressure: "medium",
+        total_staff: 13,
       },
       alerts: [
         { id: 1, title: "Three compliance items overdue", severity: "high" },
@@ -665,7 +706,7 @@ function getDemoResponse(url, method = "GET") {
   if (match) {
     const homeId = Number(match[1]);
     const items = makeTeam(homeId);
-    return { items, team: items };
+    return { items, team: items, staff: items };
   }
 
   match = url.match(/^\/homes\/(\d+)\/documents(?:\?.*)?$/);
@@ -686,7 +727,7 @@ function getDemoResponse(url, method = "GET") {
   if (match) {
     const homeId = Number(match[1]);
     const items = makeCommunications(homeId);
-    return { items, communications: items };
+    return { items, communications: items, notifications: items };
   }
 
   match = url.match(/^\/homes\/(\d+)\/supervisions(?:\?.*)?$/);
@@ -711,7 +752,7 @@ function getDemoResponse(url, method = "GET") {
         concerns: 3,
         strengths: 6,
       },
-      items: makeCompliance(1).slice(0, 5),
+      items: makeCompliance(1).slice(0, 6),
     };
   }
 
@@ -810,7 +851,7 @@ function getDemoResponse(url, method = "GET") {
         record_type: "support_plan",
       },
     ];
-    return { items, risks: items, risk_assessments: items };
+    return { items, risks: items, risk_assessments: items, support_plans: items };
   }
 
   return null;
@@ -881,6 +922,7 @@ function mergeAssistantBundle(responses = []) {
     if (Array.isArray(data.therapy)) bundle.therapy.push(...data.therapy);
     if (Array.isArray(data.therapy_records)) bundle.therapy_records.push(...data.therapy_records);
     if (Array.isArray(data.team)) bundle.team.push(...data.team);
+    if (Array.isArray(data.staff)) bundle.team.push(...data.staff);
     if (Array.isArray(data.supervisions)) bundle.supervisions.push(...data.supervisions);
     if (Array.isArray(data.young_people)) bundle.young_people.push(...data.young_people);
     if (Array.isArray(data.alerts)) bundle.alerts.push(...data.alerts);
@@ -1104,7 +1146,7 @@ function getDemoAssistantReply(payload = {}) {
   }
 
   if (scope === "home") {
-    return `Summary for ${homeName}: the home appears broadly stable, staffing is sufficient for current needs, and management attention should focus on document review dates, overdue compliance items, supervision timeliness, and whole-service follow-up.`;
+    return `Summary for ${homeName}: the home appears broadly stable, staffing is sufficient for current needs across 3 children and 13 adults, and management attention should focus on document review dates, overdue compliance items, supervision timeliness, and whole-service follow-up.`;
   }
 
   if (scope === "quality") {
