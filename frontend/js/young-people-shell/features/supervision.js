@@ -27,6 +27,11 @@ function toArray(value, fallbacks = []) {
   return [];
 }
 
+function toNumber(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
 function formatDate(value) {
   if (!value) return "No date";
 
@@ -59,25 +64,44 @@ function getStatusTone(status = "") {
   const normalised = String(status || "").toLowerCase();
 
   if (
-    ["overdue", "expired", "missed", "critical", "escalated"].includes(
-      normalised
-    )
+    [
+      "overdue",
+      "expired",
+      "missed",
+      "critical",
+      "escalated",
+      "failed",
+      "non_compliant",
+    ].includes(normalised)
   ) {
     return "danger";
   }
 
   if (
-    ["due", "due_soon", "warning", "review_due", "attention", "scheduled"].includes(
-      normalised
-    )
+    [
+      "due",
+      "due_soon",
+      "warning",
+      "review_due",
+      "attention",
+      "scheduled",
+      "probation",
+      "induction",
+      "in_progress",
+    ].includes(normalised)
   ) {
     return "warning";
   }
 
   if (
-    ["completed", "complete", "active", "up_to_date", "current"].includes(
-      normalised
-    )
+    [
+      "completed",
+      "complete",
+      "active",
+      "up_to_date",
+      "current",
+      "signed_off",
+    ].includes(normalised)
   ) {
     return "success";
   }
@@ -101,6 +125,10 @@ function sortSoonestFirst(items = [], keys = []) {
   });
 }
 
+function normaliseSummary(data = {}) {
+  return data.summary || data.supervision_summary || data.dashboard || data || {};
+}
+
 function normaliseSupervisionItems(data = {}) {
   return toArray(data.items, [data.supervisions, data.records]).map((item) => ({
     ...item,
@@ -108,8 +136,9 @@ function normaliseSupervisionItems(data = {}) {
     record_type: item.record_type || "supervision",
     title: item.title || item.staff_member || "Supervision record",
     staff_member: item.staff_member || item.name || "Staff member",
-    supervisor: item.supervisor || "",
-    supervision_type: item.supervision_type || item.type || "",
+    supervisor: item.supervisor || item.line_manager || "",
+    supervision_type: item.supervision_type || item.type || "supervision",
+    probation_stage: item.probation_stage || "",
     summary:
       item.summary ||
       item.strengths ||
@@ -119,15 +148,15 @@ function normaliseSupervisionItems(data = {}) {
     strengths: item.strengths || "",
     development_needs: item.development_needs || "",
     actions_agreed: item.actions_agreed || "",
-    session_date: item.session_date || null,
+    session_date: item.session_date || item.completed_at || null,
     next_due_date: item.next_due_date || item.review_date || null,
+    status: item.status || "recorded",
     created_at: item.created_at || null,
     updated_at: item.updated_at || null,
-    status: item.status || "recorded",
   }));
 }
 
-function buildSupervisionStats(items = []) {
+function buildStats(items = []) {
   const overdue = items.filter((item) =>
     ["overdue", "expired", "missed"].includes(
       String(item.status || "").toLowerCase()
@@ -140,8 +169,14 @@ function buildSupervisionStats(items = []) {
     )
   ).length;
 
+  const probation = items.filter((item) =>
+    ["probation", "induction"].includes(
+      String(item.status || item.probation_stage || "").toLowerCase()
+    )
+  ).length;
+
   const completed = items.filter((item) =>
-    ["completed", "complete", "up_to_date", "current"].includes(
+    ["completed", "complete", "up_to_date", "current", "signed_off"].includes(
       String(item.status || "").toLowerCase()
     )
   ).length;
@@ -156,6 +191,7 @@ function buildSupervisionStats(items = []) {
     total: items.length,
     overdue,
     dueSoon,
+    probation,
     completed,
     actions,
     uniqueStaff,
@@ -166,15 +202,20 @@ function buildPriorityItems(items = []) {
   return items.filter((item) => {
     const status = String(item.status || "").toLowerCase();
     return (
-      ["overdue", "expired", "missed", "due", "due_soon", "review_due"].includes(
-        status
-      ) || Boolean(item.development_needs) || Boolean(item.actions_agreed)
+      [
+        "overdue",
+        "expired",
+        "missed",
+        "due",
+        "due_soon",
+        "review_due",
+        "probation",
+        "induction",
+      ].includes(status) ||
+      Boolean(item.development_needs) ||
+      Boolean(item.actions_agreed)
     );
   });
-}
-
-function buildActionItems(items = []) {
-  return items.filter((item) => item.actions_agreed || item.development_needs);
 }
 
 function buildRecentItems(items = []) {
@@ -183,6 +224,10 @@ function buildRecentItems(items = []) {
 
 function buildDueItems(items = []) {
   return sortSoonestFirst(items, ["next_due_date", "updated_at", "created_at"]);
+}
+
+function buildActionItems(items = []) {
+  return items.filter((item) => item.actions_agreed || item.development_needs);
 }
 
 function renderEmptyState(message = "No supervision records.") {
@@ -197,7 +242,60 @@ function renderEmptyState(message = "No supervision records.") {
   `;
 }
 
-function renderRecordRows(items = [], emptyMessage = "No supervision records found.") {
+function renderStatCards(stats) {
+  return `
+    <div class="overview-stats-grid overview-stats-grid--five">
+      <article class="overview-stat-card">
+        <span class="overview-stat-label">All records</span>
+        <strong class="overview-stat-value">${safeText(stats.total)}</strong>
+        <span class="overview-stat-note">Supervision records logged</span>
+      </article>
+
+      <article class="overview-stat-card ${
+        stats.overdue > 0 ? "overview-stat-card--danger" : ""
+      }">
+        <span class="overview-stat-label">Overdue</span>
+        <strong class="overview-stat-value">${safeText(stats.overdue)}</strong>
+        <span class="overview-stat-note">Need urgent action</span>
+      </article>
+
+      <article class="overview-stat-card ${
+        stats.dueSoon > 0 ? "overview-stat-card--warning" : ""
+      }">
+        <span class="overview-stat-label">Due soon</span>
+        <strong class="overview-stat-value">${safeText(stats.dueSoon)}</strong>
+        <span class="overview-stat-note">Upcoming supervision pressure</span>
+      </article>
+
+      <article class="overview-stat-card ${
+        stats.probation > 0 ? "overview-stat-card--warning" : ""
+      }">
+        <span class="overview-stat-label">Probation / induction</span>
+        <strong class="overview-stat-value">${safeText(stats.probation)}</strong>
+        <span class="overview-stat-note">Closer oversight required</span>
+      </article>
+
+      <article class="overview-stat-card ${
+        stats.completed > 0 ? "overview-stat-card--success" : ""
+      }">
+        <span class="overview-stat-label">Completed</span>
+        <strong class="overview-stat-value">${safeText(stats.completed)}</strong>
+        <span class="overview-stat-note">Up-to-date supervision records</span>
+      </article>
+    </div>
+  `;
+}
+
+function renderRecordRows(items = [], options = {}) {
+  const {
+    emptyMessage = "No supervision records found.",
+    titleBuilder = null,
+    summaryBuilder = null,
+    metaBuilder = null,
+    statusBuilder = null,
+    recordType = "supervision",
+  } = options;
+
   if (!items.length) {
     return renderEmptyState(emptyMessage);
   }
@@ -206,41 +304,47 @@ function renderRecordRows(items = [], emptyMessage = "No supervision records fou
     <div class="record-list">
       ${items
         .map((item) => {
-          const tone = getStatusTone(item.status);
+          const title = titleBuilder
+            ? titleBuilder(item)
+            : item.staff_member || item.title || "Staff member";
+
+          const summary = summaryBuilder
+            ? summaryBuilder(item)
+            : item.summary || "Supervision record logged.";
+
+          const meta = metaBuilder
+            ? metaBuilder(item)
+            : [
+                item.supervisor ? `Supervisor: ${item.supervisor}` : "",
+                item.supervision_type || "",
+                item.next_due_date ? `Due ${formatDate(item.next_due_date)}` : "",
+              ]
+                .filter(Boolean)
+                .join(" • ");
+
+          const status = statusBuilder
+            ? statusBuilder(item)
+            : item.status || "recorded";
+
+          const tone = getStatusTone(status);
 
           return `
             <article
               class="record-row"
               data-open-record="true"
               data-record-id="${safeText(item.id)}"
-              data-record-type="${safeText(item.record_type || "supervision")}"
+              data-record-type="${safeText(item.record_type || recordType)}"
               data-title="${safeText(item.title || "Supervision record")}"
               role="button"
               tabindex="0"
             >
               <div class="record-row-main">
-                <div class="record-row-title">${safeText(
-                  item.staff_member || item.title || "Staff member"
-                )}</div>
-                <div class="record-row-summary">${safeText(
-                  item.summary || "Supervision record logged."
-                )}</div>
-                <div class="record-row-meta">
-                  ${safeText(
-                    [
-                      item.supervisor ? `Supervisor: ${item.supervisor}` : "",
-                      item.supervision_type || "",
-                      item.next_due_date ? `Due ${formatDate(item.next_due_date)}` : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" • ")
-                  )}
-                </div>
+                <div class="record-row-title">${safeText(title)}</div>
+                <div class="record-row-summary">${safeText(summary)}</div>
+                <div class="record-row-meta">${safeText(meta)}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(
-                  item.status || "recorded"
-                )}</span>
+                <span class="row-pill ${safeText(tone)}">${safeText(status)}</span>
               </div>
             </article>
           `;
@@ -290,71 +394,39 @@ function renderSupervisionPage({
   allItems,
 }) {
   return `
-    <section class="overview-panel">
+    <section class="overview-panel manager-dashboard manager-dashboard--home">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Supervision</div>
           <h2>Supervision and development</h2>
-          <p>Supervision oversight, due dates, development needs and agreed actions across the home.</p>
+          <p>Supervision oversight, due dates, probation, development needs and agreed actions across the home.</p>
         </div>
       </div>
 
+      ${renderStatCards(stats)}
+
       <div class="overview-grid">
         <section class="overview-main">
-          <div class="overview-stats-grid">
-            <article class="overview-stat-card">
-              <span class="overview-stat-label">All records</span>
-              <strong class="overview-stat-value">${safeText(stats.total)}</strong>
-              <span class="overview-stat-note">Supervision records logged</span>
-            </article>
-
-            <article class="overview-stat-card ${
-              stats.overdue > 0 ? "overview-stat-card--danger" : ""
-            }">
-              <span class="overview-stat-label">Overdue</span>
-              <strong class="overview-stat-value">${safeText(stats.overdue)}</strong>
-              <span class="overview-stat-note">Supervisions needing urgent attention</span>
-            </article>
-
-            <article class="overview-stat-card ${
-              stats.dueSoon > 0 ? "overview-stat-card--warning" : ""
-            }">
-              <span class="overview-stat-label">Due soon</span>
-              <strong class="overview-stat-value">${safeText(stats.dueSoon)}</strong>
-              <span class="overview-stat-note">Upcoming supervision pressure</span>
-            </article>
-
-            <article class="overview-stat-card ${
-              stats.completed > 0 ? "overview-stat-card--success" : ""
-            }">
-              <span class="overview-stat-label">Completed</span>
-              <strong class="overview-stat-value">${safeText(stats.completed)}</strong>
-              <span class="overview-stat-note">Up-to-date supervision records</span>
-            </article>
-          </div>
-
           <section class="overview-section-card">
             <div class="overview-section-head">
               <h3>Recent supervision records</h3>
-              <p>The latest supervision activity and development conversations.</p>
+              <p>The latest supervision activity and reflective conversations.</p>
             </div>
 
-            ${renderRecordRows(
-              recentItems,
-              "No recent supervision records found."
-            )}
+            ${renderRecordRows(recentItems, {
+              emptyMessage: "No recent supervision records found.",
+            })}
           </section>
 
           <section class="overview-section-card">
             <div class="overview-section-head">
               <h3>Due and upcoming</h3>
-              <p>Supervisions due soon, overdue or needing review.</p>
+              <p>Supervisions due soon, overdue or requiring closer review.</p>
             </div>
 
-            ${renderRecordRows(
-              dueItems,
-              "No due or upcoming supervision items found."
-            )}
+            ${renderRecordRows(dueItems, {
+              emptyMessage: "No due or upcoming supervision items found.",
+            })}
           </section>
         </section>
 
@@ -362,7 +434,7 @@ function renderSupervisionPage({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Needs attention</h3>
-              <p>The most important supervision and workforce support issues.</p>
+              <p>The most important supervision and workforce development issues.</p>
             </div>
 
             ${renderPriorityList(priorityItems)}
@@ -371,13 +443,12 @@ function renderSupervisionPage({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Development and actions</h3>
-              <p>Agreed actions and development needs from supervision records.</p>
+              <p>Agreed actions and development themes from supervision records.</p>
             </div>
 
-            ${renderRecordRows(
-              actionItems,
-              "No development actions or supervision follow-up items found."
-            )}
+            ${renderRecordRows(actionItems, {
+              emptyMessage: "No development actions or supervision follow-up items found.",
+            })}
           </section>
 
           <section class="overview-side-card">
@@ -386,15 +457,110 @@ function renderSupervisionPage({
               <p>Full supervision list for the home.</p>
             </div>
 
-            ${renderRecordRows(
-              allItems,
-              "No supervision records found."
-            )}
+            ${renderRecordRows(allItems, {
+              emptyMessage: "No supervision records found.",
+            })}
           </section>
         </aside>
       </div>
     </section>
   `;
+}
+
+function buildFallbackData(homeId) {
+  const now = new Date();
+  const plusDays = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    return d.toISOString();
+  };
+  const minusDays = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    return d.toISOString();
+  };
+
+  return {
+    summaryData: {
+      summary: {
+        title: "Supervision and development",
+        home_name:
+          state.currentUser?.home_name ||
+          state.currentUser?.homeName ||
+          `Home ${homeId}`,
+      },
+    },
+    supervisionData: {
+      items: [
+        {
+          id: "sup-1",
+          staff_member: "Ben Carter",
+          supervisor: "Sarah Ahmed",
+          supervision_type: "Probation supervision",
+          summary: "Probation supervision overdue. Review confidence, boundaries and recording quality.",
+          development_needs: "Needs stronger confidence with safeguarding recording.",
+          actions_agreed: "Book supervision this week and complete probation review note.",
+          session_date: minusDays(35),
+          next_due_date: minusDays(5),
+          status: "overdue",
+        },
+        {
+          id: "sup-2",
+          staff_member: "Lena Morris",
+          supervisor: "Sarah Ahmed",
+          supervision_type: "Monthly supervision",
+          summary: "Monthly supervision due this week.",
+          strengths: "Strong relationship-based practice and good reflection.",
+          actions_agreed: "Review workload and training refresh in next supervision.",
+          session_date: minusDays(24),
+          next_due_date: plusDays(3),
+          status: "due_soon",
+        },
+        {
+          id: "sup-3",
+          staff_member: "Sarah Ahmed",
+          supervisor: "Tom Kelly",
+          supervision_type: "Manager supervision",
+          summary: "Recent supervision completed and signed off.",
+          strengths: "Clear leadership, consistent follow-up and good oversight.",
+          session_date: minusDays(10),
+          next_due_date: plusDays(18),
+          status: "completed",
+        },
+        {
+          id: "sup-4",
+          staff_member: "Aimee Khan",
+          supervisor: "Sarah Ahmed",
+          supervision_type: "Induction supervision",
+          summary: "Initial induction supervision scheduled.",
+          development_needs: "Needs confidence with medication processes and handover clarity.",
+          next_due_date: plusDays(2),
+          status: "induction",
+        },
+      ],
+    },
+  };
+}
+
+async function fetchDataset(homeId) {
+  const requests = [apiGet(`/homes/${homeId}/supervisions`)];
+
+  const results = await Promise.allSettled(requests);
+  const hasLiveSuccess = results.some((result) => result.status === "fulfilled");
+
+  if (!hasLiveSuccess) {
+    return {
+      ...buildFallbackData(homeId),
+      isFallback: true,
+    };
+  }
+
+  return {
+    summaryData: {},
+    supervisionData:
+      results[0].status === "fulfilled" ? results[0].value : { items: [] },
+    isFallback: false,
+  };
 }
 
 function renderNoHomeContext() {
@@ -427,6 +593,13 @@ function renderLoadingState() {
       </div>
     </section>
   `;
+
+  updateWorkspaceSummaryStrip({
+    today: "Loading supervision view",
+    nextEvent: "Checking due dates",
+    lastRecord: "Loading latest supervision",
+    openActions: "Loading actions",
+  });
 }
 
 function renderErrorState(message) {
@@ -459,20 +632,29 @@ export async function loadSupervision() {
   renderLoadingState();
 
   try {
-    const data = await apiGet(`/homes/${homeId}/supervisions`).catch(() => ({
-      items: [],
-    }));
+    const { summaryData, supervisionData, isFallback } = await fetchDataset(homeId);
 
-    const allItems = normaliseSupervisionItems(data);
-    const stats = buildSupervisionStats(allItems);
+    const summary = normaliseSummary(summaryData);
+    const allItems = normaliseSupervisionItems(supervisionData);
+
+    const stats = buildStats(allItems);
     const recentItems = buildRecentItems(allItems).slice(0, 8);
     const dueItems = buildDueItems(allItems)
       .filter((item) =>
-        ["overdue", "expired", "missed", "due", "due_soon", "review_due", "scheduled"].includes(
-          String(item.status || "").toLowerCase()
-        )
+        [
+          "overdue",
+          "expired",
+          "missed",
+          "due",
+          "due_soon",
+          "review_due",
+          "scheduled",
+          "probation",
+          "induction",
+        ].includes(String(item.status || "").toLowerCase())
       )
       .slice(0, 8);
+
     const priorityItems = buildPriorityItems(allItems);
     const actionItems = buildActionItems(allItems).slice(0, 8);
     const latest = recentItems[0];
@@ -484,10 +666,18 @@ export async function loadSupervision() {
       priorityItems,
       actionItems,
       allItems,
+      title:
+        summary.title ||
+        state.currentUser?.home_name ||
+        state.currentUser?.homeName ||
+        `Home ${homeId} supervision`,
+      isFallback,
     });
 
     updateWorkspaceSummaryStrip({
-      today: `${stats.uniqueStaff} staff in supervision view`,
+      today: isFallback
+        ? `${stats.uniqueStaff} staff • preview mode`
+        : `${stats.uniqueStaff} staff in supervision view`,
       nextEvent:
         dueItems[0]?.next_due_date
           ? `Next due ${formatDate(dueItems[0].next_due_date)}`
@@ -495,8 +685,12 @@ export async function loadSupervision() {
       lastRecord:
         latest?.session_date
           ? `Latest supervision ${formatDateTime(latest.session_date)}`
+          : isFallback
+          ? "Preview supervision data loaded"
           : "No recent supervision record",
-      openActions: `${stats.actions} supervision action${stats.actions === 1 ? "" : "s"}`,
+      openActions: `${toNumber(stats.actions)} supervision action${
+        stats.actions === 1 ? "" : "s"
+      }`,
     });
   } catch (error) {
     renderErrorState(error?.message || "Failed to load supervision data.");
