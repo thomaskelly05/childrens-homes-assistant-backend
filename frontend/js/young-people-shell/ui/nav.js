@@ -10,7 +10,6 @@ import { escapeHtml } from "../core/utils.js";
 
 import {
   openYoungPerson,
-  goBackToSelector,
   loadYoungPersonSelector,
   filterSelectorList,
 } from "./selector.js";
@@ -125,6 +124,10 @@ function getCurrentScope() {
   return state.currentScope || "child";
 }
 
+function getDefaultSectionForScope(scope = getCurrentScope()) {
+  return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
+}
+
 function getCurrentSection() {
   return (
     state.currentSection ||
@@ -142,10 +145,6 @@ function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
   return new Set(
     SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]
   );
-}
-
-function getDefaultSectionForScope(scope = getCurrentScope()) {
-  return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
 }
 
 function isSectionAllowed(sectionId, scope = getCurrentScope()) {
@@ -492,38 +491,6 @@ function bindSelectorControls() {
   if (selectorControlsBound) return;
   selectorControlsBound = true;
 
-  const goToSelector = async () => {
-    state.youngPersonId = null;
-    state.selectedYoungPerson = null;
-    state.currentScope = "child";
-    updateSectionState(getDefaultSectionForScope("child"));
-    state.activeRecordType = null;
-    state.activeRecordItem = null;
-
-    showSelectorScreen();
-
-    goBackToSelector?.();
-    updateYoungPersonChrome({});
-    clearStatus();
-    resetWorkspaceSummaryStrip();
-
-    try {
-      await loadYoungPersonSelector();
-      renderNavigation();
-      markActiveNav(getCurrentSection());
-      markActiveScopeButtons();
-      renderAssistantControllerPanels();
-    } catch (error) {
-      showError(error?.message || "Failed to load young people.");
-    }
-  };
-
-  els.backToSelectorBtn?.addEventListener("click", goToSelector);
-  els.homeBtn?.addEventListener("click", goToSelector);
-  els.mobileHomeBtn?.addEventListener("click", goToSelector);
-  els.changePersonBtn?.addEventListener("click", goToSelector);
-  els.logoBtn?.addEventListener("click", goToSelector);
-
   [els.youngPersonSearchInput, els.selectorSearch]
     .filter(Boolean)
     .forEach((input) => {
@@ -655,7 +622,6 @@ function bindYoungPersonOpen() {
       await openYoungPerson(id);
 
       showWorkspaceScreen();
-
       updateSectionState(getDefaultSectionForScope("child"));
 
       updateYoungPersonChrome(state.selectedYoungPerson || {});
