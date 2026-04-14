@@ -70,8 +70,10 @@ function getStatusTone(status = "") {
       "high",
       "failed",
       "missing",
-      "blocked",
       "non_compliant",
+      "rejected",
+      "blocked",
+      "unsafe",
     ].includes(normalised)
   ) {
     return "danger";
@@ -81,10 +83,13 @@ function getStatusTone(status = "") {
     [
       "due_soon",
       "warning",
-      "in_progress",
       "pending",
       "review_due",
+      "incomplete",
+      "awaiting",
       "attention",
+      "in_progress",
+      "at_risk",
     ].includes(normalised)
   ) {
     return "warning";
@@ -94,11 +99,13 @@ function getStatusTone(status = "") {
     [
       "complete",
       "completed",
+      "approved",
       "passed",
+      "compliant",
       "active",
-      "signed_off",
       "ok",
-      "good",
+      "cleared",
+      "signed_off",
     ].includes(normalised)
   ) {
     return "success";
@@ -131,8 +138,16 @@ function normaliseOnboardingItems(data = {}) {
   return toArray(data.items, [data.onboarding, data.checklist, data.records]);
 }
 
-function normaliseChecklistItems(data = {}) {
-  return toArray(data.items, [data.checklist_items, data.records]);
+function normaliseRecruitmentItems(data = {}) {
+  return toArray(data.items, [data.recruitment, data.safer_recruitment, data.records]);
+}
+
+function normaliseInductionItems(data = {}) {
+  return toArray(data.items, [data.inductions, data.induction, data.records]);
+}
+
+function normaliseProbationItems(data = {}) {
+  return toArray(data.items, [data.probations, data.probation, data.records]);
 }
 
 function normaliseTrainingItems(data = {}) {
@@ -147,20 +162,38 @@ function normaliseTaskItems(data = {}) {
   return toArray(data.items, [data.tasks, data.records]);
 }
 
-function normaliseDocumentItems(data = {}) {
-  return toArray(data.items, [data.documents, data.records]);
+function normaliseNotificationItems(data = {}) {
+  return toArray(data.items, [data.notifications, data.records]);
 }
 
 function buildTopStats({
   onboardingItems = [],
-  saferRecruitmentGaps = [],
-  inductionGaps = [],
-  probationReviewsDue = [],
+  recruitmentItems = [],
+  inductionItems = [],
+  probationItems = [],
+  trainingGaps = [],
   supervisionGaps = [],
-  openTasks = [],
 }) {
   const liveOnboarding = onboardingItems.filter((item) =>
-    ["pending", "in_progress", "due_soon", "warning"].includes(
+    ["pending", "in_progress", "review_due", "active", "due_soon"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+
+  const recruitmentGaps = recruitmentItems.filter((item) =>
+    ["missing", "pending", "review_due", "failed", "awaiting"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+
+  const inductionGaps = inductionItems.filter((item) =>
+    ["missing", "pending", "review_due", "incomplete", "due_soon"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+
+  const probationGaps = probationItems.filter((item) =>
+    ["pending", "review_due", "overdue", "incomplete"].includes(
       String(item.status || "").toLowerCase()
     )
   ).length;
@@ -169,106 +202,135 @@ function buildTopStats({
     {
       label: "Live onboarding",
       value: liveOnboarding,
-      note: "Staff still moving through onboarding",
-      tone: liveOnboarding ? "warning" : "success",
+      note: "New starters or incomplete starters",
+      tone: liveOnboarding ? "warning" : "muted",
     },
     {
-      label: "Safer recruitment gaps",
-      value: saferRecruitmentGaps.length,
-      note: "Checks or evidence still missing",
-      tone: saferRecruitmentGaps.length ? "danger" : "success",
+      label: "Recruitment gaps",
+      value: recruitmentGaps,
+      note: "Safer recruitment checks missing or pending",
+      tone: recruitmentGaps ? "danger" : "success",
     },
     {
-      label: "Induction incomplete",
-      value: inductionGaps.length,
-      note: "Core induction not yet signed off",
-      tone: inductionGaps.length ? "warning" : "success",
+      label: "Induction gaps",
+      value: inductionGaps,
+      note: "Induction items incomplete",
+      tone: inductionGaps ? "warning" : "success",
     },
     {
-      label: "Probation reviews due",
-      value: probationReviewsDue.length,
-      note: "Permanent appointments requiring review",
-      tone: probationReviewsDue.length ? "warning" : "success",
+      label: "Probation due",
+      value: probationGaps,
+      note: "Probation reviews needing action",
+      tone: probationGaps ? "warning" : "success",
     },
     {
-      label: "Supervision gaps",
+      label: "Training gaps",
+      value: trainingGaps.length,
+      note: "Mandatory training due or overdue",
+      tone: trainingGaps.length ? "warning" : "success",
+    },
+    {
+      label: "Supervision start gaps",
       value: supervisionGaps.length,
-      note: "Practice oversight not yet in place",
+      note: "Early oversight needing booking",
       tone: supervisionGaps.length ? "warning" : "success",
-    },
-    {
-      label: "Open onboarding actions",
-      value: openTasks.length,
-      note: "Actions for staff or managers",
-      tone: openTasks.length ? "warning" : "success",
     },
   ];
 }
 
-function buildProgressCards({
-  checklistItems = [],
+function buildKpis({
+  recruitmentItems = [],
+  inductionItems = [],
+  probationItems = [],
   trainingItems = [],
   supervisionItems = [],
-  onboardingItems = [],
 }) {
-  const completedChecklist = checklistItems.filter((item) =>
-    ["complete", "completed", "passed", "signed_off"].includes(
+  const clearedRecruitment = recruitmentItems.filter((item) =>
+    ["approved", "complete", "completed", "passed", "cleared"].includes(
       String(item.status || "").toLowerCase()
     )
   ).length;
-
-  const checklistPercent =
-    checklistItems.length > 0
-      ? Math.round((completedChecklist / checklistItems.length) * 100)
+  const recruitmentPercent =
+    recruitmentItems.length > 0
+      ? Math.round((clearedRecruitment / recruitmentItems.length) * 100)
       : 0;
 
-  const completeTraining = trainingItems.filter((item) =>
-    ["complete", "completed", "passed", "booked"].includes(
+  const completedInduction = inductionItems.filter((item) =>
+    ["complete", "completed", "signed_off"].includes(
       String(item.status || "").toLowerCase()
     )
   ).length;
+  const inductionPercent =
+    inductionItems.length > 0
+      ? Math.round((completedInduction / inductionItems.length) * 100)
+      : 0;
 
+  const completedProbation = probationItems.filter((item) =>
+    ["complete", "completed", "signed_off"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
+  const probationPercent =
+    probationItems.length > 0
+      ? Math.round((completedProbation / probationItems.length) * 100)
+      : 0;
+
+  const compliantTraining = trainingItems.filter((item) =>
+    ["complete", "completed", "passed", "up_to_date"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  ).length;
   const trainingPercent =
     trainingItems.length > 0
-      ? Math.round((completeTraining / trainingItems.length) * 100)
+      ? Math.round((compliantTraining / trainingItems.length) * 100)
       : 0;
 
-  const completeSupervision = supervisionItems.filter((item) =>
-    ["complete", "completed", "booked"].includes(
+  const completedSupervision = supervisionItems.filter((item) =>
+    ["complete", "completed", "done", "booked"].includes(
       String(item.status || "").toLowerCase()
     )
   ).length;
-
   const supervisionPercent =
     supervisionItems.length > 0
-      ? Math.round((completeSupervision / supervisionItems.length) * 100)
-      : 0;
-
-  const signedOff = onboardingItems.filter((item) =>
-    ["signed_off", "completed", "complete"].includes(
-      String(item.status || "").toLowerCase()
-    )
-  ).length;
-
-  const onboardingPercent =
-    onboardingItems.length > 0
-      ? Math.round((signedOff / onboardingItems.length) * 100)
+      ? Math.round((completedSupervision / supervisionItems.length) * 100)
       : 0;
 
   return [
     {
-      label: "Checklist completion",
-      value: `${checklistPercent}%`,
-      percent: checklistPercent,
+      label: "Safer recruitment",
+      value: `${recruitmentPercent}%`,
+      percent: recruitmentPercent,
       tone:
-        checklistPercent >= 90
+        recruitmentPercent >= 95
           ? "success"
-          : checklistPercent >= 70
+          : recruitmentPercent >= 80
           ? "warning"
           : "danger",
     },
     {
-      label: "Core training",
+      label: "Induction completion",
+      value: `${inductionPercent}%`,
+      percent: inductionPercent,
+      tone:
+        inductionPercent >= 90
+          ? "success"
+          : inductionPercent >= 70
+          ? "warning"
+          : "danger",
+    },
+    {
+      label: "Probation completion",
+      value: `${probationPercent}%`,
+      percent: probationPercent,
+      tone:
+        probationPercent >= 90
+          ? "success"
+          : probationPercent >= 70
+          ? "warning"
+          : "danger",
+    },
+    {
+      label: "Training readiness",
       value: `${trainingPercent}%`,
       percent: trainingPercent,
       tone:
@@ -279,7 +341,7 @@ function buildProgressCards({
           : "danger",
     },
     {
-      label: "Supervision setup",
+      label: "Supervision start",
       value: `${supervisionPercent}%`,
       percent: supervisionPercent,
       tone:
@@ -289,78 +351,78 @@ function buildProgressCards({
           ? "warning"
           : "danger",
     },
-    {
-      label: "Onboarding sign-off",
-      value: `${onboardingPercent}%`,
-      percent: onboardingPercent,
-      tone:
-        onboardingPercent >= 90
-          ? "success"
-          : onboardingPercent >= 70
-          ? "warning"
-          : "danger",
-    },
   ];
 }
 
 function buildPriorityItems({
-  saferRecruitmentGaps = [],
+  recruitmentGaps = [],
   inductionGaps = [],
-  probationReviewsDue = [],
+  probationGaps = [],
+  trainingGaps = [],
   supervisionGaps = [],
-  openTasks = [],
+  tasks = [],
 }) {
   const items = [];
 
-  saferRecruitmentGaps.slice(0, 2).forEach((item) => {
+  recruitmentGaps.slice(0, 2).forEach((item) => {
     items.push({
-      title: item.staff_member || "Safer recruitment gap",
+      title: item.staff_member || item.candidate_name || "Recruitment gap",
       summary:
         item.summary ||
         item.notes ||
-        "Employment checks or documentary evidence are incomplete.",
+        item.check_name ||
+        "Safer recruitment evidence is incomplete.",
     });
   });
 
   inductionGaps.slice(0, 2).forEach((item) => {
     items.push({
-      title: item.staff_member || "Induction incomplete",
+      title: item.staff_member || "Induction gap",
       summary:
         item.summary ||
         item.next_step ||
-        "Induction still requires completion and sign-off.",
+        "Induction requires completion or sign-off.",
     });
   });
 
-  probationReviewsDue.slice(0, 2).forEach((item) => {
+  probationGaps.slice(0, 2).forEach((item) => {
     items.push({
       title: item.staff_member || "Probation review due",
       summary: item.review_date
         ? `Review due ${formatDate(item.review_date)}`
-        : "Probation review should be arranged.",
+        : "Probation checkpoint requires action.",
+    });
+  });
+
+  trainingGaps.slice(0, 1).forEach((item) => {
+    items.push({
+      title: item.staff_member || item.training_name || "Training gap",
+      summary: item.expiry_date
+        ? `Training due ${formatDate(item.expiry_date)}`
+        : "Mandatory training requires attention.",
     });
   });
 
   supervisionGaps.slice(0, 1).forEach((item) => {
     items.push({
-      title: item.staff_member || "Supervision gap",
-      summary:
-        item.summary ||
-        (item.next_due_date
-          ? `Supervision due ${formatDate(item.next_due_date)}`
-          : "Supervision arrangement still missing."),
+      title: item.staff_member || "Supervision start gap",
+      summary: item.next_due_date
+        ? `Supervision due ${formatDate(item.next_due_date)}`
+        : "Initial supervision is not yet booked or recorded.",
     });
   });
 
-  openTasks.slice(0, 1).forEach((item) => {
+  tasks.slice(0, 2).forEach((item) => {
     items.push({
       title: item.title || "Onboarding action",
       summary:
-        item.task || item.summary || "Outstanding onboarding action needs completion.",
+        item.task ||
+        item.summary ||
+        "Onboarding or recruitment task requires completion.",
     });
   });
 
-  return items.slice(0, 6);
+  return items.slice(0, 8);
 }
 
 function renderStatCards(cards = []) {
@@ -443,7 +505,7 @@ function renderRows(items = [], options = {}) {
           const title =
             item?.[titleKey] ||
             item?.staff_member ||
-            item?.full_name ||
+            item?.candidate_name ||
             item?.check_name ||
             item?.training_name ||
             item?.title ||
@@ -454,7 +516,7 @@ function renderRows(items = [], options = {}) {
             item?.notes ||
             item?.description ||
             item?.next_step ||
-            item?.stage ||
+            item?.requirement ||
             "No summary available.";
 
           const meta = metaBuilder
@@ -497,7 +559,7 @@ function renderPriorityList(items = []) {
   if (!items.length) {
     return `
       <div class="empty-state">
-        <p>No urgent onboarding issues are showing right now.</p>
+        <p>No urgent onboarding risks are showing right now.</p>
       </div>
     `;
   }
@@ -519,25 +581,26 @@ function renderPriorityList(items = []) {
 }
 
 function renderOnboardingHtml({
-  title = "Staff onboarding",
+  title = "Onboarding and induction",
   topStats = [],
   progressCards = [],
   priorityItems = [],
-  onboardingItems = [],
-  saferRecruitmentGaps = [],
-  inductionGaps = [],
-  probationReviewsDue = [],
+  recruitmentItems = [],
+  inductionItems = [],
+  probationItems = [],
+  trainingGaps = [],
   supervisionGaps = [],
-  openTasks = [],
+  taskItems = [],
+  notificationItems = [],
   isFallback = false,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
       <div class="overview-panel-head">
         <div>
-          <div class="eyebrow">Onboarding and induction</div>
+          <div class="eyebrow">Onboarding</div>
           <h2>${safeText(title)}</h2>
-          <p>A live onboarding view across safer recruitment, induction, probation, supervision, training and sign-off.</p>
+          <p>A safer recruitment, induction and probation view aligned to workforce suitability, training, supervision and readiness.</p>
           ${
             isFallback
               ? `<p class="overview-helper-text">Showing seeded preview data until live onboarding endpoints are available.</p>`
@@ -550,8 +613,8 @@ function renderOnboardingHtml({
 
       <div class="overview-section-card">
         <div class="overview-section-head">
-          <h3>Onboarding snapshot</h3>
-          <p>A quick visual read across core checks, training, supervision and sign-off.</p>
+          <h3>Onboarding readiness</h3>
+          <p>A quick visual read across recruitment checks, induction, probation, training and supervision start.</p>
         </div>
         ${renderProgressCards(progressCards)}
       </div>
@@ -560,12 +623,34 @@ function renderOnboardingHtml({
         <section class="overview-main">
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Live onboarding records</h3>
-              <p>Where each adult is in the onboarding, induction or probation journey.</p>
+              <h3>Safer recruitment checks</h3>
+              <p>Identity, references, DBS, right to work, health declarations and suitability evidence.</p>
             </div>
 
-            ${renderRows(onboardingItems, {
-              emptyMessage: "No onboarding records found.",
+            ${renderRows(recruitmentItems, {
+              emptyMessage: "No recruitment checks found.",
+              titleKey: "staff_member",
+              summaryKey: "summary",
+              recordType: "onboarding",
+              metaBuilder: (item) =>
+                [
+                  item.check_name || "",
+                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
+                  item.completed_at ? `Completed ${formatDate(item.completed_at)}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+            })}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Induction</h3>
+              <p>Core induction steps, policy familiarisation, shadow shifts, safeguarding, medication and practice readiness.</p>
+            </div>
+
+            ${renderRows(inductionItems, {
+              emptyMessage: "No induction records found.",
               titleKey: "staff_member",
               summaryKey: "summary",
               recordType: "onboarding",
@@ -582,40 +667,20 @@ function renderOnboardingHtml({
 
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Safer recruitment and employment checks</h3>
-              <p>Checks such as references, DBS, right to work and identity evidence.</p>
+              <h3>Probation</h3>
+              <p>Early review points, supervision checkpoints and confirmation of suitability in post.</p>
             </div>
 
-            ${renderRows(saferRecruitmentGaps, {
-              emptyMessage: "No safer recruitment gaps found.",
+            ${renderRows(probationItems, {
+              emptyMessage: "No probation records found.",
               titleKey: "staff_member",
               summaryKey: "summary",
-              recordType: "recruitment_check",
+              recordType: "onboarding",
               metaBuilder: (item) =>
                 [
-                  item.check_name || item.document_type || "",
+                  item.stage || "Probation",
                   item.review_date ? `Due ${formatDate(item.review_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
-
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Open onboarding actions</h3>
-              <p>Tasks for staff, line managers or leadership to complete next.</p>
-            </div>
-
-            ${renderRows(openTasks, {
-              emptyMessage: "No onboarding actions found.",
-              titleKey: "title",
-              summaryKey: "task",
-              recordType: "task",
-              metaBuilder: (item) =>
-                [
-                  item.staff_member || item.assigned_role || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+                  item.line_manager || "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -627,7 +692,7 @@ function renderOnboardingHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Needs attention</h3>
-              <p>The most urgent onboarding and induction issues.</p>
+              <p>The highest priority onboarding and safer recruitment risks.</p>
             </div>
 
             ${renderPriorityList(priorityItems)}
@@ -635,19 +700,19 @@ function renderOnboardingHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Induction gaps</h3>
-              <p>Core induction areas not yet complete or signed off.</p>
+              <h3>Training gaps</h3>
+              <p>Mandatory learning due, overdue or incomplete.</p>
             </div>
 
-            ${renderRows(inductionGaps, {
-              emptyMessage: "No induction gaps found.",
+            ${renderRows(trainingGaps, {
+              emptyMessage: "No onboarding training gaps found.",
               titleKey: "staff_member",
               summaryKey: "summary",
-              recordType: "induction",
+              recordType: "training",
               metaBuilder: (item) =>
                 [
-                  item.stage || "Induction",
-                  item.review_date ? `Due ${formatDate(item.review_date)}` : "",
+                  item.training_name || "",
+                  item.expiry_date ? `Due ${formatDate(item.expiry_date)}` : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -656,33 +721,12 @@ function renderOnboardingHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Probation reviews</h3>
-              <p>Permanent appointments that need probation review or sign-off.</p>
-            </div>
-
-            ${renderRows(probationReviewsDue, {
-              emptyMessage: "No probation reviews due.",
-              titleKey: "staff_member",
-              summaryKey: "summary",
-              recordType: "probation",
-              metaBuilder: (item) =>
-                [
-                  item.line_manager || "",
-                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Supervision and support</h3>
-              <p>Practice oversight that should be in place during onboarding.</p>
+              <h3>Supervision start</h3>
+              <p>Initial supervision and support arrangements needing action.</p>
             </div>
 
             ${renderRows(supervisionGaps, {
-              emptyMessage: "No supervision gaps found.",
+              emptyMessage: "No supervision start gaps found.",
               titleKey: "staff_member",
               summaryKey: "summary",
               recordType: "supervision",
@@ -695,13 +739,38 @@ function renderOnboardingHtml({
                   .join(" • "),
             })}
           </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Tasks and notifications</h3>
+              <p>Reminders and actions for managers and staff.</p>
+            </div>
+
+            ${renderRows(
+              [...taskItems.slice(0, 4), ...notificationItems.slice(0, 4)],
+              {
+                emptyMessage: "No onboarding actions or reminders found.",
+                titleKey: "title",
+                summaryKey: "summary",
+                recordType: "notification",
+                metaBuilder: (item) =>
+                  [
+                    item.staff_member || item.recipient_name || "",
+                    item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+                    item.created_at ? formatDateTime(item.created_at) : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" • "),
+              }
+            )}
+          </section>
         </aside>
       </div>
     </section>
   `;
 }
 
-function buildFallbackOnboardingData(homeId) {
+function buildFallbackData(homeId) {
   const now = new Date();
   const plusDays = (days) => {
     const d = new Date(now);
@@ -717,7 +786,7 @@ function buildFallbackOnboardingData(homeId) {
   return {
     summaryData: {
       summary: {
-        title: "Staff onboarding",
+        title: "Onboarding and induction",
         home_name:
           state.currentUser?.home_name ||
           state.currentUser?.homeName ||
@@ -727,116 +796,117 @@ function buildFallbackOnboardingData(homeId) {
     onboardingData: {
       items: [
         {
-          id: "on-1",
+          id: "onboarding-1",
           staff_member: "Ben Carter",
-          stage: "Probation",
-          next_step: "Book 8-week probation supervision and review.",
-          next_review_date: plusDays(4),
-          summary: "Induction mostly complete. Probation review and PMVA refresh outstanding.",
+          stage: "Onboarding",
+          next_step: "Complete medication induction and final shadow shift.",
+          next_review_date: plusDays(3),
+          summary: "New starter with most recruitment checks complete. Final practice sign-off still needed.",
           status: "in_progress",
         },
         {
-          id: "on-2",
+          id: "onboarding-2",
           staff_member: "Aimee Khan",
           stage: "Induction",
-          next_step: "Complete final shadow shift and upload induction evidence.",
+          next_step: "Upload signed induction checklist and policy read log.",
           next_review_date: plusDays(2),
-          summary: "Safer recruitment complete. Final induction sign-off still needed.",
+          summary: "Core induction progressing but evidence upload remains incomplete.",
           status: "due_soon",
         },
       ],
     },
-    checklistData: {
+    recruitmentData: {
       items: [
         {
-          id: "check-1",
+          id: "recruitment-1",
           staff_member: "Ben Carter",
-          check_name: "DBS",
-          summary: "DBS completed and recorded.",
-          status: "completed",
+          check_name: "Reference check 2",
+          review_date: plusDays(1),
+          summary: "Second reference still awaiting upload to safer recruitment file.",
+          status: "missing",
         },
         {
-          id: "check-2",
-          staff_member: "Ben Carter",
-          check_name: "PMVA refresher",
-          summary: "PMVA refresher still needs booking.",
-          status: "pending",
-        },
-        {
-          id: "check-3",
+          id: "recruitment-2",
           staff_member: "Aimee Khan",
-          check_name: "Shadow shifts",
-          summary: "Final shadow shift still to be completed.",
+          check_name: "Right to work verification",
+          completed_at: minusDays(3),
+          summary: "Right to work documents reviewed and verified.",
+          status: "cleared",
+        },
+        {
+          id: "recruitment-3",
+          staff_member: "Ben Carter",
+          check_name: "DBS confirmation",
+          completed_at: minusDays(12),
+          summary: "Enhanced DBS cleared and recorded.",
+          status: "cleared",
+        },
+      ],
+    },
+    inductionData: {
+      items: [
+        {
+          id: "induction-1",
+          staff_member: "Ben Carter",
+          stage: "Practice induction",
+          next_step: "Manager sign-off after final shadow shift.",
+          next_review_date: plusDays(4),
+          summary: "Medication and behaviour support induction still incomplete.",
+          status: "review_due",
+        },
+        {
+          id: "induction-2",
+          staff_member: "Aimee Khan",
+          stage: "Core induction",
+          next_step: "Confirm safeguarding and whistleblowing discussion.",
+          next_review_date: plusDays(2),
+          summary: "Policy familiarisation nearly complete.",
           status: "in_progress",
         },
+      ],
+    },
+    probationData: {
+      items: [
         {
-          id: "check-4",
-          staff_member: "Aimee Khan",
-          check_name: "Policy sign-off",
-          summary: "Policy read-and-sign checklist still incomplete.",
-          status: "pending",
+          id: "probation-1",
+          staff_member: "Ben Carter",
+          stage: "8-week review",
+          review_date: plusDays(5),
+          line_manager: "Sarah Ahmed",
+          summary: "Probation review to confirm progress, competence and support needs.",
+          status: "due_soon",
         },
       ],
     },
     trainingData: {
       items: [
         {
-          id: "train-1",
+          id: "training-1",
           staff_member: "Ben Carter",
           training_name: "PMVA",
-          expiry_date: minusDays(2),
-          summary: "PMVA expired and requires urgent rebooking.",
+          expiry_date: minusDays(1),
+          summary: "PMVA is overdue and must be booked before lone deployment.",
           status: "overdue",
         },
         {
-          id: "train-2",
+          id: "training-2",
           staff_member: "Aimee Khan",
-          training_name: "Safeguarding induction",
-          expiry_date: plusDays(5),
-          summary: "Safeguarding induction booked and awaiting attendance.",
-          status: "booked",
+          training_name: "Safeguarding",
+          expiry_date: plusDays(7),
+          summary: "Safeguarding refresher due this week.",
+          status: "due_soon",
         },
       ],
     },
     supervisionData: {
       items: [
         {
-          id: "sup-1",
+          id: "supervision-1",
           staff_member: "Ben Carter",
           supervisor: "Sarah Ahmed",
-          next_due_date: minusDays(5),
-          summary: "Probation supervision overdue.",
-          status: "overdue",
-        },
-        {
-          id: "sup-2",
-          staff_member: "Aimee Khan",
-          supervisor: "Sarah Ahmed",
-          next_due_date: plusDays(3),
-          summary: "Initial induction supervision due this week.",
+          next_due_date: plusDays(4),
+          summary: "Initial supervision still needs booking.",
           status: "due_soon",
-        },
-      ],
-    },
-    documentData: {
-      items: [
-        {
-          id: "doc-1",
-          staff_member: "Aimee Khan",
-          check_name: "Reference 2",
-          document_type: "Reference",
-          review_date: plusDays(1),
-          summary: "Second reference still awaiting upload.",
-          status: "missing",
-        },
-        {
-          id: "doc-2",
-          staff_member: "Ben Carter",
-          check_name: "Driving licence copy",
-          document_type: "ID",
-          review_date: plusDays(5),
-          summary: "Updated ID copy required for completed file.",
-          status: "review_due",
         },
       ],
     },
@@ -844,8 +914,8 @@ function buildFallbackOnboardingData(homeId) {
       items: [
         {
           id: "task-1",
-          title: "Book probation review",
-          task: "Arrange and record Ben Carter probation review.",
+          title: "Book initial supervision",
+          task: "Arrange and record Ben Carter initial supervision.",
           staff_member: "Ben Carter",
           due_date: plusDays(4),
           completed: false,
@@ -854,11 +924,23 @@ function buildFallbackOnboardingData(homeId) {
         {
           id: "task-2",
           title: "Upload induction evidence",
-          task: "Add signed induction checklist and certificates.",
+          task: "Add signed induction checklist and safer recruitment file evidence.",
           staff_member: "Aimee Khan",
           due_date: plusDays(2),
           completed: false,
           status: "warning",
+        },
+      ],
+    },
+    notificationData: {
+      items: [
+        {
+          id: "notification-1",
+          title: "Probation checkpoint due",
+          recipient_name: "Sarah Ahmed",
+          summary: "Ben Carter probation review is due this week.",
+          created_at: minusDays(1),
+          status: "attention",
         },
       ],
     },
@@ -868,11 +950,13 @@ function buildFallbackOnboardingData(homeId) {
 async function fetchOnboardingDataset(homeId) {
   const requests = [
     apiGet(`/homes/${homeId}/onboarding`),
-    apiGet(`/homes/${homeId}/onboarding-checklist`),
+    apiGet(`/homes/${homeId}/safer-recruitment`),
+    apiGet(`/homes/${homeId}/inductions`),
+    apiGet(`/homes/${homeId}/probations`),
     apiGet(`/homes/${homeId}/training`),
     apiGet(`/homes/${homeId}/supervisions`),
-    apiGet(`/homes/${homeId}/staff-documents`),
     apiGet(`/homes/${homeId}/staff-tasks`),
+    apiGet(`/homes/${homeId}/notifications`),
   ];
 
   const results = await Promise.allSettled(requests);
@@ -880,7 +964,7 @@ async function fetchOnboardingDataset(homeId) {
 
   if (!hasLiveSuccess) {
     return {
-      ...buildFallbackOnboardingData(homeId),
+      ...buildFallbackData(homeId),
       isFallback: true,
     };
   }
@@ -888,11 +972,13 @@ async function fetchOnboardingDataset(homeId) {
   return {
     summaryData: {},
     onboardingData: results[0].status === "fulfilled" ? results[0].value : { items: [] },
-    checklistData: results[1].status === "fulfilled" ? results[1].value : { items: [] },
-    trainingData: results[2].status === "fulfilled" ? results[2].value : { items: [] },
-    supervisionData: results[3].status === "fulfilled" ? results[3].value : { items: [] },
-    documentData: results[4].status === "fulfilled" ? results[4].value : { items: [] },
-    taskData: results[5].status === "fulfilled" ? results[5].value : { items: [] },
+    recruitmentData: results[1].status === "fulfilled" ? results[1].value : { items: [] },
+    inductionData: results[2].status === "fulfilled" ? results[2].value : { items: [] },
+    probationData: results[3].status === "fulfilled" ? results[3].value : { items: [] },
+    trainingData: results[4].status === "fulfilled" ? results[4].value : { items: [] },
+    supervisionData: results[5].status === "fulfilled" ? results[5].value : { items: [] },
+    taskData: results[6].status === "fulfilled" ? results[6].value : { items: [] },
+    notificationData: results[7].status === "fulfilled" ? results[7].value : { items: [] },
     isFallback: false,
   };
 }
@@ -904,7 +990,7 @@ function renderNoHomeContext() {
     <section class="overview-panel">
       <div class="empty-state">
         <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">⬢</div>
+          <div class="empty-state-icon" aria-hidden="true">☑</div>
           <h3>No home context available</h3>
           <p>A home ID is needed before onboarding can load.</p>
         </div>
@@ -915,8 +1001,8 @@ function renderNoHomeContext() {
   updateWorkspaceSummaryStrip({
     today: "No onboarding context",
     nextEvent: "No review loaded",
-    lastRecord: "No onboarding data",
-    openActions: "No actions loaded",
+    lastRecord: "No onboarding record loaded",
+    openActions: "No onboarding actions loaded",
   });
 }
 
@@ -936,7 +1022,7 @@ function renderLoadingState() {
 
   updateWorkspaceSummaryStrip({
     today: "Loading onboarding view",
-    nextEvent: "Checking next review",
+    nextEvent: "Checking next review date",
     lastRecord: "Loading latest onboarding activity",
     openActions: "Loading actions",
   });
@@ -959,7 +1045,7 @@ function renderErrorState(message) {
 
   updateWorkspaceSummaryStrip({
     today: "Onboarding unavailable",
-    nextEvent: "No review loaded",
+    nextEvent: "No event loaded",
     lastRecord: "No onboarding record loaded",
     openActions: "No actions loaded",
   });
@@ -981,26 +1067,40 @@ export async function loadOnboarding() {
     const {
       summaryData,
       onboardingData,
-      checklistData,
+      recruitmentData,
+      inductionData,
+      probationData,
       trainingData,
       supervisionData,
-      documentData,
       taskData,
+      notificationData,
       isFallback,
     } = await fetchOnboardingDataset(homeId);
 
     const summary = normaliseSummary(summaryData);
-
     const onboardingItems = sortSoonestFirst(normaliseOnboardingItems(onboardingData), [
       "next_review_date",
       "updated_at",
       "created_at",
     ]).slice(0, 8);
 
-    const checklistItems = sortNewestFirst(normaliseChecklistItems(checklistData), [
+    const recruitmentItems = sortSoonestFirst(normaliseRecruitmentItems(recruitmentData), [
+      "review_date",
       "updated_at",
       "created_at",
-    ]);
+    ]).slice(0, 8);
+
+    const inductionItems = sortSoonestFirst(normaliseInductionItems(inductionData), [
+      "next_review_date",
+      "updated_at",
+      "created_at",
+    ]).slice(0, 8);
+
+    const probationItems = sortSoonestFirst(normaliseProbationItems(probationData), [
+      "review_date",
+      "updated_at",
+      "created_at",
+    ]).slice(0, 8);
 
     const trainingItems = sortSoonestFirst(normaliseTrainingItems(trainingData), [
       "expiry_date",
@@ -1014,39 +1114,43 @@ export async function loadOnboarding() {
       "created_at",
     ]);
 
-    const documentItems = sortSoonestFirst(normaliseDocumentItems(documentData), [
-      "review_date",
-      "updated_at",
-      "created_at",
-    ]);
-
     const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
       "due_date",
       "updated_at",
       "created_at",
     ]);
 
-    const saferRecruitmentGaps = documentItems.filter((item) =>
-      ["missing", "review_due", "due_soon", "overdue", "incomplete"].includes(
+    const notificationItems = sortNewestFirst(normaliseNotificationItems(notificationData), [
+      "created_at",
+      "updated_at",
+    ]).slice(0, 6);
+
+    const recruitmentGaps = recruitmentItems.filter((item) =>
+      ["missing", "pending", "review_due", "failed", "awaiting"].includes(
         String(item.status || "").toLowerCase()
       )
     );
 
-    const inductionGaps = onboardingItems.filter((item) =>
-      ["pending", "in_progress", "due_soon", "warning"].includes(
+    const inductionGaps = inductionItems.filter((item) =>
+      ["pending", "review_due", "incomplete", "due_soon", "in_progress"].includes(
         String(item.status || "").toLowerCase()
       )
     );
 
-    const probationReviewsDue = onboardingItems.filter((item) =>
-      /probation/i.test(String(item.stage || "")) &&
-      ["pending", "in_progress", "due_soon", "warning"].includes(
+    const probationGaps = probationItems.filter((item) =>
+      ["pending", "review_due", "overdue", "incomplete", "due_soon"].includes(
+        String(item.status || "").toLowerCase()
+      )
+    );
+
+    const trainingGaps = trainingItems.filter((item) =>
+      ["due_soon", "overdue", "expired", "expiring", "incomplete"].includes(
         String(item.status || "").toLowerCase()
       )
     );
 
     const supervisionGaps = supervisionItems.filter((item) =>
-      ["due", "due_soon", "overdue", "review_due"].includes(
+      ["due", "due_soon", "overdue", "review_due", "pending"].includes(
         String(item.status || "").toLowerCase()
       )
     );
@@ -1055,26 +1159,28 @@ export async function loadOnboarding() {
 
     const topStats = buildTopStats({
       onboardingItems,
-      saferRecruitmentGaps,
-      inductionGaps,
-      probationReviewsDue,
+      recruitmentItems,
+      inductionItems,
+      probationItems,
+      trainingGaps,
       supervisionGaps,
-      openTasks,
     });
 
-    const progressCards = buildProgressCards({
-      checklistItems,
+    const progressCards = buildKpis({
+      recruitmentItems,
+      inductionItems,
+      probationItems,
       trainingItems,
       supervisionItems,
-      onboardingItems,
     });
 
     const priorityItems = buildPriorityItems({
-      saferRecruitmentGaps,
+      recruitmentGaps,
       inductionGaps,
-      probationReviewsDue,
+      probationGaps,
+      trainingGaps,
       supervisionGaps,
-      openTasks,
+      tasks: openTasks,
     });
 
     const title =
@@ -1088,35 +1194,32 @@ export async function loadOnboarding() {
       topStats,
       progressCards,
       priorityItems,
-      onboardingItems,
-      saferRecruitmentGaps: saferRecruitmentGaps.slice(0, 6),
-      inductionGaps: inductionGaps.slice(0, 6),
-      probationReviewsDue: probationReviewsDue.slice(0, 6),
+      recruitmentItems,
+      inductionItems,
+      probationItems,
+      trainingGaps: trainingGaps.slice(0, 6),
       supervisionGaps: supervisionGaps.slice(0, 6),
-      openTasks: openTasks.slice(0, 8),
+      taskItems: openTasks.slice(0, 6),
+      notificationItems,
       isFallback,
     });
 
-    const nextProbation = probationReviewsDue[0];
-    const liveCount = onboardingItems.filter((item) =>
-      ["pending", "in_progress", "due_soon", "warning"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    ).length;
+    const nextProbation = probationGaps[0];
+    const latestNotification = notificationItems[0];
 
     updateWorkspaceSummaryStrip({
       today: isFallback
-        ? `${liveCount} live onboarding • preview mode`
-        : `${liveCount} live onboarding • ${openTasks.length} open actions`,
-      nextEvent: nextProbation?.next_review_date
-        ? `Probation review ${formatDate(nextProbation.next_review_date)}`
-        : "No immediate probation review loaded",
-      lastRecord: onboardingItems[0]?.updated_at
-        ? `Latest update ${formatDateTime(onboardingItems[0].updated_at)}`
+        ? `${onboardingItems.length} live onboarding • preview mode`
+        : `${onboardingItems.length} live onboarding • ${openTasks.length} open actions`,
+      nextEvent: nextProbation?.review_date
+        ? `Probation due ${formatDate(nextProbation.review_date)}`
+        : "No immediate review loaded",
+      lastRecord: latestNotification?.created_at
+        ? `Latest reminder ${formatDateTime(latestNotification.created_at)}`
         : isFallback
         ? "Preview onboarding data loaded"
-        : "No recent onboarding update loaded",
-      openActions: `${openTasks.length} open • ${saferRecruitmentGaps.length} recruitment gaps`,
+        : "No recent onboarding activity loaded",
+      openActions: `${openTasks.length} open • ${recruitmentGaps.length} recruitment gaps`,
     });
   } catch (error) {
     renderErrorState(error?.message || "The onboarding view could not be loaded.");
