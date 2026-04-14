@@ -6,7 +6,6 @@ import {
   mapComplianceItem,
   mapTask,
   mapStatutoryDocument,
-  mapManagerAction,
 } from "../core/adapters.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
@@ -146,28 +145,57 @@ function buildDocumentRows(items = []) {
   }));
 }
 
-function buildManagerActionRows(items = []) {
-  return items.map((item) => ({
-    id: item.id,
-    record_type: "manager_action",
-    title: item.title || item.action_type || "Manager action",
-    summary: [
-      item.related_table || "",
-      item.note || item.summary || "",
-    ]
-      .filter(Boolean)
-      .join(" • "),
-    action_at: item.action_at || item.created_at || null,
-    created_at: item.created_at || null,
-    status: "recorded",
-  }));
+function buildOversightRows(complianceItems = [], tasks = []) {
+  const complianceRows = complianceItems
+    .filter((item) =>
+      ["overdue", "escalated", "missing", "review_due", "due_soon", "expiring"].includes(
+        String(item.status || "").toLowerCase()
+      )
+    )
+    .slice(0, 6)
+    .map((item) => ({
+      id: `compliance-${item.id}`,
+      record_type: "compliance_item",
+      title: item.title || "Compliance item",
+      summary: [
+        "Compliance",
+        item.status || "",
+        item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+      ]
+        .filter(Boolean)
+        .join(" • "),
+      action_at: item.due_date || item.created_at || null,
+      created_at: item.created_at || null,
+      status: item.status || "recorded",
+    }));
+
+  const taskRows = tasks
+    .filter((item) => !item.completed)
+    .slice(0, 6)
+    .map((item) => ({
+      id: `task-${item.id}`,
+      record_type: "task",
+      title: item.title || item.task || "Task",
+      summary: [
+        "Task",
+        item.assigned_role || "",
+        item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+      ]
+        .filter(Boolean)
+        .join(" • "),
+      action_at: item.due_date || item.created_at || null,
+      created_at: item.created_at || null,
+      status: item.completed ? "completed" : "open",
+    }));
+
+  return sortNewestFirst([...complianceRows, ...taskRows], ["action_at", "created_at"]);
 }
 
 function buildReadinessOverview({
   compliance = [],
   tasks = [],
   documents = [],
-  managerActions = [],
+  oversightRows = [],
 }) {
   const overdue = compliance.filter((item) =>
     ["overdue", "escalated", "missing", "review_due"].includes(
@@ -193,7 +221,7 @@ function buildReadinessOverview({
     dueSoon,
     openTasks,
     reviewDueDocs,
-    managerActions: managerActions.length,
+    oversightActions: oversightRows.length,
   };
 }
 
@@ -278,14 +306,14 @@ function renderReadinessHtml({
   tasks = [],
   openTasks = [],
   documents = [],
-  managerActions = [],
+  oversightRows = [],
 }) {
   const scope = getCurrentScope();
   const overview = buildReadinessOverview({
     compliance: complianceItems,
     tasks,
     documents,
-    managerActions,
+    oversightRows,
   });
 
   const title =
@@ -389,11 +417,11 @@ function renderReadinessHtml({
 
               <article class="record-row">
                 <div class="record-row-main">
-                  <div class="record-row-title">Manager actions</div>
-                  <div class="record-row-summary">Oversight actions linked to readiness.</div>
+                  <div class="record-row-title">Oversight actions</div>
+                  <div class="record-row-summary">Action signals raised from compliance and open tasks.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${overview.managerActions > 0 ? "warning" : "muted"}">${toText(overview.managerActions)}</span>
+                  <span class="row-pill ${overview.oversightActions > 0 ? "warning" : "muted"}">${toText(overview.oversightActions)}</span>
                 </div>
               </article>
             </div>
@@ -445,13 +473,13 @@ function renderReadinessHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Manager / oversight actions</h3>
-              <p>Actions raised through review, compliance, leadership or quality oversight.</p>
+              <h3>Oversight actions</h3>
+              <p>Derived from compliance pressure and open readiness tasks.</p>
             </div>
 
             ${renderRecordRows(
-              buildManagerActionRows(managerActions),
-              "No manager actions found."
+              oversightRows,
+              "No oversight actions found."
             )}
           </section>
 
@@ -480,21 +508,11 @@ function getReadinessEndpoints() {
     return null;
   }
 
-  if (scope === "home") {
+  if (scope === "home" || scope === "quality") {
     return {
       compliance: `/homes/${id}/compliance`,
-      tasks: `/homes/${id}/tasks`,
       documents: `/homes/${id}/documents`,
-      managerActions: `/homes/${id}/manager-actions`,
-    };
-  }
-
-  if (scope === "quality") {
-    return {
-      compliance: `/homes/${id}/compliance`,
-      tasks: `/homes/${id}/tasks`,
-      documents: `/homes/${id}/documents`,
-      managerActions: `/homes/${id}/manager-actions`,
+      tasks: null,
     };
   }
 
@@ -502,7 +520,6 @@ function getReadinessEndpoints() {
     compliance: `/young-people/${id}/compliance`,
     tasks: `/young-people/${id}/tasks`,
     documents: `/young-people/${id}/documents`,
-    managerActions: `/young-people/${id}/manager-actions`,
   };
 }
 
@@ -548,11 +565,12 @@ export async function loadReadiness() {
   `;
 
   try {
-    const [complianceData, tasksData, documentsData, managerActionsData] = await Promise.all([
+    const [complianceData, tasksData, documentsData] = await Promise.all([
       apiGet(endpoints.compliance).catch(() => ({ items: [] })),
-      apiGet(endpoints.tasks).catch(() => ({ items: [] })),
+      endpoints.tasks
+        ? apiGet(endpoints.tasks).catch(() => ({ items: [] }))
+        : Promise.resolve({ items: [] }),
       apiGet(endpoints.documents).catch(() => ({ items: [] })),
-      apiGet(endpoints.managerActions).catch(() => ({ items: [] })),
     ]);
 
     const complianceItems = sortSoonestFirst(
@@ -581,16 +599,6 @@ export async function loadReadiness() {
       ["review_date", "expiry_date", "created_at"]
     );
 
-    const managerActions = sortNewestFirst(
-      (
-        managerActionsData.items ||
-        managerActionsData.records ||
-        managerActionsData.manager_actions ||
-        []
-      ).map(mapManagerAction),
-      ["action_at", "created_at"]
-    );
-
     const overdueItems = complianceItems.filter((item) =>
       ["overdue", "escalated", "missing", "review_due"].includes(
         String(item.status || "").toLowerCase()
@@ -604,6 +612,7 @@ export async function loadReadiness() {
     );
 
     const openTasks = tasks.filter((item) => !item.completed);
+    const oversightRows = buildOversightRows(complianceItems, tasks);
 
     els.viewContent.innerHTML = renderReadinessHtml({
       complianceItems,
@@ -612,7 +621,7 @@ export async function loadReadiness() {
       tasks,
       openTasks,
       documents,
-      managerActions,
+      oversightRows,
     });
 
     const nextDeadline =
@@ -632,8 +641,8 @@ export async function loadReadiness() {
               nextDeadline.created_at
           )}`
         : "No immediate readiness deadline",
-      lastRecord: managerActions[0]
-        ? `${managerActions[0].title || managerActions[0].action_type || "Manager action"}`
+      lastRecord: oversightRows[0]
+        ? `${oversightRows[0].title || "Oversight action"}`
         : "No recent readiness action",
       openActions: `${openTasks.length} open • ${dueSoonItems.length} due soon`,
     });
