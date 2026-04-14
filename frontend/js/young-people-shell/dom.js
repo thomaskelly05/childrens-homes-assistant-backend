@@ -161,4 +161,4 @@ export const els = {
   // Filters
   recordSearchInput: document.getElementById("recordSearchInput"),
   recordTypeFilter: document.getElementById("recordTypeFilter"),
-}
+};
