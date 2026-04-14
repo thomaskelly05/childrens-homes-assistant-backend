@@ -78,41 +78,6 @@ const API_ROUTE_ALIASES = [
   [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
   [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
 
-  // Stable direct home routes
-  [/\/homes\/(\d+)\/communications$/, "/homes/$1/communications"],
-  [/\/homes\/(\d+)\/documents$/, "/homes/$1/documents"],
-  [/\/homes\/(\d+)\/therapy$/, "/homes/$1/therapy"],
-  [/\/homes\/(\d+)\/team$/, "/homes/$1/team"],
-  [/\/homes\/(\d+)\/supervisions$/, "/homes/$1/supervisions"],
-  [/\/homes\/(\d+)\/reports$/, "/homes/$1/reports"],
-  [/\/homes\/(\d+)\/quality$/, "/homes/$1/quality"],
-  [/\/homes\/(\d+)\/compliance$/, "/homes/$1/compliance"],
-  [/\/homes\/(\d+)\/rota$/, "/homes/$1/rota"],
-  [/\/homes\/(\d+)\/staffing$/, "/homes/$1/staffing"],
-  [/\/homes\/(\d+)\/onboarding$/, "/homes/$1/onboarding"],
-  [/\/homes\/(\d+)\/training$/, "/homes/$1/training"],
-  [/\/homes\/(\d+)\/probations$/, "/homes/$1/probations"],
-  [/\/homes\/(\d+)\/vacancies$/, "/homes/$1/vacancies"],
-  [/\/homes\/(\d+)\/pipeline$/, "/homes/$1/pipeline"],
-  [/\/homes\/(\d+)\/shifts$/, "/homes/$1/shifts"],
-  [/\/homes\/(\d+)\/absences$/, "/homes/$1/absences"],
-  [/\/homes\/(\d+)\/maintenance$/, "/homes/$1/maintenance"],
-  [/\/homes\/(\d+)\/finance$/, "/homes/$1/finance"],
-  [/\/homes\/(\d+)\/medication$/, "/homes/$1/medication"],
-  [/\/homes\/(\d+)\/admissions$/, "/homes/$1/admissions"],
-  [/\/homes\/(\d+)\/discharges$/, "/homes/$1/discharges"],
-  [/\/homes\/(\d+)\/visitors$/, "/homes/$1/visitors"],
-  [/\/homes\/(\d+)\/staff-files$/, "/homes/$1/staff-files"],
-  [/\/homes\/(\d+)\/audits$/, "/homes/$1/audits"],
-  [/\/homes\/(\d+)\/manager-actions$/, "/homes/$1/manager-actions"],
-  [/\/homes\/(\d+)\/reg40$/, "/homes/$1/reg40"],
-  [/\/homes\/(\d+)\/reg44$/, "/homes/$1/reg44"],
-  [/\/homes\/(\d+)\/reg45$/, "/homes/$1/reg45"],
-  [/\/homes\/(\d+)\/daily-notes$/, "/homes/$1/daily-notes"],
-  [/\/homes\/(\d+)\/incidents$/, "/homes/$1/incidents"],
-  [/\/homes\/(\d+)\/keywork$/, "/homes/$1/keywork"],
-  [/\/homes\/(\d+)\/transport$/, "/homes/$1/transport"],
-
   // Backwards-compatible fallbacks
   [/\/homes\/(\d+)\/staff$/, "/homes/$1/team"],
   [/\/homes\/(\d+)\/staff-documents$/, "/homes/$1/staff-files"],
@@ -548,54 +513,38 @@ export async function fetchYoungPersonAssistantBundle(youngPersonId) {
   return mergeAssistantBundle(responses);
 }
 
+const SAFE_HOME_BUNDLE_ROUTES = [
+  "dashboard",
+  "quality",
+  "compliance",
+];
+
 export async function fetchHomeAssistantBundle(homeId) {
   if (!homeId) {
     return mergeAssistantBundle([]);
   }
 
-  const urls = [
-    `/homes/${homeId}/dashboard`,
-    `/homes/${homeId}/team`,
-    `/homes/${homeId}/documents`,
-    `/homes/${homeId}/therapy`,
-    `/homes/${homeId}/communications`,
-    `/homes/${homeId}/supervisions`,
-    `/homes/${homeId}/reports`,
-    `/homes/${homeId}/quality`,
-    `/homes/${homeId}/compliance`,
-    `/homes/${homeId}/rota`,
-    `/homes/${homeId}/staffing`,
-    `/homes/${homeId}/onboarding`,
-    `/homes/${homeId}/training`,
-    `/homes/${homeId}/probations`,
-    `/homes/${homeId}/vacancies`,
-    `/homes/${homeId}/pipeline`,
-    `/homes/${homeId}/shifts`,
-    `/homes/${homeId}/absences`,
-    `/homes/${homeId}/maintenance`,
-    `/homes/${homeId}/finance`,
-    `/homes/${homeId}/medication`,
-    `/homes/${homeId}/admissions`,
-    `/homes/${homeId}/discharges`,
-    `/homes/${homeId}/visitors`,
-    `/homes/${homeId}/staff-files`,
-    `/homes/${homeId}/audits`,
-    `/homes/${homeId}/manager-actions`,
-    `/homes/${homeId}/reg40`,
-    `/homes/${homeId}/reg44`,
-    `/homes/${homeId}/reg45`,
-    `/homes/${homeId}/daily-notes`,
-    `/homes/${homeId}/incidents`,
-    `/homes/${homeId}/keywork`,
-    `/homes/${homeId}/transport`,
-  ];
+  const urls = SAFE_HOME_BUNDLE_ROUTES.map(
+    (route) => `/homes/${homeId}/${route}`
+  );
 
   const responses = await apiGetSettled(urls);
   return mergeAssistantBundle(responses);
 }
 
 export async function fetchQualityAssistantBundle(homeId) {
-  return fetchHomeAssistantBundle(homeId);
+  if (!homeId) {
+    return mergeAssistantBundle([]);
+  }
+
+  const urls = [
+    `/homes/${homeId}/quality`,
+    `/homes/${homeId}/compliance`,
+    `/homes/${homeId}/reports`,
+  ];
+
+  const responses = await apiGetSettled(urls);
+  return mergeAssistantBundle(responses);
 }
 
 export async function fetchAssistantScopeBundle(context = {}) {
