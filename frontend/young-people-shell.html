@@ -184,8 +184,54 @@
         class="workspace-screen"
         aria-labelledby="pageTitle"
       >
-        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--flat">
-          <section class="workspace-stage workspace-stage--full">
+        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--menubar">
+          <!-- Hidden but preserved for existing JS -->
+          <aside class="workspace-sidebar workspace-sidebar--hidden desktop-only" aria-label="Workspace navigation">
+            <div class="workspace-sidebar-shell">
+              <div class="workspace-sidebar-brand">
+                <div class="workspace-sidebar-brand-dot" aria-hidden="true"></div>
+                <span>Residential care workspace</span>
+              </div>
+
+              <section class="workspace-sidebar-profile-card">
+                <div class="workspace-sidebar-profile-top">
+                  <div
+                    class="workspace-sidebar-avatar"
+                    id="personAvatar"
+                    aria-hidden="true"
+                  >
+                    YP
+                  </div>
+
+                  <div class="workspace-sidebar-profile-copy">
+                    <h2 id="personName">Young person</h2>
+                    <p id="personMeta">Child-centred workspace</p>
+                  </div>
+                </div>
+
+                <div class="workspace-sidebar-meta-row">
+                  <span class="meta-chip">Live</span>
+                  <span class="meta-chip meta-chip--soft">Therapeutic view</span>
+                </div>
+              </section>
+
+              <button
+                id="backToSelectorBtn"
+                class="ghost-btn workspace-back-btn"
+                type="button"
+              >
+                Change young person
+              </button>
+
+              <nav
+                id="desktopNav"
+                class="workspace-nav workspace-nav--accordion workspace-nav--hidden"
+                aria-label="Workspace sections"
+              ></nav>
+            </div>
+          </aside>
+
+          <section class="workspace-stage">
             <div class="workspace-stage-top">
               <section class="workspace-stage-mobile-person mobile-only">
                 <div
@@ -207,29 +253,20 @@
               </section>
 
               <section
-                class="workspace-header-band workspace-header-band--calm workspace-header-band--compact workspace-header-band--refreshed"
+                class="workspace-header-band workspace-header-band--calm workspace-header-band--premium"
                 aria-labelledby="pageTitle"
               >
-                <div class="workspace-header-main workspace-header-main--refreshed">
-                  <div class="workspace-header-identity">
-                    <div
-                      id="profileSnapshotPhotoWrap"
-                      class="profile-snapshot-photo-wrap"
-                      aria-label="Workspace avatar"
-                    >
-                      <div class="profile-photo-fallback" aria-hidden="true">YP</div>
-                    </div>
-
-                    <div class="workspace-header-copy">
-                      <div id="workspaceEyebrow" class="eyebrow">Young person workspace</div>
-                      <h1 id="pageTitle">Today’s workspace</h1>
-                      <p id="pageSubtitle">
-                        Clear day-to-day recording, continuity, oversight and thoughtful next steps.
-                      </p>
-                    </div>
+                <div class="workspace-header-main">
+                  <div class="workspace-header-copy">
+                    <div id="workspaceEyebrow" class="eyebrow">Young person workspace</div>
+                    <h1 id="pageTitle">Today’s workspace</h1>
+                    <p id="pageSubtitle">
+                      A calmer, child-focused view for recording, reflection,
+                      continuity and thoughtful next steps.
+                    </p>
                   </div>
 
-                  <div class="workspace-header-actions workspace-header-actions--refreshed">
+                  <div class="workspace-header-actions">
                     <button id="heroAssistantBtn" class="secondary-btn" type="button">
                       Ask assistant
                     </button>
@@ -244,6 +281,15 @@
                     </button>
 
                     <button
+                      id="profilePhotoUploadBtn"
+                      class="ghost-btn"
+                      type="button"
+                      data-action-router="edit-profile-identity"
+                    >
+                      Update profile
+                    </button>
+
+                    <button
                       id="changePersonBtn"
                       class="ghost-btn desktop-only"
                       type="button"
@@ -253,8 +299,16 @@
                   </div>
                 </div>
 
-                <div class="workspace-header-context workspace-header-context--refreshed">
-                  <div class="workspace-person-card workspace-person-card--refreshed">
+                <div class="workspace-header-context">
+                  <div class="workspace-person-card">
+                    <div
+                      id="profileSnapshotPhotoWrap"
+                      class="profile-snapshot-photo-wrap"
+                      aria-label="Workspace avatar"
+                    >
+                      <div class="profile-photo-fallback" aria-hidden="true">YP</div>
+                    </div>
+
                     <div class="workspace-person-copy">
                       <h3 id="profileSnapshotName">Young person</h3>
                       <p id="profileSnapshotMeta">
@@ -263,14 +317,14 @@
                     </div>
                   </div>
 
-                  <div class="workspace-header-meta workspace-header-meta--refreshed">
+                  <div class="workspace-header-meta">
                     <span class="meta-chip">Live</span>
                     <span class="meta-chip meta-chip--soft">Current scope</span>
                   </div>
 
                   <div
                     id="workspaceSummaryStrip"
-                    class="workspace-summary-strip workspace-summary-strip--refreshed"
+                    class="workspace-summary-strip"
                     data-workspace-summary-strip
                     aria-label="Current summary"
                   >
@@ -299,108 +353,103 @@
 
               <section
                 id="quickCreateBar"
-                class="quick-actions-panel quick-actions-panel--workspacebar"
-                aria-label="Workspace navigation and actions"
+                class="quick-actions-panel quick-actions-panel--osmenu"
+                aria-label="Workspace menu"
               >
-                <div class="workspace-toolbar">
-                  <nav
-                    id="heroQuickActions"
-                    class="workspace-primary-nav"
-                    role="navigation"
-                    aria-label="Primary workspace sections"
-                  >
-                    <button class="workspace-tab active" type="button" data-nav-section="workspace">
-                      Today
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="overview">
-                      Overview
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="timeline">
-                      Timeline
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="handover">
-                      Handover
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="health">
-                      Health
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="education">
-                      Education
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="family">
-                      Family
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="communication">
-                      Communication
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="documents">
-                      Documents
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="reports">
-                      Reports
-                    </button>
-                    <button class="workspace-tab" type="button" data-nav-section="manager">
-                      Manager
-                    </button>
-                  </nav>
+                <div class="quick-actions-panel-head quick-actions-panel-head--compact">
+                  <div>
+                    <div class="eyebrow">Workspace menu</div>
+                    <h2>Navigate and act quickly</h2>
+                  </div>
+                  <p>
+                    Open one menu at a time to move through the workspace and create records without clutter.
+                  </p>
+                </div>
 
-                  <details class="workspace-actions-menu">
-                    <summary class="workspace-actions-trigger">Actions</summary>
-                    <div class="workspace-actions-dropdown">
-                      <button class="workspace-actions-link" type="button" data-action-router="new-daily-note">
-                        Add daily note
-                        <small>Record day-to-day care and context</small>
-                      </button>
-
-                      <button class="workspace-actions-link" type="button" data-action-router="new-incident">
-                        Add important event
-                        <small>Log incidents or significant events</small>
-                      </button>
-
-                      <button class="workspace-actions-link" type="button" data-action-router="new-health-record">
-                        Add health record
-                        <small>Medication, symptoms or wellbeing notes</small>
-                      </button>
-
-                      <button class="workspace-actions-link" type="button" data-action-router="new-education-record">
-                        Add education record
-                        <small>School, attendance or progress updates</small>
-                      </button>
-
-                      <button class="workspace-actions-link" type="button" data-action-router="new-family-contact">
-                        Add family contact
-                        <small>Record contact and relationship updates</small>
-                      </button>
-
-                      <button class="workspace-actions-link" type="button" data-action-router="new-support-plan">
-                        Add support plan
-                        <small>Create or update planned support</small>
-                      </button>
-
-                      <button class="workspace-actions-link" type="button" data-action-router="new-task">
-                        Add task
-                        <small>Set a follow-up action</small>
-                      </button>
-
-                      <button class="workspace-actions-link" type="button" data-action-router="edit-profile-identity">
-                        Update profile
-                        <small>Edit photo, identity details and preferences</small>
-                      </button>
-
-                      <button class="workspace-actions-link" type="button" data-action-router="upload-document">
-                        Upload document
-                        <small>Add supporting evidence and files</small>
-                      </button>
+                <nav
+                  id="heroQuickActions"
+                  class="workspace-menubar"
+                  role="navigation"
+                  aria-label="Workspace sections and actions"
+                >
+                  <details class="workspace-menu" open>
+                    <summary class="workspace-menu-trigger">Overview</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-nav-section="workspace">Today’s workspace</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="overview">What matters today</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="timeline">Chronology and events</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="calendar">Appointments and key dates</button>
                     </div>
                   </details>
-                </div>
-              </section>
 
-              <nav
-                id="desktopNav"
-                class="workspace-nav workspace-nav--hidden"
-                aria-label="Workspace sections"
-              ></nav>
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Care records</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-daily-note">Add daily note</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-incident">Add important event</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="handover">Open handover</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="communication">Communication log</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Health and wellbeing</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-health-record">Add health record</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="health">Health and wellbeing</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="therapy">Therapeutic services</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="calendar">Appointments</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Learning and development</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-education-record">Add education record</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="education">Learning and education</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="readiness">Actions and readiness</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Relationships</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-nav-section="profile">About this young person</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="family">Relationships and family</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">Add family contact</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="professional-message">Log communication</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Planning and review</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-support-plan">Add support plan</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-task">Add task</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reports">Reports and review</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="manager">Leadership and review</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Documents</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="upload-document">Upload document</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="documents">Documents</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reports">Reports</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Team and home</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-nav-section="team">Team around the child</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="supervision">Supervision</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="manager">Manager view</button>
+                    </div>
+                  </details>
+                </nav>
+              </section>
 
               <section
                 id="statusBar"
@@ -546,7 +595,7 @@
               class="secondary-btn"
               type="button"
             >
-             Close
+              Close
             </button>
           </div>
         </header>
@@ -897,5 +946,6 @@
   </div>
 
   <script type="module" src="/js/young-people-shell/index.js"></script>
+  <script type="module" src="/js/young-people-shell/workspace-menubar.js"></script>
 </body>
 </html>
