@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from services.assistant_context_service import build_assistant_context
+
+AssistantType = Literal["public", "young_people_os"]
 
 
 def _safe_name(young_person: dict[str, Any] | None) -> str:
@@ -14,7 +16,9 @@ def _safe_name(young_person: dict[str, Any] | None) -> str:
     preferred = (young_person.get("preferred_name") or "").strip()
     first_name = (young_person.get("first_name") or "").strip()
     full_name = " ".join(
-        part for part in [young_person.get("first_name"), young_person.get("last_name")] if part
+        part
+        for part in [young_person.get("first_name"), young_person.get("last_name")]
+        if part
     ).strip()
 
     return preferred or first_name or full_name or "the young person"
@@ -54,6 +58,68 @@ def _clean_ui_context(context: dict[str, Any] | None) -> dict[str, Any]:
         "shift_context": context.get("shift_context"),
     }
     return {k: v for k, v in cleaned.items() if v not in (None, "", [], {})}
+
+
+def _normalise_scope_for_assistant(
+    scope: dict[str, Any] | None,
+    *,
+    assistant_type: AssistantType,
+) -> dict[str, Any]:
+    raw_scope = scope or {}
+    scope_type = str(raw_scope.get("scope_type") or "global").strip().lower()
+
+    home_id = raw_scope.get("home_id")
+    young_person_id = raw_scope.get("young_person_id")
+
+    if assistant_type == "public":
+        # Hard separation: public assistant is always global.
+        return {
+            "scope_type": "global",
+            "home_id": None,
+            "young_person_id": None,
+        }
+
+    # young_people_os assistant
+    if scope_type not in {"global", "young_person"}:
+        raise ValueError("Unsupported scope_type for young people assistant.")
+
+    if scope_type == "young_person" and not young_person_id:
+        raise ValueError("young_person_id is required for young_person scope.")
+
+    if scope_type == "global":
+        young_person_id = None
+
+    return {
+        "scope_type": scope_type,
+        "home_id": home_id,
+        "young_person_id": young_person_id,
+    }
+
+
+def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, str]]:
+    safe_history: list[dict[str, str]] = []
+
+    for item in history or []:
+        if not isinstance(item, dict):
+            continue
+
+        role = str(item.get("role") or "").strip().lower()
+        content = str(item.get("content") or item.get("message") or "").strip()
+
+        if role not in {"user", "assistant", "system"}:
+            continue
+
+        if not content:
+            continue
+
+        safe_history.append(
+            {
+                "role": role,
+                "content": content[:3000],
+            }
+        )
+
+    return safe_history[-12:]
 
 
 def _build_compact_global_context(context: dict[str, Any]) -> dict[str, Any]:
@@ -458,11 +524,15 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
     }
 
 
-def _build_compact_context(context: dict[str, Any]) -> dict[str, Any]:
+def _build_compact_context(
+    context: dict[str, Any],
+    *,
+    assistant_type: AssistantType,
+) -> dict[str, Any]:
     scope = context.get("scope") or {}
     scope_type = (scope.get("scope_type") or "global").strip().lower()
 
-    if scope_type == "young_person":
+    if assistant_type == "young_people_os" and scope_type == "young_person":
         return _build_compact_young_person_context(context)
 
     return _build_compact_global_context(context)
@@ -517,16 +587,14 @@ def _build_young_person_summary(context: dict[str, Any]) -> str:
     ]
 
     current_formulation = identity.get("current_formulation")
-    if current_formulation:
-        lines.append("- Current formulation available: yes")
-    else:
-        lines.append("- Current formulation available: no")
+    lines.append(
+        f"- Current formulation available: {'yes' if current_formulation else 'no'}"
+    )
 
     communication_profile = identity.get("communication_profile")
-    if communication_profile:
-        lines.append("- Communication profile available: yes")
-    else:
-        lines.append("- Communication profile available: no")
+    lines.append(
+        f"- Communication profile available: {'yes' if communication_profile else 'no'}"
+    )
 
     return "\n".join(lines)
 
@@ -558,34 +626,48 @@ def _build_ui_summary(ui_context: dict[str, Any] | None) -> str:
 
 def _build_prompt(
     *,
+    assistant_type: AssistantType,
     message: str,
     context: dict[str, Any],
     ui_context: dict[str, Any] | None = None,
-    history: list[dict[str, Any]] | None = None,
+    history: list[dict[str, str]] | None = None,
 ) -> str:
     scope = context.get("scope") or {}
     scope_type = scope.get("scope_type")
 
-    if scope_type == "young_person":
+    if assistant_type == "young_people_os" and scope_type == "young_person":
         summary = _build_young_person_summary(context)
+        assistant_header = "You are the IndiCare Young People OS assistant."
+        guardrail = (
+            "You must stay strictly within the scoped young person OS context. "
+            "Do not answer with information about other young people, other homes, "
+            "or any public-assistant context."
+        )
     else:
         summary = _build_global_summary(context)
+        assistant_header = "You are the IndiCare public assistant."
+        guardrail = (
+            "You must stay strictly within public assistant context. "
+            "Do not use, infer, expose, or reference any young person OS data."
+        )
 
     ui_summary = _build_ui_summary(ui_context)
 
     history_lines: list[str] = []
     for item in history or []:
         role = str(item.get("role") or "").strip()
-        content = str(item.get("message") or "").strip()
+        content = str(item.get("content") or "").strip()
         if role and content:
             history_lines.append(f"{role.upper()}: {content}")
 
-    history_text = "\n".join(history_lines[-12:]).strip()
+    history_text = "\n".join(history_lines).strip()
 
     return f"""
-You are the IndiCare assistant.
+{assistant_header}
 
-Use the context below to answer clearly, safely and practically for a children's home setting.
+{guardrail}
+
+Use the context below to answer clearly, safely and practically.
 Keep the answer grounded in the available data.
 If there are gaps in the context, say so.
 If the request appears to need drafting, produce a structured draft.
@@ -619,24 +701,35 @@ def build_assistant_prompt(
     scope: dict[str, Any] | None = None,
     history: list[dict[str, Any]] | None = None,
     context: dict[str, Any] | None = None,
+    assistant_type: AssistantType = "public",
 ) -> dict[str, Any]:
+    normalised_scope = _normalise_scope_for_assistant(
+        scope,
+        assistant_type=assistant_type,
+    )
+
     built_context = build_assistant_context(
         conn,
         user_id=user_id,
-        scope=scope,
+        scope=normalised_scope,
     )
 
     ui_context = _clean_ui_context(context)
-    compact_context = _build_compact_context(built_context)
+    safe_history = _normalise_history(history)
+    compact_context = _build_compact_context(
+        built_context,
+        assistant_type=assistant_type,
+    )
 
     if ui_context:
         compact_context["ui_context"] = ui_context
 
     prompt = _build_prompt(
-        message=message,
+        assistant_type=assistant_type,
+        message=str(message or "").strip(),
         context=built_context,
         ui_context=ui_context,
-        history=history,
+        history=safe_history,
     )
 
     json_safe_context = json.loads(
@@ -647,13 +740,16 @@ def build_assistant_prompt(
         )
     )
 
+    built_scope = built_context.get("scope") or {}
+
     return {
         "prompt": prompt,
         "context": json_safe_context,
         "runtime": {
-            "scope_type": (built_context.get("scope") or {}).get("scope_type"),
-            "home_id": (built_context.get("scope") or {}).get("home_id"),
-            "young_person_id": (built_context.get("scope") or {}).get("young_person_id"),
+            "assistant_type": assistant_type,
+            "scope_type": built_scope.get("scope_type"),
+            "home_id": built_scope.get("home_id"),
+            "young_person_id": built_scope.get("young_person_id"),
             "current_view": ui_context.get("current_view"),
             "young_person_name": ui_context.get("young_person_name"),
             "placement_status": ui_context.get("placement_status"),
@@ -661,5 +757,6 @@ def build_assistant_prompt(
             "composer_record_type": ui_context.get("composer_record_type"),
             "home_name": ui_context.get("home_name"),
             "shift_context": ui_context.get("shift_context"),
+            "history_items_used": len(safe_history),
         },
     }
