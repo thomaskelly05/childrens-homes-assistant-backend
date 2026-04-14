@@ -32,6 +32,12 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+function toTime(value) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
 function formatDate(value) {
   if (!value) return "No date";
 
@@ -101,6 +107,7 @@ function getStatusTone(status = "") {
       "up_to_date",
       "current",
       "signed_off",
+      "recorded",
     ].includes(normalised)
   ) {
     return "success";
@@ -111,22 +118,22 @@ function getStatusTone(status = "") {
 
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    return toTime(bValue) - toTime(aValue);
   });
 }
 
 function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(aValue).getTime() - new Date(bValue).getTime();
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    return toTime(aValue) - toTime(bValue);
   });
 }
 
 function normaliseSummary(data = {}) {
-  return data.summary || data.supervision_summary || data.dashboard || data || {};
+  return data.summary || data.supervision_summary || data.dashboard || {};
 }
 
 function normaliseSupervisionItems(data = {}) {
@@ -148,7 +155,7 @@ function normaliseSupervisionItems(data = {}) {
     strengths: item.strengths || "",
     development_needs: item.development_needs || "",
     actions_agreed: item.actions_agreed || "",
-    session_date: item.session_date || item.completed_at || null,
+    session_date: item.session_date || item.completed_at || item.created_at || null,
     next_due_date: item.next_due_date || item.review_date || null,
     status: item.status || "recorded",
     created_at: item.created_at || null,
@@ -201,6 +208,7 @@ function buildStats(items = []) {
 function buildPriorityItems(items = []) {
   return items.filter((item) => {
     const status = String(item.status || "").toLowerCase();
+
     return (
       [
         "overdue",
@@ -469,11 +477,13 @@ function renderSupervisionPage({
 
 function buildFallbackData(homeId) {
   const now = new Date();
+
   const plusDays = (days) => {
     const d = new Date(now);
     d.setDate(d.getDate() + days);
     return d.toISOString();
   };
+
   const minusDays = (days) => {
     const d = new Date(now);
     d.setDate(d.getDate() - days);
@@ -497,9 +507,12 @@ function buildFallbackData(homeId) {
           staff_member: "Ben Carter",
           supervisor: "Sarah Ahmed",
           supervision_type: "Probation supervision",
-          summary: "Probation supervision overdue. Review confidence, boundaries and recording quality.",
-          development_needs: "Needs stronger confidence with safeguarding recording.",
-          actions_agreed: "Book supervision this week and complete probation review note.",
+          summary:
+            "Probation supervision overdue. Review confidence, boundaries and recording quality.",
+          development_needs:
+            "Needs stronger confidence with safeguarding recording.",
+          actions_agreed:
+            "Book supervision this week and complete probation review note.",
           session_date: minusDays(35),
           next_due_date: minusDays(5),
           status: "overdue",
@@ -511,7 +524,8 @@ function buildFallbackData(homeId) {
           supervision_type: "Monthly supervision",
           summary: "Monthly supervision due this week.",
           strengths: "Strong relationship-based practice and good reflection.",
-          actions_agreed: "Review workload and training refresh in next supervision.",
+          actions_agreed:
+            "Review workload and training refresh in next supervision.",
           session_date: minusDays(24),
           next_due_date: plusDays(3),
           status: "due_soon",
@@ -522,7 +536,8 @@ function buildFallbackData(homeId) {
           supervisor: "Tom Kelly",
           supervision_type: "Manager supervision",
           summary: "Recent supervision completed and signed off.",
-          strengths: "Clear leadership, consistent follow-up and good oversight.",
+          strengths:
+            "Clear leadership, consistent follow-up and good oversight.",
           session_date: minusDays(10),
           next_due_date: plusDays(18),
           status: "completed",
@@ -533,7 +548,8 @@ function buildFallbackData(homeId) {
           supervisor: "Sarah Ahmed",
           supervision_type: "Induction supervision",
           summary: "Initial induction supervision scheduled.",
-          development_needs: "Needs confidence with medication processes and handover clarity.",
+          development_needs:
+            "Needs confidence with medication processes and handover clarity.",
           next_due_date: plusDays(2),
           status: "induction",
         },
@@ -544,7 +560,6 @@ function buildFallbackData(homeId) {
 
 async function fetchDataset(homeId) {
   const requests = [apiGet(`/homes/${homeId}/supervisions`)];
-
   const results = await Promise.allSettled(requests);
   const hasLiveSuccess = results.some((result) => result.status === "fulfilled");
 
@@ -693,6 +708,7 @@ export async function loadSupervision() {
       }`,
     });
   } catch (error) {
+    console.error("[supervision] load failed", error);
     renderErrorState(error?.message || "Failed to load supervision data.");
   }
 }
