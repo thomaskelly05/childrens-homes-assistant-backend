@@ -52,6 +52,10 @@ import { loadCommunication } from "../features/communication.js";
 import { loadTherapy } from "../features/therapy.js";
 import { loadTeam } from "../features/team.js";
 import { loadSupervision } from "../features/supervision.js";
+import { loadStaffProfile } from "../features/staff-profile.js";
+import { loadOnboarding } from "../features/onboarding.js";
+import { loadNotifications } from "../features/notifications.js";
+import { loadRota } from "../features/rota.js";
 
 const SECTION_LOADERS = {
   workspace: loadWorkspace,
@@ -74,6 +78,10 @@ const SECTION_LOADERS = {
   compliance: loadCompliance,
   "home-dashboard": loadHomeDashboard,
   quality: loadQualityDashboard,
+  "staff-profile": loadStaffProfile,
+  onboarding: loadOnboarding,
+  notifications: loadNotifications,
+  rota: loadRota,
 };
 
 const ICON_MAP = {
