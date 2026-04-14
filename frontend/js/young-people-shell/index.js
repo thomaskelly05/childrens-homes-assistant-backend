@@ -24,7 +24,6 @@ import {
   ROLE_SCOPE_ACCESS,
   SCOPE_DEFAULT_SECTION,
 } from "./core/config.js";
-import { initWorkspaceMenubar } from "./workspace-menubar.js";
 
 let scopeEventsBound = false;
 let bootstrapped = false;
@@ -148,9 +147,7 @@ function syncDomDatasetFromState() {
   els.app.dataset.userRole = normaliseRole(state.userRole || "staff");
   els.app.dataset.scope = state.currentScope || "child";
   els.app.dataset.homeId = state.homeId ? String(state.homeId) : "";
-  els.app.dataset.youngPersonId = state.youngPersonId
-    ? String(state.youngPersonId)
-    : "";
+  els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
 }
 
 function getCurrentRole() {
@@ -176,15 +173,23 @@ function canAccessScope(scope) {
 }
 
 function getDefaultScopeForRole() {
+  const role = getCurrentRole();
   const allowed = getAllowedScopesForRole();
 
-  if (allowed.includes("home")) return "home";
-  if (allowed.includes("quality")) return "quality";
+  if (role === "ri" && allowed.includes("quality")) return "quality";
+  if ((role === "admin" || role === "manager") && allowed.includes("home")) return "home";
+  if (allowed.includes("child")) return "child";
+
   return allowed[0] || "child";
 }
 
 function getDefaultSectionForScope(scope = state.currentScope || "child") {
   return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
+}
+
+function shouldForceRoleDefaultScope() {
+  const role = getCurrentRole();
+  return role === "admin" || role === "manager" || role === "ri";
 }
 
 function ensureValidScopeForRole() {
@@ -387,29 +392,6 @@ function syncVisibleScreen() {
   showWorkspace();
 }
 
-function bindWorkspaceMenuSectionRouting() {
-  document.addEventListener("click", async (event) => {
-    const trigger = event.target.closest("[data-nav-section]");
-    if (!trigger) return;
-
-    const targetSection = String(trigger.dataset.navSection || "").trim();
-    if (!targetSection) return;
-
-    try {
-      state.currentSection = targetSection;
-      state.activeSection = targetSection;
-      state.currentView = targetSection;
-
-      syncDomDatasetFromState();
-      refreshAllChrome();
-      await loadSection(targetSection);
-    } catch (error) {
-      console.error("[index] failed loading menu section", error);
-      showError(error?.message || "Failed to open section.");
-    }
-  });
-}
-
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
@@ -417,18 +399,13 @@ async function bootstrap() {
   try {
     hydrateRuntimeContextFromDom();
     hydrateRuntimeContextFromSession();
-    ensureValidScopeForRole();
 
-    if (!state.currentScope || state.currentScope === "child") {
-      const currentRole = getCurrentRole();
-      if (
-        currentRole === "admin" ||
-        currentRole === "manager" ||
-        currentRole === "ri"
-      ) {
-        state.currentScope = getDefaultScopeForRole();
-      }
+    // Important: do not let the hard-coded HTML scope trap privileged users in child scope.
+    if (shouldForceRoleDefaultScope()) {
+      state.currentScope = getDefaultScopeForRole();
     }
+
+    ensureValidScopeForRole();
 
     state.currentSection = getDefaultSectionForScope(state.currentScope);
     state.activeSection = state.currentSection;
@@ -448,7 +425,6 @@ async function bootstrap() {
     bindAssistantUi();
     bindAssistantEvents();
     bindScopeEvents();
-    bindWorkspaceMenuSectionRouting();
 
     refreshAllChrome();
 
@@ -468,9 +444,6 @@ async function bootstrap() {
 
     await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
-
-    initWorkspaceMenubar();
-
     refreshAllChrome();
     refreshWorkspaceSummary();
   } catch (error) {
