@@ -1,6 +1,7 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiStreamAssistant } from "../core/api.js";
+import * as aiScrubber from "../core/ai-scrubber.js";
 import {
   refreshAssistantUi,
   appendAssistantSystemMessage,
@@ -730,6 +731,123 @@ function buildAssistantContextPayload(message = "") {
   };
 }
 
+function getScrubberFunction() {
+  if (typeof aiScrubber.scrubAssistantPayload === "function") {
+    return aiScrubber.scrubAssistantPayload;
+  }
+
+  if (typeof aiScrubber.scrubPayloadForAssistant === "function") {
+    return aiScrubber.scrubPayloadForAssistant;
+  }
+
+  if (typeof aiScrubber.scrubPayload === "function") {
+    return aiScrubber.scrubPayload;
+  }
+
+  if (typeof aiScrubber.default === "function") {
+    return aiScrubber.default;
+  }
+
+  return null;
+}
+
+function getScrubberMeta(scrubbedResult, originalPayload, finalPayload) {
+  if (
+    scrubbedResult &&
+    typeof scrubbedResult === "object" &&
+    !Array.isArray(scrubbedResult)
+  ) {
+    if (scrubbedResult.meta && typeof scrubbedResult.meta === "object") {
+      return scrubbedResult.meta;
+    }
+
+    if (scrubbedResult.scrub_meta && typeof scrubbedResult.scrub_meta === "object") {
+      return scrubbedResult.scrub_meta;
+    }
+  }
+
+  return {
+    enabled: finalPayload !== originalPayload,
+    mode: "client_side",
+  };
+}
+
+function extractScrubbedPayload(scrubbedResult, fallbackPayload) {
+  if (!scrubbedResult) {
+    return fallbackPayload;
+  }
+
+  if (
+    scrubbedResult &&
+    typeof scrubbedResult === "object" &&
+    !Array.isArray(scrubbedResult)
+  ) {
+    if (scrubbedResult.payload && typeof scrubbedResult.payload === "object") {
+      return scrubbedResult.payload;
+    }
+
+    if (
+      scrubbedResult.scrubbed_payload &&
+      typeof scrubbedResult.scrubbed_payload === "object"
+    ) {
+      return scrubbedResult.scrubbed_payload;
+    }
+
+    if (
+      scrubbedResult.data &&
+      typeof scrubbedResult.data === "object" &&
+      scrubbedResult.message
+    ) {
+      return scrubbedResult.data;
+    }
+  }
+
+  if (typeof scrubbedResult === "object") {
+    return scrubbedResult;
+  }
+
+  return fallbackPayload;
+}
+
+function scrubAssistantRequestPayload(payload) {
+  const scrubberFn = getScrubberFunction();
+
+  if (!scrubberFn) {
+    return {
+      payload,
+      meta: {
+        enabled: false,
+        reason: "scrubber_not_found",
+      },
+    };
+  }
+
+  try {
+    const scrubbedResult = scrubberFn(payload);
+    const scrubbedPayload = extractScrubbedPayload(scrubbedResult, payload);
+    const scrubMeta = getScrubberMeta(scrubbedResult, payload, scrubbedPayload);
+
+    return {
+      payload: scrubbedPayload,
+      meta: {
+        enabled: true,
+        ...(scrubMeta || {}),
+      },
+    };
+  } catch (error) {
+    console.error("[assistant] ai scrubber failed", error);
+
+    return {
+      payload,
+      meta: {
+        enabled: false,
+        reason: "scrubber_error",
+        error: error?.message || "Unknown scrubber error",
+      },
+    };
+  }
+}
+
 function applyAssistantMeta(meta = {}) {
   mergeAssistantMeta(meta);
   syncAssistantUi();
@@ -778,48 +896,58 @@ export async function askAssistant(question) {
   try {
     const contextPayload = buildAssistantContextPayload(trimmed);
 
-    await apiStreamAssistant(
-      {
-        message: trimmed,
-        response_mode: detectAssistantResponseMode(trimmed),
-        context: contextPayload,
-      },
-      {
-        onMeta: (meta) => {
-          applyAssistantMeta({
-            ...meta,
-            runtime: {
-              ...(meta?.runtime || {}),
-              assistant_intent: contextPayload.assistant_intent,
-              retrieval_mode: contextPayload.retrieval_mode,
-              output_mode: contextPayload.output_mode,
-              whole_os_default: true,
-            },
-            explainability: {
-              ...(meta?.explainability || {}),
-              reasoning_summary:
-                meta?.explainability?.reasoning_summary ||
-                `Intent: ${contextPayload.assistant_intent}. Retrieval: ${contextPayload.retrieval_mode}. Output: ${contextPayload.output_mode}.`,
-            },
-            assistant_context: {
-              ...(meta?.assistant_context || {}),
-              requested_scope_mode: contextPayload.retrieval_mode,
-              whole_os_default: true,
-            },
-          });
-        },
-        onProgress: () => {},
-        onMessage: (streamedText) => {
-          updateLastAssistantStreamingText(streamedText || "Thinking…");
-        },
-        onDone: (streamedText) => {
-          const safeReply =
-            String(streamedText || "").trim() || "No assistant reply returned.";
+    const outboundPayload = {
+      message: trimmed,
+      response_mode: detectAssistantResponseMode(trimmed),
+      context: contextPayload,
+    };
 
-          replaceLastAssistantPlaceholder(safeReply);
-        },
-      }
-    );
+    const scrubbed = scrubAssistantRequestPayload(outboundPayload);
+
+    await apiStreamAssistant(scrubbed.payload, {
+      onMeta: (meta) => {
+        applyAssistantMeta({
+          ...meta,
+          runtime: {
+            ...(meta?.runtime || {}),
+            assistant_intent: contextPayload.assistant_intent,
+            retrieval_mode: contextPayload.retrieval_mode,
+            output_mode: contextPayload.output_mode,
+            whole_os_default: true,
+            ai_scrubber_enabled: scrubbed.meta?.enabled ?? false,
+          },
+          explainability: {
+            ...(meta?.explainability || {}),
+            reasoning_summary:
+              meta?.explainability?.reasoning_summary ||
+              `Intent: ${contextPayload.assistant_intent}. Retrieval: ${contextPayload.retrieval_mode}. Output: ${contextPayload.output_mode}.`,
+            ai_scrubber:
+              scrubbed.meta?.enabled
+                ? "Client-side AI scrubber applied before outbound request."
+                : "Client-side AI scrubber not applied.",
+          },
+          assistant_context: {
+            ...(meta?.assistant_context || {}),
+            requested_scope_mode: contextPayload.retrieval_mode,
+            whole_os_default: true,
+          },
+          assistant_scope: {
+            ...(meta?.assistant_scope || {}),
+            scrubber_meta: scrubbed.meta || {},
+          },
+        });
+      },
+      onProgress: () => {},
+      onMessage: (streamedText) => {
+        updateLastAssistantStreamingText(streamedText || "Thinking…");
+      },
+      onDone: (streamedText) => {
+        const safeReply =
+          String(streamedText || "").trim() || "No assistant reply returned.";
+
+        replaceLastAssistantPlaceholder(safeReply);
+      },
+    });
   } catch (error) {
     replaceLastAssistantPlaceholder(
       error?.message || "The assistant could not answer right now."
