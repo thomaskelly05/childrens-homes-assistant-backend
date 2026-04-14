@@ -56,8 +56,11 @@ export const els = {
   heroAssistantBtn: document.getElementById("heroAssistantBtn"),
   heroQuickActions: document.getElementById("heroQuickActions"),
   changePersonBtn: document.getElementById("changePersonBtn"),
+  profileOpenBtn: document.getElementById("profileOpenBtn"),
+  profilePhotoUploadBtn: document.getElementById("profilePhotoUploadBtn"),
 
   // Workspace summary strip
+  workspaceSummaryStrip: document.getElementById("workspaceSummaryStrip"),
   summaryToday: document.getElementById("summaryToday"),
   summaryNextEvent: document.getElementById("summaryNextEvent"),
   summaryLastRecord: document.getElementById("summaryLastRecord"),
