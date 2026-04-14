@@ -1,8 +1,23 @@
 export const ROLE_SCOPE_ACCESS = Object.freeze({
-  staff: ["child"],
-  manager: ["child", "home"],
+  // Residential staff
+  staff: ["child", "home"],
+  rsw: ["child", "home"],
+  residential_support_worker: ["child", "home"],
+
+  // Management
+  manager: ["child", "home", "quality"],
+  registered_manager: ["child", "home", "quality"],
+  deputy_manager: ["child", "home", "quality"],
+
+  // RI
   ri: ["child", "home", "quality"],
+  responsible_individual: ["child", "home", "quality"],
+
+  // Admin
   admin: ["child", "home", "quality"],
+  administrator: ["child", "home", "quality"],
+  super_admin: ["child", "home", "quality"],
+  superadmin: ["child", "home", "quality"],
 });
 
 export const SCOPE_DEFAULT_SECTION = Object.freeze({
