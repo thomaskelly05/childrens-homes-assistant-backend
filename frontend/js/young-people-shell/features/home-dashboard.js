@@ -900,7 +900,7 @@ function renderHomeDashboardHtml({
                 ]
                   .filter(Boolean)
                   .join(" • "),
-              statusBuilder: (item) => item.placement_status || "active",
+              statusKey: "placement_status",
             })}
           </div>
 
@@ -1051,10 +1051,7 @@ function renderHomeDashboardHtml({
               summaryKey: "summary",
               recordType: "report",
               metaBuilder: (item) =>
-                [
-                  item.review_month || "",
-                  item.status || "",
-                ]
+                [item.review_month || "", item.status || ""]
                   .filter(Boolean)
                   .join(" • "),
             })}
@@ -1319,41 +1316,17 @@ function buildFallbackData(homeId) {
 }
 
 async function fetchDataset(homeId) {
+  const safeGet = (url) => apiGet(url).catch(() => null);
+
   const requests = [
-    apiGet(`/homes/${homeId}/dashboard`).catch(() => null),
-    apiGet(`/homes/${homeId}/team`).catch(() => null),
-    apiGet(`/homes/${homeId}/tasks`).catch(() => null),
-    apiGet(`/homes/${homeId}/communications`).catch(() => null),
-    apiGet(`/homes/${homeId}/documents`).catch(() => null),
-    apiGet(`/homes/${homeId}/supervisions`).catch(() => null),
-    apiGet(`/homes/${homeId}/therapy`).catch(() => null),
-    apiGet(`/homes/${homeId}/reports`).catch(() => null),
-    apiGet(`/homes/${homeId}/compliance`).catch(() => null),
+    safeGet(`/homes/${homeId}/dashboard`),
+    safeGet(`/homes/${homeId}/compliance`),
+    safeGet(`/homes/${homeId}/reports`),
   ];
 
-  const [
-    summaryData,
-    teamData,
-    taskData,
-    communicationData,
-    documentData,
-    supervisionData,
-    therapyData,
-    reportData,
-    complianceData,
-  ] = await Promise.all(requests);
+  const [summaryData, complianceData, reportData] = await Promise.all(requests);
 
-  const hasLiveSuccess = [
-    summaryData,
-    teamData,
-    taskData,
-    communicationData,
-    documentData,
-    supervisionData,
-    therapyData,
-    reportData,
-    complianceData,
-  ].some(Boolean);
+  const hasLiveSuccess = [summaryData, complianceData, reportData].some(Boolean);
 
   if (!hasLiveSuccess) {
     return buildFallbackData(homeId);
@@ -1361,12 +1334,12 @@ async function fetchDataset(homeId) {
 
   return {
     summaryData: summaryData || {},
-    teamData: teamData || { items: [] },
-    taskData: taskData || { items: [] },
-    communicationData: communicationData || { items: [] },
-    documentData: documentData || { items: [] },
-    supervisionData: supervisionData || { items: [] },
-    therapyData: therapyData || { items: [] },
+    teamData: { items: [] },
+    taskData: { items: [] },
+    communicationData: { items: [] },
+    documentData: { items: [] },
+    supervisionData: { items: [] },
+    therapyData: { items: [] },
     reportData: reportData || { items: [] },
     complianceData: complianceData || { items: [] },
     isFallback: false,
