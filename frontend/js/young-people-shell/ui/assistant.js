@@ -10,6 +10,21 @@ import {
 let assistantEventsBound = false;
 let assistantPromptDelegatesBound = false;
 
+const ASSISTANT_INTENT = {
+  greeting: "greeting",
+  factual_lookup: "factual_lookup",
+  summary: "summary",
+  chronology: "chronology",
+  review: "review",
+  handover: "handover",
+  drafting: "drafting",
+  compliance: "compliance",
+  risk: "risk",
+  quality: "quality",
+  management: "management",
+  unknown: "unknown",
+};
+
 function getCurrentScope() {
   return state.currentScope || "child";
 }
@@ -222,16 +237,185 @@ function setAssistantSending(flag) {
   syncAssistantUi();
 }
 
+function isGreeting(text = "") {
+  return /^(hi|hello|hey|hiya|morning|good morning|afternoon|good afternoon|evening|good evening)\b/i.test(
+    String(text || "").trim()
+  );
+}
+
+function detectAssistantIntent(text = "") {
+  const value = String(text || "").trim().toLowerCase();
+
+  if (!value) return ASSISTANT_INTENT.unknown;
+  if (isGreeting(value)) return ASSISTANT_INTENT.greeting;
+
+  if (
+    /reg\s*45|regulation\s*45|qa full summary|full summary|comprehensive summary|full review|period review|six month|6 month|twelve month|12 month/.test(
+      value
+    )
+  ) {
+    return ASSISTANT_INTENT.review;
+  }
+
+  if (/chronology|timeline|what happened|history|in date order|events over time/.test(value)) {
+    return ASSISTANT_INTENT.chronology;
+  }
+
+  if (
+    /when was|what date|dates|last incident|last missing|next appointment|how many|overdue|due soon|upcoming/.test(
+      value
+    )
+  ) {
+    return ASSISTANT_INTENT.factual_lookup;
+  }
+
+  if (/handover|next shift|shift brief/.test(value)) {
+    return ASSISTANT_INTENT.handover;
+  }
+
+  if (/draft|write|reword|rewrite|wording|improve this/.test(value)) {
+    return ASSISTANT_INTENT.drafting;
+  }
+
+  if (/compliance|ofsted|supervision|training|statutory|audit/.test(value)) {
+    return ASSISTANT_INTENT.compliance;
+  }
+
+  if (/risk|safeguarding|harm|trigger|protective factor/.test(value)) {
+    return ASSISTANT_INTENT.risk;
+  }
+
+  if (/quality|ri|inspection|governance/.test(value)) {
+    return ASSISTANT_INTENT.quality;
+  }
+
+  if (/manager|oversight|leadership|escalation/.test(value)) {
+    return ASSISTANT_INTENT.management;
+  }
+
+  if (/summary|summarise|summarize|what matters|overview/.test(value)) {
+    return ASSISTANT_INTENT.summary;
+  }
+
+  return ASSISTANT_INTENT.unknown;
+}
+
+function detectRetrievalMode(text = "", intent = ASSISTANT_INTENT.unknown) {
+  const value = String(text || "").trim().toLowerCase();
+
+  if (/this section|this page|this screen|current view|current section|workspace section/.test(value)) {
+    return "section_only";
+  }
+
+  if (
+    [
+      ASSISTANT_INTENT.summary,
+      ASSISTANT_INTENT.chronology,
+      ASSISTANT_INTENT.review,
+      ASSISTANT_INTENT.factual_lookup,
+      ASSISTANT_INTENT.compliance,
+      ASSISTANT_INTENT.risk,
+      ASSISTANT_INTENT.quality,
+      ASSISTANT_INTENT.management,
+    ].includes(intent)
+  ) {
+    return "whole_scope";
+  }
+
+  if (intent === ASSISTANT_INTENT.handover || intent === ASSISTANT_INTENT.drafting) {
+    return /this section|this page|this draft/.test(value) ? "section_only" : "whole_scope";
+  }
+
+  return "whole_scope";
+}
+
+function detectOutputMode(intent = ASSISTANT_INTENT.unknown) {
+  if (intent === ASSISTANT_INTENT.chronology) return "chronology";
+  if (intent === ASSISTANT_INTENT.review) return "review_pack";
+  if (intent === ASSISTANT_INTENT.handover) return "handover";
+  if (intent === ASSISTANT_INTENT.compliance) return "compliance_brief";
+  if (intent === ASSISTANT_INTENT.summary) return "summary";
+  if (intent === ASSISTANT_INTENT.factual_lookup) return "factual_answer";
+  if (intent === ASSISTANT_INTENT.drafting) return "drafting";
+  return "answer";
+}
+
+function detectAssistantResponseMode(text) {
+  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report|audit|compliance|ofsted|ri|full summary|reg 45|regulation 45/i.test(
+    String(text || "")
+  )
+    ? "deep"
+    : "balanced";
+}
+
+function buildRoleAwareGreeting() {
+  const scope = getCurrentScope();
+
+  if (scope === "child") {
+    return `Hello. What would you like to know about ${getFullYoungPersonName()}? I can help with a full summary, chronology, dates, risks, appointments, family contact themes, or a handover.`;
+  }
+
+  if (scope === "home") {
+    return `Hello. What would you like to know about ${getHomeName()}? I can help with a full summary, chronology, staffing, compliance, overdue items, management oversight, or next actions.`;
+  }
+
+  return `Hello. What would you like to know about ${getHomeName()} quality and oversight? I can help with compliance themes, chronology, inspection readiness, or an RI-style summary.`;
+}
+
+function buildUnknownIntentPrompt() {
+  const scope = getCurrentScope();
+
+  if (scope === "child") {
+    return [
+      `I’m ready to help with ${getFullYoungPersonName()} across the whole OS record set.`,
+      "",
+      "You can ask for:",
+      "• a full summary",
+      "• a chronology",
+      "• important dates",
+      "• last incidents or appointments",
+      "• risks and protective factors",
+      "• family contact themes",
+      "• a handover",
+    ].join("\n");
+  }
+
+  if (scope === "home") {
+    return [
+      `I’m ready to help with ${getHomeName()} across the whole OS record set.`,
+      "",
+      "You can ask for:",
+      "• a full home summary",
+      "• chronology and dates",
+      "• staffing pressures",
+      "• overdue compliance",
+      "• management priorities",
+      "• handover-ready updates",
+    ].join("\n");
+  }
+
+  return [
+    `I’m ready to help with ${getHomeName()} quality and oversight across the whole OS record set.`,
+    "",
+    "You can ask for:",
+    "• a quality summary",
+    "• chronology and themes",
+    "• audit or RI issues",
+    "• compliance gaps",
+    "• governance concerns",
+  ].join("\n");
+}
+
 function assistantPromptsForView(view, scope = getCurrentScope()) {
   const childMap = {
     workspace: [
-      "Give me a 6 month summary for this young person.",
-      "What matters most right now?",
-      "Draft a short handover for the next shift.",
+      "Give me a full summary for this young person.",
+      "Create a chronology for this young person.",
+      "What matters most right now across the whole record?",
     ],
     overview: [
-      "What matters most right now?",
-      "Summarise the key themes today.",
+      "What matters most right now across the whole record?",
+      "Summarise the main themes for this young person.",
       "What should staff prioritise next?",
     ],
     profile: [
@@ -240,12 +424,12 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
       "What are the most important communication needs?",
     ],
     timeline: [
-      "Create a short chronology summary.",
+      "Create a chronology summary for this young person.",
       "What are the key turning points recently?",
       "What patterns can you see across incidents and presentation?",
     ],
     handover: [
-      "Give me a short handover for this young person.",
+      "Give me a handover for this young person.",
       "What does the next shift most need to know?",
       "What follow-up should the next shift complete?",
     ],
@@ -280,8 +464,8 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
       "What risks or compliance issues need oversight?",
     ],
     reports: [
-      "Give me a 6 month summary for this young person.",
-      "What are the strongest themes across the record?",
+      "Give me a full summary for this young person.",
+      "Create a chronology and analysis for this young person.",
       "Draft a professional summary for a review meeting.",
     ],
     documents: [
@@ -303,9 +487,9 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
 
   const homeMap = {
     "home-dashboard": [
-      "Summarise the home’s operational picture.",
-      "What needs management attention right now?",
-      "What are the biggest risks across the home today?",
+      "Give me a full summary for the home.",
+      "Create a chronology for the home.",
+      "What needs management attention right now across the whole service?",
     ],
     compliance: [
       "What compliance issues need urgent action?",
@@ -324,7 +508,7 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
     ],
     reports: [
       "Summarise the service for reporting purposes.",
-      "What are the strongest themes across the home?",
+      "Create a chronology and thematic summary for the home.",
       "Draft a home-level review summary.",
     ],
     calendar: [
@@ -373,7 +557,7 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
     reports: [
       "Draft a quality summary for leadership.",
       "What themes should be highlighted in reporting?",
-      "Summarise audit and compliance themes.",
+      "Create a chronology and audit summary.",
     ],
     manager: [
       "What leadership themes need escalation?",
@@ -421,8 +605,8 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
 
   return map[view] || [
     scope === "child"
-      ? "What matters most right now for this young person?"
-      : "What matters most right now across this area?",
+      ? "What matters most right now across the whole record?"
+      : "What matters most right now across the whole service record?",
     "What needs attention next?",
     "Give me a concise summary.",
   ];
@@ -440,12 +624,13 @@ export function updateAssistantContext() {
     scope === "child"
       ? state.youngPersonId
         ? {
-            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • section: ${sectionLabel}`,
+            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • whole OS scope • section: ${sectionLabel}`,
             scope_type: "young_person",
             current_scope: scope,
             current_section: section,
             young_person_name: getFullYoungPersonName(),
             home_name: getHomeName(),
+            retrieval_default: "whole_scope",
             suggested_prompts: assistantPromptsForView(section, scope),
           }
         : {
@@ -455,25 +640,28 @@ export function updateAssistantContext() {
             current_section: section,
             young_person_name: null,
             home_name: getHomeName(),
+            retrieval_default: "whole_scope",
             suggested_prompts: assistantPromptsForView(section, scope),
           }
       : scope === "home"
       ? {
-          summary: `Home: ${getHomeName()} • scope: home oversight • section: ${sectionLabel}`,
+          summary: `Home: ${getHomeName()} • whole-home OS scope • section: ${sectionLabel}`,
           scope_type: "home",
           current_scope: scope,
           current_section: section,
           young_person_name: null,
           home_name: getHomeName(),
+          retrieval_default: "whole_scope",
           suggested_prompts: assistantPromptsForView(section, scope),
         }
       : {
-          summary: `Home: ${getHomeName()} • scope: quality and RI • section: ${sectionLabel}`,
+          summary: `Home: ${getHomeName()} • quality and RI • whole oversight scope • section: ${sectionLabel}`,
           scope_type: "quality",
           current_scope: scope,
           current_section: section,
           young_person_name: null,
           home_name: getHomeName(),
+          retrieval_default: "whole_scope",
           suggested_prompts: assistantPromptsForView(section, scope),
         };
 
@@ -484,10 +672,13 @@ export function updateAssistantContext() {
   syncAssistantUi();
 }
 
-function buildAssistantContextPayload() {
+function buildAssistantContextPayload(message = "") {
   const person = getSelectedYoungPerson() || {};
   const scope = getCurrentScope();
   const section = getCurrentSection();
+  const intent = detectAssistantIntent(message);
+  const retrieval_mode = detectRetrievalMode(message, intent);
+  const output_mode = detectOutputMode(intent);
 
   return {
     scope,
@@ -516,21 +707,42 @@ function buildAssistantContextPayload() {
     current_scope: scope,
     current_section: section,
     user_role: state.userRole || "staff",
-    suggested_prompts: assistantPromptsForView(section, scope),
-  };
-}
 
-function detectAssistantResponseMode(text) {
-  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report|audit|compliance|ofsted|ri/i.test(
-    String(text || "")
-  )
-    ? "deep"
-    : "balanced";
+    assistant_intent: intent,
+    retrieval_mode,
+    output_mode,
+
+    whole_os_default: true,
+    section_only_requested: retrieval_mode === "section_only",
+    use_whole_scope_records: retrieval_mode !== "section_only",
+
+    ask_for_dates:
+      intent === ASSISTANT_INTENT.factual_lookup || intent === ASSISTANT_INTENT.chronology,
+    ask_for_chronology:
+      intent === ASSISTANT_INTENT.chronology || intent === ASSISTANT_INTENT.review,
+    ask_for_summary:
+      intent === ASSISTANT_INTENT.summary || intent === ASSISTANT_INTENT.review,
+    ask_for_review_pack: intent === ASSISTANT_INTENT.review,
+    ask_for_compliance_view:
+      intent === ASSISTANT_INTENT.compliance || scope === "quality",
+
+    suggested_prompts_ui_only: assistantPromptsForView(section, scope),
+  };
 }
 
 function applyAssistantMeta(meta = {}) {
   mergeAssistantMeta(meta);
   syncAssistantUi();
+}
+
+async function answerLocallyForGreeting(question) {
+  appendAssistantUserMessage(question);
+  appendAssistantSystemMessage(buildRoleAwareGreeting());
+}
+
+async function answerLocallyForUnknown(question) {
+  appendAssistantUserMessage(question);
+  appendAssistantSystemMessage(buildUnknownIntentPrompt());
 }
 
 export async function askAssistant(question) {
@@ -547,29 +759,64 @@ export async function askAssistant(question) {
     return;
   }
 
+  const intent = detectAssistantIntent(trimmed);
+
+  if (intent === ASSISTANT_INTENT.greeting) {
+    await answerLocallyForGreeting(trimmed);
+    return;
+  }
+
+  if (intent === ASSISTANT_INTENT.unknown && trimmed.length < 8) {
+    await answerLocallyForUnknown(trimmed);
+    return;
+  }
+
   appendAssistantUserMessage(trimmed);
   addAssistantPlaceholder();
   setAssistantSending(true);
 
   try {
+    const contextPayload = buildAssistantContextPayload(trimmed);
+
     await apiStreamAssistant(
       {
         message: trimmed,
         response_mode: detectAssistantResponseMode(trimmed),
-        context: buildAssistantContextPayload(),
+        context: contextPayload,
       },
       {
         onMeta: (meta) => {
-          applyAssistantMeta(meta);
+          applyAssistantMeta({
+            ...meta,
+            runtime: {
+              ...(meta?.runtime || {}),
+              assistant_intent: contextPayload.assistant_intent,
+              retrieval_mode: contextPayload.retrieval_mode,
+              output_mode: contextPayload.output_mode,
+              whole_os_default: true,
+            },
+            explainability: {
+              ...(meta?.explainability || {}),
+              reasoning_summary:
+                meta?.explainability?.reasoning_summary ||
+                `Intent: ${contextPayload.assistant_intent}. Retrieval: ${contextPayload.retrieval_mode}. Output: ${contextPayload.output_mode}.`,
+            },
+            assistant_context: {
+              ...(meta?.assistant_context || {}),
+              requested_scope_mode: contextPayload.retrieval_mode,
+              whole_os_default: true,
+            },
+          });
         },
         onProgress: () => {},
         onMessage: (streamedText) => {
           updateLastAssistantStreamingText(streamedText || "Thinking…");
         },
         onDone: (streamedText) => {
-          replaceLastAssistantPlaceholder(
-            String(streamedText || "").trim() || "No assistant reply returned."
-          );
+          const safeReply =
+            String(streamedText || "").trim() || "No assistant reply returned.";
+
+          replaceLastAssistantPlaceholder(safeReply);
         },
       }
     );
