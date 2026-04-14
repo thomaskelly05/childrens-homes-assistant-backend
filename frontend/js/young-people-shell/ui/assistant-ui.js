@@ -4,8 +4,9 @@ import { escapeHtml, getDisplayName } from "../core/utils.js";
 import { getActionForQuickButton } from "./action-router.js";
 
 let assistantUiBound = false;
+let citationEventsBound = false;
 
-const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w-]*)\]/gi;
+const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w:-]*)\]/gi;
 const MAX_SOURCE_EXCERPT = 280;
 
 function qs(id) {
@@ -34,7 +35,12 @@ function getCurrentScope() {
 }
 
 function getCurrentSection() {
-  return state.currentSection || state.activeSection || state.currentView || "workspace";
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
 }
 
 function ensureAssistantArrays() {
@@ -131,9 +137,10 @@ function buildSourceMap() {
   const map = new Map();
 
   getSources().forEach((source, index) => {
-    map.set(sourceCitationRef(source, index).toLowerCase(), {
+    const citationRef = sourceCitationRef(source, index);
+    map.set(citationRef.toLowerCase(), {
       ...source,
-      citation_ref: sourceCitationRef(source, index),
+      citation_ref: citationRef,
       source_index: index,
     });
   });
@@ -220,7 +227,7 @@ function renderAssistantRichText(text = "") {
       continue;
     }
 
-    if (/^###\s+/.test(trimmed) || /^##\s+/.test(trimmed) || /^#\s+/.test(trimmed)) {
+    if (/^#{1,3}\s+/.test(trimmed)) {
       flushList();
       const heading = trimmed.replace(/^#{1,3}\s+/, "");
       blocks.push(`<h4>${renderParagraphWithCitations(heading, sourceMap)}</h4>`);
@@ -254,7 +261,8 @@ function renderUserRichText(text = "") {
 
 function renderMessage(message = {}) {
   const role = message.role || "assistant";
-  const roleClass = role === "user" ? "assistant-message-user" : "assistant-message-system";
+  const roleClass =
+    role === "user" ? "assistant-message-user" : "assistant-message-system";
   const content = String(message.content || message.text || "");
 
   return `
@@ -447,7 +455,9 @@ function buildScopeSummaryCards() {
         `Overdue items: ${evidenceSummary.overdue_items ?? 0}`,
         `Incidents: ${evidenceSummary.incident_items ?? 0}`,
       ].join(" • "),
-      extra: buildConfidenceBadge(sufficiency.confidence || runtime.confidence || ""),
+      extra: buildConfidenceBadge(
+        sufficiency.confidence || runtime.confidence || ""
+      ),
     },
     {
       title: "Reasoning",
@@ -463,7 +473,11 @@ function buildScopeSummaryCards() {
         assistantContext.next_steps ||
         (Array.isArray(meta.suggested_actions) && meta.suggested_actions.length
           ? meta.suggested_actions
-              .map((item) => (typeof item === "string" ? item : item?.label || "Suggested action"))
+              .map((item) =>
+                typeof item === "string"
+                  ? item
+                  : item?.label || "Suggested action"
+              )
               .join(" • ")
           : "Suggested next actions will appear here after the assistant responds."),
       extra: "",
@@ -500,7 +514,10 @@ function renderScopeSummary() {
   const html = buildScopeSummaryCards();
 
   const summaryEl = getEl(els.assistantScopeSummary, "assistantScopeSummary");
-  const modalSummaryEl = getEl(els.assistantModalScopeSummary, "assistantModalScopeSummary");
+  const modalSummaryEl = getEl(
+    els.assistantModalScopeSummary,
+    "assistantModalScopeSummary"
+  );
 
   if (summaryEl) {
     summaryEl.innerHTML = html;
@@ -524,16 +541,23 @@ function renderSourcesHtml(sources = []) {
       );
       const type = escapeHtml(source?.type || source?.record_type || "source");
       const description = escapeHtml(
-        String(source?.description || source?.excerpt || "").slice(0, MAX_SOURCE_EXCERPT)
+        String(source?.description || source?.excerpt || "").slice(
+          0,
+          MAX_SOURCE_EXCERPT
+        )
       );
       const section = escapeHtml(source?.section || "");
       const page =
-        source?.page_number != null ? escapeHtml(String(source.page_number)) : "";
+        source?.page_number != null
+          ? escapeHtml(String(source.page_number))
+          : "";
 
       return `
         <div
           class="entity-row"
-          id="assistant-source-${escapeHtml(citationRef.replace(/[^a-zA-Z0-9_-]/g, "-"))}"
+          id="assistant-source-${escapeHtml(
+            citationRef.replace(/[^a-zA-Z0-9_-]/g, "-")
+          )}"
           data-source-ref="${escapeHtml(citationRef)}"
         >
           <div class="entity-title">${title}</div>
@@ -556,7 +580,10 @@ function renderSources() {
   const html = renderSourcesHtml(meta.sources || []);
 
   const sourcesEl = getEl(els.assistantSources, "assistantSources");
-  const modalSourcesEl = getEl(els.assistantModalSources, "assistantModalSources");
+  const modalSourcesEl = getEl(
+    els.assistantModalSources,
+    "assistantModalSources"
+  );
 
   if (sourcesEl) {
     sourcesEl.innerHTML = html;
@@ -597,7 +624,10 @@ function renderExplainability() {
             "The assistant will show scoped reasoning and evidence after a response is generated.",
         };
 
-  const explainabilityEl = getEl(els.assistantExplainability, "assistantExplainability");
+  const explainabilityEl = getEl(
+    els.assistantExplainability,
+    "assistantExplainability"
+  );
   if (explainabilityEl) {
     explainabilityEl.textContent = prettyJson(explainability);
   }
@@ -763,6 +793,9 @@ function scrollSourceIntoView(ref = "") {
 }
 
 function bindCitationEvents() {
+  if (citationEventsBound) return;
+  citationEventsBound = true;
+
   document.addEventListener("click", (event) => {
     const citation = event.target.closest("[data-citation-ref]");
     if (!citation) return;
