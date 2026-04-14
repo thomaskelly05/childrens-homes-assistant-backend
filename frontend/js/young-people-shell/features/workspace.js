@@ -8,12 +8,10 @@ import {
   renderAssistantControllerPanels,
 } from "../ui/assistant-controller.js";
 import {
-  mapDailyNote,
   mapIncident,
   mapSupportPlan,
   mapAppointment,
   mapChronologyEvent,
-  mapComplianceItem,
   mapTask,
   mapHealthRecord,
   mapEducationRecord,
@@ -52,6 +50,14 @@ const isFuture = (v) => {
   return new Date(v).getTime() >= Date.now();
 };
 
+const sortNewestFirst = (items = [], keys = []) => {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+};
+
 /* -------------------------------- UI bits -------------------------------- */
 
 function renderEmpty(title, msg) {
@@ -74,7 +80,15 @@ function renderRows(items = []) {
       ${items
         .map(
           (i) => `
-        <article class="record-row">
+        <article
+          class="record-row"
+          data-open-record="true"
+          data-record-id="${toText(i.id || i.source_id || "")}"
+          data-record-type="${toText(i.record_type || "")}"
+          data-title="${toText(i.title || i.summary || "Record")}"
+          role="button"
+          tabindex="0"
+        >
           <div class="record-row-main">
             <div class="record-row-title">${toText(
               i.title || i.summary || "Record"
@@ -86,6 +100,10 @@ function renderRows(items = []) {
               ${formatDate(
                 i.record_date ||
                   i.start_datetime ||
+                  i.event_datetime ||
+                  i.incident_datetime ||
+                  i.contact_datetime ||
+                  i.review_date ||
                   i.created_at ||
                   i.updated_at
               )}
@@ -164,29 +182,103 @@ async function fetchAll(id) {
   const safe = (p) => apiGet(p).catch(() => ({ items: [] }));
 
   const [
-    notes,
     incidents,
     plans,
     appointments,
     chronology,
     tasks,
+    health,
+    education,
+    family,
   ] = await Promise.all([
-    safe(`/young-people/${id}/daily-notes`),
     safe(`/young-people/${id}/incidents`),
-    safe(`/young-people/${id}/support-plans`),
+    safe(`/young-people/${id}/plans`),
     safe(`/young-people/${id}/appointments`),
-    safe(`/young-people/${id}/chronology`),
+    safe(`/young-people/${id}/timeline`),
     safe(`/young-people/${id}/tasks`),
+    safe(`/young-people/${id}/health`),
+    safe(`/young-people/${id}/education`),
+    safe(`/young-people/${id}/family`),
   ]);
 
   return {
-    notes: notes.items?.map(mapDailyNote) || [],
-    incidents: incidents.items?.map(mapIncident) || [],
-    plans: plans.items?.map(mapSupportPlan) || [],
-    appointments: appointments.items?.map(mapAppointment) || [],
-    chronology: chronology.items?.map(mapChronologyEvent) || [],
-    tasks: tasks.items?.map(mapTask) || [],
+    incidents:
+      (incidents.items || incidents.incidents || []).map(mapIncident) || [],
+    plans:
+      (
+        plans.items ||
+        plans.risks ||
+        plans.risk_assessments ||
+        plans.support_plans ||
+        []
+      ).map(mapSupportPlan) || [],
+    appointments:
+      (appointments.items || appointments.appointments || []).map(mapAppointment) || [],
+    chronology:
+      (
+        chronology.items ||
+        chronology.timeline ||
+        chronology.chronology_events ||
+        []
+      ).map(mapChronologyEvent) || [],
+    tasks: (tasks.items || tasks.tasks || []).map(mapTask) || [],
+    health:
+      (health.items || health.health_records || []).map(mapHealthRecord) || [],
+    education:
+      (education.items || education.education_records || []).map(mapEducationRecord) || [],
+    family:
+      (family.items || family.family_contact_records || []).map(mapFamilyContactRecord) || [],
   };
+}
+
+function buildTodayItems(data) {
+  return [
+    ...data.appointments.filter((a) => isToday(a.start_datetime)),
+    ...data.health.filter((h) => isToday(h.event_datetime || h.record_date)),
+    ...data.education.filter((e) => isToday(e.record_date)),
+    ...data.family.filter((f) => isToday(f.contact_datetime)),
+  ];
+}
+
+function buildRecentItems(data) {
+  return sortNewestFirst(
+    [
+      ...data.incidents,
+      ...data.chronology,
+      ...data.health,
+      ...data.education,
+      ...data.family,
+      ...data.plans,
+    ],
+    [
+      "incident_datetime",
+      "event_datetime",
+      "record_date",
+      "contact_datetime",
+      "review_date",
+      "created_at",
+      "updated_at",
+    ]
+  ).slice(0, 10);
+}
+
+function buildUpcomingItems(data) {
+  return data.appointments
+    .filter((a) => isFuture(a.start_datetime))
+    .sort(
+      (a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+    )
+    .slice(0, 10);
+}
+
+function buildUrgentItems(data) {
+  const urgentIncidents = data.incidents.filter((i) =>
+    ["high", "critical"].includes(String(i.severity || "").toLowerCase())
+  );
+
+  const urgentTasks = data.tasks.filter((t) => !t.completed);
+
+  return [...urgentIncidents, ...urgentTasks].slice(0, 10);
 }
 
 /* -------------------------------- controller -------------------------------- */
@@ -209,20 +301,10 @@ export async function loadCurrentView() {
   try {
     const data = await fetchAll(id);
 
-    const today = [
-      ...data.appointments.filter((a) => isToday(a.start_datetime)),
-      ...data.notes.filter((n) => isToday(n.record_date)),
-    ];
-
-    const recent = [...data.notes, ...data.incidents].slice(0, 10);
-
-    const upcoming = data.appointments.filter((a) =>
-      isFuture(a.start_datetime)
-    );
-
-    const urgent = data.incidents.filter((i) =>
-      ["high", "critical"].includes(i.severity)
-    );
+    const today = buildTodayItems(data);
+    const recent = buildRecentItems(data);
+    const upcoming = buildUpcomingItems(data);
+    const urgent = buildUrgentItems(data);
 
     els.viewContent.innerHTML = renderWorkspace({
       today,
@@ -237,9 +319,14 @@ export async function loadCurrentView() {
         ? formatDate(upcoming[0].start_datetime)
         : "None",
       lastRecord: recent[0]
-        ? formatDate(recent[0].created_at)
+        ? formatDate(
+            recent[0].created_at ||
+              recent[0].incident_datetime ||
+              recent[0].event_datetime ||
+              recent[0].record_date
+          )
         : "None",
-      openActions: `${data.tasks.length} tasks`,
+      openActions: `${data.tasks.filter((t) => !t.completed).length} tasks`,
     });
 
     await onAssistantScopeChanged();
