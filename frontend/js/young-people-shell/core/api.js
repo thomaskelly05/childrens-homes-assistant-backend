@@ -2,6 +2,7 @@ const API_BASE = window.location.origin;
 
 const GET_CACHE_MS = 30000;
 const REQUEST_TIMEOUT_MS = 20000;
+const SSE_TIMEOUT_MS = 60000;
 
 const inflightGetRequests = new Map();
 const getResponseCache = new Map();
@@ -130,9 +131,12 @@ export function resolveApiUrl(url, method = "GET") {
   if (!url || typeof url !== "string") return url;
   if (!shouldResolveAlias(method)) return url;
 
+  const [pathname, queryString = ""] = url.split("?");
+  const suffix = queryString ? `?${queryString}` : "";
+
   for (const [pattern, replacement] of API_ROUTE_ALIASES) {
-    if (pattern.test(url)) {
-      return url.replace(pattern, replacement);
+    if (pattern.test(pathname)) {
+      return pathname.replace(pattern, replacement) + suffix;
     }
   }
 
@@ -226,7 +230,7 @@ function buildFetchConfig(method, options, headers) {
   return config;
 }
 
-function createTimeoutSignal(timeoutMs, externalSignal) {
+function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Request timed out") {
   if (!timeoutMs && !externalSignal) {
     return { signal: undefined, cleanup: () => {} };
   }
@@ -236,7 +240,7 @@ function createTimeoutSignal(timeoutMs, externalSignal) {
 
   const abortFromExternal = () => {
     try {
-      controller.abort();
+      controller.abort(externalSignal?.reason);
     } catch {
       // ignore
     }
@@ -251,11 +255,15 @@ function createTimeoutSignal(timeoutMs, externalSignal) {
   }
 
   if (timeoutMs > 0) {
-    timeoutId = window.setTimeout(() => {
+    timeoutId = setTimeout(() => {
       try {
-        controller.abort();
+        controller.abort(new Error(timeoutMessage));
       } catch {
-        // ignore
+        try {
+          controller.abort();
+        } catch {
+          // ignore
+        }
       }
     }, timeoutMs);
   }
@@ -264,7 +272,7 @@ function createTimeoutSignal(timeoutMs, externalSignal) {
     signal: controller.signal,
     cleanup: () => {
       if (timeoutId) {
-        window.clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
       }
       if (externalSignal) {
         try {
@@ -275,6 +283,20 @@ function createTimeoutSignal(timeoutMs, externalSignal) {
       }
     },
   };
+}
+
+function buildAbortMessage(signal, fallback = "Request timed out") {
+  const reason = signal?.reason;
+
+  if (reason instanceof Error && reason.message) {
+    return reason.message;
+  }
+
+  if (typeof reason === "string" && reason.trim()) {
+    return reason.trim();
+  }
+
+  return fallback;
 }
 
 export function clearApiCache(url = null) {
@@ -340,8 +362,16 @@ function recordKey(item = {}) {
       item.event_datetime ||
       item.review_date ||
       item.start_datetime ||
+      item.session_date ||
+      item.visit_date ||
+      item.due_date ||
+      item.next_due_date ||
       "",
   ].join("::");
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 async function apiGetSettled(urls = []) {
@@ -469,8 +499,9 @@ function mergeAssistantBundle(responses = []) {
     ];
 
     for (const [sourceKey, target] of mappings) {
-      if (Array.isArray(data[sourceKey])) {
-        pushUniqueByKey(target, data[sourceKey], recordKey);
+      const items = toArray(data[sourceKey]);
+      if (items.length) {
+        pushUniqueByKey(target, items, recordKey);
       }
     }
 
@@ -479,7 +510,7 @@ function mergeAssistantBundle(responses = []) {
       pushUniqueByKey(bundle.staffing, staffingArray, recordKey);
     }
 
-    if (data.home && !bundle.home) {
+    if (data.home && !bundle.home && typeof data.home === "object") {
       bundle.home = data.home;
     }
 
@@ -623,7 +654,12 @@ export async function apiRequest(url, options = {}) {
       ? options.timeoutMs
       : REQUEST_TIMEOUT_MS;
 
-  const { signal, cleanup } = createTimeoutSignal(timeoutMs, options.signal);
+  const { signal, cleanup } = createTimeoutSignal(
+    timeoutMs,
+    options.signal,
+    "Request timed out"
+  );
+
   const config = buildFetchConfig(method, { ...options, signal }, headers);
 
   const requestPromise = (async () => {
@@ -633,7 +669,7 @@ export async function apiRequest(url, options = {}) {
       response = await fetch(`${API_BASE}${resolvedUrl}`, config);
     } catch (error) {
       if (isAbortError(error)) {
-        throw new Error("Request timed out");
+        throw new Error(buildAbortMessage(signal, "Request timed out"));
       }
       throw new Error("Network error");
     } finally {
@@ -766,17 +802,36 @@ export function unwrapCreateResponse(recordType, response) {
   return response;
 }
 
-export function buildSseContextFetch(url, payload) {
-  return fetch(`${API_BASE}${url}`, {
+export function buildSseContextFetch(url, payload, options = {}) {
+  const timeoutMs =
+    Number.isFinite(options.timeoutMs) && options.timeoutMs >= 0
+      ? options.timeoutMs
+      : SSE_TIMEOUT_MS;
+
+  const { signal, cleanup } = createTimeoutSignal(
+    timeoutMs,
+    options.signal,
+    "Assistant request timed out"
+  );
+
+  const request = fetch(`${API_BASE}${url}`, {
     method: "POST",
     credentials: "include",
+    signal,
     headers: withCsrfHeaders("POST", {
       Accept: "text/event-stream",
       "Content-Type": "application/json",
       "Cache-Control": "no-cache",
+      ...(options.headers || {}),
     }),
     body: JSON.stringify(payload || {}),
   });
+
+  return {
+    request,
+    cleanup,
+    signal,
+  };
 }
 
 function parseSseBlock(block) {
@@ -829,16 +884,30 @@ function resolveAssistantEndpoint(payload = {}) {
   return "/young-people/assistant";
 }
 
-export async function apiStreamAssistant(payload, handlers = {}) {
+export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
   const endpoint = resolveAssistantEndpoint(payload);
-  const response = await buildSseContextFetch(endpoint, payload);
+  const { request, cleanup, signal } = buildSseContextFetch(endpoint, payload, options);
+
+  let response;
+
+  try {
+    response = await request;
+  } catch (error) {
+    cleanup();
+    if (isAbortError(error)) {
+      throw new Error(buildAbortMessage(signal, "Assistant request timed out"));
+    }
+    throw new Error("Assistant network error");
+  }
 
   if (!response.ok) {
+    cleanup();
     const data = await readJsonSafely(response);
     throw new Error(buildErrorMessage(response, data));
   }
 
   if (!response.body) {
+    cleanup();
     throw new Error("No assistant response stream was returned.");
   }
 
@@ -923,8 +992,14 @@ export async function apiStreamAssistant(payload, handlers = {}) {
         }
       });
     }
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(buildAbortMessage(signal, "Assistant request timed out"));
+    }
+    throw error;
   } finally {
     finish();
+    cleanup();
     try {
       reader.releaseLock();
     } catch {
