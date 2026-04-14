@@ -1,6 +1,7 @@
 export const els = {
-  // Shell / layout
+  // App shell
   app: document.getElementById("app"),
+  mainContent: document.getElementById("mainContent"),
   workspaceScreen: document.getElementById("workspaceScreen"),
   workspaceShell: document.getElementById("workspaceShell"),
   selectorScreen: document.getElementById("selectorScreen"),
@@ -8,13 +9,12 @@ export const els = {
   statusBar: document.getElementById("statusBar"),
   statusMessage: document.getElementById("statusMessage"),
 
-  // Top bar / shell controls
+  // Top bar
   logoBtn: document.getElementById("logoBtn"),
   mobileNavBtn: document.getElementById("mobileNavBtn"),
-  assistantLauncher: document.getElementById("assistantLauncher"),
   refreshBtn: document.getElementById("refreshBtn"),
-  refreshWorkspaceBtn: document.getElementById("refreshWorkspaceBtn"),
   homeBtn: document.getElementById("homeBtn"),
+  assistantLauncher: document.getElementById("assistantLauncher"),
 
   // Scope switch
   scopeSwitch: document.getElementById("scopeSwitch"),
@@ -25,7 +25,6 @@ export const els = {
   // Selector
   selectorList: document.getElementById("selectorList"),
   selectorSearch: document.getElementById("selectorSearch"),
-  youngPersonSearchInput: document.getElementById("youngPersonSearchInput"),
   selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
   backToSelectorBtn: document.getElementById("backToSelectorBtn"),
 
@@ -33,10 +32,14 @@ export const els = {
   personAvatar: document.getElementById("personAvatar"),
   personName: document.getElementById("personName"),
   personMeta: document.getElementById("personMeta"),
+
   mobilePersonAvatar: document.getElementById("mobilePersonAvatar"),
   mobilePersonName: document.getElementById("mobilePersonName"),
   mobilePersonMeta: document.getElementById("mobilePersonMeta"),
   mobileHomeBtn: document.getElementById("mobileHomeBtn"),
+
+  mobileDrawerPersonName: document.getElementById("mobileDrawerPersonName"),
+  mobileDrawerPersonMeta: document.getElementById("mobileDrawerPersonMeta"),
 
   // Navigation
   desktopNav: document.getElementById("desktopNav"),
@@ -52,7 +55,7 @@ export const els = {
   pageSubtitle: document.getElementById("pageSubtitle"),
   heroAssistantBtn: document.getElementById("heroAssistantBtn"),
   heroQuickActions: document.getElementById("heroQuickActions"),
-  quickCreateBar: document.getElementById("quickCreateBar"),
+  changePersonBtn: document.getElementById("changePersonBtn"),
 
   // Workspace summary strip
   summaryToday: document.getElementById("summaryToday"),
@@ -64,25 +67,18 @@ export const els = {
   profileSnapshotPhotoWrap: document.getElementById("profileSnapshotPhotoWrap"),
   profileSnapshotName: document.getElementById("profileSnapshotName"),
   profileSnapshotMeta: document.getElementById("profileSnapshotMeta"),
-  profileOpenBtn: document.getElementById("profileOpenBtn"),
-  profilePhotoUploadBtn: document.getElementById("profilePhotoUploadBtn"),
-  changePersonBtn: document.getElementById("changePersonBtn"),
 
-  // Assistant shell
+  // Assistant
   assistantBackdrop: document.getElementById("assistantBackdrop"),
   assistantModal: document.getElementById("assistantModal"),
-  assistantLauncherInline: document.getElementById("assistantLauncherInline"),
-  assistantExpandBtn: document.getElementById("assistantExpandBtn"),
   closeAssistantBtn: document.getElementById("closeAssistantBtn"),
 
-  // Assistant primary chat
   assistantMessages: document.getElementById("assistantMessages"),
   assistantForm: document.getElementById("assistantForm"),
   assistantInput: document.getElementById("assistantInput"),
   assistantSendBtn: document.getElementById("assistantSendBtn"),
   assistantClearBtn: document.getElementById("assistantClearBtn"),
 
-  // Assistant context / chips / insights
   assistantContext: document.getElementById("assistantContext"),
   assistantSuggestions: document.getElementById("assistantSuggestions"),
   assistantScopeSummary: document.getElementById("assistantScopeSummary"),
@@ -97,37 +93,15 @@ export const els = {
   scopeChildBadge: document.getElementById("scopeChildBadge"),
   scopeShiftBadge: document.getElementById("scopeShiftBadge"),
 
-  // Modal assistant mirrors / secondary panels
-  assistantModalScopeSummary: document.getElementById("assistantModalScopeSummary"),
-  assistantModalSources: document.getElementById("assistantModalSources"),
-  modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
-  modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
-
-  // Hidden compatibility assistant nodes
+  // Assistant hidden compatibility nodes
   assistantModalMessages: document.getElementById("assistantModalMessages"),
   assistantModalForm: document.getElementById("assistantModalForm"),
   assistantModalInput: document.getElementById("assistantModalInput"),
   assistantModalSendBtn: document.getElementById("assistantModalSendBtn"),
-
-  // Assistant live intelligence / bundle state
-  assistantLiveStatus: document.getElementById("assistantLiveStatus"),
-  assistantScopeBundleStatus: document.getElementById("assistantScopeBundleStatus"),
-  assistantScopeBundleError: document.getElementById("assistantScopeBundleError"),
-  assistantRefreshScopeBtn: document.getElementById("assistantRefreshScopeBtn"),
-  assistantRefreshAnalysisBtn: document.getElementById("assistantRefreshAnalysisBtn"),
-
-  // Morning / manager / quality brief surfaces
-  morningBriefPanel: document.getElementById("morningBriefPanel"),
-  morningBriefBody: document.getElementById("morningBriefBody"),
-  managerBriefPanel: document.getElementById("managerBriefPanel"),
-  managerBriefBody: document.getElementById("managerBriefBody"),
-  qualityBriefPanel: document.getElementById("qualityBriefPanel"),
-  qualityBriefBody: document.getElementById("qualityBriefBody"),
-
-  // Live updates surface
-  liveUpdatesPanel: document.getElementById("liveUpdatesPanel"),
-  liveUpdatesBody: document.getElementById("liveUpdatesBody"),
-  clearLiveUpdatesBtn: document.getElementById("clearLiveUpdatesBtn"),
+  assistantModalScopeSummary: document.getElementById("assistantModalScopeSummary"),
+  assistantModalSources: document.getElementById("assistantModalSources"),
+  modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
+  modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
 
   // Fullscreen panel
   fullscreenPanel: document.getElementById("fullscreenPanel"),
@@ -148,7 +122,6 @@ export const els = {
   composerAiFeedback: document.getElementById("composerAiFeedback"),
   composerAutosaveStatus: document.getElementById("composerAutosaveStatus"),
   closeComposerBtn: document.getElementById("closeComposerBtn"),
-  composerSaveBtn: document.getElementById("composerSaveBtn"),
   composerSaveDraftBtn: document.getElementById("composerSaveDraftBtn"),
   composerCheckBtn: document.getElementById("composerCheckBtn"),
   composerSubmitBtn: document.getElementById("composerSubmitBtn"),
