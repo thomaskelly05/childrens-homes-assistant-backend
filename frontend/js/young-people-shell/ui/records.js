@@ -429,6 +429,20 @@ function setDrawerButtons(type) {
   }
 }
 
+function setDrawerWorkflowBusy(isBusy) {
+  [
+    els.drawerEditBtn,
+    els.drawerSubmitBtn,
+    els.drawerApproveBtn,
+    els.drawerReturnBtn,
+    els.drawerArchiveBtn,
+    els.closeDrawerBtn,
+  ].forEach((button) => {
+    if (!button) return;
+    button.disabled = Boolean(isBusy);
+  });
+}
+
 function buildSuggestionContext(type, detail = {}, item = {}) {
   return {
     ...item,
@@ -473,6 +487,7 @@ export async function openRecordDetail(item) {
 
   openDrawer();
   setDrawerButtons(type);
+  setDrawerWorkflowBusy(false);
 
   if (els.drawerTitle) {
     els.drawerTitle.textContent =
@@ -589,10 +604,14 @@ export async function runDrawerWorkflow(action) {
   const type = state.activeRecordType;
   const config = RECORD_CONFIG[type];
 
-  if (!item || !config) return;
+  if (!item || !config) {
+    throw new Error("No active record is available.");
+  }
 
   const id = getRecordId(item);
-  if (!id) return;
+  if (!id) {
+    throw new Error("No record ID is available.");
+  }
 
   let url = null;
   let body = null;
@@ -619,8 +638,11 @@ export async function runDrawerWorkflow(action) {
     url = config.archiveUrl(id);
   }
 
-  if (!url) return;
-  await apiSend(url, "POST", body);
+  if (!url) {
+    throw new Error(`No workflow action is configured for "${action}".`);
+  }
+
+  return apiSend(url, "POST", body);
 }
 
 let drawerEventsBound = false;
@@ -637,27 +659,43 @@ export function bindRecordDrawerEvents({ onEdit, onWorkflowComplete } = {}) {
     onEdit?.(state.activeRecordType, state.activeRecordItem);
   });
 
+  const handleWorkflowAction = async (action) => {
+    try {
+      setDrawerWorkflowBusy(true);
+      await runDrawerWorkflow(action);
+      closeDrawer();
+      await onWorkflowComplete?.({
+        action,
+      });
+    } catch (error) {
+      setDrawerWorkflowBusy(false);
+
+      if (els.drawerSubtitle) {
+        els.drawerSubtitle.textContent = "Action failed";
+      }
+
+      if (els.drawerBody) {
+        els.drawerBody.innerHTML = renderRichEmptyState(
+          "Workflow action failed",
+          error?.message || "The record action could not be completed."
+        );
+      }
+    }
+  };
+
   els.drawerSubmitBtn?.addEventListener("click", async () => {
-    await runDrawerWorkflow("submit");
-    closeDrawer();
-    await onWorkflowComplete?.();
+    await handleWorkflowAction("submit");
   });
 
   els.drawerApproveBtn?.addEventListener("click", async () => {
-    await runDrawerWorkflow("approve");
-    closeDrawer();
-    await onWorkflowComplete?.();
+    await handleWorkflowAction("approve");
   });
 
   els.drawerReturnBtn?.addEventListener("click", async () => {
-    await runDrawerWorkflow("return");
-    closeDrawer();
-    await onWorkflowComplete?.();
+    await handleWorkflowAction("return");
   });
 
   els.drawerArchiveBtn?.addEventListener("click", async () => {
-    await runDrawerWorkflow("archive");
-    closeDrawer();
-    await onWorkflowComplete?.();
+    await handleWorkflowAction("archive");
   });
 }
