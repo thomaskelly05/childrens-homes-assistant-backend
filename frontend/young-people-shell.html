@@ -1,3 +1,7 @@
+Yes — here is the full finished HTML with the missing IDs restored so it aligns with your current dom.js, shell-ui.js, assistant UI, drawer, composer, and navigation setup.
+
+Use this as your full young-people-shell.html:
+
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -108,6 +112,16 @@
           Refresh
         </button>
 
+        <button
+          id="refreshWorkspaceBtn"
+          class="secondary-btn hidden"
+          type="button"
+          aria-hidden="true"
+          tabindex="-1"
+        >
+          Refresh workspace
+        </button>
+
         <button id="homeBtn" class="ghost-btn desktop-only" type="button">
           Workspace home
         </button>
@@ -139,6 +153,17 @@
                 type="text"
                 placeholder="Search by name, preferred name or home..."
                 autocomplete="off"
+              />
+
+              <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
+              <input
+                id="youngPersonSearchInput"
+                class="search-input hidden"
+                type="text"
+                placeholder="Search by name, preferred name or home..."
+                autocomplete="off"
+                aria-hidden="true"
+                tabindex="-1"
               />
 
               <button id="selectorRefreshBtn" class="secondary-btn" type="button">
@@ -205,9 +230,7 @@
                 id="desktopNav"
                 class="workspace-nav workspace-nav--accordion"
                 aria-label="Workspace sections"
-              >
-                <!-- JS injects accordion nav groups here -->
-              </nav>
+              ></nav>
             </div>
           </aside>
 
@@ -232,13 +255,17 @@
                 </button>
               </section>
 
-              <section class="workspace-header-band workspace-header-band--calm" aria-labelledby="pageTitle">
+              <section
+                class="workspace-header-band workspace-header-band--calm"
+                aria-labelledby="pageTitle"
+              >
                 <div class="workspace-header-main">
                   <div class="workspace-header-copy">
-                    <div class="eyebrow">Residential workspace</div>
+                    <div id="workspaceEyebrow" class="eyebrow">Residential workspace</div>
                     <h1 id="pageTitle">Today’s workspace</h1>
                     <p id="pageSubtitle">
-                      A calmer, child-focused view for recording, reflection, continuity and thoughtful next steps.
+                      A calmer, child-focused view for recording, reflection,
+                      continuity and thoughtful next steps.
                     </p>
                   </div>
 
@@ -246,7 +273,30 @@
                     <button id="heroAssistantBtn" class="secondary-btn" type="button">
                       Ask assistant
                     </button>
-                    <button id="changePersonBtn" class="ghost-btn desktop-only" type="button">
+
+                    <button
+                      id="profileOpenBtn"
+                      class="secondary-btn"
+                      type="button"
+                      data-view="profile"
+                    >
+                      Open profile
+                    </button>
+
+                    <button
+                      id="profilePhotoUploadBtn"
+                      class="ghost-btn"
+                      type="button"
+                      data-action-router="edit-profile-identity"
+                    >
+                      Update profile
+                    </button>
+
+                    <button
+                      id="changePersonBtn"
+                      class="ghost-btn desktop-only"
+                      type="button"
+                    >
                       Change young person
                     </button>
                   </div>
@@ -275,31 +325,52 @@
                     <span class="meta-chip meta-chip--soft">Current scope</span>
                   </div>
 
-                  <div class="workspace-summary-strip" aria-label="Current summary">
+                  <div
+                    id="workspaceSummaryStrip"
+                    class="workspace-summary-strip"
+                    data-workspace-summary-strip
+                    aria-label="Current summary"
+                  >
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Today</span>
-                      <strong class="workspace-summary-value">No summary yet</strong>
+                      <strong
+                        id="summaryToday"
+                        class="workspace-summary-value"
+                      >No summary yet</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Next event</span>
-                      <strong class="workspace-summary-value">No event loaded</strong>
+                      <strong
+                        id="summaryNextEvent"
+                        class="workspace-summary-value"
+                      >No event loaded</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Last record</span>
-                      <strong class="workspace-summary-value">No record loaded</strong>
+                      <strong
+                        id="summaryLastRecord"
+                        class="workspace-summary-value"
+                      >No record loaded</strong>
                     </div>
 
                     <div class="workspace-summary-item">
                       <span class="workspace-summary-label">Open actions</span>
-                      <strong class="workspace-summary-value">No actions loaded</strong>
+                      <strong
+                        id="summaryOpenActions"
+                        class="workspace-summary-value"
+                      >No actions loaded</strong>
                     </div>
                   </div>
                 </div>
               </section>
 
-              <section class="quick-actions-panel" aria-label="Quick actions">
+              <section
+                id="quickCreateBar"
+                class="quick-actions-panel"
+                aria-label="Quick actions"
+              >
                 <div class="quick-actions-panel-head">
                   <div>
                     <div class="eyebrow">Quick actions</div>
@@ -535,9 +606,7 @@
         </div>
       </div>
 
-      <div id="mobileNavContent" class="mobile-nav-content">
-        <!-- JS injects accordion nav groups here -->
-      </div>
+      <div id="mobileNavContent" class="mobile-nav-content"></div>
     </aside>
 
     <nav
@@ -567,7 +636,7 @@
               class="secondary-btn"
               type="button"
             >
-             Close
+              Close
             </button>
           </div>
         </header>
@@ -607,6 +676,16 @@
 
             <button id="closeComposerBtn" class="secondary-btn" type="button">
               Close
+            </button>
+
+            <button
+              id="composerSaveBtn"
+              class="secondary-btn hidden"
+              type="button"
+              aria-hidden="true"
+              tabindex="-1"
+            >
+              Save
             </button>
 
             <button
@@ -809,6 +888,7 @@
                   <p>Helpful next steps and quick actions.</p>
                 </div>
                 <div id="assistantSuggestions" class="assistant-chip-row"></div>
+                <div id="assistantActions" class="hidden" aria-hidden="true"></div>
               </div>
 
               <div class="assistant-support-card">
@@ -844,7 +924,6 @@
         <button id="assistantModalSendBtn" type="button"></button>
         <div id="assistantModalScopeSummary"></div>
         <div id="assistantModalSources"></div>
-        <div id="assistantActions"></div>
         <span id="modalScopeHomeBadge"></span>
         <span id="modalScopeChildBadge"></span>
       </div>
