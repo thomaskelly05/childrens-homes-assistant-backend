@@ -81,35 +81,35 @@ export const SCOPE_SECTIONS = Object.freeze({
 });
 
 export const SECTION_TITLES = Object.freeze({
-  workspace: "Today’s workspace",
-  overview: "What matters today",
-  profile: "About this young person",
-  timeline: "Chronology and events",
+  workspace: "Today",
+  overview: "Overview",
+  profile: "Profile",
+  timeline: "Timeline",
   handover: "Handover",
-  health: "Health and wellbeing",
-  education: "Learning and education",
-  family: "Family and relationships",
-  calendar: "Appointments and key dates",
-  readiness: "Actions and readiness",
-  manager: "Leadership and review",
-  reports: "Reports and review packs",
-  documents: "Documents and uploads",
-  communication: "Professional communication",
-  therapy: "Therapeutic services",
+  health: "Health",
+  education: "Education",
+  family: "Family",
+  calendar: "Calendar",
+  readiness: "Readiness",
+  manager: "Manager review",
+  reports: "Reports",
+  documents: "Documents",
+  communication: "Communication",
+  therapy: "Therapy",
   "home-dashboard": "Home dashboard",
-  team: "Team and staffing",
-  supervision: "Supervision and development",
-  compliance: "Compliance and statutory assurance",
-  quality: "Quality and RI dashboard",
-  "staff-profile": "Staff profiles and workforce",
-  onboarding: "Onboarding and induction",
-  notifications: "Notifications and actions",
-  rota: "Rota and staffing cover",
+  team: "Team",
+  supervision: "Supervision",
+  compliance: "Compliance",
+  quality: "Quality dashboard",
+  "staff-profile": "Staff profiles",
+  onboarding: "Onboarding",
+  notifications: "Notifications",
+  rota: "Rota",
 });
 
 export const SECTION_SUBTITLES = Object.freeze({
   workspace:
-    "A calm space to record, reflect and respond to what matters today.",
+    "Main daily view for recording, reflection, priorities and current work.",
   overview:
     "A clear picture of priorities, wellbeing, risk, strengths and next steps.",
   profile:
@@ -119,16 +119,17 @@ export const SECTION_SUBTITLES = Object.freeze({
   handover:
     "Support smooth, thoughtful communication between adults around the young person.",
   health:
-    "Health needs, professionals, outcomes and follow-up that adults need to know.",
+    "Health needs, medication, professionals, appointments and follow-up.",
   education:
     "Learning, attendance, support, strengths and educational experience.",
   family:
     "Family contact, important relationships and how these are experienced.",
   calendar:
-    "Appointments, meetings and important dates that shape the young person’s week.",
+    "Appointments, meetings and important dates that shape the week.",
   readiness:
-    "Actions, tasks, compliance and practical follow-up that need attention.",
-  manager: "Oversight, quality, decision-making and review.",
+    "Actions, goals, practical follow-up and what needs attention next.",
+  manager:
+    "Oversight, quality, decision-making and management review.",
   reports:
     "Structured summaries, reports and review outputs for the young person or service.",
   documents:
@@ -139,7 +140,8 @@ export const SECTION_SUBTITLES = Object.freeze({
     "Therapeutic support, recommendations, outcomes and emotional wellbeing input.",
   "home-dashboard":
     "A whole-home operational and quality view for managers.",
-  team: "Team capacity, staffing, deployment and workforce context.",
+  team:
+    "Team capacity, staffing, deployment and workforce context.",
   supervision:
     "Supervision, development, training and workforce support.",
   compliance:
@@ -149,7 +151,7 @@ export const SECTION_SUBTITLES = Object.freeze({
   "staff-profile":
     "A live workforce view across staff profiles, roles, onboarding, training, supervision and file readiness.",
   onboarding:
-    "Track recruitment checks, induction, probation and early workforce readiness in line with safer recruitment and Ofsted expectations.",
+    "Track recruitment checks, induction, probation and early workforce readiness.",
   notifications:
     "A live action layer for reminders, escalations, acknowledgements and workforce follow-up.",
   rota:
@@ -158,222 +160,200 @@ export const SECTION_SUBTITLES = Object.freeze({
 
 const NAV_GROUPS = [
   {
-    id: "today",
-    title: "Today",
+    id: "daily-work",
+    title: "Daily work",
     items: [
       {
         id: "workspace",
-        label: "Today’s workspace",
-        short_label: "Workspace",
+        label: "Today",
+        short_label: "Today",
         icon: "home",
-        description:
-          "The main place to record, reflect and act on what matters today.",
+        description: "Main daily view, priorities and current work.",
       },
       {
         id: "overview",
-        label: "What matters today",
+        label: "Overview",
         short_label: "Overview",
         icon: "layout-dashboard",
-        description:
-          "A clear picture of priorities, progress, risks and strengths.",
+        description: "Key information, alerts and what matters now.",
       },
       {
         id: "timeline",
-        label: "Chronology and events",
+        label: "Timeline",
         short_label: "Timeline",
         icon: "list-ordered",
-        description: "A clear view of what has happened over time.",
+        description: "Chronology, significant events and recent activity.",
       },
       {
         id: "handover",
         label: "Handover",
         short_label: "Handover",
         icon: "repeat",
-        description:
-          "Support smooth, thoughtful communication between adults.",
+        description: "Shift updates, continuity and important notes.",
       },
     ],
   },
   {
-    id: "relationships_and_identity",
-    title: "Identity, relationships and daily life",
+    id: "relationships-and-identity",
+    title: "Relationships and identity",
     items: [
       {
         id: "profile",
-        label: "About this young person",
+        label: "Profile",
         short_label: "Profile",
         icon: "user",
-        description:
-          "Identity, communication, needs, strengths and what matters to them.",
+        description: "Identity, preferences, strengths and personal details.",
       },
       {
         id: "family",
-        label: "Family and relationships",
+        label: "Family",
         short_label: "Family",
         icon: "users",
-        description:
-          "Family contact, important relationships and how contact is experienced.",
+        description: "Family, relationships and important people.",
       },
       {
         id: "communication",
-        label: "Professional communication",
+        label: "Communication",
         short_label: "Comms",
         icon: "messages-square",
-        description:
-          "Emails, updates, liaison and communication with professionals and families.",
+        description: "Professional contact, messages and communication log.",
       },
       {
         id: "documents",
-        label: "Documents and uploads",
-        short_label: "Documents",
+        label: "Documents",
+        short_label: "Docs",
         icon: "folder",
-        description:
-          "Statutory documents, uploads and important child or service records.",
+        description: "Uploaded documents, supporting evidence and files.",
       },
     ],
   },
   {
-    id: "development_and_wellbeing",
-    title: "Health, learning and wellbeing",
+    id: "care-and-wellbeing",
+    title: "Care and wellbeing",
     items: [
       {
         id: "health",
-        label: "Health and wellbeing",
+        label: "Health",
         short_label: "Health",
         icon: "heart-pulse",
-        description:
-          "Health needs, professionals, appointments, outcomes and follow-up.",
+        description: "Health, medication, appointments and wellbeing.",
       },
       {
         id: "education",
-        label: "Learning and education",
+        label: "Education",
         short_label: "Education",
         icon: "graduation-cap",
-        description:
-          "Learning, attendance, strengths, support and educational progress.",
+        description: "School, attendance, learning and progress.",
       },
       {
         id: "calendar",
-        label: "Appointments and key dates",
-        short_label: "Appointments",
+        label: "Calendar",
+        short_label: "Calendar",
         icon: "calendar",
-        description: "Appointments, meetings and other important dates.",
+        description: "Appointments, meetings and key dates.",
       },
       {
         id: "therapy",
-        label: "Therapeutic services",
+        label: "Therapy",
         short_label: "Therapy",
         icon: "sparkles",
-        description:
-          "Therapy input, recommendations, outcomes and emotional wellbeing support.",
+        description: "Therapeutic input, support and interventions.",
       },
     ],
   },
   {
-    id: "safety_and_planning",
-    title: "Safety, planning and action",
+    id: "planning-and-review",
+    title: "Planning and review",
     items: [
       {
         id: "readiness",
-        label: "Actions and readiness",
+        label: "Readiness",
         short_label: "Readiness",
-        icon: "shield-check",
-        description:
-          "Tasks, follow-up, oversight and what needs doing next.",
+        icon: "clipboard-check",
+        description: "Actions, goals, independence and next steps.",
       },
       {
         id: "manager",
-        label: "Leadership and review",
-        short_label: "Manager view",
-        icon: "clipboard-check",
-        description:
-          "Review workflows, oversight, quality and decision-making.",
+        label: "Manager review",
+        short_label: "Manager",
+        icon: "shield-check",
+        description: "Oversight, leadership review and management actions.",
       },
       {
         id: "reports",
-        label: "Reports and review packs",
+        label: "Reports",
         short_label: "Reports",
         icon: "file-text",
-        description:
-          "Reports, summaries and structured review outputs.",
+        description: "Reports, formal records and review documents.",
       },
     ],
   },
   {
-    id: "home_management",
-    title: "Home and service oversight",
+    id: "home-and-team",
+    title: "Home and team",
     items: [
       {
         id: "home-dashboard",
         label: "Home dashboard",
-        short_label: "Home",
+        short_label: "Dashboard",
         icon: "building-2",
-        description:
-          "A whole-home dashboard for managers with live operational visibility.",
+        description: "Whole-home view, daily picture and key issues.",
       },
       {
         id: "compliance",
         label: "Compliance",
         short_label: "Compliance",
         icon: "badge-check",
-        description:
-          "Compliance across supervisions, training, statutory paperwork, Statement of Purpose, Annex A and Ofsted readiness.",
+        description: "Checks, actions, standards and compliance monitoring.",
       },
       {
         id: "staff-profile",
         label: "Staff profiles",
         short_label: "Staff",
         icon: "users-round",
-        description:
-          "Workforce profiles, onboarding, training, supervision and file readiness.",
+        description: "Workforce profiles, roles and responsibilities.",
       },
       {
         id: "onboarding",
         label: "Onboarding",
         short_label: "Onboarding",
         icon: "clipboard-check",
-        description:
-          "Recruitment checks, induction, probation and safer recruitment workflow.",
+        description: "Recruitment checks, induction and probation.",
       },
       {
         id: "notifications",
         label: "Notifications",
         short_label: "Alerts",
         icon: "messages-square",
-        description:
-          "Reminders, escalations and live actions for staff and managers.",
+        description: "Important updates, reminders and alerts.",
       },
       {
         id: "rota",
-        label: "Rota and staffing cover",
+        label: "Rota",
         short_label: "Rota",
         icon: "calendar",
-        description:
-          "Shift cover, shift leads, absences, agency use and operational gaps.",
+        description: "Staffing, shifts and cover.",
       },
       {
         id: "team",
-        label: "Team and staffing",
+        label: "Team",
         short_label: "Team",
         icon: "users-round",
-        description:
-          "Staffing, roles, rota context, sickness, vacancies and deployment.",
+        description: "Team around the child and involved professionals.",
       },
       {
         id: "supervision",
-        label: "Supervision and development",
+        label: "Supervision",
         short_label: "Supervision",
         icon: "badge-check",
-        description:
-          "Supervisions, appraisals, capability, training and support.",
+        description: "Reflective supervision and staff support.",
       },
       {
         id: "quality",
-        label: "Quality and RI dashboard",
+        label: "Quality dashboard",
         short_label: "Quality",
         icon: "bar-chart-3",
-        description:
-          "Quality assurance, audits, trends, RI oversight and service standards.",
+        description: "Quality assurance, audits, trends and RI oversight.",
       },
     ],
   },
