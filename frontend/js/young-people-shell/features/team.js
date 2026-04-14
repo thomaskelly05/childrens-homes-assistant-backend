@@ -1,6 +1,5 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
@@ -17,25 +16,9 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function toArray(value, fallbacks = []) {
-  if (Array.isArray(value)) return value;
-
-  for (const fallback of fallbacks) {
-    if (Array.isArray(fallback)) return fallback;
-  }
-
-  return [];
-}
-
 function toNumber(value, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
-}
-
-function toTime(value) {
-  if (!value) return 0;
-  const time = new Date(value).getTime();
-  return Number.isFinite(time) ? time : 0;
 }
 
 function formatDate(value) {
@@ -127,217 +110,6 @@ function getStatusTone(status = "") {
   return "muted";
 }
 
-function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(bValue) - toTime(aValue);
-  });
-}
-
-function sortSoonestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue) - toTime(bValue);
-  });
-}
-
-function normaliseSummary(data = {}) {
-  return data.summary || data.dashboard || {};
-}
-
-function normaliseTeamItems(data = {}) {
-  return toArray(data.items, [data.team, data.staff, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "team",
-    full_name:
-      item.full_name ||
-      item.staff_member ||
-      item.name ||
-      item.title ||
-      "Staff member",
-    staff_member:
-      item.staff_member ||
-      item.full_name ||
-      item.name ||
-      "Staff member",
-    role: item.role || item.job_title || "",
-    status: item.status || item.employment_status || "active",
-    summary:
-      item.summary ||
-      item.notes ||
-      `${item.role || "Team member"} status recorded.`,
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
-}
-
-function normaliseSupervisionItems(data = {}) {
-  return toArray(data.items, [data.supervisions, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "supervision",
-    staff_member: item.staff_member || item.name || "Staff member",
-    role: item.role || "",
-    status: item.status || "recorded",
-    due_date: item.due_date || item.next_due_date || item.review_date || null,
-    summary:
-      item.summary ||
-      (item.due_date ? `Supervision due ${formatDate(item.due_date)}` : "Supervision record."),
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
-}
-
-function normaliseDocumentItems(data = {}) {
-  return toArray(data.items, [data.documents, data.statutory_documents, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "document",
-    title: item.title || item.document_type || "Document",
-    document_type: item.document_type || "",
-    status: item.status || "active",
-    review_date: item.review_date || item.expiry_date || null,
-    summary:
-      item.summary ||
-      item.description ||
-      "Document available for review.",
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
-}
-
-function normaliseCommunicationItems(data = {}) {
-  return toArray(data.items, [data.communications, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "communication",
-    title: item.title || "Communication",
-    status: item.status || "recorded",
-    summary:
-      item.summary ||
-      "Communication logged.",
-    contact_datetime: item.contact_datetime || item.created_at || null,
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
-}
-
-function buildStats({
-  teamItems = [],
-  supervisionItems = [],
-  documentItems = [],
-}) {
-  const active = teamItems.filter((item) =>
-    ["active", "on_shift", "available"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const staffingPressure = teamItems.filter((item) =>
-    ["off_shift", "annual_leave", "sick", "bank_staff", "agency", "working_remotely", "visiting_professional"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const supervisionGaps = supervisionItems.filter((item) =>
-    ["due", "due_soon", "overdue", "review_due"].includes(
-      String(item.status || "").toLowerCase()
-    )
-  ).length;
-
-  const documentGaps = documentItems.filter((item) =>
-    ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
-      String(item.status || "").toLowerCase()
-    )
-  ).length;
-
-  const uniqueRoles = new Set(
-    teamItems.map((item) => item.role).filter(Boolean)
-  ).size;
-
-  return {
-    total: teamItems.length,
-    active,
-    staffingPressure,
-    supervisionGaps,
-    documentGaps,
-    uniqueRoles,
-  };
-}
-
-function buildPriorityItems({
-  teamItems = [],
-  supervisionItems = [],
-  documentItems = [],
-  communicationItems = [],
-}) {
-  const items = [];
-
-  supervisionItems
-    .filter((item) =>
-      ["due", "due_soon", "overdue", "review_due"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    )
-    .slice(0, 3)
-    .forEach((item) => {
-      items.push({
-        title: item.staff_member || "Supervision due",
-        summary:
-          item.summary ||
-          (item.due_date
-            ? `Supervision due ${formatDate(item.due_date)}`
-            : "Supervision requires action."),
-      });
-    });
-
-  documentItems
-    .filter((item) =>
-      ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    )
-    .slice(0, 3)
-    .forEach((item) => {
-      items.push({
-        title: item.title || item.document_type || "Document gap",
-        summary:
-          item.summary ||
-          "Important document needs review.",
-      });
-    });
-
-  teamItems
-    .filter((item) =>
-      ["sick", "absent", "annual_leave", "agency", "bank_staff"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 2)
-    .forEach((item) => {
-      items.push({
-        title: item.staff_member || "Staffing pressure",
-        summary:
-          item.summary ||
-          `${item.role || "Team role"} is affecting staffing coverage.`,
-      });
-    });
-
-  communicationItems
-    .slice(0, 2)
-    .forEach((item) => {
-      items.push({
-        title: item.title || "Communication",
-        summary: item.summary || "Recent communication logged.",
-      });
-    });
-
-  return items.slice(0, 8);
-}
-
 function renderEmptyState(message = "No workforce data available.") {
   return `
     <div class="empty-state">
@@ -422,19 +194,14 @@ function renderRecordRows(items = [], options = {}) {
 
           const meta = metaBuilder
             ? metaBuilder(item)
-            : [
-                item.role || "",
-                item.updated_at ? formatDateTime(item.updated_at) : "",
-              ]
-                .filter(Boolean)
-                .join(" • ");
+            : "";
 
           const rawStatus = statusBuilder
             ? statusBuilder(item)
             : item.status || "recorded";
 
           const tone = getStatusTone(rawStatus);
-          const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const rowId = item?.id || "";
 
           return `
             <article
@@ -487,6 +254,206 @@ function renderPriorityList(items = []) {
   `;
 }
 
+function buildStaticTeamModel(homeId) {
+  const homeName =
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    `Home ${homeId}`;
+
+  const teamItems = [
+    {
+      id: "team-1",
+      full_name: "Sarah Ahmed",
+      staff_member: "Sarah Ahmed",
+      role: "Registered Manager",
+      status: "On shift",
+      summary: "Leads home oversight, staffing and safeguarding review.",
+      updated_at: new Date().toISOString(),
+      record_type: "team",
+    },
+    {
+      id: "team-2",
+      full_name: "Tom Patel",
+      staff_member: "Tom Patel",
+      role: "Deputy Manager",
+      status: "On shift",
+      summary: "Supporting daily operations and shift leadership.",
+      updated_at: new Date().toISOString(),
+      record_type: "team",
+    },
+    {
+      id: "team-3",
+      full_name: "Leah Brown",
+      staff_member: "Leah Brown",
+      role: "Senior Residential Worker",
+      status: "On shift",
+      summary: "Senior shift support and child-centred practice leadership.",
+      updated_at: new Date().toISOString(),
+      record_type: "team",
+    },
+    {
+      id: "team-4",
+      full_name: "Amir Hussain",
+      staff_member: "Amir Hussain",
+      role: "Residential Worker",
+      status: "Off shift",
+      summary: "Core residential care and routines support.",
+      updated_at: new Date().toISOString(),
+      record_type: "team",
+    },
+    {
+      id: "team-5",
+      full_name: "Chloe Davies",
+      staff_member: "Chloe Davies",
+      role: "Residential Worker",
+      status: "On shift",
+      summary: "Daily care, routines and relationship-based support.",
+      updated_at: new Date().toISOString(),
+      record_type: "team",
+    },
+    {
+      id: "team-6",
+      full_name: "Michael Osei",
+      staff_member: "Michael Osei",
+      role: "Waking Night",
+      status: "Annual leave",
+      summary: "Night cover and overnight welfare monitoring.",
+      updated_at: new Date().toISOString(),
+      record_type: "team",
+    },
+    {
+      id: "team-7",
+      full_name: "Priya Shah",
+      staff_member: "Priya Shah",
+      role: "Therapist",
+      status: "Visiting professional",
+      summary: "Therapeutic support and consultation.",
+      updated_at: new Date().toISOString(),
+      record_type: "team",
+    },
+    {
+      id: "team-8",
+      full_name: "Danielle Green",
+      staff_member: "Danielle Green",
+      role: "Education Lead",
+      status: "Working remotely",
+      summary: "Education liaison and attendance support.",
+      updated_at: new Date().toISOString(),
+      record_type: "team",
+    },
+  ];
+
+  const supervisionItems = [
+    {
+      id: "sup-1",
+      staff_member: "Leah Brown",
+      role: "Senior Residential Worker",
+      due_date: new Date(Date.now() + 3 * 86400000).toISOString(),
+      summary: "Supervision due this week.",
+      status: "due_soon",
+      record_type: "supervision",
+    },
+    {
+      id: "sup-2",
+      staff_member: "Michael Osei",
+      role: "Waking Night",
+      due_date: new Date(Date.now() - 2 * 86400000).toISOString(),
+      summary: "Supervision overdue.",
+      status: "overdue",
+      record_type: "supervision",
+    },
+  ];
+
+  const documentItems = [
+    {
+      id: "doc-1",
+      title: "Staff file review",
+      document_type: "Staff file",
+      review_date: new Date(Date.now() + 5 * 86400000).toISOString(),
+      summary: "Staff file review due this week.",
+      status: "review_due",
+      record_type: "document",
+    },
+    {
+      id: "doc-2",
+      title: "Training certificate check",
+      document_type: "Training",
+      review_date: new Date(Date.now() + 10 * 86400000).toISOString(),
+      summary: "Training evidence needs updating.",
+      status: "due_soon",
+      record_type: "document",
+    },
+  ];
+
+  const communicationItems = [
+    {
+      id: "comm-1",
+      title: "Staffing update",
+      summary: "Weekend cover confirmed and rota adjusted.",
+      contact_datetime: new Date(Date.now() - 86400000).toISOString(),
+      status: "Sent",
+      record_type: "communication",
+    },
+    {
+      id: "comm-2",
+      title: "Supervision reminder",
+      summary: "Upcoming supervision reminders sent to staff.",
+      contact_datetime: new Date().toISOString(),
+      status: "Sent",
+      record_type: "communication",
+    },
+  ];
+
+  const stats = {
+    total: teamItems.length,
+    active: teamItems.filter((item) =>
+      ["active", "on_shift", "available"].includes(
+        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      )
+    ).length,
+    staffingPressure: teamItems.filter((item) =>
+      ["off_shift", "annual_leave", "sick", "bank_staff", "agency", "working_remotely", "visiting_professional"].includes(
+        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      )
+    ).length,
+    supervisionGaps: supervisionItems.filter((item) =>
+      ["due", "due_soon", "overdue", "review_due"].includes(
+        String(item.status || "").toLowerCase()
+      )
+    ).length,
+    documentGaps: documentItems.filter((item) =>
+      ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
+        String(item.status || "").toLowerCase()
+      )
+    ).length,
+  };
+
+  const priorityItems = [
+    {
+      title: "Michael Osei",
+      summary: "Supervision overdue and needs booking.",
+    },
+    {
+      title: "Staff file review",
+      summary: "Document review due this week.",
+    },
+    {
+      title: "Weekend staffing",
+      summary: "Agency or bank support may still be needed for cover.",
+    },
+  ];
+
+  return {
+    homeName,
+    teamItems,
+    supervisionItems,
+    documentItems,
+    communicationItems,
+    stats,
+    priorityItems,
+  };
+}
+
 function renderTeamPage({
   stats,
   teamItems,
@@ -494,13 +461,14 @@ function renderTeamPage({
   documentItems,
   communicationItems,
   priorityItems,
+  homeName,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Team and workforce</div>
-          <h2>Team and staffing</h2>
+          <h2>Team and staffing • ${safeText(homeName)}</h2>
           <p>A workforce view across team members, staffing pressures, supervision, documents and operational readiness.</p>
         </div>
       </div>
@@ -608,141 +576,6 @@ function renderTeamPage({
   `;
 }
 
-function buildFallbackData(homeId) {
-  const now = new Date();
-
-  const plusDays = (days) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    return d.toISOString();
-  };
-
-  const minusDays = (days) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - days);
-    return d.toISOString();
-  };
-
-  return {
-    summaryData: {
-      summary: {
-        title: "Team and staffing",
-        home_name:
-          state.currentUser?.home_name ||
-          state.currentUser?.homeName ||
-          `Home ${homeId}`,
-      },
-    },
-    teamData: {
-      items: [
-        {
-          id: "team-1",
-          full_name: "Sarah Ahmed",
-          staff_member: "Sarah Ahmed",
-          role: "Deputy manager",
-          status: "On shift",
-          summary: "Leading day-to-day operational oversight.",
-        },
-        {
-          id: "team-2",
-          full_name: "Ben Carter",
-          staff_member: "Ben Carter",
-          role: "Senior residential worker",
-          status: "On shift",
-          summary: "Senior shift support and child-focused oversight.",
-        },
-        {
-          id: "team-3",
-          full_name: "Lena Morris",
-          staff_member: "Lena Morris",
-          role: "Residential worker",
-          status: "Annual leave",
-          summary: "Currently away from rota.",
-        },
-        {
-          id: "team-4",
-          full_name: "Agency cover worker",
-          staff_member: "Agency cover worker",
-          role: "Agency worker",
-          status: "Available",
-          summary: "Available for rota pressure.",
-        },
-      ],
-    },
-    supervisionData: {
-      items: [
-        {
-          id: "sup-1",
-          staff_member: "Ben Carter",
-          role: "Senior residential worker",
-          due_date: minusDays(2),
-          summary: "Supervision overdue.",
-          status: "overdue",
-        },
-        {
-          id: "sup-2",
-          staff_member: "Sarah Ahmed",
-          role: "Deputy manager",
-          due_date: plusDays(5),
-          summary: "Supervision due this week.",
-          status: "due_soon",
-        },
-      ],
-    },
-    documentData: {
-      items: [
-        {
-          id: "doc-1",
-          title: "Staff file review",
-          document_type: "Staff file",
-          review_date: plusDays(3),
-          summary: "One file review due this week.",
-          status: "review_due",
-        },
-      ],
-    },
-    communicationData: {
-      items: [
-        {
-          id: "comm-1",
-          title: "Staffing update",
-          summary: "Agency cover arranged for weekend shifts.",
-          contact_datetime: minusDays(1),
-          status: "Sent",
-        },
-      ],
-    },
-  };
-}
-
-async function fetchDataset(homeId) {
-  const requests = [
-    apiGet(`/homes/${homeId}/team`),
-    apiGet(`/homes/${homeId}/supervisions`),
-    apiGet(`/homes/${homeId}/documents`),
-    apiGet(`/homes/${homeId}/communications`),
-  ];
-
-  const results = await Promise.allSettled(requests);
-  const hasLiveSuccess = results.some((result) => result.status === "fulfilled");
-
-  if (!hasLiveSuccess) {
-    return {
-      ...buildFallbackData(homeId),
-      isFallback: true,
-    };
-  }
-
-  return {
-    summaryData: {},
-    teamData: results[0].status === "fulfilled" ? results[0].value : { items: [] },
-    supervisionData: results[1].status === "fulfilled" ? results[1].value : { items: [] },
-    documentData: results[2].status === "fulfilled" ? results[2].value : { items: [] },
-    communicationData: results[3].status === "fulfilled" ? results[3].value : { items: [] },
-    isFallback: false,
-  };
-}
-
 function renderNoHomeContext() {
   if (!els.viewContent) return;
 
@@ -795,7 +628,7 @@ function renderErrorState(message) {
     today: "Team unavailable",
     nextEvent: "Unable to load",
     lastRecord: "No workforce data",
-    openActions: "Check API routes",
+    openActions: "Check setup",
   });
 }
 
@@ -812,77 +645,28 @@ export async function loadTeam() {
   renderLoadingState();
 
   try {
-    const {
-      summaryData,
-      teamData,
-      supervisionData,
-      documentData,
-      communicationData,
-      isFallback,
-    } = await fetchDataset(homeId);
-
-    const summary = normaliseSummary(summaryData);
-
-    const teamItems = sortNewestFirst(normaliseTeamItems(teamData), [
-      "updated_at",
-      "created_at",
-    ]).slice(0, 12);
-
-    const supervisionItems = sortSoonestFirst(
-      normaliseSupervisionItems(supervisionData),
-      ["due_date", "updated_at", "created_at"]
-    );
-
-    const documentItems = sortSoonestFirst(
-      normaliseDocumentItems(documentData),
-      ["review_date", "updated_at", "created_at"]
-    );
-
-    const communicationItems = sortNewestFirst(
-      normaliseCommunicationItems(communicationData),
-      ["contact_datetime", "updated_at", "created_at"]
-    );
-
-    const stats = buildStats({
-      teamItems,
-      supervisionItems,
-      documentItems,
-    });
-
-    const priorityItems = buildPriorityItems({
-      teamItems,
-      supervisionItems,
-      documentItems,
-      communicationItems,
-    });
+    const model = buildStaticTeamModel(homeId);
 
     els.viewContent.innerHTML = renderTeamPage({
-      stats,
-      teamItems,
-      supervisionItems,
-      documentItems,
-      communicationItems,
-      priorityItems,
-      isFallback,
-      title:
-        summary.title ||
-        state.currentUser?.home_name ||
-        state.currentUser?.homeName ||
-        `Home ${homeId} workforce`,
+      stats: model.stats,
+      teamItems: model.teamItems,
+      supervisionItems: model.supervisionItems,
+      documentItems: model.documentItems,
+      communicationItems: model.communicationItems,
+      priorityItems: model.priorityItems,
+      homeName: model.homeName,
     });
 
-    const nextSupervision = supervisionItems.find((item) =>
+    const nextSupervision = model.supervisionItems.find((item) =>
       ["due", "due_soon", "overdue", "review_due"].includes(
         String(item.status || "").toLowerCase()
       )
     );
 
-    const latestProfile = teamItems[0];
+    const latestProfile = model.teamItems[0];
 
     updateWorkspaceSummaryStrip({
-      today: isFallback
-        ? `${toNumber(stats.total)} team • preview mode`
-        : `${toNumber(stats.total)} team • ${toNumber(stats.active)} active`,
+      today: `${toNumber(model.stats.total)} team • safe mode`,
       nextEvent: nextSupervision?.due_date
         ? `Supervision due ${formatDate(nextSupervision.due_date)}`
         : "No immediate workforce review",
@@ -891,11 +675,9 @@ export async function loadTeam() {
           ? `Latest team update ${formatDateTime(
               latestProfile.updated_at || latestProfile.created_at
             )}`
-          : isFallback
-          ? "Preview workforce data loaded"
           : "No recent workforce record",
-      openActions: `${toNumber(stats.supervisionGaps)} supervision • ${toNumber(
-        stats.documentGaps
+      openActions: `${toNumber(model.stats.supervisionGaps)} supervision • ${toNumber(
+        model.stats.documentGaps
       )} document gaps`,
     });
   } catch (error) {
