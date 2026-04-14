@@ -24,6 +24,13 @@ import {
   closeMobileNav,
 } from "./shell-ui.js";
 import { resetWorkspaceSummaryStrip } from "./workspace-summary.js";
+import {
+  bindAssistantController,
+  onAssistantScopeChanged,
+  onWorkspaceRefreshRequested,
+  refreshAssistantAnalysisOnly,
+  renderAssistantControllerPanels,
+} from "./assistant-controller.js";
 
 import { loadOverview } from "../features/overview.js";
 import { loadProfile } from "../features/profile.js";
@@ -108,6 +115,7 @@ let drawerCallbacksBound = false;
 let shellEventsBound = false;
 let actionRouterBound = false;
 let suggestionsBound = false;
+let scopeSwitchBound = false;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -341,6 +349,23 @@ function markActiveNav(section) {
   });
 }
 
+function markActiveScopeButtons() {
+  const scope = getCurrentScope();
+
+  const pairs = [
+    [els.scopeChildBtn, "child"],
+    [els.scopeHomeBtn, "home"],
+    [els.scopeQualityBtn, "quality"],
+  ];
+
+  pairs.forEach(([button, value]) => {
+    if (!button) return;
+    const isActive = scope === value;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
 function updateSectionState(section) {
   state.currentSection = section;
   state.activeSection = section;
@@ -349,6 +374,40 @@ function updateSectionState(section) {
 
 function requireChildContext() {
   return Boolean(state.youngPersonId);
+}
+
+async function applyScopeChange(scope) {
+  const safeScope =
+    scope === "home" || scope === "quality" || scope === "child"
+      ? scope
+      : "child";
+
+  state.currentScope = safeScope;
+  updateSectionState(getDefaultSectionForScope(safeScope));
+
+  renderNavigation();
+  markActiveNav(getCurrentSection());
+  markActiveScopeButtons();
+  updateSectionChrome(getCurrentSection());
+  updateYoungPersonChrome(state.selectedYoungPerson || {});
+  clearStatus();
+  resetWorkspaceSummaryStrip();
+
+  if (safeScope === "child" && !requireChildContext()) {
+    try {
+      await loadYoungPersonSelector();
+      showSelectorScreen();
+      renderAssistantControllerPanels();
+    } catch (error) {
+      showError(error?.message || "Unable to load young people.");
+    }
+    return;
+  }
+
+  showWorkspaceScreen();
+  await onAssistantScopeChanged();
+  renderAssistantControllerPanels();
+  await loadSection(getCurrentSection());
 }
 
 export async function loadSection(section) {
@@ -360,6 +419,7 @@ export async function loadSection(section) {
     showError("Select a young person first.");
     showSelectorScreen();
     resetWorkspaceSummaryStrip();
+    renderAssistantControllerPanels();
     return;
   }
 
@@ -375,6 +435,7 @@ export async function loadSection(section) {
 
   showWorkspaceScreen();
   markActiveNav(safeSection);
+  markActiveScopeButtons();
   updateSectionChrome(safeSection);
   updateYoungPersonChrome(state.selectedYoungPerson || {});
   clearStatus();
@@ -383,6 +444,7 @@ export async function loadSection(section) {
   try {
     await loader();
     closeMobileNav();
+    renderAssistantControllerPanels();
   } catch (error) {
     console.error(`[nav] failed loading section "${safeSection}"`, error);
     showError(error?.message || "Failed to load this section.");
@@ -409,6 +471,23 @@ function bindNavButtons() {
   });
 }
 
+function bindScopeSwitch() {
+  if (scopeSwitchBound) return;
+  scopeSwitchBound = true;
+
+  els.scopeChildBtn?.addEventListener("click", async () => {
+    await applyScopeChange("child");
+  });
+
+  els.scopeHomeBtn?.addEventListener("click", async () => {
+    await applyScopeChange("home");
+  });
+
+  els.scopeQualityBtn?.addEventListener("click", async () => {
+    await applyScopeChange("quality");
+  });
+}
+
 function bindSelectorControls() {
   if (selectorControlsBound) return;
   selectorControlsBound = true;
@@ -432,6 +511,8 @@ function bindSelectorControls() {
       await loadYoungPersonSelector();
       renderNavigation();
       markActiveNav(getCurrentSection());
+      markActiveScopeButtons();
+      renderAssistantControllerPanels();
     } catch (error) {
       showError(error?.message || "Failed to load young people.");
     }
@@ -469,37 +550,29 @@ function bindComposerControls() {
     closeComposer(true);
   });
 
-  els.composerSaveBtn?.addEventListener("click", async () => {
+  const handleSaveThenRefresh = async (mode, successMessage) => {
     try {
-      await saveComposer("draft");
-      showMessage("Draft saved.");
+      await saveComposer(mode);
+      showMessage(successMessage);
       await reloadCurrentSection();
+      await refreshAssistantAnalysisOnly();
+      renderAssistantControllerPanels();
     } catch (error) {
-      console.error("[nav] save draft failed", error);
-      showError(error?.message || "Could not save draft.");
+      console.error("[nav] composer action failed", error);
+      showError(error?.message || "Could not save record.");
     }
+  };
+
+  els.composerSaveBtn?.addEventListener("click", async () => {
+    await handleSaveThenRefresh("draft", "Draft saved.");
   });
 
   els.composerSaveDraftBtn?.addEventListener("click", async () => {
-    try {
-      await saveComposer("draft");
-      showMessage("Draft saved.");
-      await reloadCurrentSection();
-    } catch (error) {
-      console.error("[nav] save draft failed", error);
-      showError(error?.message || "Could not save draft.");
-    }
+    await handleSaveThenRefresh("draft", "Draft saved.");
   });
 
   els.composerSubmitBtn?.addEventListener("click", async () => {
-    try {
-      await saveComposer("submit");
-      showMessage("Record sent for review.");
-      await reloadCurrentSection();
-    } catch (error) {
-      console.error("[nav] submit failed", error);
-      showError(error?.message || "Could not submit record.");
-    }
+    await handleSaveThenRefresh("submit", "Record sent for review.");
   });
 }
 
@@ -509,6 +582,7 @@ function bindRefreshControls() {
 
   const refresh = async () => {
     try {
+      await onWorkspaceRefreshRequested();
       await reloadCurrentSection();
       showMessage("Workspace refreshed.");
     } catch (error) {
@@ -591,6 +665,7 @@ function bindYoungPersonOpen() {
 
       renderNavigation();
       markActiveNav(getCurrentSection());
+      markActiveScopeButtons();
 
       await loadSection(getCurrentSection());
     } catch (error) {
@@ -612,6 +687,8 @@ function bindDrawerCallbacks() {
     onWorkflowComplete: async () => {
       try {
         await reloadCurrentSection();
+        await refreshAssistantAnalysisOnly();
+        renderAssistantControllerPanels();
       } catch (error) {
         console.error("[nav] workflow refresh failed", error);
         showError(error?.message || "Failed to refresh workspace.");
@@ -635,6 +712,7 @@ export function bindNavEvents() {
   if (shellEventsBound) return;
   shellEventsBound = true;
 
+  bindAssistantController();
   bindSelectorControls();
   bindComposerControls();
   bindRefreshControls();
@@ -642,6 +720,7 @@ export function bindNavEvents() {
   bindYoungPersonOpen();
   bindDrawerCallbacks();
   bindQuickActionRouter();
+  bindScopeSwitch();
 
   if (!suggestionsBound) {
     bindSuggestionEvents();
@@ -653,7 +732,9 @@ export function rerenderNavigationForScope() {
   ensureValidCurrentSection();
   renderNavigation();
   markActiveNav(getCurrentSection());
+  markActiveScopeButtons();
   updateSectionChrome(getCurrentSection());
+  renderAssistantControllerPanels();
 }
 
 export async function initialiseShellNavigation() {
@@ -668,19 +749,23 @@ export async function initialiseShellNavigation() {
   state.currentView = state.currentSection;
   ensureValidCurrentSection();
 
+  bindAssistantController();
   renderNavigation();
   bindNavButtons();
   bindNavEvents();
 
   markActiveNav(getCurrentSection());
+  markActiveScopeButtons();
   updateSectionChrome(getCurrentSection());
   updateYoungPersonChrome(state.selectedYoungPerson || {});
+  renderAssistantControllerPanels();
 
   if (isChildScope() && !requireChildContext()) {
     try {
       await loadYoungPersonSelector();
       showSelectorScreen();
       resetWorkspaceSummaryStrip();
+      renderAssistantControllerPanels();
     } catch (error) {
       console.error("[nav] selector load failed", error);
       showError(error?.message || "Unable to load young people.");
@@ -690,6 +775,7 @@ export async function initialiseShellNavigation() {
 
   try {
     showWorkspaceScreen();
+    await onAssistantScopeChanged();
     await loadSection(getCurrentSection());
   } catch (error) {
     console.error("[nav] initial section load failed", error);
