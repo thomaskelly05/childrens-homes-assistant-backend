@@ -5,7 +5,7 @@ import {
   mapReadinessEvidence,
   mapManagerReviewEvidence,
   toAssistantEvidence,
-} from "./core/adapters.js";
+} from "./adapters.js";
 
 const ASSISTANT_INTENT = {
   greeting: "greeting",
