@@ -731,107 +731,42 @@ function buildAssistantContextPayload(message = "") {
   };
 }
 
-function getScrubberFunction() {
-  if (typeof aiScrubber.scrubAssistantPayload === "function") {
-    return aiScrubber.scrubAssistantPayload;
-  }
-
-  if (typeof aiScrubber.scrubPayloadForAssistant === "function") {
-    return aiScrubber.scrubPayloadForAssistant;
-  }
-
-  if (typeof aiScrubber.scrubPayload === "function") {
-    return aiScrubber.scrubPayload;
-  }
-
-  if (typeof aiScrubber.default === "function") {
-    return aiScrubber.default;
-  }
-
-  return null;
-}
-
-function getScrubberMeta(scrubbedResult, originalPayload, finalPayload) {
-  if (
-    scrubbedResult &&
-    typeof scrubbedResult === "object" &&
-    !Array.isArray(scrubbedResult)
-  ) {
-    if (scrubbedResult.meta && typeof scrubbedResult.meta === "object") {
-      return scrubbedResult.meta;
-    }
-
-    if (scrubbedResult.scrub_meta && typeof scrubbedResult.scrub_meta === "object") {
-      return scrubbedResult.scrub_meta;
-    }
-  }
-
-  return {
-    enabled: finalPayload !== originalPayload,
-    mode: "client_side",
-  };
-}
-
-function extractScrubbedPayload(scrubbedResult, fallbackPayload) {
-  if (!scrubbedResult) {
-    return fallbackPayload;
-  }
-
-  if (
-    scrubbedResult &&
-    typeof scrubbedResult === "object" &&
-    !Array.isArray(scrubbedResult)
-  ) {
-    if (scrubbedResult.payload && typeof scrubbedResult.payload === "object") {
-      return scrubbedResult.payload;
-    }
-
-    if (
-      scrubbedResult.scrubbed_payload &&
-      typeof scrubbedResult.scrubbed_payload === "object"
-    ) {
-      return scrubbedResult.scrubbed_payload;
-    }
-
-    if (
-      scrubbedResult.data &&
-      typeof scrubbedResult.data === "object" &&
-      scrubbedResult.message
-    ) {
-      return scrubbedResult.data;
-    }
-  }
-
-  if (typeof scrubbedResult === "object") {
-    return scrubbedResult;
-  }
-
-  return fallbackPayload;
-}
-
 function scrubAssistantRequestPayload(payload) {
-  const scrubberFn = getScrubberFunction();
+  try {
+    if (typeof aiScrubber.scrubAssistantPayload === "function") {
+      const result = aiScrubber.scrubAssistantPayload(payload);
 
-  if (!scrubberFn) {
+      return {
+        payload: result?.safePayload || payload,
+        reverseMap: result?.reverseMap || {},
+        meta: {
+          enabled: true,
+          mode: "client_side",
+        },
+      };
+    }
+
+    if (typeof aiScrubber.createScrubber === "function") {
+      const scrubber = aiScrubber.createScrubber();
+      scrubber.registerContext(payload?.context || {});
+      const safePayload = scrubber.scrubPayload(payload);
+
+      return {
+        payload: safePayload || payload,
+        reverseMap: typeof scrubber.reverseMap === "function" ? scrubber.reverseMap() : {},
+        meta: {
+          enabled: true,
+          mode: "client_side",
+        },
+      };
+    }
+
     return {
       payload,
+      reverseMap: {},
       meta: {
         enabled: false,
         reason: "scrubber_not_found",
-      },
-    };
-  }
-
-  try {
-    const scrubbedResult = scrubberFn(payload);
-    const scrubbedPayload = extractScrubbedPayload(scrubbedResult, payload);
-    const scrubMeta = getScrubberMeta(scrubbedResult, payload, scrubbedPayload);
-
-    return {
-      payload: scrubbedPayload,
-      meta: {
-        enabled: true,
-        ...(scrubMeta || {}),
       },
     };
   } catch (error) {
@@ -839,6 +774,7 @@ function scrubAssistantRequestPayload(payload) {
 
     return {
       payload,
+      reverseMap: {},
       meta: {
         enabled: false,
         reason: "scrubber_error",
@@ -846,6 +782,22 @@ function scrubAssistantRequestPayload(payload) {
       },
     };
   }
+}
+
+function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
+  try {
+    if (
+      reverseMap &&
+      Object.keys(reverseMap).length &&
+      typeof aiScrubber.restoreTokens === "function"
+    ) {
+      return aiScrubber.restoreTokens(text, reverseMap);
+    }
+  } catch (error) {
+    console.error("[assistant] token restore failed", error);
+  }
+
+  return text;
 }
 
 function applyAssistantMeta(meta = {}) {
@@ -939,13 +891,19 @@ export async function askAssistant(question) {
       },
       onProgress: () => {},
       onMessage: (streamedText) => {
-        updateLastAssistantStreamingText(streamedText || "Thinking…");
+        const restored = restoreAssistantReplyTokens(
+          streamedText || "Thinking…",
+          scrubbed.reverseMap
+        );
+        updateLastAssistantStreamingText(restored || "Thinking…");
       },
       onDone: (streamedText) => {
-        const safeReply =
-          String(streamedText || "").trim() || "No assistant reply returned.";
+        const restored = restoreAssistantReplyTokens(
+          String(streamedText || "").trim() || "No assistant reply returned.",
+          scrubbed.reverseMap
+        );
 
-        replaceLastAssistantPlaceholder(safeReply);
+        replaceLastAssistantPlaceholder(restored);
       },
     });
   } catch (error) {
