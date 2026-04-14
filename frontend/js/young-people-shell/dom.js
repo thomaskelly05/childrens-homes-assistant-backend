@@ -13,6 +13,7 @@ export const els = {
   logoBtn: document.getElementById("logoBtn"),
   mobileNavBtn: document.getElementById("mobileNavBtn"),
   refreshBtn: document.getElementById("refreshBtn"),
+  refreshWorkspaceBtn: document.getElementById("refreshWorkspaceBtn"),
   homeBtn: document.getElementById("homeBtn"),
   assistantLauncher: document.getElementById("assistantLauncher"),
 
@@ -25,6 +26,7 @@ export const els = {
   // Selector
   selectorList: document.getElementById("selectorList"),
   selectorSearch: document.getElementById("selectorSearch"),
+  youngPersonSearchInput: document.getElementById("youngPersonSearchInput"),
   selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
   backToSelectorBtn: document.getElementById("backToSelectorBtn"),
 
@@ -55,6 +57,7 @@ export const els = {
   pageSubtitle: document.getElementById("pageSubtitle"),
   heroAssistantBtn: document.getElementById("heroAssistantBtn"),
   heroQuickActions: document.getElementById("heroQuickActions"),
+  quickCreateBar: document.getElementById("quickCreateBar"),
   changePersonBtn: document.getElementById("changePersonBtn"),
   profileOpenBtn: document.getElementById("profileOpenBtn"),
   profilePhotoUploadBtn: document.getElementById("profilePhotoUploadBtn"),
@@ -125,6 +128,7 @@ export const els = {
   composerAiFeedback: document.getElementById("composerAiFeedback"),
   composerAutosaveStatus: document.getElementById("composerAutosaveStatus"),
   closeComposerBtn: document.getElementById("closeComposerBtn"),
+  composerSaveBtn: document.getElementById("composerSaveBtn"),
   composerSaveDraftBtn: document.getElementById("composerSaveDraftBtn"),
   composerCheckBtn: document.getElementById("composerCheckBtn"),
   composerSubmitBtn: document.getElementById("composerSubmitBtn"),
