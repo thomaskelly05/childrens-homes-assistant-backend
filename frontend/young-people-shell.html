@@ -184,15 +184,15 @@
         class="workspace-screen"
         aria-labelledby="pageTitle"
       >
-        <section id="workspaceShell" class="workspace-screen-inner">
-          <aside class="workspace-sidebar desktop-only" aria-label="Workspace navigation">
+        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--menubar">
+          <aside class="workspace-sidebar workspace-sidebar--slim desktop-only" aria-label="Workspace identity">
             <div class="workspace-sidebar-shell">
               <div class="workspace-sidebar-brand">
                 <div class="workspace-sidebar-brand-dot" aria-hidden="true"></div>
-                <span>Residential care workspace</span>
+                <span>Young person workspace</span>
               </div>
 
-              <section class="workspace-sidebar-profile-card">
+              <section class="workspace-sidebar-profile-card workspace-sidebar-profile-card--slim">
                 <div class="workspace-sidebar-profile-top">
                   <div
                     class="workspace-sidebar-avatar"
@@ -224,7 +224,7 @@
 
               <nav
                 id="desktopNav"
-                class="workspace-nav workspace-nav--accordion"
+                class="workspace-nav workspace-nav--accordion workspace-nav--hidden"
                 aria-label="Workspace sections"
               ></nav>
             </div>
@@ -252,12 +252,12 @@
               </section>
 
               <section
-                class="workspace-header-band workspace-header-band--calm"
+                class="workspace-header-band workspace-header-band--calm workspace-header-band--compact"
                 aria-labelledby="pageTitle"
               >
                 <div class="workspace-header-main">
                   <div class="workspace-header-copy">
-                    <div id="workspaceEyebrow" class="eyebrow">Residential workspace</div>
+                    <div id="workspaceEyebrow" class="eyebrow">Young person workspace</div>
                     <h1 id="pageTitle">Today’s workspace</h1>
                     <p id="pageSubtitle">
                       A calmer, child-focused view for recording, reflection,
@@ -364,155 +364,166 @@
 
               <section
                 id="quickCreateBar"
-                class="quick-actions-panel quick-actions-panel--menu"
-                aria-label="Quick actions"
+                class="quick-actions-panel quick-actions-panel--macmenu"
+                aria-label="Workspace menu"
               >
                 <div class="quick-actions-panel-head quick-actions-panel-head--compact">
                   <div>
-                    <div class="eyebrow">Task menu</div>
-                    <h2>Start where you are</h2>
+                    <div class="eyebrow">Workspace menu</div>
+                    <h2>Sections and actions</h2>
                   </div>
                   <p>
-                    Open the right heading to create records quickly without crowding the page.
+                    Use the menus below to move around the workspace and create records quickly.
                   </p>
                 </div>
 
-                <div
+                <nav
                   id="heroQuickActions"
-                  class="task-menu-bar"
+                  class="workspace-menubar"
                   role="navigation"
-                  aria-label="Quick action categories"
+                  aria-label="Workspace sections and actions"
                 >
-                  <details class="task-menu-group" open>
-                    <summary class="task-menu-trigger">
-                      <span class="task-menu-trigger-title">Daily care</span>
-                      <span class="task-menu-trigger-meta">Notes, events and handover</span>
-                    </summary>
-                    <div class="task-menu-dropdown">
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="new-daily-note"
-                      >
-                        <strong>Add daily note</strong>
-                        <small>Capture care, presentation and what mattered.</small>
+                  <details class="workspace-menu" open>
+                    <summary class="workspace-menu-trigger">Today</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-nav-section="workspace">
+                        Today’s workspace
                       </button>
-
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="new-incident"
-                      >
-                        <strong>Add important event</strong>
-                        <small>Record clearly, safely and without blame.</small>
+                      <button class="workspace-menu-link" type="button" data-nav-section="overview">
+                        What matters today
                       </button>
-
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-assistant-quick="handover"
-                      >
-                        <strong>Draft handover</strong>
-                        <small>Prepare a clear shift handover.</small>
+                      <button class="workspace-menu-link" type="button" data-nav-section="timeline">
+                        Chronology and events
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="handover">
+                        Handover
                       </button>
                     </div>
                   </details>
 
-                  <details class="task-menu-group">
-                    <summary class="task-menu-trigger">
-                      <span class="task-menu-trigger-title">Health, learning and wellbeing</span>
-                      <span class="task-menu-trigger-meta">Appointments, progress and support</span>
-                    </summary>
-                    <div class="task-menu-dropdown">
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="new-health-record"
-                      >
-                        <strong>Add health record</strong>
-                        <small>Appointments, outcomes and follow-up.</small>
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Care</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-daily-note">
+                        Add daily note
                       </button>
-
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="new-education-record"
-                      >
-                        <strong>Add education record</strong>
-                        <small>Learning, attendance and progress.</small>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-incident">
+                        Add important event
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="timeline">
+                        View chronology
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="handover">
+                        Open handover
                       </button>
                     </div>
                   </details>
 
-                  <details class="task-menu-group">
-                    <summary class="task-menu-trigger">
-                      <span class="task-menu-trigger-title">Relationships and communication</span>
-                      <span class="task-menu-trigger-meta">Family and professional contact</span>
-                    </summary>
-                    <div class="task-menu-dropdown">
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="new-family-contact"
-                      >
-                        <strong>Add family contact</strong>
-                        <small>Contact, themes and next steps.</small>
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Health</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-health-record">
+                        Add health record
                       </button>
-
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="professional-message"
-                      >
-                        <strong>Log communication</strong>
-                        <small>Professionals, family and partner agencies.</small>
+                      <button class="workspace-menu-link" type="button" data-nav-section="health">
+                        Health and wellbeing
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="calendar">
+                        Appointments and key dates
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="therapy">
+                        Therapeutic services
                       </button>
                     </div>
                   </details>
 
-                  <details class="task-menu-group">
-                    <summary class="task-menu-trigger">
-                      <span class="task-menu-trigger-title">Planning and action</span>
-                      <span class="task-menu-trigger-meta">Plans, tasks and next steps</span>
-                    </summary>
-                    <div class="task-menu-dropdown">
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="new-support-plan"
-                      >
-                        <strong>Add support plan</strong>
-                        <small>Create practical therapeutic guidance.</small>
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Learning</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-education-record">
+                        Add education record
                       </button>
-
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="new-task"
-                      >
-                        <strong>Add task</strong>
-                        <small>Create a clear action with ownership.</small>
+                      <button class="workspace-menu-link" type="button" data-nav-section="education">
+                        Learning and education
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="readiness">
+                        Actions and readiness
                       </button>
                     </div>
                   </details>
 
-                  <details class="task-menu-group">
-                    <summary class="task-menu-trigger">
-                      <span class="task-menu-trigger-title">Documents</span>
-                      <span class="task-menu-trigger-meta">Files and supporting records</span>
-                    </summary>
-                    <div class="task-menu-dropdown">
-                      <button
-                        class="task-menu-item"
-                        type="button"
-                        data-action-router="upload-document"
-                      >
-                        <strong>Upload document</strong>
-                        <small>Add statutory and supporting records.</small>
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Relationships</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-nav-section="profile">
+                        About this young person
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="family">
+                        Relationships and family
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">
+                        Add family contact
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-action-router="professional-message">
+                        Log communication
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="communication">
+                        Communication log
                       </button>
                     </div>
                   </details>
-                </div>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Planning</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-support-plan">
+                        Add support plan
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-task">
+                        Add task
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reports">
+                        Reports and review
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="manager">
+                        Leadership and review
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="readiness">
+                        Actions and readiness
+                      </button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Documents</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="upload-document">
+                        Upload document
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="documents">
+                        Documents
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reports">
+                        Reports
+                      </button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu">
+                    <summary class="workspace-menu-trigger">Home</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-nav-section="team">
+                        Team around the child
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="supervision">
+                        Supervision
+                      </button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="manager">
+                        Manager view
+                      </button>
+                    </div>
+                  </details>
+                </nav>
               </section>
 
               <section
