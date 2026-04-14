@@ -513,38 +513,12 @@ export async function fetchYoungPersonAssistantBundle(youngPersonId) {
   return mergeAssistantBundle(responses);
 }
 
-const SAFE_HOME_BUNDLE_ROUTES = [
-  "dashboard",
-  "quality",
-  "compliance",
-];
-
 export async function fetchHomeAssistantBundle(homeId) {
-  if (!homeId) {
-    return mergeAssistantBundle([]);
-  }
-
-  const urls = SAFE_HOME_BUNDLE_ROUTES.map(
-    (route) => `/homes/${homeId}/${route}`
-  );
-
-  const responses = await apiGetSettled(urls);
-  return mergeAssistantBundle(responses);
+  return mergeAssistantBundle([]);
 }
 
 export async function fetchQualityAssistantBundle(homeId) {
-  if (!homeId) {
-    return mergeAssistantBundle([]);
-  }
-
-  const urls = [
-    `/homes/${homeId}/quality`,
-    `/homes/${homeId}/compliance`,
-    `/homes/${homeId}/reports`,
-  ];
-
-  const responses = await apiGetSettled(urls);
-  return mergeAssistantBundle(responses);
+  return mergeAssistantBundle([]);
 }
 
 export async function fetchAssistantScopeBundle(context = {}) {
@@ -559,16 +533,8 @@ export async function fetchAssistantScopeBundle(context = {}) {
     context.person_id ||
     null;
 
-  const homeId =
-    context.home_id ||
-    null;
-
-  if (scope === "home") {
-    return fetchHomeAssistantBundle(homeId);
-  }
-
-  if (scope === "quality") {
-    return fetchQualityAssistantBundle(homeId);
+  if (scope === "home" || scope === "quality") {
+    return mergeAssistantBundle([]);
   }
 
   return fetchYoungPersonAssistantBundle(youngPersonId);
