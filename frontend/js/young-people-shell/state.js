@@ -10,6 +10,19 @@ export function createAssistantMeta() {
     assistant_scope: {},
     assistant_context: {},
     suggested_actions: [],
+
+    // New assistant intelligence fields
+    intent: null,
+    retrieval_mode: "whole_scope",
+    output_mode: "answer",
+    chronology: [],
+    facts: {},
+    care_domains: {},
+    evidence_summary: {},
+    evidence_sufficiency: {},
+    live_summary: null,
+    last_bundle_refresh_at: null,
+    last_analysis_at: null,
   };
 }
 
@@ -31,6 +44,24 @@ export function createSuggestionState() {
     currentSuggestionSource: null,
     lastSavedRecord: null,
     suggestions: [],
+  };
+}
+
+export function createAssistantBundleState() {
+  return {
+    scopeBundle: null,
+    scopeBundleLoadedAt: null,
+    scopeBundleLoading: false,
+    scopeBundleError: null,
+
+    // Optional derived caches for future real-time / morning brief support
+    latestChronology: [],
+    latestFacts: {},
+    latestCareDomains: {},
+    latestMorningBrief: null,
+    latestManagerBrief: null,
+    latestQualityBrief: null,
+    liveUpdates: [],
   };
 }
 
@@ -84,6 +115,9 @@ export const state = {
   assistantSending: false,
   assistantMeta: createAssistantMeta(),
 
+  // Whole-scope assistant bundle / live intelligence state
+  ...createAssistantBundleState(),
+
   // Request optimisation state
   resourceCache: Object.create(null),
   requestCooldowns: Object.create(null),
@@ -124,6 +158,18 @@ export function resetAssistantState() {
   state.assistantExplainability = null;
   state.assistantSending = false;
   state.assistantMeta = createAssistantMeta();
+
+  state.scopeBundle = null;
+  state.scopeBundleLoadedAt = null;
+  state.scopeBundleLoading = false;
+  state.scopeBundleError = null;
+  state.latestChronology = [];
+  state.latestFacts = {};
+  state.latestCareDomains = {};
+  state.latestMorningBrief = null;
+  state.latestManagerBrief = null;
+  state.latestQualityBrief = null;
+  state.liveUpdates = [];
 }
 
 export function resetComposerState() {
@@ -221,4 +267,122 @@ export function setHomeContext(homeId = null) {
     homeId === null || homeId === undefined || homeId === ""
       ? null
       : homeId;
+}
+
+// ========================
+// Assistant bundle / live intelligence helpers
+// ========================
+
+export function setAssistantScopeBundle(bundle = null) {
+  state.scopeBundle = bundle || null;
+  state.scopeBundleLoadedAt = bundle ? new Date().toISOString() : null;
+  state.scopeBundleError = null;
+}
+
+export function setAssistantScopeBundleLoading(isLoading = false) {
+  state.scopeBundleLoading = Boolean(isLoading);
+}
+
+export function setAssistantScopeBundleError(error = null) {
+  state.scopeBundleError = error || null;
+}
+
+export function setAssistantDerivedState({
+  chronology = null,
+  facts = null,
+  care_domains = null,
+  morning_brief = null,
+  manager_brief = null,
+  quality_brief = null,
+  live_summary = null,
+} = {}) {
+  if (Array.isArray(chronology)) {
+    state.latestChronology = chronology;
+  }
+
+  if (facts && typeof facts === "object") {
+    state.latestFacts = facts;
+  }
+
+  if (care_domains && typeof care_domains === "object") {
+    state.latestCareDomains = care_domains;
+  }
+
+  if (morning_brief !== null) {
+    state.latestMorningBrief = morning_brief;
+  }
+
+  if (manager_brief !== null) {
+    state.latestManagerBrief = manager_brief;
+  }
+
+  if (quality_brief !== null) {
+    state.latestQualityBrief = quality_brief;
+  }
+
+  if (live_summary !== null) {
+    state.assistantMeta.live_summary = live_summary;
+  }
+
+  state.assistantMeta.last_analysis_at = new Date().toISOString();
+}
+
+export function pushAssistantLiveUpdate(update = null) {
+  if (!update || typeof update !== "object") return;
+
+  state.liveUpdates = [update, ...(state.liveUpdates || [])].slice(0, 50);
+}
+
+export function clearAssistantLiveUpdates() {
+  state.liveUpdates = [];
+}
+
+// ========================
+// Scope-aware helpers
+// ========================
+
+export function getCurrentScopeEntity() {
+  if (state.currentScope === "child") {
+    return {
+      type: "child",
+      id: state.youngPersonId || null,
+      name:
+        state.selectedYoungPerson?.preferred_name ||
+        state.selectedYoungPerson?.full_name ||
+        state.selectedYoungPerson?.name ||
+        null,
+    };
+  }
+
+  if (state.currentScope === "home") {
+    return {
+      type: "home",
+      id: state.homeId || null,
+      name:
+        state.currentUser?.home_name ||
+        state.currentUser?.homeName ||
+        null,
+    };
+  }
+
+  if (state.currentScope === "quality") {
+    return {
+      type: "quality",
+      id: state.homeId || null,
+      name:
+        state.currentUser?.home_name ||
+        state.currentUser?.homeName ||
+        null,
+    };
+  }
+
+  return {
+    type: "unknown",
+    id: null,
+    name: null,
+  };
+}
+
+export function shouldUseWholeScopeAssistant() {
+  return true;
 }
