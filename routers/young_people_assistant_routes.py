@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -57,7 +58,10 @@ def _user_id(current_user: dict[str, Any]) -> int | None:
     return _safe_int(current_user.get("user_id") or current_user.get("id"))
 
 
-def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
+def _assert_home_access(
+    current_user: dict[str, Any],
+    record_home_id: int | None,
+) -> None:
     role = _user_role(current_user)
     user_home_id = _user_home_id(current_user)
 
@@ -68,7 +72,10 @@ def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None
         raise HTTPException(status_code=403, detail="Home access could not be verified")
 
     if user_home_id != record_home_id:
-        raise HTTPException(status_code=403, detail="You do not have access to this young person")
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this young person",
+        )
 
 
 def _load_and_check_young_person(
@@ -90,19 +97,25 @@ def _normalise_response_mode(value: str | None) -> str:
     return "balanced"
 
 
-def _normalise_scope(payload: YoungPersonAssistantPayload, current_user: dict[str, Any]) -> dict[str, Any]:
+def _normalise_scope(
+    payload: YoungPersonAssistantPayload,
+    current_user: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "scope_type": "young_person",
         "home_id": _user_home_id(current_user),
         "young_person_id": int(payload.context.young_person_id),
-        "record_type": (payload.context.record_type or "").strip() or None,
-        "record_id": payload.context.record_id,
     }
 
 
-def _normalise_context(payload: YoungPersonAssistantPayload, record: dict[str, Any]) -> dict[str, Any]:
+def _normalise_context(
+    payload: YoungPersonAssistantPayload,
+    record: dict[str, Any],
+) -> dict[str, Any]:
     full_name = (
-        " ".join([x for x in [record.get("first_name"), record.get("last_name")] if x]).strip()
+        " ".join(
+            [x for x in [record.get("first_name"), record.get("last_name")] if x]
+        ).strip()
         or record.get("preferred_name")
         or "Young person"
     )
@@ -114,7 +127,8 @@ def _normalise_context(payload: YoungPersonAssistantPayload, record: dict[str, A
         "current_section": payload.context.current_section or current_view,
         "young_person_name": payload.context.young_person_name or full_name,
         "placement_status": payload.context.placement_status or record.get("placement_status"),
-        "summary_risk_level": payload.context.summary_risk_level or record.get("summary_risk_level"),
+        "summary_risk_level": payload.context.summary_risk_level
+        or record.get("summary_risk_level"),
         "composer_record_type": payload.context.composer_record_type,
         "home_name": payload.context.home_name or record.get("home_name"),
         "shift_context": payload.context.shift_context or current_view,
@@ -129,8 +143,6 @@ def _sse_message(data: str) -> str:
 
 
 def _sse_event(event: str, payload: Any) -> str:
-    import json
-
     body = json.dumps(payload, ensure_ascii=False)
     return f"event: {event}\ndata: {body}\n\n"
 
@@ -163,10 +175,21 @@ async def ask_young_person_assistant(
             scope=scope,
             history=[],
             context=context,
+            assistant_type="young_people_os",
         )
 
     except HTTPException:
         raise
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=500,
@@ -227,7 +250,10 @@ async def ask_young_person_assistant(
                     runtime = item.get("runtime") or {}
                     continue
 
-                if item_type == "explainability" and isinstance(item.get("explainability"), dict):
+                if item_type == "explainability" and isinstance(
+                    item.get("explainability"),
+                    dict,
+                ):
                     explainability = item.get("explainability") or {}
                     continue
 
@@ -245,7 +271,9 @@ async def ask_young_person_assistant(
                         assistant_scope_meta = item.get("assistant_scope") or assistant_scope_meta
 
                     if isinstance(item.get("assistant_context"), dict):
-                        assistant_context_meta = item.get("assistant_context") or assistant_context_meta
+                        assistant_context_meta = (
+                            item.get("assistant_context") or assistant_context_meta
+                        )
 
                     if isinstance(item.get("suggested_actions"), list):
                         suggested_actions = [
@@ -277,12 +305,20 @@ async def ask_young_person_assistant(
                 final_runtime.setdefault("current_section", context.get("current_section"))
                 final_runtime.setdefault("young_person_name", context.get("young_person_name"))
                 final_runtime.setdefault("placement_status", context.get("placement_status"))
-                final_runtime.setdefault("summary_risk_level", context.get("summary_risk_level"))
-                final_runtime.setdefault("composer_record_type", context.get("composer_record_type"))
+                final_runtime.setdefault(
+                    "summary_risk_level",
+                    context.get("summary_risk_level"),
+                )
+                final_runtime.setdefault(
+                    "composer_record_type",
+                    context.get("composer_record_type"),
+                )
                 final_runtime.setdefault("home_name", context.get("home_name"))
                 final_runtime.setdefault("shift_context", context.get("shift_context"))
                 final_runtime.setdefault("record_type", context.get("record_type"))
                 final_runtime.setdefault("record_id", context.get("record_id"))
+
+            final_runtime.setdefault("assistant_type", "young_people_os")
 
             if suggested_actions:
                 existing_actions = final_runtime.get("suggested_actions") or []
