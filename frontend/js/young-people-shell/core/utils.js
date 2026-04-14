@@ -32,8 +32,14 @@ export function setYoungPersonIdInUrl(id) {
 }
 
 // ========================
-// DATE FORMATTING
+// DATE HELPERS
 // ========================
+
+export function isValidDate(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime());
+}
 
 export function formatDate(value) {
   if (!value) return "—";
@@ -58,6 +64,47 @@ export function formatShortDate(value) {
     month: "short",
     year: "numeric",
   });
+}
+
+export function formatTime(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function formatRelativeDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === -1) return "Yesterday";
+  if (diffDays > 1 && diffDays <= 7) return `In ${diffDays} days`;
+  if (diffDays < -1 && diffDays >= -7) return `${Math.abs(diffDays)} days ago`;
+
+  return formatShortDate(value);
+}
+
+export function daysBetween(fromValue, toValue = new Date()) {
+  if (!isValidDate(fromValue) || !isValidDate(toValue)) return null;
+
+  const from = new Date(fromValue);
+  const to = new Date(toValue);
+  const diff = to.getTime() - from.getTime();
+
+  return Math.round(diff / (1000 * 60 * 60 * 24));
 }
 
 export function toDateInputValue(date) {
@@ -87,6 +134,39 @@ export function toDateTimeLocalValue(value) {
 }
 
 // ========================
+// STRING / NORMALISATION HELPERS
+// ========================
+
+export function cleanText(value) {
+  return String(value ?? "").trim();
+}
+
+export function normaliseToken(value = "") {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
+}
+
+export function truncateText(value, maxLength = 160) {
+  const text = cleanText(value);
+  if (!text) return "";
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+export function compactTextList(values = []) {
+  return arrayify(values)
+    .map(cleanText)
+    .filter(Boolean);
+}
+
+export function joinTextList(values = [], separator = " • ") {
+  return compactTextList(values).join(separator);
+}
+
+// ========================
 // DISPLAY HELPERS
 // ========================
 
@@ -107,16 +187,65 @@ export function getDisplayName(item = {}) {
     [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
     item.full_name ||
     item.name ||
+    item.staff_member ||
+    item.fullName ||
     "Young person"
   );
 }
 
-export function normaliseImagePath() {
-  return "";
+export function getRoleLabel(item = {}) {
+  return (
+    item.role ||
+    item.job_title ||
+    item.position ||
+    item.staff_role ||
+    ""
+  );
 }
 
-export function getProfileImage() {
-  return "";
+export function getStatusLabel(item = {}) {
+  return item.status || item.workflow_status || item.approval_status || "";
+}
+
+export function describePersonCard(item = {}) {
+  return joinTextList([
+    getDisplayName(item),
+    getRoleLabel(item),
+    getStatusLabel(item),
+  ]);
+}
+
+// ========================
+// IMAGE HELPERS
+// ========================
+
+export function normaliseImagePath(value = "") {
+  const input = cleanText(value);
+  if (!input) return "";
+
+  if (
+    input.startsWith("http://") ||
+    input.startsWith("https://") ||
+    input.startsWith("data:image/")
+  ) {
+    return input;
+  }
+
+  if (input.startsWith("/")) {
+    return input;
+  }
+
+  return `/${input.replace(/^\/+/, "")}`;
+}
+
+export function getProfileImage(item = {}) {
+  return normaliseImagePath(
+    item.photo_url ||
+      item.profile_photo_url ||
+      item.image_url ||
+      item.avatar_url ||
+      ""
+  );
 }
 
 export function buildImageOrInitials(
@@ -125,6 +254,19 @@ export function buildImageOrInitials(
   fallbackClass = "avatar avatar-fallback"
 ) {
   const name = getDisplayName(item);
+  const imageUrl = getProfileImage(item);
+
+  if (imageUrl) {
+    return `
+      <img
+        class="${escapeHtml(imageClass)}"
+        src="${escapeHtml(imageUrl)}"
+        alt="${escapeHtml(name)}"
+        loading="lazy"
+      />
+    `;
+  }
+
   return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initialsFromName(name))}</div>`;
 }
 
@@ -134,6 +276,40 @@ export function renderAvatar(
   fallbackClass = "avatar avatar-fallback"
 ) {
   return buildImageOrInitials(item, imageClass, fallbackClass);
+}
+
+// ========================
+// ARRAY / OBJECT HELPERS
+// ========================
+
+export function arrayify(value) {
+  if (Array.isArray(value)) return value;
+  if (value === null || value === undefined || value === "") return [];
+  return [value];
+}
+
+export function uniqueBy(items = [], getKey = (item) => item) {
+  const seen = new Set();
+  const result = [];
+
+  for (const item of arrayify(items)) {
+    const key = getKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+
+  return result;
+}
+
+export function sortByDateDesc(items = [], getDate = (item) => item?.date) {
+  return [...arrayify(items)].sort((a, b) => {
+    const aTime = Date.parse(getDate(a) || "");
+    const bTime = Date.parse(getDate(b) || "");
+    const safeA = Number.isNaN(aTime) ? 0 : aTime;
+    const safeB = Number.isNaN(bTime) ? 0 : bTime;
+    return safeB - safeA;
+  });
 }
 
 // ========================
@@ -151,10 +327,22 @@ export function safeJsonParse(value, fallback = null) {
   }
 }
 
+export function safeJsonArray(value, fallback = []) {
+  const parsed = safeJsonParse(value, fallback);
+  return Array.isArray(parsed) ? parsed : fallback;
+}
+
+export function safeJsonObject(value, fallback = {}) {
+  const parsed = safeJsonParse(value, fallback);
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? parsed
+    : fallback;
+}
+
 export function dedupeStrings(values = []) {
   return [
     ...new Set(
-      values
+      arrayify(values)
         .filter(Boolean)
         .map((x) => String(x).trim())
         .filter(Boolean)
