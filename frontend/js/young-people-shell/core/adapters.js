@@ -365,6 +365,42 @@ function buildAssistantSummary(record = {}) {
         cleanText(record.summary),
         "Statutory document available."
       ),
+
+    document: () =>
+      pickFirst(
+        cleanText(record.description),
+        cleanText(record.summary),
+        "Document available."
+      ),
+
+    communication: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.notes),
+        cleanText(record.outcome),
+        "Communication record available."
+      ),
+
+    therapy: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.notes),
+        "Therapy record available."
+      ),
+
+    team: () =>
+      pickFirst(
+        cleanText(record.staff_member),
+        cleanText(record.role),
+        "Team record available."
+      ),
+
+    supervision: () =>
+      pickFirst(
+        cleanText(record.staff_member),
+        cleanText(record.status),
+        "Supervision record available."
+      ),
   };
 
   if (map[recordType]) return map[recordType]();
@@ -512,6 +548,23 @@ export function toAssistantEvidence(record = {}) {
       safeRecord.review_date ||
       safeRecord.next_action_date ||
       safeRecord.expiry_date ||
+      null,
+    young_person_id:
+      safeRecord.young_person_id ??
+      raw.young_person_id ??
+      raw.child_id ??
+      raw.person_id ??
+      null,
+    home_id:
+      safeRecord.home_id ??
+      raw.home_id ??
+      raw.service_id ??
+      null,
+    adult_id:
+      safeRecord.adult_id ??
+      raw.adult_id ??
+      raw.staff_id ??
+      raw.assigned_to_user_id ??
       null,
     child_voice:
       safeRecord.child_voice ||
@@ -844,8 +897,7 @@ export function mapIncident(raw = {}) {
     police_notified: toBool(raw.police_notified),
     lado_notified: toBool(raw.lado_notified),
     ofsted_notified: toBool(raw.ofsted_notified),
-    requires_reg40: toBool(raw.requires_reg40),
-    requires_notification: toBool(raw.requires_notification),
+    requires_reg40: toBool(raw.requires_notification),
     review_comment: cleanText(raw.review_comment),
     submitted_at: raw.submitted_at || null,
     reviewed_at: raw.reviewed_at || null,
@@ -1398,6 +1450,93 @@ export function mapStatutoryDocument(raw = {}) {
   });
 }
 
+export function mapDocument(raw = {}) {
+  if (
+    raw.document_type ||
+    raw.compliance_category ||
+    raw.review_date ||
+    raw.expiry_date ||
+    raw.source_table === "statutory_documents"
+  ) {
+    return mapStatutoryDocument(raw);
+  }
+
+  return buildBaseRecord(raw, {
+    record_type: "document",
+    source_table: raw.source_table || "documents",
+    title: cleanText(raw.title) || cleanText(raw.file_name) || "Document",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.description),
+      "Document available."
+    ),
+    document_type: cleanText(raw.document_type),
+    file_url: cleanText(raw.file_url),
+    file_name: cleanText(raw.file_name),
+    file_type: cleanText(raw.file_type),
+    review_date: raw.review_date || null,
+    expiry_date: raw.expiry_date || null,
+    status: cleanText(raw.status),
+    archived: toBool(raw.archived),
+    review_required: !!raw.review_date || !!raw.expiry_date,
+  });
+}
+
+export function mapTherapyRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "therapy",
+    source_table: raw.source_table || "therapy",
+    title: cleanText(raw.title) || "Therapy record",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.notes),
+      cleanText(raw.recommendations),
+      "Therapy record available."
+    ),
+    event_datetime: raw.event_datetime || raw.created_at || null,
+    therapist_name: cleanText(raw.therapist_name || raw.professional_name),
+    recommendations: cleanText(raw.recommendations),
+    outcome: cleanText(raw.outcome),
+    follow_up_required: !!cleanText(raw.recommendations),
+  });
+}
+
+export function mapTeamRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "team",
+    source_table: raw.source_table || "team",
+    title: cleanText(raw.staff_member) || cleanText(raw.full_name) || "Team member",
+    summary: pickFirst(
+      cleanText(raw.role),
+      cleanText(raw.status),
+      "Team record available."
+    ),
+    staff_member: cleanText(raw.staff_member || raw.full_name),
+    role: cleanText(raw.role),
+    status: cleanText(raw.status),
+    home_id: raw.home_id ?? null,
+  });
+}
+
+export function mapSupervisionRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "supervision",
+    source_table: raw.source_table || "supervisions",
+    title: cleanText(raw.staff_member) || "Supervision",
+    summary: pickFirst(
+      cleanText(raw.status),
+      cleanText(raw.role),
+      "Supervision record available."
+    ),
+    staff_member: cleanText(raw.staff_member),
+    role: cleanText(raw.role),
+    due_date: raw.due_date || null,
+    status: cleanText(raw.status),
+    home_id: raw.home_id ?? null,
+    follow_up_required: cleanText(raw.status).toLowerCase() !== "active",
+  });
+}
+
 export function mapBundle(raw = {}) {
   return {
     young_person: mapYoungPerson(raw.young_person || raw.youngPerson || raw, raw),
@@ -1507,6 +1646,16 @@ export function mapRecordByType(recordType, raw = {}) {
       return mapReviewMeeting(raw);
     case "statutory_document":
       return mapStatutoryDocument(raw);
+    case "document":
+      return mapDocument(raw);
+    case "communication":
+      return mapCommunicationRecord(raw);
+    case "therapy":
+      return mapTherapyRecord(raw);
+    case "team":
+      return mapTeamRecord(raw);
+    case "supervision":
+      return mapSupervisionRecord(raw);
     default:
       return buildBaseRecord(raw, {
         record_type: recordType || raw.record_type || "record",
@@ -1572,6 +1721,11 @@ export function buildAssistantEvidenceSet(payload = {}) {
   addMapped(payload.medication_records, mapMedicationRecord);
   addMapped(payload.review_meetings, mapReviewMeeting);
   addMapped(payload.statutory_documents, mapStatutoryDocument);
+  addMapped(payload.documents, mapDocument);
+  addMapped(payload.communications, mapCommunicationRecord);
+  addMapped(payload.therapy || payload.therapy_records, mapTherapyRecord);
+  addMapped(payload.team, mapTeamRecord);
+  addMapped(payload.supervisions, mapSupervisionRecord);
   addMapped(payload.inspection_pack_jobs, mapInspectionPackJob);
 
   if (payload.identity_profile || payload.young_person_identity_profile) {
