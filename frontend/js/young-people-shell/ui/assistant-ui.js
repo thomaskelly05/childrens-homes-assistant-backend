@@ -5,6 +5,9 @@ import { getActionForQuickButton } from "./action-router.js";
 
 let assistantUiBound = false;
 
+const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w-]*)\]/gi;
+const MAX_SOURCE_EXCERPT = 280;
+
 function qs(id) {
   return document.getElementById(id);
 }
@@ -108,67 +111,145 @@ function prettyJson(value) {
   }
 }
 
+function cleanText(value = "") {
+  return String(value || "").trim();
+}
+
+function sourceCitationRef(source = {}, index = 0) {
+  if (source.citation_ref) return String(source.citation_ref);
+  const type = source.record_type || source.type || "record";
+  const id = source.record_id || source.id || `idx_${index + 1}`;
+  return `${type}:${id}`;
+}
+
+function getSources() {
+  const meta = getAssistantMeta();
+  return Array.isArray(meta.sources) ? meta.sources : [];
+}
+
+function buildSourceMap() {
+  const map = new Map();
+
+  getSources().forEach((source, index) => {
+    map.set(sourceCitationRef(source, index).toLowerCase(), {
+      ...source,
+      citation_ref: sourceCitationRef(source, index),
+      source_index: index,
+    });
+  });
+
+  return map;
+}
+
+function renderInlineText(text = "") {
+  let html = escapeHtml(String(text || ""));
+
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+  return html;
+}
+
+function renderCitationChip(ref = "", source = null) {
+  const safeRef = escapeHtml(ref);
+  const label = source?.label || source?.title || ref;
+  const safeLabel = escapeHtml(String(label || ref));
+
+  return `
+    <button
+      class="assistant-citation-chip"
+      type="button"
+      data-citation-ref="${safeRef}"
+      title="${safeLabel}"
+      aria-label="View source ${safeLabel}"
+    >
+      ${safeRef}
+    </button>
+  `;
+}
+
+function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
+  const raw = String(text || "");
+  const parts = [];
+  let lastIndex = 0;
+
+  raw.replace(CITATION_REF_REGEX, (match, ref, offset) => {
+    const before = raw.slice(lastIndex, offset);
+    if (before) {
+      parts.push(renderInlineText(before));
+    }
+
+    const source = sourceMap.get(String(ref || "").toLowerCase()) || null;
+    parts.push(renderCitationChip(ref, source));
+    lastIndex = offset + match.length;
+    return match;
+  });
+
+  const tail = raw.slice(lastIndex);
+  if (tail) {
+    parts.push(renderInlineText(tail));
+  }
+
+  return parts.join("");
+}
+
 function renderAssistantRichText(text = "") {
-  const escaped = escapeHtml(String(text || ""));
+  const sourceMap = buildSourceMap();
+  const lines = String(text || "").split("\n");
+  const blocks = [];
+  let listItems = [];
 
-  const withRules = escaped
-    .replace(/^---$/gm, '<hr class="assistant-divider" />')
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/^### (.*)$/gm, "<h4>$1</h4>")
-    .replace(/^## (.*)$/gm, "<h4>$1</h4>")
-    .replace(/^# (.*)$/gm, "<h4>$1</h4>");
-
-  const lines = withRules.split("\n");
-  let html = "";
-  let inList = false;
+  const flushList = () => {
+    if (!listItems.length) return;
+    blocks.push(`<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
+    listItems = [];
+  };
 
   for (const rawLine of lines) {
-    const line = rawLine.trimEnd();
+    const line = rawLine.trimRight();
+    const trimmed = line.trim();
 
-    if (!line.trim()) {
-      if (inList) {
-        html += "</ul>";
-        inList = false;
-      }
-      html += "<p></p>";
+    if (!trimmed) {
+      flushList();
       continue;
     }
 
-    if (/^[-*]\s+/.test(line)) {
-      if (!inList) {
-        html += "<ul>";
-        inList = true;
-      }
-      html += `<li>${line.replace(/^[-*]\s+/, "")}</li>`;
+    if (/^---+$/.test(trimmed)) {
+      flushList();
+      blocks.push(`<hr class="assistant-divider" />`);
       continue;
     }
 
-    if (/^\d+\.\s+/.test(line)) {
-      if (inList) {
-        html += "</ul>";
-        inList = false;
-      }
-      html += `<p>${line}</p>`;
+    if (/^###\s+/.test(trimmed) || /^##\s+/.test(trimmed) || /^#\s+/.test(trimmed)) {
+      flushList();
+      const heading = trimmed.replace(/^#{1,3}\s+/, "");
+      blocks.push(`<h4>${renderParagraphWithCitations(heading, sourceMap)}</h4>`);
       continue;
     }
 
-    if (inList) {
-      html += "</ul>";
-      inList = false;
+    if (/^[-*]\s+/.test(trimmed)) {
+      const itemText = trimmed.replace(/^[-*]\s+/, "");
+      listItems.push(renderParagraphWithCitations(itemText, sourceMap));
+      continue;
     }
 
-    if (line.startsWith("<h4>") || line.startsWith("<hr")) {
-      html += line;
-    } else {
-      html += `<p>${line}</p>`;
+    if (/^\d+\.\s+/.test(trimmed)) {
+      flushList();
+      blocks.push(`<p>${renderParagraphWithCitations(trimmed, sourceMap)}</p>`);
+      continue;
     }
+
+    flushList();
+    blocks.push(`<p>${renderParagraphWithCitations(trimmed, sourceMap)}</p>`);
   }
 
-  if (inList) {
-    html += "</ul>";
-  }
+  flushList();
 
-  return html || "<p></p>";
+  return blocks.join("") || "<p></p>";
+}
+
+function renderUserRichText(text = "") {
+  return `<p>${escapeHtml(String(text || ""))}</p>`;
 }
 
 function renderMessage(message = {}) {
@@ -183,7 +264,7 @@ function renderMessage(message = {}) {
         ${
           role === "assistant"
             ? renderAssistantRichText(content)
-            : `<p>${escapeHtml(content)}</p>`
+            : renderUserRichText(content)
         }
       </div>
     </article>
@@ -226,6 +307,7 @@ function renderMessageList(host, messages = []) {
       ${messages.map(renderMessage).join("")}
     </div>
   `;
+
   host.scrollTop = host.scrollHeight;
 }
 
@@ -312,11 +394,36 @@ function renderContextText() {
   contextEl.textContent = contextText;
 }
 
+function buildConfidenceBadge(confidence = "") {
+  const value = String(confidence || "").toLowerCase();
+  if (!value) return "";
+
+  const tone =
+    value === "high"
+      ? "success"
+      : value === "medium"
+      ? "warning"
+      : value === "low" || value === "very_low"
+      ? "danger"
+      : "muted";
+
+  return `
+    <span class="row-pill ${escapeHtml(tone)}">
+      Confidence: ${escapeHtml(value)}
+    </span>
+  `;
+}
+
 function buildScopeSummaryCards() {
   const meta = getAssistantMeta();
   const assistantContext = meta.assistant_context || {};
   const runtime = meta.runtime || {};
   const explainability = meta.explainability || {};
+  const evidenceSummary = assistantContext.evidence_summary || {};
+  const sufficiency = assistantContext.evidence_sufficiency || {};
+  const keyConcerns = Array.isArray(assistantContext.key_concerns)
+    ? assistantContext.key_concerns
+    : [];
   const scope = getCurrentScope();
 
   const cards = [
@@ -330,30 +437,25 @@ function buildScopeSummaryCards() {
           : `${getScopeLabel()} • ${getHomeLabel()} • whole OS scope • section: ${normaliseSectionLabel(
               getCurrentSection()
             )}`,
+      extra: "",
     },
     {
-      title: "Assistant context",
-      text:
-        assistantContext.summary ||
-        assistantContext.overview ||
-        assistantContext.context_summary ||
-        (Object.keys(assistantContext).length
-          ? "Assistant context is loaded for this scope."
-          : "Context will appear here after the assistant analyses records."),
+      title: "Evidence summary",
+      text: [
+        `Evidence items: ${evidenceSummary.total ?? runtime.evidence_count ?? 0}`,
+        `Open tasks: ${evidenceSummary.open_tasks ?? 0}`,
+        `Overdue items: ${evidenceSummary.overdue_items ?? 0}`,
+        `Incidents: ${evidenceSummary.incident_items ?? 0}`,
+      ].join(" • "),
+      extra: buildConfidenceBadge(sufficiency.confidence || runtime.confidence || ""),
     },
     {
       title: "Reasoning",
       text:
-        explainability.summary ||
         explainability.reasoning_summary ||
+        explainability.summary ||
         "Explainability will appear here after the assistant returns a scoped answer.",
-    },
-    {
-      title: "Runtime",
-      text:
-        runtime.mode ||
-        runtime.response_mode ||
-        `Assistant ready for ${scope === "child" ? getPersonLabel() : getHomeLabel()}.`,
+      extra: "",
     },
     {
       title: "Next steps",
@@ -364,7 +466,17 @@ function buildScopeSummaryCards() {
               .map((item) => (typeof item === "string" ? item : item?.label || "Suggested action"))
               .join(" • ")
           : "Suggested next actions will appear here after the assistant responds."),
+      extra: "",
     },
+    ...(keyConcerns.length
+      ? [
+          {
+            title: "Key concerns",
+            text: keyConcerns.join(" • "),
+            extra: "",
+          },
+        ]
+      : []),
   ];
 
   return `
@@ -375,6 +487,7 @@ function buildScopeSummaryCards() {
             <div class="profile-card">
               <div class="profile-card-title">${escapeHtml(card.title)}</div>
               <div class="profile-card-text">${escapeHtml(card.text || "")}</div>
+              ${card.extra || ""}
             </div>
           `
         )
@@ -404,21 +517,28 @@ function renderSourcesHtml(sources = []) {
   }
 
   return sources
-    .map((source) => {
+    .map((source, index) => {
+      const citationRef = sourceCitationRef(source, index);
       const title = escapeHtml(
         source?.title || source?.label || source?.document_title || "Source"
       );
-      const type = escapeHtml(source?.type || "source");
-      const description = escapeHtml(source?.description || source?.excerpt || "");
+      const type = escapeHtml(source?.type || source?.record_type || "source");
+      const description = escapeHtml(
+        String(source?.description || source?.excerpt || "").slice(0, MAX_SOURCE_EXCERPT)
+      );
       const section = escapeHtml(source?.section || "");
       const page =
         source?.page_number != null ? escapeHtml(String(source.page_number)) : "";
 
       return `
-        <div class="entity-row">
+        <div
+          class="entity-row"
+          id="assistant-source-${escapeHtml(citationRef.replace(/[^a-zA-Z0-9_-]/g, "-"))}"
+          data-source-ref="${escapeHtml(citationRef)}"
+        >
           <div class="entity-title">${title}</div>
           <div class="entity-meta">
-            ${type}${section ? ` • ${section}` : ""}${page ? ` • p.${page}` : ""}
+            ${type}${section ? ` • ${section}` : ""}${page ? ` • p.${page}` : ""} • ${escapeHtml(citationRef)}
           </div>
           ${
             description
@@ -623,6 +743,37 @@ function syncAssistantInputs() {
   }
 }
 
+function scrollSourceIntoView(ref = "") {
+  if (!ref) return;
+
+  const safeId = `assistant-source-${String(ref).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const sourceEl = document.getElementById(safeId);
+
+  if (!sourceEl) return;
+
+  sourceEl.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest",
+  });
+
+  sourceEl.classList.add("assistant-source-highlight");
+  window.setTimeout(() => {
+    sourceEl.classList.remove("assistant-source-highlight");
+  }, 1600);
+}
+
+function bindCitationEvents() {
+  document.addEventListener("click", (event) => {
+    const citation = event.target.closest("[data-citation-ref]");
+    if (!citation) return;
+
+    const ref = citation.getAttribute("data-citation-ref") || "";
+    if (!ref) return;
+
+    scrollSourceIntoView(ref);
+  });
+}
+
 function renderAllAssistantUi() {
   ensureAssistantArrays();
   getAssistantMeta();
@@ -643,6 +794,7 @@ function renderAllAssistantUi() {
 export function bindAssistantUi() {
   if (assistantUiBound) return;
   assistantUiBound = true;
+  bindCitationEvents();
   renderAllAssistantUi();
 }
 
