@@ -729,6 +729,7 @@ function buildAssistantContextPayload(message = "") {
   const output_mode = detectOutputMode(intent);
 
   return {
+    assistant_type: "young_people_os",
     scope,
     scope_type: getAssistantScopeType(),
     current_view: section,
@@ -830,6 +831,7 @@ function buildSafeAssistantRequestPayload(payload) {
     message: trimForOutbound(payload?.message || ""),
     response_mode: payload?.response_mode || "balanced",
     context: {
+      assistant_type: context.assistant_type || "young_people_os",
       scope: context.scope || null,
       scope_type: context.scope_type || null,
       current_view: context.current_view || null,
@@ -1074,6 +1076,10 @@ export function clearAssistantMessages() {
     state.assistantMeta.sources = [];
     state.assistantMeta.suggested_actions = [];
     state.assistantMeta.scrubber_reverse_map = {};
+    state.assistantMeta.runtime = {};
+    state.assistantMeta.explainability = {};
+    state.assistantMeta.assistant_scope = {};
+    state.assistantMeta.assistant_context = {};
   }
 
   syncAssistantUi();
