@@ -629,37 +629,6 @@ function makeTimeline(youngPersonId) {
   }));
 }
 
-function getDemoAssistantReply(payload = {}) {
-  const scope =
-    payload?.context?.scope ||
-    payload?.context?.current_scope ||
-    payload?.context?.scope_type ||
-    "child";
-
-  const section =
-    payload?.context?.current_view ||
-    payload?.context?.current_section ||
-    "workspace";
-
-  const name =
-    payload?.context?.young_person_name ||
-    "the young person";
-
-  const homeName =
-    payload?.context?.home_name ||
-    "IndiCare House";
-
-  if (scope === "home") {
-    return `Summary for ${homeName}: the home appears broadly stable, staffing is sufficient for current needs, and management attention should focus on document review dates, overdue compliance items, and supervision timeliness.`;
-  }
-
-  if (scope === "quality") {
-    return `Quality summary for ${homeName}: evidence is strongest in routine recording and relationship-based care. Improvement priorities are tighter compliance follow-up, clearer management oversight trails, and more consistent review-date discipline across documents and supervision.`;
-  }
-
-  return `Summary for ${name}: the main current themes are anxiety around education, stronger outcomes when routines are predictable, generally responsive relationships with staff, and a need for continued follow-up around family contact, appointments, and emotionally regulated transitions. Section in view: ${section}.`;
-}
-
 function getDemoResponse(url, method = "GET") {
   const upper = String(method || "GET").toUpperCase();
   if (upper !== "GET") return null;
@@ -845,6 +814,304 @@ function getDemoResponse(url, method = "GET") {
   }
 
   return null;
+}
+
+async function apiGetSettled(urls = []) {
+  const settled = await Promise.allSettled(urls.map((url) => apiGet(url)));
+  return settled.map((result, index) => ({
+    url: urls[index],
+    ok: result.status === "fulfilled",
+    data: result.status === "fulfilled" ? result.value : null,
+    error: result.status === "rejected" ? result.reason : null,
+  }));
+}
+
+function mergeAssistantBundle(responses = []) {
+  const bundle = {
+    items: [],
+    daily_notes: [],
+    incidents: [],
+    tasks: [],
+    health_records: [],
+    education_records: [],
+    family_contact_records: [],
+    appointments: [],
+    monthly_reviews: [],
+    chronology_events: [],
+    risk_assessments: [],
+    support_plans: [],
+    compliance_items: [],
+    statutory_documents: [],
+    documents: [],
+    communications: [],
+    therapy: [],
+    therapy_records: [],
+    team: [],
+    supervisions: [],
+    reports: [],
+    home: null,
+    young_people: [],
+    summary: {},
+    alerts: [],
+  };
+
+  for (const response of responses) {
+    if (!response?.ok || !response.data || typeof response.data !== "object") continue;
+    const data = response.data;
+
+    if (Array.isArray(data.items)) bundle.items.push(...data.items);
+    if (Array.isArray(data.daily_notes)) bundle.daily_notes.push(...data.daily_notes);
+    if (Array.isArray(data.incidents)) bundle.incidents.push(...data.incidents);
+    if (Array.isArray(data.tasks)) bundle.tasks.push(...data.tasks);
+    if (Array.isArray(data.health_records)) bundle.health_records.push(...data.health_records);
+    if (Array.isArray(data.education_records)) bundle.education_records.push(...data.education_records);
+    if (Array.isArray(data.family_contact_records)) bundle.family_contact_records.push(...data.family_contact_records);
+    if (Array.isArray(data.appointments)) bundle.appointments.push(...data.appointments);
+    if (Array.isArray(data.monthly_reviews)) bundle.monthly_reviews.push(...data.monthly_reviews);
+    if (Array.isArray(data.reports)) bundle.reports.push(...data.reports);
+    if (Array.isArray(data.timeline)) bundle.chronology_events.push(...data.timeline);
+    if (Array.isArray(data.chronology_events)) bundle.chronology_events.push(...data.chronology_events);
+    if (Array.isArray(data.risk_assessments)) bundle.risk_assessments.push(...data.risk_assessments);
+    if (Array.isArray(data.risks)) bundle.risk_assessments.push(...data.risks);
+    if (Array.isArray(data.support_plans)) bundle.support_plans.push(...data.support_plans);
+    if (Array.isArray(data.compliance_items)) bundle.compliance_items.push(...data.compliance_items);
+    if (Array.isArray(data.documents)) bundle.documents.push(...data.documents);
+    if (Array.isArray(data.statutory_documents)) bundle.statutory_documents.push(...data.statutory_documents);
+    if (Array.isArray(data.communications)) bundle.communications.push(...data.communications);
+    if (Array.isArray(data.therapy)) bundle.therapy.push(...data.therapy);
+    if (Array.isArray(data.therapy_records)) bundle.therapy_records.push(...data.therapy_records);
+    if (Array.isArray(data.team)) bundle.team.push(...data.team);
+    if (Array.isArray(data.supervisions)) bundle.supervisions.push(...data.supervisions);
+    if (Array.isArray(data.young_people)) bundle.young_people.push(...data.young_people);
+    if (Array.isArray(data.alerts)) bundle.alerts.push(...data.alerts);
+
+    if (data.home && !bundle.home) {
+      bundle.home = data.home;
+    }
+
+    if (data.summary && typeof data.summary === "object") {
+      bundle.summary = {
+        ...bundle.summary,
+        ...data.summary,
+      };
+    }
+  }
+
+  return bundle;
+}
+
+export async function fetchYoungPersonAssistantBundle(youngPersonId) {
+  if (!youngPersonId) {
+    return mergeAssistantBundle([]);
+  }
+
+  const urls = [
+    `/young-people/${youngPersonId}/incidents`,
+    `/young-people/${youngPersonId}/tasks`,
+    `/young-people/${youngPersonId}/health`,
+    `/young-people/${youngPersonId}/education`,
+    `/young-people/${youngPersonId}/family`,
+    `/young-people/${youngPersonId}/appointments`,
+    `/young-people/${youngPersonId}/reports`,
+    `/young-people/${youngPersonId}/timeline`,
+    `/young-people/${youngPersonId}/plans`,
+    `/young-people/${youngPersonId}/compliance`,
+  ];
+
+  const responses = await apiGetSettled(urls);
+  return mergeAssistantBundle(responses);
+}
+
+export async function fetchHomeAssistantBundle(homeId) {
+  if (!homeId) {
+    return mergeAssistantBundle([]);
+  }
+
+  const urls = [
+    `/homes/${homeId}/dashboard`,
+    `/homes/${homeId}/team`,
+    `/homes/${homeId}/documents`,
+    `/homes/${homeId}/therapy`,
+    `/homes/${homeId}/communications`,
+    `/homes/${homeId}/supervisions`,
+    `/homes/${homeId}/reports`,
+    `/homes/${homeId}/quality`,
+    `/homes/${homeId}/compliance`,
+  ];
+
+  const responses = await apiGetSettled(urls);
+  return mergeAssistantBundle(responses);
+}
+
+export async function fetchQualityAssistantBundle(homeId) {
+  return fetchHomeAssistantBundle(homeId);
+}
+
+export async function fetchAssistantScopeBundle(context = {}) {
+  const scope =
+    context.scope ||
+    context.current_scope ||
+    context.scope_type ||
+    "child";
+
+  const youngPersonId =
+    context.young_person_id ||
+    context.person_id ||
+    null;
+
+  const homeId =
+    context.home_id ||
+    null;
+
+  if (scope === "home") {
+    return fetchHomeAssistantBundle(homeId);
+  }
+
+  if (scope === "quality") {
+    return fetchQualityAssistantBundle(homeId);
+  }
+
+  return fetchYoungPersonAssistantBundle(youngPersonId);
+}
+
+function formatLine(item = {}, includeDate = true) {
+  const bits = [];
+
+  if (includeDate && item?.date) bits.push(item.date);
+  if (item?.title) bits.push(item.title);
+  if (item?.summary) bits.push(item.summary);
+
+  return bits.join(" - ");
+}
+
+function getDemoAssistantReply(payload = {}) {
+  const scope =
+    payload?.context?.scope ||
+    payload?.context?.current_scope ||
+    payload?.context?.scope_type ||
+    "child";
+
+  const section =
+    payload?.context?.current_view ||
+    payload?.context?.current_section ||
+    "workspace";
+
+  const name =
+    payload?.context?.young_person_name ||
+    "the young person";
+
+  const homeName =
+    payload?.context?.home_name ||
+    "IndiCare House";
+
+  const intent =
+    payload?.context?.assistant_intent ||
+    payload?.intent ||
+    "summary";
+
+  const outputMode =
+    payload?.context?.output_mode ||
+    payload?.output_mode ||
+    "answer";
+
+  const evidence = Array.isArray(payload?.evidence) ? payload.evidence : [];
+  const chronology = Array.isArray(payload?.chronology) ? payload.chronology : [];
+  const facts = payload?.facts || {};
+  const summary = payload?.summary || {};
+  const confidence = payload?.evidence_sufficiency?.confidence || "medium";
+
+  if (intent === "greeting") {
+    if (scope === "home") {
+      return `Hello. I’m ready to help with ${homeName}. I can provide a full summary, chronology, compliance view, dates, staffing themes, or management priorities.`;
+    }
+
+    if (scope === "quality") {
+      return `Hello. I’m ready to help with ${homeName} quality and oversight. I can provide chronology, audit themes, compliance gaps, and an RI-style summary.`;
+    }
+
+    return `Hello. I’m ready to help with ${name}. I can provide a full summary, chronology, dates, incidents, appointments, risks, family contact themes, or a handover.`;
+  }
+
+  if (intent === "morning_brief" || outputMode === "morning_brief") {
+    return [
+      `Morning brief for ${scope === "child" ? name : homeName}:`,
+      "",
+      `• Evidence reviewed: ${summary?.total || evidence.length || 0}`,
+      `• Open tasks: ${summary?.open_tasks || 0}`,
+      `• Overdue items: ${summary?.overdue_items || 0}`,
+      `• Confidence: ${confidence}`,
+      ...(facts?.next_appointment
+        ? [`• Next appointment: ${facts.next_appointment.title || "Appointment"} (${facts.next_appointment.date || "date not set"})`]
+        : []),
+      "",
+      "What matters this morning:",
+      ...(evidence.slice(0, 3).map((item) => `• ${formatLine(item, false)}`)),
+    ].join("\n");
+  }
+
+  if (intent === "chronology" || outputMode === "chronology") {
+    if (chronology.length) {
+      return [
+        `Chronology for ${scope === "child" ? name : homeName}:`,
+        "",
+        ...chronology.slice(0, 8).map((item) => `• ${formatLine(item, true)}`),
+        "",
+        `Evidence reviewed: ${summary?.total || evidence.length || 0}`,
+      ].join("\n");
+    }
+
+    return `Chronology for ${scope === "child" ? name : homeName}: no dated chronology items are currently available in demo mode.`;
+  }
+
+  if (intent === "factual_lookup" || outputMode === "factual_answer") {
+    const lines = [];
+
+    if (facts?.latest_incident) {
+      lines.push(`• Latest incident: ${formatLine(facts.latest_incident, true)}`);
+    }
+
+    if (facts?.latest_missing_episode) {
+      lines.push(`• Latest missing episode: ${formatLine(facts.latest_missing_episode, true)}`);
+    }
+
+    if (facts?.next_appointment) {
+      lines.push(`• Next appointment: ${formatLine(facts.next_appointment, true)}`);
+    }
+
+    if (!lines.length) {
+      lines.push("• No matching dated record is currently available in demo mode.");
+    }
+
+    return [
+      `Date-based lookup for ${scope === "child" ? name : homeName}:`,
+      "",
+      ...lines,
+    ].join("\n");
+  }
+
+  if (intent === "review") {
+    return [
+      `Full review summary for ${scope === "child" ? name : homeName}:`,
+      "",
+      `• Evidence reviewed: ${summary?.total || evidence.length || 0}`,
+      `• Confidence: ${confidence}`,
+      `• Overdue items: ${summary?.overdue_items || 0}`,
+      `• Incident items: ${summary?.incident_items || 0}`,
+      "",
+      "Key themes:",
+      ...(evidence.slice(0, 4).map((item) => `• ${formatLine(item, false)}`)),
+    ].join("\n");
+  }
+
+  if (scope === "home") {
+    return `Summary for ${homeName}: the home appears broadly stable, staffing is sufficient for current needs, and management attention should focus on document review dates, overdue compliance items, supervision timeliness, and whole-service follow-up.`;
+  }
+
+  if (scope === "quality") {
+    return `Quality summary for ${homeName}: evidence is strongest in routine recording and relationship-based care. Improvement priorities are tighter compliance follow-up, clearer management oversight trails, and more consistent review-date discipline across documents and supervision.`;
+  }
+
+  return `Summary for ${name}: the main current themes are anxiety around education, stronger outcomes when routines are predictable, generally responsive relationships with staff, and a need for continued follow-up around family contact, appointments, and emotionally regulated transitions. Current section: ${section}. Whole-scope mode is enabled in demo mode.`;
 }
 
 export async function apiRequest(url, options = {}) {
@@ -1105,25 +1372,52 @@ export async function apiStreamAssistant(payload, handlers = {}) {
       onDone = () => {},
     } = handlers;
 
+    const intent =
+      payload?.context?.assistant_intent ||
+      payload?.intent ||
+      "summary";
+
+    const retrievalMode =
+      payload?.context?.retrieval_mode ||
+      payload?.retrieval_mode ||
+      "whole_scope";
+
     onMeta({
-      sources: [],
+      sources: Array.isArray(payload?.evidence)
+        ? payload.evidence.slice(0, 8).map((item) => ({
+            type: item.record_type || "record",
+            label: item.title || "Record",
+            excerpt: item.summary || "",
+            section: item.section || "",
+            record_type: item.record_type || null,
+            record_id: item.source_id || item.id || null,
+          }))
+        : [],
       runtime: {
         mode: "demo",
         provider: "local-demo",
+        intent,
+        retrieval_mode: retrievalMode,
+        whole_os_default: true,
       },
       explainability: {
-        summary: "This is a demonstration assistant response using local sample data.",
+        summary: "This is a demonstration assistant response using local sample data and whole-scope-style assistant behaviour.",
+        reasoning_summary: `Intent: ${intent}. Retrieval: ${retrievalMode}.`,
       },
       assistant_scope: payload?.context || {},
-      assistant_context: payload?.context || {},
+      assistant_context: {
+        ...(payload?.context || {}),
+        requested_scope_mode: retrievalMode,
+        whole_os_default: true,
+      },
       suggested_actions: [
-        { label: "Summarise key risks" },
-        { label: "Draft handover" },
-        { label: "What needs attention next?" },
+        { type: "draft_summary", label: "Draft summary" },
+        { type: "draft_handover", label: "Draft handover" },
+        { type: "create_task", label: "Create action list" },
       ],
     });
 
-    onProgress("Analysing records...");
+    onProgress("Analysing scoped records...");
     const finalText = getDemoAssistantReply(payload);
     onMessage(finalText);
     onDone(finalText);
