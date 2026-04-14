@@ -10,6 +10,10 @@ import {
 } from "../core/utils.js";
 import { refreshShellChrome } from "./shell-ui.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
+import {
+  onYoungPersonSelected,
+  renderAssistantControllerPanels,
+} from "./assistant-controller.js";
 
 function getSelectorList() {
   return els.selectorList || document.getElementById("selectorList");
@@ -178,6 +182,7 @@ export function goBackToSelector() {
 
   refreshShellChrome();
   refreshAssistantUi();
+  renderAssistantControllerPanels();
 }
 
 export async function openYoungPerson(id, options = {}) {
@@ -213,6 +218,9 @@ export async function openYoungPerson(id, options = {}) {
 
   refreshShellChrome();
   refreshAssistantUi();
+  renderAssistantControllerPanels();
+
+  await onYoungPersonSelected();
 
   if (!options.skipInitialSectionLoad) {
     const navModule = await import("./nav.js");
