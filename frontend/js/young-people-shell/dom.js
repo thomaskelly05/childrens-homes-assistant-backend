@@ -109,6 +109,26 @@ export const els = {
   assistantModalInput: document.getElementById("assistantModalInput"),
   assistantModalSendBtn: document.getElementById("assistantModalSendBtn"),
 
+  // Assistant live intelligence / bundle state
+  assistantLiveStatus: document.getElementById("assistantLiveStatus"),
+  assistantScopeBundleStatus: document.getElementById("assistantScopeBundleStatus"),
+  assistantScopeBundleError: document.getElementById("assistantScopeBundleError"),
+  assistantRefreshScopeBtn: document.getElementById("assistantRefreshScopeBtn"),
+  assistantRefreshAnalysisBtn: document.getElementById("assistantRefreshAnalysisBtn"),
+
+  // Morning / manager / quality brief surfaces
+  morningBriefPanel: document.getElementById("morningBriefPanel"),
+  morningBriefBody: document.getElementById("morningBriefBody"),
+  managerBriefPanel: document.getElementById("managerBriefPanel"),
+  managerBriefBody: document.getElementById("managerBriefBody"),
+  qualityBriefPanel: document.getElementById("qualityBriefPanel"),
+  qualityBriefBody: document.getElementById("qualityBriefBody"),
+
+  // Live updates surface
+  liveUpdatesPanel: document.getElementById("liveUpdatesPanel"),
+  liveUpdatesBody: document.getElementById("liveUpdatesBody"),
+  clearLiveUpdatesBtn: document.getElementById("clearLiveUpdatesBtn"),
+
   // Fullscreen panel
   fullscreenPanel: document.getElementById("fullscreenPanel"),
   fullscreenPanelTitle: document.getElementById("fullscreenPanelTitle"),
