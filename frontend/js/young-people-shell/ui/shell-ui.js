@@ -1,7 +1,13 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
-import { getDisplayName } from "../core/utils.js";
+import {
+  getDisplayName,
+  getProfileImage,
+  initialsFromName,
+  escapeHtml,
+  buildImageOrInitials,
+} from "../core/utils.js";
 import {
   SECTION_TITLES,
   SECTION_SUBTITLES,
@@ -74,34 +80,6 @@ function getAllowedScopesForRole() {
   }
 
   return ["child"];
-}
-
-function canAccessScope(scope) {
-  return getAllowedScopesForRole().includes(scope);
-}
-
-function initialsFromPerson(person = {}) {
-  const first = String(
-    person.preferred_name ||
-      person.first_name ||
-      person.full_name ||
-      person.name ||
-      "Y"
-  )
-    .trim()
-    .charAt(0)
-    .toUpperCase();
-
-  const last = String(person.last_name || "")
-    .trim()
-    .charAt(0)
-    .toUpperCase();
-
-  return `${first}${last}`.trim() || "YP";
-}
-
-function buildInitialsAvatar(person = {}, className = "avatar avatar-fallback") {
-  return `<div class="${className}">${initialsFromPerson(person)}</div>`;
 }
 
 function buildPersonMeta(person = {}) {
@@ -185,21 +163,43 @@ function updateWorkspaceContextPill() {
 }
 
 function updateWorkspaceEyebrow() {
-  if (els.workspaceEyebrow) {
-    els.workspaceEyebrow.textContent = getWorkspaceEyebrowText();
+  const eyebrow = document.querySelector(".workspace-header-copy .eyebrow");
+  if (eyebrow) {
+    eyebrow.textContent = getWorkspaceEyebrowText();
   }
+}
+
+function renderAvatarHtml(person = {}, imageClass, fallbackClass) {
+  return buildImageOrInitials(person, imageClass, fallbackClass);
 }
 
 function updateSnapshotAvatar(person = {}) {
   const wrap = qs("profileSnapshotPhotoWrap");
   if (!wrap) return;
 
-  wrap.innerHTML = buildInitialsAvatar(person, "profile-photo-fallback");
+  wrap.innerHTML = renderAvatarHtml(
+    person,
+    "profile-photo",
+    "profile-photo-fallback"
+  );
 }
 
 function updateSidebarAvatar(person = {}) {
-  setHtml("personAvatar", buildInitialsAvatar(person, "avatar avatar-fallback"));
-  setHtml("mobilePersonAvatar", buildInitialsAvatar(person, "avatar avatar-fallback"));
+  const imageUrl = getProfileImage(person);
+  const name = getDisplayName(person);
+  const initials = initialsFromName(name);
+
+  if (qs("personAvatar")) {
+    qs("personAvatar").innerHTML = imageUrl
+      ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
+      : `<div class="avatar avatar-fallback">${escapeHtml(initials)}</div>`;
+  }
+
+  if (qs("mobilePersonAvatar")) {
+    qs("mobilePersonAvatar").innerHTML = imageUrl
+      ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
+      : `<div class="avatar avatar-fallback">${escapeHtml(initials)}</div>`;
+  }
 }
 
 function updateYoungPersonText(person = {}) {
@@ -278,8 +278,9 @@ function updateScopeSensitiveActions() {
   showEl(els.changePersonBtn, isChildScope, "inline-flex");
   showEl(els.backToSelectorBtn, isChildScope, "inline-flex");
 
-  if (els.quickCreateBar) {
-    showEl(els.quickCreateBar, true, "block");
+  const quickCreateBar = document.querySelector(".quick-create-bar");
+  if (quickCreateBar) {
+    showEl(quickCreateBar, true, "block");
   }
 
   const selectorButtons = [els.homeBtn, els.mobileHomeBtn];
@@ -409,7 +410,7 @@ function bindChromeNavDelegates() {
 
   document.addEventListener("click", async (event) => {
     const navButton = event.target.closest(
-      ".mobile-tab-btn[data-nav-section], #mobileNavContent [data-nav-section]"
+      "#mobileNavContent [data-nav-section], #mobileBottomBar [data-nav-section]"
     );
     if (!navButton) return;
 
