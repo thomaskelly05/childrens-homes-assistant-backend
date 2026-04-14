@@ -184,53 +184,8 @@
         class="workspace-screen"
         aria-labelledby="pageTitle"
       >
-        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--menubar">
-          <aside class="workspace-sidebar workspace-sidebar--slim desktop-only" aria-label="Workspace identity">
-            <div class="workspace-sidebar-shell">
-              <div class="workspace-sidebar-brand">
-                <div class="workspace-sidebar-brand-dot" aria-hidden="true"></div>
-                <span>Young person workspace</span>
-              </div>
-
-              <section class="workspace-sidebar-profile-card workspace-sidebar-profile-card--slim">
-                <div class="workspace-sidebar-profile-top">
-                  <div
-                    class="workspace-sidebar-avatar"
-                    id="personAvatar"
-                    aria-hidden="true"
-                  >
-                    YP
-                  </div>
-
-                  <div class="workspace-sidebar-profile-copy">
-                    <h2 id="personName">Young person</h2>
-                    <p id="personMeta">Child-centred workspace</p>
-                  </div>
-                </div>
-
-                <div class="workspace-sidebar-meta-row">
-                  <span class="meta-chip">Live</span>
-                  <span class="meta-chip meta-chip--soft">Therapeutic view</span>
-                </div>
-              </section>
-
-              <button
-                id="backToSelectorBtn"
-                class="ghost-btn workspace-back-btn"
-                type="button"
-              >
-                Change young person
-              </button>
-
-              <nav
-                id="desktopNav"
-                class="workspace-nav workspace-nav--accordion workspace-nav--hidden"
-                aria-label="Workspace sections"
-              ></nav>
-            </div>
-          </aside>
-
-          <section class="workspace-stage">
+        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--flat">
+          <section class="workspace-stage workspace-stage--full">
             <div class="workspace-stage-top">
               <section class="workspace-stage-mobile-person mobile-only">
                 <div
@@ -353,15 +308,15 @@
               <section
                 id="quickCreateBar"
                 class="quick-actions-panel quick-actions-panel--macmenu"
-                aria-label="Workspace menu"
+                aria-label="Workspace navigation and actions"
               >
                 <div class="quick-actions-panel-head quick-actions-panel-head--compact">
                   <div>
-                    <div class="eyebrow">Workspace menu</div>
-                    <h2>Sections and actions</h2>
+                    <div class="eyebrow">Navigate and work</div>
+                    <h2>Find the right area quickly</h2>
                   </div>
                   <p>
-                    Use the menus below to move around the workspace and create records quickly.
+                    Clear sections for daily work, records, health, relationships, planning and documents.
                   </p>
                 </div>
 
@@ -371,147 +326,203 @@
                   role="navigation"
                   aria-label="Workspace sections and actions"
                 >
-                  <details class="workspace-menu" open>
-                    <summary class="workspace-menu-trigger">Today</summary>
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Daily view</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="workspace">
                         Today’s workspace
+                        <small>Main daily operating view</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="overview">
-                        What matters today
+                        Priority overview
+                        <small>What matters most today</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="timeline">
-                        Chronology and events
+                        Timeline
+                        <small>Chronology and key events</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="handover">
                         Handover
+                        <small>Shift continuity and updates</small>
                       </button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu">
-                    <summary class="workspace-menu-trigger">Care</summary>
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Care records</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action-router="new-daily-note">
                         Add daily note
+                        <small>Record day-to-day care</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-incident">
                         Add important event
+                        <small>Log incidents or significant events</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="timeline">
-                        View chronology
+                        View timeline
+                        <small>Browse care history</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="handover">
                         Open handover
+                        <small>See key shift information</small>
                       </button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu">
-                    <summary class="workspace-menu-trigger">Health</summary>
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Health and wellbeing</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action-router="new-health-record">
                         Add health record
+                        <small>Medication, symptoms or health notes</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="health">
-                        Health and wellbeing
+                        Health overview
+                        <small>Health and wellbeing records</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="calendar">
-                        Appointments and key dates
+                        Appointments
+                        <small>Health visits and key dates</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="therapy">
-                        Therapeutic services
+                        Therapy support
+                        <small>Therapeutic services and input</small>
                       </button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu">
-                    <summary class="workspace-menu-trigger">Learning</summary>
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Education and progress</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action-router="new-education-record">
                         Add education record
+                        <small>Log school, attendance or learning updates</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="education">
-                        Learning and education
+                        Education view
+                        <small>Learning and school information</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="readiness">
-                        Actions and readiness
+                        Readiness and actions
+                        <small>Goals, tasks and development</small>
                       </button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu">
-                    <summary class="workspace-menu-trigger">Relationships</summary>
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Relationships and identity</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="profile">
-                        About this young person
+                        Young person profile
+                        <small>Identity, preferences and profile detail</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="family">
-                        Relationships and family
+                        Family and relationships
+                        <small>Family, contact and important people</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">
                         Add family contact
+                        <small>Record family contact or update</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-action-router="professional-message">
                         Log communication
+                        <small>Record professional contact</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="communication">
                         Communication log
+                        <small>All key communication in one place</small>
                       </button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu">
-                    <summary class="workspace-menu-trigger">Planning</summary>
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Planning and review</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action-router="new-support-plan">
                         Add support plan
+                        <small>Create or update planned support</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-task">
                         Add task
+                        <small>Set follow-up action</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="reports">
-                        Reports and review
+                        Reports and reviews
+                        <small>Formal reporting and review work</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="manager">
-                        Leadership and review
+                        Management review
+                        <small>Oversight and leadership view</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="readiness">
-                        Actions and readiness
+                        Readiness
+                        <small>Actions, development and next steps</small>
                       </button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu">
-                    <summary class="workspace-menu-trigger">Documents</summary>
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Documents and evidence</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action-router="upload-document">
                         Upload document
+                        <small>Add new supporting evidence</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="documents">
                         Documents
+                        <small>Policies, forms and uploaded files</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="reports">
                         Reports
+                        <small>Exported and formal records</small>
                       </button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu">
-                    <summary class="workspace-menu-trigger">Home</summary>
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Team and home context</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="team">
                         Team around the child
+                        <small>Staff and involved professionals</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="supervision">
                         Supervision
+                        <small>Reflective support and supervision</small>
                       </button>
                       <button class="workspace-menu-link" type="button" data-nav-section="manager">
                         Manager view
+                        <small>Leadership oversight and escalation</small>
                       </button>
                     </div>
                   </details>
                 </nav>
+              </section>
+
+              <section
+                class="workspace-section-nav content-section"
+                aria-label="Section shortcuts"
+              >
+                <div class="workspace-section-nav-head">
+                  <div>
+                    <div class="eyebrow">Section shortcuts</div>
+                    <h2>Open a section directly</h2>
+                  </div>
+                  <button
+                    id="backToSelectorBtn"
+                    class="ghost-btn"
+                    type="button"
+                  >
+                    Change young person
+                  </button>
+                </div>
+
+                <nav
+                  id="desktopNav"
+                  class="workspace-nav workspace-nav--topgrid"
+                  aria-label="Workspace sections"
+                ></nav>
               </section>
 
               <section
@@ -658,7 +669,7 @@
               class="secondary-btn"
               type="button"
             >
-              Close
+             Close
             </button>
           </div>
         </header>
