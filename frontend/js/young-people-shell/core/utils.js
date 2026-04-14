@@ -194,13 +194,7 @@ export function getDisplayName(item = {}) {
 }
 
 export function getRoleLabel(item = {}) {
-  return (
-    item.role ||
-    item.job_title ||
-    item.position ||
-    item.staff_role ||
-    ""
-  );
+  return item.role || item.job_title || item.position || item.staff_role || "";
 }
 
 export function getStatusLabel(item = {}) {
@@ -244,6 +238,7 @@ export function getProfileImage(item = {}) {
       item.profile_photo_url ||
       item.image_url ||
       item.avatar_url ||
+      item.photo ||
       ""
   );
 }
@@ -267,7 +262,9 @@ export function buildImageOrInitials(
     `;
   }
 
-  return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(initialsFromName(name))}</div>`;
+  return `<div class="${escapeHtml(fallbackClass)}">${escapeHtml(
+    initialsFromName(name)
+  )}</div>`;
 }
 
 export function renderAvatar(
