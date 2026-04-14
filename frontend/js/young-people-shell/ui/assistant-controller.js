@@ -22,6 +22,9 @@ import { escapeHtml, formatDate } from "../core/utils.js";
 let assistantControllerBound = false;
 let latestRefreshToken = 0;
 
+const MAX_BRIEF_EVIDENCE = 10;
+const MAX_BRIEF_CHRONOLOGY = 5;
+
 function getScopeContext() {
   return {
     scope: state.currentScope,
@@ -45,6 +48,12 @@ function getBundlePayload() {
   return state.scopeBundle || {};
 }
 
+function ensureAssistantMeta() {
+  if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
+    state.assistantMeta = {};
+  }
+}
+
 function scrubAssistantBundle(bundle = {}, context = {}) {
   try {
     if (typeof aiScrubber.scrubAssistantPayload === "function") {
@@ -55,7 +64,6 @@ function scrubAssistantBundle(bundle = {}, context = {}) {
 
       return {
         bundle: result?.safePayload?.bundle || result?.safePayload || bundle,
-        reverseMap: result?.reverseMap || {},
         meta: {
           enabled: true,
           mode: "client_side_bundle",
@@ -71,8 +79,6 @@ function scrubAssistantBundle(bundle = {}, context = {}) {
 
       return {
         bundle: safeBundle || bundle,
-        reverseMap:
-          typeof scrubber.reverseMap === "function" ? scrubber.reverseMap() : {},
         meta: {
           enabled: true,
           mode: "client_side_bundle",
@@ -82,7 +88,6 @@ function scrubAssistantBundle(bundle = {}, context = {}) {
 
     return {
       bundle,
-      reverseMap: {},
       meta: {
         enabled: false,
         reason: "scrubber_not_found",
@@ -93,7 +98,6 @@ function scrubAssistantBundle(bundle = {}, context = {}) {
 
     return {
       bundle,
-      reverseMap: {},
       meta: {
         enabled: false,
         reason: "scrubber_error",
@@ -101,49 +105,6 @@ function scrubAssistantBundle(bundle = {}, context = {}) {
       },
     };
   }
-}
-
-function restoreAssistantText(text = "", reverseMap = {}) {
-  try {
-    if (
-      reverseMap &&
-      Object.keys(reverseMap).length &&
-      typeof aiScrubber.restoreTokens === "function"
-    ) {
-      return aiScrubber.restoreTokens(String(text || ""), reverseMap);
-    }
-  } catch (error) {
-    console.error("[assistant-controller] restore tokens failed", error);
-  }
-
-  return String(text || "");
-}
-
-function restoreBriefObject(value, reverseMap = {}) {
-  if (value === null || value === undefined) return value;
-
-  if (Array.isArray(value)) {
-    return value.map((item) => restoreBriefObject(item, reverseMap));
-  }
-
-  if (typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, val]) => [
-        key,
-        restoreBriefObject(val, reverseMap),
-      ])
-    );
-  }
-
-  if (typeof value === "string") {
-    return restoreAssistantText(value, reverseMap);
-  }
-
-  return value;
-}
-
-function getAssistantReverseMap() {
-  return state.assistantMeta?.scrubber_reverse_map || {};
 }
 
 function renderBundleStatus() {
@@ -181,6 +142,10 @@ function renderBundleStatus() {
   }
 }
 
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
   if (!host) return;
 
@@ -189,30 +154,19 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
     return;
   }
 
-  const reverseMap = getAssistantReverseMap();
-  const restoredBrief = restoreBriefObject(brief, reverseMap);
-
-  const keyConcerns = Array.isArray(restoredBrief.key_concerns)
-    ? restoredBrief.key_concerns
-    : [];
-  const evidence = Array.isArray(restoredBrief.evidence)
-    ? restoredBrief.evidence
-    : [];
-  const chronology = Array.isArray(restoredBrief.chronology)
-    ? restoredBrief.chronology
-    : [];
-  const facts = restoredBrief.facts || {};
-  const sufficiency = restoredBrief.evidence_sufficiency || {};
+  const keyConcerns = safeArray(brief.key_concerns);
+  const evidence = safeArray(brief.evidence).slice(0, MAX_BRIEF_EVIDENCE);
+  const chronology = safeArray(brief.chronology).slice(0, MAX_BRIEF_CHRONOLOGY);
+  const facts = brief.facts || {};
+  const sufficiency = brief.evidence_sufficiency || {};
 
   host.innerHTML = `
     <div class="profile-stack">
       <div class="profile-card">
-        <div class="profile-card-title">${escapeHtml(
-          restoredBrief.title || "Brief"
-        )}</div>
+        <div class="profile-card-title">${escapeHtml(brief.title || "Brief")}</div>
         <div class="profile-card-text">
-          Scope: ${escapeHtml(restoredBrief.scope || "unknown")} • Section: ${escapeHtml(
-    restoredBrief.section || "unknown"
+          Scope: ${escapeHtml(brief.scope || "unknown")} • Section: ${escapeHtml(
+    brief.section || "unknown"
   )}
         </div>
       </div>
@@ -221,13 +175,11 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
         <div class="profile-card-title">Summary</div>
         <div class="profile-card-text">
           Evidence items: ${escapeHtml(
-            String(restoredBrief.summary?.total ?? evidence.length ?? 0)
+            String(brief.summary?.total ?? evidence.length ?? 0)
           )}<br />
-          Open tasks: ${escapeHtml(
-            String(restoredBrief.summary?.open_tasks ?? 0)
-          )}<br />
+          Open tasks: ${escapeHtml(String(brief.summary?.open_tasks ?? 0))}<br />
           Overdue items: ${escapeHtml(
-            String(restoredBrief.summary?.overdue_items ?? 0)
+            String(brief.summary?.overdue_items ?? 0)
           )}<br />
           Confidence: ${escapeHtml(String(sufficiency.confidence || "unknown"))}
         </div>
@@ -239,7 +191,7 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
             <div class="profile-card">
               <div class="profile-card-title">Key concerns</div>
               <div class="profile-card-text">${keyConcerns
-                .map((item) => escapeHtml(item))
+                .map((item) => escapeHtml(String(item || "")))
                 .join("<br />")}</div>
             </div>
           `
@@ -260,9 +212,7 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
                         facts.next_appointment.title || "Appointment"
                       )} ${
                         facts.next_appointment.date
-                          ? `(${escapeHtml(
-                              String(facts.next_appointment.date)
-                            )})`
+                          ? `(${escapeHtml(String(facts.next_appointment.date))})`
                           : ""
                       }<br />`
                     : ""
@@ -273,9 +223,7 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
                         facts.latest_incident.title || "Incident"
                       )} ${
                         facts.latest_incident.date
-                          ? `(${escapeHtml(
-                              String(facts.latest_incident.date)
-                            )})`
+                          ? `(${escapeHtml(String(facts.latest_incident.date))})`
                           : ""
                       }<br />`
                     : ""
@@ -306,7 +254,6 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
               <div class="profile-card-title">Chronology</div>
               <div class="profile-card-text">
                 ${chronology
-                  .slice(0, 5)
                   .map((item) =>
                     escapeHtml(
                       [item.date, item.title, item.summary]
@@ -327,7 +274,6 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
 function renderLiveUpdates() {
   if (!els.liveUpdatesBody) return;
 
-  const reverseMap = getAssistantReverseMap();
   const updates = Array.isArray(state.liveUpdates) ? state.liveUpdates : [];
 
   if (!updates.length) {
@@ -337,10 +283,8 @@ function renderLiveUpdates() {
 
   els.liveUpdatesBody.innerHTML = updates
     .map((update) => {
-      const restoredTitle = restoreAssistantText(update.title || "Update", reverseMap);
-      const restoredMessage = restoreAssistantText(update.message || "", reverseMap);
-      const title = escapeHtml(restoredTitle);
-      const message = escapeHtml(restoredMessage);
+      const title = escapeHtml(String(update.title || "Update"));
+      const message = escapeHtml(String(update.message || ""));
       const timestamp = update.created_at
         ? escapeHtml(formatDate(update.created_at))
         : "";
@@ -421,19 +365,19 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
     },
   });
 
-  if (state.assistantMeta) {
-    state.assistantMeta.chronology = runtime.chronology || [];
-    state.assistantMeta.facts = runtime.facts || {};
-    state.assistantMeta.care_domains = runtime.care_domains || {};
-    state.assistantMeta.evidence_summary = runtime.summary || {};
-    state.assistantMeta.evidence_sufficiency =
-      runtime.evidence_sufficiency || {};
-    state.assistantMeta.retrieval_mode =
-      runtime.retrieval_mode || "whole_scope";
-    state.assistantMeta.output_mode = runtime.output_mode || "answer";
-    state.assistantMeta.intent = runtime.intent || "summary";
-    state.assistantMeta.last_bundle_refresh_at = new Date().toISOString();
-  }
+  ensureAssistantMeta();
+
+  state.assistantMeta.chronology = runtime.chronology || [];
+  state.assistantMeta.facts = runtime.facts || {};
+  state.assistantMeta.care_domains = runtime.care_domains || {};
+  state.assistantMeta.evidence_summary = runtime.summary || {};
+  state.assistantMeta.evidence_sufficiency =
+    runtime.evidence_sufficiency || {};
+  state.assistantMeta.retrieval_mode =
+    runtime.retrieval_mode || "whole_scope";
+  state.assistantMeta.output_mode = runtime.output_mode || "answer";
+  state.assistantMeta.intent = runtime.intent || "summary";
+  state.assistantMeta.last_bundle_refresh_at = new Date().toISOString();
 }
 
 export async function refreshAssistantScopeData({
@@ -456,13 +400,9 @@ export async function refreshAssistantScopeData({
 
     setAssistantScopeBundle(scrubbed.bundle);
 
-    if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
-      state.assistantMeta = {};
-    }
-
+    ensureAssistantMeta();
     state.assistantMeta.scrubber_enabled = scrubbed.meta?.enabled ?? false;
     state.assistantMeta.scrubber_meta = scrubbed.meta || {};
-    state.assistantMeta.scrubber_reverse_map = scrubbed.reverseMap || {};
 
     await buildDerivedAssistantStateFromBundle(scrubbed.bundle);
 
