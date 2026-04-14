@@ -29,6 +29,7 @@ const ASSISTANT_INTENT = {
 const MAX_SAFE_MESSAGE_LENGTH = 3000;
 const MAX_SOURCE_ITEMS = 12;
 const MAX_SOURCE_EXCERPT = 240;
+const MAX_UI_PROMPTS = 8;
 
 function getCurrentScope() {
   return state.currentScope || "child";
@@ -95,7 +96,6 @@ function ensureAssistantState() {
       assistant_scope: {},
       assistant_context: {},
       suggested_actions: [],
-      scrubber_reverse_map: {},
     };
   }
 }
@@ -152,10 +152,6 @@ function mergeAssistantMeta(nextMeta = {}) {
     suggested_actions: Array.isArray(nextMeta.suggested_actions)
       ? nextMeta.suggested_actions
       : previous.suggested_actions || [],
-    scrubber_reverse_map:
-      nextMeta.scrubber_reverse_map && typeof nextMeta.scrubber_reverse_map === "object"
-        ? nextMeta.scrubber_reverse_map
-        : previous.scrubber_reverse_map || {},
   };
 }
 
@@ -736,12 +732,12 @@ function buildAssistantContextPayload(message = "") {
     ask_for_compliance_view:
       intent === ASSISTANT_INTENT.compliance || scope === "quality",
 
-    suggested_prompts_ui_only: assistantPromptsForView(section, scope),
+    suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(0, MAX_UI_PROMPTS),
   };
 }
 
 function trimForOutbound(value = "", max = MAX_SAFE_MESSAGE_LENGTH) {
-  return String(value || "").slice(0, max);
+  return String(value || "").trim().slice(0, max);
 }
 
 function buildCitationRef(source = {}, index = 0) {
@@ -750,12 +746,32 @@ function buildCitationRef(source = {}, index = 0) {
   return `${recordType}:${recordId}`;
 }
 
+function dedupeSources(sources = []) {
+  const seen = new Set();
+  const result = [];
+
+  for (const source of Array.isArray(sources) ? sources : []) {
+    const key = `${source.record_type || source.type || "record"}::${source.record_id || source.id || source.label || ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(source);
+  }
+
+  return result;
+}
+
 function sanitiseSourcesForUi(sources = []) {
-  return (Array.isArray(sources) ? sources : []).slice(0, MAX_SOURCE_ITEMS).map((source, index) => ({
-    ...source,
-    citation_ref: source.citation_ref || buildCitationRef(source, index),
-    excerpt: String(source.excerpt || "").slice(0, MAX_SOURCE_EXCERPT),
-  }));
+  return dedupeSources(sources)
+    .slice(0, MAX_SOURCE_ITEMS)
+    .map((source, index) => ({
+      type: source.type || source.record_type || "record",
+      label: String(source.label || source.title || "Record"),
+      excerpt: String(source.excerpt || source.summary || "").slice(0, MAX_SOURCE_EXCERPT),
+      section: source.section || "",
+      record_type: source.record_type || source.type || null,
+      record_id: source.record_id || source.id || null,
+      citation_ref: source.citation_ref || buildCitationRef(source, index),
+    }));
 }
 
 function buildSafeAssistantRequestPayload(payload) {
@@ -793,7 +809,7 @@ function buildSafeAssistantRequestPayload(payload) {
       ask_for_review_pack: Boolean(context.ask_for_review_pack),
       ask_for_compliance_view: Boolean(context.ask_for_compliance_view),
       suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
-        ? context.suggested_prompts_ui_only.slice(0, 8)
+        ? context.suggested_prompts_ui_only.slice(0, MAX_UI_PROMPTS)
         : [],
     },
   };
@@ -932,15 +948,10 @@ export async function askAssistant(question) {
 
     const scrubbed = scrubAssistantRequestPayload(outboundPayload);
 
-    mergeAssistantMeta({
-      scrubber_reverse_map: scrubbed.reverseMap || {},
-    });
-
     await apiStreamAssistant(scrubbed.payload, {
       onMeta: (meta) => {
         applyAssistantMeta({
           ...meta,
-          sources: sanitiseSourcesForUi(meta?.sources || []),
           runtime: {
             ...(meta?.runtime || {}),
             assistant_intent: contextPayload.assistant_intent,
@@ -968,7 +979,7 @@ export async function askAssistant(question) {
             ...(meta?.assistant_scope || {}),
             scrubber_meta: scrubbed.meta || {},
           },
-          scrubber_reverse_map: scrubbed.reverseMap || {},
+          sources: meta?.sources || [],
         });
       },
       onProgress: () => {},
