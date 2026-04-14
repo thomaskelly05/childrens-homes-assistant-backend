@@ -364,127 +364,149 @@
 
               <section
                 id="quickCreateBar"
-                class="quick-actions-panel"
+                class="quick-actions-panel quick-actions-panel--menu"
                 aria-label="Quick actions"
               >
-                <div class="quick-actions-panel-head">
+                <div class="quick-actions-panel-head quick-actions-panel-head--compact">
                   <div>
-                    <div class="eyebrow">Quick actions</div>
+                    <div class="eyebrow">Task menu</div>
                     <h2>Start where you are</h2>
                   </div>
                   <p>
-                    Fast, guided access to the records adults most often need during the day.
+                    Open the right heading to create records quickly without crowding the page.
                   </p>
                 </div>
 
-                <div id="heroQuickActions" class="quick-actions-row" role="list">
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="new-daily-note"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">✎</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Add daily note</strong>
-                      <small>Capture care, presentation and what mattered.</small>
-                    </span>
-                  </button>
+                <div id="heroQuickActions" class="task-menu-bar" role="navigation" aria-label="Quick action categories">
+                  <details class="task-menu-group" open>
+                    <summary class="task-menu-trigger">
+                      <span class="task-menu-trigger-title">Daily care</span>
+                      <span class="task-menu-trigger-meta">Notes, events and handover</span>
+                    </summary>
+                    <div class="task-menu-dropdown">
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="new-daily-note"
+                      >
+                        <strong>Add daily note</strong>
+                        <small>Capture care, presentation and what mattered.</small>
+                      </button>
 
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="new-incident"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">!</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Add important event</strong>
-                      <small>Record clearly, safely and without blame.</small>
-                    </span>
-                  </button>
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="new-incident"
+                      >
+                        <strong>Add important event</strong>
+                        <small>Record clearly, safely and without blame.</small>
+                      </button>
 
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="new-support-plan"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">✓</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Add support plan</strong>
-                      <small>Create practical therapeutic guidance.</small>
-                    </span>
-                  </button>
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-assistant-quick="handover"
+                      >
+                        <strong>Draft handover</strong>
+                        <small>Prepare a clear shift handover.</small>
+                      </button>
+                    </div>
+                  </details>
 
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="new-health-record"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">♥</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Add health record</strong>
-                      <small>Appointments, outcomes and follow-up.</small>
-                    </span>
-                  </button>
+                  <details class="task-menu-group">
+                    <summary class="task-menu-trigger">
+                      <span class="task-menu-trigger-title">Health, learning and wellbeing</span>
+                      <span class="task-menu-trigger-meta">Appointments, progress and support</span>
+                    </summary>
+                    <div class="task-menu-dropdown">
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="new-health-record"
+                      >
+                        <strong>Add health record</strong>
+                        <small>Appointments, outcomes and follow-up.</small>
+                      </button>
 
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="new-education-record"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">▣</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Add education record</strong>
-                      <small>Learning, attendance and progress.</small>
-                    </span>
-                  </button>
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="new-education-record"
+                      >
+                        <strong>Add education record</strong>
+                        <small>Learning, attendance and progress.</small>
+                      </button>
+                    </div>
+                  </details>
 
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="new-family-contact"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">◎</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Add family contact</strong>
-                      <small>Contact, themes and next steps.</small>
-                    </span>
-                  </button>
+                  <details class="task-menu-group">
+                    <summary class="task-menu-trigger">
+                      <span class="task-menu-trigger-title">Relationships and communication</span>
+                      <span class="task-menu-trigger-meta">Family and professional contact</span>
+                    </summary>
+                    <div class="task-menu-dropdown">
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="new-family-contact"
+                      >
+                        <strong>Add family contact</strong>
+                        <small>Contact, themes and next steps.</small>
+                      </button>
 
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="new-task"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">☑</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Add task</strong>
-                      <small>Create a clear action with ownership.</small>
-                    </span>
-                  </button>
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="professional-message"
+                      >
+                        <strong>Log communication</strong>
+                        <small>Professionals, family and partner agencies.</small>
+                      </button>
+                    </div>
+                  </details>
 
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="upload-document"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">▤</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Upload document</strong>
-                      <small>Add statutory and supporting records.</small>
-                    </span>
-                  </button>
+                  <details class="task-menu-group">
+                    <summary class="task-menu-trigger">
+                      <span class="task-menu-trigger-title">Planning and action</span>
+                      <span class="task-menu-trigger-meta">Plans, tasks and next steps</span>
+                    </summary>
+                    <div class="task-menu-dropdown">
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="new-support-plan"
+                      >
+                        <strong>Add support plan</strong>
+                        <small>Create practical therapeutic guidance.</small>
+                      </button>
 
-                  <button
-                    class="quick-action-pill"
-                    type="button"
-                    data-action-router="professional-message"
-                  >
-                    <span class="quick-action-pill-icon" aria-hidden="true">✉</span>
-                    <span class="quick-action-pill-copy">
-                      <strong>Log communication</strong>
-                      <small>Professionals, family and partner agencies.</small>
-                    </span>
-                  </button>
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="new-task"
+                      >
+                        <strong>Add task</strong>
+                        <small>Create a clear action with ownership.</small>
+                      </button>
+                    </div>
+                  </details>
+
+                  <details class="task-menu-group">
+                    <summary class="task-menu-trigger">
+                      <span class="task-menu-trigger-title">Documents</span>
+                      <span class="task-menu-trigger-meta">Files and supporting records</span>
+                    </summary>
+                    <div class="task-menu-dropdown">
+                      <button
+                        class="task-menu-item"
+                        type="button"
+                        data-action-router="upload-document"
+                      >
+                        <strong>Upload document</strong>
+                        <small>Add statutory and supporting records.</small>
+                      </button>
+                    </div>
+                  </details>
                 </div>
               </section>
 
@@ -804,7 +826,7 @@
       aria-hidden="true"
       aria-label="Workspace assistant"
     >
-      <div class="assistant-shell">
+      <div class="assistant-shell assistant-shell--large">
         <div class="assistant-header">
           <div>
             <h3>Assistant</h3>
