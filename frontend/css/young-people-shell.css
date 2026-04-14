@@ -3010,3 +3010,368 @@ summary:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* =========================================
+   LAYOUT OVERRIDES - SIDEBAR REMOVED
+========================================= */
+
+:root {
+  --content-max: 1680px;
+}
+
+.workspace-screen-inner,
+.workspace-screen-inner--menubar,
+.workspace-screen-inner--flat {
+  display: block;
+  min-height: calc(100vh - var(--topbar-h));
+}
+
+.workspace-stage--full {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 18px 20px 24px;
+}
+
+.workspace-sidebar,
+.workspace-sidebar-shell,
+.workspace-sidebar-profile-card,
+.workspace-sidebar-brand {
+  display: none !important;
+}
+
+/* =========================================
+   TOP GRID SECTION NAV
+========================================= */
+
+.workspace-section-nav {
+  padding: 14px 16px 16px;
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(216, 226, 236, 0.94);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+}
+
+.workspace-section-nav-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.workspace-section-nav-head h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.workspace-nav--topgrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workspace-nav--topgrid .nav-btn {
+  min-height: 82px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #fbfdff, #f7fbff);
+  box-shadow: var(--shadow-xs);
+}
+
+.workspace-nav--topgrid .nav-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  background: #fff;
+}
+
+.workspace-nav--topgrid .nav-btn.active {
+  background: linear-gradient(180deg, var(--primary-soft), var(--primary-soft-2));
+  border-color: rgba(45, 108, 223, 0.2);
+  box-shadow: inset 0 3px 0 var(--primary), var(--shadow-xs);
+}
+
+.workspace-nav--topgrid .nav-btn-label {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.workspace-nav--topgrid .nav-btn-meta {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* =========================================
+   MENUBAR IMPROVEMENTS
+========================================= */
+
+.quick-actions-panel-head p {
+  max-width: 620px;
+}
+
+.workspace-menubar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+.workspace-menu {
+  width: 100%;
+}
+
+.workspace-menu-trigger {
+  width: 100%;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbfdff, #f7fbff);
+  box-shadow: var(--shadow-xs);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.workspace-menu-trigger:hover {
+  transform: translateY(-1px);
+}
+
+.workspace-menu[open] .workspace-menu-trigger {
+  background: linear-gradient(180deg, var(--primary-soft), var(--primary-soft-2));
+  color: var(--primary-strong);
+  border-color: rgba(45, 108, 223, 0.2);
+}
+
+.workspace-menu-dropdown {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.workspace-menu-link {
+  min-height: 58px;
+  align-content: center;
+}
+
+.workspace-menu-link small {
+  display: block;
+  margin-top: 2px;
+}
+
+/* =========================================
+   FULL PAGE / FULL VIEWPORT OVERLAYS
+========================================= */
+
+.composer-panel,
+.fullscreen-panel,
+.assistant-modal {
+  position: fixed;
+  inset: 0;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.composer-shell,
+.fullscreen-panel-shell {
+  width: calc(100vw - 24px);
+  max-width: none;
+  height: calc(100vh - 24px);
+  max-height: none;
+  margin: 12px;
+  border-radius: 24px;
+}
+
+.assistant-modal {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 12px;
+}
+
+.assistant-shell,
+.assistant-shell--large {
+  width: 100%;
+  height: calc(100vh - 24px);
+  max-width: none;
+}
+
+.assistant-header {
+  border-radius: 24px 24px 0 0;
+}
+
+.assistant-modal-layout {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
+  overflow: auto;
+}
+
+.assistant-footer {
+  border-radius: 0 0 24px 24px;
+}
+
+.fullscreen-panel-body,
+.composer-main,
+.composer-side,
+.assistant-modal-main,
+.record-drawer-body {
+  overscroll-behavior: contain;
+}
+
+/* =========================================
+   DRAWER / RECORD OVERLAY
+========================================= */
+
+.record-drawer {
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.record-drawer-panel {
+  width: min(980px, 100vw);
+  max-width: 100vw;
+}
+
+/* =========================================
+   HEADER / MAIN CONTENT BALANCE
+========================================= */
+
+.workspace-header-context {
+  grid-template-columns: minmax(280px, 380px) auto 1fr;
+  align-items: start;
+}
+
+.workspace-content-wrap {
+  margin-top: 14px;
+}
+
+.workspace-view-content {
+  gap: 16px;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1280px) {
+  .workspace-menubar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workspace-nav--topgrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .workspace-stage--full {
+    padding: 14px;
+    padding-bottom: calc(var(--mobile-bottom-h) + 16px);
+  }
+
+  .workspace-menubar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace-nav--topgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace-header-context {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-shell,
+  .fullscreen-panel-shell,
+  .assistant-shell,
+  .assistant-shell--large {
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+    margin: 8px;
+    border-radius: 18px;
+  }
+
+  .assistant-header {
+    border-radius: 18px 18px 0 0;
+  }
+
+  .assistant-footer {
+    border-radius: 0 0 18px 18px;
+  }
+}
+
+@media (max-width: 720px) {
+  .workspace-menubar,
+  .workspace-nav--topgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-section-nav-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .workspace-section-nav-head .ghost-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .workspace-menu-dropdown {
+    position: static;
+    margin-top: 8px;
+    box-shadow: none;
+  }
+
+  .composer-shell,
+  .fullscreen-panel-shell,
+  .assistant-shell,
+  .assistant-shell--large {
+    width: calc(100vw - 10px);
+    height: calc(100vh - 10px);
+    margin: 5px;
+    border-radius: 16px;
+  }
+
+  .record-drawer-panel {
+    width: 100vw;
+  }
+}
+
+/* =========================================
+   DARK MODE SUPPORT FOR NEW SECTIONS
+========================================= */
+
+@media (prefers-color-scheme: dark) {
+  .workspace-section-nav {
+    background: rgba(22, 34, 51, 0.9);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .workspace-nav--topgrid .nav-btn,
+  .workspace-menu-trigger {
+    background: linear-gradient(180deg, rgba(27, 42, 61, 0.98), rgba(24, 38, 56, 0.98));
+    border-color: var(--border);
+  }
+
+  .workspace-nav--topgrid .nav-btn:hover,
+  .workspace-menu-trigger:hover {
+    background: rgba(27, 42, 61, 1);
+    border-color: var(--border-strong);
+  }
+
+  .workspace-nav--topgrid .nav-btn.active,
+  .workspace-menu[open] .workspace-menu-trigger {
+    background: linear-gradient(180deg, rgba(91, 140, 255, 0.18), rgba(91, 140, 255, 0.08));
+    border-color: rgba(91, 140, 255, 0.24);
+  }
+}
