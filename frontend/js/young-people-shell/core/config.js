@@ -32,6 +32,10 @@ export const SCOPE_SECTIONS = Object.freeze({
   home: [
     "home-dashboard",
     "compliance",
+    "staff-profile",
+    "onboarding",
+    "notifications",
+    "rota",
     "manager",
     "readiness",
     "reports",
@@ -45,6 +49,10 @@ export const SCOPE_SECTIONS = Object.freeze({
   quality: [
     "quality",
     "compliance",
+    "staff-profile",
+    "onboarding",
+    "notifications",
+    "rota",
     "reports",
     "manager",
     "readiness",
@@ -78,6 +86,10 @@ export const SECTION_TITLES = Object.freeze({
   supervision: "Supervision and development",
   compliance: "Compliance and statutory assurance",
   quality: "Quality and RI dashboard",
+  "staff-profile": "Staff profiles and workforce",
+  onboarding: "Onboarding and induction",
+  notifications: "Notifications and actions",
+  rota: "Rota and staffing cover",
 });
 
 export const SECTION_SUBTITLES = Object.freeze({
@@ -119,6 +131,14 @@ export const SECTION_SUBTITLES = Object.freeze({
     "A live compliance view across workforce, children’s files, statutory paperwork and Ofsted readiness.",
   quality:
     "Quality assurance, audits, trends, RI oversight and service performance.",
+  "staff-profile":
+    "A live workforce view across staff profiles, roles, onboarding, training, supervision and file readiness.",
+  onboarding:
+    "Track recruitment checks, induction, probation and early workforce readiness in line with safer recruitment and Ofsted expectations.",
+  notifications:
+    "A live action layer for reminders, escalations, acknowledgements and workforce follow-up.",
+  rota:
+    "A live rota view across staffing cover, shift leads, absences, agency use and operational gaps.",
 });
 
 const NAV_GROUPS = [
@@ -283,6 +303,38 @@ const NAV_GROUPS = [
         icon: "badge-check",
         description:
           "Compliance across supervisions, training, statutory paperwork, Statement of Purpose, Annex A and Ofsted readiness.",
+      },
+      {
+        id: "staff-profile",
+        label: "Staff profiles",
+        short_label: "Staff",
+        icon: "users-round",
+        description:
+          "Workforce profiles, onboarding, training, supervision and file readiness.",
+      },
+      {
+        id: "onboarding",
+        label: "Onboarding",
+        short_label: "Onboarding",
+        icon: "clipboard-check",
+        description:
+          "Recruitment checks, induction, probation and safer recruitment workflow.",
+      },
+      {
+        id: "notifications",
+        label: "Notifications",
+        short_label: "Alerts",
+        icon: "messages-square",
+        description:
+          "Reminders, escalations and live actions for staff and managers.",
+      },
+      {
+        id: "rota",
+        label: "Rota and staffing cover",
+        short_label: "Rota",
+        icon: "calendar",
+        description:
+          "Shift cover, shift leads, absences, agency use and operational gaps.",
       },
       {
         id: "team",
@@ -473,6 +525,15 @@ export const QUICK_ACTIONS = Object.freeze([
     description:
       "Record contact with professionals, family members and partner agencies.",
   },
+  {
+    id: "staff_task",
+    label: "Add staff action",
+    short_label: "Staff action",
+    record_type: "task",
+    section_hint: "staff-profile",
+    description:
+      "Create a workforce action linked to onboarding, training, supervision or staffing.",
+  },
 ]);
 
 export const QUICK_ACTION_MAP = Object.freeze(
@@ -497,6 +558,10 @@ export const SECTION_DEFAULT_ACTION = Object.freeze({
   therapy: "task",
   "home-dashboard": "task",
   compliance: "task",
+  "staff-profile": "staff_task",
+  onboarding: "staff_task",
+  notifications: "staff_task",
+  rota: "staff_task",
   team: "task",
   supervision: "task",
   quality: "task",
