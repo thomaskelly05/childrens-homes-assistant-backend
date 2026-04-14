@@ -23,16 +23,7 @@ function qs(id) {
 
 function setText(id, value, fallback = "") {
   const el = qs(id);
-  if (el) {
-    el.textContent = value || fallback;
-  }
-}
-
-function setHtml(id, value) {
-  const el = qs(id);
-  if (el) {
-    el.innerHTML = value || "";
-  }
+  if (el) el.textContent = value || fallback;
 }
 
 function showEl(el, show = true, display = "") {
@@ -157,16 +148,12 @@ function getWorkspaceEyebrowText() {
 
 function updateWorkspaceContextPill() {
   const valueEl = document.querySelector(".workspace-context-pill-value");
-  if (valueEl) {
-    valueEl.textContent = getWorkspaceContextValue();
-  }
+  if (valueEl) valueEl.textContent = getWorkspaceContextValue();
 }
 
 function updateWorkspaceEyebrow() {
   const eyebrow = document.querySelector(".workspace-header-copy .eyebrow");
-  if (eyebrow) {
-    eyebrow.textContent = getWorkspaceEyebrowText();
-  }
+  if (eyebrow) eyebrow.textContent = getWorkspaceEyebrowText();
 }
 
 function renderAvatarHtml(person = {}, imageClass, fallbackClass) {
@@ -189,17 +176,31 @@ function updateSidebarAvatar(person = {}) {
   const name = getDisplayName(person);
   const initials = initialsFromName(name);
 
-  if (qs("personAvatar")) {
-    qs("personAvatar").innerHTML = imageUrl
-      ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
-      : `<div class="avatar avatar-fallback">${escapeHtml(initials)}</div>`;
+  const sidebarAvatar = qs("personAvatar");
+  const mobileAvatar = qs("mobilePersonAvatar");
+
+  const html = imageUrl
+    ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
+    : `<div class="avatar avatar-fallback">${escapeHtml(initials)}</div>`;
+
+  if (sidebarAvatar) sidebarAvatar.innerHTML = html;
+  if (mobileAvatar) mobileAvatar.innerHTML = html;
+}
+
+function updateMobileDrawerPerson(person = {}) {
+  const scopeIdentity = getScopeIdentity();
+
+  if (scopeIdentity) {
+    setText("mobileDrawerPersonName", scopeIdentity.title, "Workspace");
+    setText("mobileDrawerPersonMeta", scopeIdentity.meta, "Current workspace");
+    return;
   }
 
-  if (qs("mobilePersonAvatar")) {
-    qs("mobilePersonAvatar").innerHTML = imageUrl
-      ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
-      : `<div class="avatar avatar-fallback">${escapeHtml(initials)}</div>`;
-  }
+  const displayName = getDisplayName(person);
+  const meta = buildPersonMeta(person) || "Current workspace";
+
+  setText("mobileDrawerPersonName", displayName, "Young person");
+  setText("mobileDrawerPersonMeta", meta, "Current workspace");
 }
 
 function updateYoungPersonText(person = {}) {
@@ -217,6 +218,7 @@ function updateYoungPersonText(person = {}) {
 
     updateSnapshotAvatar(scopeIdentity.seed);
     updateSidebarAvatar(scopeIdentity.seed);
+    updateMobileDrawerPerson(scopeIdentity.seed);
     return;
   }
 
@@ -234,6 +236,7 @@ function updateYoungPersonText(person = {}) {
 
   updateSnapshotAvatar(person);
   updateSidebarAvatar(person);
+  updateMobileDrawerPerson(person);
 }
 
 function updateScopeButtons() {
@@ -273,18 +276,10 @@ function updateScopeButtons() {
 function updateScopeSensitiveActions() {
   const isChildScope = getCurrentScope() === "child";
 
-  showEl(els.profileOpenBtn, isChildScope, "inline-flex");
-  showEl(els.profilePhotoUploadBtn, isChildScope, "inline-flex");
   showEl(els.changePersonBtn, isChildScope, "inline-flex");
   showEl(els.backToSelectorBtn, isChildScope, "inline-flex");
 
-  const quickCreateBar = document.querySelector(".quick-create-bar");
-  if (quickCreateBar) {
-    showEl(quickCreateBar, true, "block");
-  }
-
   const selectorButtons = [els.homeBtn, els.mobileHomeBtn];
-
   selectorButtons.forEach((button) => {
     if (!button) return;
     button.textContent = isChildScope ? "Young people home" : "Workspace home";
@@ -293,6 +288,11 @@ function updateScopeSensitiveActions() {
   const profileCard = document.querySelector(".workspace-sidebar-profile-card");
   if (profileCard) {
     showEl(profileCard, true, "block");
+  }
+
+  const quickActionsPanel = document.querySelector(".quick-actions-panel");
+  if (quickActionsPanel) {
+    showEl(quickActionsPanel, true, "block");
   }
 }
 
@@ -321,14 +321,10 @@ function updateTopLevelLabels() {
   const scopeTitle = getScopeTitle();
 
   const sidebarBrand = document.querySelector(".workspace-sidebar-brand span");
-  if (sidebarBrand) {
-    sidebarBrand.textContent = scopeTitle;
-  }
+  if (sidebarBrand) sidebarBrand.textContent = scopeTitle;
 
   const mobileNavHeading = document.querySelector("#mobileNavDrawer h3");
-  if (mobileNavHeading) {
-    mobileNavHeading.textContent = scopeTitle;
-  }
+  if (mobileNavHeading) mobileNavHeading.textContent = scopeTitle;
 }
 
 function updateAppDataset() {
@@ -431,11 +427,6 @@ export function bindShellChrome() {
   qs("changePersonBtn")?.addEventListener("click", goHomeToSelector);
   qs("logoBtn")?.addEventListener("click", goHomeToSelector);
   qs("homeBtn")?.addEventListener("click", goHomeToSelector);
-
-  qs("profileOpenBtn")?.addEventListener("click", async () => {
-    const { loadSection } = await import("./nav.js");
-    await loadSection("profile");
-  });
 
   qs("heroAssistantBtn")?.addEventListener("click", async () => {
     const { openAssistant } = await import("./assistant.js");
