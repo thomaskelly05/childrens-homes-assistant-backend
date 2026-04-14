@@ -278,6 +278,8 @@ function updateScopeSensitiveActions() {
 
   showEl(els.changePersonBtn, isChildScope, "inline-flex");
   showEl(els.backToSelectorBtn, isChildScope, "inline-flex");
+  showEl(els.profileOpenBtn, isChildScope, "inline-flex");
+  showEl(els.profilePhotoUploadBtn, isChildScope, "inline-flex");
 
   const selectorButtons = [els.homeBtn, els.mobileHomeBtn];
   selectorButtons.forEach((button) => {
