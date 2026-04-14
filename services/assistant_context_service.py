@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from psycopg2.extras import RealDictCursor
+
+
+AssistantType = Literal["public", "young_people_os"]
 
 
 def _fetch_one(conn, query: str, params: tuple[Any, ...]) -> dict[str, Any] | None:
@@ -25,14 +28,23 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value is None or value == "":
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _normalise_scope(scope: dict[str, Any] | None) -> dict[str, Any]:
     scope = scope or {}
     return {
         "scope_type": _safe_string(scope.get("scope_type") or "global").lower() or "global",
-        "home_id": scope.get("home_id"),
-        "young_person_id": scope.get("young_person_id"),
-        "record_type": _safe_string(scope.get("record_type")),
-        "record_id": scope.get("record_id"),
+        "home_id": _safe_int(scope.get("home_id")),
+        "young_person_id": _safe_int(scope.get("young_person_id")),
+        "record_type": _safe_string(scope.get("record_type")).lower(),
+        "record_id": _safe_int(scope.get("record_id")),
     }
 
 
@@ -49,7 +61,7 @@ def _get_user_home(conn, user_id: int) -> int | None:
     )
     if not row:
         return None
-    return row.get("home_id")
+    return _safe_int(row.get("home_id"))
 
 
 def _assert_young_person_access(conn, user_id: int, young_person_id: int) -> dict[str, Any]:
@@ -88,7 +100,8 @@ def _assert_young_person_access(conn, user_id: int, young_person_id: int) -> dic
     if not young_person:
         raise ValueError("Young person not found")
 
-    if user_home_id is not None and young_person.get("home_id") != user_home_id:
+    record_home_id = _safe_int(young_person.get("home_id"))
+    if user_home_id is not None and record_home_id != user_home_id:
         raise PermissionError("You do not have access to this young person")
 
     return young_person
@@ -507,7 +520,6 @@ def _build_scoped_record_context(
     if not record_type or record_id is None:
         return {}
 
-    # Main detail record
     record: dict[str, Any] | None = None
 
     if record_type == "daily_note":
@@ -670,7 +682,7 @@ def build_young_person_context(
     }
 
 
-def build_global_context(conn, *, user_id: int, scope: dict[str, Any] | None = None) -> dict[str, Any]:
+def build_home_os_context(conn, *, user_id: int, scope: dict[str, Any] | None = None) -> dict[str, Any]:
     scope = _normalise_scope(scope)
     home_id = _get_user_home(conn, user_id)
 
@@ -783,14 +795,56 @@ def build_global_context(conn, *, user_id: int, scope: dict[str, Any] | None = N
     }
 
 
+def build_public_context(*, scope: dict[str, Any] | None = None) -> dict[str, Any]:
+    """
+    Strictly public assistant context.
+    Never expose OS records, home data, young person data, or scoped record data.
+    """
+    scope = _normalise_scope(scope)
+
+    return {
+        "scope": {
+            "scope_type": "global",
+            "home_id": None,
+            "record_type": None,
+            "record_id": None,
+        },
+        "home_id": None,
+        "tasks": [],
+        "manager_updates": [],
+        "handover": [],
+        "chronology": [],
+        "documents": [],
+        "incidents": [],
+        "compliance_items": [],
+        "public_context": {
+            "assistant_type": "public",
+            "os_data_available": False,
+            "young_person_data_available": False,
+            "home_data_available": False,
+        },
+    }
+
+
 def build_assistant_context(
     conn,
     *,
     user_id: int,
     scope: dict[str, Any] | None,
+    assistant_type: AssistantType = "young_people_os",
 ) -> dict[str, Any]:
     scope = _normalise_scope(scope)
     scope_type = scope.get("scope_type") or "global"
+
+    if assistant_type == "public":
+        if scope_type != "global":
+            raise PermissionError("Public assistant does not support scoped OS access")
+        if scope.get("home_id") is not None or scope.get("young_person_id") is not None:
+            raise PermissionError("Public assistant cannot access home or young person records")
+        return build_public_context(scope=scope)
+
+    if assistant_type != "young_people_os":
+        raise ValueError("Unsupported assistant_type")
 
     if scope_type == "young_person":
         young_person_id = scope.get("young_person_id")
@@ -803,7 +857,7 @@ def build_assistant_context(
             scope=scope,
         )
 
-    return build_global_context(
+    return build_home_os_context(
         conn,
         user_id=user_id,
         scope=scope,
