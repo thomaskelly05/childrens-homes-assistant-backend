@@ -96,7 +96,23 @@ function ensureAssistantState() {
       assistant_scope: {},
       assistant_context: {},
       suggested_actions: [],
+      scrubber_reverse_map: {},
     };
+  }
+
+  if (!Array.isArray(state.assistantMeta.sources)) {
+    state.assistantMeta.sources = [];
+  }
+
+  if (!Array.isArray(state.assistantMeta.suggested_actions)) {
+    state.assistantMeta.suggested_actions = [];
+  }
+
+  if (
+    !state.assistantMeta.scrubber_reverse_map ||
+    typeof state.assistantMeta.scrubber_reverse_map !== "object"
+  ) {
+    state.assistantMeta.scrubber_reverse_map = {};
   }
 }
 
@@ -152,6 +168,11 @@ function mergeAssistantMeta(nextMeta = {}) {
     suggested_actions: Array.isArray(nextMeta.suggested_actions)
       ? nextMeta.suggested_actions
       : previous.suggested_actions || [],
+    scrubber_reverse_map:
+      nextMeta.scrubber_reverse_map &&
+      typeof nextMeta.scrubber_reverse_map === "object"
+        ? nextMeta.scrubber_reverse_map
+        : previous.scrubber_reverse_map || {},
   };
 }
 
@@ -199,7 +220,10 @@ function addAssistantPlaceholder() {
 
 function updateLastAssistantStreamingText(text) {
   const safeText = String(text || "Thinking…");
-  const lists = [state.assistantMessages || [], state.assistantModalMessages || []];
+  const lists = [
+    state.assistantMessages || [],
+    state.assistantModalMessages || [],
+  ];
 
   lists.forEach((list) => {
     if (!list.length) return;
@@ -215,7 +239,10 @@ function updateLastAssistantStreamingText(text) {
 
 function replaceLastAssistantPlaceholder(text) {
   const safeText = String(text || "No assistant reply returned.");
-  const lists = [state.assistantMessages || [], state.assistantModalMessages || []];
+  const lists = [
+    state.assistantMessages || [],
+    state.assistantModalMessages || [],
+  ];
 
   lists.forEach((list) => {
     if (!list.length) return;
@@ -263,7 +290,11 @@ function detectAssistantIntent(text = "") {
     return ASSISTANT_INTENT.review;
   }
 
-  if (/chronology|timeline|what happened|history|in date order|events over time/.test(value)) {
+  if (
+    /chronology|timeline|what happened|history|in date order|events over time/.test(
+      value
+    )
+  ) {
     return ASSISTANT_INTENT.chronology;
   }
 
@@ -309,7 +340,11 @@ function detectAssistantIntent(text = "") {
 function detectRetrievalMode(text = "", intent = ASSISTANT_INTENT.unknown) {
   const value = String(text || "").trim().toLowerCase();
 
-  if (/this section|this page|this screen|current view|current section|workspace section/.test(value)) {
+  if (
+    /this section|this page|this screen|current view|current section|workspace section/.test(
+      value
+    )
+  ) {
     return "section_only";
   }
 
@@ -328,8 +363,13 @@ function detectRetrievalMode(text = "", intent = ASSISTANT_INTENT.unknown) {
     return "whole_scope";
   }
 
-  if (intent === ASSISTANT_INTENT.handover || intent === ASSISTANT_INTENT.drafting) {
-    return /this section|this page|this draft/.test(value) ? "section_only" : "whole_scope";
+  if (
+    intent === ASSISTANT_INTENT.handover ||
+    intent === ASSISTANT_INTENT.drafting
+  ) {
+    return /this section|this page|this draft/.test(value)
+      ? "section_only"
+      : "whole_scope";
   }
 
   return "whole_scope";
@@ -624,7 +664,9 @@ export function updateAssistantContext() {
 
   ensureAssistantState();
 
-  const sectionLabel = String(section).replaceAll("_", " ").replaceAll("-", " ");
+  const sectionLabel = String(section)
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
 
   const contextSummary =
     scope === "child"
@@ -713,26 +755,28 @@ function buildAssistantContextPayload(message = "") {
     current_scope: scope,
     current_section: section,
     user_role: state.userRole || "staff",
-
     assistant_intent: intent,
     retrieval_mode,
     output_mode,
-
     whole_os_default: true,
     section_only_requested: retrieval_mode === "section_only",
     use_whole_scope_records: retrieval_mode !== "section_only",
-
     ask_for_dates:
-      intent === ASSISTANT_INTENT.factual_lookup || intent === ASSISTANT_INTENT.chronology,
+      intent === ASSISTANT_INTENT.factual_lookup ||
+      intent === ASSISTANT_INTENT.chronology,
     ask_for_chronology:
-      intent === ASSISTANT_INTENT.chronology || intent === ASSISTANT_INTENT.review,
+      intent === ASSISTANT_INTENT.chronology ||
+      intent === ASSISTANT_INTENT.review,
     ask_for_summary:
-      intent === ASSISTANT_INTENT.summary || intent === ASSISTANT_INTENT.review,
+      intent === ASSISTANT_INTENT.summary ||
+      intent === ASSISTANT_INTENT.review,
     ask_for_review_pack: intent === ASSISTANT_INTENT.review,
     ask_for_compliance_view:
       intent === ASSISTANT_INTENT.compliance || scope === "quality",
-
-    suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(0, MAX_UI_PROMPTS),
+    suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(
+      0,
+      MAX_UI_PROMPTS
+    ),
   };
 }
 
@@ -751,7 +795,9 @@ function dedupeSources(sources = []) {
   const result = [];
 
   for (const source of Array.isArray(sources) ? sources : []) {
-    const key = `${source.record_type || source.type || "record"}::${source.record_id || source.id || source.label || ""}`;
+    const key = `${source.record_type || source.type || "record"}::${
+      source.record_id || source.id || source.label || ""
+    }`;
     if (seen.has(key)) continue;
     seen.add(key);
     result.push(source);
@@ -766,7 +812,10 @@ function sanitiseSourcesForUi(sources = []) {
     .map((source, index) => ({
       type: source.type || source.record_type || "record",
       label: String(source.label || source.title || "Record"),
-      excerpt: String(source.excerpt || source.summary || "").slice(0, MAX_SOURCE_EXCERPT),
+      excerpt: String(source.excerpt || source.summary || "").slice(
+        0,
+        MAX_SOURCE_EXCERPT
+      ),
       section: source.section || "",
       record_type: source.record_type || source.type || null,
       record_id: source.record_id || source.id || null,
@@ -839,7 +888,10 @@ function scrubAssistantRequestPayload(payload) {
 
       return {
         payload: safePayload || safeBasePayload,
-        reverseMap: typeof scrubber.reverseMap === "function" ? scrubber.reverseMap() : {},
+        reverseMap:
+          typeof scrubber.reverseMap === "function"
+            ? scrubber.reverseMap()
+            : {},
         meta: {
           enabled: true,
           mode: "client_side",
@@ -948,6 +1000,10 @@ export async function askAssistant(question) {
 
     const scrubbed = scrubAssistantRequestPayload(outboundPayload);
 
+    mergeAssistantMeta({
+      scrubber_reverse_map: scrubbed.reverseMap || {},
+    });
+
     await apiStreamAssistant(scrubbed.payload, {
       onMeta: (meta) => {
         applyAssistantMeta({
@@ -980,6 +1036,7 @@ export async function askAssistant(question) {
             scrubber_meta: scrubbed.meta || {},
           },
           sources: meta?.sources || [],
+          scrubber_reverse_map: scrubbed.reverseMap || {},
         });
       },
       onProgress: () => {},
@@ -1012,7 +1069,26 @@ export async function askAssistant(question) {
 export function clearAssistantMessages() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
+
+  if (state.assistantMeta && typeof state.assistantMeta === "object") {
+    state.assistantMeta.sources = [];
+    state.assistantMeta.suggested_actions = [];
+    state.assistantMeta.scrubber_reverse_map = {};
+  }
+
   syncAssistantUi();
+}
+
+function handleQuickAction(actionId = "") {
+  const id = String(actionId || "").trim();
+  if (!id) return;
+
+  const router =
+    typeof window !== "undefined" ? window.handleQuickAction : null;
+
+  if (typeof router === "function") {
+    router(id);
+  }
 }
 
 function bindPromptButtons() {
@@ -1020,6 +1096,15 @@ function bindPromptButtons() {
   assistantPromptDelegatesBound = true;
 
   document.addEventListener("click", async (event) => {
+    const quickActionButton = event.target.closest("[data-quick-action]");
+    if (quickActionButton) {
+      const actionId = quickActionButton.dataset.quickAction || "";
+      if (actionId) {
+        handleQuickAction(actionId);
+      }
+      return;
+    }
+
     const button = event.target.closest("[data-prompt], [data-assistant-chip]");
     if (!button) return;
 
