@@ -123,6 +123,8 @@ let shellEventsBound = false;
 let actionRouterBound = false;
 let suggestionsBound = false;
 let scopeSwitchBound = false;
+let workspaceMenusBound = false;
+let overlayDismissBound = false;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -223,17 +225,8 @@ function renderNavItem(item, { compact = false } = {}) {
 }
 
 function buildDesktopNavHtml() {
-  return getScopedNavGroups()
-    .map(
-      (group) => `
-        <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
-          <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
-          <div class="nav-section-items">
-            ${(group.items || []).map((item) => renderNavItem(item)).join("")}
-          </div>
-        </section>
-      `
-    )
+  return getScopedNavSections()
+    .map((item) => renderNavItem(item))
     .join("");
 }
 
@@ -385,6 +378,153 @@ function requireChildContext() {
   return Boolean(state.youngPersonId);
 }
 
+function closeAllWorkspaceMenus(except = null) {
+  document.querySelectorAll("[data-workspace-menu]").forEach((menu) => {
+    if (except && menu === except) return;
+    menu.removeAttribute("open");
+  });
+}
+
+function bindWorkspaceMenuBehaviour() {
+  if (workspaceMenusBound) return;
+  workspaceMenusBound = true;
+
+  document.addEventListener("toggle", (event) => {
+    const menu = event.target;
+    if (!(menu instanceof HTMLDetailsElement)) return;
+    if (!menu.matches("[data-workspace-menu]")) return;
+    if (!menu.open) return;
+
+    closeAllWorkspaceMenus(menu);
+  }, true);
+
+  document.addEventListener("click", (event) => {
+    const insideMenu = event.target.closest("[data-workspace-menu]");
+    if (!insideMenu) {
+      closeAllWorkspaceMenus();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAllWorkspaceMenus();
+    }
+  });
+}
+
+function closeAssistantOverlay() {
+  const assistantModal = document.getElementById("assistantModal");
+  const assistantBackdrop = document.getElementById("assistantBackdrop");
+  assistantModal?.classList.add("hidden");
+  assistantBackdrop?.classList.add("hidden");
+  assistantModal?.setAttribute("aria-hidden", "true");
+  assistantBackdrop?.setAttribute("aria-hidden", "true");
+}
+
+function closeFullscreenOverlay() {
+  const fullscreenPanel = document.getElementById("fullscreenPanel");
+  fullscreenPanel?.classList.add("hidden");
+  fullscreenPanel?.setAttribute("aria-hidden", "true");
+}
+
+function closeSuggestionsOverlay() {
+  const suggestionsPanel = document.getElementById("suggestionsPanel");
+  suggestionsPanel?.classList.add("hidden");
+  suggestionsPanel?.setAttribute("aria-hidden", "true");
+}
+
+function closeRecordDrawerOverlay() {
+  const recordDrawer = document.getElementById("recordDrawer");
+  const recordDrawerBackdrop = document.getElementById("recordDrawerBackdrop");
+  recordDrawer?.classList.add("hidden");
+  recordDrawerBackdrop?.classList.add("hidden");
+  recordDrawer?.setAttribute("aria-hidden", "true");
+  recordDrawerBackdrop?.setAttribute("aria-hidden", "true");
+}
+
+function bindOverlayDismiss() {
+  if (overlayDismissBound) return;
+  overlayDismissBound = true;
+
+  document.addEventListener("click", (event) => {
+    const assistantModal = document.getElementById("assistantModal");
+    const assistantShell = assistantModal?.querySelector(".assistant-shell");
+    if (
+      assistantModal &&
+      !assistantModal.classList.contains("hidden") &&
+      !event.target.closest(".assistant-shell")
+    ) {
+      if (event.target === assistantModal || event.target.id === "assistantBackdrop") {
+        closeAssistantOverlay();
+      }
+    }
+
+    const composerPanel = document.getElementById("composerPanel");
+    const composerShell = composerPanel?.querySelector(".composer-shell");
+    if (
+      composerPanel &&
+      !composerPanel.classList.contains("hidden") &&
+      !event.target.closest(".composer-shell")
+    ) {
+      if (event.target === composerPanel) {
+        closeComposer(true);
+      }
+    }
+
+    const fullscreenPanel = document.getElementById("fullscreenPanel");
+    if (
+      fullscreenPanel &&
+      !fullscreenPanel.classList.contains("hidden") &&
+      !event.target.closest(".fullscreen-panel-shell")
+    ) {
+      if (event.target === fullscreenPanel) {
+        closeFullscreenOverlay();
+      }
+    }
+
+    const suggestionsPanel = document.getElementById("suggestionsPanel");
+    if (
+      suggestionsPanel &&
+      !suggestionsPanel.classList.contains("hidden") &&
+      !event.target.closest(".fullscreen-panel-shell")
+    ) {
+      if (event.target === suggestionsPanel) {
+        closeSuggestionsOverlay();
+      }
+    }
+
+    const recordDrawer = document.getElementById("recordDrawer");
+    const recordDrawerBackdrop = document.getElementById("recordDrawerBackdrop");
+    if (event.target === recordDrawerBackdrop) {
+      closeRecordDrawerOverlay();
+    }
+    if (
+      recordDrawer &&
+      !recordDrawer.classList.contains("hidden") &&
+      event.target === recordDrawer
+    ) {
+      closeRecordDrawerOverlay();
+    }
+
+    const mobileNavBackdrop = document.getElementById("mobileNavBackdrop");
+    if (event.target === mobileNavBackdrop) {
+      closeMobileNav();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+
+    closeAllWorkspaceMenus();
+    closeAssistantOverlay();
+    closeFullscreenOverlay();
+    closeSuggestionsOverlay();
+    closeRecordDrawerOverlay();
+    closeMobileNav();
+    closeComposer(true);
+  });
+}
+
 async function applyScopeChange(scope) {
   const safeScope =
     scope === "home" || scope === "quality" || scope === "child"
@@ -460,6 +600,7 @@ export async function loadSection(section) {
   try {
     await loader();
     closeMobileNav();
+    closeAllWorkspaceMenus();
     renderAssistantControllerPanels();
   } catch (error) {
     console.error(`[nav] failed loading section "${safeSection}"`, error);
@@ -709,6 +850,8 @@ export function bindNavEvents() {
   bindDrawerCallbacks();
   bindQuickActionRouter();
   bindScopeSwitch();
+  bindWorkspaceMenuBehaviour();
+  bindOverlayDismiss();
 
   if (!suggestionsBound) {
     bindSuggestionEvents();
