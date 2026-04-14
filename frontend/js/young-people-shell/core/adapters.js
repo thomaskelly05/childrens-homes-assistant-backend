@@ -35,6 +35,12 @@ function cleanText(value) {
   return String(value).trim();
 }
 
+function truncateText(value, max = 280) {
+  const text = cleanText(value);
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
 function toJsonObject(value, fallback = {}) {
   if (!value) return fallback;
   if (typeof value === "object" && !Array.isArray(value)) return value;
@@ -101,7 +107,15 @@ function inferUrgencyLevel(record = {}) {
   if (significance === "critical") return "critical";
   if (significance === "high") return "high";
   if (record.safeguarding_flag) return "high";
-  if (record.follow_up_required && isOverdue(record.due_date || record.review_date || record.next_action_date)) {
+  if (
+    record.follow_up_required &&
+    isOverdue(
+      record.due_date ||
+        record.review_date ||
+        record.next_action_date ||
+        record.expiry_date
+    )
+  ) {
     return "high";
   }
   if (status === "overdue") return "high";
@@ -127,7 +141,8 @@ function buildBaseRecord(raw = {}, overrides = {}) {
     updated_at: raw.updated_at || null,
     linked_plan_id: raw.linked_plan_id ?? null,
     linked_appointment_id: raw.linked_appointment_id ?? null,
-    child_voice: raw.child_voice || raw.young_person_voice || raw.child_views || "",
+    child_voice:
+      raw.child_voice || raw.young_person_voice || raw.child_views || "",
     raw,
     ...overrides,
   };
@@ -164,6 +179,28 @@ export function inferSectionFromRecordType(recordType = "", raw = {}) {
     therapy: "therapy",
     team: "team",
     supervision: "supervision",
+    onboarding: "team",
+    training_record: "supervision",
+    probation: "supervision",
+    vacancy: "team",
+    pipeline_candidate: "team",
+    shift: "handover",
+    absence: "team",
+    maintenance_item: "home-dashboard",
+    finance_item: "manager",
+    medication_item: "health",
+    admission: "manager",
+    discharge: "manager",
+    visitor_log: "communication",
+    staff_file: "documents",
+    audit: "quality",
+    reg40_item: "quality",
+    reg44_item: "quality",
+    reg45_item: "reports",
+    transport_log: "calendar",
+    rota_shift: "team",
+    staffing_snapshot: "team",
+    home_incident: "timeline",
   };
 
   if (map[recordType]) return map[recordType];
@@ -176,6 +213,22 @@ export function inferSectionFromRecordType(recordType = "", raw = {}) {
   if (sourceTable.includes("team")) return "team";
   if (sourceTable.includes("supervision")) return "supervision";
   if (sourceTable.includes("compliance")) return "compliance";
+  if (sourceTable.includes("training")) return "supervision";
+  if (sourceTable.includes("probation")) return "supervision";
+  if (sourceTable.includes("onboarding")) return "team";
+  if (sourceTable.includes("pipeline")) return "team";
+  if (sourceTable.includes("vacanc")) return "team";
+  if (sourceTable.includes("rota")) return "team";
+  if (sourceTable.includes("staffing")) return "team";
+  if (sourceTable.includes("visitor")) return "communication";
+  if (sourceTable.includes("audit")) return "quality";
+  if (sourceTable.includes("reg44")) return "quality";
+  if (sourceTable.includes("reg45")) return "reports";
+  if (sourceTable.includes("reg40")) return "quality";
+  if (sourceTable.includes("transport")) return "calendar";
+  if (sourceTable.includes("maintenance")) return "home-dashboard";
+  if (sourceTable.includes("finance")) return "manager";
+  if (sourceTable.includes("incident")) return "timeline";
 
   return "workspace";
 }
@@ -350,7 +403,10 @@ function buildAssistantSummary(record = {}) {
       ),
 
     inspection_pack_job: () =>
-      pickFirst(cleanText(record.summary), "Inspection pack activity recorded."),
+      pickFirst(
+        cleanText(record.summary),
+        "Inspection pack activity recorded."
+      ),
 
     review_meeting: () =>
       pickFirst(
@@ -401,6 +457,173 @@ function buildAssistantSummary(record = {}) {
         cleanText(record.status),
         "Supervision record available."
       ),
+
+    onboarding: () =>
+      pickFirst(
+        cleanText(record.stage),
+        cleanText(record.status),
+        cleanText(record.summary),
+        "Onboarding record available."
+      ),
+
+    training_record: () =>
+      pickFirst(
+        cleanText(record.status),
+        cleanText(record.summary),
+        "Training record available."
+      ),
+
+    probation: () =>
+      pickFirst(
+        cleanText(record.probation_stage),
+        cleanText(record.status),
+        "Probation record available."
+      ),
+
+    vacancy: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.priority),
+        "Vacancy record available."
+      ),
+
+    pipeline_candidate: () =>
+      pickFirst(
+        cleanText(record.stage),
+        cleanText(record.status),
+        "Pipeline candidate available."
+      ),
+
+    shift: () =>
+      pickFirst(
+        cleanText(record.note),
+        cleanText(record.shift),
+        "Shift record available."
+      ),
+
+    absence: () =>
+      pickFirst(
+        cleanText(record.cover_plan),
+        cleanText(record.absence_type),
+        "Absence record available."
+      ),
+
+    maintenance_item: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.status),
+        "Maintenance record available."
+      ),
+
+    finance_item: () =>
+      pickFirst(
+        [
+          cleanText(record.category),
+          cleanText(record.amount),
+          cleanText(record.period),
+        ]
+          .filter(Boolean)
+          .join(" • "),
+        cleanText(record.summary),
+        "Finance record available."
+      ),
+
+    medication_item: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.status),
+        "Medication item available."
+      ),
+
+    admission: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.status),
+        "Admission record available."
+      ),
+
+    discharge: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.destination),
+        "Discharge record available."
+      ),
+
+    visitor_log: () =>
+      pickFirst(
+        cleanText(record.purpose),
+        cleanText(record.status),
+        "Visitor log available."
+      ),
+
+    staff_file: () =>
+      pickFirst(
+        cleanText(record.file_audit_status),
+        cleanText(record.summary),
+        "Staff file record available."
+      ),
+
+    audit: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.outcome),
+        "Audit record available."
+      ),
+
+    reg40_item: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.notification_type),
+        "Reg 40 item available."
+      ),
+
+    reg44_item: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.recommendations),
+        "Reg 44 item available."
+      ),
+
+    reg45_item: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.status),
+        "Reg 45 item available."
+      ),
+
+    transport_log: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.journey),
+        "Transport record available."
+      ),
+
+    rota_shift: () =>
+      pickFirst(
+        [
+          cleanText(record.shift_name),
+          cleanText(record.start_time),
+          cleanText(record.end_time),
+        ]
+          .filter(Boolean)
+          .join(" • "),
+        cleanText(record.status),
+        "Rota shift available."
+      ),
+
+    staffing_snapshot: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.staffing_pressure),
+        "Staffing snapshot available."
+      ),
+
+    home_incident: () =>
+      pickFirst(
+        cleanText(record.summary),
+        cleanText(record.incident_type),
+        "Home incident available."
+      ),
   };
 
   if (map[recordType]) return map[recordType]();
@@ -448,6 +671,14 @@ function buildContextualSignals(record = {}) {
     signals.push("family_relevant");
   }
 
+  if (/staff|training|supervision|rota|vacancy|onboarding|probation/.test(text)) {
+    signals.push("workforce_relevant");
+  }
+
+  if (/audit|reg 44|reg44|reg 45|reg45|quality/.test(text)) {
+    signals.push("quality_relevant");
+  }
+
   return signals;
 }
 
@@ -477,10 +708,17 @@ export function buildAssistantTags(record = {}) {
   if (record.compliance_generated) tags.push("compliance_generated");
   if (record.return_interview_completed) tags.push("return_interview_completed");
 
-  const recordSection = inferSectionFromRecordType(record.record_type, record.raw || record);
+  const recordSection = inferSectionFromRecordType(
+    record.record_type,
+    record.raw || record
+  );
   if (recordSection) tags.push(`section:${recordSection}`);
 
-  const dueDate = record.due_date || record.review_date || record.next_action_date || record.expiry_date;
+  const dueDate =
+    record.due_date ||
+    record.review_date ||
+    record.next_action_date ||
+    record.expiry_date;
   if (dueDate) {
     if (isOverdue(dueDate)) tags.push("status:overdue");
     if (isDueSoon(dueDate)) tags.push("status:due_soon");
@@ -514,6 +752,18 @@ function inferRecordDate(record = {}) {
     record.appointment_date ||
     record.action_at ||
     record.review_date ||
+    record.audit_date ||
+    record.visit_date ||
+    record.referral_date ||
+    record.discharge_date ||
+    record.rota_date ||
+    record.reported_date ||
+    record.period_start ||
+    record.period_end ||
+    record.issue_date ||
+    record.completed_date ||
+    record.return_datetime ||
+    record.completed_at ||
     record.created_at ||
     record.updated_at ||
     null
@@ -524,15 +774,19 @@ export function toAssistantEvidence(record = {}) {
   const safeRecord = record && typeof record === "object" ? record : {};
   const raw = safeRecord.raw || safeRecord;
   const section = inferSectionFromRecordType(safeRecord.record_type, raw);
-  const summary = buildAssistantSummary(safeRecord);
+  const summary = truncateText(buildAssistantSummary(safeRecord), 280);
   const tags = buildAssistantTags(safeRecord);
+  const recordId = safeRecord.source_id ?? safeRecord.id ?? null;
+  const sourceTable = safeRecord.source_table || "unknown";
+  const recordType = safeRecord.record_type || "record";
 
   return {
-    id: safeRecord.source_id ?? safeRecord.id ?? null,
-    source_id: safeRecord.source_id ?? safeRecord.id ?? null,
-    source_table: safeRecord.source_table || "",
-    record_type: safeRecord.record_type || "",
+    id: recordId,
+    source_id: recordId,
+    source_table: sourceTable,
+    record_type: recordType,
     title: safeRecord.title || "Record",
+    source_label: safeRecord.title || "Record",
     summary,
     section,
     status:
@@ -573,6 +827,7 @@ export function toAssistantEvidence(record = {}) {
       "",
     linked_plan_id: safeRecord.linked_plan_id ?? null,
     linked_appointment_id: safeRecord.linked_appointment_id ?? null,
+    citation_ref: [recordType, sourceTable, recordId ?? "unknown"].join(":"),
     tags,
     raw,
   };
@@ -783,7 +1038,9 @@ export function mapYoungPersonContact(raw = {}) {
     phone: cleanText(raw.phone || raw.phone_number),
     email: cleanText(raw.email),
     address: cleanText(raw.address),
-    is_parental_responsibility_holder: toBool(raw.is_parental_responsibility_holder),
+    is_parental_responsibility_holder: toBool(
+      raw.is_parental_responsibility_holder
+    ),
     is_approved_contact: toBool(raw.is_approved_contact),
     is_restricted_contact: toBool(raw.is_restricted_contact),
     supervision_level: cleanText(raw.supervision_level),
@@ -802,16 +1059,15 @@ export function mapCommunicationRecord(raw = {}) {
       cleanText(raw.subject) ||
       cleanText(raw.contact_type) ||
       "Communication",
-    summary:
-      pickFirst(
-        cleanText(raw.summary),
-        cleanText(raw.notes),
-        cleanText(raw.contact_notes),
-        cleanText(raw.description),
-        cleanText(raw.outcome),
-        cleanText(raw.message),
-        "Communication record"
-      ),
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.notes),
+      cleanText(raw.contact_notes),
+      cleanText(raw.description),
+      cleanText(raw.outcome),
+      cleanText(raw.message),
+      "Communication record"
+    ),
     source_table: raw.source_table || "communications",
     status: cleanText(raw.status),
     communication_type: cleanText(raw.communication_type || raw.contact_type),
@@ -867,7 +1123,8 @@ export function mapIncident(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.incident,
     source_table: raw.source_table || "incidents",
-    title: cleanText(raw.incident_type) || cleanText(raw.title) || "Important event",
+    title:
+      cleanText(raw.incident_type) || cleanText(raw.title) || "Important event",
     summary: pickFirst(
       cleanText(raw.description),
       cleanText(raw.outcome),
@@ -875,7 +1132,9 @@ export function mapIncident(raw = {}) {
       "Important event"
     ),
     occurred_at: raw.incident_datetime || raw.created_at || null,
-    workflow_status: normaliseWorkflowStatus(raw.workflow_status || raw.manager_review_status),
+    workflow_status: normaliseWorkflowStatus(
+      raw.workflow_status || raw.manager_review_status
+    ),
     severity: normaliseSeverity(raw.severity),
     location: cleanText(raw.location),
     incident_type: cleanText(raw.incident_type),
@@ -920,7 +1179,9 @@ export function mapSupportPlan(raw = {}) {
     review_date: raw.review_date || null,
     status: cleanText(raw.status),
     approval_status: cleanText(raw.approval_status),
-    workflow_status: normaliseWorkflowStatus(raw.approval_status || raw.status),
+    workflow_status: normaliseWorkflowStatus(
+      raw.approval_status || raw.status
+    ),
     presenting_need: cleanText(raw.presenting_need),
     child_voice: cleanText(raw.child_voice),
     proactive_strategies: cleanText(raw.proactive_strategies),
@@ -956,7 +1217,9 @@ export function mapRiskAssessment(raw = {}) {
     review_date: raw.review_date || null,
     status: cleanText(raw.status),
     approval_status: cleanText(raw.approval_status),
-    workflow_status: normaliseWorkflowStatus(raw.approval_status || raw.status),
+    workflow_status: normaliseWorkflowStatus(
+      raw.approval_status || raw.status
+    ),
     severity: normaliseSeverity(raw.severity),
     likelihood: cleanText(raw.likelihood),
     review_comment: cleanText(raw.review_comment),
@@ -1017,7 +1280,10 @@ export function mapFamilyContactRecord(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.family_contact_record,
     source_table: raw.source_table || "family_contact_records",
-    title: cleanText(raw.contact_person) || cleanText(raw.contact_type) || "Family contact",
+    title:
+      cleanText(raw.contact_person) ||
+      cleanText(raw.contact_type) ||
+      "Family contact",
     summary: pickFirst(
       cleanText(raw.post_contact_presentation),
       cleanText(raw.concerns),
@@ -1044,7 +1310,7 @@ export function mapKeyworkSession(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.keywork_session,
     source_table: raw.source_table || "keywork_sessions",
-    title: cleanText(raw.topic) || "Keywork session",
+    title: cleanText(raw.topic || raw.theme) || "Keywork session",
     summary: pickFirst(
       cleanText(raw.summary),
       cleanText(raw.reflective_analysis),
@@ -1053,7 +1319,7 @@ export function mapKeyworkSession(raw = {}) {
     ),
     session_date: raw.session_date || raw.created_at || null,
     workflow_status: normaliseWorkflowStatus(raw.workflow_status || raw.status),
-    topic: cleanText(raw.topic),
+    topic: cleanText(raw.topic || raw.theme),
     purpose: cleanText(raw.purpose),
     child_voice: cleanText(raw.child_voice),
     reflective_analysis: cleanText(raw.reflective_analysis),
@@ -1067,17 +1333,17 @@ export function mapKeyworkSession(raw = {}) {
 
 export function mapAppointment(raw = {}) {
   const start =
-    raw.start_datetime ||
-    raw.appointment_date ||
-    raw.scheduled_time ||
-    null;
+    raw.start_datetime || raw.appointment_date || raw.scheduled_time || null;
 
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.appointment,
     source_table:
       raw.source_table ||
-      (raw.professional_name || raw.professional_role ? "young_person_appointments" : "appointments"),
-    title: cleanText(raw.title) || cleanText(raw.appointment_type) || "Appointment",
+      (raw.professional_name || raw.professional_role
+        ? "young_person_appointments"
+        : "appointments"),
+    title:
+      cleanText(raw.title) || cleanText(raw.appointment_type) || "Appointment",
     summary: pickFirst(
       cleanText(raw.summary),
       cleanText(raw.description),
@@ -1106,7 +1372,8 @@ export function mapAchievementRecord(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.achievement_record,
     source_table: raw.source_table || "achievement_records",
-    title: cleanText(raw.title) || cleanText(raw.achievement_type) || "Achievement",
+    title:
+      cleanText(raw.title) || cleanText(raw.achievement_type) || "Achievement",
     summary: pickFirst(
       cleanText(raw.description),
       cleanText(raw.child_voice),
@@ -1170,12 +1437,15 @@ export function mapMissingEpisode(raw = {}) {
     actions_taken: cleanText(raw.actions_taken),
     outcome: cleanText(raw.outcome),
     review_required: toBool(raw.review_required),
-    workflow_status: normaliseWorkflowStatus(raw.workflow_status || raw.manager_review_status),
+    workflow_status: normaliseWorkflowStatus(
+      raw.workflow_status || raw.manager_review_status
+    ),
     manager_review_status: cleanText(raw.manager_review_status),
     child_voice: cleanText(raw.child_voice),
     return_interview_date: raw.return_interview_date || null,
     linked_risk_assessment_id: raw.linked_risk_assessment_id ?? null,
-    follow_up_required: !toBool(raw.return_interview_completed) || toBool(raw.review_required),
+    follow_up_required:
+      !toBool(raw.return_interview_completed) || toBool(raw.review_required),
   });
 }
 
@@ -1189,7 +1459,9 @@ export function mapChronologyEvent(raw = {}) {
     category: cleanText(raw.category),
     subcategory: cleanText(raw.subcategory),
     significance: normaliseSignificance(raw.significance),
-    workflow_status: normaliseWorkflowStatus(raw.workflow_status || raw.event_status),
+    workflow_status: normaliseWorkflowStatus(
+      raw.workflow_status || raw.event_status
+    ),
     severity: normaliseSeverity(raw.severity),
     safeguarding_flag: toBool(raw.safeguarding_flag),
     child_voice_present: toBool(raw.child_voice_present),
@@ -1231,7 +1503,9 @@ export function mapComplianceItem(raw = {}) {
     manager_notified_at: raw.manager_notified_at || null,
     last_notification_at: raw.last_notification_at || null,
     follow_up_required: normalisedStatus !== COMPLIANCE_STATUS.completed,
-    review_required: normalisedStatus === COMPLIANCE_STATUS.overdue || normalisedStatus === COMPLIANCE_STATUS.escalated,
+    review_required:
+      normalisedStatus === COMPLIANCE_STATUS.overdue ||
+      normalisedStatus === COMPLIANCE_STATUS.escalated,
   });
 }
 
@@ -1239,7 +1513,10 @@ export function mapAiReport(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.ai_generated_report,
     source_table: raw.source_table || "ai_generated_reports",
-    title: cleanText(raw.title) || cleanText(raw.report_type) || "AI generated report",
+    title:
+      cleanText(raw.title) ||
+      cleanText(raw.report_type) ||
+      "AI generated report",
     summary: cleanText(raw.report_text),
     report_type: cleanText(raw.report_type),
     review_month: raw.review_month || null,
@@ -1318,14 +1595,17 @@ export function mapManagerAction(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: RECORD_TYPES.manager_action,
     source_table: raw.source_table || "manager_actions",
-    title: cleanText(raw.action_type) || "Manager action",
-    summary: cleanText(raw.note) || "Manager action",
+    title: cleanText(raw.action_type || raw.title) || "Manager action",
+    summary: cleanText(raw.note || raw.summary) || "Manager action",
     action_type: cleanText(raw.action_type),
     related_table: cleanText(raw.related_table),
     related_id: raw.related_id ?? null,
     note: cleanText(raw.note),
     action_by: raw.action_by ?? null,
     action_at: raw.action_at || raw.created_at || null,
+    owner: cleanText(raw.owner),
+    priority: cleanText(raw.priority),
+    due_date: raw.due_date || null,
   });
 }
 
@@ -1334,7 +1614,7 @@ export function mapTask(raw = {}) {
     record_type: RECORD_TYPES.task,
     source_table: raw.source_table || "tasks",
     title: cleanText(raw.title) || cleanText(raw.task) || "Task",
-    summary: cleanText(raw.task) || "Task",
+    summary: cleanText(raw.task || raw.summary) || "Task",
     task_date: raw.task_date || null,
     due_date: raw.due_date || null,
     completed: toBool(raw.completed),
@@ -1353,13 +1633,14 @@ export function mapMedicationProfile(raw = {}) {
     record_type: RECORD_TYPES.medication_profile,
     source_table: raw.source_table || "medication_profiles",
     title: cleanText(raw.medication_name) || "Medication profile",
-    summary: [
-      cleanText(raw.dosage || raw.dose),
-      cleanText(raw.frequency),
-      cleanText(raw.reason),
-    ]
-      .filter(Boolean)
-      .join(" • ") || "Medication profile",
+    summary:
+      [
+        cleanText(raw.dosage || raw.dose),
+        cleanText(raw.frequency),
+        cleanText(raw.reason),
+      ]
+        .filter(Boolean)
+        .join(" • ") || "Medication profile",
     medication_name: cleanText(raw.medication_name),
     dosage: cleanText(raw.dosage || raw.dose),
     route: cleanText(raw.route),
@@ -1380,13 +1661,14 @@ export function mapMedicationRecord(raw = {}) {
     record_type: RECORD_TYPES.medication_record,
     source_table: raw.source_table || "medication_records",
     title: cleanText(raw.medication_name) || "Medication administration",
-    summary: [
-      cleanText(raw.dose),
-      cleanText(raw.route),
-      cleanText(raw.status),
-    ]
-      .filter(Boolean)
-      .join(" • ") || "Medication record",
+    summary:
+      [
+        cleanText(raw.dose),
+        cleanText(raw.route),
+        cleanText(raw.status),
+      ]
+        .filter(Boolean)
+        .join(" • ") || "Medication record",
     scheduled_time: raw.scheduled_time || null,
     administered_time: raw.administered_time || null,
     medication_name: cleanText(raw.medication_name),
@@ -1431,7 +1713,8 @@ export function mapStatutoryDocument(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: "statutory_document",
     source_table: raw.source_table || "statutory_documents",
-    title: cleanText(raw.title) || cleanText(raw.document_type) || "Statutory document",
+    title:
+      cleanText(raw.title) || cleanText(raw.document_type) || "Statutory document",
     summary: cleanText(raw.description) || "Statutory document",
     document_type: cleanText(raw.document_type),
     file_url: cleanText(raw.file_url),
@@ -1505,16 +1788,23 @@ export function mapTeamRecord(raw = {}) {
   return buildBaseRecord(raw, {
     record_type: "team",
     source_table: raw.source_table || "team",
-    title: cleanText(raw.staff_member) || cleanText(raw.full_name) || "Team member",
+    title:
+      cleanText(raw.staff_member) ||
+      cleanText(raw.full_name) ||
+      "Team member",
     summary: pickFirst(
       cleanText(raw.role),
       cleanText(raw.status),
       "Team record available."
     ),
     staff_member: cleanText(raw.staff_member || raw.full_name),
+    full_name: cleanText(raw.full_name || raw.staff_member),
     role: cleanText(raw.role),
     status: cleanText(raw.status),
     home_id: raw.home_id ?? null,
+    line_manager: cleanText(raw.line_manager),
+    contracted_hours: raw.contracted_hours ?? null,
+    employment_status: cleanText(raw.employment_status),
   });
 }
 
@@ -1530,17 +1820,497 @@ export function mapSupervisionRecord(raw = {}) {
     ),
     staff_member: cleanText(raw.staff_member),
     role: cleanText(raw.role),
-    due_date: raw.due_date || null,
+    due_date: raw.due_date || raw.next_due_date || null,
     status: cleanText(raw.status),
     home_id: raw.home_id ?? null,
     follow_up_required: cleanText(raw.status).toLowerCase() !== "active",
   });
 }
 
+export function mapOnboardingRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "onboarding",
+    source_table: raw.source_table || "onboarding",
+    title: cleanText(raw.full_name) || "Onboarding",
+    summary: pickFirst(
+      cleanText(raw.stage),
+      cleanText(raw.status),
+      cleanText(raw.mandatory_training),
+      "Onboarding record available."
+    ),
+    home_id: raw.home_id ?? null,
+    full_name: cleanText(raw.full_name),
+    role: cleanText(raw.role),
+    stage: cleanText(raw.stage),
+    status: cleanText(raw.status),
+    start_target_date: raw.start_target_date || null,
+    checklist_completion: raw.checklist_completion ?? null,
+    dbs: cleanText(raw.dbs),
+    references: cleanText(raw.references),
+    right_to_work: cleanText(raw.right_to_work),
+    induction: cleanText(raw.induction),
+    shadow_shifts: raw.shadow_shifts ?? null,
+    mandatory_training: cleanText(raw.mandatory_training),
+    due_date: raw.start_target_date || null,
+    follow_up_required: cleanText(raw.status).toLowerCase() !== "on_track",
+  });
+}
+
+export function mapTrainingRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "training_record",
+    source_table: raw.source_table || "training",
+    title: cleanText(raw.staff_member) || "Training record",
+    summary: pickFirst(
+      cleanText(raw.status),
+      cleanText(raw.training_compliance_percent),
+      "Training record available."
+    ),
+    home_id: raw.home_id ?? null,
+    staff_member: cleanText(raw.staff_member),
+    role: cleanText(raw.role),
+    safeguarding_children: cleanText(raw.safeguarding_children),
+    medication: cleanText(raw.medication),
+    behaviour_support: cleanText(raw.behaviour_support),
+    first_aid: cleanText(raw.first_aid),
+    fire_safety: cleanText(raw.fire_safety),
+    training_compliance_percent: raw.training_compliance_percent ?? null,
+    status: cleanText(raw.status),
+    next_due_date: raw.next_due_date || null,
+    due_date: raw.next_due_date || null,
+    follow_up_required: cleanText(raw.status).toLowerCase() !== "current",
+  });
+}
+
+export function mapProbationRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "probation",
+    source_table: raw.source_table || "probations",
+    title: cleanText(raw.staff_member) || "Probation",
+    summary: pickFirst(
+      cleanText(raw.probation_stage),
+      cleanText(raw.status),
+      "Probation record available."
+    ),
+    home_id: raw.home_id ?? null,
+    staff_member: cleanText(raw.staff_member),
+    role: cleanText(raw.role),
+    start_date: raw.start_date || null,
+    probation_end_date: raw.probation_end_date || null,
+    probation_stage: cleanText(raw.probation_stage),
+    line_manager: cleanText(raw.line_manager),
+    status: cleanText(raw.status),
+    due_date: raw.probation_end_date || null,
+    follow_up_required: cleanText(raw.status).toLowerCase() !== "active",
+  });
+}
+
+export function mapVacancyRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "vacancy",
+    source_table: raw.source_table || "vacancies",
+    title: cleanText(raw.title) || "Vacancy",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.priority),
+      "Vacancy record available."
+    ),
+    home_id: raw.home_id ?? null,
+    posts: raw.posts ?? null,
+    status: cleanText(raw.status),
+    priority: cleanText(raw.priority),
+    follow_up_required: cleanText(raw.status).toLowerCase() === "open",
+  });
+}
+
+export function mapPipelineCandidate(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "pipeline_candidate",
+    source_table: raw.source_table || "pipeline_candidates",
+    title: cleanText(raw.full_name) || "Pipeline candidate",
+    summary: pickFirst(
+      cleanText(raw.stage),
+      cleanText(raw.status),
+      "Pipeline candidate available."
+    ),
+    home_id: raw.home_id ?? null,
+    full_name: cleanText(raw.full_name),
+    role_applied_for: cleanText(raw.role_applied_for),
+    stage: cleanText(raw.stage),
+    status: cleanText(raw.status),
+    start_target_date: raw.start_target_date || null,
+    dbs_status: cleanText(raw.dbs_status),
+    right_to_work: cleanText(raw.right_to_work),
+    references: cleanText(raw.references),
+    mandatory_training_status: cleanText(raw.mandatory_training_status),
+    due_date: raw.start_target_date || null,
+    follow_up_required: cleanText(raw.status).toLowerCase() !== "completed",
+  });
+}
+
+export function mapShiftRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "shift",
+    source_table: raw.source_table || "shifts",
+    title: cleanText(raw.shift) || "Shift",
+    summary: pickFirst(
+      cleanText(raw.note),
+      cleanText(raw.shift),
+      "Shift record available."
+    ),
+    home_id: raw.home_id ?? null,
+    date: raw.date || null,
+    shift: cleanText(raw.shift),
+    lead: cleanText(raw.lead),
+    staff: arrayify(raw.staff),
+    young_people_present: arrayify(raw.young_people_present),
+    note: cleanText(raw.note),
+    status: cleanText(raw.status),
+  });
+}
+
+export function mapAbsenceRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "absence",
+    source_table: raw.source_table || "absences",
+    title: cleanText(raw.staff_member) || "Absence",
+    summary: pickFirst(
+      cleanText(raw.cover_plan),
+      cleanText(raw.absence_type),
+      "Absence record available."
+    ),
+    home_id: raw.home_id ?? null,
+    staff_member: cleanText(raw.staff_member),
+    absence_type: cleanText(raw.absence_type),
+    start_date: raw.start_date || null,
+    end_date: raw.end_date || null,
+    status: cleanText(raw.status),
+    impact: cleanText(raw.impact),
+    cover_plan: cleanText(raw.cover_plan),
+    follow_up_required: cleanText(raw.impact).toLowerCase() === "medium",
+  });
+}
+
+export function mapMaintenanceRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "maintenance_item",
+    source_table: raw.source_table || "maintenance",
+    title: cleanText(raw.title) || "Maintenance item",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.status),
+      "Maintenance record available."
+    ),
+    home_id: raw.home_id ?? null,
+    status: cleanText(raw.status),
+    priority: cleanText(raw.priority),
+    reported_date: raw.reported_date || null,
+    due_date: raw.reported_date || null,
+    follow_up_required: ["open", "due_soon"].includes(
+      cleanText(raw.status).toLowerCase()
+    ),
+  });
+}
+
+export function mapFinanceRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "finance_item",
+    source_table: raw.source_table || "finance",
+    title: cleanText(raw.title) || "Finance item",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      [
+        cleanText(raw.category),
+        cleanText(raw.amount),
+        cleanText(raw.period),
+      ]
+        .filter(Boolean)
+        .join(" • "),
+      "Finance record available."
+    ),
+    home_id: raw.home_id ?? null,
+    category: cleanText(raw.category),
+    amount: cleanText(raw.amount),
+    period: cleanText(raw.period),
+    status: cleanText(raw.status),
+  });
+}
+
+export function mapMedicationItem(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "medication_item",
+    source_table: raw.source_table || "medication",
+    title: cleanText(raw.title) || "Medication item",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.status),
+      "Medication item available."
+    ),
+    home_id: raw.home_id ?? null,
+    audit_date: raw.audit_date || null,
+    status: cleanText(raw.status),
+    stock_level: cleanText(raw.stock_level),
+    due_date: raw.audit_date || null,
+    follow_up_required: cleanText(raw.status).toLowerCase() === "due_soon",
+  });
+}
+
+export function mapAdmissionRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "admission",
+    source_table: raw.source_table || "admissions",
+    title: cleanText(raw.young_person_name) || "Admission",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.status),
+      "Admission record available."
+    ),
+    home_id: raw.home_id ?? null,
+    young_person_name: cleanText(raw.young_person_name),
+    referral_source: cleanText(raw.referral_source),
+    referral_date: raw.referral_date || null,
+    status: cleanText(raw.status),
+    follow_up_required: cleanText(raw.status).toLowerCase() === "under_consideration",
+  });
+}
+
+export function mapDischargeRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "discharge",
+    source_table: raw.source_table || "discharges",
+    title: cleanText(raw.young_person_name) || "Discharge",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.destination),
+      "Discharge record available."
+    ),
+    home_id: raw.home_id ?? null,
+    young_person_name: cleanText(raw.young_person_name),
+    discharge_date: raw.discharge_date || null,
+    destination: cleanText(raw.destination),
+    status: cleanText(raw.status),
+  });
+}
+
+export function mapVisitorRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "visitor_log",
+    source_table: raw.source_table || "visitors",
+    title: cleanText(raw.visitor_name) || "Visitor",
+    summary: pickFirst(
+      cleanText(raw.purpose),
+      cleanText(raw.status),
+      "Visitor log available."
+    ),
+    home_id: raw.home_id ?? null,
+    visitor_name: cleanText(raw.visitor_name),
+    organisation: cleanText(raw.organisation),
+    visit_date: raw.visit_date || null,
+    purpose: cleanText(raw.purpose),
+    status: cleanText(raw.status),
+    follow_up_required: cleanText(raw.status).toLowerCase() === "booked",
+  });
+}
+
+export function mapStaffFileRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "staff_file",
+    source_table: raw.source_table || "staff_files",
+    title: cleanText(raw.staff_member) || "Staff file",
+    summary: pickFirst(
+      cleanText(raw.file_audit_status),
+      cleanText(raw.qualification_evidence),
+      "Staff file record available."
+    ),
+    home_id: raw.home_id ?? null,
+    staff_member: cleanText(raw.staff_member),
+    application_form: cleanText(raw.application_form),
+    references: cleanText(raw.references),
+    dbs: cleanText(raw.dbs),
+    right_to_work: cleanText(raw.right_to_work),
+    id_check: cleanText(raw.id_check),
+    qualification_evidence: cleanText(raw.qualification_evidence),
+    file_audit_status: cleanText(raw.file_audit_status),
+    follow_up_required: cleanText(raw.file_audit_status).toLowerCase() === "action_required",
+  });
+}
+
+export function mapAuditRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "audit",
+    source_table: raw.source_table || "audits",
+    title: cleanText(raw.title) || "Audit",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.outcome),
+      "Audit record available."
+    ),
+    home_id: raw.home_id ?? null,
+    audit_date: raw.audit_date || null,
+    outcome: cleanText(raw.outcome),
+    status: cleanText(raw.status),
+    follow_up_required: cleanText(raw.status).toLowerCase() === "open_actions",
+  });
+}
+
+export function mapReg40Record(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "reg40_item",
+    source_table: raw.source_table || "reg40",
+    title: cleanText(raw.notification_type) || "Reg 40",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.notification_type),
+      "Reg 40 item available."
+    ),
+    home_id: raw.home_id ?? null,
+    event_date: raw.event_date || null,
+    notification_type: cleanText(raw.notification_type),
+    status: cleanText(raw.status),
+  });
+}
+
+export function mapReg44Record(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "reg44_item",
+    source_table: raw.source_table || "reg44",
+    title: "Reg 44 visit",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.recommendations),
+      "Reg 44 item available."
+    ),
+    home_id: raw.home_id ?? null,
+    visit_date: raw.visit_date || null,
+    visitor_name: cleanText(raw.visitor_name),
+    status: cleanText(raw.status),
+    recommendations: cleanText(raw.recommendations),
+    follow_up_required: cleanText(raw.status).toLowerCase() !== "completed" || !!cleanText(raw.recommendations),
+  });
+}
+
+export function mapReg45Record(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "reg45_item",
+    source_table: raw.source_table || "reg45",
+    title: "Reg 45 review",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.status),
+      "Reg 45 item available."
+    ),
+    home_id: raw.home_id ?? null,
+    period_start: raw.period_start || null,
+    period_end: raw.period_end || null,
+    status: cleanText(raw.status),
+    follow_up_required: cleanText(raw.status).toLowerCase() !== "completed",
+  });
+}
+
+export function mapTransportRecord(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "transport_log",
+    source_table: raw.source_table || "transport",
+    title: cleanText(raw.journey) || "Transport",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.status),
+      "Transport record available."
+    ),
+    home_id: raw.home_id ?? null,
+    date: raw.date || null,
+    vehicle: cleanText(raw.vehicle),
+    journey: cleanText(raw.journey),
+    driver: cleanText(raw.driver),
+    status: cleanText(raw.status),
+    follow_up_required: cleanText(raw.status).toLowerCase() === "booked",
+  });
+}
+
+export function mapRotaShift(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "rota_shift",
+    source_table: raw.source_table || "rota",
+    title:
+      cleanText(raw.staff_member) ||
+      cleanText(raw.shift_name) ||
+      "Rota shift",
+    summary: pickFirst(
+      [
+        cleanText(raw.shift_name),
+        cleanText(raw.start_time),
+        cleanText(raw.end_time),
+      ]
+        .filter(Boolean)
+        .join(" • "),
+      cleanText(raw.note),
+      "Rota shift available."
+    ),
+    home_id: raw.home_id ?? null,
+    rota_date: raw.rota_date || null,
+    staff_member: cleanText(raw.staff_member),
+    role: cleanText(raw.role),
+    shift_name: cleanText(raw.shift_name),
+    start_time: cleanText(raw.start_time),
+    end_time: cleanText(raw.end_time),
+    status: cleanText(raw.status),
+    note: cleanText(raw.note),
+    follow_up_required: cleanText(raw.status).toLowerCase() === "gap",
+  });
+}
+
+export function mapStaffingSnapshot(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "staffing_snapshot",
+    source_table: raw.source_table || "staffing",
+    title: cleanText(raw.title) || "Staffing snapshot",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.staffing_pressure),
+      "Staffing snapshot available."
+    ),
+    home_id: raw.home_id ?? null,
+    beds_registered: raw.beds_registered ?? null,
+    occupancy: raw.occupancy ?? null,
+    staff_employed: raw.staff_employed ?? null,
+    staff_pipeline: raw.staff_pipeline ?? null,
+    on_shift_now: raw.on_shift_now ?? null,
+    off_shift_now: raw.off_shift_now ?? null,
+    annual_leave_now: raw.annual_leave_now ?? null,
+    bank_available: raw.bank_available ?? null,
+    staffing_pressure: cleanText(raw.staffing_pressure),
+    vacancies_open: raw.vacancies_open ?? null,
+    waking_night_cover: cleanText(raw.waking_night_cover),
+    daytime_cover: cleanText(raw.daytime_cover),
+    manager_on_call: cleanText(raw.manager_on_call),
+    follow_up_required: cleanText(raw.staffing_pressure).toLowerCase() === "high",
+  });
+}
+
+export function mapHomeIncident(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "home_incident",
+    source_table: raw.source_table || "home_incidents",
+    title: cleanText(raw.title) || cleanText(raw.incident_type) || "Home incident",
+    summary: pickFirst(
+      cleanText(raw.summary),
+      cleanText(raw.incident_type),
+      "Home incident available."
+    ),
+    home_id: raw.home_id ?? null,
+    date: raw.date || null,
+    incident_type: cleanText(raw.incident_type),
+    severity: normaliseSeverity(raw.severity),
+    status: cleanText(raw.status),
+  });
+}
+
 export function mapBundle(raw = {}) {
   return {
     young_person: mapYoungPerson(raw.young_person || raw.youngPerson || raw, raw),
-    identity_profile: mapIdentityProfile(raw.identity_profile || raw.young_person_identity_profile || {}),
+    identity_profile: mapIdentityProfile(
+      raw.identity_profile || raw.young_person_identity_profile || {}
+    ),
     communication_profile: mapCommunicationProfile(
       raw.communication_profile || raw.young_person_communication_profile || {}
     ),
@@ -1656,6 +2426,50 @@ export function mapRecordByType(recordType, raw = {}) {
       return mapTeamRecord(raw);
     case "supervision":
       return mapSupervisionRecord(raw);
+    case "onboarding":
+      return mapOnboardingRecord(raw);
+    case "training_record":
+      return mapTrainingRecord(raw);
+    case "probation":
+      return mapProbationRecord(raw);
+    case "vacancy":
+      return mapVacancyRecord(raw);
+    case "pipeline_candidate":
+      return mapPipelineCandidate(raw);
+    case "shift":
+      return mapShiftRecord(raw);
+    case "absence":
+      return mapAbsenceRecord(raw);
+    case "maintenance_item":
+      return mapMaintenanceRecord(raw);
+    case "finance_item":
+      return mapFinanceRecord(raw);
+    case "medication_item":
+      return mapMedicationItem(raw);
+    case "admission":
+      return mapAdmissionRecord(raw);
+    case "discharge":
+      return mapDischargeRecord(raw);
+    case "visitor_log":
+      return mapVisitorRecord(raw);
+    case "staff_file":
+      return mapStaffFileRecord(raw);
+    case "audit":
+      return mapAuditRecord(raw);
+    case "reg40_item":
+      return mapReg40Record(raw);
+    case "reg44_item":
+      return mapReg44Record(raw);
+    case "reg45_item":
+      return mapReg45Record(raw);
+    case "transport_log":
+      return mapTransportRecord(raw);
+    case "rota_shift":
+      return mapRotaShift(raw);
+    case "staffing_snapshot":
+      return mapStaffingSnapshot(raw);
+    case "home_incident":
+      return mapHomeIncident(raw);
     default:
       return buildBaseRecord(raw, {
         record_type: recordType || raw.record_type || "record",
@@ -1700,12 +2514,13 @@ export function buildAssistantEvidenceSet(payload = {}) {
 
   addMapped(payload.daily_notes, mapDailyNote);
   addMapped(payload.incidents, mapIncident);
+  addMapped(payload.home_incidents, mapHomeIncident);
   addMapped(payload.support_plans, mapSupportPlan);
   addMapped(payload.risk_assessments || payload.risks, mapRiskAssessment);
   addMapped(payload.health_records, mapHealthRecord);
   addMapped(payload.education_records, mapEducationRecord);
   addMapped(payload.family_contact_records, mapFamilyContactRecord);
-  addMapped(payload.keywork_sessions, mapKeyworkSession);
+  addMapped(payload.keywork_sessions || payload.keywork, mapKeyworkSession);
   addMapped(payload.appointments, mapAppointment);
   addMapped(payload.achievement_records, mapAchievementRecord);
   addMapped(payload.safeguarding_records, mapSafeguardingRecord);
@@ -1728,34 +2543,80 @@ export function buildAssistantEvidenceSet(payload = {}) {
   addMapped(payload.supervisions, mapSupervisionRecord);
   addMapped(payload.inspection_pack_jobs, mapInspectionPackJob);
 
+  addMapped(payload.onboarding, mapOnboardingRecord);
+  addMapped(payload.training, mapTrainingRecord);
+  addMapped(payload.probations, mapProbationRecord);
+  addMapped(payload.vacancies, mapVacancyRecord);
+  addMapped(payload.pipeline || payload.pipeline_candidates, mapPipelineCandidate);
+  addMapped(payload.shifts, mapShiftRecord);
+  addMapped(payload.absences, mapAbsenceRecord);
+  addMapped(payload.maintenance, mapMaintenanceRecord);
+  addMapped(payload.finance, mapFinanceRecord);
+  addMapped(payload.medication, mapMedicationItem);
+  addMapped(payload.admissions, mapAdmissionRecord);
+  addMapped(payload.discharges, mapDischargeRecord);
+  addMapped(payload.visitors, mapVisitorRecord);
+  addMapped(payload.staff_files, mapStaffFileRecord);
+  addMapped(payload.audits, mapAuditRecord);
+  addMapped(payload.reg40, mapReg40Record);
+  addMapped(payload.reg44, mapReg44Record);
+  addMapped(payload.reg45, mapReg45Record);
+  addMapped(payload.transport, mapTransportRecord);
+  addMapped(payload.rota, mapRotaShift);
+  addMapped(payload.staffing, mapStaffingSnapshot);
+
   if (payload.identity_profile || payload.young_person_identity_profile) {
-    evidence.push(toAssistantEvidence(mapIdentityProfile(
-      payload.identity_profile || payload.young_person_identity_profile
-    )));
+    evidence.push(
+      toAssistantEvidence(
+        mapIdentityProfile(
+          payload.identity_profile || payload.young_person_identity_profile
+        )
+      )
+    );
   }
 
-  if (payload.communication_profile || payload.young_person_communication_profile) {
-    evidence.push(toAssistantEvidence(mapCommunicationProfile(
-      payload.communication_profile || payload.young_person_communication_profile
-    )));
+  if (
+    payload.communication_profile ||
+    payload.young_person_communication_profile
+  ) {
+    evidence.push(
+      toAssistantEvidence(
+        mapCommunicationProfile(
+          payload.communication_profile ||
+            payload.young_person_communication_profile
+        )
+      )
+    );
   }
 
   if (payload.education_profile || payload.young_person_education_profile) {
-    evidence.push(toAssistantEvidence(mapEducationProfile(
-      payload.education_profile || payload.young_person_education_profile
-    )));
+    evidence.push(
+      toAssistantEvidence(
+        mapEducationProfile(
+          payload.education_profile || payload.young_person_education_profile
+        )
+      )
+    );
   }
 
   if (payload.health_profile || payload.young_person_health_profile) {
-    evidence.push(toAssistantEvidence(mapHealthProfile(
-      payload.health_profile || payload.young_person_health_profile
-    )));
+    evidence.push(
+      toAssistantEvidence(
+        mapHealthProfile(
+          payload.health_profile || payload.young_person_health_profile
+        )
+      )
+    );
   }
 
   if (payload.legal_status || payload.young_person_legal_status) {
-    evidence.push(toAssistantEvidence(mapLegalStatus(
-      payload.legal_status || payload.young_person_legal_status
-    )));
+    evidence.push(
+      toAssistantEvidence(
+        mapLegalStatus(
+          payload.legal_status || payload.young_person_legal_status
+        )
+      )
+    );
   }
 
   if (
@@ -1763,11 +2624,15 @@ export function buildAssistantEvidenceSet(payload = {}) {
     payload.young_person_formulation ||
     payload.young_person_formulations
   ) {
-    evidence.push(toAssistantEvidence(mapFormulation(
-      payload.formulation ||
-        payload.young_person_formulation ||
-        payload.young_person_formulations
-    )));
+    evidence.push(
+      toAssistantEvidence(
+        mapFormulation(
+          payload.formulation ||
+            payload.young_person_formulation ||
+            payload.young_person_formulations
+        )
+      )
+    );
   }
 
   return evidence;
