@@ -41,11 +41,34 @@ function showSelector() {
 function normaliseRole(role) {
   const rawRole = String(role || "staff").toLowerCase().trim();
 
-  if (rawRole === "administrator") return "admin";
-  if (rawRole === "super_admin") return "admin";
-  if (rawRole === "superadmin") return "admin";
+  if (
+    rawRole === "administrator" ||
+    rawRole === "admin" ||
+    rawRole === "super_admin" ||
+    rawRole === "superadmin" ||
+    rawRole === "admin_user" ||
+    rawRole === "system_admin" ||
+    rawRole === "owner"
+  ) {
+    return "admin";
+  }
 
-  return rawRole;
+  if (
+    rawRole === "manager" ||
+    rawRole === "registered_manager" ||
+    rawRole === "deputy_manager"
+  ) {
+    return "manager";
+  }
+
+  if (
+    rawRole === "ri" ||
+    rawRole === "responsible_individual"
+  ) {
+    return "ri";
+  }
+
+  return rawRole || "staff";
 }
 
 function readSessionUser() {
@@ -89,7 +112,13 @@ function hydrateRuntimeContextFromSession() {
 
   state.currentUser = currentUser;
 
-  const sessionRole = normaliseRole(currentUser.role);
+  const sessionRole = normaliseRole(
+    currentUser.role ||
+      currentUser.user_role ||
+      currentUser.account_type ||
+      currentUser.role_name
+  );
+
   if (sessionRole) {
     state.userRole = sessionRole;
   }
@@ -376,6 +405,7 @@ async function bootstrap() {
       scope: state.currentScope,
       section: state.currentSection,
       allowedScopes: getAllowedScopesForRole(),
+      currentUser: state.currentUser,
     });
 
     bindShellChrome();
