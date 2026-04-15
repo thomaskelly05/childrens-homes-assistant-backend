@@ -27,7 +27,7 @@ function getEl(...candidates) {
 }
 
 function getCurrentPerson() {
-  return state.selectedYoungPerson || state.youngPerson || null;
+  return state.selectedYoungPerson || null;
 }
 
 function getCurrentScope() {
@@ -35,21 +35,12 @@ function getCurrentScope() {
 }
 
 function getCurrentSection() {
-  return (
-    state.currentSection ||
-    state.activeSection ||
-    state.currentView ||
-    "workspace"
-  );
+  return state.currentSection || "workspace";
 }
 
 function ensureAssistantArrays() {
   if (!Array.isArray(state.assistantMessages)) {
     state.assistantMessages = [];
-  }
-
-  if (!Array.isArray(state.assistantModalMessages)) {
-    state.assistantModalMessages = [];
   }
 }
 
@@ -117,10 +108,6 @@ function prettyJson(value) {
   }
 }
 
-function cleanText(value = "") {
-  return String(value || "").trim();
-}
-
 function sourceCitationRef(source = {}, index = 0) {
   if (source.citation_ref) return String(source.citation_ref);
   const type = source.record_type || source.type || "record";
@@ -150,10 +137,8 @@ function buildSourceMap() {
 
 function renderInlineText(text = "") {
   let html = escapeHtml(String(text || ""));
-
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
-
   return html;
 }
 
@@ -261,7 +246,6 @@ function renderUserRichText(text = "") {
 
 function extractAssistantContent(message = {}) {
   if (typeof message === "string") return message;
-
   if (!message || typeof message !== "object") return "";
 
   const directCandidates = [
@@ -281,7 +265,6 @@ function extractAssistantContent(message = {}) {
 
   if (message.content && typeof message.content === "object") {
     const content = message.content;
-
     const nestedCandidates = [
       content.text,
       content.message,
@@ -395,15 +378,16 @@ function renderMessageList(host, messages = []) {
 
 function renderMessages() {
   ensureAssistantArrays();
+  const messages = state.assistantMessages || [];
 
   renderMessageList(
     getEl(els.assistantMessages, "assistantMessages"),
-    state.assistantMessages
+    messages
   );
 
   renderMessageList(
     getEl(els.assistantModalMessages, "assistantModalMessages"),
-    state.assistantModalMessages
+    messages
   );
 }
 
@@ -425,13 +409,13 @@ function renderScopeBadges() {
   }
 
   if (homeBadge) {
-    const showHome = scope === "home" || scope === "quality" || !!homeName;
+    const showHome = scope === "home" || scope === "quality" || Boolean(homeName);
     homeBadge.textContent = showHome ? homeName : "";
     homeBadge.classList.toggle("hidden", !showHome);
   }
 
   if (childBadge) {
-    const showChild = scope === "child" && !!state.youngPersonId;
+    const showChild = scope === "child" && Boolean(state.youngPersonId);
     childBadge.textContent = showChild ? childName : "";
     childBadge.classList.toggle("hidden", !showChild);
   }
@@ -442,13 +426,13 @@ function renderScopeBadges() {
   }
 
   if (modalHomeBadge) {
-    const showHome = scope === "home" || scope === "quality" || !!homeName;
+    const showHome = scope === "home" || scope === "quality" || Boolean(homeName);
     modalHomeBadge.textContent = showHome ? homeName : "";
     modalHomeBadge.classList.toggle("hidden", !showHome);
   }
 
   if (modalChildBadge) {
-    const showChild = scope === "child" && !!state.youngPersonId;
+    const showChild = scope === "child" && Boolean(state.youngPersonId);
     modalChildBadge.textContent = showChild ? childName : "";
     modalChildBadge.classList.toggle("hidden", !showChild);
   }
@@ -516,9 +500,7 @@ function buildScopeSummaryCards() {
           ? state.youngPersonId
             ? `Young person: ${getPersonLabel()} • whole OS scope • section: ${normaliseSectionLabel(getCurrentSection())}`
             : "No young person selected."
-          : `${getScopeLabel()} • ${getHomeLabel()} • whole OS scope • section: ${normaliseSectionLabel(
-              getCurrentSection()
-            )}`,
+          : `${getScopeLabel()} • ${getHomeLabel()} • whole OS scope • section: ${normaliseSectionLabel(getCurrentSection())}`,
       extra: "",
     },
     {
@@ -920,7 +902,6 @@ export function appendAssistantSystemMessage(text) {
   };
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
   renderAllAssistantUi();
 }
 
@@ -935,7 +916,6 @@ export function appendAssistantUserMessage(text) {
   };
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
   renderAllAssistantUi();
 }
 
