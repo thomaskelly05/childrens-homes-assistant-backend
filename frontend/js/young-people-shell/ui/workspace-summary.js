@@ -18,27 +18,21 @@ function normaliseSummary(summary = {}) {
   };
 }
 
-function buildSummaryHtml(summary) {
+function buildSummaryItem(label, value) {
   return `
     <div class="workspace-summary-item">
-      <span class="workspace-summary-label">Today</span>
-      <strong class="workspace-summary-value">${escapeHtml(summary.today)}</strong>
+      <span class="workspace-summary-label">${escapeHtml(label)}</span>
+      <strong class="workspace-summary-value">${escapeHtml(value)}</strong>
     </div>
+  `;
+}
 
-    <div class="workspace-summary-item">
-      <span class="workspace-summary-label">Next event</span>
-      <strong class="workspace-summary-value">${escapeHtml(summary.nextEvent)}</strong>
-    </div>
-
-    <div class="workspace-summary-item">
-      <span class="workspace-summary-label">Last record</span>
-      <strong class="workspace-summary-value">${escapeHtml(summary.lastRecord)}</strong>
-    </div>
-
-    <div class="workspace-summary-item">
-      <span class="workspace-summary-label">Open actions</span>
-      <strong class="workspace-summary-value">${escapeHtml(summary.openActions)}</strong>
-    </div>
+function buildSummaryHtml(summary) {
+  return `
+    ${buildSummaryItem("Today", summary.today)}
+    ${buildSummaryItem("Next event", summary.nextEvent)}
+    ${buildSummaryItem("Last record", summary.lastRecord)}
+    ${buildSummaryItem("Open actions", summary.openActions)}
   `;
 }
 
@@ -63,4 +57,6 @@ export function resetWorkspaceSummaryStrip() {
       openActions: "No actions loaded",
     })
   );
+
+  host.classList.remove("hidden");
 }
