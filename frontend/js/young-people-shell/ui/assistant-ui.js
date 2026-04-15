@@ -1,13 +1,12 @@
 import { state, createAssistantMeta } from "../state.js";
 import { els } from "../dom.js";
 import { escapeHtml, getDisplayName } from "../core/utils.js";
-import { getActionForQuickButton } from "./action-router.js";
 
 let assistantUiBound = false;
 let citationEventsBound = false;
 
 const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w:-]*)\]/gi;
-const MAX_SOURCE_EXCERPT = 280;
+const MAX_SOURCE_EXCERPT = 240;
 
 function qs(id) {
   return document.getElementById(id);
@@ -16,13 +15,16 @@ function qs(id) {
 function getEl(...candidates) {
   for (const candidate of candidates) {
     if (!candidate) continue;
+
     if (typeof candidate === "string") {
       const found = qs(candidate);
       if (found) return found;
       continue;
     }
+
     return candidate;
   }
+
   return null;
 }
 
@@ -108,14 +110,6 @@ function getScopeLabel() {
   if (scope === "home") return "Home assistant";
   if (scope === "quality") return "Quality assistant";
   return "Young person assistant";
-}
-
-function prettyJson(value) {
-  try {
-    return JSON.stringify(value || {}, null, 2);
-  } catch {
-    return "{}";
-  }
 }
 
 function sourceCitationRef(source = {}, index = 0) {
@@ -235,12 +229,6 @@ function renderAssistantRichText(text = "") {
       continue;
     }
 
-    if (/^\d+\.\s+/.test(trimmed)) {
-      flushList();
-      blocks.push(`<p>${renderParagraphWithCitations(trimmed, sourceMap)}</p>`);
-      continue;
-    }
-
     flushList();
     blocks.push(`<p>${renderParagraphWithCitations(trimmed, sourceMap)}</p>`);
   }
@@ -326,11 +314,68 @@ function extractAssistantContent(message = {}) {
   }
 }
 
-function renderMessage(message = {}) {
+function renderMessageSources(sources = []) {
+  if (!Array.isArray(sources) || !sources.length) return "";
+
+  return `
+    <div class="assistant-inline-sources">
+      <div class="assistant-inline-sources-title">Sources</div>
+      <div class="assistant-source-list">
+        ${sources
+          .map((source, index) => {
+            const citationRef = sourceCitationRef(source, index);
+            const title = escapeHtml(
+              source?.title || source?.label || source?.document_title || "Source"
+            );
+            const type = escapeHtml(source?.type || source?.record_type || "source");
+            const section = escapeHtml(source?.section || "");
+            const description = escapeHtml(
+              String(source?.description || source?.excerpt || source?.summary || "").slice(
+                0,
+                MAX_SOURCE_EXCERPT
+              )
+            );
+
+            return `
+              <div
+                class="assistant-source-item"
+                id="assistant-source-${escapeHtml(
+                  citationRef.replace(/[^a-zA-Z0-9_-]/g, "-")
+                )}"
+                data-source-ref="${escapeHtml(citationRef)}"
+              >
+                <div class="assistant-source-item-title">${title}</div>
+                <div class="assistant-source-item-meta">
+                  ${type}${section ? ` • ${section}` : ""} • ${escapeHtml(citationRef)}
+                </div>
+                ${
+                  description
+                    ? `<div class="assistant-source-item-description">${description}</div>`
+                    : ""
+                }
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderMessage(message = {}, index = 0, messages = []) {
   const role = message.role || "assistant";
   const roleClass =
     role === "user" ? "assistant-message-user" : "assistant-message-system";
   const content = extractAssistantContent(message);
+
+  const isLastAssistantMessage =
+    role === "assistant" &&
+    index ===
+      [...messages]
+        .map((item, i) => ({ item, i }))
+        .filter(({ item }) => item?.role === "assistant")
+        .map(({ i }) => i)
+        .pop();
 
   return `
     <article class="assistant-message ${escapeHtml(roleClass)}">
@@ -342,6 +387,7 @@ function renderMessage(message = {}) {
             : renderUserRichText(content)
         }
       </div>
+      ${isLastAssistantMessage ? renderMessageSources(getSources()) : ""}
     </article>
   `;
 }
@@ -376,10 +422,12 @@ function buildIntroMessageHtml() {
 function renderMessageList(host, messages = []) {
   if (!host) return;
 
+  const showIntro = !messages.length;
+
   host.innerHTML = `
-    ${buildIntroMessageHtml()}
+    ${showIntro ? buildIntroMessageHtml() : ""}
     <div class="assistant-history">
-      ${messages.map(renderMessage).join("")}
+      ${messages.map((message, index) => renderMessage(message, index, messages)).join("")}
     </div>
   `;
 
@@ -458,7 +506,7 @@ function renderContextText() {
 
   if (scope === "child") {
     contextText = state.youngPersonId
-      ? `Scoped to ${getPersonLabel()} • whole OS by default • current section: ${section}`
+      ? `Scoped to ${getPersonLabel()} • whole OS scope • section: ${section}`
       : "No young person selected.";
   } else if (scope === "home") {
     contextText = `Scoped to ${getHomeLabel()} • whole-home OS view • section: ${section}`;
@@ -467,188 +515,13 @@ function renderContextText() {
     contextText =
       state.userRole === "ri" || state.userRole === "admin"
         ? `Scoped to provider quality oversight • ${homeIds.length || 1} home(s) • section: ${section}`
-        : `Scoped to ${getHomeLabel()} • quality and RI • full oversight view • section: ${section}`;
+        : `Scoped to ${getHomeLabel()} • quality and RI • section: ${section}`;
   }
 
   contextEl.textContent = contextText;
 }
 
-function buildConfidenceBadge(confidence = "") {
-  const value = String(confidence || "").toLowerCase();
-  if (!value) return "";
-
-  const tone =
-    value === "high"
-      ? "success"
-      : value === "medium"
-      ? "warning"
-      : value === "low" || value === "very_low"
-      ? "danger"
-      : "muted";
-
-  return `
-    <span class="row-pill ${escapeHtml(tone)}">
-      Confidence: ${escapeHtml(value)}
-    </span>
-  `;
-}
-
-function buildScopeSummaryCards() {
-  const meta = getAssistantMeta();
-  const assistantContext = meta.assistant_context || {};
-  const runtime = meta.runtime || {};
-  const explainability = meta.explainability || {};
-  const evidenceSummary = assistantContext.evidence_summary || {};
-  const sufficiency = assistantContext.evidence_sufficiency || {};
-  const keyConcerns = Array.isArray(assistantContext.key_concerns)
-    ? assistantContext.key_concerns
-    : [];
-  const scope = getCurrentScope();
-
-  const cards = [
-    {
-      title: "Scope",
-      text:
-        scope === "child"
-          ? state.youngPersonId
-            ? `Young person: ${getPersonLabel()} • whole OS scope • section: ${normaliseSectionLabel(getCurrentSection())}`
-            : "No young person selected."
-          : `${getScopeLabel()} • ${getHomeLabel()} • whole OS scope • section: ${normaliseSectionLabel(
-              getCurrentSection()
-            )}`,
-      extra: "",
-    },
-    {
-      title: "Evidence summary",
-      text: [
-        `Evidence items: ${evidenceSummary.total ?? runtime.evidence_count ?? 0}`,
-        `Open tasks: ${evidenceSummary.open_tasks ?? 0}`,
-        `Overdue items: ${evidenceSummary.overdue_items ?? 0}`,
-        `Incidents: ${evidenceSummary.incident_items ?? 0}`,
-      ].join(" • "),
-      extra: buildConfidenceBadge(
-        sufficiency.confidence || runtime.confidence || ""
-      ),
-    },
-    {
-      title: "Reasoning",
-      text:
-        explainability.reasoning_summary ||
-        explainability.summary ||
-        "Explainability will appear here after the assistant returns a scoped answer.",
-      extra: "",
-    },
-    {
-      title: "Next steps",
-      text:
-        assistantContext.next_steps ||
-        (Array.isArray(meta.suggested_actions) && meta.suggested_actions.length
-          ? meta.suggested_actions
-              .map((item) =>
-                typeof item === "string"
-                  ? item
-                  : item?.label || "Suggested action"
-              )
-              .join(" • ")
-          : "Suggested next actions will appear here after the assistant responds."),
-      extra: "",
-    },
-    ...(keyConcerns.length
-      ? [
-          {
-            title: "Key concerns",
-            text: keyConcerns.join(" • "),
-            extra: "",
-          },
-        ]
-      : []),
-  ];
-
-  return `
-    <div class="profile-stack">
-      ${cards
-        .map(
-          (card) => `
-            <div class="profile-card">
-              <div class="profile-card-title">${escapeHtml(card.title)}</div>
-              <div class="profile-card-text">${escapeHtml(card.text || "")}</div>
-              ${card.extra || ""}
-            </div>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderScopeSummary() {
-  const html = buildScopeSummaryCards();
-
-  const summaryEl = getEl(els.assistantScopeSummary, "assistantScopeSummary");
-  const modalSummaryEl = getEl(
-    els.assistantModalScopeSummary,
-    "assistantModalScopeSummary"
-  );
-
-  if (summaryEl) {
-    summaryEl.innerHTML = html;
-  }
-
-  if (modalSummaryEl) {
-    modalSummaryEl.innerHTML = html;
-  }
-}
-
-function renderSourcesHtml(sources = []) {
-  if (!Array.isArray(sources) || !sources.length) {
-    return `<p>Sources will appear here after a response.</p>`;
-  }
-
-  return sources
-    .map((source, index) => {
-      const citationRef = sourceCitationRef(source, index);
-      const title = escapeHtml(
-        source?.title || source?.label || source?.document_title || "Source"
-      );
-      const type = escapeHtml(source?.type || source?.record_type || "source");
-      const description = escapeHtml(
-        String(
-          source?.description || source?.excerpt || source?.summary || ""
-        ).slice(0, MAX_SOURCE_EXCERPT)
-      );
-      const section = escapeHtml(source?.section || "");
-      const page =
-        source?.page_number != null
-          ? escapeHtml(String(source.page_number))
-          : "";
-
-      return `
-        <div
-          class="entity-row"
-          id="assistant-source-${escapeHtml(
-            citationRef.replace(/[^a-zA-Z0-9_-]/g, "-")
-          )}"
-          data-source-ref="${escapeHtml(citationRef)}"
-        >
-          <div class="entity-title">${title}</div>
-          <div class="entity-meta">
-            ${type}${section ? ` • ${section}` : ""}${page ? ` • p.${page}` : ""} • ${escapeHtml(citationRef)}
-          </div>
-          ${
-            description
-              ? `<div class="entity-meta" style="margin-top:6px;">${description}</div>`
-              : ""
-          }
-        </div>
-      `;
-    })
-    .join("");
-}
-
 function renderSources() {
-  const meta = getAssistantMeta();
-  const html = renderSourcesHtml(meta.sources || []);
-
   const sourcesEl = getEl(els.assistantSources, "assistantSources");
   const modalSourcesEl = getEl(
     els.assistantModalSources,
@@ -656,171 +529,11 @@ function renderSources() {
   );
 
   if (sourcesEl) {
-    sourcesEl.innerHTML = html;
+    sourcesEl.innerHTML = "";
   }
 
   if (modalSourcesEl) {
-    modalSourcesEl.innerHTML = html;
-  }
-}
-
-function renderRuntime() {
-  const meta = getAssistantMeta();
-  const runtime =
-    Object.keys(meta.runtime || {}).length > 0
-      ? meta.runtime
-      : {
-          mode: "scoped-assistant",
-          current_scope: getCurrentScope(),
-          current_section: getCurrentSection(),
-          selected_young_person_id: state.youngPersonId || null,
-          home_id: state.homeId || null,
-          provider_id: state.providerId || null,
-          allowed_home_ids: state.allowedHomeIds || [],
-          messages: (state.assistantMessages || []).length,
-        };
-
-  const runtimeEl = getEl(els.assistantRuntime, "assistantRuntime");
-  if (runtimeEl) {
-    runtimeEl.textContent = prettyJson(runtime);
-  }
-}
-
-function renderExplainability() {
-  const meta = getAssistantMeta();
-  const explainability =
-    Object.keys(meta.explainability || {}).length > 0
-      ? meta.explainability
-      : {
-          summary:
-            "The assistant will show scoped reasoning and evidence after a response is generated.",
-        };
-
-  const explainabilityEl = getEl(
-    els.assistantExplainability,
-    "assistantExplainability"
-  );
-  if (explainabilityEl) {
-    explainabilityEl.textContent = prettyJson(explainability);
-  }
-}
-
-function inferSuggestedActions() {
-  const meta = getAssistantMeta();
-  const section = getCurrentSection();
-  const scope = getCurrentScope();
-  const actions = [];
-
-  if (scope === "child") {
-    [
-      getActionForQuickButton("daily_note", { section }),
-      getActionForQuickButton("incident", { section }),
-      getActionForQuickButton("task", { section }),
-      getActionForQuickButton("appointment", { section }),
-    ]
-      .filter(Boolean)
-      .forEach((action) => {
-        if (action?.id && action?.label) {
-          actions.push({
-            type: "quick_action",
-            id: action.id,
-            label: action.label,
-          });
-        }
-      });
-  } else {
-    [
-      getActionForQuickButton("task", { section, scope }),
-      getActionForQuickButton("document", { section, scope }),
-      getActionForQuickButton("communication", { section, scope }),
-    ]
-      .filter(Boolean)
-      .forEach((action) => {
-        if (action?.id && action?.label) {
-          actions.push({
-            type: "quick_action",
-            id: action.id,
-            label: action.label,
-          });
-        }
-      });
-  }
-
-  (meta.suggested_actions || []).forEach((item) => {
-    if (typeof item === "string") {
-      const clean = item.trim();
-      if (clean) {
-        actions.push({
-          type: "assistant_chip",
-          id: clean,
-          label: clean,
-        });
-      }
-      return;
-    }
-
-    if (item && typeof item === "object") {
-      const label = String(item.label || item.title || item.text || "").trim();
-      if (label) {
-        actions.push({
-          type: "assistant_chip",
-          id: label,
-          label,
-        });
-      }
-    }
-  });
-
-  const seen = new Set();
-
-  return actions.filter((item) => {
-    const key = `${item.type}:${String(item.id).toLowerCase()}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function renderSuggestedActions() {
-  const actions = inferSuggestedActions();
-
-  const html = actions.length
-    ? actions
-        .map((action) => {
-          if (action.type === "quick_action") {
-            return `
-              <button
-                class="chip"
-                type="button"
-                data-quick-action="${escapeHtml(action.id)}"
-              >
-                ${escapeHtml(action.label)}
-              </button>
-            `;
-          }
-
-          return `
-            <button
-              class="chip"
-              type="button"
-              data-assistant-chip="${escapeHtml(action.label)}"
-            >
-              ${escapeHtml(action.label)}
-            </button>
-          `;
-        })
-        .join("")
-    : `<p>No suggested actions yet.</p>`;
-
-  const suggestionsEl = getEl(els.assistantSuggestions, "assistantSuggestions");
-  const actionsEl = getEl(els.assistantActions, "assistantActions");
-
-  if (suggestionsEl) {
-    suggestionsEl.innerHTML = html;
-  }
-
-  if (actionsEl) {
-    actionsEl.innerHTML = html;
+    modalSourcesEl.innerHTML = "";
   }
 }
 
@@ -905,11 +618,7 @@ function renderAllAssistantUi() {
   renderScopeBadges();
   renderContextText();
   renderMessages();
-  renderScopeSummary();
   renderSources();
-  renderRuntime();
-  renderExplainability();
-  renderSuggestedActions();
 }
 
 export function bindAssistantUi() {
@@ -962,13 +671,11 @@ export function setAssistantSources(sources = []) {
 export function setAssistantRuntime(runtime = null) {
   const meta = getAssistantMeta();
   meta.runtime = runtime || {};
-  renderAllAssistantUi();
 }
 
 export function setAssistantExplainability(explainability = null) {
   const meta = getAssistantMeta();
   meta.explainability = explainability || {};
-  renderAllAssistantUi();
 }
 
 export function setAssistantScopeSummary(scopeSummary = null) {
