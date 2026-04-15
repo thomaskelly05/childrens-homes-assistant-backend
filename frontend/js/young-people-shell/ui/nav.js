@@ -1,4 +1,4 @@
-import { state } from "../state.js";
+import { state, setCurrentScope, setCurrentSection } from "../state.js";
 import { els } from "../dom.js";
 import {
   NAV_SECTIONS,
@@ -171,9 +171,7 @@ function ensureValidCurrentSection() {
   }
 
   const fallback = getDefaultSectionForScope(scope);
-  state.currentSection = fallback;
-  state.activeSection = fallback;
-  state.currentView = fallback;
+  setCurrentSection(fallback);
   return fallback;
 }
 
@@ -374,9 +372,7 @@ function markActiveScopeButtons() {
 }
 
 function updateSectionState(section) {
-  state.currentSection = section;
-  state.activeSection = section;
-  state.currentView = section;
+  setCurrentSection(section);
 }
 
 function requireChildContext() {
@@ -468,7 +464,11 @@ function bindWorkspaceMenuLinks() {
       }
 
       const navTarget = findNavTarget(navSection);
-      if (navTarget && navTarget !== button && typeof navTarget.click === "function") {
+      if (
+        navTarget &&
+        navTarget !== button &&
+        typeof navTarget.click === "function"
+      ) {
         navTarget.click();
       }
 
@@ -478,6 +478,7 @@ function bindWorkspaceMenuLinks() {
 }
 
 function closeAssistantOverlay() {
+  state.assistantOpen = false;
   const assistantModal = document.getElementById("assistantModal");
   const assistantBackdrop = document.getElementById("assistantBackdrop");
   assistantModal?.classList.add("hidden");
@@ -487,6 +488,7 @@ function closeAssistantOverlay() {
 }
 
 function closeFullscreenOverlay() {
+  state.fullscreenPanelOpen = false;
   const fullscreenPanel = document.getElementById("fullscreenPanel");
   fullscreenPanel?.classList.add("hidden");
   fullscreenPanel?.setAttribute("aria-hidden", "true");
@@ -499,6 +501,7 @@ function closeSuggestionsOverlay() {
 }
 
 function closeRecordDrawerOverlay() {
+  state.recordDrawerOpen = false;
   const recordDrawer = document.getElementById("recordDrawer");
   const recordDrawerBackdrop = document.getElementById("recordDrawerBackdrop");
   recordDrawer?.classList.add("hidden");
@@ -518,7 +521,10 @@ function bindOverlayDismiss() {
       !assistantModal.classList.contains("hidden") &&
       !event.target.closest(".assistant-shell")
     ) {
-      if (event.target === assistantModal || event.target.id === "assistantBackdrop") {
+      if (
+        event.target === assistantModal ||
+        event.target.id === "assistantBackdrop"
+      ) {
         closeAssistantOverlay();
       }
     }
@@ -594,8 +600,7 @@ async function applyScopeChange(scope) {
       ? scope
       : "child";
 
-  state.currentScope = safeScope;
-  updateSectionState(getDefaultSectionForScope(safeScope));
+  setCurrentScope(safeScope);
 
   renderNavigation();
   markActiveNav(getCurrentSection());
@@ -839,7 +844,7 @@ function bindYoungPersonOpen() {
     if (!id) return;
 
     try {
-      state.currentScope = "child";
+      setCurrentScope("child");
       updateSectionState(getDefaultSectionForScope("child"));
       await openYoungPerson(id);
 
@@ -934,7 +939,7 @@ export function rerenderNavigationForScope() {
 
 export async function initialiseShellNavigation() {
   if (!state.currentSection) {
-    state.currentSection = getDefaultSectionForScope();
+    setCurrentSection(getDefaultSectionForScope());
   }
 
   if (!state.activeSection) {
