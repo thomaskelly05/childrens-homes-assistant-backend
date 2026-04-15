@@ -48,6 +48,13 @@ const OUTPUT_MODE = {
   quality_brief: "quality_brief",
   morning_brief: "morning_brief",
   drafting: "drafting",
+
+  children_home_summary_template: "children_home_summary_template",
+  children_home_chronology_template: "children_home_chronology_template",
+  children_home_handover_template: "children_home_handover_template",
+  children_home_manager_brief_template: "children_home_manager_brief_template",
+  children_home_quality_brief_template: "children_home_quality_brief_template",
+  children_home_reg45_template: "children_home_reg45_template",
 };
 
 const MAX_SOURCE_ITEMS = 8;
@@ -147,35 +154,60 @@ function detectAssistantIntent(message = "") {
 
   if (!text) return ASSISTANT_INTENT.unknown;
   if (isGreeting(text)) return ASSISTANT_INTENT.greeting;
-  if (/morning brief|morning update|daily brief/.test(text)) return ASSISTANT_INTENT.morning_brief;
-  if (/reg\s*45|regulation\s*45|qa full summary|full summary|comprehensive summary|full review|period review|six month|6 month|twelve month|12 month/.test(text)) {
+
+  if (/morning brief|morning update|daily brief/.test(text)) {
+    return ASSISTANT_INTENT.morning_brief;
+  }
+
+  if (
+    /reg\s*45|regulation\s*45|qa full summary|full summary|comprehensive summary|full review|period review|six month|6 month|twelve month|12 month/.test(
+      text
+    )
+  ) {
     return ASSISTANT_INTENT.review;
   }
+
   if (/chronology|timeline|what happened|history|in date order|events over time/.test(text)) {
     return ASSISTANT_INTENT.chronology;
   }
-  if (/when was|what date|dates|last incident|last missing|next appointment|how many|overdue|due soon|upcoming|latest/.test(text)) {
+
+  if (
+    /when was|what date|dates|last incident|last missing|next appointment|how many|overdue|due soon|upcoming|latest/.test(
+      text
+    )
+  ) {
     return ASSISTANT_INTENT.factual_lookup;
   }
+
   if (/handover|next shift|shift brief/.test(text)) {
     return ASSISTANT_INTENT.handover;
   }
+
   if (/draft|write|reword|rewrite|wording|improve this/.test(text)) {
     return ASSISTANT_INTENT.drafting;
   }
-  if (/compliance|ofsted|supervision|training|statutory|audit/.test(text)) {
+
+  if (
+    /compliance|ofsted|supervision|training|statutory|audit|reg\s*40|reg\s*44|quality standards|inspection risk|scrutiny|sccif/.test(
+      text
+    )
+  ) {
     return ASSISTANT_INTENT.compliance;
   }
-  if (/risk|safeguarding|harm|trigger|protective factor/.test(text)) {
+
+  if (/risk|safeguarding|harm|trigger|protective factor|missing from care|missing episode/.test(text)) {
     return ASSISTANT_INTENT.risk;
   }
-  if (/quality|ri|inspection|governance/.test(text)) {
+
+  if (/quality|ri|inspection|governance|provider|oversight/.test(text)) {
     return ASSISTANT_INTENT.quality;
   }
-  if (/manager|oversight|leadership|escalation/.test(text)) {
+
+  if (/manager|leadership|escalation|registered manager/.test(text)) {
     return ASSISTANT_INTENT.management;
   }
-  if (/summary|summarise|summarize|what matters|overview/.test(text)) {
+
+  if (/summary|summarise|summarize|what matters|overview|lived experience|key work|keywork/.test(text)) {
     return ASSISTANT_INTENT.summary;
   }
 
@@ -204,7 +236,33 @@ function detectRetrievalMode(message = "", intent = ASSISTANT_INTENT.unknown) {
   return RETRIEVAL_MODE.whole_scope;
 }
 
-function detectOutputMode(intent = ASSISTANT_INTENT.unknown) {
+function detectOutputMode(intent = ASSISTANT_INTENT.unknown, message = "") {
+  const text = String(message || "").toLowerCase();
+
+  if (/reg\s*45|regulation\s*45/.test(text)) {
+    return OUTPUT_MODE.children_home_reg45_template;
+  }
+
+  if (/handover|next shift|morning brief|shift brief/.test(text)) {
+    return OUTPUT_MODE.children_home_handover_template;
+  }
+
+  if (/manager brief|manager summary|leadership brief/.test(text)) {
+    return OUTPUT_MODE.children_home_manager_brief_template;
+  }
+
+  if (/quality brief|quality summary|inspection readiness|ri summary|scrutiny/.test(text)) {
+    return OUTPUT_MODE.children_home_quality_brief_template;
+  }
+
+  if (/chronology|timeline/.test(text)) {
+    return OUTPUT_MODE.children_home_chronology_template;
+  }
+
+  if (/full summary|comprehensive summary|overview/.test(text)) {
+    return OUTPUT_MODE.children_home_summary_template;
+  }
+
   if (intent === ASSISTANT_INTENT.factual_lookup) return OUTPUT_MODE.factual_answer;
   if (intent === ASSISTANT_INTENT.summary) return OUTPUT_MODE.summary;
   if (intent === ASSISTANT_INTENT.chronology) return OUTPUT_MODE.chronology;
@@ -215,99 +273,223 @@ function detectOutputMode(intent = ASSISTANT_INTENT.unknown) {
   if (intent === ASSISTANT_INTENT.quality) return OUTPUT_MODE.quality_brief;
   if (intent === ASSISTANT_INTENT.morning_brief) return OUTPUT_MODE.morning_brief;
   if (intent === ASSISTANT_INTENT.drafting) return OUTPUT_MODE.drafting;
+
   return OUTPUT_MODE.answer;
 }
 
 function sectionGuidance(section, scope) {
   const map = {
     workspace:
-      "Support with daily recording, shift reflection, strengths-based writing, and next-step actions.",
+      "Support adults through the shift with child-centred recording, safeguarding awareness, practical next steps and continuity of care.",
     overview:
-      "Support with concise summaries, priorities, risks, strengths, and planning.",
+      "Support with whole-picture summaries, current themes, risks, strengths, lived experience and planning.",
     profile:
-      "Support with child-centred profile writing, identity, communication, health and formulation.",
+      "Support with child-centred profile writing, identity, communication, health, formulation and what helps.",
     timeline:
-      "Support with chronology summaries, patterns, event analysis, and linked follow-up.",
+      "Support with chronology, significant events, pattern analysis and triangulation across records.",
     handover:
-      "Support with concise handover writing, clarity, risks, and what staff need to know next.",
+      "Support with practical shift handover, what matters now, risks to hold in mind, actions and escalation.",
     health:
-      "Support with appointments, outcomes, professionals, medication context, and follow-up.",
+      "Support with health needs, appointments, outcomes, professionals, medication context and follow-up.",
     education:
-      "Support with attendance, engagement, progress, incidents, and educational planning.",
+      "Support with attendance, engagement, incidents, progress, barriers and educational planning.",
     family:
-      "Support with family contact summaries, themes, presentation before and after contact, and follow-up.",
+      "Support with family contact themes, emotional impact, presentation before and after contact, and follow-up.",
     calendar:
-      "Support with appointments, meeting prep, follow-up, and reminders.",
+      "Support with appointments, meeting preparation, follow-up and reminders.",
     readiness:
-      "Support with practical task lists, oversight, prioritisation, and completion planning.",
+      "Support with task completion, review points, practical readiness, and action planning.",
     manager:
-      "Support with oversight summaries, decision-making notes, review writing, and escalation thinking.",
+      "Support with management oversight, safeguarding grip, quality of care, decisions, review writing and escalation.",
     reports:
-      "Support with report drafting, review packs, summaries, and structured professional writing.",
+      "Support with report drafting, summaries, review packs and structured professional writing.",
     documents:
-      "Support with document summaries, document checklists, and statutory paperwork prompts.",
+      "Support with document summaries, uploaded evidence, statutory paperwork and inspection-cycle evidence review.",
     communication:
-      "Support with drafting professional messages, contact summaries, and liaison logs.",
+      "Support with professional communication, liaison logs and follow-up messages.",
     therapy:
-      "Support with therapeutic recommendations, summary notes, and follow-up prompts.",
+      "Support with therapeutic understanding, formulation-led thinking and practical follow-up.",
     "home-dashboard":
-      "Support with whole-home summaries, staffing pressures, actions, communications, and operational oversight.",
+      "Support with whole-home operational oversight, quality of care, staffing, incidents, compliance and management actions.",
     compliance:
-      "Support with Ofsted readiness, supervision compliance, training compliance, statutory paperwork, and action planning.",
+      "Support with Ofsted readiness, statutory compliance, supervision, training, audits, quality standards and evidence of good practice.",
     team:
-      "Support with staffing summaries, absence impact, rota themes, and deployment thinking.",
+      "Support with staffing pressures, absence impact, rota themes and workforce consistency.",
     supervision:
-      "Support with supervision prep, supervision summaries, training and capability follow-up.",
+      "Support with supervision oversight, workforce development, training and practice accountability.",
     quality:
-      "Support with audit summaries, RI themes, quality assurance findings, service trends, and compliance actions.",
+      "Support with audit summaries, RI themes, monthly patterns, triangulation, quality assurance and inspection readiness.",
   };
 
-  return map[section] || `Support with ${scope} workspace tasks.`;
+  return map[section] || `Support with ${scope} children’s residential home operating system tasks.`;
 }
 
 function roleGuidance(role = "") {
   const value = String(role || "").toLowerCase();
 
   if (value === "staff") {
-    return "Prioritise practical, immediate, child-centred support and shift-level clarity.";
+    return "Prioritise practical, child-centred, shift-relevant support in a children’s residential home.";
   }
 
   if (value === "manager") {
-    return "Prioritise oversight, escalation, management review, quality of recording, and follow-up actions.";
+    return "Prioritise safeguarding oversight, consistency of care, management grip, standards, action completion and inspection readiness.";
   }
 
   if (value === "ri") {
-    return "Prioritise service patterns, compliance themes, audit language, quality assurance and inspection readiness.";
+    return "Prioritise triangulation, audit patterns, repeated shortfalls, quality assurance, governance and independent oversight.";
   }
 
   if (value === "admin") {
-    return "Prioritise system-wide visibility, governance, reporting, compliance and operational clarity.";
+    return "Prioritise provider-wide visibility, governance, compliance, reporting and cross-home operational assurance.";
   }
 
-  return "Prioritise clarity, practical usefulness, and evidence-based support.";
+  return "Prioritise calm, evidence-based, operationally useful support in a children’s residential home.";
 }
 
 function scopePromptGuidance(context) {
   if (context.scope === "child") {
     return [
-      "Be child-centred, trauma-informed and practical.",
-      "Separate facts, interpretation and next actions where possible.",
+      "Be child-centred, trauma-informed, residential-practice aware and practical.",
+      "Focus on lived experience, presentation, risks, relationships, education, health, routines, incidents, protective factors and what staff need to do next.",
+      "When helpful, separate fact, pattern, professional interpretation and action.",
       "Do not invent missing context.",
     ].join(" ");
   }
 
   if (context.scope === "home") {
     return [
-      "Be operationally focused and management-useful.",
-      "Highlight staffing, actions, compliance pressures and service risks.",
-      "Prefer concise service-level summaries and next steps.",
+      "Be operationally focused and management-useful for a children’s residential home.",
+      "Focus on safeguarding themes, staffing pressures, task completion, compliance, quality of recording, home routines, incidents, oversight and service risk.",
+      "Highlight what the records show, what is overdue, what needs management attention, and what should happen next.",
     ].join(" ");
   }
 
   return [
-    "Be quality-focused and inspection-ready.",
-    "Highlight patterns, assurance gaps, governance issues and evidence strengths or weaknesses.",
-    "Use language appropriate for RI, leadership and audit review.",
+    "Be quality-focused, governance-aware and inspection-ready.",
+    "Focus on provider oversight, quality assurance, compliance patterns, repeated service issues, workforce oversight, document quality, and readiness for external scrutiny.",
+    "Highlight strengths, gaps, risks, evidence quality and governance follow-up in a way suitable for RI and senior leadership review.",
+  ].join(" ");
+}
+
+function outputModeGuidance(outputMode = OUTPUT_MODE.answer) {
+  const map = {
+    [OUTPUT_MODE.answer]:
+      "Give a direct, evidence-based answer using the scoped records.",
+    [OUTPUT_MODE.factual_answer]:
+      "Answer directly and precisely. Prefer dates, latest records, counts and explicit evidence.",
+    [OUTPUT_MODE.summary]:
+      "Provide a structured summary that reflects children’s residential care practice and operational relevance.",
+    [OUTPUT_MODE.chronology]:
+      "Present a clear chronology of significant events, records, incidents, appointments or changes in presentation, followed by brief pattern analysis.",
+    [OUTPUT_MODE.review_pack]:
+      "Write in a formal review style suitable for management oversight, Reg 45 support, or review preparation.",
+    [OUTPUT_MODE.handover]:
+      "Write like a residential care handover: practical, shift-ready, concise and action-focused.",
+    [OUTPUT_MODE.compliance_brief]:
+      "Write like a compliance and inspection-readiness brief for a children’s home.",
+    [OUTPUT_MODE.management_brief]:
+      "Write like a manager oversight brief focusing on risk, actions, performance and service pressures.",
+    [OUTPUT_MODE.quality_brief]:
+      "Write like a quality assurance and RI brief, suitable for governance and scrutiny.",
+    [OUTPUT_MODE.morning_brief]:
+      "Write like a start-of-day residential home briefing with priorities, risks and follow-up.",
+    [OUTPUT_MODE.drafting]:
+      "Draft professional wording suitable for children’s home records or management communication.",
+    [OUTPUT_MODE.children_home_summary_template]:
+      "Use a children’s home summary template. Make it evidence-led, child-centred where relevant, and useful for practice and oversight.",
+    [OUTPUT_MODE.children_home_chronology_template]:
+      "Use a children’s home chronology template. Focus on significant dates, events, patterns and implications for care.",
+    [OUTPUT_MODE.children_home_handover_template]:
+      "Use a children’s home handover template. Keep it practical, shift-ready, safeguarding-aware and concise.",
+    [OUTPUT_MODE.children_home_manager_brief_template]:
+      "Use a children’s home manager brief template. Focus on oversight, safeguarding, quality, compliance, workforce and actions.",
+    [OUTPUT_MODE.children_home_quality_brief_template]:
+      "Use a children’s home quality and scrutiny template. Focus on triangulation, patterns, quality assurance, Ofsted readiness and governance.",
+    [OUTPUT_MODE.children_home_reg45_template]:
+      "Use a Reg 45 support template suitable for children’s home review work. Focus on lived experience, progress, care impact, patterns, shortfalls and actions.",
+  };
+
+  return map[outputMode] || map[OUTPUT_MODE.answer];
+}
+
+function buildProfessionalReasoningLenses(context, outputMode = OUTPUT_MODE.answer) {
+  const shared = [
+    "Always reason from the evidence in the children’s residential home record.",
+    "Triangulate across incidents, daily records, tasks, health, education, family contact, plans, risk, documents, staffing, compliance and oversight records where available.",
+    "Separate: evidenced fact, pattern, interpretation, risk, and action.",
+    "Do not overclaim. If evidence is incomplete, say what is missing.",
+    "Prioritise safeguarding, lived experience, quality of care, management oversight, and practical next steps.",
+  ];
+
+  const ofstedLens = [
+    "Think like an Ofsted inspector reviewing a children’s home.",
+    "Consider lived experience, progress, safety, effectiveness of care, leadership and management, and whether the records demonstrate impact.",
+    "Notice weak analysis, drift, poor follow-through, inconsistent recording, repeated incidents, and gaps between plans and practice.",
+    "Test whether the evidence would stand up to inspection scrutiny.",
+  ];
+
+  const riLens = [
+    "Think like an RI providing independent oversight of the home.",
+    "Look for monthly patterns, repeated shortfalls, weak management grip, recurring incidents, audit themes, compliance drift, and governance gaps.",
+    "Triangulate across records rather than relying on one note or one incident in isolation.",
+    "Highlight what needs escalation, challenge, follow-up, or provider oversight.",
+  ];
+
+  const managerLens = [
+    "Think like a Registered Manager who is accountable for the home.",
+    "Protect children, staff and the quality of care.",
+    "Align thinking to the Children’s Homes Regulations, Quality Standards and inspection expectations.",
+    "Focus on service grip, staff consistency, review quality, action completion, and safeguarding oversight.",
+  ];
+
+  const rswLens = [
+    "Think like an RSW who knows the child and the rhythms of the home.",
+    "Keep the answer practical, relational and grounded in everyday care.",
+    "Consider what staff need to understand, hold in mind, and do on shift.",
+    "Value child voice, co-regulation, routines, transitions, repair, and what helps the child feel safe.",
+  ];
+
+  const therapeuticLens = [
+    "Think with a therapeutic and trauma-informed lens.",
+    "Look for patterns, triggers, unmet need, regulation, attachment, stress responses, and the meaning of behaviour.",
+    "Avoid pathologising the child. Focus on what the child may be communicating and what support is needed.",
+  ];
+
+  const outputSpecific =
+    outputMode === OUTPUT_MODE.quality_brief ||
+    outputMode === OUTPUT_MODE.children_home_quality_brief_template
+      ? [
+          "Weight the Ofsted, RI and manager lenses most strongly.",
+          "Produce scrutiny-ready analysis.",
+        ]
+      : outputMode === OUTPUT_MODE.management_brief ||
+        outputMode === OUTPUT_MODE.children_home_manager_brief_template
+      ? [
+          "Weight the manager and RI lenses most strongly.",
+          "Produce oversight-ready analysis with actions.",
+        ]
+      : outputMode === OUTPUT_MODE.handover ||
+        outputMode === OUTPUT_MODE.children_home_handover_template
+      ? [
+          "Weight the RSW and therapeutic lenses most strongly.",
+          "Produce practical next-shift clarity.",
+        ]
+      : outputMode === OUTPUT_MODE.review_pack ||
+        outputMode === OUTPUT_MODE.children_home_reg45_template
+      ? [
+          "Weight the Ofsted, manager and therapeutic lenses strongly.",
+          "Produce a formal review-style answer with evidence and patterns.",
+        ]
+      : ["Use all lenses proportionately according to the question."];
+
+  return [
+    ...shared,
+    ...ofstedLens,
+    ...riLens,
+    ...managerLens,
+    ...rswLens,
+    ...therapeuticLens,
+    ...outputSpecific,
   ].join(" ");
 }
 
@@ -317,7 +499,10 @@ function buildSystemPrompt(context, options = {}) {
   const outputMode = options.output_mode || OUTPUT_MODE.answer;
 
   return [
-    "You are the IndiCare residential OS assistant.",
+    "You are IndiCare OS, a children’s residential home operating system assistant.",
+    "You are not a generic chatbot. You are an evidence-led operational intelligence assistant for children’s homes.",
+    "You support child-level practice, home-level oversight, provider quality assurance, and inspection readiness.",
+    "You should reason like an Ofsted inspector, RI, Registered Manager, RSW and therapeutic practitioner, then produce one clear answer suited to the user’s role and question.",
     `Current scope: ${context.scope}.`,
     `Current section: ${context.section}.`,
     `User role: ${context.role}.`,
@@ -327,20 +512,20 @@ function buildSystemPrompt(context, options = {}) {
     `Purpose: ${sectionGuidance(context.section, context.scope)}`,
     `Role guidance: ${roleGuidance(context.role)}`,
     `Scope guidance: ${scopePromptGuidance(context)}`,
+    `Output guidance: ${outputModeGuidance(outputMode)}`,
+    `Reasoning lenses: ${buildProfessionalReasoningLenses(context, outputMode)}`,
     context.scope === "child"
       ? `Selected young person: ${context.person.name}. Preferred name: ${context.person.preferred_name || "not set"}. Home: ${context.person.home_name || "not set"}. Risk: ${context.person.risk || "not set"}. Placement status: ${context.person.placement_status || "not set"}.`
       : `Current home: ${context.home.home_name}.`,
     retrievalMode === RETRIEVAL_MODE.section_only
-      ? "Use section-focused evidence for this request."
-      : "Use the full scoped OS record set for this request, not just the current section.",
-    "If the user asks for a summary, chronology, dates, incidents, appointments, actions, risks, or patterns, answer using the full scoped record set where available.",
-    "Only narrow to the current section if the user explicitly asks about the current page, current section, or current draft.",
-    "Provide dates, chronology, and factual record-based answers where available.",
-    "Keep responses clear, calm, practical, child-centred where relevant, and operationally useful.",
-    "Where useful, structure the answer as: summary, chronology, what matters, risks, strengths, and next actions.",
-    "Do not overclaim. If evidence is weak or missing, say so clearly.",
-    "Where useful, highlight missing evidence, overdue review points, open risks, and recommended follow-up.",
-    "When citing evidence, prefer short inline references like [incident:123] or [task:456].",
+      ? "Use section-focused evidence only because the user explicitly asked about the current section."
+      : "Use the full scoped children’s home record set for this request, not just the visible page.",
+    "Answer from the records and evidence provided.",
+    "Do not invent missing facts.",
+    "Citations must appear throughout the answer, not only at the end.",
+    "Use short inline citations like [incident:123], [task:456], [document:789], [family_contact:321].",
+    "Where useful, identify: what is evidenced, what pattern is emerging, what creates risk, what is missing, and what action should follow.",
+    "Keep the answer calm, professional, practical, evidence-based and suitable for children’s residential care.",
   ].join(" ");
 }
 
@@ -421,6 +606,13 @@ async function resolveScopeBundle(options = {}) {
       current_scope: state.currentScope,
       young_person_id: state.youngPersonId || null,
       home_id: state.homeId || null,
+      allowed_home_ids: state.allowedHomeIds || [],
+      access_level: state.userRole === "ri" || state.userRole === "admin" ? "provider" : "home",
+      provider_id:
+        state.providerId ||
+        state.currentUser?.provider_id ||
+        state.currentUser?.providerId ||
+        null,
     });
 
     if (bundle) {
@@ -495,7 +687,7 @@ function filterEvidenceBySection(evidence = [], section = "workspace") {
     compliance: ["compliance", "documents", "supervision", "team", "readiness"],
     team: ["team", "supervision", "manager"],
     supervision: ["supervision", "team", "compliance"],
-    quality: ["quality", "compliance", "reports", "manager", "team", "supervision"],
+    quality: ["quality", "compliance", "reports", "manager", "team", "supervision", "documents"],
   };
 
   const allowed = new Set(sectionGroups[section] || [section]);
@@ -609,6 +801,8 @@ function scoreEvidence(item = {}, queryProfile = {}) {
   if (queryProfile.focus === "risk" && (item.record_type === "risk" || item.tags?.includes("safeguarding"))) score += 5;
   if (queryProfile.focus === "handover" && ["daily_note", "incident", "appointment", "handover_record"].includes(item.record_type)) score += 4;
   if (queryProfile.focus === "morning_brief" && item.date) score += 2;
+  if (queryProfile.focus === "quality" && ["compliance_item", "audit", "manager_action", "document"].includes(item.record_type)) score += 4;
+  if (queryProfile.focus === "management" && ["task", "manager_action", "incident", "compliance_item"].includes(item.record_type)) score += 4;
 
   return score;
 }
@@ -724,6 +918,19 @@ function buildCareDomains(evidence = []) {
     strengths: evidence.filter((x) => ["achievement_record", "daily_note"].includes(x.record_type)),
     documents: evidence.filter((x) => ["document", "statutory_document", "monthly_review"].includes(x.record_type)),
     compliance: evidence.filter((x) => x.record_type === "compliance_item"),
+  };
+}
+
+function buildTriangulationSummary(evidence = []) {
+  return {
+    incidents: evidence.filter((x) => x.record_type === "incident").length,
+    daily_notes: evidence.filter((x) => x.record_type === "daily_note").length,
+    plans: evidence.filter((x) => ["support_plan", "risk"].includes(x.record_type)).length,
+    family: evidence.filter((x) => x.record_type === "family_contact").length,
+    health: evidence.filter((x) => x.record_type === "health_record").length,
+    education: evidence.filter((x) => x.record_type === "education_record").length,
+    compliance: evidence.filter((x) => x.record_type === "compliance_item").length,
+    documents: evidence.filter((x) => ["document", "statutory_document"].includes(x.record_type)).length,
   };
 }
 
@@ -866,8 +1073,8 @@ function buildFallbackReply(message, context, runtime = {}) {
     return {
       answer:
         context.scope === "child"
-          ? `Hello. I’m ready to help with ${context.person.name}. I can provide a full summary, chronology, dates, incidents, appointments, risks, family contact themes, or a handover using the whole scoped record set where available.`
-          : `Hello. I’m ready to help with ${context.home.home_name}. I can provide summaries, chronology, dates, compliance themes, risks, and management-focused updates using the whole scoped record set where available.`,
+          ? `Hello. I’m ready to support practice around ${context.person.name} using the full children’s residential home record set where available, including incidents, daily records, care planning, risk, health, education, family contact, compliance and uploaded evidence.`
+          : `Hello. I’m ready to support oversight for ${context.home.home_name} using the full children’s residential home record set where available, including quality, staffing, compliance, documents, incidents, oversight actions and uploaded evidence.`,
       suggested_actions: [{ type: "draft_summary", label: "Draft summary" }],
     };
   }
@@ -875,7 +1082,7 @@ function buildFallbackReply(message, context, runtime = {}) {
   if (text.includes("morning brief")) {
     return {
       answer: [
-        `Morning brief for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
+        `Residential morning brief for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
         "",
         `• Evidence items reviewed: ${evidenceSummary.total}`,
         `• Open tasks: ${evidenceSummary.open_tasks}`,
@@ -905,13 +1112,14 @@ function buildFallbackReply(message, context, runtime = {}) {
   if (text.includes("handover")) {
     return {
       answer: [
-        "Here is a handover structure based on the scoped records:",
+        `Residential handover view for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
         "",
-        "1. Presentation and wellbeing",
-        "2. Important events or incidents",
-        "3. Health, medication, appointments or education updates",
-        "4. Family contact or safeguarding context",
-        "5. What staff on next shift must do",
+        "1. What matters today",
+        "2. Risks to hold in mind",
+        "3. Appointments and timings",
+        "4. Family/contact updates",
+        "5. Tasks for this shift",
+        "6. Escalations for manager awareness",
         "",
         "Recent evidence to consider:",
         ...buildEvidenceSummaryLines(evidence, 4),
@@ -929,7 +1137,7 @@ function buildFallbackReply(message, context, runtime = {}) {
   if (text.includes("chronology") || text.includes("timeline") || text.includes("what happened")) {
     return {
       answer: [
-        `Chronology for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
+        `Chronology and pattern view for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
         "",
         ...buildChronologyLines(chronology, 10),
         "",
@@ -980,13 +1188,13 @@ function buildFallbackReply(message, context, runtime = {}) {
   if (text.includes("risk")) {
     return {
       answer: [
-        `Risk view for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
+        `Residential risk view for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
         "",
         ...(topConcerns.length
           ? topConcerns.map((item) => `• ${item}`)
           : ["• No clear high-priority risk theme is visible in the current evidence set."]),
         "",
-        "Use this risk thinking structure:",
+        "Use this children’s home risk structure:",
         "• What is the concern?",
         "• What patterns or triggers are known?",
         "• What are the early warning signs?",
@@ -1005,7 +1213,7 @@ function buildFallbackReply(message, context, runtime = {}) {
   if (text.includes("compliance") || text.includes("ofsted") || text.includes("audit")) {
     return {
       answer: [
-        "Compliance view:",
+        "Compliance and inspection-readiness view:",
         "",
         "1. Workforce compliance",
         "2. Child or service file compliance",
@@ -1031,7 +1239,7 @@ function buildFallbackReply(message, context, runtime = {}) {
   if (text.includes("summary") || text.includes("summarise") || text.includes("summarize")) {
     return {
       answer: [
-        `Summary for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
+        `Current position summary for ${context.scope === "child" ? context.person.name : context.home.home_name}:`,
         "",
         "• What matters most right now",
         "• Risks or pressures",
@@ -1048,7 +1256,7 @@ function buildFallbackReply(message, context, runtime = {}) {
 
   return {
     answer: [
-      `I can help with ${context.scope === "child" ? context.person.name : context.home.home_name} across the whole scoped OS record set.`,
+      `I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality and oversight.`,
       "",
       "Try asking me to:",
       "• give a full summary",
@@ -1115,6 +1323,7 @@ function buildAssistantContextMeta(context, runtime = {}) {
   const facts = runtime.facts || {};
   const sufficiency = runtime.evidence_sufficiency || assessEvidenceSufficiency(evidence);
   const careDomains = runtime.care_domains || buildCareDomains(evidence);
+  const triangulation = runtime.triangulation || buildTriangulationSummary(evidence);
 
   return {
     current_scope: context.scope,
@@ -1135,6 +1344,7 @@ function buildAssistantContextMeta(context, runtime = {}) {
       next_appointment: facts.next_appointment || null,
     },
     evidence_sufficiency: sufficiency,
+    triangulation,
     recent_records: {
       incidents: evidence.filter((item) => item.record_type === "incident").slice(0, 5),
       tasks: evidence.filter((item) => item.record_type === "task").slice(0, 5),
@@ -1191,7 +1401,7 @@ export async function buildAssistantEvidenceContext(options = {}) {
   const message = options.message || "";
   const intent = options.intent || detectAssistantIntent(message);
   const retrievalMode = options.retrieval_mode || detectRetrievalMode(message, intent);
-  const outputMode = options.output_mode || detectOutputMode(intent);
+  const outputMode = options.output_mode || detectOutputMode(intent, message);
   const dateRange = resolveDateRange(message, options);
 
   const fetchedScopeBundle = await resolveScopeBundle(options);
@@ -1215,6 +1425,7 @@ export async function buildAssistantEvidenceContext(options = {}) {
   const summary = summariseEvidence(ranked);
   const facts = extractFacts(filtered);
   const careDomains = buildCareDomains(filtered);
+  const triangulation = buildTriangulationSummary(filtered);
   const evidenceSufficiency = assessEvidenceSufficiency(filtered);
 
   return {
@@ -1228,6 +1439,7 @@ export async function buildAssistantEvidenceContext(options = {}) {
     chronology,
     facts,
     care_domains: careDomains,
+    triangulation,
     evidence_sufficiency: evidenceSufficiency,
     system_prompt: buildSystemPrompt(context, {
       intent,
@@ -1243,7 +1455,7 @@ export async function buildMorningBriefContext(options = {}) {
     ...options,
     message: options.message || "morning brief",
     intent: ASSISTANT_INTENT.morning_brief,
-    output_mode: OUTPUT_MODE.morning_brief,
+    output_mode: OUTPUT_MODE.children_home_handover_template,
   });
 
   const context = runtime.context;
@@ -1269,7 +1481,7 @@ export async function buildManagerBriefContext(options = {}) {
   const runtime = await buildAssistantEvidenceContext({
     ...options,
     intent: ASSISTANT_INTENT.management,
-    output_mode: OUTPUT_MODE.management_brief,
+    output_mode: OUTPUT_MODE.children_home_manager_brief_template,
   });
 
   return {
@@ -1289,7 +1501,7 @@ export async function buildQualityBriefContext(options = {}) {
   const runtime = await buildAssistantEvidenceContext({
     ...options,
     intent: ASSISTANT_INTENT.quality,
-    output_mode: OUTPUT_MODE.quality_brief,
+    output_mode: OUTPUT_MODE.children_home_quality_brief_template,
   });
 
   return {
@@ -1322,6 +1534,7 @@ export async function runAssistantMessage(message, options = {}) {
     chronology,
     facts,
     care_domains,
+    triangulation,
     evidence_sufficiency,
     system_prompt,
     summary,
@@ -1337,6 +1550,7 @@ export async function runAssistantMessage(message, options = {}) {
   state.assistantMeta.chronology = chronology;
   state.assistantMeta.facts = facts;
   state.assistantMeta.care_domains = care_domains;
+  state.assistantMeta.triangulation = triangulation;
   state.assistantMeta.evidence_summary = summary;
   state.assistantMeta.evidence_sufficiency = evidence_sufficiency;
   state.assistantMeta.last_bundle_refresh_at = state.scopeBundleLoadedAt || null;
@@ -1346,6 +1560,9 @@ export async function runAssistantMessage(message, options = {}) {
     chronology,
     facts,
     care_domains,
+    morning_brief: null,
+    manager_brief: null,
+    quality_brief: null,
     live_summary: {
       scope: context.scope,
       section: context.section,
@@ -1369,6 +1586,25 @@ export async function runAssistantMessage(message, options = {}) {
         body: JSON.stringify({
           message: cleanText(message),
           context,
+          assistant_identity: {
+            product_name: "IndiCare OS",
+            domain: "children_residential_home_operating_system",
+            reasoning_model: "ofsted_ri_manager_rsw_therapeutic",
+          },
+          response_contract: {
+            require_inline_citations: true,
+            citation_format: "[record_type:record_id]",
+            citation_density: "every_substantive_paragraph",
+            separate_fact_pattern_action: true,
+            use_children_home_language: true,
+            avoid_generic_policy_filler: true,
+            evidence_first: true,
+          },
+          inspection_framework: {
+            reference_children_homes_regulations: true,
+            reference_quality_standards: true,
+            reference_sccif: true,
+          },
           intent,
           retrieval_mode,
           output_mode,
@@ -1389,9 +1625,9 @@ export async function runAssistantMessage(message, options = {}) {
             documents_count: care_domains.documents.length,
             compliance_count: care_domains.compliance.length,
           },
+          triangulation,
           evidence_sufficiency,
           summary,
-          // deliberately exclude raw scope_bundle in production API calls
           include_scope_bundle: false,
         }),
       });
@@ -1422,12 +1658,13 @@ export async function runAssistantMessage(message, options = {}) {
             section: context.section,
             evidence_count: evidence.length,
             chronology_count: chronology.length,
+            triangulation,
             reasoning_summary:
               data.explainability?.reasoning_summary ||
-              `Intent: ${intent}. Retrieval: ${retrieval_mode}. Output: ${output_mode}.`,
+              `This answer used an evidence-led children’s home reasoning model with Ofsted, RI, manager, RSW and therapeutic lenses.`,
             evidence_summary:
               data.explainability?.evidence_summary ||
-              `${evidence.length} evidence item(s) used with ${evidence_sufficiency.confidence} confidence.`,
+              `${evidence.length} evidence item(s) were reviewed with ${evidence_sufficiency.confidence} confidence.`,
             key_concerns: getTopConcerns(evidence),
             ...data.explainability,
           },
@@ -1466,8 +1703,11 @@ export async function runAssistantMessage(message, options = {}) {
       evidence_count: evidence.length,
       chronology_count: chronology.length,
       fallback_used: true,
-      reasoning_summary: `Fallback response used. Intent: ${intent}. Retrieval: ${retrieval_mode}. Output: ${output_mode}.`,
-      evidence_summary: `${evidence.length} evidence item(s) used with ${evidence_sufficiency.confidence} confidence.`,
+      triangulation,
+      reasoning_summary:
+        `Fallback residential OS response used. It was framed through inspection, RI, manager, RSW and therapeutic reasoning lenses.`,
+      evidence_summary:
+        `${evidence.length} evidence item(s) were reviewed with ${evidence_sufficiency.confidence} confidence.`,
       key_concerns: getTopConcerns(evidence),
     },
     assistant_scope: buildAssistantScopeMeta(context, runtime),
