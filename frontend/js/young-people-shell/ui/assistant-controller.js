@@ -101,6 +101,68 @@ function ensureAssistantMeta() {
     : [];
 }
 
+function extractRenderableText(value) {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return "";
+
+  const directCandidates = [
+    value.text,
+    value.message,
+    value.content,
+    value.answer,
+    value.output,
+    value.response,
+    value.summary,
+    value.label,
+    value.title,
+  ];
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate;
+    }
+  }
+
+  if (value.content && typeof value.content === "object") {
+    const nested = value.content;
+    const nestedCandidates = [
+      nested.text,
+      nested.message,
+      nested.content,
+      nested.answer,
+      nested.output,
+      nested.response,
+      nested.summary,
+    ];
+
+    for (const candidate of nestedCandidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate;
+      }
+    }
+  }
+
+  if (Array.isArray(value.parts)) {
+    const joined = value.parts
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part.text === "string") return part.text;
+        if (part && typeof part.content === "string") return part.content;
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+
+    if (joined.trim()) return joined;
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return "";
+  }
+}
+
 function scrubAssistantBundle(bundle = {}, context = {}) {
   try {
     if (typeof aiScrubber.scrubAssistantPayload === "function") {
@@ -330,8 +392,12 @@ function renderLiveUpdates() {
 
   els.liveUpdatesBody.innerHTML = updates
     .map((update) => {
-      const title = escapeHtml(String(update.title || "Update"));
-      const message = escapeHtml(String(update.message || ""));
+      const title = escapeHtml(
+        extractRenderableText(update.title) || "Update"
+      );
+      const message = escapeHtml(
+        extractRenderableText(update.message || update) || ""
+      );
       const timestamp = update.created_at
         ? escapeHtml(formatDate(update.created_at))
         : "";
@@ -342,7 +408,7 @@ function renderLiveUpdates() {
           ${timestamp ? `<div class="entity-meta">${timestamp}</div>` : ""}
           ${
             message
-              ? `<div class="entity-meta" style="margin-top:6px;">${message}</div>`
+              ? `<div class="entity-meta entity-meta-description">${message}</div>`
               : ""
           }
         </div>
