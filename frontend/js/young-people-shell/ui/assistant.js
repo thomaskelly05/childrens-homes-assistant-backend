@@ -116,13 +116,65 @@ function ensureAssistantState() {
   }
 }
 
+function extractTextContent(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value == null) {
+    return "";
+  }
+
+  if (Array.isArray(value)) {
+    const joined = value
+      .map((item) => extractTextContent(item))
+      .filter(Boolean)
+      .join("\n");
+    if (joined.trim()) return joined;
+  }
+
+  if (typeof value === "object") {
+    const candidates = [
+      value.text,
+      value.message,
+      value.response,
+      value.answer,
+      value.output,
+      value.content,
+      value.body,
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate;
+      }
+    }
+
+    if (Array.isArray(value.parts)) {
+      const joined = value.parts
+        .map((part) => extractTextContent(part))
+        .filter(Boolean)
+        .join("\n");
+      if (joined.trim()) return joined;
+    }
+
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return "";
+    }
+  }
+
+  return String(value);
+}
+
 function cloneMessageEntry(entry = {}) {
   return {
     id:
       entry.id ||
       `assistant-msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: entry.role || "assistant",
-    content: String(entry.content || ""),
+    content: extractTextContent(entry.content || entry.text || entry.message || ""),
     created_at: entry.created_at || new Date().toISOString(),
     _streaming: !!entry._streaming,
   };
@@ -219,7 +271,7 @@ function addAssistantPlaceholder() {
 }
 
 function updateLastAssistantStreamingText(text) {
-  const safeText = String(text || "Thinking…");
+  const safeText = extractTextContent(text) || "Thinking…";
   const lists = [
     state.assistantMessages || [],
     state.assistantModalMessages || [],
@@ -238,7 +290,7 @@ function updateLastAssistantStreamingText(text) {
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  const safeText = String(text || "No assistant reply returned.");
+  const safeText = extractTextContent(text) || "No assistant reply returned.";
   const lists = [
     state.assistantMessages || [],
     state.assistantModalMessages || [],
@@ -937,7 +989,7 @@ function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
     console.error("[assistant] token restore failed", error);
   }
 
-  return text;
+  return extractTextContent(text);
 }
 
 function applyAssistantMeta(meta = {}) {
@@ -1006,6 +1058,8 @@ export async function askAssistant(question) {
       scrubber_reverse_map: scrubbed.reverseMap || {},
     });
 
+    let finalText = "";
+
     await apiStreamAssistant(scrubbed.payload, {
       onMeta: (meta) => {
         applyAssistantMeta({
@@ -1047,20 +1101,23 @@ export async function askAssistant(question) {
           streamedText || "Thinking…",
           scrubbed.reverseMap
         );
-        updateLastAssistantStreamingText(restored || "Thinking…");
+        finalText = extractTextContent(restored || "Thinking…");
+        updateLastAssistantStreamingText(finalText || "Thinking…");
       },
       onDone: (streamedText) => {
         const restored = restoreAssistantReplyTokens(
-          String(streamedText || "").trim() || "No assistant reply returned.",
+          streamedText || finalText || "No assistant reply returned.",
           scrubbed.reverseMap
         );
 
-        replaceLastAssistantPlaceholder(restored);
+        replaceLastAssistantPlaceholder(
+          extractTextContent(restored || finalText || "No assistant reply returned.")
+        );
       },
     });
   } catch (error) {
     replaceLastAssistantPlaceholder(
-      error?.message || "The assistant could not answer right now."
+      extractTextContent(error?.message || "The assistant could not answer right now.")
     );
   } finally {
     setAssistantSending(false);
