@@ -1,4 +1,4 @@
-import { state } from "../state.js";
+import { state, clearSelectedYoungPerson, setSelectedYoungPerson } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import {
@@ -71,7 +71,6 @@ function renderYoungPersonCard(item = {}) {
 
       <div class="selector-card-body">
         <h3>${escapeHtml(displayName)}</h3>
-
         ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
 
         ${
@@ -128,6 +127,8 @@ function matchesSearch(item = {}, term = "") {
     item.first_name,
     item.last_name,
     item.preferred_name,
+    item.full_name,
+    item.name,
     item.placement_status,
     item.summary_risk_level,
     item.local_id_number,
@@ -139,6 +140,10 @@ function matchesSearch(item = {}, term = "") {
     .toLowerCase();
 
   return haystack.includes(String(term).toLowerCase());
+}
+
+function getResolvedSection() {
+  return state.currentSection || state.activeSection || state.currentView || "workspace";
 }
 
 export function filterSelectorList(term = "") {
@@ -168,13 +173,12 @@ export async function loadYoungPersonSelector() {
   const data = await apiGet("/young-people");
   const items = normaliseYoungPeopleResponse(data);
 
-  state.youngPeople = items;
+  state.youngPeople = Array.isArray(items) ? items : [];
   filterSelectorList(state.youngPeopleFilter || "");
 }
 
 export function goBackToSelector() {
-  state.youngPersonId = null;
-  state.selectedYoungPerson = null;
+  clearSelectedYoungPerson();
   setYoungPersonIdInUrl(null);
 
   els.workspaceScreen?.classList.add("hidden");
@@ -193,7 +197,6 @@ export async function openYoungPerson(id, options = {}) {
   const numericId = Number(id);
   const youngPersonId = Number.isNaN(numericId) ? id : numericId;
 
-  state.youngPersonId = youngPersonId;
   setYoungPersonIdInUrl(youngPersonId);
 
   const existing =
@@ -202,16 +205,18 @@ export async function openYoungPerson(id, options = {}) {
     ) || null;
 
   if (existing) {
-    state.selectedYoungPerson = existing;
+    setSelectedYoungPerson(existing);
   } else {
     try {
       const data = await apiGet(`/young-people/${youngPersonId}`);
-      state.selectedYoungPerson =
-        data.young_person || data.item || data || null;
+      const person = data.young_person || data.item || data || null;
+      setSelectedYoungPerson(person || { id: youngPersonId });
     } catch {
-      state.selectedYoungPerson = { id: youngPersonId };
+      setSelectedYoungPerson({ id: youngPersonId });
     }
   }
+
+  state.currentScope = "child";
 
   els.selectorScreen?.classList.add("hidden");
   els.workspaceScreen?.classList.remove("hidden");
@@ -226,11 +231,7 @@ export async function openYoungPerson(id, options = {}) {
     const navModule = await import("./nav.js");
 
     if (typeof navModule.loadSection === "function") {
-      await navModule.loadSection(
-        state.currentSection || state.activeSection || "workspace"
-      );
-    } else if (typeof navModule.handleViewChange === "function") {
-      await navModule.handleViewChange(state.currentView || "overview");
+      await navModule.loadSection(getResolvedSection());
     }
   }
 
