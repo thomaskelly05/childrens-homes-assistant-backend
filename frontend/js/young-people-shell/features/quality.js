@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
+import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
@@ -60,28 +61,57 @@ function formatDateTime(value) {
 }
 
 function getStatusTone(status = "") {
-  const normalised = String(status || "").toLowerCase().replaceAll(" ", "_");
+  const normalised = String(status || "")
+    .toLowerCase()
+    .trim()
+    .replaceAll(" ", "_");
 
   if (
-    ["overdue", "high", "critical", "escalated", "missing", "non_compliant", "failed"].includes(
-      normalised
-    )
+    [
+      "overdue",
+      "high",
+      "critical",
+      "escalated",
+      "missing",
+      "non_compliant",
+      "failed",
+      "danger",
+      "open",
+    ].includes(normalised)
   ) {
     return "danger";
   }
 
   if (
-    ["due_soon", "warning", "medium", "review_due", "attention", "at_risk"].includes(
-      normalised
-    )
+    [
+      "due",
+      "due_soon",
+      "warning",
+      "medium",
+      "review_due",
+      "attention",
+      "at_risk",
+      "planned",
+      "received",
+      "sent",
+    ].includes(normalised)
   ) {
     return "warning";
   }
 
   if (
-    ["completed", "good", "active", "booked", "compliant", "ok", "passed"].includes(
-      normalised
-    )
+    [
+      "completed",
+      "good",
+      "active",
+      "booked",
+      "compliant",
+      "ok",
+      "passed",
+      "resolved",
+      "closed",
+      "reviewed",
+    ].includes(normalised)
   ) {
     return "success";
   }
@@ -89,20 +119,45 @@ function getStatusTone(status = "") {
   return "muted";
 }
 
+function toTime(value) {
+  if (!value) return 0;
+  const t = new Date(value).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    return toTime(bValue) - toTime(aValue);
   });
 }
 
 function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(aValue).getTime() - new Date(bValue).getTime();
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    return toTime(aValue) - toTime(bValue);
   });
+}
+
+function hasUsableData(data) {
+  if (!data || typeof data !== "object") return false;
+  if (Array.isArray(data.items) && data.items.length > 0) return true;
+  if (Array.isArray(data.records) && data.records.length > 0) return true;
+  if (Array.isArray(data.audits) && data.audits.length > 0) return true;
+  if (Array.isArray(data.incidents) && data.incidents.length > 0) return true;
+  if (Array.isArray(data.safeguarding) && data.safeguarding.length > 0) return true;
+  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
+  if (Array.isArray(data.compliance) && data.compliance.length > 0) return true;
+  if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
+  if (Array.isArray(data.reports) && data.reports.length > 0) return true;
+  if (data.summary && typeof data.summary === "object") return true;
+  if (data.dashboard && typeof data.dashboard === "object") return true;
+  if (data.quality_summary && typeof data.quality_summary === "object") return true;
+  if (typeof data.audit_score !== "undefined") return true;
+  if (typeof data.quality_score !== "undefined") return true;
+  return false;
 }
 
 function normaliseQualitySummary(data = {}) {
@@ -127,9 +182,10 @@ function normaliseIncidentItems(data = {}) {
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     incident_type: item.incident_type || item.title || "Incident",
-    description: item.description || item.summary || item.notes || "Incident recorded.",
+    description:
+      item.description || item.summary || item.notes || "Incident recorded.",
     location: item.location || "",
-    status: item.status || "recorded",
+    status: item.status || item.manager_review_status || "recorded",
     incident_datetime: item.incident_datetime || item.created_at || null,
     record_type: item.record_type || "incident",
   }));
@@ -142,10 +198,13 @@ function normaliseSafeguardingItems(data = {}) {
     safeguarding_category:
       item.safeguarding_category || item.title || item.category || "Safeguarding",
     concern_details:
-      item.concern_details || item.summary || item.notes || "Safeguarding concern recorded.",
+      item.concern_details ||
+      item.summary ||
+      item.notes ||
+      "Safeguarding concern recorded.",
     concern_datetime: item.concern_datetime || item.created_at || null,
     referral_made: Boolean(item.referral_made),
-    status: item.status || "open",
+    status: item.status || item.manager_review_status || "open",
     record_type: item.record_type || "safeguarding",
   }));
 }
@@ -169,7 +228,10 @@ function normaliseComplianceItems(data = {}) {
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     title: item.title || item.area || "Compliance item",
-    summary: item.summary || item.notes || "Compliance item recorded.",
+    summary:
+      item.summary ||
+      item.notes ||
+      `${item.status || "Status recorded"}${item.due_date ? ` • Due ${formatDate(item.due_date)}` : ""}`,
     area: item.area || "",
     review_date: item.review_date || item.due_date || null,
     due_date: item.due_date || item.review_date || null,
@@ -184,7 +246,7 @@ function normaliseReportItems(data = {}) {
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     title: item.title || item.report_type || "Report",
-    summary: item.summary || item.notes || "Report recorded.",
+    summary: item.summary || item.notes || item.report_text || "Report recorded.",
     report_type: item.report_type || "",
     status: item.status || "completed",
     created_at: item.created_at || item.updated_at || null,
@@ -202,7 +264,9 @@ function buildTopStats({
   compliancePressure = [],
 }) {
   const overdueAudits = audits.filter((item) =>
-    ["overdue", "due_soon", "review_due"].includes(String(item.status || "").toLowerCase().replaceAll(" ", "_"))
+    ["overdue", "due_soon", "review_due"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+    )
   ).length;
 
   const recentIncidents = incidents.filter((item) => {
@@ -354,7 +418,9 @@ function renderRows(items = [], options = {}) {
                 <div class="record-row-meta">${safeText(meta)}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(status || "Recorded")}</span>
+                <span class="row-pill ${safeText(tone)}">${safeText(
+                  status || "Recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -451,7 +517,8 @@ function buildInsightItems({ audits = [], incidents = [], safeguarding = [], com
   if (!items.length) {
     items.push({
       title: "No critical themes showing",
-      summary: "The dashboard is not currently surfacing major audit, incident or compliance pressure.",
+      summary:
+        "The dashboard is not currently surfacing major audit, incident or compliance pressure.",
     });
   }
 
@@ -825,7 +892,52 @@ function buildFallbackQualityData(homeId) {
 }
 
 async function fetchQualityDataset(homeId) {
-  return buildFallbackQualityData(homeId);
+  const safeGet = (url) => apiGet(url).catch(() => null);
+
+  const requests = [
+    safeGet(`/homes/${homeId}/quality`),
+    safeGet(`/homes/${homeId}/audits`),
+    safeGet(`/homes/${homeId}/incidents`),
+    safeGet(`/homes/${homeId}/tasks`),
+    safeGet(`/homes/${homeId}/compliance`),
+    safeGet(`/homes/${homeId}/reports`),
+  ];
+
+  const [
+    summaryData,
+    auditData,
+    incidentData,
+    taskData,
+    complianceData,
+    reportData,
+  ] = await Promise.all(requests);
+
+  const safeguardingData = null;
+
+  const responses = [
+    summaryData,
+    auditData,
+    incidentData,
+    taskData,
+    complianceData,
+    reportData,
+  ];
+
+  const hasLiveSuccess = responses.some(hasUsableData);
+
+  if (!hasLiveSuccess) {
+    return buildFallbackQualityData(homeId);
+  }
+
+  return {
+    summaryData: summaryData || {},
+    auditData: auditData || { items: [] },
+    incidentData: incidentData || { items: [] },
+    safeguardingData: safeguardingData || { items: [] },
+    taskData: taskData || { items: [] },
+    complianceData: complianceData || { items: [] },
+    reportData: reportData || { items: [] },
+  };
 }
 
 export async function loadQualityDashboard() {
@@ -943,6 +1055,7 @@ export async function loadQualityDashboard() {
       openActions: `${openActions.length} open • ${complianceItems.length} compliance pressure`,
     });
   } catch (error) {
+    console.error("[quality] load failed", error);
     renderErrorState(error?.message || "The quality dashboard could not be loaded.");
   }
 }
