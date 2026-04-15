@@ -2,9 +2,13 @@ import { state } from "../state.js";
 import { openComposerFor } from "./composer.js";
 import {
   QUICK_ACTIONS as CONFIG_QUICK_ACTIONS,
+  PROFILE_ACTIONS as CONFIG_PROFILE_ACTIONS,
   SECTION_DEFAULT_ACTION,
   SCOPE_SECTIONS,
+  getSafeSectionForScope,
 } from "../core/config.js";
+
+let actionRouterBound = false;
 
 function cleanText(value) {
   return String(value || "").trim();
@@ -23,7 +27,21 @@ function getCurrentScope() {
 }
 
 function getCurrentSection() {
-  return state.currentSection || state.activeSection || state.currentView || "workspace";
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
+}
+
+function getCurrentHomeId() {
+  return (
+    state.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    null
+  );
 }
 
 function ensureScopeContext() {
@@ -33,7 +51,7 @@ function ensureScopeContext() {
     return Boolean(state.youngPersonId);
   }
 
-  return true;
+  return Boolean(getCurrentHomeId());
 }
 
 function resolveRecordType(value = "") {
@@ -176,7 +194,7 @@ function normaliseActionKey(value = "") {
     edit_profile_legal: "profile_legal",
     edit_profile_formulation: "profile_formulation",
 
-    assistant_handover: "daily_note",
+    assistant_handover: "task",
     assistant_priorities: "task",
     assistant_chronology: "ai_generated_report",
     assistant_plans: "support_plan",
@@ -208,7 +226,7 @@ function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
     keywork: false,
     appointment: allowedSections.includes("calendar"),
     achievement_record: false,
-    safeguarding_record: true,
+    safeguarding_record: scope === "quality",
     missing_episode: false,
     task: true,
     manager_action: true,
@@ -217,7 +235,7 @@ function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
     therapy: allowedSections.includes("therapy"),
     team: allowedSections.includes("team"),
     supervision: allowedSections.includes("supervision"),
-    ai_generated_report: true,
+    ai_generated_report: allowedSections.includes("reports"),
 
     profile_identity: false,
     profile_communication: false,
@@ -267,10 +285,7 @@ function inferSectionForRecordType(recordType = "") {
 function inferRecordTypeFromActionType(actionType = "", suggestion = {}) {
   const resolvedAction = resolveActionType(actionType);
 
-  if (
-    resolvedAction === "draft_summary" ||
-    resolvedAction === "draft_note"
-  ) {
+  if (resolvedAction === "draft_summary" || resolvedAction === "draft_note") {
     return resolveRecordType(
       suggestion.record_type ||
         suggestion.target_record_type ||
@@ -279,7 +294,7 @@ function inferRecordTypeFromActionType(actionType = "", suggestion = {}) {
   }
 
   if (resolvedAction === "draft_handover") {
-    return "handover_record";
+    return "task";
   }
 
   if (resolvedAction === "review_incidents") {
@@ -310,7 +325,7 @@ function buildDraftFromSuggestion(suggestion = {}, resolvedType = "") {
   const metadata = suggestion.metadata || {};
   const scope = getCurrentScope();
 
-  const draft = {
+  return {
     young_person_id:
       scope === "child"
         ? suggestion.young_person_id ||
@@ -322,7 +337,7 @@ function buildDraftFromSuggestion(suggestion = {}, resolvedType = "") {
     home_id:
       suggestion.home_id ||
       metadata.home_id ||
-      state.homeId ||
+      getCurrentHomeId() ||
       null,
 
     scope,
@@ -360,8 +375,6 @@ function buildDraftFromSuggestion(suggestion = {}, resolvedType = "") {
     suggestion_action_type: resolveActionType(suggestion.action_type),
     suggestion_metadata: metadata,
   };
-
-  return draft;
 }
 
 function safeOpen(recordType, mode = "create", item = null) {
@@ -377,7 +390,7 @@ function safeOpen(recordType, mode = "create", item = null) {
       ? {
           ...item,
           current_scope: scope,
-          home_id: item.home_id ?? state.homeId ?? null,
+          home_id: item.home_id ?? getCurrentHomeId() ?? null,
           young_person_id:
             scope === "child"
               ? item.young_person_id ?? state.youngPersonId ?? null
@@ -389,116 +402,45 @@ function safeOpen(recordType, mode = "create", item = null) {
   return true;
 }
 
-function setCurrentSection(section = "") {
-  const next = cleanText(section);
-  if (!next) return false;
+async function navigateToSection(section = "") {
+  const scope = getCurrentScope();
+  const safeSection = getSafeSectionForScope(section, scope);
 
-  state.currentSection = next;
-  state.activeSection = next;
-  state.currentView = next;
-  return true;
+  state.currentSection = safeSection;
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
+
+  try {
+    const navModule = await import("./nav.js");
+    if (typeof navModule.loadSection === "function") {
+      await navModule.loadSection(safeSection);
+      return true;
+    }
+  } catch (error) {
+    console.error("[action-router] failed to navigate section", error);
+  }
+
+  return false;
 }
 
 function buildQuickActionMap() {
   const actions = {};
 
-  (CONFIG_QUICK_ACTIONS || []).forEach((action) => {
-    const resolvedType = resolveRecordType(action.record_type || action.id);
+  [...(CONFIG_QUICK_ACTIONS || []), ...(CONFIG_PROFILE_ACTIONS || [])].forEach(
+    (action) => {
+      const resolvedType = resolveRecordType(action.record_type || action.id);
 
-    actions[action.id] = {
-      id: action.id,
-      label: action.label || action.id,
-      short_label: action.short_label || action.label || action.id,
-      record_type: resolvedType,
-      section_hint: action.section_hint || "",
-      description: action.description || "",
-      run: () => safeOpen(resolvedType),
-    };
-  });
-
-  if (!actions.document) {
-    actions.document = {
-      id: "document",
-      label: "Upload document",
-      short_label: "Upload",
-      record_type: "document",
-      section_hint: "documents",
-      description: "Upload and organise documents.",
-      run: () => safeOpen("document"),
-    };
-  }
-
-  if (!actions.communication) {
-    actions.communication = {
-      id: "communication",
-      label: "Log communication",
-      short_label: "Communication",
-      record_type: "communication",
-      section_hint: "communication",
-      description: "Log professional communication.",
-      run: () => safeOpen("communication"),
-    };
-  }
-
-  if (!actions.therapy) {
-    actions.therapy = {
-      id: "therapy",
-      label: "Add therapy note",
-      short_label: "Therapy",
-      record_type: "therapy",
-      section_hint: "therapy",
-      description: "Record therapeutic work and recommendations.",
-      run: () => safeOpen("therapy"),
-    };
-  }
-
-  if (!actions.team) {
-    actions.team = {
-      id: "team",
-      label: "Add team item",
-      short_label: "Team",
-      record_type: "team",
-      section_hint: "team",
-      description: "Record staffing or team updates.",
-      run: () => safeOpen("team"),
-    };
-  }
-
-  if (!actions.supervision) {
-    actions.supervision = {
-      id: "supervision",
-      label: "Add supervision note",
-      short_label: "Supervision",
-      record_type: "supervision",
-      section_hint: "supervision",
-      description: "Record supervision and development notes.",
-      run: () => safeOpen("supervision"),
-    };
-  }
-
-  if (!actions.manager_action) {
-    actions.manager_action = {
-      id: "manager_action",
-      label: "Add manager action",
-      short_label: "Manager action",
-      record_type: "manager_action",
-      section_hint: "manager",
-      description: "Record management oversight and follow-up.",
-      run: () => safeOpen("manager_action"),
-    };
-  }
-
-  if (!actions.ai_generated_report) {
-    actions.ai_generated_report = {
-      id: "ai_generated_report",
-      label: "Create AI summary",
-      short_label: "AI summary",
-      record_type: "ai_generated_report",
-      section_hint: "reports",
-      description: "Draft a summary, chronology, or review output.",
-      run: () => safeOpen("ai_generated_report"),
-    };
-  }
+      actions[action.id] = {
+        id: action.id,
+        label: action.label || action.id,
+        short_label: action.short_label || action.label || action.id,
+        record_type: resolvedType,
+        section_hint: action.section_hint || inferSectionForRecordType(resolvedType),
+        description: action.description || "",
+        run: () => safeOpen(resolvedType),
+      };
+    }
+  );
 
   return actions;
 }
@@ -506,15 +448,14 @@ function buildQuickActionMap() {
 const ACTIONS = buildQuickActionMap();
 
 function getFallbackActionKey(section = "", scope = getCurrentScope()) {
-  const sectionKey = String(section || "").trim();
+  const sectionKey = cleanText(section);
   const configured = SECTION_DEFAULT_ACTION?.[sectionKey];
 
   if (configured && isActionAllowedInScope(configured, scope)) {
     return configured;
   }
 
-  if (scope === "home") return "task";
-  if (scope === "quality") return "task";
+  if (scope === "home" || scope === "quality") return "task";
   return "daily_note";
 }
 
@@ -522,18 +463,24 @@ export function getActionForQuickButton(key, context = {}) {
   const scope = context.scope || getCurrentScope();
   const resolvedKey = normaliseActionKey(key);
 
-  if (ACTIONS[resolvedKey] && isActionAllowedInScope(ACTIONS[resolvedKey].record_type, scope)) {
+  if (
+    ACTIONS[resolvedKey] &&
+    isActionAllowedInScope(ACTIONS[resolvedKey].record_type, scope)
+  ) {
     return ACTIONS[resolvedKey];
   }
 
   const resolvedType = resolveRecordType(resolvedKey);
-  if (ACTIONS[resolvedType] && isActionAllowedInScope(ACTIONS[resolvedType].record_type, scope)) {
+  if (
+    ACTIONS[resolvedType] &&
+    isActionAllowedInScope(ACTIONS[resolvedType].record_type, scope)
+  ) {
     return ACTIONS[resolvedType];
   }
 
   const section = context.section || getCurrentSection();
   const fallbackKey = getFallbackActionKey(section, scope);
-  return ACTIONS[fallbackKey];
+  return ACTIONS[fallbackKey] || null;
 }
 
 function runCreateSuggestion(suggestion = {}) {
@@ -554,11 +501,8 @@ function runCreateSuggestion(suggestion = {}) {
 }
 
 function runTaskSuggestion(suggestion = {}) {
-  const scope = getCurrentScope();
-  const type = "task";
-
   if (!ensureScopeContext()) return false;
-  if (!isActionAllowedInScope(type, scope)) return false;
+  if (!isActionAllowedInScope("task")) return false;
 
   const draft = buildDraftFromSuggestion(
     {
@@ -575,7 +519,7 @@ function runTaskSuggestion(suggestion = {}) {
     "task"
   );
 
-  openComposerFor(type, "create", draft);
+  openComposerFor("task", "create", draft);
   return true;
 }
 
@@ -639,26 +583,22 @@ function runImproveSuggestion(suggestion = {}) {
 }
 
 function runEscalationSuggestion(suggestion = {}) {
-  const scope = getCurrentScope();
-
   if (!ensureScopeContext()) return false;
-  if (!isActionAllowedInScope("manager_action", scope)) return false;
+  if (!isActionAllowedInScope("manager_action")) return false;
 
   const draft = buildDraftFromSuggestion(
     {
       ...suggestion,
       record_type: "manager_action",
       prefill: {
-        action_type:
-          suggestion.prefill?.action_type ||
-          "escalation",
+        ...(suggestion.prefill || {}),
+        action_type: suggestion.prefill?.action_type || "escalation",
         note:
           suggestion.prefill?.note ||
           suggestion.description ||
           suggestion.reason ||
           suggestion.title ||
           "Escalation required",
-        ...(suggestion.prefill || {}),
       },
     },
     "manager_action"
@@ -668,7 +608,7 @@ function runEscalationSuggestion(suggestion = {}) {
   return true;
 }
 
-function runOpenSectionSuggestion(suggestion = {}) {
+async function runOpenSectionSuggestion(suggestion = {}) {
   const explicitSection = cleanText(
     suggestion.section ||
       suggestion.target_section ||
@@ -686,7 +626,7 @@ function runOpenSectionSuggestion(suggestion = {}) {
   const targetSection = explicitSection || recordSection;
   if (!targetSection) return false;
 
-  return setCurrentSection(targetSection);
+  return navigateToSection(targetSection);
 }
 
 function runOpenRecordSuggestion(suggestion = {}) {
@@ -723,13 +663,8 @@ function runDraftSummarySuggestion(suggestion = {}) {
       record_type: targetType,
       prefill: {
         ...(suggestion.prefill || {}),
-        title:
-          suggestion.prefill?.title ||
-          suggestion.title ||
-          "AI summary",
-        summary_type:
-          suggestion.prefill?.summary_type ||
-          "summary",
+        title: suggestion.prefill?.title || suggestion.title || "AI summary",
+        summary_type: suggestion.prefill?.summary_type || "summary",
       },
     },
     targetType
@@ -740,28 +675,26 @@ function runDraftSummarySuggestion(suggestion = {}) {
 }
 
 function runDraftHandoverSuggestion(suggestion = {}) {
-  const scope = getCurrentScope();
-  const targetType = "handover_record";
-
   if (!ensureScopeContext()) return false;
-  if (!isActionAllowedInScope(targetType, scope)) return false;
+  if (!isActionAllowedInScope("task")) return false;
 
   const draft = buildDraftFromSuggestion(
     {
       ...suggestion,
-      record_type: targetType,
+      record_type: "task",
       prefill: {
         ...(suggestion.prefill || {}),
         title:
           suggestion.prefill?.title ||
           suggestion.title ||
-          "AI handover draft",
+          "Handover follow-up",
+        task_type: suggestion.prefill?.task_type || "handover",
       },
     },
-    targetType
+    "task"
   );
 
-  openComposerFor(targetType, "create", draft);
+  openComposerFor("task", "create", draft);
   return true;
 }
 
@@ -795,16 +728,11 @@ function runDraftNoteSuggestion(suggestion = {}) {
   return true;
 }
 
-export function runSuggestionAction(suggestion = {}) {
+export async function runSuggestionAction(suggestion = {}) {
   const actionType = resolveActionType(suggestion.action_type);
 
-  if (actionType === "create_record") {
-    return runCreateSuggestion(suggestion);
-  }
-
-  if (actionType === "create_task") {
-    return runTaskSuggestion(suggestion);
-  }
+  if (actionType === "create_record") return runCreateSuggestion(suggestion);
+  if (actionType === "create_task") return runTaskSuggestion(suggestion);
 
   if (
     actionType === "review_record" ||
@@ -815,47 +743,22 @@ export function runSuggestionAction(suggestion = {}) {
     return runReviewSuggestion(suggestion);
   }
 
-  if (actionType === "improve_record") {
-    return runImproveSuggestion(suggestion);
-  }
-
-  if (actionType === "escalate") {
-    return runEscalationSuggestion(suggestion);
-  }
-
-  if (actionType === "open_section") {
-    return runOpenSectionSuggestion(suggestion);
-  }
-
-  if (actionType === "open_record") {
-    return runOpenRecordSuggestion(suggestion);
-  }
-
-  if (actionType === "draft_summary") {
-    return runDraftSummarySuggestion(suggestion);
-  }
-
-  if (actionType === "draft_handover") {
-    return runDraftHandoverSuggestion(suggestion);
-  }
-
-  if (actionType === "draft_note") {
-    return runDraftNoteSuggestion(suggestion);
-  }
+  if (actionType === "improve_record") return runImproveSuggestion(suggestion);
+  if (actionType === "escalate") return runEscalationSuggestion(suggestion);
+  if (actionType === "open_section") return runOpenSectionSuggestion(suggestion);
+  if (actionType === "open_record") return runOpenRecordSuggestion(suggestion);
+  if (actionType === "draft_summary") return runDraftSummarySuggestion(suggestion);
+  if (actionType === "draft_handover") return runDraftHandoverSuggestion(suggestion);
+  if (actionType === "draft_note") return runDraftNoteSuggestion(suggestion);
 
   return runCreateSuggestion(suggestion);
 }
 
 function getActionFromButton(button) {
-  const actionKey =
-    button.dataset.quickAction ||
-    button.dataset.actionRouter ||
-    "";
+  const actionKey = button.dataset.quickAction || button.dataset.actionRouter || "";
 
   return getActionForQuickButton(actionKey, {
-    section:
-      button.dataset.section ||
-      getCurrentSection(),
+    section: button.dataset.section || getCurrentSection(),
     scope: getCurrentScope(),
   });
 }
@@ -885,14 +788,14 @@ function buildSuggestionFromButton(button) {
     priority: button.dataset.priority || "",
 
     young_person_id: button.dataset.youngPersonId || state.youngPersonId || null,
-    home_id: button.dataset.homeId || state.homeId || null,
+    home_id: button.dataset.homeId || getCurrentHomeId() || null,
 
     prefill: {},
     metadata: {
       source_record_type: button.dataset.sourceRecordType || "",
       source_record_id: button.dataset.sourceRecordId || null,
       young_person_id: button.dataset.youngPersonId || state.youngPersonId || null,
-      home_id: button.dataset.homeId || state.homeId || null,
+      home_id: button.dataset.homeId || getCurrentHomeId() || null,
       target_section: button.dataset.targetSection || "",
     },
   };
@@ -900,15 +803,23 @@ function buildSuggestionFromButton(button) {
 
 export function bindActionRouter({
   onMissingYoungPerson,
+  onMissingHomeContext,
   onSectionChange,
   quickButtonSelector = "[data-quick-action], [data-action-router]",
   suggestionButtonSelector = "[data-suggestion-action]",
 } = {}) {
-  document.addEventListener("click", (event) => {
+  if (actionRouterBound) return;
+  actionRouterBound = true;
+
+  document.addEventListener("click", async (event) => {
     const quickButton = event.target.closest(quickButtonSelector);
     if (quickButton) {
       if (!ensureScopeContext()) {
-        onMissingYoungPerson?.();
+        if (getCurrentScope() === "child") {
+          onMissingYoungPerson?.();
+        } else {
+          onMissingHomeContext?.();
+        }
         return;
       }
 
@@ -918,21 +829,22 @@ export function bindActionRouter({
     }
 
     const suggestionButton = event.target.closest(suggestionButtonSelector);
-    if (suggestionButton) {
-      if (!ensureScopeContext()) {
+    if (!suggestionButton) return;
+
+    if (!ensureScopeContext()) {
+      if (getCurrentScope() === "child") {
         onMissingYoungPerson?.();
-        return;
+      } else {
+        onMissingHomeContext?.();
       }
+      return;
+    }
 
-      const suggestion = buildSuggestionFromButton(suggestionButton);
-      const didRun = runSuggestionAction(suggestion);
+    const suggestion = buildSuggestionFromButton(suggestionButton);
+    const didRun = await runSuggestionAction(suggestion);
 
-      if (
-        didRun &&
-        resolveActionType(suggestion.action_type) === "open_section"
-      ) {
-        onSectionChange?.(getCurrentSection());
-      }
+    if (didRun && resolveActionType(suggestion.action_type) === "open_section") {
+      onSectionChange?.(getCurrentSection());
     }
   });
 }
