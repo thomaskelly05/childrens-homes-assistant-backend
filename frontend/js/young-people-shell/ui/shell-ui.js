@@ -1,4 +1,4 @@
-import { state } from "../state.js";
+import { state, normaliseUserRole } from "../state.js";
 import { els } from "../dom.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
 import {
@@ -50,13 +50,7 @@ function getCurrentScope() {
 }
 
 function getCurrentRole() {
-  const rawRole = String(state.userRole || "staff").toLowerCase().trim();
-
-  if (rawRole === "administrator") return "admin";
-  if (rawRole === "super_admin") return "admin";
-  if (rawRole === "superadmin") return "admin";
-
-  return rawRole;
+  return normaliseUserRole(state.userRole || "staff");
 }
 
 function getAllowedScopesForRole() {
@@ -440,6 +434,8 @@ export function bindShellChrome() {
 
 export function refreshShellChrome() {
   updateYoungPersonChrome(state.selectedYoungPerson || {});
-  updateSectionChrome(state.currentSection || state.activeSection || "workspace");
+  updateSectionChrome(
+    state.currentSection || state.activeSection || state.currentView || "workspace"
+  );
   refreshAssistantUi();
 }
