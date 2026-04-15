@@ -71,6 +71,27 @@ function getHomeName() {
   );
 }
 
+function getAllowedHomeIds() {
+  return Array.isArray(state.allowedHomeIds)
+    ? state.allowedHomeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item))
+    : [];
+}
+
+function getAccessLevelForScope(scope = getCurrentScope()) {
+  const role = String(state.userRole || "").toLowerCase();
+
+  if (scope === "child") return "child";
+  if (scope === "home") return "home";
+
+  if (scope === "quality") {
+    return role === "ri" || role === "admin" ? "provider" : "home";
+  }
+
+  return "home";
+}
+
 function getAssistantScopeType() {
   const scope = getCurrentScope();
 
@@ -116,65 +137,13 @@ function ensureAssistantState() {
   }
 }
 
-function extractTextContent(value) {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (value == null) {
-    return "";
-  }
-
-  if (Array.isArray(value)) {
-    const joined = value
-      .map((item) => extractTextContent(item))
-      .filter(Boolean)
-      .join("\n");
-    if (joined.trim()) return joined;
-  }
-
-  if (typeof value === "object") {
-    const candidates = [
-      value.text,
-      value.message,
-      value.response,
-      value.answer,
-      value.output,
-      value.content,
-      value.body,
-    ];
-
-    for (const candidate of candidates) {
-      if (typeof candidate === "string" && candidate.trim()) {
-        return candidate;
-      }
-    }
-
-    if (Array.isArray(value.parts)) {
-      const joined = value.parts
-        .map((part) => extractTextContent(part))
-        .filter(Boolean)
-        .join("\n");
-      if (joined.trim()) return joined;
-    }
-
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return "";
-    }
-  }
-
-  return String(value);
-}
-
 function cloneMessageEntry(entry = {}) {
   return {
     id:
       entry.id ||
       `assistant-msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: entry.role || "assistant",
-    content: extractTextContent(entry.content || entry.text || entry.message || ""),
+    content: String(entry.content || ""),
     created_at: entry.created_at || new Date().toISOString(),
     _streaming: !!entry._streaming,
   };
@@ -271,7 +240,7 @@ function addAssistantPlaceholder() {
 }
 
 function updateLastAssistantStreamingText(text) {
-  const safeText = extractTextContent(text) || "Thinking…";
+  const safeText = String(text || "Thinking…");
   const lists = [
     state.assistantMessages || [],
     state.assistantModalMessages || [],
@@ -290,7 +259,7 @@ function updateLastAssistantStreamingText(text) {
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  const safeText = extractTextContent(text) || "No assistant reply returned.";
+  const safeText = String(text || "No assistant reply returned.");
   const lists = [
     state.assistantMessages || [],
     state.assistantModalMessages || [],
@@ -374,7 +343,7 @@ function detectAssistantIntent(text = "") {
     return ASSISTANT_INTENT.risk;
   }
 
-  if (/quality|ri|inspection|governance/.test(value)) {
+  if (/quality|ri|inspection|governance|provider|home compare|compare homes|all homes/.test(value)) {
     return ASSISTANT_INTENT.quality;
   }
 
@@ -457,7 +426,11 @@ function buildRoleAwareGreeting() {
     return `Hello. What would you like to know about ${getHomeName()}? I can help with a full summary, chronology, staffing, compliance, overdue items, management oversight, or next actions.`;
   }
 
-  return `Hello. What would you like to know about ${getHomeName()} quality and oversight? I can help with compliance themes, chronology, inspection readiness, or an RI-style summary.`;
+  return `Hello. What would you like to know about ${
+    getAccessLevelForScope("quality") === "provider"
+      ? "your homes and provider oversight"
+      : `${getHomeName()} quality and oversight`
+  }? I can help with compliance themes, chronology, inspection readiness, RI summaries, and cross-home comparisons where allowed.`;
 }
 
 function buildUnknownIntentPrompt() {
@@ -465,7 +438,7 @@ function buildUnknownIntentPrompt() {
 
   if (scope === "child") {
     return [
-      `I’m ready to help with ${getFullYoungPersonName()} across the whole OS record set.`,
+      `I’m ready to help with ${getFullYoungPersonName()} across that child’s full OS record.`,
       "",
       "You can ask for:",
       "• a full summary",
@@ -480,7 +453,7 @@ function buildUnknownIntentPrompt() {
 
   if (scope === "home") {
     return [
-      `I’m ready to help with ${getHomeName()} across the whole OS record set.`,
+      `I’m ready to help with ${getHomeName()} across that home’s full OS record.`,
       "",
       "You can ask for:",
       "• a full home summary",
@@ -493,7 +466,11 @@ function buildUnknownIntentPrompt() {
   }
 
   return [
-    `I’m ready to help with ${getHomeName()} quality and oversight across the whole OS record set.`,
+    `I’m ready to help with ${
+      getAccessLevelForScope("quality") === "provider"
+        ? "all homes you oversee"
+        : `${getHomeName()} quality and oversight`
+    } across the OS record set.`,
     "",
     "You can ask for:",
     "• a quality summary",
@@ -501,6 +478,7 @@ function buildUnknownIntentPrompt() {
     "• audit or RI issues",
     "• compliance gaps",
     "• governance concerns",
+    "• cross-home comparisons where permitted",
   ].join("\n");
 }
 
@@ -566,21 +544,6 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
       "Create a chronology and analysis for this young person.",
       "Draft a professional summary for a review meeting.",
     ],
-    documents: [
-      "What important documents are missing or due review?",
-      "Summarise the key child documents.",
-      "What document follow-up is needed?",
-    ],
-    communication: [
-      "Summarise recent communication with professionals and family.",
-      "What communication themes are emerging?",
-      "Draft a professional update from recent records.",
-    ],
-    therapy: [
-      "Summarise therapeutic themes and recommendations.",
-      "What should staff hold in mind from therapeutic input?",
-      "What follow-up actions come from therapy records?",
-    ],
   };
 
   const homeMap = {
@@ -608,11 +571,6 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
       "Summarise the service for reporting purposes.",
       "Create a chronology and thematic summary for the home.",
       "Draft a home-level review summary.",
-    ],
-    calendar: [
-      "What are the next key home dates and meetings?",
-      "What requires preparation this week?",
-      "Summarise upcoming deadlines and appointments.",
     ],
     team: [
       "Summarise staffing issues across the home.",
@@ -643,54 +601,39 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
 
   const qualityMap = {
     quality: [
-      "Summarise current quality themes across the service.",
-      "What would an RI or auditor notice first?",
-      "What quality concerns are emerging?",
+      "Summarise current quality themes across all homes I oversee.",
+      "Compare compliance risk across my homes.",
+      "What would an RI notice first?",
     ],
     compliance: [
       "What compliance gaps create the biggest Ofsted risk?",
-      "Summarise workforce and paperwork compliance issues.",
+      "Compare overdue compliance across homes.",
       "What needs urgent correction before inspection?",
     ],
     reports: [
-      "Draft a quality summary for leadership.",
+      "Draft a provider-wide quality summary.",
       "What themes should be highlighted in reporting?",
-      "Create a chronology and audit summary.",
+      "Create a chronology and audit summary across homes.",
     ],
     manager: [
       "What leadership themes need escalation?",
-      "What service-level patterns should management notice?",
+      "Which home needs the most support right now?",
       "Where is oversight weakest right now?",
     ],
-    calendar: [
-      "What quality deadlines and review dates are coming up?",
-      "What compliance milestones are due soon?",
-      "What needs preparing this month?",
-    ],
     team: [
-      "Summarise staffing and workforce quality concerns.",
+      "Summarise staffing and workforce quality concerns across homes.",
       "What training or supervision gaps are emerging?",
       "What workforce risks affect compliance?",
     ],
     supervision: [
-      "What supervision compliance risks are present?",
+      "What supervision compliance risks are present across homes?",
       "Where are staff oversight gaps strongest?",
-      "Summarise overdue supervisions and appraisals.",
-    ],
-    communication: [
-      "Summarise communication themes relevant to audit and quality.",
-      "What partner-agency communication needs follow-up?",
-      "Draft a professional quality update.",
+      "Summarise overdue supervisions by home.",
     ],
     documents: [
       "What statutory paperwork gaps need urgent action?",
-      "Summarise document quality and review issues.",
-      "Which documents create the biggest inspection risk?",
-    ],
-    therapy: [
-      "Summarise therapeutic provision quality themes.",
-      "What therapeutic follow-up is slipping?",
-      "Are there patterns in wellbeing or service delivery?",
+      "Compare document quality and review issues across homes.",
+      "Which home creates the biggest inspection risk?",
     ],
   };
 
@@ -713,6 +656,7 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
 export function updateAssistantContext() {
   const scope = getCurrentScope();
   const section = getCurrentSection();
+  const accessLevel = getAccessLevelForScope(scope);
 
   ensureAssistantState();
 
@@ -724,12 +668,14 @@ export function updateAssistantContext() {
     scope === "child"
       ? state.youngPersonId
         ? {
-            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • whole OS scope • section: ${sectionLabel}`,
+            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • child-only OS scope • section: ${sectionLabel}`,
             scope_type: "young_person",
             current_scope: scope,
             current_section: section,
+            access_level: "child",
             young_person_name: getFullYoungPersonName(),
             home_name: getHomeName(),
+            allowed_home_ids: [state.homeId].filter(Boolean),
             retrieval_default: "whole_scope",
             suggested_prompts: assistantPromptsForView(section, scope),
           }
@@ -738,29 +684,41 @@ export function updateAssistantContext() {
             scope_type: "global",
             current_scope: scope,
             current_section: section,
+            access_level: "child",
             young_person_name: null,
             home_name: getHomeName(),
+            allowed_home_ids: [state.homeId].filter(Boolean),
             retrieval_default: "whole_scope",
             suggested_prompts: assistantPromptsForView(section, scope),
           }
       : scope === "home"
       ? {
-          summary: `Home: ${getHomeName()} • whole-home OS scope • section: ${sectionLabel}`,
+          summary: `Home: ${getHomeName()} • home-only OS scope • section: ${sectionLabel}`,
           scope_type: "home",
           current_scope: scope,
           current_section: section,
+          access_level: "home",
           young_person_name: null,
           home_name: getHomeName(),
+          allowed_home_ids: [state.homeId].filter(Boolean),
           retrieval_default: "whole_scope",
           suggested_prompts: assistantPromptsForView(section, scope),
         }
       : {
-          summary: `Home: ${getHomeName()} • quality and RI • whole oversight scope • section: ${sectionLabel}`,
+          summary:
+            accessLevel === "provider"
+              ? `Quality: provider-wide oversight across allowed homes • section: ${sectionLabel}`
+              : `Quality: ${getHomeName()} only • section: ${sectionLabel}`,
           scope_type: "quality",
           current_scope: scope,
           current_section: section,
+          access_level: accessLevel,
           young_person_name: null,
           home_name: getHomeName(),
+          allowed_home_ids:
+            accessLevel === "provider"
+              ? getAllowedHomeIds()
+              : [state.homeId].filter(Boolean),
           retrieval_default: "whole_scope",
           suggested_prompts: assistantPromptsForView(section, scope),
         };
@@ -779,11 +737,23 @@ function buildAssistantContextPayload(message = "") {
   const intent = detectAssistantIntent(message);
   const retrieval_mode = detectRetrievalMode(message, intent);
   const output_mode = detectOutputMode(intent);
+  const accessLevel = getAccessLevelForScope(scope);
+  const allowedHomeIds =
+    scope === "quality" && accessLevel === "provider"
+      ? getAllowedHomeIds()
+      : [Number(state.homeId)].filter((item) => Number.isFinite(item));
 
   return {
     assistant_type: "young_people_os",
     scope,
     scope_type: getAssistantScopeType(),
+    access_level: accessLevel,
+    provider_id:
+      state.providerId ||
+      state.currentUser?.provider_id ||
+      state.currentUser?.providerId ||
+      null,
+    allowed_home_ids: allowedHomeIds,
     current_view: section,
     shift_context: section,
     young_person_id: scope === "child" ? state.youngPersonId || null : null,
@@ -886,6 +856,11 @@ function buildSafeAssistantRequestPayload(payload) {
       assistant_type: context.assistant_type || "young_people_os",
       scope: context.scope || null,
       scope_type: context.scope_type || null,
+      access_level: context.access_level || null,
+      provider_id: context.provider_id || null,
+      allowed_home_ids: Array.isArray(context.allowed_home_ids)
+        ? context.allowed_home_ids
+        : [],
       current_view: context.current_view || null,
       shift_context: context.shift_context || null,
       young_person_id: context.young_person_id || null,
@@ -989,7 +964,7 @@ function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
     console.error("[assistant] token restore failed", error);
   }
 
-  return extractTextContent(text);
+  return text;
 }
 
 function applyAssistantMeta(meta = {}) {
@@ -1058,8 +1033,6 @@ export async function askAssistant(question) {
       scrubber_reverse_map: scrubbed.reverseMap || {},
     });
 
-    let finalText = "";
-
     await apiStreamAssistant(scrubbed.payload, {
       onMeta: (meta) => {
         applyAssistantMeta({
@@ -1070,13 +1043,16 @@ export async function askAssistant(question) {
             retrieval_mode: contextPayload.retrieval_mode,
             output_mode: contextPayload.output_mode,
             whole_os_default: true,
+            access_level: contextPayload.access_level,
+            allowed_home_ids: contextPayload.allowed_home_ids,
+            provider_id: contextPayload.provider_id,
             ai_scrubber_enabled: scrubbed.meta?.enabled ?? false,
           },
           explainability: {
             ...(meta?.explainability || {}),
             reasoning_summary:
               meta?.explainability?.reasoning_summary ||
-              `Intent: ${contextPayload.assistant_intent}. Retrieval: ${contextPayload.retrieval_mode}. Output: ${contextPayload.output_mode}.`,
+              `Intent: ${contextPayload.assistant_intent}. Retrieval: ${contextPayload.retrieval_mode}. Output: ${contextPayload.output_mode}. Scope access: ${contextPayload.access_level}.`,
             ai_scrubber:
               scrubbed.meta?.enabled
                 ? "Client-side AI scrubber applied before outbound request."
@@ -1086,10 +1062,16 @@ export async function askAssistant(question) {
             ...(meta?.assistant_context || {}),
             requested_scope_mode: contextPayload.retrieval_mode,
             whole_os_default: true,
+            access_level: contextPayload.access_level,
+            allowed_home_ids: contextPayload.allowed_home_ids,
+            provider_id: contextPayload.provider_id,
           },
           assistant_scope: {
             ...(meta?.assistant_scope || {}),
             scrubber_meta: scrubbed.meta || {},
+            access_level: contextPayload.access_level,
+            allowed_home_ids: contextPayload.allowed_home_ids,
+            provider_id: contextPayload.provider_id,
           },
           sources: meta?.sources || [],
           scrubber_reverse_map: scrubbed.reverseMap || {},
@@ -1101,23 +1083,20 @@ export async function askAssistant(question) {
           streamedText || "Thinking…",
           scrubbed.reverseMap
         );
-        finalText = extractTextContent(restored || "Thinking…");
-        updateLastAssistantStreamingText(finalText || "Thinking…");
+        updateLastAssistantStreamingText(restored || "Thinking…");
       },
       onDone: (streamedText) => {
         const restored = restoreAssistantReplyTokens(
-          streamedText || finalText || "No assistant reply returned.",
+          String(streamedText || "").trim() || "No assistant reply returned.",
           scrubbed.reverseMap
         );
 
-        replaceLastAssistantPlaceholder(
-          extractTextContent(restored || finalText || "No assistant reply returned.")
-        );
+        replaceLastAssistantPlaceholder(restored);
       },
     });
   } catch (error) {
     replaceLastAssistantPlaceholder(
-      extractTextContent(error?.message || "The assistant could not answer right now.")
+      error?.message || "The assistant could not answer right now."
     );
   } finally {
     setAssistantSending(false);
