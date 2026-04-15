@@ -489,14 +489,6 @@ function fieldSelect(name, label, value = "", options = [], full = false) {
   return { name, label, type: "select", value, options, full };
 }
 
-function yesNoOptions() {
-  return [
-    { value: "", label: "Select..." },
-    { value: "yes", label: "Yes" },
-    { value: "no", label: "No" },
-  ];
-}
-
 function severityOptions() {
   return [
     { value: "", label: "Select..." },
@@ -544,10 +536,6 @@ function getSuggestionBannerHtml() {
     </section>
   `;
 }
-
-/* -----------------------------
-   Child builders
------------------------------ */
 
 function buildDailyNoteContent(item = {}) {
   const today = getToday();
@@ -1185,10 +1173,6 @@ function buildProfileFormulationContent(item = {}) {
   };
 }
 
-/* -----------------------------
-   Home / quality builders
------------------------------ */
-
 function buildDocumentContent(item = {}) {
   return {
     title: item?.id ? "Edit document record" : "Upload document",
@@ -1369,10 +1353,6 @@ function buildManagerActionContent(item = {}) {
     ],
   };
 }
-
-/* -----------------------------
-   Content resolver
------------------------------ */
 
 function getComposerContent(recordType, item = {}) {
   const map = {
@@ -1768,6 +1748,461 @@ export function buildAiFeedback(type = "clarity") {
   return notes.join("\n");
 }
 
+function isNotFoundError(error) {
+  return (
+    error?.status === 404 ||
+    error?.message === "Not Found" ||
+    /not found/i.test(String(error?.message || ""))
+  );
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function normaliseSavedRecordForSchema(recordType, payload = {}) {
+  const currentScope = getCurrentScope();
+  const entityId = getScopeEntityId();
+  const id = payload.id || state.composerRecordId || `local-${recordType}-${Date.now()}`;
+
+  const base = {
+    id,
+    record_id: id,
+    source_id: id,
+    record_type: recordType,
+    created_at: payload.created_at || nowIso(),
+    updated_at: nowIso(),
+    _local_only: true,
+  };
+
+  if (currentScope === "child") {
+    base.young_person_id = payload.young_person_id || state.youngPersonId || null;
+  } else {
+    base.home_id = payload.home_id || getCurrentHomeId() || entityId || null;
+    base.scope = currentScope;
+  }
+
+  const byType = {
+    daily_note: {
+      note_date: payload.note_date || null,
+      shift_type: payload.shift_type || "",
+      presentation: payload.presentation || "",
+      activities: payload.activities || "",
+      education_update: payload.education_update || "",
+      health_update: payload.health_update || "",
+      family_update: payload.family_update || "",
+      behaviour_update: payload.behaviour_update || "",
+      young_person_voice: payload.young_person_voice || "",
+      positives: payload.positives || "",
+      actions_required: payload.actions_required || "",
+      significance: payload.significance || "",
+      workflow_status: payload.workflow_status || "draft",
+      manager_review_comment: payload.manager_review_comment || "",
+    },
+
+    incident: {
+      incident_type: payload.incident_type || "",
+      incident_datetime: payload.incident_datetime || null,
+      location: payload.location || "",
+      description: payload.description || "",
+      antecedent: payload.antecedent || "",
+      staff_response: payload.staff_response || "",
+      child_response: payload.child_response || "",
+      outcome: payload.outcome || "",
+      injury_flag: !!payload.injury_flag,
+      property_damage_flag: !!payload.property_damage_flag,
+      police_involved: !!payload.police_involved,
+      safeguarding_flag: !!payload.safeguarding_flag,
+      severity: payload.severity || "",
+      follow_up_required: !!payload.follow_up_required,
+      workflow_status: payload.workflow_status || "draft",
+      manager_review_status: payload.manager_review_status || "",
+      presentation: payload.presentation || "",
+      trauma_informed_formulation: payload.trauma_informed_formulation || "",
+      child_voice: payload.child_voice || "",
+      restorative_follow_up: payload.restorative_follow_up || "",
+      actions_taken: payload.actions_taken || "",
+      ofsted_notified: !!payload.ofsted_notified,
+      requires_reg40: !!payload.requires_reg40,
+    },
+
+    support_plan: {
+      plan_type: payload.plan_type || "",
+      title: payload.title || "",
+      presenting_need: payload.presenting_need || "",
+      summary: payload.summary || "",
+      child_voice: payload.child_voice || "",
+      proactive_strategies: payload.proactive_strategies || "",
+      pace_guidance: payload.pace_guidance || "",
+      triggers: payload.triggers || "",
+      protective_factors: payload.protective_factors || "",
+      start_date: payload.start_date || null,
+      review_date: payload.review_date || null,
+      status: payload.status || "active",
+      approval_status: payload.approval_status || "",
+      review_comment: payload.review_comment || "",
+    },
+
+    risk: {
+      category: payload.category || "",
+      title: payload.title || "",
+      concern_summary: payload.concern_summary || "",
+      known_triggers: payload.known_triggers || "",
+      early_warning_signs: payload.early_warning_signs || "",
+      contextual_factors: payload.contextual_factors || "",
+      current_controls: payload.current_controls || "",
+      deescalation_strategies: payload.deescalation_strategies || "",
+      response_actions: payload.response_actions || "",
+      child_views: payload.child_views || "",
+      severity: payload.severity || "",
+      likelihood: payload.likelihood || "",
+      review_date: payload.review_date || null,
+      status: payload.status || "active",
+      approval_status: payload.approval_status || "",
+      review_comment: payload.review_comment || "",
+    },
+
+    health_record: {
+      record_type: payload.record_type || "",
+      event_datetime: payload.event_datetime || null,
+      title: payload.title || "",
+      summary: payload.summary || "",
+      professional_name: payload.professional_name || "",
+      outcome: payload.outcome || "",
+      follow_up_required: !!payload.follow_up_required,
+      next_action_date: payload.next_action_date || null,
+      child_voice: payload.child_voice || "",
+      workflow_status: payload.workflow_status || "draft",
+      significance: payload.significance || "",
+      linked_appointment_id: payload.linked_appointment_id || null,
+      linked_plan_id: payload.linked_plan_id || null,
+    },
+
+    education_record: {
+      record_date: payload.record_date || null,
+      attendance_status: payload.attendance_status || "",
+      provision_name: payload.provision_name || "",
+      behaviour_summary: payload.behaviour_summary || "",
+      learning_engagement: payload.learning_engagement || "",
+      issue_raised: payload.issue_raised || "",
+      action_taken: payload.action_taken || "",
+      professional_involved: payload.professional_involved || "",
+      achievement_note: payload.achievement_note || "",
+      child_voice: payload.child_voice || "",
+      follow_up_required: !!payload.follow_up_required,
+      workflow_status: payload.workflow_status || "draft",
+      significance: payload.significance || "",
+      linked_plan_id: payload.linked_plan_id || null,
+    },
+
+    family_contact: {
+      contact_datetime: payload.contact_datetime || null,
+      contact_type: payload.contact_type || "",
+      contact_person: payload.contact_person || "",
+      supervision_level: payload.supervision_level || "",
+      location: payload.location || "",
+      pre_contact_presentation: payload.pre_contact_presentation || "",
+      post_contact_presentation: payload.post_contact_presentation || "",
+      child_voice: payload.child_voice || "",
+      concerns: payload.concerns || "",
+      follow_up_required: !!payload.follow_up_required,
+      workflow_status: payload.workflow_status || "draft",
+      significance: payload.significance || "",
+      linked_contact_id: payload.linked_contact_id || null,
+    },
+
+    keywork: {
+      session_date: payload.session_date || null,
+      topic: payload.topic || "",
+      purpose: payload.purpose || "",
+      summary: payload.summary || "",
+      child_voice: payload.child_voice || "",
+      reflective_analysis: payload.reflective_analysis || "",
+      actions_agreed: payload.actions_agreed || "",
+      next_session_date: payload.next_session_date || null,
+      status: payload.status || "draft",
+      workflow_status: payload.workflow_status || "draft",
+      review_comment: payload.review_comment || "",
+      manager_review_comment: payload.manager_review_comment || "",
+    },
+
+    appointment: {
+      title: payload.title || "",
+      description: payload.description || "",
+      appointment_type: payload.appointment_type || "",
+      start_datetime: payload.start_datetime || null,
+      end_datetime: payload.end_datetime || null,
+      location: payload.location || "",
+      linked_plan_id: payload.linked_plan_id || null,
+      reminder_minutes_before: payload.reminder_minutes_before || null,
+      status: payload.status || "planned",
+      outcome: payload.outcome || payload.outcome_notes || "",
+      notes: payload.notes || payload.summary || "",
+      professional_name: payload.professional_name || "",
+      professional_role: payload.professional_role || "",
+      purpose: payload.purpose || "",
+      child_voice: payload.child_voice || "",
+      preparation_notes: payload.preparation_notes || "",
+      follow_up_actions: payload.follow_up_actions || "",
+    },
+
+    achievement_record: {
+      achievement_date: payload.achievement_date || null,
+      achievement_type: payload.achievement_type || "",
+      title: payload.title || "",
+      description: payload.description || "",
+      source: payload.source || "",
+      child_voice: payload.child_voice || "",
+      linked_plan_id: payload.linked_plan_id || null,
+      linked_target_id: payload.linked_target_id || null,
+      significance: payload.significance || "",
+      archived: !!payload.archived,
+    },
+
+    safeguarding_record: {
+      incident_id: payload.incident_id || null,
+      safeguarding_category: payload.safeguarding_category || "",
+      concern_datetime: payload.concern_datetime || null,
+      disclosure_details: payload.disclosure_details || "",
+      concern_details: payload.concern_details || "",
+      immediate_action_taken: payload.immediate_action_taken || "",
+      referral_made: !!payload.referral_made,
+      referral_details: payload.referral_details || "",
+      outcome: payload.outcome || "",
+      manager_review_status: payload.manager_review_status || "",
+      closed_at: payload.closed_at || null,
+    },
+
+    missing_episode: {
+      start_datetime: payload.start_datetime || null,
+      reported_datetime: payload.reported_datetime || null,
+      police_reference: payload.police_reference || "",
+      return_datetime: payload.return_datetime || null,
+      return_interview_completed: !!payload.return_interview_completed,
+      trigger_factors: payload.trigger_factors || "",
+      push_pull_factors: payload.push_pull_factors || "",
+      actions_taken: payload.actions_taken || "",
+      outcome: payload.outcome || "",
+      review_required: !!payload.review_required,
+      workflow_status: payload.workflow_status || "draft",
+      manager_review_status: payload.manager_review_status || "",
+      child_voice: payload.child_voice || "",
+      return_interview_date: payload.return_interview_date || null,
+      linked_risk_assessment_id: payload.linked_risk_assessment_id || null,
+    },
+
+    task: {
+      home_id: currentScope !== "child" ? (payload.home_id || getCurrentHomeId() || null) : (payload.home_id || getCurrentHomeId() || null),
+      young_person_id: currentScope === "child" ? (payload.young_person_id || state.youngPersonId || null) : null,
+      task: payload.task || "",
+      task_date: payload.task_date || null,
+      completed: !!payload.completed,
+      assigned_role: payload.assigned_role || "",
+      title: payload.title || "",
+      assigned_to_user_id: payload.assigned_to_user_id || null,
+      source_table: payload.source_table || payload.related_table || "",
+      source_id: payload.source_id || payload.related_id || null,
+      task_type: payload.task_type || "",
+      due_date: payload.due_date || null,
+      compliance_generated: !!payload.compliance_generated,
+      completed_at: payload.completed ? nowIso() : null,
+    },
+
+    manager_action: {
+      young_person_id: currentScope === "child" ? (payload.young_person_id || state.youngPersonId || null) : null,
+      action_type: payload.action_type || "",
+      related_table: payload.related_table || payload.source_record_type || "",
+      related_id: payload.related_id || payload.source_record_id || null,
+      note: payload.note || payload.summary || "",
+      action_at: nowIso(),
+    },
+
+    document: {
+      young_person_id: currentScope === "child" ? (payload.young_person_id || state.youngPersonId || null) : null,
+      home_id: currentScope !== "child" ? (payload.home_id || getCurrentHomeId() || null) : (payload.home_id || getCurrentHomeId() || null),
+      document_type: payload.document_type || "",
+      title: payload.title || "",
+      issue_date: payload.issue_date || null,
+      review_date: payload.review_date || null,
+      expiry_date: payload.expiry_date || null,
+      approval_status: payload.approval_status || "",
+      confidentiality_level: payload.confidentiality_level || "",
+      notes: payload.notes || "",
+      summary: payload.summary || "",
+      important_actions: payload.important_actions || "",
+      status: payload.status || "active",
+      file_name: payload.file_name || "",
+      category: payload.category || "",
+    },
+
+    communication: {
+      young_person_id: currentScope === "child" ? (payload.young_person_id || state.youngPersonId || null) : null,
+      home_id: currentScope !== "child" ? (payload.home_id || getCurrentHomeId() || null) : (payload.home_id || getCurrentHomeId() || null),
+      contact_datetime: payload.contact_datetime || null,
+      contact_type: payload.contact_type || "",
+      contact_person: payload.contact_person || "",
+      organisation: payload.organisation || "",
+      role: payload.role || "",
+      direction: payload.direction || "",
+      summary: payload.summary || "",
+      decisions: payload.decisions || "",
+      actions_required: payload.actions_required || "",
+      follow_up_required: !!payload.follow_up_required,
+    },
+
+    therapy: {
+      home_id: payload.home_id || getCurrentHomeId() || null,
+      session_date: payload.session_date || null,
+      service_name: payload.service_name || "",
+      professional_name: payload.professional_name || "",
+      intervention_type: payload.intervention_type || "",
+      summary: payload.summary || "",
+      recommendations: payload.recommendations || "",
+      staff_guidance: payload.staff_guidance || "",
+      next_steps: payload.next_steps || "",
+    },
+
+    team: {
+      home_id: payload.home_id || getCurrentHomeId() || null,
+      record_date: payload.record_date || null,
+      update_type: payload.update_type || "",
+      shift: payload.shift || "",
+      staff_member: payload.staff_member || "",
+      summary: payload.summary || "",
+      impact: payload.impact || "",
+      actions_required: payload.actions_required || "",
+    },
+
+    supervision: {
+      home_id: payload.home_id || getCurrentHomeId() || null,
+      session_date: payload.session_date || null,
+      staff_member: payload.staff_member || "",
+      supervisor: payload.supervisor || "",
+      supervision_type: payload.supervision_type || "",
+      summary: payload.summary || "",
+      strengths: payload.strengths || "",
+      development_needs: payload.development_needs || "",
+      actions_agreed: payload.actions_agreed || "",
+    },
+
+    profile_identity: {
+      young_person_id: payload.young_person_id || state.youngPersonId || null,
+      religion_or_faith: payload.religion_or_faith || "",
+      cultural_identity: payload.cultural_identity || "",
+      first_language: payload.first_language || "",
+      dietary_needs: payload.dietary_needs || "",
+      interests: payload.interests || "",
+      strengths_summary: payload.strengths_summary || "",
+      what_matters_to_me: payload.what_matters_to_me || "",
+      important_dates: payload.important_dates || "",
+    },
+
+    profile_communication: {
+      young_person_id: payload.young_person_id || state.youngPersonId || null,
+      neurodiversity_summary: payload.neurodiversity_summary || "",
+      communication_style: payload.communication_style || "",
+      sensory_profile: payload.sensory_profile || "",
+      processing_needs: payload.processing_needs || "",
+      signs_of_distress: payload.signs_of_distress || "",
+      what_helps: payload.what_helps || "",
+      what_to_avoid: payload.what_to_avoid || "",
+      routines_and_predictability: payload.routines_and_predictability || "",
+      visual_support_needs: payload.visual_support_needs || "",
+    },
+
+    profile_education: {
+      young_person_id: payload.young_person_id || state.youngPersonId || null,
+      school_name: payload.school_name || "",
+      year_group: payload.year_group || "",
+      education_status: payload.education_status || "",
+      sen_status: payload.sen_status || "",
+      ehcp_details: payload.ehcp_details || "",
+      designated_teacher: payload.designated_teacher || "",
+      attendance_baseline: payload.attendance_baseline || null,
+      pep_status: payload.pep_status || "",
+      support_summary: payload.support_summary || "",
+    },
+
+    profile_health: {
+      young_person_id: payload.young_person_id || state.youngPersonId || null,
+      gp_name: payload.gp_name || "",
+      gp_contact: payload.gp_contact || "",
+      dentist_name: payload.dentist_name || "",
+      dentist_contact: payload.dentist_contact || "",
+      optician_name: payload.optician_name || "",
+      optician_contact: payload.optician_contact || "",
+      allergies: payload.allergies || "",
+      diagnoses: payload.diagnoses || "",
+      mental_health_summary: payload.mental_health_summary || "",
+      medication_summary: payload.medication_summary || "",
+      consent_notes: payload.consent_notes || "",
+    },
+
+    profile_legal: {
+      young_person_id: payload.young_person_id || state.youngPersonId || null,
+      legal_status: payload.legal_status || "",
+      order_type: payload.order_type || "",
+      order_details: payload.order_details || "",
+      delegated_authority_details: payload.delegated_authority_details || "",
+      restrictions_text: payload.restrictions_text || "",
+      consent_arrangements: payload.consent_arrangements || "",
+      effective_from: payload.effective_from || null,
+      effective_to: payload.effective_to || null,
+      is_current: payload.is_current !== false,
+    },
+
+    profile_formulation: {
+      young_person_id: payload.young_person_id || state.youngPersonId || null,
+      presenting_needs: payload.presenting_needs || "",
+      developmental_context: payload.developmental_context || "",
+      trauma_context: payload.trauma_context || "",
+      neurodevelopmental_context: payload.neurodevelopmental_context || "",
+      relational_context: payload.relational_context || "",
+      meaning_of_behaviour: payload.meaning_of_behaviour || "",
+      known_triggers: payload.known_triggers || "",
+      early_signs_of_distress: payload.early_signs_of_distress || "",
+      protective_factors: payload.protective_factors || "",
+      what_helps: payload.what_helps || "",
+      what_adults_should_avoid: payload.what_adults_should_avoid || "",
+      regulation_strategies: payload.regulation_strategies || "",
+      child_voice_summary: payload.child_voice_summary || "",
+      review_date: payload.review_date || null,
+      is_current: payload.is_current !== false,
+    },
+  };
+
+  return {
+    ...base,
+    ...(byType[recordType] || payload),
+  };
+}
+
+function buildLocalFallbackResponse(recordType, payload = {}) {
+  return {
+    item: normaliseSavedRecordForSchema(recordType, payload),
+    _local_only: true,
+  };
+}
+
+async function safeComposerSend(url, method, payload, recordType) {
+  try {
+    return await apiSend(url, method, payload);
+  } catch (error) {
+    if (getCurrentScope() !== "child" && isNotFoundError(error)) {
+      console.warn("[composer] endpoint missing, using local fallback", {
+        scope: getCurrentScope(),
+        recordType,
+        method,
+        url,
+      });
+
+      return buildLocalFallbackResponse(recordType, payload);
+    }
+
+    throw error;
+  }
+}
+
 export async function saveComposer(mode = "draft") {
   const recordType = state.composerRecordType;
   const config = COMPOSER_CONFIG[recordType];
@@ -1800,10 +2235,11 @@ export async function saveComposer(mode = "draft") {
     !isSingleton;
 
   if (isSingleton) {
-    response = await apiSend(
+    response = await safeComposerSend(
       config.updateUrl(),
       config.updateMethod || config.createMethod || "PUT",
-      payload
+      payload,
+      recordType
     );
 
     savedRecord = unwrapSavedRecord(recordType, response);
@@ -1816,10 +2252,11 @@ export async function saveComposer(mode = "draft") {
 
     state.composerMode = "edit";
   } else if (hasStandardUpdateTarget) {
-    response = await apiSend(
+    response = await safeComposerSend(
       config.updateUrl(state.composerRecordId),
       config.updateMethod || "PATCH",
-      payload
+      payload,
+      recordType
     );
 
     savedRecord = unwrapSavedRecord(recordType, response);
@@ -1829,10 +2266,11 @@ export async function saveComposer(mode = "draft") {
       savedRecord?.source_id ||
       state.composerRecordId;
   } else {
-    response = await apiSend(
+    response = await safeComposerSend(
       config.createUrl(),
       config.createMethod || "POST",
-      payload
+      payload,
+      recordType
     );
 
     savedRecord = unwrapSavedRecord(recordType, response);
@@ -1845,8 +2283,18 @@ export async function saveComposer(mode = "draft") {
     state.composerMode = "edit";
   }
 
-  if (mode === "submit" && config.submitUrl && state.composerRecordId) {
-    await apiSend(config.submitUrl(state.composerRecordId), "POST", {});
+  if (
+    mode === "submit" &&
+    config.submitUrl &&
+    state.composerRecordId &&
+    !response?._local_only
+  ) {
+    await safeComposerSend(
+      config.submitUrl(state.composerRecordId),
+      "POST",
+      {},
+      recordType
+    );
   }
 
   try {
@@ -1871,7 +2319,13 @@ export async function saveComposer(mode = "draft") {
 
   clearDraftFromLocal();
   autosaveBoundForKey = "";
-  showComposerStatus(mode === "submit" ? "Submitted" : "Saved");
+  showComposerStatus(
+    response?._local_only
+      ? "Saved locally"
+      : mode === "submit"
+      ? "Submitted"
+      : "Saved"
+  );
   closeComposer(true);
 
   return response;
