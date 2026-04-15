@@ -99,7 +99,7 @@ export const els = {
   scopeChildBadge: document.getElementById("scopeChildBadge"),
   scopeShiftBadge: document.getElementById("scopeShiftBadge"),
 
-  // Assistant hidden compatibility nodes
+  // Assistant modal compatibility nodes
   assistantModalMessages: document.getElementById("assistantModalMessages"),
   assistantModalForm: document.getElementById("assistantModalForm"),
   assistantModalInput: document.getElementById("assistantModalInput"),
@@ -108,6 +108,18 @@ export const els = {
   assistantModalSources: document.getElementById("assistantModalSources"),
   modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
   modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
+
+  // Assistant controller / intelligence panels
+  assistantScopeBundleStatus: document.getElementById("assistantScopeBundleStatus"),
+  assistantScopeBundleError: document.getElementById("assistantScopeBundleError"),
+  assistantLiveStatus: document.getElementById("assistantLiveStatus"),
+  assistantRefreshScopeBtn: document.getElementById("assistantRefreshScopeBtn"),
+  assistantRefreshAnalysisBtn: document.getElementById("assistantRefreshAnalysisBtn"),
+  morningBriefBody: document.getElementById("morningBriefBody"),
+  managerBriefBody: document.getElementById("managerBriefBody"),
+  qualityBriefBody: document.getElementById("qualityBriefBody"),
+  liveUpdatesBody: document.getElementById("liveUpdatesBody"),
+  clearLiveUpdatesBtn: document.getElementById("clearLiveUpdatesBtn"),
 
   // Fullscreen panel
   fullscreenPanel: document.getElementById("fullscreenPanel"),
@@ -142,6 +154,20 @@ export const els = {
   composerFields: document.getElementById("recordComposerFields"),
 
   // Record drawer
+  recordDrawer: document.getElementById("recordDrawer"),
+  recordDrawerBackdrop: document.getElementById("recordDrawerBackdrop"),
+  recordDrawerTitle: document.getElementById("recordDrawerTitle"),
+  recordDrawerSubtitle: document.getElementById("recordDrawerSubtitle"),
+  recordDrawerBody: document.getElementById("recordDrawerBody"),
+  recordDrawerActions: document.getElementById("recordDrawerActions"),
+  closeRecordDrawerBtn: document.getElementById("closeRecordDrawerBtn"),
+  drawerEditBtn: document.getElementById("drawerEditBtn"),
+  drawerSubmitBtn: document.getElementById("drawerSubmitBtn"),
+  drawerApproveBtn: document.getElementById("drawerApproveBtn"),
+  drawerReturnBtn: document.getElementById("drawerReturnBtn"),
+  drawerArchiveBtn: document.getElementById("drawerArchiveBtn"),
+
+  // Backward-compatible drawer aliases
   drawer: document.getElementById("recordDrawer"),
   drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
   drawerTitle: document.getElementById("recordDrawerTitle"),
@@ -149,11 +175,6 @@ export const els = {
   drawerBody: document.getElementById("recordDrawerBody"),
   drawerActions: document.getElementById("recordDrawerActions"),
   closeDrawerBtn: document.getElementById("closeRecordDrawerBtn"),
-  drawerEditBtn: document.getElementById("drawerEditBtn"),
-  drawerSubmitBtn: document.getElementById("drawerSubmitBtn"),
-  drawerApproveBtn: document.getElementById("drawerApproveBtn"),
-  drawerReturnBtn: document.getElementById("drawerReturnBtn"),
-  drawerArchiveBtn: document.getElementById("drawerArchiveBtn"),
 
   // Suggestions
   suggestionsPanel: document.getElementById("suggestionsPanel"),
