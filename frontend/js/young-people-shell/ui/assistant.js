@@ -100,6 +100,148 @@ function getAssistantScopeType() {
   return state.youngPersonId ? "young_person" : "global";
 }
 
+function extractStreamText(payload) {
+  if (typeof payload === "string") return payload;
+  if (!payload || typeof payload !== "object") return "";
+
+  const directCandidates = [
+    payload.text,
+    payload.message,
+    payload.content,
+    payload.answer,
+    payload.output,
+    payload.response,
+  ];
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate;
+    }
+  }
+
+  if (payload.content && typeof payload.content === "object") {
+    const nested = payload.content;
+    const nestedCandidates = [
+      nested.text,
+      nested.message,
+      nested.content,
+      nested.answer,
+      nested.output,
+      nested.response,
+    ];
+
+    for (const candidate of nestedCandidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate;
+      }
+    }
+
+    if (Array.isArray(nested.parts)) {
+      const joined = nested.parts
+        .map((part) => {
+          if (typeof part === "string") return part;
+          if (part && typeof part.text === "string") return part.text;
+          if (part && typeof part.content === "string") return part.content;
+          return "";
+        })
+        .filter(Boolean)
+        .join("\n");
+
+      if (joined.trim()) return joined;
+    }
+  }
+
+  if (Array.isArray(payload.parts)) {
+    const joined = payload.parts
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part.text === "string") return part.text;
+        if (part && typeof part.content === "string") return part.content;
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+
+    if (joined.trim()) return joined;
+  }
+
+  return "";
+}
+
+function resolveRelativeMonthRange(months = 6) {
+  const end = new Date();
+  const start = new Date(end);
+  start.setMonth(start.getMonth() - months);
+  return { startDate: start, endDate: end, inferred: true };
+}
+
+function resolveExplicitDateRange(text = "") {
+  const value = String(text || "").trim();
+
+  const matches =
+    value.match(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/g) || [];
+
+  if (matches.length < 2) return null;
+
+  const parseDate = (raw) => {
+    const parts = raw.split(/[./-]/).map((item) => item.trim());
+    if (parts.length !== 3) return null;
+
+    let [day, month, year] = parts.map(Number);
+    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) {
+      return null;
+    }
+
+    if (year < 100) {
+      year += 2000;
+    }
+
+    const result = new Date(year, month - 1, day);
+    if (Number.isNaN(result.getTime())) return null;
+    return result;
+  };
+
+  const startDate = parseDate(matches[0]);
+  const endDate = parseDate(matches[1]);
+
+  if (!startDate || !endDate) return null;
+
+  return {
+    startDate,
+    endDate,
+    inferred: false,
+  };
+}
+
+function resolveReg45DateRange(message = "") {
+  const text = String(message || "").toLowerCase().trim();
+
+  const explicit = resolveExplicitDateRange(text);
+  if (explicit) return explicit;
+
+  if (
+    /last\s+6\s+months|past\s+6\s+months|previous\s+6\s+months|six\s+months|6\s+months/.test(
+      text
+    )
+  ) {
+    return resolveRelativeMonthRange(6);
+  }
+
+  if (
+    /last\s+12\s+months|past\s+12\s+months|previous\s+12\s+months|twelve\s+months|12\s+months/.test(
+      text
+    )
+  ) {
+    return resolveRelativeMonthRange(12);
+  }
+
+  return null;
+}
+
+function getDefaultReg45DateRange() {
+  return resolveRelativeMonthRange(6);
+}
+
 function ensureAssistantState() {
   if (!Array.isArray(state.assistantMessages)) {
     state.assistantMessages = [];
@@ -141,7 +283,10 @@ function cloneMessageEntry(entry = {}) {
       entry.id ||
       `assistant-msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: entry.role || "assistant",
-    content: String(entry.content || ""),
+    content:
+      typeof entry.content === "string"
+        ? entry.content
+        : extractStreamText(entry.content || ""),
     created_at: entry.created_at || new Date().toISOString(),
     _streaming: !!entry._streaming,
   };
@@ -250,7 +395,9 @@ function addAssistantPlaceholder() {
 }
 
 function updateLastAssistantStreamingText(text) {
-  const safeText = String(text || "Thinking…");
+  const safeText =
+    typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
+
   const lists = [
     state.assistantMessages || [],
     state.assistantModalMessages || [],
@@ -269,7 +416,11 @@ function updateLastAssistantStreamingText(text) {
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  const safeText = String(text || "No assistant reply returned.");
+  const safeText =
+    typeof text === "string"
+      ? text
+      : extractStreamText(text) || "No assistant reply returned.";
+
   const lists = [
     state.assistantMessages || [],
     state.assistantModalMessages || [],
@@ -344,7 +495,7 @@ function detectAssistantIntent(text = "") {
     return ASSISTANT_INTENT.factual_lookup;
   }
 
-  if (/handover|next shift|shift brief/.test(value)) {
+  if (/handover|next shift|shift brief|morning brief/.test(value)) {
     return ASSISTANT_INTENT.handover;
   }
 
@@ -417,14 +568,36 @@ function detectRetrievalMode(text = "", intent = ASSISTANT_INTENT.unknown) {
   return "whole_scope";
 }
 
-function detectOutputMode(intent = ASSISTANT_INTENT.unknown) {
-  if (intent === ASSISTANT_INTENT.chronology) return "chronology";
-  if (intent === ASSISTANT_INTENT.review) return "review_pack";
-  if (intent === ASSISTANT_INTENT.handover) return "handover";
-  if (intent === ASSISTANT_INTENT.compliance) return "compliance_brief";
-  if (intent === ASSISTANT_INTENT.summary) return "summary";
+function detectOutputMode(intent = ASSISTANT_INTENT.unknown, text = "") {
+  const value = String(text || "").toLowerCase();
+
+  if (/reg\s*45|regulation\s*45|ofsted/.test(value)) {
+    return "reg45_template";
+  }
+
+  if (/morning brief|shift brief|handover/.test(value)) {
+    return "handover_template";
+  }
+
+  if (/manager brief|manager summary|leadership brief/.test(value)) {
+    return "manager_brief_template";
+  }
+
+  if (/quality brief|quality summary|inspection readiness/.test(value)) {
+    return "quality_brief_template";
+  }
+
+  if (/chronology|timeline/.test(value)) {
+    return "chronology_template";
+  }
+
+  if (/full summary|comprehensive summary|overview/.test(value)) {
+    return "summary_template";
+  }
+
   if (intent === ASSISTANT_INTENT.factual_lookup) return "factual_answer";
   if (intent === ASSISTANT_INTENT.drafting) return "drafting";
+
   return "answer";
 }
 
@@ -757,12 +930,17 @@ function buildAssistantContextPayload(message = "") {
   const section = getCurrentSection();
   const intent = detectAssistantIntent(message);
   const retrieval_mode = detectRetrievalMode(message, intent);
-  const output_mode = detectOutputMode(intent);
+  const output_mode = detectOutputMode(intent, message);
   const accessLevel = getAccessLevelForScope(scope);
   const allowedHomeIds =
     scope === "quality" && accessLevel === "provider"
       ? getAllowedHomeIds()
       : [Number(state.homeId)].filter((item) => Number.isFinite(item));
+
+  const reg45Range =
+    /reg\s*45|regulation\s*45|ofsted/.test(String(message || "").toLowerCase())
+      ? resolveReg45DateRange(message) || getDefaultReg45DateRange()
+      : null;
 
   return {
     assistant_type: "young_people_os",
@@ -821,6 +999,10 @@ function buildAssistantContextPayload(message = "") {
       0,
       MAX_UI_PROMPTS
     ),
+    reg45_requested: Boolean(reg45Range),
+    reporting_period_start: reg45Range?.startDate?.toISOString?.() || null,
+    reporting_period_end: reg45Range?.endDate?.toISOString?.() || null,
+    reporting_period_inferred: Boolean(reg45Range?.inferred),
   };
 }
 
@@ -910,6 +1092,10 @@ function buildSafeAssistantRequestPayload(payload) {
       suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
         ? context.suggested_prompts_ui_only.slice(0, MAX_UI_PROMPTS)
         : [],
+      reg45_requested: Boolean(context.reg45_requested),
+      reporting_period_start: context.reporting_period_start || null,
+      reporting_period_end: context.reporting_period_end || null,
+      reporting_period_inferred: Boolean(context.reporting_period_inferred),
     },
   };
 }
@@ -1070,6 +1256,9 @@ export async function askAssistant(question) {
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
             ai_scrubber_enabled: scrubbed.meta?.enabled ?? false,
+            reporting_period_start: contextPayload.reporting_period_start,
+            reporting_period_end: contextPayload.reporting_period_end,
+            reporting_period_inferred: contextPayload.reporting_period_inferred,
           },
           explainability: {
             ...(meta?.explainability || {}),
@@ -1088,6 +1277,9 @@ export async function askAssistant(question) {
             access_level: contextPayload.access_level,
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
+            reporting_period_start: contextPayload.reporting_period_start,
+            reporting_period_end: contextPayload.reporting_period_end,
+            reporting_period_inferred: contextPayload.reporting_period_inferred,
           },
           assistant_scope: {
             ...(meta?.assistant_scope || {}),
@@ -1104,20 +1296,26 @@ export async function askAssistant(question) {
         });
       },
       onProgress: () => {},
-      onMessage: (streamedText) => {
+      onMessage: (streamedPayload) => {
+        const safeText = extractStreamText(streamedPayload) || "Thinking…";
         const restored = restoreAssistantReplyTokens(
-          streamedText || "Thinking…",
+          safeText,
           scrubbed.reverseMap
         );
         updateLastAssistantStreamingText(restored || "Thinking…");
       },
-      onDone: (streamedText) => {
+      onDone: (streamedPayload) => {
+        const safeText =
+          extractStreamText(streamedPayload) || "No assistant reply returned.";
+
         const restored = restoreAssistantReplyTokens(
-          String(streamedText || "").trim() || "No assistant reply returned.",
+          safeText.trim(),
           scrubbed.reverseMap
         );
 
-        replaceLastAssistantPlaceholder(restored);
+        replaceLastAssistantPlaceholder(
+          restored || "No assistant reply returned."
+        );
       },
     });
   } catch (error) {
