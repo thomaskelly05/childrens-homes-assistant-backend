@@ -2,25 +2,17 @@ export const DEFAULT_SECTION = "workspace";
 export const DEFAULT_SCOPE = "child";
 export const DEFAULT_ROLE = "staff";
 
-export const SCOPE_DEFAULT_SECTION = Object.freeze({
-  child: "workspace",
-  home: "home-dashboard",
-  quality: "quality",
-});
-
 export function createAssistantMeta() {
   return {
-    // Evidence / UI
+    // UI / evidence
     sources: [],
     runtime: {},
     explainability: {},
-    suggested_actions: [],
-
-    // Scoped assistant context
     assistant_scope: {},
     assistant_context: {},
+    suggested_actions: [],
 
-    // Derived intelligence
+    // Intelligence / derived assistant state
     intent: null,
     retrieval_mode: "whole_scope",
     output_mode: "answer",
@@ -31,7 +23,7 @@ export function createAssistantMeta() {
     evidence_sufficiency: {},
     live_summary: null,
 
-    // Privacy / scrubber
+    // Scrubber / privacy metadata
     scrubber_enabled: false,
     scrubber_meta: {},
     scrubber_reverse_map: {},
@@ -45,7 +37,7 @@ export function createAssistantMeta() {
 export function createComposerState() {
   return {
     composerOpen: false,
-    composerMode: "create", // create | edit
+    composerMode: "create", // "create" | "edit"
     composerRecordType: null,
     composerRecordId: null,
     composerEditItem: null,
@@ -70,6 +62,7 @@ export function createAssistantBundleState() {
     scopeBundleLoading: false,
     scopeBundleError: null,
 
+    // Derived assistant caches
     latestChronology: [],
     latestFacts: {},
     latestCareDomains: {},
@@ -80,60 +73,64 @@ export function createAssistantBundleState() {
   };
 }
 
-export function createUiState() {
-  return {
-    loading: false,
-    error: null,
-    mobileNavOpen: false,
-    assistantOpen: false,
-    fullscreenPanelOpen: false,
-    recordDrawerOpen: false,
-  };
-}
-
-export function createContextState() {
-  return {
-    homeId: null,
-    providerId: null,
-    allowedHomeIds: [],
-    currentUser: null,
-    userId: null,
-    staffId: null,
-  };
-}
-
-export function createWorkspaceState() {
-  return {
-    youngPersonId: null,
-    selectedYoungPerson: null,
-    youngPeople: [],
-    youngPeopleFilter: "",
-
-    currentScope: DEFAULT_SCOPE,
-    currentSection: DEFAULT_SECTION,
-  };
-}
-
 export const state = {
-  ...createWorkspaceState(),
-  ...createUiState(),
+  // Selected young person / workspace
+  youngPersonId: null,
+  selectedYoungPerson: null,
+  youngPeople: [],
+  youngPeopleFilter: "",
+
+  // Current shell section / view
+  currentSection: DEFAULT_SECTION,
+  activeSection: DEFAULT_SECTION,
+  currentView: DEFAULT_SECTION,
+
+  // Role / scope layer
+  userRole: DEFAULT_ROLE, // "staff" | "manager" | "ri" | "admin"
+  currentScope: DEFAULT_SCOPE, // "child" | "home" | "quality"
+
+  // General UI state
+  loading: false,
+  error: null,
+  mobileNavOpen: false,
+  assistantOpen: false,
+  fullscreenPanelOpen: false,
+  recordDrawerOpen: false,
+
+  // Suggestions / linked follow-up state
   ...createSuggestionState(),
+
+  // Composer state
   ...createComposerState(),
-  ...createContextState(),
-  ...createAssistantBundleState(),
 
-  userRole: DEFAULT_ROLE,
-
-  // Record drawer / active record
+  // Active record / drawer context
   activeRecordType: null,
   activeRecordItem: null,
 
-  // Assistant chat
+  // Runtime / context state
+  homeId: null,
+  providerId: null,
+  allowedHomeIds: [],
+  currentUser: null,
+  userId: null,
+  staffId: null,
+
+  // Assistant chat state
   assistantMessages: [],
+  assistantModalMessages: [],
   assistantSending: false,
   assistantMeta: createAssistantMeta(),
 
-  // Cache / optimisation
+  // Legacy compatibility fields
+  assistantContext: null,
+  assistantSources: [],
+  assistantRuntime: null,
+  assistantExplainability: null,
+
+  // Whole-scope assistant bundle / live intelligence state
+  ...createAssistantBundleState(),
+
+  // Request optimisation state
   resourceCache: Object.create(null),
   requestCooldowns: Object.create(null),
 };
@@ -141,39 +138,9 @@ export const state = {
 export function normaliseUserRole(role) {
   const raw = String(role || DEFAULT_ROLE).trim().toLowerCase();
 
-  if (
-    raw === "administrator" ||
-    raw === "super_admin" ||
-    raw === "superadmin" ||
-    raw === "admin_user" ||
-    raw === "system_admin" ||
-    raw === "owner"
-  ) {
-    return "admin";
-  }
-
-  if (
-    raw === "registered_manager" ||
-    raw === "deputy_manager" ||
-    raw === "rm"
-  ) {
-    return "manager";
-  }
-
-  if (
-    raw === "responsible_individual" ||
-    raw === "director" ||
-    raw === "ceo"
-  ) {
-    return "ri";
-  }
-
-  if (
-    raw === "residential_support_worker" ||
-    raw === "rsw"
-  ) {
-    return "staff";
-  }
+  if (raw === "administrator") return "admin";
+  if (raw === "super_admin") return "admin";
+  if (raw === "superadmin") return "admin";
 
   return raw || DEFAULT_ROLE;
 }
@@ -189,68 +156,22 @@ export function getDefaultScopeForRole(role = state.userRole) {
 }
 
 export function getDefaultSectionForScope(scope = state.currentScope) {
-  return SCOPE_DEFAULT_SECTION[scope] || DEFAULT_SECTION;
-}
-
-export function setUserRole(role) {
-  state.userRole = normaliseUserRole(role);
-}
-
-export function setCurrentScope(scope, options = {}) {
-  const safeScope =
-    scope === "home" || scope === "quality" || scope === "child"
-      ? scope
-      : DEFAULT_SCOPE;
-
-  const resetSection = options.resetSection !== false;
-
-  state.currentScope = safeScope;
-
-  if (resetSection) {
-    state.currentSection = getDefaultSectionForScope(safeScope);
-  }
-}
-
-export function setCurrentSection(section) {
-  state.currentSection = section || getDefaultSectionForScope(state.currentScope);
-}
-
-export function setSelectedYoungPerson(person = null) {
-  state.selectedYoungPerson = person || null;
-  state.youngPersonId = person?.id || person?.young_person_id || null;
-}
-
-export function clearSelectedYoungPerson() {
-  state.youngPersonId = null;
-  state.selectedYoungPerson = null;
-}
-
-export function setHomeContext(homeId = null) {
-  state.homeId =
-    homeId === null || homeId === undefined || homeId === ""
-      ? null
-      : homeId;
-}
-
-export function setProviderContext(providerId = null) {
-  state.providerId =
-    providerId === null || providerId === undefined || providerId === ""
-      ? null
-      : providerId;
-}
-
-export function setAllowedHomeIds(homeIds = []) {
-  state.allowedHomeIds = Array.isArray(homeIds)
-    ? homeIds
-        .map((item) => Number(item))
-        .filter((item) => Number.isFinite(item))
-    : [];
+  if (scope === "home") return "home-dashboard";
+  if (scope === "quality") return "quality";
+  return DEFAULT_SECTION;
 }
 
 export function resetAssistantState() {
   state.assistantMessages = [];
+  state.assistantModalMessages = [];
   state.assistantSending = false;
   state.assistantMeta = createAssistantMeta();
+
+  // Legacy compatibility fields
+  state.assistantContext = null;
+  state.assistantSources = [];
+  state.assistantRuntime = null;
+  state.assistantExplainability = null;
 
   state.scopeBundle = null;
   state.scopeBundleLoadedAt = null;
@@ -296,21 +217,27 @@ export function resetActiveRecordState() {
 }
 
 export function resetWorkspaceState() {
-  const workspace = createWorkspaceState();
-  state.youngPersonId = workspace.youngPersonId;
-  state.selectedYoungPerson = workspace.selectedYoungPerson;
-  state.youngPeople = workspace.youngPeople;
-  state.youngPeopleFilter = workspace.youngPeopleFilter;
-  state.currentScope = workspace.currentScope;
-  state.currentSection = workspace.currentSection;
+  state.youngPersonId = null;
+  state.selectedYoungPerson = null;
+  state.youngPeopleFilter = "";
 
-  const ui = createUiState();
-  state.loading = ui.loading;
-  state.error = ui.error;
-  state.mobileNavOpen = ui.mobileNavOpen;
-  state.assistantOpen = ui.assistantOpen;
-  state.fullscreenPanelOpen = ui.fullscreenPanelOpen;
-  state.recordDrawerOpen = ui.recordDrawerOpen;
+  state.currentScope = DEFAULT_SCOPE;
+  state.currentSection = DEFAULT_SECTION;
+  state.activeSection = DEFAULT_SECTION;
+  state.currentView = DEFAULT_SECTION;
+
+  state.loading = false;
+  state.error = null;
+  state.mobileNavOpen = false;
+  state.assistantOpen = false;
+  state.fullscreenPanelOpen = false;
+
+  state.homeId = null;
+  state.providerId = null;
+  state.allowedHomeIds = [];
+  state.currentUser = null;
+  state.userId = null;
+  state.staffId = null;
 
   resetSuggestionState();
   resetActiveRecordState();
@@ -322,6 +249,66 @@ export function clearRequestOptimisationState() {
   state.resourceCache = Object.create(null);
   state.requestCooldowns = Object.create(null);
 }
+
+export function setCurrentSection(section) {
+  const safeSection = section || getDefaultSectionForScope(state.currentScope);
+  state.currentSection = safeSection;
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
+}
+
+export function setCurrentScope(scope, { resetSection = true } = {}) {
+  const safeScope =
+    scope === "home" || scope === "quality" || scope === "child"
+      ? scope
+      : DEFAULT_SCOPE;
+
+  state.currentScope = safeScope;
+
+  if (resetSection) {
+    setCurrentSection(getDefaultSectionForScope(safeScope));
+  }
+}
+
+export function setUserRole(role) {
+  state.userRole = normaliseUserRole(role);
+}
+
+export function setSelectedYoungPerson(person = null) {
+  state.selectedYoungPerson = person || null;
+  state.youngPersonId = person?.id || person?.young_person_id || null;
+}
+
+export function clearSelectedYoungPerson() {
+  state.youngPersonId = null;
+  state.selectedYoungPerson = null;
+}
+
+export function setHomeContext(homeId = null) {
+  state.homeId =
+    homeId === null || homeId === undefined || homeId === ""
+      ? null
+      : homeId;
+}
+
+export function setProviderContext(providerId = null) {
+  state.providerId =
+    providerId === null || providerId === undefined || providerId === ""
+      ? null
+      : providerId;
+}
+
+export function setAllowedHomeIds(homeIds = []) {
+  state.allowedHomeIds = Array.isArray(homeIds)
+    ? homeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item))
+    : [];
+}
+
+// ========================
+// Assistant bundle / live intelligence helpers
+// ========================
 
 export function setAssistantScopeBundle(bundle = null) {
   state.scopeBundle = bundle || null;
@@ -388,6 +375,10 @@ export function pushAssistantLiveUpdate(update = null) {
 export function clearAssistantLiveUpdates() {
   state.liveUpdates = [];
 }
+
+// ========================
+// Scope-aware helpers
+// ========================
 
 export function getCurrentScopeEntity() {
   if (state.currentScope === "child") {
