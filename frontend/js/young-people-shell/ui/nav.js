@@ -108,8 +108,8 @@ const ICON_MAP = {
 
 const MOBILE_BOTTOM_BY_SCOPE = {
   child: ["workspace", "timeline", "profile", "readiness", "manager"],
-  home: ["home-dashboard", "compliance", "readiness", "reports", "calendar"],
-  quality: ["quality", "compliance", "reports", "manager", "calendar"],
+  home: ["home-dashboard", "compliance", "reports", "team", "manager"],
+  quality: ["quality", "compliance", "reports", "team", "manager"],
 };
 
 let navButtonsBound = false;
@@ -150,6 +150,10 @@ function getCurrentSection() {
 
 function isChildScope() {
   return getCurrentScope() === "child";
+}
+
+function shouldShowDesktopSidebar() {
+  return getCurrentScope() !== "child";
 }
 
 function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
@@ -280,6 +284,30 @@ function buildMobileBottomBarHtml() {
     .join("");
 }
 
+function syncDesktopSidebarChrome() {
+  const workspaceShell = els.workspaceShell || document.getElementById("workspaceShell");
+  const sidebar = document.querySelector(".workspace-sidebar");
+  const desktopNav = els.desktopNav || document.getElementById("desktopNav");
+
+  const showSidebar = shouldShowDesktopSidebar();
+
+  if (workspaceShell) {
+    workspaceShell.classList.toggle("has-sidebar", showSidebar);
+  }
+
+  if (sidebar) {
+    sidebar.classList.toggle("workspace-sidebar--hidden", !showSidebar);
+    sidebar.classList.toggle("workspace-sidebar--visible", showSidebar);
+    sidebar.setAttribute("aria-hidden", showSidebar ? "false" : "true");
+  }
+
+  if (desktopNav) {
+    desktopNav.classList.toggle("workspace-nav--hidden", !showSidebar);
+    desktopNav.classList.toggle("workspace-nav--visible", showSidebar);
+    desktopNav.setAttribute("aria-hidden", showSidebar ? "false" : "true");
+  }
+}
+
 function renderNavigation() {
   ensureValidCurrentSection();
 
@@ -294,6 +322,8 @@ function renderNavigation() {
   if (els.mobileBottomBar) {
     els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
   }
+
+  syncDesktopSidebarChrome();
 }
 
 function showWorkspaceScreen() {
@@ -658,6 +688,7 @@ export async function loadSection(section) {
   updateSectionState(safeSection);
 
   showWorkspaceScreen();
+  renderNavigation();
   markActiveNav(safeSection);
   markActiveScopeButtons();
   updateSectionChrome(safeSection);
@@ -849,12 +880,12 @@ function bindYoungPersonOpen() {
       await openYoungPerson(id);
 
       showWorkspaceScreen();
+      renderNavigation();
       updateYoungPersonChrome(state.selectedYoungPerson || {});
       updateSectionChrome(getCurrentSection());
       clearStatus();
       resetWorkspaceSummaryStrip();
 
-      renderNavigation();
       markActiveNav(getCurrentSection());
       markActiveScopeButtons();
 
