@@ -28,57 +28,42 @@ function buildErrorMessage(response, data) {
 }
 
 const API_ROUTE_ALIASES = [
-  // ------------------------------
-  // Young person aliases
-  // ------------------------------
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
   [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
 
-  // Health
   [/\/young-people\/(\d+)\/health-records$/, "/young-people/$1/health"],
   [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/health"],
   [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/health"],
 
-  // Education
   [/\/young-people\/(\d+)\/education-records$/, "/young-people/$1/education"],
   [/\/young-people\/(\d+)\/achievements$/, "/young-people/$1/education"],
 
-  // Family
   [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
 
-  // Timeline / safeguarding
   [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/safeguarding$/, "/young-people/$1/incidents"],
 
-  // Readiness / action fallbacks
   [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/child-compliance$/, "/young-people/$1/compliance"],
 
-  // Planning / risk
   [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
 
-  // Reports
   [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
   [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
 
-  // Optional child routes
   [/\/young-people\/(\d+)\/communications$/, "/young-people/$1/family"],
   [/\/young-people\/(\d+)\/therapy$/, "/young-people/$1/health"],
   [/\/young-people\/(\d+)\/keywork$/, "/young-people/$1/keywork"],
 
-  // ------------------------------
-  // Home aliases
-  // ------------------------------
   [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
   [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
   [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
 
-  // Backwards-compatible fallbacks
   [/\/homes\/(\d+)\/staff$/, "/homes/$1/team"],
   [/\/homes\/(\d+)\/staff-documents$/, "/homes/$1/staff-files"],
   [/\/homes\/(\d+)\/notifications$/, "/homes/$1/communications"],
@@ -122,9 +107,7 @@ export function getCsrfToken() {
 
 export function withCsrfHeaders(method = "GET", headers = {}) {
   const upper = String(method || "GET").toUpperCase();
-  const nextHeaders = {
-    ...(headers || {}),
-  };
+  const nextHeaders = { ...(headers || {}) };
 
   if (["POST", "PUT", "PATCH", "DELETE"].includes(upper)) {
     const csrfToken = getCsrfToken();
@@ -236,9 +219,7 @@ function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Reques
   return {
     signal: controller.signal,
     cleanup: () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      if (timeoutId) clearTimeout(timeoutId);
       if (externalSignal) {
         try {
           externalSignal.removeEventListener("abort", abortFromExternal);
@@ -514,11 +495,32 @@ export async function fetchYoungPersonAssistantBundle(youngPersonId) {
 }
 
 export async function fetchHomeAssistantBundle(homeId) {
-  return mergeAssistantBundle([]);
+  if (!homeId) {
+    return mergeAssistantBundle([]);
+  }
+
+  const urls = [
+    `/homes/${homeId}/team`,
+    `/homes/${homeId}/documents`,
+    `/homes/${homeId}/communications`,
+  ];
+
+  const responses = await apiGetSettled(urls);
+  return mergeAssistantBundle(responses);
 }
 
 export async function fetchQualityAssistantBundle(homeId) {
-  return mergeAssistantBundle([]);
+  if (!homeId) {
+    return mergeAssistantBundle([]);
+  }
+
+  const urls = [
+    `/homes/${homeId}/audits`,
+    `/homes/${homeId}/incidents`,
+  ];
+
+  const responses = await apiGetSettled(urls);
+  return mergeAssistantBundle(responses);
 }
 
 export async function fetchAssistantScopeBundle(context = {}) {
@@ -533,8 +535,16 @@ export async function fetchAssistantScopeBundle(context = {}) {
     context.person_id ||
     null;
 
-  if (scope === "home" || scope === "quality") {
-    return mergeAssistantBundle([]);
+  const homeId =
+    context.home_id ||
+    null;
+
+  if (scope === "home") {
+    return fetchHomeAssistantBundle(homeId);
+  }
+
+  if (scope === "quality") {
+    return fetchQualityAssistantBundle(homeId);
   }
 
   return fetchYoungPersonAssistantBundle(youngPersonId);
