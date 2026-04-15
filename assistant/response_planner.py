@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -69,6 +70,46 @@ REFLECTIVE_TASKS = {
     "reflection",
 }
 
+REPORT_OUTPUTS = {
+    "report",
+    "structured_report",
+    "email_report",
+}
+
+REPORT_MODES = {
+    "manager_review",
+    "document_review",
+}
+
+FAST_OPERATIONAL_MODES = {
+    "handover",
+    "recording",
+    "incident_summary",
+    "rewrite",
+    "chronology",
+    "practical",
+}
+
+DOCUMENT_FIDELITY_MODES = {
+    "rewrite",
+    "document_review",
+    "incident_summary",
+    "recording",
+    "chronology",
+    "handover",
+}
+
+DEEP_REASONING_MODES = {
+    "manager_review",
+    "supervision",
+    "support_planning",
+    "document_review",
+    "reflective",
+}
+
+MINI_MODEL = os.getenv("INDICARE_MODEL_MINI", "gpt-4o-mini")
+STRONG_MODEL = os.getenv("INDICARE_MODEL_STRONG", "gpt-4o")
+
 
 @dataclass
 class GuidancePlan:
@@ -79,7 +120,7 @@ class GuidancePlan:
 
 @dataclass
 class ModelPlan:
-    model: str = "gpt-4o-mini"
+    model: str = MINI_MODEL
     temperature: float = 0.2
     max_tokens: int = 850
 
@@ -111,16 +152,43 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
-def _contains_any(text: str, keywords: set[str]) -> bool:
-    lower = _safe_string(text).lower()
-    return any(keyword in lower for keyword in keywords)
-
-
 def _normalise_mode(value: str) -> str:
     value = _safe_string(value).lower()
     if value in {"quick", "balanced", "deep"}:
         return value
     return "balanced"
+
+
+def _normalise_text(value: Any) -> str:
+    return f" {_safe_string(value).lower()} "
+
+
+def _contains_any(text: str, keywords: set[str]) -> bool:
+    lower = _normalise_text(text)
+    return any(keyword.lower() in lower for keyword in keywords)
+
+
+def _looks_like_internal_report_request(message: str, output_type: str, mode: str) -> bool:
+    text = _normalise_text(message)
+
+    if output_type in REPORT_OUTPUTS:
+        return True
+
+    if mode in REPORT_MODES:
+        return True
+
+    report_terms = {
+        "monthly report",
+        "monthly summary",
+        "monthly overview",
+        "reg 45",
+        "regulation 45",
+        "annual report",
+        "annual overview",
+        "yearly report",
+        "yearly overview",
+    }
+    return any(term in text for term in report_terms)
 
 
 def _derive_response_stance(
@@ -178,7 +246,7 @@ def _should_use_memory(
         reasons.append("quick_mode_disables_memory")
         return False, reasons
 
-    if mode in {"handover", "recording", "incident_summary", "rewrite", "chronology", "practical"}:
+    if mode in FAST_OPERATIONAL_MODES:
         reasons.append("fast_operational_mode_uses_minimal_memory")
         return False, reasons
 
@@ -193,6 +261,7 @@ def _should_use_retrieval(
     safeguarding_level: str,
     has_document: bool,
     message: str,
+    output_type: str,
 ) -> tuple[bool, list[str]]:
     reasons: list[str] = []
 
@@ -208,11 +277,15 @@ def _should_use_retrieval(
         reasons.append("high_safeguarding_recording_prefers_direct_response_over_retrieval")
         return False, reasons
 
+    if _looks_like_internal_report_request(message, output_type, mode):
+        reasons.append("internal_report_like_request_prefers_local_context_over_retrieval")
+        return False, reasons
+
     if _contains_any(message, GUIDANCE_KEYWORDS):
         reasons.append("guidance_keywords_enable_retrieval")
         return True, reasons
 
-    if task_type in REVIEW_TASKS | PLANNING_TASKS:
+    if task_type in (REVIEW_TASKS | PLANNING_TASKS):
         reasons.append("review_or_planning_task_enables_retrieval")
         return True, reasons
 
@@ -240,7 +313,7 @@ def _should_use_reflection(
         reasons.append("urgent_safeguarding_disables_reflection")
         return False, False, reasons
 
-    if mode in {"supervision"}:
+    if mode == "supervision":
         reasons.append("supervision_mode_enables_reflection_and_supervision")
         return True, True, reasons
 
@@ -291,6 +364,7 @@ def _build_guidance_plan(
     mode: str,
     safeguarding_level: str,
     selected_mode: str,
+    output_type: str,
 ) -> GuidancePlan:
     text = _safe_string(message).lower()
 
@@ -299,6 +373,13 @@ def _build_guidance_plan(
 
     if safeguarding_level in {"heightened", "urgent"}:
         return GuidancePlan(enabled=False, reason="safeguarding_override", search_query="")
+
+    if _looks_like_internal_report_request(message, output_type, mode):
+        return GuidancePlan(
+            enabled=False,
+            reason="internal_report_like_request_uses_local_context",
+            search_query="",
+        )
 
     if mode in {"handover", "recording", "incident_summary", "rewrite", "chronology"}:
         if _contains_any(text, GUIDANCE_KEYWORDS):
@@ -334,29 +415,39 @@ def _build_model_plan(
     selected_mode: str,
     has_document: bool,
     leadership_lens: bool,
+    output_type: str,
 ) -> ModelPlan:
+    internal_report_like = _looks_like_internal_report_request(message, output_type, mode)
+
     if safeguarding_level == "urgent":
-        return ModelPlan(model="gpt-4o-mini", temperature=0.15, max_tokens=500)
+        return ModelPlan(model=MINI_MODEL, temperature=0.15, max_tokens=500)
 
     if selected_mode == "quick":
-        return ModelPlan(model="gpt-4o-mini", temperature=0.15, max_tokens=350)
+        if internal_report_like:
+            return ModelPlan(model=MINI_MODEL, temperature=0.15, max_tokens=500)
+        return ModelPlan(model=MINI_MODEL, temperature=0.15, max_tokens=350)
 
     if selected_mode == "deep":
-        return ModelPlan(model="gpt-4o", temperature=0.3, max_tokens=1200)
+        if internal_report_like:
+            return ModelPlan(model=STRONG_MODEL, temperature=0.25, max_tokens=1600)
+        return ModelPlan(model=STRONG_MODEL, temperature=0.3, max_tokens=1200)
 
     if leadership_lens:
-        return ModelPlan(model="gpt-4o", temperature=0.2, max_tokens=1000)
+        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1000)
 
     if has_document and mode in {"document_review", "rewrite"}:
-        return ModelPlan(model="gpt-4o", temperature=0.2, max_tokens=1000)
+        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1000)
+
+    if internal_report_like:
+        return ModelPlan(model=MINI_MODEL, temperature=0.2, max_tokens=1200)
 
     if mode in {"incident_summary", "recording", "chronology", "handover"}:
-        return ModelPlan(model="gpt-4o-mini", temperature=0.1, max_tokens=600)
+        return ModelPlan(model=MINI_MODEL, temperature=0.1, max_tokens=600)
 
-    if mode in {"manager_review", "supervision", "support_planning", "document_review"}:
-        return ModelPlan(model="gpt-4o-mini", temperature=0.2, max_tokens=1000)
+    if mode in DEEP_REASONING_MODES:
+        return ModelPlan(model=MINI_MODEL, temperature=0.2, max_tokens=1000)
 
-    return ModelPlan(model="gpt-4o-mini", temperature=0.2, max_tokens=850)
+    return ModelPlan(model=MINI_MODEL, temperature=0.2, max_tokens=850)
 
 
 def build_response_plan(
@@ -396,6 +487,7 @@ def build_response_plan(
         safeguarding_level=safeguarding_level,
         has_document=has_document,
         message=message,
+        output_type=output_type,
     )
     reasons.extend(retrieval_reasons)
 
@@ -421,6 +513,7 @@ def build_response_plan(
         mode=mode,
         safeguarding_level=safeguarding_level,
         selected_mode=selected_mode,
+        output_type=output_type,
     )
 
     model_plan = _build_model_plan(
@@ -430,15 +523,16 @@ def build_response_plan(
         selected_mode=selected_mode,
         has_document=has_document,
         leadership_lens=use_leadership_lens,
+        output_type=output_type,
     )
 
     must_lead_with_safety = safeguarding_level == "urgent" or urgency == "urgent"
     if must_lead_with_safety:
         reasons.append("urgent_context_requires_safety_first_response")
 
-    must_preserve_source_facts = has_document or mode == "rewrite"
+    must_preserve_source_facts = has_document or mode in DOCUMENT_FIDELITY_MODES
     if must_preserve_source_facts:
-        reasons.append("document_or_rewrite_context_requires_source_fidelity")
+        reasons.append("document_or_recording_context_requires_source_fidelity")
 
     should_distinguish_fact_from_inference = (
         output_type in RECORDING_OUTPUTS
