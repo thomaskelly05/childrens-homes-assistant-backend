@@ -41,6 +41,7 @@ function getAccessLevelForScope(scope = state.currentScope || "child") {
   if (scope === "quality") {
     return role === "ri" || role === "admin" ? "provider" : "home";
   }
+
   return "home";
 }
 
@@ -84,6 +85,20 @@ function ensureAssistantMeta() {
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
     state.assistantMeta = {};
   }
+
+  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
+  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
+  state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
+  state.assistantMeta.assistant_context =
+    state.assistantMeta.assistant_context || {};
+  state.assistantMeta.sources = Array.isArray(state.assistantMeta.sources)
+    ? state.assistantMeta.sources
+    : [];
+  state.assistantMeta.suggested_actions = Array.isArray(
+    state.assistantMeta.suggested_actions
+  )
+    ? state.assistantMeta.suggested_actions
+    : [];
 }
 
 function scrubAssistantBundle(bundle = {}, context = {}) {
@@ -438,6 +453,17 @@ export async function refreshAssistantScopeData({
     state.assistantMeta.scope_access_level = context.access_level;
     state.assistantMeta.allowed_home_ids = context.allowed_home_ids || [];
     state.assistantMeta.provider_id = context.provider_id || null;
+    state.assistantMeta.assistant_scope = {
+      ...(state.assistantMeta.assistant_scope || {}),
+      scope: context.scope,
+      current_scope: context.current_scope,
+      access_level: context.access_level,
+      provider_id: context.provider_id || null,
+      allowed_home_ids: context.allowed_home_ids || [],
+      home_id: context.home_id || null,
+      young_person_id: context.young_person_id || null,
+      scrubber_meta: scrubbed.meta || {},
+    };
 
     await buildDerivedAssistantStateFromBundle(scrubbed.bundle);
 
@@ -450,7 +476,9 @@ export async function refreshAssistantScopeData({
                 context.young_person_name || "the selected young person"
               }.`
             : context.scope === "quality" && context.access_level === "provider"
-            ? `Scoped records refreshed across ${safeArray(context.allowed_home_ids).length} allowed home(s).`
+            ? `Scoped records refreshed across ${safeArray(
+                context.allowed_home_ids
+              ).length} allowed home(s).`
             : `Scoped records refreshed for ${
                 context.home_name || "the selected home"
               }.`,
