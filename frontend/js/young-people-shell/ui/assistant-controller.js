@@ -27,8 +27,8 @@ const MAX_BRIEF_CHRONOLOGY = 5;
 
 function getScopeContext() {
   return {
-    scope: state.currentScope,
-    current_scope: state.currentScope,
+    scope: state.currentScope || "child",
+    current_scope: state.currentScope || "child",
     young_person_id: state.youngPersonId || null,
     home_id: state.homeId || state.selectedYoungPerson?.home_id || null,
     home_name:
@@ -45,13 +45,58 @@ function getScopeContext() {
 }
 
 function getBundlePayload() {
-  return state.scopeBundle || {};
+  return state.scopeBundle && typeof state.scopeBundle === "object"
+    ? state.scopeBundle
+    : {};
 }
 
 function ensureAssistantMeta() {
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
     state.assistantMeta = {};
   }
+
+  if (!Array.isArray(state.assistantMeta.sources)) {
+    state.assistantMeta.sources = [];
+  }
+
+  if (!Array.isArray(state.assistantMeta.suggested_actions)) {
+    state.assistantMeta.suggested_actions = [];
+  }
+
+  if (!Array.isArray(state.assistantMeta.chronology)) {
+    state.assistantMeta.chronology = [];
+  }
+
+  state.assistantMeta.facts =
+    state.assistantMeta.facts && typeof state.assistantMeta.facts === "object"
+      ? state.assistantMeta.facts
+      : {};
+
+  state.assistantMeta.care_domains =
+    state.assistantMeta.care_domains &&
+    typeof state.assistantMeta.care_domains === "object"
+      ? state.assistantMeta.care_domains
+      : {};
+
+  state.assistantMeta.evidence_summary =
+    state.assistantMeta.evidence_summary &&
+    typeof state.assistantMeta.evidence_summary === "object"
+      ? state.assistantMeta.evidence_summary
+      : {};
+
+  state.assistantMeta.evidence_sufficiency =
+    state.assistantMeta.evidence_sufficiency &&
+    typeof state.assistantMeta.evidence_sufficiency === "object"
+      ? state.assistantMeta.evidence_sufficiency
+      : {};
+}
+
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function safeObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
 function scrubAssistantBundle(bundle = {}, context = {}) {
@@ -142,14 +187,10 @@ function renderBundleStatus() {
   }
 }
 
-function safeArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
 function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
   if (!host) return;
 
-  if (!brief) {
+  if (!brief || typeof brief !== "object") {
     host.innerHTML = `<p>${escapeHtml(emptyText)}</p>`;
     return;
   }
@@ -157,16 +198,17 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
   const keyConcerns = safeArray(brief.key_concerns);
   const evidence = safeArray(brief.evidence).slice(0, MAX_BRIEF_EVIDENCE);
   const chronology = safeArray(brief.chronology).slice(0, MAX_BRIEF_CHRONOLOGY);
-  const facts = brief.facts || {};
-  const sufficiency = brief.evidence_sufficiency || {};
+  const facts = safeObject(brief.facts);
+  const sufficiency = safeObject(brief.evidence_sufficiency);
+  const summary = safeObject(brief.summary);
 
   host.innerHTML = `
     <div class="profile-stack">
       <div class="profile-card">
         <div class="profile-card-title">${escapeHtml(brief.title || "Brief")}</div>
         <div class="profile-card-text">
-          Scope: ${escapeHtml(brief.scope || "unknown")} • Section: ${escapeHtml(
-    brief.section || "unknown"
+          Scope: ${escapeHtml(String(brief.scope || "unknown"))} • Section: ${escapeHtml(
+    String(brief.section || "unknown")
   )}
         </div>
       </div>
@@ -174,13 +216,9 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
       <div class="profile-card">
         <div class="profile-card-title">Summary</div>
         <div class="profile-card-text">
-          Evidence items: ${escapeHtml(
-            String(brief.summary?.total ?? evidence.length ?? 0)
-          )}<br />
-          Open tasks: ${escapeHtml(String(brief.summary?.open_tasks ?? 0))}<br />
-          Overdue items: ${escapeHtml(
-            String(brief.summary?.overdue_items ?? 0)
-          )}<br />
+          Evidence items: ${escapeHtml(String(summary.total ?? evidence.length ?? 0))}<br />
+          Open tasks: ${escapeHtml(String(summary.open_tasks ?? 0))}<br />
+          Overdue items: ${escapeHtml(String(summary.overdue_items ?? 0))}<br />
           Confidence: ${escapeHtml(String(sufficiency.confidence || "unknown"))}
         </div>
       </div>
@@ -234,9 +272,7 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
                         facts.latest_missing_episode.title || "Missing episode"
                       )} ${
                         facts.latest_missing_episode.date
-                          ? `(${escapeHtml(
-                              String(facts.latest_missing_episode.date)
-                            )})`
+                          ? `(${escapeHtml(String(facts.latest_missing_episode.date))})`
                           : ""
                       }`
                     : ""
@@ -256,7 +292,11 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
                 ${chronology
                   .map((item) =>
                     escapeHtml(
-                      [item.date, item.title, item.summary]
+                      [
+                        item?.date || "",
+                        item?.title || "",
+                        item?.summary || "",
+                      ]
                         .filter(Boolean)
                         .join(" - ")
                     )
@@ -329,54 +369,73 @@ function renderAssistantExtraPanels() {
 }
 
 async function buildDerivedAssistantStateFromBundle(bundle) {
-  const records_payload = bundle || {};
+  const records_payload = safeObject(bundle);
 
-  const runtime = await buildAssistantEvidenceContext({
-    message: "summary",
-    records_payload,
-    fetchScopeBundle: false,
-  });
+  const runtime = safeObject(
+    await buildAssistantEvidenceContext({
+      message: "summary",
+      records_payload,
+      fetchScopeBundle: false,
+    })
+  );
 
-  const morningBrief = await buildMorningBriefContext({
-    records_payload,
-    fetchScopeBundle: false,
-  });
+  const morningBrief = safeObject(
+    await buildMorningBriefContext({
+      records_payload,
+      fetchScopeBundle: false,
+    })
+  );
 
-  const managerBrief = await buildManagerBriefContext({
-    records_payload,
-    fetchScopeBundle: false,
-  });
+  const managerBrief = safeObject(
+    await buildManagerBriefContext({
+      records_payload,
+      fetchScopeBundle: false,
+    })
+  );
 
-  const qualityBrief = await buildQualityBriefContext({
-    records_payload,
-    fetchScopeBundle: false,
-  });
+  const qualityBrief = safeObject(
+    await buildQualityBriefContext({
+      records_payload,
+      fetchScopeBundle: false,
+    })
+  );
 
   setAssistantDerivedState({
-    chronology: runtime.chronology,
-    facts: runtime.facts,
-    care_domains: runtime.care_domains,
+    chronology: safeArray(runtime.chronology),
+    facts: safeObject(runtime.facts),
+    care_domains: safeObject(runtime.care_domains),
     morning_brief: morningBrief,
     manager_brief: managerBrief,
     quality_brief: qualityBrief,
     live_summary: {
-      ...runtime.summary,
-      evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
+      ...safeObject(runtime.summary),
+      evidence_count:
+        safeArray(runtime.evidence).length ||
+        safeObject(runtime.summary).total ||
+        0,
     },
   });
 
   ensureAssistantMeta();
 
-  state.assistantMeta.chronology = runtime.chronology || [];
-  state.assistantMeta.facts = runtime.facts || {};
-  state.assistantMeta.care_domains = runtime.care_domains || {};
-  state.assistantMeta.evidence_summary = runtime.summary || {};
-  state.assistantMeta.evidence_sufficiency =
-    runtime.evidence_sufficiency || {};
+  state.assistantMeta.chronology = safeArray(runtime.chronology);
+  state.assistantMeta.facts = safeObject(runtime.facts);
+  state.assistantMeta.care_domains = safeObject(runtime.care_domains);
+  state.assistantMeta.evidence_summary = safeObject(runtime.summary);
+  state.assistantMeta.evidence_sufficiency = safeObject(
+    runtime.evidence_sufficiency
+  );
   state.assistantMeta.retrieval_mode =
     runtime.retrieval_mode || "whole_scope";
   state.assistantMeta.output_mode = runtime.output_mode || "answer";
   state.assistantMeta.intent = runtime.intent || "summary";
+  state.assistantMeta.live_summary = {
+    ...safeObject(runtime.summary),
+    evidence_count:
+      safeArray(runtime.evidence).length ||
+      safeObject(runtime.summary).total ||
+      0,
+  };
   state.assistantMeta.last_bundle_refresh_at = new Date().toISOString();
 }
 
@@ -396,7 +455,7 @@ export async function refreshAssistantScopeData({
 
     if (token !== latestRefreshToken) return null;
 
-    const scrubbed = scrubAssistantBundle(bundle, context);
+    const scrubbed = scrubAssistantBundle(safeObject(bundle), context);
 
     setAssistantScopeBundle(scrubbed.bundle);
 
@@ -443,7 +502,7 @@ export async function refreshAssistantScopeData({
 export async function refreshAssistantAnalysisOnly() {
   const bundle = getBundlePayload();
 
-  if (!bundle || typeof bundle !== "object") {
+  if (!bundle || typeof bundle !== "object" || !Object.keys(bundle).length) {
     setAssistantScopeBundleError("No scoped records are loaded yet.");
     renderAssistantExtraPanels();
     return;
