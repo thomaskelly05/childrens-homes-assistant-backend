@@ -1,4 +1,4 @@
-import { state } from "../state.js";
+import { state, resetComposerState } from "../state.js";
 import { els } from "../dom.js";
 import { apiSend, unwrapCreateResponse } from "../core/api.js";
 import {
@@ -18,11 +18,18 @@ function getCurrentScope() {
 }
 
 function getCurrentHomeId() {
-  return state.homeId || state.currentUser?.home_id || state.currentUser?.homeId || null;
+  return (
+    state.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    null
+  );
 }
 
 function getScopeEntityId() {
-  if (getCurrentScope() === "child") return state.youngPersonId || null;
+  if (getCurrentScope() === "child") {
+    return state.youngPersonId || null;
+  }
   return getCurrentHomeId();
 }
 
@@ -51,10 +58,14 @@ function buildScopePath(basePath = "") {
   const entityId = getScopeEntityId();
 
   if (scope === "child") {
-    return basePath.replace("{scope}", "young-people").replace("{id}", String(entityId || ""));
+    return basePath
+      .replace("{scope}", "young-people")
+      .replace("{id}", String(entityId || ""));
   }
 
-  return basePath.replace("{scope}", "homes").replace("{id}", String(entityId || ""));
+  return basePath
+    .replace("{scope}", "homes")
+    .replace("{id}", String(entityId || ""));
 }
 
 const COMPOSER_CONFIG = {
@@ -303,8 +314,15 @@ function isRecordAllowedInScope(recordType) {
   const config = COMPOSER_CONFIG[recordType];
   if (!config) return false;
 
-  const scopes = config.scopes || ["child"];
-  return scopes.includes(getCurrentScope());
+  return (config.scopes || ["child"]).includes(getCurrentScope());
+}
+
+function getComposerForm() {
+  return els.recordComposerForm || els.composerForm || null;
+}
+
+function getComposerFieldsHost() {
+  return els.recordComposerFields || els.composerFields || null;
 }
 
 function showComposerStatus(message) {
@@ -314,7 +332,9 @@ function showComposerStatus(message) {
 }
 
 function getComposerMeta() {
-  if (!state.composerMeta) state.composerMeta = {};
+  if (!state.composerMeta || typeof state.composerMeta !== "object") {
+    state.composerMeta = {};
+  }
   return state.composerMeta;
 }
 
@@ -346,7 +366,7 @@ function getNowLocal() {
 }
 
 function isSingletonComposerRecord(recordType) {
-  return !!COMPOSER_CONFIG[recordType]?.singleton;
+  return Boolean(COMPOSER_CONFIG[recordType]?.singleton);
 }
 
 export function openComposer() {
@@ -361,20 +381,24 @@ export function closeComposer(reset = true) {
 
   if (!reset) return;
 
-  state.composerOpen = false;
-  state.composerMode = "create";
-  state.composerRecordType = null;
-  state.composerRecordId = null;
-  state.composerEditItem = null;
+  const fieldsHost = getComposerFieldsHost();
 
-  resetComposerMeta();
+  if (fieldsHost) {
+    fieldsHost.innerHTML = "";
+  }
 
-  if (els.composerFields) els.composerFields.innerHTML = "";
   if (els.composerAiFeedback) {
     els.composerAiFeedback.textContent = "No AI review run yet.";
   }
 
+  if (els.composerPrompts) {
+    els.composerPrompts.innerHTML = "";
+  }
+
   showComposerStatus("Autosave ready");
+  autosaveBoundForKey = "";
+  resetComposerMeta();
+  resetComposerState();
 }
 
 function buildField(field) {
@@ -404,7 +428,11 @@ function buildField(field) {
           ${(field.options || [])
             .map(
               (option) => `
-                <option value="${escapeHtml(option.value)}" ${String(option.value) === String(field.value || "") ? "selected" : ""}>
+                <option value="${escapeHtml(option.value)}" ${
+                  String(option.value) === String(field.value || "")
+                    ? "selected"
+                    : ""
+                }>
                   ${escapeHtml(option.label)}
                 </option>
               `
@@ -517,14 +545,24 @@ function getSuggestionBannerHtml() {
   const bits = [];
 
   if (meta.suggestion_action_type) {
-    bits.push(`Action: ${String(meta.suggestion_action_type).replaceAll("_", " ")}`);
+    bits.push(
+      `Action: ${String(meta.suggestion_action_type).replaceAll("_", " ")}`
+    );
   }
 
   if (meta.source_record_type) {
-    bits.push(`Linked from ${String(meta.source_record_type).replaceAll("_", " ")}${meta.source_record_id ? ` #${meta.source_record_id}` : ""}`);
+    bits.push(
+      `Linked from ${String(meta.source_record_type).replaceAll("_", " ")}${
+        meta.source_record_id ? ` #${meta.source_record_id}` : ""
+      }`
+    );
   }
 
-  const prompt = meta.improvement_prompt || meta.review_prompt || meta.suggestion_reason || "";
+  const prompt =
+    meta.improvement_prompt ||
+    meta.review_prompt ||
+    meta.suggestion_reason ||
+    "";
 
   if (!bits.length && !prompt) return "";
 
@@ -555,8 +593,18 @@ function buildDailyNoteContent(item = {}) {
       buildSection("Shift details", [
         fieldDate("note_date", "Date", item.note_date || item.record_date || today),
         fieldText("shift_type", "Shift type", item.shift_type || ""),
-        fieldSelect("workflow_status", "Workflow status", item.workflow_status || "draft", workflowOptions()),
-        fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
+        fieldSelect(
+          "workflow_status",
+          "Workflow status",
+          item.workflow_status || "draft",
+          workflowOptions()
+        ),
+        fieldSelect(
+          "significance",
+          "Significance",
+          item.significance || "",
+          severityOptions()
+        ),
       ]),
       buildSection("Daily record", [
         fieldTextArea("presentation", "Presentation", item.presentation || ""),
@@ -567,10 +615,18 @@ function buildDailyNoteContent(item = {}) {
         fieldTextArea("behaviour_update", "Behaviour update", item.behaviour_update || ""),
       ]),
       buildSection("Voice and follow-up", [
-        fieldTextArea("young_person_voice", "Young person voice", item.young_person_voice || item.child_voice || ""),
+        fieldTextArea(
+          "young_person_voice",
+          "Young person voice",
+          item.young_person_voice || item.child_voice || ""
+        ),
         fieldTextArea("positives", "Positives", item.positives || ""),
         fieldTextArea("actions_required", "Actions required", item.actions_required || ""),
-        fieldTextArea("manager_review_comment", "Manager review comment", item.manager_review_comment || ""),
+        fieldTextArea(
+          "manager_review_comment",
+          "Manager review comment",
+          item.manager_review_comment || ""
+        ),
       ]),
     ],
   };
@@ -592,11 +648,20 @@ function buildIncidentContent(item = {}) {
     ],
     sections: [
       buildSection("Incident details", [
-        fieldDateTime("incident_datetime", "Incident date and time", toDateTimeLocalValue(item.incident_datetime) || now),
+        fieldDateTime(
+          "incident_datetime",
+          "Incident date and time",
+          toDateTimeLocalValue(item.incident_datetime) || now
+        ),
         fieldText("incident_type", "Incident type", item.incident_type || ""),
         fieldText("location", "Location", item.location || ""),
         fieldSelect("severity", "Severity", item.severity || "", severityOptions()),
-        fieldSelect("workflow_status", "Workflow status", item.workflow_status || item.manager_review_status || "draft", workflowOptions()),
+        fieldSelect(
+          "workflow_status",
+          "Workflow status",
+          item.workflow_status || item.manager_review_status || "draft",
+          workflowOptions()
+        ),
       ]),
       buildSection("Event narrative", [
         fieldTextArea("description", "Description", item.description || ""),
@@ -607,17 +672,29 @@ function buildIncidentContent(item = {}) {
       ]),
       buildSection("Analysis and follow-up", [
         fieldTextArea("presentation", "Presentation", item.presentation || ""),
-        fieldTextArea("trauma_informed_formulation", "Trauma-informed formulation", item.trauma_informed_formulation || ""),
+        fieldTextArea(
+          "trauma_informed_formulation",
+          "Trauma-informed formulation",
+          item.trauma_informed_formulation || ""
+        ),
         fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldTextArea("restorative_follow_up", "Restorative follow-up", item.restorative_follow_up || ""),
+        fieldTextArea(
+          "restorative_follow_up",
+          "Restorative follow-up",
+          item.restorative_follow_up || ""
+        ),
         fieldTextArea("actions_taken", "Actions taken", item.actions_taken || ""),
-        fieldCheckbox("injury_flag", "Injury", !!item.injury_flag),
-        fieldCheckbox("property_damage_flag", "Property damage", !!item.property_damage_flag),
-        fieldCheckbox("police_involved", "Police involved", !!item.police_involved),
-        fieldCheckbox("safeguarding_flag", "Safeguarding flag", !!item.safeguarding_flag),
-        fieldCheckbox("follow_up_required", "Follow-up required", !!item.follow_up_required),
-        fieldCheckbox("ofsted_notified", "Ofsted notified", !!item.ofsted_notified),
-        fieldCheckbox("requires_reg40", "Requires Reg 40", !!item.requires_reg40),
+        fieldCheckbox("injury_flag", "Injury", Boolean(item.injury_flag)),
+        fieldCheckbox(
+          "property_damage_flag",
+          "Property damage",
+          Boolean(item.property_damage_flag)
+        ),
+        fieldCheckbox("police_involved", "Police involved", Boolean(item.police_involved)),
+        fieldCheckbox("safeguarding_flag", "Safeguarding flag", Boolean(item.safeguarding_flag)),
+        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
+        fieldCheckbox("ofsted_notified", "Ofsted notified", Boolean(item.ofsted_notified)),
+        fieldCheckbox("requires_reg40", "Requires Reg 40", Boolean(item.requires_reg40)),
       ]),
     ],
   };
@@ -650,7 +727,11 @@ function buildSupportPlanContent(item = {}) {
         fieldTextArea("summary", "Summary", item.summary || ""),
         fieldTextArea("presenting_need", "Presenting need", item.presenting_need || ""),
         fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldTextArea("proactive_strategies", "Proactive strategies", item.proactive_strategies || ""),
+        fieldTextArea(
+          "proactive_strategies",
+          "Proactive strategies",
+          item.proactive_strategies || ""
+        ),
         fieldTextArea("pace_guidance", "Pace guidance", item.pace_guidance || ""),
         fieldTextArea("triggers", "Triggers", item.triggers || ""),
         fieldTextArea("protective_factors", "Protective factors", item.protective_factors || ""),
@@ -691,10 +772,18 @@ function buildRiskContent(item = {}) {
       buildSection("Risk analysis", [
         fieldTextArea("concern_summary", "Concern summary", item.concern_summary || ""),
         fieldTextArea("known_triggers", "Known triggers", item.known_triggers || ""),
-        fieldTextArea("early_warning_signs", "Early warning signs", item.early_warning_signs || ""),
+        fieldTextArea(
+          "early_warning_signs",
+          "Early warning signs",
+          item.early_warning_signs || ""
+        ),
         fieldTextArea("contextual_factors", "Contextual factors", item.contextual_factors || ""),
         fieldTextArea("current_controls", "Current controls", item.current_controls || ""),
-        fieldTextArea("deescalation_strategies", "De-escalation strategies", item.deescalation_strategies || ""),
+        fieldTextArea(
+          "deescalation_strategies",
+          "De-escalation strategies",
+          item.deescalation_strategies || ""
+        ),
         fieldTextArea("response_actions", "Response actions", item.response_actions || ""),
         fieldTextArea("child_views", "Child views", item.child_views || ""),
         fieldTextArea("review_comment", "Review comment", item.review_comment || ""),
@@ -721,16 +810,25 @@ function buildHealthRecordContent(item = {}) {
       buildSection("Health event", [
         fieldText("title", "Title", item.title || ""),
         fieldText("record_type", "Record type", item.record_type || ""),
-        fieldDateTime("event_datetime", "Date and time", toDateTimeLocalValue(item.event_datetime) || now),
+        fieldDateTime(
+          "event_datetime",
+          "Date and time",
+          toDateTimeLocalValue(item.event_datetime) || now
+        ),
         fieldText("professional_name", "Professional name", item.professional_name || ""),
         fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect("workflow_status", "Workflow status", item.workflow_status || "draft", workflowOptions()),
+        fieldSelect(
+          "workflow_status",
+          "Workflow status",
+          item.workflow_status || "draft",
+          workflowOptions()
+        ),
       ]),
       buildSection("Health summary", [
         fieldTextArea("summary", "Summary", item.summary || ""),
         fieldTextArea("outcome", "Outcome", item.outcome || ""),
         fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", !!item.follow_up_required),
+        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
         fieldDate("next_action_date", "Next action date", item.next_action_date || ""),
       ]),
     ],
@@ -757,7 +855,12 @@ function buildEducationRecordContent(item = {}) {
         fieldText("provision_name", "Provision name", item.provision_name || ""),
         fieldText("attendance_status", "Attendance status", item.attendance_status || ""),
         fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect("workflow_status", "Workflow status", item.workflow_status || "draft", workflowOptions()),
+        fieldSelect(
+          "workflow_status",
+          "Workflow status",
+          item.workflow_status || "draft",
+          workflowOptions()
+        ),
       ]),
       buildSection("Education summary", [
         fieldTextArea("learning_engagement", "Learning engagement", item.learning_engagement || ""),
@@ -767,7 +870,7 @@ function buildEducationRecordContent(item = {}) {
         fieldTextArea("professional_involved", "Professional involved", item.professional_involved || ""),
         fieldTextArea("achievement_note", "Achievement note", item.achievement_note || ""),
         fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", !!item.follow_up_required),
+        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
       ]),
     ],
   };
@@ -789,20 +892,37 @@ function buildFamilyContactContent(item = {}) {
     ],
     sections: [
       buildSection("Contact details", [
-        fieldDateTime("contact_datetime", "Date and time", toDateTimeLocalValue(item.contact_datetime) || now),
+        fieldDateTime(
+          "contact_datetime",
+          "Date and time",
+          toDateTimeLocalValue(item.contact_datetime) || now
+        ),
         fieldText("contact_type", "Contact type", item.contact_type || ""),
         fieldText("contact_person", "Contact person", item.contact_person || ""),
         fieldText("supervision_level", "Supervision level", item.supervision_level || ""),
         fieldText("location", "Location", item.location || ""),
         fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect("workflow_status", "Workflow status", item.workflow_status || "draft", workflowOptions()),
+        fieldSelect(
+          "workflow_status",
+          "Workflow status",
+          item.workflow_status || "draft",
+          workflowOptions()
+        ),
       ]),
       buildSection("Contact summary", [
-        fieldTextArea("pre_contact_presentation", "Pre-contact presentation", item.pre_contact_presentation || ""),
-        fieldTextArea("post_contact_presentation", "Post-contact presentation", item.post_contact_presentation || ""),
+        fieldTextArea(
+          "pre_contact_presentation",
+          "Pre-contact presentation",
+          item.pre_contact_presentation || ""
+        ),
+        fieldTextArea(
+          "post_contact_presentation",
+          "Post-contact presentation",
+          item.post_contact_presentation || ""
+        ),
         fieldTextArea("concerns", "Concerns", item.concerns || ""),
         fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", !!item.follow_up_required),
+        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
       ]),
     ],
   };
@@ -833,10 +953,18 @@ function buildKeyworkContent(item = {}) {
       buildSection("Session content", [
         fieldTextArea("summary", "Summary", item.summary || ""),
         fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldTextArea("reflective_analysis", "Reflective analysis", item.reflective_analysis || ""),
+        fieldTextArea(
+          "reflective_analysis",
+          "Reflective analysis",
+          item.reflective_analysis || ""
+        ),
         fieldTextArea("actions_agreed", "Actions agreed", item.actions_agreed || ""),
         fieldDate("next_session_date", "Next session date", item.next_session_date || ""),
-        fieldTextArea("manager_review_comment", "Manager review comment", item.manager_review_comment || ""),
+        fieldTextArea(
+          "manager_review_comment",
+          "Manager review comment",
+          item.manager_review_comment || ""
+        ),
       ]),
     ],
   };
@@ -925,7 +1053,11 @@ function buildSafeguardingContent(item = {}) {
     ],
     sections: [
       buildSection("Safeguarding details", [
-        fieldDateTime("concern_datetime", "Concern date and time", toDateTimeLocalValue(item.concern_datetime) || now),
+        fieldDateTime(
+          "concern_datetime",
+          "Concern date and time",
+          toDateTimeLocalValue(item.concern_datetime) || now
+        ),
         fieldText("safeguarding_category", "Safeguarding category", item.safeguarding_category || ""),
         fieldText("manager_review_status", "Manager review status", item.manager_review_status || ""),
         fieldText("incident_id", "Linked incident ID", item.incident_id || ""),
@@ -934,8 +1066,12 @@ function buildSafeguardingContent(item = {}) {
       buildSection("Concern and response", [
         fieldTextArea("concern_details", "Concern details", item.concern_details || ""),
         fieldTextArea("disclosure_details", "Disclosure details", item.disclosure_details || ""),
-        fieldTextArea("immediate_action_taken", "Immediate action taken", item.immediate_action_taken || ""),
-        fieldCheckbox("referral_made", "Referral made", !!item.referral_made),
+        fieldTextArea(
+          "immediate_action_taken",
+          "Immediate action taken",
+          item.immediate_action_taken || ""
+        ),
+        fieldCheckbox("referral_made", "Referral made", Boolean(item.referral_made)),
         fieldTextArea("referral_details", "Referral details", item.referral_details || ""),
         fieldTextArea("outcome", "Outcome", item.outcome || ""),
       ]),
@@ -964,7 +1100,11 @@ function buildMissingEpisodeContent(item = {}) {
         fieldDateTime("return_datetime", "Return", toDateTimeLocalValue(item.return_datetime) || ""),
         fieldText("police_reference", "Police reference", item.police_reference || ""),
         fieldText("manager_review_status", "Manager review status", item.manager_review_status || ""),
-        fieldText("linked_risk_assessment_id", "Linked risk assessment ID", item.linked_risk_assessment_id || ""),
+        fieldText(
+          "linked_risk_assessment_id",
+          "Linked risk assessment ID",
+          item.linked_risk_assessment_id || ""
+        ),
       ]),
       buildSection("Episode summary", [
         fieldTextArea("trigger_factors", "Trigger factors", item.trigger_factors || ""),
@@ -972,9 +1112,13 @@ function buildMissingEpisodeContent(item = {}) {
         fieldTextArea("actions_taken", "Actions taken", item.actions_taken || ""),
         fieldTextArea("outcome", "Outcome", item.outcome || ""),
         fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("return_interview_completed", "Return interview completed", !!item.return_interview_completed),
+        fieldCheckbox(
+          "return_interview_completed",
+          "Return interview completed",
+          Boolean(item.return_interview_completed)
+        ),
         fieldDate("return_interview_date", "Return interview date", item.return_interview_date || ""),
-        fieldCheckbox("review_required", "Review required", !!item.review_required),
+        fieldCheckbox("review_required", "Review required", Boolean(item.review_required)),
       ]),
     ],
   };
@@ -986,8 +1130,7 @@ function buildTaskContent(item = {}) {
   return {
     title: item?.id ? "Edit task" : "New task",
     subtitle: "Create a clear action with ownership and follow-up.",
-    guidance:
-      "Make the task specific, practical and easy to complete.",
+    guidance: "Make the task specific, practical and easy to complete.",
     prompts: [
       "What needs to happen?",
       "Who should do it?",
@@ -1003,8 +1146,8 @@ function buildTaskContent(item = {}) {
         fieldText("assigned_to_user_id", "Assigned to user ID", item.assigned_to_user_id || ""),
         fieldDate("task_date", "Task date", item.task_date || today),
         fieldDate("due_date", "Due date", item.due_date || ""),
-        fieldCheckbox("completed", "Completed", !!item.completed),
-        fieldCheckbox("compliance_generated", "Compliance generated", !!item.compliance_generated),
+        fieldCheckbox("completed", "Completed", Boolean(item.completed)),
+        fieldCheckbox("compliance_generated", "Compliance generated", Boolean(item.compliance_generated)),
       ]),
     ],
   };
@@ -1054,7 +1197,11 @@ function buildProfileCommunicationContent(item = {}) {
         fieldTextArea("signs_of_distress", "Signs of distress", item.signs_of_distress || ""),
         fieldTextArea("what_helps", "What helps", item.what_helps || ""),
         fieldTextArea("what_to_avoid", "What to avoid", item.what_to_avoid || ""),
-        fieldTextArea("routines_and_predictability", "Routines and predictability", item.routines_and_predictability || ""),
+        fieldTextArea(
+          "routines_and_predictability",
+          "Routines and predictability",
+          item.routines_and_predictability || ""
+        ),
         fieldTextArea("visual_support_needs", "Visual support needs", item.visual_support_needs || ""),
       ]),
     ],
@@ -1130,7 +1277,11 @@ function buildProfileLegalContent(item = {}) {
         fieldText("legal_status", "Legal status", item.legal_status || ""),
         fieldText("order_type", "Order type", item.order_type || ""),
         fieldTextArea("order_details", "Order details", item.order_details || ""),
-        fieldTextArea("delegated_authority_details", "Delegated authority details", item.delegated_authority_details || ""),
+        fieldTextArea(
+          "delegated_authority_details",
+          "Delegated authority details",
+          item.delegated_authority_details || ""
+        ),
         fieldTextArea("restrictions_text", "Restrictions", item.restrictions_text || ""),
         fieldTextArea("consent_arrangements", "Consent arrangements", item.consent_arrangements || ""),
         fieldDate("effective_from", "Effective from", item.effective_from || ""),
@@ -1156,14 +1307,26 @@ function buildProfileFormulationContent(item = {}) {
         fieldTextArea("presenting_needs", "Presenting needs", item.presenting_needs || ""),
         fieldTextArea("developmental_context", "Developmental context", item.developmental_context || ""),
         fieldTextArea("trauma_context", "Trauma context", item.trauma_context || ""),
-        fieldTextArea("neurodevelopmental_context", "Neurodevelopmental context", item.neurodevelopmental_context || ""),
+        fieldTextArea(
+          "neurodevelopmental_context",
+          "Neurodevelopmental context",
+          item.neurodevelopmental_context || ""
+        ),
         fieldTextArea("relational_context", "Relational context", item.relational_context || ""),
         fieldTextArea("meaning_of_behaviour", "Meaning of behaviour", item.meaning_of_behaviour || ""),
         fieldTextArea("known_triggers", "Known triggers", item.known_triggers || ""),
-        fieldTextArea("early_signs_of_distress", "Early signs of distress", item.early_signs_of_distress || ""),
+        fieldTextArea(
+          "early_signs_of_distress",
+          "Early signs of distress",
+          item.early_signs_of_distress || ""
+        ),
         fieldTextArea("protective_factors", "Protective factors", item.protective_factors || ""),
         fieldTextArea("what_helps", "What helps", item.what_helps || ""),
-        fieldTextArea("what_adults_should_avoid", "What adults should avoid", item.what_adults_should_avoid || ""),
+        fieldTextArea(
+          "what_adults_should_avoid",
+          "What adults should avoid",
+          item.what_adults_should_avoid || ""
+        ),
         fieldTextArea("regulation_strategies", "Regulation strategies", item.regulation_strategies || ""),
         fieldTextArea("child_voice_summary", "Child voice summary", item.child_voice_summary || ""),
         fieldDate("review_date", "Review date", item.review_date || ""),
@@ -1223,7 +1386,11 @@ function buildCommunicationContent(item = {}) {
     ],
     sections: [
       buildSection("Communication details", [
-        fieldDateTime("contact_datetime", "Date and time", toDateTimeLocalValue(item.contact_datetime) || now),
+        fieldDateTime(
+          "contact_datetime",
+          "Date and time",
+          toDateTimeLocalValue(item.contact_datetime) || now
+        ),
         fieldText("contact_type", "Contact type", item.contact_type || ""),
         fieldText("contact_person", "Contact person", item.contact_person || ""),
         fieldText("organisation", "Organisation", item.organisation || ""),
@@ -1234,7 +1401,7 @@ function buildCommunicationContent(item = {}) {
         fieldTextArea("summary", "Summary", item.summary || ""),
         fieldTextArea("decisions", "Decisions", item.decisions || ""),
         fieldTextArea("actions_required", "Actions required", item.actions_required || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", !!item.follow_up_required),
+        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
       ]),
     ],
   };
@@ -1343,8 +1510,16 @@ function buildManagerActionContent(item = {}) {
     sections: [
       buildSection("Manager action details", [
         fieldText("action_type", "Action type", item.action_type || ""),
-        fieldText("related_table", "Related table", item.related_table || item.source_record_type || ""),
-        fieldText("related_id", "Related ID", item.related_id || item.source_record_id || ""),
+        fieldText(
+          "related_table",
+          "Related table",
+          item.related_table || item.source_record_type || ""
+        ),
+        fieldText(
+          "related_id",
+          "Related ID",
+          item.related_id || item.source_record_id || ""
+        ),
       ]),
       buildSection("Management note", [
         fieldTextArea("note", "Note", item.note || item.summary || ""),
@@ -1426,12 +1601,13 @@ function serialiseValue(key, value) {
 }
 
 function serializeComposerForm() {
-  if (!els.composerForm) return {};
+  const form = getComposerForm();
+  if (!form) return {};
 
-  const formData = new FormData(els.composerForm);
+  const formData = new FormData(form);
   const payload = {};
 
-  els.composerForm.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+  form.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
     if (checkbox.name) {
       payload[checkbox.name] = checkbox.checked;
     }
@@ -1502,7 +1678,8 @@ function clearDraftFromLocal() {
 }
 
 function hydrateComposerDraft(draft) {
-  if (!draft?.values || !els.composerForm) return;
+  const form = getComposerForm();
+  if (!draft?.values || !form) return;
 
   if (draft.meta && typeof draft.meta === "object") {
     state.composerMeta = {
@@ -1512,11 +1689,11 @@ function hydrateComposerDraft(draft) {
   }
 
   Object.entries(draft.values).forEach(([key, value]) => {
-    const field = els.composerForm.elements.namedItem(key);
+    const field = form.elements.namedItem(key);
     if (!field) return;
 
     if (field.type === "checkbox") {
-      field.checked = !!value;
+      field.checked = Boolean(value);
       return;
     }
 
@@ -1527,13 +1704,14 @@ function hydrateComposerDraft(draft) {
 let autosaveBoundForKey = "";
 
 function bindComposerAutosave() {
-  if (!els.composerForm) return;
+  const form = getComposerForm();
+  if (!form) return;
 
   const storageKey = getStorageKey();
   if (autosaveBoundForKey === storageKey) return;
   autosaveBoundForKey = storageKey;
 
-  els.composerForm.querySelectorAll("input, textarea, select").forEach((field) => {
+  form.querySelectorAll("input, textarea, select").forEach((field) => {
     field.addEventListener("input", () => {
       window.clearTimeout(state.autosaveTimer);
       state.autosaveTimer = window.setTimeout(saveDraftToLocal, 500);
@@ -1605,19 +1783,17 @@ async function runSuggestionEngineAfterSave(recordType, savedRecord) {
   state.lastSavedRecord = savedRecord;
 
   if (els.composerAiFeedback) {
-    if (suggestions.length) {
-      els.composerAiFeedback.textContent = `${suggestions.length} linked suggestion${suggestions.length === 1 ? "" : "s"} ready.`;
-    } else {
-      els.composerAiFeedback.textContent = "Saved. No AI suggestions triggered.";
-    }
+    els.composerAiFeedback.textContent = suggestions.length
+      ? `${suggestions.length} linked suggestion${suggestions.length === 1 ? "" : "s"} ready.`
+      : "Saved. No AI suggestions triggered.";
   }
 
   if (!suggestions.length) {
-    suggestionsUi.hideSuggestionsPanel();
+    suggestionsUi.hideSuggestionsPanel?.();
     return suggestions;
   }
 
-  suggestionsUi.showSuggestionsPanel(suggestions, {
+  suggestionsUi.showSuggestionsPanel?.(suggestions, {
     source_record_type: metadata.source_record_type,
     source_record_id: metadata.source_record_id,
     scope: metadata.scope,
@@ -1633,12 +1809,16 @@ function updateComposerAssistantContext() {
   const lines = [];
 
   if (meta.suggestion_action_type) {
-    lines.push(`Assistant action: ${String(meta.suggestion_action_type).replaceAll("_", " ")}`);
+    lines.push(
+      `Assistant action: ${String(meta.suggestion_action_type).replaceAll("_", " ")}`
+    );
   }
 
   if (meta.source_record_type) {
     lines.push(
-      `Linked from ${meta.source_record_type}${meta.source_record_id ? ` #${meta.source_record_id}` : ""}`
+      `Linked from ${meta.source_record_type}${
+        meta.source_record_id ? ` #${meta.source_record_id}` : ""
+      }`
     );
   }
 
@@ -1677,6 +1857,7 @@ export function openComposerFor(recordType, mode = "create", item = null) {
   setComposerMetaFromItem(item || {});
 
   const content = getComposerContent(recordType, item || {});
+  const fieldsHost = getComposerFieldsHost();
 
   if (els.composerTitle) els.composerTitle.textContent = content.title;
   if (els.composerSubtitle) els.composerSubtitle.textContent = content.subtitle;
@@ -1684,13 +1865,15 @@ export function openComposerFor(recordType, mode = "create", item = null) {
 
   if (els.composerPrompts) {
     els.composerPrompts.innerHTML = [
-      ...(content.prompts || []).map((prompt) => `<div class="composer-prompt">${escapeHtml(prompt)}</div>`),
+      ...(content.prompts || []).map(
+        (prompt) => `<div class="composer-prompt">${escapeHtml(prompt)}</div>`
+      ),
       getSuggestionBannerHtml(),
     ].join("");
   }
 
-  if (els.composerFields) {
-    els.composerFields.innerHTML = renderSections(content.sections || []);
+  if (fieldsHost) {
+    fieldsHost.innerHTML = renderSections(content.sections || []);
   }
 
   updateComposerAssistantContext();
@@ -1698,7 +1881,9 @@ export function openComposerFor(recordType, mode = "create", item = null) {
   bindComposerAutosave();
 
   const draft = loadDraftFromLocal();
-  if (draft) hydrateComposerDraft(draft);
+  if (draft) {
+    hydrateComposerDraft(draft);
+  }
 
   showComposerStatus("Autosave ready");
 }
@@ -1763,7 +1948,10 @@ function nowIso() {
 function normaliseSavedRecordForSchema(recordType, payload = {}) {
   const currentScope = getCurrentScope();
   const entityId = getScopeEntityId();
-  const id = payload.id || state.composerRecordId || `local-${recordType}-${Date.now()}`;
+  const id =
+    payload.id ||
+    state.composerRecordId ||
+    `local-${recordType}-${Date.now()}`;
 
   const base = {
     id,
@@ -1809,12 +1997,12 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       staff_response: payload.staff_response || "",
       child_response: payload.child_response || "",
       outcome: payload.outcome || "",
-      injury_flag: !!payload.injury_flag,
-      property_damage_flag: !!payload.property_damage_flag,
-      police_involved: !!payload.police_involved,
-      safeguarding_flag: !!payload.safeguarding_flag,
+      injury_flag: Boolean(payload.injury_flag),
+      property_damage_flag: Boolean(payload.property_damage_flag),
+      police_involved: Boolean(payload.police_involved),
+      safeguarding_flag: Boolean(payload.safeguarding_flag),
       severity: payload.severity || "",
-      follow_up_required: !!payload.follow_up_required,
+      follow_up_required: Boolean(payload.follow_up_required),
       workflow_status: payload.workflow_status || "draft",
       manager_review_status: payload.manager_review_status || "",
       presentation: payload.presentation || "",
@@ -1822,8 +2010,8 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       child_voice: payload.child_voice || "",
       restorative_follow_up: payload.restorative_follow_up || "",
       actions_taken: payload.actions_taken || "",
-      ofsted_notified: !!payload.ofsted_notified,
-      requires_reg40: !!payload.requires_reg40,
+      ofsted_notified: Boolean(payload.ofsted_notified),
+      requires_reg40: Boolean(payload.requires_reg40),
     },
 
     support_plan: {
@@ -1869,7 +2057,7 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       summary: payload.summary || "",
       professional_name: payload.professional_name || "",
       outcome: payload.outcome || "",
-      follow_up_required: !!payload.follow_up_required,
+      follow_up_required: Boolean(payload.follow_up_required),
       next_action_date: payload.next_action_date || null,
       child_voice: payload.child_voice || "",
       workflow_status: payload.workflow_status || "draft",
@@ -1889,7 +2077,7 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       professional_involved: payload.professional_involved || "",
       achievement_note: payload.achievement_note || "",
       child_voice: payload.child_voice || "",
-      follow_up_required: !!payload.follow_up_required,
+      follow_up_required: Boolean(payload.follow_up_required),
       workflow_status: payload.workflow_status || "draft",
       significance: payload.significance || "",
       linked_plan_id: payload.linked_plan_id || null,
@@ -1905,7 +2093,7 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       post_contact_presentation: payload.post_contact_presentation || "",
       child_voice: payload.child_voice || "",
       concerns: payload.concerns || "",
-      follow_up_required: !!payload.follow_up_required,
+      follow_up_required: Boolean(payload.follow_up_required),
       workflow_status: payload.workflow_status || "draft",
       significance: payload.significance || "",
       linked_contact_id: payload.linked_contact_id || null,
@@ -1956,7 +2144,7 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       linked_plan_id: payload.linked_plan_id || null,
       linked_target_id: payload.linked_target_id || null,
       significance: payload.significance || "",
-      archived: !!payload.archived,
+      archived: Boolean(payload.archived),
     },
 
     safeguarding_record: {
@@ -1966,7 +2154,7 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       disclosure_details: payload.disclosure_details || "",
       concern_details: payload.concern_details || "",
       immediate_action_taken: payload.immediate_action_taken || "",
-      referral_made: !!payload.referral_made,
+      referral_made: Boolean(payload.referral_made),
       referral_details: payload.referral_details || "",
       outcome: payload.outcome || "",
       manager_review_status: payload.manager_review_status || "",
@@ -1978,12 +2166,12 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       reported_datetime: payload.reported_datetime || null,
       police_reference: payload.police_reference || "",
       return_datetime: payload.return_datetime || null,
-      return_interview_completed: !!payload.return_interview_completed,
+      return_interview_completed: Boolean(payload.return_interview_completed),
       trigger_factors: payload.trigger_factors || "",
       push_pull_factors: payload.push_pull_factors || "",
       actions_taken: payload.actions_taken || "",
       outcome: payload.outcome || "",
-      review_required: !!payload.review_required,
+      review_required: Boolean(payload.review_required),
       workflow_status: payload.workflow_status || "draft",
       manager_review_status: payload.manager_review_status || "",
       child_voice: payload.child_voice || "",
@@ -1992,11 +2180,15 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
     },
 
     task: {
-      home_id: currentScope !== "child" ? (payload.home_id || getCurrentHomeId() || null) : (payload.home_id || getCurrentHomeId() || null),
-      young_person_id: currentScope === "child" ? (payload.young_person_id || state.youngPersonId || null) : null,
+      home_id:
+        payload.home_id || getCurrentHomeId() || null,
+      young_person_id:
+        currentScope === "child"
+          ? payload.young_person_id || state.youngPersonId || null
+          : null,
       task: payload.task || "",
       task_date: payload.task_date || null,
-      completed: !!payload.completed,
+      completed: Boolean(payload.completed),
       assigned_role: payload.assigned_role || "",
       title: payload.title || "",
       assigned_to_user_id: payload.assigned_to_user_id || null,
@@ -2004,22 +2196,29 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       source_id: payload.source_id || payload.related_id || null,
       task_type: payload.task_type || "",
       due_date: payload.due_date || null,
-      compliance_generated: !!payload.compliance_generated,
+      compliance_generated: Boolean(payload.compliance_generated),
       completed_at: payload.completed ? nowIso() : null,
     },
 
     manager_action: {
-      young_person_id: currentScope === "child" ? (payload.young_person_id || state.youngPersonId || null) : null,
+      young_person_id:
+        currentScope === "child"
+          ? payload.young_person_id || state.youngPersonId || null
+          : null,
       action_type: payload.action_type || "",
       related_table: payload.related_table || payload.source_record_type || "",
       related_id: payload.related_id || payload.source_record_id || null,
       note: payload.note || payload.summary || "",
       action_at: nowIso(),
+      summary: payload.summary || "",
     },
 
     document: {
-      young_person_id: currentScope === "child" ? (payload.young_person_id || state.youngPersonId || null) : null,
-      home_id: currentScope !== "child" ? (payload.home_id || getCurrentHomeId() || null) : (payload.home_id || getCurrentHomeId() || null),
+      young_person_id:
+        currentScope === "child"
+          ? payload.young_person_id || state.youngPersonId || null
+          : null,
+      home_id: payload.home_id || getCurrentHomeId() || null,
       document_type: payload.document_type || "",
       title: payload.title || "",
       issue_date: payload.issue_date || null,
@@ -2036,8 +2235,11 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
     },
 
     communication: {
-      young_person_id: currentScope === "child" ? (payload.young_person_id || state.youngPersonId || null) : null,
-      home_id: currentScope !== "child" ? (payload.home_id || getCurrentHomeId() || null) : (payload.home_id || getCurrentHomeId() || null),
+      young_person_id:
+        currentScope === "child"
+          ? payload.young_person_id || state.youngPersonId || null
+          : null,
+      home_id: payload.home_id || getCurrentHomeId() || null,
       contact_datetime: payload.contact_datetime || null,
       contact_type: payload.contact_type || "",
       contact_person: payload.contact_person || "",
@@ -2047,7 +2249,7 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       summary: payload.summary || "",
       decisions: payload.decisions || "",
       actions_required: payload.actions_required || "",
-      follow_up_required: !!payload.follow_up_required,
+      follow_up_required: Boolean(payload.follow_up_required),
     },
 
     therapy: {
@@ -2302,7 +2504,9 @@ export async function saveComposer(mode = "draft") {
       ...(savedRecord || {}),
       young_person_id:
         getCurrentScope() === "child"
-          ? savedRecord?.young_person_id || payload.young_person_id || state.youngPersonId
+          ? savedRecord?.young_person_id ||
+            payload.young_person_id ||
+            state.youngPersonId
           : null,
       home_id:
         getCurrentScope() !== "child"
@@ -2319,6 +2523,7 @@ export async function saveComposer(mode = "draft") {
 
   clearDraftFromLocal();
   autosaveBoundForKey = "";
+
   showComposerStatus(
     response?._local_only
       ? "Saved locally"
@@ -2326,7 +2531,7 @@ export async function saveComposer(mode = "draft") {
       ? "Submitted"
       : "Saved"
   );
-  closeComposer(true);
 
+  closeComposer(true);
   return response;
 }
