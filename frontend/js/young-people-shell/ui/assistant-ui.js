@@ -259,11 +259,85 @@ function renderUserRichText(text = "") {
   return `<p>${escapeHtml(String(text || ""))}</p>`;
 }
 
+function extractAssistantContent(message = {}) {
+  if (typeof message === "string") return message;
+
+  if (!message || typeof message !== "object") return "";
+
+  const directCandidates = [
+    message.content,
+    message.text,
+    message.message,
+    message.response,
+    message.answer,
+    message.output,
+  ];
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate;
+    }
+  }
+
+  if (message.content && typeof message.content === "object") {
+    const content = message.content;
+
+    const nestedCandidates = [
+      content.text,
+      content.message,
+      content.response,
+      content.answer,
+      content.output,
+      content.content,
+    ];
+
+    for (const candidate of nestedCandidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate;
+      }
+    }
+
+    if (Array.isArray(content.parts)) {
+      const joined = content.parts
+        .map((part) => {
+          if (typeof part === "string") return part;
+          if (part && typeof part.text === "string") return part.text;
+          if (part && typeof part.content === "string") return part.content;
+          return "";
+        })
+        .filter(Boolean)
+        .join("\n");
+
+      if (joined.trim()) return joined;
+    }
+  }
+
+  if (Array.isArray(message.parts)) {
+    const joined = message.parts
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part.text === "string") return part.text;
+        if (part && typeof part.content === "string") return part.content;
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+
+    if (joined.trim()) return joined;
+  }
+
+  try {
+    return JSON.stringify(message, null, 2);
+  } catch {
+    return "";
+  }
+}
+
 function renderMessage(message = {}) {
   const role = message.role || "assistant";
   const roleClass =
     role === "user" ? "assistant-message-user" : "assistant-message-system";
-  const content = String(message.content || message.text || "");
+  const content = extractAssistantContent(message);
 
   return `
     <article class="assistant-message ${escapeHtml(roleClass)}">
@@ -841,7 +915,7 @@ export function appendAssistantSystemMessage(text) {
   const entry = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: "assistant",
-    content: String(text || ""),
+    content: text,
     created_at: new Date().toISOString(),
   };
 
