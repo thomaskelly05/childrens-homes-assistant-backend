@@ -30,139 +30,174 @@ export {
   renderEmptyState,
 } from "./helpers.js";
 
-const RECORD_CONFIG = {
-  daily_note: {
-    label: "Daily note",
-    detailUrl: (id) => `/young-people/daily-notes/${id}`,
-    submitUrl: (id) => `/young-people/daily-notes/${id}/submit`,
-    approveUrl: (id) => `/young-people/daily-notes/${id}/approve`,
-    returnUrl: (id) => `/young-people/daily-notes/${id}/return`,
-    archiveUrl: (id) => `/young-people/daily-notes/${id}/archive`,
-  },
-  incident: {
-    label: "Important event",
-    detailUrl: (id) => `/young-people/incidents/${id}`,
-    submitUrl: (id) => `/young-people/incidents/${id}/submit`,
-    approveUrl: (id) => `/young-people/incidents/${id}/approve`,
-    returnUrl: (id) => `/young-people/incidents/${id}/return`,
-    archiveUrl: (id) => `/young-people/incidents/${id}/archive`,
-  },
-  support_plan: {
-    label: "Support plan",
-    detailUrl: (id) => `/young-people/plans/${id}`,
-    submitUrl: (id) => `/young-people/plans/${id}/submit`,
-    approveUrl: (id) => `/young-people/plans/${id}/approve`,
-    returnUrl: (id) => `/young-people/plans/${id}/return`,
-    archiveUrl: (id) => `/young-people/plans/${id}/archive`,
-  },
-  risk: {
-    label: "Risk assessment",
-    detailUrl: (id) => `/young-people/risks/${id}`,
-    submitUrl: (id) => `/young-people/risks/${id}/submit`,
-    approveUrl: (id) => `/young-people/risks/${id}/approve`,
-    returnUrl: (id) => `/young-people/risks/${id}/return`,
-    archiveUrl: (id) => `/young-people/risks/${id}/archive`,
-  },
-  appointment: {
-    label: "Appointment",
-    detailUrl: (id) => `/young-people/appointments/${id}`,
-    approveUrl: (id) => `/young-people/appointments/${id}/complete`,
-    returnUrl: (id) => `/young-people/appointments/${id}/cancel`,
-  },
-  health_record: {
-    label: "Health record",
-    detailUrl: (id) => `/young-people/health-records/${id}`,
-  },
-  education_record: {
-    label: "Education record",
-    detailUrl: (id) => `/young-people/education-records/${id}`,
-  },
-  family_contact: {
-    label: "Family contact",
-    detailUrl: (id) => `/young-people/family-contact-records/${id}`,
-  },
-  keywork: {
-    label: "Keywork session",
-    detailUrl: (id) => `/young-people/keywork/${id}`,
-    submitUrl: (id) => `/young-people/keywork/${id}/submit`,
-    approveUrl: (id) => `/young-people/keywork/${id}/approve`,
-    returnUrl: (id) => `/young-people/keywork/${id}/return`,
-    archiveUrl: (id) => `/young-people/keywork/${id}/archive`,
-  },
-  report: {
-    label: "Report",
-    detailUrl: (id) => `/young-people/reports/${id}`,
-  },
-  chronology_event: {
-    label: "Chronology event",
-    detailUrl: (id) => `/young-people/chronology/${id}`,
-  },
-  compliance_item: {
-    label: "Compliance item",
-    detailUrl: (id) => `/young-people/compliance/${id}`,
-  },
-  safeguarding_record: {
-    label: "Safeguarding record",
-    detailUrl: (id) => `/young-people/safeguarding-records/${id}`,
-    submitUrl: (id) => `/young-people/safeguarding-records/${id}/submit`,
-    approveUrl: (id) => `/young-people/safeguarding-records/${id}/approve`,
-    returnUrl: (id) => `/young-people/safeguarding-records/${id}/return`,
-    archiveUrl: (id) => `/young-people/safeguarding-records/${id}/archive`,
-  },
-  missing_episode: {
-    label: "Missing episode",
-    detailUrl: (id) => `/young-people/missing-episodes/${id}`,
-    submitUrl: (id) => `/young-people/missing-episodes/${id}/submit`,
-    approveUrl: (id) => `/young-people/missing-episodes/${id}/approve`,
-    returnUrl: (id) => `/young-people/missing-episodes/${id}/return`,
-    archiveUrl: (id) => `/young-people/missing-episodes/${id}/archive`,
-  },
-  task: {
-    label: "Task",
-    detailUrl: (id) => `/young-people/tasks/${id}`,
-  },
-  achievement_record: {
-    label: "Achievement",
-    detailUrl: (id) => `/young-people/achievements/${id}`,
-  },
-  medication_profile: {
-    label: "Medication profile",
-    detailUrl: (id) => `/young-people/medication-profiles/${id}`,
-  },
-  medication_record: {
-    label: "Medication record",
-    detailUrl: (id) => `/young-people/medication-records/${id}`,
-  },
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
 
-  // Wider home / quality shell items
-  communication: {
-    label: "Communication",
-    detailUrl: (id) => `/communications/${id}`,
-  },
-  document: {
-    label: "Document",
-    detailUrl: (id) => `/documents/${id}`,
-  },
-  therapy: {
-    label: "Therapy",
-    detailUrl: (id) => `/therapy/${id}`,
-  },
-  team: {
-    label: "Team item",
-    detailUrl: (id) => `/team/${id}`,
-  },
-  supervision: {
-    label: "Supervision",
-    detailUrl: (id) => `/supervisions/${id}`,
-  },
-  compliance: {
-    label: "Compliance",
-    detailUrl: (id) => `/compliance/${id}`,
-  },
-  audit: {
-    label: "Audit",
-    detailUrl: (id) => `/audits/${id}`,
-  },
+function isChildScope() {
+  return getCurrentScope() === "child";
+}
+
+function getHomeScopedBase() {
+  return "/homes";
+}
+
+function getChildScopedBase() {
+  return "/young-people";
+}
+
+function buildScopedDetailUrl(recordType, id) {
+  const childBase = getChildScopedBase();
+  const homeBase = getHomeScopedBase();
+  const scope = getCurrentScope();
+
+  const childRoutes = {
+    daily_note: `${childBase}/daily-notes/${id}`,
+    incident: `${childBase}/incidents/${id}`,
+    support_plan: `${childBase}/plans/${id}`,
+    risk: `${childBase}/risks/${id}`,
+    appointment: `${childBase}/appointments/${id}`,
+    health_record: `${childBase}/health-records/${id}`,
+    education_record: `${childBase}/education-records/${id}`,
+    family_contact: `${childBase}/family-contact-records/${id}`,
+    keywork: `${childBase}/keywork/${id}`,
+    report: `${childBase}/reports/${id}`,
+    chronology_event: `${childBase}/chronology/${id}`,
+    compliance_item: `${childBase}/compliance/${id}`,
+    safeguarding_record: `${childBase}/safeguarding-records/${id}`,
+    missing_episode: `${childBase}/missing-episodes/${id}`,
+    task: `${childBase}/tasks/${id}`,
+    achievement_record: `${childBase}/achievements/${id}`,
+    medication_profile: `${childBase}/medication-profiles/${id}`,
+    medication_record: `${childBase}/medication-records/${id}`,
+    communication: `${childBase}/communications/${id}`,
+    document: `${childBase}/documents/${id}`,
+  };
+
+  const homeRoutes = {
+    risk: `${homeBase}/risks/${id}`,
+    appointment: `${homeBase}/appointments/${id}`,
+    task: `${homeBase}/tasks/${id}`,
+    manager_action: `${homeBase}/manager-actions/${id}`,
+    communication: `${homeBase}/communications/${id}`,
+    document: `${homeBase}/documents/${id}`,
+    therapy: `${homeBase}/therapy/${id}`,
+    team: `${homeBase}/team/${id}`,
+    supervision: `${homeBase}/supervisions/${id}`,
+    compliance: `${homeBase}/compliance/${id}`,
+    audit: `${homeBase}/audits/${id}`,
+    report: `${homeBase}/reports/${id}`,
+  };
+
+  if (scope === "child") {
+    return childRoutes[recordType] || null;
+  }
+
+  return homeRoutes[recordType] || childRoutes[recordType] || null;
+}
+
+function buildScopedWorkflowUrl(recordType, id, action) {
+  const childBase = getChildScopedBase();
+  const homeBase = getHomeScopedBase();
+  const scope = getCurrentScope();
+
+  const childActions = {
+    daily_note: {
+      submit: `${childBase}/daily-notes/${id}/submit`,
+      approve: `${childBase}/daily-notes/${id}/approve`,
+      return: `${childBase}/daily-notes/${id}/return`,
+      archive: `${childBase}/daily-notes/${id}/archive`,
+    },
+    incident: {
+      submit: `${childBase}/incidents/${id}/submit`,
+      approve: `${childBase}/incidents/${id}/approve`,
+      return: `${childBase}/incidents/${id}/return`,
+      archive: `${childBase}/incidents/${id}/archive`,
+    },
+    support_plan: {
+      submit: `${childBase}/plans/${id}/submit`,
+      approve: `${childBase}/plans/${id}/approve`,
+      return: `${childBase}/plans/${id}/return`,
+      archive: `${childBase}/plans/${id}/archive`,
+    },
+    risk: {
+      submit: `${childBase}/risks/${id}/submit`,
+      approve: `${childBase}/risks/${id}/approve`,
+      return: `${childBase}/risks/${id}/return`,
+      archive: `${childBase}/risks/${id}/archive`,
+    },
+    appointment: {
+      approve: `${childBase}/appointments/${id}/complete`,
+      return: `${childBase}/appointments/${id}/cancel`,
+    },
+    keywork: {
+      submit: `${childBase}/keywork/${id}/submit`,
+      approve: `${childBase}/keywork/${id}/approve`,
+      return: `${childBase}/keywork/${id}/return`,
+      archive: `${childBase}/keywork/${id}/archive`,
+    },
+    safeguarding_record: {
+      submit: `${childBase}/safeguarding-records/${id}/submit`,
+      approve: `${childBase}/safeguarding-records/${id}/approve`,
+      return: `${childBase}/safeguarding-records/${id}/return`,
+      archive: `${childBase}/safeguarding-records/${id}/archive`,
+    },
+    missing_episode: {
+      submit: `${childBase}/missing-episodes/${id}/submit`,
+      approve: `${childBase}/missing-episodes/${id}/approve`,
+      return: `${childBase}/missing-episodes/${id}/return`,
+      archive: `${childBase}/missing-episodes/${id}/archive`,
+    },
+  };
+
+  const homeActions = {
+    risk: {
+      submit: `${homeBase}/risks/${id}/submit`,
+      approve: `${homeBase}/risks/${id}/approve`,
+      return: `${homeBase}/risks/${id}/return`,
+      archive: `${homeBase}/risks/${id}/archive`,
+    },
+    appointment: {
+      approve: `${homeBase}/appointments/${id}/complete`,
+      return: `${homeBase}/appointments/${id}/cancel`,
+    },
+  };
+
+  const map =
+    scope === "child"
+      ? childActions[recordType]
+      : homeActions[recordType] || childActions[recordType];
+
+  return map?.[action] || null;
+}
+
+const RECORD_CONFIG = {
+  daily_note: { label: "Daily note" },
+  incident: { label: "Important event" },
+  support_plan: { label: "Support plan" },
+  risk: { label: "Risk assessment" },
+  appointment: { label: "Appointment" },
+  health_record: { label: "Health record" },
+  education_record: { label: "Education record" },
+  family_contact: { label: "Family contact" },
+  keywork: { label: "Keywork session" },
+  report: { label: "Report" },
+  chronology_event: { label: "Chronology event" },
+  compliance_item: { label: "Compliance item" },
+  safeguarding_record: { label: "Safeguarding record" },
+  missing_episode: { label: "Missing episode" },
+  task: { label: "Task" },
+  achievement_record: { label: "Achievement" },
+  medication_profile: { label: "Medication profile" },
+  medication_record: { label: "Medication record" },
+  communication: { label: "Communication" },
+  document: { label: "Document" },
+  therapy: { label: "Therapy" },
+  team: { label: "Team item" },
+  supervision: { label: "Supervision" },
+  compliance: { label: "Compliance" },
+  audit: { label: "Audit" },
+  manager_action: { label: "Manager action" },
 };
 
 export function normaliseRecordType(item = {}) {
@@ -196,13 +231,14 @@ export function normaliseRecordType(item = {}) {
   if (raw === "achievement_records") return "achievement_record";
   if (raw === "medication_profiles") return "medication_profile";
   if (raw === "medication_records") return "medication_record";
-
   if (raw === "communications") return "communication";
   if (raw === "documents") return "document";
-  if (raw === "therapy_records" || raw === "therapeutic_services") return "therapy";
-  if (raw === "team_items" || raw === "staff") return "team";
+  if (raw === "therapy_records" || raw === "therapeutic_services" || raw === "therapy") return "therapy";
+  if (raw === "team_items" || raw === "staff" || raw === "team") return "team";
   if (raw === "supervisions") return "supervision";
   if (raw === "audits") return "audit";
+  if (raw === "compliance") return "compliance";
+  if (raw === "manager_actions") return "manager_action";
 
   return raw;
 }
@@ -215,13 +251,7 @@ export function getRecordUrl(item = {}) {
   const type = normaliseRecordType(item);
   const id = getRecordId(item);
   if (!id) return null;
-
-  const config = RECORD_CONFIG[type];
-  if (config?.detailUrl) {
-    return config.detailUrl(id);
-  }
-
-  return null;
+  return buildScopedDetailUrl(type, id);
 }
 
 function buildSubtitle(type, item = {}, detail = {}) {
@@ -298,6 +328,7 @@ function detailObjectFromResponse(data = {}) {
     data.supervision ||
     data.audit ||
     data.compliance ||
+    data.manager_action ||
     data.item ||
     data.record ||
     data
@@ -403,22 +434,35 @@ export function closeDrawer() {
 }
 
 function setDrawerButtons(type) {
-  const config = RECORD_CONFIG[type];
-  const hasWorkflow = !!(
-    config?.submitUrl ||
-    config?.approveUrl ||
-    config?.returnUrl ||
-    config?.archiveUrl
+  const id = getRecordId(state.activeRecordItem || {});
+  const hasWorkflow = Boolean(
+    id &&
+      (buildScopedWorkflowUrl(type, id, "submit") ||
+        buildScopedWorkflowUrl(type, id, "approve") ||
+        buildScopedWorkflowUrl(type, id, "return") ||
+        buildScopedWorkflowUrl(type, id, "archive"))
   );
 
   els.drawerActions?.classList.toggle("hidden", !hasWorkflow);
 
   if (!hasWorkflow) return;
 
-  els.drawerSubmitBtn?.classList.toggle("hidden", !config.submitUrl);
-  els.drawerApproveBtn?.classList.toggle("hidden", !config.approveUrl);
-  els.drawerReturnBtn?.classList.toggle("hidden", !config.returnUrl);
-  els.drawerArchiveBtn?.classList.toggle("hidden", !config.archiveUrl);
+  els.drawerSubmitBtn?.classList.toggle(
+    "hidden",
+    !buildScopedWorkflowUrl(type, id, "submit")
+  );
+  els.drawerApproveBtn?.classList.toggle(
+    "hidden",
+    !buildScopedWorkflowUrl(type, id, "approve")
+  );
+  els.drawerReturnBtn?.classList.toggle(
+    "hidden",
+    !buildScopedWorkflowUrl(type, id, "return")
+  );
+  els.drawerArchiveBtn?.classList.toggle(
+    "hidden",
+    !buildScopedWorkflowUrl(type, id, "archive")
+  );
 
   if (type === "appointment") {
     if (els.drawerApproveBtn) els.drawerApproveBtn.textContent = "Complete";
@@ -467,6 +511,13 @@ function shouldShowSuggestionsForType(type) {
     "safeguarding_record",
     "missing_episode",
     "task",
+    "communication",
+    "document",
+    "therapy",
+    "supervision",
+    "audit",
+    "compliance",
+    "manager_action",
   ].includes(type);
 }
 
@@ -602,9 +653,8 @@ export async function openRecordDetail(item) {
 export async function runDrawerWorkflow(action) {
   const item = state.activeRecordItem;
   const type = state.activeRecordType;
-  const config = RECORD_CONFIG[type];
 
-  if (!item || !config) {
+  if (!item || !type) {
     throw new Error("No active record is available.");
   }
 
@@ -613,33 +663,20 @@ export async function runDrawerWorkflow(action) {
     throw new Error("No record ID is available.");
   }
 
-  let url = null;
-  let body = null;
-
-  if (action === "submit" && config.submitUrl) {
-    url = config.submitUrl(id);
-  }
-
-  if (action === "approve" && config.approveUrl) {
-    url = config.approveUrl(id);
-    if (type !== "appointment") {
-      body = { review_note: "Approved in workspace" };
-    }
-  }
-
-  if (action === "return" && config.returnUrl) {
-    url = config.returnUrl(id);
-    if (type !== "appointment") {
-      body = { review_note: "Returned in workspace" };
-    }
-  }
-
-  if (action === "archive" && config.archiveUrl) {
-    url = config.archiveUrl(id);
-  }
+  const url = buildScopedWorkflowUrl(type, id, action);
 
   if (!url) {
     throw new Error(`No workflow action is configured for "${action}".`);
+  }
+
+  let body = null;
+
+  if (action === "approve" && type !== "appointment") {
+    body = { review_note: "Approved in workspace" };
+  }
+
+  if (action === "return" && type !== "appointment") {
+    body = { review_note: "Returned in workspace" };
   }
 
   return apiSend(url, "POST", body);
@@ -664,9 +701,7 @@ export function bindRecordDrawerEvents({ onEdit, onWorkflowComplete } = {}) {
       setDrawerWorkflowBusy(true);
       await runDrawerWorkflow(action);
       closeDrawer();
-      await onWorkflowComplete?.({
-        action,
-      });
+      await onWorkflowComplete?.({ action });
     } catch (error) {
       setDrawerWorkflowBusy(false);
 
