@@ -94,6 +94,7 @@ function getStatusTone(status = "") {
       "planned",
       "received",
       "sent",
+      "in_progress",
     ].includes(normalised)
   ) {
     return "warning";
@@ -111,6 +112,7 @@ function getStatusTone(status = "") {
       "resolved",
       "closed",
       "reviewed",
+      "current",
     ].includes(normalised)
   ) {
     return "success";
@@ -459,7 +461,12 @@ function renderInsightCards(items = []) {
   `;
 }
 
-function buildInsightItems({ audits = [], incidents = [], safeguarding = [], compliance = [] }) {
+function buildInsightItems({
+  audits = [],
+  incidents = [],
+  safeguarding = [],
+  compliance = [],
+}) {
   const items = [];
 
   const overdueAuditCount = audits.filter((item) =>
@@ -898,6 +905,7 @@ async function fetchQualityDataset(homeId) {
     safeGet(`/homes/${homeId}/quality`),
     safeGet(`/homes/${homeId}/audits`),
     safeGet(`/homes/${homeId}/incidents`),
+    safeGet(`/homes/${homeId}/safeguarding`),
     safeGet(`/homes/${homeId}/tasks`),
     safeGet(`/homes/${homeId}/compliance`),
     safeGet(`/homes/${homeId}/reports`),
@@ -907,17 +915,17 @@ async function fetchQualityDataset(homeId) {
     summaryData,
     auditData,
     incidentData,
+    safeguardingData,
     taskData,
     complianceData,
     reportData,
   ] = await Promise.all(requests);
 
-  const safeguardingData = null;
-
   const responses = [
     summaryData,
     auditData,
     incidentData,
+    safeguardingData,
     taskData,
     complianceData,
     reportData,
@@ -926,7 +934,10 @@ async function fetchQualityDataset(homeId) {
   const hasLiveSuccess = responses.some(hasUsableData);
 
   if (!hasLiveSuccess) {
-    return buildFallbackQualityData(homeId);
+    return {
+      ...buildFallbackQualityData(homeId),
+      isFallback: true,
+    };
   }
 
   return {
@@ -937,6 +948,7 @@ async function fetchQualityDataset(homeId) {
     taskData: taskData || { items: [] },
     complianceData: complianceData || { items: [] },
     reportData: reportData || { items: [] },
+    isFallback: false,
   };
 }
 
@@ -961,6 +973,7 @@ export async function loadQualityDashboard() {
       taskData,
       complianceData,
       reportData,
+      isFallback,
     } = await fetchQualityDataset(homeId);
 
     const summary = normaliseQualitySummary(summaryData);
@@ -1044,7 +1057,9 @@ export async function loadQualityDashboard() {
     const auditScore = toNumber(summary.audit_score ?? summary.quality_score, 0);
 
     updateWorkspaceSummaryStrip({
-      today: `Audit score ${auditScore} • ${openActions.length} open actions`,
+      today: isFallback
+        ? `Audit score ${auditScore} • ${openActions.length} open actions • demo preview`
+        : `Audit score ${auditScore} • ${openActions.length} open actions`,
       nextEvent: nextAudit
         ? `Next audit ${formatDate(nextAudit.audit_date || nextAudit.review_date)}`
         : "No audit scheduled",
