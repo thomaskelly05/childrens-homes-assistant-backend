@@ -34,10 +34,6 @@ function getCurrentScope() {
   return state.currentScope || "child";
 }
 
-function isChildScope() {
-  return getCurrentScope() === "child";
-}
-
 function getHomeScopedBase() {
   return "/homes";
 }
@@ -297,6 +293,8 @@ function buildSubtitle(type, item = {}, detail = {}) {
 }
 
 function detailObjectFromResponse(data = {}) {
+  if (!data || typeof data !== "object") return {};
+
   return (
     data.daily_note ||
     data.incident ||
@@ -375,7 +373,7 @@ function renderObjectValue(value) {
 function renderDetailRows(detail = {}) {
   const rows = Object.entries(detail).filter(
     ([key, value]) =>
-      !["id", "young_person_id", "home_id", "created_by", "updated_by"].includes(key) &&
+      !["id", "young_person_id", "home_id", "created_by", "updated_by", "_local_only"].includes(key) &&
       value !== null &&
       value !== "" &&
       value !== undefined
@@ -447,22 +445,10 @@ function setDrawerButtons(type) {
 
   if (!hasWorkflow) return;
 
-  els.drawerSubmitBtn?.classList.toggle(
-    "hidden",
-    !buildScopedWorkflowUrl(type, id, "submit")
-  );
-  els.drawerApproveBtn?.classList.toggle(
-    "hidden",
-    !buildScopedWorkflowUrl(type, id, "approve")
-  );
-  els.drawerReturnBtn?.classList.toggle(
-    "hidden",
-    !buildScopedWorkflowUrl(type, id, "return")
-  );
-  els.drawerArchiveBtn?.classList.toggle(
-    "hidden",
-    !buildScopedWorkflowUrl(type, id, "archive")
-  );
+  els.drawerSubmitBtn?.classList.toggle("hidden", !buildScopedWorkflowUrl(type, id, "submit"));
+  els.drawerApproveBtn?.classList.toggle("hidden", !buildScopedWorkflowUrl(type, id, "approve"));
+  els.drawerReturnBtn?.classList.toggle("hidden", !buildScopedWorkflowUrl(type, id, "return"));
+  els.drawerArchiveBtn?.classList.toggle("hidden", !buildScopedWorkflowUrl(type, id, "archive"));
 
   if (type === "appointment") {
     if (els.drawerApproveBtn) els.drawerApproveBtn.textContent = "Complete";
@@ -544,6 +530,8 @@ export async function openRecordDetail(item) {
     els.drawerTitle.textContent =
       item.title ||
       item.name ||
+      item.staff_member ||
+      item.young_person_name ||
       RECORD_CONFIG[type]?.label ||
       "Details";
   }
@@ -564,11 +552,13 @@ export async function openRecordDetail(item) {
   }
 
   try {
-    if (!url) {
+    if (!url || item?._local_only) {
       const fallbackDetail = {
         ...item,
-        detail_status: "preview_only",
-        detail_note: "This item does not yet have a dedicated detail endpoint.",
+        detail_status: item?._local_only ? "local_preview" : "preview_only",
+        detail_note: item?._local_only
+          ? "This record is currently stored locally because no live endpoint was available."
+          : "This item does not yet have a dedicated detail endpoint.",
       };
 
       if (els.drawerTitle) {
@@ -627,6 +617,7 @@ export async function openRecordDetail(item) {
         showSuggestionsPanel(suggestions, {
           source_record_type: type,
           source_record_id: suggestionRecord.id,
+          scope: getCurrentScope(),
         });
       } else {
         hideSuggestionsPanel();
