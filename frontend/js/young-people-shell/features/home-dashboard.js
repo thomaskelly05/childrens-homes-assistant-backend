@@ -102,6 +102,10 @@ function getStatusTone(status = "") {
       "visiting_professional",
       "limited",
       "in_progress",
+      "open",
+      "received",
+      "sent",
+      "planned",
     ].includes(normalised)
   ) {
     return "warning";
@@ -148,6 +152,28 @@ function sortSoonestFirst(items = [], keys = []) {
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
     return toTime(aValue) - toTime(bValue);
   });
+}
+
+function hasUsableData(data) {
+  if (!data || typeof data !== "object") return false;
+  if (Array.isArray(data.items) && data.items.length > 0) return true;
+  if (Array.isArray(data.young_people) && data.young_people.length > 0) return true;
+  if (Array.isArray(data.records) && data.records.length > 0) return true;
+  if (Array.isArray(data.team) && data.team.length > 0) return true;
+  if (Array.isArray(data.staff) && data.staff.length > 0) return true;
+  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
+  if (Array.isArray(data.communications) && data.communications.length > 0) return true;
+  if (Array.isArray(data.documents) && data.documents.length > 0) return true;
+  if (Array.isArray(data.statutory_documents) && data.statutory_documents.length > 0) return true;
+  if (Array.isArray(data.supervisions) && data.supervisions.length > 0) return true;
+  if (Array.isArray(data.therapy) && data.therapy.length > 0) return true;
+  if (Array.isArray(data.therapy_records) && data.therapy_records.length > 0) return true;
+  if (Array.isArray(data.reports) && data.reports.length > 0) return true;
+  if (Array.isArray(data.monthly_reviews) && data.monthly_reviews.length > 0) return true;
+  if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
+  if (data.summary && typeof data.summary === "object") return true;
+  if (data.home && typeof data.home === "object") return true;
+  return false;
 }
 
 function normaliseHomeSummary(data = {}) {
@@ -217,6 +243,7 @@ function normaliseTaskItems(data = {}) {
       item.summary ||
       item.notes ||
       item.description ||
+      item.task ||
       "Task recorded.",
     created_at: item.created_at || null,
     updated_at: item.updated_at || null,
@@ -228,11 +255,11 @@ function normaliseCommunicationItems(data = {}) {
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "communication",
-    title: item.title || "Communication",
+    title: item.title || item.contact_type || "Communication",
     status: item.status || "recorded",
-    summary: item.summary || "Communication logged.",
+    summary: item.summary || item.notes || "Communication logged.",
     contact_datetime: item.contact_datetime || item.created_at || null,
-    communication_type: item.communication_type || "",
+    communication_type: item.communication_type || item.contact_type || "",
     organisation: item.organisation || "",
     created_at: item.created_at || null,
     updated_at: item.updated_at || null,
@@ -306,6 +333,7 @@ function normaliseReportItems(data = {}) {
       item.summary ||
       item.summary_of_month ||
       item.progress_summary ||
+      item.report_text ||
       "Report available.",
     review_month: item.review_month || null,
     status: item.status || "completed",
@@ -682,8 +710,8 @@ function renderRows(items = [], options = {}) {
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${safeText(tone)}">${safeText(
-            status || "Recorded"
-          )}</span>
+                  status || "Recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -1125,12 +1153,6 @@ function buildFallbackData(homeId) {
     `Home ${homeId}`;
 
   const now = new Date();
-  const plusDays = (days, hour = 9, minute = 0) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-  };
   const minusDays = (days, hour = 9, minute = 0) => {
     const d = new Date(now);
     d.setDate(d.getDate() - days);
@@ -1187,23 +1209,12 @@ function buildFallbackData(homeId) {
         { id: 2, full_name: "Tom Patel", role: "Deputy Manager", status: "On shift" },
         { id: 3, full_name: "Priya Shah", role: "Therapist", status: "Visiting professional" },
         { id: 4, full_name: "Leah Brown", role: "Senior Residential Worker", status: "On shift" },
-        { id: 5, full_name: "Amir Hussain", role: "Residential Worker", status: "On shift" },
-        { id: 6, full_name: "Chloe Davies", role: "Residential Worker", status: "On shift" },
-        { id: 7, full_name: "Michael Osei", role: "Residential Worker", status: "Annual leave" },
-        { id: 8, full_name: "Helen Morris", role: "Residential Worker", status: "On shift" },
-        { id: 9, full_name: "Danielle Green", role: "Residential Worker", status: "Working remotely" },
-        { id: 10, full_name: "Chris Walker", role: "Waking Night", status: "On shift" },
-        { id: 11, full_name: "Amina Yusuf", role: "Waking Night", status: "Available" },
-        { id: 12, full_name: "Ben Carter", role: "Bank Staff", status: "Bank staff" },
-        { id: 13, full_name: "Grace Thomas", role: "Residential Worker", status: "On shift" },
       ],
     },
     taskData: {
       items: [
         { id: 201, title: "Complete fire drill log", status: "open", completed: false, due_date: dateOnly(-1) },
         { id: 202, title: "Update rota gap cover", status: "open", completed: false, due_date: dateOnly(1) },
-        { id: 203, title: "Book supervision for Ben Carter", status: "open", completed: false, due_date: dateOnly(2) },
-        { id: 204, title: "Review missing-from-care protocol", status: "completed", completed: true, due_date: dateOnly(-2) },
       ],
     },
     communicationData: {
@@ -1217,15 +1228,6 @@ function buildFallbackData(homeId) {
           communication_type: "email",
           organisation: "IRO",
         },
-        {
-          id: 302,
-          title: "School safeguarding query",
-          summary: "School asked for clarification on incident follow-up.",
-          contact_datetime: minusDays(2, 14, 15),
-          status: "Received",
-          communication_type: "phone",
-          organisation: "School",
-        },
       ],
     },
     documentData: {
@@ -1238,14 +1240,6 @@ function buildFallbackData(homeId) {
           status: "review_due",
           review_date: dateOnly(4),
         },
-        {
-          id: 402,
-          title: "Medication Audit",
-          document_type: "Health",
-          summary: "Latest audit filed.",
-          status: "active",
-          review_date: dateOnly(18),
-        },
       ],
     },
     supervisionData: {
@@ -1257,14 +1251,6 @@ function buildFallbackData(homeId) {
           status: "overdue",
           due_date: dateOnly(-3),
           summary: "Supervision overdue.",
-        },
-        {
-          id: 502,
-          staff_member: "Grace Thomas",
-          role: "Residential Worker",
-          status: "due_soon",
-          due_date: dateOnly(3),
-          summary: "Supervision due this week.",
         },
       ],
     },
@@ -1302,13 +1288,6 @@ function buildFallbackData(homeId) {
           severity: "high",
           due_date: dateOnly(-2),
         },
-        {
-          id: 802,
-          title: "Training matrix update",
-          status: "due_soon",
-          severity: "medium",
-          due_date: dateOnly(5),
-        },
       ],
     },
     isFallback: true,
@@ -1320,13 +1299,41 @@ async function fetchDataset(homeId) {
 
   const requests = [
     safeGet(`/homes/${homeId}/dashboard`),
-    safeGet(`/homes/${homeId}/compliance`),
+    safeGet(`/homes/${homeId}/team`),
+    safeGet(`/homes/${homeId}/tasks`),
+    safeGet(`/homes/${homeId}/communications`),
+    safeGet(`/homes/${homeId}/documents`),
+    safeGet(`/homes/${homeId}/supervisions`),
+    safeGet(`/homes/${homeId}/therapy`),
     safeGet(`/homes/${homeId}/reports`),
+    safeGet(`/homes/${homeId}/compliance`),
   ];
 
-  const [summaryData, complianceData, reportData] = await Promise.all(requests);
+  const [
+    summaryData,
+    teamData,
+    taskData,
+    communicationData,
+    documentData,
+    supervisionData,
+    therapyData,
+    reportData,
+    complianceData,
+  ] = await Promise.all(requests);
 
-  const hasLiveSuccess = [summaryData, complianceData, reportData].some(Boolean);
+  const responses = [
+    summaryData,
+    teamData,
+    taskData,
+    communicationData,
+    documentData,
+    supervisionData,
+    therapyData,
+    reportData,
+    complianceData,
+  ];
+
+  const hasLiveSuccess = responses.some(hasUsableData);
 
   if (!hasLiveSuccess) {
     return buildFallbackData(homeId);
@@ -1334,12 +1341,12 @@ async function fetchDataset(homeId) {
 
   return {
     summaryData: summaryData || {},
-    teamData: { items: [] },
-    taskData: { items: [] },
-    communicationData: { items: [] },
-    documentData: { items: [] },
-    supervisionData: { items: [] },
-    therapyData: { items: [] },
+    teamData: teamData || { items: [] },
+    taskData: taskData || { items: [] },
+    communicationData: communicationData || { items: [] },
+    documentData: documentData || { items: [] },
+    supervisionData: supervisionData || { items: [] },
+    therapyData: therapyData || { items: [] },
     reportData: reportData || { items: [] },
     complianceData: complianceData || { items: [] },
     isFallback: false,
