@@ -27,7 +27,7 @@ function getEl(...candidates) {
 }
 
 function getCurrentPerson() {
-  return state.selectedYoungPerson || null;
+  return state.selectedYoungPerson || state.youngPerson || null;
 }
 
 function getCurrentScope() {
@@ -35,12 +35,21 @@ function getCurrentScope() {
 }
 
 function getCurrentSection() {
-  return state.currentSection || "workspace";
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
 }
 
 function ensureAssistantArrays() {
   if (!Array.isArray(state.assistantMessages)) {
     state.assistantMessages = [];
+  }
+
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
   }
 }
 
@@ -60,7 +69,8 @@ function getAssistantMeta() {
   state.assistantMeta.runtime = state.assistantMeta.runtime || {};
   state.assistantMeta.explainability = state.assistantMeta.explainability || {};
   state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
-  state.assistantMeta.assistant_context = state.assistantMeta.assistant_context || {};
+  state.assistantMeta.assistant_context =
+    state.assistantMeta.assistant_context || {};
 
   return state.assistantMeta;
 }
@@ -378,16 +388,15 @@ function renderMessageList(host, messages = []) {
 
 function renderMessages() {
   ensureAssistantArrays();
-  const messages = state.assistantMessages || [];
 
   renderMessageList(
     getEl(els.assistantMessages, "assistantMessages"),
-    messages
+    state.assistantMessages
   );
 
   renderMessageList(
     getEl(els.assistantModalMessages, "assistantModalMessages"),
-    messages
+    state.assistantModalMessages
   );
 }
 
@@ -454,7 +463,11 @@ function renderContextText() {
   } else if (scope === "home") {
     contextText = `Scoped to ${getHomeLabel()} • whole-home OS view • section: ${section}`;
   } else if (scope === "quality") {
-    contextText = `Scoped to ${getHomeLabel()} • quality and RI • full oversight view • section: ${section}`;
+    const homeIds = Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : [];
+    contextText =
+      state.userRole === "ri" || state.userRole === "admin"
+        ? `Scoped to provider quality oversight • ${homeIds.length || 1} home(s) • section: ${section}`
+        : `Scoped to ${getHomeLabel()} • quality and RI • full oversight view • section: ${section}`;
   }
 
   contextEl.textContent = contextText;
@@ -500,7 +513,9 @@ function buildScopeSummaryCards() {
           ? state.youngPersonId
             ? `Young person: ${getPersonLabel()} • whole OS scope • section: ${normaliseSectionLabel(getCurrentSection())}`
             : "No young person selected."
-          : `${getScopeLabel()} • ${getHomeLabel()} • whole OS scope • section: ${normaliseSectionLabel(getCurrentSection())}`,
+          : `${getScopeLabel()} • ${getHomeLabel()} • whole OS scope • section: ${normaliseSectionLabel(
+              getCurrentSection()
+            )}`,
       extra: "",
     },
     {
@@ -597,10 +612,9 @@ function renderSourcesHtml(sources = []) {
       );
       const type = escapeHtml(source?.type || source?.record_type || "source");
       const description = escapeHtml(
-        String(source?.description || source?.excerpt || "").slice(
-          0,
-          MAX_SOURCE_EXCERPT
-        )
+        String(
+          source?.description || source?.excerpt || source?.summary || ""
+        ).slice(0, MAX_SOURCE_EXCERPT)
       );
       const section = escapeHtml(source?.section || "");
       const page =
@@ -661,6 +675,8 @@ function renderRuntime() {
           current_section: getCurrentSection(),
           selected_young_person_id: state.youngPersonId || null,
           home_id: state.homeId || null,
+          provider_id: state.providerId || null,
+          allowed_home_ids: state.allowedHomeIds || [],
           messages: (state.assistantMessages || []).length,
         };
 
@@ -701,6 +717,22 @@ function inferSuggestedActions() {
       getActionForQuickButton("incident", { section }),
       getActionForQuickButton("task", { section }),
       getActionForQuickButton("appointment", { section }),
+    ]
+      .filter(Boolean)
+      .forEach((action) => {
+        if (action?.id && action?.label) {
+          actions.push({
+            type: "quick_action",
+            id: action.id,
+            label: action.label,
+          });
+        }
+      });
+  } else {
+    [
+      getActionForQuickButton("task", { section, scope }),
+      getActionForQuickButton("document", { section, scope }),
+      getActionForQuickButton("communication", { section, scope }),
     ]
       .filter(Boolean)
       .forEach((action) => {
@@ -902,6 +934,7 @@ export function appendAssistantSystemMessage(text) {
   };
 
   state.assistantMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
   renderAllAssistantUi();
 }
 
@@ -916,6 +949,7 @@ export function appendAssistantUserMessage(text) {
   };
 
   state.assistantMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
   renderAllAssistantUi();
 }
 
