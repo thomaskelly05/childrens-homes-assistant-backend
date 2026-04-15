@@ -25,10 +25,6 @@ from assistant.response_planner import (
 logger = logging.getLogger("indicare.orchestrator")
 
 
-# ---------------------------------------------------------
-# Public data structures
-# ---------------------------------------------------------
-
 @dataclass
 class OrchestratorRequest:
     message: str
@@ -60,10 +56,6 @@ class OrchestratorResult:
     regulation_mapping: RegulationMappingResult = field(default_factory=RegulationMappingResult)
     regulation_payload: list[dict[str, str]] = field(default_factory=list)
 
-
-# ---------------------------------------------------------
-# Safe helpers
-# ---------------------------------------------------------
 
 def _safe_string(value: Any) -> str:
     if value is None:
@@ -210,10 +202,6 @@ def _serialise_runtime(
 
     return {k: v for k, v in payload.items() if v not in (None, "", [])}
 
-
-# ---------------------------------------------------------
-# Main orchestration
-# ---------------------------------------------------------
 
 def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     selected_mode = _normalise_response_mode(req.speed)
