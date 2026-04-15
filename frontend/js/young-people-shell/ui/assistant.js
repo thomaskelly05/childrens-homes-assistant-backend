@@ -100,6 +100,12 @@ function getAssistantScopeType() {
   return state.youngPersonId ? "young_person" : "global";
 }
 
+function getAssistantTypeForScope(scope = getCurrentScope()) {
+  if (scope === "home") return "home_os";
+  if (scope === "quality") return "quality_os";
+  return "young_people_os";
+}
+
 function extractStreamText(payload) {
   if (typeof payload === "string") return payload;
   if (!payload || typeof payload !== "object") return "";
@@ -511,7 +517,11 @@ function detectAssistantIntent(text = "") {
     return ASSISTANT_INTENT.compliance;
   }
 
-  if (/risk|safeguarding|harm|trigger|protective factor|missing from care|missing episode/.test(value)) {
+  if (
+    /risk|safeguarding|harm|trigger|protective factor|missing from care|missing episode/.test(
+      value
+    )
+  ) {
     return ASSISTANT_INTENT.risk;
   }
 
@@ -527,7 +537,11 @@ function detectAssistantIntent(text = "") {
     return ASSISTANT_INTENT.management;
   }
 
-  if (/summary|summarise|summarize|what matters|overview|lived experience|key work|keywork/.test(value)) {
+  if (
+    /summary|summarise|summarize|what matters|overview|lived experience|key work|keywork/.test(
+      value
+    )
+  ) {
     return ASSISTANT_INTENT.summary;
   }
 
@@ -933,21 +947,23 @@ function buildAssistantContextPayload(message = "") {
   const scope = getCurrentScope();
   const section = getCurrentSection();
   const intent = detectAssistantIntent(message);
-  const retrieval_mode = detectRetrievalMode(message, intent);
-  const output_mode = detectOutputMode(intent, message);
+  const retrievalMode = detectRetrievalMode(message, intent);
+  const outputMode = detectOutputMode(intent, message);
   const accessLevel = getAccessLevelForScope(scope);
+  const assistantType = getAssistantTypeForScope(scope);
+
   const allowedHomeIds =
     scope === "quality" && accessLevel === "provider"
       ? getAllowedHomeIds()
       : [Number(state.homeId)].filter((item) => Number.isFinite(item));
 
   const reg45Range =
-    /reg\s*45|regulation\s*45|ofsted/.test(String(message || "").toLowerCase())
+    /reg\s*45|regulation\s*45/.test(String(message || "").toLowerCase())
       ? resolveReg45DateRange(message) || getDefaultReg45DateRange()
       : null;
 
   return {
-    assistant_type: "young_people_os",
+    assistant_type: assistantType,
     assistant_identity: {
       product_name: "IndiCare OS",
       domain: "children_residential_home_operating_system",
@@ -1002,11 +1018,11 @@ function buildAssistantContextPayload(message = "") {
     current_section: section,
     user_role: state.userRole || "staff",
     assistant_intent: intent,
-    retrieval_mode,
-    output_mode,
+    retrieval_mode: retrievalMode,
+    output_mode: outputMode,
     whole_os_default: true,
-    section_only_requested: retrieval_mode === "section_only",
-    use_whole_scope_records: retrieval_mode !== "section_only",
+    section_only_requested: retrievalMode === "section_only",
+    use_whole_scope_records: retrievalMode !== "section_only",
     ask_for_dates:
       intent === ASSISTANT_INTENT.factual_lookup ||
       intent === ASSISTANT_INTENT.chronology,
@@ -1061,7 +1077,7 @@ function sanitiseSourcesForUi(sources = []) {
     .slice(0, MAX_SOURCE_ITEMS)
     .map((source, index) => ({
       type: source.type || source.record_type || "record",
-      label: String(source.label || source.title || "Record"),
+      label: String(source.label || source.title || source.document_title || "Record"),
       excerpt: String(source.excerpt || source.summary || "").slice(
         0,
         MAX_SOURCE_EXCERPT
@@ -1070,6 +1086,7 @@ function sanitiseSourcesForUi(sources = []) {
       record_type: source.record_type || source.type || null,
       record_id: source.record_id || source.id || null,
       citation_ref: source.citation_ref || buildCitationRef(source, index),
+      url: source.url || null,
     }));
 }
 
@@ -1300,7 +1317,7 @@ export async function askAssistant(question) {
             ...(meta?.explainability || {}),
             reasoning_summary:
               meta?.explainability?.reasoning_summary ||
-              `This answer used a children’s residential home reasoning model with Ofsted, RI, manager, RSW and therapeutic lenses.`,
+              `This answer used a children’s residential home reasoning model with Ofsted, RI, registered manager, RSW and therapeutic lenses.`,
             ai_scrubber:
               scrubbed.meta?.enabled
                 ? "Client-side AI scrubber applied before outbound request."
@@ -1325,6 +1342,7 @@ export async function askAssistant(question) {
             provider_id: contextPayload.provider_id,
           },
           sources: meta?.sources || [],
+          suggested_actions: meta?.suggested_actions || [],
           scrubber_reverse_map: scrubbed.reverseMap || {},
           scrubber_enabled: scrubbed.meta?.enabled ?? false,
           scrubber_meta: scrubbed.meta || {},
@@ -1349,6 +1367,27 @@ export async function askAssistant(question) {
           scrubbed.reverseMap
         );
 
+        if (
+          streamedPayload &&
+          typeof streamedPayload === "object" &&
+          (streamedPayload.sources ||
+            streamedPayload.runtime ||
+            streamedPayload.explainability ||
+            streamedPayload.assistant_scope ||
+            streamedPayload.assistant_context ||
+            streamedPayload.suggested_actions)
+        ) {
+          applyAssistantMeta({
+            sources: streamedPayload.sources || getSourcesSafe(),
+            runtime: streamedPayload.runtime || {},
+            explainability: streamedPayload.explainability || {},
+            assistant_scope: streamedPayload.assistant_scope || {},
+            assistant_context: streamedPayload.assistant_context || {},
+            suggested_actions: streamedPayload.suggested_actions || [],
+            last_analysis_at: new Date().toISOString(),
+          });
+        }
+
         replaceLastAssistantPlaceholder(
           restored || "No assistant reply returned."
         );
@@ -1362,6 +1401,13 @@ export async function askAssistant(question) {
     setAssistantSending(false);
     syncAssistantUi();
   }
+}
+
+function getSourcesSafe() {
+  ensureAssistantState();
+  return Array.isArray(state.assistantMeta?.sources)
+    ? state.assistantMeta.sources
+    : [];
 }
 
 export function clearAssistantMessages() {
