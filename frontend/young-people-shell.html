@@ -9,13 +9,15 @@
   <title>IndiCare OS • Residential Workspace</title>
   <meta
     name="description"
-    content="IndiCare OS residential workspace for child-centred, trauma-informed, therapeutic recording, oversight and care planning."
+    content="IndiCare OS residential workspace for child-centred, trauma-informed, therapeutic recording, oversight, compliance, quality assurance and care planning."
   />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f3f6fb" />
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
+  <a class="sr-only sr-only-focusable" href="#mainContent">Skip to main content</a>
+
   <div
     id="app"
     class="app-shell theme-system"
@@ -23,7 +25,7 @@
     data-young-person-id=""
     data-home-id=""
     data-workspace="young-people-shell"
-    data-scope=""
+    data-scope="child"
     data-user-role="admin"
   >
     <header class="shell-topbar" role="banner">
@@ -37,15 +39,15 @@
           <span class="brand-mark" aria-hidden="true">IC</span>
           <span class="brand-copy">
             <strong>IndiCare OS</strong>
-            <small>Child-centred residential workspace</small>
+            <small>Child-centred residential operating system</small>
           </span>
         </button>
       </div>
 
       <div class="shell-topbar-centre desktop-only">
-        <div class="workspace-context-pill">
+        <div class="workspace-context-pill" aria-label="Current workspace">
           <span class="workspace-context-pill-label">Workspace</span>
-          <span class="workspace-context-pill-value">Young people</span>
+          <span class="workspace-context-pill-value">Residential care operating system</span>
         </div>
       </div>
 
@@ -60,7 +62,7 @@
             id="scopeChildBtn"
             class="scope-switch-btn active"
             type="button"
-            data-scope=""
+            data-scope="child"
             role="tab"
             aria-selected="true"
             aria-pressed="true"
@@ -137,7 +139,7 @@
               <h1 id="selectorHeading">Select a young person</h1>
               <p>
                 Open one calm, child-centred workspace for recording, reflection,
-                planning, chronology, oversight and guided support.
+                planning, chronology, oversight, safeguarding and guided support.
               </p>
             </div>
 
@@ -185,14 +187,17 @@
         aria-labelledby="pageTitle"
       >
         <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--menubar">
-          <aside class="workspace-sidebar workspace-sidebar--hidden desktop-only" aria-label="Workspace navigation">
+          <aside
+            class="workspace-sidebar workspace-sidebar--hidden desktop-only"
+            aria-label="Workspace navigation"
+          >
             <div class="workspace-sidebar-shell">
               <div class="workspace-sidebar-brand">
                 <div class="workspace-sidebar-brand-dot" aria-hidden="true"></div>
-                <span>Residential care workspace</span>
+                <span>Residential care operating system</span>
               </div>
 
-              <section class="workspace-sidebar-profile-card">
+              <section class="workspace-sidebar-profile-card" aria-label="Current context">
                 <div class="workspace-sidebar-profile-top">
                   <div
                     class="workspace-sidebar-avatar"
@@ -211,6 +216,7 @@
                 <div class="workspace-sidebar-meta-row">
                   <span class="meta-chip">Live</span>
                   <span class="meta-chip meta-chip--soft">Therapeutic view</span>
+                  <span class="meta-chip meta-chip--soft">Safeguarding first</span>
                 </div>
               </section>
 
@@ -260,8 +266,8 @@
                     <div id="workspaceEyebrow" class="eyebrow">Young person workspace</div>
                     <h1 id="pageTitle">Today’s workspace</h1>
                     <p id="pageSubtitle">
-                      A calmer, child-focused view for recording, reflection,
-                      continuity and thoughtful next steps.
+                      A calmer, child-focused operating space for recording, reflection,
+                      continuity, safeguarding, planning and thoughtful next steps.
                     </p>
                   </div>
 
@@ -319,6 +325,7 @@
                   <div class="workspace-header-meta">
                     <span class="meta-chip">Live</span>
                     <span class="meta-chip meta-chip--soft">Current scope</span>
+                    <span class="meta-chip meta-chip--soft">Operational ready</span>
                   </div>
 
                   <div
@@ -807,7 +814,7 @@
           </button>
         </div>
 
-        <div class="assistant-modal-layout assistant-modal-layout--single">
+        <div class="assistant-modal-layout">
           <div class="assistant-modal-main">
             <div class="assistant-context-bar">
               <span id="scopeBadge" class="meta-chip">Young person assistant</span>
@@ -887,6 +894,85 @@
               </div>
             </section>
           </div>
+
+          <aside class="assistant-modal-side">
+            <section class="assistant-side-card">
+              <div class="overview-section-head">
+                <h3>Scoped records</h3>
+                <p>Live scope bundle and refresh status.</p>
+              </div>
+
+              <div class="assistant-context-row">
+                <button id="assistantRefreshScopeBtn" class="secondary-btn" type="button">
+                  Refresh scope
+                </button>
+                <button id="assistantRefreshAnalysisBtn" class="secondary-btn" type="button">
+                  Refresh analysis
+                </button>
+              </div>
+
+              <div id="assistantScopeBundleStatus" class="assistant-inline-status">
+                No scoped records loaded.
+              </div>
+
+              <div
+                id="assistantScopeBundleError"
+                class="assistant-inline-status assistant-inline-status--error hidden"
+                aria-live="polite"
+              ></div>
+
+              <div id="assistantLiveStatus" class="assistant-inline-status">
+                Assistant ready.
+              </div>
+            </section>
+
+            <section class="assistant-side-card">
+              <div class="overview-section-head">
+                <h3>Morning brief</h3>
+                <p>A practical shift-ready summary.</p>
+              </div>
+              <div id="morningBriefBody">
+                <p>No morning brief available yet.</p>
+              </div>
+            </section>
+
+            <section class="assistant-side-card">
+              <div class="overview-section-head">
+                <h3>Manager brief</h3>
+                <p>Leadership, risk, compliance and oversight themes.</p>
+              </div>
+              <div id="managerBriefBody">
+                <p>No manager brief available yet.</p>
+              </div>
+            </section>
+
+            <section class="assistant-side-card">
+              <div class="overview-section-head">
+                <h3>Quality brief</h3>
+                <p>Quality assurance, audit and readiness themes.</p>
+              </div>
+              <div id="qualityBriefBody">
+                <p>No quality brief available yet.</p>
+              </div>
+            </section>
+
+            <section class="assistant-side-card">
+              <div class="overview-section-head">
+                <h3>Live updates</h3>
+                <p>Recent refreshes and assistant intelligence updates.</p>
+              </div>
+
+              <div class="assistant-context-row">
+                <button id="clearLiveUpdatesBtn" class="ghost-btn" type="button">
+                  Clear updates
+                </button>
+              </div>
+
+              <div id="liveUpdatesBody">
+                <p>No live updates yet.</p>
+              </div>
+            </section>
+          </aside>
         </div>
 
         <div class="assistant-footer">
