@@ -202,8 +202,7 @@ function renderAssistantRichText(text = "") {
   };
 
   for (const rawLine of lines) {
-    const line = rawLine.trimRight();
-    const trimmed = line.trim();
+    const trimmed = String(rawLine || "").trim();
 
     if (!trimmed) {
       flushList();
@@ -212,20 +211,26 @@ function renderAssistantRichText(text = "") {
 
     if (/^---+$/.test(trimmed)) {
       flushList();
-      blocks.push(`<hr class="assistant-divider" />`);
       continue;
     }
 
-    if (/^#{1,3}\s+/.test(trimmed)) {
+    if (/^#{1,6}\s+/.test(trimmed)) {
       flushList();
-      const heading = trimmed.replace(/^#{1,3}\s+/, "");
-      blocks.push(`<h4>${renderParagraphWithCitations(heading, sourceMap)}</h4>`);
+      const plainText = trimmed.replace(/^#{1,6}\s+/, "");
+      blocks.push(`<p>${renderParagraphWithCitations(plainText, sourceMap)}</p>`);
       continue;
     }
 
     if (/^[-*]\s+/.test(trimmed)) {
       const itemText = trimmed.replace(/^[-*]\s+/, "");
       listItems.push(renderParagraphWithCitations(itemText, sourceMap));
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(trimmed)) {
+      flushList();
+      const plainText = trimmed.replace(/^\d+\.\s+/, "");
+      blocks.push(`<p>${renderParagraphWithCitations(plainText, sourceMap)}</p>`);
       continue;
     }
 
@@ -368,14 +373,13 @@ function renderMessage(message = {}, index = 0, messages = []) {
     role === "user" ? "assistant-message-user" : "assistant-message-system";
   const content = extractAssistantContent(message);
 
+  const assistantIndexes = messages
+    .map((item, i) => ({ item, i }))
+    .filter(({ item }) => item?.role === "assistant")
+    .map(({ i }) => i);
+
   const isLastAssistantMessage =
-    role === "assistant" &&
-    index ===
-      [...messages]
-        .map((item, i) => ({ item, i }))
-        .filter(({ item }) => item?.role === "assistant")
-        .map(({ i }) => i)
-        .pop();
+    role === "assistant" && index === assistantIndexes[assistantIndexes.length - 1];
 
   return `
     <article class="assistant-message ${escapeHtml(roleClass)}">
