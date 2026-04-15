@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from services.assistant_context_service import build_assistant_context
 
-AssistantType = Literal["public", "young_people_os"]
+AssistantType = Literal["public", "young_people_os", "home_os", "quality_os"]
 
 
 def _safe_name(young_person: dict[str, Any] | None) -> str:
@@ -59,6 +59,11 @@ def _clean_ui_context(context: dict[str, Any] | None) -> dict[str, Any]:
         "shift_context": context.get("shift_context"),
         "record_type": context.get("record_type"),
         "record_id": context.get("record_id"),
+        "access_level": context.get("access_level"),
+        "allowed_home_ids": context.get("allowed_home_ids"),
+        "provider_id": context.get("provider_id"),
+        "scope": context.get("scope"),
+        "scope_type": context.get("scope_type"),
     }
     return {k: v for k, v in cleaned.items() if v not in (None, "", [], {})}
 
@@ -75,6 +80,9 @@ def _normalise_scope_for_assistant(
     young_person_id = raw_scope.get("young_person_id")
     record_type = raw_scope.get("record_type")
     record_id = raw_scope.get("record_id")
+    access_level = raw_scope.get("access_level")
+    allowed_home_ids = raw_scope.get("allowed_home_ids") or []
+    provider_id = raw_scope.get("provider_id")
 
     if assistant_type == "public":
         return {
@@ -83,24 +91,66 @@ def _normalise_scope_for_assistant(
             "young_person_id": None,
             "record_type": None,
             "record_id": None,
+            "access_level": None,
+            "allowed_home_ids": [],
+            "provider_id": None,
         }
 
-    if scope_type not in {"global", "young_person"}:
-        raise ValueError("Unsupported scope_type for young people assistant.")
+    if assistant_type == "young_people_os":
+        if scope_type not in {"global", "young_person"}:
+            raise ValueError("Unsupported scope_type for young people assistant.")
 
-    if scope_type == "young_person" and not young_person_id:
-        raise ValueError("young_person_id is required for young_person scope.")
+        if scope_type == "young_person" and not young_person_id:
+            raise ValueError("young_person_id is required for young_person scope.")
 
-    if scope_type == "global":
-        young_person_id = None
+        if scope_type == "global":
+            young_person_id = None
 
-    return {
-        "scope_type": scope_type,
-        "home_id": home_id,
-        "young_person_id": young_person_id,
-        "record_type": record_type,
-        "record_id": record_id,
-    }
+        return {
+            "scope_type": scope_type,
+            "home_id": home_id,
+            "young_person_id": young_person_id,
+            "record_type": record_type,
+            "record_id": record_id,
+            "access_level": "child",
+            "allowed_home_ids": [],
+            "provider_id": None,
+        }
+
+    if assistant_type == "home_os":
+        if scope_type not in {"home"}:
+            scope_type = "home"
+
+        if not home_id:
+            raise ValueError("home_id is required for home assistant scope.")
+
+        return {
+            "scope_type": "home",
+            "home_id": home_id,
+            "young_person_id": None,
+            "record_type": record_type,
+            "record_id": record_id,
+            "access_level": access_level or "home",
+            "allowed_home_ids": [home_id],
+            "provider_id": provider_id,
+        }
+
+    if assistant_type == "quality_os":
+        if scope_type not in {"quality"}:
+            scope_type = "quality"
+
+        return {
+            "scope_type": "quality",
+            "home_id": home_id,
+            "young_person_id": None,
+            "record_type": record_type,
+            "record_id": record_id,
+            "access_level": access_level or "home",
+            "allowed_home_ids": allowed_home_ids if isinstance(allowed_home_ids, list) else [],
+            "provider_id": provider_id,
+        }
+
+    raise ValueError("Unsupported assistant type.")
 
 
 def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, str]]:
@@ -643,6 +693,311 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
     }
 
 
+def _build_compact_home_context(context: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "scope": context.get("scope") or {},
+        "home": _pick_fields(
+            context.get("home"),
+            [
+                "id",
+                "name",
+                "home_name",
+                "status",
+                "created_at",
+                "updated_at",
+            ],
+        ),
+        "summary": context.get("summary") or {},
+        "young_people": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "preferred_name",
+                    "full_name",
+                    "placement_status",
+                    "summary_risk_level",
+                    "home_name",
+                ],
+            )
+            for item in _trim_list(context.get("young_people"), 12)
+        ],
+        "team": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "full_name",
+                    "staff_member",
+                    "role",
+                    "status",
+                    "updated_at",
+                ],
+            )
+            for item in _trim_list(context.get("team"), 12)
+        ],
+        "tasks": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "task",
+                    "status",
+                    "priority",
+                    "due_date",
+                    "assigned_role",
+                ],
+            )
+            for item in _trim_list(context.get("tasks"), 12)
+        ],
+        "communications": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "summary",
+                    "communication_type",
+                    "organisation",
+                    "contact_datetime",
+                    "status",
+                ],
+            )
+            for item in _trim_list(context.get("communications"), 10)
+        ],
+        "documents": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "document_type",
+                    "status",
+                    "review_date",
+                    "expiry_date",
+                ],
+            )
+            for item in _trim_list(context.get("documents"), 10)
+        ],
+        "supervisions": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "staff_member",
+                    "role",
+                    "status",
+                    "due_date",
+                ],
+            )
+            for item in _trim_list(context.get("supervisions"), 10)
+        ],
+        "therapy": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "service_name",
+                    "professional_name",
+                    "status",
+                    "session_date",
+                ],
+            )
+            for item in _trim_list(context.get("therapy"), 10)
+        ],
+        "reports": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "summary",
+                    "review_month",
+                    "status",
+                    "created_at",
+                ],
+            )
+            for item in _trim_list(context.get("reports"), 10)
+        ],
+        "compliance_items": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "summary",
+                    "status",
+                    "severity",
+                    "due_date",
+                ],
+            )
+            for item in _trim_list(context.get("compliance_items"), 12)
+        ],
+        "rota": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "shift_date",
+                    "shift_type",
+                    "lead_name",
+                    "status",
+                ],
+            )
+            for item in _trim_list(context.get("rota"), 10)
+        ],
+        "onboarding": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "staff_member",
+                    "status",
+                    "stage",
+                    "review_date",
+                ],
+            )
+            for item in _trim_list(context.get("onboarding"), 10)
+        ],
+        "training": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "staff_member",
+                    "training_name",
+                    "status",
+                    "expiry_date",
+                ],
+            )
+            for item in _trim_list(context.get("training"), 10)
+        ],
+    }
+
+
+def _build_compact_quality_context(context: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "scope": context.get("scope") or {},
+        "homes": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "name",
+                    "home_name",
+                    "status",
+                ],
+            )
+            for item in _trim_list(context.get("homes"), 20)
+        ],
+        "summary": context.get("summary") or {},
+        "audits": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "audit_name",
+                    "finding",
+                    "status",
+                    "audit_date",
+                    "auditor",
+                    "home_id",
+                ],
+            )
+            for item in _trim_list(context.get("audits"), 12)
+        ],
+        "incidents": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "incident_type",
+                    "description",
+                    "status",
+                    "incident_datetime",
+                    "location",
+                    "home_id",
+                ],
+            )
+            for item in _trim_list(context.get("incidents"), 12)
+        ],
+        "compliance_items": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "summary",
+                    "status",
+                    "severity",
+                    "due_date",
+                    "home_id",
+                ],
+            )
+            for item in _trim_list(context.get("compliance_items"), 12)
+        ],
+        "reports": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "summary",
+                    "report_type",
+                    "status",
+                    "created_at",
+                    "home_id",
+                ],
+            )
+            for item in _trim_list(context.get("reports"), 12)
+        ],
+        "team": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "full_name",
+                    "staff_member",
+                    "role",
+                    "status",
+                    "home_id",
+                ],
+            )
+            for item in _trim_list(context.get("team"), 12)
+        ],
+        "supervisions": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "staff_member",
+                    "role",
+                    "status",
+                    "due_date",
+                    "home_id",
+                ],
+            )
+            for item in _trim_list(context.get("supervisions"), 12)
+        ],
+        "documents": [
+            _pick_fields(
+                item,
+                [
+                    "id",
+                    "title",
+                    "document_type",
+                    "status",
+                    "review_date",
+                    "home_id",
+                ],
+            )
+            for item in _trim_list(context.get("documents"), 12)
+        ],
+    }
+
+
 def _build_compact_context(
     context: dict[str, Any],
     *,
@@ -654,10 +1009,18 @@ def _build_compact_context(
     if assistant_type == "public":
         return _build_compact_public_context(context)
 
-    if scope_type == "young_person":
-        return _build_compact_young_person_context(context)
+    if assistant_type == "young_people_os":
+        if scope_type == "young_person":
+            return _build_compact_young_person_context(context)
+        return _build_compact_global_os_context(context)
 
-    return _build_compact_global_os_context(context)
+    if assistant_type == "home_os":
+        return _build_compact_home_context(context)
+
+    if assistant_type == "quality_os":
+        return _build_compact_quality_context(context)
+
+    return {"scope": scope}
 
 
 def _build_public_summary(context: dict[str, Any]) -> str:
@@ -729,6 +1092,51 @@ def _build_young_person_summary(context: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _build_home_summary(context: dict[str, Any]) -> str:
+    home = context.get("home") or {}
+    team = context.get("team") or []
+    tasks = context.get("tasks") or []
+    young_people = context.get("young_people") or []
+    compliance_items = context.get("compliance_items") or []
+    supervisions = context.get("supervisions") or []
+    reports = context.get("reports") or []
+
+    lines = [
+        f"Home assistant context loaded for {home.get('home_name') or home.get('name') or 'the home'}.",
+        f"- Home ID: {home.get('id') or context.get('home_id')}",
+        f"- Young people loaded: {len(young_people)}",
+        f"- Team items loaded: {len(team)}",
+        f"- Tasks loaded: {len(tasks)}",
+        f"- Compliance items loaded: {len(compliance_items)}",
+        f"- Supervisions loaded: {len(supervisions)}",
+        f"- Reports loaded: {len(reports)}",
+    ]
+    return "\n".join(lines)
+
+
+def _build_quality_summary(context: dict[str, Any]) -> str:
+    homes = context.get("homes") or []
+    audits = context.get("audits") or []
+    incidents = context.get("incidents") or []
+    compliance_items = context.get("compliance_items") or []
+    reports = context.get("reports") or []
+
+    scope = context.get("scope") or {}
+
+    lines = [
+        "Quality assistant context loaded.",
+        f"- Access level: {scope.get('access_level')}",
+        f"- Selected home ID: {scope.get('home_id')}",
+        f"- Allowed homes: {len(scope.get('allowed_home_ids') or [])}",
+        f"- Homes loaded: {len(homes)}",
+        f"- Audits loaded: {len(audits)}",
+        f"- Incidents loaded: {len(incidents)}",
+        f"- Compliance items loaded: {len(compliance_items)}",
+        f"- Reports loaded: {len(reports)}",
+    ]
+    return "\n".join(lines)
+
+
 def _build_ui_summary(ui_context: dict[str, Any] | None) -> str:
     ui_context = ui_context or {}
     if not ui_context:
@@ -756,6 +1164,12 @@ def _build_ui_summary(ui_context: dict[str, Any] | None) -> str:
         lines.append(f"- Record type: {ui_context.get('record_type')}")
     if ui_context.get("record_id") is not None:
         lines.append(f"- Record ID: {ui_context.get('record_id')}")
+    if ui_context.get("access_level"):
+        lines.append(f"- Access level: {ui_context.get('access_level')}")
+    if ui_context.get("allowed_home_ids"):
+        lines.append(f"- Allowed home IDs: {ui_context.get('allowed_home_ids')}")
+    if ui_context.get("provider_id") is not None:
+        lines.append(f"- Provider ID: {ui_context.get('provider_id')}")
 
     return "\n".join(lines)
 
@@ -777,24 +1191,44 @@ def _build_prompt(
         guardrail = (
             "You must stay strictly within public assistant context. "
             "Do not use, infer, expose, or reference any young person OS data, "
-            "home operational data, or safeguarding records."
+            "home operational data, quality oversight data, or safeguarding records."
         )
-    elif scope_type == "young_person":
-        summary = _build_young_person_summary(context)
+    elif assistant_type == "young_people_os":
+        if scope_type == "young_person":
+            summary = _build_young_person_summary(context)
+            guardrail = (
+                "You must stay strictly within the scoped young person OS context. "
+                "Do not answer with information about other young people, other homes, "
+                "quality/provider-wide data, or any public assistant context."
+            )
+        else:
+            summary = _build_global_os_summary(context)
+            guardrail = (
+                "You must stay strictly within the scoped Young People OS home context. "
+                "Do not expose information outside the current authorised home scope, "
+                "and do not use any public assistant context."
+            )
         assistant_header = "You are the IndiCare Young People OS assistant."
+    elif assistant_type == "home_os":
+        summary = _build_home_summary(context)
+        assistant_header = "You are the IndiCare Home OS assistant."
         guardrail = (
-            "You must stay strictly within the scoped young person OS context. "
-            "Do not answer with information about other young people, other homes, "
-            "or any public assistant context."
+            "You must stay strictly within the authorised home operational scope. "
+            "Do not expose other homes, provider-wide oversight material, or any public assistant context."
+        )
+    elif assistant_type == "quality_os":
+        summary = _build_quality_summary(context)
+        assistant_header = "You are the IndiCare Quality OS assistant."
+        guardrail = (
+            "You must stay strictly within the authorised quality and oversight scope. "
+            "If access is home-level, do not answer across other homes. "
+            "If access is provider-level, stay within the allowed homes only. "
+            "Do not use any public assistant context."
         )
     else:
-        summary = _build_global_os_summary(context)
-        assistant_header = "You are the IndiCare Young People OS assistant."
-        guardrail = (
-            "You must stay strictly within the scoped Young People OS home context. "
-            "Do not expose information outside the current authorised home scope, "
-            "and do not use any public assistant context."
-        )
+        summary = "No assistant summary available."
+        assistant_header = "You are the IndiCare assistant."
+        guardrail = "Stay within authorised context only."
 
     ui_summary = _build_ui_summary(ui_context)
 
@@ -898,6 +1332,9 @@ def build_assistant_prompt(
             "young_person_id": built_scope.get("young_person_id"),
             "record_type": built_scope.get("record_type"),
             "record_id": built_scope.get("record_id"),
+            "access_level": built_scope.get("access_level"),
+            "allowed_home_ids": built_scope.get("allowed_home_ids"),
+            "provider_id": built_scope.get("provider_id"),
             "current_view": ui_context.get("current_view"),
             "current_section": ui_context.get("current_section"),
             "young_person_name": ui_context.get("young_person_name"),
