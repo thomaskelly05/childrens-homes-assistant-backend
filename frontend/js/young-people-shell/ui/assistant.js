@@ -1,4 +1,4 @@
-import { state } from "../state.js";
+import { state, createAssistantMeta } from "../state.js";
 import { els } from "../dom.js";
 import { apiStreamAssistant } from "../core/api.js";
 import * as aiScrubber from "../core/ai-scrubber.js";
@@ -36,16 +36,11 @@ function getCurrentScope() {
 }
 
 function getCurrentSection() {
-  return (
-    state.currentSection ||
-    state.activeSection ||
-    state.currentView ||
-    "workspace"
-  );
+  return state.currentSection || state.activeSection || state.currentView || "workspace";
 }
 
 function getSelectedYoungPerson() {
-  return state.selectedYoungPerson || state.youngPerson || null;
+  return state.selectedYoungPerson || null;
 }
 
 function getFullYoungPersonName() {
@@ -105,20 +100,8 @@ function ensureAssistantState() {
     state.assistantMessages = [];
   }
 
-  if (!Array.isArray(state.assistantModalMessages)) {
-    state.assistantModalMessages = [];
-  }
-
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
-    state.assistantMeta = {
-      sources: [],
-      runtime: {},
-      explainability: {},
-      assistant_scope: {},
-      assistant_context: {},
-      suggested_actions: [],
-      scrubber_reverse_map: {},
-    };
+    state.assistantMeta = createAssistantMeta();
   }
 
   if (!Array.isArray(state.assistantMeta.sources)) {
@@ -135,6 +118,11 @@ function ensureAssistantState() {
   ) {
     state.assistantMeta.scrubber_reverse_map = {};
   }
+
+  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
+  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
+  state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
+  state.assistantMeta.assistant_context = state.assistantMeta.assistant_context || {};
 }
 
 function cloneMessageEntry(entry = {}) {
@@ -152,9 +140,10 @@ function cloneMessageEntry(entry = {}) {
 function mergeAssistantMeta(nextMeta = {}) {
   ensureAssistantState();
 
-  const previous = state.assistantMeta || {};
+  const previous = state.assistantMeta || createAssistantMeta();
 
   state.assistantMeta = {
+    ...previous,
     sources: Array.isArray(nextMeta.sources)
       ? nextMeta.sources
       : previous.sources || [],
@@ -234,54 +223,50 @@ function addAssistantPlaceholder() {
   });
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
-
   syncAssistantUi();
 }
 
 function updateLastAssistantStreamingText(text) {
   const safeText = String(text || "Thinking…");
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const list = state.assistantMessages || [];
 
-  lists.forEach((list) => {
-    if (!list.length) return;
+  if (!list.length) return;
 
-    const last = list[list.length - 1];
-    if (last?.role === "assistant" && last?._streaming) {
-      last.content = safeText;
-    }
-  });
+  const last = list[list.length - 1];
+  if (last?.role === "assistant" && last?._streaming) {
+    last.content = safeText;
+  }
 
   syncAssistantUi();
 }
 
 function replaceLastAssistantPlaceholder(text) {
   const safeText = String(text || "No assistant reply returned.");
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const list = state.assistantMessages || [];
 
-  lists.forEach((list) => {
-    if (!list.length) return;
-
-    const last = list[list.length - 1];
-    if (last?.role === "assistant" && last?._streaming) {
-      last.content = safeText;
-      last._streaming = false;
-      return;
-    }
-
+  if (!list.length) {
     list.push(
       cloneMessageEntry({
         role: "assistant",
         content: safeText,
       })
     );
-  });
+    syncAssistantUi();
+    return;
+  }
+
+  const last = list[list.length - 1];
+  if (last?.role === "assistant" && last?._streaming) {
+    last.content = safeText;
+    last._streaming = false;
+  } else {
+    list.push(
+      cloneMessageEntry({
+        role: "assistant",
+        content: safeText,
+      })
+    );
+  }
 
   syncAssistantUi();
 }
@@ -1031,6 +1016,8 @@ export async function askAssistant(question) {
 
     mergeAssistantMeta({
       scrubber_reverse_map: scrubbed.reverseMap || {},
+      scrubber_enabled: scrubbed.meta?.enabled ?? false,
+      scrubber_meta: scrubbed.meta || {},
     });
 
     await apiStreamAssistant(scrubbed.payload, {
@@ -1106,16 +1093,9 @@ export async function askAssistant(question) {
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
-  state.assistantModalMessages = [];
 
   if (state.assistantMeta && typeof state.assistantMeta === "object") {
-    state.assistantMeta.sources = [];
-    state.assistantMeta.suggested_actions = [];
-    state.assistantMeta.scrubber_reverse_map = {};
-    state.assistantMeta.runtime = {};
-    state.assistantMeta.explainability = {};
-    state.assistantMeta.assistant_scope = {};
-    state.assistantMeta.assistant_context = {};
+    state.assistantMeta = createAssistantMeta();
   }
 
   syncAssistantUi();
