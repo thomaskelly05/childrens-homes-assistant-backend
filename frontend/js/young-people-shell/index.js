@@ -56,12 +56,18 @@ function normaliseRole(role) {
   if (
     rawRole === "manager" ||
     rawRole === "registered_manager" ||
-    rawRole === "deputy_manager"
+    rawRole === "deputy_manager" ||
+    rawRole === "rm"
   ) {
     return "manager";
   }
 
-  if (rawRole === "ri" || rawRole === "responsible_individual") {
+  if (
+    rawRole === "ri" ||
+    rawRole === "responsible_individual" ||
+    rawRole === "director" ||
+    rawRole === "ceo"
+  ) {
     return "ri";
   }
 
@@ -86,6 +92,13 @@ function readSessionUser() {
   }
 }
 
+function toIdArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
+
 function hydrateRuntimeContextFromDom() {
   if (!els.app) return;
 
@@ -93,17 +106,34 @@ function hydrateRuntimeContextFromDom() {
   const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
   const datasetHomeId = els.app.dataset.homeId || "";
   const datasetYoungPersonId = els.app.dataset.youngPersonId || "";
+  const datasetProviderId = els.app.dataset.providerId || "";
+  const datasetAllowedHomeIds = els.app.dataset.allowedHomeIds || "";
 
   if (datasetRole) {
     state.userRole = datasetRole;
   }
 
   if (datasetHomeId) {
-    state.homeId = datasetHomeId;
+    state.homeId = Number(datasetHomeId) || datasetHomeId;
   }
 
   if (datasetYoungPersonId && !state.youngPersonId) {
-    state.youngPersonId = datasetYoungPersonId;
+    state.youngPersonId = Number(datasetYoungPersonId) || datasetYoungPersonId;
+  }
+
+  if (datasetProviderId) {
+    state.providerId = Number(datasetProviderId) || datasetProviderId;
+  }
+
+  if (datasetAllowedHomeIds) {
+    try {
+      state.allowedHomeIds = toIdArray(JSON.parse(datasetAllowedHomeIds));
+    } catch {
+      state.allowedHomeIds = datasetAllowedHomeIds
+        .split(",")
+        .map((item) => Number(item.trim()))
+        .filter((item) => Number.isFinite(item));
+    }
   }
 
   if (datasetScope) {
@@ -139,6 +169,30 @@ function hydrateRuntimeContextFromSession() {
   if (currentUser.staff_id) {
     state.staffId = currentUser.staff_id;
   }
+
+  if (currentUser.provider_id || currentUser.providerId) {
+    state.providerId = currentUser.provider_id || currentUser.providerId;
+  }
+
+  const allowedHomes =
+    currentUser.allowed_home_ids ||
+    currentUser.allowedHomeIds ||
+    currentUser.home_ids ||
+    currentUser.homeIds ||
+    [];
+
+  const safeAllowedHomes = toIdArray(allowedHomes);
+
+  if (safeAllowedHomes.length) {
+    state.allowedHomeIds = safeAllowedHomes;
+  } else if (currentUser.home_id || currentUser.homeId) {
+    const singleHomeId = Number(currentUser.home_id || currentUser.homeId);
+    state.allowedHomeIds = Number.isFinite(singleHomeId) ? [singleHomeId] : [];
+  }
+
+  if (!state.homeId && state.allowedHomeIds?.length === 1) {
+    state.homeId = state.allowedHomeIds[0];
+  }
 }
 
 function syncDomDatasetFromState() {
@@ -148,6 +202,10 @@ function syncDomDatasetFromState() {
   els.app.dataset.scope = state.currentScope || "child";
   els.app.dataset.homeId = state.homeId ? String(state.homeId) : "";
   els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
+  els.app.dataset.providerId = state.providerId ? String(state.providerId) : "";
+  els.app.dataset.allowedHomeIds = JSON.stringify(
+    Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
+  );
 }
 
 function getCurrentRole() {
@@ -400,7 +458,6 @@ async function bootstrap() {
     hydrateRuntimeContextFromDom();
     hydrateRuntimeContextFromSession();
 
-    // Important: do not let the hard-coded HTML scope trap privileged users in child scope.
     if (shouldForceRoleDefaultScope()) {
       state.currentScope = getDefaultScopeForRole();
     }
@@ -418,6 +475,9 @@ async function bootstrap() {
       scope: state.currentScope,
       section: state.currentSection,
       allowedScopes: getAllowedScopesForRole(),
+      providerId: state.providerId,
+      homeId: state.homeId,
+      allowedHomeIds: state.allowedHomeIds,
       currentUser: state.currentUser,
     });
 
