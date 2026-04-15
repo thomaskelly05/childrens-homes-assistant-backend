@@ -20,7 +20,7 @@ def _fetch_one(conn, query: str, params: tuple[Any, ...]) -> dict[str, Any] | No
 def _fetch_all(conn, query: str, params: tuple[Any, ...]) -> list[dict[str, Any]]:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(query, params)
-        rows = cur.fetchall()
+        rows = cur.fetchall() or []
         return [dict(row) for row in rows]
 
 
@@ -124,7 +124,8 @@ def _build_children_outcomes_summary(
             COUNT(DISTINCT fcr.id) AS family_contact_records_count,
             COUNT(DISTINCT ar.id) AS achievement_records_count,
             COUNT(DISTINCT i.id) AS incidents_count,
-            COUNT(DISTINCT me.id) AS missing_episodes_count
+            COUNT(DISTINCT me.id) AS missing_episodes_count,
+            COUNT(DISTINCT ks.id) AS keywork_sessions_count
         FROM young_people yp
         LEFT JOIN education_records er
             ON er.young_person_id = yp.id
@@ -145,6 +146,9 @@ def _build_children_outcomes_summary(
         LEFT JOIN missing_episodes me
             ON me.young_person_id = yp.id
            AND me.start_datetime::date BETWEEN %s AND %s
+        LEFT JOIN keywork_sessions ks
+            ON ks.young_person_id = yp.id
+           AND ks.session_date BETWEEN %s AND %s
         WHERE yp.home_id = ANY(%s)
           AND COALESCE(yp.archived, FALSE) = FALSE
         GROUP BY
@@ -158,6 +162,7 @@ def _build_children_outcomes_summary(
         ORDER BY yp.home_id ASC, young_person_name ASC
         """,
         (
+            start_date, end_date,
             start_date, end_date,
             start_date, end_date,
             start_date, end_date,
@@ -246,62 +251,177 @@ def _build_compliance_summary(
             OR updated_at::date BETWEEN %s AND %s
           )
         GROUP BY home_id, status, severity
-        ORDER BY home_id ASC, count DESC, status ASC
+        ORDER BY home_id ASC, count DESC, status ASC, severity ASC
         """,
         (home_ids, start_date, end_date, start_date, end_date),
     )
 
 
-def _build_workforce_summary(
+def _build_staffing_summary(
     conn,
     home_ids: list[int],
     start_date: str,
     end_date: str,
 ) -> dict[str, Any]:
     if not home_ids:
-        return {"supervisions": [], "training": []}
+        return {
+            "staff_assignments": [],
+            "staff_status": [],
+            "roster_shifts": [],
+            "staff_shifts": [],
+            "checkins": [],
+        }
 
-    supervisions = _fetch_all(
+    staff_assignments = _fetch_all(
         conn,
         """
         SELECT
-            home_id,
-            status,
-            COUNT(*) AS count
-        FROM supervisions
-        WHERE home_id = ANY(%s)
-          AND (
-            due_date BETWEEN %s AND %s
-            OR updated_at::date BETWEEN %s AND %s
-          )
-        GROUP BY home_id, status
-        ORDER BY home_id ASC, count DESC, status ASC
+            sha.home_id,
+            COUNT(DISTINCT sha.staff_id) AS count
+        FROM staff_home_assignments sha
+        WHERE sha.home_id = ANY(%s)
+        GROUP BY sha.home_id
+        ORDER BY sha.home_id ASC
         """,
-        (home_ids, start_date, end_date, start_date, end_date),
+        (home_ids,),
     )
 
-    training = _fetch_all(
+    staff_status = _fetch_all(
         conn,
         """
         SELECT
-            home_id,
-            status,
-            COUNT(*) AS count
-        FROM training
-        WHERE home_id = ANY(%s)
-          AND (
-            expiry_date BETWEEN %s AND %s
-            OR updated_at::date BETWEEN %s AND %s
-          )
-        GROUP BY home_id, status
-        ORDER BY home_id ASC, count DESC, status ASC
+            sha.home_id,
+            COALESCE(s.status, 'unknown') AS status,
+            COUNT(DISTINCT s.id) AS count
+        FROM staff_home_assignments sha
+        INNER JOIN staff s
+            ON s.id = sha.staff_id
+        WHERE sha.home_id = ANY(%s)
+        GROUP BY sha.home_id, COALESCE(s.status, 'unknown')
+        ORDER BY sha.home_id ASC, count DESC, status ASC
         """,
-        (home_ids, start_date, end_date, start_date, end_date),
+        (home_ids,),
+    )
+
+    roster_shifts = _fetch_all(
+        conn,
+        """
+        SELECT
+            rs.home_id,
+            COALESCE(rs.status, 'unknown') AS status,
+            COUNT(*) AS count
+        FROM roster_shifts rs
+        WHERE rs.home_id = ANY(%s)
+          AND rs.shift_date BETWEEN %s AND %s
+        GROUP BY rs.home_id, COALESCE(rs.status, 'unknown')
+        ORDER BY rs.home_id ASC, count DESC, status ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    staff_shifts = _fetch_all(
+        conn,
+        """
+        SELECT
+            ss.home_id,
+            COALESCE(ss.status, 'unknown') AS status,
+            COUNT(*) AS count
+        FROM staff_shifts ss
+        WHERE ss.home_id = ANY(%s)
+          AND ss.shift_date BETWEEN %s AND %s
+        GROUP BY ss.home_id, COALESCE(ss.status, 'unknown')
+        ORDER BY ss.home_id ASC, count DESC, status ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    checkins = _fetch_all(
+        conn,
+        """
+        SELECT
+            sc.home_id,
+            COUNT(*) AS count
+        FROM staff_checkins sc
+        WHERE sc.home_id = ANY(%s)
+          AND sc.created_at::date BETWEEN %s AND %s
+        GROUP BY sc.home_id
+        ORDER BY sc.home_id ASC
+        """,
+        (home_ids, start_date, end_date),
     )
 
     return {
-        "supervisions": supervisions,
-        "training": training,
+        "staff_assignments": staff_assignments,
+        "staff_status": staff_status,
+        "roster_shifts": roster_shifts,
+        "staff_shifts": staff_shifts,
+        "checkins": checkins,
+    }
+
+
+def _build_supervision_summary(
+    conn,
+    home_ids: list[int],
+    start_date: str,
+    end_date: str,
+) -> dict[str, Any]:
+    if not home_ids:
+        return {
+            "supervision_notes": [],
+            "supervision_submissions": [],
+            "supervision_summaries": [],
+        }
+
+    supervision_notes = _fetch_all(
+        conn,
+        """
+        SELECT
+            sn.home_id,
+            COUNT(*) AS count
+        FROM supervision_notes sn
+        WHERE sn.home_id = ANY(%s)
+          AND sn.created_at::date BETWEEN %s AND %s
+        GROUP BY sn.home_id
+        ORDER BY sn.home_id ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    supervision_submissions = _fetch_all(
+        conn,
+        """
+        SELECT
+            ss.home_id,
+            COALESCE(ss.status, 'unknown') AS status,
+            COUNT(*) AS count
+        FROM supervision_submissions ss
+        WHERE ss.home_id = ANY(%s)
+          AND ss.created_at::date BETWEEN %s AND %s
+        GROUP BY ss.home_id, COALESCE(ss.status, 'unknown')
+        ORDER BY ss.home_id ASC, count DESC, status ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    supervision_summaries = _fetch_all(
+        conn,
+        """
+        SELECT
+            ss.home_id,
+            COUNT(*) AS count
+        FROM supervision_summaries ss
+        WHERE ss.home_id = ANY(%s)
+          AND ss.created_at::date BETWEEN %s AND %s
+        GROUP BY ss.home_id
+        ORDER BY ss.home_id ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    return {
+        "supervision_notes": supervision_notes,
+        "supervision_submissions": supervision_submissions,
+        "supervision_summaries": supervision_summaries,
     }
 
 
@@ -316,6 +436,7 @@ def _build_positive_indicators(
             "achievement_counts": [],
             "keywork_counts": [],
             "family_contact_counts": [],
+            "daily_notes_counts": [],
         }
 
     achievements = _fetch_all(
@@ -364,10 +485,114 @@ def _build_positive_indicators(
         (home_ids, start_date, end_date),
     )
 
+    daily_notes = _fetch_all(
+        conn,
+        """
+        SELECT
+            home_id,
+            COUNT(*) AS count
+        FROM daily_notes
+        WHERE home_id = ANY(%s)
+          AND note_date BETWEEN %s AND %s
+        GROUP BY home_id
+        ORDER BY home_id ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
     return {
         "achievement_counts": achievements,
         "keywork_counts": keywork,
         "family_contact_counts": family_contact,
+        "daily_notes_counts": daily_notes,
+    }
+
+
+def _build_management_summary(
+    conn,
+    home_ids: list[int],
+    start_date: str,
+    end_date: str,
+) -> dict[str, Any]:
+    if not home_ids:
+        return {
+            "manager_updates": [],
+            "manager_actions": [],
+            "monthly_reviews": [],
+            "review_meetings": [],
+        }
+
+    manager_updates = _fetch_all(
+        conn,
+        """
+        SELECT
+            home_id,
+            COALESCE(status, 'unknown') AS status,
+            COUNT(*) AS count
+        FROM manager_updates
+        WHERE home_id = ANY(%s)
+          AND created_at::date BETWEEN %s AND %s
+        GROUP BY home_id, COALESCE(status, 'unknown')
+        ORDER BY home_id ASC, count DESC, status ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    manager_actions = _fetch_all(
+        conn,
+        """
+        SELECT
+            home_id,
+            COALESCE(status, 'unknown') AS status,
+            COUNT(*) AS count
+        FROM manager_actions
+        WHERE home_id = ANY(%s)
+          AND created_at::date BETWEEN %s AND %s
+        GROUP BY home_id, COALESCE(status, 'unknown')
+        ORDER BY home_id ASC, count DESC, status ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    monthly_reviews = _fetch_all(
+        conn,
+        """
+        SELECT
+            home_id,
+            COALESCE(status, 'unknown') AS status,
+            COUNT(*) AS count
+        FROM monthly_reviews
+        WHERE home_id = ANY(%s)
+          AND (
+            review_month BETWEEN %s AND %s
+            OR created_at::date BETWEEN %s AND %s
+          )
+        GROUP BY home_id, COALESCE(status, 'unknown')
+        ORDER BY home_id ASC, count DESC, status ASC
+        """,
+        (home_ids, start_date, end_date, start_date, end_date),
+    )
+
+    review_meetings = _fetch_all(
+        conn,
+        """
+        SELECT
+            home_id,
+            COUNT(*) AS count
+        FROM review_meetings
+        WHERE home_id = ANY(%s)
+          AND created_at::date BETWEEN %s AND %s
+        GROUP BY home_id
+        ORDER BY home_id ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    return {
+        "manager_updates": manager_updates,
+        "manager_actions": manager_actions,
+        "monthly_reviews": monthly_reviews,
+        "review_meetings": review_meetings,
     }
 
 
@@ -401,7 +626,9 @@ def build_monthly_report_context(
         "incident_summary": _build_incident_summary(conn, home_ids, start_date, end_date),
         "safeguarding_summary": _build_safeguarding_summary(conn, home_ids, start_date, end_date),
         "compliance_summary": _build_compliance_summary(conn, home_ids, start_date, end_date),
-        "workforce_summary": _build_workforce_summary(conn, home_ids, start_date, end_date),
+        "staffing_summary": _build_staffing_summary(conn, home_ids, start_date, end_date),
+        "supervision_summary": _build_supervision_summary(conn, home_ids, start_date, end_date),
+        "management_summary": _build_management_summary(conn, home_ids, start_date, end_date),
         "positive_indicators": _build_positive_indicators(conn, home_ids, start_date, end_date),
     }
 
@@ -416,18 +643,17 @@ def build_reg45_context(
     allowed_home_ids: list[int] | None = None,
     provider_id: int | None = None,
 ) -> dict[str, Any]:
-    return {
-        "report_type": "reg45",
-        **build_monthly_report_context(
-            conn,
-            home_id=home_id,
-            start_date=start_date,
-            end_date=end_date,
-            access_level=access_level,
-            allowed_home_ids=allowed_home_ids,
-            provider_id=provider_id,
-        ),
-    }
+    base = build_monthly_report_context(
+        conn,
+        home_id=home_id,
+        start_date=start_date,
+        end_date=end_date,
+        access_level=access_level,
+        allowed_home_ids=allowed_home_ids,
+        provider_id=provider_id,
+    )
+    base["report_type"] = "reg45"
+    return base
 
 
 def build_yearly_report_context(
@@ -440,18 +666,17 @@ def build_yearly_report_context(
     allowed_home_ids: list[int] | None = None,
     provider_id: int | None = None,
 ) -> dict[str, Any]:
-    return {
-        "report_type": "yearly",
-        **build_monthly_report_context(
-            conn,
-            home_id=home_id,
-            start_date=start_date,
-            end_date=end_date,
-            access_level=access_level,
-            allowed_home_ids=allowed_home_ids,
-            provider_id=provider_id,
-        ),
-    }
+    base = build_monthly_report_context(
+        conn,
+        home_id=home_id,
+        start_date=start_date,
+        end_date=end_date,
+        access_level=access_level,
+        allowed_home_ids=allowed_home_ids,
+        provider_id=provider_id,
+    )
+    base["report_type"] = "yearly"
+    return base
 
 
 def _build_report_prompt(report_type: str, context: dict[str, Any]) -> str:
@@ -461,38 +686,41 @@ def _build_report_prompt(report_type: str, context: dict[str, Any]) -> str:
         instruction = """
 Create a Regulation 45 style report.
 
-Focus on:
+Required focus:
 - experiences and outcomes for children
 - progress, strengths and positive developments
+- education, health and emotional wellbeing
 - safeguarding, incidents and risk patterns
-- effectiveness of care
-- management oversight
-- recommendations
+- quality of care and effectiveness of staff practice
+- management monitoring and oversight
+- strengths, shortfalls and clear recommendations
 
-Do not focus only on risk. Balance concerns with evidence of progress, nurture, achievement and stability.
+Do not focus only on risk. Balance concerns with progress, nurture, achievement, stability and protective factors.
 """
     elif report_type == "yearly":
         instruction = """
 Create a yearly overview report.
 
-Focus on:
-- year-long patterns and trends
+Required focus:
+- patterns and themes across the year
 - outcomes for children
-- positives, strengths, and improvements
+- strengths, positives and improvement over time
 - safeguarding and risk themes
-- quality of care and service development
-- strategic recommendations
+- staffing and operational patterns
+- management and quality assurance themes
+- strategic recommendations for the year ahead
 """
     else:
         instruction = """
 Create a monthly management report.
 
-Focus on:
-- current progress and outcomes for children
-- positives and strengths
-- safeguarding and risks
-- operational and workforce themes
-- priority actions
+Required focus:
+- current experiences and outcomes for children
+- strengths and positive indicators
+- safeguarding and current risks
+- staffing, supervision and operational themes
+- compliance issues and management oversight
+- priority actions for the next period
 """
 
     return f"""
@@ -504,10 +732,10 @@ Rules:
 - stay evidence-based
 - use warm, professional, child-centred language
 - include positives and strengths as well as concerns
+- do not invent incidents, outcomes, trends or statistics
 - identify gaps where relevant
-- produce a clear structured report
-- do not invent incidents, outcomes, or statistics
-- if evidence is limited, say so plainly
+- state clearly where evidence is limited
+- write in a structured, manager-ready format
 
 Structured context:
 {context}
@@ -547,6 +775,60 @@ def send_email(*, to_email: str, subject: str, body: str) -> None:
         if username and password:
             server.login(username, password)
         server.send_message(msg)
+
+
+def _store_generated_report(
+    conn,
+    *,
+    home_id: int | None,
+    report_type: str,
+    start_date: str,
+    end_date: str,
+    report_text: str,
+    triggered_by_user_id: int | None,
+) -> dict[str, Any] | None:
+    review_month = None
+    if report_type == "monthly":
+        review_month = f"{start_date[:7]}-01" if start_date and len(start_date) >= 7 else None
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            INSERT INTO ai_generated_reports (
+                young_person_id,
+                report_type,
+                title,
+                review_month,
+                report_text,
+                status,
+                generated_by,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                NULL,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                NOW(),
+                NOW()
+            )
+            RETURNING *
+            """,
+            (
+                report_type,
+                f"{report_type.upper()} report | {start_date} to {end_date}",
+                review_month,
+                report_text,
+                "generated",
+                triggered_by_user_id,
+            ),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
 
 
 def send_scheduled_report_now(
@@ -613,6 +895,21 @@ def send_scheduled_report_now(
     subject = f"{report_type.upper()} report | {start_date} to {end_date}"
     send_email(to_email=resolved_email, subject=subject, body=report_text)
 
+    stored_report = None
+    try:
+        stored_report = _store_generated_report(
+            conn,
+            home_id=home_id,
+            report_type=report_type,
+            start_date=start_date,
+            end_date=end_date,
+            report_text=report_text,
+            triggered_by_user_id=triggered_by_user_id,
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+
     return {
         "report_type": report_type,
         "home_id": home_id,
@@ -621,4 +918,5 @@ def send_scheduled_report_now(
         "email_to": resolved_email,
         "triggered_by_user_id": triggered_by_user_id,
         "delivered": True,
+        "stored_report_id": (stored_report or {}).get("id"),
     }
