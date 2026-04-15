@@ -1,21 +1,103 @@
 import { escapeHtml, formatDate } from "../core/utils.js";
 
+function normaliseStatus(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
+}
+
 export function statusBadgeClass(status) {
-  const value = String(status || "").trim().toLowerCase();
+  const value = normaliseStatus(status);
 
-  if (["approved", "active", "completed", "ok"].includes(value)) {
-    return "row-pill muted";
+  if (
+    [
+      "approved",
+      "active",
+      "completed",
+      "complete",
+      "ok",
+      "good",
+      "current",
+      "compliant",
+      "up_to_date",
+      "passed",
+      "resolved",
+      "closed",
+      "reviewed",
+      "available",
+      "confirmed",
+      "on_shift",
+      "booked",
+    ].includes(value)
+  ) {
+    return "row-pill success";
   }
 
-  if (["submitted", "pending_review", "review", "due_soon"].includes(value)) {
-    return "row-pill muted";
-  }
-
-  if (["returned", "overdue", "escalated", "critical", "high"].includes(value)) {
+  if (
+    [
+      "submitted",
+      "pending_review",
+      "review",
+      "due",
+      "due_soon",
+      "review_due",
+      "warning",
+      "medium",
+      "attention",
+      "at_risk",
+      "planned",
+      "received",
+      "sent",
+      "open",
+      "in_progress",
+      "expiring",
+      "incomplete",
+      "bank_staff",
+      "agency",
+      "limited",
+      "visiting_professional",
+    ].includes(value)
+  ) {
     return "row-pill warning";
   }
 
-  if (["draft", "inactive", "cancelled", "archived"].includes(value)) {
+  if (
+    [
+      "returned",
+      "overdue",
+      "escalated",
+      "critical",
+      "high",
+      "expired",
+      "missing",
+      "non_compliant",
+      "failed",
+      "danger",
+      "absent",
+      "sick",
+      "off_shift",
+      "annual_leave",
+      "vacant",
+      "vacancy",
+    ].includes(value)
+  ) {
+    return "row-pill danger";
+  }
+
+  if (
+    [
+      "draft",
+      "inactive",
+      "cancelled",
+      "canceled",
+      "archived",
+      "recorded",
+      "unknown",
+      "",
+    ].includes(value)
+  ) {
     return "row-pill muted";
   }
 
@@ -44,7 +126,11 @@ export function renderBadges(values = []) {
 export function renderEmptyState(message = "No information available.") {
   return `
     <div class="empty-state">
-      <p>${escapeHtml(message)}</p>
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>Nothing to show</h3>
+        <p>${escapeHtml(message)}</p>
+      </div>
     </div>
   `;
 }
@@ -64,12 +150,25 @@ export function renderSection(title, subtitle = "", body = "", options = {}) {
   `;
 }
 
-export function renderSummaryStat(label, value, hint = "") {
+export function renderSummaryStat(label, value, hint = "", tone = "") {
+  const toneClass =
+    tone === "danger"
+      ? "overview-stat-card--danger"
+      : tone === "warning"
+      ? "overview-stat-card--warning"
+      : tone === "success"
+      ? "overview-stat-card--success"
+      : "";
+
   return `
-    <article class="overview-stat-card">
+    <article class="overview-stat-card ${escapeHtml(toneClass)}">
       <span class="overview-stat-label">${escapeHtml(label || "")}</span>
       <strong class="overview-stat-value">${escapeHtml(String(value ?? "0"))}</strong>
-      ${hint ? `<span class="overview-stat-note">${escapeHtml(hint)}</span>` : `<span class="overview-stat-note"></span>`}
+      ${
+        hint
+          ? `<span class="overview-stat-note">${escapeHtml(hint)}</span>`
+          : `<span class="overview-stat-note"></span>`
+      }
     </article>
   `;
 }
@@ -87,7 +186,12 @@ function pickBestDate(item = {}) {
     item.review_month ||
     item.review_date ||
     item.due_date ||
+    item.next_due_date ||
+    item.audit_date ||
+    item.concern_datetime ||
+    item.incident_datetime ||
     item.created_at ||
+    item.updated_at ||
     null
   );
 }
@@ -106,12 +210,32 @@ function buildMetaParts(item = {}) {
   if (item.provision_name) parts.push(item.provision_name);
   if (item.shift_type) parts.push(item.shift_type);
   if (item.appointment_type) parts.push(item.appointment_type);
+  if (item.staff_member) parts.push(item.staff_member);
+  if (item.organisation) parts.push(item.organisation);
+  if (item.document_type) parts.push(item.document_type);
+  if (item.service_name) parts.push(item.service_name);
+  if (item.role) parts.push(item.role);
 
-  return parts.filter(Boolean);
+  return [...new Set(parts.filter(Boolean))];
 }
 
 function getBestTitle(item = {}) {
-  return item.title || item.label || item.name || item.appointment_type || "Record";
+  return (
+    item.title ||
+    item.label ||
+    item.name ||
+    item.full_name ||
+    item.staff_member ||
+    item.young_person_name ||
+    item.contact_person ||
+    item.service_name ||
+    item.audit_name ||
+    item.safeguarding_category ||
+    item.incident_type ||
+    item.appointment_type ||
+    item.document_type ||
+    "Record"
+  );
 }
 
 function getBestSummary(item = {}) {
@@ -122,6 +246,10 @@ function getBestSummary(item = {}) {
     item.outcome ||
     item.note ||
     item.details ||
+    item.task ||
+    item.finding ||
+    item.concern_details ||
+    item.notes ||
     ""
   );
 }
@@ -193,7 +321,7 @@ export function renderRecordsTable(items = [], emptyMessage = "No records found.
       ${items
         .map((item) => {
           const recordId = item.record_id || item.source_id || item.id || "";
-          const recordType = item.record_type || "";
+          const recordType = item.record_type || item.type || "";
           const title = getBestTitle(item);
           const dateValue = pickBestDate(item);
           const status =
