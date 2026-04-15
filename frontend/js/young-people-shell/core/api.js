@@ -469,7 +469,7 @@ function mergeAssistantBundle(responses = []) {
       if (!bundle.home) {
         bundle.home = data.home;
       }
-      bundle.homes.push(data.home);
+      pushUniqueByKey(bundle.homes, [data.home], (item) => String(item?.id ?? ""));
     }
 
     if (Array.isArray(data.homes)) {
@@ -906,6 +906,42 @@ function resolveAssistantEndpoint(payload = {}) {
   return "/assistant";
 }
 
+function parseAssistantEventPayload(payloadValue = "") {
+  const raw = String(payloadValue || "");
+  if (!raw.trim()) {
+    return { raw: "", text: "" };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+
+    if (typeof parsed === "string") {
+      return { raw, parsed, text: parsed };
+    }
+
+    if (parsed && typeof parsed === "object") {
+      const text =
+        parsed.text ||
+        parsed.message ||
+        parsed.content?.text ||
+        (typeof parsed.content === "string" ? parsed.content : "") ||
+        parsed.answer ||
+        parsed.output ||
+        "";
+
+      return {
+        raw,
+        parsed,
+        text: typeof text === "string" ? text : "",
+      };
+    }
+
+    return { raw, parsed, text: "" };
+  } catch {
+    return { raw, text: raw };
+  }
+}
+
 export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
   const endpoint = resolveAssistantEndpoint(payload);
   const { request, cleanup, signal } = buildSseContextFetch(endpoint, payload, options);
@@ -944,12 +980,62 @@ export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
   const decoder = new TextDecoder();
   let buffer = "";
   let streamedText = "";
+  let lastStructuredMessage = null;
   let doneEmitted = false;
 
   const finish = () => {
     if (doneEmitted) return;
     doneEmitted = true;
+
+    if (lastStructuredMessage && typeof lastStructuredMessage === "object") {
+      onDone({
+        ...lastStructuredMessage,
+        accumulated_text: streamedText,
+      });
+      return;
+    }
+
     onDone(streamedText);
+  };
+
+  const handleEvent = (eventName, payloadValue) => {
+    if (payloadValue === "[DONE]" || eventName === "done") {
+      finish();
+      return;
+    }
+
+    if (eventName === "meta") {
+      try {
+        onMeta(JSON.parse(payloadValue || "{}"));
+      } catch {
+        onMeta({});
+      }
+      return;
+    }
+
+    if (eventName === "progress") {
+      onProgress(payloadValue || "");
+      return;
+    }
+
+    if (eventName === "message") {
+      const parsedEvent = parseAssistantEventPayload(payloadValue);
+
+      if (parsedEvent.text) {
+        streamedText += parsedEvent.text;
+      }
+
+      if (parsedEvent.parsed && typeof parsedEvent.parsed === "object") {
+        lastStructuredMessage = parsedEvent.parsed;
+        onMessage({
+          ...parsedEvent.parsed,
+          accumulated_text: streamedText,
+        });
+        return;
+      }
+
+      onMessage(streamedText);
+    }
   };
 
   try {
@@ -959,60 +1045,11 @@ export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-
-      buffer = consumeSseBuffer(buffer, (eventName, payloadValue) => {
-        if (payloadValue === "[DONE]" || eventName === "done") {
-          finish();
-          return;
-        }
-
-        if (eventName === "meta") {
-          try {
-            onMeta(JSON.parse(payloadValue || "{}"));
-          } catch {
-            onMeta({});
-          }
-          return;
-        }
-
-        if (eventName === "progress") {
-          onProgress(payloadValue || "");
-          return;
-        }
-
-        if (eventName === "message") {
-          streamedText += payloadValue || "";
-          onMessage(streamedText);
-        }
-      });
+      buffer = consumeSseBuffer(buffer, handleEvent);
     }
 
     if (buffer.trim()) {
-      consumeSseBuffer(`${buffer}\n\n`, (eventName, payloadValue) => {
-        if (payloadValue === "[DONE]" || eventName === "done") {
-          finish();
-          return;
-        }
-
-        if (eventName === "meta") {
-          try {
-            onMeta(JSON.parse(payloadValue || "{}"));
-          } catch {
-            onMeta({});
-          }
-          return;
-        }
-
-        if (eventName === "progress") {
-          onProgress(payloadValue || "");
-          return;
-        }
-
-        if (eventName === "message") {
-          streamedText += payloadValue || "";
-          onMessage(streamedText);
-        }
-      });
+      consumeSseBuffer(`${buffer}\n\n`, handleEvent);
     }
   } catch (error) {
     if (isAbortError(error)) {
