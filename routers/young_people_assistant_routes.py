@@ -16,19 +16,54 @@ from services.young_person_service import YoungPersonService
 router = APIRouter(tags=["Operational Assistant"])
 
 
-class YoungPersonAssistantContext(BaseModel):
-    scope: str | None = "young_person"
-    young_person_id: int
+class BaseAssistantContext(BaseModel):
+    assistant_type: str | None = None
+    scope: str | None = None
+    scope_type: str | None = None
+    access_level: str | None = None
+    provider_id: int | None = None
+    allowed_home_ids: list[int] | None = None
+
     current_view: str | None = None
     current_section: str | None = None
+    shift_context: str | None = None
+
+    user_role: str | None = None
+    assistant_intent: str | None = None
+    retrieval_mode: str | None = None
+    output_mode: str | None = None
+
+    whole_os_default: bool | None = None
+    section_only_requested: bool | None = None
+    use_whole_scope_records: bool | None = None
+
+    ask_for_dates: bool | None = None
+    ask_for_chronology: bool | None = None
+    ask_for_summary: bool | None = None
+    ask_for_review_pack: bool | None = None
+    ask_for_compliance_view: bool | None = None
+
+    suggested_prompts_ui_only: list[str] | None = None
+
+    reporting_period_start: str | None = None
+    reporting_period_end: str | None = None
+    reporting_period_inferred: bool | None = None
+    reg45_requested: bool | None = None
+
+    composer_record_type: str | None = None
+    record_type: str | None = None
+    record_id: int | None = None
+
+
+class YoungPersonAssistantContext(BaseAssistantContext):
+    scope: str | None = "child"
+    scope_type: str | None = "young_person"
+    young_person_id: int
     young_person_name: str | None = None
     placement_status: str | None = None
     summary_risk_level: str | None = None
-    composer_record_type: str | None = None
+    home_id: int | None = None
     home_name: str | None = None
-    shift_context: str | None = None
-    record_type: str | None = None
-    record_id: int | None = None
 
 
 class YoungPersonAssistantPayload(BaseModel):
@@ -37,19 +72,11 @@ class YoungPersonAssistantPayload(BaseModel):
     response_mode: str | None = "balanced"
 
 
-class HomeAssistantContext(BaseModel):
+class HomeAssistantContext(BaseAssistantContext):
     scope: str | None = "home"
+    scope_type: str | None = "home"
     home_id: int | None = None
     home_name: str | None = None
-    current_view: str | None = None
-    current_section: str | None = None
-    shift_context: str | None = None
-    composer_record_type: str | None = None
-    record_type: str | None = None
-    record_id: int | None = None
-    access_level: str | None = None
-    allowed_home_ids: list[int] | None = None
-    provider_id: int | None = None
 
 
 class HomeAssistantPayload(BaseModel):
@@ -58,19 +85,11 @@ class HomeAssistantPayload(BaseModel):
     response_mode: str | None = "balanced"
 
 
-class QualityAssistantContext(BaseModel):
+class QualityAssistantContext(BaseAssistantContext):
     scope: str | None = "quality"
+    scope_type: str | None = "quality"
     home_id: int | None = None
     home_name: str | None = None
-    current_view: str | None = None
-    current_section: str | None = None
-    shift_context: str | None = None
-    composer_record_type: str | None = None
-    record_type: str | None = None
-    record_id: int | None = None
-    access_level: str | None = None
-    allowed_home_ids: list[int] | None = None
-    provider_id: int | None = None
 
 
 class QualityAssistantPayload(BaseModel):
@@ -88,6 +107,27 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
+def _safe_bool(value: Any) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"true", "1", "yes"}:
+            return True
+        if lowered in {"false", "0", "no"}:
+            return False
+    return bool(value)
+
+
+def _safe_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 def _safe_int_list(values: Any) -> list[int]:
     if not isinstance(values, list):
         return []
@@ -96,6 +136,18 @@ def _safe_int_list(values: Any) -> list[int]:
     for value in values:
         parsed = _safe_int(value)
         if parsed is not None:
+            result.append(parsed)
+    return result
+
+
+def _safe_str_list(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+
+    result: list[str] = []
+    for value in values:
+        parsed = _safe_str(value)
+        if parsed:
             result.append(parsed)
     return result
 
@@ -219,15 +271,75 @@ def _normalise_response_mode(value: str | None) -> str:
     return "balanced"
 
 
+def _normalise_scope_value(value: str | None, fallback: str) -> str:
+    normalised = str(value or fallback).strip().lower()
+    if normalised in {"child", "young_person", "young person"}:
+        return "child"
+    if normalised == "home":
+        return "home"
+    if normalised == "quality":
+        return "quality"
+    return fallback
+
+
+def _normalise_assistant_type(value: str | None, fallback: str) -> str:
+    normalised = str(value or fallback).strip().lower()
+    if normalised in {"young_people_os", "young_person_os", "child_os"}:
+        return "young_people_os"
+    if normalised in {"home_os", "home"}:
+        return "home_os"
+    if normalised in {"quality_os", "quality"}:
+        return "quality_os"
+    return fallback
+
+
+def _extract_common_context(payload_context: BaseAssistantContext, current_user: dict[str, Any]) -> dict[str, Any]:
+    current_view = payload_context.current_view or payload_context.current_section
+    current_section = payload_context.current_section or current_view
+    shift_context = payload_context.shift_context or current_view
+
+    return {
+        "assistant_type": _normalise_assistant_type(payload_context.assistant_type, "young_people_os"),
+        "current_view": current_view,
+        "current_section": current_section,
+        "shift_context": shift_context,
+        "user_role": payload_context.user_role or _user_role(current_user) or "staff",
+        "assistant_intent": payload_context.assistant_intent or "unknown",
+        "retrieval_mode": payload_context.retrieval_mode or "whole_scope",
+        "output_mode": payload_context.output_mode or "answer",
+        "whole_os_default": _safe_bool(payload_context.whole_os_default),
+        "section_only_requested": _safe_bool(payload_context.section_only_requested),
+        "use_whole_scope_records": _safe_bool(payload_context.use_whole_scope_records),
+        "ask_for_dates": _safe_bool(payload_context.ask_for_dates),
+        "ask_for_chronology": _safe_bool(payload_context.ask_for_chronology),
+        "ask_for_summary": _safe_bool(payload_context.ask_for_summary),
+        "ask_for_review_pack": _safe_bool(payload_context.ask_for_review_pack),
+        "ask_for_compliance_view": _safe_bool(payload_context.ask_for_compliance_view),
+        "suggested_prompts_ui_only": _safe_str_list(payload_context.suggested_prompts_ui_only),
+        "reporting_period_start": _safe_str(payload_context.reporting_period_start),
+        "reporting_period_end": _safe_str(payload_context.reporting_period_end),
+        "reporting_period_inferred": _safe_bool(payload_context.reporting_period_inferred),
+        "reg45_requested": _safe_bool(payload_context.reg45_requested),
+        "composer_record_type": payload_context.composer_record_type,
+        "record_type": payload_context.record_type,
+        "record_id": payload_context.record_id,
+    }
+
+
 def _normalise_young_person_scope(
     payload: YoungPersonAssistantPayload,
     current_user: dict[str, Any],
+    record: dict[str, Any],
 ) -> dict[str, Any]:
+    resolved_home_id = _safe_int(record.get("home_id")) or _user_home_id(current_user)
+
     return {
         "scope_type": "young_person",
         "scope": "child",
         "access_level": "child",
-        "home_id": _user_home_id(current_user),
+        "home_id": resolved_home_id,
+        "allowed_home_ids": [resolved_home_id] if resolved_home_id is not None else [],
+        "provider_id": _user_provider_id(current_user),
         "young_person_id": int(payload.context.young_person_id),
     }
 
@@ -282,30 +394,30 @@ def _normalise_quality_scope(
 def _normalise_young_person_context(
     payload: YoungPersonAssistantPayload,
     record: dict[str, Any],
+    current_user: dict[str, Any],
+    scope: dict[str, Any],
 ) -> dict[str, Any]:
     full_name = (
-        " ".join(
-            [x for x in [record.get("first_name"), record.get("last_name")] if x]
-        ).strip()
+        " ".join([x for x in [record.get("first_name"), record.get("last_name")] if x]).strip()
         or record.get("preferred_name")
         or "Young person"
     )
 
-    current_view = payload.context.current_view or payload.context.current_section
+    common = _extract_common_context(payload.context, current_user)
 
     return {
-        "current_view": current_view,
-        "current_section": payload.context.current_section or current_view,
+        **common,
+        "scope": "child",
+        "scope_type": "young_person",
+        "access_level": scope.get("access_level"),
+        "provider_id": scope.get("provider_id"),
+        "allowed_home_ids": scope.get("allowed_home_ids", []),
+        "home_id": scope.get("home_id"),
+        "young_person_id": int(payload.context.young_person_id),
         "young_person_name": payload.context.young_person_name or full_name,
         "placement_status": payload.context.placement_status or record.get("placement_status"),
-        "summary_risk_level": payload.context.summary_risk_level
-        or record.get("summary_risk_level"),
-        "composer_record_type": payload.context.composer_record_type,
+        "summary_risk_level": payload.context.summary_risk_level or record.get("summary_risk_level"),
         "home_name": payload.context.home_name or record.get("home_name"),
-        "shift_context": payload.context.shift_context or current_view,
-        "record_type": payload.context.record_type,
-        "record_id": payload.context.record_id,
-        "young_person_id": int(payload.context.young_person_id),
     }
 
 
@@ -314,7 +426,6 @@ def _normalise_home_context(
     scope: dict[str, Any],
     current_user: dict[str, Any],
 ) -> dict[str, Any]:
-    current_view = payload.context.current_view or payload.context.current_section
     home_name = (
         payload.context.home_name
         or current_user.get("home_name")
@@ -322,18 +433,17 @@ def _normalise_home_context(
         or f"Home {scope.get('home_id')}"
     )
 
+    common = _extract_common_context(payload.context, current_user)
+
     return {
-        "current_view": current_view,
-        "current_section": payload.context.current_section or current_view,
-        "home_name": home_name,
-        "shift_context": payload.context.shift_context or current_view,
-        "composer_record_type": payload.context.composer_record_type,
-        "record_type": payload.context.record_type,
-        "record_id": payload.context.record_id,
-        "home_id": scope.get("home_id"),
+        **common,
+        "scope": "home",
+        "scope_type": "home",
         "access_level": scope.get("access_level"),
-        "allowed_home_ids": scope.get("allowed_home_ids", []),
         "provider_id": scope.get("provider_id"),
+        "allowed_home_ids": scope.get("allowed_home_ids", []),
+        "home_id": scope.get("home_id"),
+        "home_name": home_name,
     }
 
 
@@ -342,30 +452,24 @@ def _normalise_quality_context(
     scope: dict[str, Any],
     current_user: dict[str, Any],
 ) -> dict[str, Any]:
-    current_view = payload.context.current_view or payload.context.current_section
     home_name = (
         payload.context.home_name
         or current_user.get("home_name")
         or current_user.get("homeName")
-        or (
-            f"Home {scope.get('home_id')}"
-            if scope.get("home_id") is not None
-            else "Quality oversight"
-        )
+        or (f"Home {scope.get('home_id')}" if scope.get("home_id") is not None else "Quality oversight")
     )
 
+    common = _extract_common_context(payload.context, current_user)
+
     return {
-        "current_view": current_view,
-        "current_section": payload.context.current_section or current_view,
-        "home_name": home_name,
-        "shift_context": payload.context.shift_context or current_view,
-        "composer_record_type": payload.context.composer_record_type,
-        "record_type": payload.context.record_type,
-        "record_id": payload.context.record_id,
-        "home_id": scope.get("home_id"),
+        **common,
+        "scope": "quality",
+        "scope_type": "quality",
         "access_level": scope.get("access_level"),
-        "allowed_home_ids": scope.get("allowed_home_ids", []),
         "provider_id": scope.get("provider_id"),
+        "allowed_home_ids": scope.get("allowed_home_ids", []),
+        "home_id": scope.get("home_id"),
+        "home_name": home_name,
     }
 
 
@@ -543,8 +647,8 @@ async def ask_young_person_assistant(
     record = _load_and_check_young_person(payload.context.young_person_id, current_user)
 
     try:
-        scope = _normalise_young_person_scope(payload, current_user)
-        context = _normalise_young_person_context(payload, record)
+        scope = _normalise_young_person_scope(payload, current_user, record)
+        context = _normalise_young_person_context(payload, record, current_user, scope)
         response_mode = _normalise_response_mode(payload.response_mode)
         user_id = _user_id(current_user)
 
@@ -587,6 +691,15 @@ async def ask_young_person_assistant(
                 "top_level_meta": {
                     "young_person_id": payload.context.young_person_id,
                     "young_person_name": context.get("young_person_name"),
+                    "home_id": context.get("home_id"),
+                    "home_name": context.get("home_name"),
+                    "assistant_intent": context.get("assistant_intent"),
+                    "retrieval_mode": context.get("retrieval_mode"),
+                    "output_mode": context.get("output_mode"),
+                    "reporting_period_start": context.get("reporting_period_start"),
+                    "reporting_period_end": context.get("reporting_period_end"),
+                    "reporting_period_inferred": context.get("reporting_period_inferred"),
+                    "reg45_requested": context.get("reg45_requested"),
                 },
             },
         ),
@@ -650,6 +763,13 @@ async def ask_home_assistant(
                 "top_level_meta": {
                     "home_id": scope.get("home_id"),
                     "home_name": context.get("home_name"),
+                    "assistant_intent": context.get("assistant_intent"),
+                    "retrieval_mode": context.get("retrieval_mode"),
+                    "output_mode": context.get("output_mode"),
+                    "reporting_period_start": context.get("reporting_period_start"),
+                    "reporting_period_end": context.get("reporting_period_end"),
+                    "reporting_period_inferred": context.get("reporting_period_inferred"),
+                    "reg45_requested": context.get("reg45_requested"),
                 },
             },
         ),
@@ -727,6 +847,13 @@ async def ask_quality_assistant(
                     "allowed_home_ids": allowed_home_ids,
                     "access_level": scope.get("access_level"),
                     "provider_id": scope.get("provider_id"),
+                    "assistant_intent": context.get("assistant_intent"),
+                    "retrieval_mode": context.get("retrieval_mode"),
+                    "output_mode": context.get("output_mode"),
+                    "reporting_period_start": context.get("reporting_period_start"),
+                    "reporting_period_end": context.get("reporting_period_end"),
+                    "reporting_period_inferred": context.get("reporting_period_inferred"),
+                    "reg45_requested": context.get("reg45_requested"),
                 },
             },
         ),
