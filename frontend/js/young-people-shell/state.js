@@ -37,7 +37,7 @@ export function createAssistantMeta() {
 export function createComposerState() {
   return {
     composerOpen: false,
-    composerMode: "create", // "create" | "edit"
+    composerMode: "create",
     composerRecordType: null,
     composerRecordId: null,
     composerEditItem: null,
@@ -62,7 +62,6 @@ export function createAssistantBundleState() {
     scopeBundleLoading: false,
     scopeBundleError: null,
 
-    // Derived assistant caches
     latestChronology: [],
     latestFacts: {},
     latestCareDomains: {},
@@ -77,6 +76,7 @@ export const state = {
   // Selected young person / workspace
   youngPersonId: null,
   selectedYoungPerson: null,
+  youngPerson: null,
   youngPeople: [],
   youngPeopleFilter: "",
 
@@ -86,14 +86,15 @@ export const state = {
   currentView: DEFAULT_SECTION,
 
   // Role / scope layer
-  userRole: DEFAULT_ROLE, // "staff" | "manager" | "ri" | "admin"
-  currentScope: DEFAULT_SCOPE, // "child" | "home" | "quality"
+  userRole: DEFAULT_ROLE,
+  currentScope: DEFAULT_SCOPE,
 
   // General UI state
   loading: false,
   error: null,
   mobileNavOpen: false,
   assistantOpen: false,
+  assistantSending: false,
   fullscreenPanelOpen: false,
   recordDrawerOpen: false,
 
@@ -118,7 +119,6 @@ export const state = {
   // Assistant chat state
   assistantMessages: [],
   assistantModalMessages: [],
-  assistantSending: false,
   assistantMeta: createAssistantMeta(),
 
   // Legacy compatibility fields
@@ -135,6 +135,39 @@ export const state = {
   requestCooldowns: Object.create(null),
 };
 
+function ensureAssistantMeta() {
+  if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
+    state.assistantMeta = createAssistantMeta();
+    return;
+  }
+
+  state.assistantMeta.sources = Array.isArray(state.assistantMeta.sources)
+    ? state.assistantMeta.sources
+    : [];
+  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
+  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
+  state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
+  state.assistantMeta.assistant_context =
+    state.assistantMeta.assistant_context || {};
+  state.assistantMeta.suggested_actions = Array.isArray(
+    state.assistantMeta.suggested_actions
+  )
+    ? state.assistantMeta.suggested_actions
+    : [];
+  state.assistantMeta.chronology = Array.isArray(state.assistantMeta.chronology)
+    ? state.assistantMeta.chronology
+    : [];
+  state.assistantMeta.facts = state.assistantMeta.facts || {};
+  state.assistantMeta.care_domains = state.assistantMeta.care_domains || {};
+  state.assistantMeta.evidence_summary =
+    state.assistantMeta.evidence_summary || {};
+  state.assistantMeta.evidence_sufficiency =
+    state.assistantMeta.evidence_sufficiency || {};
+  state.assistantMeta.scrubber_meta = state.assistantMeta.scrubber_meta || {};
+  state.assistantMeta.scrubber_reverse_map =
+    state.assistantMeta.scrubber_reverse_map || {};
+}
+
 export function normaliseUserRole(role) {
   const raw = String(role || DEFAULT_ROLE).trim().toLowerCase();
 
@@ -150,6 +183,8 @@ export function getDefaultScopeForRole(role = state.userRole) {
 
   if (safeRole === "ri") return "quality";
   if (safeRole === "manager") return "home";
+  if (safeRole === "registered_manager") return "home";
+  if (safeRole === "deputy_manager") return "home";
   if (safeRole === "admin") return "home";
 
   return DEFAULT_SCOPE;
@@ -167,7 +202,6 @@ export function resetAssistantState() {
   state.assistantSending = false;
   state.assistantMeta = createAssistantMeta();
 
-  // Legacy compatibility fields
   state.assistantContext = null;
   state.assistantSources = [];
   state.assistantRuntime = null;
@@ -219,6 +253,7 @@ export function resetActiveRecordState() {
 export function resetWorkspaceState() {
   state.youngPersonId = null;
   state.selectedYoungPerson = null;
+  state.youngPerson = null;
   state.youngPeopleFilter = "";
 
   state.currentScope = DEFAULT_SCOPE;
@@ -230,6 +265,7 @@ export function resetWorkspaceState() {
   state.error = null;
   state.mobileNavOpen = false;
   state.assistantOpen = false;
+  state.assistantSending = false;
   state.fullscreenPanelOpen = false;
 
   state.homeId = null;
@@ -275,13 +311,20 @@ export function setUserRole(role) {
 }
 
 export function setSelectedYoungPerson(person = null) {
-  state.selectedYoungPerson = person || null;
-  state.youngPersonId = person?.id || person?.young_person_id || null;
+  const safePerson = person || null;
+  state.selectedYoungPerson = safePerson;
+  state.youngPerson = safePerson;
+  state.youngPersonId = safePerson?.id || safePerson?.young_person_id || null;
+
+  if (!state.homeId && (safePerson?.home_id || safePerson?.homeId)) {
+    state.homeId = safePerson.home_id || safePerson.homeId || null;
+  }
 }
 
 export function clearSelectedYoungPerson() {
   state.youngPersonId = null;
   state.selectedYoungPerson = null;
+  state.youngPerson = null;
 }
 
 export function setHomeContext(homeId = null) {
@@ -318,6 +361,10 @@ export function setAssistantScopeBundle(bundle = null) {
 
 export function setAssistantScopeBundleLoading(isLoading = false) {
   state.scopeBundleLoading = Boolean(isLoading);
+
+  if (isLoading) {
+    state.scopeBundleError = null;
+  }
 }
 
 export function setAssistantScopeBundleError(error = null) {
@@ -333,6 +380,8 @@ export function setAssistantDerivedState({
   quality_brief = null,
   live_summary = null,
 } = {}) {
+  ensureAssistantMeta();
+
   if (Array.isArray(chronology)) {
     state.latestChronology = chronology;
     state.assistantMeta.chronology = chronology;
