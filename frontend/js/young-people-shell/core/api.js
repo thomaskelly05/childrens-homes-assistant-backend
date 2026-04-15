@@ -499,7 +499,20 @@ export async function fetchHomeAssistantBundle(homeId) {
     return mergeAssistantBundle([]);
   }
 
-  return mergeAssistantBundle([]);
+  const urls = [
+    `/homes/${homeId}/dashboard`,
+    `/homes/${homeId}/team`,
+    `/homes/${homeId}/tasks`,
+    `/homes/${homeId}/communications`,
+    `/homes/${homeId}/documents`,
+    `/homes/${homeId}/supervisions`,
+    `/homes/${homeId}/reports`,
+    `/homes/${homeId}/therapy`,
+    `/homes/${homeId}/compliance`,
+  ];
+
+  const responses = await apiGetSettled(urls);
+  return mergeAssistantBundle(responses);
 }
 
 export async function fetchQualityAssistantBundle(homeId) {
@@ -507,7 +520,17 @@ export async function fetchQualityAssistantBundle(homeId) {
     return mergeAssistantBundle([]);
   }
 
-  return mergeAssistantBundle([]);
+  const urls = [
+    `/homes/${homeId}/quality`,
+    `/homes/${homeId}/audits`,
+    `/homes/${homeId}/incidents`,
+    `/homes/${homeId}/tasks`,
+    `/homes/${homeId}/compliance`,
+    `/homes/${homeId}/reports`,
+  ];
+
+  const responses = await apiGetSettled(urls);
+  return mergeAssistantBundle(responses);
 }
 
 export async function fetchAssistantScopeBundle(context = {}) {
@@ -790,23 +813,31 @@ function resolveAssistantEndpoint(payload = {}) {
     payload?.assistant_type ||
     null;
 
-  if (assistantType === "public") {
-    return "/assistant";
-  }
-
-  if (assistantType === "young_people_os") {
-    return "/young-people/assistant";
-  }
-
   const scope =
     payload?.context?.scope ||
     payload?.context?.current_scope ||
     payload?.context?.scope_type ||
     "child";
 
-  if (scope === "home") return "/home/assistant";
-  if (scope === "quality") return "/quality/assistant";
-  if (scope === "child" || scope === "young_person") return "/young-people/assistant";
+  if (assistantType === "public") {
+    return "/assistant";
+  }
+
+  if (scope === "home") {
+    return "/home/assistant";
+  }
+
+  if (scope === "quality") {
+    return "/quality/assistant";
+  }
+
+  if (
+    scope === "child" ||
+    scope === "young_person" ||
+    assistantType === "young_people_os"
+  ) {
+    return "/young-people/assistant";
+  }
 
   return "/assistant";
 }
