@@ -6,17 +6,28 @@
     name="viewport"
     content="width=device-width, initial-scale=1, viewport-fit=cover"
   />
-  <title>IndiCare OS • Residential Workspace</title>
+  <title>IndiCare OS • Residential Care Operating System</title>
   <meta
     name="description"
     content="IndiCare OS residential workspace for child-centred, trauma-informed, therapeutic recording, oversight, compliance, quality assurance and care planning."
   />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f3f6fb" />
+  <meta name="application-name" content="IndiCare OS" />
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 <body>
   <a class="sr-only sr-only-focusable" href="#mainContent">Skip to main content</a>
+  <a class="sr-only sr-only-focusable" href="#assistantModal">Skip to assistant</a>
+
+  <noscript>
+    <div
+      style="padding:12px 16px;background:#fff4e5;color:#7a4b00;border-bottom:1px solid #f0d6a8;font:600 14px/1.5 Inter,system-ui,sans-serif;"
+      role="alert"
+    >
+      IndiCare OS works best with JavaScript enabled.
+    </div>
+  </noscript>
 
   <div
     id="app"
@@ -814,7 +825,7 @@
           </button>
         </div>
 
-        <div class="assistant-modal-layout">
+        <div class="assistant-modal-layout assistant-modal-layout--split">
           <div class="assistant-modal-main">
             <div class="assistant-context-bar">
               <span id="scopeBadge" class="meta-chip">Young person assistant</span>
@@ -1038,6 +1049,19 @@
         </div>
       </div>
     </section>
+
+    <footer class="app-footer" role="contentinfo">
+      <div class="app-footer-inner">
+        <div class="app-footer-brand">
+          <strong>IndiCare OS</strong>
+          <span>Child-centred residential operating system</span>
+        </div>
+
+        <div class="app-footer-copy">
+          <span>© 2026 IndiCare OS. All rights reserved.</span>
+        </div>
+      </div>
+    </footer>
 
     <button
       id="assistantLauncher"
