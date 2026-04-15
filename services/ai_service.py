@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from typing import Any
@@ -64,14 +65,17 @@ def _trim_search_results(search_results: str, selected_mode: str) -> str:
     if selected_mode == "quick":
         limit = 1500
     elif selected_mode == "deep":
-        limit = 4000
+        limit = 5000
     else:
-        limit = 2500
+        limit = 3000
 
     return text[:limit]
 
 
-def _trim_messages_for_mode(messages: list[dict[str, Any]] | None, selected_mode: str) -> list[dict[str, Any]]:
+def _trim_messages_for_mode(
+    messages: list[dict[str, Any]] | None,
+    selected_mode: str,
+) -> list[dict[str, Any]]:
     if not messages:
         return []
 
@@ -80,7 +84,7 @@ def _trim_messages_for_mode(messages: list[dict[str, Any]] | None, selected_mode
         max_chars = 1200
     elif selected_mode == "deep":
         keep = 8
-        max_chars = 2500
+        max_chars = 2800
     else:
         keep = 6
         max_chars = 1800
@@ -190,12 +194,40 @@ def _append_live_guidance_context(system_prompt: str, search_results: str) -> st
         f"{system_prompt}\n\n"
         "============================================================\n"
         "LIVE GUIDANCE CONTEXT\n\n"
-        "The following trusted guidance excerpts were retrieved for this request:\n\n"
+        "The following trusted guidance excerpts were retrieved for this request.\n"
+        "Where relevant, prioritise Children’s Homes Regulations 2015, the Quality Standards,\n"
+        "the Guide to the Children’s Homes Regulations including the Quality Standards,\n"
+        "SCCIF expectations, safeguarding guidance, and official children’s homes practice frameworks.\n\n"
         f"{search_results}\n\n"
-        "Use this only where it genuinely improves accuracy.\n"
-        "Prefer statutory guidance, legislation, Ofsted, and official frameworks where relevant.\n"
-        "Do not let this stop you completing practical drafting tasks directly."
+        "Use this material only where it genuinely improves accuracy.\n"
+        "Do not overstate what the guidance says.\n"
+        "Do not let guidance replace the specific evidence in the OS record.\n"
+        "If guidance and local evidence differ, say so clearly."
     ).strip()
+
+
+def _append_service_level_answer_rules(system_prompt: str) -> str:
+    extra = """
+============================================================
+SERVICE-LEVEL ANSWER RULES
+
+Your answer must:
+- stay within the authorised children’s residential care scope
+- be practical, analytical and safeguarding-aware
+- keep children’s lived experience central where relevant
+- distinguish clearly between evidence, concern, inference and missing information
+- avoid generic filler and unsupported statements
+- use inline citations throughout when evidence exists
+- not cluster all citations only at the end
+- not invent citations for unsupported claims
+- match the user’s requested structure exactly where one is given
+- avoid markdown headings if the user asked for plain section labels only
+
+If the request is inspection, RI, manager, home oversight, chronology, Reg 45, compliance or safeguarding related:
+- answer as an experienced children’s homes professional
+- think in line with Ofsted, SCCIF, the Quality Standards, leadership and management expectations, and safe residential practice
+"""
+    return f"{system_prompt}\n\n{extra}".strip()
 
 
 def _normalise_sources(value: Any) -> list[dict]:
@@ -217,11 +249,24 @@ def _normalise_sources(value: Any) -> list[dict]:
             "page_number": item.get("page_number"),
             "excerpt": item.get("excerpt"),
             "url": item.get("url"),
+            "record_type": item.get("record_type"),
+            "record_id": item.get("record_id"),
+            "citation_ref": item.get("citation_ref"),
         }
 
         key = "|".join(
             str(source.get(k) or "")
-            for k in ["type", "label", "document_title", "section", "page_number", "url"]
+            for k in [
+                "type",
+                "label",
+                "document_title",
+                "section",
+                "page_number",
+                "url",
+                "record_type",
+                "record_id",
+                "citation_ref",
+            ]
         )
 
         if key in seen:
@@ -231,6 +276,91 @@ def _normalise_sources(value: Any) -> list[dict]:
         cleaned.append(source)
 
     return cleaned
+
+
+def _normalise_suggested_actions(value: Any) -> list[Any]:
+    if not isinstance(value, list):
+        return []
+
+    cleaned: list[Any] = []
+    seen: set[str] = set()
+
+    for item in value:
+        if isinstance(item, dict):
+            key = json.dumps(item, sort_keys=True, ensure_ascii=False)
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned.append(item)
+            continue
+
+        text = _safe_string(item)
+        if not text:
+            continue
+        lowered = text.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        cleaned.append(text)
+
+    return cleaned
+
+
+def _extract_structured_payload(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+
+    structured_keys = {
+        "answer",
+        "text",
+        "message",
+        "content",
+        "sources",
+        "runtime",
+        "explainability",
+        "assistant_scope",
+        "assistant_context",
+        "suggested_actions",
+    }
+
+    if any(key in value for key in structured_keys):
+        return value
+
+    return None
+
+
+def _extract_text_from_provider_payload(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+
+    if not isinstance(value, dict):
+        return ""
+
+    direct_candidates = [
+        value.get("text"),
+        value.get("message"),
+        value.get("answer"),
+        value.get("output"),
+        value.get("content"),
+    ]
+
+    for candidate in direct_candidates:
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate
+
+    content = value.get("content")
+    if isinstance(content, dict):
+        for candidate in [
+            content.get("text"),
+            content.get("message"),
+            content.get("answer"),
+            content.get("output"),
+            content.get("content"),
+        ]:
+            if isinstance(candidate, str) and candidate.strip():
+                return candidate
+
+    return ""
 
 
 async def generate_ai_stream(
@@ -285,7 +415,7 @@ async def generate_ai_stream(
     output_type = getattr(runtime, "output_type", "plain_response")
 
     sources_used = _normalise_sources(orchestration.sources)
-    runtime_payload = orchestration.runtime_payload
+    runtime_payload = dict(orchestration.runtime_payload or {})
     explainability_payload = build_explainability_payload(
         user_message=message,
         orchestration=orchestration,
@@ -340,6 +470,7 @@ async def generate_ai_stream(
             }
 
     final_system_prompt = _append_live_guidance_context(system_prompt, trimmed_search_results)
+    final_system_prompt = _append_service_level_answer_rules(final_system_prompt)
 
     messages = [
         {"role": "system", "content": final_system_prompt},
@@ -376,6 +507,14 @@ async def generate_ai_stream(
     provider_error_code = None
     provider_error_message = None
 
+    final_answer_parts: list[str] = []
+    provider_meta_sources: list[dict] = []
+    provider_runtime: dict[str, Any] = {}
+    provider_explainability: dict[str, Any] = {}
+    provider_assistant_scope: dict[str, Any] = {}
+    provider_assistant_context: dict[str, Any] = {}
+    provider_suggested_actions: list[Any] = []
+
     try:
         async for content in provider.stream_chat(
             ChatStreamRequest(
@@ -395,10 +534,66 @@ async def generate_ai_stream(
                 },
             )
         ):
+            if isinstance(content, dict):
+                structured = _extract_structured_payload(content)
+
+                if structured:
+                    text = _extract_text_from_provider_payload(structured)
+                    if text:
+                        final_answer_parts.append(text)
+                        yield {
+                            "type": "token",
+                            "content": text,
+                        }
+
+                    if isinstance(structured.get("sources"), list):
+                        provider_meta_sources = _normalise_sources(structured.get("sources"))
+
+                    if isinstance(structured.get("runtime"), dict):
+                        provider_runtime = {
+                            **provider_runtime,
+                            **structured.get("runtime", {}),
+                        }
+
+                    if isinstance(structured.get("explainability"), dict):
+                        provider_explainability = {
+                            **provider_explainability,
+                            **structured.get("explainability", {}),
+                        }
+
+                    if isinstance(structured.get("assistant_scope"), dict):
+                        provider_assistant_scope = {
+                            **provider_assistant_scope,
+                            **structured.get("assistant_scope", {}),
+                        }
+
+                    if isinstance(structured.get("assistant_context"), dict):
+                        provider_assistant_context = {
+                            **provider_assistant_context,
+                            **structured.get("assistant_context", {}),
+                        }
+
+                    if isinstance(structured.get("suggested_actions"), list):
+                        provider_suggested_actions = _normalise_suggested_actions(
+                            structured.get("suggested_actions")
+                        )
+
+                    continue
+
+                token_text = _extract_text_from_provider_payload(content)
+                if _safe_string(token_text):
+                    final_answer_parts.append(token_text)
+                    yield {
+                        "type": "token",
+                        "content": token_text,
+                    }
+                continue
+
             if _safe_string(content):
+                final_answer_parts.append(str(content))
                 yield {
                     "type": "token",
-                    "content": content,
+                    "content": str(content),
                 }
 
         provider_success = True
@@ -413,12 +608,14 @@ async def generate_ai_stream(
             exc,
         )
 
+        fallback_text = (
+            "Sorry, something went wrong while generating the response. "
+            f"Provider error: {provider_error_message}"
+        )
+        final_answer_parts.append(fallback_text)
         yield {
             "type": "token",
-            "content": (
-                "Sorry, something went wrong while generating the response. "
-                f"Provider error: {provider_error_message}"
-            ),
+            "content": fallback_text,
         }
 
     finally:
@@ -429,7 +626,7 @@ async def generate_ai_stream(
                 base_event=request_audit_event,
                 duration_ms=duration_ms,
                 success=provider_success,
-                source_count=len(sources_used),
+                source_count=len(provider_meta_sources or sources_used),
                 error_code=provider_error_code,
                 error_message=provider_error_message,
                 extra={
@@ -440,12 +637,39 @@ async def generate_ai_stream(
                 },
             )
 
-    yield {
-        "type": "meta",
-        "sources": sources_used,
-        "runtime": runtime_payload,
-        "explainability": explainability_payload,
+    final_sources = _normalise_sources(provider_meta_sources or sources_used)
+    final_runtime = {
+        **runtime_payload,
+        **provider_runtime,
+        "guidance_results_used": bool(trimmed_search_results),
+        "guidance_search_skipped": skip_guidance_search,
+        "response_mode": selected_mode,
+        "task_type": task_type,
+        "output_type": output_type,
+        "safeguarding_level": safeguarding_level,
     }
+    final_explainability = {
+        **(explainability_payload or {}),
+        **provider_explainability,
+    }
+
+    meta_payload = {
+        "type": "meta",
+        "sources": final_sources,
+        "runtime": final_runtime,
+        "explainability": final_explainability,
+    }
+
+    if provider_assistant_scope:
+        meta_payload["assistant_scope"] = provider_assistant_scope
+
+    if provider_assistant_context:
+        meta_payload["assistant_context"] = provider_assistant_context
+
+    if provider_suggested_actions:
+        meta_payload["suggested_actions"] = provider_suggested_actions
+
+    yield meta_payload
 
     logger.info("Completed AI stream session_id=%s", session_id)
 
