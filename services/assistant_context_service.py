@@ -5,7 +5,7 @@ from typing import Any, Literal
 from psycopg2.extras import RealDictCursor
 
 
-AssistantType = Literal["public", "young_people_os"]
+AssistantType = Literal["public", "young_people_os", "home_os", "quality_os"]
 
 
 def _fetch_one(conn, query: str, params: tuple[Any, ...]) -> dict[str, Any] | None:
@@ -37,6 +37,17 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
+def _safe_int_list(value: Any) -> list[int]:
+    if not isinstance(value, list):
+        return []
+    result: list[int] = []
+    for item in value:
+        safe = _safe_int(item)
+        if safe is not None:
+            result.append(safe)
+    return result
+
+
 def _normalise_scope(scope: dict[str, Any] | None) -> dict[str, Any]:
     scope = scope or {}
     return {
@@ -45,6 +56,9 @@ def _normalise_scope(scope: dict[str, Any] | None) -> dict[str, Any]:
         "young_person_id": _safe_int(scope.get("young_person_id")),
         "record_type": _safe_string(scope.get("record_type")).lower(),
         "record_id": _safe_int(scope.get("record_id")),
+        "access_level": _safe_string(scope.get("access_level")).lower(),
+        "provider_id": _safe_int(scope.get("provider_id")),
+        "allowed_home_ids": _safe_int_list(scope.get("allowed_home_ids")),
     }
 
 
@@ -62,6 +76,58 @@ def _get_user_home(conn, user_id: int) -> int | None:
     if not row:
         return None
     return _safe_int(row.get("home_id"))
+
+
+def _assert_home_access(conn, user_id: int, home_id: int | None) -> int:
+    if home_id is None:
+        raise ValueError("home_id is required")
+
+    user_home_id = _get_user_home(conn, user_id)
+
+    if user_home_id is not None and user_home_id != home_id:
+        raise PermissionError("You do not have access to this home")
+
+    return home_id
+
+
+def _assert_quality_access(
+    conn,
+    user_id: int,
+    *,
+    home_id: int | None,
+    access_level: str,
+    allowed_home_ids: list[int] | None,
+) -> dict[str, Any]:
+    safe_allowed = allowed_home_ids or []
+
+    if access_level == "provider":
+        if safe_allowed:
+            return {
+                "access_level": "provider",
+                "allowed_home_ids": safe_allowed,
+                "selected_home_id": home_id,
+            }
+
+        user_home_id = _get_user_home(conn, user_id)
+        if user_home_id is not None:
+            return {
+                "access_level": "provider",
+                "allowed_home_ids": [user_home_id],
+                "selected_home_id": home_id,
+            }
+
+        return {
+            "access_level": "provider",
+            "allowed_home_ids": [],
+            "selected_home_id": home_id,
+        }
+
+    verified_home_id = _assert_home_access(conn, user_id, home_id)
+    return {
+        "access_level": "home",
+        "allowed_home_ids": [verified_home_id],
+        "selected_home_id": verified_home_id,
+    }
 
 
 def _assert_young_person_access(conn, user_id: int, young_person_id: int) -> dict[str, Any]:
@@ -89,8 +155,10 @@ def _assert_young_person_access(conn, user_id: int, young_person_id: int) -> dic
             yp.photo_url,
             yp.archived,
             yp.created_at,
-            yp.updated_at
+            yp.updated_at,
+            h.name AS home_name
         FROM young_people yp
+        LEFT JOIN homes h ON h.id = yp.home_id
         WHERE yp.id = %s
         LIMIT 1
         """,
@@ -534,7 +602,6 @@ def _build_scoped_record_context(
             """,
             (record_id, young_person_id),
         )
-
     elif record_type == "incident":
         record = _fetch_one(
             conn,
@@ -547,7 +614,6 @@ def _build_scoped_record_context(
             """,
             (record_id, young_person_id),
         )
-
     elif record_type == "risk":
         record = _fetch_one(
             conn,
@@ -560,7 +626,6 @@ def _build_scoped_record_context(
             """,
             (record_id, young_person_id),
         )
-
     elif record_type in {"support_plan", "plan"}:
         record = _fetch_one(
             conn,
@@ -574,7 +639,6 @@ def _build_scoped_record_context(
             (record_id, young_person_id),
         )
         record_type = "support_plan"
-
     elif record_type == "appointment":
         record = _fetch_one(
             conn,
@@ -587,7 +651,6 @@ def _build_scoped_record_context(
             """,
             (record_id, young_person_id),
         )
-
     elif record_type == "keywork":
         record = _fetch_one(
             conn,
@@ -667,6 +730,9 @@ def build_young_person_context(
             "young_person_id": young_person_id,
             "record_type": scope.get("record_type"),
             "record_id": scope.get("record_id"),
+            "access_level": "child",
+            "provider_id": None,
+            "allowed_home_ids": [_safe_int(young_person.get("home_id"))] if _safe_int(young_person.get("home_id")) else [],
         },
         "young_person": young_person,
         "identity": _build_identity_context(conn, young_person_id),
@@ -682,6 +748,24 @@ def build_young_person_context(
     }
 
 
+def _build_home_header(conn, home_id: int) -> dict[str, Any] | None:
+    return _fetch_one(
+        conn,
+        """
+        SELECT
+            h.id,
+            h.name,
+            h.name AS home_name,
+            h.created_at,
+            h.updated_at
+        FROM homes h
+        WHERE h.id = %s
+        LIMIT 1
+        """,
+        (home_id,),
+    )
+
+
 def build_home_os_context(
     conn,
     *,
@@ -689,98 +773,172 @@ def build_home_os_context(
     scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     scope = _normalise_scope(scope)
-    home_id = _get_user_home(conn, user_id)
+    home_id = _assert_home_access(conn, user_id, scope.get("home_id") or _get_user_home(conn, user_id))
 
-    recent_tasks: list[dict[str, Any]] = []
-    recent_updates: list[dict[str, Any]] = []
-    recent_handovers: list[dict[str, Any]] = []
-    recent_events: list[dict[str, Any]] = []
-    recent_documents: list[dict[str, Any]] = []
-    recent_incidents: list[dict[str, Any]] = []
-    recent_compliance: list[dict[str, Any]] = []
+    home = _build_home_header(conn, home_id)
 
-    if home_id is not None:
-        recent_tasks = _fetch_all(
-            conn,
-            """
-            SELECT *
-            FROM tasks
-            WHERE home_id = %s
-            ORDER BY due_date ASC NULLS LAST, created_at DESC NULLS LAST, id DESC
-            LIMIT 20
-            """,
-            (home_id,),
-        )
-        recent_updates = _fetch_all(
-            conn,
-            """
-            SELECT *
-            FROM manager_updates
-            WHERE home_id = %s
-            ORDER BY created_at DESC NULLS LAST, id DESC
-            LIMIT 10
-            """,
-            (home_id,),
-        )
-        recent_handovers = _fetch_all(
-            conn,
-            """
-            SELECT *
-            FROM handover
-            WHERE home_id = %s
-            ORDER BY created_at DESC NULLS LAST, id DESC
-            LIMIT 10
-            """,
-            (home_id,),
-        )
-        recent_events = _fetch_all(
-            conn,
-            """
-            SELECT *
-            FROM chronology_events
-            WHERE home_id = %s
-            ORDER BY event_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-            LIMIT 20
-            """,
-            (home_id,),
-        )
-        recent_documents = _fetch_all(
-            conn,
-            """
-            SELECT *
-            FROM documents
-            WHERE home_id = %s
-            ORDER BY updated_at DESC NULLS LAST, id DESC
-            LIMIT 20
-            """,
-            (home_id,),
-        )
-        recent_incidents = _fetch_all(
-            conn,
-            """
-            SELECT *
-            FROM incidents
-            WHERE home_id = %s
-            ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-            LIMIT 20
-            """,
-            (home_id,),
-        )
-        recent_compliance = _fetch_all(
-            conn,
-            """
-            SELECT *
-            FROM compliance_items ci
-            WHERE ci.young_person_id IN (
-                SELECT yp.id
-                FROM young_people yp
-                WHERE yp.home_id = %s
-            )
-            ORDER BY ci.due_date ASC NULLS LAST, ci.updated_at DESC NULLS LAST, ci.id DESC
-            LIMIT 30
-            """,
-            (home_id,),
-        )
+    young_people = _fetch_all(
+        conn,
+        """
+        SELECT
+            yp.id,
+            yp.preferred_name,
+            CONCAT_WS(' ', yp.first_name, yp.last_name) AS full_name,
+            yp.placement_status,
+            yp.summary_risk_level,
+            h.name AS home_name
+        FROM young_people yp
+        LEFT JOIN homes h ON h.id = yp.home_id
+        WHERE yp.home_id = %s
+          AND COALESCE(yp.archived, FALSE) = FALSE
+        ORDER BY yp.first_name ASC, yp.last_name ASC, yp.id ASC
+        LIMIT 50
+        """,
+        (home_id,),
+    )
+
+    team = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM staff
+        WHERE home_id = %s
+        ORDER BY updated_at DESC NULLS LAST, id DESC
+        LIMIT 50
+        """,
+        (home_id,),
+    )
+
+    tasks = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM tasks
+        WHERE home_id = %s
+        ORDER BY due_date ASC NULLS LAST, created_at DESC NULLS LAST, id DESC
+        LIMIT 50
+        """,
+        (home_id,),
+    )
+
+    communications = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM communications
+        WHERE home_id = %s
+        ORDER BY contact_datetime DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
+        LIMIT 40
+        """,
+        (home_id,),
+    )
+
+    documents = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM documents
+        WHERE home_id = %s
+        ORDER BY updated_at DESC NULLS LAST, id DESC
+        LIMIT 40
+        """,
+        (home_id,),
+    )
+
+    supervisions = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM supervisions
+        WHERE home_id = %s
+        ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 40
+        """,
+        (home_id,),
+    )
+
+    therapy = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM therapy_records
+        WHERE home_id = %s
+        ORDER BY session_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 40
+        """,
+        (home_id,),
+    )
+
+    reports = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM reports
+        WHERE home_id = %s
+        ORDER BY created_at DESC NULLS LAST, id DESC
+        LIMIT 30
+        """,
+        (home_id,),
+    )
+
+    compliance_items = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM compliance_items
+        WHERE home_id = %s
+        ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 50
+        """,
+        (home_id,),
+    )
+
+    rota = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM rota
+        WHERE home_id = %s
+        ORDER BY shift_date DESC NULLS LAST, id DESC
+        LIMIT 30
+        """,
+        (home_id,),
+    )
+
+    onboarding = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM onboarding
+        WHERE home_id = %s
+        ORDER BY updated_at DESC NULLS LAST, id DESC
+        LIMIT 30
+        """,
+        (home_id,),
+    )
+
+    training = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM training
+        WHERE home_id = %s
+        ORDER BY expiry_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 30
+        """,
+        (home_id,),
+    )
+
+    summary = {
+        "children_count": len(young_people),
+        "team_count": len(team),
+        "open_tasks": len(tasks),
+        "document_count": len(documents),
+        "supervision_count": len(supervisions),
+        "report_count": len(reports),
+        "compliance_count": len(compliance_items),
+        "home_name": (home or {}).get("home_name") or (home or {}).get("name"),
+    }
 
     return {
         "scope": {
@@ -789,23 +947,205 @@ def build_home_os_context(
             "young_person_id": None,
             "record_type": scope.get("record_type"),
             "record_id": scope.get("record_id"),
+            "access_level": "home",
+            "provider_id": scope.get("provider_id"),
+            "allowed_home_ids": [home_id],
         },
+        "home": home,
         "home_id": home_id,
-        "tasks": recent_tasks,
-        "manager_updates": recent_updates,
-        "handover": recent_handovers,
-        "chronology": recent_events,
-        "documents": recent_documents,
-        "incidents": recent_incidents,
-        "compliance_items": recent_compliance,
+        "summary": summary,
+        "young_people": young_people,
+        "team": team,
+        "tasks": tasks,
+        "communications": communications,
+        "documents": documents,
+        "supervisions": supervisions,
+        "therapy": therapy,
+        "reports": reports,
+        "compliance_items": compliance_items,
+        "rota": rota,
+        "onboarding": onboarding,
+        "training": training,
+    }
+
+
+def build_quality_os_context(
+    conn,
+    *,
+    user_id: int,
+    scope: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    scope = _normalise_scope(scope)
+    quality_access = _assert_quality_access(
+        conn,
+        user_id,
+        home_id=scope.get("home_id"),
+        access_level=scope.get("access_level") or "home",
+        allowed_home_ids=scope.get("allowed_home_ids") or [],
+    )
+
+    allowed_home_ids = quality_access["allowed_home_ids"]
+    selected_home_id = quality_access["selected_home_id"]
+    access_level = quality_access["access_level"]
+
+    if not allowed_home_ids:
+        return {
+            "scope": {
+                "scope_type": "quality",
+                "home_id": selected_home_id,
+                "young_person_id": None,
+                "record_type": scope.get("record_type"),
+                "record_id": scope.get("record_id"),
+                "access_level": access_level,
+                "provider_id": scope.get("provider_id"),
+                "allowed_home_ids": [],
+            },
+            "homes": [],
+            "summary": {},
+            "audits": [],
+            "incidents": [],
+            "compliance_items": [],
+            "reports": [],
+            "team": [],
+            "supervisions": [],
+            "documents": [],
+        }
+
+    homes = _fetch_all(
+        conn,
+        """
+        SELECT
+            h.id,
+            h.name,
+            h.name AS home_name,
+            h.created_at,
+            h.updated_at
+        FROM homes h
+        WHERE h.id = ANY(%s)
+        ORDER BY h.name ASC, h.id ASC
+        """,
+        (allowed_home_ids,),
+    )
+
+    audits = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM audits
+        WHERE home_id = ANY(%s)
+        ORDER BY audit_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 100
+        """,
+        (allowed_home_ids,),
+    )
+
+    incidents = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM incidents
+        WHERE home_id = ANY(%s)
+        ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 100
+        """,
+        (allowed_home_ids,),
+    )
+
+    compliance_items = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM compliance_items
+        WHERE home_id = ANY(%s)
+        ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 100
+        """,
+        (allowed_home_ids,),
+    )
+
+    reports = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM reports
+        WHERE home_id = ANY(%s)
+        ORDER BY created_at DESC NULLS LAST, id DESC
+        LIMIT 80
+        """,
+        (allowed_home_ids,),
+    )
+
+    team = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM staff
+        WHERE home_id = ANY(%s)
+        ORDER BY updated_at DESC NULLS LAST, id DESC
+        LIMIT 100
+        """,
+        (allowed_home_ids,),
+    )
+
+    supervisions = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM supervisions
+        WHERE home_id = ANY(%s)
+        ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 100
+        """,
+        (allowed_home_ids,),
+    )
+
+    documents = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM documents
+        WHERE home_id = ANY(%s)
+        ORDER BY updated_at DESC NULLS LAST, id DESC
+        LIMIT 100
+        """,
+        (allowed_home_ids,),
+    )
+
+    summary = {
+        "homes_count": len(homes),
+        "audits_count": len(audits),
+        "incidents_count": len(incidents),
+        "compliance_count": len(compliance_items),
+        "reports_count": len(reports),
+        "team_count": len(team),
+        "supervisions_count": len(supervisions),
+        "documents_count": len(documents),
+    }
+
+    return {
+        "scope": {
+            "scope_type": "quality",
+            "home_id": selected_home_id,
+            "young_person_id": None,
+            "record_type": scope.get("record_type"),
+            "record_id": scope.get("record_id"),
+            "access_level": access_level,
+            "provider_id": scope.get("provider_id"),
+            "allowed_home_ids": allowed_home_ids,
+        },
+        "homes": homes,
+        "summary": summary,
+        "audits": audits,
+        "incidents": incidents,
+        "compliance_items": compliance_items,
+        "reports": reports,
+        "team": team,
+        "supervisions": supervisions,
+        "documents": documents,
     }
 
 
 def build_public_context(*, scope: dict[str, Any] | None = None) -> dict[str, Any]:
-    """
-    Strictly public assistant context.
-    Never expose OS records, home data, young person data, or scoped record data.
-    """
     _ = _normalise_scope(scope)
 
     return {
@@ -815,6 +1155,9 @@ def build_public_context(*, scope: dict[str, Any] | None = None) -> dict[str, An
             "young_person_id": None,
             "record_type": None,
             "record_id": None,
+            "access_level": None,
+            "provider_id": None,
+            "allowed_home_ids": [],
         },
         "home_id": None,
         "tasks": [],
@@ -852,25 +1195,47 @@ def build_assistant_context(
             raise PermissionError("Public assistant cannot access scoped record context")
         return build_public_context(scope=scope)
 
-    if assistant_type != "young_people_os":
-        raise ValueError("Unsupported assistant_type")
+    if assistant_type == "young_people_os":
+        if scope_type == "young_person":
+            young_person_id = scope.get("young_person_id")
+            if not young_person_id:
+                raise ValueError("young_person_id is required for young_person scope")
+            return build_young_person_context(
+                conn,
+                user_id=user_id,
+                young_person_id=int(young_person_id),
+                scope=scope,
+            )
 
-    if scope_type == "young_person":
-        young_person_id = scope.get("young_person_id")
-        if not young_person_id:
-            raise ValueError("young_person_id is required for young_person scope")
-        return build_young_person_context(
-            conn,
-            user_id=user_id,
-            young_person_id=int(young_person_id),
-            scope=scope,
-        )
+        if scope_type == "global":
+            return build_home_os_context(
+                conn,
+                user_id=user_id,
+                scope={
+                    **scope,
+                    "scope_type": "home",
+                    "home_id": scope.get("home_id") or _get_user_home(conn, user_id),
+                },
+            )
 
-    if scope_type == "global":
+        raise ValueError("Unsupported scope_type for young people assistant")
+
+    if assistant_type == "home_os":
+        if scope_type != "home":
+            raise ValueError("Unsupported scope_type for home assistant")
         return build_home_os_context(
             conn,
             user_id=user_id,
             scope=scope,
         )
 
-    raise ValueError("Unsupported scope_type for young people assistant")
+    if assistant_type == "quality_os":
+        if scope_type != "quality":
+            raise ValueError("Unsupported scope_type for quality assistant")
+        return build_quality_os_context(
+            conn,
+            user_id=user_id,
+            scope=scope,
+        )
+
+    raise ValueError("Unsupported assistant_type")
