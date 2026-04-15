@@ -499,14 +499,7 @@ export async function fetchHomeAssistantBundle(homeId) {
     return mergeAssistantBundle([]);
   }
 
-  const urls = [
-    `/homes/${homeId}/team`,
-    `/homes/${homeId}/documents`,
-    `/homes/${homeId}/communications`,
-  ];
-
-  const responses = await apiGetSettled(urls);
-  return mergeAssistantBundle(responses);
+  return mergeAssistantBundle([]);
 }
 
 export async function fetchQualityAssistantBundle(homeId) {
@@ -514,13 +507,7 @@ export async function fetchQualityAssistantBundle(homeId) {
     return mergeAssistantBundle([]);
   }
 
-  const urls = [
-    `/homes/${homeId}/audits`,
-    `/homes/${homeId}/incidents`,
-  ];
-
-  const responses = await apiGetSettled(urls);
-  return mergeAssistantBundle(responses);
+  return mergeAssistantBundle([]);
 }
 
 export async function fetchAssistantScopeBundle(context = {}) {
@@ -817,14 +804,9 @@ function resolveAssistantEndpoint(payload = {}) {
     payload?.context?.scope_type ||
     "child";
 
-  if (
-    scope === "child" ||
-    scope === "young_person" ||
-    scope === "home" ||
-    scope === "quality"
-  ) {
-    return "/young-people/assistant";
-  }
+  if (scope === "home") return "/home/assistant";
+  if (scope === "quality") return "/quality/assistant";
+  if (scope === "child" || scope === "young_person") return "/young-people/assistant";
 
   return "/assistant";
 }
