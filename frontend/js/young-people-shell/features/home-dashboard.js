@@ -503,7 +503,12 @@ function buildHomeKpis({
 
   const compliancePercent =
     compliance.length > 0
-      ? Math.max(0, Math.round(((compliance.length - urgentCompliance) / compliance.length) * 100))
+      ? Math.max(
+          0,
+          Math.round(
+            ((compliance.length - urgentCompliance) / compliance.length) * 100
+          )
+        )
       : 0;
 
   const completedTasks = tasks.filter((item) => item.completed).length;
@@ -759,7 +764,9 @@ function renderProgressCards(cards = []) {
               </div>
               <div class="analytics-progress-track">
                 <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
+                  class="analytics-progress-bar analytics-progress-bar--${safeText(
+                    card.tone || "muted"
+                  )}"
                   style="width: ${safeText(card.percent || 0)}%;"
                 ></span>
               </div>
@@ -1213,8 +1220,20 @@ function buildFallbackData(homeId) {
     },
     taskData: {
       items: [
-        { id: 201, title: "Complete fire drill log", status: "open", completed: false, due_date: dateOnly(-1) },
-        { id: 202, title: "Update rota gap cover", status: "open", completed: false, due_date: dateOnly(1) },
+        {
+          id: 201,
+          title: "Complete fire drill log",
+          status: "open",
+          completed: false,
+          due_date: dateOnly(-1),
+        },
+        {
+          id: 202,
+          title: "Update rota gap cover",
+          status: "open",
+          completed: false,
+          due_date: dateOnly(1),
+        },
       ],
     },
     communicationData: {
