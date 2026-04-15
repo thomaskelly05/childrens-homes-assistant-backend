@@ -1276,3 +1276,90 @@ def build_assistant_context(
         )
 
     raise ValueError("Unsupported assistant_type")
+
+# =========================
+# REPORT CONTEXT BUILDERS
+# =========================
+
+def build_monthly_report_context(conn, home_id: int, start_date, end_date):
+    incidents = _fetch_all(conn, """
+        SELECT incident_type, COUNT(*) as count
+        FROM incidents
+        WHERE home_id = %s
+          AND incident_datetime BETWEEN %s AND %s
+        GROUP BY incident_type
+    """, (home_id, start_date, end_date))
+
+    tasks = _fetch_all(conn, """
+        SELECT status, COUNT(*) as count
+        FROM tasks
+        WHERE home_id = %s
+          AND created_at BETWEEN %s AND %s
+        GROUP BY status
+    """, (home_id, start_date, end_date))
+
+    compliance = _fetch_all(conn, """
+        SELECT status, COUNT(*) as count
+        FROM compliance_items
+        WHERE home_id = %s
+          AND updated_at BETWEEN %s AND %s
+        GROUP BY status
+    """, (home_id, start_date, end_date))
+
+    return {
+        "report_type": "monthly",
+        "date_range": [str(start_date), str(end_date)],
+        "incidents": incidents,
+        "tasks": tasks,
+        "compliance": compliance,
+    }
+
+
+def build_reg45_context(conn, home_id: int, start_date, end_date):
+    incidents = _fetch_all(conn, """
+        SELECT incident_type, COUNT(*) as count
+        FROM incidents
+        WHERE home_id = %s
+          AND incident_datetime BETWEEN %s AND %s
+        GROUP BY incident_type
+    """, (home_id, start_date, end_date))
+
+    safeguarding = _fetch_all(conn, """
+        SELECT COUNT(*) as total
+        FROM safeguarding_records
+        WHERE home_id = %s
+          AND concern_datetime BETWEEN %s AND %s
+    """, (home_id, start_date, end_date))
+
+    missing = _fetch_all(conn, """
+        SELECT COUNT(*) as total
+        FROM missing_episodes
+        WHERE home_id = %s
+          AND start_datetime BETWEEN %s AND %s
+    """, (home_id, start_date, end_date))
+
+    return {
+        "report_type": "reg45",
+        "date_range": [str(start_date), str(end_date)],
+        "incidents": incidents,
+        "safeguarding": safeguarding,
+        "missing_episodes": missing,
+    }
+
+
+def build_yearly_context(conn, home_id: int, start_date, end_date):
+    incidents = _fetch_all(conn, """
+        SELECT DATE_TRUNC('month', incident_datetime) as month,
+               COUNT(*) as count
+        FROM incidents
+        WHERE home_id = %s
+          AND incident_datetime BETWEEN %s AND %s
+        GROUP BY month
+        ORDER BY month
+    """, (home_id, start_date, end_date))
+
+    return {
+        "report_type": "yearly",
+        "date_range": [str(start_date), str(end_date)],
+        "incident_trends": incidents,
+    }
