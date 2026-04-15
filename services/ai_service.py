@@ -335,3 +335,7 @@ async def generate_ai_stream(
     }
 
     logger.info("Completed AI stream session_id=%s", session_id)
+
+
+async def generate_ai_response(*args, **kwargs):
+    return generate_ai_stream(*args, **kwargs)
