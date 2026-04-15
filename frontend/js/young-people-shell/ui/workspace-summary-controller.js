@@ -6,7 +6,22 @@ function getCurrentScope() {
 }
 
 function getSelectedYoungPerson() {
-  return state.selectedYoungPerson || state.youngPerson || null;
+  return state.selectedYoungPerson || null;
+}
+
+function getActiveSection() {
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
+}
+
+function humaniseSection(section = "") {
+  return String(section || "")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
 }
 
 function getPersonName() {
@@ -48,39 +63,36 @@ function buildNoSelectionSummary() {
 function buildChildSummary() {
   const name = getPersonName();
   const homeName = getHomeName();
-  const activeSection =
-    state.currentSection || state.activeSection || state.currentView || "workspace";
+  const activeSection = getActiveSection();
 
   return {
     today: `${name} • ${homeName}`,
     nextEvent: "No upcoming appointments",
-    lastRecord: `Viewing ${String(activeSection).replaceAll("_", " ").replaceAll("-", " ")}`,
+    lastRecord: `Viewing ${humaniseSection(activeSection)}`,
     openActions: "No open actions",
   };
 }
 
 function buildHomeSummary() {
   const homeName = getHomeName();
-  const activeSection =
-    state.currentSection || state.activeSection || state.currentView || "home-dashboard";
+  const activeSection = getActiveSection();
 
   return {
     today: `${homeName} • Live operational view`,
     nextEvent: "No upcoming home events",
-    lastRecord: `Viewing ${String(activeSection).replaceAll("_", " ").replaceAll("-", " ")}`,
+    lastRecord: `Viewing ${humaniseSection(activeSection)}`,
     openActions: "No open actions across home",
   };
 }
 
 function buildQualitySummary() {
   const homeName = getHomeName();
-  const activeSection =
-    state.currentSection || state.activeSection || state.currentView || "quality";
+  const activeSection = getActiveSection();
 
   return {
     today: `${homeName} • Quality oversight`,
     nextEvent: "No inspections or audits scheduled",
-    lastRecord: `Viewing ${String(activeSection).replaceAll("_", " ").replaceAll("-", " ")}`,
+    lastRecord: `Viewing ${humaniseSection(activeSection)}`,
     openActions: "No compliance actions due",
   };
 }
