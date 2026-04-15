@@ -119,6 +119,10 @@ function sourceCitationRef(source = {}, index = 0) {
   return `${type}:${id}`;
 }
 
+function sourceSafeDomId(ref = "") {
+  return `assistant-source-${String(ref).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
 function getSources() {
   const meta = getAssistantMeta();
   return Array.isArray(meta.sources) ? meta.sources : [];
@@ -141,14 +145,16 @@ function buildSourceMap() {
 
 function renderInlineText(text = "") {
   let html = escapeHtml(String(text || ""));
+
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
   return html;
 }
 
 function renderCitationChip(ref = "", source = null) {
   const safeRef = escapeHtml(ref);
-  const label = source?.label || source?.title || ref;
+  const label = source?.label || source?.title || source?.document_title || ref;
   const safeLabel = escapeHtml(String(label || ref));
 
   return `
@@ -189,6 +195,13 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
   return parts.join("");
 }
 
+function normaliseAssistantLine(line = "") {
+  return String(line || "")
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^\d+\.\s+/, "")
+    .trim();
+}
+
 function renderAssistantRichText(text = "") {
   const sourceMap = buildSourceMap();
   const lines = String(text || "").split("\n");
@@ -202,7 +215,8 @@ function renderAssistantRichText(text = "") {
   };
 
   for (const rawLine of lines) {
-    const trimmed = String(rawLine || "").trim();
+    const original = String(rawLine || "");
+    const trimmed = original.trim();
 
     if (!trimmed) {
       flushList();
@@ -214,13 +228,6 @@ function renderAssistantRichText(text = "") {
       continue;
     }
 
-    if (/^#{1,6}\s+/.test(trimmed)) {
-      flushList();
-      const plainText = trimmed.replace(/^#{1,6}\s+/, "");
-      blocks.push(`<p>${renderParagraphWithCitations(plainText, sourceMap)}</p>`);
-      continue;
-    }
-
     if (/^[-*]\s+/.test(trimmed)) {
       const itemText = trimmed.replace(/^[-*]\s+/, "");
       listItems.push(renderParagraphWithCitations(itemText, sourceMap));
@@ -229,7 +236,14 @@ function renderAssistantRichText(text = "") {
 
     if (/^\d+\.\s+/.test(trimmed)) {
       flushList();
-      const plainText = trimmed.replace(/^\d+\.\s+/, "");
+      const plainText = normaliseAssistantLine(trimmed);
+      blocks.push(`<p>${renderParagraphWithCitations(plainText, sourceMap)}</p>`);
+      continue;
+    }
+
+    if (/^#{1,6}\s+/.test(trimmed)) {
+      flushList();
+      const plainText = normaliseAssistantLine(trimmed);
       blocks.push(`<p>${renderParagraphWithCitations(plainText, sourceMap)}</p>`);
       continue;
     }
@@ -258,6 +272,7 @@ function extractAssistantContent(message = {}) {
     message.response,
     message.answer,
     message.output,
+    message.accumulated_text,
   ];
 
   for (const candidate of directCandidates) {
@@ -275,6 +290,7 @@ function extractAssistantContent(message = {}) {
       content.answer,
       content.output,
       content.content,
+      content.accumulated_text,
     ];
 
     for (const candidate of nestedCandidates) {
@@ -312,57 +328,49 @@ function extractAssistantContent(message = {}) {
     if (joined.trim()) return joined;
   }
 
-  try {
-    return JSON.stringify(message, null, 2);
-  } catch {
-    return "";
-  }
+  return "";
 }
 
-function renderMessageSources(sources = []) {
-  if (!Array.isArray(sources) || !sources.length) return "";
+function renderSourcesHtml(sources = []) {
+  if (!Array.isArray(sources) || !sources.length) {
+    return `<p>No sources available yet.</p>`;
+  }
 
   return `
-    <div class="assistant-inline-sources">
-      <div class="assistant-inline-sources-title">Sources</div>
-      <div class="assistant-source-list">
-        ${sources
-          .map((source, index) => {
-            const citationRef = sourceCitationRef(source, index);
-            const title = escapeHtml(
-              source?.title || source?.label || source?.document_title || "Source"
-            );
-            const type = escapeHtml(source?.type || source?.record_type || "source");
-            const section = escapeHtml(source?.section || "");
-            const description = escapeHtml(
-              String(source?.description || source?.excerpt || source?.summary || "").slice(
-                0,
-                MAX_SOURCE_EXCERPT
-              )
-            );
+    <div class="assistant-source-list">
+      ${sources
+        .map((source, index) => {
+          const citationRef = sourceCitationRef(source, index);
+          const title = escapeHtml(
+            source?.title || source?.label || source?.document_title || "Source"
+          );
+          const type = escapeHtml(source?.type || source?.record_type || "source");
+          const section = escapeHtml(source?.section || "");
+          const description = escapeHtml(
+            String(
+              source?.description || source?.excerpt || source?.summary || ""
+            ).slice(0, MAX_SOURCE_EXCERPT)
+          );
 
-            return `
-              <div
-                class="assistant-source-item"
-                id="assistant-source-${escapeHtml(
-                  citationRef.replace(/[^a-zA-Z0-9_-]/g, "-")
-                )}"
-                data-source-ref="${escapeHtml(citationRef)}"
-              >
-                <div class="assistant-source-item-title">${title}</div>
-                <div class="assistant-source-item-meta">
-                  ${type}${section ? ` • ${section}` : ""} • ${escapeHtml(citationRef)}
-                </div>
-                ${
-                  description
-                    ? `<div class="assistant-source-item-description">${description}</div>`
-                    : ""
-                }
+          return `
+            <div
+              class="assistant-source-item"
+              id="${sourceSafeDomId(citationRef)}"
+              data-source-ref="${escapeHtml(citationRef)}"
+            >
+              <div class="assistant-source-item-title">${title}</div>
+              <div class="assistant-source-item-meta">
+                ${type}${section ? ` • ${section}` : ""} • ${escapeHtml(citationRef)}
               </div>
-            `;
-          })
-          .join("")}
-      </div>
+              ${
+                description
+                  ? `<div class="assistant-source-item-description">${description}</div>`
+                  : ""
+              }
+            </div>
+          `;
+        })
+        .join("")}
     </div>
   `;
 }
@@ -391,7 +399,16 @@ function renderMessage(message = {}, index = 0, messages = []) {
             : renderUserRichText(content)
         }
       </div>
-      ${isLastAssistantMessage ? renderMessageSources(getSources()) : ""}
+      ${
+        isLastAssistantMessage && getSources().length
+          ? `
+            <div class="assistant-inline-sources">
+              <div class="assistant-inline-sources-title">Sources</div>
+              ${renderSourcesHtml(getSources())}
+            </div>
+          `
+          : ""
+      }
     </article>
   `;
 }
@@ -525,7 +542,9 @@ function renderContextText() {
   contextEl.textContent = contextText;
 }
 
-function renderSources() {
+function renderStandaloneSources() {
+  const html = renderSourcesHtml(getSources());
+
   const sourcesEl = getEl(els.assistantSources, "assistantSources");
   const modalSourcesEl = getEl(
     els.assistantModalSources,
@@ -533,11 +552,11 @@ function renderSources() {
   );
 
   if (sourcesEl) {
-    sourcesEl.innerHTML = "";
+    sourcesEl.innerHTML = html;
   }
 
   if (modalSourcesEl) {
-    modalSourcesEl.innerHTML = "";
+    modalSourcesEl.innerHTML = html;
   }
 }
 
@@ -581,8 +600,7 @@ function syncAssistantInputs() {
 function scrollSourceIntoView(ref = "") {
   if (!ref) return;
 
-  const safeId = `assistant-source-${String(ref).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-  const sourceEl = document.getElementById(safeId);
+  const sourceEl = document.getElementById(sourceSafeDomId(ref));
 
   if (!sourceEl) return;
 
@@ -622,7 +640,7 @@ function renderAllAssistantUi() {
   renderScopeBadges();
   renderContextText();
   renderMessages();
-  renderSources();
+  renderStandaloneSources();
 }
 
 export function bindAssistantUi() {
@@ -642,7 +660,7 @@ export function appendAssistantSystemMessage(text) {
   const entry = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: "assistant",
-    content: text,
+    content: typeof text === "string" ? text : extractAssistantContent(text),
     created_at: new Date().toISOString(),
   };
 
