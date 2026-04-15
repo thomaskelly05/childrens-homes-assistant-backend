@@ -190,6 +190,19 @@ ESCALATION_KEYWORDS = {
     "escalate",
 }
 
+REPORT_SIGNAL_KEYS = {
+    "report_type",
+    "period",
+    "children_outcomes",
+    "incident_summary",
+    "safeguarding_summary",
+    "compliance_summary",
+    "staffing_summary",
+    "supervision_summary",
+    "management_summary",
+    "positive_indicators",
+}
+
 
 @dataclass
 class AssistantRequest:
@@ -247,6 +260,10 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
+def _normalise_text(value: Any) -> str:
+    return f" {_safe_string(value).lower()} "
+
+
 def _append_section(base: str, title: str, content: str) -> str:
     content = _safe_string(content)
     if not content:
@@ -254,7 +271,7 @@ def _append_section(base: str, title: str, content: str) -> str:
 
     return (
         f"{base}\n\n"
-        f"============================================================\n"
+        "============================================================\n"
         f"{title}\n\n"
         f"{content}"
     )
@@ -279,6 +296,9 @@ def _normalise_history(history: list[dict[str, Any]], max_messages: int = 5) -> 
     cleaned: list[dict[str, Any]] = []
 
     for item in history or []:
+        if not isinstance(item, dict):
+            continue
+
         role = item.get("role")
         message = _safe_string(item.get("message") or item.get("content"))
 
@@ -310,13 +330,38 @@ def _document_trim_limit(mode: str, speed: str) -> int:
 
 
 def _contains_guidance_trigger(message: str) -> bool:
-    text = (message or "").lower()
+    text = _normalise_text(message)
     return any(word in text for word in GUIDANCE_TRIGGER_WORDS)
 
 
 def _contains_any(text: str, keywords: set[str]) -> bool:
-    text = (text or "").lower()
-    return any(keyword in text for keyword in keywords)
+    normalised = _normalise_text(text)
+    return any(keyword in normalised for keyword in keywords)
+
+
+def _looks_like_internal_report_context(user_context: dict[str, Any] | None) -> bool:
+    if not isinstance(user_context, dict) or not user_context:
+        return False
+    return any(key in user_context for key in REPORT_SIGNAL_KEYS)
+
+
+def _looks_like_internal_report_request(message: str, user_context: dict[str, Any] | None) -> bool:
+    if _looks_like_internal_report_context(user_context):
+        return True
+
+    text = _normalise_text(message)
+    report_terms = {
+        "monthly report",
+        "monthly summary",
+        "monthly overview",
+        "reg 45",
+        "regulation 45",
+        "annual report",
+        "annual overview",
+        "yearly report",
+        "yearly overview",
+    }
+    return any(term in text for term in report_terms)
 
 
 def _normalise_user_role_profile(role: str, user_context: dict[str, Any] | None = None) -> str:
@@ -360,8 +405,16 @@ def _normalise_user_role_profile(role: str, user_context: dict[str, Any] | None 
     return "staff"
 
 
-def _derive_task_type(message: str, mode: str, document_text: str | None) -> str:
-    text = (message or "").lower()
+def _derive_task_type(
+    message: str,
+    mode: str,
+    document_text: str | None,
+    user_context: dict[str, Any] | None = None,
+) -> str:
+    text = _normalise_text(message)
+
+    if _looks_like_internal_report_request(message, user_context):
+        return "report"
 
     if document_text:
         return "document_work"
@@ -388,22 +441,24 @@ def _derive_task_type(message: str, mode: str, document_text: str | None) -> str
 
 
 def _legacy_output_type_from_mode(mode: str, task_type: str, message: str) -> str:
-    text = (message or "").lower()
+    text = _normalise_text(message)
 
-    if "chronology" in text or mode == "chronology":
+    if " chronology " in text or mode == "chronology":
         return "chronology_entry"
-    if "handover" in text or mode == "handover":
+    if " handover " in text or mode == "handover":
         return "handover_note"
-    if "incident" in text or mode == "incident_summary":
+    if " incident " in text or mode == "incident_summary":
         return "incident_record"
-    if "daily note" in text:
+    if " daily note " in text:
         return "daily_note"
-    if "risk assessment" in text or mode == "support_planning":
+    if " risk assessment " in text or mode == "support_planning":
         return "risk_summary"
     if mode == "manager_review":
         return "manager_review"
     if mode == "supervision":
         return "supervision_reflection"
+    if task_type == "report":
+        return "report"
     if task_type == "recording":
         return "structured_record"
     return "plain_response"
@@ -434,7 +489,7 @@ def _map_classifier_output_to_runtime(
 
 
 def _derive_urgency(message: str, safeguarding_level: str) -> str:
-    text = (message or "").lower()
+    text = _normalise_text(message)
 
     if safeguarding_level == "urgent" or _contains_any(text, URGENT_KEYWORDS):
         return "urgent"
@@ -450,8 +505,12 @@ def _retrieval_level(
     message: str,
     document_text: str | None,
     response_mode: str,
+    user_context: dict[str, Any] | None = None,
 ) -> str:
     if document_text:
+        return "none"
+
+    if task_type == "report" or _looks_like_internal_report_context(user_context):
         return "none"
 
     if response_mode == "quick":
@@ -477,14 +536,19 @@ def _retrieval_level(
     return "none"
 
 
-def _should_use_memory(mode: str, response_mode: str) -> bool:
+def _should_use_memory(mode: str, response_mode: str, task_type: str) -> bool:
     if response_mode == "quick":
+        return False
+    if task_type == "report":
         return False
     return mode not in FAST_MODES_LIGHT_MEMORY
 
 
 def _reflection_level(mode: str, task_type: str, response_mode: str, safeguarding_level: str) -> str:
     if response_mode == "quick":
+        return "none"
+
+    if task_type == "report":
         return "none"
 
     if response_mode == "deep" and (mode in REFLECTIVE_MODES or task_type in {"reflection", "review", "planning"}):
@@ -506,7 +570,7 @@ def _should_use_leadership_lens(mode: str, message: str, speed: str, role_profil
     if role_profile == "provider":
         return True
 
-    if role_profile == "manager" and task_type in {"review", "planning", "reflection", "document_work"}:
+    if role_profile == "manager" and task_type in {"review", "planning", "reflection", "document_work", "report"}:
         return True
 
     if speed == "quick":
@@ -581,12 +645,12 @@ def _build_leadership_lens_context(
     role_profile: str,
     task_type: str,
 ) -> str:
-    text = (message or "").lower()
+    text = _normalise_text(message)
 
     emphasise_rm = (
         role_profile == "manager"
         or mode in {"manager_review", "support_planning", "supervision", "document_review"}
-        or task_type in {"review", "planning"}
+        or task_type in {"review", "planning", "report"}
         or _contains_any(text, RM_KEYWORDS)
     )
     emphasise_ofsted = (
@@ -643,7 +707,7 @@ def _build_suggested_actions_context(
     role_profile: str,
     message: str,
 ) -> str:
-    text = (message or "").lower()
+    text = _normalise_text(message)
     actions: list[str] = []
 
     if urgency == "urgent" or safeguarding_level == "urgent":
@@ -689,6 +753,15 @@ def _build_suggested_actions_context(
             ]
         )
 
+    if task_type == "report":
+        actions.extend(
+            [
+                "Balance strengths and progress with concerns and risks.",
+                "Use only the supplied report facts and clearly state where evidence is limited.",
+                "Highlight clear management priorities and recommendations.",
+            ]
+        )
+
     if role_profile in {"manager", "provider"}:
         actions.append("Notice any pattern, consistency issue, drift, or management follow-up requirement.")
 
@@ -729,6 +802,15 @@ def _build_practice_quality_context(task_type: str, output_type: str, safeguardi
             ]
         )
 
+    if task_type == "report":
+        checks.extend(
+            [
+                "Keep the report structured, balanced, and evidence-led.",
+                "Do not invent themes, incidents, patterns, or outcomes.",
+                "State clearly where evidence is limited or incomplete.",
+            ]
+        )
+
     if safeguarding_level in {"heightened", "urgent"}:
         checks.append("Do not let polished wording replace clear safeguarding action and escalation logic.")
 
@@ -736,7 +818,7 @@ def _build_practice_quality_context(task_type: str, output_type: str, safeguardi
 
 
 def _build_escalation_context(urgency: str, safeguarding_level: str, role_profile: str, message: str) -> str:
-    text = (message or "").lower()
+    text = _normalise_text(message)
     blocks: list[str] = []
 
     if urgency == "urgent" or safeguarding_level == "urgent":
@@ -932,7 +1014,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     runtime.safeguarding_level = _safe_assess_safeguarding(message, history)
     runtime.user_role_profile = _normalise_user_role_profile(req.role, req.user_context)
-    runtime.task_type = _derive_task_type(message, runtime.mode, req.document_text)
+    runtime.task_type = _derive_task_type(message, runtime.mode, req.document_text, req.user_context)
     runtime.output_type = _map_classifier_output_to_runtime(
         classification.output_format,
         runtime.mode,
@@ -947,6 +1029,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         message,
         req.document_text,
         speed,
+        req.user_context,
     )
     runtime.reflection_level = _reflection_level(
         runtime.mode,
@@ -978,7 +1061,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
     )
 
     if speed != "quick":
-        if _should_use_memory(runtime.mode, speed):
+        if _should_use_memory(runtime.mode, speed, runtime.task_type):
             runtime.memory_context = _safe_memory_context(req, runtime.mode, speed)
 
         if runtime.retrieval_level != "none":
@@ -1081,11 +1164,11 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             "UPLOADED DOCUMENT CONTEXT",
             (
                 f"Document name: {req.document_name or 'Uploaded document'}\n\n"
-                f"Use this document as working source material where relevant.\n"
-                f"Do not invent facts beyond the document and the user's instructions.\n"
-                f"Distinguish clearly between source material and inference.\n"
-                f"If information is missing, label gaps clearly.\n"
-                f"When rewriting, preserve core facts unless the user explicitly asks for adaptation.\n\n"
+                "Use this document as working source material where relevant.\n"
+                "Do not invent facts beyond the document and the user's instructions.\n"
+                "Distinguish clearly between source material and inference.\n"
+                "If information is missing, label gaps clearly.\n"
+                "When rewriting, preserve core facts unless the user explicitly asks for adaptation.\n\n"
                 f"Document text:\n{trimmed_document_text}"
             ),
         )
