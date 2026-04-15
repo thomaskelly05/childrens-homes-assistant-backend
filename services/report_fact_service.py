@@ -156,7 +156,12 @@ def _get_source_updated_at(conn, home_ids: list[int]) -> str | None:
     return str(value) if value else None
 
 
-def _build_children_outcomes_summary(conn, home_ids: list[int], start_date: str, end_date: str) -> list[dict[str, Any]]:
+def _build_children_outcomes_summary(
+    conn,
+    home_ids: list[int],
+    start_date: str,
+    end_date: str,
+) -> list[dict[str, Any]]:
     if not home_ids:
         return []
 
@@ -624,7 +629,9 @@ def _build_signals(facts: dict[str, Any]) -> dict[str, Any]:
     )
 
     if total_achievements > 0:
-        strengths.append(f"There is evidence of positive progress and achievement activity across the period ({total_achievements} achievement records).")
+        strengths.append(
+            f"There is evidence of positive progress and achievement activity across the period ({total_achievements} achievement records)."
+        )
 
     if total_keywork > 0:
         strengths.append(f"Keywork engagement is evidenced across the period ({total_keywork} sessions recorded).")
