@@ -10,10 +10,6 @@ from openai import AsyncOpenAI
 logger = logging.getLogger("indicare.llm_provider")
 
 
-# ---------------------------------------------------------
-# Data contracts
-# ---------------------------------------------------------
-
 @dataclass
 class ChatMessage:
     role: str
@@ -39,18 +35,10 @@ class ProviderConfig:
     project: str | None = None
 
 
-# ---------------------------------------------------------
-# Provider protocol
-# ---------------------------------------------------------
-
 class LLMProvider(Protocol):
     async def stream_chat(self, request: ChatStreamRequest) -> AsyncIterator[str]:
         ...
 
-
-# ---------------------------------------------------------
-# Shared helpers
-# ---------------------------------------------------------
 
 def _safe_string(value: Any) -> str:
     if value is None:
@@ -149,10 +137,6 @@ def _load_provider_config() -> ProviderConfig:
     )
 
 
-# ---------------------------------------------------------
-# OpenAI provider
-# ---------------------------------------------------------
-
 class OpenAIProvider:
     def __init__(self, config: ProviderConfig):
         if not config.api_key:
@@ -242,10 +226,6 @@ class OpenAIProvider:
                 model,
             )
 
-
-# ---------------------------------------------------------
-# Provider factory
-# ---------------------------------------------------------
 
 _provider_instance: LLMProvider | None = None
 
