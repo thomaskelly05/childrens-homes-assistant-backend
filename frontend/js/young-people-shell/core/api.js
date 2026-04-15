@@ -788,15 +788,35 @@ function consumeSseBuffer(buffer, onEvent) {
 }
 
 function resolveAssistantEndpoint(payload = {}) {
+  const assistantType =
+    payload?.context?.assistant_type ||
+    payload?.assistant_type ||
+    null;
+
+  if (assistantType === "public") {
+    return "/assistant";
+  }
+
+  if (assistantType === "young_people_os") {
+    return "/young-people/assistant";
+  }
+
   const scope =
     payload?.context?.scope ||
     payload?.context?.current_scope ||
     payload?.context?.scope_type ||
     "child";
 
-  if (scope === "home") return "/home/assistant";
-  if (scope === "quality") return "/quality/assistant";
-  return "/young-people/assistant";
+  if (
+    scope === "child" ||
+    scope === "young_person" ||
+    scope === "home" ||
+    scope === "quality"
+  ) {
+    return "/young-people/assistant";
+  }
+
+  return "/assistant";
 }
 
 export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
