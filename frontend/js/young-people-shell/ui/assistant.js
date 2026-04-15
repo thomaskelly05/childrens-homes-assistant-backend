@@ -36,11 +36,16 @@ function getCurrentScope() {
 }
 
 function getCurrentSection() {
-  return state.currentSection || state.activeSection || state.currentView || "workspace";
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
 }
 
 function getSelectedYoungPerson() {
-  return state.selectedYoungPerson || null;
+  return state.selectedYoungPerson || state.youngPerson || null;
 }
 
 function getFullYoungPersonName() {
@@ -100,6 +105,10 @@ function ensureAssistantState() {
     state.assistantMessages = [];
   }
 
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
     state.assistantMeta = createAssistantMeta();
   }
@@ -122,7 +131,8 @@ function ensureAssistantState() {
   state.assistantMeta.runtime = state.assistantMeta.runtime || {};
   state.assistantMeta.explainability = state.assistantMeta.explainability || {};
   state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
-  state.assistantMeta.assistant_context = state.assistantMeta.assistant_context || {};
+  state.assistantMeta.assistant_context =
+    state.assistantMeta.assistant_context || {};
 }
 
 function cloneMessageEntry(entry = {}) {
@@ -183,6 +193,18 @@ function mergeAssistantMeta(nextMeta = {}) {
       typeof nextMeta.scrubber_reverse_map === "object"
         ? nextMeta.scrubber_reverse_map
         : previous.scrubber_reverse_map || {},
+    scrubber_enabled:
+      typeof nextMeta.scrubber_enabled === "boolean"
+        ? nextMeta.scrubber_enabled
+        : Boolean(previous.scrubber_enabled),
+    scrubber_meta:
+      nextMeta.scrubber_meta && typeof nextMeta.scrubber_meta === "object"
+        ? {
+            ...(previous.scrubber_meta || {}),
+            ...nextMeta.scrubber_meta,
+          }
+        : previous.scrubber_meta || {},
+    last_analysis_at: nextMeta.last_analysis_at || previous.last_analysis_at || null,
   };
 }
 
@@ -223,50 +245,60 @@ function addAssistantPlaceholder() {
   });
 
   state.assistantMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
   syncAssistantUi();
 }
 
 function updateLastAssistantStreamingText(text) {
   const safeText = String(text || "Thinking…");
-  const list = state.assistantMessages || [];
+  const lists = [
+    state.assistantMessages || [],
+    state.assistantModalMessages || [],
+  ];
 
-  if (!list.length) return;
+  lists.forEach((list) => {
+    if (!list.length) return;
 
-  const last = list[list.length - 1];
-  if (last?.role === "assistant" && last?._streaming) {
-    last.content = safeText;
-  }
+    const last = list[list.length - 1];
+    if (last?.role === "assistant" && last?._streaming) {
+      last.content = safeText;
+    }
+  });
 
   syncAssistantUi();
 }
 
 function replaceLastAssistantPlaceholder(text) {
   const safeText = String(text || "No assistant reply returned.");
-  const list = state.assistantMessages || [];
+  const lists = [
+    state.assistantMessages || [],
+    state.assistantModalMessages || [],
+  ];
 
-  if (!list.length) {
-    list.push(
-      cloneMessageEntry({
-        role: "assistant",
-        content: safeText,
-      })
-    );
-    syncAssistantUi();
-    return;
-  }
+  lists.forEach((list) => {
+    if (!list.length) {
+      list.push(
+        cloneMessageEntry({
+          role: "assistant",
+          content: safeText,
+        })
+      );
+      return;
+    }
 
-  const last = list[list.length - 1];
-  if (last?.role === "assistant" && last?._streaming) {
-    last.content = safeText;
-    last._streaming = false;
-  } else {
-    list.push(
-      cloneMessageEntry({
-        role: "assistant",
-        content: safeText,
-      })
-    );
-  }
+    const last = list[list.length - 1];
+    if (last?.role === "assistant" && last?._streaming) {
+      last.content = safeText;
+      last._streaming = false;
+    } else {
+      list.push(
+        cloneMessageEntry({
+          role: "assistant",
+          content: safeText,
+        })
+      );
+    }
+  });
 
   syncAssistantUi();
 }
@@ -328,7 +360,11 @@ function detectAssistantIntent(text = "") {
     return ASSISTANT_INTENT.risk;
   }
 
-  if (/quality|ri|inspection|governance|provider|home compare|compare homes|all homes/.test(value)) {
+  if (
+    /quality|ri|inspection|governance|provider|home compare|compare homes|all homes/.test(
+      value
+    )
+  ) {
     return ASSISTANT_INTENT.quality;
   }
 
@@ -1062,6 +1098,9 @@ export async function askAssistant(question) {
           },
           sources: meta?.sources || [],
           scrubber_reverse_map: scrubbed.reverseMap || {},
+          scrubber_enabled: scrubbed.meta?.enabled ?? false,
+          scrubber_meta: scrubbed.meta || {},
+          last_analysis_at: new Date().toISOString(),
         });
       },
       onProgress: () => {},
@@ -1093,6 +1132,7 @@ export async function askAssistant(question) {
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
+  state.assistantModalMessages = [];
 
   if (state.assistantMeta && typeof state.assistantMeta === "object") {
     state.assistantMeta = createAssistantMeta();
@@ -1145,7 +1185,6 @@ export function bindAssistantEvents() {
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
   els.heroAssistantBtn?.addEventListener("click", openAssistant);
-  els.assistantExpandBtn?.addEventListener("click", openAssistant);
   els.closeAssistantBtn?.addEventListener("click", closeAssistant);
   els.assistantBackdrop?.addEventListener("click", closeAssistant);
 
