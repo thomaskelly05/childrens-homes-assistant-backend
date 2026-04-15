@@ -228,22 +228,6 @@ def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, s
     return safe_history[-12:]
 
 
-def _looks_like_report_request(message: str) -> bool:
-    value = _safe_str(message).lower()
-    triggers = [
-        "reg 45",
-        "regulation 45",
-        "monthly report",
-        "monthly summary",
-        "monthly overview",
-        "annual report",
-        "annual overview",
-        "yearly report",
-        "yearly overview",
-    ]
-    return any(trigger in value for trigger in triggers)
-
-
 def _detect_report_request(
     message: str,
     ui_context: dict[str, Any],
@@ -306,9 +290,7 @@ def _build_compact_public_context(context: dict[str, Any]) -> dict[str, Any]:
         "public_context": {
             "assistant_type": public_context.get("assistant_type", "public"),
             "os_data_available": bool(public_context.get("os_data_available", False)),
-            "young_person_data_available": bool(
-                public_context.get("young_person_data_available", False)
-            ),
+            "young_person_data_available": bool(public_context.get("young_person_data_available", False)),
             "home_data_available": bool(public_context.get("home_data_available", False)),
         },
     }
@@ -343,29 +325,11 @@ def _build_compact_global_os_context(context: dict[str, Any]) -> dict[str, Any]:
             for item in tasks
         ],
         "manager_updates": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "message",
-                    "status",
-                    "created_at",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "message", "status", "created_at"])
             for item in manager_updates
         ],
         "handover": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "summary",
-                    "created_at",
-                    "shift_type",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "summary", "created_at", "shift_type"])
             for item in handover
         ],
         "chronology": [
@@ -384,45 +348,15 @@ def _build_compact_global_os_context(context: dict[str, Any]) -> dict[str, Any]:
             for item in chronology
         ],
         "documents": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "document_type",
-                    "status",
-                    "review_date",
-                    "updated_at",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "document_type", "status", "review_date", "updated_at"])
             for item in documents
         ],
         "incidents": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "incident_type",
-                    "title",
-                    "severity",
-                    "incident_datetime",
-                    "updated_at",
-                ],
-            )
+            _pick_fields(item, ["id", "incident_type", "title", "severity", "incident_datetime", "updated_at"])
             for item in incidents
         ],
         "compliance_items": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "status",
-                    "due_date",
-                    "severity",
-                    "updated_at",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "status", "due_date", "severity", "updated_at"])
             for item in compliance_items
         ],
     }
@@ -458,72 +392,32 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
         "identity": {
             "communication_profile": _pick_fields(
                 identity.get("communication_profile"),
-                [
-                    "communication_style",
-                    "what_helps",
-                    "triggers",
-                    "updated_at",
-                ],
+                ["communication_style", "what_helps", "triggers", "updated_at"],
             ),
             "education_profile": _pick_fields(
                 identity.get("education_profile"),
-                [
-                    "school_name",
-                    "education_status",
-                    "year_group",
-                    "support_summary",
-                    "updated_at",
-                ],
+                ["school_name", "education_status", "year_group", "support_summary", "updated_at"],
             ),
             "health_profile": _pick_fields(
                 identity.get("health_profile"),
-                [
-                    "gp_name",
-                    "allergies",
-                    "diagnoses",
-                    "mental_health_summary",
-                    "medication_summary",
-                    "updated_at",
-                ],
+                ["gp_name", "allergies", "diagnoses", "mental_health_summary", "medication_summary", "updated_at"],
             ),
             "identity_profile": _pick_fields(
                 identity.get("identity_profile"),
-                [
-                    "interests",
-                    "strengths_summary",
-                    "cultural_identity",
-                    "religion_or_faith",
-                    "updated_at",
-                ],
+                ["interests", "strengths_summary", "cultural_identity", "religion_or_faith", "updated_at"],
             ),
             "legal_status": _pick_fields(
                 identity.get("legal_status"),
-                [
-                    "legal_status",
-                    "order_type",
-                    "order_details",
-                    "updated_at",
-                ],
+                ["legal_status", "order_type", "order_details", "updated_at"],
             ),
             "current_formulation": _pick_fields(
                 identity.get("current_formulation"),
-                [
-                    "summary",
-                    "hypothesis",
-                    "updated_at",
-                ],
+                ["summary", "hypothesis", "updated_at"],
             ),
             "active_alerts": [
                 _pick_fields(
                     item,
-                    [
-                        "id",
-                        "title",
-                        "description",
-                        "severity",
-                        "is_active",
-                        "updated_at",
-                    ],
+                    ["id", "title", "description", "severity", "is_active", "updated_at"],
                 )
                 for item in _trim_list(identity.get("active_alerts"), 8)
             ],
@@ -532,16 +426,7 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
             "support_plans": [
                 _pick_fields(
                     item,
-                    [
-                        "id",
-                        "title",
-                        "summary",
-                        "plan_type",
-                        "approval_status",
-                        "status",
-                        "review_date",
-                        "updated_at",
-                    ],
+                    ["id", "title", "summary", "plan_type", "approval_status", "status", "review_date", "updated_at"],
                 )
                 for item in _trim_list(active_work.get("support_plans"), 6)
             ],
@@ -580,31 +465,11 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                 for item in _trim_list(active_work.get("appointments"), 6)
             ],
             "compliance_items": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "title",
-                        "due_date",
-                        "status",
-                        "approval_status",
-                    ],
-                )
+                _pick_fields(item, ["id", "title", "due_date", "status", "approval_status"])
                 for item in _trim_list(active_work.get("compliance_items"), 8)
             ],
             "tasks": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "title",
-                        "description",
-                        "status",
-                        "priority",
-                        "due_date",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "title", "description", "status", "priority", "due_date", "created_at"])
                 for item in _trim_list(active_work.get("tasks"), 8)
             ],
         },
@@ -645,115 +510,35 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                 for item in _trim_list(recent_records.get("incidents"), 6)
             ],
             "health_records": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "event_datetime",
-                        "title",
-                        "summary",
-                        "outcome",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "event_datetime", "title", "summary", "outcome", "created_at"])
                 for item in _trim_list(recent_records.get("health_records"), 5)
             ],
             "education_records": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "record_date",
-                        "title",
-                        "summary",
-                        "attendance_status",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "record_date", "title", "summary", "attendance_status", "created_at"])
                 for item in _trim_list(recent_records.get("education_records"), 5)
             ],
             "family_contact_records": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "contact_datetime",
-                        "contact_type",
-                        "summary",
-                        "outcome",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "contact_datetime", "contact_type", "summary", "outcome", "created_at"])
                 for item in _trim_list(recent_records.get("family_contact_records"), 5)
             ],
             "keywork_sessions": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "session_date",
-                        "title",
-                        "summary",
-                        "child_voice",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "session_date", "title", "summary", "child_voice", "created_at"])
                 for item in _trim_list(recent_records.get("keywork_sessions"), 5)
             ],
             "missing_episodes": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "start_datetime",
-                        "return_datetime",
-                        "summary",
-                        "outcome",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "start_datetime", "return_datetime", "summary", "outcome", "created_at"])
                 for item in _trim_list(recent_records.get("missing_episodes"), 5)
             ],
             "safeguarding_records": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "concern_datetime",
-                        "title",
-                        "summary",
-                        "status",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "concern_datetime", "title", "summary", "status", "created_at"])
                 for item in _trim_list(recent_records.get("safeguarding_records"), 5)
             ],
             "achievements": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "achievement_date",
-                        "title",
-                        "summary",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "achievement_date", "title", "summary", "created_at"])
                 for item in _trim_list(recent_records.get("achievements"), 5)
             ],
             "chronology": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "title",
-                        "summary",
-                        "event_datetime",
-                        "category",
-                        "significance",
-                        "created_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "title", "summary", "event_datetime", "category", "significance", "created_at"])
                 for item in _trim_list(recent_records.get("chronology"), 10)
             ],
         },
@@ -762,50 +547,18 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
             "record_id": scoped_record.get("record_id"),
             "record": _pick_fields(
                 scoped_record.get("record"),
-                [
-                    "id",
-                    "title",
-                    "status",
-                    "summary",
-                    "updated_at",
-                    "created_at",
-                ],
+                ["id", "title", "status", "summary", "updated_at", "created_at"],
             ),
             "workflow_events": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "event_type",
-                        "created_at",
-                        "note",
-                        "user_id",
-                    ],
-                )
+                _pick_fields(item, ["id", "event_type", "created_at", "note", "user_id"])
                 for item in _trim_list(scoped_record.get("workflow_events"), 10)
             ],
             "record_standard_links": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "standard_code",
-                        "updated_at",
-                    ],
-                )
+                _pick_fields(item, ["id", "standard_code", "updated_at"])
                 for item in _trim_list(scoped_record.get("record_standard_links"), 10)
             ],
             "chronology_events": [
-                _pick_fields(
-                    item,
-                    [
-                        "id",
-                        "title",
-                        "summary",
-                        "event_datetime",
-                        "category",
-                    ],
-                )
+                _pick_fields(item, ["id", "title", "summary", "event_datetime", "category"])
                 for item in _trim_list(scoped_record.get("chronology_events"), 10)
             ],
         },
@@ -817,180 +570,55 @@ def _build_compact_home_context(context: dict[str, Any]) -> dict[str, Any]:
         "scope": context.get("scope") or {},
         "home": _pick_fields(
             context.get("home"),
-            [
-                "id",
-                "name",
-                "home_name",
-                "status",
-                "created_at",
-                "updated_at",
-            ],
+            ["id", "name", "home_name", "status", "created_at", "updated_at"],
         ),
         "summary": context.get("summary") or {},
         "young_people": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "preferred_name",
-                    "full_name",
-                    "placement_status",
-                    "summary_risk_level",
-                    "home_name",
-                ],
-            )
+            _pick_fields(item, ["id", "preferred_name", "full_name", "placement_status", "summary_risk_level", "home_name"])
             for item in _trim_list(context.get("young_people"), 12)
         ],
         "team": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "full_name",
-                    "staff_member",
-                    "role",
-                    "status",
-                    "updated_at",
-                ],
-            )
+            _pick_fields(item, ["id", "full_name", "staff_member", "role", "status", "updated_at"])
             for item in _trim_list(context.get("team"), 12)
         ],
         "tasks": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "task",
-                    "status",
-                    "priority",
-                    "due_date",
-                    "assigned_role",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "task", "status", "priority", "due_date", "assigned_role"])
             for item in _trim_list(context.get("tasks"), 12)
         ],
         "communications": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "summary",
-                    "communication_type",
-                    "organisation",
-                    "contact_datetime",
-                    "status",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "summary", "communication_type", "organisation", "contact_datetime", "status"])
             for item in _trim_list(context.get("communications"), 10)
         ],
         "documents": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "document_type",
-                    "status",
-                    "review_date",
-                    "expiry_date",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "document_type", "status", "review_date", "expiry_date"])
             for item in _trim_list(context.get("documents"), 10)
         ],
         "supervisions": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "staff_member",
-                    "role",
-                    "status",
-                    "due_date",
-                ],
-            )
+            _pick_fields(item, ["id", "staff_member", "role", "status", "due_date"])
             for item in _trim_list(context.get("supervisions"), 10)
         ],
         "therapy": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "service_name",
-                    "professional_name",
-                    "status",
-                    "session_date",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "service_name", "professional_name", "status", "session_date"])
             for item in _trim_list(context.get("therapy"), 10)
         ],
         "reports": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "summary",
-                    "review_month",
-                    "status",
-                    "created_at",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "summary", "review_month", "status", "created_at"])
             for item in _trim_list(context.get("reports"), 10)
         ],
         "compliance_items": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "summary",
-                    "status",
-                    "severity",
-                    "due_date",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "summary", "status", "severity", "due_date"])
             for item in _trim_list(context.get("compliance_items"), 12)
         ],
         "rota": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "shift_date",
-                    "shift_type",
-                    "lead_name",
-                    "status",
-                ],
-            )
+            _pick_fields(item, ["id", "shift_date", "shift_type", "lead_name", "status"])
             for item in _trim_list(context.get("rota"), 10)
         ],
         "onboarding": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "staff_member",
-                    "status",
-                    "stage",
-                    "review_date",
-                ],
-            )
+            _pick_fields(item, ["id", "staff_member", "status", "stage", "review_date"])
             for item in _trim_list(context.get("onboarding"), 10)
         ],
         "training": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "staff_member",
-                    "training_name",
-                    "status",
-                    "expiry_date",
-                ],
-            )
+            _pick_fields(item, ["id", "staff_member", "training_name", "status", "expiry_date"])
             for item in _trim_list(context.get("training"), 10)
         ],
     }
@@ -1000,118 +628,36 @@ def _build_compact_quality_context(context: dict[str, Any]) -> dict[str, Any]:
     return {
         "scope": context.get("scope") or {},
         "homes": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "name",
-                    "home_name",
-                    "status",
-                ],
-            )
+            _pick_fields(item, ["id", "name", "home_name", "status"])
             for item in _trim_list(context.get("homes"), 20)
         ],
         "summary": context.get("summary") or {},
         "audits": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "audit_name",
-                    "finding",
-                    "status",
-                    "audit_date",
-                    "auditor",
-                    "home_id",
-                ],
-            )
+            _pick_fields(item, ["id", "audit_name", "finding", "status", "audit_date", "auditor", "home_id"])
             for item in _trim_list(context.get("audits"), 12)
         ],
         "incidents": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "incident_type",
-                    "description",
-                    "status",
-                    "incident_datetime",
-                    "location",
-                    "home_id",
-                ],
-            )
+            _pick_fields(item, ["id", "incident_type", "description", "status", "incident_datetime", "location", "home_id"])
             for item in _trim_list(context.get("incidents"), 12)
         ],
         "compliance_items": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "summary",
-                    "status",
-                    "severity",
-                    "due_date",
-                    "home_id",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "summary", "status", "severity", "due_date", "home_id"])
             for item in _trim_list(context.get("compliance_items"), 12)
         ],
         "reports": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "summary",
-                    "report_type",
-                    "status",
-                    "created_at",
-                    "home_id",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "summary", "report_type", "status", "created_at", "home_id"])
             for item in _trim_list(context.get("reports"), 12)
         ],
         "team": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "full_name",
-                    "staff_member",
-                    "role",
-                    "status",
-                    "home_id",
-                ],
-            )
+            _pick_fields(item, ["id", "full_name", "staff_member", "role", "status", "home_id"])
             for item in _trim_list(context.get("team"), 12)
         ],
         "supervisions": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "staff_member",
-                    "role",
-                    "status",
-                    "due_date",
-                    "home_id",
-                ],
-            )
+            _pick_fields(item, ["id", "staff_member", "role", "status", "due_date", "home_id"])
             for item in _trim_list(context.get("supervisions"), 12)
         ],
         "documents": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "title",
-                    "document_type",
-                    "status",
-                    "review_date",
-                    "home_id",
-                ],
-            )
+            _pick_fields(item, ["id", "title", "document_type", "status", "review_date", "home_id"])
             for item in _trim_list(context.get("documents"), 12)
         ],
     }
@@ -1124,17 +670,9 @@ def _build_compact_report_context(context: dict[str, Any]) -> dict[str, Any]:
         "access_level": context.get("access_level"),
         "provider_id": context.get("provider_id"),
         "home_ids": _trim_list(context.get("home_ids"), 20),
+        "allowed_home_ids": _trim_list(context.get("allowed_home_ids"), 20),
         "homes": [
-            _pick_fields(
-                item,
-                [
-                    "id",
-                    "name",
-                    "home_name",
-                    "manager_email",
-                    "provider_id",
-                ],
-            )
+            _pick_fields(item, ["id", "name", "home_name", "manager_email", "provider_id"])
             for item in _trim_list(context.get("homes"), 20)
         ],
         "children_outcomes": [
@@ -1152,53 +690,75 @@ def _build_compact_report_context(context: dict[str, Any]) -> dict[str, Any]:
                     "achievement_records_count",
                     "incidents_count",
                     "missing_episodes_count",
+                    "keywork_sessions_count",
                 ],
             )
             for item in _trim_list(context.get("children_outcomes"), 200)
         ],
         "incident_summary": [
-            _pick_fields(
-                item,
-                [
-                    "home_id",
-                    "incident_type",
-                    "count",
-                ],
-            )
+            _pick_fields(item, ["home_id", "incident_type", "count"])
             for item in _trim_list(context.get("incident_summary"), 100)
         ],
         "safeguarding_summary": [
-            _pick_fields(
-                item,
-                [
-                    "home_id",
-                    "safeguarding_category",
-                    "status",
-                    "count",
-                ],
-            )
+            _pick_fields(item, ["home_id", "safeguarding_category", "status", "count"])
             for item in _trim_list(context.get("safeguarding_summary"), 100)
         ],
         "compliance_summary": [
-            _pick_fields(
-                item,
-                [
-                    "home_id",
-                    "status",
-                    "severity",
-                    "count",
-                ],
-            )
+            _pick_fields(item, ["home_id", "status", "severity", "count"])
             for item in _trim_list(context.get("compliance_summary"), 100)
         ],
-        "workforce_summary": {
-            "supervisions": [
-                _pick_fields(item, ["home_id", "status", "count"])
-                for item in _trim_list((context.get("workforce_summary") or {}).get("supervisions"), 100)
+        "staffing_summary": {
+            "staff_assignments": [
+                _pick_fields(item, ["home_id", "count"])
+                for item in _trim_list((context.get("staffing_summary") or {}).get("staff_assignments"), 100)
             ],
-            "training": [
+            "staff_status": [
                 _pick_fields(item, ["home_id", "status", "count"])
-                for item in _trim_list((context.get("workforce_summary") or {}).get("training"), 100)
+                for item in _trim_list((context.get("staffing_summary") or {}).get("staff_status"), 100)
+            ],
+            "roster_shifts": [
+                _pick_fields(item, ["home_id", "status", "count"])
+                for item in _trim_list((context.get("staffing_summary") or {}).get("roster_shifts"), 100)
+            ],
+            "staff_shifts": [
+                _pick_fields(item, ["home_id", "status", "count"])
+                for item in _trim_list((context.get("staffing_summary") or {}).get("staff_shifts"), 100)
+            ],
+            "checkins": [
+                _pick_fields(item, ["home_id", "count"])
+                for item in _trim_list((context.get("staffing_summary") or {}).get("checkins"), 100)
+            ],
+        },
+        "supervision_summary": {
+            "supervision_notes": [
+                _pick_fields(item, ["home_id", "count"])
+                for item in _trim_list((context.get("supervision_summary") or {}).get("supervision_notes"), 100)
+            ],
+            "supervision_submissions": [
+                _pick_fields(item, ["home_id", "status", "count"])
+                for item in _trim_list((context.get("supervision_summary") or {}).get("supervision_submissions"), 100)
+            ],
+            "supervision_summaries": [
+                _pick_fields(item, ["home_id", "count"])
+                for item in _trim_list((context.get("supervision_summary") or {}).get("supervision_summaries"), 100)
+            ],
+        },
+        "management_summary": {
+            "manager_updates": [
+                _pick_fields(item, ["home_id", "status", "count"])
+                for item in _trim_list((context.get("management_summary") or {}).get("manager_updates"), 100)
+            ],
+            "manager_actions": [
+                _pick_fields(item, ["home_id", "status", "count"])
+                for item in _trim_list((context.get("management_summary") or {}).get("manager_actions"), 100)
+            ],
+            "monthly_reviews": [
+                _pick_fields(item, ["home_id", "status", "count"])
+                for item in _trim_list((context.get("management_summary") or {}).get("monthly_reviews"), 100)
+            ],
+            "review_meetings": [
+                _pick_fields(item, ["home_id", "count"])
+                for item in _trim_list((context.get("management_summary") or {}).get("review_meetings"), 100)
             ],
         },
         "positive_indicators": {
@@ -1213,6 +773,10 @@ def _build_compact_report_context(context: dict[str, Any]) -> dict[str, Any]:
             "family_contact_counts": [
                 _pick_fields(item, ["home_id", "count"])
                 for item in _trim_list((context.get("positive_indicators") or {}).get("family_contact_counts"), 100)
+            ],
+            "daily_notes_counts": [
+                _pick_fields(item, ["home_id", "count"])
+                for item in _trim_list((context.get("positive_indicators") or {}).get("daily_notes_counts"), 100)
             ],
         },
     }
@@ -1367,7 +931,9 @@ def _build_report_summary(context: dict[str, Any]) -> str:
     incident_summary = context.get("incident_summary") or []
     safeguarding_summary = context.get("safeguarding_summary") or []
     compliance_summary = context.get("compliance_summary") or []
-    workforce_summary = context.get("workforce_summary") or {}
+    staffing_summary = context.get("staffing_summary") or {}
+    supervision_summary = context.get("supervision_summary") or {}
+    management_summary = context.get("management_summary") or {}
     positive_indicators = context.get("positive_indicators") or {}
 
     lines = [
@@ -1380,11 +946,13 @@ def _build_report_summary(context: dict[str, Any]) -> str:
         f"- Incident summary rows: {len(incident_summary)}",
         f"- Safeguarding summary rows: {len(safeguarding_summary)}",
         f"- Compliance summary rows: {len(compliance_summary)}",
-        f"- Workforce supervision rows: {len(workforce_summary.get('supervisions') or [])}",
-        f"- Workforce training rows: {len(workforce_summary.get('training') or [])}",
-        f"- Achievement count rows: {len((positive_indicators.get('achievement_counts') or []))}",
-        f"- Keywork count rows: {len((positive_indicators.get('keywork_counts') or []))}",
-        f"- Family contact count rows: {len((positive_indicators.get('family_contact_counts') or []))}",
+        f"- Staffing assignment rows: {len(staffing_summary.get('staff_assignments') or [])}",
+        f"- Supervision note rows: {len(supervision_summary.get('supervision_notes') or [])}",
+        f"- Management update rows: {len(management_summary.get('manager_updates') or [])}",
+        f"- Achievement count rows: {len(positive_indicators.get('achievement_counts') or [])}",
+        f"- Keywork count rows: {len(positive_indicators.get('keywork_counts') or [])}",
+        f"- Family contact count rows: {len(positive_indicators.get('family_contact_counts') or [])}",
+        f"- Daily notes count rows: {len(positive_indicators.get('daily_notes_counts') or [])}",
     ]
     return "\n".join(lines)
 
@@ -1646,6 +1214,7 @@ def build_assistant_prompt(
         build_monthly_report_context,
         build_reg45_context,
         build_yearly_report_context,
+        preview_report_snapshot,
     )
 
     ui_context = _normalise_context(context)
@@ -1664,6 +1233,8 @@ def build_assistant_prompt(
     )
 
     if report_request is not None:
+        _ = preview_report_snapshot  # reserved import for route-level preview flow
+
         if report_request.report_type == "monthly":
             built_context = build_monthly_report_context(
                 conn,
@@ -1673,6 +1244,7 @@ def build_assistant_prompt(
                 access_level=report_request.access_level,
                 allowed_home_ids=report_request.allowed_home_ids,
                 provider_id=report_request.provider_id,
+                generated_by=user_id,
             )
         elif report_request.report_type == "reg45":
             built_context = build_reg45_context(
@@ -1683,6 +1255,7 @@ def build_assistant_prompt(
                 access_level=report_request.access_level,
                 allowed_home_ids=report_request.allowed_home_ids,
                 provider_id=report_request.provider_id,
+                generated_by=user_id,
             )
         else:
             built_context = build_yearly_report_context(
@@ -1693,6 +1266,7 @@ def build_assistant_prompt(
                 access_level=report_request.access_level,
                 allowed_home_ids=report_request.allowed_home_ids,
                 provider_id=report_request.provider_id,
+                generated_by=user_id,
             )
 
         compact_context = _build_compact_report_context(built_context)
