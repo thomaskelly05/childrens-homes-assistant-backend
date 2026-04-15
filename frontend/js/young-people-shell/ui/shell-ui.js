@@ -38,9 +38,9 @@ function showEl(el, show = true, display = "") {
     el.removeAttribute("tabindex");
   }
 
-  if (display) {
-    el.style.display = show ? display : "";
-  } else if (!show) {
+  if (display && show) {
+    el.style.display = display;
+  } else {
     el.style.removeProperty("display");
   }
 }
@@ -85,8 +85,8 @@ function getScopeIdentity() {
     return {
       title: "Home overview",
       meta: state.homeId
-        ? `Managers dashboard for home ${state.homeId}`
-        : "Managers dashboard across the home",
+        ? `Operational dashboard for home ${state.homeId}`
+        : "Operational dashboard across the home",
       seed: { first_name: "H" },
     };
   }
@@ -129,7 +129,7 @@ function getScopeSubtitle() {
     return "Quality assurance, reporting, compliance, audit and regulator-facing oversight.";
   }
 
-  return "A calm operational view for recording, reflection, continuity and thoughtful next steps.";
+  return "A calmer, child-centred workspace for recording, reflection, continuity and thoughtful next steps.";
 }
 
 function getWorkspaceEyebrowText() {
@@ -174,7 +174,7 @@ function updateSidebarAvatar(person = {}) {
   const mobileAvatar = qs("mobilePersonAvatar");
 
   const html = imageUrl
-    ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
+    ? `<img class="avatar" src="${escapeHtml(name ? imageUrl : imageUrl)}" alt="${escapeHtml(name)}" />`
     : `<div class="avatar avatar-fallback">${escapeHtml(initials)}</div>`;
 
   if (sidebarAvatar) sidebarAvatar.innerHTML = html;
@@ -280,16 +280,6 @@ function updateScopeSensitiveActions() {
     if (!button) return;
     button.textContent = isChildScope ? "Young people home" : "Workspace home";
   });
-
-  const profileCard = document.querySelector(".workspace-sidebar-profile-card");
-  if (profileCard) {
-    showEl(profileCard, true, "block");
-  }
-
-  const quickActionsPanel = document.querySelector(".quick-actions-panel");
-  if (quickActionsPanel) {
-    showEl(quickActionsPanel, true, "block");
-  }
 }
 
 function updateHeaderChrome(section = "workspace") {
@@ -336,6 +326,36 @@ function updateAppDataset() {
   els.app.dataset.homeId = state.homeId ? String(state.homeId) : "";
 }
 
+function updateLayoutChrome() {
+  const scope = getCurrentScope();
+  const workspaceInner = qs("workspaceShell");
+  const sidebar = document.querySelector(".workspace-sidebar");
+  const desktopNav = qs("desktopNav");
+  const profileCard = document.querySelector(".workspace-sidebar-profile-card");
+
+  const shouldShowSidebar = scope !== "child";
+
+  if (workspaceInner) {
+    workspaceInner.classList.toggle("has-sidebar", shouldShowSidebar);
+  }
+
+  if (sidebar) {
+    sidebar.classList.toggle("workspace-sidebar--hidden", !shouldShowSidebar);
+    sidebar.classList.toggle("workspace-sidebar--visible", shouldShowSidebar);
+    sidebar.setAttribute("aria-hidden", shouldShowSidebar ? "false" : "true");
+  }
+
+  if (desktopNav) {
+    desktopNav.classList.toggle("workspace-nav--hidden", !shouldShowSidebar);
+    desktopNav.classList.toggle("workspace-nav--visible", shouldShowSidebar);
+    desktopNav.setAttribute("aria-hidden", shouldShowSidebar ? "false" : "true");
+  }
+
+  if (profileCard) {
+    showEl(profileCard, true, "block");
+  }
+}
+
 export function updateYoungPersonChrome(person = {}) {
   updateYoungPersonText(person);
   updateTopLevelLabels();
@@ -344,6 +364,7 @@ export function updateYoungPersonChrome(person = {}) {
   updateScopeButtons();
   updateScopeSensitiveActions();
   updateAppDataset();
+  updateLayoutChrome();
 }
 
 export function updateSectionChrome(section = "workspace") {
