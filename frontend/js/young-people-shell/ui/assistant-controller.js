@@ -424,6 +424,10 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
     runtime.retrieval_mode || "whole_scope";
   state.assistantMeta.output_mode = runtime.output_mode || "answer";
   state.assistantMeta.intent = runtime.intent || "summary";
+  state.assistantMeta.live_summary = {
+    ...runtime.summary,
+    evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
+  };
   state.assistantMeta.last_bundle_refresh_at = new Date().toISOString();
 }
 
