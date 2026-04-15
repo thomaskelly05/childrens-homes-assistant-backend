@@ -320,6 +320,13 @@ function toArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function toIdArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
+
 async function apiGetSettled(urls = []) {
   const settled = await Promise.allSettled(urls.map((url) => apiGet(url)));
   return settled.map((result, index) => ({
@@ -382,6 +389,8 @@ function mergeAssistantBundle(responses = []) {
     young_people: [],
     summary: {},
     alerts: [],
+    scope_meta: {},
+    homes: [],
   };
 
   for (const response of responses) {
@@ -456,8 +465,15 @@ function mergeAssistantBundle(responses = []) {
       pushUniqueByKey(bundle.staffing, staffingArray, recordKey);
     }
 
-    if (data.home && !bundle.home && typeof data.home === "object") {
-      bundle.home = data.home;
+    if (data.home && typeof data.home === "object") {
+      if (!bundle.home) {
+        bundle.home = data.home;
+      }
+      bundle.homes.push(data.home);
+    }
+
+    if (Array.isArray(data.homes)) {
+      pushUniqueByKey(bundle.homes, data.homes, (item) => String(item?.id ?? ""));
     }
 
     if (data.summary && typeof data.summary === "object") {
@@ -466,9 +482,60 @@ function mergeAssistantBundle(responses = []) {
         ...data.summary,
       };
     }
+
+    if (data.scope_meta && typeof data.scope_meta === "object") {
+      bundle.scope_meta = {
+        ...bundle.scope_meta,
+        ...data.scope_meta,
+      };
+    }
   }
 
   return bundle;
+}
+
+async function fetchHomeWideBundle(homeId) {
+  if (!homeId) return [];
+
+  const urls = [
+    `/homes/${homeId}/dashboard`,
+    `/homes/${homeId}/team`,
+    `/homes/${homeId}/tasks`,
+    `/homes/${homeId}/communications`,
+    `/homes/${homeId}/documents`,
+    `/homes/${homeId}/supervisions`,
+    `/homes/${homeId}/reports`,
+    `/homes/${homeId}/therapy`,
+    `/homes/${homeId}/compliance`,
+    `/homes/${homeId}/quality`,
+    `/homes/${homeId}/audits`,
+    `/homes/${homeId}/incidents`,
+  ];
+
+  return apiGetSettled(urls);
+}
+
+function resolveAccessibleHomeIds(context = {}) {
+  const accessLevel = String(context.access_level || "").toLowerCase();
+  const scope = String(context.scope || context.current_scope || "child").toLowerCase();
+  const homeId = Number(context.home_id);
+  const allowedHomeIds = toIdArray(
+    context.allowed_home_ids || context.allowedHomeIds || []
+  );
+
+  if (scope === "quality" && accessLevel === "provider" && allowedHomeIds.length) {
+    return allowedHomeIds;
+  }
+
+  if (Number.isFinite(homeId)) {
+    return [homeId];
+  }
+
+  if (allowedHomeIds.length) {
+    return [allowedHomeIds[0]];
+  }
+
+  return [];
 }
 
 export async function fetchYoungPersonAssistantBundle(youngPersonId) {
@@ -494,43 +561,52 @@ export async function fetchYoungPersonAssistantBundle(youngPersonId) {
   return mergeAssistantBundle(responses);
 }
 
-export async function fetchHomeAssistantBundle(homeId) {
-  if (!homeId) {
+export async function fetchHomeAssistantBundle(context = {}) {
+  const homeIds = resolveAccessibleHomeIds({
+    ...context,
+    access_level: "home",
+  });
+
+  if (!homeIds.length) {
     return mergeAssistantBundle([]);
   }
 
-  const urls = [
-    `/homes/${homeId}/dashboard`,
-    `/homes/${homeId}/team`,
-    `/homes/${homeId}/tasks`,
-    `/homes/${homeId}/communications`,
-    `/homes/${homeId}/documents`,
-    `/homes/${homeId}/supervisions`,
-    `/homes/${homeId}/reports`,
-    `/homes/${homeId}/therapy`,
-    `/homes/${homeId}/compliance`,
-  ];
+  const settledGroups = await Promise.all(homeIds.map((homeId) => fetchHomeWideBundle(homeId)));
+  const merged = mergeAssistantBundle(settledGroups.flat());
 
-  const responses = await apiGetSettled(urls);
-  return mergeAssistantBundle(responses);
+  merged.scope_meta = {
+    ...(merged.scope_meta || {}),
+    scope: "home",
+    access_level: "home",
+    home_ids: homeIds,
+  };
+
+  return merged;
 }
 
-export async function fetchQualityAssistantBundle(homeId) {
-  if (!homeId) {
+export async function fetchQualityAssistantBundle(context = {}) {
+  const homeIds = resolveAccessibleHomeIds(context);
+
+  if (!homeIds.length) {
     return mergeAssistantBundle([]);
   }
 
-  const urls = [
-    `/homes/${homeId}/quality`,
-    `/homes/${homeId}/audits`,
-    `/homes/${homeId}/incidents`,
-    `/homes/${homeId}/tasks`,
-    `/homes/${homeId}/compliance`,
-    `/homes/${homeId}/reports`,
-  ];
+  const settledGroups = await Promise.all(homeIds.map((homeId) => fetchHomeWideBundle(homeId)));
+  const merged = mergeAssistantBundle(settledGroups.flat());
 
-  const responses = await apiGetSettled(urls);
-  return mergeAssistantBundle(responses);
+  merged.scope_meta = {
+    ...(merged.scope_meta || {}),
+    scope: "quality",
+    access_level:
+      String(context.access_level || "").toLowerCase() === "provider"
+        ? "provider"
+        : "home",
+    home_ids: homeIds,
+    provider_id: context.provider_id || null,
+    selected_home_id: context.home_id || null,
+  };
+
+  return merged;
 }
 
 export async function fetchAssistantScopeBundle(context = {}) {
@@ -545,16 +621,12 @@ export async function fetchAssistantScopeBundle(context = {}) {
     context.person_id ||
     null;
 
-  const homeId =
-    context.home_id ||
-    null;
-
   if (scope === "home") {
-    return fetchHomeAssistantBundle(homeId);
+    return fetchHomeAssistantBundle(context);
   }
 
   if (scope === "quality") {
-    return fetchQualityAssistantBundle(homeId);
+    return fetchQualityAssistantBundle(context);
   }
 
   return fetchYoungPersonAssistantBundle(youngPersonId);
@@ -813,31 +885,23 @@ function resolveAssistantEndpoint(payload = {}) {
     payload?.assistant_type ||
     null;
 
+  if (assistantType === "public") {
+    return "/assistant";
+  }
+
+  if (assistantType === "young_people_os") {
+    return "/young-people/assistant";
+  }
+
   const scope =
     payload?.context?.scope ||
     payload?.context?.current_scope ||
     payload?.context?.scope_type ||
     "child";
 
-  if (assistantType === "public") {
-    return "/assistant";
-  }
-
-  if (scope === "home") {
-    return "/home/assistant";
-  }
-
-  if (scope === "quality") {
-    return "/quality/assistant";
-  }
-
-  if (
-    scope === "child" ||
-    scope === "young_person" ||
-    assistantType === "young_people_os"
-  ) {
-    return "/young-people/assistant";
-  }
+  if (scope === "home") return "/home/assistant";
+  if (scope === "quality") return "/quality/assistant";
+  if (scope === "child" || scope === "young_person") return "/young-people/assistant";
 
   return "/assistant";
 }
