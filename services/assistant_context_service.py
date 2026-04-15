@@ -62,29 +62,62 @@ def _normalise_scope(scope: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def _get_user_home(conn, user_id: int) -> int | None:
-    row = _fetch_one(
+def _get_user_row(conn, user_id: int) -> dict[str, Any] | None:
+    return _fetch_one(
         conn,
         """
-        SELECT home_id
+        SELECT
+            id,
+            home_id,
+            provider_id,
+            role
         FROM users
         WHERE id = %s
         LIMIT 1
         """,
         (user_id,),
     )
+
+
+def _get_user_home(conn, user_id: int) -> int | None:
+    row = _get_user_row(conn, user_id)
     if not row:
         return None
     return _safe_int(row.get("home_id"))
+
+
+def _get_user_provider(conn, user_id: int) -> int | None:
+    row = _get_user_row(conn, user_id)
+    if not row:
+        return None
+    return _safe_int(row.get("provider_id"))
+
+
+def _get_user_role(conn, user_id: int) -> str:
+    row = _get_user_row(conn, user_id)
+    if not row:
+        return ""
+    return _safe_string(row.get("role")).lower()
+
+
+def _is_provider_level_role(role: str) -> bool:
+    return role in {"admin", "provider_admin", "ri", "responsible_individual"}
 
 
 def _assert_home_access(conn, user_id: int, home_id: int | None) -> int:
     if home_id is None:
         raise ValueError("home_id is required")
 
+    role = _get_user_role(conn, user_id)
     user_home_id = _get_user_home(conn, user_id)
 
-    if user_home_id is not None and user_home_id != home_id:
+    if _is_provider_level_role(role):
+        return home_id
+
+    if user_home_id is None:
+        raise PermissionError("Home access could not be verified")
+
+    if user_home_id != home_id:
         raise PermissionError("You do not have access to this home")
 
     return home_id
@@ -98,13 +131,24 @@ def _assert_quality_access(
     access_level: str,
     allowed_home_ids: list[int] | None,
 ) -> dict[str, Any]:
+    role = _get_user_role(conn, user_id)
     safe_allowed = allowed_home_ids or []
 
     if access_level == "provider":
+        if not _is_provider_level_role(role):
+            raise PermissionError("You do not have provider-level quality access")
+
         if safe_allowed:
             return {
                 "access_level": "provider",
                 "allowed_home_ids": safe_allowed,
+                "selected_home_id": home_id,
+            }
+
+        if home_id is not None:
+            return {
+                "access_level": "provider",
+                "allowed_home_ids": [home_id],
                 "selected_home_id": home_id,
             }
 
@@ -113,13 +157,13 @@ def _assert_quality_access(
             return {
                 "access_level": "provider",
                 "allowed_home_ids": [user_home_id],
-                "selected_home_id": home_id,
+                "selected_home_id": None,
             }
 
         return {
             "access_level": "provider",
             "allowed_home_ids": [],
-            "selected_home_id": home_id,
+            "selected_home_id": None,
         }
 
     verified_home_id = _assert_home_access(conn, user_id, home_id)
@@ -131,6 +175,7 @@ def _assert_quality_access(
 
 
 def _assert_young_person_access(conn, user_id: int, young_person_id: int) -> dict[str, Any]:
+    role = _get_user_role(conn, user_id)
     user_home_id = _get_user_home(conn, user_id)
 
     young_person = _fetch_one(
@@ -169,8 +214,10 @@ def _assert_young_person_access(conn, user_id: int, young_person_id: int) -> dic
         raise ValueError("Young person not found")
 
     record_home_id = _safe_int(young_person.get("home_id"))
-    if user_home_id is not None and record_home_id != user_home_id:
-        raise PermissionError("You do not have access to this young person")
+
+    if not _is_provider_level_role(role):
+        if user_home_id is None or record_home_id != user_home_id:
+            raise PermissionError("You do not have access to this young person")
 
     return young_person
 
@@ -722,17 +769,18 @@ def build_young_person_context(
 ) -> dict[str, Any]:
     scope = _normalise_scope(scope)
     young_person = _assert_young_person_access(conn, user_id, young_person_id)
+    young_person_home_id = _safe_int(young_person.get("home_id"))
 
     return {
         "scope": {
             "scope_type": "young_person",
-            "home_id": _safe_int(young_person.get("home_id")),
+            "home_id": young_person_home_id,
             "young_person_id": young_person_id,
             "record_type": scope.get("record_type"),
             "record_id": scope.get("record_id"),
             "access_level": "child",
             "provider_id": None,
-            "allowed_home_ids": [_safe_int(young_person.get("home_id"))] if _safe_int(young_person.get("home_id")) else [],
+            "allowed_home_ids": [young_person_home_id] if young_person_home_id else [],
         },
         "young_person": young_person,
         "identity": _build_identity_context(conn, young_person_id),
@@ -773,7 +821,8 @@ def build_home_os_context(
     scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     scope = _normalise_scope(scope)
-    home_id = _assert_home_access(conn, user_id, scope.get("home_id") or _get_user_home(conn, user_id))
+    requested_home_id = scope.get("home_id") or _get_user_home(conn, user_id)
+    home_id = _assert_home_access(conn, user_id, requested_home_id)
 
     home = _build_home_header(conn, home_id)
 
@@ -948,7 +997,7 @@ def build_home_os_context(
             "record_type": scope.get("record_type"),
             "record_id": scope.get("record_id"),
             "access_level": "home",
-            "provider_id": scope.get("provider_id"),
+            "provider_id": scope.get("provider_id") or _get_user_provider(conn, user_id),
             "allowed_home_ids": [home_id],
         },
         "home": home,
@@ -997,7 +1046,7 @@ def build_quality_os_context(
                 "record_type": scope.get("record_type"),
                 "record_id": scope.get("record_id"),
                 "access_level": access_level,
-                "provider_id": scope.get("provider_id"),
+                "provider_id": scope.get("provider_id") or _get_user_provider(conn, user_id),
                 "allowed_home_ids": [],
             },
             "homes": [],
@@ -1130,7 +1179,7 @@ def build_quality_os_context(
             "record_type": scope.get("record_type"),
             "record_id": scope.get("record_id"),
             "access_level": access_level,
-            "provider_id": scope.get("provider_id"),
+            "provider_id": scope.get("provider_id") or _get_user_provider(conn, user_id),
             "allowed_home_ids": allowed_home_ids,
         },
         "homes": homes,
@@ -1196,29 +1245,17 @@ def build_assistant_context(
         return build_public_context(scope=scope)
 
     if assistant_type == "young_people_os":
-        if scope_type == "young_person":
-            young_person_id = scope.get("young_person_id")
-            if not young_person_id:
-                raise ValueError("young_person_id is required for young_person scope")
-            return build_young_person_context(
-                conn,
-                user_id=user_id,
-                young_person_id=int(young_person_id),
-                scope=scope,
-            )
-
-        if scope_type == "global":
-            return build_home_os_context(
-                conn,
-                user_id=user_id,
-                scope={
-                    **scope,
-                    "scope_type": "home",
-                    "home_id": scope.get("home_id") or _get_user_home(conn, user_id),
-                },
-            )
-
-        raise ValueError("Unsupported scope_type for young people assistant")
+        if scope_type != "young_person":
+            raise ValueError("Unsupported scope_type for young people assistant")
+        young_person_id = scope.get("young_person_id")
+        if not young_person_id:
+            raise ValueError("young_person_id is required for young_person scope")
+        return build_young_person_context(
+            conn,
+            user_id=user_id,
+            young_person_id=int(young_person_id),
+            scope=scope,
+        )
 
     if assistant_type == "home_os":
         if scope_type != "home":
