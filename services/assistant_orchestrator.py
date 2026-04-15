@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
 from services.assistant_context_service import build_assistant_context
@@ -21,6 +22,7 @@ class ReportRequest:
     access_level: str | None
     allowed_home_ids: list[int]
     provider_id: int | None
+    inferred: bool = False
 
 
 def _safe_str(value: Any) -> str:
@@ -38,6 +40,20 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
+def _safe_bool(value: Any) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"true", "1", "yes"}:
+            return True
+        if lowered in {"false", "0", "no"}:
+            return False
+    return bool(value)
+
+
 def _safe_int_list(value: Any) -> list[int]:
     if not isinstance(value, list):
         return []
@@ -45,6 +61,17 @@ def _safe_int_list(value: Any) -> list[int]:
     for item in value:
         parsed = _safe_int(item)
         if parsed is not None:
+            result.append(parsed)
+    return result
+
+
+def _safe_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    result: list[str] = []
+    for item in value:
+        parsed = _safe_str(item)
+        if parsed:
             result.append(parsed)
     return result
 
@@ -92,6 +119,7 @@ def _pick_fields(item: Any, allowed: list[str]) -> dict[str, Any]:
 def _normalise_context(context: dict[str, Any] | None) -> dict[str, Any]:
     context = context or {}
     cleaned = {
+        "assistant_type": _safe_str(context.get("assistant_type")) or None,
         "home_id": _safe_int(context.get("home_id")),
         "home_name": _safe_str(context.get("home_name")) or None,
         "young_person_id": _safe_int(context.get("young_person_id")),
@@ -109,8 +137,23 @@ def _normalise_context(context: dict[str, Any] | None) -> dict[str, Any]:
         "access_level": _safe_str(context.get("access_level")) or None,
         "allowed_home_ids": _safe_int_list(context.get("allowed_home_ids")),
         "provider_id": _safe_int(context.get("provider_id")),
-        "start_date": _safe_str(context.get("start_date")) or None,
-        "end_date": _safe_str(context.get("end_date")) or None,
+        "assistant_intent": _safe_str(context.get("assistant_intent")) or None,
+        "retrieval_mode": _safe_str(context.get("retrieval_mode")) or None,
+        "output_mode": _safe_str(context.get("output_mode")) or None,
+        "user_role": _safe_str(context.get("user_role")) or None,
+        "whole_os_default": _safe_bool(context.get("whole_os_default")),
+        "section_only_requested": _safe_bool(context.get("section_only_requested")),
+        "use_whole_scope_records": _safe_bool(context.get("use_whole_scope_records")),
+        "ask_for_dates": _safe_bool(context.get("ask_for_dates")),
+        "ask_for_chronology": _safe_bool(context.get("ask_for_chronology")),
+        "ask_for_summary": _safe_bool(context.get("ask_for_summary")),
+        "ask_for_review_pack": _safe_bool(context.get("ask_for_review_pack")),
+        "ask_for_compliance_view": _safe_bool(context.get("ask_for_compliance_view")),
+        "suggested_prompts_ui_only": _safe_str_list(context.get("suggested_prompts_ui_only")),
+        "reporting_period_start": _safe_str(context.get("reporting_period_start")) or None,
+        "reporting_period_end": _safe_str(context.get("reporting_period_end")) or None,
+        "reporting_period_inferred": _safe_bool(context.get("reporting_period_inferred")),
+        "reg45_requested": _safe_bool(context.get("reg45_requested")),
     }
     return {k: v for k, v in cleaned.items() if v not in (None, "", [], {})}
 
@@ -125,6 +168,7 @@ def _normalise_scope_for_assistant(
     ui_context = ui_context or {}
 
     scope_type = _safe_str(raw_scope.get("scope_type") or ui_context.get("scope_type") or "global").lower()
+    scope_name = _safe_str(raw_scope.get("scope") or ui_context.get("scope")).lower()
     home_id = _safe_int(raw_scope.get("home_id") or ui_context.get("home_id"))
     young_person_id = _safe_int(raw_scope.get("young_person_id") or ui_context.get("young_person_id"))
     record_type = _safe_str(raw_scope.get("record_type") or ui_context.get("record_type")) or None
@@ -136,6 +180,7 @@ def _normalise_scope_for_assistant(
     if assistant_type == "public":
         return {
             "scope_type": "global",
+            "scope": "global",
             "home_id": None,
             "young_person_id": None,
             "record_type": None,
@@ -147,16 +192,20 @@ def _normalise_scope_for_assistant(
 
     if assistant_type == "young_people_os":
         if scope_type not in {"global", "young_person"}:
-            scope_type = "young_person" if young_person_id else "global"
+            if scope_name in {"child", "young_person"}:
+                scope_type = "young_person"
+            else:
+                scope_type = "young_person" if young_person_id else "global"
 
         if scope_type == "young_person" and not young_person_id:
-            raise ValueError("young_person_id is required for young_person scope.")
+            raise ValueError("young_person_id is required for young person scope.")
 
         if scope_type == "global":
             young_person_id = None
 
         return {
             "scope_type": scope_type,
+            "scope": "child" if scope_type == "young_person" else "global",
             "home_id": home_id,
             "young_person_id": young_person_id,
             "record_type": record_type,
@@ -175,6 +224,7 @@ def _normalise_scope_for_assistant(
 
         return {
             "scope_type": "home",
+            "scope": "home",
             "home_id": home_id,
             "young_person_id": None,
             "record_type": record_type,
@@ -190,6 +240,7 @@ def _normalise_scope_for_assistant(
 
         return {
             "scope_type": "quality",
+            "scope": "quality",
             "home_id": home_id,
             "young_person_id": None,
             "record_type": record_type,
@@ -218,14 +269,49 @@ def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, s
         if not content:
             continue
 
-        safe_history.append(
-            {
-                "role": role,
-                "content": content[:3000],
-            }
-        )
+        safe_history.append({"role": role, "content": content[:3000]})
 
     return safe_history[-12:]
+
+
+def _parse_iso_date(value: str | None) -> date | None:
+    raw = _safe_str(value)
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00")).date()
+    except Exception:
+        try:
+            return date.fromisoformat(raw[:10])
+        except Exception:
+            return None
+
+
+def _infer_date_range_from_message(message: str) -> tuple[str | None, str | None, bool]:
+    value = _safe_str(message).lower()
+    today = datetime.utcnow().date()
+
+    if re.search(r"\blast 90 days\b|\bpast 90 days\b|\bprevious 90 days\b", value):
+        start = today - timedelta(days=90)
+        return start.isoformat(), today.isoformat(), True
+
+    if re.search(r"\blast 60 days\b|\bpast 60 days\b|\bprevious 60 days\b", value):
+        start = today - timedelta(days=60)
+        return start.isoformat(), today.isoformat(), True
+
+    if re.search(r"\blast 30 days\b|\bpast 30 days\b|\bprevious 30 days\b", value):
+        start = today - timedelta(days=30)
+        return start.isoformat(), today.isoformat(), True
+
+    if re.search(r"\blast 6 months\b|\bpast 6 months\b|\bprevious 6 months\b|\bsix months\b|\b6 months\b", value):
+        start = today - timedelta(days=183)
+        return start.isoformat(), today.isoformat(), True
+
+    if re.search(r"\blast 12 months\b|\bpast 12 months\b|\bprevious 12 months\b|\btwelve months\b|\b12 months\b", value):
+        start = today - timedelta(days=365)
+        return start.isoformat(), today.isoformat(), True
+
+    return None, None, False
 
 
 def _detect_report_request(
@@ -234,57 +320,70 @@ def _detect_report_request(
     scope: dict[str, Any],
 ) -> ReportRequest | None:
     value = _safe_str(message).lower()
-    start_date = _safe_str(ui_context.get("start_date"))
-    end_date = _safe_str(ui_context.get("end_date"))
+
+    explicit_start = _safe_str(ui_context.get("reporting_period_start"))
+    explicit_end = _safe_str(ui_context.get("reporting_period_end"))
+    explicit_inferred = bool(ui_context.get("reporting_period_inferred"))
+
+    if explicit_start and explicit_end:
+        start_date = explicit_start
+        end_date = explicit_end
+        inferred = explicit_inferred
+    else:
+        start_date, end_date, inferred = _infer_date_range_from_message(message)
+
+    def make_request(report_type: ReportType) -> ReportRequest:
+        final_start = start_date
+        final_end = end_date
+
+        if not final_start or not final_end:
+            if report_type == "reg45":
+                fallback_end = datetime.utcnow().date()
+                fallback_start = fallback_end - timedelta(days=183)
+                final_start = fallback_start.isoformat()
+                final_end = fallback_end.isoformat()
+                inferred_local = True
+            elif report_type == "monthly":
+                fallback_end = datetime.utcnow().date()
+                fallback_start = fallback_end - timedelta(days=30)
+                final_start = fallback_start.isoformat()
+                final_end = fallback_end.isoformat()
+                inferred_local = True
+            else:
+                fallback_end = datetime.utcnow().date()
+                fallback_start = fallback_end - timedelta(days=365)
+                final_start = fallback_start.isoformat()
+                final_end = fallback_end.isoformat()
+                inferred_local = True
+        else:
+            inferred_local = inferred
+
+        return ReportRequest(
+            report_type=report_type,
+            start_date=final_start,
+            end_date=final_end,
+            home_id=_safe_int(scope.get("home_id")),
+            home_name=_safe_str(ui_context.get("home_name")) or None,
+            access_level=_safe_str(scope.get("access_level")) or None,
+            allowed_home_ids=_safe_int_list(scope.get("allowed_home_ids")),
+            provider_id=_safe_int(scope.get("provider_id")),
+            inferred=inferred_local,
+        )
 
     if "reg 45" in value or "regulation 45" in value:
-        if not start_date or not end_date:
-            raise ValueError("start_date and end_date are required for Reg 45 reports")
-        return ReportRequest(
-            report_type="reg45",
-            start_date=start_date,
-            end_date=end_date,
-            home_id=_safe_int(scope.get("home_id")),
-            home_name=_safe_str(ui_context.get("home_name")) or None,
-            access_level=_safe_str(scope.get("access_level")) or None,
-            allowed_home_ids=_safe_int_list(scope.get("allowed_home_ids")),
-            provider_id=_safe_int(scope.get("provider_id")),
-        )
+        return make_request("reg45")
 
     if "monthly report" in value or "monthly summary" in value or "monthly overview" in value:
-        if not start_date or not end_date:
-            raise ValueError("start_date and end_date are required for monthly reports")
-        return ReportRequest(
-            report_type="monthly",
-            start_date=start_date,
-            end_date=end_date,
-            home_id=_safe_int(scope.get("home_id")),
-            home_name=_safe_str(ui_context.get("home_name")) or None,
-            access_level=_safe_str(scope.get("access_level")) or None,
-            allowed_home_ids=_safe_int_list(scope.get("allowed_home_ids")),
-            provider_id=_safe_int(scope.get("provider_id")),
-        )
+        return make_request("monthly")
 
     if "yearly report" in value or "annual report" in value or "yearly overview" in value or "annual overview" in value:
-        if not start_date or not end_date:
-            raise ValueError("start_date and end_date are required for yearly reports")
-        return ReportRequest(
-            report_type="yearly",
-            start_date=start_date,
-            end_date=end_date,
-            home_id=_safe_int(scope.get("home_id")),
-            home_name=_safe_str(ui_context.get("home_name")) or None,
-            access_level=_safe_str(scope.get("access_level")) or None,
-            allowed_home_ids=_safe_int_list(scope.get("allowed_home_ids")),
-            provider_id=_safe_int(scope.get("provider_id")),
-        )
+        return make_request("yearly")
 
     return None
 
 
 def _build_compact_public_context(context: dict[str, Any]) -> dict[str, Any]:
     public_context = context.get("public_context") or {}
-
     return {
         "scope": context.get("scope") or {},
         "public_context": {
@@ -812,7 +911,6 @@ def _build_compact_context(
 
 def _build_public_summary(context: dict[str, Any]) -> str:
     public_context = context.get("public_context") or {}
-
     lines = [
         "Public assistant context loaded.",
         f"- OS data available: {bool(public_context.get('os_data_available', False))}",
@@ -875,7 +973,6 @@ def _build_young_person_summary(context: dict[str, Any]) -> str:
         f"- Current formulation available: {'yes' if identity.get('current_formulation') else 'no'}",
         f"- Communication profile available: {'yes' if identity.get('communication_profile') else 'no'}",
     ]
-
     return "\n".join(lines)
 
 
@@ -907,7 +1004,6 @@ def _build_quality_summary(context: dict[str, Any]) -> str:
     incidents = context.get("incidents") or []
     compliance_items = context.get("compliance_items") or []
     reports = context.get("reports") or []
-
     scope = context.get("scope") or {}
 
     lines = [
@@ -964,6 +1060,10 @@ def _build_ui_summary(ui_context: dict[str, Any] | None) -> str:
 
     lines: list[str] = ["UI context provided."]
 
+    if ui_context.get("scope"):
+        lines.append(f"- Scope: {ui_context.get('scope')}")
+    if ui_context.get("scope_type"):
+        lines.append(f"- Scope type: {ui_context.get('scope_type')}")
     if ui_context.get("current_view"):
         lines.append(f"- Current view: {ui_context.get('current_view')}")
     if ui_context.get("current_section"):
@@ -990,12 +1090,131 @@ def _build_ui_summary(ui_context: dict[str, Any] | None) -> str:
         lines.append(f"- Allowed home IDs: {ui_context.get('allowed_home_ids')}")
     if ui_context.get("provider_id") is not None:
         lines.append(f"- Provider ID: {ui_context.get('provider_id')}")
-    if ui_context.get("start_date"):
-        lines.append(f"- Start date: {ui_context.get('start_date')}")
-    if ui_context.get("end_date"):
-        lines.append(f"- End date: {ui_context.get('end_date')}")
+    if ui_context.get("assistant_intent"):
+        lines.append(f"- Assistant intent: {ui_context.get('assistant_intent')}")
+    if ui_context.get("retrieval_mode"):
+        lines.append(f"- Retrieval mode: {ui_context.get('retrieval_mode')}")
+    if ui_context.get("output_mode"):
+        lines.append(f"- Output mode: {ui_context.get('output_mode')}")
+    if ui_context.get("reporting_period_start"):
+        lines.append(f"- Reporting period start: {ui_context.get('reporting_period_start')}")
+    if ui_context.get("reporting_period_end"):
+        lines.append(f"- Reporting period end: {ui_context.get('reporting_period_end')}")
+    if ui_context.get("reporting_period_inferred") is not None:
+        lines.append(f"- Reporting period inferred: {ui_context.get('reporting_period_inferred')}")
+    if ui_context.get("reg45_requested") is not None:
+        lines.append(f"- Reg 45 requested: {ui_context.get('reg45_requested')}")
 
     return "\n".join(lines)
+
+
+def _children_home_reasoning_block() -> str:
+    return """
+You are not a generic chatbot. You are an evidence-led assistant inside a children’s residential home operating system.
+
+You must reason with the mindset of:
+- an Ofsted inspector using the SCCIF
+- a Responsible Individual reviewing quality, assurance, patterns and provider oversight
+- a Registered Manager protecting children, staff and the culture of the home
+- a Residential Support Worker needing practical, shift-ready guidance
+- a therapeutic practitioner using trauma-informed, child-centred, relationship-based thinking
+
+Use the Children’s Homes (England) Regulations 2015, the Quality Standards, the Guide to the Children’s Homes Regulations including the Quality Standards, and SCCIF principles as the practice framework where relevant.
+
+Your job is to support adults to think, evidence, reflect, prioritise and act safely.
+Your job is not to fabricate, overclaim, or sound authoritative without evidence.
+""".strip()
+
+
+def _core_answer_rules() -> str:
+    return """
+Core answer rules:
+- Stay strictly inside authorised scope.
+- Use only the supplied evidence/context.
+- If evidence is incomplete, say clearly what is missing.
+- Distinguish clearly between:
+  - evidenced fact
+  - professional concern
+  - likely pattern / inference
+  - assumption needing checking
+- Keep responses practical, analytical, safeguarding-aware and professionally useful.
+- Be specific, not vague.
+- When asked about current concerns, focus on current evidence, not generic sector wording.
+- When asked for inspection, RI, manager or handover style outputs, use that exact frame.
+- Inline citations should appear throughout the answer, not just once at the end.
+- Prefer short clickable citation markers such as [incident:123], [task:456], [support_plan:12], [document:91].
+- If a point does not have evidence, do not attach a false citation.
+- Never use markdown headings if the user asked not to.
+- Never default to numbered lists unless the user asked for them or the structure genuinely requires numbering.
+""".strip()
+
+
+def _output_template_rules(ui_context: dict[str, Any]) -> str:
+    output_mode = _safe_str(ui_context.get("output_mode")).lower()
+    assistant_intent = _safe_str(ui_context.get("assistant_intent")).lower()
+    message_flags = [
+        output_mode,
+        assistant_intent,
+    ]
+
+    if "reg45" in output_mode:
+        return """
+If the request is Reg 45 or Ofsted-style review writing:
+- write in clear professional prose
+- use section labels only, not markdown headings
+- cover strengths, concerns, progress, risk, quality of care, management oversight and recommendations
+- cite throughout
+- if the period was inferred, work within that period and state that the period has been interpreted from the request
+""".strip()
+
+    if "handover" in output_mode:
+        return """
+If the request is a handover:
+- follow the user’s requested handover structure exactly if one is given
+- keep it shift-practical
+- include only the most relevant current information
+- cite throughout where evidence supports each point
+""".strip()
+
+    if "manager_brief" in output_mode:
+        return """
+If the request is a manager brief:
+- focus on oversight, patterns, compliance, operational risk, staffing, quality and immediate priorities
+- separate evidence from recommendation
+- cite throughout
+""".strip()
+
+    if "quality_brief" in output_mode:
+        return """
+If the request is a quality / RI / inspection brief:
+- focus on triangulation, patterns, gaps, strengths, assurance and inspection risk
+- make clear what an inspector or RI would test further
+- cite throughout
+""".strip()
+
+    if "chronology" in output_mode:
+        return """
+If the request is a chronology:
+- keep events in date order
+- include only material events relevant to the question
+- after the chronology, briefly explain any patterns
+- cite each chronology point
+""".strip()
+
+    if "summary" in output_mode or assistant_intent == "summary":
+        return """
+If the request is a summary:
+- organise it around what matters most
+- keep it evidence-led
+- avoid generic filler
+- cite throughout, not just at the end
+""".strip()
+
+    return """
+Match the user’s requested format exactly.
+If the user gives a section structure, use that structure and nothing else.
+Citations should be distributed throughout the answer.
+""".strip()
 
 
 def _build_general_prompt(
@@ -1070,11 +1289,16 @@ def _build_general_prompt(
 
 {guardrail}
 
-Use the context below to answer clearly, safely and practically.
-Keep the answer grounded in the available data.
-If there are gaps in the context, say so.
-If the request appears to need drafting, produce a structured draft.
-If the request relates to a young person, stay child-centred, trauma-informed and safeguarding-aware.
+{_children_home_reasoning_block()}
+
+{_core_answer_rules()}
+
+{_output_template_rules(ui_context or {})}
+
+Use the context below to answer clearly, safely, analytically and practically.
+If the request is about children, think about lived experience, safety, stability, progress, relationships, emotional wellbeing and what adults need to do.
+If the request is about the home, think about quality of care, safeguarding culture, oversight, workforce practice, compliance, triangulation and inspection readiness.
+If the request is about quality/provider scope, think about patterns, repeat findings, weak assurance, audit themes, management drift and what needs testing further.
 
 === CONTEXT SUMMARY ===
 {summary}
@@ -1105,52 +1329,52 @@ def _build_report_prompt(
     if report_request.report_type == "reg45":
         heading = "Regulation 45 report"
         structure = """
-Produce a full Regulation 45 style report for the specified period.
+Produce a Regulation 45 style review for the period.
 
 Required structure:
 1. Introduction and period covered
-2. Overview of the home
+2. Overall view of the home during the period
 3. Experiences, progress and outcomes for children
 4. Education, health and emotional wellbeing
-5. Relationships, contact and identity
-6. Safeguarding, risk and behaviour patterns
-7. Quality of care and staffing practice
-8. Complaints, incidents and significant events
-9. Management oversight and compliance themes
-10. Strengths and positives
+5. Relationships, family contact, identity and belonging
+6. Safeguarding, missing from care, behaviour and risk patterns
+7. Staffing, relationships, practice quality and consistency
+8. Management oversight, monitoring and challenge
+9. Compliance, quality assurance and any shortfalls
+10. Strengths and evidence of good practice
 11. Areas for development
 12. Clear recommendations
 """
     elif report_request.report_type == "monthly":
         heading = "Monthly management report"
         structure = """
-Produce a monthly management report for the specified period.
+Produce a monthly management report for the period.
 
 Required structure:
 1. Period overview
 2. Children’s experiences and outcomes
-3. Safeguarding and risk overview
-4. Staffing, practice and operational themes
-5. Compliance and outstanding actions
-6. Strengths and positives
-7. Concerns or gaps
-8. Priority actions for the next period
+3. Safeguarding and behaviour/risk overview
+4. Workforce, culture and operational themes
+5. Compliance and management oversight
+6. Strengths and positive practice
+7. Current concerns and gaps
+8. Priority actions for the next month
 """
     else:
         heading = "Yearly overview report"
         structure = """
-Produce a yearly overview report for the specified period.
+Produce a yearly overview report for the period.
 
 Required structure:
 1. Year in review
 2. Outcomes for children across the year
-3. Progress, strengths and positive developments
+3. Progress, stability and strengths
 4. Safeguarding, incidents and risk trends
 5. Education, health and emotional wellbeing themes
-6. Workforce, stability and operational themes
+6. Workforce, leadership and operational themes
 7. Compliance and quality assurance themes
 8. Key patterns over time
-9. Strategic recommendations for the next year
+9. Strategic recommendations
 """
 
     history_lines: list[str] = []
@@ -1162,22 +1386,38 @@ Required structure:
 
     history_text = "\n".join(history_lines).strip()
 
+    period_note = (
+        "The reporting period was inferred from the request and available context."
+        if report_request.inferred
+        else "The reporting period was explicitly provided."
+    )
+
     return f"""
-You are the IndiCare reporting assistant.
+You are the IndiCare reporting assistant for children’s residential care.
+
+{_children_home_reasoning_block()}
+
+{_core_answer_rules()}
 
 Generate a {heading}.
 
 {structure}
 
-Rules:
-- stay evidence-based
-- include positive outcomes and strengths as well as risks
-- use warm but professional language
-- focus on what children experienced, what improved, and what still needs attention
-- do not invent statistics or events
-- where the context is incomplete, say so plainly
-- write in a professional format suitable for managers and oversight
-- where relevant, balance safeguarding concerns with progress, stability and protective factors
+Rules for this report:
+- write for children’s homes oversight, not as a generic report writer
+- ground analysis in evidence from the supplied context
+- align reasoning to the Quality Standards, safeguarding duties, leadership and management expectations, and SCCIF thinking where relevant
+- keep children’s lived experience central
+- balance strengths, progress and protective factors with risk and gaps
+- do not invent statistics, incidents, compliance failings or outcomes
+- where evidence is thin, say so clearly
+- make recommendations specific and usable
+- use section labels in plain professional style
+- place citations throughout the report, not only at the end
+- where the period was inferred, state that clearly in the introduction
+
+=== REPORT PERIOD NOTE ===
+{period_note}
 
 === REPORT CONTEXT SUMMARY ===
 {_build_report_summary(compact_context)}
@@ -1233,7 +1473,7 @@ def build_assistant_prompt(
     )
 
     if report_request is not None:
-        _ = preview_report_snapshot  # reserved import for route-level preview flow
+        _ = preview_report_snapshot
 
         if report_request.report_type == "monthly":
             built_context = build_monthly_report_context(
@@ -1298,11 +1538,15 @@ def build_assistant_prompt(
                 "home_name": report_request.home_name,
                 "start_date": report_request.start_date,
                 "end_date": report_request.end_date,
+                "reporting_period_inferred": report_request.inferred,
                 "access_level": report_request.access_level,
                 "allowed_home_ids": report_request.allowed_home_ids,
                 "provider_id": report_request.provider_id,
                 "history_items_used": len(safe_history),
                 "is_report_request": True,
+                "assistant_intent": ui_context.get("assistant_intent"),
+                "retrieval_mode": ui_context.get("retrieval_mode"),
+                "output_mode": ui_context.get("output_mode"),
             },
         }
 
@@ -1345,6 +1589,7 @@ def build_assistant_prompt(
         "runtime": {
             "assistant_type": assistant_type,
             "scope_type": built_scope.get("scope_type"),
+            "scope": built_scope.get("scope"),
             "home_id": built_scope.get("home_id"),
             "young_person_id": built_scope.get("young_person_id"),
             "record_type": built_scope.get("record_type"),
@@ -1360,8 +1605,13 @@ def build_assistant_prompt(
             "composer_record_type": ui_context.get("composer_record_type"),
             "home_name": ui_context.get("home_name"),
             "shift_context": ui_context.get("shift_context"),
-            "start_date": ui_context.get("start_date"),
-            "end_date": ui_context.get("end_date"),
+            "assistant_intent": ui_context.get("assistant_intent"),
+            "retrieval_mode": ui_context.get("retrieval_mode"),
+            "output_mode": ui_context.get("output_mode"),
+            "reporting_period_start": ui_context.get("reporting_period_start"),
+            "reporting_period_end": ui_context.get("reporting_period_end"),
+            "reporting_period_inferred": ui_context.get("reporting_period_inferred"),
+            "reg45_requested": ui_context.get("reg45_requested"),
             "history_items_used": len(safe_history),
             "is_report_request": False,
         },
