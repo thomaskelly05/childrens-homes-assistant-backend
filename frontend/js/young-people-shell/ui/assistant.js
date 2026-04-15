@@ -105,6 +105,7 @@ function extractStreamText(payload) {
   if (!payload || typeof payload !== "object") return "";
 
   const directCandidates = [
+    payload.accumulated_text,
     payload.text,
     payload.message,
     payload.content,
@@ -177,7 +178,6 @@ function resolveRelativeMonthRange(months = 6) {
 
 function resolveExplicitDateRange(text = "") {
   const value = String(text || "").trim();
-
   const matches =
     value.match(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/g) || [];
 
@@ -488,7 +488,7 @@ function detectAssistantIntent(text = "") {
   }
 
   if (
-    /when was|what date|dates|last incident|last missing|next appointment|how many|overdue|due soon|upcoming/.test(
+    /when was|what date|dates|last incident|last missing|next appointment|how many|overdue|due soon|upcoming|latest/.test(
       value
     )
   ) {
@@ -503,11 +503,15 @@ function detectAssistantIntent(text = "") {
     return ASSISTANT_INTENT.drafting;
   }
 
-  if (/compliance|ofsted|supervision|training|statutory|audit/.test(value)) {
+  if (
+    /compliance|ofsted|supervision|training|statutory|audit|reg\s*40|reg\s*44|quality standards|inspection risk|scrutiny|sccif/.test(
+      value
+    )
+  ) {
     return ASSISTANT_INTENT.compliance;
   }
 
-  if (/risk|safeguarding|harm|trigger|protective factor/.test(value)) {
+  if (/risk|safeguarding|harm|trigger|protective factor|missing from care|missing episode/.test(value)) {
     return ASSISTANT_INTENT.risk;
   }
 
@@ -519,11 +523,11 @@ function detectAssistantIntent(text = "") {
     return ASSISTANT_INTENT.quality;
   }
 
-  if (/manager|oversight|leadership|escalation/.test(value)) {
+  if (/manager|oversight|leadership|escalation|registered manager/.test(value)) {
     return ASSISTANT_INTENT.management;
   }
 
-  if (/summary|summarise|summarize|what matters|overview/.test(value)) {
+  if (/summary|summarise|summarize|what matters|overview|lived experience|key work|keywork/.test(value)) {
     return ASSISTANT_INTENT.summary;
   }
 
@@ -571,28 +575,28 @@ function detectRetrievalMode(text = "", intent = ASSISTANT_INTENT.unknown) {
 function detectOutputMode(intent = ASSISTANT_INTENT.unknown, text = "") {
   const value = String(text || "").toLowerCase();
 
-  if (/reg\s*45|regulation\s*45|ofsted/.test(value)) {
-    return "reg45_template";
+  if (/reg\s*45|regulation\s*45/.test(value)) {
+    return "children_home_reg45_template";
   }
 
-  if (/morning brief|shift brief|handover/.test(value)) {
-    return "handover_template";
+  if (/handover|next shift|morning brief|shift brief/.test(value)) {
+    return "children_home_handover_template";
   }
 
   if (/manager brief|manager summary|leadership brief/.test(value)) {
-    return "manager_brief_template";
+    return "children_home_manager_brief_template";
   }
 
-  if (/quality brief|quality summary|inspection readiness/.test(value)) {
-    return "quality_brief_template";
+  if (/quality brief|quality summary|inspection readiness|ri summary|scrutiny/.test(value)) {
+    return "children_home_quality_brief_template";
   }
 
   if (/chronology|timeline/.test(value)) {
-    return "chronology_template";
+    return "children_home_chronology_template";
   }
 
   if (/full summary|comprehensive summary|overview/.test(value)) {
-    return "summary_template";
+    return "children_home_summary_template";
   }
 
   if (intent === ASSISTANT_INTENT.factual_lookup) return "factual_answer";
@@ -613,18 +617,18 @@ function buildRoleAwareGreeting() {
   const scope = getCurrentScope();
 
   if (scope === "child") {
-    return `Hello. What would you like to know about ${getFullYoungPersonName()}? I can help with a full summary, chronology, dates, risks, appointments, family contact themes, or a handover.`;
+    return `Hello. What would you like to know about ${getFullYoungPersonName()}? I can help with a full summary, chronology, dates, risks, appointments, family contact themes, handover thinking, and evidence-led children’s home support.`;
   }
 
   if (scope === "home") {
-    return `Hello. What would you like to know about ${getHomeName()}? I can help with a full summary, chronology, staffing, compliance, overdue items, management oversight, or next actions.`;
+    return `Hello. What would you like to know about ${getHomeName()}? I can help with a full home summary, chronology, staffing, compliance, inspection readiness, management oversight, or next actions.`;
   }
 
   return `Hello. What would you like to know about ${
     getAccessLevelForScope("quality") === "provider"
       ? "your homes and provider oversight"
       : `${getHomeName()} quality and oversight`
-  }? I can help with compliance themes, chronology, inspection readiness, RI summaries, and cross-home comparisons where allowed.`;
+  }? I can help with compliance themes, chronology, inspection readiness, RI summaries, governance patterns and cross-home comparisons where allowed.`;
 }
 
 function buildUnknownIntentPrompt() {
@@ -632,7 +636,7 @@ function buildUnknownIntentPrompt() {
 
   if (scope === "child") {
     return [
-      `I’m ready to help with ${getFullYoungPersonName()} across that child’s full OS record.`,
+      `I’m ready to help with ${getFullYoungPersonName()} across the full children’s residential home record.`,
       "",
       "You can ask for:",
       "• a full summary",
@@ -647,7 +651,7 @@ function buildUnknownIntentPrompt() {
 
   if (scope === "home") {
     return [
-      `I’m ready to help with ${getHomeName()} across that home’s full OS record.`,
+      `I’m ready to help with ${getHomeName()} across the full home operating record.`,
       "",
       "You can ask for:",
       "• a full home summary",
@@ -664,7 +668,7 @@ function buildUnknownIntentPrompt() {
       getAccessLevelForScope("quality") === "provider"
         ? "all homes you oversee"
         : `${getHomeName()} quality and oversight`
-    } across the OS record set.`,
+    } across the OS evidence set.`,
     "",
     "You can ask for:",
     "• a quality summary",
@@ -944,6 +948,26 @@ function buildAssistantContextPayload(message = "") {
 
   return {
     assistant_type: "young_people_os",
+    assistant_identity: {
+      product_name: "IndiCare OS",
+      domain: "children_residential_home_operating_system",
+      reasoning_model: "ofsted_ri_manager_rsw_therapeutic",
+      answer_style: "evidence_led_children_home_operational_assistant",
+    },
+    response_contract: {
+      require_inline_citations: true,
+      citation_format: "[record_type:record_id]",
+      citation_density: "every_substantive_paragraph",
+      avoid_generic_policy_language: true,
+      prefer_children_home_operational_language: true,
+      separate_fact_pattern_action: true,
+      evidence_first: true,
+    },
+    inspection_framework: {
+      reference_children_homes_regulations: true,
+      reference_quality_standards: true,
+      reference_sccif: true,
+    },
     scope,
     scope_type: getAssistantScopeType(),
     access_level: accessLevel,
@@ -1057,6 +1081,18 @@ function buildSafeAssistantRequestPayload(payload) {
     response_mode: payload?.response_mode || "balanced",
     context: {
       assistant_type: context.assistant_type || "young_people_os",
+      assistant_identity:
+        context.assistant_identity && typeof context.assistant_identity === "object"
+          ? context.assistant_identity
+          : null,
+      response_contract:
+        context.response_contract && typeof context.response_contract === "object"
+          ? context.response_contract
+          : null,
+      inspection_framework:
+        context.inspection_framework && typeof context.inspection_framework === "object"
+          ? context.inspection_framework
+          : null,
       scope: context.scope || null,
       scope_type: context.scope_type || null,
       access_level: context.access_level || null,
@@ -1264,7 +1300,7 @@ export async function askAssistant(question) {
             ...(meta?.explainability || {}),
             reasoning_summary:
               meta?.explainability?.reasoning_summary ||
-              `Intent: ${contextPayload.assistant_intent}. Retrieval: ${contextPayload.retrieval_mode}. Output: ${contextPayload.output_mode}. Scope access: ${contextPayload.access_level}.`,
+              `This answer used a children’s residential home reasoning model with Ofsted, RI, manager, RSW and therapeutic lenses.`,
             ai_scrubber:
               scrubbed.meta?.enabled
                 ? "Client-side AI scrubber applied before outbound request."
