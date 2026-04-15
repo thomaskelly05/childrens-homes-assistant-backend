@@ -12,7 +12,7 @@ from auth.current_user import get_current_user
 from db.connection import get_db
 from services.ai_service import generate_ai_stream
 from services.assistant_orchestrator import build_assistant_prompt
-from services.report_scheduler import send_scheduled_report_now
+from services.report_scheduler import preview_report_snapshot, send_scheduled_report_now
 from services.young_person_service import YoungPersonService
 
 logger = logging.getLogger(__name__)
@@ -20,19 +20,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/assistant-api", tags=["Operational Assistant"])
 
 
-# ---------------------------------------------------------------------
-# Public assistant models
-# ---------------------------------------------------------------------
-
-
 class AssistantScope(BaseModel):
-    """
-    Public assistant scope.
-
-    We keep the request model tolerant so existing clients do not break,
-    but we explicitly block any non-global scope at runtime.
-    """
-
     model_config = ConfigDict(extra="forbid")
 
     scope_type: Literal["global", "young_person", "home", "quality"] = "global"
@@ -52,11 +40,6 @@ class AssistantPromptRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=3000)
     scope: AssistantScope | None = None
     history: list[dict[str, Any]] | None = None
-
-
-# ---------------------------------------------------------------------
-# Operational assistant models
-# ---------------------------------------------------------------------
 
 
 class YoungPersonAssistantContext(BaseModel):
@@ -154,11 +137,7 @@ class ReportSendPayload(BaseModel):
     access_level: str | None = None
     allowed_home_ids: list[int] | None = None
     provider_id: int | None = None
-
-
-# ---------------------------------------------------------------------
-# Shared helpers
-# ---------------------------------------------------------------------
+    force_refresh: bool | None = False
 
 
 def _safe_int(value: Any) -> int | None:
@@ -240,17 +219,7 @@ def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, s
     return safe_history
 
 
-# ---------------------------------------------------------------------
-# Public assistant scope enforcement
-# ---------------------------------------------------------------------
-
-
 def _normalise_public_scope(scope: AssistantScope | None) -> dict[str, Any]:
-    """
-    Enforce strict separation:
-    /assistant-api/context and /assistant-api/prompt are public assistant only.
-    """
-
     if scope is None:
         return {
             "scope_type": "global",
@@ -275,11 +244,6 @@ def _normalise_public_scope(scope: AssistantScope | None) -> dict[str, Any]:
         "home_id": None,
         "young_person_id": None,
     }
-
-
-# ---------------------------------------------------------------------
-# Operational access checks
-# ---------------------------------------------------------------------
 
 
 def _assert_home_access(
@@ -362,20 +326,18 @@ def _load_and_check_young_person(
     return record
 
 
-# ---------------------------------------------------------------------
-# Operational scope/context normalisation
-# ---------------------------------------------------------------------
-
-
 def _normalise_young_person_scope(
     payload: YoungPersonAssistantPayload,
     current_user: dict[str, Any],
 ) -> dict[str, Any]:
+    record = YoungPersonService.get_young_person_by_id(int(payload.context.young_person_id))
+    record_home_id = _safe_int((record or {}).get("home_id")) or _user_home_id(current_user)
+
     return {
         "scope_type": "young_person",
         "scope": "child",
         "access_level": "child",
-        "home_id": _user_home_id(current_user),
+        "home_id": record_home_id,
         "young_person_id": int(payload.context.young_person_id),
     }
 
@@ -510,11 +472,6 @@ def _normalise_quality_context(
         "start_date": payload.context.start_date,
         "end_date": payload.context.end_date,
     }
-
-
-# ---------------------------------------------------------------------
-# SSE helpers
-# ---------------------------------------------------------------------
 
 
 def _sse_message(data: str) -> str:
@@ -665,11 +622,6 @@ async def _stream_assistant_response(
         yield _sse_done()
 
 
-# ---------------------------------------------------------------------
-# Public assistant routes
-# ---------------------------------------------------------------------
-
-
 @router.post("/context")
 def get_assistant_context(
     payload: AssistantContextRequest,
@@ -759,11 +711,6 @@ def build_prompt(
         )
 
 
-# ---------------------------------------------------------------------
-# Young person assistant route
-# ---------------------------------------------------------------------
-
-
 @router.post("/young-people/assistant")
 async def ask_young_person_assistant(
     payload: YoungPersonAssistantPayload,
@@ -825,11 +772,6 @@ async def ask_young_person_assistant(
     )
 
 
-# ---------------------------------------------------------------------
-# Home assistant route
-# ---------------------------------------------------------------------
-
-
 @router.post("/home/assistant")
 async def ask_home_assistant(
     payload: HomeAssistantPayload,
@@ -887,11 +829,6 @@ async def ask_home_assistant(
             "X-Accel-Buffering": "no",
         },
     )
-
-
-# ---------------------------------------------------------------------
-# Quality assistant route
-# ---------------------------------------------------------------------
 
 
 @router.post("/quality/assistant")
@@ -964,26 +901,64 @@ async def ask_quality_assistant(
     )
 
 
-# ---------------------------------------------------------------------
-# Report routes
-# ---------------------------------------------------------------------
-
-
 @router.post("/reports/preview")
 async def preview_report(
     payload: HomeAssistantPayload,
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """
-    Preview a report through the home assistant flow.
-    The UI should pass message such as:
-    - "Generate monthly report"
-    - "Generate Reg 45 report"
-    - "Generate yearly overview"
-    along with start_date and end_date in context.
-    """
-    return await ask_home_assistant(payload, conn=conn, current_user=current_user)
+    try:
+        if not payload.context.start_date or not payload.context.end_date:
+            raise HTTPException(status_code=400, detail="start_date and end_date are required for report preview")
+
+        scope = _normalise_home_scope(payload, current_user)
+        user_id = _safe_user_id(current_user)
+
+        lowered = payload.message.lower()
+        report_type = (
+            "reg45"
+            if "reg 45" in lowered or "regulation 45" in lowered
+            else "yearly"
+            if "yearly" in lowered or "annual" in lowered
+            else "monthly"
+        )
+
+        result = preview_report_snapshot(
+            conn,
+            report_type=report_type,
+            home_id=scope.get("home_id"),
+            start_date=payload.context.start_date,
+            end_date=payload.context.end_date,
+            access_level=scope.get("access_level"),
+            allowed_home_ids=scope.get("allowed_home_ids"),
+            provider_id=scope.get("provider_id"),
+            generated_by=user_id,
+            force_refresh=False,
+        )
+
+        snapshot = result.get("snapshot") or {}
+
+        return {
+            "ok": True,
+            "preview": result.get("preview"),
+            "snapshot": {
+                "id": snapshot.get("id"),
+                "report_type": snapshot.get("report_type"),
+                "period_start": snapshot.get("period_start"),
+                "period_end": snapshot.get("period_end"),
+                "status": snapshot.get("status"),
+            },
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Failed to preview report")
+        raise HTTPException(status_code=500, detail=f"Failed to preview report: {str(exc)}")
 
 
 @router.post("/reports/send-now")
@@ -1017,6 +992,7 @@ async def send_report_now(
             allowed_home_ids=allowed_home_ids,
             provider_id=payload.provider_id or _user_provider_id(current_user),
             triggered_by_user_id=user_id,
+            force_refresh=bool(payload.force_refresh),
         )
 
         return {"ok": True, "result": result}
