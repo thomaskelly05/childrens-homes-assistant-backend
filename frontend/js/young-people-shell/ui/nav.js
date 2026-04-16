@@ -57,58 +57,58 @@ import { loadOnboarding } from "../features/onboarding.js";
 import { loadNotifications } from "../features/notifications.js";
 import { loadRota } from "../features/rota.js";
 
-const PLACEHOLDER_LOADER = async () => {
+const PLACEHOLDER_LOADER = async (sectionId = "") => {
   const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
-  await renderPlaceholderFeaturePage();
+  await renderPlaceholderFeaturePage(sectionId);
 };
 
 const SECTION_LOADERS = {
   workspace: loadWorkspace,
   overview: loadOverview,
-  admission: PLACEHOLDER_LOADER,
+  admission: () => PLACEHOLDER_LOADER("admission"),
   profile: loadProfile,
   timeline: loadTimeline,
   handover: loadHandover,
-  "daily-life": PLACEHOLDER_LOADER,
+  "daily-life": () => PLACEHOLDER_LOADER("daily-life"),
   health: loadHealth,
-  medication: PLACEHOLDER_LOADER,
+  medication: () => PLACEHOLDER_LOADER("medication"),
   education: loadEducation,
   family: loadFamily,
   calendar: loadCalendar,
   therapy: loadTherapy,
-  risk: PLACEHOLDER_LOADER,
-  safeguarding: PLACEHOLDER_LOADER,
-  "missing-from-care": PLACEHOLDER_LOADER,
+  risk: () => PLACEHOLDER_LOADER("risk"),
+  safeguarding: () => PLACEHOLDER_LOADER("safeguarding"),
+  "missing-from-care": () => PLACEHOLDER_LOADER("missing-from-care"),
   readiness: loadReadiness,
-  reviews: PLACEHOLDER_LOADER,
+  reviews: () => PLACEHOLDER_LOADER("reviews"),
   reports: loadReports,
-  transition: PLACEHOLDER_LOADER,
-  "leaving-care": PLACEHOLDER_LOADER,
+  transition: () => PLACEHOLDER_LOADER("transition"),
+  "leaving-care": () => PLACEHOLDER_LOADER("leaving-care"),
   documents: loadDocuments,
   communication: loadCommunication,
   manager: loadManager,
 
   "home-dashboard": loadHomeDashboard,
-  operations: PLACEHOLDER_LOADER,
+  operations: () => PLACEHOLDER_LOADER("operations"),
   team: loadTeam,
   rota: loadRota,
   "staff-profile": loadStaffProfile,
   onboarding: loadOnboarding,
   supervision: loadSupervision,
-  "training-centre": PLACEHOLDER_LOADER,
+  "training-centre": () => PLACEHOLDER_LOADER("training-centre"),
   compliance: loadCompliance,
-  "health-safety": PLACEHOLDER_LOADER,
-  maintenance: PLACEHOLDER_LOADER,
+  "health-safety": () => PLACEHOLDER_LOADER("health-safety"),
+  maintenance: () => PLACEHOLDER_LOADER("maintenance"),
   notifications: loadNotifications,
   quality: loadQualityDashboard,
-  "ofsted-readiness": PLACEHOLDER_LOADER,
-  policies: PLACEHOLDER_LOADER,
+  "ofsted-readiness": () => PLACEHOLDER_LOADER("ofsted-readiness"),
+  policies: () => PLACEHOLDER_LOADER("policies"),
 
-  "provider-overview": PLACEHOLDER_LOADER,
-  "quality-audits": PLACEHOLDER_LOADER,
-  reg44: PLACEHOLDER_LOADER,
-  reg45: PLACEHOLDER_LOADER,
-  "inspection-readiness": PLACEHOLDER_LOADER,
+  "provider-overview": () => PLACEHOLDER_LOADER("provider-overview"),
+  "quality-audits": () => PLACEHOLDER_LOADER("quality-audits"),
+  reg44: () => PLACEHOLDER_LOADER("reg44"),
+  reg45: () => PLACEHOLDER_LOADER("reg45"),
+  "inspection-readiness": () => PLACEHOLDER_LOADER("inspection-readiness"),
 };
 
 const ICON_MAP = {
@@ -136,7 +136,13 @@ const ICON_MAP = {
 const MOBILE_BOTTOM_BY_SCOPE = {
   child: ["workspace", "timeline", "health", "risk", "reviews"],
   home: ["home-dashboard", "operations", "rota", "compliance", "quality"],
-  quality: ["provider-overview", "quality", "compliance", "quality-audits", "inspection-readiness"],
+  quality: [
+    "provider-overview",
+    "quality",
+    "compliance",
+    "quality-audits",
+    "inspection-readiness",
+  ],
 };
 
 let navButtonsBound = false;
@@ -154,6 +160,7 @@ let workspaceMenusBound = false;
 let overlayDismissBound = false;
 let workspaceMenuLinksBound = false;
 let loadingSectionPromise = null;
+let lastLoadingSectionId = null;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -643,6 +650,7 @@ function bindOverlayDismiss() {
     if (event.target === recordDrawerBackdrop) {
       closeRecordDrawerOverlay();
     }
+
     if (
       recordDrawer &&
       !recordDrawer.classList.contains("hidden") &&
@@ -721,7 +729,10 @@ export async function loadSection(section) {
     ? section
     : getDefaultSectionForScope(scope);
 
-  if (loadingSectionPromise && safeSection === getCurrentSection()) {
+  if (
+    loadingSectionPromise &&
+    safeSection === lastLoadingSectionId
+  ) {
     return loadingSectionPromise;
   }
 
@@ -733,7 +744,7 @@ export async function loadSection(section) {
     return;
   }
 
-  const loader = SECTION_LOADERS[safeSection] || PLACEHOLDER_LOADER;
+  const loader = SECTION_LOADERS[safeSection] || (() => PLACEHOLDER_LOADER(safeSection));
 
   updateSectionState(safeSection);
   showWorkspaceScreen();
@@ -741,6 +752,7 @@ export async function loadSection(section) {
   clearStatus();
   resetWorkspaceSummaryStrip();
 
+  lastLoadingSectionId = safeSection;
   loadingSectionPromise = (async () => {
     try {
       await loader();
@@ -753,6 +765,7 @@ export async function loadSection(section) {
       resetWorkspaceSummaryStrip();
     } finally {
       loadingSectionPromise = null;
+      lastLoadingSectionId = null;
     }
   })();
 
@@ -812,7 +825,9 @@ function bindSelectorControls() {
       await loadYoungPersonSelector();
       clearStatus();
     } catch (error) {
-      showError(error?.message || "Failed to refresh children and young people.");
+      showError(
+        error?.message || "Failed to refresh children and young people."
+      );
     }
   });
 }
