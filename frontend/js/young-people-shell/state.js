@@ -2,6 +2,20 @@ export const DEFAULT_SECTION = "workspace";
 export const DEFAULT_SCOPE = "child";
 export const DEFAULT_ROLE = "staff";
 
+const VALID_SCOPES = new Set(["child", "home", "quality"]);
+
+function getValidScope(scope) {
+  const safeScope = String(scope || DEFAULT_SCOPE).trim().toLowerCase();
+  return VALID_SCOPES.has(safeScope) ? safeScope : DEFAULT_SCOPE;
+}
+
+function getScopeDefaultSection(scope = DEFAULT_SCOPE) {
+  const safeScope = getValidScope(scope);
+  if (safeScope === "home") return "home-dashboard";
+  if (safeScope === "quality") return "quality";
+  return DEFAULT_SECTION;
+}
+
 export function createAssistantMeta() {
   return {
     // UI / evidence
@@ -72,31 +86,61 @@ export function createAssistantBundleState() {
   };
 }
 
+function createUiState() {
+  return {
+    loading: false,
+    error: null,
+    mobileNavOpen: false,
+    assistantOpen: false,
+    assistantSending: false,
+    fullscreenPanelOpen: false,
+    recordDrawerOpen: false,
+  };
+}
+
+function createContextState() {
+  return {
+    homeId: null,
+    providerId: null,
+    allowedHomeIds: [],
+    currentUser: null,
+    userId: null,
+    staffId: null,
+  };
+}
+
+function createYoungPersonState() {
+  return {
+    youngPersonId: null,
+    selectedYoungPerson: null,
+    youngPerson: null,
+    youngPeople: [],
+    youngPeopleFilter: "",
+  };
+}
+
+function createSectionState(scope = DEFAULT_SCOPE) {
+  const section = getScopeDefaultSection(scope);
+  return {
+    currentSection: section,
+    activeSection: section,
+    currentView: section,
+  };
+}
+
 export const state = {
-  // Selected young person / workspace
-  youngPersonId: null,
-  selectedYoungPerson: null,
-  youngPerson: null,
-  youngPeople: [],
-  youngPeopleFilter: "",
+  // Selected child / workspace
+  ...createYoungPersonState(),
 
   // Current shell section / view
-  currentSection: DEFAULT_SECTION,
-  activeSection: DEFAULT_SECTION,
-  currentView: DEFAULT_SECTION,
+  ...createSectionState(DEFAULT_SCOPE),
 
   // Role / scope layer
   userRole: DEFAULT_ROLE,
   currentScope: DEFAULT_SCOPE,
 
   // General UI state
-  loading: false,
-  error: null,
-  mobileNavOpen: false,
-  assistantOpen: false,
-  assistantSending: false,
-  fullscreenPanelOpen: false,
-  recordDrawerOpen: false,
+  ...createUiState(),
 
   // Suggestions / linked follow-up state
   ...createSuggestionState(),
@@ -109,12 +153,7 @@ export const state = {
   activeRecordItem: null,
 
   // Runtime / context state
-  homeId: null,
-  providerId: null,
-  allowedHomeIds: [],
-  currentUser: null,
-  userId: null,
-  staffId: null,
+  ...createContextState(),
 
   // Assistant chat state
   assistantMessages: [],
@@ -191,9 +230,13 @@ export function getDefaultScopeForRole(role = state.userRole) {
 }
 
 export function getDefaultSectionForScope(scope = state.currentScope) {
-  if (scope === "home") return "home-dashboard";
-  if (scope === "quality") return "quality";
-  return DEFAULT_SECTION;
+  return getScopeDefaultSection(scope);
+}
+
+function syncSectionAliases(section) {
+  state.currentSection = section;
+  state.activeSection = section;
+  state.currentView = section;
 }
 
 export function resetAssistantState() {
@@ -207,18 +250,7 @@ export function resetAssistantState() {
   state.assistantRuntime = null;
   state.assistantExplainability = null;
 
-  state.scopeBundle = null;
-  state.scopeBundleLoadedAt = null;
-  state.scopeBundleLoading = false;
-  state.scopeBundleError = null;
-
-  state.latestChronology = [];
-  state.latestFacts = {};
-  state.latestCareDomains = {};
-  state.latestMorningBrief = null;
-  state.latestManagerBrief = null;
-  state.latestQualityBrief = null;
-  state.liveUpdates = [];
+  Object.assign(state, createAssistantBundleState());
 }
 
 export function resetComposerState() {
@@ -226,22 +258,11 @@ export function resetComposerState() {
     clearTimeout(state.autosaveTimer);
   }
 
-  const next = createComposerState();
-  state.composerOpen = next.composerOpen;
-  state.composerMode = next.composerMode;
-  state.composerRecordType = next.composerRecordType;
-  state.composerRecordId = next.composerRecordId;
-  state.composerEditItem = next.composerEditItem;
-  state.composerMeta = next.composerMeta;
-  state.autosaveTimer = next.autosaveTimer;
+  Object.assign(state, createComposerState());
 }
 
 export function resetSuggestionState() {
-  const next = createSuggestionState();
-  state.currentSuggestions = next.currentSuggestions;
-  state.currentSuggestionSource = next.currentSuggestionSource;
-  state.lastSavedRecord = next.lastSavedRecord;
-  state.suggestions = next.suggestions;
+  Object.assign(state, createSuggestionState());
 }
 
 export function resetActiveRecordState() {
@@ -251,29 +272,14 @@ export function resetActiveRecordState() {
 }
 
 export function resetWorkspaceState() {
-  state.youngPersonId = null;
-  state.selectedYoungPerson = null;
-  state.youngPerson = null;
-  state.youngPeopleFilter = "";
+  Object.assign(state, createYoungPersonState());
 
   state.currentScope = DEFAULT_SCOPE;
-  state.currentSection = DEFAULT_SECTION;
-  state.activeSection = DEFAULT_SECTION;
-  state.currentView = DEFAULT_SECTION;
+  state.userRole = DEFAULT_ROLE;
+  syncSectionAliases(getScopeDefaultSection(DEFAULT_SCOPE));
 
-  state.loading = false;
-  state.error = null;
-  state.mobileNavOpen = false;
-  state.assistantOpen = false;
-  state.assistantSending = false;
-  state.fullscreenPanelOpen = false;
-
-  state.homeId = null;
-  state.providerId = null;
-  state.allowedHomeIds = [];
-  state.currentUser = null;
-  state.userId = null;
-  state.staffId = null;
+  Object.assign(state, createUiState());
+  Object.assign(state, createContextState());
 
   resetSuggestionState();
   resetActiveRecordState();
@@ -287,22 +293,16 @@ export function clearRequestOptimisationState() {
 }
 
 export function setCurrentSection(section) {
-  const safeSection = section || getDefaultSectionForScope(state.currentScope);
-  state.currentSection = safeSection;
-  state.activeSection = safeSection;
-  state.currentView = safeSection;
+  const safeSection = section || getScopeDefaultSection(state.currentScope);
+  syncSectionAliases(safeSection);
 }
 
 export function setCurrentScope(scope, { resetSection = true } = {}) {
-  const safeScope =
-    scope === "home" || scope === "quality" || scope === "child"
-      ? scope
-      : DEFAULT_SCOPE;
-
+  const safeScope = getValidScope(scope);
   state.currentScope = safeScope;
 
   if (resetSection) {
-    setCurrentSection(getDefaultSectionForScope(safeScope));
+    syncSectionAliases(getScopeDefaultSection(safeScope));
   }
 }
 
@@ -357,6 +357,9 @@ export function setAssistantScopeBundle(bundle = null) {
   state.scopeBundle = bundle || null;
   state.scopeBundleLoadedAt = bundle ? new Date().toISOString() : null;
   state.scopeBundleError = null;
+
+  ensureAssistantMeta();
+  state.assistantMeta.last_bundle_refresh_at = state.scopeBundleLoadedAt;
 }
 
 export function setAssistantScopeBundleLoading(isLoading = false) {
