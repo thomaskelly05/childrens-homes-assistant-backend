@@ -6,7 +6,7 @@ let assistantUiBound = false;
 let citationEventsBound = false;
 
 const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w:-]*)\]/gi;
-const MAX_SOURCE_EXCERPT = 240;
+const MAX_SOURCE_EXCERPT = 180;
 
 function qs(id) {
   return document.getElementById(id);
@@ -145,10 +145,8 @@ function buildSourceMap() {
 
 function renderInlineText(text = "") {
   let html = escapeHtml(String(text || ""));
-
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
-
   return html;
 }
 
@@ -195,13 +193,6 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
   return parts.join("");
 }
 
-function normaliseAssistantLine(line = "") {
-  return String(line || "")
-    .replace(/^#{1,6}\s+/, "")
-    .replace(/^\d+\.\s+/, "")
-    .trim();
-}
-
 function renderAssistantRichText(text = "") {
   const sourceMap = buildSourceMap();
   const lines = String(text || "").split("\n");
@@ -215,36 +206,17 @@ function renderAssistantRichText(text = "") {
   };
 
   for (const rawLine of lines) {
-    const original = String(rawLine || "");
-    const trimmed = original.trim();
+    const trimmed = String(rawLine || "").trim();
 
     if (!trimmed) {
       flushList();
       continue;
     }
 
-    if (/^---+$/.test(trimmed)) {
-      flushList();
-      continue;
-    }
-
     if (/^[-*]\s+/.test(trimmed)) {
-      const itemText = trimmed.replace(/^[-*]\s+/, "");
-      listItems.push(renderParagraphWithCitations(itemText, sourceMap));
-      continue;
-    }
-
-    if (/^\d+\.\s+/.test(trimmed)) {
-      flushList();
-      const plainText = normaliseAssistantLine(trimmed);
-      blocks.push(`<p>${renderParagraphWithCitations(plainText, sourceMap)}</p>`);
-      continue;
-    }
-
-    if (/^#{1,6}\s+/.test(trimmed)) {
-      flushList();
-      const plainText = normaliseAssistantLine(trimmed);
-      blocks.push(`<p>${renderParagraphWithCitations(plainText, sourceMap)}</p>`);
+      listItems.push(
+        renderParagraphWithCitations(trimmed.replace(/^[-*]\s+/, ""), sourceMap)
+      );
       continue;
     }
 
@@ -298,96 +270,16 @@ function extractAssistantContent(message = {}) {
         return candidate;
       }
     }
-
-    if (Array.isArray(content.parts)) {
-      const joined = content.parts
-        .map((part) => {
-          if (typeof part === "string") return part;
-          if (part && typeof part.text === "string") return part.text;
-          if (part && typeof part.content === "string") return part.content;
-          return "";
-        })
-        .filter(Boolean)
-        .join("\n");
-
-      if (joined.trim()) return joined;
-    }
-  }
-
-  if (Array.isArray(message.parts)) {
-    const joined = message.parts
-      .map((part) => {
-        if (typeof part === "string") return part;
-        if (part && typeof part.text === "string") return part.text;
-        if (part && typeof part.content === "string") return part.content;
-        return "";
-      })
-      .filter(Boolean)
-      .join("\n");
-
-    if (joined.trim()) return joined;
   }
 
   return "";
 }
 
-function renderSourcesHtml(sources = []) {
-  if (!Array.isArray(sources) || !sources.length) {
-    return `<p>No sources available yet.</p>`;
-  }
-
-  return `
-    <div class="assistant-source-list">
-      ${sources
-        .map((source, index) => {
-          const citationRef = sourceCitationRef(source, index);
-          const title = escapeHtml(
-            source?.title || source?.label || source?.document_title || "Source"
-          );
-          const type = escapeHtml(source?.type || source?.record_type || "source");
-          const section = escapeHtml(source?.section || "");
-          const description = escapeHtml(
-            String(
-              source?.description || source?.excerpt || source?.summary || ""
-            ).slice(0, MAX_SOURCE_EXCERPT)
-          );
-
-          return `
-            <div
-              class="assistant-source-item"
-              id="${sourceSafeDomId(citationRef)}"
-              data-source-ref="${escapeHtml(citationRef)}"
-            >
-              <div class="assistant-source-item-title">${title}</div>
-              <div class="assistant-source-item-meta">
-                ${type}${section ? ` • ${section}` : ""} • ${escapeHtml(citationRef)}
-              </div>
-              ${
-                description
-                  ? `<div class="assistant-source-item-description">${description}</div>`
-                  : ""
-              }
-            </div>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
-function renderMessage(message = {}, index = 0, messages = []) {
+function renderMessage(message = {}) {
   const role = message.role || "assistant";
   const roleClass =
     role === "user" ? "assistant-message-user" : "assistant-message-system";
   const content = extractAssistantContent(message);
-
-  const assistantIndexes = messages
-    .map((item, i) => ({ item, i }))
-    .filter(({ item }) => item?.role === "assistant")
-    .map(({ i }) => i);
-
-  const isLastAssistantMessage =
-    role === "assistant" && index === assistantIndexes[assistantIndexes.length - 1];
 
   return `
     <article class="assistant-message ${escapeHtml(roleClass)}">
@@ -399,16 +291,6 @@ function renderMessage(message = {}, index = 0, messages = []) {
             : renderUserRichText(content)
         }
       </div>
-      ${
-        isLastAssistantMessage && getSources().length
-          ? `
-            <div class="assistant-inline-sources">
-              <div class="assistant-inline-sources-title">Sources</div>
-              ${renderSourcesHtml(getSources())}
-            </div>
-          `
-          : ""
-      }
     </article>
   `;
 }
@@ -423,17 +305,17 @@ function buildIntroMessageHtml() {
           ? state.youngPersonId
             ? `
               <p><strong>Ask about ${escapeHtml(getPersonLabel())}.</strong></p>
-              <p>You can ask for a full summary, chronology, important dates, risks, appointments, family contact themes, or a handover.</p>
+              <p>Try a summary, chronology, risks, appointments, family themes, or a handover.</p>
             `
-            : `<p>Select a young person to start.</p>`
+            : `<p>Select a young person to begin.</p>`
           : scope === "home"
           ? `
             <p><strong>Ask about ${escapeHtml(getHomeLabel())}.</strong></p>
-            <p>You can ask for staffing, compliance, chronology, overdue items, management priorities, or a full home summary.</p>
+            <p>Try staffing, compliance, chronology, overdue items, management priorities, or a home summary.</p>
           `
           : `
-            <p><strong>Ask about ${escapeHtml(getHomeLabel())} quality and oversight.</strong></p>
-            <p>You can ask for audit themes, compliance gaps, chronology, inspection readiness, or RI-focused summaries.</p>
+            <p><strong>Ask about quality and oversight.</strong></p>
+            <p>Try audit themes, compliance gaps, inspection readiness, or RI summaries.</p>
           `
       }
     </div>
@@ -443,12 +325,10 @@ function buildIntroMessageHtml() {
 function renderMessageList(host, messages = []) {
   if (!host) return;
 
-  const showIntro = !messages.length;
-
   host.innerHTML = `
-    ${showIntro ? buildIntroMessageHtml() : ""}
+    ${!messages.length ? buildIntroMessageHtml() : ""}
     <div class="assistant-history">
-      ${messages.map((message, index) => renderMessage(message, index, messages)).join("")}
+      ${messages.map((message) => renderMessage(message)).join("")}
     </div>
   `;
 
@@ -487,7 +367,7 @@ function renderScopeBadges() {
   }
 
   if (homeBadge) {
-    const showHome = scope === "home" || scope === "quality" || Boolean(homeName);
+    const showHome = scope !== "child";
     homeBadge.textContent = showHome ? homeName : "";
     homeBadge.classList.toggle("hidden", !showHome);
   }
@@ -504,7 +384,7 @@ function renderScopeBadges() {
   }
 
   if (modalHomeBadge) {
-    const showHome = scope === "home" || scope === "quality" || Boolean(homeName);
+    const showHome = scope !== "child";
     modalHomeBadge.textContent = showHome ? homeName : "";
     modalHomeBadge.classList.toggle("hidden", !showHome);
   }
@@ -523,23 +403,70 @@ function renderContextText() {
 
   if (!contextEl) return;
 
-  let contextText = "No context loaded.";
-
   if (scope === "child") {
-    contextText = state.youngPersonId
-      ? `Scoped to ${getPersonLabel()} • whole OS scope • section: ${section}`
+    contextEl.textContent = state.youngPersonId
+      ? `${getPersonLabel()} • ${section}`
       : "No young person selected.";
-  } else if (scope === "home") {
-    contextText = `Scoped to ${getHomeLabel()} • whole-home OS view • section: ${section}`;
-  } else if (scope === "quality") {
-    const homeIds = Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : [];
-    contextText =
-      state.userRole === "ri" || state.userRole === "admin"
-        ? `Scoped to provider quality oversight • ${homeIds.length || 1} home(s) • section: ${section}`
-        : `Scoped to ${getHomeLabel()} • quality and RI • section: ${section}`;
+    return;
   }
 
-  contextEl.textContent = contextText;
+  if (scope === "home") {
+    contextEl.textContent = `${getHomeLabel()} • ${section}`;
+    return;
+  }
+
+  const homeIds = Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : [];
+  contextEl.textContent =
+    state.userRole === "ri" || state.userRole === "admin"
+      ? `Provider quality view • ${homeIds.length || 1} home(s) • ${section}`
+      : `${getHomeLabel()} • quality • ${section}`;
+}
+
+function renderSourcesHtml(sources = []) {
+  if (!Array.isArray(sources) || !sources.length) {
+    return `<p class="assistant-muted">No sources yet.</p>`;
+  }
+
+  return `
+    <div class="assistant-source-list assistant-source-list--simple">
+      ${sources
+        .map((source, index) => {
+          const citationRef = sourceCitationRef(source, index);
+          const title = escapeHtml(
+            source?.title || source?.label || source?.document_title || "Source"
+          );
+          const meta = [
+            source?.record_type || source?.type || "",
+            source?.section || "",
+          ]
+            .filter(Boolean)
+            .map((item) => escapeHtml(String(item)))
+            .join(" • ");
+
+          const description = escapeHtml(
+            String(source?.description || source?.excerpt || source?.summary || "")
+              .slice(0, MAX_SOURCE_EXCERPT)
+          );
+
+          return `
+            <button
+              class="assistant-source-row"
+              id="${sourceSafeDomId(citationRef)}"
+              type="button"
+              data-source-ref="${escapeHtml(citationRef)}"
+            >
+              <div class="assistant-source-row-top">
+                <strong>${title}</strong>
+                <span>${escapeHtml(citationRef)}</span>
+              </div>
+              ${meta ? `<div class="assistant-source-row-meta">${meta}</div>` : ""}
+              ${description ? `<div class="assistant-source-row-text">${description}</div>` : ""}
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 function renderStandaloneSources() {
@@ -551,13 +478,60 @@ function renderStandaloneSources() {
     "assistantModalSources"
   );
 
-  if (sourcesEl) {
-    sourcesEl.innerHTML = html;
+  if (sourcesEl) sourcesEl.innerHTML = html;
+  if (modalSourcesEl) modalSourcesEl.innerHTML = html;
+}
+
+function renderSuggestedActions() {
+  const meta = getAssistantMeta();
+  const actions = Array.isArray(meta.suggested_actions)
+    ? meta.suggested_actions
+    : [];
+  const host = getEl(els.assistantSuggestions, "assistantSuggestions");
+
+  if (!host) return;
+
+  if (!actions.length) {
+    host.innerHTML = `<span class="chip">No actions yet</span>`;
+    return;
   }
 
-  if (modalSourcesEl) {
-    modalSourcesEl.innerHTML = html;
-  }
+  host.innerHTML = actions
+    .map((action) => {
+      const label =
+        typeof action === "string"
+          ? action
+          : action?.label || action?.title || action?.type || "Action";
+
+      return `<span class="chip">${escapeHtml(label)}</span>`;
+    })
+    .join("");
+}
+
+function renderScopeSummary() {
+  const host = getEl(els.assistantScopeSummary, "assistantScopeSummary");
+  if (!host) return;
+
+  const meta = getAssistantMeta();
+  const runtime = meta.runtime || {};
+  const scope = getCurrentScope();
+
+  host.innerHTML = `
+    <div class="assistant-scope-summary">
+      <div class="assistant-scope-summary-row">
+        <span>Scope</span>
+        <strong>${escapeHtml(scope)}</strong>
+      </div>
+      <div class="assistant-scope-summary-row">
+        <span>Section</span>
+        <strong>${escapeHtml(normaliseSectionLabel(getCurrentSection()))}</strong>
+      </div>
+      <div class="assistant-scope-summary-row">
+        <span>Evidence</span>
+        <strong>${escapeHtml(String(runtime.evidence_count || 0))}</strong>
+      </div>
+    </div>
+  `;
 }
 
 function syncAssistantVisibility() {
@@ -576,32 +550,21 @@ function syncAssistantVisibility() {
 function syncAssistantSendButtons() {
   const sending = Boolean(state.assistantSending);
 
-  if (els.assistantSendBtn) {
-    els.assistantSendBtn.disabled = sending;
-  }
-
-  if (els.assistantModalSendBtn) {
-    els.assistantModalSendBtn.disabled = sending;
-  }
+  if (els.assistantSendBtn) els.assistantSendBtn.disabled = sending;
+  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = sending;
 }
 
 function syncAssistantInputs() {
   const disabled = Boolean(state.assistantSending);
 
-  if (els.assistantInput) {
-    els.assistantInput.disabled = disabled;
-  }
-
-  if (els.assistantModalInput) {
-    els.assistantModalInput.disabled = disabled;
-  }
+  if (els.assistantInput) els.assistantInput.disabled = disabled;
+  if (els.assistantModalInput) els.assistantModalInput.disabled = disabled;
 }
 
 function scrollSourceIntoView(ref = "") {
   if (!ref) return;
 
   const sourceEl = document.getElementById(sourceSafeDomId(ref));
-
   if (!sourceEl) return;
 
   sourceEl.scrollIntoView({
@@ -612,7 +575,7 @@ function scrollSourceIntoView(ref = "") {
   sourceEl.classList.add("assistant-source-highlight");
   window.setTimeout(() => {
     sourceEl.classList.remove("assistant-source-highlight");
-  }, 1600);
+  }, 1200);
 }
 
 function bindCitationEvents() {
@@ -621,12 +584,17 @@ function bindCitationEvents() {
 
   document.addEventListener("click", (event) => {
     const citation = event.target.closest("[data-citation-ref]");
-    if (!citation) return;
+    if (citation) {
+      const ref = citation.getAttribute("data-citation-ref") || "";
+      if (ref) scrollSourceIntoView(ref);
+      return;
+    }
 
-    const ref = citation.getAttribute("data-citation-ref") || "";
-    if (!ref) return;
-
-    scrollSourceIntoView(ref);
+    const sourceRow = event.target.closest("[data-source-ref]");
+    if (sourceRow) {
+      const ref = sourceRow.getAttribute("data-source-ref") || "";
+      if (ref) scrollSourceIntoView(ref);
+    }
   });
 }
 
@@ -641,6 +609,8 @@ function renderAllAssistantUi() {
   renderContextText();
   renderMessages();
   renderStandaloneSources();
+  renderSuggestedActions();
+  renderScopeSummary();
 }
 
 export function bindAssistantUi() {
@@ -693,6 +663,7 @@ export function setAssistantSources(sources = []) {
 export function setAssistantRuntime(runtime = null) {
   const meta = getAssistantMeta();
   meta.runtime = runtime || {};
+  renderAllAssistantUi();
 }
 
 export function setAssistantExplainability(explainability = null) {
