@@ -245,6 +245,9 @@ def _normalise_sources(value: Any) -> list[dict]:
             "type": item.get("type"),
             "label": item.get("label"),
             "document_title": item.get("document_title"),
+            "title": item.get("title"),
+            "summary": item.get("summary"),
+            "description": item.get("description"),
             "section": item.get("section"),
             "page_number": item.get("page_number"),
             "excerpt": item.get("excerpt"),
@@ -274,6 +277,52 @@ def _normalise_sources(value: Any) -> list[dict]:
 
         seen.add(key)
         cleaned.append(source)
+
+    return cleaned
+
+
+def _normalise_evidence_index(value: Any, *, limit: int = 200) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+
+    cleaned: list[dict] = []
+    seen: set[str] = set()
+
+    for item in value[:limit]:
+        if not isinstance(item, dict):
+            continue
+
+        evidence = {
+            "citation_ref": item.get("citation_ref"),
+            "record_type": item.get("record_type"),
+            "record_id": item.get("record_id"),
+            "label": item.get("label"),
+            "title": item.get("title"),
+            "section": item.get("section"),
+            "excerpt": item.get("excerpt"),
+            "description": item.get("description"),
+            "event_at": item.get("event_at"),
+            "updated_at": item.get("updated_at"),
+            "url": item.get("url"),
+        }
+
+        key = "|".join(
+            str(evidence.get(k) or "")
+            for k in [
+                "citation_ref",
+                "record_type",
+                "record_id",
+                "label",
+                "section",
+                "url",
+            ]
+        )
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        cleaned.append(evidence)
 
     return cleaned
 
@@ -321,6 +370,7 @@ def _extract_structured_payload(value: Any) -> dict[str, Any] | None:
         "assistant_scope",
         "assistant_context",
         "suggested_actions",
+        "evidence_index",
     }
 
     if any(key in value for key in structured_keys):
@@ -514,6 +564,7 @@ async def generate_ai_stream(
     provider_assistant_scope: dict[str, Any] = {}
     provider_assistant_context: dict[str, Any] = {}
     provider_suggested_actions: list[Any] = []
+    provider_evidence_index: list[dict] = []
 
     try:
         async for content in provider.stream_chat(
@@ -578,6 +629,11 @@ async def generate_ai_stream(
                             structured.get("suggested_actions")
                         )
 
+                    if isinstance(structured.get("evidence_index"), list):
+                        provider_evidence_index = _normalise_evidence_index(
+                            structured.get("evidence_index")
+                        )
+
                     continue
 
                 token_text = _extract_text_from_provider_payload(content)
@@ -634,10 +690,16 @@ async def generate_ai_stream(
                     "guidance_search_skipped": skip_guidance_search,
                     "trimmed_history_count": len(trimmed_history),
                     "message_count": len(messages),
+                    "evidence_count": len(
+                        provider_evidence_index
+                        or runtime_payload.get("evidence_index")
+                        or []
+                    ),
                 },
             )
 
     final_sources = _normalise_sources(provider_meta_sources or sources_used)
+
     final_runtime = {
         **runtime_payload,
         **provider_runtime,
@@ -648,10 +710,21 @@ async def generate_ai_stream(
         "output_type": output_type,
         "safeguarding_level": safeguarding_level,
     }
+
     final_explainability = {
         **(explainability_payload or {}),
         **provider_explainability,
     }
+
+    final_evidence_index = _normalise_evidence_index(
+        provider_evidence_index
+        or final_runtime.get("evidence_index")
+        or []
+    )
+
+    if final_evidence_index:
+        final_runtime["evidence_index"] = final_evidence_index
+        final_runtime["evidence_items_loaded"] = len(final_evidence_index)
 
     meta_payload = {
         "type": "meta",
@@ -668,6 +741,9 @@ async def generate_ai_stream(
 
     if provider_suggested_actions:
         meta_payload["suggested_actions"] = provider_suggested_actions
+
+    if final_evidence_index:
+        meta_payload["evidence_index"] = final_evidence_index
 
     yield meta_payload
 
