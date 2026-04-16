@@ -44,14 +44,20 @@ function getCurrentHomeId() {
   );
 }
 
-function ensureScopeContext() {
-  const scope = getCurrentScope();
+function hasChildContext() {
+  return Boolean(state.youngPersonId);
+}
 
-  if (scope === "child") {
-    return Boolean(state.youngPersonId);
-  }
-
+function hasHomeContext() {
   return Boolean(getCurrentHomeId());
+}
+
+function ensureScopeContext() {
+  return getCurrentScope() === "child" ? hasChildContext() : hasHomeContext();
+}
+
+function getAllowedSectionsForScope(scope = getCurrentScope()) {
+  return SCOPE_SECTIONS?.[scope] || [];
 }
 
 function resolveRecordType(value = "") {
@@ -138,7 +144,6 @@ function resolveActionType(value = "") {
   const aliases = {
     create: "create_record",
     create_record: "create_record",
-
     create_task: "create_task",
 
     review: "review_record",
@@ -209,7 +214,7 @@ function normaliseActionKey(value = "") {
 }
 
 function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
-  const allowedSections = SCOPE_SECTIONS?.[scope] || [];
+  const allowedSections = getAllowedSectionsForScope(scope);
 
   if (scope === "child") {
     return true;
@@ -406,10 +411,6 @@ async function navigateToSection(section = "") {
   const scope = getCurrentScope();
   const safeSection = getSafeSectionForScope(section, scope);
 
-  state.currentSection = safeSection;
-  state.activeSection = safeSection;
-  state.currentView = safeSection;
-
   try {
     const navModule = await import("./nav.js");
     if (typeof navModule.loadSection === "function") {
@@ -572,7 +573,7 @@ function runImproveSuggestion(suggestion = {}) {
         improvement_prompt:
           suggestion.description ||
           suggestion.reason ||
-          "Improve clarity, completeness, and professional quality.",
+          "Improve clarity, completeness and professional quality.",
       },
     },
     targetType
@@ -629,21 +630,20 @@ async function runOpenSectionSuggestion(suggestion = {}) {
   return navigateToSection(targetSection);
 }
 
-function runOpenRecordSuggestion(suggestion = {}) {
-  const scope = getCurrentScope();
-  const targetType = resolveRecordType(
-    suggestion.record_type ||
-      suggestion.target_record_type ||
-      suggestion.source_record_type
-  );
+async function runOpenRecordSuggestion(suggestion = {}) {
+  const targetSection =
+    cleanText(suggestion.target_section) ||
+    inferSectionForRecordType(
+      resolveRecordType(
+        suggestion.record_type ||
+          suggestion.target_record_type ||
+          suggestion.source_record_type
+      )
+    );
 
-  if (!targetType) return false;
-  if (!ensureScopeContext()) return false;
-  if (!isActionAllowedInScope(targetType, scope)) return false;
+  if (!targetSection) return false;
 
-  const payload = buildDraftFromSuggestion(suggestion, targetType);
-  openComposerFor(targetType, "create", payload);
-  return true;
+  return navigateToSection(targetSection);
 }
 
 function runDraftSummarySuggestion(suggestion = {}) {
@@ -755,7 +755,8 @@ export async function runSuggestionAction(suggestion = {}) {
 }
 
 function getActionFromButton(button) {
-  const actionKey = button.dataset.quickAction || button.dataset.actionRouter || "";
+  const actionKey =
+    button.dataset.quickAction || button.dataset.actionRouter || "";
 
   return getActionForQuickButton(actionKey, {
     section: button.dataset.section || getCurrentSection(),
@@ -841,9 +842,10 @@ export function bindActionRouter({
     }
 
     const suggestion = buildSuggestionFromButton(suggestionButton);
+    const actionType = resolveActionType(suggestion.action_type);
     const didRun = await runSuggestionAction(suggestion);
 
-    if (didRun && resolveActionType(suggestion.action_type) === "open_section") {
+    if (didRun && actionType === "open_section") {
       onSectionChange?.(getCurrentSection());
     }
   });
