@@ -57,31 +57,58 @@ import { loadOnboarding } from "../features/onboarding.js";
 import { loadNotifications } from "../features/notifications.js";
 import { loadRota } from "../features/rota.js";
 
+const PLACEHOLDER_LOADER = async () => {
+  const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
+  await renderPlaceholderFeaturePage();
+};
+
 const SECTION_LOADERS = {
   workspace: loadWorkspace,
   overview: loadOverview,
+  admission: PLACEHOLDER_LOADER,
   profile: loadProfile,
   timeline: loadTimeline,
   handover: loadHandover,
-  reports: loadReports,
+  "daily-life": PLACEHOLDER_LOADER,
   health: loadHealth,
+  medication: PLACEHOLDER_LOADER,
   education: loadEducation,
   family: loadFamily,
   calendar: loadCalendar,
+  therapy: loadTherapy,
+  risk: PLACEHOLDER_LOADER,
+  safeguarding: PLACEHOLDER_LOADER,
+  "missing-from-care": PLACEHOLDER_LOADER,
   readiness: loadReadiness,
-  manager: loadManager,
+  reviews: PLACEHOLDER_LOADER,
+  reports: loadReports,
+  transition: PLACEHOLDER_LOADER,
+  "leaving-care": PLACEHOLDER_LOADER,
   documents: loadDocuments,
   communication: loadCommunication,
-  therapy: loadTherapy,
-  team: loadTeam,
-  supervision: loadSupervision,
-  compliance: loadCompliance,
+  manager: loadManager,
+
   "home-dashboard": loadHomeDashboard,
-  quality: loadQualityDashboard,
+  operations: PLACEHOLDER_LOADER,
+  team: loadTeam,
+  rota: loadRota,
   "staff-profile": loadStaffProfile,
   onboarding: loadOnboarding,
+  supervision: loadSupervision,
+  "training-centre": PLACEHOLDER_LOADER,
+  compliance: loadCompliance,
+  "health-safety": PLACEHOLDER_LOADER,
+  maintenance: PLACEHOLDER_LOADER,
   notifications: loadNotifications,
-  rota: loadRota,
+  quality: loadQualityDashboard,
+  "ofsted-readiness": PLACEHOLDER_LOADER,
+  policies: PLACEHOLDER_LOADER,
+
+  "provider-overview": PLACEHOLDER_LOADER,
+  "quality-audits": PLACEHOLDER_LOADER,
+  reg44: PLACEHOLDER_LOADER,
+  reg45: PLACEHOLDER_LOADER,
+  "inspection-readiness": PLACEHOLDER_LOADER,
 };
 
 const ICON_MAP = {
@@ -107,49 +134,9 @@ const ICON_MAP = {
 };
 
 const MOBILE_BOTTOM_BY_SCOPE = {
-  child: ["workspace", "timeline", "profile", "readiness", "manager"],
-  home: ["home-dashboard", "compliance", "reports", "team", "manager"],
-  quality: ["quality", "compliance", "reports", "team", "manager"],
-};
-
-const SECTION_TITLE_OVERRIDES = {
-  workspace: "Today at a glance",
-  overview: "What matters today",
-  timeline: "Timeline and recent events",
-  handover: "Handover",
-  reports: "Reports and reviews",
-  health: "Health overview",
-  education: "Education overview",
-  family: "Family and relationships",
-  calendar: "Calendar and appointments",
-  readiness: "Independence and readiness",
-  manager: "Manager review",
-  documents: "Documents",
-  communication: "Communication log",
-  therapy: "Therapeutic support",
-  team: "Team and staffing",
-  supervision: "Supervision and development",
-  compliance: "Compliance and statutory checks",
-  "home-dashboard": "Home dashboard",
-  quality: "Quality dashboard",
-  "staff-profile": "Staff profiles",
-  onboarding: "Recruitment and onboarding",
-  notifications: "Alerts and notifications",
-  rota: "Rota and cover",
-};
-
-const MENU_GROUP_TITLE_OVERRIDES = {
-  overview: "Dashboard",
-  records: "Daily recording",
-  safeguarding: "Safeguarding and risk",
-  health: "Health and wellbeing",
-  education: "Education and progress",
-  relationships: "Family and relationships",
-  planning: "Plans and actions",
-  documents: "Documents and reports",
-  operations: "Home operations",
-  workforce: "Staff and development",
-  quality: "Quality and compliance",
+  child: ["workspace", "timeline", "health", "risk", "reviews"],
+  home: ["home-dashboard", "operations", "rota", "compliance", "quality"],
+  quality: ["provider-overview", "quality", "compliance", "quality-audits", "inspection-readiness"],
 };
 
 let navButtonsBound = false;
@@ -190,18 +177,15 @@ function getCurrentSection() {
 }
 
 function getSectionLabel(item) {
-  if (!item) return "";
-  return SECTION_TITLE_OVERRIDES[item.id] || item.label || item.id;
+  return item?.label || item?.id || "";
 }
 
 function getSectionDescription(item) {
-  if (!item) return "";
-  return item.description || getSectionLabel(item);
+  return item?.description || getSectionLabel(item);
 }
 
 function getGroupTitle(group) {
-  if (!group) return "";
-  return MENU_GROUP_TITLE_OVERRIDES[group.id] || group.title || "";
+  return group?.title || "";
 }
 
 function isChildScope() {
@@ -749,13 +733,7 @@ export async function loadSection(section) {
     return;
   }
 
-  const loader = SECTION_LOADERS[safeSection];
-
-  if (!loader) {
-    showError(`Unknown section: ${safeSection}`);
-    resetWorkspaceSummaryStrip();
-    return;
-  }
+  const loader = SECTION_LOADERS[safeSection] || PLACEHOLDER_LOADER;
 
   updateSectionState(safeSection);
   showWorkspaceScreen();
@@ -994,6 +972,9 @@ function bindQuickActionRouter() {
   bindActionRouter({
     onMissingYoungPerson: () => {
       showError("Select a child or young person first.");
+    },
+    onMissingHomeContext: () => {
+      showError("Load a home context first.");
     },
   });
 }
