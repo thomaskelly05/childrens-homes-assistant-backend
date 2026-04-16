@@ -112,6 +112,46 @@ const MOBILE_BOTTOM_BY_SCOPE = {
   quality: ["quality", "compliance", "reports", "team", "manager"],
 };
 
+const SECTION_TITLE_OVERRIDES = {
+  workspace: "Today at a glance",
+  overview: "What matters today",
+  timeline: "Timeline and recent events",
+  handover: "Handover",
+  reports: "Reports and reviews",
+  health: "Health overview",
+  education: "Education overview",
+  family: "Family and relationships",
+  calendar: "Calendar and appointments",
+  readiness: "Independence and readiness",
+  manager: "Manager review",
+  documents: "Documents",
+  communication: "Communication log",
+  therapy: "Therapeutic support",
+  team: "Team and staffing",
+  supervision: "Supervision and development",
+  compliance: "Compliance and statutory checks",
+  "home-dashboard": "Home dashboard",
+  quality: "Quality dashboard",
+  "staff-profile": "Staff profiles",
+  onboarding: "Recruitment and onboarding",
+  notifications: "Alerts and notifications",
+  rota: "Rota and cover",
+};
+
+const MENU_GROUP_TITLE_OVERRIDES = {
+  overview: "Dashboard",
+  records: "Daily recording",
+  safeguarding: "Safeguarding and risk",
+  health: "Health and wellbeing",
+  education: "Education and progress",
+  relationships: "Family and relationships",
+  planning: "Plans and actions",
+  documents: "Documents and reports",
+  operations: "Home operations",
+  workforce: "Staff and development",
+  quality: "Quality and compliance",
+};
+
 let navButtonsBound = false;
 let selectorControlsBound = false;
 let composerControlsBound = false;
@@ -126,6 +166,7 @@ let scopeSwitchBound = false;
 let workspaceMenusBound = false;
 let overlayDismissBound = false;
 let workspaceMenuLinksBound = false;
+let loadingSectionPromise = null;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -146,6 +187,21 @@ function getCurrentSection() {
     state.currentView ||
     getDefaultSectionForScope()
   );
+}
+
+function getSectionLabel(item) {
+  if (!item) return "";
+  return SECTION_TITLE_OVERRIDES[item.id] || item.label || item.id;
+}
+
+function getSectionDescription(item) {
+  if (!item) return "";
+  return item.description || getSectionLabel(item);
+}
+
+function getGroupTitle(group) {
+  if (!group) return "";
+  return MENU_GROUP_TITLE_OVERRIDES[group.id] || group.title || "";
 }
 
 function isChildScope() {
@@ -176,6 +232,8 @@ function ensureValidCurrentSection() {
 
   const fallback = getDefaultSectionForScope(scope);
   setCurrentSection(fallback);
+  state.activeSection = fallback;
+  state.currentView = fallback;
   return fallback;
 }
 
@@ -185,6 +243,7 @@ function getScopedNavGroups() {
   return (NAV_GROUPS_CONFIG || [])
     .map((group) => ({
       ...group,
+      title: getGroupTitle(group),
       items: (group.items || []).filter((item) => allowed.has(item.id)),
     }))
     .filter((group) => group.items.length > 0);
@@ -202,8 +261,8 @@ function getMobileBottomSections() {
 
 function renderNavItem(item, { compact = false } = {}) {
   const isActive = item.id === getCurrentSection();
-  const description = item.description || item.label || item.id;
-  const label = item.label || item.id;
+  const label = getSectionLabel(item);
+  const description = getSectionDescription(item);
   const meta = compact
     ? ""
     : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
@@ -268,14 +327,14 @@ function buildMobileBottomBarHtml() {
           data-nav-key="${escapeHtml(item.id)}"
           data-view-key="${escapeHtml(item.id)}"
           aria-pressed="${isActive ? "true" : "false"}"
-          title="${escapeHtml(item.label || item.id)}"
+          title="${escapeHtml(getSectionLabel(item))}"
         >
           <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(
             getNavIcon(item.icon)
           )}</span>
           <span class="nav-btn-copy">
             <span class="nav-btn-label">${escapeHtml(
-              item.short_label || item.label || item.id
+              item.short_label || getSectionLabel(item)
             )}</span>
           </span>
         </button>
@@ -285,7 +344,8 @@ function buildMobileBottomBarHtml() {
 }
 
 function syncDesktopSidebarChrome() {
-  const workspaceShell = els.workspaceShell || document.getElementById("workspaceShell");
+  const workspaceShell =
+    els.workspaceShell || document.getElementById("workspaceShell");
   const sidebar = document.querySelector(".workspace-sidebar");
   const desktopNav = els.desktopNav || document.getElementById("desktopNav");
 
@@ -403,10 +463,12 @@ function markActiveScopeButtons() {
 
 function updateSectionState(section) {
   setCurrentSection(section);
+  state.activeSection = section;
+  state.currentView = section;
 }
 
 function requireChildContext() {
-  return Boolean(state.youngPersonId);
+  return Boolean(state.youngPersonId || state.selectedYoungPerson?.id);
 }
 
 function getWorkspaceMenus() {
@@ -624,6 +686,22 @@ function bindOverlayDismiss() {
   });
 }
 
+async function runAssistantScopeSync() {
+  try {
+    await onAssistantScopeChanged();
+  } catch (error) {
+    console.error("[nav] assistant scope change failed", error);
+  }
+}
+
+function paintNavigationChrome() {
+  renderNavigation();
+  markActiveNav(getCurrentSection());
+  markActiveScopeButtons();
+  updateSectionChrome(getCurrentSection());
+  updateYoungPersonChrome(state.selectedYoungPerson || {});
+}
+
 async function applyScopeChange(scope) {
   const safeScope =
     scope === "home" || scope === "quality" || scope === "child"
@@ -631,12 +709,8 @@ async function applyScopeChange(scope) {
       : "child";
 
   setCurrentScope(safeScope);
-
-  renderNavigation();
-  markActiveNav(getCurrentSection());
-  markActiveScopeButtons();
-  updateSectionChrome(getCurrentSection());
-  updateYoungPersonChrome(state.selectedYoungPerson || {});
+  ensureValidCurrentSection();
+  paintNavigationChrome();
   clearStatus();
   resetWorkspaceSummaryStrip();
 
@@ -652,13 +726,7 @@ async function applyScopeChange(scope) {
   }
 
   showWorkspaceScreen();
-
-  try {
-    await onAssistantScopeChanged();
-  } catch (error) {
-    console.error("[nav] assistant scope change failed", error);
-  }
-
+  await runAssistantScopeSync();
   renderAssistantControllerPanels();
   await loadSection(getCurrentSection());
 }
@@ -669,8 +737,12 @@ export async function loadSection(section) {
     ? section
     : getDefaultSectionForScope(scope);
 
+  if (loadingSectionPromise && safeSection === getCurrentSection()) {
+    return loadingSectionPromise;
+  }
+
   if (scope === "child" && !requireChildContext()) {
-    showError("Select a young person first.");
+    showError("Select a child or young person first.");
     showSelectorScreen();
     resetWorkspaceSummaryStrip();
     renderAssistantControllerPanels();
@@ -686,26 +758,27 @@ export async function loadSection(section) {
   }
 
   updateSectionState(safeSection);
-
   showWorkspaceScreen();
-  renderNavigation();
-  markActiveNav(safeSection);
-  markActiveScopeButtons();
-  updateSectionChrome(safeSection);
-  updateYoungPersonChrome(state.selectedYoungPerson || {});
+  paintNavigationChrome();
   clearStatus();
   resetWorkspaceSummaryStrip();
 
-  try {
-    await loader();
-    closeMobileNav();
-    closeAllWorkspaceMenus();
-    renderAssistantControllerPanels();
-  } catch (error) {
-    console.error(`[nav] failed loading section "${safeSection}"`, error);
-    showError(error?.message || "Failed to load this section.");
-    resetWorkspaceSummaryStrip();
-  }
+  loadingSectionPromise = (async () => {
+    try {
+      await loader();
+      closeMobileNav();
+      closeAllWorkspaceMenus();
+      renderAssistantControllerPanels();
+    } catch (error) {
+      console.error(`[nav] failed loading section "${safeSection}"`, error);
+      showError(error?.message || "Failed to load this section.");
+      resetWorkspaceSummaryStrip();
+    } finally {
+      loadingSectionPromise = null;
+    }
+  })();
+
+  return loadingSectionPromise;
 }
 
 export async function reloadCurrentSection() {
@@ -761,7 +834,7 @@ function bindSelectorControls() {
       await loadYoungPersonSelector();
       clearStatus();
     } catch (error) {
-      showError(error?.message || "Failed to refresh young people.");
+      showError(error?.message || "Failed to refresh children and young people.");
     }
   });
 }
@@ -880,21 +953,10 @@ function bindYoungPersonOpen() {
       await openYoungPerson(id);
 
       showWorkspaceScreen();
-      renderNavigation();
-      updateYoungPersonChrome(state.selectedYoungPerson || {});
-      updateSectionChrome(getCurrentSection());
+      paintNavigationChrome();
       clearStatus();
       resetWorkspaceSummaryStrip();
-
-      markActiveNav(getCurrentSection());
-      markActiveScopeButtons();
-
-      try {
-        await onAssistantScopeChanged();
-      } catch (error) {
-        console.error("[nav] assistant scope update failed", error);
-      }
-
+      await runAssistantScopeSync();
       await loadSection(getCurrentSection());
     } catch (error) {
       console.error("[nav] open young person failed", error);
@@ -931,7 +993,7 @@ function bindQuickActionRouter() {
 
   bindActionRouter({
     onMissingYoungPerson: () => {
-      showError("Select a young person first.");
+      showError("Select a child or young person first.");
     },
   });
 }
@@ -961,10 +1023,7 @@ export function bindNavEvents() {
 
 export function rerenderNavigationForScope() {
   ensureValidCurrentSection();
-  renderNavigation();
-  markActiveNav(getCurrentSection());
-  markActiveScopeButtons();
-  updateSectionChrome(getCurrentSection());
+  paintNavigationChrome();
   renderAssistantControllerPanels();
 }
 
@@ -999,20 +1058,14 @@ export async function initialiseShellNavigation() {
       renderAssistantControllerPanels();
     } catch (error) {
       console.error("[nav] selector load failed", error);
-      showError(error?.message || "Unable to load young people.");
+      showError(error?.message || "Unable to load children and young people.");
     }
     return;
   }
 
   try {
     showWorkspaceScreen();
-
-    try {
-      await onAssistantScopeChanged();
-    } catch (error) {
-      console.error("[nav] assistant scope init failed", error);
-    }
-
+    await runAssistantScopeSync();
     await loadSection(getCurrentSection());
   } catch (error) {
     console.error("[nav] initial section load failed", error);
