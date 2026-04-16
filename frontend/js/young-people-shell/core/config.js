@@ -30,77 +30,120 @@ export const SCOPE_SECTIONS = Object.freeze({
   child: [
     "workspace",
     "overview",
+    "admission",
     "profile",
     "timeline",
     "handover",
+    "daily-life",
     "health",
+    "medication",
     "education",
     "family",
     "calendar",
+    "therapy",
+    "risk",
+    "safeguarding",
+    "missing-from-care",
     "readiness",
-    "manager",
+    "reviews",
     "reports",
+    "transition",
+    "leaving-care",
     "documents",
     "communication",
-    "therapy",
+    "manager",
   ],
   home: [
     "home-dashboard",
-    "compliance",
-    "staff-profile",
-    "onboarding",
-    "notifications",
-    "rota",
-    "manager",
-    "reports",
+    "operations",
     "calendar",
     "team",
+    "rota",
+    "staff-profile",
+    "onboarding",
     "supervision",
-    "communication",
+    "training-centre",
+    "compliance",
+    "health-safety",
+    "maintenance",
+    "notifications",
+    "manager",
+    "quality",
+    "reports",
+    "ofsted-readiness",
+    "policies",
     "documents",
+    "communication",
   ],
   quality: [
     "quality",
+    "provider-overview",
     "compliance",
+    "quality-audits",
+    "reg44",
+    "reg45",
+    "inspection-readiness",
     "staff-profile",
     "onboarding",
-    "notifications",
-    "rota",
-    "reports",
-    "manager",
-    "calendar",
-    "team",
     "supervision",
-    "communication",
+    "training-centre",
+    "team",
+    "rota",
+    "notifications",
+    "reports",
+    "policies",
     "documents",
+    "communication",
   ],
 });
 
 export const SECTION_TITLES = Object.freeze({
   workspace: "Today at a glance",
   overview: "What matters today",
+  admission: "Admission and planning",
   profile: "About this child",
   timeline: "Timeline and recent events",
   handover: "Handover",
+  "daily-life": "Daily life in placement",
   health: "Health overview",
+  medication: "Medication and treatment",
   education: "Education overview",
   family: "Family and relationships",
   calendar: "Calendar and appointments",
+  therapy: "Therapeutic support",
+  risk: "Risk assessment",
+  safeguarding: "Safeguarding",
+  "missing-from-care": "Missing from care",
   readiness: "Independence and readiness",
-  manager: "Manager review",
+  reviews: "Reviews and outcomes",
   reports: "Reports and reviews",
+  transition: "Transition planning",
+  "leaving-care": "Leaving placement",
   documents: "Documents",
   communication: "Communication log",
-  therapy: "Therapeutic support",
+  manager: "Manager review",
+
   "home-dashboard": "Home dashboard",
+  operations: "Daily operations",
   team: "Team and staffing",
-  supervision: "Supervision and development",
-  compliance: "Compliance and statutory checks",
-  quality: "Quality dashboard",
+  rota: "Rota and cover",
   "staff-profile": "Staff profiles",
   onboarding: "Recruitment and onboarding",
+  supervision: "Supervision and development",
+  "training-centre": "Training and compliance",
+  compliance: "Compliance and statutory checks",
+  "health-safety": "Health and safety",
+  maintenance: "Maintenance and environment",
   notifications: "Alerts and notifications",
-  rota: "Rota and cover",
+  quality: "Quality dashboard",
+  "ofsted-readiness": "Ofsted readiness",
+  policies: "Policies and guidance",
+
+  "provider-overview": "Provider overview",
+  "quality-audits": "Quality audits",
+  reg44: "Regulation 44",
+  reg45: "Regulation 45",
+  "inspection-readiness": "Inspection readiness",
 });
 
 export const SECTION_SUBTITLES = Object.freeze({
@@ -108,56 +151,98 @@ export const SECTION_SUBTITLES = Object.freeze({
     "A calm, practical space to record, reflect, safeguard and respond to what matters today.",
   overview:
     "A clear picture of strengths, risks, priorities, progress and next steps.",
+  admission:
+    "Admission tasks, planning, baseline needs, risk and welcome arrangements.",
   profile:
     "Identity, communication, needs, strengths and what adults should hold in mind.",
   timeline:
     "A shared view of significant events, patterns, progress and concerns over time.",
   handover:
     "Support safe, thoughtful communication between adults across the shift.",
+  "daily-life":
+    "Daily routines, notes, appointments, achievements and life in placement.",
   health:
     "Health needs, appointments, professionals, outcomes and follow-up.",
+  medication:
+    "Medication administration, treatment plans, audits and health follow-up.",
   education:
     "Learning, attendance, support, strengths and educational experience.",
   family:
     "Family contact, important relationships and how these are experienced.",
   calendar:
     "Appointments, meetings and important dates that shape the week.",
+  therapy:
+    "Therapeutic input, recommendations, outcomes and emotional wellbeing support.",
+  risk:
+    "Risk assessments, triggers, protective factors and response guidance.",
+  safeguarding:
+    "Safeguarding concerns, referrals, linked actions and oversight.",
+  "missing-from-care":
+    "Missing episodes, returns, patterns, response quality and follow-up.",
   readiness:
-    "Actions, practical tasks, preparation and follow-up that need attention.",
-  manager:
-    "Oversight, management review, decision-making and quality assurance.",
+    "Actions, practical tasks, independence work, preparation and follow-up.",
+  reviews:
+    "Review preparation, outcomes tracking, progress themes and next steps.",
   reports:
     "Structured summaries, reports and review outputs for the child or service.",
+  transition:
+    "Planning for change, independence, step-down and future moves.",
+  "leaving-care":
+    "Leaving placement planning, closure work, summaries and ending well.",
   documents:
     "Upload, organise and review statutory and supporting documents.",
   communication:
     "Track communication with professionals, families and partner agencies.",
-  therapy:
-    "Therapeutic input, recommendations, outcomes and emotional wellbeing support.",
+  manager:
+    "Oversight, management review, decision-making and quality assurance.",
+
   "home-dashboard":
     "A whole-home operational view for managers and senior staff.",
+  operations:
+    "Daily running of the home, live issues, occupancy, shift visibility and priorities.",
   team:
     "Team capacity, staffing, deployment and workforce context.",
-  supervision:
-    "Supervision, training, appraisal, development and workforce support.",
-  compliance:
-    "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness.",
-  quality:
-    "Quality assurance, audits, trends, RI oversight and service performance.",
+  rota:
+    "A live rota view across cover, absences, shift leads, agency use and gaps.",
   "staff-profile":
     "A live workforce view across staff roles, files, checks, training and readiness.",
   onboarding:
     "Track recruitment checks, induction, probation and safer recruitment progress.",
+  supervision:
+    "Supervision, training, appraisal, development and workforce support.",
+  "training-centre":
+    "Mandatory training, role development, compliance and workforce learning needs.",
+  compliance:
+    "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness.",
+  "health-safety":
+    "Fire, premises, risk controls, safety checks and environmental readiness.",
+  maintenance:
+    "Repairs, environment standards, premises issues and follow-up actions.",
   notifications:
     "A live action layer for reminders, escalations, acknowledgements and workforce follow-up.",
-  rota:
-    "A live rota view across cover, absences, shift leads, agency use and gaps.",
+  quality:
+    "Quality assurance, audits, trends, RI oversight and service performance.",
+  "ofsted-readiness":
+    "Inspection preparation, evidence, action tracking and readiness across the home.",
+  policies:
+    "Policy library, review dates, guidance and practice standards across the service.",
+
+  "provider-overview":
+    "A cross-home quality and operational overview for provider and senior leaders.",
+  "quality-audits":
+    "Internal audit activity, findings, action plans and progress against improvement themes.",
+  reg44:
+    "Independent visit preparation, evidence collation, themes and resulting actions.",
+  reg45:
+    "Quality of care review planning, evidence, analysis and improvement actions.",
+  "inspection-readiness":
+    "Inspection evidence, gaps, readiness tracking and regulator-facing preparation.",
 });
 
 const NAV_GROUPS = [
   {
-    id: "dashboard",
-    title: "Dashboard",
+    id: "child_dashboard",
+    title: "Child dashboard",
     items: [
       {
         id: "workspace",
@@ -192,9 +277,17 @@ const NAV_GROUPS = [
     ],
   },
   {
-    id: "daily_recording",
-    title: "Daily recording",
+    id: "child_admission_and_life",
+    title: "Admission and daily life",
     items: [
+      {
+        id: "admission",
+        label: "Admission and planning",
+        short_label: "Admission",
+        icon: "clipboard-check",
+        description:
+          "Admission checklist, planning, baseline information and welcome arrangements.",
+      },
       {
         id: "handover",
         label: "Handover",
@@ -204,6 +297,14 @@ const NAV_GROUPS = [
           "Support smooth, thoughtful communication between adults.",
       },
       {
+        id: "daily-life",
+        label: "Daily life in placement",
+        short_label: "Daily life",
+        icon: "home",
+        description:
+          "Daily routines, notes, appointments, achievements and life in placement.",
+      },
+      {
         id: "communication",
         label: "Communication log",
         short_label: "Comms",
@@ -211,19 +312,11 @@ const NAV_GROUPS = [
         description:
           "Professional liaison, family contact and important communication trails.",
       },
-      {
-        id: "documents",
-        label: "Documents",
-        short_label: "Documents",
-        icon: "folder",
-        description:
-          "Statutory documents, uploads and important child or service records.",
-      },
     ],
   },
   {
-    id: "child_and_family",
-    title: "Family and relationships",
+    id: "child_identity_and_family",
+    title: "Identity and family",
     items: [
       {
         id: "profile",
@@ -241,10 +334,18 @@ const NAV_GROUPS = [
         description:
           "Family contact, important relationships and how contact is experienced.",
       },
+      {
+        id: "documents",
+        label: "Documents",
+        short_label: "Documents",
+        icon: "folder",
+        description:
+          "Statutory documents, uploads and important child records.",
+      },
     ],
   },
   {
-    id: "health_and_progress",
+    id: "child_health_and_progress",
     title: "Health and progress",
     items: [
       {
@@ -254,6 +355,14 @@ const NAV_GROUPS = [
         icon: "heart-pulse",
         description:
           "Health needs, professionals, appointments, outcomes and follow-up.",
+      },
+      {
+        id: "medication",
+        label: "Medication and treatment",
+        short_label: "Medication",
+        icon: "heart-pulse",
+        description:
+          "Medication administration, treatment plans and health monitoring.",
       },
       {
         id: "education",
@@ -282,9 +391,41 @@ const NAV_GROUPS = [
     ],
   },
   {
-    id: "planning_and_review",
-    title: "Plans and actions",
+    id: "child_risk_and_review",
+    title: "Risk and review",
     items: [
+      {
+        id: "risk",
+        label: "Risk assessment",
+        short_label: "Risk",
+        icon: "shield-check",
+        description:
+          "Risk assessments, triggers, protective factors and response guidance.",
+      },
+      {
+        id: "safeguarding",
+        label: "Safeguarding",
+        short_label: "Safeguarding",
+        icon: "badge-check",
+        description:
+          "Safeguarding concerns, referrals, linked actions and oversight.",
+      },
+      {
+        id: "missing-from-care",
+        label: "Missing from care",
+        short_label: "Missing",
+        icon: "repeat",
+        description:
+          "Missing episodes, returns, patterns and follow-up.",
+      },
+      {
+        id: "reviews",
+        label: "Reviews and outcomes",
+        short_label: "Reviews",
+        icon: "file-text",
+        description:
+          "Review preparation, outcomes tracking and next steps.",
+      },
       {
         id: "reports",
         label: "Reports and reviews",
@@ -304,6 +445,28 @@ const NAV_GROUPS = [
     ],
   },
   {
+    id: "child_transition",
+    title: "Transition and leaving",
+    items: [
+      {
+        id: "transition",
+        label: "Transition planning",
+        short_label: "Transition",
+        icon: "repeat",
+        description:
+          "Planning for change, independence, step-down and future moves.",
+      },
+      {
+        id: "leaving-care",
+        label: "Leaving placement",
+        short_label: "Leaving",
+        icon: "home",
+        description:
+          "Leaving placement planning, summaries and ending well.",
+      },
+    ],
+  },
+  {
     id: "home_operations",
     title: "Home operations",
     items: [
@@ -314,6 +477,14 @@ const NAV_GROUPS = [
         icon: "building-2",
         description:
           "A whole-home dashboard with live operational visibility.",
+      },
+      {
+        id: "operations",
+        label: "Daily operations",
+        short_label: "Operations",
+        icon: "layout-dashboard",
+        description:
+          "Live events, shift visibility, occupancy and daily priorities across the home.",
       },
       {
         id: "rota",
@@ -342,7 +513,7 @@ const NAV_GROUPS = [
     ],
   },
   {
-    id: "staff_and_development",
+    id: "home_staff_and_development",
     title: "Staff and development",
     items: [
       {
@@ -369,11 +540,19 @@ const NAV_GROUPS = [
         description:
           "Supervisions, appraisals, capability, training and workforce support.",
       },
+      {
+        id: "training-centre",
+        label: "Training and compliance",
+        short_label: "Training",
+        icon: "graduation-cap",
+        description:
+          "Mandatory training, role development and workforce learning needs.",
+      },
     ],
   },
   {
-    id: "quality_and_compliance",
-    title: "Quality and compliance",
+    id: "home_compliance_and_quality",
+    title: "Compliance and quality",
     items: [
       {
         id: "compliance",
@@ -381,7 +560,23 @@ const NAV_GROUPS = [
         short_label: "Compliance",
         icon: "badge-check",
         description:
-          "Compliance across staff files, supervisions, training, statutory paperwork and inspection readiness.",
+          "Compliance across staff files, children’s files, statutory paperwork and inspection readiness.",
+      },
+      {
+        id: "health-safety",
+        label: "Health and safety",
+        short_label: "H&S",
+        icon: "shield-check",
+        description:
+          "Fire, premises, risk controls, safety checks and environmental readiness.",
+      },
+      {
+        id: "maintenance",
+        label: "Maintenance and environment",
+        short_label: "Maintenance",
+        icon: "building-2",
+        description:
+          "Repairs, environment standards, premises issues and follow-up actions.",
       },
       {
         id: "quality",
@@ -390,6 +585,210 @@ const NAV_GROUPS = [
         icon: "bar-chart-3",
         description:
           "Quality assurance, audits, trends, RI oversight and service standards.",
+      },
+      {
+        id: "reports",
+        label: "Reports and reviews",
+        short_label: "Reports",
+        icon: "file-text",
+        description:
+          "Home reports, reviews and structured management outputs.",
+      },
+      {
+        id: "ofsted-readiness",
+        label: "Ofsted readiness",
+        short_label: "Ofsted",
+        icon: "clipboard-check",
+        description:
+          "Inspection evidence, gaps, action tracking and readiness across the home.",
+      },
+      {
+        id: "policies",
+        label: "Policies and guidance",
+        short_label: "Policies",
+        icon: "folder",
+        description:
+          "Policy library, review dates, guidance and practice standards.",
+      },
+      {
+        id: "documents",
+        label: "Documents",
+        short_label: "Documents",
+        icon: "folder",
+        description:
+          "Home documents, evidence packs and supporting records.",
+      },
+      {
+        id: "communication",
+        label: "Communication log",
+        short_label: "Comms",
+        icon: "messages-square",
+        description:
+          "Communication with professionals, families, providers and partner agencies.",
+      },
+      {
+        id: "manager",
+        label: "Manager review",
+        short_label: "Manager",
+        icon: "clipboard-check",
+        description:
+          "Home oversight, decision-making and management actions.",
+      },
+    ],
+  },
+  {
+    id: "quality_provider_and_audit",
+    title: "Provider and oversight",
+    items: [
+      {
+        id: "provider-overview",
+        label: "Provider overview",
+        short_label: "Provider",
+        icon: "building-2",
+        description:
+          "A cross-home quality and operational overview for provider and senior leaders.",
+      },
+      {
+        id: "quality",
+        label: "Quality dashboard",
+        short_label: "Quality",
+        icon: "bar-chart-3",
+        description:
+          "Quality assurance, audits, trends, RI oversight and service performance.",
+      },
+      {
+        id: "quality-audits",
+        label: "Quality audits",
+        short_label: "Audits",
+        icon: "clipboard-check",
+        description:
+          "Internal audits, findings, action plans and progress.",
+      },
+      {
+        id: "reg44",
+        label: "Regulation 44",
+        short_label: "Reg 44",
+        icon: "file-text",
+        description:
+          "Independent visit preparation, evidence, themes and resulting actions.",
+      },
+      {
+        id: "reg45",
+        label: "Regulation 45",
+        short_label: "Reg 45",
+        icon: "file-text",
+        description:
+          "Quality of care review planning, evidence and improvement actions.",
+      },
+      {
+        id: "inspection-readiness",
+        label: "Inspection readiness",
+        short_label: "Inspection",
+        icon: "badge-check",
+        description:
+          "Inspection evidence, gaps, readiness tracking and preparation.",
+      },
+      {
+        id: "compliance",
+        label: "Compliance and statutory checks",
+        short_label: "Compliance",
+        icon: "badge-check",
+        description:
+          "Cross-home compliance themes, overdue actions and statutory readiness.",
+      },
+      {
+        id: "reports",
+        label: "Reports and reviews",
+        short_label: "Reports",
+        icon: "file-text",
+        description:
+          "Provider reports, summaries and quality outputs.",
+      },
+      {
+        id: "policies",
+        label: "Policies and guidance",
+        short_label: "Policies",
+        icon: "folder",
+        description:
+          "Policy library, review dates and practice standards across services.",
+      },
+      {
+        id: "documents",
+        label: "Documents",
+        short_label: "Documents",
+        icon: "folder",
+        description:
+          "Inspection evidence, reports and provider-level supporting documents.",
+      },
+    ],
+  },
+  {
+    id: "quality_workforce",
+    title: "Workforce oversight",
+    items: [
+      {
+        id: "staff-profile",
+        label: "Staff profiles",
+        short_label: "Staff",
+        icon: "users-round",
+        description:
+          "Cross-home workforce profiles, file readiness and workforce overview.",
+      },
+      {
+        id: "onboarding",
+        label: "Recruitment and onboarding",
+        short_label: "Onboarding",
+        icon: "clipboard-check",
+        description:
+          "Recruitment checks, induction progress and probation themes.",
+      },
+      {
+        id: "supervision",
+        label: "Supervision and development",
+        short_label: "Supervision",
+        icon: "badge-check",
+        description:
+          "Supervision completion, development themes and workforce support.",
+      },
+      {
+        id: "training-centre",
+        label: "Training and compliance",
+        short_label: "Training",
+        icon: "graduation-cap",
+        description:
+          "Training completion, mandatory learning and workforce risks.",
+      },
+      {
+        id: "team",
+        label: "Team and staffing",
+        short_label: "Team",
+        icon: "users-round",
+        description:
+          "Team structure, staffing capacity, vacancies and deployment themes.",
+      },
+      {
+        id: "rota",
+        label: "Rota and cover",
+        short_label: "Rota",
+        icon: "calendar",
+        description:
+          "Shift coverage, agency usage, absence patterns and operational gaps.",
+      },
+      {
+        id: "notifications",
+        label: "Alerts and notifications",
+        short_label: "Alerts",
+        icon: "messages-square",
+        description:
+          "Cross-home reminders, escalations and live actions.",
+      },
+      {
+        id: "communication",
+        label: "Communication log",
+        short_label: "Comms",
+        icon: "messages-square",
+        description:
+          "Communication trails relevant to quality, staffing and oversight.",
       },
     ],
   },
@@ -448,7 +847,7 @@ export const QUICK_ACTIONS = Object.freeze([
     label: "Add care or support plan",
     short_label: "Support plan",
     record_type: "support_plan",
-    section_hint: "workspace",
+    section_hint: "admission",
     description:
       "Create practical guidance to help adults respond consistently.",
   },
@@ -457,7 +856,7 @@ export const QUICK_ACTIONS = Object.freeze([
     label: "Add risk assessment",
     short_label: "Risk",
     record_type: "risk",
-    section_hint: "manager",
+    section_hint: "risk",
     description:
       "Record risks, early signs, protective factors and response guidance.",
   },
@@ -493,7 +892,7 @@ export const QUICK_ACTIONS = Object.freeze([
     label: "Add keywork session",
     short_label: "Keywork",
     record_type: "keywork",
-    section_hint: "workspace",
+    section_hint: "daily-life",
     description:
       "Record direct work, reflection and agreed actions.",
   },
@@ -520,7 +919,7 @@ export const QUICK_ACTIONS = Object.freeze([
     label: "Add safeguarding record",
     short_label: "Safeguarding",
     record_type: "safeguarding_record",
-    section_hint: "manager",
+    section_hint: "safeguarding",
     description:
       "Record safeguarding concerns, immediate action and referrals.",
   },
@@ -529,7 +928,7 @@ export const QUICK_ACTIONS = Object.freeze([
     label: "Add missing episode",
     short_label: "Missing",
     record_type: "missing_episode",
-    section_hint: "timeline",
+    section_hint: "missing-from-care",
     description:
       "Record a missing episode, response, return and follow-up.",
   },
@@ -569,6 +968,24 @@ export const QUICK_ACTIONS = Object.freeze([
     description:
       "Create a workforce action linked to onboarding, training, supervision or staffing.",
   },
+  {
+    id: "policy_review",
+    label: "Add policy review action",
+    short_label: "Policy action",
+    record_type: "task",
+    section_hint: "policies",
+    description:
+      "Create an action linked to policy updates, review dates or guidance changes.",
+  },
+  {
+    id: "health_safety_check",
+    label: "Add health and safety check",
+    short_label: "H&S check",
+    record_type: "task",
+    section_hint: "health-safety",
+    description:
+      "Record a health and safety action, check or follow-up.",
+  },
 ]);
 
 export const QUICK_ACTION_MAP = Object.freeze(
@@ -578,28 +995,50 @@ export const QUICK_ACTION_MAP = Object.freeze(
 export const SECTION_DEFAULT_ACTION = Object.freeze({
   workspace: "daily_note",
   overview: "daily_note",
+  admission: "support_plan",
   profile: "profile_identity",
   timeline: "incident",
   handover: "daily_note",
+  "daily-life": "daily_note",
   health: "health_record",
+  medication: "health_record",
   education: "education_record",
   family: "family_contact",
   calendar: "appointment",
+  therapy: "task",
+  risk: "risk",
+  safeguarding: "safeguarding_record",
+  "missing-from-care": "missing_episode",
   readiness: "task",
-  manager: "task",
+  reviews: "task",
   reports: "task",
+  transition: "task",
+  "leaving-care": "task",
   documents: "upload_document",
   communication: "professional_message",
-  therapy: "task",
+  manager: "task",
+
   "home-dashboard": "task",
-  compliance: "task",
+  operations: "task",
+  team: "task",
+  rota: "staff_task",
   "staff-profile": "staff_task",
   onboarding: "staff_task",
+  supervision: "staff_task",
+  "training-centre": "staff_task",
+  compliance: "task",
+  "health-safety": "health_safety_check",
+  maintenance: "task",
   notifications: "staff_task",
-  rota: "staff_task",
-  team: "task",
-  supervision: "task",
   quality: "task",
+  "ofsted-readiness": "task",
+  policies: "policy_review",
+
+  "provider-overview": "task",
+  "quality-audits": "task",
+  reg44: "task",
+  reg45: "task",
+  "inspection-readiness": "task",
 });
 
 export const PROFILE_ACTIONS = Object.freeze([
