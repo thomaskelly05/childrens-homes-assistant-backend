@@ -77,6 +77,253 @@ def _normalise_scope(scope: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
+def _isoish(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    text = _safe_string(value)
+    return text or None
+
+
+def _first_non_empty(item: dict[str, Any], keys: list[str]) -> Any:
+    for key in keys:
+        value = item.get(key)
+        if value not in (None, "", [], {}):
+            return value
+    return None
+
+
+def _record_title(record_type: str, item: dict[str, Any]) -> str:
+    value = _first_non_empty(
+        item,
+        [
+            "title",
+            "name",
+            "summary",
+            "incident_type",
+            "contact_type",
+            "appointment_type",
+            "training_name",
+            "audit_name",
+            "service_name",
+            "staff_member",
+            "full_name",
+            "communication_type",
+            "document_type",
+            "category",
+            "status",
+        ],
+    )
+    if value not in (None, ""):
+        return _safe_string(value)
+    return record_type.replace("_", " ").strip().title()
+
+
+def _record_excerpt(item: dict[str, Any], max_chars: int = 280) -> str:
+    value = _first_non_empty(
+        item,
+        [
+            "summary",
+            "description",
+            "message",
+            "outcome",
+            "presentation",
+            "young_person_voice",
+            "child_voice",
+            "follow_up_actions",
+            "support_summary",
+            "concern_summary",
+            "mental_health_summary",
+            "medication_summary",
+        ],
+    )
+    text = _safe_string(value)
+    if not text:
+        return ""
+    return text[:max_chars]
+
+
+def _record_date(item: dict[str, Any]) -> str | None:
+    value = _first_non_empty(
+        item,
+        [
+            "event_datetime",
+            "incident_datetime",
+            "contact_datetime",
+            "appointment_date",
+            "meeting_date",
+            "session_date",
+            "note_date",
+            "record_date",
+            "review_date",
+            "review_month",
+            "achievement_date",
+            "audit_date",
+            "shift_date",
+            "handover_date",
+            "due_date",
+            "expiry_date",
+            "created_at",
+            "updated_at",
+        ],
+    )
+    return _isoish(value)
+
+
+def _source_section_for_record_type(record_type: str) -> str:
+    mapping = {
+        "daily_note": "timeline",
+        "incident": "timeline",
+        "health_record": "health",
+        "education_record": "education",
+        "family_contact": "family",
+        "keywork": "keywork",
+        "missing_episode": "incidents",
+        "safeguarding_record": "incidents",
+        "achievement_record": "education",
+        "support_plan": "plans",
+        "risk": "plans",
+        "appointment": "calendar",
+        "task": "readiness",
+        "monthly_review": "reports",
+        "manager_action": "manager",
+        "document": "documents",
+        "statutory_document": "documents",
+        "handover_record": "handover",
+        "audit": "quality",
+        "report": "reports",
+        "communication": "communication",
+        "supervision": "supervision",
+        "training": "training",
+        "rota": "team",
+        "staff": "team",
+    }
+    return mapping.get(record_type, "workspace")
+
+
+def _build_deep_link(
+    *,
+    scope_type: str,
+    section: str,
+    record_type: str,
+    record_id: int | None,
+    young_person_id: int | None = None,
+    home_id: int | None = None,
+) -> str | None:
+    if record_id is None:
+        return None
+
+    params = [
+        f"section={section}",
+        f"record_type={record_type}",
+        f"record_id={record_id}",
+    ]
+
+    if scope_type == "young_person" and young_person_id is not None:
+        params.append(f"young_person_id={young_person_id}")
+        return f"/young-people/workspace?{'&'.join(params)}"
+
+    if scope_type == "home" and home_id is not None:
+        params.append(f"home_id={home_id}")
+        return f"/home/workspace?{'&'.join(params)}"
+
+    if scope_type == "quality":
+        if home_id is not None:
+            params.append(f"home_id={home_id}")
+        return f"/quality/workspace?{'&'.join(params)}"
+
+    return None
+
+
+def _make_evidence_item(
+    *,
+    scope_type: str,
+    record_type: str,
+    item: dict[str, Any],
+    young_person_id: int | None = None,
+    home_id: int | None = None,
+    section: str | None = None,
+) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+
+    record_id = _safe_int(item.get("id"))
+    if record_id is None:
+        return None
+
+    resolved_section = section or _source_section_for_record_type(record_type)
+    citation_ref = f"{record_type}:{record_id}"
+
+    return {
+        "citation_ref": citation_ref,
+        "record_type": record_type,
+        "record_id": record_id,
+        "label": _record_title(record_type, item),
+        "excerpt": _record_excerpt(item),
+        "date": _record_date(item),
+        "section": resolved_section,
+        "scope_type": scope_type,
+        "young_person_id": young_person_id,
+        "home_id": home_id,
+        "deep_link": _build_deep_link(
+            scope_type=scope_type,
+            section=resolved_section,
+            record_type=record_type,
+            record_id=record_id,
+            young_person_id=young_person_id,
+            home_id=home_id,
+        ),
+    }
+
+
+def _extend_evidence_index(
+    evidence_index: list[dict[str, Any]],
+    *,
+    scope_type: str,
+    record_type: str,
+    items: list[dict[str, Any]] | None,
+    young_person_id: int | None = None,
+    home_id: int | None = None,
+    section: str | None = None,
+) -> None:
+    if not isinstance(items, list):
+        return
+
+    for item in items:
+        evidence_item = _make_evidence_item(
+            scope_type=scope_type,
+            record_type=record_type,
+            item=item,
+            young_person_id=young_person_id,
+            home_id=home_id,
+            section=section,
+        )
+        if evidence_item:
+            evidence_index.append(evidence_item)
+
+
+def _dedupe_evidence_index(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+
+    for item in items:
+        citation_ref = _safe_string(item.get("citation_ref")).lower()
+        if not citation_ref or citation_ref in seen:
+            continue
+        seen.add(citation_ref)
+        result.append(item)
+
+    return result
+
+
+def _sort_evidence_index(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def sort_key(item: dict[str, Any]) -> tuple[str, str]:
+        return (_safe_string(item.get("date")) or "", _safe_string(item.get("citation_ref")))
+
+    return sorted(items, key=sort_key, reverse=True)
+
+
 def _get_user_row(conn, user_id: int) -> dict[str, Any] | None:
     return _fetch_one(
         conn,
@@ -744,6 +991,237 @@ def _build_scoped_record_context(
     }
 
 
+def _build_young_person_evidence_index(
+    *,
+    young_person_id: int,
+    home_id: int | None,
+    identity: dict[str, Any],
+    active_work: dict[str, Any],
+    recent_records: dict[str, Any],
+) -> list[dict[str, Any]]:
+    evidence_index: list[dict[str, Any]] = []
+
+    for profile_record_type, profile_item in [
+        ("communication_profile", identity.get("communication_profile")),
+        ("education_profile", identity.get("education_profile")),
+        ("health_profile", identity.get("health_profile")),
+        ("identity_profile", identity.get("identity_profile")),
+        ("legal_status", identity.get("legal_status")),
+        ("formulation", identity.get("current_formulation")),
+    ]:
+        if isinstance(profile_item, dict):
+            evidence_item = _make_evidence_item(
+                scope_type="young_person",
+                record_type=profile_record_type,
+                item=profile_item,
+                young_person_id=young_person_id,
+                home_id=home_id,
+            )
+            if evidence_item:
+                evidence_index.append(evidence_item)
+
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="alert",
+        items=identity.get("active_alerts"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="overview",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="support_plan",
+        items=active_work.get("support_plans"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="plans",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="risk",
+        items=active_work.get("risk_assessments"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="plans",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="appointment",
+        items=active_work.get("appointments"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="calendar",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="statutory_document",
+        items=active_work.get("statutory_documents"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="documents",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="compliance_item",
+        items=active_work.get("compliance_items"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="readiness",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="task",
+        items=active_work.get("tasks"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="readiness",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="monthly_review",
+        items=active_work.get("monthly_reviews"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="reports",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="review_meeting",
+        items=active_work.get("review_meetings"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="reports",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="manager_action",
+        items=active_work.get("manager_actions"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="manager",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="daily_note",
+        items=recent_records.get("daily_notes"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="timeline",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="incident",
+        items=recent_records.get("incidents"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="timeline",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="health_record",
+        items=recent_records.get("health_records"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="health",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="education_record",
+        items=recent_records.get("education_records"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="education",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="family_contact",
+        items=recent_records.get("family_contact_records"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="family",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="keywork",
+        items=recent_records.get("keywork_sessions"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="keywork",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="missing_episode",
+        items=recent_records.get("missing_episodes"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="timeline",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="safeguarding_record",
+        items=recent_records.get("safeguarding_records"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="timeline",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="achievement_record",
+        items=recent_records.get("achievements"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="education",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="chronology_event",
+        items=recent_records.get("chronology"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="timeline",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="handover_record",
+        items=recent_records.get("handover_records"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="handover",
+    )
+    _extend_evidence_index(
+        evidence_index,
+        scope_type="young_person",
+        record_type="ai_generated_report",
+        items=recent_records.get("ai_generated_reports"),
+        young_person_id=young_person_id,
+        home_id=home_id,
+        section="reports",
+    )
+
+    return _sort_evidence_index(_dedupe_evidence_index(evidence_index))
+
+
 def build_young_person_context(
     conn,
     *,
@@ -754,6 +1232,10 @@ def build_young_person_context(
     scope = _normalise_scope(scope)
     young_person = _assert_young_person_access(conn, user_id, young_person_id)
     young_person_home_id = _safe_int(young_person.get("home_id"))
+
+    identity = _build_identity_context(conn, young_person_id)
+    active_work = _build_active_work_context(conn, young_person_id)
+    recent_records = _build_recent_records_context(conn, young_person_id)
 
     return {
         "scope": {
@@ -768,15 +1250,22 @@ def build_young_person_context(
             "allowed_home_ids": [young_person_home_id] if young_person_home_id else [],
         },
         "young_person": young_person,
-        "identity": _build_identity_context(conn, young_person_id),
-        "active_work": _build_active_work_context(conn, young_person_id),
-        "recent_records": _build_recent_records_context(conn, young_person_id),
+        "identity": identity,
+        "active_work": active_work,
+        "recent_records": recent_records,
         "links": _build_links_context(conn, young_person_id),
         "scoped_record": _build_scoped_record_context(
             conn,
             young_person_id=young_person_id,
             record_type=scope.get("record_type"),
             record_id=scope.get("record_id"),
+        ),
+        "evidence_index": _build_young_person_evidence_index(
+            young_person_id=young_person_id,
+            home_id=young_person_home_id,
+            identity=identity,
+            active_work=active_work,
+            recent_records=recent_records,
         ),
     }
 
@@ -797,6 +1286,42 @@ def _build_home_header(conn, home_id: int) -> dict[str, Any] | None:
         """,
         (home_id,),
     )
+
+
+def _build_home_evidence_index(
+    *,
+    home_id: int,
+    team: list[dict[str, Any]],
+    tasks: list[dict[str, Any]],
+    communications: list[dict[str, Any]],
+    documents: list[dict[str, Any]],
+    supervisions: list[dict[str, Any]],
+    therapy: list[dict[str, Any]],
+    reports: list[dict[str, Any]],
+    compliance_items: list[dict[str, Any]],
+    rota: list[dict[str, Any]],
+    onboarding: list[dict[str, Any]],
+    training: list[dict[str, Any]],
+    audits: list[dict[str, Any]],
+    incidents: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    evidence_index: list[dict[str, Any]] = []
+
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="staff", items=team, home_id=home_id, section="team")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="task", items=tasks, home_id=home_id, section="readiness")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="communication", items=communications, home_id=home_id, section="communication")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="document", items=documents, home_id=home_id, section="documents")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="supervision", items=supervisions, home_id=home_id, section="supervision")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="therapy_record", items=therapy, home_id=home_id, section="therapy")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="report", items=reports, home_id=home_id, section="reports")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="compliance_item", items=compliance_items, home_id=home_id, section="compliance")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="rota", items=rota, home_id=home_id, section="team")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="onboarding", items=onboarding, home_id=home_id, section="team")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="training", items=training, home_id=home_id, section="team")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="audit", items=audits, home_id=home_id, section="quality")
+    _extend_evidence_index(evidence_index, scope_type="home", record_type="incident", items=incidents, home_id=home_id, section="timeline")
+
+    return _sort_evidence_index(_dedupe_evidence_index(evidence_index))
 
 
 def build_home_os_context(
@@ -831,161 +1356,19 @@ def build_home_os_context(
         (home_id,),
     )
 
-    team = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM staff
-        WHERE home_id = %s
-        ORDER BY updated_at DESC NULLS LAST, id DESC
-        LIMIT 50
-        """,
-        (home_id,),
-    )
-
-    tasks = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM tasks
-        WHERE home_id = %s
-        ORDER BY due_date ASC NULLS LAST, created_at DESC NULLS LAST, id DESC
-        LIMIT 50
-        """,
-        (home_id,),
-    )
-
-    communications = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM communications
-        WHERE home_id = %s
-        ORDER BY contact_datetime DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
-        LIMIT 40
-        """,
-        (home_id,),
-    )
-
-    documents = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM documents
-        WHERE home_id = %s
-        ORDER BY updated_at DESC NULLS LAST, id DESC
-        LIMIT 40
-        """,
-        (home_id,),
-    )
-
-    supervisions = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM supervisions
-        WHERE home_id = %s
-        ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 40
-        """,
-        (home_id,),
-    )
-
-    therapy = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM therapy_records
-        WHERE home_id = %s
-        ORDER BY session_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 40
-        """,
-        (home_id,),
-    )
-
-    reports = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM reports
-        WHERE home_id = %s
-        ORDER BY created_at DESC NULLS LAST, id DESC
-        LIMIT 30
-        """,
-        (home_id,),
-    )
-
-    compliance_items = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM compliance_items
-        WHERE home_id = %s
-        ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 50
-        """,
-        (home_id,),
-    )
-
-    rota = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM rota
-        WHERE home_id = %s
-        ORDER BY shift_date DESC NULLS LAST, id DESC
-        LIMIT 30
-        """,
-        (home_id,),
-    )
-
-    onboarding = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM onboarding
-        WHERE home_id = %s
-        ORDER BY updated_at DESC NULLS LAST, id DESC
-        LIMIT 30
-        """,
-        (home_id,),
-    )
-
-    training = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM training
-        WHERE home_id = %s
-        ORDER BY expiry_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 30
-        """,
-        (home_id,),
-    )
-
-    audits = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM audits
-        WHERE home_id = %s
-        ORDER BY audit_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 30
-        """,
-        (home_id,),
-    )
-
-    incidents = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM incidents
-        WHERE home_id = %s
-        ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 40
-        """,
-        (home_id,),
-    )
+    team = _fetch_all(conn, "SELECT * FROM staff WHERE home_id = %s ORDER BY updated_at DESC NULLS LAST, id DESC LIMIT 50", (home_id,))
+    tasks = _fetch_all(conn, "SELECT * FROM tasks WHERE home_id = %s ORDER BY due_date ASC NULLS LAST, created_at DESC NULLS LAST, id DESC LIMIT 50", (home_id,))
+    communications = _fetch_all(conn, "SELECT * FROM communications WHERE home_id = %s ORDER BY contact_datetime DESC NULLS LAST, created_at DESC NULLS LAST, id DESC LIMIT 40", (home_id,))
+    documents = _fetch_all(conn, "SELECT * FROM documents WHERE home_id = %s ORDER BY updated_at DESC NULLS LAST, id DESC LIMIT 40", (home_id,))
+    supervisions = _fetch_all(conn, "SELECT * FROM supervisions WHERE home_id = %s ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 40", (home_id,))
+    therapy = _fetch_all(conn, "SELECT * FROM therapy_records WHERE home_id = %s ORDER BY session_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 40", (home_id,))
+    reports = _fetch_all(conn, "SELECT * FROM reports WHERE home_id = %s ORDER BY created_at DESC NULLS LAST, id DESC LIMIT 30", (home_id,))
+    compliance_items = _fetch_all(conn, "SELECT * FROM compliance_items WHERE home_id = %s ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 50", (home_id,))
+    rota = _fetch_all(conn, "SELECT * FROM rota WHERE home_id = %s ORDER BY shift_date DESC NULLS LAST, id DESC LIMIT 30", (home_id,))
+    onboarding = _fetch_all(conn, "SELECT * FROM onboarding WHERE home_id = %s ORDER BY updated_at DESC NULLS LAST, id DESC LIMIT 30", (home_id,))
+    training = _fetch_all(conn, "SELECT * FROM training WHERE home_id = %s ORDER BY expiry_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 30", (home_id,))
+    audits = _fetch_all(conn, "SELECT * FROM audits WHERE home_id = %s ORDER BY audit_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 30", (home_id,))
+    incidents = _fetch_all(conn, "SELECT * FROM incidents WHERE home_id = %s ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 40", (home_id,))
 
     summary = {
         "children_count": len(young_people),
@@ -1029,7 +1412,47 @@ def build_home_os_context(
         "training": training,
         "audits": audits,
         "incidents": incidents,
+        "evidence_index": _build_home_evidence_index(
+            home_id=home_id,
+            team=team,
+            tasks=tasks,
+            communications=communications,
+            documents=documents,
+            supervisions=supervisions,
+            therapy=therapy,
+            reports=reports,
+            compliance_items=compliance_items,
+            rota=rota,
+            onboarding=onboarding,
+            training=training,
+            audits=audits,
+            incidents=incidents,
+        ),
     }
+
+
+def _build_quality_evidence_index(
+    *,
+    selected_home_id: int | None,
+    audits: list[dict[str, Any]],
+    incidents: list[dict[str, Any]],
+    compliance_items: list[dict[str, Any]],
+    reports: list[dict[str, Any]],
+    team: list[dict[str, Any]],
+    supervisions: list[dict[str, Any]],
+    documents: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    evidence_index: list[dict[str, Any]] = []
+
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="audit", items=audits, home_id=selected_home_id, section="quality")
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="incident", items=incidents, home_id=selected_home_id, section="quality")
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="compliance_item", items=compliance_items, home_id=selected_home_id, section="compliance")
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="report", items=reports, home_id=selected_home_id, section="reports")
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="staff", items=team, home_id=selected_home_id, section="team")
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="supervision", items=supervisions, home_id=selected_home_id, section="supervision")
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="document", items=documents, home_id=selected_home_id, section="documents")
+
+    return _sort_evidence_index(_dedupe_evidence_index(evidence_index))
 
 
 def build_quality_os_context(
@@ -1073,6 +1496,7 @@ def build_quality_os_context(
             "team": [],
             "supervisions": [],
             "documents": [],
+            "evidence_index": [],
         }
 
     homes = _fetch_all(
@@ -1091,89 +1515,13 @@ def build_quality_os_context(
         (allowed_home_ids,),
     )
 
-    audits = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM audits
-        WHERE home_id = ANY(%s)
-        ORDER BY audit_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 100
-        """,
-        (allowed_home_ids,),
-    )
-
-    incidents = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM incidents
-        WHERE home_id = ANY(%s)
-        ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 100
-        """,
-        (allowed_home_ids,),
-    )
-
-    compliance_items = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM compliance_items
-        WHERE home_id = ANY(%s)
-        ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 100
-        """,
-        (allowed_home_ids,),
-    )
-
-    reports = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM reports
-        WHERE home_id = ANY(%s)
-        ORDER BY created_at DESC NULLS LAST, id DESC
-        LIMIT 80
-        """,
-        (allowed_home_ids,),
-    )
-
-    team = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM staff
-        WHERE home_id = ANY(%s)
-        ORDER BY updated_at DESC NULLS LAST, id DESC
-        LIMIT 100
-        """,
-        (allowed_home_ids,),
-    )
-
-    supervisions = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM supervisions
-        WHERE home_id = ANY(%s)
-        ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-        LIMIT 100
-        """,
-        (allowed_home_ids,),
-    )
-
-    documents = _fetch_all(
-        conn,
-        """
-        SELECT *
-        FROM documents
-        WHERE home_id = ANY(%s)
-        ORDER BY updated_at DESC NULLS LAST, id DESC
-        LIMIT 100
-        """,
-        (allowed_home_ids,),
-    )
+    audits = _fetch_all(conn, "SELECT * FROM audits WHERE home_id = ANY(%s) ORDER BY audit_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 100", (allowed_home_ids,))
+    incidents = _fetch_all(conn, "SELECT * FROM incidents WHERE home_id = ANY(%s) ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 100", (allowed_home_ids,))
+    compliance_items = _fetch_all(conn, "SELECT * FROM compliance_items WHERE home_id = ANY(%s) ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 100", (allowed_home_ids,))
+    reports = _fetch_all(conn, "SELECT * FROM reports WHERE home_id = ANY(%s) ORDER BY created_at DESC NULLS LAST, id DESC LIMIT 80", (allowed_home_ids,))
+    team = _fetch_all(conn, "SELECT * FROM staff WHERE home_id = ANY(%s) ORDER BY updated_at DESC NULLS LAST, id DESC LIMIT 100", (allowed_home_ids,))
+    supervisions = _fetch_all(conn, "SELECT * FROM supervisions WHERE home_id = ANY(%s) ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC LIMIT 100", (allowed_home_ids,))
+    documents = _fetch_all(conn, "SELECT * FROM documents WHERE home_id = ANY(%s) ORDER BY updated_at DESC NULLS LAST, id DESC LIMIT 100", (allowed_home_ids,))
 
     summary = {
         "homes_count": len(homes),
@@ -1207,6 +1555,16 @@ def build_quality_os_context(
         "team": team,
         "supervisions": supervisions,
         "documents": documents,
+        "evidence_index": _build_quality_evidence_index(
+            selected_home_id=selected_home_id,
+            audits=audits,
+            incidents=incidents,
+            compliance_items=compliance_items,
+            reports=reports,
+            team=team,
+            supervisions=supervisions,
+            documents=documents,
+        ),
     }
 
 
@@ -1239,6 +1597,7 @@ def build_public_context(*, scope: dict[str, Any] | None = None) -> dict[str, An
             "young_person_data_available": False,
             "home_data_available": False,
         },
+        "evidence_index": [],
     }
 
 
@@ -1328,6 +1687,7 @@ def build_monthly_report_context(
             "supervision_summary": {},
             "management_summary": {},
             "positive_indicators": {},
+            "evidence_index": [],
         }
 
     homes = _fetch_all(
@@ -1643,6 +2003,11 @@ def build_monthly_report_context(
         ),
     }
 
+    evidence_index: list[dict[str, Any]] = []
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="incident_summary", items=incident_summary, home_id=home_id, section="quality")
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="safeguarding_summary", items=safeguarding_summary, home_id=home_id, section="quality")
+    _extend_evidence_index(evidence_index, scope_type="quality", record_type="compliance_summary", items=compliance_summary, home_id=home_id, section="quality")
+
     return {
         "report_type": "monthly",
         "period": {"start_date": str(start_date), "end_date": str(end_date)},
@@ -1661,6 +2026,7 @@ def build_monthly_report_context(
         "supervision_summary": supervision_summary,
         "management_summary": management_summary,
         "positive_indicators": positive_indicators,
+        "evidence_index": _sort_evidence_index(_dedupe_evidence_index(evidence_index)),
     }
 
 
@@ -1675,19 +2041,18 @@ def build_reg45_context(
     provider_id: int | None = None,
     generated_by: int | None = None,
 ) -> dict[str, Any]:
-    return {
-        **build_monthly_report_context(
-            conn,
-            home_id=home_id,
-            start_date=start_date,
-            end_date=end_date,
-            access_level=access_level,
-            allowed_home_ids=allowed_home_ids,
-            provider_id=provider_id,
-            generated_by=generated_by,
-        ),
-        "report_type": "reg45",
-    }
+    result = build_monthly_report_context(
+        conn,
+        home_id=home_id,
+        start_date=start_date,
+        end_date=end_date,
+        access_level=access_level,
+        allowed_home_ids=allowed_home_ids,
+        provider_id=provider_id,
+        generated_by=generated_by,
+    )
+    result["report_type"] = "reg45"
+    return result
 
 
 def build_yearly_report_context(
@@ -1701,19 +2066,18 @@ def build_yearly_report_context(
     provider_id: int | None = None,
     generated_by: int | None = None,
 ) -> dict[str, Any]:
-    return {
-        **build_monthly_report_context(
-            conn,
-            home_id=home_id,
-            start_date=start_date,
-            end_date=end_date,
-            access_level=access_level,
-            allowed_home_ids=allowed_home_ids,
-            provider_id=provider_id,
-            generated_by=generated_by,
-        ),
-        "report_type": "yearly",
-    }
+    result = build_monthly_report_context(
+        conn,
+        home_id=home_id,
+        start_date=start_date,
+        end_date=end_date,
+        access_level=access_level,
+        allowed_home_ids=allowed_home_ids,
+        provider_id=provider_id,
+        generated_by=generated_by,
+    )
+    result["report_type"] = "yearly"
+    return result
 
 
 def preview_report_snapshot(
