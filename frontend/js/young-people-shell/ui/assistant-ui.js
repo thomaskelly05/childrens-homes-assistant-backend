@@ -1,19 +1,14 @@
 import { state, createAssistantMeta } from "../state.js";
 import { els } from "../dom.js";
-import {
-  escapeHtml,
-  getDisplayName,
-} from "../core/utils.js";
-import {
-  getSectionTitle,
-  getSectionSubtitle,
-} from "../core/config.js";
+import { escapeHtml, getDisplayName } from "../core/utils.js";
+import { getSectionTitle, getSectionSubtitle } from "../core/config.js";
 
 let assistantUiBound = false;
 let citationEventsBound = false;
 
 const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w:-]*)\]/gi;
-const MAX_SOURCE_EXCERPT = 180;
+const MAX_SOURCE_EXCERPT = 160;
+const MAX_VISIBLE_SOURCES = 8;
 
 function qs(id) {
   return document.getElementById(id);
@@ -62,26 +57,33 @@ function ensureAssistantArrays() {
   }
 }
 
+function ensureAssistantMetaShape(meta) {
+  meta.sources = Array.isArray(meta.sources) ? meta.sources : [];
+  meta.suggested_actions = Array.isArray(meta.suggested_actions)
+    ? meta.suggested_actions
+    : [];
+  meta.runtime = meta.runtime && typeof meta.runtime === "object" ? meta.runtime : {};
+  meta.explainability =
+    meta.explainability && typeof meta.explainability === "object"
+      ? meta.explainability
+      : {};
+  meta.assistant_scope =
+    meta.assistant_scope && typeof meta.assistant_scope === "object"
+      ? meta.assistant_scope
+      : {};
+  meta.assistant_context =
+    meta.assistant_context && typeof meta.assistant_context === "object"
+      ? meta.assistant_context
+      : {};
+  return meta;
+}
+
 function getAssistantMeta() {
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
     state.assistantMeta = createAssistantMeta();
   }
 
-  if (!Array.isArray(state.assistantMeta.sources)) {
-    state.assistantMeta.sources = [];
-  }
-
-  if (!Array.isArray(state.assistantMeta.suggested_actions)) {
-    state.assistantMeta.suggested_actions = [];
-  }
-
-  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
-  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
-  state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
-  state.assistantMeta.assistant_context =
-    state.assistantMeta.assistant_context || {};
-
-  return state.assistantMeta;
+  return ensureAssistantMetaShape(state.assistantMeta);
 }
 
 function formatRole(role = "") {
@@ -123,6 +125,7 @@ function getReadableSectionSubtitle() {
 
 function sourceCitationRef(source = {}, index = 0) {
   if (source.citation_ref) return String(source.citation_ref);
+
   const type = source.record_type || source.type || "record";
   const id = source.record_id || source.id || `idx_${index + 1}`;
   return `${type}:${id}`;
@@ -135,6 +138,10 @@ function sourceSafeDomId(ref = "") {
 function getSources() {
   const meta = getAssistantMeta();
   return Array.isArray(meta.sources) ? meta.sources : [];
+}
+
+function getVisibleSources() {
+  return getSources().slice(0, MAX_VISIBLE_SOURCES);
 }
 
 function buildSourceMap() {
@@ -311,29 +318,26 @@ function buildIntroMessageHtml() {
   const sectionTitle = getReadableSectionLabel();
   const sectionSubtitle = getReadableSectionSubtitle();
 
+  if (scope === "child" && !state.youngPersonId) {
+    return `
+      <div class="assistant-helper-text">
+        <p>Select a child or young person to begin.</p>
+      </div>
+    `;
+  }
+
+  const introTitle =
+    scope === "child"
+      ? `Ask about ${escapeHtml(getPersonLabel())}.`
+      : scope === "home"
+      ? `Ask about ${escapeHtml(getHomeLabel())}.`
+      : "Ask about quality and oversight.";
+
   return `
     <div class="assistant-helper-text">
-      ${
-        scope === "child"
-          ? state.youngPersonId
-            ? `
-              <p><strong>Ask about ${escapeHtml(getPersonLabel())}.</strong></p>
-              <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-              ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
-            `
-            : `<p>Select a child or young person to begin.</p>`
-          : scope === "home"
-          ? `
-            <p><strong>Ask about ${escapeHtml(getHomeLabel())}.</strong></p>
-            <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-            ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
-          `
-          : `
-            <p><strong>Ask about quality and oversight.</strong></p>
-            <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-            ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
-          `
-      }
+      <p><strong>${introTitle}</strong></p>
+      <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+      ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
     </div>
   `;
 }
@@ -449,9 +453,12 @@ function renderSourcesHtml(sources = []) {
     return `<p class="assistant-muted">No sources yet.</p>`;
   }
 
+  const visibleSources = sources.slice(0, MAX_VISIBLE_SOURCES);
+  const remainder = Math.max(0, sources.length - visibleSources.length);
+
   return `
     <div class="assistant-source-list assistant-source-list--simple">
-      ${sources
+      ${visibleSources
         .map((source, index) => {
           const citationRef = sourceCitationRef(source, index);
           const title = escapeHtml(
@@ -469,7 +476,10 @@ function renderSourcesHtml(sources = []) {
           const description = escapeHtml(
             String(
               source?.description || source?.excerpt || source?.summary || ""
-            ).slice(0, MAX_SOURCE_EXCERPT)
+            )
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, MAX_SOURCE_EXCERPT)
           );
 
           return `
@@ -497,6 +507,11 @@ function renderSourcesHtml(sources = []) {
           `;
         })
         .join("")}
+      ${
+        remainder > 0
+          ? `<p class="assistant-muted">+ ${remainder} more source${remainder === 1 ? "" : "s"} available in runtime data.</p>`
+          : ""
+      }
     </div>
   `;
 }
@@ -529,6 +544,7 @@ function renderSuggestedActions() {
   }
 
   host.innerHTML = actions
+    .slice(0, 6)
     .map((action) => {
       const label =
         typeof action === "string"
@@ -560,7 +576,7 @@ function renderScopeSummary() {
       </div>
       <div class="assistant-scope-summary-row">
         <span>Evidence</span>
-        <strong>${escapeHtml(String(runtime.evidence_count || 0))}</strong>
+        <strong>${escapeHtml(String(runtime.evidence_count || getSources().length || 0))}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Mode</span>
@@ -580,6 +596,7 @@ function syncAssistantVisibility() {
 
   if (els.assistantBackdrop) {
     els.assistantBackdrop.classList.toggle("hidden", !isOpen);
+    els.assistantBackdrop.setAttribute("aria-hidden", isOpen ? "false" : "true");
   }
 }
 
@@ -698,20 +715,21 @@ export function setAssistantSources(sources = []) {
 
 export function setAssistantRuntime(runtime = null) {
   const meta = getAssistantMeta();
-  meta.runtime = runtime || {};
+  meta.runtime = runtime && typeof runtime === "object" ? runtime : {};
   renderAllAssistantUi();
 }
 
 export function setAssistantExplainability(explainability = null) {
   const meta = getAssistantMeta();
-  meta.explainability = explainability || {};
+  meta.explainability =
+    explainability && typeof explainability === "object" ? explainability : {};
 }
 
 export function setAssistantScopeSummary(scopeSummary = null) {
   const meta = getAssistantMeta();
   meta.assistant_context = {
     ...(meta.assistant_context || {}),
-    ...(scopeSummary || {}),
+    ...(scopeSummary && typeof scopeSummary === "object" ? scopeSummary : {}),
   };
   renderAllAssistantUi();
 }
