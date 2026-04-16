@@ -2,14 +2,11 @@
 <html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
-  <title>IndiCare OS • Residential Care Operating System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>IndiCare OS • Residential Care Workspace</title>
   <meta
     name="description"
-    content="IndiCare OS residential workspace for child-centred, trauma-informed, therapeutic recording, oversight, compliance, quality assurance and care planning."
+    content="IndiCare OS residential care workspace for child-centred recording, safeguarding, home operations, staffing, planning, compliance and quality oversight."
   />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f3f6fb" />
@@ -50,15 +47,15 @@
           <span class="brand-mark" aria-hidden="true">IC</span>
           <span class="brand-copy">
             <strong>IndiCare OS</strong>
-            <small>Child-centred residential operating system</small>
+            <small>Residential care made clearer</small>
           </span>
         </button>
       </div>
 
       <div class="shell-topbar-centre desktop-only">
         <div class="workspace-context-pill" aria-label="Current workspace">
-          <span class="workspace-context-pill-label">Workspace</span>
-          <span class="workspace-context-pill-value">Residential care operating system</span>
+          <span class="workspace-context-pill-label">Current area</span>
+          <span class="workspace-context-pill-value">Residential care workspace</span>
         </div>
       </div>
 
@@ -67,7 +64,7 @@
           id="scopeSwitch"
           class="scope-switch desktop-only"
           role="tablist"
-          aria-label="Workspace scope"
+          aria-label="Switch workspace area"
         >
           <button
             id="scopeChildBtn"
@@ -78,7 +75,7 @@
             aria-selected="true"
             aria-pressed="true"
           >
-            Young person
+            Child
           </button>
 
           <button
@@ -128,11 +125,11 @@
           aria-hidden="true"
           tabindex="-1"
         >
-          Refresh workspace
+          Refresh area
         </button>
 
         <button id="homeBtn" class="ghost-btn desktop-only" type="button">
-          Workspace home
+          Dashboard
         </button>
       </div>
     </header>
@@ -146,11 +143,11 @@
         <div class="selector-screen-inner">
           <div class="selector-page-head">
             <div>
-              <div class="eyebrow">Young people</div>
-              <h1 id="selectorHeading">Select a young person</h1>
+              <div class="eyebrow">Children and young people</div>
+              <h1 id="selectorHeading">Choose a child or young person</h1>
               <p>
-                Open one calm, child-centred workspace for recording, reflection,
-                planning, chronology, oversight, safeguarding and guided support.
+                Open one clear workspace for daily recording, safeguarding,
+                planning, chronology, health, education, relationships and review.
               </p>
             </div>
 
@@ -185,7 +182,7 @@
             <div class="loading-state">
               <div>
                 <div class="spinner" aria-hidden="true"></div>
-                <p>Loading young people…</p>
+                <p>Loading children and young people…</p>
               </div>
             </div>
           </div>
@@ -205,7 +202,7 @@
             <div class="workspace-sidebar-shell">
               <div class="workspace-sidebar-brand">
                 <div class="workspace-sidebar-brand-dot" aria-hidden="true"></div>
-                <span>Residential care operating system</span>
+                <span>Residential care workspace</span>
               </div>
 
               <section class="workspace-sidebar-profile-card" aria-label="Current context">
@@ -220,14 +217,14 @@
 
                   <div class="workspace-sidebar-profile-copy">
                     <h2 id="personName">Young person</h2>
-                    <p id="personMeta">Child-centred workspace</p>
+                    <p id="personMeta">Current child workspace</p>
                   </div>
                 </div>
 
                 <div class="workspace-sidebar-meta-row">
                   <span class="meta-chip">Live</span>
-                  <span class="meta-chip meta-chip--soft">Therapeutic view</span>
-                  <span class="meta-chip meta-chip--soft">Safeguarding first</span>
+                  <span class="meta-chip meta-chip--soft">Child first</span>
+                  <span class="meta-chip meta-chip--soft">Safeguarding</span>
                 </div>
               </section>
 
@@ -236,7 +233,7 @@
                 class="ghost-btn workspace-back-btn"
                 type="button"
               >
-                Change young person
+                Change child
               </button>
 
               <nav
@@ -260,11 +257,11 @@
 
                 <div class="workspace-stage-mobile-copy">
                   <h2 id="mobilePersonName">Young person</h2>
-                  <p id="mobilePersonMeta">Child-centred workspace</p>
+                  <p id="mobilePersonMeta">Current child workspace</p>
                 </div>
 
                 <button id="mobileHomeBtn" class="ghost-btn" type="button">
-                  Home
+                  Dashboard
                 </button>
               </section>
 
@@ -274,11 +271,11 @@
               >
                 <div class="workspace-header-main">
                   <div class="workspace-header-copy">
-                    <div id="workspaceEyebrow" class="eyebrow">Young person workspace</div>
-                    <h1 id="pageTitle">Today’s workspace</h1>
+                    <div id="workspaceEyebrow" class="eyebrow">Child workspace</div>
+                    <h1 id="pageTitle">Today at a glance</h1>
                     <p id="pageSubtitle">
-                      A calmer, child-focused operating space for recording, reflection,
-                      continuity, safeguarding, planning and thoughtful next steps.
+                      A calm, practical workspace for recording, safeguarding,
+                      daily care, planning, continuity and clear next steps.
                     </p>
                   </div>
 
@@ -293,7 +290,7 @@
                       type="button"
                       data-view="profile"
                     >
-                      Open profile
+                      View profile
                     </button>
 
                     <button
@@ -302,7 +299,7 @@
                       type="button"
                       data-action-router="edit-profile-identity"
                     >
-                      Update profile
+                      Edit profile
                     </button>
 
                     <button
@@ -310,7 +307,7 @@
                       class="ghost-btn desktop-only"
                       type="button"
                     >
-                      Change young person
+                      Change child
                     </button>
                   </div>
                 </div>
@@ -328,15 +325,15 @@
                     <div class="workspace-person-copy">
                       <h3 id="profileSnapshotName">Young person</h3>
                       <p id="profileSnapshotMeta">
-                        Trauma-informed, therapeutic and child-centred overview
+                        Child-centred overview and current context
                       </p>
                     </div>
                   </div>
 
                   <div class="workspace-header-meta">
                     <span class="meta-chip">Live</span>
-                    <span class="meta-chip meta-chip--soft">Current scope</span>
-                    <span class="meta-chip meta-chip--soft">Operational ready</span>
+                    <span class="meta-chip meta-chip--soft">Current area</span>
+                    <span class="meta-chip meta-chip--soft">Ready to use</span>
                   </div>
 
                   <div
@@ -351,18 +348,18 @@
                     </div>
 
                     <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Next event</span>
-                      <strong id="summaryNextEvent" class="workspace-summary-value">No event loaded</strong>
+                      <span class="workspace-summary-label">Next item</span>
+                      <strong id="summaryNextEvent" class="workspace-summary-value">Nothing loaded</strong>
                     </div>
 
                     <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Last record</span>
-                      <strong id="summaryLastRecord" class="workspace-summary-value">No record loaded</strong>
+                      <span class="workspace-summary-label">Last update</span>
+                      <strong id="summaryLastRecord" class="workspace-summary-value">Nothing loaded</strong>
                     </div>
 
                     <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Open actions</span>
-                      <strong id="summaryOpenActions" class="workspace-summary-value">No actions loaded</strong>
+                      <span class="workspace-summary-label">Actions</span>
+                      <strong id="summaryOpenActions" class="workspace-summary-value">Nothing loaded</strong>
                     </div>
                   </div>
                 </div>
@@ -375,11 +372,12 @@
               >
                 <div class="quick-actions-panel-head quick-actions-panel-head--compact">
                   <div>
-                    <div class="eyebrow">Workspace menu</div>
-                    <h2>Navigate and act quickly</h2>
+                    <div class="eyebrow">Main menu</div>
+                    <h2>Go somewhere or create something</h2>
                   </div>
                   <p>
-                    Open one menu at a time to move through the workspace and create records without clutter.
+                    Clear groups, simpler titles and faster actions for every user,
+                    no matter their role, confidence or experience.
                   </p>
                 </div>
 
@@ -387,69 +385,79 @@
                   id="heroQuickActions"
                   class="workspace-menubar"
                   role="navigation"
-                  aria-label="Workspace sections and actions"
+                  aria-label="Main workspace menu"
                 >
                   <details class="workspace-menu" data-workspace-menu open>
-                    <summary class="workspace-menu-trigger">Overview</summary>
+                    <summary class="workspace-menu-trigger">1. Dashboard</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="workspace">Today’s workspace</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="workspace">Today at a glance</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="overview">What matters today</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="timeline">Chronology and events</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="calendar">Appointments and key dates</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="timeline">Timeline and recent events</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="calendar">Calendar and appointments</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Care records</summary>
+                    <summary class="workspace-menu-trigger">2. Daily recording</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action-router="new-daily-note">Add daily note</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-incident">Add important event</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="handover">Open handover</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-incident">Add incident or important event</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="handover">Handover</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="communication">Communication log</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Health and wellbeing</summary>
+                    <summary class="workspace-menu-trigger">3. Safeguarding and risk</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-action-router="new-incident">Record safeguarding concern</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="timeline">Recent concerns and events</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="manager">Management oversight</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="compliance">Compliance checks</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">4. Health and wellbeing</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action-router="new-health-record">Add health record</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="health">Health and wellbeing</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="therapy">Therapeutic services</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="health">Health overview</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="therapy">Therapeutic support</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="calendar">Appointments</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Learning and development</summary>
+                    <summary class="workspace-menu-trigger">5. Education and progress</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-action-router="new-education-record">Add education record</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="education">Learning and education</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="readiness">Actions and readiness</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-education-record">Add education update</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="education">Education overview</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="readiness">Independence and readiness</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Relationships</summary>
+                    <summary class="workspace-menu-trigger">6. Family and relationships</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="profile">About this young person</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="family">Relationships and family</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="profile">About this child</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="family">Family and relationships</button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">Add family contact</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="professional-message">Log communication</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="professional-message">Log professional communication</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Planning and review</summary>
+                    <summary class="workspace-menu-trigger">7. Plans and actions</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-action-router="new-support-plan">Add support plan</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-task">Add task</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="reports">Reports and review</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="manager">Leadership and review</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-support-plan">Add care or support plan</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-task">Add action</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reports">Reports and reviews</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="manager">Manager review</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Documents</summary>
+                    <summary class="workspace-menu-trigger">8. Documents and reports</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action-router="upload-document">Upload document</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="documents">Documents</button>
@@ -458,32 +466,30 @@
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Home operations</summary>
+                    <summary class="workspace-menu-trigger">9. Home operations</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="home-dashboard">Home dashboard</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="compliance">Compliance</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="rota">Rota and cover</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="team">Team and staffing</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="manager">Manager view</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="notifications">Alerts and notifications</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Workforce</summary>
+                    <summary class="workspace-menu-trigger">10. Staff and development</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="staff-profile">Staff profiles</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="onboarding">Onboarding</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="notifications">Notifications</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="rota">Rota and staffing cover</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="onboarding">Recruitment and onboarding</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="supervision">Supervision and development</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Quality</summary>
+                    <summary class="workspace-menu-trigger">11. Quality and compliance</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="quality">Quality dashboard</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="compliance">Compliance and statutory assurance</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="reports">Reports and review packs</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="compliance">Compliance and statutory checks</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reports">Audit and review packs</button>
                     </div>
                   </details>
                 </nav>
@@ -512,11 +518,12 @@
                 >
                   <div class="records-toolbar-left">
                     <div>
-                      <div class="eyebrow">Records</div>
-                      <h2 id="recordsToolbarTitle">Find what matters quickly</h2>
+                      <div class="eyebrow">Search</div>
+                      <h2 id="recordsToolbarTitle">Find records quickly</h2>
                     </div>
                     <p>
-                      Search recent work, earlier records, key events, documents and communication without clutter.
+                      Search notes, incidents, plans, documents, communication,
+                      appointments and actions in one place.
                     </p>
                   </div>
 
@@ -526,7 +533,7 @@
                       id="recordSearchInput"
                       class="search-input"
                       type="text"
-                      placeholder="Search records, events, plans, documents or communication..."
+                      placeholder="Search notes, incidents, plans, documents or communication..."
                       autocomplete="off"
                     />
 
@@ -534,16 +541,16 @@
                     <select id="recordTypeFilter" class="select-input">
                       <option value="">All record types</option>
                       <option value="daily_note">Daily notes</option>
-                      <option value="incident">Important events</option>
-                      <option value="support_plan">Support plans</option>
+                      <option value="incident">Incidents and events</option>
+                      <option value="support_plan">Care and support plans</option>
                       <option value="health_record">Health</option>
                       <option value="education_record">Education</option>
-                      <option value="family_contact">Family</option>
+                      <option value="family_contact">Family contact</option>
                       <option value="appointment">Appointments</option>
-                      <option value="task">Tasks</option>
+                      <option value="task">Actions</option>
                       <option value="document">Documents</option>
                       <option value="communication">Communication</option>
-                      <option value="therapy">Therapy</option>
+                      <option value="therapy">Therapeutic work</option>
                     </select>
                   </div>
                 </section>
@@ -580,7 +587,7 @@
       <div class="mobile-nav-head">
         <div>
           <div class="eyebrow">Navigation</div>
-          <h3>Workspace menu</h3>
+          <h3>Main menu</h3>
         </div>
 
         <button
@@ -662,7 +669,7 @@
             <div class="eyebrow">Create or edit</div>
             <h2 id="composerTitle">New record</h2>
             <p id="composerSubtitle">
-              Record clearly, warmly and with the young person at the centre.
+              Record clearly, kindly and professionally with the child at the centre.
             </p>
           </div>
 
@@ -712,24 +719,25 @@
 
           <aside class="composer-side">
             <section class="composer-side-card">
-              <h3>Writing guidance</h3>
+              <h3>Writing help</h3>
               <div id="composerGuidanceText" class="composer-side-body">
-                Keep the young person at the centre. Write clearly, calmly and professionally.
-                Record what happened, what may have been going on for them, and what adults need to do next.
+                Keep the child at the centre. Be clear, calm and factual.
+                Record what happened, what may have been going on for them,
+                what helped, and what adults need to do next.
               </div>
             </section>
 
             <section class="composer-side-card">
-              <h3>Practice prompts</h3>
+              <h3>Helpful prompts</h3>
               <div id="composerPrompts" class="composer-prompt-list">
-                <div class="composer-prompt">What happened, step by step, in a clear and factual way?</div>
-                <div class="composer-prompt">What may the young person have been feeling or communicating?</div>
-                <div class="composer-prompt">What helped, what did not help, and what should adults do next?</div>
+                <div class="composer-prompt">What happened, in clear order?</div>
+                <div class="composer-prompt">What may the child or young person have been feeling or communicating?</div>
+                <div class="composer-prompt">What worked, what did not, and what needs to happen next?</div>
               </div>
             </section>
 
             <section class="composer-side-card">
-              <h3>AI review</h3>
+              <h3>AI writing review</h3>
               <div class="composer-ai-actions">
                 <button id="composerGrammarBtn" class="secondary-btn" type="button">
                   Check tone and clarity
@@ -741,7 +749,7 @@
                   Safeguarding review
                 </button>
                 <button id="composerChildVoiceBtn" class="secondary-btn" type="button">
-                  Strengthen young person voice
+                  Strengthen child voice
                 </button>
               </div>
 
@@ -764,9 +772,9 @@
         <header class="fullscreen-panel-head">
           <div>
             <div class="eyebrow">Suggestions</div>
-            <h2 id="suggestionsPanelTitle">Suggested follow-up</h2>
+            <h2 id="suggestionsPanelTitle">Helpful next steps</h2>
             <p id="suggestionsPanelSubtitle">
-              Linked records and actions that may be helpful next.
+              Linked records and actions that may help next.
             </p>
           </div>
 
@@ -810,8 +818,8 @@
           <div>
             <h3>Assistant</h3>
             <p>
-              Ask questions, draft wording and get support with child-centred records,
-              oversight, quality, compliance and thoughtful next steps.
+              Ask questions, draft records and get support with child-centred care,
+              safeguarding, management oversight, quality and next steps.
             </p>
           </div>
 
@@ -828,7 +836,7 @@
         <div class="assistant-modal-layout assistant-modal-layout--split">
           <div class="assistant-modal-main">
             <div class="assistant-context-bar">
-              <span id="scopeBadge" class="meta-chip">Young person assistant</span>
+              <span id="scopeBadge" class="meta-chip">Child assistant</span>
               <span id="scopeHomeBadge" class="meta-chip meta-chip--soft hidden"></span>
               <span id="scopeChildBadge" class="meta-chip meta-chip--soft hidden"></span>
               <span id="scopeShiftBadge" class="meta-chip meta-chip--soft"></span>
@@ -849,8 +857,8 @@
                 <div class="assistant-message-role">Assistant</div>
                 <div class="assistant-message-body">
                   <p>
-                    Ask about this workspace, this child, the home, compliance,
-                    quality, records or next steps.
+                    Ask about this child, the home, records, quality, compliance,
+                    risk, planning or next steps.
                   </p>
                 </div>
               </article>
@@ -873,16 +881,16 @@
             <section class="assistant-support-grid">
               <div class="assistant-support-card">
                 <div class="overview-section-head">
-                  <h3>Scope summary</h3>
-                  <p>Current assistant scope and context.</p>
+                  <h3>Current context</h3>
+                  <p>What the assistant is looking at right now.</p>
                 </div>
                 <div id="assistantScopeSummary"></div>
               </div>
 
               <div class="assistant-support-card">
                 <div class="overview-section-head">
-                  <h3>Suggested actions</h3>
-                  <p>Helpful next steps and quick actions.</p>
+                  <h3>Helpful actions</h3>
+                  <p>Quick next steps and suggested actions.</p>
                 </div>
                 <div id="assistantSuggestions" class="assistant-chip-row"></div>
                 <div id="assistantActions" class="hidden" aria-hidden="true"></div>
@@ -891,7 +899,7 @@
               <div class="assistant-support-card">
                 <div class="overview-section-head">
                   <h3>Sources</h3>
-                  <p>Evidence used by the assistant.</p>
+                  <p>Evidence and information used by the assistant.</p>
                 </div>
                 <div id="assistantSources"></div>
               </div>
@@ -909,8 +917,8 @@
           <aside class="assistant-modal-side">
             <section class="assistant-side-card">
               <div class="overview-section-head">
-                <h3>Scoped records</h3>
-                <p>Live scope bundle and refresh status.</p>
+                <h3>Live scope</h3>
+                <p>Current records bundle and refresh status.</p>
               </div>
 
               <div class="assistant-context-row">
@@ -939,38 +947,38 @@
 
             <section class="assistant-side-card">
               <div class="overview-section-head">
-                <h3>Morning brief</h3>
-                <p>A practical shift-ready summary.</p>
+                <h3>Shift brief</h3>
+                <p>A practical summary for staff on duty.</p>
               </div>
               <div id="morningBriefBody">
-                <p>No morning brief available yet.</p>
+                <p>No shift brief available yet.</p>
               </div>
             </section>
 
             <section class="assistant-side-card">
               <div class="overview-section-head">
-                <h3>Manager brief</h3>
+                <h3>Manager view</h3>
                 <p>Leadership, risk, compliance and oversight themes.</p>
               </div>
               <div id="managerBriefBody">
-                <p>No manager brief available yet.</p>
+                <p>No manager summary available yet.</p>
               </div>
             </section>
 
             <section class="assistant-side-card">
               <div class="overview-section-head">
-                <h3>Quality brief</h3>
-                <p>Quality assurance, audit and readiness themes.</p>
+                <h3>Quality view</h3>
+                <p>Audit, regulation and improvement themes.</p>
               </div>
               <div id="qualityBriefBody">
-                <p>No quality brief available yet.</p>
+                <p>No quality summary available yet.</p>
               </div>
             </section>
 
             <section class="assistant-side-card">
               <div class="overview-section-head">
-                <h3>Live updates</h3>
-                <p>Recent refreshes and assistant intelligence updates.</p>
+                <h3>Recent updates</h3>
+                <p>Refreshes and assistant updates.</p>
               </div>
 
               <div class="assistant-context-row">
@@ -1043,7 +1051,7 @@
             <div class="empty-state-inner">
               <div class="empty-state-icon" aria-hidden="true">○</div>
               <h3>Select a record</h3>
-              <p>Choose a record from the workspace to view its detail here.</p>
+              <p>Choose a record from the workspace to view it here.</p>
             </div>
           </div>
         </div>
@@ -1054,7 +1062,7 @@
       <div class="app-footer-inner">
         <div class="app-footer-brand">
           <strong>IndiCare OS</strong>
-          <span>Child-centred residential operating system</span>
+          <span>Residential care made clearer</span>
         </div>
 
         <div class="app-footer-copy">
