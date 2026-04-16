@@ -1,654 +1,867 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import {
   getSectionTitle,
   getSectionSubtitle,
-  getQuickAction,
 } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 
-function getCurrentScope() {
-  return state.currentScope || "child";
+const SECTION_CONTENT = {
+  admission: {
+    eyebrow: "Child journey",
+    intro:
+      "A structured admission hub covering referral, matching, impact risk, welcome planning, bedroom preparation, consent, key documents and first 72 hours.",
+    stats: [
+      ["Referral", "Ready", "Referral pack and matching summary"],
+      ["Pre-placement", "4", "Actions before move-in"],
+      ["Day one", "Planned", "Arrival and welcome tasks"],
+      ["72-hour review", "Due", "Initial adjustment review"],
+    ],
+    sections: [
+      {
+        title: "Admission workflow",
+        items: [
+          "Referral received and placement request logged",
+          "Impact risk and matching consideration completed",
+          "Manager decision and placement rationale recorded",
+          "Bedroom, welcome items and staff briefing prepared",
+          "Child welcome plan and first conversation prompts ready",
+        ],
+      },
+      {
+        title: "Key forms and documents",
+        items: [
+          "Referral information and placing authority paperwork",
+          "Consent forms and delegated authority overview",
+          "Placement plan and immediate risk summary",
+          "Health information, allergies and medication handover",
+          "Education and family contact information",
+        ],
+      },
+      {
+        title: "First week focus",
+        items: [
+          "Settling-in observations and child voice",
+          "Daily living routines and sensory needs",
+          "Relationship building with staff and peers",
+          "School transport, attendance and expectations",
+          "Initial keywork and welcome review",
+        ],
+      },
+    ],
+  },
+
+  "daily-life": {
+    eyebrow: "Child journey",
+    intro:
+      "A whole-child daily living area for routines, sleep, meals, independence, achievements, direct work and day-to-day care experience.",
+    stats: [
+      ["Daily notes", "Live", "Current day recording"],
+      ["Routines", "Tracked", "Sleep, meals and daily structure"],
+      ["Achievements", "Visible", "Progress and strengths recorded"],
+      ["Keywork", "Planned", "Direct work and reflection"],
+    ],
+    sections: [
+      {
+        title: "Daily living",
+        items: [
+          "Morning and evening routines",
+          "Meals, nutrition and food preferences",
+          "Sleep, rest and overnight patterns",
+          "Independence and self-care support",
+          "Community engagement and activities",
+        ],
+      },
+      {
+        title: "Recording themes",
+        items: [
+          "Daily notes and lived experience",
+          "Achievements and progress moments",
+          "Behaviour as communication reflections",
+          "Relationship-based interventions",
+          "Child voice and wishes throughout the day",
+        ],
+      },
+      {
+        title: "Useful templates",
+        items: [
+          "Daily record template",
+          "Keywork session template",
+          "Achievement note template",
+          "Independence progress tracker",
+          "Evening and sleep handover prompts",
+        ],
+      },
+    ],
+  },
+
+  medication: {
+    eyebrow: "Health",
+    intro:
+      "A medication area for MAR-style oversight, storage checks, refusals, administration records, audits and health professional instructions.",
+    stats: [
+      ["Medication", "Managed", "Active medication list"],
+      ["MAR checks", "Daily", "Administration oversight"],
+      ["Refusals", "Tracked", "Missed or declined doses"],
+      ["Audit", "Monthly", "Medication review cycle"],
+    ],
+    sections: [
+      {
+        title: "Medication management",
+        items: [
+          "Medication profile and prescribing details",
+          "Administration records and signatures",
+          "Refusals, omissions and follow-up actions",
+          "Controlled medication and storage checks",
+          "Medication changes and GP updates",
+        ],
+      },
+      {
+        title: "Compliance prompts",
+        items: [
+          "Expiry dates and stock balance",
+          "Temperature and storage recording",
+          "PRN guidance and effectiveness review",
+          "Medication competency and staff sign-off",
+          "Escalation for discrepancies or concern",
+        ],
+      },
+    ],
+  },
+
+  risk: {
+    eyebrow: "Safeguarding",
+    intro:
+      "A focused risk area for risk assessments, triggers, protective factors, de-escalation guidance, review dates and team response planning.",
+    stats: [
+      ["Risk plans", "Active", "Current assessments in place"],
+      ["Reviews", "Scheduled", "Planned review cycle"],
+      ["Triggers", "Mapped", "Known patterns and indicators"],
+      ["Responses", "Shared", "Consistent team guidance"],
+    ],
+    sections: [
+      {
+        title: "Risk assessment structure",
+        items: [
+          "Presenting risk and context",
+          "Known triggers and warning signs",
+          "Protective factors and strengths",
+          "Prevention and de-escalation guidance",
+          "Clear response steps for staff",
+        ],
+      },
+      {
+        title: "Linked areas",
+        items: [
+          "Missing from care planning",
+          "Self-harm or emotional distress support",
+          "Peer and relationship risks",
+          "Community and exploitation concerns",
+          "Room safety and environmental controls",
+        ],
+      },
+    ],
+  },
+
+  safeguarding: {
+    eyebrow: "Safeguarding",
+    intro:
+      "A safeguarding hub for concerns, contextual safeguarding, referrals, chronologies, strategy actions and management oversight.",
+    stats: [
+      ["Concerns", "Logged", "Safeguarding records"],
+      ["Chronology", "Live", "Linked incidents and actions"],
+      ["Referrals", "Tracked", "Agency escalation and follow-up"],
+      ["Oversight", "Manager", "Review and decision trail"],
+    ],
+    sections: [
+      {
+        title: "Safeguarding response",
+        items: [
+          "Concern raised and immediate safety action",
+          "Manager review and threshold decision",
+          "Referral to local authority or police",
+          "Chronology and linked evidence",
+          "Outcome, review and learning",
+        ],
+      },
+      {
+        title: "Safeguarding themes",
+        items: [
+          "Exploitation and missing episodes",
+          "Peer-on-peer concerns",
+          "Online safety and digital risk",
+          "Physical intervention review",
+          "Neglect, emotional wellbeing and contextual harm",
+        ],
+      },
+    ],
+  },
+
+  "missing-from-care": {
+    eyebrow: "Safeguarding",
+    intro:
+      "A dedicated missing-from-care area for episodes, return home interviews, mapping patterns, disruption planning and contextual safeguarding response.",
+    stats: [
+      ["Episodes", "Tracked", "Missing incidents logged"],
+      ["Return interviews", "Due", "Follow-up and learning"],
+      ["Patterns", "Mapped", "Time, place and people analysis"],
+      ["Plans", "Updated", "Response and prevention guidance"],
+    ],
+    sections: [
+      {
+        title: "Episode management",
+        items: [
+          "Immediate response and notifications",
+          "Chronology of actions during the episode",
+          "Return and presentation on return",
+          "Return home interview follow-up",
+          "Review of triggers and prevention planning",
+        ],
+      },
+      {
+        title: "Linked intelligence",
+        items: [
+          "People, places and peer links",
+          "Transport and location patterns",
+          "Exploitation indicators",
+          "Phone and online contact concerns",
+          "Updated disruption and safety planning",
+        ],
+      },
+    ],
+  },
+
+  reviews: {
+    eyebrow: "Child journey",
+    intro:
+      "A review centre for looked after reviews, placement planning meetings, monthly management review, outcomes tracking and child voice.",
+    stats: [
+      ["Reviews", "Scheduled", "Upcoming review activity"],
+      ["Actions", "Open", "Review actions awaiting completion"],
+      ["Voice", "Captured", "Child contribution included"],
+      ["Outcomes", "Tracked", "Progress since last review"],
+    ],
+    sections: [
+      {
+        title: "Review cycle",
+        items: [
+          "Looked after child review preparation",
+          "Placement planning meeting preparation",
+          "Monthly management monitoring",
+          "Outcome and progress review",
+          "Post-review action tracking",
+        ],
+      },
+      {
+        title: "Review evidence",
+        items: [
+          "Child voice and wishes",
+          "Health and education progress",
+          "Family time and relationship themes",
+          "Risk, behaviour and safeguarding overview",
+          "Recommendations and updated plans",
+        ],
+      },
+    ],
+  },
+
+  transition: {
+    eyebrow: "Child journey",
+    intro:
+      "A transition area to support step-down planning, change preparation, visits, endings work and emotional readiness for the next move.",
+    stats: [
+      ["Transition plan", "Drafted", "Move-on planning started"],
+      ["Visits", "Planned", "Introductions and familiarisation"],
+      ["Feelings work", "Included", "Ending and change support"],
+      ["Actions", "Open", "Transition tasks in progress"],
+    ],
+    sections: [
+      {
+        title: "Transition planning",
+        items: [
+          "Reason for move and transition rationale",
+          "Preparation visits and introductions",
+          "Practical move planning and belongings",
+          "Child feelings, worries and hopes",
+          "Staff handover to next service",
+        ],
+      },
+      {
+        title: "Supporting endings",
+        items: [
+          "Memory work and reflection",
+          "Relationship endings done safely",
+          "Celebrating achievements and identity",
+          "Goodbye planning and closure",
+          "Post-move welfare check planning",
+        ],
+      },
+    ],
+  },
+
+  "leaving-care": {
+    eyebrow: "Child journey",
+    intro:
+      "A leaving-care and independence area covering pathway-style preparation, tenancy skills, budgeting, identity documents, emotional support and next-step planning.",
+    stats: [
+      ["Readiness", "Tracked", "Independence progress"],
+      ["Documents", "Prepared", "ID and key paperwork"],
+      ["Skills", "Reviewed", "Practical living development"],
+      ["Next steps", "Planned", "Move-on actions"],
+    ],
+    sections: [
+      {
+        title: "Leaving placement preparation",
+        items: [
+          "Budgeting, shopping and meal preparation",
+          "Travel and community confidence",
+          "Appointments and self-advocacy",
+          "Housing and tenancy readiness",
+          "Identity documents and practical paperwork",
+        ],
+      },
+      {
+        title: "Emotional preparation",
+        items: [
+          "Change and endings conversations",
+          "Trusted adult and support network mapping",
+          "Staying connected safely",
+          "Confidence, resilience and reflection",
+          "Celebrating progress and personal growth",
+        ],
+      },
+    ],
+  },
+
+  operations: {
+    eyebrow: "Home operations",
+    intro:
+      "A live operations area for shift running, admissions pipeline, incidents, vehicles, handover quality, occupancy and daily management grip.",
+    stats: [
+      ["Occupancy", "Live", "Current home usage"],
+      ["Shifts", "Covered", "Daily cover and leaders"],
+      ["Incidents", "Visible", "Recent operational events"],
+      ["Actions", "Open", "Manager follow-up items"],
+    ],
+    sections: [
+      {
+        title: "Operational oversight",
+        items: [
+          "Daily shift picture and deployment",
+          "Occupancy and planned admissions",
+          "Vehicles, escorts and logistics",
+          "Incident overview and escalation",
+          "Handover quality and shift continuity",
+        ],
+      },
+      {
+        title: "Manager tools",
+        items: [
+          "Daily priorities board",
+          "Service issues and disruptions",
+          "Placement pipeline and referrals",
+          "Agency use and cost pressure",
+          "Operational risk log",
+        ],
+      },
+    ],
+  },
+
+  "training-centre": {
+    eyebrow: "Staff journey",
+    intro:
+      "A workforce training centre covering mandatory learning, role-specific training, refreshers, competency sign-off and overdue learning.",
+    stats: [
+      ["Mandatory", "Tracked", "Core training compliance"],
+      ["Refreshers", "Due", "Upcoming expiries"],
+      ["Competency", "Logged", "Observed practice sign-off"],
+      ["Progress", "Visible", "Workforce training status"],
+    ],
+    sections: [
+      {
+        title: "Training areas",
+        items: [
+          "Mandatory learning matrix",
+          "Role-based specialist learning",
+          "Medication and safeguarding competency",
+          "Refreshers and overdue items",
+          "Certificates and evidence storage",
+        ],
+      },
+      {
+        title: "Management oversight",
+        items: [
+          "Training gaps by staff member",
+          "Team compliance snapshot",
+          "Booking and attendance tracking",
+          "Learning linked to incidents or audits",
+          "Development planning",
+        ],
+      },
+    ],
+  },
+
+  "health-safety": {
+    eyebrow: "Home operations",
+    intro:
+      "A health and safety area for fire checks, room checks, risk assessments, accidents, environmental safety and statutory maintenance logs.",
+    stats: [
+      ["Checks", "Scheduled", "Routine H&S checks"],
+      ["Risks", "Live", "Environmental safety risks"],
+      ["Incidents", "Logged", "Accidents and near misses"],
+      ["Audit", "Ready", "Inspection evidence available"],
+    ],
+    sections: [
+      {
+        title: "Health and safety framework",
+        items: [
+          "Fire safety, drills and equipment checks",
+          "Room and environment safety checks",
+          "Accident and incident recording",
+          "COSHH and hazardous storage records",
+          "Visitor, contractor and site safety controls",
+        ],
+      },
+      {
+        title: "Useful logs",
+        items: [
+          "Weekly premises checks",
+          "Vehicle and transport safety",
+          "Kitchen and food hygiene checks",
+          "Water temperature and legionella logs",
+          "Emergency lighting and alarm servicing",
+        ],
+      },
+    ],
+  },
+
+  maintenance: {
+    eyebrow: "Home operations",
+    intro:
+      "A maintenance hub for defects, repairs, planned works, contractor visits, room readiness and premises presentation.",
+    stats: [
+      ["Repairs", "Open", "Outstanding maintenance items"],
+      ["Rooms", "Monitored", "Bedroom and communal space quality"],
+      ["Contractors", "Booked", "Planned visits"],
+      ["Presentation", "Tracked", "Home environment standards"],
+    ],
+    sections: [
+      {
+        title: "Maintenance management",
+        items: [
+          "Reported defects and priority rating",
+          "Planned preventative maintenance",
+          "Contractor scheduling and completion",
+          "Bedroom readiness and room turnaround",
+          "Evidence of completion and sign-off",
+        ],
+      },
+      {
+        title: "Inspection relevance",
+        items: [
+          "Repair responsiveness",
+          "Environment warm, homely and safe",
+          "Damage patterns and repeated issues",
+          "Children’s views on their space",
+          "Manager oversight of unresolved problems",
+        ],
+      },
+    ],
+  },
+
+  "ofsted-readiness": {
+    eyebrow: "Quality and compliance",
+    intro:
+      "An Ofsted readiness area pulling together evidence, actions, leadership oversight, key records and inspection-day confidence.",
+    stats: [
+      ["Readiness", "Live", "Current inspection position"],
+      ["Evidence", "Collected", "Key sources available"],
+      ["Actions", "Open", "Gaps to address"],
+      ["Leaders", "Prepared", "Inspection roles and briefs"],
+    ],
+    sections: [
+      {
+        title: "Inspection preparation",
+        items: [
+          "Service strengths and improvement themes",
+          "Children’s progress and lived experience evidence",
+          "Leadership and management examples",
+          "Workforce compliance and safer recruitment",
+          "Records, chronologies and safeguarding oversight",
+        ],
+      },
+      {
+        title: "Inspection day pack",
+        items: [
+          "Statement of purpose and key policies",
+          "Quality of care review and development plan",
+          "Workforce matrix and supervision evidence",
+          "Children’s records and sampling readiness",
+          "Premises, health and safety and maintenance evidence",
+        ],
+      },
+    ],
+  },
+
+  policies: {
+    eyebrow: "Governance",
+    intro:
+      "A central policy library for operational guidance, practice standards, version control, review cycles and staff sign-off.",
+    stats: [
+      ["Policies", "Centralised", "Single policy library"],
+      ["Reviews", "Scheduled", "Upcoming review dates"],
+      ["Versions", "Tracked", "Current and previous versions"],
+      ["Sign-off", "Visible", "Staff acknowledgement"],
+    ],
+    sections: [
+      {
+        title: "Policy library",
+        items: [
+          "Safeguarding and child protection",
+          "Missing from care and exploitation",
+          "Medication and health procedures",
+          "Behaviour support and physical intervention",
+          "Complaints, allegations and whistleblowing",
+        ],
+      },
+      {
+        title: "Governance controls",
+        items: [
+          "Policy owner and review date",
+          "Version history and change log",
+          "Staff reading confirmation",
+          "Linked training and competency",
+          "Inspection-ready evidence of implementation",
+        ],
+      },
+    ],
+  },
+
+  "provider-overview": {
+    eyebrow: "Provider oversight",
+    intro:
+      "A provider-wide overview bringing together occupancy, incidents, staffing, compliance, quality and strategic risk across homes.",
+    stats: [
+      ["Homes", "Visible", "Cross-service oversight"],
+      ["Risk", "Mapped", "Provider concerns and themes"],
+      ["Quality", "Compared", "Home-by-home performance"],
+      ["Actions", "Tracked", "Strategic follow-up"],
+    ],
+    sections: [
+      {
+        title: "Provider dashboard",
+        items: [
+          "Multi-home operational snapshot",
+          "Cross-home safeguarding themes",
+          "Staffing pressure and workforce trends",
+          "Compliance risk by home",
+          "Leadership action tracker",
+        ],
+      },
+      {
+        title: "Strategic use",
+        items: [
+          "Board and leadership reporting",
+          "Regional support priorities",
+          "Escalation and intervention decisions",
+          "Resource planning across homes",
+          "Improvement monitoring",
+        ],
+      },
+    ],
+  },
+
+  "quality-audits": {
+    eyebrow: "Quality",
+    intro:
+      "A quality audits area for dip samples, themed audits, action tracking, evidence scoring and service improvement monitoring.",
+    stats: [
+      ["Audits", "Planned", "Current audit programme"],
+      ["Findings", "Logged", "Themes and evidence"],
+      ["Actions", "Assigned", "Improvement actions"],
+      ["Trends", "Visible", "Recurring issues and strengths"],
+    ],
+    sections: [
+      {
+        title: "Audit activity",
+        items: [
+          "Child record dip sampling",
+          "Workforce file audits",
+          "Medication and health audits",
+          "Environmental and H&S audits",
+          "Practice quality and child voice auditing",
+        ],
+      },
+      {
+        title: "Improvement cycle",
+        items: [
+          "Finding logged and rated",
+          "Responsible person assigned",
+          "Timescale and follow-up date",
+          "Evidence of improvement uploaded",
+          "Re-audit and closure",
+        ],
+      },
+    ],
+  },
+
+  reg44: {
+    eyebrow: "Regulation",
+    intro:
+      "A Regulation 44 area for independent visitor preparation, evidence collation, recommendations, provider response and tracking.",
+    stats: [
+      ["Visits", "Scheduled", "Independent visitor cycle"],
+      ["Evidence", "Prepared", "Supporting information ready"],
+      ["Recommendations", "Logged", "Improvement points tracked"],
+      ["Responses", "Recorded", "Provider action updates"],
+    ],
+    sections: [
+      {
+        title: "Regulation 44 workflow",
+        items: [
+          "Visit preparation and evidence pack",
+          "Independent visitor access to key information",
+          "Recommendations and strengths recorded",
+          "Provider response and action planning",
+          "Progress tracking to next visit",
+        ],
+      },
+      {
+        title: "Key evidence",
+        items: [
+          "Children’s views and lived experience",
+          "Staffing and workforce overview",
+          "Safeguarding and incident themes",
+          "Premises and presentation standards",
+          "Leadership response to previous recommendations",
+        ],
+      },
+    ],
+  },
+
+  reg45: {
+    eyebrow: "Regulation",
+    intro:
+      "A Regulation 45 area for six-monthly quality of care review, evidence gathering, consultation, analysis and service development planning.",
+    stats: [
+      ["Review cycle", "Active", "Six-month review in progress"],
+      ["Consultation", "Included", "Views from children and stakeholders"],
+      ["Analysis", "Structured", "Strengths and weaknesses identified"],
+      ["Plan", "Updated", "Improvement priorities set"],
+    ],
+    sections: [
+      {
+        title: "Regulation 45 review",
+        items: [
+          "Quality of care evidence gathering",
+          "Children’s, staff and stakeholder views",
+          "Analysis of progress and shortfalls",
+          "Service strengths and improvement areas",
+          "Development plan and leadership response",
+        ],
+      },
+      {
+        title: "Outputs",
+        items: [
+          "Six-month review report",
+          "Improvement priorities and timescales",
+          "Responsible leads and governance oversight",
+          "Links to audit and Ofsted readiness",
+          "Review history and trend comparison",
+        ],
+      },
+    ],
+  },
+
+  "inspection-readiness": {
+    eyebrow: "Quality",
+    intro:
+      "A strategic inspection-readiness area for provider and home leaders preparing evidence, speaking points, risk analysis and quality narrative.",
+    stats: [
+      ["Narrative", "Prepared", "Service quality story"],
+      ["Evidence", "Mapped", "Inspection supporting material"],
+      ["Leaders", "Briefed", "Key lines of questioning"],
+      ["Risks", "Visible", "Known vulnerabilities and actions"],
+    ],
+    sections: [
+      {
+        title: "Readiness themes",
+        items: [
+          "What children’s lives are like here",
+          "How leaders know the service is safe",
+          "How improvement is monitored and sustained",
+          "How workforce quality is maintained",
+          "How concerns are identified and acted on",
+        ],
+      },
+      {
+        title: "Leadership preparation",
+        items: [
+          "Inspection question bank and prompts",
+          "Current strengths and honest improvement areas",
+          "Recent progress since last inspection",
+          "Document and evidence pack",
+          "Cross-reference with reg44, reg45 and audits",
+        ],
+      },
+    ],
+  },
+};
+
+function getSectionContent(sectionId = "") {
+  return (
+    SECTION_CONTENT[sectionId] || {
+      eyebrow: "Workspace area",
+      intro:
+        "This area is mapped into the IndiCare OS journey and is ready to be demonstrated as part of the wider residential platform.",
+      stats: [
+        ["Status", "Available", "Section is connected in the OS"],
+        ["Journey", "Mapped", "Included in role-based navigation"],
+        ["Actions", "Ready", "Can be linked to workflow"],
+        ["Demo", "Polished", "Prepared for showcase"],
+      ],
+      sections: [
+        {
+          title: "What this area will hold",
+          items: [
+            "Structured workflow and templates",
+            "Linked actions and evidence capture",
+            "Manager and quality visibility",
+            "Clear role-based navigation",
+            "Inspection-ready documentation support",
+          ],
+        },
+      ],
+    }
+  );
 }
 
-function getCurrentSection() {
-  return (
+function getScopeLabel() {
+  const scope = state.currentScope || "child";
+  if (scope === "home") return "Home workspace";
+  if (scope === "quality") return "Quality workspace";
+  return "Child workspace";
+}
+
+function statCardHtml(label, value, note) {
+  return `
+    <article class="overview-stat-card">
+      <span class="overview-stat-label">${escapeHtml(label)}</span>
+      <strong class="overview-stat-value">${escapeHtml(value)}</strong>
+      <span class="overview-stat-note">${escapeHtml(note)}</span>
+    </article>
+  `;
+}
+
+function listCardHtml(title, items = []) {
+  return `
+    <section class="overview-section-card">
+      <div class="overview-section-head">
+        <h3>${escapeHtml(title)}</h3>
+      </div>
+      <div class="priority-list">
+        ${items
+          .map(
+            (item) => `
+              <article class="priority-item">
+                <p>${escapeHtml(item)}</p>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+export async function renderPlaceholderFeaturePage(sectionId = "") {
+  const activeSection =
+    sectionId ||
     state.currentSection ||
     state.activeSection ||
     state.currentView ||
-    "workspace"
-  );
-}
+    "workspace";
 
-function getCurrentPersonName() {
-  return (
-    state.selectedYoungPerson?.preferred_name ||
-    state.selectedYoungPerson?.first_name ||
-    state.selectedYoungPerson?.name ||
-    "this child"
-  );
-}
-
-function getCurrentHomeName() {
-  return (
-    state.currentUser?.home_name ||
-    state.currentUser?.homeName ||
-    (state.homeId ? `Home ${state.homeId}` : "this home")
-  );
-}
-
-function getScopeSummary() {
-  const scope = getCurrentScope();
-
-  if (scope === "home") {
-    return {
-      subject: getCurrentHomeName(),
-      descriptor: "home",
-    };
-  }
-
-  if (scope === "quality") {
-    return {
-      subject: getCurrentHomeName(),
-      descriptor: "quality view",
-    };
-  }
-
-  return {
-    subject: getCurrentPersonName(),
-    descriptor: "child",
-  };
-}
-
-function getDefaultActionId(section = getCurrentSection()) {
-  const map = {
-    workspace: "daily_note",
-    overview: "daily_note",
-    admission: "support_plan",
-    profile: "profile_identity",
-    timeline: "incident",
-    handover: "daily_note",
-    "daily-life": "daily_note",
-    health: "health_record",
-    medication: "health_record",
-    education: "education_record",
-    family: "family_contact",
-    calendar: "appointment",
-    therapy: "task",
-    risk: "risk",
-    safeguarding: "safeguarding_record",
-    "missing-from-care": "missing_episode",
-    readiness: "task",
-    reviews: "task",
-    reports: "task",
-    transition: "task",
-    "leaving-care": "task",
-    documents: "upload_document",
-    communication: "professional_message",
-    manager: "task",
-    "home-dashboard": "task",
-    operations: "task",
-    team: "task",
-    rota: "staff_task",
-    "staff-profile": "staff_task",
-    onboarding: "staff_task",
-    supervision: "staff_task",
-    "training-centre": "staff_task",
-    compliance: "task",
-    "health-safety": "health_safety_check",
-    maintenance: "task",
-    notifications: "staff_task",
-    quality: "task",
-    "ofsted-readiness": "task",
-    policies: "policy_review",
-    "provider-overview": "task",
-    "quality-audits": "task",
-    reg44: "task",
-    reg45: "task",
-    "inspection-readiness": "task",
-  };
-
-  return map[section] || "task";
-}
-
-function getPlaceholderStats(section = getCurrentSection()) {
-  const scope = getCurrentScope();
-
-  if (scope === "child") {
-    const childStats = {
-      admission: [
-        ["Open tasks", "4"],
-        ["Documents", "7"],
-        ["Priority risks", "2"],
-      ],
-      health: [
-        ["Appointments", "3"],
-        ["Follow-up", "2"],
-        ["Professionals", "4"],
-      ],
-      education: [
-        ["Attendance", "94%"],
-        ["Supports", "3"],
-        ["Achievements", "5"],
-      ],
-      risk: [
-        ["Live risks", "3"],
-        ["Protective factors", "6"],
-        ["Actions due", "2"],
-      ],
-      safeguarding: [
-        ["Open concerns", "1"],
-        ["Linked actions", "3"],
-        ["Reviews due", "1"],
-      ],
-      reviews: [
-        ["Upcoming reviews", "2"],
-        ["Reports due", "1"],
-        ["Actions carried", "4"],
-      ],
-      transition: [
-        ["Life skills", "8"],
-        ["Open actions", "3"],
-        ["Meetings", "2"],
-      ],
-      "leaving-care": [
-        ["Closure tasks", "5"],
-        ["Key documents", "4"],
-        ["Final actions", "2"],
-      ],
-    };
-
-    return childStats[section] || [
-      ["Open items", "3"],
-      ["Due today", "2"],
-      ["Recent updates", "5"],
-    ];
-  }
-
-  if (scope === "home") {
-    const homeStats = {
-      operations: [
-        ["On shift", "7"],
-        ["Open events", "2"],
-        ["Priority actions", "4"],
-      ],
-      team: [
-        ["Core staff", "12"],
-        ["Vacancies", "2"],
-        ["Agency use", "1"],
-      ],
-      rota: [
-        ["Shifts today", "6"],
-        ["Gaps", "1"],
-        ["Leads set", "100%"],
-      ],
-      compliance: [
-        ["Overdue", "3"],
-        ["Due this week", "7"],
-        ["Ready", "91%"],
-      ],
-      "health-safety": [
-        ["Checks due", "4"],
-        ["Open issues", "2"],
-        ["Readiness", "88%"],
-      ],
-      quality: [
-        ["Audits", "5"],
-        ["Actions open", "6"],
-        ["Standards", "92%"],
-      ],
-      "ofsted-readiness": [
-        ["Evidence gaps", "3"],
-        ["Actions due", "4"],
-        ["Readiness", "89%"],
-      ],
-      policies: [
-        ["Policies", "24"],
-        ["Due review", "3"],
-        ["Current", "87%"],
-      ],
-    };
-
-    return homeStats[section] || [
-      ["Open items", "5"],
-      ["Due today", "3"],
-      ["Readiness", "90%"],
-    ];
-  }
-
-  const qualityStats = {
-    "provider-overview": [
-      ["Homes", "4"],
-      ["Priority risks", "3"],
-      ["Open actions", "11"],
-    ],
-    quality: [
-      ["Audit themes", "6"],
-      ["Open actions", "8"],
-      ["Quality score", "91%"],
-    ],
-    "quality-audits": [
-      ["Audits open", "5"],
-      ["Actions due", "7"],
-      ["Completed", "82%"],
-    ],
-    reg44: [
-      ["Visits due", "1"],
-      ["Themes open", "4"],
-      ["Actions live", "5"],
-    ],
-    reg45: [
-      ["Reviews due", "1"],
-      ["Measures tracked", "8"],
-      ["Actions open", "3"],
-    ],
-    "inspection-readiness": [
-      ["Evidence gaps", "4"],
-      ["Readiness", "88%"],
-      ["Priority actions", "5"],
-    ],
-  };
-
-  return qualityStats[section] || [
-    ["Open items", "6"],
-    ["Due this week", "4"],
-    ["Readiness", "90%"],
-  ];
-}
-
-function getPlaceholderBlocks(section = getCurrentSection()) {
-  const { subject } = getScopeSummary();
-
-  const generic = [
-    {
-      title: "Overview",
-      body: `This module is mapped into the full IndiCare OS journey for ${subject}. In live use, this area will show linked records, actions, evidence, and assistant support.`,
-    },
-    {
-      title: "What will sit here",
-      body: "This page is ready for structured forms, timelines, documents, workflows, and linked operational prompts without changing the overall experience.",
-    },
-  ];
-
-  const blocks = {
-    admission: [
-      {
-        title: "Admission workflow",
-        body: "Admission tasks, welcome planning, baseline risk, health, education and first-week actions will sit together here.",
-      },
-      {
-        title: "Core admission forms",
-        body: "This area is designed for admission checklists, placement plans, welcome information, consent, and initial documents.",
-      },
-    ],
-    "daily-life": [
-      {
-        title: "Life in placement",
-        body: "Daily notes, routines, achievements, appointments and meaningful moments are intended to sit here in one child-centred flow.",
-      },
-      {
-        title: "Practice support",
-        body: "This area will support recording, reflection, continuity and practical next steps across the day-to-day care journey.",
-      },
-    ],
-    risk: [
-      {
-        title: "Risk overview",
-        body: "Risk assessments, warning signs, protective factors, de-escalation guidance and review actions are planned here.",
-      },
-      {
-        title: "Linked safeguarding view",
-        body: "This module is intended to connect incidents, missing episodes, safeguarding concerns and practical action planning.",
-      },
-    ],
-    safeguarding: [
-      {
-        title: "Safeguarding pathway",
-        body: "Concerns, referrals, updates, strategy input, decisions and follow-up actions are structured to sit here clearly.",
-      },
-      {
-        title: "Manager and quality oversight",
-        body: "This area will support safeguarding chronology, response quality and linked management review.",
-      },
-    ],
-    "missing-from-care": [
-      {
-        title: "Missing episode workflow",
-        body: "Missing reports, return interviews, chronology, themes and action tracking are designed to sit here together.",
-      },
-      {
-        title: "Pattern recognition",
-        body: "This area is intended to support safer planning through trends, locations, triggers and protective responses.",
-      },
-    ],
-    transition: [
-      {
-        title: "Transition planning",
-        body: "Preparation for change, independence work, coordination meetings and practical readiness will sit here.",
-      },
-      {
-        title: "Next-stage actions",
-        body: "This module is intended to hold pathway-style actions, meeting outcomes and staged preparation for move-on plans.",
-      },
-    ],
-    "leaving-care": [
-      {
-        title: "Leaving placement",
-        body: "Final summaries, ending-well work, closure actions and important records are structured to live here.",
-      },
-      {
-        title: "Placement journey output",
-        body: "This area is designed to support final reporting, document handover and a coherent end-of-placement summary.",
-      },
-    ],
-    operations: [
-      {
-        title: "Daily operations",
-        body: "Shift visibility, occupancy, live events, priorities and operational issues will sit together here.",
-      },
-      {
-        title: "Manager focus",
-        body: "This area is intended to give leaders a clear practical view of what needs attention across the home today.",
-      },
-    ],
-    "training-centre": [
-      {
-        title: "Training overview",
-        body: "Mandatory training, role-based learning, overdue renewals and workforce development are designed to sit here.",
-      },
-      {
-        title: "Compliance tracking",
-        body: "This module is structured to support clear training compliance and safer workforce oversight.",
-      },
-    ],
-    "health-safety": [
-      {
-        title: "Health and safety controls",
-        body: "Fire checks, risk controls, premises checks, accidents, hazards and actions are intended to sit here.",
-      },
-      {
-        title: "Premises readiness",
-        body: "This area will support a practical view of environmental safety, readiness and follow-up work across the home.",
-      },
-    ],
-    maintenance: [
-      {
-        title: "Maintenance log",
-        body: "Repairs, defects, contractors, follow-up and environment standards are structured to live here.",
-      },
-      {
-        title: "Home environment",
-        body: "This module supports the lived experience of the home by keeping practical issues visible and actioned.",
-      },
-    ],
-    "ofsted-readiness": [
-      {
-        title: "Inspection readiness",
-        body: "This area is designed for evidence packs, action tracking, missing items and overall readiness before inspection.",
-      },
-      {
-        title: "What this will support",
-        body: "Managers should be able to see exactly what is ready, what is overdue and what needs strengthening before inspection.",
-      },
-    ],
-    policies: [
-      {
-        title: "Policy library",
-        body: "Policies, review dates, ownership, linked guidance and update actions are intended to sit here clearly.",
-      },
-      {
-        title: "Practice guidance",
-        body: "This area will help keep policy accessible, current and linked to day-to-day residential practice.",
-      },
-    ],
-    "provider-overview": [
-      {
-        title: "Provider view",
-        body: "Cross-home quality, workforce, compliance and operational themes are designed to sit here in one place.",
-      },
-      {
-        title: "Leadership oversight",
-        body: "This area is intended to give senior leaders a practical summary of risk, quality and readiness across services.",
-      },
-    ],
-    "quality-audits": [
-      {
-        title: "Audit activity",
-        body: "Internal audit schedules, findings, actions and improvement themes are structured to sit here.",
-      },
-      {
-        title: "Quality improvement",
-        body: "This area supports visible progress from findings to action to review.",
-      },
-    ],
-    reg44: [
-      {
-        title: "Regulation 44 support",
-        body: "Visit preparation, evidence gathering, feedback themes and resulting actions are designed to sit here.",
-      },
-      {
-        title: "Independent scrutiny",
-        body: "This module is intended to strengthen provider visibility and action tracking following independent visits.",
-      },
-    ],
-    reg45: [
-      {
-        title: "Regulation 45 support",
-        body: "Quality of care review outputs, evidence summaries, action plans and follow-up are intended to sit here.",
-      },
-      {
-        title: "Improvement view",
-        body: "This area is structured to make service reflection, analysis and improvement actions easier to coordinate.",
-      },
-    ],
-    "inspection-readiness": [
-      {
-        title: "Inspection preparation",
-        body: "Evidence, gaps, linked action plans and cross-home readiness are designed to sit here clearly.",
-      },
-      {
-        title: "Readiness themes",
-        body: "This module will support practical regulator-facing preparation without staff having to pull information from multiple systems.",
-      },
-    ],
-  };
-
-  return blocks[section] || generic;
-}
-
-function getAssistantPrompts(section = getCurrentSection()) {
-  const prompts = {
-    admission: [
-      "Summarise the admission picture",
-      "What are the first-week priorities?",
-      "Draft an admission overview",
-    ],
-    risk: [
-      "Show the main risks",
-      "Summarise triggers and protections",
-      "Draft a review summary",
-    ],
-    safeguarding: [
-      "Summarise safeguarding concerns",
-      "What needs immediate follow-up?",
-      "Draft a management update",
-    ],
-    reviews: [
-      "Prepare a review summary",
-      "Show progress themes",
-      "What actions are still open?",
-    ],
-    operations: [
-      "What needs attention today?",
-      "Summarise operational priorities",
-      "Show live gaps or risks",
-    ],
-    compliance: [
-      "Show compliance gaps",
-      "What is overdue?",
-      "Prepare a compliance summary",
-    ],
-    quality: [
-      "Summarise quality themes",
-      "Show improvement priorities",
-      "Draft a quality overview",
-    ],
-    "ofsted-readiness": [
-      "Show inspection gaps",
-      "What evidence is missing?",
-      "Prepare a readiness summary",
-    ],
-    policies: [
-      "Which policies are due review?",
-      "Summarise policy gaps",
-      "Draft a policy action plan",
-    ],
-    reg44: [
-      "Prepare a Reg 44 summary",
-      "What themes need action?",
-      "Show open improvement actions",
-    ],
-    reg45: [
-      "Prepare a Reg 45 summary",
-      "Show quality themes",
-      "What should be prioritised next?",
-    ],
-  };
-
-  return prompts[section] || [
-    "Summarise this area",
-    "What needs attention?",
-    "Show risks or gaps",
-  ];
-}
-
-function renderStats(stats = []) {
-  return `
-    <div class="overview-stats-grid">
-      ${stats
-        .map(
-          ([label, value]) => `
-            <article class="overview-stat-card">
-              <span class="overview-stat-label">${escapeHtml(label)}</span>
-              <strong class="overview-stat-value">${escapeHtml(value)}</strong>
-              <span class="overview-stat-note">Demo view</span>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderBlocks(blocks = []) {
-  return blocks
-    .map(
-      (block) => `
-        <section class="overview-section-card">
-          <div class="overview-section-head">
-            <h3>${escapeHtml(block.title)}</h3>
-            <p>${escapeHtml(block.body)}</p>
-          </div>
-        </section>
-      `
-    )
-    .join("");
-}
-
-function renderAssistantPromptChips(prompts = []) {
-  return `
-    <div class="assistant-chip-row">
-      ${prompts
-        .map(
-          (prompt) => `<span class="chip">${escapeHtml(prompt)}</span>`
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderPrimaryAction(section = getCurrentSection()) {
-  const actionId = getDefaultActionId(section);
-  const action = getQuickAction(actionId);
-  const label = action?.label || "Add action";
-
-  return `
-    <div class="assistant-context-row">
-      <button
-        class="primary-btn"
-        type="button"
-        data-action-router="${escapeHtml(actionId)}"
-      >
-        ${escapeHtml(label)}
-      </button>
-    </div>
-  `;
-}
-
-export async function renderPlaceholderFeaturePage() {
-  const section = getCurrentSection();
-  const title = getSectionTitle(section);
-  const subtitle = getSectionSubtitle(section);
-  const stats = getPlaceholderStats(section);
-  const blocks = getPlaceholderBlocks(section);
-  const prompts = getAssistantPrompts(section);
-  const { subject, descriptor } = getScopeSummary();
+  const title = getSectionTitle(activeSection) || "Workspace";
+  const subtitle =
+    getSectionSubtitle(activeSection) ||
+    "This section is part of the wider IndiCare OS experience.";
+  const content = getSectionContent(activeSection);
 
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     <section class="overview-panel">
       <div class="overview-panel-head">
-        <div class="eyebrow">Mapped module</div>
+        <div class="eyebrow">${escapeHtml(content.eyebrow)}</div>
         <h2>${escapeHtml(title)}</h2>
         <p>${escapeHtml(subtitle)}</p>
       </div>
 
-      ${renderStats(stats)}
+      <section class="overview-section-card">
+        <div class="overview-section-head">
+          <h3>Section overview</h3>
+          <p>${escapeHtml(content.intro)}</p>
+        </div>
 
-      <div class="overview-grid" style="margin-top:14px;">
+        <div class="overview-stats-grid">
+          ${(content.stats || [])
+            .map(([label, value, note]) => statCardHtml(label, value, note))
+            .join("")}
+        </div>
+      </section>
+
+      <section class="overview-grid">
         <div class="overview-main">
-          ${renderBlocks(blocks)}
-
-          <section class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Why this is here</h3>
-              <p>
-                This module is part of the full IndiCare OS journey for ${escapeHtml(
-                  subject
-                )} within the ${escapeHtml(descriptor)} workflow. It is intentionally structured to feel complete in navigation, design and assistant relevance even where live data is still being expanded.
-              </p>
-            </div>
-          </section>
+          ${(content.sections || [])
+            .map((section) => listCardHtml(section.title, section.items || []))
+            .join("")}
         </div>
 
         <aside class="overview-side">
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Primary action</h3>
-              <p>Use a realistic action so this module feels live and usable in demo.</p>
+              <h3>Demo position</h3>
+              <p>This area is intentionally presented as part of the full OS journey.</p>
             </div>
-            ${renderPrimaryAction(section)}
+            <div class="priority-list">
+              <article class="priority-item">
+                <strong>Connected navigation</strong>
+                <p>Available through role-based menus, quick actions and scope switching.</p>
+              </article>
+              <article class="priority-item">
+                <strong>Uniform design</strong>
+                <p>Styled to match the wider IndiCare OS shell so the experience feels complete.</p>
+              </article>
+              <article class="priority-item">
+                <strong>Ready for expansion</strong>
+                <p>This section can be replaced with live data and forms without changing the user journey.</p>
+              </article>
+            </div>
           </section>
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Assistant support</h3>
-              <p>Prompts that show how the assistant will support this area.</p>
+              <h3>Context</h3>
+              <p>Current workspace context for the active view.</p>
             </div>
-            ${renderAssistantPromptChips(prompts)}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Demo note</h3>
-              <p>
-                This area is ready for live records, documents, actions and linked assistant intelligence without changing the overall experience of the OS.
-              </p>
+            <div class="assistant-scope-summary">
+              <div class="assistant-scope-summary-row">
+                <span>Scope</span>
+                <strong>${escapeHtml(getScopeLabel())}</strong>
+              </div>
+              <div class="assistant-scope-summary-row">
+                <span>Section</span>
+                <strong>${escapeHtml(title)}</strong>
+              </div>
+              <div class="assistant-scope-summary-row">
+                <span>Status</span>
+                <strong>Demo ready</strong>
+              </div>
             </div>
           </section>
         </aside>
-      </div>
+      </section>
     </section>
   `;
 }
