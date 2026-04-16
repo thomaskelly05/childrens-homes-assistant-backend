@@ -153,11 +153,27 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
             "page_number": item.get("page_number"),
             "excerpt": item.get("excerpt"),
             "url": item.get("url"),
+            "record_type": item.get("record_type"),
+            "record_id": item.get("record_id"),
+            "citation_ref": item.get("citation_ref"),
+            "summary": item.get("summary"),
+            "title": item.get("title"),
+            "description": item.get("description"),
         }
 
         key = "|".join(
             str(source.get(k) or "")
-            for k in ["type", "label", "document_title", "section", "page_number", "url"]
+            for k in [
+                "type",
+                "label",
+                "document_title",
+                "section",
+                "page_number",
+                "url",
+                "record_type",
+                "record_id",
+                "citation_ref",
+            ]
         )
         if key in seen:
             continue
@@ -168,9 +184,65 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
     return cleaned
 
 
+def _normalise_evidence_index(value: Any, *, limit: int = 100) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    cleaned: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for item in value[:limit]:
+        if not isinstance(item, dict):
+            continue
+
+        entry = {
+            "citation_ref": item.get("citation_ref"),
+            "record_type": item.get("record_type"),
+            "record_id": item.get("record_id"),
+            "label": item.get("label"),
+            "title": item.get("title"),
+            "section": item.get("section"),
+            "excerpt": item.get("excerpt"),
+            "description": item.get("description"),
+            "event_at": item.get("event_at"),
+            "updated_at": item.get("updated_at"),
+            "url": item.get("url"),
+        }
+
+        key = "|".join(
+            str(entry.get(k) or "")
+            for k in ["citation_ref", "record_type", "record_id", "label", "section", "url"]
+        )
+        if key in seen:
+            continue
+
+        seen.add(key)
+        cleaned.append(entry)
+
+    return cleaned
+
+
+def _extract_evidence_index(user_context: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(user_context, dict):
+        return []
+
+    direct = user_context.get("evidence_index")
+    if isinstance(direct, list):
+        return _normalise_evidence_index(direct)
+
+    context_block = user_context.get("context")
+    if isinstance(context_block, dict):
+        nested = context_block.get("evidence_index")
+        if isinstance(nested, list):
+            return _normalise_evidence_index(nested)
+
+    return []
+
+
 def _serialise_runtime(
     runtime: AssistantRuntimeContext | None,
     regulation_payload: list[dict[str, str]] | None = None,
+    evidence_index: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if runtime is None:
         return {}
@@ -183,6 +255,8 @@ def _serialise_runtime(
             line = line.strip()
             if line.startswith("•"):
                 suggested_actions.append(line.lstrip("•").strip())
+
+    evidence_index = evidence_index or []
 
     payload = {
         "mode": getattr(runtime, "mode", None),
@@ -198,6 +272,8 @@ def _serialise_runtime(
         "secondary_intents": getattr(runtime, "secondary_intents", None),
         "suggested_actions": suggested_actions,
         "regulation_basis": regulation_payload or [],
+        "evidence_items_loaded": len(evidence_index),
+        "evidence_preview": evidence_index[:10],
     }
 
     return {k: v for k, v in payload.items() if v not in (None, "", [])}
@@ -277,7 +353,15 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         ).strip()
 
     sources = _normalise_sources(getattr(runtime, "sources_used", []))
-    runtime_payload = _serialise_runtime(runtime, regulation_payload=regulation_payload)
+    evidence_index = _extract_evidence_index(req.user_context)
+    runtime_payload = _serialise_runtime(
+        runtime,
+        regulation_payload=regulation_payload,
+        evidence_index=evidence_index,
+    )
+
+    if evidence_index:
+        runtime_payload["evidence_index"] = evidence_index
 
     messages = _build_messages(
         system_prompt=system_prompt,
@@ -291,7 +375,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
             "safeguarding=%s urgency=%s response_mode=%s stance=%s "
             "guidance_enabled=%s guidance_reason=%s model=%s temp=%s max_tokens=%s "
             "memory=%s retrieval=%s reflection=%s supervision=%s leadership=%s "
-            "regulation_refs=%s sources=%s"
+            "regulation_refs=%s sources=%s evidence=%s"
         ),
         req.session_id,
         mode,
@@ -313,6 +397,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         response_plan.should_use_leadership_lens,
         len(regulation_payload),
         len(sources),
+        len(evidence_index),
     )
 
     return OrchestratorResult(
