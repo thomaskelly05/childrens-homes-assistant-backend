@@ -1,5 +1,5 @@
 export const ROLE_SCOPE_ACCESS = Object.freeze({
-  // Residential staff
+  // Direct care staff
   staff: ["child", "home"],
   rsw: ["child", "home"],
   residential_support_worker: ["child", "home"],
@@ -9,7 +9,7 @@ export const ROLE_SCOPE_ACCESS = Object.freeze({
   registered_manager: ["child", "home", "quality"],
   deputy_manager: ["child", "home", "quality"],
 
-  // RI
+  // Responsible individual / oversight
   ri: ["child", "home", "quality"],
   responsible_individual: ["child", "home", "quality"],
 
@@ -52,12 +52,10 @@ export const SCOPE_SECTIONS = Object.freeze({
     "notifications",
     "rota",
     "manager",
-    "readiness",
     "reports",
     "calendar",
     "team",
     "supervision",
-    "therapy",
     "communication",
     "documents",
   ],
@@ -70,101 +68,101 @@ export const SCOPE_SECTIONS = Object.freeze({
     "rota",
     "reports",
     "manager",
-    "readiness",
     "calendar",
     "team",
     "supervision",
-    "therapy",
     "communication",
     "documents",
   ],
 });
 
 export const SECTION_TITLES = Object.freeze({
-  workspace: "Today’s workspace",
+  workspace: "Today at a glance",
   overview: "What matters today",
-  profile: "About this young person",
-  timeline: "Chronology and events",
+  profile: "About this child",
+  timeline: "Timeline and recent events",
   handover: "Handover",
-  health: "Health and wellbeing",
-  education: "Learning and education",
+  health: "Health overview",
+  education: "Education overview",
   family: "Family and relationships",
-  calendar: "Appointments and key dates",
-  readiness: "Actions and readiness",
-  manager: "Leadership and review",
-  reports: "Reports and review packs",
-  documents: "Documents and uploads",
-  communication: "Professional communication",
-  therapy: "Therapeutic services",
+  calendar: "Calendar and appointments",
+  readiness: "Independence and readiness",
+  manager: "Manager review",
+  reports: "Reports and reviews",
+  documents: "Documents",
+  communication: "Communication log",
+  therapy: "Therapeutic support",
   "home-dashboard": "Home dashboard",
   team: "Team and staffing",
   supervision: "Supervision and development",
-  compliance: "Compliance and statutory assurance",
-  quality: "Quality and RI dashboard",
-  "staff-profile": "Staff profiles and workforce",
-  onboarding: "Onboarding and induction",
-  notifications: "Notifications and actions",
-  rota: "Rota and staffing cover",
+  compliance: "Compliance and statutory checks",
+  quality: "Quality dashboard",
+  "staff-profile": "Staff profiles",
+  onboarding: "Recruitment and onboarding",
+  notifications: "Alerts and notifications",
+  rota: "Rota and cover",
 });
 
 export const SECTION_SUBTITLES = Object.freeze({
   workspace:
-    "A calm space to record, reflect and respond to what matters today.",
+    "A calm, practical space to record, reflect, safeguard and respond to what matters today.",
   overview:
-    "A clear picture of priorities, wellbeing, risk, strengths and next steps.",
+    "A clear picture of strengths, risks, priorities, progress and next steps.",
   profile:
     "Identity, communication, needs, strengths and what adults should hold in mind.",
   timeline:
-    "A shared view of significant events, patterns and progress over time.",
+    "A shared view of significant events, patterns, progress and concerns over time.",
   handover:
-    "Support smooth, thoughtful communication between adults around the young person.",
+    "Support safe, thoughtful communication between adults across the shift.",
   health:
-    "Health needs, professionals, outcomes and follow-up that adults need to know.",
+    "Health needs, appointments, professionals, outcomes and follow-up.",
   education:
     "Learning, attendance, support, strengths and educational experience.",
   family:
     "Family contact, important relationships and how these are experienced.",
   calendar:
-    "Appointments, meetings and important dates that shape the young person’s week.",
+    "Appointments, meetings and important dates that shape the week.",
   readiness:
-    "Actions, tasks, compliance and practical follow-up that need attention.",
-  manager: "Oversight, quality, decision-making and review.",
+    "Actions, practical tasks, preparation and follow-up that need attention.",
+  manager:
+    "Oversight, management review, decision-making and quality assurance.",
   reports:
-    "Structured summaries, reports and review outputs for the young person or service.",
+    "Structured summaries, reports and review outputs for the child or service.",
   documents:
     "Upload, organise and review statutory and supporting documents.",
   communication:
-    "Track professional liaison, family communication and important contact trails.",
+    "Track communication with professionals, families and partner agencies.",
   therapy:
-    "Therapeutic support, recommendations, outcomes and emotional wellbeing input.",
+    "Therapeutic input, recommendations, outcomes and emotional wellbeing support.",
   "home-dashboard":
-    "A whole-home operational and quality view for managers.",
-  team: "Team capacity, staffing, deployment and workforce context.",
+    "A whole-home operational view for managers and senior staff.",
+  team:
+    "Team capacity, staffing, deployment and workforce context.",
   supervision:
-    "Supervision, development, training and workforce support.",
+    "Supervision, training, appraisal, development and workforce support.",
   compliance:
-    "A live compliance view across workforce, children’s files, statutory paperwork and Ofsted readiness.",
+    "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness.",
   quality:
     "Quality assurance, audits, trends, RI oversight and service performance.",
   "staff-profile":
-    "A live workforce view across staff profiles, roles, onboarding, training, supervision and file readiness.",
+    "A live workforce view across staff roles, files, checks, training and readiness.",
   onboarding:
-    "Track recruitment checks, induction, probation and early workforce readiness in line with safer recruitment and Ofsted expectations.",
+    "Track recruitment checks, induction, probation and safer recruitment progress.",
   notifications:
     "A live action layer for reminders, escalations, acknowledgements and workforce follow-up.",
   rota:
-    "A live rota view across staffing cover, shift leads, absences, agency use and operational gaps.",
+    "A live rota view across cover, absences, shift leads, agency use and gaps.",
 });
 
 const NAV_GROUPS = [
   {
-    id: "today",
-    title: "Today",
+    id: "dashboard",
+    title: "Dashboard",
     items: [
       {
         id: "workspace",
-        label: "Today’s workspace",
-        short_label: "Workspace",
+        label: "Today at a glance",
+        short_label: "Today",
         icon: "home",
         description:
           "The main place to record, reflect and act on what matters today.",
@@ -175,15 +173,28 @@ const NAV_GROUPS = [
         short_label: "Overview",
         icon: "layout-dashboard",
         description:
-          "A clear picture of priorities, progress, risks and strengths.",
+          "A clear picture of priorities, progress, strengths and current concerns.",
       },
       {
         id: "timeline",
-        label: "Chronology and events",
+        label: "Timeline and recent events",
         short_label: "Timeline",
         icon: "list-ordered",
         description: "A clear view of what has happened over time.",
       },
+      {
+        id: "calendar",
+        label: "Calendar and appointments",
+        short_label: "Calendar",
+        icon: "calendar",
+        description: "Appointments, meetings and important dates.",
+      },
+    ],
+  },
+  {
+    id: "daily_recording",
+    title: "Daily recording",
+    items: [
       {
         id: "handover",
         label: "Handover",
@@ -192,15 +203,31 @@ const NAV_GROUPS = [
         description:
           "Support smooth, thoughtful communication between adults.",
       },
+      {
+        id: "communication",
+        label: "Communication log",
+        short_label: "Comms",
+        icon: "messages-square",
+        description:
+          "Professional liaison, family contact and important communication trails.",
+      },
+      {
+        id: "documents",
+        label: "Documents",
+        short_label: "Documents",
+        icon: "folder",
+        description:
+          "Statutory documents, uploads and important child or service records.",
+      },
     ],
   },
   {
-    id: "relationships_and_identity",
-    title: "Identity, relationships and daily life",
+    id: "child_and_family",
+    title: "Family and relationships",
     items: [
       {
         id: "profile",
-        label: "About this young person",
+        label: "About this child",
         short_label: "Profile",
         icon: "user",
         description:
@@ -214,31 +241,15 @@ const NAV_GROUPS = [
         description:
           "Family contact, important relationships and how contact is experienced.",
       },
-      {
-        id: "communication",
-        label: "Professional communication",
-        short_label: "Comms",
-        icon: "messages-square",
-        description:
-          "Emails, updates, liaison and communication with professionals and families.",
-      },
-      {
-        id: "documents",
-        label: "Documents and uploads",
-        short_label: "Documents",
-        icon: "folder",
-        description:
-          "Statutory documents, uploads and important child or service records.",
-      },
     ],
   },
   {
-    id: "development_and_wellbeing",
-    title: "Health, learning and wellbeing",
+    id: "health_and_progress",
+    title: "Health and progress",
     items: [
       {
         id: "health",
-        label: "Health and wellbeing",
+        label: "Health overview",
         short_label: "Health",
         icon: "heart-pulse",
         description:
@@ -246,62 +257,55 @@ const NAV_GROUPS = [
       },
       {
         id: "education",
-        label: "Learning and education",
+        label: "Education overview",
         short_label: "Education",
         icon: "graduation-cap",
         description:
           "Learning, attendance, strengths, support and educational progress.",
       },
       {
-        id: "calendar",
-        label: "Appointments and key dates",
-        short_label: "Appointments",
-        icon: "calendar",
-        description: "Appointments, meetings and other important dates.",
-      },
-      {
         id: "therapy",
-        label: "Therapeutic services",
+        label: "Therapeutic support",
         short_label: "Therapy",
         icon: "sparkles",
         description:
           "Therapy input, recommendations, outcomes and emotional wellbeing support.",
       },
-    ],
-  },
-  {
-    id: "safety_and_planning",
-    title: "Safety, planning and action",
-    items: [
       {
         id: "readiness",
-        label: "Actions and readiness",
+        label: "Independence and readiness",
         short_label: "Readiness",
         icon: "shield-check",
         description:
-          "Tasks, follow-up, oversight and what needs doing next.",
+          "Practical life skills, independence work, actions and preparation.",
       },
-      {
-        id: "manager",
-        label: "Leadership and review",
-        short_label: "Manager view",
-        icon: "clipboard-check",
-        description:
-          "Review workflows, oversight, quality and decision-making.",
-      },
+    ],
+  },
+  {
+    id: "planning_and_review",
+    title: "Plans and actions",
+    items: [
       {
         id: "reports",
-        label: "Reports and review packs",
+        label: "Reports and reviews",
         short_label: "Reports",
         icon: "file-text",
         description:
           "Reports, summaries and structured review outputs.",
       },
+      {
+        id: "manager",
+        label: "Manager review",
+        short_label: "Manager",
+        icon: "clipboard-check",
+        description:
+          "Review workflows, oversight, decision-making and management actions.",
+      },
     ],
   },
   {
-    id: "home_management",
-    title: "Home and service oversight",
+    id: "home_operations",
+    title: "Home operations",
     items: [
       {
         id: "home-dashboard",
@@ -309,43 +313,11 @@ const NAV_GROUPS = [
         short_label: "Home",
         icon: "building-2",
         description:
-          "A whole-home dashboard for managers with live operational visibility.",
-      },
-      {
-        id: "compliance",
-        label: "Compliance",
-        short_label: "Compliance",
-        icon: "badge-check",
-        description:
-          "Compliance across supervisions, training, statutory paperwork, Statement of Purpose, Annex A and Ofsted readiness.",
-      },
-      {
-        id: "staff-profile",
-        label: "Staff profiles",
-        short_label: "Staff",
-        icon: "users-round",
-        description:
-          "Workforce profiles, onboarding, training, supervision and file readiness.",
-      },
-      {
-        id: "onboarding",
-        label: "Onboarding",
-        short_label: "Onboarding",
-        icon: "clipboard-check",
-        description:
-          "Recruitment checks, induction, probation and safer recruitment workflow.",
-      },
-      {
-        id: "notifications",
-        label: "Notifications",
-        short_label: "Alerts",
-        icon: "messages-square",
-        description:
-          "Reminders, escalations and live actions for staff and managers.",
+          "A whole-home dashboard with live operational visibility.",
       },
       {
         id: "rota",
-        label: "Rota and staffing cover",
+        label: "Rota and cover",
         short_label: "Rota",
         icon: "calendar",
         description:
@@ -360,16 +332,60 @@ const NAV_GROUPS = [
           "Staffing, roles, rota context, sickness, vacancies and deployment.",
       },
       {
+        id: "notifications",
+        label: "Alerts and notifications",
+        short_label: "Alerts",
+        icon: "messages-square",
+        description:
+          "Reminders, escalations and live actions for staff and managers.",
+      },
+    ],
+  },
+  {
+    id: "staff_and_development",
+    title: "Staff and development",
+    items: [
+      {
+        id: "staff-profile",
+        label: "Staff profiles",
+        short_label: "Staff",
+        icon: "users-round",
+        description:
+          "Workforce profiles, checks, training, supervision and file readiness.",
+      },
+      {
+        id: "onboarding",
+        label: "Recruitment and onboarding",
+        short_label: "Onboarding",
+        icon: "clipboard-check",
+        description:
+          "Recruitment checks, induction, probation and safer recruitment workflow.",
+      },
+      {
         id: "supervision",
         label: "Supervision and development",
         short_label: "Supervision",
         icon: "badge-check",
         description:
-          "Supervisions, appraisals, capability, training and support.",
+          "Supervisions, appraisals, capability, training and workforce support.",
+      },
+    ],
+  },
+  {
+    id: "quality_and_compliance",
+    title: "Quality and compliance",
+    items: [
+      {
+        id: "compliance",
+        label: "Compliance and statutory checks",
+        short_label: "Compliance",
+        icon: "badge-check",
+        description:
+          "Compliance across staff files, supervisions, training, statutory paperwork and inspection readiness.",
       },
       {
         id: "quality",
-        label: "Quality and RI dashboard",
+        label: "Quality dashboard",
         short_label: "Quality",
         icon: "bar-chart-3",
         description:
@@ -380,19 +396,23 @@ const NAV_GROUPS = [
 ];
 
 export const NAV_GROUPS_CONFIG = Object.freeze(
-  NAV_GROUPS.map((group) => ({
-    ...group,
-    items: Object.freeze(group.items.map((item) => ({ ...item }))),
-  }))
+  NAV_GROUPS.map((group) =>
+    Object.freeze({
+      ...group,
+      items: Object.freeze(group.items.map((item) => Object.freeze({ ...item }))),
+    })
+  )
 );
 
 export const NAV_SECTIONS = Object.freeze(
   NAV_GROUPS.flatMap((group) =>
-    group.items.map((item) => ({
-      ...item,
-      group_id: group.id,
-      group_title: group.title,
-    }))
+    group.items.map((item) =>
+      Object.freeze({
+        ...item,
+        group_id: group.id,
+        group_title: group.title,
+      })
+    )
   )
 );
 
@@ -412,12 +432,12 @@ export const QUICK_ACTIONS = Object.freeze([
     record_type: "daily_note",
     section_hint: "workspace",
     description:
-      "Capture the day clearly, warmly and with the young person at the centre.",
+      "Capture the day clearly, warmly and with the child at the centre.",
   },
   {
     id: "incident",
-    label: "Add important event",
-    short_label: "Important event",
+    label: "Add incident or important event",
+    short_label: "Incident",
     record_type: "incident",
     section_hint: "timeline",
     description:
@@ -425,7 +445,7 @@ export const QUICK_ACTIONS = Object.freeze([
   },
   {
     id: "support_plan",
-    label: "Add support plan",
+    label: "Add care or support plan",
     short_label: "Support plan",
     record_type: "support_plan",
     section_hint: "workspace",
@@ -435,7 +455,7 @@ export const QUICK_ACTIONS = Object.freeze([
   {
     id: "risk",
     label: "Add risk assessment",
-    short_label: "Risk assessment",
+    short_label: "Risk",
     record_type: "risk",
     section_hint: "manager",
     description:
@@ -444,7 +464,7 @@ export const QUICK_ACTIONS = Object.freeze([
   {
     id: "health_record",
     label: "Add health record",
-    short_label: "Health record",
+    short_label: "Health",
     record_type: "health_record",
     section_hint: "health",
     description:
@@ -452,8 +472,8 @@ export const QUICK_ACTIONS = Object.freeze([
   },
   {
     id: "education_record",
-    label: "Add education record",
-    short_label: "Education record",
+    label: "Add education update",
+    short_label: "Education",
     record_type: "education_record",
     section_hint: "education",
     description:
@@ -475,7 +495,7 @@ export const QUICK_ACTIONS = Object.freeze([
     record_type: "keywork",
     section_hint: "workspace",
     description:
-      "Record direct work, reflection and actions agreed.",
+      "Record direct work, reflection and agreed actions.",
   },
   {
     id: "appointment",
@@ -507,7 +527,7 @@ export const QUICK_ACTIONS = Object.freeze([
   {
     id: "missing_episode",
     label: "Add missing episode",
-    short_label: "Missing episode",
+    short_label: "Missing",
     record_type: "missing_episode",
     section_hint: "timeline",
     description:
@@ -515,8 +535,8 @@ export const QUICK_ACTIONS = Object.freeze([
   },
   {
     id: "task",
-    label: "Add task",
-    short_label: "Task",
+    label: "Add action",
+    short_label: "Action",
     record_type: "task",
     section_hint: "readiness",
     description:
@@ -597,7 +617,7 @@ export const PROFILE_ACTIONS = Object.freeze([
     short_label: "Communication",
     record_type: "profile_communication",
     description:
-      "How this young person communicates, processes and what helps.",
+      "How this child communicates, processes and what helps.",
   },
   {
     id: "profile_education",
