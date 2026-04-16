@@ -45,7 +45,7 @@ function getCurrentHomeId() {
 }
 
 function hasChildContext() {
-  return Boolean(state.youngPersonId);
+  return Boolean(state.youngPersonId || state.selectedYoungPerson?.id);
 }
 
 function hasHomeContext() {
@@ -258,15 +258,15 @@ function inferSectionForRecordType(recordType = "") {
     daily_note: "workspace",
     incident: "timeline",
     support_plan: "workspace",
-    risk: "manager",
+    risk: "risk",
     health_record: "health",
     education_record: "education",
     family_contact: "family",
-    keywork: "workspace",
+    keywork: "daily-life",
     appointment: "calendar",
     achievement_record: "education",
-    safeguarding_record: "manager",
-    missing_episode: "timeline",
+    safeguarding_record: "safeguarding",
+    missing_episode: "missing-from-care",
     task: "readiness",
     manager_action: "manager",
     document: "documents",
@@ -436,7 +436,8 @@ function buildQuickActionMap() {
         label: action.label || action.id,
         short_label: action.short_label || action.label || action.id,
         record_type: resolvedType,
-        section_hint: action.section_hint || inferSectionForRecordType(resolvedType),
+        section_hint:
+          action.section_hint || inferSectionForRecordType(resolvedType),
         description: action.description || "",
         run: () => safeOpen(resolvedType),
       };
@@ -788,14 +789,16 @@ function buildSuggestionFromButton(button) {
     source_record_id: button.dataset.sourceRecordId || null,
     priority: button.dataset.priority || "",
 
-    young_person_id: button.dataset.youngPersonId || state.youngPersonId || null,
+    young_person_id:
+      button.dataset.youngPersonId || state.youngPersonId || null,
     home_id: button.dataset.homeId || getCurrentHomeId() || null,
 
     prefill: {},
     metadata: {
       source_record_type: button.dataset.sourceRecordType || "",
       source_record_id: button.dataset.sourceRecordId || null,
-      young_person_id: button.dataset.youngPersonId || state.youngPersonId || null,
+      young_person_id:
+        button.dataset.youngPersonId || state.youngPersonId || null,
       home_id: button.dataset.homeId || getCurrentHomeId() || null,
       target_section: button.dataset.targetSection || "",
     },
