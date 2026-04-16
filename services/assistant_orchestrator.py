@@ -280,19 +280,6 @@ def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, s
     return safe_history[-12:]
 
 
-def _parse_iso_date(value: str | None) -> date | None:
-    raw = _safe_str(value)
-    if not raw:
-        return None
-    try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00")).date()
-    except Exception:
-        try:
-            return date.fromisoformat(raw[:10])
-        except Exception:
-            return None
-
-
 def _infer_date_range_from_message(message: str) -> tuple[str | None, str | None, bool]:
     value = _safe_str(message).lower()
     today = datetime.utcnow().date()
@@ -411,6 +398,7 @@ def _build_compact_public_context(context: dict[str, Any]) -> dict[str, Any]:
             ),
             "home_data_available": bool(public_context.get("home_data_available", False)),
         },
+        "evidence_index": _trim_list(context.get("evidence_index"), 20),
     }
 
 
@@ -483,6 +471,7 @@ def _build_compact_global_os_context(context: dict[str, Any]) -> dict[str, Any]:
             _pick_fields(item, ["id", "title", "status", "due_date", "severity", "updated_at"])
             for item in compliance_items
         ],
+        "evidence_index": _trim_list(context.get("evidence_index"), 40),
     }
 
 
@@ -714,6 +703,7 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                 for item in _trim_list(scoped_record.get("chronology_events"), 10)
             ],
         },
+        "evidence_index": _trim_list(context.get("evidence_index"), 60),
     }
 
 
@@ -782,6 +772,7 @@ def _build_compact_home_context(context: dict[str, Any]) -> dict[str, Any]:
             _pick_fields(item, ["id", "staff_member", "training_name", "status", "expiry_date"])
             for item in _trim_list(context.get("training"), 10)
         ],
+        "evidence_index": _trim_list(context.get("evidence_index"), 60),
     }
 
 
@@ -824,6 +815,7 @@ def _build_compact_quality_context(context: dict[str, Any]) -> dict[str, Any]:
             _pick_fields(item, ["id", "title", "document_type", "status", "review_date", "home_id"])
             for item in _trim_list(context.get("documents"), 12)
         ],
+        "evidence_index": _trim_list(context.get("evidence_index"), 60),
     }
 
 
@@ -967,6 +959,7 @@ def _build_compact_report_context(context: dict[str, Any]) -> dict[str, Any]:
                 )
             ],
         },
+        "evidence_index": _trim_list(context.get("evidence_index"), 80),
     }
 
 
@@ -998,6 +991,13 @@ def _build_compact_context(
     return {"scope": scope}
 
 
+def _count_evidence(context: dict[str, Any]) -> int:
+    evidence = context.get("evidence_index")
+    if isinstance(evidence, list):
+        return len(evidence)
+    return 0
+
+
 def _build_public_summary(context: dict[str, Any]) -> str:
     public_context = context.get("public_context") or {}
     lines = [
@@ -1005,6 +1005,7 @@ def _build_public_summary(context: dict[str, Any]) -> str:
         f"- OS data available: {bool(public_context.get('os_data_available', False))}",
         f"- Young person data available: {bool(public_context.get('young_person_data_available', False))}",
         f"- Home data available: {bool(public_context.get('home_data_available', False))}",
+        f"- Evidence items loaded: {_count_evidence(context)}",
     ]
     return "\n".join(lines)
 
@@ -1026,6 +1027,7 @@ def _build_global_os_summary(context: dict[str, Any]) -> str:
         f"- Recent chronology events loaded: {len(chronology)}",
         f"- Recent incidents loaded: {len(incidents)}",
         f"- Recent compliance items loaded: {len(compliance_items)}",
+        f"- Evidence items loaded: {_count_evidence(context)}",
     ]
     return "\n".join(lines)
 
@@ -1061,6 +1063,7 @@ def _build_young_person_summary(context: dict[str, Any]) -> str:
         f"- Recent chronology loaded: {len(chronology)}",
         f"- Current formulation available: {'yes' if identity.get('current_formulation') else 'no'}",
         f"- Communication profile available: {'yes' if identity.get('communication_profile') else 'no'}",
+        f"- Evidence items loaded: {_count_evidence(context)}",
     ]
     return "\n".join(lines)
 
@@ -1083,6 +1086,7 @@ def _build_home_summary(context: dict[str, Any]) -> str:
         f"- Compliance items loaded: {len(compliance_items)}",
         f"- Supervisions loaded: {len(supervisions)}",
         f"- Reports loaded: {len(reports)}",
+        f"- Evidence items loaded: {_count_evidence(context)}",
     ]
     return "\n".join(lines)
 
@@ -1105,6 +1109,7 @@ def _build_quality_summary(context: dict[str, Any]) -> str:
         f"- Incidents loaded: {len(incidents)}",
         f"- Compliance items loaded: {len(compliance_items)}",
         f"- Reports loaded: {len(reports)}",
+        f"- Evidence items loaded: {_count_evidence(context)}",
     ]
     return "\n".join(lines)
 
@@ -1138,6 +1143,7 @@ def _build_report_summary(context: dict[str, Any]) -> str:
         f"- Keywork count rows: {len(positive_indicators.get('keywork_counts') or [])}",
         f"- Family contact count rows: {len(positive_indicators.get('family_contact_counts') or [])}",
         f"- Daily notes count rows: {len(positive_indicators.get('daily_notes_counts') or [])}",
+        f"- Evidence items loaded: {_count_evidence(context)}",
     ]
     return "\n".join(lines)
 
@@ -1243,6 +1249,8 @@ Core answer rules:
 - Prefer children’s home language: lived experience, stability, relationships, presentation, safeguarding, workforce practice, oversight, quality of care, management response, inspection readiness.
 - When asked what is missing, what needs checking, or what creates inspection risk, answer directly and analytically.
 - Keep children at the centre, but do not soften or obscure concerns that need action.
+- Use the evidence index when available as the primary citation pool.
+- Prefer citing the most directly relevant record rather than broad summary rows where possible.
 """.strip()
 
 
@@ -1315,6 +1323,15 @@ If the user gives a section structure, use that structure and nothing else.
 Citations should be distributed throughout the answer.
 Do not drift into generic policy wording.
 """.strip()
+
+
+def _build_evidence_block(compact_context: dict[str, Any], limit: int = 40) -> str:
+    evidence = compact_context.get("evidence_index")
+    if not isinstance(evidence, list) or not evidence:
+        return "No evidence index supplied."
+
+    trimmed = evidence[:limit]
+    return json.dumps(trimmed, ensure_ascii=False, default=_json_safe, indent=2)
 
 
 def _build_general_prompt(
@@ -1406,6 +1423,9 @@ When relevant, think in this order:
 3. what adults need to do next
 4. what should be checked, escalated or reviewed
 
+Use the evidence index as the main citation source where possible.
+Cite using the exact citation_ref values already supplied.
+
 === CONTEXT SUMMARY ===
 {summary}
 
@@ -1414,6 +1434,9 @@ When relevant, think in this order:
 
 === STRUCTURED CONTEXT ===
 {compact_context}
+
+=== EVIDENCE INDEX ===
+{_build_evidence_block(compact_context, limit=40)}
 
 === UI CONTEXT ===
 {ui_context or {}}
@@ -1526,6 +1549,8 @@ Rules for this report:
 - where concerns are identified, explain why they matter for children’s lived experience, safeguarding, quality of care or leadership oversight
 - where the period was inferred, state that clearly in the introduction
 - be child-centred but not soft: be warm, professional, analytical, protective and honest about shortfalls
+- use the evidence index and supplied summary rows to support citations
+- if evidence comes from aggregated rows rather than individual records, say that clearly
 
 === REPORT PERIOD NOTE ===
 {period_note}
@@ -1535,6 +1560,9 @@ Rules for this report:
 
 === STRUCTURED REPORT CONTEXT ===
 {compact_context}
+
+=== EVIDENCE INDEX ===
+{_build_evidence_block(compact_context, limit=60)}
 
 === CONVERSATION HISTORY ===
 {history_text}
@@ -1658,6 +1686,7 @@ def build_assistant_prompt(
                 "assistant_intent": ui_context.get("assistant_intent"),
                 "retrieval_mode": ui_context.get("retrieval_mode"),
                 "output_mode": ui_context.get("output_mode"),
+                "evidence_items_loaded": len(compact_context.get("evidence_index") or []),
             },
         }
 
@@ -1725,5 +1754,6 @@ def build_assistant_prompt(
             "reg45_requested": ui_context.get("reg45_requested"),
             "history_items_used": len(safe_history),
             "is_report_request": False,
+            "evidence_items_loaded": len(compact_context.get("evidence_index") or []),
         },
     }
