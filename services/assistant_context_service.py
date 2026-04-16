@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Any, Literal
 
 from psycopg2.extras import RealDictCursor
@@ -50,8 +51,22 @@ def _safe_int_list(value: Any) -> list[int]:
 
 def _normalise_scope(scope: dict[str, Any] | None) -> dict[str, Any]:
     scope = scope or {}
+    raw_scope_type = _safe_string(scope.get("scope_type")).lower()
+    raw_scope = _safe_string(scope.get("scope")).lower()
+
+    if not raw_scope_type:
+        if raw_scope in {"child", "young_person"}:
+            raw_scope_type = "young_person"
+        elif raw_scope in {"home"}:
+            raw_scope_type = "home"
+        elif raw_scope in {"quality"}:
+            raw_scope_type = "quality"
+        else:
+            raw_scope_type = "global"
+
     return {
-        "scope_type": _safe_string(scope.get("scope_type") or "global").lower() or "global",
+        "scope_type": raw_scope_type,
+        "scope": raw_scope or raw_scope_type,
         "home_id": _safe_int(scope.get("home_id")),
         "young_person_id": _safe_int(scope.get("young_person_id")),
         "record_type": _safe_string(scope.get("record_type")).lower(),
@@ -421,6 +436,17 @@ def _build_active_work_context(conn, young_person_id: int) -> dict[str, Any]:
             """,
             (young_person_id,),
         ),
+        "manager_actions": _fetch_all(
+            conn,
+            """
+            SELECT *
+            FROM manager_actions
+            WHERE young_person_id = %s
+            ORDER BY due_date ASC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+            LIMIT 20
+            """,
+            (young_person_id,),
+        ),
     }
 
 
@@ -433,7 +459,7 @@ def _build_recent_records_context(conn, young_person_id: int) -> dict[str, Any]:
             FROM daily_notes
             WHERE young_person_id = %s
             ORDER BY note_date DESC, updated_at DESC NULLS LAST, id DESC
-            LIMIT 10
+            LIMIT 12
             """,
             (young_person_id,),
         ),
@@ -444,7 +470,7 @@ def _build_recent_records_context(conn, young_person_id: int) -> dict[str, Any]:
             FROM incidents
             WHERE young_person_id = %s
             ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-            LIMIT 10
+            LIMIT 12
             """,
             (young_person_id,),
         ),
@@ -534,7 +560,7 @@ def _build_recent_records_context(conn, young_person_id: int) -> dict[str, Any]:
             WHERE young_person_id = %s
               AND is_visible = TRUE
             ORDER BY event_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
-            LIMIT 20
+            LIMIT 24
             """,
             (young_person_id,),
         ),
@@ -637,73 +663,31 @@ def _build_scoped_record_context(
 
     record: dict[str, Any] | None = None
 
-    if record_type == "daily_note":
+    table_map = {
+        "daily_note": "daily_notes",
+        "incident": "incidents",
+        "risk": "risk_assessments",
+        "support_plan": "support_plans",
+        "plan": "support_plans",
+        "appointment": "young_person_appointments",
+        "keywork": "keywork_sessions",
+        "family_contact": "family_contact_records",
+        "health_record": "health_records",
+        "education_record": "education_records",
+        "missing_episode": "missing_episodes",
+        "safeguarding_record": "safeguarding_records",
+        "achievement_record": "achievement_records",
+        "task": "tasks",
+        "monthly_review": "monthly_reviews",
+    }
+
+    table_name = table_map.get(record_type)
+    if table_name:
         record = _fetch_one(
             conn,
-            """
+            f"""
             SELECT *
-            FROM daily_notes
-            WHERE id = %s
-              AND young_person_id = %s
-            LIMIT 1
-            """,
-            (record_id, young_person_id),
-        )
-    elif record_type == "incident":
-        record = _fetch_one(
-            conn,
-            """
-            SELECT *
-            FROM incidents
-            WHERE id = %s
-              AND young_person_id = %s
-            LIMIT 1
-            """,
-            (record_id, young_person_id),
-        )
-    elif record_type == "risk":
-        record = _fetch_one(
-            conn,
-            """
-            SELECT *
-            FROM risk_assessments
-            WHERE id = %s
-              AND young_person_id = %s
-            LIMIT 1
-            """,
-            (record_id, young_person_id),
-        )
-    elif record_type in {"support_plan", "plan"}:
-        record = _fetch_one(
-            conn,
-            """
-            SELECT *
-            FROM support_plans
-            WHERE id = %s
-              AND young_person_id = %s
-            LIMIT 1
-            """,
-            (record_id, young_person_id),
-        )
-        record_type = "support_plan"
-    elif record_type == "appointment":
-        record = _fetch_one(
-            conn,
-            """
-            SELECT *
-            FROM young_person_appointments
-            WHERE id = %s
-              AND young_person_id = %s
-            LIMIT 1
-            """,
-            (record_id, young_person_id),
-        )
-    elif record_type == "keywork":
-        record = _fetch_one(
-            conn,
-            """
-            SELECT *
-            FROM keywork_sessions
+            FROM {table_name}
             WHERE id = %s
               AND young_person_id = %s
             LIMIT 1
@@ -774,6 +758,7 @@ def build_young_person_context(
     return {
         "scope": {
             "scope_type": "young_person",
+            "scope": "child",
             "home_id": young_person_home_id,
             "young_person_id": young_person_id,
             "record_type": scope.get("record_type"),
@@ -978,6 +963,30 @@ def build_home_os_context(
         (home_id,),
     )
 
+    audits = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM audits
+        WHERE home_id = %s
+        ORDER BY audit_date DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 30
+        """,
+        (home_id,),
+    )
+
+    incidents = _fetch_all(
+        conn,
+        """
+        SELECT *
+        FROM incidents
+        WHERE home_id = %s
+        ORDER BY incident_datetime DESC NULLS LAST, updated_at DESC NULLS LAST, id DESC
+        LIMIT 40
+        """,
+        (home_id,),
+    )
+
     summary = {
         "children_count": len(young_people),
         "team_count": len(team),
@@ -986,12 +995,15 @@ def build_home_os_context(
         "supervision_count": len(supervisions),
         "report_count": len(reports),
         "compliance_count": len(compliance_items),
+        "audit_count": len(audits),
+        "incident_count": len(incidents),
         "home_name": (home or {}).get("home_name") or (home or {}).get("name"),
     }
 
     return {
         "scope": {
             "scope_type": "home",
+            "scope": "home",
             "home_id": home_id,
             "young_person_id": None,
             "record_type": scope.get("record_type"),
@@ -1015,6 +1027,8 @@ def build_home_os_context(
         "rota": rota,
         "onboarding": onboarding,
         "training": training,
+        "audits": audits,
+        "incidents": incidents,
     }
 
 
@@ -1041,6 +1055,7 @@ def build_quality_os_context(
         return {
             "scope": {
                 "scope_type": "quality",
+                "scope": "quality",
                 "home_id": selected_home_id,
                 "young_person_id": None,
                 "record_type": scope.get("record_type"),
@@ -1174,6 +1189,7 @@ def build_quality_os_context(
     return {
         "scope": {
             "scope_type": "quality",
+            "scope": "quality",
             "home_id": selected_home_id,
             "young_person_id": None,
             "record_type": scope.get("record_type"),
@@ -1200,6 +1216,7 @@ def build_public_context(*, scope: dict[str, Any] | None = None) -> dict[str, An
     return {
         "scope": {
             "scope_type": "global",
+            "scope": "global",
             "home_id": None,
             "young_person_id": None,
             "record_type": None,
@@ -1277,89 +1294,465 @@ def build_assistant_context(
 
     raise ValueError("Unsupported assistant_type")
 
+
 # =========================
 # REPORT CONTEXT BUILDERS
 # =========================
 
-def build_monthly_report_context(conn, home_id: int, start_date, end_date):
-    incidents = _fetch_all(conn, """
-        SELECT incident_type, COUNT(*) as count
+def build_monthly_report_context(
+    conn,
+    *,
+    home_id: int | None,
+    start_date,
+    end_date,
+    access_level: str | None = None,
+    allowed_home_ids: list[int] | None = None,
+    provider_id: int | None = None,
+    generated_by: int | None = None,
+) -> dict[str, Any]:
+    home_ids = allowed_home_ids or ([home_id] if home_id is not None else [])
+    if not home_ids:
+        return {
+            "report_type": "monthly",
+            "period": {"start_date": str(start_date), "end_date": str(end_date)},
+            "home_ids": [],
+            "allowed_home_ids": [],
+            "access_level": access_level,
+            "provider_id": provider_id,
+            "homes": [],
+            "children_outcomes": [],
+            "incident_summary": [],
+            "safeguarding_summary": [],
+            "compliance_summary": [],
+            "staffing_summary": {},
+            "supervision_summary": {},
+            "management_summary": {},
+            "positive_indicators": {},
+        }
+
+    homes = _fetch_all(
+        conn,
+        """
+        SELECT id, name, name AS home_name, manager_email, provider_id
+        FROM homes
+        WHERE id = ANY(%s)
+        ORDER BY name ASC, id ASC
+        """,
+        (home_ids,),
+    )
+
+    children_outcomes = _fetch_all(
+        conn,
+        """
+        SELECT
+            yp.home_id,
+            yp.id AS young_person_id,
+            COALESCE(yp.preferred_name, CONCAT_WS(' ', yp.first_name, yp.last_name)) AS young_person_name,
+            yp.placement_status,
+            yp.summary_risk_level,
+            (
+                SELECT COUNT(*) FROM education_records er
+                WHERE er.young_person_id = yp.id
+                  AND er.record_date BETWEEN %s AND %s
+            ) AS education_records_count,
+            (
+                SELECT COUNT(*) FROM health_records hr
+                WHERE hr.young_person_id = yp.id
+                  AND hr.event_datetime BETWEEN %s AND %s
+            ) AS health_records_count,
+            (
+                SELECT COUNT(*) FROM family_contact_records fcr
+                WHERE fcr.young_person_id = yp.id
+                  AND fcr.contact_datetime BETWEEN %s AND %s
+            ) AS family_contact_records_count,
+            (
+                SELECT COUNT(*) FROM achievement_records ar
+                WHERE ar.young_person_id = yp.id
+                  AND ar.achievement_date BETWEEN %s AND %s
+            ) AS achievement_records_count,
+            (
+                SELECT COUNT(*) FROM incidents i
+                WHERE i.young_person_id = yp.id
+                  AND i.incident_datetime BETWEEN %s AND %s
+            ) AS incidents_count,
+            (
+                SELECT COUNT(*) FROM missing_episodes me
+                WHERE me.young_person_id = yp.id
+                  AND me.start_datetime BETWEEN %s AND %s
+            ) AS missing_episodes_count,
+            (
+                SELECT COUNT(*) FROM keywork_sessions ks
+                WHERE ks.young_person_id = yp.id
+                  AND ks.session_date BETWEEN %s AND %s
+            ) AS keywork_sessions_count
+        FROM young_people yp
+        WHERE yp.home_id = ANY(%s)
+          AND COALESCE(yp.archived, FALSE) = FALSE
+        ORDER BY yp.home_id ASC, yp.first_name ASC, yp.last_name ASC, yp.id ASC
+        """,
+        (
+            start_date, end_date,
+            start_date, end_date,
+            start_date, end_date,
+            start_date, end_date,
+            start_date, end_date,
+            start_date, end_date,
+            start_date, end_date,
+            home_ids,
+        ),
+    )
+
+    incident_summary = _fetch_all(
+        conn,
+        """
+        SELECT home_id, incident_type, COUNT(*) AS count
         FROM incidents
-        WHERE home_id = %s
+        WHERE home_id = ANY(%s)
           AND incident_datetime BETWEEN %s AND %s
-        GROUP BY incident_type
-    """, (home_id, start_date, end_date))
+        GROUP BY home_id, incident_type
+        ORDER BY home_id ASC, count DESC, incident_type ASC
+        """,
+        (home_ids, start_date, end_date),
+    )
 
-    tasks = _fetch_all(conn, """
-        SELECT status, COUNT(*) as count
-        FROM tasks
-        WHERE home_id = %s
-          AND created_at BETWEEN %s AND %s
-        GROUP BY status
-    """, (home_id, start_date, end_date))
+    safeguarding_summary = _fetch_all(
+        conn,
+        """
+        SELECT home_id, safeguarding_category, status, COUNT(*) AS count
+        FROM safeguarding_records
+        WHERE home_id = ANY(%s)
+          AND concern_datetime BETWEEN %s AND %s
+        GROUP BY home_id, safeguarding_category, status
+        ORDER BY home_id ASC, count DESC
+        """,
+        (home_ids, start_date, end_date),
+    )
 
-    compliance = _fetch_all(conn, """
-        SELECT status, COUNT(*) as count
+    compliance_summary = _fetch_all(
+        conn,
+        """
+        SELECT home_id, status, severity, COUNT(*) AS count
         FROM compliance_items
-        WHERE home_id = %s
+        WHERE home_id = ANY(%s)
           AND updated_at BETWEEN %s AND %s
-        GROUP BY status
-    """, (home_id, start_date, end_date))
+        GROUP BY home_id, status, severity
+        ORDER BY home_id ASC, count DESC
+        """,
+        (home_ids, start_date, end_date),
+    )
+
+    staffing_summary = {
+        "staff_assignments": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM staff
+            WHERE home_id = ANY(%s)
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids,),
+        ),
+        "staff_status": _fetch_all(
+            conn,
+            """
+            SELECT home_id, status, COUNT(*) AS count
+            FROM staff
+            WHERE home_id = ANY(%s)
+            GROUP BY home_id, status
+            ORDER BY home_id ASC, count DESC
+            """,
+            (home_ids,),
+        ),
+        "roster_shifts": _fetch_all(
+            conn,
+            """
+            SELECT home_id, status, COUNT(*) AS count
+            FROM rota
+            WHERE home_id = ANY(%s)
+              AND shift_date BETWEEN %s AND %s
+            GROUP BY home_id, status
+            ORDER BY home_id ASC, count DESC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "staff_shifts": _fetch_all(
+            conn,
+            """
+            SELECT home_id, status, COUNT(*) AS count
+            FROM shifts
+            WHERE home_id = ANY(%s)
+              AND shift_date BETWEEN %s AND %s
+            GROUP BY home_id, status
+            ORDER BY home_id ASC, count DESC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "checkins": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM staff_checkins
+            WHERE home_id = ANY(%s)
+              AND created_at BETWEEN %s AND %s
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+    }
+
+    supervision_summary = {
+        "supervision_notes": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM supervision_notes
+            WHERE home_id = ANY(%s)
+              AND created_at BETWEEN %s AND %s
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "supervision_submissions": _fetch_all(
+            conn,
+            """
+            SELECT home_id, status, COUNT(*) AS count
+            FROM supervision_submissions
+            WHERE home_id = ANY(%s)
+              AND created_at BETWEEN %s AND %s
+            GROUP BY home_id, status
+            ORDER BY home_id ASC, count DESC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "supervision_summaries": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM supervisions
+            WHERE home_id = ANY(%s)
+              AND updated_at BETWEEN %s AND %s
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+    }
+
+    management_summary = {
+        "manager_updates": _fetch_all(
+            conn,
+            """
+            SELECT home_id, status, COUNT(*) AS count
+            FROM manager_updates
+            WHERE home_id = ANY(%s)
+              AND created_at BETWEEN %s AND %s
+            GROUP BY home_id, status
+            ORDER BY home_id ASC, count DESC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "manager_actions": _fetch_all(
+            conn,
+            """
+            SELECT home_id, status, COUNT(*) AS count
+            FROM manager_actions
+            WHERE home_id = ANY(%s)
+              AND updated_at BETWEEN %s AND %s
+            GROUP BY home_id, status
+            ORDER BY home_id ASC, count DESC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "monthly_reviews": _fetch_all(
+            conn,
+            """
+            SELECT home_id, status, COUNT(*) AS count
+            FROM monthly_reviews
+            WHERE home_id = ANY(%s)
+              AND review_month BETWEEN %s AND %s
+            GROUP BY home_id, status
+            ORDER BY home_id ASC, count DESC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "review_meetings": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM review_meetings
+            WHERE home_id = ANY(%s)
+              AND meeting_date BETWEEN %s AND %s
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+    }
+
+    positive_indicators = {
+        "achievement_counts": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM achievement_records
+            WHERE home_id = ANY(%s)
+              AND achievement_date BETWEEN %s AND %s
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "keywork_counts": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM keywork_sessions
+            WHERE home_id = ANY(%s)
+              AND session_date BETWEEN %s AND %s
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "family_contact_counts": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM family_contact_records
+            WHERE home_id = ANY(%s)
+              AND contact_datetime BETWEEN %s AND %s
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+        "daily_notes_counts": _fetch_all(
+            conn,
+            """
+            SELECT home_id, COUNT(*) AS count
+            FROM daily_notes
+            WHERE home_id = ANY(%s)
+              AND note_date BETWEEN %s AND %s
+            GROUP BY home_id
+            ORDER BY home_id ASC
+            """,
+            (home_ids, start_date, end_date),
+        ),
+    }
 
     return {
         "report_type": "monthly",
-        "date_range": [str(start_date), str(end_date)],
-        "incidents": incidents,
-        "tasks": tasks,
-        "compliance": compliance,
+        "period": {"start_date": str(start_date), "end_date": str(end_date)},
+        "home_id": home_id,
+        "home_ids": home_ids,
+        "allowed_home_ids": home_ids,
+        "access_level": access_level,
+        "provider_id": provider_id,
+        "generated_by": generated_by,
+        "homes": homes,
+        "children_outcomes": children_outcomes,
+        "incident_summary": incident_summary,
+        "safeguarding_summary": safeguarding_summary,
+        "compliance_summary": compliance_summary,
+        "staffing_summary": staffing_summary,
+        "supervision_summary": supervision_summary,
+        "management_summary": management_summary,
+        "positive_indicators": positive_indicators,
     }
 
 
-def build_reg45_context(conn, home_id: int, start_date, end_date):
-    incidents = _fetch_all(conn, """
-        SELECT incident_type, COUNT(*) as count
-        FROM incidents
-        WHERE home_id = %s
-          AND incident_datetime BETWEEN %s AND %s
-        GROUP BY incident_type
-    """, (home_id, start_date, end_date))
-
-    safeguarding = _fetch_all(conn, """
-        SELECT COUNT(*) as total
-        FROM safeguarding_records
-        WHERE home_id = %s
-          AND concern_datetime BETWEEN %s AND %s
-    """, (home_id, start_date, end_date))
-
-    missing = _fetch_all(conn, """
-        SELECT COUNT(*) as total
-        FROM missing_episodes
-        WHERE home_id = %s
-          AND start_datetime BETWEEN %s AND %s
-    """, (home_id, start_date, end_date))
-
+def build_reg45_context(
+    conn,
+    *,
+    home_id: int | None,
+    start_date,
+    end_date,
+    access_level: str | None = None,
+    allowed_home_ids: list[int] | None = None,
+    provider_id: int | None = None,
+    generated_by: int | None = None,
+) -> dict[str, Any]:
     return {
+        **build_monthly_report_context(
+            conn,
+            home_id=home_id,
+            start_date=start_date,
+            end_date=end_date,
+            access_level=access_level,
+            allowed_home_ids=allowed_home_ids,
+            provider_id=provider_id,
+            generated_by=generated_by,
+        ),
         "report_type": "reg45",
-        "date_range": [str(start_date), str(end_date)],
-        "incidents": incidents,
-        "safeguarding": safeguarding,
-        "missing_episodes": missing,
     }
 
 
-def build_yearly_context(conn, home_id: int, start_date, end_date):
-    incidents = _fetch_all(conn, """
-        SELECT DATE_TRUNC('month', incident_datetime) as month,
-               COUNT(*) as count
-        FROM incidents
-        WHERE home_id = %s
-          AND incident_datetime BETWEEN %s AND %s
-        GROUP BY month
-        ORDER BY month
-    """, (home_id, start_date, end_date))
-
+def build_yearly_report_context(
+    conn,
+    *,
+    home_id: int | None,
+    start_date,
+    end_date,
+    access_level: str | None = None,
+    allowed_home_ids: list[int] | None = None,
+    provider_id: int | None = None,
+    generated_by: int | None = None,
+) -> dict[str, Any]:
     return {
+        **build_monthly_report_context(
+            conn,
+            home_id=home_id,
+            start_date=start_date,
+            end_date=end_date,
+            access_level=access_level,
+            allowed_home_ids=allowed_home_ids,
+            provider_id=provider_id,
+            generated_by=generated_by,
+        ),
         "report_type": "yearly",
-        "date_range": [str(start_date), str(end_date)],
-        "incident_trends": incidents,
     }
+
+
+def preview_report_snapshot(
+    conn,
+    *,
+    report_type: str,
+    home_id: int | None,
+    start_date,
+    end_date,
+    access_level: str | None = None,
+    allowed_home_ids: list[int] | None = None,
+    provider_id: int | None = None,
+) -> dict[str, Any]:
+    if report_type == "reg45":
+        return build_reg45_context(
+            conn,
+            home_id=home_id,
+            start_date=start_date,
+            end_date=end_date,
+            access_level=access_level,
+            allowed_home_ids=allowed_home_ids,
+            provider_id=provider_id,
+        )
+    if report_type == "yearly":
+        return build_yearly_report_context(
+            conn,
+            home_id=home_id,
+            start_date=start_date,
+            end_date=end_date,
+            access_level=access_level,
+            allowed_home_ids=allowed_home_ids,
+            provider_id=provider_id,
+        )
+    return build_monthly_report_context(
+        conn,
+        home_id=home_id,
+        start_date=start_date,
+        end_date=end_date,
+        access_level=access_level,
+        allowed_home_ids=allowed_home_ids,
+        provider_id=provider_id,
+    )
