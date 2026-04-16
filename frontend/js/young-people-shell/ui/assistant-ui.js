@@ -210,7 +210,9 @@ function renderAssistantRichText(text = "") {
 
   const flushList = () => {
     if (!listItems.length) return;
-    blocks.push(`<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
+    blocks.push(
+      `<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`
+    );
     listItems = [];
   };
 
@@ -317,31 +319,19 @@ function buildIntroMessageHtml() {
             ? `
               <p><strong>Ask about ${escapeHtml(getPersonLabel())}.</strong></p>
               <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-              ${
-                sectionSubtitle
-                  ? `<p>${escapeHtml(sectionSubtitle)}</p>`
-                  : ""
-              }
+              ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
             `
             : `<p>Select a child or young person to begin.</p>`
           : scope === "home"
           ? `
             <p><strong>Ask about ${escapeHtml(getHomeLabel())}.</strong></p>
             <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-            ${
-              sectionSubtitle
-                ? `<p>${escapeHtml(sectionSubtitle)}</p>`
-                : ""
-            }
+            ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
           `
           : `
             <p><strong>Ask about quality and oversight.</strong></p>
             <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-            ${
-              sectionSubtitle
-                ? `<p>${escapeHtml(sectionSubtitle)}</p>`
-                : ""
-            }
+            ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
           `
       }
     </div>
@@ -386,7 +376,10 @@ function renderScopeBadges() {
   const childBadge = getEl(els.scopeChildBadge, "scopeChildBadge");
   const shiftBadge = getEl(els.scopeShiftBadge, "scopeShiftBadge");
   const modalHomeBadge = getEl(els.modalScopeHomeBadge, "modalScopeHomeBadge");
-  const modalChildBadge = getEl(els.modalScopeChildBadge, "modalScopeChildBadge");
+  const modalChildBadge = getEl(
+    els.modalScopeChildBadge,
+    "modalScopeChildBadge"
+  );
 
   if (scopeBadge) {
     scopeBadge.textContent = getScopeLabel();
@@ -441,7 +434,10 @@ function renderContextText() {
     return;
   }
 
-  const homeIds = Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : [];
+  const homeIds = Array.isArray(state.allowedHomeIds)
+    ? state.allowedHomeIds
+    : [];
+
   contextEl.textContent =
     state.userRole === "ri" || state.userRole === "admin"
       ? `Provider quality view • ${homeIds.length || 1} home(s) • ${section}`
@@ -461,6 +457,7 @@ function renderSourcesHtml(sources = []) {
           const title = escapeHtml(
             source?.title || source?.label || source?.document_title || "Source"
           );
+
           const meta = [
             source?.record_type || source?.type || "",
             source?.section || "",
@@ -470,8 +467,9 @@ function renderSourcesHtml(sources = []) {
             .join(" • ");
 
           const description = escapeHtml(
-            String(source?.description || source?.excerpt || source?.summary || "")
-              .slice(0, MAX_SOURCE_EXCERPT)
+            String(
+              source?.description || source?.excerpt || source?.summary || ""
+            ).slice(0, MAX_SOURCE_EXCERPT)
           );
 
           return `
@@ -485,8 +483,16 @@ function renderSourcesHtml(sources = []) {
                 <strong>${title}</strong>
                 <span>${escapeHtml(citationRef)}</span>
               </div>
-              ${meta ? `<div class="assistant-source-row-meta">${meta}</div>` : ""}
-              ${description ? `<div class="assistant-source-row-text">${description}</div>` : ""}
+              ${
+                meta
+                  ? `<div class="assistant-source-row-meta">${meta}</div>`
+                  : ""
+              }
+              ${
+                description
+                  ? `<div class="assistant-source-row-text">${description}</div>`
+                  : ""
+              }
             </button>
           `;
         })
