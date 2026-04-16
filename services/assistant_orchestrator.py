@@ -167,14 +167,20 @@ def _normalise_scope_for_assistant(
     raw_scope = scope or {}
     ui_context = ui_context or {}
 
-    scope_type = _safe_str(raw_scope.get("scope_type") or ui_context.get("scope_type") or "global").lower()
+    scope_type = _safe_str(
+        raw_scope.get("scope_type") or ui_context.get("scope_type") or "global"
+    ).lower()
     scope_name = _safe_str(raw_scope.get("scope") or ui_context.get("scope")).lower()
     home_id = _safe_int(raw_scope.get("home_id") or ui_context.get("home_id"))
-    young_person_id = _safe_int(raw_scope.get("young_person_id") or ui_context.get("young_person_id"))
+    young_person_id = _safe_int(
+        raw_scope.get("young_person_id") or ui_context.get("young_person_id")
+    )
     record_type = _safe_str(raw_scope.get("record_type") or ui_context.get("record_type")) or None
     record_id = _safe_int(raw_scope.get("record_id") or ui_context.get("record_id"))
     access_level = _safe_str(raw_scope.get("access_level") or ui_context.get("access_level")) or None
-    allowed_home_ids = _safe_int_list(raw_scope.get("allowed_home_ids") or ui_context.get("allowed_home_ids"))
+    allowed_home_ids = _safe_int_list(
+        raw_scope.get("allowed_home_ids") or ui_context.get("allowed_home_ids")
+    )
     provider_id = _safe_int(raw_scope.get("provider_id") or ui_context.get("provider_id"))
 
     if assistant_type == "public":
@@ -303,11 +309,17 @@ def _infer_date_range_from_message(message: str) -> tuple[str | None, str | None
         start = today - timedelta(days=30)
         return start.isoformat(), today.isoformat(), True
 
-    if re.search(r"\blast 6 months\b|\bpast 6 months\b|\bprevious 6 months\b|\bsix months\b|\b6 months\b", value):
+    if re.search(
+        r"\blast 6 months\b|\bpast 6 months\b|\bprevious 6 months\b|\bsix months\b|\b6 months\b",
+        value,
+    ):
         start = today - timedelta(days=183)
         return start.isoformat(), today.isoformat(), True
 
-    if re.search(r"\blast 12 months\b|\bpast 12 months\b|\bprevious 12 months\b|\btwelve months\b|\b12 months\b", value):
+    if re.search(
+        r"\blast 12 months\b|\bpast 12 months\b|\bprevious 12 months\b|\btwelve months\b|\b12 months\b",
+        value,
+    ):
         start = today - timedelta(days=365)
         return start.isoformat(), today.isoformat(), True
 
@@ -376,7 +388,12 @@ def _detect_report_request(
     if "monthly report" in value or "monthly summary" in value or "monthly overview" in value:
         return make_request("monthly")
 
-    if "yearly report" in value or "annual report" in value or "yearly overview" in value or "annual overview" in value:
+    if (
+        "yearly report" in value
+        or "annual report" in value
+        or "yearly overview" in value
+        or "annual overview" in value
+    ):
         return make_request("yearly")
 
     return None
@@ -389,7 +406,9 @@ def _build_compact_public_context(context: dict[str, Any]) -> dict[str, Any]:
         "public_context": {
             "assistant_type": public_context.get("assistant_type", "public"),
             "os_data_available": bool(public_context.get("os_data_available", False)),
-            "young_person_data_available": bool(public_context.get("young_person_data_available", False)),
+            "young_person_data_available": bool(
+                public_context.get("young_person_data_available", False)
+            ),
             "home_data_available": bool(public_context.get("home_data_available", False)),
         },
     }
@@ -447,11 +466,17 @@ def _build_compact_global_os_context(context: dict[str, Any]) -> dict[str, Any]:
             for item in chronology
         ],
         "documents": [
-            _pick_fields(item, ["id", "title", "document_type", "status", "review_date", "updated_at"])
+            _pick_fields(
+                item,
+                ["id", "title", "document_type", "status", "review_date", "updated_at"],
+            )
             for item in documents
         ],
         "incidents": [
-            _pick_fields(item, ["id", "incident_type", "title", "severity", "incident_datetime", "updated_at"])
+            _pick_fields(
+                item,
+                ["id", "incident_type", "title", "severity", "incident_datetime", "updated_at"],
+            )
             for item in incidents
         ],
         "compliance_items": [
@@ -499,11 +524,24 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
             ),
             "health_profile": _pick_fields(
                 identity.get("health_profile"),
-                ["gp_name", "allergies", "diagnoses", "mental_health_summary", "medication_summary", "updated_at"],
+                [
+                    "gp_name",
+                    "allergies",
+                    "diagnoses",
+                    "mental_health_summary",
+                    "medication_summary",
+                    "updated_at",
+                ],
             ),
             "identity_profile": _pick_fields(
                 identity.get("identity_profile"),
-                ["interests", "strengths_summary", "cultural_identity", "religion_or_faith", "updated_at"],
+                [
+                    "interests",
+                    "strengths_summary",
+                    "cultural_identity",
+                    "religion_or_faith",
+                    "updated_at",
+                ],
             ),
             "legal_status": _pick_fields(
                 identity.get("legal_status"),
@@ -525,7 +563,16 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
             "support_plans": [
                 _pick_fields(
                     item,
-                    ["id", "title", "summary", "plan_type", "approval_status", "status", "review_date", "updated_at"],
+                    [
+                        "id",
+                        "title",
+                        "summary",
+                        "plan_type",
+                        "approval_status",
+                        "status",
+                        "review_date",
+                        "updated_at",
+                    ],
                 )
                 for item in _trim_list(active_work.get("support_plans"), 6)
             ],
@@ -568,7 +615,10 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                 for item in _trim_list(active_work.get("compliance_items"), 8)
             ],
             "tasks": [
-                _pick_fields(item, ["id", "title", "description", "status", "priority", "due_date", "created_at"])
+                _pick_fields(
+                    item,
+                    ["id", "title", "description", "status", "priority", "due_date", "created_at"],
+                )
                 for item in _trim_list(active_work.get("tasks"), 8)
             ],
         },
@@ -637,7 +687,10 @@ def _build_compact_young_person_context(context: dict[str, Any]) -> dict[str, An
                 for item in _trim_list(recent_records.get("achievements"), 5)
             ],
             "chronology": [
-                _pick_fields(item, ["id", "title", "summary", "event_datetime", "category", "significance", "created_at"])
+                _pick_fields(
+                    item,
+                    ["id", "title", "summary", "event_datetime", "category", "significance", "created_at"],
+                )
                 for item in _trim_list(recent_records.get("chronology"), 10)
             ],
         },
@@ -673,7 +726,10 @@ def _build_compact_home_context(context: dict[str, Any]) -> dict[str, Any]:
         ),
         "summary": context.get("summary") or {},
         "young_people": [
-            _pick_fields(item, ["id", "preferred_name", "full_name", "placement_status", "summary_risk_level", "home_name"])
+            _pick_fields(
+                item,
+                ["id", "preferred_name", "full_name", "placement_status", "summary_risk_level", "home_name"],
+            )
             for item in _trim_list(context.get("young_people"), 12)
         ],
         "team": [
@@ -685,7 +741,10 @@ def _build_compact_home_context(context: dict[str, Any]) -> dict[str, Any]:
             for item in _trim_list(context.get("tasks"), 12)
         ],
         "communications": [
-            _pick_fields(item, ["id", "title", "summary", "communication_type", "organisation", "contact_datetime", "status"])
+            _pick_fields(
+                item,
+                ["id", "title", "summary", "communication_type", "organisation", "contact_datetime", "status"],
+            )
             for item in _trim_list(context.get("communications"), 10)
         ],
         "documents": [
@@ -697,7 +756,10 @@ def _build_compact_home_context(context: dict[str, Any]) -> dict[str, Any]:
             for item in _trim_list(context.get("supervisions"), 10)
         ],
         "therapy": [
-            _pick_fields(item, ["id", "title", "service_name", "professional_name", "status", "session_date"])
+            _pick_fields(
+                item,
+                ["id", "title", "service_name", "professional_name", "status", "session_date"],
+            )
             for item in _trim_list(context.get("therapy"), 10)
         ],
         "reports": [
@@ -736,7 +798,10 @@ def _build_compact_quality_context(context: dict[str, Any]) -> dict[str, Any]:
             for item in _trim_list(context.get("audits"), 12)
         ],
         "incidents": [
-            _pick_fields(item, ["id", "incident_type", "description", "status", "incident_datetime", "location", "home_id"])
+            _pick_fields(
+                item,
+                ["id", "incident_type", "description", "status", "incident_datetime", "location", "home_id"],
+            )
             for item in _trim_list(context.get("incidents"), 12)
         ],
         "compliance_items": [
@@ -809,7 +874,9 @@ def _build_compact_report_context(context: dict[str, Any]) -> dict[str, Any]:
         "staffing_summary": {
             "staff_assignments": [
                 _pick_fields(item, ["home_id", "count"])
-                for item in _trim_list((context.get("staffing_summary") or {}).get("staff_assignments"), 100)
+                for item in _trim_list(
+                    (context.get("staffing_summary") or {}).get("staff_assignments"), 100
+                )
             ],
             "staff_status": [
                 _pick_fields(item, ["home_id", "status", "count"])
@@ -831,51 +898,73 @@ def _build_compact_report_context(context: dict[str, Any]) -> dict[str, Any]:
         "supervision_summary": {
             "supervision_notes": [
                 _pick_fields(item, ["home_id", "count"])
-                for item in _trim_list((context.get("supervision_summary") or {}).get("supervision_notes"), 100)
+                for item in _trim_list(
+                    (context.get("supervision_summary") or {}).get("supervision_notes"), 100
+                )
             ],
             "supervision_submissions": [
                 _pick_fields(item, ["home_id", "status", "count"])
-                for item in _trim_list((context.get("supervision_summary") or {}).get("supervision_submissions"), 100)
+                for item in _trim_list(
+                    (context.get("supervision_summary") or {}).get("supervision_submissions"), 100
+                )
             ],
             "supervision_summaries": [
                 _pick_fields(item, ["home_id", "count"])
-                for item in _trim_list((context.get("supervision_summary") or {}).get("supervision_summaries"), 100)
+                for item in _trim_list(
+                    (context.get("supervision_summary") or {}).get("supervision_summaries"), 100
+                )
             ],
         },
         "management_summary": {
             "manager_updates": [
                 _pick_fields(item, ["home_id", "status", "count"])
-                for item in _trim_list((context.get("management_summary") or {}).get("manager_updates"), 100)
+                for item in _trim_list(
+                    (context.get("management_summary") or {}).get("manager_updates"), 100
+                )
             ],
             "manager_actions": [
                 _pick_fields(item, ["home_id", "status", "count"])
-                for item in _trim_list((context.get("management_summary") or {}).get("manager_actions"), 100)
+                for item in _trim_list(
+                    (context.get("management_summary") or {}).get("manager_actions"), 100
+                )
             ],
             "monthly_reviews": [
                 _pick_fields(item, ["home_id", "status", "count"])
-                for item in _trim_list((context.get("management_summary") or {}).get("monthly_reviews"), 100)
+                for item in _trim_list(
+                    (context.get("management_summary") or {}).get("monthly_reviews"), 100
+                )
             ],
             "review_meetings": [
                 _pick_fields(item, ["home_id", "count"])
-                for item in _trim_list((context.get("management_summary") or {}).get("review_meetings"), 100)
+                for item in _trim_list(
+                    (context.get("management_summary") or {}).get("review_meetings"), 100
+                )
             ],
         },
         "positive_indicators": {
             "achievement_counts": [
                 _pick_fields(item, ["home_id", "count"])
-                for item in _trim_list((context.get("positive_indicators") or {}).get("achievement_counts"), 100)
+                for item in _trim_list(
+                    (context.get("positive_indicators") or {}).get("achievement_counts"), 100
+                )
             ],
             "keywork_counts": [
                 _pick_fields(item, ["home_id", "count"])
-                for item in _trim_list((context.get("positive_indicators") or {}).get("keywork_counts"), 100)
+                for item in _trim_list(
+                    (context.get("positive_indicators") or {}).get("keywork_counts"), 100
+                )
             ],
             "family_contact_counts": [
                 _pick_fields(item, ["home_id", "count"])
-                for item in _trim_list((context.get("positive_indicators") or {}).get("family_contact_counts"), 100)
+                for item in _trim_list(
+                    (context.get("positive_indicators") or {}).get("family_contact_counts"), 100
+                )
             ],
             "daily_notes_counts": [
                 _pick_fields(item, ["home_id", "count"])
-                for item in _trim_list((context.get("positive_indicators") or {}).get("daily_notes_counts"), 100)
+                for item in _trim_list(
+                    (context.get("positive_indicators") or {}).get("daily_notes_counts"), 100
+                )
             ],
         },
     }
@@ -1146,16 +1235,20 @@ Core answer rules:
 - If a point does not have evidence, do not attach a false citation.
 - Never use markdown headings if the user asked not to.
 - Never default to numbered lists unless the user asked for them or the structure genuinely requires numbering.
+- Do not use markdown headings or hash-prefixed headings.
+- Do not produce generic introductory filler such as "Based on the available context".
+- Every substantive paragraph should include at least one inline citation where supporting evidence exists.
+- If a statement is an inference rather than a direct record fact, label it clearly as analysis or pattern, and still cite the records that support that inference.
+- If there is no supporting evidence in scope for a point, say so plainly rather than implying certainty.
+- Prefer children’s home language: lived experience, stability, relationships, presentation, safeguarding, workforce practice, oversight, quality of care, management response, inspection readiness.
+- When asked what is missing, what needs checking, or what creates inspection risk, answer directly and analytically.
+- Keep children at the centre, but do not soften or obscure concerns that need action.
 """.strip()
 
 
 def _output_template_rules(ui_context: dict[str, Any]) -> str:
     output_mode = _safe_str(ui_context.get("output_mode")).lower()
     assistant_intent = _safe_str(ui_context.get("assistant_intent")).lower()
-    message_flags = [
-        output_mode,
-        assistant_intent,
-    ]
 
     if "reg45" in output_mode:
         return """
@@ -1165,6 +1258,7 @@ If the request is Reg 45 or Ofsted-style review writing:
 - cover strengths, concerns, progress, risk, quality of care, management oversight and recommendations
 - cite throughout
 - if the period was inferred, work within that period and state that the period has been interpreted from the request
+- distinguish clearly between evidence, analysis and recommendation
 """.strip()
 
     if "handover" in output_mode:
@@ -1174,6 +1268,7 @@ If the request is a handover:
 - keep it shift-practical
 - include only the most relevant current information
 - cite throughout where evidence supports each point
+- avoid generic narrative and keep every section actionable
 """.strip()
 
     if "manager_brief" in output_mode:
@@ -1182,6 +1277,7 @@ If the request is a manager brief:
 - focus on oversight, patterns, compliance, operational risk, staffing, quality and immediate priorities
 - separate evidence from recommendation
 - cite throughout
+- make clear what requires manager review, escalation or follow-up
 """.strip()
 
     if "quality_brief" in output_mode:
@@ -1190,6 +1286,7 @@ If the request is a quality / RI / inspection brief:
 - focus on triangulation, patterns, gaps, strengths, assurance and inspection risk
 - make clear what an inspector or RI would test further
 - cite throughout
+- prioritise evidence-led analysis over reassurance
 """.strip()
 
     if "chronology" in output_mode:
@@ -1199,6 +1296,7 @@ If the request is a chronology:
 - include only material events relevant to the question
 - after the chronology, briefly explain any patterns
 - cite each chronology point
+- avoid padding
 """.strip()
 
     if "summary" in output_mode or assistant_intent == "summary":
@@ -1208,12 +1306,14 @@ If the request is a summary:
 - keep it evidence-led
 - avoid generic filler
 - cite throughout, not just at the end
+- make the summary feel like a children’s home professional summary, not a generic chatbot answer
 """.strip()
 
     return """
 Match the user’s requested format exactly.
 If the user gives a section structure, use that structure and nothing else.
 Citations should be distributed throughout the answer.
+Do not drift into generic policy wording.
 """.strip()
 
 
@@ -1299,6 +1399,12 @@ Use the context below to answer clearly, safely, analytically and practically.
 If the request is about children, think about lived experience, safety, stability, progress, relationships, emotional wellbeing and what adults need to do.
 If the request is about the home, think about quality of care, safeguarding culture, oversight, workforce practice, compliance, triangulation and inspection readiness.
 If the request is about quality/provider scope, think about patterns, repeat findings, weak assurance, audit themes, management drift and what needs testing further.
+
+When relevant, think in this order:
+1. what is evidenced now
+2. what that means for the child or home
+3. what adults need to do next
+4. what should be checked, escalated or reviewed
 
 === CONTEXT SUMMARY ===
 {summary}
@@ -1413,8 +1519,13 @@ Rules for this report:
 - where evidence is thin, say so clearly
 - make recommendations specific and usable
 - use section labels in plain professional style
+- do not use markdown headings
 - place citations throughout the report, not only at the end
+- every substantive paragraph should contain inline citations where evidence exists
+- distinguish clearly between evidence, analysis and recommendation
+- where concerns are identified, explain why they matter for children’s lived experience, safeguarding, quality of care or leadership oversight
 - where the period was inferred, state that clearly in the introduction
+- be child-centred but not soft: be warm, professional, analytical, protective and honest about shortfalls
 
 === REPORT PERIOD NOTE ===
 {period_note}
