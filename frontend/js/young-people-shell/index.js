@@ -23,9 +23,11 @@ import { refreshWorkspaceSummary } from "./ui/workspace-summary-controller.js";
 import {
   ROLE_SCOPE_ACCESS,
   SCOPE_DEFAULT_SECTION,
+  getSafeSectionForScope,
 } from "./core/config.js";
 
-let scopeEventsBound = false;
+const SHELL_STORAGE_KEY = "youngPeopleShell.runtime";
+
 let bootstrapped = false;
 
 function showWorkspace() {
@@ -97,6 +99,31 @@ function toIdArray(value) {
   return value
     .map((item) => Number(item))
     .filter((item) => Number.isFinite(item));
+}
+
+function readStoredShellState() {
+  try {
+    const raw = sessionStorage.getItem(SHELL_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function persistShellState() {
+  try {
+    sessionStorage.setItem(
+      SHELL_STORAGE_KEY,
+      JSON.stringify({
+        scope: state.currentScope || "child",
+        section: state.currentSection || state.activeSection || state.currentView || "",
+        youngPersonId: state.youngPersonId || null,
+      })
+    );
+  } catch {
+    // Ignore storage failures.
+  }
 }
 
 function hydrateRuntimeContextFromDom() {
@@ -195,6 +222,31 @@ function hydrateRuntimeContextFromSession() {
   }
 }
 
+function hydrateRuntimeContextFromStoredShell() {
+  const stored = readStoredShellState();
+  if (!stored || typeof stored !== "object") return;
+
+  if (!state.currentScope && stored.scope) {
+    state.currentScope = String(stored.scope).trim().toLowerCase();
+  }
+
+  if (!state.currentSection && stored.section) {
+    state.currentSection = String(stored.section).trim();
+  }
+
+  if (!state.activeSection && stored.section) {
+    state.activeSection = String(stored.section).trim();
+  }
+
+  if (!state.currentView && stored.section) {
+    state.currentView = String(stored.section).trim();
+  }
+
+  if (!state.youngPersonId && stored.youngPersonId) {
+    state.youngPersonId = stored.youngPersonId;
+  }
+}
+
 function syncDomDatasetFromState() {
   if (!els.app) return;
 
@@ -260,19 +312,20 @@ function ensureValidScopeForRole() {
 }
 
 function ensureInitialSectionForScope() {
-  const expectedDefault = getDefaultSectionForScope(state.currentScope);
+  const safeScope = state.currentScope || "child";
+  const fallbackSection = getDefaultSectionForScope(safeScope);
 
-  if (!state.currentSection) {
-    state.currentSection = expectedDefault;
-  }
+  const initialSection =
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    fallbackSection;
 
-  if (!state.activeSection) {
-    state.activeSection = state.currentSection;
-  }
+  const safeSection = getSafeSectionForScope(initialSection, safeScope);
 
-  if (!state.currentView) {
-    state.currentView = state.currentSection;
-  }
+  state.currentSection = safeSection;
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
 }
 
 function syncScopeButtons() {
@@ -305,7 +358,7 @@ function syncScopeButtons() {
   });
 
   if (els.scopeSwitch) {
-    const showSwitch = getAllowedScopesForRole().length > 1;
+    const showSwitch = allowedScopes.length > 1;
     els.scopeSwitch.classList.toggle("hidden", !showSwitch);
     els.scopeSwitch.setAttribute("aria-hidden", showSwitch ? "false" : "true");
   }
@@ -315,6 +368,7 @@ function refreshAllChrome() {
   ensureValidScopeForRole();
   ensureInitialSectionForScope();
   syncDomDatasetFromState();
+
   refreshShellChrome();
   refreshAssistantUi();
   updateAssistantContext();
@@ -322,6 +376,8 @@ function refreshAllChrome() {
   renderAssistantInsights();
   syncScopeButtons();
   refreshWorkspaceSummary();
+
+  persistShellState();
 }
 
 async function setScope(scope) {
@@ -357,38 +413,6 @@ async function setScope(scope) {
   refreshWorkspaceSummary();
 }
 
-function bindScopeEvents() {
-  if (scopeEventsBound) return;
-  scopeEventsBound = true;
-
-  els.scopeChildBtn?.addEventListener("click", async () => {
-    try {
-      await setScope("child");
-    } catch (error) {
-      console.error("[index] failed switching to child scope", error);
-      showError(error?.message || "Failed to switch scope.");
-    }
-  });
-
-  els.scopeHomeBtn?.addEventListener("click", async () => {
-    try {
-      await setScope("home");
-    } catch (error) {
-      console.error("[index] failed switching to home scope", error);
-      showError(error?.message || "Failed to switch scope.");
-    }
-  });
-
-  els.scopeQualityBtn?.addEventListener("click", async () => {
-    try {
-      await setScope("quality");
-    } catch (error) {
-      console.error("[index] failed switching to quality scope", error);
-      showError(error?.message || "Failed to switch scope.");
-    }
-  });
-}
-
 async function restoreSelectedYoungPerson() {
   const idFromUrl = getYoungPersonIdFromUrl();
 
@@ -407,6 +431,7 @@ async function restoreSelectedYoungPerson() {
     await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
     syncDomDatasetFromState();
     refreshWorkspaceSummary();
+    persistShellState();
     return true;
   } catch (error) {
     console.error("[index] failed to restore young person", error);
@@ -416,6 +441,7 @@ async function restoreSelectedYoungPerson() {
     syncDomDatasetFromState();
     refreshWorkspaceSummary();
     showError(error?.message || "Failed to open selected young person.");
+    persistShellState();
     return false;
   }
 }
@@ -450,25 +476,27 @@ function syncVisibleScreen() {
   showWorkspace();
 }
 
+async function bootstrapInitialScopeAndSection() {
+  hydrateRuntimeContextFromDom();
+  hydrateRuntimeContextFromSession();
+  hydrateRuntimeContextFromStoredShell();
+
+  if (shouldForceRoleDefaultScope()) {
+    state.currentScope = getDefaultScopeForRole();
+  }
+
+  ensureValidScopeForRole();
+  ensureInitialSectionForScope();
+  syncDomDatasetFromState();
+  persistShellState();
+}
+
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
 
   try {
-    hydrateRuntimeContextFromDom();
-    hydrateRuntimeContextFromSession();
-
-    if (shouldForceRoleDefaultScope()) {
-      state.currentScope = getDefaultScopeForRole();
-    }
-
-    ensureValidScopeForRole();
-
-    state.currentSection = getDefaultSectionForScope(state.currentScope);
-    state.activeSection = state.currentSection;
-    state.currentView = state.currentSection;
-
-    syncDomDatasetFromState();
+    await bootstrapInitialScopeAndSection();
 
     console.log("[young-people-shell] boot", {
       role: state.userRole,
@@ -484,28 +512,35 @@ async function bootstrap() {
     bindShellChrome();
     bindAssistantUi();
     bindAssistantEvents();
-    bindScopeEvents();
 
     refreshAllChrome();
 
     const restoredYoungPerson = await restoreSelectedYoungPerson();
 
-    if (state.currentScope === "child") {
-      if (restoredYoungPerson) {
-        showWorkspace();
-      } else {
-        showSelector();
-      }
-    } else {
-      showWorkspace();
+    syncVisibleScreen();
+    await bootstrapSelectorIfNeeded(restoredYoungPerson);
+
+    await initialiseShellNavigation();
+
+    if (state.currentScope !== "child") {
+      await loadSection(state.currentSection || getDefaultSectionForScope(state.currentScope));
+    } else if (state.youngPersonId) {
+      await loadSection(state.currentSection || getDefaultSectionForScope("child"));
     }
 
-    syncVisibleScreen();
-
-    await bootstrapSelectorIfNeeded(restoredYoungPerson);
-    await initialiseShellNavigation();
     refreshAllChrome();
     refreshWorkspaceSummary();
+
+    window.youngPeopleShell = Object.freeze({
+      getState: () => state,
+      setScope,
+      refresh: async () => {
+        refreshAllChrome();
+        await loadSection(
+          state.currentSection || getDefaultSectionForScope(state.currentScope || "child")
+        );
+      },
+    });
   } catch (error) {
     console.error("[index] bootstrap failed", error);
     showError(error?.message || "Failed to start workspace.");
