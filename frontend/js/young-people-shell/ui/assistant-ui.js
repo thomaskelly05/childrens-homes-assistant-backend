@@ -1,6 +1,13 @@
 import { state, createAssistantMeta } from "../state.js";
 import { els } from "../dom.js";
-import { escapeHtml, getDisplayName } from "../core/utils.js";
+import {
+  escapeHtml,
+  getDisplayName,
+} from "../core/utils.js";
+import {
+  getSectionTitle,
+  getSectionSubtitle,
+} from "../core/config.js";
 
 let assistantUiBound = false;
 let citationEventsBound = false;
@@ -83,15 +90,9 @@ function formatRole(role = "") {
   return "System";
 }
 
-function normaliseSectionLabel(section = "") {
-  return String(section || "workspace")
-    .replaceAll("_", " ")
-    .replaceAll("-", " ");
-}
-
 function getPersonLabel() {
   const person = getCurrentPerson();
-  return getDisplayName(person || {}) || "Young person";
+  return getDisplayName(person || {}) || "Child";
 }
 
 function getHomeLabel() {
@@ -109,7 +110,15 @@ function getScopeLabel() {
 
   if (scope === "home") return "Home assistant";
   if (scope === "quality") return "Quality assistant";
-  return "Young person assistant";
+  return "Child assistant";
+}
+
+function getReadableSectionLabel() {
+  return getSectionTitle(getCurrentSection()) || "Workspace";
+}
+
+function getReadableSectionSubtitle() {
+  return getSectionSubtitle(getCurrentSection()) || "";
 }
 
 function sourceCitationRef(source = {}, index = 0) {
@@ -297,6 +306,8 @@ function renderMessage(message = {}) {
 
 function buildIntroMessageHtml() {
   const scope = getCurrentScope();
+  const sectionTitle = getReadableSectionLabel();
+  const sectionSubtitle = getReadableSectionSubtitle();
 
   return `
     <div class="assistant-helper-text">
@@ -305,17 +316,32 @@ function buildIntroMessageHtml() {
           ? state.youngPersonId
             ? `
               <p><strong>Ask about ${escapeHtml(getPersonLabel())}.</strong></p>
-              <p>Try a summary, chronology, risks, appointments, family themes, or a handover.</p>
+              <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+              ${
+                sectionSubtitle
+                  ? `<p>${escapeHtml(sectionSubtitle)}</p>`
+                  : ""
+              }
             `
-            : `<p>Select a young person to begin.</p>`
+            : `<p>Select a child or young person to begin.</p>`
           : scope === "home"
           ? `
             <p><strong>Ask about ${escapeHtml(getHomeLabel())}.</strong></p>
-            <p>Try staffing, compliance, chronology, overdue items, management priorities, or a home summary.</p>
+            <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+            ${
+              sectionSubtitle
+                ? `<p>${escapeHtml(sectionSubtitle)}</p>`
+                : ""
+            }
           `
           : `
             <p><strong>Ask about quality and oversight.</strong></p>
-            <p>Try audit themes, compliance gaps, inspection readiness, or RI summaries.</p>
+            <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+            ${
+              sectionSubtitle
+                ? `<p>${escapeHtml(sectionSubtitle)}</p>`
+                : ""
+            }
           `
       }
     </div>
@@ -353,7 +379,7 @@ function renderScopeBadges() {
   const scope = getCurrentScope();
   const homeName = getHomeLabel();
   const childName = getPersonLabel();
-  const section = normaliseSectionLabel(getCurrentSection());
+  const section = getReadableSectionLabel();
 
   const scopeBadge = getEl(els.scopeBadge, "scopeBadge");
   const homeBadge = getEl(els.scopeHomeBadge, "scopeHomeBadge");
@@ -398,7 +424,7 @@ function renderScopeBadges() {
 
 function renderContextText() {
   const scope = getCurrentScope();
-  const section = normaliseSectionLabel(getCurrentSection());
+  const section = getReadableSectionLabel();
   const contextEl = getEl(els.assistantContext, "assistantContext");
 
   if (!contextEl) return;
@@ -406,7 +432,7 @@ function renderContextText() {
   if (scope === "child") {
     contextEl.textContent = state.youngPersonId
       ? `${getPersonLabel()} • ${section}`
-      : "No young person selected.";
+      : "No child selected.";
     return;
   }
 
@@ -520,15 +546,19 @@ function renderScopeSummary() {
     <div class="assistant-scope-summary">
       <div class="assistant-scope-summary-row">
         <span>Scope</span>
-        <strong>${escapeHtml(scope)}</strong>
+        <strong>${escapeHtml(getScopeLabel())}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Section</span>
-        <strong>${escapeHtml(normaliseSectionLabel(getCurrentSection()))}</strong>
+        <strong>${escapeHtml(getReadableSectionLabel())}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Evidence</span>
         <strong>${escapeHtml(String(runtime.evidence_count || 0))}</strong>
+      </div>
+      <div class="assistant-scope-summary-row">
+        <span>Mode</span>
+        <strong>${escapeHtml(scope)}</strong>
       </div>
     </div>
   `;
