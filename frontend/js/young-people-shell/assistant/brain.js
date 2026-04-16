@@ -1,9 +1,4 @@
-import {
-  buildAssistantResponse,
-  buildAssistantDataset,
-  summariseEvidence,
-  extractKeyInsights,
-} from "./adapters.js";
+import { buildAssistantEvidenceSet } from "../core/adapters.js";
 
 const INTENT = {
   summary: "summary",
@@ -33,11 +28,11 @@ function parseDateValue(value) {
 }
 
 function unique(items = []) {
-  return [...new Set(items.filter(Boolean))];
+  return [...new Set((items || []).filter(Boolean))];
 }
 
 function limit(items = [], max = 6) {
-  return items.slice(0, max);
+  return Array.isArray(items) ? items.slice(0, max) : [];
 }
 
 function buildCitation(item = {}) {
@@ -48,10 +43,135 @@ function formatDate(value) {
   if (!value) return "date not recorded";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
+
   return date.toLocaleString("en-GB", {
     dateStyle: "medium",
     timeStyle: String(value).includes("T") ? "short" : undefined,
   });
+}
+
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function buildAssistantDataset(payload = {}, options = {}) {
+  const evidence = buildAssistantEvidenceSet(payload || {});
+  const sortMode = cleanText(options.sort || "urgency").toLowerCase();
+
+  const sorted = [...evidence];
+
+  if (sortMode === "date") {
+    sorted.sort((a, b) => parseDateValue(b.date) - parseDateValue(a.date));
+    return sorted;
+  }
+
+  sorted.sort((a, b) => {
+    const urgencyRank = { critical: 4, high: 3, medium: 2, low: 1 };
+    const aRank = urgencyRank[a.urgency || "low"] || 0;
+    const bRank = urgencyRank[b.urgency || "low"] || 0;
+
+    if (bRank !== aRank) return bRank - aRank;
+    return parseDateValue(b.date) - parseDateValue(a.date);
+  });
+
+  return sorted;
+}
+
+function summariseEvidence(evidence = []) {
+  const summary = {
+    total: safeArray(evidence).length,
+    overdue: 0,
+    safeguarding: 0,
+    open_tasks: 0,
+    incidents: 0,
+    appointments: 0,
+    documents: 0,
+    compliance: 0,
+    strengths: 0,
+  };
+
+  for (const item of safeArray(evidence)) {
+    const tags = safeArray(item.tags);
+    const type = item.record_type || "";
+
+    if (tags.includes("status:overdue")) summary.overdue += 1;
+    if (tags.includes("safeguarding")) summary.safeguarding += 1;
+    if (tags.includes("open_task")) summary.open_tasks += 1;
+    if (type === "incident") summary.incidents += 1;
+    if (type === "appointment") summary.appointments += 1;
+    if (type === "document" || type === "statutory_document") summary.documents += 1;
+    if (type === "compliance_item") summary.compliance += 1;
+    if (type === "achievement_record") summary.strengths += 1;
+  }
+
+  return summary;
+}
+
+function extractKeyInsights(evidence = []) {
+  const items = safeArray(evidence);
+  const insights = [];
+  const summary = summariseEvidence(items);
+
+  if (summary.safeguarding > 0) {
+    insights.push({
+      type: "safeguarding",
+      level: "high",
+      message: "Safeguarding-linked evidence is present and should be actively reviewed.",
+    });
+  }
+
+  if (summary.overdue > 0) {
+    insights.push({
+      type: "overdue",
+      level: "medium",
+      message: "There are overdue items that may affect oversight, compliance or follow-up.",
+    });
+  }
+
+  if (summary.incidents > 0) {
+    insights.push({
+      type: "incidents",
+      level: "medium",
+      message: "Incident patterns should be reviewed alongside planning, chronology and daily care.",
+    });
+  }
+
+  if (summary.open_tasks > 0) {
+    insights.push({
+      type: "tasks",
+      level: "medium",
+      message: "There are open tasks that may need clearer ownership or timescales.",
+    });
+  }
+
+  if (summary.strengths > 0) {
+    insights.push({
+      type: "strengths",
+      level: "positive",
+      message: "There is positive evidence of achievement or progress that should be recognised.",
+    });
+  }
+
+  return insights;
+}
+
+function buildAssistantResponse(payload = {}, options = {}) {
+  const dataset = buildAssistantDataset(payload, options);
+
+  return {
+    evidence_count: dataset.length,
+    top_sources: limit(dataset, 8).map((item) => ({
+      title: item.title || "Record",
+      summary: item.summary || "",
+      citation: buildCitation(item),
+      citation_ref: item.citation_ref || buildCitation(item),
+      section: item.section || "",
+      record_type: item.record_type || "",
+      date: item.date || null,
+    })),
+    brain_summary: summariseEvidence(dataset),
+    brain_insights: extractKeyInsights(dataset),
+  };
 }
 
 function detectIntent(question = "") {
@@ -73,7 +193,7 @@ function detectIntent(question = "") {
 function scoreEvidence(item = {}, intent = INTENT.unknown) {
   let score = 0;
 
-  const tags = Array.isArray(item.tags) ? item.tags : [];
+  const tags = safeArray(item.tags);
   const urgency = item.urgency || "low";
   const recordType = item.record_type || "";
 
@@ -102,7 +222,7 @@ function scoreEvidence(item = {}, intent = INTENT.unknown) {
 }
 
 function rankEvidence(evidence = [], intent = INTENT.unknown) {
-  return [...evidence].sort((a, b) => {
+  return [...safeArray(evidence)].sort((a, b) => {
     const scoreA = scoreEvidence(a, intent);
     const scoreB = scoreEvidence(b, intent);
 
@@ -114,11 +234,11 @@ function rankEvidence(evidence = [], intent = INTENT.unknown) {
 function buildThemes(evidence = []) {
   const themes = [];
 
-  const safeguardingCount = evidence.filter((x) => (x.tags || []).includes("safeguarding")).length;
-  const overdueCount = evidence.filter((x) => (x.tags || []).includes("status:overdue")).length;
+  const safeguardingCount = evidence.filter((x) => safeArray(x.tags).includes("safeguarding")).length;
+  const overdueCount = evidence.filter((x) => safeArray(x.tags).includes("status:overdue")).length;
   const missingCount = evidence.filter((x) => x.record_type === "missing_episode").length;
   const incidentCount = evidence.filter((x) => x.record_type === "incident").length;
-  const taskCount = evidence.filter((x) => (x.tags || []).includes("open_task")).length;
+  const taskCount = evidence.filter((x) => safeArray(x.tags).includes("open_task")).length;
   const achievementCount = evidence.filter((x) => x.record_type === "achievement_record").length;
 
   if (safeguardingCount > 0) {
@@ -198,8 +318,8 @@ function buildGaps(evidence = []) {
 function buildImmediateActions(evidence = []) {
   const actions = [];
 
-  const overdue = evidence.filter((x) => (x.tags || []).includes("status:overdue"));
-  const safeguarding = evidence.filter((x) => (x.tags || []).includes("safeguarding"));
+  const overdue = evidence.filter((x) => safeArray(x.tags).includes("status:overdue"));
+  const safeguarding = evidence.filter((x) => safeArray(x.tags).includes("safeguarding"));
   const appointments = evidence
     .filter((x) => x.record_type === "appointment" && x.date)
     .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date));
@@ -225,8 +345,8 @@ function buildImmediateActions(evidence = []) {
 function buildProfessionalEscalations(evidence = []) {
   const escalations = [];
   const highRisk = evidence.filter((x) => ["high", "critical"].includes(x.urgency));
-  const police = evidence.filter((x) => (x.tags || []).includes("police_involved"));
-  const ofsted = evidence.filter((x) => (x.tags || []).includes("ofsted_notified"));
+  const police = evidence.filter((x) => safeArray(x.tags).includes("police_involved"));
+  const ofsted = evidence.filter((x) => safeArray(x.tags).includes("ofsted_notified"));
 
   if (highRisk.length) {
     escalations.push("Manager review may be required where high-risk or critical records remain active or unresolved.");
@@ -277,21 +397,15 @@ function buildChildSummary(context = {}, evidence = []) {
   }
 
   if (latestDaily) {
-    lines.push(
-      `Latest daily care evidence: ${latestDaily.summary} ${buildCitation(latestDaily)}`
-    );
+    lines.push(`Latest daily care evidence: ${latestDaily.summary} ${buildCitation(latestDaily)}`);
   }
 
   if (latestIncident) {
-    lines.push(
-      `Latest incident evidence: ${latestIncident.summary} ${buildCitation(latestIncident)}`
-    );
+    lines.push(`Latest incident evidence: ${latestIncident.summary} ${buildCitation(latestIncident)}`);
   }
 
   if (nextAppt) {
-    lines.push(
-      `Next visible appointment: ${nextAppt.title || "Appointment"} on ${formatDate(nextAppt.date)} ${buildCitation(nextAppt)}`
-    );
+    lines.push(`Next visible appointment: ${nextAppt.title || "Appointment"} on ${formatDate(nextAppt.date)} ${buildCitation(nextAppt)}`);
   }
 
   return lines.join(" ");
@@ -531,11 +645,11 @@ function inferSuggestedActions(intent = INTENT.unknown, evidence = []) {
     actions.push("Build quality brief");
   }
 
-  if (evidence.some((x) => (x.tags || []).includes("status:overdue"))) {
+  if (evidence.some((x) => safeArray(x.tags).includes("status:overdue"))) {
     actions.push("Review overdue items");
   }
 
-  if (evidence.some((x) => (x.tags || []).includes("safeguarding"))) {
+  if (evidence.some((x) => safeArray(x.tags).includes("safeguarding"))) {
     actions.push("Review safeguarding records");
   }
 
@@ -594,6 +708,7 @@ export function askAssistantBrain(question, payload = {}, options = {}) {
       title: item.title || "Record",
       summary: item.summary || "",
       citation: buildCitation(item),
+      citation_ref: item.citation_ref || buildCitation(item),
       section: item.section || "",
       record_type: item.record_type || "",
       date: item.date || null,
