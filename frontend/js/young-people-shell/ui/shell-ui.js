@@ -23,7 +23,8 @@ function qs(id) {
 
 function setText(id, value, fallback = "") {
   const el = qs(id);
-  if (el) el.textContent = value || fallback;
+  if (!el) return;
+  el.textContent = value || fallback;
 }
 
 function showEl(el, show = true, display = "") {
@@ -57,6 +58,18 @@ function getAllowedScopes() {
   return getAllowedScopesForRole(getCurrentRole());
 }
 
+function getCurrentSection() {
+  return state.currentSection || state.activeSection || state.currentView || "workspace";
+}
+
+function getCurrentHomeLabel() {
+  return (
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    (state.homeId ? `Home ${state.homeId}` : "Home")
+  );
+}
+
 function buildPersonMeta(person = {}) {
   return [
     person.preferred_name ? `Preferred: ${person.preferred_name}` : "",
@@ -73,7 +86,7 @@ function getScopeIdentity() {
 
   if (scope === "home") {
     return {
-      title: "Home overview",
+      title: getCurrentHomeLabel(),
       meta: state.homeId
         ? `Operational dashboard for home ${state.homeId}`
         : "Operational dashboard across the home",
@@ -134,29 +147,25 @@ function getWorkspaceHomeButtonLabel() {
   return getCurrentScope() === "child" ? "Children and young people" : "Dashboard";
 }
 
+function renderAvatarHtml(person = {}, imageClass, fallbackClass) {
+  return buildImageOrInitials(person, imageClass, fallbackClass);
+}
+
 function updateWorkspaceContextPill() {
   const valueEl = document.querySelector(".workspace-context-pill-value");
   if (valueEl) valueEl.textContent = getWorkspaceContextValue();
 }
 
 function updateWorkspaceEyebrow() {
-  const eyebrow = document.getElementById("workspaceEyebrow") || document.querySelector(".workspace-header-copy .eyebrow");
+  const eyebrow = qs("workspaceEyebrow") || document.querySelector(".workspace-header-copy .eyebrow");
   if (eyebrow) eyebrow.textContent = getWorkspaceEyebrowText();
-}
-
-function renderAvatarHtml(person = {}, imageClass, fallbackClass) {
-  return buildImageOrInitials(person, imageClass, fallbackClass);
 }
 
 function updateSnapshotAvatar(person = {}) {
   const wrap = qs("profileSnapshotPhotoWrap");
   if (!wrap) return;
 
-  wrap.innerHTML = renderAvatarHtml(
-    person,
-    "profile-photo",
-    "profile-photo-fallback"
-  );
+  wrap.innerHTML = renderAvatarHtml(person, "profile-photo", "profile-photo-fallback");
 }
 
 function updateSidebarAvatar(person = {}) {
@@ -166,6 +175,7 @@ function updateSidebarAvatar(person = {}) {
 
   const sidebarAvatar = qs("personAvatar");
   const mobileAvatar = qs("mobilePersonAvatar");
+  const drawerAvatar = document.querySelector("#mobileNavDrawer .workspace-stage-mobile-avatar");
 
   const html = imageUrl
     ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
@@ -173,6 +183,7 @@ function updateSidebarAvatar(person = {}) {
 
   if (sidebarAvatar) sidebarAvatar.innerHTML = html;
   if (mobileAvatar) mobileAvatar.innerHTML = html;
+  if (drawerAvatar) drawerAvatar.innerHTML = html;
 }
 
 function updateMobileDrawerPerson(person = {}) {
@@ -299,6 +310,28 @@ function updateTopLevelLabels() {
   if (mobileNavHeading) mobileNavHeading.textContent = "Main menu";
 }
 
+function updateSearchPlaceholders() {
+  const scope = getCurrentScope();
+  const topbarSearch = qs("topbarSearchInput");
+  const recordSearch = qs("recordSearchInput");
+  const filter = qs("recordTypeFilter");
+
+  let placeholder = "Search notes, incidents, plans, documents or communication...";
+
+  if (scope === "home") {
+    placeholder = "Search staffing, incidents, actions, documents or compliance...";
+  } else if (scope === "quality") {
+    placeholder = "Search audits, actions, compliance, reports or evidence...";
+  }
+
+  if (topbarSearch) topbarSearch.placeholder = placeholder;
+  if (recordSearch) recordSearch.placeholder = placeholder;
+
+  if (filter) {
+    filter.setAttribute("aria-label", scope === "child" ? "Filter child records" : "Filter workspace records");
+  }
+}
+
 function updateAppDataset() {
   if (!els.app) return;
 
@@ -349,6 +382,7 @@ export function updateYoungPersonChrome(person = {}) {
   updateWorkspaceEyebrow();
   updateScopeButtons();
   updateScopeSensitiveActions();
+  updateSearchPlaceholders();
   updateAppDataset();
   updateLayoutChrome();
 }
@@ -441,8 +475,6 @@ export function bindShellChrome() {
 
 export function refreshShellChrome() {
   updateYoungPersonChrome(state.selectedYoungPerson || {});
-  updateSectionChrome(
-    state.currentSection || state.activeSection || state.currentView || "workspace"
-  );
+  updateSectionChrome(getCurrentSection());
   refreshAssistantUi();
 }
