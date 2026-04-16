@@ -96,17 +96,37 @@ function isDueSoon(value, thresholdDays = 7) {
   return days !== null && days >= 0 && days <= thresholdDays;
 }
 
+function normaliseToken(value = "") {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
+}
+
+function joinSignals(parts = []) {
+  return parts
+    .map((part) => normaliseToken(part))
+    .filter(Boolean)
+    .join(":");
+}
+
 function inferUrgencyLevel(record = {}) {
   const severity = cleanText(record.severity).toLowerCase();
   const significance = cleanText(record.significance).toLowerCase();
   const workflow = cleanText(record.workflow_status).toLowerCase();
   const status = cleanText(record.status).toLowerCase();
+  const approval = cleanText(record.approval_status).toLowerCase();
 
   if (severity === "critical") return "critical";
   if (severity === "high") return "high";
   if (significance === "critical") return "critical";
   if (significance === "high") return "high";
   if (record.safeguarding_flag) return "high";
+  if (record.police_involved || record.ofsted_notified || record.requires_reg40) {
+    return "high";
+  }
+
   if (
     record.follow_up_required &&
     isOverdue(
@@ -118,9 +138,13 @@ function inferUrgencyLevel(record = {}) {
   ) {
     return "high";
   }
+
   if (status === "overdue") return "high";
+  if (status === "escalated") return "high";
+  if (approval === "rejected" || approval === "returned") return "medium";
   if (workflow === "pending_review") return "medium";
   if (record.follow_up_required) return "medium";
+
   return "low";
 }
 
@@ -645,9 +669,15 @@ function buildContextualSignals(record = {}) {
     record.review_comment,
     record.manager_review_comment,
     record.note,
+    record.recommendations,
+    record.manager_analysis,
+    record.concerns_and_risks,
+    record.progress_summary,
+    record.quality_of_care,
+    record.staffing_pressure,
   ]).join(" ").toLowerCase();
 
-  if (/ofsted|inspection|annex a|statement of purpose|reg 40|reg40/.test(text)) {
+  if (/ofsted|inspection|annex a|statement of purpose|reg 40|reg40|reg 44|reg44|reg 45|reg45|sccif/.test(text)) {
     signals.push("inspection_relevant");
   }
 
@@ -655,7 +685,7 @@ function buildContextualSignals(record = {}) {
     signals.push("handover_relevant");
   }
 
-  if (/follow up|follow-up|review|monitor|book|arrange|contact/.test(text)) {
+  if (/follow up|follow-up|review|monitor|book|arrange|contact|escalate|complete/.test(text)) {
     signals.push("actionable");
   }
 
@@ -671,15 +701,119 @@ function buildContextualSignals(record = {}) {
     signals.push("family_relevant");
   }
 
-  if (/staff|training|supervision|rota|vacancy|onboarding|probation/.test(text)) {
+  if (/staff|training|supervision|rota|vacancy|onboarding|probation|absence/.test(text)) {
     signals.push("workforce_relevant");
   }
 
-  if (/audit|reg 44|reg44|reg 45|reg45|quality/.test(text)) {
+  if (/audit|reg 44|reg44|reg 45|reg45|quality|provider|ri/.test(text)) {
     signals.push("quality_relevant");
   }
 
+  if (/missing|abscond|police|safeguard|harm|risk/.test(text)) {
+    signals.push("risk_relevant");
+  }
+
+  if (/positive|achievement|progress|strength|engagement/.test(text)) {
+    signals.push("strength_relevant");
+  }
+
   return signals;
+}
+
+function buildRegulatorySignals(record = {}) {
+  const tags = [];
+  const type = cleanText(record.record_type).toLowerCase();
+  const table = cleanText(record.source_table).toLowerCase();
+  const text = compact([
+    record.title,
+    record.summary,
+    record.description,
+    record.notification_type,
+    record.recommendations,
+    record.compliance_category,
+    record.linked_standard_code,
+    record.linked_standard,
+    record.linked_judgement_area,
+  ]).join(" ").toLowerCase();
+
+  if (
+    type === "compliance_item" ||
+    table.includes("compliance") ||
+    cleanText(record.compliance_category)
+  ) {
+    tags.push("regulatory");
+  }
+
+  if (
+    type === "audit" ||
+    type === "reg44_item" ||
+    type === "reg45_item" ||
+    text.includes("reg 44") ||
+    text.includes("reg44") ||
+    text.includes("reg 45") ||
+    text.includes("reg45")
+  ) {
+    tags.push("inspection_cycle");
+  }
+
+  if (
+    type === "statutory_document" ||
+    table.includes("statutory_document") ||
+    table.includes("document")
+  ) {
+    tags.push("document_control");
+  }
+
+  if (
+    type === "staff_file" ||
+    type === "training_record" ||
+    type === "supervision" ||
+    type === "onboarding" ||
+    type === "probation"
+  ) {
+    tags.push("workforce_compliance");
+  }
+
+  if (
+    type === "incident" ||
+    type === "safeguarding_record" ||
+    type === "missing_episode" ||
+    record.ofsted_notified ||
+    record.requires_reg40
+  ) {
+    tags.push("notification_relevant");
+  }
+
+  return unique(tags);
+}
+
+function buildOutcomeSignals(record = {}) {
+  const tags = [];
+  const text = compact([
+    record.summary,
+    record.outcome,
+    record.progress_summary,
+    record.achievements_summary,
+    record.achievement_note,
+    record.positives,
+    record.strengths_summary,
+    record.what_matters_to_me,
+    record.child_voice,
+  ]).join(" ").toLowerCase();
+
+  if (/achievement|achieved|progress|positive|strength|well|engaged|improved/.test(text)) {
+    tags.push("positive_outcome");
+  }
+
+  if (/decline|worsening|concern|reduced|not attended|missed|deterioration/.test(text)) {
+    tags.push("negative_outcome");
+  }
+
+  if (cleanText(record.child_voice || record.young_person_voice || record.child_views)) {
+    tags.push("child_voice_present");
+  }
+
+  return unique(tags);
 }
 
 export function buildAssistantTags(record = {}) {
@@ -718,7 +852,12 @@ export function buildAssistantTags(record = {}) {
     record.due_date ||
     record.review_date ||
     record.next_action_date ||
-    record.expiry_date;
+    record.expiry_date ||
+    record.next_due_date ||
+    record.start_target_date ||
+    record.probation_end_date ||
+    record.return_interview_date;
+
   if (dueDate) {
     if (isOverdue(dueDate)) tags.push("status:overdue");
     if (isDueSoon(dueDate)) tags.push("status:due_soon");
@@ -728,6 +867,34 @@ export function buildAssistantTags(record = {}) {
   if (urgency) tags.push(`urgency:${urgency}`);
 
   tags.push(...buildContextualSignals(record));
+  tags.push(...buildRegulatorySignals(record));
+  tags.push(...buildOutcomeSignals(record));
+
+  if (record.home_id) tags.push(`home:${record.home_id}`);
+  if (record.young_person_id) tags.push(`young_person:${record.young_person_id}`);
+
+  if (record.record_type === RECORD_TYPES.incident && record.safeguarding_flag) {
+    tags.push("incident_with_safeguarding");
+  }
+
+  if (record.record_type === RECORD_TYPES.missing_episode) {
+    tags.push("missing_from_care");
+  }
+
+  if (record.record_type === RECORD_TYPES.appointment && dueDate && isDueSoon(dueDate, 3)) {
+    tags.push("upcoming_appointment");
+  }
+
+  if (record.record_type === RECORD_TYPES.task && !record.completed) {
+    tags.push("task_open");
+  }
+
+  if (
+    record.record_type === RECORD_TYPES.compliance_item &&
+    isOverdue(record.due_date)
+  ) {
+    tags.push("compliance_breach_risk");
+  }
 
   return unique(tags);
 }
@@ -779,6 +946,7 @@ export function toAssistantEvidence(record = {}) {
   const recordId = safeRecord.source_id ?? safeRecord.id ?? null;
   const sourceTable = safeRecord.source_table || "unknown";
   const recordType = safeRecord.record_type || "record";
+  const urgency = inferUrgencyLevel(safeRecord);
 
   return {
     id: recordId,
@@ -795,13 +963,14 @@ export function toAssistantEvidence(record = {}) {
       safeRecord.approval_status ||
       "",
     severity: safeRecord.severity || safeRecord.significance || "",
-    urgency: inferUrgencyLevel(safeRecord),
+    urgency,
     date: inferRecordDate(safeRecord),
     due_date:
       safeRecord.due_date ||
       safeRecord.review_date ||
       safeRecord.next_action_date ||
       safeRecord.expiry_date ||
+      safeRecord.next_due_date ||
       null,
     young_person_id:
       safeRecord.young_person_id ??
@@ -829,6 +998,7 @@ export function toAssistantEvidence(record = {}) {
     linked_appointment_id: safeRecord.linked_appointment_id ?? null,
     citation_ref: [recordType, sourceTable, recordId ?? "unknown"].join(":"),
     tags,
+    signal_key: joinSignals([recordType, sourceTable, recordId ?? "unknown", urgency]),
     raw,
   };
 }
