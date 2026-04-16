@@ -18,12 +18,29 @@ import {
 } from "../core/assistant-runtime.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
+import {
+  askAssistantBrain,
+  buildMorningBrief,
+  buildManagerBrief,
+  buildQualityBrief,
+  buildReg45Support,
+} from "../assistant/brain.js";
 
 let assistantControllerBound = false;
 let latestRefreshToken = 0;
+let assistantMessageBound = false;
 
 const MAX_BRIEF_EVIDENCE = 10;
 const MAX_BRIEF_CHRONOLOGY = 5;
+
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function cleanText(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
 
 function getAllowedHomeIds() {
   return Array.isArray(state.allowedHomeIds)
@@ -216,6 +233,39 @@ function scrubAssistantBundle(bundle = {}, context = {}) {
   }
 }
 
+function currentAssistantContext() {
+  const scopeContext = getScopeContext();
+
+  return {
+    scope: scopeContext.scope,
+    section:
+      state.currentSection || state.activeSection || state.currentView || "workspace",
+    role: state.userRole || "staff",
+    person: {
+      id: scopeContext.young_person_id,
+      name:
+        state.selectedYoungPerson?.preferred_name ||
+        state.selectedYoungPerson?.full_name ||
+        state.selectedYoungPerson?.name ||
+        scopeContext.young_person_name ||
+        "Young person",
+      preferred_name: state.selectedYoungPerson?.preferred_name || "",
+      home_name:
+        state.selectedYoungPerson?.home_name || scopeContext.home_name || "",
+      risk: state.selectedYoungPerson?.summary_risk_level || "",
+      placement_status: state.selectedYoungPerson?.placement_status || "",
+    },
+    home: {
+      home_id: scopeContext.home_id,
+      home_name: scopeContext.home_name || "Home",
+    },
+    active_record_type: state.activeRecordType || null,
+    active_record_item: state.activeRecordItem || null,
+    composer_record_type: state.composerRecordType || null,
+    composer_record_id: state.composerRecordId || null,
+  };
+}
+
 function renderBundleStatus() {
   if (els.assistantScopeBundleStatus) {
     if (state.scopeBundleLoading) {
@@ -249,10 +299,6 @@ function renderBundleStatus() {
       els.assistantLiveStatus.textContent = "Assistant ready.";
     }
   }
-}
-
-function safeArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
@@ -441,6 +487,232 @@ function renderAssistantExtraPanels() {
   renderLiveUpdates();
 }
 
+function setAssistantResponseMeta(result = {}) {
+  ensureAssistantMeta();
+
+  state.assistantMeta.sources = safeArray(result.top_sources || result.sources);
+  state.assistantMeta.suggested_actions = safeArray(result.suggested_actions);
+  state.assistantMeta.runtime = {
+    ...(state.assistantMeta.runtime || {}),
+    evidence_count: result.evidence_count || 0,
+    intent: result.intent || "unknown",
+    mode: "local_brain",
+    updated_at: new Date().toISOString(),
+  };
+  state.assistantMeta.explainability = {
+    ...(state.assistantMeta.explainability || {}),
+    evidence_count: result.evidence_count || 0,
+    reasoning_summary:
+      "Local assistant reasoning used scoped residential care evidence only.",
+  };
+  state.assistantMeta.assistant_scope = {
+    ...(state.assistantMeta.assistant_scope || {}),
+    ...currentAssistantContext(),
+  };
+}
+
+function formatBrainAnswerAsHtml(answer = "") {
+  const safe = escapeHtml(answer);
+  return safe
+    .split("\n\n")
+    .map((block) => {
+      const trimmed = block.trim();
+      if (!trimmed) return "";
+
+      if (
+        trimmed.startsWith("- ") ||
+        trimmed.split("\n").every((line) => line.trim().startsWith("- "))
+      ) {
+        const items = trimmed
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => `<li>${line.replace(/^- /, "")}</li>`)
+          .join("");
+
+        return `<ul>${items}</ul>`;
+      }
+
+      return trimmed
+        .split("\n")
+        .map((line) => `<p>${line}</p>`)
+        .join("");
+    })
+    .join("");
+}
+
+function appendAssistantMessage(role = "assistant", content = "") {
+  if (!els.assistantMessages) return;
+
+  const article = document.createElement("article");
+  article.className = `assistant-message assistant-message-${role}`;
+
+  const roleLabel = role === "user" ? "You" : "Assistant";
+
+  article.innerHTML = `
+    <div class="assistant-message-role">${escapeHtml(roleLabel)}</div>
+    <div class="assistant-message-body">
+      ${formatBrainAnswerAsHtml(content)}
+    </div>
+  `;
+
+  els.assistantMessages.appendChild(article);
+  els.assistantMessages.scrollTop = els.assistantMessages.scrollHeight;
+}
+
+function renderAssistantSources(sources = []) {
+  if (!els.assistantSources) return;
+
+  const safeSources = safeArray(sources);
+
+  if (!safeSources.length) {
+    els.assistantSources.innerHTML = `<p>No sources available yet.</p>`;
+    return;
+  }
+
+  els.assistantSources.innerHTML = safeSources
+    .map((item) => {
+      const title = escapeHtml(item.title || item.label || "Record");
+      const summary = escapeHtml(item.summary || item.excerpt || "");
+      const citation = escapeHtml(item.citation || item.citation_ref || "");
+      const meta = [item.section, item.record_type, item.date]
+        .filter(Boolean)
+        .map((x) => escapeHtml(String(x)))
+        .join(" • ");
+
+      return `
+        <div class="entity-row">
+          <div class="entity-title">${title}</div>
+          ${meta ? `<div class="entity-meta">${meta}</div>` : ""}
+          ${summary ? `<div class="entity-meta entity-meta-description">${summary}</div>` : ""}
+          ${citation ? `<div class="entity-meta">${citation}</div>` : ""}
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderAssistantSuggestedActions(actions = []) {
+  if (!els.assistantSuggestions) return;
+
+  const safeActions = safeArray(actions);
+
+  if (!safeActions.length) {
+    els.assistantSuggestions.innerHTML = `<span class="chip">No suggested actions yet</span>`;
+    return;
+  }
+
+  els.assistantSuggestions.innerHTML = safeActions
+    .map((item) => {
+      const label =
+        typeof item === "string"
+          ? item
+          : item?.label || item?.title || item?.type || "Action";
+
+      return `<span class="chip">${escapeHtml(label)}</span>`;
+    })
+    .join("");
+}
+
+function renderAssistantScopeSummary(result = {}) {
+  if (!els.assistantScopeSummary) return;
+
+  const context = currentAssistantContext();
+  const evidenceCount = result.evidence_count || 0;
+  const intent = result.intent || "unknown";
+  const summary = result.brain_summary || {};
+
+  els.assistantScopeSummary.innerHTML = `
+    <div class="profile-stack">
+      <div class="profile-card">
+        <div class="profile-card-title">Current scope</div>
+        <div class="profile-card-text">
+          Scope: ${escapeHtml(context.scope)}<br />
+          Section: ${escapeHtml(context.section)}<br />
+          Role: ${escapeHtml(context.role)}
+        </div>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-card-title">Analysis</div>
+        <div class="profile-card-text">
+          Intent: ${escapeHtml(intent)}<br />
+          Evidence count: ${escapeHtml(String(evidenceCount))}<br />
+          Open tasks: ${escapeHtml(String(summary.open_tasks ?? 0))}<br />
+          Overdue items: ${escapeHtml(String(summary.overdue ?? summary.overdue_items ?? 0))}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function setAssistantContextText() {
+  if (!els.assistantContext) return;
+
+  const context = currentAssistantContext();
+
+  if (context.scope === "child") {
+    els.assistantContext.textContent = `Scoped to ${context.person.name} in ${context.person.home_name || context.home.home_name || "the home"}.`;
+    return;
+  }
+
+  if (context.scope === "home") {
+    els.assistantContext.textContent = `Scoped to home oversight for ${context.home.home_name || "the current home"}.`;
+    return;
+  }
+
+  els.assistantContext.textContent = `Scoped to quality and oversight across authorised homes.`;
+}
+
+function renderScopeBadges() {
+  const context = currentAssistantContext();
+
+  if (els.scopeBadge) {
+    els.scopeBadge.textContent =
+      context.scope === "child"
+        ? "Young person assistant"
+        : context.scope === "home"
+        ? "Home assistant"
+        : "Quality assistant";
+  }
+
+  if (els.scopeHomeBadge) {
+    const homeName = context.home?.home_name;
+    els.scopeHomeBadge.textContent = homeName || "";
+    els.scopeHomeBadge.classList.toggle("hidden", !homeName);
+  }
+
+  if (els.scopeChildBadge) {
+    const childName =
+      context.scope === "child" ? context.person?.name || "" : "";
+    els.scopeChildBadge.textContent = childName;
+    els.scopeChildBadge.classList.toggle("hidden", !childName);
+  }
+
+  if (els.scopeShiftBadge) {
+    els.scopeShiftBadge.textContent = escapeHtml(
+      state.currentSection || state.activeSection || "workspace"
+    );
+  }
+}
+
+function writeBriefsFromBrain() {
+  const bundle = getBundlePayload();
+  const context = currentAssistantContext();
+
+  state.latestMorningBrief = buildMorningBrief("morning brief", bundle, {
+    context,
+  });
+
+  state.latestManagerBrief = buildManagerBrief("manager oversight brief", bundle, {
+    context,
+  });
+
+  state.latestQualityBrief = buildQualityBrief("quality and inspection brief", bundle, {
+    context,
+  });
+}
+
 async function buildDerivedAssistantStateFromBundle(bundle) {
   const records_payload = bundle || {};
 
@@ -450,28 +722,15 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
     fetchScopeBundle: false,
   });
 
-  const morningBrief = await buildMorningBriefContext({
-    records_payload,
-    fetchScopeBundle: false,
-  });
-
-  const managerBrief = await buildManagerBriefContext({
-    records_payload,
-    fetchScopeBundle: false,
-  });
-
-  const qualityBrief = await buildQualityBriefContext({
-    records_payload,
-    fetchScopeBundle: false,
-  });
+  writeBriefsFromBrain();
 
   setAssistantDerivedState({
     chronology: runtime.chronology,
     facts: runtime.facts,
     care_domains: runtime.care_domains,
-    morning_brief: morningBrief,
-    manager_brief: managerBrief,
-    quality_brief: qualityBrief,
+    morning_brief: state.latestMorningBrief,
+    manager_brief: state.latestManagerBrief,
+    quality_brief: state.latestQualityBrief,
     live_summary: {
       ...runtime.summary,
       evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
@@ -495,6 +754,9 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
     evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
   };
   state.assistantMeta.last_bundle_refresh_at = new Date().toISOString();
+
+  renderScopeBadges();
+  setAssistantContextText();
 }
 
 export async function refreshAssistantScopeData({
@@ -643,8 +905,106 @@ function bindRefreshButtons() {
   });
 }
 
+function clearAssistantMessages() {
+  if (!els.assistantMessages) return;
+
+  els.assistantMessages.innerHTML = `
+    <article class="assistant-message assistant-message-system">
+      <div class="assistant-message-role">Assistant</div>
+      <div class="assistant-message-body">
+        <p>
+          Ask about this workspace, this child, the home, compliance,
+          quality, records or next steps.
+        </p>
+      </div>
+    </article>
+  `;
+}
+
+function bindAssistantMessaging() {
+  if (assistantMessageBound) return;
+  assistantMessageBound = true;
+
+  els.assistantForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const question = cleanText(els.assistantInput?.value || "");
+    if (!question) return;
+
+    const bundle = getBundlePayload();
+    const context = currentAssistantContext();
+
+    appendAssistantMessage("user", question);
+
+    if (els.assistantInput) {
+      els.assistantInput.value = "";
+    }
+
+    try {
+      const result = askAssistantBrain(question, bundle, { context });
+
+      appendAssistantMessage("assistant", result.answer);
+      setAssistantResponseMeta(result);
+      renderAssistantSources(result.top_sources);
+      renderAssistantSuggestedActions(result.suggested_actions);
+      renderAssistantScopeSummary(result);
+
+      if (result.intent === "handover") {
+        state.latestMorningBrief = result;
+      }
+
+      if (result.intent === "manager") {
+        state.latestManagerBrief = result;
+      }
+
+      if (result.intent === "quality") {
+        state.latestQualityBrief = result;
+      }
+
+      if (result.intent === "reg45") {
+        state.latestQualityBrief = buildReg45Support(question, bundle, {
+          context,
+        });
+      }
+
+      pushAssistantLiveUpdate({
+        title: "Assistant response generated",
+        message: `Answered using ${result.evidence_count || 0} scoped evidence item(s).`,
+        created_at: new Date().toISOString(),
+      });
+
+      refreshAssistantUi();
+      renderAssistantExtraPanels();
+    } catch (error) {
+      console.error("[assistant-controller] assistant question failed", error);
+
+      appendAssistantMessage(
+        "assistant",
+        "Sorry, I could not generate a response from the scoped records just now."
+      );
+
+      pushAssistantLiveUpdate({
+        title: "Assistant response failed",
+        message: error?.message || "Unknown assistant error.",
+        created_at: new Date().toISOString(),
+      });
+
+      renderAssistantExtraPanels();
+    }
+  });
+
+  els.assistantClearBtn?.addEventListener("click", () => {
+    clearAssistantMessages();
+    renderAssistantSources([]);
+    renderAssistantSuggestedActions([]);
+    renderAssistantScopeSummary({});
+  });
+}
+
 export function renderAssistantControllerPanels() {
   renderAssistantExtraPanels();
+  renderScopeBadges();
+  setAssistantContextText();
 }
 
 export function bindAssistantController() {
@@ -652,5 +1012,8 @@ export function bindAssistantController() {
   assistantControllerBound = true;
 
   bindRefreshButtons();
+  bindAssistantMessaging();
   renderAssistantExtraPanels();
+  renderScopeBadges();
+  setAssistantContextText();
 }
