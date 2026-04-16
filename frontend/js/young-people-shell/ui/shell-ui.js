@@ -9,9 +9,9 @@ import {
   buildImageOrInitials,
 } from "../core/utils.js";
 import {
-  SECTION_TITLES,
-  SECTION_SUBTITLES,
-  ROLE_SCOPE_ACCESS,
+  getSectionTitle,
+  getSectionSubtitle,
+  getAllowedScopesForRole,
 } from "../core/config.js";
 
 let shellChromeBound = false;
@@ -53,18 +53,8 @@ function getCurrentRole() {
   return normaliseUserRole(state.userRole || "staff");
 }
 
-function getAllowedScopesForRole() {
-  const role = getCurrentRole();
-
-  if (ROLE_SCOPE_ACCESS?.[role]) {
-    return ROLE_SCOPE_ACCESS[role];
-  }
-
-  if (role === "admin") {
-    return ["child", "home", "quality"];
-  }
-
-  return ["child"];
+function getAllowedScopes() {
+  return getAllowedScopesForRole(getCurrentRole());
 }
 
 function buildPersonMeta(person = {}) {
@@ -94,7 +84,7 @@ function getScopeIdentity() {
   if (scope === "quality") {
     return {
       title: "Quality overview",
-      meta: "RI and quality assurance dashboard",
+      meta: "Quality assurance, compliance and RI oversight",
       seed: { first_name: "Q" },
     };
   }
@@ -105,31 +95,31 @@ function getScopeIdentity() {
 function getWorkspaceContextValue() {
   const scope = getCurrentScope();
 
-  if (scope === "home") return "Home oversight";
-  if (scope === "quality") return "Quality and RI";
-  return "Young people";
+  if (scope === "home") return "Home workspace";
+  if (scope === "quality") return "Quality workspace";
+  return "Child workspace";
 }
 
 function getScopeTitle() {
   const scope = getCurrentScope();
 
-  if (scope === "home") return "Home-wide workspace";
-  if (scope === "quality") return "Quality and RI workspace";
-  return "Young person workspace";
+  if (scope === "home") return "Residential care home workspace";
+  if (scope === "quality") return "Quality and oversight workspace";
+  return "Residential child workspace";
 }
 
 function getScopeSubtitle() {
   const scope = getCurrentScope();
 
   if (scope === "home") {
-    return "Operational, staffing, safeguarding, compliance and leadership visibility across the home.";
+    return "Operations, staffing, safeguarding, compliance and management visibility across the home.";
   }
 
   if (scope === "quality") {
-    return "Quality assurance, reporting, compliance, audit and regulator-facing oversight.";
+    return "Quality assurance, audits, compliance, trends and regulator-facing oversight.";
   }
 
-  return "A calmer, child-centred workspace for recording, reflection, continuity and thoughtful next steps.";
+  return "A calm, child-centred workspace for recording, reflection, continuity, safeguarding and thoughtful next steps.";
 }
 
 function getWorkspaceEyebrowText() {
@@ -137,7 +127,11 @@ function getWorkspaceEyebrowText() {
 
   if (scope === "home") return "Home workspace";
   if (scope === "quality") return "Quality workspace";
-  return "Young person workspace";
+  return "Child workspace";
+}
+
+function getWorkspaceHomeButtonLabel() {
+  return getCurrentScope() === "child" ? "Children and young people" : "Dashboard";
 }
 
 function updateWorkspaceContextPill() {
@@ -146,7 +140,7 @@ function updateWorkspaceContextPill() {
 }
 
 function updateWorkspaceEyebrow() {
-  const eyebrow = document.querySelector(".workspace-header-copy .eyebrow");
+  const eyebrow = document.getElementById("workspaceEyebrow") || document.querySelector(".workspace-header-copy .eyebrow");
   if (eyebrow) eyebrow.textContent = getWorkspaceEyebrowText();
 }
 
@@ -167,14 +161,14 @@ function updateSnapshotAvatar(person = {}) {
 
 function updateSidebarAvatar(person = {}) {
   const imageUrl = getProfileImage(person);
-  const name = getDisplayName(person);
+  const name = getDisplayName(person) || person?.first_name || "Workspace";
   const initials = initialsFromName(name);
 
   const sidebarAvatar = qs("personAvatar");
   const mobileAvatar = qs("mobilePersonAvatar");
 
   const html = imageUrl
-    ? `<img class="avatar" src="${escapeHtml(name ? imageUrl : imageUrl)}" alt="${escapeHtml(name)}" />`
+    ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
     : `<div class="avatar avatar-fallback">${escapeHtml(initials)}</div>`;
 
   if (sidebarAvatar) sidebarAvatar.innerHTML = html;
@@ -193,7 +187,7 @@ function updateMobileDrawerPerson(person = {}) {
   const displayName = getDisplayName(person);
   const meta = buildPersonMeta(person) || "Current workspace";
 
-  setText("mobileDrawerPersonName", displayName, "Young person");
+  setText("mobileDrawerPersonName", displayName, "Child");
   setText("mobileDrawerPersonMeta", meta, "Current workspace");
 }
 
@@ -217,16 +211,16 @@ function updateYoungPersonText(person = {}) {
   }
 
   const displayName = getDisplayName(person);
-  const meta = buildPersonMeta(person) || "Young person workspace";
+  const meta = buildPersonMeta(person) || "Child workspace";
 
-  setText("personName", displayName, "Young person");
+  setText("personName", displayName, "Child");
   setText("personMeta", meta, "Workspace");
 
-  setText("mobilePersonName", displayName, "Young person");
+  setText("mobilePersonName", displayName, "Child");
   setText("mobilePersonMeta", meta, "Workspace");
 
-  setText("profileSnapshotName", displayName, "Young person");
-  setText("profileSnapshotMeta", meta, "Profile snapshot");
+  setText("profileSnapshotName", displayName, "Child");
+  setText("profileSnapshotMeta", meta, "Current context");
 
   updateSnapshotAvatar(person);
   updateSidebarAvatar(person);
@@ -235,7 +229,7 @@ function updateYoungPersonText(person = {}) {
 
 function updateScopeButtons() {
   const scope = getCurrentScope();
-  const allowedScopes = getAllowedScopesForRole();
+  const allowedScopes = getAllowedScopes();
 
   const buttons = [
     { el: els.scopeChildBtn, value: "child" },
@@ -275,23 +269,15 @@ function updateScopeSensitiveActions() {
   showEl(els.profileOpenBtn, isChildScope, "inline-flex");
   showEl(els.profilePhotoUploadBtn, isChildScope, "inline-flex");
 
-  const selectorButtons = [els.homeBtn, els.mobileHomeBtn];
-  selectorButtons.forEach((button) => {
+  [els.homeBtn, els.mobileHomeBtn].forEach((button) => {
     if (!button) return;
-    button.textContent = isChildScope ? "Young people home" : "Workspace home";
+    button.textContent = getWorkspaceHomeButtonLabel();
   });
 }
 
 function updateHeaderChrome(section = "workspace") {
-  const title =
-    SECTION_TITLES?.[section] ||
-    (getCurrentScope() === "home"
-      ? "Home dashboard"
-      : getCurrentScope() === "quality"
-      ? "Quality dashboard"
-      : "Today’s workspace");
-
-  const subtitle = SECTION_SUBTITLES?.[section] || getScopeSubtitle();
+  const title = getSectionTitle(section) || getScopeTitle();
+  const subtitle = getSectionSubtitle(section) || getScopeSubtitle();
 
   setText("pageTitle", title, "Workspace");
   setText("pageSubtitle", subtitle, getScopeSubtitle());
@@ -310,7 +296,7 @@ function updateTopLevelLabels() {
   if (sidebarBrand) sidebarBrand.textContent = scopeTitle;
 
   const mobileNavHeading = document.querySelector("#mobileNavDrawer h3");
-  if (mobileNavHeading) mobileNavHeading.textContent = scopeTitle;
+  if (mobileNavHeading) mobileNavHeading.textContent = "Main menu";
 }
 
 function updateAppDataset() {
