@@ -2,7 +2,10 @@
 <html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
   <title>IndiCare OS • Residential Care Workspace</title>
   <meta
     name="description"
@@ -51,25 +54,39 @@
           </span>
         </button>
 
-        <div class="workspace-context-pill desktop-only" aria-label="Current workspace">
+        <div
+          class="workspace-context-pill desktop-only"
+          aria-label="Current workspace"
+        >
           <span class="workspace-context-pill-label">Current area</span>
           <span class="workspace-context-pill-value">Residential care workspace</span>
         </div>
       </div>
 
       <div class="shell-topbar-centre desktop-only">
-        <div class="topbar-search-wrap" aria-label="Search records">
+        <form
+          id="globalSearchForm"
+          class="topbar-search-wrap"
+          role="search"
+          aria-label="Search records"
+        >
           <label class="sr-only" for="recordSearchInput">Search records</label>
           <input
             id="recordSearchInput"
             class="search-input topbar-search-input"
-            type="text"
+            type="search"
+            inputmode="search"
             placeholder="Search notes, incidents, plans, documents or communication..."
             autocomplete="off"
+            spellcheck="false"
           />
 
           <label class="sr-only" for="recordTypeFilter">Filter by record type</label>
-          <select id="recordTypeFilter" class="select-input topbar-search-filter">
+          <select
+            id="recordTypeFilter"
+            class="select-input topbar-search-filter"
+            aria-label="Filter by record type"
+          >
             <option value="">All record types</option>
             <option value="daily_note">Daily notes</option>
             <option value="incident">Incidents and events</option>
@@ -83,7 +100,7 @@
             <option value="communication">Communication</option>
             <option value="therapy">Therapeutic work</option>
           </select>
-        </div>
+        </form>
       </div>
 
       <div class="shell-topbar-right">
@@ -161,7 +178,7 @@
       </div>
     </header>
 
-    <main class="shell-main" id="mainContent">
+    <main id="mainContent" class="shell-main">
       <section
         id="selectorScreen"
         class="selector-screen hidden"
@@ -183,18 +200,22 @@
               <input
                 id="selectorSearch"
                 class="search-input"
-                type="text"
+                type="search"
+                inputmode="search"
                 placeholder="Search by name, preferred name or home..."
                 autocomplete="off"
+                spellcheck="false"
               />
 
               <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
               <input
                 id="youngPersonSearchInput"
                 class="search-input hidden"
-                type="text"
+                type="search"
+                inputmode="search"
                 placeholder="Search by name, preferred name or home..."
                 autocomplete="off"
+                spellcheck="false"
                 aria-hidden="true"
                 tabindex="-1"
               />
@@ -221,7 +242,10 @@
         class="workspace-screen"
         aria-labelledby="pageTitle"
       >
-        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--menubar">
+        <section
+          id="workspaceShell"
+          class="workspace-screen-inner workspace-screen-inner--menubar"
+        >
           <aside
             class="workspace-sidebar workspace-sidebar--hidden desktop-only"
             aria-label="Workspace navigation"
@@ -232,7 +256,10 @@
                 <span>Residential care workspace</span>
               </div>
 
-              <section class="workspace-sidebar-profile-card" aria-label="Current context">
+              <section
+                class="workspace-sidebar-profile-card"
+                aria-label="Current context"
+              >
                 <div class="workspace-sidebar-profile-top">
                   <div
                     class="workspace-sidebar-avatar"
@@ -298,7 +325,13 @@
               >
                 <div class="workspace-header-main">
                   <div class="workspace-header-copy">
-                    <div id="workspaceEyebrow" class="eyebrow hidden" aria-hidden="true">Child workspace</div>
+                    <div
+                      id="workspaceEyebrow"
+                      class="eyebrow hidden"
+                      aria-hidden="true"
+                    >
+                      Child workspace
+                    </div>
                     <h1 id="pageTitle">Today at a glance</h1>
                     <p id="pageSubtitle">
                       A calm, practical workspace for recording, safeguarding,
@@ -510,7 +543,7 @@
             </div>
 
             <div class="workspace-content-wrap workspace-content-wrap--single">
-              <section class="workspace-content">
+              <section class="workspace-content" aria-label="Workspace content">
                 <div id="viewContent" class="workspace-view-content" aria-live="polite">
                   <section class="overview-panel">
                     <div class="loading-state">
@@ -570,9 +603,11 @@
           <input
             id="mobileRecordSearchInput"
             class="search-input"
-            type="text"
+            type="search"
+            inputmode="search"
             placeholder="Search records..."
             autocomplete="off"
+            spellcheck="false"
           />
         </div>
       </div>
@@ -782,26 +817,31 @@
     >
       <div class="assistant-shell assistant-shell--large">
         <div class="assistant-header">
-          <div>
+          <div class="assistant-header-copy">
             <h3>Assistant</h3>
             <p>
               Ask questions, draft records and get support with child-centred care,
-              safeguarding, management oversight, quality and next steps.
+              safeguarding, management oversight and next steps.
             </p>
           </div>
 
-          <button
-            id="closeAssistantBtn"
-            class="secondary-btn icon-btn"
-            type="button"
-            aria-label="Close assistant"
-          >
-            ✕
-          </button>
+          <div class="assistant-header-actions">
+            <button id="assistantClearBtn" class="ghost-btn" type="button">
+              Clear chat
+            </button>
+            <button
+              id="closeAssistantBtn"
+              class="secondary-btn icon-btn"
+              type="button"
+              aria-label="Close assistant"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        <div class="assistant-modal-layout assistant-modal-layout--split">
-          <div class="assistant-modal-main">
+        <div class="assistant-modal-layout assistant-modal-layout--minimal">
+          <div class="assistant-modal-main assistant-modal-main--minimal">
             <div class="assistant-context-bar">
               <span id="scopeBadge" class="meta-chip">Child assistant</span>
               <span id="scopeHomeBadge" class="meta-chip meta-chip--soft hidden"></span>
@@ -824,8 +864,8 @@
                 <div class="assistant-message-role">Assistant</div>
                 <div class="assistant-message-body">
                   <p>
-                    Ask about this child, the home, records, quality, compliance,
-                    risk, planning or next steps.
+                    Ask about this child, the home, records, compliance,
+                    planning or next steps.
                   </p>
                 </div>
               </article>
@@ -845,47 +885,32 @@
               </button>
             </form>
 
-            <section class="assistant-support-grid">
-              <div class="assistant-support-card">
-                <div class="overview-section-head">
-                  <h3>Current context</h3>
-                  <p>What the assistant is looking at right now.</p>
+            <section class="assistant-meta-strip">
+              <details class="assistant-meta-panel">
+                <summary>Current context</summary>
+                <div id="assistantScopeSummary" class="assistant-meta-panel-body"></div>
+              </details>
+
+              <details class="assistant-meta-panel">
+                <summary>Helpful actions</summary>
+                <div class="assistant-meta-panel-body">
+                  <div id="assistantSuggestions" class="assistant-chip-row"></div>
+                  <div id="assistantActions" class="hidden" aria-hidden="true"></div>
                 </div>
-                <div id="assistantScopeSummary"></div>
-              </div>
+              </details>
 
-              <div class="assistant-support-card">
-                <div class="overview-section-head">
-                  <h3>Helpful actions</h3>
-                  <p>Quick next steps and suggested actions.</p>
-                </div>
-                <div id="assistantSuggestions" class="assistant-chip-row"></div>
-                <div id="assistantActions" class="hidden" aria-hidden="true"></div>
-              </div>
-
-              <div class="assistant-support-card">
-                <div class="overview-section-head">
-                  <h3>Sources</h3>
-                  <p>Evidence and information used by the assistant.</p>
-                </div>
-                <div id="assistantSources"></div>
-              </div>
-
-              <div class="assistant-support-card hidden">
-                <pre id="assistantRuntime"></pre>
-              </div>
-
-              <div class="assistant-support-card hidden">
-                <pre id="assistantExplainability"></pre>
-              </div>
+              <details class="assistant-meta-panel">
+                <summary>Sources</summary>
+                <div id="assistantSources" class="assistant-meta-panel-body"></div>
+              </details>
             </section>
           </div>
 
-          <aside class="assistant-modal-side">
+          <aside class="assistant-modal-side assistant-modal-side--minimal">
             <section class="assistant-side-card">
               <div class="overview-section-head">
-                <h3>Live scope</h3>
-                <p>Current records bundle and refresh status.</p>
+                <h3>Refresh</h3>
+                <p>Update the scope or regenerate analysis.</p>
               </div>
 
               <div class="assistant-context-row">
@@ -914,38 +939,38 @@
 
             <section class="assistant-side-card">
               <div class="overview-section-head">
-                <h3>Shift brief</h3>
-                <p>A practical summary for staff on duty.</p>
+                <h3>Briefs</h3>
+                <p>Compact operational summaries.</p>
               </div>
-              <div id="morningBriefBody">
-                <p>No shift brief available yet.</p>
-              </div>
-            </section>
 
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Manager view</h3>
-                <p>Leadership, risk, compliance and oversight themes.</p>
-              </div>
-              <div id="managerBriefBody">
-                <p>No manager summary available yet.</p>
-              </div>
-            </section>
+              <div class="assistant-brief-stack">
+                <details class="assistant-brief-panel">
+                  <summary>Shift brief</summary>
+                  <div id="morningBriefBody" class="assistant-brief-body">
+                    <p>No shift brief available yet.</p>
+                  </div>
+                </details>
 
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Quality view</h3>
-                <p>Audit, regulation and improvement themes.</p>
-              </div>
-              <div id="qualityBriefBody">
-                <p>No quality summary available yet.</p>
+                <details class="assistant-brief-panel">
+                  <summary>Manager view</summary>
+                  <div id="managerBriefBody" class="assistant-brief-body">
+                    <p>No manager summary available yet.</p>
+                  </div>
+                </details>
+
+                <details class="assistant-brief-panel">
+                  <summary>Quality view</summary>
+                  <div id="qualityBriefBody" class="assistant-brief-body">
+                    <p>No quality summary available yet.</p>
+                  </div>
+                </details>
               </div>
             </section>
 
             <section class="assistant-side-card">
               <div class="overview-section-head">
                 <h3>Recent updates</h3>
-                <p>Refreshes and assistant updates.</p>
+                <p>Refreshes and assistant activity.</p>
               </div>
 
               <div class="assistant-context-row">
@@ -960,12 +985,6 @@
             </section>
           </aside>
         </div>
-
-        <div class="assistant-footer">
-          <button id="assistantClearBtn" class="secondary-btn" type="button">
-            Clear chat
-          </button>
-        </div>
       </div>
 
       <div class="hidden" aria-hidden="true">
@@ -977,6 +996,8 @@
         <div id="assistantModalSources"></div>
         <span id="modalScopeHomeBadge"></span>
         <span id="modalScopeChildBadge"></span>
+        <pre id="assistantRuntime"></pre>
+        <pre id="assistantExplainability"></pre>
       </div>
     </section>
 
