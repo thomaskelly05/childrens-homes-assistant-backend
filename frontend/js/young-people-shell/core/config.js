@@ -23,7 +23,7 @@ export const ROLE_SCOPE_ACCESS = Object.freeze({
 export const SCOPE_DEFAULT_SECTION = Object.freeze({
   child: "workspace",
   home: "home-dashboard",
-  quality: "quality",
+  quality: "provider-overview",
 });
 
 export const SCOPE_SECTIONS = Object.freeze({
@@ -76,10 +76,10 @@ export const SCOPE_SECTIONS = Object.freeze({
     "communication",
   ],
   quality: [
-    "quality",
     "provider-overview",
-    "compliance",
+    "quality",
     "quality-audits",
+    "compliance",
     "reg44",
     "reg45",
     "inspection-readiness",
@@ -160,7 +160,7 @@ export const SECTION_SUBTITLES = Object.freeze({
   handover:
     "Support safe, thoughtful communication between adults across the shift.",
   "daily-life":
-    "Daily routines, notes, appointments, achievements and life in placement.",
+    "Daily routines, notes, achievements, appointments and life in placement.",
   health:
     "Health needs, appointments, professionals, outcomes and follow-up.",
   medication:
