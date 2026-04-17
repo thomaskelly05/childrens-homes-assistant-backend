@@ -79,7 +79,10 @@ const SECTION_LOADERS = {
   risk: () => PLACEHOLDER_LOADER("risk"),
   safeguarding: () => PLACEHOLDER_LOADER("safeguarding"),
   "missing-from-care": () => PLACEHOLDER_LOADER("missing-from-care"),
+
+  // Child readiness
   readiness: loadReadiness,
+
   reviews: () => PLACEHOLDER_LOADER("reviews"),
   reports: loadReports,
   transition: () => PLACEHOLDER_LOADER("transition"),
@@ -88,6 +91,7 @@ const SECTION_LOADERS = {
   communication: loadCommunication,
   manager: loadManager,
 
+  // Home scope
   "home-dashboard": loadHomeDashboard,
   operations: () => PLACEHOLDER_LOADER("operations"),
   team: loadTeam,
@@ -101,14 +105,18 @@ const SECTION_LOADERS = {
   maintenance: () => PLACEHOLDER_LOADER("maintenance"),
   notifications: loadNotifications,
   quality: loadQualityDashboard,
-  "ofsted-readiness": () => PLACEHOLDER_LOADER("ofsted-readiness"),
+
+  // Home / quality inspection readiness
+  "ofsted-readiness": loadReadiness,
+  "inspection-readiness": loadReadiness,
+
   policies: () => PLACEHOLDER_LOADER("policies"),
 
+  // Quality scope
   "provider-overview": () => PLACEHOLDER_LOADER("provider-overview"),
   "quality-audits": () => PLACEHOLDER_LOADER("quality-audits"),
   reg44: () => PLACEHOLDER_LOADER("reg44"),
   reg45: () => PLACEHOLDER_LOADER("reg45"),
-  "inspection-readiness": () => PLACEHOLDER_LOADER("inspection-readiness"),
 };
 
 const ICON_MAP = {
@@ -729,10 +737,7 @@ export async function loadSection(section) {
     ? section
     : getDefaultSectionForScope(scope);
 
-  if (
-    loadingSectionPromise &&
-    safeSection === lastLoadingSectionId
-  ) {
+  if (loadingSectionPromise && safeSection === lastLoadingSectionId) {
     return loadingSectionPromise;
   }
 
@@ -744,7 +749,8 @@ export async function loadSection(section) {
     return;
   }
 
-  const loader = SECTION_LOADERS[safeSection] || (() => PLACEHOLDER_LOADER(safeSection));
+  const loader =
+    SECTION_LOADERS[safeSection] || (() => PLACEHOLDER_LOADER(safeSection));
 
   updateSectionState(safeSection);
   showWorkspaceScreen();
