@@ -1,11 +1,29 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
-import { escapeHtml } from "../core/utils.js";
+import {
+  escapeHtml,
+  formatDate,
+  formatDateTime,
+} from "../core/utils.js";
+import {
+  buildInspectionUiEndpoints,
+} from "../core/api.js";
+import {
+  mapInspectionHomeCard,
+  mapInspectionHeader,
+  mapInspectionSectionPanel,
+  mapInspectionReason,
+  mapInspectionAction,
+  mapInspectionTask,
+  mapInspectionBriefing,
+  mapInspection72Hour,
+} from "../core/adapters.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
 function getHomeId() {
   return (
+    state.readinessSelectedHomeId ||
     state.homeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
@@ -32,93 +50,12 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function formatDate(value) {
-  if (!value) return "No date";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(value) {
-  if (!value) return "No date";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function getStatusTone(status = "") {
-  const normalised = String(status || "")
-    .toLowerCase()
+function normaliseToken(value = "") {
+  return String(value || "")
     .trim()
-    .replaceAll(" ", "_");
-
-  if (
-    [
-      "overdue",
-      "high",
-      "critical",
-      "escalated",
-      "missing",
-      "non_compliant",
-      "failed",
-      "danger",
-      "open",
-    ].includes(normalised)
-  ) {
-    return "danger";
-  }
-
-  if (
-    [
-      "due",
-      "due_soon",
-      "warning",
-      "medium",
-      "review_due",
-      "attention",
-      "at_risk",
-      "planned",
-      "received",
-      "sent",
-      "in_progress",
-    ].includes(normalised)
-  ) {
-    return "warning";
-  }
-
-  if (
-    [
-      "completed",
-      "good",
-      "active",
-      "booked",
-      "compliant",
-      "ok",
-      "passed",
-      "resolved",
-      "closed",
-      "reviewed",
-      "current",
-    ].includes(normalised)
-  ) {
-    return "success";
-  }
-
-  return "muted";
+    .toLowerCase()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
 }
 
 function toTime(value) {
@@ -147,10 +84,15 @@ function hasUsableData(data) {
   if (!data || typeof data !== "object") return false;
   if (Array.isArray(data.items) && data.items.length > 0) return true;
   if (Array.isArray(data.records) && data.records.length > 0) return true;
+  if (Array.isArray(data.rows) && data.rows.length > 0) return true;
+  if (Array.isArray(data.cards) && data.cards.length > 0) return true;
+  if (Array.isArray(data.sections) && data.sections.length > 0) return true;
+  if (Array.isArray(data.reasons) && data.reasons.length > 0) return true;
+  if (Array.isArray(data.actions) && data.actions.length > 0) return true;
+  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
   if (Array.isArray(data.audits) && data.audits.length > 0) return true;
   if (Array.isArray(data.incidents) && data.incidents.length > 0) return true;
   if (Array.isArray(data.safeguarding) && data.safeguarding.length > 0) return true;
-  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
   if (Array.isArray(data.compliance) && data.compliance.length > 0) return true;
   if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
   if (Array.isArray(data.reports) && data.reports.length > 0) return true;
@@ -159,172 +101,102 @@ function hasUsableData(data) {
   if (data.quality_summary && typeof data.quality_summary === "object") return true;
   if (typeof data.audit_score !== "undefined") return true;
   if (typeof data.quality_score !== "undefined") return true;
+  if (typeof data.overall_score !== "undefined") return true;
   return false;
 }
 
-function normaliseQualitySummary(data = {}) {
-  return data.summary || data.quality_summary || data.dashboard || data || {};
+function getStatusTone(status = "") {
+  const normalised = normaliseToken(status);
+
+  if (
+    [
+      "overdue",
+      "high",
+      "critical",
+      "escalated",
+      "missing",
+      "non_compliant",
+      "failed",
+      "danger",
+      "open",
+      "blocked",
+      "inadequate",
+      "limiting_factor",
+      "concern",
+      "requires_improvement",
+    ].includes(normalised)
+  ) {
+    return "danger";
+  }
+
+  if (
+    [
+      "due",
+      "due_soon",
+      "warning",
+      "medium",
+      "review_due",
+      "attention",
+      "at_risk",
+      "planned",
+      "received",
+      "sent",
+      "in_progress",
+      "good",
+    ].includes(normalised)
+  ) {
+    return "warning";
+  }
+
+  if (
+    [
+      "completed",
+      "active",
+      "booked",
+      "compliant",
+      "ok",
+      "passed",
+      "resolved",
+      "closed",
+      "reviewed",
+      "current",
+      "outstanding",
+      "strength",
+    ].includes(normalised)
+  ) {
+    return "success";
+  }
+
+  return "muted";
 }
 
-function normaliseAuditItems(data = {}) {
-  return toArray(data.items, [data.audits, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    audit_name: item.audit_name || item.title || item.name || "Audit",
-    finding: item.finding || item.summary || item.notes || "Audit recorded.",
-    status: item.status || "recorded",
-    audit_date: item.audit_date || item.review_date || item.created_at || null,
-    auditor: item.auditor || item.owner || "",
-    record_type: item.record_type || "audit",
-  }));
+function formatBand(value = "") {
+  const text = String(value || "").trim();
+  if (!text) return "Unknown";
+  return text
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-function normaliseIncidentItems(data = {}) {
-  return toArray(data.items, [data.incidents, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    incident_type: item.incident_type || item.title || "Incident",
-    description:
-      item.description || item.summary || item.notes || "Incident recorded.",
-    location: item.location || "",
-    status: item.status || item.manager_review_status || "recorded",
-    incident_datetime: item.incident_datetime || item.created_at || null,
-    record_type: item.record_type || "incident",
-  }));
+function getBandTone(value = "") {
+  const band = normaliseToken(value);
+  if (band === "outstanding") return "success";
+  if (band === "good") return "success";
+  if (band === "requires_improvement") return "warning";
+  if (band === "inadequate") return "danger";
+  return "muted";
 }
 
-function normaliseSafeguardingItems(data = {}) {
-  return toArray(data.items, [data.safeguarding, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    safeguarding_category:
-      item.safeguarding_category || item.title || item.category || "Safeguarding",
-    concern_details:
-      item.concern_details ||
-      item.summary ||
-      item.notes ||
-      "Safeguarding concern recorded.",
-    concern_datetime: item.concern_datetime || item.created_at || null,
-    referral_made: Boolean(item.referral_made),
-    status: item.status || item.manager_review_status || "open",
-    record_type: item.record_type || "safeguarding",
-  }));
-}
-
-function normaliseTaskItems(data = {}) {
-  return toArray(data.items, [data.tasks, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    title: item.title || item.task || "Task",
-    task: item.task || item.summary || item.title || "Task",
-    assigned_role: item.assigned_role || "",
-    due_date: item.due_date || null,
-    completed: Boolean(item.completed),
-    status: item.status || (item.completed ? "completed" : "open"),
-    record_type: item.record_type || "task",
-  }));
-}
-
-function normaliseComplianceItems(data = {}) {
-  return toArray(data.items, [data.compliance, data.compliance_items, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    title: item.title || item.area || "Compliance item",
-    summary:
-      item.summary ||
-      item.notes ||
-      `${item.status || "Status recorded"}${item.due_date ? ` • Due ${formatDate(item.due_date)}` : ""}`,
-    area: item.area || "",
-    review_date: item.review_date || item.due_date || null,
-    due_date: item.due_date || item.review_date || null,
-    severity: item.severity || "",
-    status: item.status || "recorded",
-    record_type: item.record_type || "compliance",
-  }));
-}
-
-function normaliseReportItems(data = {}) {
-  return toArray(data.items, [data.reports, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    title: item.title || item.report_type || "Report",
-    summary: item.summary || item.notes || item.report_text || "Report recorded.",
-    report_type: item.report_type || "",
-    status: item.status || "completed",
-    created_at: item.created_at || item.updated_at || null,
-    updated_at: item.updated_at || null,
-    record_type: item.record_type || "report",
-  }));
-}
-
-function buildTopStats({
-  summary = {},
-  audits = [],
-  incidents = [],
-  safeguarding = [],
-  openActions = [],
-  compliancePressure = [],
-}) {
-  const overdueAudits = audits.filter((item) =>
-    ["overdue", "due_soon", "review_due"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const recentIncidents = incidents.filter((item) => {
-    const when = item.incident_datetime || item.created_at || item.updated_at;
-    if (!when) return false;
-    const date = new Date(when);
-    if (Number.isNaN(date.getTime())) return false;
-    return Date.now() - date.getTime() <= 1000 * 60 * 60 * 24 * 30;
-  }).length;
-
-  const safeguardingOpen = safeguarding.filter((item) =>
-    !["closed", "completed", "resolved"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const score = toNumber(summary.audit_score ?? summary.quality_score, 0);
-
-  return [
-    {
-      label: "Audit score",
-      value: score,
-      note: "Current quality score",
-      tone: score >= 85 ? "success" : score >= 70 ? "warning" : "danger",
-    },
-    {
-      label: "Audits due",
-      value: overdueAudits,
-      note: "Reviews due or overdue",
-      tone: overdueAudits ? "warning" : "success",
-    },
-    {
-      label: "Recent incidents",
-      value: recentIncidents,
-      note: "Last 30 days",
-      tone: recentIncidents > 10 ? "warning" : "muted",
-    },
-    {
-      label: "Open safeguarding",
-      value: safeguardingOpen,
-      note: "Concerns needing oversight",
-      tone: safeguardingOpen ? "danger" : "success",
-    },
-    {
-      label: "Compliance pressure",
-      value: compliancePressure.length,
-      note: "Items needing assurance",
-      tone: compliancePressure.length ? "warning" : "success",
-    },
-    {
-      label: "Open actions",
-      value: openActions.length,
-      note: "Quality follow-up actions",
-      tone: openActions.length ? "warning" : "success",
-    },
-  ];
+function renderEmptyState(message = "Nothing to show right now.") {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>Nothing to show</h3>
+        <p>${safeText(message)}</p>
+      </div>
+    </div>
+  `;
 }
 
 function renderStatCards(cards = []) {
@@ -364,15 +236,7 @@ function renderRows(items = [], options = {}) {
   } = options;
 
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">○</div>
-          <h3>Nothing to show</h3>
-          <p>${safeText(emptyMessage)}</p>
-        </div>
-      </div>
-    `;
+    return renderEmptyState(emptyMessage);
   }
 
   return `
@@ -434,15 +298,9 @@ function renderRows(items = [], options = {}) {
 
 function renderInsightCards(items = []) {
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">○</div>
-          <h3>No insights yet</h3>
-          <p>Quality insights will appear here as audits, incidents and compliance data builds up.</p>
-        </div>
-      </div>
-    `;
+    return renderEmptyState(
+      "Quality insights will appear here as audits, inspection data and compliance activity build up."
+    );
   }
 
   return `
@@ -461,7 +319,238 @@ function renderInsightCards(items = []) {
   `;
 }
 
-function buildInsightItems({
+function renderInspectionBandCards(detail = {}) {
+  return `
+    <div class="record-list">
+      <article class="record-row">
+        <div class="record-row-main">
+          <div class="record-row-title">Experiences and progress</div>
+          <div class="record-row-summary">Current inspection judgement area</div>
+        </div>
+        <div class="record-row-side">
+          <span class="row-pill ${safeText(getBandTone(detail.experiences_band))}">
+            ${safeText(formatBand(detail.experiences_band))}
+          </span>
+        </div>
+      </article>
+
+      <article class="record-row">
+        <div class="record-row-main">
+          <div class="record-row-title">Helped and protected</div>
+          <div class="record-row-summary">Current inspection judgement area</div>
+        </div>
+        <div class="record-row-side">
+          <span class="row-pill ${safeText(getBandTone(detail.helped_band))}">
+            ${safeText(formatBand(detail.helped_band))}
+          </span>
+        </div>
+      </article>
+
+      <article class="record-row">
+        <div class="record-row-main">
+          <div class="record-row-title">Leadership and management</div>
+          <div class="record-row-summary">Current inspection judgement area</div>
+        </div>
+        <div class="record-row-side">
+          <span class="row-pill ${safeText(getBandTone(detail.leadership_band))}">
+            ${safeText(formatBand(detail.leadership_band))}
+          </span>
+        </div>
+      </article>
+    </div>
+  `;
+}
+
+function renderSectionPanels(items = []) {
+  if (!items.length) {
+    return renderEmptyState("No inspection section panels are available.");
+  }
+
+  return `
+    <div class="overview-grid overview-grid--cards">
+      ${items
+        .map(
+          (item) => `
+            <section class="overview-section-card">
+              <div class="overview-section-head">
+                <h3>${safeText(item.section_name || formatBand(item.section_code))}</h3>
+                <p>
+                  ${safeText(formatBand(item.score_band))}${
+                    item.score_value !== null && item.score_value !== undefined
+                      ? ` • Score ${safeText(item.score_value)}`
+                      : ""
+                  }
+                </p>
+              </div>
+              <div class="record-list">
+                <article class="record-row">
+                  <div class="record-row-main">
+                    <div class="record-row-title">Summary</div>
+                    <div class="record-row-summary">${safeText(
+                      item.summary_text || "No summary available."
+                    )}</div>
+                  </div>
+                </article>
+                ${
+                  item.strengths_text
+                    ? `
+                      <article class="record-row">
+                        <div class="record-row-main">
+                          <div class="record-row-title">Strengths</div>
+                          <div class="record-row-summary">${safeText(item.strengths_text)}</div>
+                        </div>
+                      </article>
+                    `
+                    : ""
+                }
+                ${
+                  item.concerns_text
+                    ? `
+                      <article class="record-row">
+                        <div class="record-row-main">
+                          <div class="record-row-title">Concerns</div>
+                          <div class="record-row-summary">${safeText(item.concerns_text)}</div>
+                        </div>
+                      </article>
+                    `
+                    : ""
+                }
+              </div>
+            </section>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderInspectionHomes(items = [], selectedHomeId) {
+  if (!items.length) {
+    return renderEmptyState("No home inspection cards are available.");
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .map((item) => {
+          const isSelected =
+            Number(item.home_id) === Number(selectedHomeId);
+
+          return `
+            <article
+              class="record-row ${isSelected ? "active" : ""}"
+              data-quality-home-card="true"
+              data-home-id="${safeText(item.home_id)}"
+              tabindex="0"
+              role="button"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(item.home_name)}</div>
+                <div class="record-row-summary">
+                  ${safeText(formatBand(item.overall_band))} •
+                  Score ${safeText(item.overall_score)} •
+                  Confidence ${safeText(item.confidence_score)}
+                </div>
+                <div class="record-row-meta">
+                  ${safeText(
+                    [
+                      `${item.open_actions || 0} open actions`,
+                      `${item.overdue_actions || 0} overdue`,
+                      `${item.critical_actions || 0} critical`,
+                    ].join(" • ")
+                  )}
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${safeText(getBandTone(item.overall_band))}">
+                  ${safeText(formatBand(item.overall_band))}
+                </span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function buildInspectionInsights({
+  detail = {},
+  reasons = [],
+  actions = [],
+  tasks = [],
+  sections = [],
+}) {
+  const items = [];
+
+  if (detail.top_concerns) {
+    items.push({
+      title: "Top concern",
+      summary: detail.top_concerns,
+    });
+  }
+
+  const criticalActions = actions.filter((item) =>
+    ["critical", "high"].includes(normaliseToken(item.priority))
+  ).length;
+
+  if (criticalActions) {
+    items.push({
+      title: "Action pressure",
+      summary: `${criticalActions} high-priority inspection action${
+        criticalActions === 1 ? "" : "s"
+      } need attention.`,
+    });
+  }
+
+  const limitingFactors = reasons.filter((item) =>
+    ["limiting_factor", "concern"].includes(normaliseToken(item.reason_type))
+  ).length;
+
+  if (limitingFactors) {
+    items.push({
+      title: "Limiting factors",
+      summary: `${limitingFactors} inspection reason${
+        limitingFactors === 1 ? "" : "s"
+      } are currently limiting the judgement picture.`,
+    });
+  }
+
+  const incompleteTasks = tasks.filter((item) => !item.completed).length;
+  if (incompleteTasks) {
+    items.push({
+      title: "Operational follow-through",
+      summary: `${incompleteTasks} linked inspection task${
+        incompleteTasks === 1 ? "" : "s"
+      } remain open.`,
+    });
+  }
+
+  const weakSections = sections.filter((item) =>
+    ["requires_improvement", "inadequate"].includes(normaliseToken(item.score_band))
+  ).length;
+
+  if (weakSections) {
+    items.push({
+      title: "Judgement pressure",
+      summary: `${weakSections} judgement area${
+        weakSections === 1 ? "" : "s"
+      } are below good.`,
+    });
+  }
+
+  if (!items.length) {
+    items.push({
+      title: "No major inspection pressure surfaced",
+      summary:
+        "The current inspection view is not surfacing immediate critical concerns.",
+    });
+  }
+
+  return items.slice(0, 6);
+}
+
+function buildFallbackInsights({
   audits = [],
   incidents = [],
   safeguarding = [],
@@ -470,15 +559,15 @@ function buildInsightItems({
   const items = [];
 
   const overdueAuditCount = audits.filter((item) =>
-    ["overdue", "due_soon", "review_due"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    ["overdue", "due_soon", "review_due"].includes(normaliseToken(item.status))
   ).length;
 
   if (overdueAuditCount) {
     items.push({
       title: "Audit pressure",
-      summary: `${overdueAuditCount} audit item${overdueAuditCount === 1 ? "" : "s"} due or overdue.`,
+      summary: `${overdueAuditCount} audit item${
+        overdueAuditCount === 1 ? "" : "s"
+      } due or overdue.`,
     });
   }
 
@@ -491,33 +580,37 @@ function buildInsightItems({
   if (restrictivePractice) {
     items.push({
       title: "Restrictive practice pattern",
-      summary: `${restrictivePractice} recent incident${restrictivePractice === 1 ? "" : "s"} mention restraint or physical intervention.`,
+      summary: `${restrictivePractice} recent incident${
+        restrictivePractice === 1 ? "" : "s"
+      } mention restraint or physical intervention.`,
     });
   }
 
   const openSafeguarding = safeguarding.filter((item) =>
-    !["closed", "completed", "resolved"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    !["closed", "completed", "resolved"].includes(normaliseToken(item.status))
   ).length;
 
   if (openSafeguarding) {
     items.push({
       title: "Safeguarding oversight",
-      summary: `${openSafeguarding} safeguarding concern${openSafeguarding === 1 ? "" : "s"} remain open.`,
+      summary: `${openSafeguarding} safeguarding concern${
+        openSafeguarding === 1 ? "" : "s"
+      } remain open.`,
     });
   }
 
   const nonCompliant = compliance.filter((item) =>
     ["overdue", "non_compliant", "due_soon", "missing"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseToken(item.status)
     )
   ).length;
 
   if (nonCompliant) {
     items.push({
       title: "Compliance risk",
-      summary: `${nonCompliant} compliance item${nonCompliant === 1 ? "" : "s"} need action or assurance.`,
+      summary: `${nonCompliant} compliance item${
+        nonCompliant === 1 ? "" : "s"
+      } need action or assurance.`,
     });
   }
 
@@ -532,7 +625,244 @@ function buildInsightItems({
   return items.slice(0, 6);
 }
 
-function renderQualityDashboardHtml({
+function renderInspectionDashboardHtml({
+  title,
+  cards = [],
+  selectedHomeId = null,
+  detail = {},
+  sectionPanels = [],
+  reasons = [],
+  actions = [],
+  tasks = [],
+  briefing = null,
+  prep72h = null,
+  topStats = [],
+  insightItems = [],
+}) {
+  return `
+    <section class="overview-panel">
+      <div class="overview-panel-head">
+        <div>
+          <div class="eyebrow">Quality and inspection</div>
+          <h2>${safeText(title)}</h2>
+          <p>
+            ${safeText(
+              detail.narrative_summary ||
+                detail.top_concerns ||
+                "A live view of inspection readiness, judgement pressure, actions and operational follow-through."
+            )}
+          </p>
+        </div>
+      </div>
+
+      ${renderStatCards(topStats)}
+
+      <div class="overview-grid">
+        <section class="overview-main">
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Available homes</h3>
+              <p>Inspection position across homes you can currently access.</p>
+            </div>
+            ${renderInspectionHomes(cards, selectedHomeId)}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Inspection insights</h3>
+              <p>Current themes rising from the inspection picture.</p>
+            </div>
+            ${renderInsightCards(insightItems)}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Overall judgement picture</h3>
+              <p>Live headline across the three main judgement areas.</p>
+            </div>
+            ${renderInspectionBandCards(detail)}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Section summaries</h3>
+              <p>Detailed section-level strengths, concerns and narrative.</p>
+            </div>
+            ${renderSectionPanels(sectionPanels)}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Inspection reasons</h3>
+              <p>The lines of evidence driving the current picture.</p>
+            </div>
+            ${renderRows(reasons, {
+              emptyMessage: "No inspection reasons are available.",
+              titleKey: "title",
+              summaryKey: "description",
+              recordType: "inspection_reason",
+              metaBuilder: (item) =>
+                [
+                  item.section_name || formatBand(item.section_code),
+                  item.reason_type ? formatBand(item.reason_type) : "",
+                  item.priority ? `Priority ${item.priority}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+              statusKey: "reason_type",
+            })}
+          </div>
+        </section>
+
+        <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Best next actions</h3>
+              <p>Inspection improvement actions ordered for practical follow-up.</p>
+            </div>
+            ${renderRows(actions, {
+              emptyMessage: "No inspection improvement actions are available.",
+              titleKey: "action_title",
+              summaryKey: "action_description",
+              recordType: "inspection_action",
+              metaBuilder: (item) =>
+                [
+                  item.section_name || formatBand(item.section_code),
+                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+                  item.owner_user_name || item.owner_staff_name || "Unassigned",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+              statusKey: "priority",
+            })}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Linked operational tasks</h3>
+              <p>Tasks already synced or linked to inspection improvement work.</p>
+            </div>
+            ${renderRows(tasks, {
+              emptyMessage: "No linked inspection tasks are available.",
+              titleKey: "task_title",
+              summaryKey: "action_title",
+              recordType: "inspection_task",
+              metaBuilder: (item) =>
+                [
+                  item.assigned_user_name || item.assigned_role || "Unassigned",
+                  item.task_due_date ? `Due ${formatDate(item.task_due_date)}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+              statusKey: "status",
+            })}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Manager briefing</h3>
+              <p>Plain-English summary and 72-hour focus.</p>
+            </div>
+            ${
+              briefing || prep72h
+                ? `
+                  <div class="record-list">
+                    ${
+                      briefing?.headline_summary
+                        ? `
+                          <article class="record-row">
+                            <div class="record-row-main">
+                              <div class="record-row-title">Headline</div>
+                              <div class="record-row-summary">${safeText(
+                                briefing.headline_summary
+                              )}</div>
+                            </div>
+                          </article>
+                        `
+                        : ""
+                    }
+
+                    ${
+                      briefing?.overall_position_statement
+                        ? `
+                          <article class="record-row">
+                            <div class="record-row-main">
+                              <div class="record-row-title">Overall position</div>
+                              <div class="record-row-summary">${safeText(
+                                briefing.overall_position_statement
+                              )}</div>
+                            </div>
+                          </article>
+                        `
+                        : ""
+                    }
+
+                    ${
+                      briefing?.likely_inspector_focus
+                        ? `
+                          <article class="record-row">
+                            <div class="record-row-main">
+                              <div class="record-row-title">Likely inspector focus</div>
+                              <div class="record-row-summary">${safeText(
+                                briefing.likely_inspector_focus
+                              )}</div>
+                            </div>
+                          </article>
+                        `
+                        : ""
+                    }
+
+                    ${
+                      briefing?.immediate_priority_actions
+                        ? `
+                          <article class="record-row">
+                            <div class="record-row-main">
+                              <div class="record-row-title">Immediate priority actions</div>
+                              <div class="record-row-summary">${safeText(
+                                briefing.immediate_priority_actions
+                              )}</div>
+                            </div>
+                          </article>
+                        `
+                        : ""
+                    }
+
+                    ${
+                      prep72h
+                        ? `
+                          <article class="record-row">
+                            <div class="record-row-main">
+                              <div class="record-row-title">72-hour focus</div>
+                              <div class="record-row-summary">${safeText(
+                                [
+                                  prep72h.inspection_pressure_level,
+                                  prep72h.primary_focus_area,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" • ")
+                              )}</div>
+                              ${
+                                prep72h.urgent_actions
+                                  ? `<div class="record-row-meta">${safeText(prep72h.urgent_actions)}</div>`
+                                  : ""
+                              }
+                            </div>
+                          </article>
+                        `
+                        : ""
+                    }
+                  </div>
+                `
+                : renderEmptyState("No manager briefing is available.")
+            }
+          </section>
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+function renderFallbackQualityDashboardHtml({
   title = "Quality and RI dashboard",
   topStats = [],
   insightItems = [],
@@ -760,6 +1090,226 @@ function renderErrorState(message) {
   });
 }
 
+function normaliseQualitySummary(data = {}) {
+  return data.summary || data.quality_summary || data.dashboard || data || {};
+}
+
+function normaliseAuditItems(data = {}) {
+  return toArray(data.items, [data.audits, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    audit_name: item.audit_name || item.title || item.name || "Audit",
+    finding: item.finding || item.summary || item.notes || "Audit recorded.",
+    status: item.status || "recorded",
+    audit_date: item.audit_date || item.review_date || item.created_at || null,
+    auditor: item.auditor || item.owner || "",
+    record_type: item.record_type || "audit",
+  }));
+}
+
+function normaliseIncidentItems(data = {}) {
+  return toArray(data.items, [data.incidents, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    incident_type: item.incident_type || item.title || "Incident",
+    description:
+      item.description || item.summary || item.notes || "Incident recorded.",
+    location: item.location || "",
+    status: item.status || item.manager_review_status || "recorded",
+    incident_datetime: item.incident_datetime || item.created_at || null,
+    record_type: item.record_type || "incident",
+  }));
+}
+
+function normaliseSafeguardingItems(data = {}) {
+  return toArray(data.items, [data.safeguarding, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    safeguarding_category:
+      item.safeguarding_category || item.title || item.category || "Safeguarding",
+    concern_details:
+      item.concern_details ||
+      item.summary ||
+      item.notes ||
+      "Safeguarding concern recorded.",
+    concern_datetime: item.concern_datetime || item.created_at || null,
+    referral_made: Boolean(item.referral_made),
+    status: item.status || item.manager_review_status || "open",
+    record_type: item.record_type || "safeguarding",
+  }));
+}
+
+function normaliseTaskItems(data = {}) {
+  return toArray(data.items, [data.tasks, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    title: item.title || item.task || "Task",
+    task: item.task || item.summary || item.title || "Task",
+    assigned_role: item.assigned_role || "",
+    due_date: item.due_date || null,
+    completed: Boolean(item.completed),
+    status: item.status || (item.completed ? "completed" : "open"),
+    record_type: item.record_type || "task",
+  }));
+}
+
+function normaliseComplianceItems(data = {}) {
+  return toArray(data.items, [data.compliance, data.compliance_items, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    title: item.title || item.area || "Compliance item",
+    summary:
+      item.summary ||
+      item.notes ||
+      `${item.status || "Status recorded"}${item.due_date ? ` • Due ${formatDate(item.due_date)}` : ""}`,
+    area: item.area || "",
+    review_date: item.review_date || item.due_date || null,
+    due_date: item.due_date || item.review_date || null,
+    severity: item.severity || "",
+    status: item.status || "recorded",
+    record_type: item.record_type || "compliance",
+  }));
+}
+
+function normaliseReportItems(data = {}) {
+  return toArray(data.items, [data.reports, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    title: item.title || item.report_type || "Report",
+    summary: item.summary || item.notes || item.report_text || "Report recorded.",
+    report_type: item.report_type || "",
+    status: item.status || "completed",
+    created_at: item.created_at || item.updated_at || null,
+    updated_at: item.updated_at || null,
+    record_type: item.record_type || "report",
+  }));
+}
+
+function buildFallbackTopStats({
+  summary = {},
+  audits = [],
+  incidents = [],
+  safeguarding = [],
+  openActions = [],
+  compliancePressure = [],
+}) {
+  const overdueAudits = audits.filter((item) =>
+    ["overdue", "due_soon", "review_due"].includes(normaliseToken(item.status))
+  ).length;
+
+  const recentIncidents = incidents.filter((item) => {
+    const when = item.incident_datetime || item.created_at || item.updated_at;
+    if (!when) return false;
+    const date = new Date(when);
+    if (Number.isNaN(date.getTime())) return false;
+    return Date.now() - date.getTime() <= 1000 * 60 * 60 * 24 * 30;
+  }).length;
+
+  const safeguardingOpen = safeguarding.filter((item) =>
+    !["closed", "completed", "resolved"].includes(normaliseToken(item.status))
+  ).length;
+
+  const score = toNumber(summary.audit_score ?? summary.quality_score, 0);
+
+  return [
+    {
+      label: "Audit score",
+      value: score,
+      note: "Current quality score",
+      tone: score >= 85 ? "success" : score >= 70 ? "warning" : "danger",
+    },
+    {
+      label: "Audits due",
+      value: overdueAudits,
+      note: "Reviews due or overdue",
+      tone: overdueAudits ? "warning" : "success",
+    },
+    {
+      label: "Recent incidents",
+      value: recentIncidents,
+      note: "Last 30 days",
+      tone: recentIncidents > 10 ? "warning" : "muted",
+    },
+    {
+      label: "Open safeguarding",
+      value: safeguardingOpen,
+      note: "Concerns needing oversight",
+      tone: safeguardingOpen ? "danger" : "success",
+    },
+    {
+      label: "Compliance pressure",
+      value: compliancePressure.length,
+      note: "Items needing assurance",
+      tone: compliancePressure.length ? "warning" : "success",
+    },
+    {
+      label: "Open actions",
+      value: openActions.length,
+      note: "Quality follow-up actions",
+      tone: openActions.length ? "warning" : "success",
+    },
+  ];
+}
+
+function buildInspectionTopStats({
+  detail = {},
+  actions = [],
+  reasons = [],
+  tasks = [],
+}) {
+  const overallScore = toNumber(detail.overall_score, 0);
+  const confidenceScore = toNumber(detail.confidence_score, 0);
+  const openActions = toNumber(detail.open_actions, actions.length);
+  const overdueActions = toNumber(detail.overdue_actions, 0);
+  const criticalActions = toNumber(detail.critical_actions, 0);
+  const openReasons = reasons.length;
+  const openTasks = tasks.filter((item) => !item.completed).length;
+
+  return [
+    {
+      label: "Overall band",
+      value: formatBand(detail.overall_band),
+      note: `Score ${overallScore || 0}`,
+      tone: getBandTone(detail.overall_band),
+    },
+    {
+      label: "Confidence",
+      value: confidenceScore || 0,
+      note: "Inspection confidence",
+      tone:
+        confidenceScore >= 75
+          ? "success"
+          : confidenceScore >= 50
+          ? "warning"
+          : "danger",
+    },
+    {
+      label: "Open actions",
+      value: openActions,
+      note: `${overdueActions} overdue`,
+      tone: openActions ? "warning" : "success",
+    },
+    {
+      label: "Critical actions",
+      value: criticalActions,
+      note: "Highest priority work",
+      tone: criticalActions ? "danger" : "success",
+    },
+    {
+      label: "Reason lines",
+      value: openReasons,
+      note: "Inspection drivers",
+      tone: openReasons ? "warning" : "muted",
+    },
+    {
+      label: "Linked tasks",
+      value: openTasks,
+      note: "Operational follow-through",
+      tone: openTasks ? "warning" : "success",
+    },
+  ];
+}
+
 function buildFallbackQualityData(homeId) {
   const homeName =
     state.currentUser?.home_name ||
@@ -898,7 +1448,136 @@ function buildFallbackQualityData(homeId) {
   };
 }
 
-async function fetchQualityDataset(homeId) {
+async function tryFetchInspectionDataset(homeId) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) return null;
+
+  const safeGet = (url) => apiGet(url).catch(() => null);
+
+  const [
+    cardsData,
+    headerData,
+    sectionData,
+    reasonsData,
+    actionsData,
+    tasksData,
+    briefingData,
+    prep72hData,
+  ] = await Promise.all([
+    safeGet(endpoints.homeCards),
+    safeGet(endpoints.homeHeader),
+    safeGet(endpoints.sectionPanels),
+    safeGet(endpoints.reasons),
+    safeGet(endpoints.actions),
+    safeGet(endpoints.tasks),
+    safeGet(endpoints.briefing),
+    safeGet(endpoints.prep72h),
+  ]);
+
+  const cards = toArray(cardsData?.items, [
+    cardsData?.rows,
+    cardsData?.cards,
+    cardsData?.records,
+  ]).map(mapInspectionHomeCard);
+
+  const headers = toArray(headerData?.items, [
+    headerData?.rows,
+    headerData?.records,
+  ]).map(mapInspectionHeader);
+
+  const sections = toArray(sectionData?.items, [
+    sectionData?.rows,
+    sectionData?.sections,
+    sectionData?.records,
+  ]).map(mapInspectionSectionPanel);
+
+  const reasons = toArray(reasonsData?.items, [
+    reasonsData?.rows,
+    reasonsData?.reasons,
+    reasonsData?.records,
+  ]).map(mapInspectionReason);
+
+  const actions = toArray(actionsData?.items, [
+    actionsData?.rows,
+    actionsData?.actions,
+    actionsData?.records,
+  ]).map(mapInspectionAction);
+
+  const tasks = toArray(tasksData?.items, [
+    tasksData?.rows,
+    tasksData?.tasks,
+    tasksData?.records,
+  ]).map(mapInspectionTask);
+
+  const briefings = toArray(briefingData?.items, [
+    briefingData?.rows,
+    briefingData?.records,
+  ]).map(mapInspectionBriefing);
+
+  const prep72h = toArray(prep72hData?.items, [
+    prep72hData?.rows,
+    prep72hData?.records,
+  ]).map(mapInspection72Hour);
+
+  const hasInspectionData =
+    cards.length ||
+    headers.length ||
+    sections.length ||
+    reasons.length ||
+    actions.length ||
+    tasks.length ||
+    briefings.length ||
+    prep72h.length;
+
+  if (!hasInspectionData) {
+    return null;
+  }
+
+  const selectedCard =
+    cards.find((item) => Number(item.home_id) === Number(homeId)) ||
+    cards[0] ||
+    null;
+
+  const activeHomeId = selectedCard?.home_id || homeId;
+
+  const detail =
+    headers.find((item) => Number(item.home_id) === Number(activeHomeId)) ||
+    selectedCard ||
+    {};
+
+  return {
+    mode: "inspection",
+    selectedHomeId: activeHomeId,
+    cards: cards,
+    detail,
+    sections: sortNewestFirst(
+      sections.filter((item) => Number(item.home_id) === Number(activeHomeId)),
+      ["updated_at", "created_at"]
+    ),
+    reasons: sortNewestFirst(
+      reasons.filter((item) => Number(item.home_id) === Number(activeHomeId)),
+      ["updated_at", "created_at"]
+    ),
+    actions: sortSoonestFirst(
+      actions.filter((item) => Number(item.home_id) === Number(activeHomeId)),
+      ["due_date", "created_at"]
+    ),
+    tasks: sortSoonestFirst(
+      tasks.filter((item) => Number(item.home_id) === Number(activeHomeId)),
+      ["task_due_date", "created_at"]
+    ),
+    briefing:
+      briefings.find((item) => Number(item.home_id) === Number(activeHomeId)) ||
+      briefings[0] ||
+      null,
+    prep72h:
+      prep72h.find((item) => Number(item.home_id) === Number(activeHomeId)) ||
+      prep72h[0] ||
+      null,
+  };
+}
+
+async function fetchFallbackQualityDataset(homeId) {
   const safeGet = (url) => apiGet(url).catch(() => null);
 
   const requests = [
@@ -952,6 +1631,22 @@ async function fetchQualityDataset(homeId) {
   };
 }
 
+function bindInspectionHomeEvents() {
+  if (!els.viewContent) return;
+
+  els.viewContent
+    .querySelectorAll("[data-quality-home-card='true']")
+    .forEach((button) => {
+      button.addEventListener("click", async () => {
+        const homeId = Number(button.dataset.homeId || 0);
+        if (!homeId) return;
+        state.readinessSelectedHomeId = homeId;
+        state.homeId = homeId;
+        await loadQualityDashboard();
+      });
+    });
+}
+
 export async function loadQualityDashboard() {
   if (!els.viewContent) return;
 
@@ -965,6 +1660,65 @@ export async function loadQualityDashboard() {
   renderLoadingState();
 
   try {
+    const inspectionData = await tryFetchInspectionDataset(homeId);
+
+    if (inspectionData) {
+      const topStats = buildInspectionTopStats({
+        detail: inspectionData.detail,
+        actions: inspectionData.actions,
+        reasons: inspectionData.reasons,
+        tasks: inspectionData.tasks,
+      });
+
+      const insightItems = buildInspectionInsights({
+        detail: inspectionData.detail,
+        reasons: inspectionData.reasons,
+        actions: inspectionData.actions,
+        tasks: inspectionData.tasks,
+        sections: inspectionData.sections,
+      });
+
+      els.viewContent.innerHTML = renderInspectionDashboardHtml({
+        title:
+          inspectionData.detail.home_name ||
+          state.currentUser?.home_name ||
+          "Inspection quality dashboard",
+        cards: inspectionData.cards,
+        selectedHomeId: inspectionData.selectedHomeId,
+        detail: inspectionData.detail,
+        sectionPanels: inspectionData.sections,
+        reasons: inspectionData.reasons.slice(0, 8),
+        actions: inspectionData.actions.slice(0, 8),
+        tasks: inspectionData.tasks.slice(0, 8),
+        briefing: inspectionData.briefing,
+        prep72h: inspectionData.prep72h,
+        topStats,
+        insightItems,
+      });
+
+      updateWorkspaceSummaryStrip({
+        today: `${formatBand(inspectionData.detail.overall_band)} • Score ${toNumber(
+          inspectionData.detail.overall_score,
+          0
+        )}`,
+        nextEvent: inspectionData.detail.next_action_due_date
+          ? `Next inspection action ${formatDate(inspectionData.detail.next_action_due_date)}`
+          : inspectionData.actions[0]?.due_date
+          ? `Next inspection action ${formatDate(inspectionData.actions[0].due_date)}`
+          : "No immediate inspection deadline",
+        lastRecord: inspectionData.briefing?.headline_summary
+          ? inspectionData.briefing.headline_summary
+          : inspectionData.detail.top_concerns || "No major inspection concern recorded",
+        openActions: `${toNumber(
+          inspectionData.detail.open_actions,
+          inspectionData.actions.length
+        )} open • ${toNumber(inspectionData.detail.overdue_actions, 0)} overdue`,
+      });
+
+      bindInspectionHomeEvents();
+      return;
+    }
+
     const {
       summaryData,
       auditData,
@@ -974,7 +1728,7 @@ export async function loadQualityDashboard() {
       complianceData,
       reportData,
       isFallback,
-    } = await fetchQualityDataset(homeId);
+    } = await fetchFallbackQualityDataset(homeId);
 
     const summary = normaliseQualitySummary(summaryData);
 
@@ -1010,7 +1764,7 @@ export async function loadQualityDashboard() {
     )
       .filter((item) =>
         ["overdue", "due_soon", "review_due", "missing", "non_compliant"].includes(
-          String(item.status || "").toLowerCase().replaceAll(" ", "_")
+          normaliseToken(item.status)
         )
       )
       .slice(0, 8);
@@ -1020,7 +1774,7 @@ export async function loadQualityDashboard() {
       "updated_at",
     ]).slice(0, 6);
 
-    const topStats = buildTopStats({
+    const topStats = buildFallbackTopStats({
       summary,
       audits: auditItems,
       incidents: incidentItems,
@@ -1029,14 +1783,14 @@ export async function loadQualityDashboard() {
       compliancePressure: complianceItems,
     });
 
-    const insightItems = buildInsightItems({
+    const insightItems = buildFallbackInsights({
       audits: auditItems,
       incidents: incidentItems,
       safeguarding: safeguardingItems,
       compliance: complianceItems,
     });
 
-    els.viewContent.innerHTML = renderQualityDashboardHtml({
+    els.viewContent.innerHTML = renderFallbackQualityDashboardHtml({
       title:
         summary.title ||
         summary.home_name ||
