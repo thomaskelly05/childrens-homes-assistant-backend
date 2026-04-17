@@ -7,8 +7,7 @@ let assistantUiBound = false;
 let citationEventsBound = false;
 
 const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w:-]*)\]/gi;
-const MAX_SOURCE_EXCERPT = 160;
-const MAX_VISIBLE_SOURCES = 8;
+const MAX_SOURCE_EXCERPT = 220;
 
 function qs(id) {
   return document.getElementById(id);
@@ -57,33 +56,27 @@ function ensureAssistantArrays() {
   }
 }
 
-function ensureAssistantMetaShape(meta) {
-  meta.sources = Array.isArray(meta.sources) ? meta.sources : [];
-  meta.suggested_actions = Array.isArray(meta.suggested_actions)
-    ? meta.suggested_actions
-    : [];
-  meta.runtime = meta.runtime && typeof meta.runtime === "object" ? meta.runtime : {};
-  meta.explainability =
-    meta.explainability && typeof meta.explainability === "object"
-      ? meta.explainability
-      : {};
-  meta.assistant_scope =
-    meta.assistant_scope && typeof meta.assistant_scope === "object"
-      ? meta.assistant_scope
-      : {};
-  meta.assistant_context =
-    meta.assistant_context && typeof meta.assistant_context === "object"
-      ? meta.assistant_context
-      : {};
-  return meta;
-}
-
 function getAssistantMeta() {
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
     state.assistantMeta = createAssistantMeta();
   }
 
-  return ensureAssistantMetaShape(state.assistantMeta);
+  if (!Array.isArray(state.assistantMeta.sources)) {
+    state.assistantMeta.sources = [];
+  }
+
+  if (!Array.isArray(state.assistantMeta.suggested_actions)) {
+    state.assistantMeta.suggested_actions = [];
+  }
+
+  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
+  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
+  state.assistantMeta.assistant_scope =
+    state.assistantMeta.assistant_scope || {};
+  state.assistantMeta.assistant_context =
+    state.assistantMeta.assistant_context || {};
+
+  return state.assistantMeta;
 }
 
 function formatRole(role = "") {
@@ -140,10 +133,6 @@ function getSources() {
   return Array.isArray(meta.sources) ? meta.sources : [];
 }
 
-function getVisibleSources() {
-  return getSources().slice(0, MAX_VISIBLE_SOURCES);
-}
-
 function buildSourceMap() {
   const map = new Map();
 
@@ -166,10 +155,48 @@ function renderInlineText(text = "") {
   return html;
 }
 
+function toTitleCase(value = "") {
+  return String(value || "")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getSourceLabel(source = {}, ref = "", index = 0) {
+  const preferred =
+    source.display_label ||
+    source.citation_label ||
+    source.link_label ||
+    source.title ||
+    source.label ||
+    source.document_title ||
+    source.name ||
+    "";
+
+  if (preferred && String(preferred).trim()) {
+    return String(preferred).trim();
+  }
+
+  const recordType = source.record_type || source.type || "";
+  const recordId = source.record_id || source.id || "";
+  const ordinal = index + 1;
+
+  if (recordType && recordId) {
+    return `${toTitleCase(recordType)} ${recordId}`;
+  }
+
+  if (recordType) {
+    return `${toTitleCase(recordType)} ${ordinal}`;
+  }
+
+  return ref || `Source ${ordinal}`;
+}
+
 function renderCitationChip(ref = "", source = null) {
   const safeRef = escapeHtml(ref);
-  const label = source?.label || source?.title || source?.document_title || ref;
-  const safeLabel = escapeHtml(String(label || ref));
+  const label = getSourceLabel(source || {}, ref);
+  const safeLabel = escapeHtml(label);
 
   return `
     <button
@@ -179,7 +206,7 @@ function renderCitationChip(ref = "", source = null) {
       title="${safeLabel}"
       aria-label="View source ${safeLabel}"
     >
-      ${safeRef}
+      ${safeLabel}
     </button>
   `;
 }
@@ -212,6 +239,7 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
 function renderAssistantRichText(text = "") {
   const sourceMap = buildSourceMap();
   const lines = String(text || "").split("\n");
+
   const blocks = [];
   let listItems = [];
 
@@ -233,7 +261,20 @@ function renderAssistantRichText(text = "") {
 
     if (/^[-*]\s+/.test(trimmed)) {
       listItems.push(
-        renderParagraphWithCitations(trimmed.replace(/^[-*]\s+/, ""), sourceMap)
+        renderParagraphWithCitations(
+          trimmed.replace(/^[-*]\s+/, ""),
+          sourceMap
+        )
+      );
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(trimmed)) {
+      listItems.push(
+        renderParagraphWithCitations(
+          trimmed.replace(/^\d+\.\s+/, ""),
+          sourceMap
+        )
       );
       continue;
     }
@@ -318,26 +359,29 @@ function buildIntroMessageHtml() {
   const sectionTitle = getReadableSectionLabel();
   const sectionSubtitle = getReadableSectionSubtitle();
 
-  if (scope === "child" && !state.youngPersonId) {
-    return `
-      <div class="assistant-helper-text">
-        <p>Select a child or young person to begin.</p>
-      </div>
-    `;
-  }
-
-  const introTitle =
-    scope === "child"
-      ? `Ask about ${escapeHtml(getPersonLabel())}.`
-      : scope === "home"
-      ? `Ask about ${escapeHtml(getHomeLabel())}.`
-      : "Ask about quality and oversight.";
-
   return `
     <div class="assistant-helper-text">
-      <p><strong>${introTitle}</strong></p>
-      <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-      ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
+      ${
+        scope === "child"
+          ? state.youngPersonId
+            ? `
+              <p><strong>Ask about ${escapeHtml(getPersonLabel())}.</strong></p>
+              <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+              ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
+            `
+            : `<p>Select a child or young person to begin.</p>`
+          : scope === "home"
+          ? `
+            <p><strong>Ask about ${escapeHtml(getHomeLabel())}.</strong></p>
+            <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+            ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
+          `
+          : `
+            <p><strong>Ask about quality and oversight.</strong></p>
+            <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+            ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
+          `
+      }
     </div>
   `;
 }
@@ -453,21 +497,17 @@ function renderSourcesHtml(sources = []) {
     return `<p class="assistant-muted">No sources yet.</p>`;
   }
 
-  const visibleSources = sources.slice(0, MAX_VISIBLE_SOURCES);
-  const remainder = Math.max(0, sources.length - visibleSources.length);
-
   return `
     <div class="assistant-source-list assistant-source-list--simple">
-      ${visibleSources
+      ${sources
         .map((source, index) => {
           const citationRef = sourceCitationRef(source, index);
-          const title = escapeHtml(
-            source?.title || source?.label || source?.document_title || "Source"
-          );
+          const title = escapeHtml(getSourceLabel(source, citationRef, index));
 
           const meta = [
             source?.record_type || source?.type || "",
             source?.section || "",
+            source?.date || source?.created_at || "",
           ]
             .filter(Boolean)
             .map((item) => escapeHtml(String(item)))
@@ -476,11 +516,13 @@ function renderSourcesHtml(sources = []) {
           const description = escapeHtml(
             String(
               source?.description || source?.excerpt || source?.summary || ""
-            )
-              .replace(/\s+/g, " ")
-              .trim()
-              .slice(0, MAX_SOURCE_EXCERPT)
+            ).slice(0, MAX_SOURCE_EXCERPT)
           );
+
+          const recordId =
+            source?.record_id || source?.id || source?.source_record_id || "";
+          const recordType =
+            source?.record_type || source?.type || source?.source_record_type || "";
 
           return `
             <button
@@ -488,6 +530,9 @@ function renderSourcesHtml(sources = []) {
               id="${sourceSafeDomId(citationRef)}"
               type="button"
               data-source-ref="${escapeHtml(citationRef)}"
+              data-record-id="${escapeHtml(String(recordId || ""))}"
+              data-record-type="${escapeHtml(String(recordType || ""))}"
+              title="${title}"
             >
               <div class="assistant-source-row-top">
                 <strong>${title}</strong>
@@ -507,11 +552,6 @@ function renderSourcesHtml(sources = []) {
           `;
         })
         .join("")}
-      ${
-        remainder > 0
-          ? `<p class="assistant-muted">+ ${remainder} more source${remainder === 1 ? "" : "s"} available in runtime data.</p>`
-          : ""
-      }
     </div>
   `;
 }
@@ -544,7 +584,6 @@ function renderSuggestedActions() {
   }
 
   host.innerHTML = actions
-    .slice(0, 6)
     .map((action) => {
       const label =
         typeof action === "string"
@@ -576,7 +615,7 @@ function renderScopeSummary() {
       </div>
       <div class="assistant-scope-summary-row">
         <span>Evidence</span>
-        <strong>${escapeHtml(String(runtime.evidence_count || getSources().length || 0))}</strong>
+        <strong>${escapeHtml(String(runtime.evidence_count || 0))}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Mode</span>
@@ -631,22 +670,59 @@ function scrollSourceIntoView(ref = "") {
   }, 1200);
 }
 
+async function openLinkedSourceRecord(button) {
+  if (!button) return false;
+
+  const recordId = button.getAttribute("data-record-id") || "";
+  const recordType = button.getAttribute("data-record-type") || "";
+
+  if (!recordId) return false;
+
+  try {
+    const { openRecordDetail } = await import("./records.js");
+
+    const numericId = Number(recordId);
+    const safeId = Number.isNaN(numericId) ? recordId : numericId;
+
+    state.activeRecordType = recordType || null;
+    state.activeRecordItem = {
+      id: safeId,
+      source_id: safeId,
+      record_id: safeId,
+      record_type: recordType || "",
+      title: button.textContent?.trim() || "",
+    };
+
+    await openRecordDetail(state.activeRecordItem);
+    return true;
+  } catch (error) {
+    console.error("[assistant-ui] failed to open linked source record", error);
+    return false;
+  }
+}
+
 function bindCitationEvents() {
   if (citationEventsBound) return;
   citationEventsBound = true;
 
-  document.addEventListener("click", (event) => {
+  document.addEventListener("click", async (event) => {
     const citation = event.target.closest("[data-citation-ref]");
     if (citation) {
       const ref = citation.getAttribute("data-citation-ref") || "";
-      if (ref) scrollSourceIntoView(ref);
+      if (ref) {
+        scrollSourceIntoView(ref);
+      }
       return;
     }
 
     const sourceRow = event.target.closest("[data-source-ref]");
     if (sourceRow) {
       const ref = sourceRow.getAttribute("data-source-ref") || "";
-      if (ref) scrollSourceIntoView(ref);
+      if (ref) {
+        scrollSourceIntoView(ref);
+      }
+
+      await openLinkedSourceRecord(sourceRow);
     }
   });
 }
@@ -707,6 +783,12 @@ export function appendAssistantUserMessage(text) {
   renderAllAssistantUi();
 }
 
+export function clearAssistantMessages() {
+  state.assistantMessages = [];
+  state.assistantModalMessages = [];
+  renderAllAssistantUi();
+}
+
 export function setAssistantSources(sources = []) {
   const meta = getAssistantMeta();
   meta.sources = Array.isArray(sources) ? sources : [];
@@ -715,21 +797,36 @@ export function setAssistantSources(sources = []) {
 
 export function setAssistantRuntime(runtime = null) {
   const meta = getAssistantMeta();
-  meta.runtime = runtime && typeof runtime === "object" ? runtime : {};
+  meta.runtime = runtime || {};
   renderAllAssistantUi();
 }
 
 export function setAssistantExplainability(explainability = null) {
   const meta = getAssistantMeta();
-  meta.explainability =
-    explainability && typeof explainability === "object" ? explainability : {};
+  meta.explainability = explainability || {};
+}
+
+export function setAssistantSuggestedActions(actions = []) {
+  const meta = getAssistantMeta();
+  meta.suggested_actions = Array.isArray(actions) ? actions : [];
+  renderAllAssistantUi();
 }
 
 export function setAssistantScopeSummary(scopeSummary = null) {
   const meta = getAssistantMeta();
   meta.assistant_context = {
     ...(meta.assistant_context || {}),
-    ...(scopeSummary && typeof scopeSummary === "object" ? scopeSummary : {}),
+    ...(scopeSummary || {}),
   };
+  renderAllAssistantUi();
+}
+
+export function openAssistantUi() {
+  state.assistantOpen = true;
+  renderAllAssistantUi();
+}
+
+export function closeAssistantUi() {
+  state.assistantOpen = false;
   renderAllAssistantUi();
 }
