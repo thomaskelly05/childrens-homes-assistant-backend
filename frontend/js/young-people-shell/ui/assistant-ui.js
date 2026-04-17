@@ -7,6 +7,8 @@ let assistantUiBound = false;
 let citationEventsBound = false;
 
 const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w:-]*)\]/gi;
+const RECORD_LINK_REGEX =
+  /\b(incident|record|note|task|document|report|chronology|entry)\s+(number\s+)?(#?\d+)\b/gi;
 const MAX_SOURCE_EXCERPT = 220;
 
 function qs(id) {
@@ -118,7 +120,6 @@ function getReadableSectionSubtitle() {
 
 function sourceCitationRef(source = {}, index = 0) {
   if (source.citation_ref) return String(source.citation_ref);
-
   const type = source.record_type || source.type || "record";
   const id = source.record_id || source.id || `idx_${index + 1}`;
   return `${type}:${id}`;
@@ -148,6 +149,28 @@ function buildSourceMap() {
   return map;
 }
 
+function buildRecordLookupMap() {
+  const map = new Map();
+
+  getSources().forEach((source, index) => {
+    const recordId =
+      source?.record_id ||
+      source?.id ||
+      source?.source_id ||
+      source?.linked_record_id ||
+      null;
+
+    if (!recordId) return;
+
+    map.set(String(recordId), {
+      ...source,
+      citation_ref: sourceCitationRef(source, index),
+    });
+  });
+
+  return map;
+}
+
 function renderInlineText(text = "") {
   let html = escapeHtml(String(text || ""));
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
@@ -155,48 +178,10 @@ function renderInlineText(text = "") {
   return html;
 }
 
-function toTitleCase(value = "") {
-  return String(value || "")
-    .replaceAll("_", " ")
-    .replaceAll("-", " ")
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function getSourceLabel(source = {}, ref = "", index = 0) {
-  const preferred =
-    source.display_label ||
-    source.citation_label ||
-    source.link_label ||
-    source.title ||
-    source.label ||
-    source.document_title ||
-    source.name ||
-    "";
-
-  if (preferred && String(preferred).trim()) {
-    return String(preferred).trim();
-  }
-
-  const recordType = source.record_type || source.type || "";
-  const recordId = source.record_id || source.id || "";
-  const ordinal = index + 1;
-
-  if (recordType && recordId) {
-    return `${toTitleCase(recordType)} ${recordId}`;
-  }
-
-  if (recordType) {
-    return `${toTitleCase(recordType)} ${ordinal}`;
-  }
-
-  return ref || `Source ${ordinal}`;
-}
-
 function renderCitationChip(ref = "", source = null) {
   const safeRef = escapeHtml(ref);
-  const label = getSourceLabel(source || {}, ref);
-  const safeLabel = escapeHtml(label);
+  const label = source?.label || source?.title || source?.document_title || ref;
+  const safeLabel = escapeHtml(String(label || ref));
 
   return `
     <button
@@ -206,24 +191,82 @@ function renderCitationChip(ref = "", source = null) {
       title="${safeLabel}"
       aria-label="View source ${safeLabel}"
     >
+      ${safeRef}
+    </button>
+  `;
+}
+
+function renderLinkedRecordChip(label = "", recordId = "", recordType = "") {
+  const safeLabel = escapeHtml(label);
+  const safeRecordId = escapeHtml(String(recordId || ""));
+  const safeRecordType = escapeHtml(String(recordType || ""));
+
+  return `
+    <button
+      class="assistant-citation-chip assistant-citation-chip--record"
+      type="button"
+      data-linked-record-id="${safeRecordId}"
+      data-linked-record-type="${safeRecordType}"
+      aria-label="Open ${safeLabel}"
+      title="${safeLabel}"
+    >
       ${safeLabel}
     </button>
   `;
 }
 
-function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
+function injectRecordLinks(text = "", recordLookup = new Map()) {
   const raw = String(text || "");
+
+  return raw.replace(RECORD_LINK_REGEX, (match, kind, _numberWord, idToken) => {
+    const numericId = String(idToken || "").replace(/[^\d]/g, "");
+    if (!numericId) return match;
+
+    const linked = recordLookup.get(numericId);
+    const label = match;
+
+    return `%%RECORD_LINK_START%%${JSON.stringify({
+      label,
+      recordId: numericId,
+      recordType: linked?.record_type || kind || "",
+    })}%%RECORD_LINK_END%%`;
+  });
+}
+
+function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
+  const recordLookup = buildRecordLookupMap();
+  const raw = injectRecordLinks(String(text || ""), recordLookup);
+
   const parts = [];
   let lastIndex = 0;
 
-  raw.replace(CITATION_REF_REGEX, (match, ref, offset) => {
+  const regex =
+    /%%RECORD_LINK_START%%(.*?)%%RECORD_LINK_END%%|\[([a-z_]+:\w[\w:-]*)\]/gi;
+
+  raw.replace(regex, (match, recordPayload, citationRef, offset) => {
     const before = raw.slice(lastIndex, offset);
     if (before) {
       parts.push(renderInlineText(before));
     }
 
-    const source = sourceMap.get(String(ref || "").toLowerCase()) || null;
-    parts.push(renderCitationChip(ref, source));
+    if (recordPayload) {
+      try {
+        const parsed = JSON.parse(recordPayload);
+        parts.push(
+          renderLinkedRecordChip(
+            parsed.label || "Open record",
+            parsed.recordId || "",
+            parsed.recordType || ""
+          )
+        );
+      } catch {
+        parts.push(renderInlineText(match));
+      }
+    } else if (citationRef) {
+      const source = sourceMap.get(String(citationRef || "").toLowerCase()) || null;
+      parts.push(renderCitationChip(citationRef, source));
+    }
+
     lastIndex = offset + match.length;
     return match;
   });
@@ -239,7 +282,6 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
 function renderAssistantRichText(text = "") {
   const sourceMap = buildSourceMap();
   const lines = String(text || "").split("\n");
-
   const blocks = [];
   let listItems = [];
 
@@ -261,20 +303,17 @@ function renderAssistantRichText(text = "") {
 
     if (/^[-*]\s+/.test(trimmed)) {
       listItems.push(
-        renderParagraphWithCitations(
-          trimmed.replace(/^[-*]\s+/, ""),
-          sourceMap
-        )
+        renderParagraphWithCitations(trimmed.replace(/^[-*]\s+/, ""), sourceMap)
       );
       continue;
     }
 
     if (/^\d+\.\s+/.test(trimmed)) {
-      listItems.push(
-        renderParagraphWithCitations(
-          trimmed.replace(/^\d+\.\s+/, ""),
-          sourceMap
-        )
+      flushList();
+      blocks.push(
+        `<p><strong>${renderParagraphWithCitations(
+          trimmed.replace(/^(\d+\.)\s+/, "$1 ")
+        )}</strong></p>`
       );
       continue;
     }
@@ -502,12 +541,20 @@ function renderSourcesHtml(sources = []) {
       ${sources
         .map((source, index) => {
           const citationRef = sourceCitationRef(source, index);
-          const title = escapeHtml(getSourceLabel(source, citationRef, index));
+          const title = escapeHtml(
+            source?.title ||
+              source?.label ||
+              source?.document_title ||
+              source?.name ||
+              "Source"
+          );
 
           const meta = [
             source?.record_type || source?.type || "",
             source?.section || "",
-            source?.date || source?.created_at || "",
+            source?.created_at
+              ? new Date(source.created_at).toLocaleDateString("en-GB")
+              : "",
           ]
             .filter(Boolean)
             .map((item) => escapeHtml(String(item)))
@@ -519,20 +566,20 @@ function renderSourcesHtml(sources = []) {
             ).slice(0, MAX_SOURCE_EXCERPT)
           );
 
-          const recordId =
-            source?.record_id || source?.id || source?.source_record_id || "";
-          const recordType =
-            source?.record_type || source?.type || source?.source_record_type || "";
-
           return `
             <button
               class="assistant-source-row"
               id="${sourceSafeDomId(citationRef)}"
               type="button"
               data-source-ref="${escapeHtml(citationRef)}"
-              data-record-id="${escapeHtml(String(recordId || ""))}"
-              data-record-type="${escapeHtml(String(recordType || ""))}"
-              title="${title}"
+              data-linked-record-id="${escapeHtml(
+                String(
+                  source?.record_id || source?.id || source?.source_id || ""
+                )
+              )}"
+              data-linked-record-type="${escapeHtml(
+                String(source?.record_type || source?.type || "")
+              )}"
             >
               <div class="assistant-source-row-top">
                 <strong>${title}</strong>
@@ -590,7 +637,28 @@ function renderSuggestedActions() {
           ? action
           : action?.label || action?.title || action?.type || "Action";
 
-      return `<span class="chip">${escapeHtml(label)}</span>`;
+      const actionType =
+        typeof action === "string"
+          ? ""
+          : action?.action_type || action?.type || "create_record";
+
+      const recordType =
+        typeof action === "string"
+          ? ""
+          : action?.record_type || action?.target_record_type || "";
+
+      return `
+        <button
+          class="chip assistant-action-chip"
+          type="button"
+          data-suggestion-action
+          data-action-type="${escapeHtml(String(actionType))}"
+          data-record-type="${escapeHtml(String(recordType))}"
+          data-title="${escapeHtml(String(label))}"
+        >
+          ${escapeHtml(String(label))}
+        </button>
+      `;
     })
     .join("");
 }
@@ -635,7 +703,6 @@ function syncAssistantVisibility() {
 
   if (els.assistantBackdrop) {
     els.assistantBackdrop.classList.toggle("hidden", !isOpen);
-    els.assistantBackdrop.setAttribute("aria-hidden", isOpen ? "false" : "true");
   }
 }
 
@@ -670,13 +737,8 @@ function scrollSourceIntoView(ref = "") {
   }, 1200);
 }
 
-async function openLinkedSourceRecord(button) {
-  if (!button) return false;
-
-  const recordId = button.getAttribute("data-record-id") || "";
-  const recordType = button.getAttribute("data-record-type") || "";
-
-  if (!recordId) return false;
+async function openLinkedRecord(recordId = "", recordType = "") {
+  if (!recordId) return;
 
   try {
     const { openRecordDetail } = await import("./records.js");
@@ -690,14 +752,12 @@ async function openLinkedSourceRecord(button) {
       source_id: safeId,
       record_id: safeId,
       record_type: recordType || "",
-      title: button.textContent?.trim() || "",
+      title: "",
     };
 
     await openRecordDetail(state.activeRecordItem);
-    return true;
   } catch (error) {
-    console.error("[assistant-ui] failed to open linked source record", error);
-    return false;
+    console.error("[assistant-ui] failed opening linked record", error);
   }
 }
 
@@ -709,8 +769,17 @@ function bindCitationEvents() {
     const citation = event.target.closest("[data-citation-ref]");
     if (citation) {
       const ref = citation.getAttribute("data-citation-ref") || "";
-      if (ref) {
-        scrollSourceIntoView(ref);
+      if (ref) scrollSourceIntoView(ref);
+      return;
+    }
+
+    const linkedRecord = event.target.closest("[data-linked-record-id]");
+    if (linkedRecord) {
+      const recordId = linkedRecord.getAttribute("data-linked-record-id") || "";
+      const recordType =
+        linkedRecord.getAttribute("data-linked-record-type") || "";
+      if (recordId) {
+        await openLinkedRecord(recordId, recordType);
       }
       return;
     }
@@ -718,11 +787,7 @@ function bindCitationEvents() {
     const sourceRow = event.target.closest("[data-source-ref]");
     if (sourceRow) {
       const ref = sourceRow.getAttribute("data-source-ref") || "";
-      if (ref) {
-        scrollSourceIntoView(ref);
-      }
-
-      await openLinkedSourceRecord(sourceRow);
+      if (ref) scrollSourceIntoView(ref);
     }
   });
 }
@@ -806,27 +871,11 @@ export function setAssistantExplainability(explainability = null) {
   meta.explainability = explainability || {};
 }
 
-export function setAssistantSuggestedActions(actions = []) {
-  const meta = getAssistantMeta();
-  meta.suggested_actions = Array.isArray(actions) ? actions : [];
-  renderAllAssistantUi();
-}
-
 export function setAssistantScopeSummary(scopeSummary = null) {
   const meta = getAssistantMeta();
   meta.assistant_context = {
     ...(meta.assistant_context || {}),
     ...(scopeSummary || {}),
   };
-  renderAllAssistantUi();
-}
-
-export function openAssistantUi() {
-  state.assistantOpen = true;
-  renderAllAssistantUi();
-}
-
-export function closeAssistantUi() {
-  state.assistantOpen = false;
   renderAllAssistantUi();
 }
