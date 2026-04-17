@@ -1,6 +1,6 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
-import { apiGet } from "../core/api.js";
+import { apiGet, apiPost } from "../core/api.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
 import {
   mapComplianceItem,
@@ -64,6 +64,17 @@ function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function firstArray(...values) {
+  for (const value of values) {
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+}
+
 function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
@@ -86,6 +97,32 @@ function renderEmptyState(message = "No information available.") {
       <p>${toText(message)}</p>
     </div>
   `;
+}
+
+function getGradeTone(band = "") {
+  const value = String(band || "").toLowerCase();
+  if (value === "outstanding") return "success";
+  if (value === "good") return "positive";
+  if (value === "requires_improvement") return "warning";
+  if (value === "inadequate") return "danger";
+  return "muted";
+}
+
+function getConfidenceTone(score) {
+  const value = Number(score || 0);
+  if (value >= 75) return "success";
+  if (value >= 50) return "warning";
+  return "danger";
+}
+
+function formatBand(value) {
+  return String(value || "Unknown").replaceAll("_", " ");
+}
+
+function formatNumber(value, fallback = "0") {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return number % 1 === 0 ? String(number) : number.toFixed(1);
 }
 
 function buildComplianceRows(items = []) {
@@ -299,7 +336,7 @@ function renderRecordRows(items = [], emptyMessage = "No records found.") {
   `;
 }
 
-function renderReadinessHtml({
+function renderLegacyReadinessHtml({
   complianceItems = [],
   overdueItems = [],
   dueSoonItems = [],
@@ -500,7 +537,22 @@ function renderReadinessHtml({
   `;
 }
 
-function getReadinessEndpoints() {
+function getInspectionEndpoints(homeId) {
+  return {
+    homeCards: "/inspection/ui/home-cards",
+    homeHeader: `/inspection/ui/homes/${homeId}/header`,
+    sectionPanels: `/inspection/ui/homes/${homeId}/sections`,
+    reasons: `/inspection/ui/homes/${homeId}/reasons`,
+    actions: `/inspection/ui/homes/${homeId}/actions`,
+    tasks: `/inspection/ui/homes/${homeId}/tasks`,
+    briefing: `/inspection/ui/homes/${homeId}/briefing`,
+    prep72h: `/inspection/ui/homes/${homeId}/72-hour`,
+    refresh: `/inspection/homes/${homeId}/refresh`,
+    syncTasks: `/inspection/homes/${homeId}/sync-tasks`,
+  };
+}
+
+function getLegacyReadinessEndpoints() {
   const scope = getCurrentScope();
   const id = getScopeEntityId();
 
@@ -545,12 +597,766 @@ function renderNoContext() {
   });
 }
 
+function normaliseApiRows(payload) {
+  return firstArray(
+    payload?.items,
+    payload?.rows,
+    payload?.data,
+    payload?.results,
+    payload?.records
+  );
+}
+
+function renderStatCard(label, value, note = "", tone = "muted") {
+  return `
+    <article class="overview-stat-card">
+      <span class="overview-stat-label">${toText(label)}</span>
+      <strong class="overview-stat-value">${toText(value)}</strong>
+      ${note ? `<span class="overview-stat-note ${toText(tone)}">${toText(note)}</span>` : ""}
+    </article>
+  `;
+}
+
+function renderBandChip(label, band, score) {
+  const tone = getGradeTone(band);
+  return `
+    <article class="record-row">
+      <div class="record-row-main">
+        <div class="record-row-title">${toText(label)}</div>
+        <div class="record-row-summary">${toText(formatBand(band))}</div>
+      </div>
+      <div class="record-row-side">
+        <span class="row-pill ${toText(tone)}">${toText(formatNumber(score))}</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderHomeCards(cards = [], selectedHomeId = null) {
+  if (!cards.length) {
+    return renderEmptyState("No inspection readiness cards are available.");
+  }
+
+  return `
+    <div class="record-list readiness-home-cards">
+      ${cards
+        .map((card) => {
+          const isSelected = Number(card.home_id) === Number(selectedHomeId);
+          return `
+            <article
+              class="record-row ${isSelected ? "active" : ""}"
+              data-readiness-home-card="true"
+              data-home-id="${toText(card.home_id)}"
+              role="button"
+              tabindex="0"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(card.home_name)}</div>
+                <div class="record-row-summary">
+                  ${toText(formatBand(card.overall_band))} •
+                  Score ${toText(formatNumber(card.overall_score))} •
+                  Confidence ${toText(formatNumber(card.confidence_score))}
+                </div>
+                <div class="record-row-meta">
+                  ${toText(
+                    [
+                      `${card.open_actions || 0} open actions`,
+                      `${card.overdue_actions || 0} overdue`,
+                      `${card.critical_actions || 0} critical`,
+                    ].join(" • ")
+                  )}
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(getGradeTone(card.overall_band))}">
+                  ${toText(formatBand(card.overall_band))}
+                </span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderSectionPanels(sections = []) {
+  if (!sections.length) {
+    return renderEmptyState("No judgement panels are available.");
+  }
+
+  return `
+    <div class="overview-grid">
+      ${sections
+        .map(
+          (section) => `
+            <section class="overview-section-card">
+              <div class="overview-section-head">
+                <h3>${toText(section.section_name || formatBand(section.section_code))}</h3>
+                <p>${toText(formatBand(section.score_band))} • Score ${toText(formatNumber(section.score_value))}</p>
+              </div>
+              <div class="record-list">
+                <article class="record-row">
+                  <div class="record-row-main">
+                    <div class="record-row-title">Summary</div>
+                    <div class="record-row-summary">${toText(section.summary_text || "No summary available.")}</div>
+                  </div>
+                </article>
+                ${
+                  section.strengths_text
+                    ? `
+                      <article class="record-row">
+                        <div class="record-row-main">
+                          <div class="record-row-title">Strengths</div>
+                          <div class="record-row-summary">${toText(section.strengths_text)}</div>
+                        </div>
+                      </article>
+                    `
+                    : ""
+                }
+                ${
+                  section.concerns_text
+                    ? `
+                      <article class="record-row">
+                        <div class="record-row-main">
+                          <div class="record-row-title">Concerns</div>
+                          <div class="record-row-summary">${toText(section.concerns_text)}</div>
+                        </div>
+                      </article>
+                    `
+                    : ""
+                }
+              </div>
+            </section>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderReasonRows(reasons = []) {
+  if (!reasons.length) {
+    return renderEmptyState("No inspection reasons are available.");
+  }
+
+  return `
+    <div class="record-list">
+      ${reasons
+        .map(
+          (reason) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(reason.title || "Reason")}</div>
+                <div class="record-row-summary">
+                  ${toText(
+                    [
+                      reason.section_name || formatBand(reason.section_code),
+                      reason.reason_type || "",
+                      reason.priority ? `Priority ${reason.priority}` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")
+                  )}
+                </div>
+                <div class="record-row-meta">${toText(reason.description || "No description available.")}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(
+                  reason.reason_type === "limiting_factor"
+                    ? "warning"
+                    : reason.reason_type === "concern"
+                    ? "warning"
+                    : "muted"
+                )}">
+                  ${toText(reason.reason_type || "recorded")}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderActionRows(actions = []) {
+  if (!actions.length) {
+    return renderEmptyState("No open inspection actions are available.");
+  }
+
+  return `
+    <div class="record-list">
+      ${actions
+        .map(
+          (action) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(action.action_title || "Action")}</div>
+                <div class="record-row-summary">
+                  ${toText(
+                    [
+                      action.section_name || formatBand(action.section_code),
+                      action.priority || "",
+                      action.due_date ? `Due ${formatDate(action.due_date)}` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")
+                  )}
+                </div>
+                <div class="record-row-meta">
+                  ${toText(
+                    [
+                      action.owner_user_name || action.owner_staff_name || "Unassigned",
+                      action.recoverable_points_estimate
+                        ? `Impact ${formatNumber(action.recoverable_points_estimate)}`
+                        : "",
+                      action.projected_section_band
+                        ? `Projected ${formatBand(action.projected_section_band)}`
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")
+                  )}
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(
+                  action.priority === "critical" || action.priority === "high"
+                    ? "warning"
+                    : "muted"
+                )}">
+                  ${toText(action.priority || "open")}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderTaskRows(tasks = []) {
+  if (!tasks.length) {
+    return renderEmptyState("No linked inspection tasks are available.");
+  }
+
+  return `
+    <div class="record-list">
+      ${tasks
+        .map(
+          (task) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(task.task_title || task.action_title || "Task")}</div>
+                <div class="record-row-summary">
+                  ${toText(
+                    [
+                      task.action_title || "",
+                      task.task_due_date ? `Due ${formatDate(task.task_due_date)}` : "",
+                      task.assigned_user_name || "Unassigned",
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")
+                  )}
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(task.completed ? "positive" : "warning")}">
+                  ${toText(task.completed ? "completed" : "open")}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderBriefingPanel(briefing = null, prep72h = null) {
+  if (!briefing && !prep72h) {
+    return renderEmptyState("No inspection briefing is available.");
+  }
+
+  return `
+    <section class="overview-section-card">
+      <div class="overview-section-head">
+        <h3>Manager briefing</h3>
+        <p>Plain-English summary of the current inspection picture.</p>
+      </div>
+      <div class="record-list">
+        ${
+          briefing?.headline_summary
+            ? `
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Headline</div>
+                  <div class="record-row-summary">${toText(briefing.headline_summary)}</div>
+                </div>
+              </article>
+            `
+            : ""
+        }
+        ${
+          briefing?.overall_position_statement
+            ? `
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Overall position</div>
+                  <div class="record-row-summary">${toText(briefing.overall_position_statement)}</div>
+                </div>
+              </article>
+            `
+            : ""
+        }
+        ${
+          briefing?.likely_inspector_focus
+            ? `
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Likely inspector focus</div>
+                  <div class="record-row-summary">${toText(briefing.likely_inspector_focus)}</div>
+                </div>
+              </article>
+            `
+            : ""
+        }
+        ${
+          briefing?.immediate_priority_actions
+            ? `
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Immediate priority actions</div>
+                  <div class="record-row-summary">${toText(briefing.immediate_priority_actions)}</div>
+                </div>
+              </article>
+            `
+            : ""
+        }
+        ${
+          prep72h
+            ? `
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">72-hour inspection focus</div>
+                  <div class="record-row-summary">
+                    ${toText(
+                      [
+                        prep72h.inspection_pressure_level,
+                        prep72h.primary_focus_area,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")
+                    )}
+                  </div>
+                  ${
+                    prep72h.urgent_actions
+                      ? `<div class="record-row-meta">${toText(prep72h.urgent_actions)}</div>`
+                      : ""
+                  }
+                </div>
+              </article>
+            `
+            : ""
+        }
+      </div>
+    </section>
+  `;
+}
+
+function renderInspectionDetail({
+  selectedCard,
+  header,
+  sections,
+  reasons,
+  actions,
+  tasks,
+  briefing,
+  prep72h,
+}) {
+  if (!header && !selectedCard) {
+    return renderEmptyState("No inspection detail is available for this home.");
+  }
+
+  const detail = header || selectedCard || {};
+  const topBand = detail.overall_band;
+  const topScore = detail.overall_score;
+  const confidenceScore = detail.confidence_score;
+
+  return `
+    <section class="overview-panel">
+      <div class="overview-panel-head">
+        <div>
+          <div class="eyebrow">Inspection readiness</div>
+          <h2>${toText(detail.home_name || getScopeTitle())}</h2>
+          <p>
+            ${toText(
+              detail.top_concerns ||
+                detail.narrative_summary ||
+                "Live inspection readiness, actions, and likely areas of inspector focus."
+            )}
+          </p>
+        </div>
+        <div class="overview-panel-actions">
+          <button class="btn btn-secondary" data-readiness-sync="true">Sync actions</button>
+          <button class="btn btn-primary" data-readiness-refresh="true">Refresh inspection cycle</button>
+        </div>
+      </div>
+
+      <div class="overview-stats-grid">
+        ${renderStatCard("Overall band", formatBand(topBand), `Score ${formatNumber(topScore)}`, getGradeTone(topBand))}
+        ${renderStatCard("Confidence", formatNumber(confidenceScore), "Inspection confidence", getConfidenceTone(confidenceScore))}
+        ${renderStatCard("Open actions", detail.open_actions || 0, `${detail.overdue_actions || 0} overdue`, detail.overdue_actions > 0 ? "warning" : "muted")}
+        ${renderStatCard("Critical actions", detail.critical_actions || 0, `${detail.open_lines_of_enquiry || 0} open lines of enquiry`, detail.critical_actions > 0 ? "warning" : "muted")}
+      </div>
+
+      <div class="overview-grid">
+        <section class="overview-main">
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Judgement areas</h3>
+              <p>Current position across the three main inspection domains.</p>
+            </div>
+            <div class="record-list">
+              ${renderBandChip("Experiences and progress", detail.experiences_band, detail.experiences_score)}
+              ${renderBandChip("Helped and protected", detail.helped_band, detail.helped_score)}
+              ${renderBandChip("Leadership and management", detail.leadership_band, detail.leadership_score)}
+            </div>
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Judgement summaries</h3>
+              <p>Section-level narrative, strengths, and concerns.</p>
+            </div>
+            ${renderSectionPanels(sections)}
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Top inspection reasons</h3>
+              <p>Why the home is currently graded this way.</p>
+            </div>
+            ${renderReasonRows(reasons)}
+          </section>
+        </section>
+
+        <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Best next actions</h3>
+              <p>Ordered by likely impact on the inspection picture.</p>
+            </div>
+            ${renderActionRows(actions)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Linked tasks</h3>
+              <p>Operational tasks connected to inspection improvement work.</p>
+            </div>
+            ${renderTaskRows(tasks)}
+          </section>
+
+          <section class="overview-side-card">
+            ${renderBriefingPanel(briefing, prep72h)}
+          </section>
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+function chooseSelectedHome(cards = []) {
+  const currentHomeId = getHomeId();
+  const selectedHomeId =
+    state.readinessSelectedHomeId ||
+    currentHomeId ||
+    cards[0]?.home_id ||
+    null;
+
+  const selectedCard =
+    cards.find((card) => Number(card.home_id) === Number(selectedHomeId)) || cards[0] || null;
+
+  if (selectedCard?.home_id) {
+    state.readinessSelectedHomeId = selectedCard.home_id;
+  }
+
+  return selectedCard;
+}
+
+function updateReadinessSummaryFromInspection(detail = {}) {
+  updateWorkspaceSummaryStrip({
+    today: `${formatBand(detail.overall_band || "unknown")} • Score ${formatNumber(detail.overall_score)}`,
+    nextEvent: detail.next_action_due_date
+      ? `Next action due ${formatDate(detail.next_action_due_date)}`
+      : "No immediate inspection deadline",
+    lastRecord: detail.top_concerns || "No major concerns recorded",
+    openActions: `${detail.open_actions || 0} open • ${detail.overdue_actions || 0} overdue`,
+  });
+}
+
+function updateReadinessSummaryFromLegacy({
+  overdueItems = [],
+  dueSoonItems = [],
+  openTasks = [],
+  oversightRows = [],
+  documents = [],
+}) {
+  const nextDeadline =
+    overdueItems[0] ||
+    dueSoonItems[0] ||
+    openTasks[0] ||
+    documents[0] ||
+    null;
+
+  updateWorkspaceSummaryStrip({
+    today: `${overdueItems.length} overdue • ${openTasks.length} open actions`,
+    nextEvent: nextDeadline
+      ? `Next due ${formatDate(
+          nextDeadline.due_date ||
+            nextDeadline.review_date ||
+            nextDeadline.expiry_date ||
+            nextDeadline.created_at
+        )}`
+      : "No immediate readiness deadline",
+    lastRecord: oversightRows[0]
+      ? `${oversightRows[0].title || "Oversight action"}`
+      : "No recent readiness action",
+    openActions: `${openTasks.length} open • ${dueSoonItems.length} due soon`,
+  });
+}
+
+async function tryLoadInspectionReadiness() {
+  const homeId = getHomeId();
+  const scope = getCurrentScope();
+
+  if (!homeId || (scope !== "home" && scope !== "quality")) {
+    return null;
+  }
+
+  const endpoints = getInspectionEndpoints(homeId);
+
+  const [cardsRes, headerRes, sectionsRes, reasonsRes, actionsRes, tasksRes, briefingRes, prepRes] =
+    await Promise.all([
+      apiGet(endpoints.homeCards).catch(() => null),
+      apiGet(endpoints.homeHeader).catch(() => null),
+      apiGet(endpoints.sectionPanels).catch(() => null),
+      apiGet(endpoints.reasons).catch(() => null),
+      apiGet(endpoints.actions).catch(() => null),
+      apiGet(endpoints.tasks).catch(() => null),
+      apiGet(endpoints.briefing).catch(() => null),
+      apiGet(endpoints.prep72h).catch(() => null),
+    ]);
+
+  const cards = normaliseApiRows(cardsRes);
+  const selectedCard = chooseSelectedHome(cards);
+
+  const headerRows = normaliseApiRows(headerRes);
+  const sectionRows = normaliseApiRows(sectionsRes);
+  const reasonRows = normaliseApiRows(reasonsRes);
+  const actionRows = normaliseApiRows(actionsRes);
+  const taskRows = normaliseApiRows(tasksRes);
+  const briefingRows = normaliseApiRows(briefingRes);
+  const prepRows = normaliseApiRows(prepRes);
+
+  const header =
+    headerRows.find((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)) ||
+    headerRows[0] ||
+    selectedCard ||
+    null;
+
+  const sections = sectionRows.filter(
+    (row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)
+  );
+  const reasons = sortNewestFirst(
+    reasonRows.filter((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)),
+    ["priority", "created_at"]
+  );
+  const actions = sortSoonestFirst(
+    actionRows.filter((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)),
+    ["due_date", "created_at"]
+  );
+  const tasks = sortSoonestFirst(
+    taskRows.filter((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)),
+    ["task_due_date", "action_due_date", "task_created_at"]
+  );
+  const briefing =
+    briefingRows.find((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)) ||
+    briefingRows[0] ||
+    null;
+  const prep72h =
+    prepRows.find((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)) ||
+    prepRows[0] ||
+    null;
+
+  const hasInspectionData =
+    cards.length ||
+    header ||
+    sections.length ||
+    reasons.length ||
+    actions.length ||
+    tasks.length ||
+    briefing ||
+    prep72h;
+
+  if (!hasInspectionData) {
+    return null;
+  }
+
+  return {
+    cards,
+    selectedCard,
+    header,
+    sections,
+    reasons,
+    actions,
+    tasks,
+    briefing,
+    prep72h,
+    endpoints,
+  };
+}
+
+async function loadLegacyReadiness() {
+  const endpoints = getLegacyReadinessEndpoints();
+
+  if (!endpoints) {
+    renderNoContext();
+    return;
+  }
+
+  const [complianceData, tasksData, documentsData] = await Promise.all([
+    apiGet(endpoints.compliance).catch(() => ({ items: [] })),
+    endpoints.tasks
+      ? apiGet(endpoints.tasks).catch(() => ({ items: [] }))
+      : Promise.resolve({ items: [] }),
+    apiGet(endpoints.documents).catch(() => ({ items: [] })),
+  ]);
+
+  const complianceItems = sortSoonestFirst(
+    (
+      complianceData.items ||
+      complianceData.records ||
+      complianceData.compliance_items ||
+      []
+    ).map(mapComplianceItem),
+    ["due_date", "created_at"]
+  );
+
+  const tasks = sortSoonestFirst(
+    (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
+    ["due_date", "created_at"]
+  );
+
+  const documents = sortNewestFirst(
+    (
+      documentsData.items ||
+      documentsData.records ||
+      documentsData.documents ||
+      documentsData.statutory_documents ||
+      []
+    ).map(mapStatutoryDocument),
+    ["review_date", "expiry_date", "created_at"]
+  );
+
+  const overdueItems = complianceItems.filter((item) =>
+    ["overdue", "escalated", "missing", "review_due"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  );
+
+  const dueSoonItems = complianceItems.filter((item) =>
+    ["due_soon", "due soon", "expiring"].includes(
+      String(item.status || "").toLowerCase()
+    )
+  );
+
+  const openTasks = tasks.filter((item) => !item.completed);
+  const oversightRows = buildOversightRows(complianceItems, tasks);
+
+  els.viewContent.innerHTML = renderLegacyReadinessHtml({
+    complianceItems,
+    overdueItems,
+    dueSoonItems,
+    tasks,
+    openTasks,
+    documents,
+    oversightRows,
+  });
+
+  updateReadinessSummaryFromLegacy({
+    overdueItems,
+    dueSoonItems,
+    openTasks,
+    oversightRows,
+    documents,
+  });
+}
+
+function bindInspectionReadinessEvents(endpoints) {
+  if (!els.viewContent || !endpoints) return;
+
+  els.viewContent
+    .querySelectorAll("[data-readiness-home-card]")
+    .forEach((button) => {
+      button.addEventListener("click", async () => {
+        const homeId = Number(button.dataset.homeId || 0);
+        if (!homeId) return;
+        state.readinessSelectedHomeId = homeId;
+        await loadReadiness();
+      });
+    });
+
+  const refreshButton = els.viewContent.querySelector("[data-readiness-refresh='true']");
+  if (refreshButton) {
+    refreshButton.addEventListener("click", async () => {
+      refreshButton.disabled = true;
+      refreshButton.textContent = "Refreshing...";
+      try {
+        if (apiPost) {
+          await apiPost(endpoints.refresh, {});
+        } else {
+          await fetch(endpoints.refresh, { method: "POST", credentials: "include" });
+        }
+        await loadReadiness();
+      } catch (error) {
+        console.error("Failed to refresh inspection cycle", error);
+      } finally {
+        refreshButton.disabled = false;
+        refreshButton.textContent = "Refresh inspection cycle";
+      }
+    });
+  }
+
+  const syncButton = els.viewContent.querySelector("[data-readiness-sync='true']");
+  if (syncButton) {
+    syncButton.addEventListener("click", async () => {
+      syncButton.disabled = true;
+      syncButton.textContent = "Syncing...";
+      try {
+        if (apiPost) {
+          await apiPost(endpoints.syncTasks, {});
+        } else {
+          await fetch(endpoints.syncTasks, { method: "POST", credentials: "include" });
+        }
+        await loadReadiness();
+      } catch (error) {
+        console.error("Failed to sync readiness tasks", error);
+      } finally {
+        syncButton.disabled = false;
+        syncButton.textContent = "Sync actions";
+      }
+    });
+  }
+}
+
 export async function loadReadiness() {
   if (!els.viewContent) return;
 
-  const endpoints = getReadinessEndpoints();
-
-  if (!endpoints) {
+  if (!getScopeEntityId()) {
     renderNoContext();
     return;
   }
@@ -565,99 +1371,55 @@ export async function loadReadiness() {
   `;
 
   try {
-    const [complianceData, tasksData, documentsData] = await Promise.all([
-      apiGet(endpoints.compliance).catch(() => ({ items: [] })),
-      endpoints.tasks
-        ? apiGet(endpoints.tasks).catch(() => ({ items: [] }))
-        : Promise.resolve({ items: [] }),
-      apiGet(endpoints.documents).catch(() => ({ items: [] })),
-    ]);
+    const inspectionData = await tryLoadInspectionReadiness();
 
-    const complianceItems = sortSoonestFirst(
-      (
-        complianceData.items ||
-        complianceData.records ||
-        complianceData.compliance_items ||
-        []
-      ).map(mapComplianceItem),
-      ["due_date", "created_at"]
-    );
+    if (inspectionData) {
+      els.viewContent.innerHTML = `
+        <div class="overview-grid">
+          <section class="overview-main">
+            <section class="overview-section-card">
+              <div class="overview-section-head">
+                <h3>Homes</h3>
+                <p>Live inspection readiness across available homes.</p>
+              </div>
+              ${renderHomeCards(
+                inspectionData.cards,
+                inspectionData.selectedCard?.home_id || state.readinessSelectedHomeId
+              )}
+            </section>
+          </section>
+        </div>
+        ${renderInspectionDetail(inspectionData)}
+      `;
 
-    const tasks = sortSoonestFirst(
-      (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
-      ["due_date", "created_at"]
-    );
+      updateReadinessSummaryFromInspection(
+        inspectionData.header || inspectionData.selectedCard || {}
+      );
+      bindInspectionReadinessEvents(inspectionData.endpoints);
+      return;
+    }
 
-    const documents = sortNewestFirst(
-      (
-        documentsData.items ||
-        documentsData.records ||
-        documentsData.documents ||
-        documentsData.statutory_documents ||
-        []
-      ).map(mapStatutoryDocument),
-      ["review_date", "expiry_date", "created_at"]
-    );
-
-    const overdueItems = complianceItems.filter((item) =>
-      ["overdue", "escalated", "missing", "review_due"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const dueSoonItems = complianceItems.filter((item) =>
-      ["due_soon", "due soon", "expiring"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const openTasks = tasks.filter((item) => !item.completed);
-    const oversightRows = buildOversightRows(complianceItems, tasks);
-
-    els.viewContent.innerHTML = renderReadinessHtml({
-      complianceItems,
-      overdueItems,
-      dueSoonItems,
-      tasks,
-      openTasks,
-      documents,
-      oversightRows,
-    });
-
-    const nextDeadline =
-      overdueItems[0] ||
-      dueSoonItems[0] ||
-      openTasks[0] ||
-      documents[0] ||
-      null;
-
-    updateWorkspaceSummaryStrip({
-      today: `${overdueItems.length} overdue • ${openTasks.length} open actions`,
-      nextEvent: nextDeadline
-        ? `Next due ${formatDate(
-            nextDeadline.due_date ||
-              nextDeadline.review_date ||
-              nextDeadline.expiry_date ||
-              nextDeadline.created_at
-          )}`
-        : "No immediate readiness deadline",
-      lastRecord: oversightRows[0]
-        ? `${oversightRows[0].title || "Oversight action"}`
-        : "No recent readiness action",
-      openActions: `${openTasks.length} open • ${dueSoonItems.length} due soon`,
-    });
+    await loadLegacyReadiness();
   } catch (error) {
-    els.viewContent.innerHTML = `
-      <div class="empty-state">
-        <p>${escapeHtml(error.message || "Failed to load readiness.")}</p>
-      </div>
-    `;
+    console.error("Failed to load readiness", error);
 
-    updateWorkspaceSummaryStrip({
-      today: "Readiness unavailable",
-      nextEvent: "Unable to load",
-      lastRecord: "No readiness data",
-      openActions: "Check API routes",
-    });
+    try {
+      await loadLegacyReadiness();
+    } catch (legacyError) {
+      els.viewContent.innerHTML = `
+        <div class="empty-state">
+          <p>${escapeHtml(
+            legacyError.message || error.message || "Failed to load readiness."
+          )}</p>
+        </div>
+      `;
+
+      updateWorkspaceSummaryStrip({
+        today: "Readiness unavailable",
+        nextEvent: "Unable to load",
+        lastRecord: "No readiness data",
+        openActions: "Check API routes",
+      });
+    }
   }
 }
