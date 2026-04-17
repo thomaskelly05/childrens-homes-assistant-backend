@@ -171,6 +171,9 @@ function hasUsableData(data) {
   if (Array.isArray(data.reports) && data.reports.length > 0) return true;
   if (Array.isArray(data.monthly_reviews) && data.monthly_reviews.length > 0) return true;
   if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
+  if (Array.isArray(data.inspection_home_cards) && data.inspection_home_cards.length > 0) return true;
+  if (Array.isArray(data.inspection_headers) && data.inspection_headers.length > 0) return true;
+  if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0) return true;
   if (data.summary && typeof data.summary === "object") return true;
   if (data.home && typeof data.home === "object") return true;
   return false;
@@ -359,12 +362,51 @@ function normaliseComplianceItems(data = {}) {
   }));
 }
 
+function normaliseInspectionCards(data = {}) {
+  return toArray(data.items, [data.inspection_home_cards, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.home_id ?? item.source_id ?? null,
+    record_type: item.record_type || "inspection_home_card",
+    title: item.home_name || "Inspection card",
+    status: item.overall_band || "recorded",
+    overall_score: item.overall_score ?? 0,
+    confidence_score: item.confidence_score ?? 0,
+    open_actions: item.open_actions ?? 0,
+    overdue_actions: item.overdue_actions ?? 0,
+    summary:
+      item.summary ||
+      `${item.overall_band || "Band"} • Score ${item.overall_score ?? 0}`,
+    updated_at: item.updated_at || item.created_at || null,
+  }));
+}
+
+function normaliseInspectionActions(data = {}) {
+  return toArray(data.items, [data.inspection_actions, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.source_id ?? null,
+    record_type: item.record_type || "inspection_action",
+    title: item.action_title || item.title || "Inspection action",
+    status: item.status || item.priority || "open",
+    priority: item.priority || "",
+    due_date: item.due_date || null,
+    owner_user_name: item.owner_user_name || item.owner_staff_name || "",
+    projected_section_band: item.projected_section_band || "",
+    summary:
+      item.summary ||
+      item.action_description ||
+      item.evidence_required ||
+      "Inspection action available.",
+    updated_at: item.updated_at || item.created_at || null,
+  }));
+}
+
 function buildTopStats({
   youngPeople = [],
   openTasks = [],
   overdueItems = [],
   dueSupervisions = [],
   recentCommunications = [],
+  inspectionActions = [],
 }) {
   return [
     {
@@ -397,6 +439,12 @@ function buildTopStats({
       note: "Latest liaison activity",
       tone: "muted",
     },
+    {
+      label: "Inspection actions",
+      value: inspectionActions.length,
+      note: "Readiness actions open",
+      tone: inspectionActions.length ? "warning" : "success",
+    },
   ];
 }
 
@@ -405,6 +453,7 @@ function buildOperationalCounts({
   tasks = [],
   documents = [],
   compliance = [],
+  inspectionActions = [],
 }) {
   const openVacancies = team.filter((item) =>
     ["vacant", "vacancy"].includes(
@@ -432,12 +481,19 @@ function buildOperationalCounts({
     )
   ).length;
 
+  const urgentInspection = inspectionActions.filter((item) =>
+    ["critical", "high", "overdue"].includes(
+      String(item.priority || item.status || "").toLowerCase().replaceAll(" ", "_")
+    )
+  ).length;
+
   return {
     openVacancies,
     absentStaff,
     openActions,
     docReviewsDue,
     urgentCompliance,
+    urgentInspection,
   };
 }
 
@@ -446,8 +502,20 @@ function buildPriorityItems({
   dueSupervisions = [],
   expiringDocuments = [],
   urgentCompliance = [],
+  urgentInspection = [],
 }) {
   const items = [];
+
+  urgentInspection.slice(0, 2).forEach((item) => {
+    items.push({
+      title: item.title || "Urgent inspection action",
+      summary:
+        item.summary ||
+        (item.due_date
+          ? `Due ${formatDate(item.due_date)}`
+          : "Inspection action needs immediate review."),
+    });
+  });
 
   urgentCompliance.slice(0, 2).forEach((item) => {
     items.push({
@@ -485,7 +553,7 @@ function buildPriorityItems({
     });
   });
 
-  return items.slice(0, 6);
+  return items.slice(0, 8);
 }
 
 function buildHomeKpis({
@@ -494,6 +562,7 @@ function buildHomeKpis({
   supervisions = [],
   therapy = [],
   compliance = [],
+  inspectionCards = [],
 }) {
   const urgentCompliance = compliance.filter((item) =>
     ["overdue", "escalated", "review_due", "missing"].includes(
@@ -527,7 +596,7 @@ function buildHomeKpis({
       : 0;
 
   const completedSupervisions = supervisions.filter((item) =>
-    ["completed", "done", "active"].includes(
+    ["completed", "done", "active", "current"].includes(
       String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
@@ -541,6 +610,8 @@ function buildHomeKpis({
       String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
+
+  const inspectionScore = inspectionCards[0]?.overall_score ?? 0;
 
   return [
     {
@@ -584,6 +655,19 @@ function buildHomeKpis({
           : "danger",
     },
     {
+      label: "Inspection score",
+      value: inspectionScore ? `${inspectionScore}` : "—",
+      percent: Math.min(Math.max(Number(inspectionScore) || 0, 0), 100),
+      tone:
+        inspectionScore >= 85
+          ? "success"
+          : inspectionScore >= 70
+          ? "warning"
+          : inspectionScore > 0
+          ? "danger"
+          : "muted",
+    },
+    {
       label: "Therapeutic input",
       value: activeTherapy,
       percent: Math.min(activeTherapy * 20, 100),
@@ -598,6 +682,7 @@ function buildMiniMetrics({
   recentDocuments = [],
   therapyItems = [],
   recentCommunications = [],
+  inspectionActions = [],
 }) {
   return [
     { label: "Tasks", value: openTasks.length },
@@ -605,6 +690,7 @@ function buildMiniMetrics({
     { label: "Documents", value: recentDocuments.length },
     { label: "Therapy", value: therapyItems.length },
     { label: "Comms", value: recentCommunications.length },
+    { label: "Inspection", value: inspectionActions.length },
   ];
 }
 
@@ -622,7 +708,7 @@ function renderEmptyState(message = "No home dashboard data available.") {
 
 function renderStatCards(cards = []) {
   return `
-    <div class="overview-stats-grid overview-stats-grid--five">
+    <div class="overview-stats-grid overview-stats-grid--six">
       ${cards
         .map(
           (card) => `
@@ -809,6 +895,47 @@ function renderMiniChart(title, items = [], key = "value") {
   `;
 }
 
+function renderInspectionCards(cards = []) {
+  if (!cards.length) {
+    return `
+      <div class="empty-state">
+        <p>No inspection scorecards are available right now.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${cards
+        .map(
+          (item) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(item.title)}</div>
+                <div class="record-row-summary">${safeText(item.summary)}</div>
+                <div class="record-row-meta">
+                  ${safeText(
+                    [
+                      `Confidence ${item.confidence_score ?? 0}`,
+                      `${item.open_actions ?? 0} open actions`,
+                      `${item.overdue_actions ?? 0} overdue`,
+                    ].join(" • ")
+                  )}
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${safeText(getStatusTone(item.status || ""))}">
+                  ${safeText(item.status || "recorded")}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderHomeDashboardHtml({
   homeName = "Home",
   topStats = [],
@@ -824,6 +951,8 @@ function renderHomeDashboardHtml({
   miniMetrics = [],
   youngPeople = [],
   recentReports = [],
+  inspectionCards = [],
+  inspectionActions = [],
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
@@ -831,7 +960,7 @@ function renderHomeDashboardHtml({
         <div>
           <div class="eyebrow">Home dashboard</div>
           <h2>${safeText(homeName)}</h2>
-          <p>A live home-wide management view across children, staffing, communication, documents, therapy and oversight.</p>
+          <p>A live home-wide management view across children, staffing, communication, documents, therapy, inspection readiness and oversight.</p>
         </div>
       </div>
 
@@ -840,7 +969,7 @@ function renderHomeDashboardHtml({
       <div class="overview-section-card">
         <div class="overview-section-head">
           <h3>Performance snapshot</h3>
-          <p>A quick visual read across completion, compliance and readiness.</p>
+          <p>A quick visual read across completion, compliance, readiness and inspection position.</p>
         </div>
         ${renderProgressCards(progressCards)}
       </div>
@@ -850,7 +979,7 @@ function renderHomeDashboardHtml({
           <div class="overview-section-card">
             <div class="overview-section-head">
               <h3>Operational picture</h3>
-              <p>The quickest view of workforce, actions, vacancies and document review pressure.</p>
+              <p>The quickest view of workforce, actions, vacancies, inspection pressure and document review pressure.</p>
             </div>
 
             <div class="record-list">
@@ -887,6 +1016,18 @@ function renderHomeDashboardHtml({
                   <span class="row-pill ${
                     operationalCounts.urgentCompliance > 0 ? "danger" : "muted"
                   }">${safeText(operationalCounts.urgentCompliance)}</span>
+                </div>
+              </article>
+
+              <article class="record-row">
+                <div class="record-row-main">
+                  <div class="record-row-title">Urgent inspection actions</div>
+                  <div class="record-row-summary">Inspection readiness actions needing urgent focus.</div>
+                </div>
+                <div class="record-row-side">
+                  <span class="row-pill ${
+                    operationalCounts.urgentInspection > 0 ? "danger" : "muted"
+                  }">${safeText(operationalCounts.urgentInspection)}</span>
                 </div>
               </article>
 
@@ -997,6 +1138,15 @@ function renderHomeDashboardHtml({
                 [item.role || "", item.status || ""].filter(Boolean).join(" • "),
             })}
           </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Inspection readiness</h3>
+              <p>Current inspection scorecards and readiness position.</p>
+            </div>
+
+            ${renderInspectionCards(inspectionCards)}
+          </div>
         </section>
 
         <aside class="overview-side">
@@ -1010,6 +1160,29 @@ function renderHomeDashboardHtml({
           </section>
 
           ${renderMiniChart("Management activity", miniMetrics, "value")}
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Inspection actions</h3>
+              <p>Actions most likely to affect inspection confidence and readiness.</p>
+            </div>
+
+            ${renderRows(inspectionActions, {
+              emptyMessage: "No open inspection actions found.",
+              titleKey: "title",
+              summaryKey: "summary",
+              recordType: "inspection_action",
+              metaBuilder: (item) =>
+                [
+                  item.owner_user_name || "",
+                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+                  item.projected_section_band || "",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+              statusKey: "priority",
+            })}
+          </section>
 
           <section class="overview-side-card">
             <div class="overview-section-head">
@@ -1309,6 +1482,33 @@ function buildFallbackData(homeId) {
         },
       ],
     },
+    inspectionCardsData: {
+      items: [
+        {
+          id: homeId,
+          home_id: homeId,
+          home_name: homeName,
+          overall_band: "Good",
+          overall_score: 78,
+          confidence_score: 72,
+          open_actions: 4,
+          overdue_actions: 1,
+        },
+      ],
+    },
+    inspectionActionsData: {
+      items: [
+        {
+          id: 901,
+          action_title: "Tighten evidence for leadership oversight",
+          priority: "high",
+          due_date: dateOnly(3),
+          owner_user_name: "Sarah Jones",
+          projected_section_band: "good",
+          action_description: "Complete evidence against recent management audit actions.",
+        },
+      ],
+    },
     isFallback: true,
   };
 }
@@ -1326,6 +1526,8 @@ async function fetchDataset(homeId) {
     safeGet(`/homes/${homeId}/therapy`),
     safeGet(`/homes/${homeId}/reports`),
     safeGet(`/homes/${homeId}/compliance`),
+    safeGet(`/inspection/ui/home-cards`),
+    safeGet(`/inspection/ui/homes/${homeId}/actions`),
   ];
 
   const [
@@ -1338,6 +1540,8 @@ async function fetchDataset(homeId) {
     therapyData,
     reportData,
     complianceData,
+    inspectionCardsData,
+    inspectionActionsData,
   ] = await Promise.all(requests);
 
   const responses = [
@@ -1350,6 +1554,8 @@ async function fetchDataset(homeId) {
     therapyData,
     reportData,
     complianceData,
+    inspectionCardsData,
+    inspectionActionsData,
   ];
 
   const hasLiveSuccess = responses.some(hasUsableData);
@@ -1368,6 +1574,8 @@ async function fetchDataset(homeId) {
     therapyData: therapyData || { items: [] },
     reportData: reportData || { items: [] },
     complianceData: complianceData || { items: [] },
+    inspectionCardsData: inspectionCardsData || { items: [] },
+    inspectionActionsData: inspectionActionsData || { items: [] },
     isFallback: false,
   };
 }
@@ -1395,6 +1603,8 @@ export async function loadHomeDashboard() {
       therapyData,
       reportData,
       complianceData,
+      inspectionCardsData,
+      inspectionActionsData,
       isFallback,
     } = await fetchDataset(homeId);
 
@@ -1474,12 +1684,31 @@ export async function loadHomeDashboard() {
       )
     );
 
+    const inspectionCards = sortNewestFirst(
+      normaliseInspectionCards(inspectionCardsData).filter(
+        (item) => Number(item.id) === Number(homeId) || Number(item.home_id) === Number(homeId)
+      ),
+      ["updated_at", "created_at"]
+    ).slice(0, 1);
+
+    const inspectionActions = sortSoonestFirst(
+      normaliseInspectionActions(inspectionActionsData),
+      ["due_date", "updated_at", "created_at"]
+    ).slice(0, 6);
+
+    const urgentInspection = inspectionActions.filter((item) =>
+      ["critical", "high", "overdue"].includes(
+        String(item.priority || item.status || "").toLowerCase().replaceAll(" ", "_")
+      )
+    );
+
     const topStats = buildTopStats({
       youngPeople,
       openTasks,
-      overdueItems: [...overdueTasks, ...urgentCompliance],
+      overdueItems: [...overdueTasks, ...urgentCompliance, ...urgentInspection],
       dueSupervisions,
       recentCommunications: communicationItems,
+      inspectionActions,
     });
 
     const operationalCounts = buildOperationalCounts({
@@ -1487,6 +1716,7 @@ export async function loadHomeDashboard() {
       tasks: taskItems,
       documents: documentItems,
       compliance: complianceItems,
+      inspectionActions,
     });
 
     const priorityItems = buildPriorityItems({
@@ -1494,6 +1724,7 @@ export async function loadHomeDashboard() {
       dueSupervisions,
       expiringDocuments,
       urgentCompliance,
+      urgentInspection,
     });
 
     const progressCards = buildHomeKpis({
@@ -1502,6 +1733,7 @@ export async function loadHomeDashboard() {
       supervisions: supervisionItems,
       therapy: therapyItems,
       compliance: complianceItems,
+      inspectionCards,
     });
 
     const miniMetrics = buildMiniMetrics({
@@ -1510,6 +1742,7 @@ export async function loadHomeDashboard() {
       recentDocuments,
       therapyItems,
       recentCommunications: communicationItems,
+      inspectionActions,
     });
 
     const homeName =
@@ -1535,9 +1768,12 @@ export async function loadHomeDashboard() {
       miniMetrics,
       youngPeople,
       recentReports,
+      inspectionCards,
+      inspectionActions,
     });
 
     const nextDueSupervision = dueSupervisions[0];
+    const nextInspectionAction = inspectionActions[0];
     const latestCommunication = communicationItems[0];
     const todaySummary = `${youngPeople.length} children • ${openTasks.length} open actions`;
 
@@ -1545,7 +1781,9 @@ export async function loadHomeDashboard() {
       today: isFallback
         ? `${todaySummary} • demo preview`
         : todaySummary,
-      nextEvent: nextDueSupervision?.due_date
+      nextEvent: nextInspectionAction?.due_date
+        ? `Inspection action due ${formatDate(nextInspectionAction.due_date)}`
+        : nextDueSupervision?.due_date
         ? `Supervision due ${formatDate(nextDueSupervision.due_date)}`
         : "No immediate event loaded",
       lastRecord:
@@ -1554,7 +1792,7 @@ export async function loadHomeDashboard() {
               latestCommunication.contact_datetime || latestCommunication.created_at
             )}`
           : "No recent home record loaded",
-      openActions: `${openTasks.length} open • ${urgentCompliance.length} urgent compliance`,
+      openActions: `${openTasks.length} open • ${urgentCompliance.length + urgentInspection.length} urgent`,
     });
   } catch (error) {
     console.error("[home-dashboard] load failed", error);
