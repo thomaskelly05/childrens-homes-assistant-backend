@@ -111,13 +111,32 @@ function joinSignals(parts = []) {
     .join(":");
 }
 
+function normaliseInspectionBand(value = "") {
+  const band = normaliseToken(value);
+  if (!band) return "";
+  if (band === "requiresimprovement") return "requires_improvement";
+  if (band === "requires_improvement_to_be_good") return "requires_improvement";
+  return band;
+}
+
+function inspectionBandValue(value = "") {
+  const band = normaliseInspectionBand(value);
+  if (band === "outstanding") return 4;
+  if (band === "good") return 3;
+  if (band === "requires_improvement") return 2;
+  if (band === "inadequate") return 1;
+  return 0;
+}
+
 function inferUrgencyLevel(record = {}) {
   const severity = cleanText(record.severity).toLowerCase();
   const significance = cleanText(record.significance).toLowerCase();
   const workflow = cleanText(record.workflow_status).toLowerCase();
   const status = cleanText(record.status).toLowerCase();
   const approval = cleanText(record.approval_status).toLowerCase();
+  const priority = cleanText(record.priority).toLowerCase();
 
+  if (priority === "critical") return "critical";
   if (severity === "critical") return "critical";
   if (severity === "high") return "high";
   if (significance === "critical") return "critical";
@@ -141,6 +160,7 @@ function inferUrgencyLevel(record = {}) {
 
   if (status === "overdue") return "high";
   if (status === "escalated") return "high";
+  if (priority === "high") return "high";
   if (approval === "rejected" || approval === "returned") return "medium";
   if (workflow === "pending_review") return "medium";
   if (record.follow_up_required) return "medium";
@@ -225,12 +245,22 @@ export function inferSectionFromRecordType(recordType = "", raw = {}) {
     rota_shift: "team",
     staffing_snapshot: "team",
     home_incident: "timeline",
+
+    inspection_home_card: "inspection-readiness",
+    inspection_header: "inspection-readiness",
+    inspection_section_panel: "inspection-readiness",
+    inspection_reason: "inspection-readiness",
+    inspection_action: "inspection-readiness",
+    inspection_task: "inspection-readiness",
+    inspection_briefing: "inspection-readiness",
+    inspection_72_hour: "inspection-readiness",
   };
 
   if (map[recordType]) return map[recordType];
 
   const sourceTable = cleanText(raw.source_table || "").toLowerCase();
 
+  if (sourceTable.includes("inspection")) return "inspection-readiness";
   if (sourceTable.includes("document")) return "documents";
   if (sourceTable.includes("communication")) return "communication";
   if (sourceTable.includes("therapy")) return "therapy";
@@ -648,6 +678,67 @@ function buildAssistantSummary(record = {}) {
         cleanText(record.incident_type),
         "Home incident available."
       ),
+
+    inspection_home_card: () =>
+      pickFirst(
+        cleanText(record.top_concerns),
+        cleanText(record.narrative_summary),
+        `${cleanText(record.home_name)} inspection readiness`
+      ),
+
+    inspection_header: () =>
+      pickFirst(
+        cleanText(record.top_concerns),
+        cleanText(record.narrative_summary),
+        `${cleanText(record.home_name)} inspection detail`
+      ),
+
+    inspection_section_panel: () =>
+      pickFirst(
+        cleanText(record.summary_text),
+        cleanText(record.concerns_text),
+        cleanText(record.strengths_text),
+        "Inspection section summary"
+      ),
+
+    inspection_reason: () =>
+      pickFirst(
+        cleanText(record.description),
+        cleanText(record.reason_text),
+        cleanText(record.title),
+        "Inspection reason recorded."
+      ),
+
+    inspection_action: () =>
+      pickFirst(
+        cleanText(record.action_description),
+        cleanText(record.evidence_required),
+        cleanText(record.action_title),
+        "Inspection improvement action recorded."
+      ),
+
+    inspection_task: () =>
+      pickFirst(
+        cleanText(record.task_title),
+        cleanText(record.action_title),
+        "Inspection linked task recorded."
+      ),
+
+    inspection_briefing: () =>
+      pickFirst(
+        cleanText(record.headline_summary),
+        cleanText(record.overall_position_statement),
+        cleanText(record.immediate_priority_actions),
+        "Inspection briefing available."
+      ),
+
+    inspection_72_hour: () =>
+      pickFirst(
+        cleanText(record.urgent_actions),
+        cleanText(record.primary_focus_area),
+        cleanText(record.inspection_pressure_level),
+        "72-hour inspection plan available."
+      ),
   };
 
   if (map[recordType]) return map[recordType]();
@@ -675,9 +766,17 @@ function buildContextualSignals(record = {}) {
     record.progress_summary,
     record.quality_of_care,
     record.staffing_pressure,
+    record.headline_summary,
+    record.overall_position_statement,
+    record.immediate_priority_actions,
+    record.primary_focus_area,
+    record.top_concerns,
+    record.action_description,
+    record.evidence_required,
+    record.reason_text,
   ]).join(" ").toLowerCase();
 
-  if (/ofsted|inspection|annex a|statement of purpose|reg 40|reg40|reg 44|reg44|reg 45|reg45|sccif/.test(text)) {
+  if (/ofsted|inspection|annex a|statement of purpose|reg 40|reg40|reg 44|reg44|reg 45|reg45|sccif|line of enquiry|judgement/.test(text)) {
     signals.push("inspection_relevant");
   }
 
@@ -685,7 +784,7 @@ function buildContextualSignals(record = {}) {
     signals.push("handover_relevant");
   }
 
-  if (/follow up|follow-up|review|monitor|book|arrange|contact|escalate|complete/.test(text)) {
+  if (/follow up|follow-up|review|monitor|book|arrange|contact|escalate|complete|sync|refresh/.test(text)) {
     signals.push("actionable");
   }
 
@@ -734,6 +833,11 @@ function buildRegulatorySignals(record = {}) {
     record.linked_standard_code,
     record.linked_standard,
     record.linked_judgement_area,
+    record.section_code,
+    record.section_name,
+    record.reason_type,
+    record.priority,
+    record.projected_section_band,
   ]).join(" ").toLowerCase();
 
   if (
@@ -754,6 +858,20 @@ function buildRegulatorySignals(record = {}) {
     text.includes("reg45")
   ) {
     tags.push("inspection_cycle");
+  }
+
+  if (
+    type === "inspection_home_card" ||
+    type === "inspection_header" ||
+    type === "inspection_section_panel" ||
+    type === "inspection_reason" ||
+    type === "inspection_action" ||
+    type === "inspection_task" ||
+    type === "inspection_briefing" ||
+    type === "inspection_72_hour"
+  ) {
+    tags.push("inspection_cycle");
+    tags.push("inspection_ui");
   }
 
   if (
@@ -799,13 +917,17 @@ function buildOutcomeSignals(record = {}) {
     record.strengths_summary,
     record.what_matters_to_me,
     record.child_voice,
+    record.strengths_text,
+    record.concerns_text,
+    record.headline_summary,
+    record.overall_position_statement,
   ]).join(" ").toLowerCase();
 
-  if (/achievement|achieved|progress|positive|strength|well|engaged|improved/.test(text)) {
+  if (/achievement|achieved|progress|positive|strength|well|engaged|improved|outstanding|good/.test(text)) {
     tags.push("positive_outcome");
   }
 
-  if (/decline|worsening|concern|reduced|not attended|missed|deterioration/.test(text)) {
+  if (/decline|worsening|concern|reduced|not attended|missed|deterioration|inadequate|requires improvement/.test(text)) {
     tags.push("negative_outcome");
   }
 
@@ -827,6 +949,7 @@ export function buildAssistantTags(record = {}) {
   if (record.workflow_status) tags.push(`workflow:${record.workflow_status}`);
   if (record.status) tags.push(`status:${record.status}`);
   if (record.approval_status) tags.push(`approval:${record.approval_status}`);
+  if (record.priority) tags.push(`priority:${normaliseToken(record.priority)}`);
 
   if (record.safeguarding_flag) tags.push("safeguarding");
   if (record.follow_up_required) tags.push("follow_up_required");
@@ -842,6 +965,14 @@ export function buildAssistantTags(record = {}) {
   if (record.compliance_generated) tags.push("compliance_generated");
   if (record.return_interview_completed) tags.push("return_interview_completed");
 
+  if (record.overall_band) tags.push(`band:${normaliseInspectionBand(record.overall_band)}`);
+  if (record.score_band) tags.push(`band:${normaliseInspectionBand(record.score_band)}`);
+  if (record.projected_section_band) {
+    tags.push(`projected_band:${normaliseInspectionBand(record.projected_section_band)}`);
+  }
+  if (record.reason_type) tags.push(`reason_type:${normaliseToken(record.reason_type)}`);
+  if (record.section_code) tags.push(`inspection_section:${normaliseToken(record.section_code)}`);
+
   const recordSection = inferSectionFromRecordType(
     record.record_type,
     record.raw || record
@@ -856,7 +987,8 @@ export function buildAssistantTags(record = {}) {
     record.next_due_date ||
     record.start_target_date ||
     record.probation_end_date ||
-    record.return_interview_date;
+    record.return_interview_date ||
+    record.next_action_due_date;
 
   if (dueDate) {
     if (isOverdue(dueDate)) tags.push("status:overdue");
@@ -872,6 +1004,8 @@ export function buildAssistantTags(record = {}) {
 
   if (record.home_id) tags.push(`home:${record.home_id}`);
   if (record.young_person_id) tags.push(`young_person:${record.young_person_id}`);
+  if (record.inspection_score_id) tags.push(`inspection_score:${record.inspection_score_id}`);
+  if (record.line_of_enquiry_id) tags.push(`line_of_enquiry:${record.line_of_enquiry_id}`);
 
   if (record.record_type === RECORD_TYPES.incident && record.safeguarding_flag) {
     tags.push("incident_with_safeguarding");
@@ -1776,6 +1910,9 @@ export function mapManagerAction(raw = {}) {
     owner: cleanText(raw.owner),
     priority: cleanText(raw.priority),
     due_date: raw.due_date || null,
+    inspection_score_id: raw.inspection_score_id ?? null,
+    line_of_enquiry_id: raw.line_of_enquiry_id ?? null,
+    inspection_context: cleanText(raw.inspection_context),
   });
 }
 
@@ -1795,6 +1932,10 @@ export function mapTask(raw = {}) {
     compliance_generated: toBool(raw.compliance_generated),
     status: raw.completed ? WORKFLOW_STATUS.completed : WORKFLOW_STATUS.active,
     follow_up_required: !toBool(raw.completed),
+    inspection_score_id: raw.inspection_score_id ?? null,
+    line_of_enquiry_id: raw.line_of_enquiry_id ?? null,
+    projected_section_band: normaliseInspectionBand(raw.projected_section_band),
+    recoverable_points_estimate: raw.recoverable_points_estimate ?? null,
   });
 }
 
@@ -2475,6 +2616,274 @@ export function mapHomeIncident(raw = {}) {
   });
 }
 
+/* -------------------- Inspection UI mappings -------------------- */
+
+export function mapInspectionHomeCard(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "inspection_home_card",
+    source_table: raw.source_table || "inspection_home_cards",
+    title: cleanText(raw.home_name) || "Inspection home card",
+    summary: pickFirst(
+      cleanText(raw.top_concerns),
+      cleanText(raw.narrative_summary),
+      "Inspection readiness card"
+    ),
+    home_id: raw.home_id ?? null,
+    provider_id: raw.provider_id ?? null,
+    home_name: cleanText(raw.home_name),
+    overall_band: normaliseInspectionBand(raw.overall_band),
+    overall_score: raw.overall_score ?? null,
+    confidence_score: raw.confidence_score ?? null,
+    experiences_band: normaliseInspectionBand(raw.experiences_band),
+    experiences_score: raw.experiences_score ?? null,
+    helped_band: normaliseInspectionBand(raw.helped_band),
+    helped_score: raw.helped_score ?? null,
+    leadership_band: normaliseInspectionBand(raw.leadership_band),
+    leadership_score: raw.leadership_score ?? null,
+    open_actions: raw.open_actions ?? raw.open_action_count ?? 0,
+    overdue_actions: raw.overdue_actions ?? raw.overdue_action_count ?? 0,
+    critical_actions: raw.critical_actions ?? raw.critical_action_count ?? 0,
+    open_lines_of_enquiry: raw.open_lines_of_enquiry ?? 0,
+    snapshot_date: raw.snapshot_date || raw.created_at || null,
+    top_concerns: cleanText(raw.top_concerns),
+    narrative_summary: cleanText(raw.narrative_summary),
+    next_action_due_date: raw.next_action_due_date || null,
+    status: normaliseInspectionBand(raw.overall_band),
+  });
+}
+
+export function mapInspectionHeader(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "inspection_header",
+    source_table: raw.source_table || "inspection_headers",
+    title: cleanText(raw.home_name) || "Inspection header",
+    summary: pickFirst(
+      cleanText(raw.top_concerns),
+      cleanText(raw.narrative_summary),
+      "Inspection detail"
+    ),
+    id: raw.inspection_score_id ?? raw.id ?? null,
+    source_id: raw.inspection_score_id ?? raw.id ?? null,
+    inspection_score_id: raw.inspection_score_id ?? raw.id ?? null,
+    home_id: raw.home_id ?? null,
+    provider_id: raw.provider_id ?? null,
+    home_name: cleanText(raw.home_name),
+    overall_band: normaliseInspectionBand(raw.overall_band),
+    overall_score: raw.overall_score ?? null,
+    confidence_score: raw.confidence_score ?? null,
+    experiences_band: normaliseInspectionBand(raw.experiences_band),
+    experiences_score: raw.experiences_score ?? null,
+    helped_band: normaliseInspectionBand(raw.helped_band),
+    helped_score: raw.helped_score ?? null,
+    leadership_band: normaliseInspectionBand(raw.leadership_band),
+    leadership_score: raw.leadership_score ?? null,
+    open_actions: raw.open_actions ?? 0,
+    overdue_actions: raw.overdue_actions ?? 0,
+    critical_actions: raw.critical_actions ?? 0,
+    open_lines_of_enquiry: raw.open_lines_of_enquiry ?? 0,
+    top_concerns: cleanText(raw.top_concerns),
+    narrative_summary: cleanText(raw.narrative_summary),
+    next_action_due_date: raw.next_action_due_date || null,
+    created_at: raw.created_at || null,
+    updated_at: raw.updated_at || null,
+    status: normaliseInspectionBand(raw.overall_band),
+  });
+}
+
+export function mapInspectionSectionPanel(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "inspection_section_panel",
+    source_table: raw.source_table || "inspection_section_panels",
+    title:
+      cleanText(raw.section_name) ||
+      cleanText(raw.section_code) ||
+      "Inspection section",
+    summary: pickFirst(
+      cleanText(raw.summary_text),
+      cleanText(raw.concerns_text),
+      cleanText(raw.strengths_text),
+      "Inspection section panel"
+    ),
+    id:
+      raw.section_score_id ??
+      raw.id ??
+      `${cleanText(raw.home_id)}-${cleanText(raw.section_code)}`,
+    source_id:
+      raw.section_score_id ??
+      raw.id ??
+      `${cleanText(raw.home_id)}-${cleanText(raw.section_code)}`,
+    home_id: raw.home_id ?? null,
+    provider_id: raw.provider_id ?? null,
+    inspection_score_id: raw.inspection_score_id ?? null,
+    section_code: cleanText(raw.section_code),
+    section_name: cleanText(raw.section_name),
+    score_band: normaliseInspectionBand(raw.score_band),
+    score_value: raw.score_value ?? null,
+    summary_text: cleanText(raw.summary_text),
+    strengths_text: cleanText(raw.strengths_text),
+    concerns_text: cleanText(raw.concerns_text),
+    evidence_count: raw.evidence_count ?? null,
+    high_count: raw.high_count ?? null,
+    critical_count: raw.critical_count ?? null,
+    missing_count: raw.missing_count ?? null,
+    stale_count: raw.stale_count ?? null,
+    status: normaliseInspectionBand(raw.score_band),
+  });
+}
+
+export function mapInspectionReason(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "inspection_reason",
+    source_table: raw.source_table || "inspection_score_reasons",
+    title: cleanText(raw.title) || cleanText(raw.line_of_enquiry_title) || "Inspection reason",
+    summary: pickFirst(
+      cleanText(raw.description),
+      cleanText(raw.reason_text),
+      "Inspection reason"
+    ),
+    home_id: raw.home_id ?? null,
+    provider_id: raw.provider_id ?? null,
+    inspection_score_id: raw.inspection_score_id ?? null,
+    line_of_enquiry_id: raw.line_of_enquiry_id ?? null,
+    section_code: cleanText(raw.section_code),
+    section_name: cleanText(raw.section_name),
+    reason_type: cleanText(raw.reason_type),
+    priority: cleanText(raw.priority),
+    title_text: cleanText(raw.title),
+    description: cleanText(raw.description || raw.reason_text),
+    reason_text: cleanText(raw.reason_text),
+    evidence_excerpt: cleanText(raw.evidence_excerpt),
+    score_impact: raw.score_impact ?? raw.score_delta ?? null,
+    created_at: raw.created_at || null,
+    updated_at: raw.updated_at || null,
+    severity:
+      cleanText(raw.priority) === "critical"
+        ? "critical"
+        : cleanText(raw.priority) === "high"
+        ? "high"
+        : "",
+  });
+}
+
+export function mapInspectionAction(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "inspection_action",
+    source_table: raw.source_table || "inspection_improvement_actions",
+    title: cleanText(raw.action_title) || "Inspection action",
+    summary: pickFirst(
+      cleanText(raw.action_description),
+      cleanText(raw.evidence_required),
+      "Inspection improvement action"
+    ),
+    home_id: raw.home_id ?? null,
+    provider_id: raw.provider_id ?? null,
+    inspection_score_id: raw.inspection_score_id ?? null,
+    line_of_enquiry_id: raw.line_of_enquiry_id ?? null,
+    linked_task_id: raw.linked_task_id ?? null,
+    section_code: cleanText(raw.section_code),
+    section_name: cleanText(raw.section_name),
+    action_title: cleanText(raw.action_title),
+    action_description: cleanText(raw.action_description),
+    action_type: cleanText(raw.action_type),
+    priority: cleanText(raw.priority),
+    status: cleanText(raw.status || "open"),
+    due_date: raw.due_date || null,
+    evidence_required: cleanText(raw.evidence_required),
+    owner_user_id: raw.owner_user_id ?? null,
+    owner_user_name: cleanText(raw.owner_user_name),
+    owner_staff_id: raw.owner_staff_id ?? null,
+    owner_staff_name: cleanText(raw.owner_staff_name),
+    projected_section_band: normaliseInspectionBand(raw.projected_section_band),
+    recoverable_points_estimate: raw.recoverable_points_estimate ?? null,
+    created_at: raw.created_at || null,
+    updated_at: raw.updated_at || null,
+    follow_up_required: cleanText(raw.status || "open").toLowerCase() !== "completed",
+    review_required: cleanText(raw.status || "open").toLowerCase() === "blocked",
+  });
+}
+
+export function mapInspectionTask(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "inspection_task",
+    source_table: raw.source_table || "vw_inspection_tasks",
+    title: cleanText(raw.task_title || raw.action_title) || "Inspection task",
+    summary: pickFirst(
+      cleanText(raw.action_title),
+      cleanText(raw.task_title),
+      "Inspection linked task"
+    ),
+    home_id: raw.home_id ?? null,
+    provider_id: raw.provider_id ?? null,
+    inspection_score_id: raw.inspection_score_id ?? null,
+    line_of_enquiry_id: raw.line_of_enquiry_id ?? null,
+    linked_task_id: raw.linked_task_id ?? raw.task_id ?? null,
+    task_id: raw.task_id ?? raw.linked_task_id ?? null,
+    task_title: cleanText(raw.task_title),
+    action_title: cleanText(raw.action_title),
+    task_due_date: raw.task_due_date || raw.due_date || null,
+    action_due_date: raw.action_due_date || null,
+    assigned_user_name: cleanText(raw.assigned_user_name),
+    assigned_role: cleanText(raw.assigned_role),
+    completed: toBool(raw.completed),
+    completed_at: raw.completed_at || null,
+    status: toBool(raw.completed) ? "completed" : cleanText(raw.status || "open"),
+    created_at: raw.task_created_at || raw.created_at || null,
+    updated_at: raw.updated_at || null,
+    follow_up_required: !toBool(raw.completed),
+  });
+}
+
+export function mapInspectionBriefing(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "inspection_briefing",
+    source_table: raw.source_table || "inspection_briefings",
+    title: cleanText(raw.home_name) || "Inspection briefing",
+    summary: pickFirst(
+      cleanText(raw.headline_summary),
+      cleanText(raw.overall_position_statement),
+      "Inspection briefing"
+    ),
+    home_id: raw.home_id ?? null,
+    provider_id: raw.provider_id ?? null,
+    inspection_score_id: raw.inspection_score_id ?? null,
+    home_name: cleanText(raw.home_name),
+    headline_summary: cleanText(raw.headline_summary),
+    overall_position_statement: cleanText(raw.overall_position_statement),
+    likely_inspector_focus: cleanText(raw.likely_inspector_focus),
+    immediate_priority_actions: cleanText(raw.immediate_priority_actions),
+    created_at: raw.created_at || null,
+    updated_at: raw.updated_at || null,
+  });
+}
+
+export function mapInspection72Hour(raw = {}) {
+  return buildBaseRecord(raw, {
+    record_type: "inspection_72_hour",
+    source_table: raw.source_table || "inspection_72_hour_plans",
+    title: cleanText(raw.home_name) || "72-hour inspection plan",
+    summary: pickFirst(
+      cleanText(raw.urgent_actions),
+      cleanText(raw.primary_focus_area),
+      "72-hour inspection focus"
+    ),
+    home_id: raw.home_id ?? null,
+    provider_id: raw.provider_id ?? null,
+    inspection_score_id: raw.inspection_score_id ?? null,
+    home_name: cleanText(raw.home_name),
+    inspection_pressure_level: cleanText(raw.inspection_pressure_level),
+    primary_focus_area: cleanText(raw.primary_focus_area),
+    urgent_actions: cleanText(raw.urgent_actions),
+    created_at: raw.created_at || null,
+    updated_at: raw.updated_at || null,
+    priority:
+      cleanText(raw.inspection_pressure_level).toLowerCase() === "high"
+        ? "high"
+        : cleanText(raw.inspection_pressure_level).toLowerCase() === "critical"
+        ? "critical"
+        : "",
+  });
+}
+
 export function mapBundle(raw = {}) {
   return {
     young_person: mapYoungPerson(raw.young_person || raw.youngPerson || raw, raw),
@@ -2533,6 +2942,28 @@ export function mapManagerReviewPayload(raw = {}) {
     risks: mapList(raw.risk_assessments || raw.risks || [], mapRiskAssessment),
     tasks: mapList(raw.tasks || [], mapTask),
     pattern_alerts: arrayify(raw.pattern_alerts || []),
+  };
+}
+
+export function mapInspectionUiPayload(raw = {}) {
+  return {
+    home_cards: mapList(
+      raw.home_cards || raw.cards || raw.items || [],
+      mapInspectionHomeCard
+    ),
+    headers: mapList(raw.headers || raw.items || [], mapInspectionHeader),
+    section_panels: mapList(
+      raw.section_panels || raw.sections || raw.items || [],
+      mapInspectionSectionPanel
+    ),
+    reasons: mapList(raw.reasons || raw.items || [], mapInspectionReason),
+    actions: mapList(raw.actions || raw.items || [], mapInspectionAction),
+    tasks: mapList(raw.tasks || raw.items || [], mapInspectionTask),
+    briefings: mapList(raw.briefings || raw.items || [], mapInspectionBriefing),
+    prep_72_hour: mapList(
+      raw.prep_72_hour || raw.prep72h || raw.items || [],
+      mapInspection72Hour
+    ),
   };
 }
 
@@ -2640,6 +3071,24 @@ export function mapRecordByType(recordType, raw = {}) {
       return mapStaffingSnapshot(raw);
     case "home_incident":
       return mapHomeIncident(raw);
+
+    case "inspection_home_card":
+      return mapInspectionHomeCard(raw);
+    case "inspection_header":
+      return mapInspectionHeader(raw);
+    case "inspection_section_panel":
+      return mapInspectionSectionPanel(raw);
+    case "inspection_reason":
+      return mapInspectionReason(raw);
+    case "inspection_action":
+      return mapInspectionAction(raw);
+    case "inspection_task":
+      return mapInspectionTask(raw);
+    case "inspection_briefing":
+      return mapInspectionBriefing(raw);
+    case "inspection_72_hour":
+      return mapInspection72Hour(raw);
+
     default:
       return buildBaseRecord(raw, {
         record_type: recordType || raw.record_type || "record",
@@ -2672,6 +3121,21 @@ export function mapManagerReviewEvidence(raw = {}) {
     ...payload.incidents.map(toAssistantEvidence),
     ...payload.risks.map(toAssistantEvidence),
     ...payload.tasks.map(toAssistantEvidence),
+  ];
+}
+
+export function mapInspectionUiEvidence(raw = {}) {
+  const payload = mapInspectionUiPayload(raw);
+
+  return [
+    ...payload.home_cards.map(toAssistantEvidence),
+    ...payload.headers.map(toAssistantEvidence),
+    ...payload.section_panels.map(toAssistantEvidence),
+    ...payload.reasons.map(toAssistantEvidence),
+    ...payload.actions.map(toAssistantEvidence),
+    ...payload.tasks.map(toAssistantEvidence),
+    ...payload.briefings.map(toAssistantEvidence),
+    ...payload.prep_72_hour.map(toAssistantEvidence),
   ];
 }
 
@@ -2734,6 +3198,15 @@ export function buildAssistantEvidenceSet(payload = {}) {
   addMapped(payload.transport, mapTransportRecord);
   addMapped(payload.rota, mapRotaShift);
   addMapped(payload.staffing, mapStaffingSnapshot);
+
+  addMapped(payload.inspection_home_cards || payload.home_cards, mapInspectionHomeCard);
+  addMapped(payload.inspection_headers || payload.headers, mapInspectionHeader);
+  addMapped(payload.inspection_section_panels || payload.section_panels || payload.sections, mapInspectionSectionPanel);
+  addMapped(payload.inspection_reasons || payload.reasons, mapInspectionReason);
+  addMapped(payload.inspection_actions || payload.actions, mapInspectionAction);
+  addMapped(payload.inspection_tasks, mapInspectionTask);
+  addMapped(payload.inspection_briefings || payload.briefings, mapInspectionBriefing);
+  addMapped(payload.inspection_72_hour || payload.prep_72_hour || payload.prep72h, mapInspection72Hour);
 
   if (payload.identity_profile || payload.young_person_identity_profile) {
     evidence.push(
