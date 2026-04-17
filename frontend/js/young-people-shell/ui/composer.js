@@ -1,4 +1,8 @@
-import { state, resetComposerState } from "../state.js";
+import {
+  state,
+  resetComposerState,
+  getCurrentReadinessHomeId,
+} from "../state.js";
 import { els } from "../dom.js";
 import { apiSend, unwrapCreateResponse } from "../core/api.js";
 import {
@@ -22,6 +26,7 @@ function getCurrentHomeId() {
     state.homeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
+    getCurrentReadinessHomeId() ||
     null
   );
 }
@@ -352,8 +357,41 @@ function setComposerMetaFromItem(item = {}) {
     suggestion_record_type: item.suggestion_record_type || "",
     suggestion_action_type: item.suggestion_action_type || "",
     suggestion_metadata: item.suggestion_metadata || item.metadata || {},
+
     improvement_prompt: item.improvement_prompt || "",
     review_prompt: item.review_prompt || "",
+
+    inspection_score_id:
+      item.inspection_score_id ||
+      item.suggestion_metadata?.inspection_score_id ||
+      item.metadata?.inspection_score_id ||
+      null,
+    line_of_enquiry_id:
+      item.line_of_enquiry_id ||
+      item.suggestion_metadata?.line_of_enquiry_id ||
+      item.metadata?.line_of_enquiry_id ||
+      null,
+    linked_task_id:
+      item.linked_task_id ||
+      item.suggestion_metadata?.linked_task_id ||
+      item.metadata?.linked_task_id ||
+      null,
+    inspection_section:
+      item.inspection_section ||
+      item.projected_section_band ||
+      item.suggestion_metadata?.inspection_section ||
+      item.metadata?.inspection_section ||
+      "",
+    projected_section_band:
+      item.projected_section_band ||
+      item.suggestion_metadata?.projected_section_band ||
+      item.metadata?.projected_section_band ||
+      "",
+    recoverable_points_estimate:
+      item.recoverable_points_estimate ||
+      item.suggestion_metadata?.recoverable_points_estimate ||
+      item.metadata?.recoverable_points_estimate ||
+      "",
   };
 }
 
@@ -540,6 +578,29 @@ function workflowOptions() {
   ];
 }
 
+function taskTypeOptions() {
+  return [
+    { value: "", label: "Select..." },
+    { value: "general", label: "General" },
+    { value: "inspection_improvement", label: "Inspection improvement" },
+    { value: "handover", label: "Handover" },
+    { value: "compliance", label: "Compliance" },
+    { value: "safeguarding", label: "Safeguarding" },
+    { value: "quality_improvement", label: "Quality improvement" },
+  ];
+}
+
+function managerActionTypeOptions() {
+  return [
+    { value: "", label: "Select..." },
+    { value: "oversight", label: "Oversight" },
+    { value: "escalation", label: "Escalation" },
+    { value: "inspection_follow_up", label: "Inspection follow-up" },
+    { value: "quality_review", label: "Quality review" },
+    { value: "safeguarding", label: "Safeguarding" },
+  ];
+}
+
 function getSuggestionBannerHtml() {
   const meta = getComposerMeta();
   const bits = [];
@@ -556,6 +617,22 @@ function getSuggestionBannerHtml() {
         meta.source_record_id ? ` #${meta.source_record_id}` : ""
       }`
     );
+  }
+
+  if (meta.inspection_section) {
+    bits.push(
+      `Inspection section: ${String(meta.inspection_section).replaceAll("_", " ")}`
+    );
+  }
+
+  if (meta.projected_section_band) {
+    bits.push(
+      `Projected band: ${String(meta.projected_section_band).replaceAll("_", " ")}`
+    );
+  }
+
+  if (meta.recoverable_points_estimate) {
+    bits.push(`Potential impact: ${meta.recoverable_points_estimate}`);
   }
 
   const prompt =
@@ -1126,10 +1203,19 @@ function buildMissingEpisodeContent(item = {}) {
 
 function buildTaskContent(item = {}) {
   const today = getToday();
+  const meta = getComposerMeta();
+  const isInspectionTask =
+    item.task_type === "inspection_improvement" ||
+    meta.suggestion_action_type === "inspection_refresh" ||
+    meta.suggestion_action_type === "inspection_sync" ||
+    meta.inspection_score_id ||
+    meta.line_of_enquiry_id;
 
   return {
     title: item?.id ? "Edit task" : "New task",
-    subtitle: "Create a clear action with ownership and follow-up.",
+    subtitle: isInspectionTask
+      ? "Create an inspection-linked action with clear ownership and follow-up."
+      : "Create a clear action with ownership and follow-up.",
     guidance: "Make the task specific, practical and easy to complete.",
     prompts: [
       "What needs to happen?",
@@ -1141,13 +1227,50 @@ function buildTaskContent(item = {}) {
       buildSection("Task details", [
         fieldText("title", "Title", item.title || ""),
         fieldTextArea("task", "Task", item.task || item.summary || ""),
-        fieldText("task_type", "Task type", item.task_type || ""),
+        fieldSelect(
+          "task_type",
+          "Task type",
+          item.task_type || (isInspectionTask ? "inspection_improvement" : ""),
+          taskTypeOptions()
+        ),
         fieldText("assigned_role", "Assigned role", item.assigned_role || ""),
         fieldText("assigned_to_user_id", "Assigned to user ID", item.assigned_to_user_id || ""),
         fieldDate("task_date", "Task date", item.task_date || today),
         fieldDate("due_date", "Due date", item.due_date || ""),
         fieldCheckbox("completed", "Completed", Boolean(item.completed)),
         fieldCheckbox("compliance_generated", "Compliance generated", Boolean(item.compliance_generated)),
+      ]),
+      buildSection("Linking and context", [
+        fieldText(
+          "source_table",
+          "Source table",
+          item.source_table || item.related_table || item.source_record_type || ""
+        ),
+        fieldText(
+          "source_id",
+          "Source ID",
+          item.source_id || item.related_id || item.source_record_id || ""
+        ),
+        fieldText(
+          "inspection_score_id",
+          "Inspection score ID",
+          item.inspection_score_id || meta.inspection_score_id || ""
+        ),
+        fieldText(
+          "line_of_enquiry_id",
+          "Line of enquiry ID",
+          item.line_of_enquiry_id || meta.line_of_enquiry_id || ""
+        ),
+        fieldText(
+          "projected_section_band",
+          "Projected section band",
+          item.projected_section_band || meta.projected_section_band || ""
+        ),
+        fieldText(
+          "recoverable_points_estimate",
+          "Recoverable points estimate",
+          item.recoverable_points_estimate || meta.recoverable_points_estimate || ""
+        ),
       ]),
     ],
   };
@@ -1497,9 +1620,18 @@ function buildSupervisionContent(item = {}) {
 }
 
 function buildManagerActionContent(item = {}) {
+  const meta = getComposerMeta();
+  const isInspectionLinked =
+    meta.inspection_score_id ||
+    meta.line_of_enquiry_id ||
+    item.inspection_score_id ||
+    item.line_of_enquiry_id;
+
   return {
     title: item?.id ? "Edit manager action" : "New manager action",
-    subtitle: "Record management oversight, escalation, or follow-up.",
+    subtitle: isInspectionLinked
+      ? "Record management oversight or inspection follow-up."
+      : "Record management oversight, escalation, or follow-up.",
     guidance:
       "Use this for management decisions, oversight actions, escalation, and formal follow-up.",
     prompts: [
@@ -1509,7 +1641,12 @@ function buildManagerActionContent(item = {}) {
     ],
     sections: [
       buildSection("Manager action details", [
-        fieldText("action_type", "Action type", item.action_type || ""),
+        fieldSelect(
+          "action_type",
+          "Action type",
+          item.action_type || (isInspectionLinked ? "inspection_follow_up" : ""),
+          managerActionTypeOptions()
+        ),
         fieldText(
           "related_table",
           "Related table",
@@ -1520,10 +1657,27 @@ function buildManagerActionContent(item = {}) {
           "Related ID",
           item.related_id || item.source_record_id || ""
         ),
+        fieldText(
+          "inspection_score_id",
+          "Inspection score ID",
+          item.inspection_score_id || meta.inspection_score_id || ""
+        ),
+        fieldText(
+          "line_of_enquiry_id",
+          "Line of enquiry ID",
+          item.line_of_enquiry_id || meta.line_of_enquiry_id || ""
+        ),
       ]),
       buildSection("Management note", [
         fieldTextArea("note", "Note", item.note || item.summary || ""),
         fieldTextArea("summary", "Summary", item.summary || ""),
+        fieldTextArea(
+          "inspection_context",
+          "Inspection context",
+          item.inspection_context ||
+            meta.suggestion_reason ||
+            ""
+        ),
       ]),
     ],
   };
@@ -1592,6 +1746,10 @@ function serialiseValue(key, value) {
       "linked_target_id",
       "related_id",
       "assigned_to_user_id",
+      "inspection_score_id",
+      "line_of_enquiry_id",
+      "recoverable_points_estimate",
+      "source_id",
     ].includes(key)
   ) {
     return value === "" ? null : Number(value);
@@ -1632,6 +1790,25 @@ function serializeComposerForm() {
 
   if (meta.source_record_id && !payload.source_record_id) {
     payload.source_record_id = meta.source_record_id;
+  }
+
+  if (meta.inspection_score_id && !payload.inspection_score_id) {
+    payload.inspection_score_id = meta.inspection_score_id;
+  }
+
+  if (meta.line_of_enquiry_id && !payload.line_of_enquiry_id) {
+    payload.line_of_enquiry_id = meta.line_of_enquiry_id;
+  }
+
+  if (meta.projected_section_band && !payload.projected_section_band) {
+    payload.projected_section_band = meta.projected_section_band;
+  }
+
+  if (
+    meta.recoverable_points_estimate &&
+    !payload.recoverable_points_estimate
+  ) {
+    payload.recoverable_points_estimate = meta.recoverable_points_estimate;
   }
 
   return payload;
@@ -1742,6 +1919,8 @@ function buildSuggestionMetadata(recordType, savedRecord) {
     state.composerRecordId ||
     null;
 
+  const meta = getComposerMeta();
+
   return {
     record_type: recordType,
     id: recordId,
@@ -1757,6 +1936,14 @@ function buildSuggestionMetadata(recordType, savedRecord) {
         : null,
     scope: getCurrentScope(),
     user_role: state.userRole || "",
+    inspection_score_id:
+      savedRecord?.inspection_score_id ||
+      meta.inspection_score_id ||
+      null,
+    line_of_enquiry_id:
+      savedRecord?.line_of_enquiry_id ||
+      meta.line_of_enquiry_id ||
+      null,
   };
 }
 
@@ -1820,6 +2007,14 @@ function updateComposerAssistantContext() {
         meta.source_record_id ? ` #${meta.source_record_id}` : ""
       }`
     );
+  }
+
+  if (meta.inspection_score_id) {
+    lines.push(`Inspection score #${meta.inspection_score_id}`);
+  }
+
+  if (meta.line_of_enquiry_id) {
+    lines.push(`Line of enquiry #${meta.line_of_enquiry_id}`);
   }
 
   if (meta.improvement_prompt) {
@@ -1948,6 +2143,7 @@ function nowIso() {
 function normaliseSavedRecordForSchema(recordType, payload = {}) {
   const currentScope = getCurrentScope();
   const entityId = getScopeEntityId();
+  const meta = getComposerMeta();
   const id =
     payload.id ||
     state.composerRecordId ||
@@ -2180,8 +2376,7 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
     },
 
     task: {
-      home_id:
-        payload.home_id || getCurrentHomeId() || null,
+      home_id: payload.home_id || getCurrentHomeId() || null,
       young_person_id:
         currentScope === "child"
           ? payload.young_person_id || state.youngPersonId || null
@@ -2192,12 +2387,18 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       assigned_role: payload.assigned_role || "",
       title: payload.title || "",
       assigned_to_user_id: payload.assigned_to_user_id || null,
-      source_table: payload.source_table || payload.related_table || "",
-      source_id: payload.source_id || payload.related_id || null,
+      source_table: payload.source_table || payload.related_table || payload.source_record_type || "",
+      source_id: payload.source_id || payload.related_id || payload.source_record_id || null,
       task_type: payload.task_type || "",
       due_date: payload.due_date || null,
       compliance_generated: Boolean(payload.compliance_generated),
       completed_at: payload.completed ? nowIso() : null,
+      inspection_score_id: payload.inspection_score_id || meta.inspection_score_id || null,
+      line_of_enquiry_id: payload.line_of_enquiry_id || meta.line_of_enquiry_id || null,
+      projected_section_band:
+        payload.projected_section_band || meta.projected_section_band || "",
+      recoverable_points_estimate:
+        payload.recoverable_points_estimate || meta.recoverable_points_estimate || null,
     },
 
     manager_action: {
@@ -2205,12 +2406,16 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
         currentScope === "child"
           ? payload.young_person_id || state.youngPersonId || null
           : null,
+      home_id: currentScope !== "child" ? payload.home_id || getCurrentHomeId() || null : null,
       action_type: payload.action_type || "",
       related_table: payload.related_table || payload.source_record_type || "",
       related_id: payload.related_id || payload.source_record_id || null,
       note: payload.note || payload.summary || "",
       action_at: nowIso(),
       summary: payload.summary || "",
+      inspection_score_id: payload.inspection_score_id || meta.inspection_score_id || null,
+      line_of_enquiry_id: payload.line_of_enquiry_id || meta.line_of_enquiry_id || null,
+      inspection_context: payload.inspection_context || meta.suggestion_reason || "",
     },
 
     document: {
@@ -2512,6 +2717,16 @@ export async function saveComposer(mode = "draft") {
         getCurrentScope() !== "child"
           ? savedRecord?.home_id || payload.home_id || getCurrentHomeId()
           : null,
+      inspection_score_id:
+        savedRecord?.inspection_score_id ||
+        payload.inspection_score_id ||
+        getComposerMeta().inspection_score_id ||
+        null,
+      line_of_enquiry_id:
+        savedRecord?.line_of_enquiry_id ||
+        payload.line_of_enquiry_id ||
+        getComposerMeta().line_of_enquiry_id ||
+        null,
     });
   } catch (error) {
     console.error("[composer] suggestion trigger failed", error);
