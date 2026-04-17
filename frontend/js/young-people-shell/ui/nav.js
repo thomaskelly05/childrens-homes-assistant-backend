@@ -13,7 +13,7 @@ import {
   loadYoungPersonSelector,
   filterSelectorList,
 } from "./selector.js";
-import { bindRecordDrawerEvents, openRecordDetail } from "./records.js";
+import { bindRecordDrawerEvents } from "./records.js";
 import { closeComposer, saveComposer } from "./composer.js";
 import { bindSuggestionEvents } from "./suggestions.js";
 import { bindActionRouter } from "./action-router.js";
@@ -101,14 +101,14 @@ const SECTION_LOADERS = {
   maintenance: PLACEHOLDER_LOADER,
   notifications: loadNotifications,
   quality: loadQualityDashboard,
-  "ofsted-readiness": PLACEHOLDER_LOADER,
+  "ofsted-readiness": loadReadiness,
   policies: PLACEHOLDER_LOADER,
 
   "provider-overview": PLACEHOLDER_LOADER,
   "quality-audits": PLACEHOLDER_LOADER,
   reg44: PLACEHOLDER_LOADER,
   reg45: PLACEHOLDER_LOADER,
-  "inspection-readiness": PLACEHOLDER_LOADER,
+  "inspection-readiness": loadReadiness,
 };
 
 const ICON_MAP = {
@@ -135,7 +135,7 @@ const ICON_MAP = {
 
 const MOBILE_BOTTOM_BY_SCOPE = {
   child: ["workspace", "timeline", "health", "risk", "reviews"],
-  home: ["home-dashboard", "operations", "rota", "compliance", "quality"],
+  home: ["home-dashboard", "rota", "compliance", "quality", "ofsted-readiness"],
   quality: [
     "provider-overview",
     "quality",
@@ -201,6 +201,12 @@ function isChildScope() {
 
 function shouldShowDesktopSidebar() {
   return getCurrentScope() !== "child";
+}
+
+function isReadinessSection(sectionId) {
+  return ["readiness", "ofsted-readiness", "inspection-readiness"].includes(
+    String(sectionId || "")
+  );
 }
 
 function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
@@ -700,6 +706,11 @@ async function applyScopeChange(scope) {
       : "child";
 
   setCurrentScope(safeScope);
+
+  if (safeScope !== "child" && !state.readinessSelectedHomeId) {
+    state.readinessSelectedHomeId = state.homeId || state.currentUser?.home_id || state.currentUser?.homeId || null;
+  }
+
   ensureValidCurrentSection();
   paintNavigationChrome();
   clearStatus();
@@ -753,6 +764,11 @@ export async function loadSection(section, options = {}) {
       await loader(options);
       closeMobileNav();
       closeAllWorkspaceMenus();
+
+      if (isReadinessSection(safeSection)) {
+        state.currentView = safeSection;
+      }
+
       renderAssistantControllerPanels();
     } catch (error) {
       console.error(`[nav] failed loading section "${safeSection}"`, error);
@@ -965,6 +981,7 @@ function bindOpenRecordEvents() {
         title: trigger.dataset.title || "",
       };
 
+      const { openRecordDetail } = await import("./records.js");
       await openRecordDetail(state.activeRecordItem);
     } catch (error) {
       console.error("[nav] open record failed", error);
