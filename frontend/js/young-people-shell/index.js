@@ -23,11 +23,11 @@ import { refreshWorkspaceSummary } from "./ui/workspace-summary-controller.js";
 import {
   ROLE_SCOPE_ACCESS,
   SCOPE_DEFAULT_SECTION,
-  getSafeSectionForScope,
+  getDefaultScopeForRole as getConfigDefaultScopeForRole,
+  canRoleAccessScope,
 } from "./core/config.js";
 
-const SHELL_STORAGE_KEY = "youngPeopleShell.runtime";
-
+let scopeEventsBound = false;
 let bootstrapped = false;
 
 function showWorkspace() {
@@ -94,6 +94,12 @@ function readSessionUser() {
   }
 }
 
+function toNumberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : value;
+}
+
 function toIdArray(value) {
   if (!Array.isArray(value)) return [];
   return value
@@ -101,36 +107,13 @@ function toIdArray(value) {
     .filter((item) => Number.isFinite(item));
 }
 
-function readStoredShellState() {
-  try {
-    const raw = sessionStorage.getItem(SHELL_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function persistShellState() {
-  try {
-    sessionStorage.setItem(
-      SHELL_STORAGE_KEY,
-      JSON.stringify({
-        scope: state.currentScope || "child",
-        section: state.currentSection || state.activeSection || state.currentView || "",
-        youngPersonId: state.youngPersonId || null,
-      })
-    );
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
 function hydrateRuntimeContextFromDom() {
   if (!els.app) return;
 
   const datasetRole = normaliseRole(els.app.dataset.userRole || "");
-  const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
+  const datasetScope = String(els.app.dataset.scope || "")
+    .trim()
+    .toLowerCase();
   const datasetHomeId = els.app.dataset.homeId || "";
   const datasetYoungPersonId = els.app.dataset.youngPersonId || "";
   const datasetProviderId = els.app.dataset.providerId || "";
@@ -140,16 +123,20 @@ function hydrateRuntimeContextFromDom() {
     state.userRole = datasetRole;
   }
 
+  if (datasetScope) {
+    state.currentScope = datasetScope;
+  }
+
   if (datasetHomeId) {
-    state.homeId = Number(datasetHomeId) || datasetHomeId;
+    state.homeId = toNumberOrNull(datasetHomeId);
   }
 
   if (datasetYoungPersonId && !state.youngPersonId) {
-    state.youngPersonId = Number(datasetYoungPersonId) || datasetYoungPersonId;
+    state.youngPersonId = toNumberOrNull(datasetYoungPersonId);
   }
 
   if (datasetProviderId) {
-    state.providerId = Number(datasetProviderId) || datasetProviderId;
+    state.providerId = toNumberOrNull(datasetProviderId);
   }
 
   if (datasetAllowedHomeIds) {
@@ -161,10 +148,6 @@ function hydrateRuntimeContextFromDom() {
         .map((item) => Number(item.trim()))
         .filter((item) => Number.isFinite(item));
     }
-  }
-
-  if (datasetScope) {
-    state.currentScope = datasetScope;
   }
 }
 
@@ -222,38 +205,15 @@ function hydrateRuntimeContextFromSession() {
   }
 }
 
-function hydrateRuntimeContextFromStoredShell() {
-  const stored = readStoredShellState();
-  if (!stored || typeof stored !== "object") return;
-
-  if (!state.currentScope && stored.scope) {
-    state.currentScope = String(stored.scope).trim().toLowerCase();
-  }
-
-  if (!state.currentSection && stored.section) {
-    state.currentSection = String(stored.section).trim();
-  }
-
-  if (!state.activeSection && stored.section) {
-    state.activeSection = String(stored.section).trim();
-  }
-
-  if (!state.currentView && stored.section) {
-    state.currentView = String(stored.section).trim();
-  }
-
-  if (!state.youngPersonId && stored.youngPersonId) {
-    state.youngPersonId = stored.youngPersonId;
-  }
-}
-
 function syncDomDatasetFromState() {
   if (!els.app) return;
 
   els.app.dataset.userRole = normaliseRole(state.userRole || "staff");
   els.app.dataset.scope = state.currentScope || "child";
   els.app.dataset.homeId = state.homeId ? String(state.homeId) : "";
-  els.app.dataset.youngPersonId = state.youngPersonId ? String(state.youngPersonId) : "";
+  els.app.dataset.youngPersonId = state.youngPersonId
+    ? String(state.youngPersonId)
+    : "";
   els.app.dataset.providerId = state.providerId ? String(state.providerId) : "";
   els.app.dataset.allowedHomeIds = JSON.stringify(
     Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
@@ -279,18 +239,11 @@ function getAllowedScopesForRole() {
 }
 
 function canAccessScope(scope) {
-  return getAllowedScopesForRole().includes(scope);
+  return canRoleAccessScope(getCurrentRole(), scope);
 }
 
 function getDefaultScopeForRole() {
-  const role = getCurrentRole();
-  const allowed = getAllowedScopesForRole();
-
-  if (role === "ri" && allowed.includes("quality")) return "quality";
-  if ((role === "admin" || role === "manager") && allowed.includes("home")) return "home";
-  if (allowed.includes("child")) return "child";
-
-  return allowed[0] || "child";
+  return getConfigDefaultScopeForRole(getCurrentRole());
 }
 
 function getDefaultSectionForScope(scope = state.currentScope || "child") {
@@ -312,20 +265,19 @@ function ensureValidScopeForRole() {
 }
 
 function ensureInitialSectionForScope() {
-  const safeScope = state.currentScope || "child";
-  const fallbackSection = getDefaultSectionForScope(safeScope);
+  const expectedDefault = getDefaultSectionForScope(state.currentScope);
 
-  const initialSection =
-    state.currentSection ||
-    state.activeSection ||
-    state.currentView ||
-    fallbackSection;
+  if (!state.currentSection) {
+    state.currentSection = expectedDefault;
+  }
 
-  const safeSection = getSafeSectionForScope(initialSection, safeScope);
+  if (!state.activeSection) {
+    state.activeSection = state.currentSection;
+  }
 
-  state.currentSection = safeSection;
-  state.activeSection = safeSection;
-  state.currentView = safeSection;
+  if (!state.currentView) {
+    state.currentView = state.currentSection;
+  }
 }
 
 function syncScopeButtons() {
@@ -368,7 +320,6 @@ function refreshAllChrome() {
   ensureValidScopeForRole();
   ensureInitialSectionForScope();
   syncDomDatasetFromState();
-
   refreshShellChrome();
   refreshAssistantUi();
   updateAssistantContext();
@@ -376,8 +327,6 @@ function refreshAllChrome() {
   renderAssistantInsights();
   syncScopeButtons();
   refreshWorkspaceSummary();
-
-  persistShellState();
 }
 
 async function setScope(scope) {
@@ -413,12 +362,45 @@ async function setScope(scope) {
   refreshWorkspaceSummary();
 }
 
+function bindScopeEvents() {
+  if (scopeEventsBound) return;
+  scopeEventsBound = true;
+
+  els.scopeChildBtn?.addEventListener("click", async () => {
+    try {
+      await setScope("child");
+    } catch (error) {
+      console.error("[index] failed switching to child scope", error);
+      showError(error?.message || "Failed to switch scope.");
+    }
+  });
+
+  els.scopeHomeBtn?.addEventListener("click", async () => {
+    try {
+      await setScope("home");
+    } catch (error) {
+      console.error("[index] failed switching to home scope", error);
+      showError(error?.message || "Failed to switch scope.");
+    }
+  });
+
+  els.scopeQualityBtn?.addEventListener("click", async () => {
+    try {
+      await setScope("quality");
+    } catch (error) {
+      console.error("[index] failed switching to quality scope", error);
+      showError(error?.message || "Failed to switch scope.");
+    }
+  });
+}
+
 async function restoreSelectedYoungPerson() {
   const idFromUrl = getYoungPersonIdFromUrl();
 
   if (!idFromUrl) {
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
+    state.youngPerson = null;
     syncDomDatasetFromState();
     return false;
   }
@@ -431,17 +413,16 @@ async function restoreSelectedYoungPerson() {
     await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
     syncDomDatasetFromState();
     refreshWorkspaceSummary();
-    persistShellState();
     return true;
   } catch (error) {
     console.error("[index] failed to restore young person", error);
     state.youngPersonId = null;
     state.selectedYoungPerson = null;
+    state.youngPerson = null;
     setYoungPersonIdInUrl(null);
     syncDomDatasetFromState();
     refreshWorkspaceSummary();
     showError(error?.message || "Failed to open selected young person.");
-    persistShellState();
     return false;
   }
 }
@@ -476,19 +457,63 @@ function syncVisibleScreen() {
   showWorkspace();
 }
 
-async function bootstrapInitialScopeAndSection() {
-  hydrateRuntimeContextFromDom();
-  hydrateRuntimeContextFromSession();
-  hydrateRuntimeContextFromStoredShell();
+function bindGlobalSearchMirrors() {
+  const desktopSearch = document.getElementById("recordSearchInput");
+  const mobileSearch = document.getElementById("mobileRecordSearchInput");
+  const filter = document.getElementById("recordTypeFilter");
 
-  if (shouldForceRoleDefaultScope()) {
-    state.currentScope = getDefaultScopeForRole();
-  }
+  if (!desktopSearch && !mobileSearch && !filter) return;
 
-  ensureValidScopeForRole();
-  ensureInitialSectionForScope();
-  syncDomDatasetFromState();
-  persistShellState();
+  const syncSearchValues = (source, target) => {
+    if (!source || !target) return;
+    if (target.value === source.value) return;
+    target.value = source.value;
+  };
+
+  const dispatchSearchChanged = () => {
+    document.dispatchEvent(
+      new CustomEvent("indicared:record-search-changed", {
+        detail: {
+          query: desktopSearch?.value || mobileSearch?.value || "",
+          recordType: filter?.value || "",
+          scope: state.currentScope || "child",
+          section:
+            state.currentSection || state.activeSection || state.currentView || "",
+        },
+      })
+    );
+  };
+
+  desktopSearch?.addEventListener("input", () => {
+    syncSearchValues(desktopSearch, mobileSearch);
+    dispatchSearchChanged();
+  });
+
+  mobileSearch?.addEventListener("input", () => {
+    syncSearchValues(mobileSearch, desktopSearch);
+    dispatchSearchChanged();
+  });
+
+  filter?.addEventListener("change", dispatchSearchChanged);
+}
+
+function bindGlobalRefreshShortcuts() {
+  window.addEventListener("popstate", async () => {
+    try {
+      const restoredYoungPerson = await restoreSelectedYoungPerson();
+      syncVisibleScreen();
+
+      if (
+        (state.currentScope || "child") === "child" &&
+        restoredYoungPerson &&
+        state.currentSection
+      ) {
+        await loadSection(state.currentSection);
+      }
+    } catch (error) {
+      console.error("[index] popstate restore failed", error);
+    }
+  });
 }
 
 async function bootstrap() {
@@ -496,7 +521,20 @@ async function bootstrap() {
   bootstrapped = true;
 
   try {
-    await bootstrapInitialScopeAndSection();
+    hydrateRuntimeContextFromDom();
+    hydrateRuntimeContextFromSession();
+
+    if (shouldForceRoleDefaultScope()) {
+      state.currentScope = getDefaultScopeForRole();
+    }
+
+    ensureValidScopeForRole();
+
+    state.currentSection = getDefaultSectionForScope(state.currentScope);
+    state.activeSection = state.currentSection;
+    state.currentView = state.currentSection;
+
+    syncDomDatasetFromState();
 
     console.log("[young-people-shell] boot", {
       role: state.userRole,
@@ -512,35 +550,30 @@ async function bootstrap() {
     bindShellChrome();
     bindAssistantUi();
     bindAssistantEvents();
+    bindScopeEvents();
+    bindGlobalSearchMirrors();
+    bindGlobalRefreshShortcuts();
 
     refreshAllChrome();
 
     const restoredYoungPerson = await restoreSelectedYoungPerson();
 
-    syncVisibleScreen();
-    await bootstrapSelectorIfNeeded(restoredYoungPerson);
-
-    await initialiseShellNavigation();
-
-    if (state.currentScope !== "child") {
-      await loadSection(state.currentSection || getDefaultSectionForScope(state.currentScope));
-    } else if (state.youngPersonId) {
-      await loadSection(state.currentSection || getDefaultSectionForScope("child"));
+    if (state.currentScope === "child") {
+      if (restoredYoungPerson) {
+        showWorkspace();
+      } else {
+        showSelector();
+      }
+    } else {
+      showWorkspace();
     }
 
+    syncVisibleScreen();
+
+    await bootstrapSelectorIfNeeded(restoredYoungPerson);
+    await initialiseShellNavigation();
     refreshAllChrome();
     refreshWorkspaceSummary();
-
-    window.youngPeopleShell = Object.freeze({
-      getState: () => state,
-      setScope,
-      refresh: async () => {
-        refreshAllChrome();
-        await loadSection(
-          state.currentSection || getDefaultSectionForScope(state.currentScope || "child")
-        );
-      },
-    });
   } catch (error) {
     console.error("[index] bootstrap failed", error);
     showError(error?.message || "Failed to start workspace.");
