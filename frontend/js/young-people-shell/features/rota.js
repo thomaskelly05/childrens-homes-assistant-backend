@@ -86,7 +86,10 @@ function formatShiftTime(start, end) {
 }
 
 function getStatusTone(status = "") {
-  const normalised = String(status || "").toLowerCase();
+  const normalised = String(status || "")
+    .toLowerCase()
+    .trim()
+    .replaceAll(" ", "_");
 
   if (
     [
@@ -98,6 +101,8 @@ function getStatusTone(status = "") {
       "absent",
       "overdue",
       "cancelled",
+      "vacant",
+      "vacancy",
     ].includes(normalised)
   ) {
     return "danger";
@@ -113,6 +118,11 @@ function getStatusTone(status = "") {
       "agency",
       "bank",
       "pending",
+      "due_soon",
+      "review_due",
+      "open",
+      "planned",
+      "bank_staff",
     ].includes(normalised)
   ) {
     return "warning";
@@ -126,7 +136,7 @@ function getStatusTone(status = "") {
       "complete",
       "completed",
       "on_shift",
-      "planned",
+      "planned_ok",
     ].includes(normalised)
   ) {
     return "success";
@@ -135,11 +145,17 @@ function getStatusTone(status = "") {
   return "muted";
 }
 
+function toTime(value) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(aValue).getTime() - new Date(bValue).getTime();
+    return toTime(aValue) - toTime(bValue);
   });
 }
 
@@ -147,8 +163,24 @@ function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
+    return toTime(bValue) - toTime(aValue);
   });
+}
+
+function hasUsableData(data) {
+  if (!data || typeof data !== "object") return false;
+  if (Array.isArray(data.items) && data.items.length > 0) return true;
+  if (Array.isArray(data.shifts) && data.shifts.length > 0) return true;
+  if (Array.isArray(data.rota) && data.rota.length > 0) return true;
+  if (Array.isArray(data.records) && data.records.length > 0) return true;
+  if (Array.isArray(data.absences) && data.absences.length > 0) return true;
+  if (Array.isArray(data.leave) && data.leave.length > 0) return true;
+  if (Array.isArray(data.gaps) && data.gaps.length > 0) return true;
+  if (Array.isArray(data.unfilled) && data.unfilled.length > 0) return true;
+  if (Array.isArray(data.notifications) && data.notifications.length > 0) return true;
+  if (data.summary && typeof data.summary === "object") return true;
+  if (data.dashboard && typeof data.dashboard === "object") return true;
+  return false;
 }
 
 function normaliseSummary(data = {}) {
@@ -156,19 +188,89 @@ function normaliseSummary(data = {}) {
 }
 
 function normaliseShiftItems(data = {}) {
-  return toArray(data.items, [data.shifts, data.rota, data.records]);
+  return toArray(data.items, [data.shifts, data.rota, data.records]).map(
+    (item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_type: item.record_type || "rota_shift",
+      shift_date:
+        item.shift_date ||
+        item.date ||
+        item.start_datetime ||
+        item.start_time ||
+        null,
+      shift_name: item.shift_name || item.title || item.shift || "Shift",
+      staff_member: item.staff_member || item.staff_name || item.full_name || "",
+      role: item.role || item.shift_role || "",
+      start_time: item.start_time || item.start_datetime || "",
+      end_time: item.end_time || item.end_datetime || "",
+      is_shift_lead: Boolean(item.is_shift_lead || item.shift_lead),
+      source: item.source || item.cover_source || "",
+      status: item.status || "planned",
+      summary: item.summary || item.notes || "Planned rota assignment.",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })
+  );
 }
 
 function normaliseAbsenceItems(data = {}) {
-  return toArray(data.items, [data.absences, data.leave, data.records]);
+  return toArray(data.items, [data.absences, data.leave, data.records]).map(
+    (item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_type: item.record_type || "absence",
+      staff_member: item.staff_member || item.full_name || item.name || "Staff member",
+      reason: item.reason || item.absence_type || "Absence",
+      shift_date: item.shift_date || item.start_date || null,
+      start_date: item.start_date || item.shift_date || null,
+      end_date: item.end_date || null,
+      summary:
+        item.summary ||
+        item.notes ||
+        `${item.reason || item.absence_type || "Absence"} affecting cover.`,
+      status: item.status || item.absence_status || "absence",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })
+  );
 }
 
 function normaliseGapItems(data = {}) {
-  return toArray(data.items, [data.gaps, data.unfilled, data.records]);
+  return toArray(data.items, [data.gaps, data.unfilled, data.records]).map(
+    (item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_type: item.record_type || "rota_shift",
+      shift_name: item.shift_name || item.title || "Shift gap",
+      shift_date:
+        item.shift_date ||
+        item.date ||
+        item.start_datetime ||
+        item.start_time ||
+        null,
+      start_time: item.start_time || item.start_datetime || "",
+      end_time: item.end_time || item.end_datetime || "",
+      summary: item.summary || item.notes || "Shift still needs cover.",
+      status: item.status || "unfilled",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })
+  );
 }
 
 function normaliseNotificationItems(data = {}) {
-  return toArray(data.items, [data.notifications, data.records]);
+  return toArray(data.items, [data.notifications, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    record_type: item.record_type || "notification",
+    title: item.title || item.subject || "Notification",
+    summary: item.summary || item.message || item.notes || "Notification recorded.",
+    recipient_name: item.recipient_name || item.staff_member || "",
+    status: item.status || "recorded",
+    created_at: item.created_at || item.updated_at || null,
+    updated_at: item.updated_at || null,
+  }));
 }
 
 function buildTopStats({
@@ -230,7 +332,9 @@ function buildProgressCards({
     shifts.length > 0 ? Math.round((filled.length / shifts.length) * 100) : 0;
 
   const internalPercent =
-    shifts.length > 0 ? Math.round((internalCover.length / shifts.length) * 100) : 0;
+    shifts.length > 0
+      ? Math.round((internalCover.length / shifts.length) * 100)
+      : 0;
 
   const agencyPercent =
     shifts.length > 0 ? Math.round((agency.length / shifts.length) * 100) : 0;
@@ -264,8 +368,7 @@ function buildProgressCards({
       label: "Gap pressure",
       value: `${gapPercent}%`,
       percent: gapPercent,
-      tone:
-        gapPercent <= 5 ? "success" : gapPercent <= 15 ? "warning" : "danger",
+      tone: gapPercent <= 5 ? "success" : gapPercent <= 15 ? "warning" : "danger",
     },
   ];
 }
@@ -283,7 +386,10 @@ function buildPriorityItems({
       title: item.shift_name || item.title || "Unfilled shift",
       summary:
         item.summary ||
-        `${formatShortDate(item.shift_date)} • ${formatShiftTime(item.start_time, item.end_time)}`,
+        `${formatShortDate(item.shift_date)} • ${formatShiftTime(
+          item.start_time,
+          item.end_time
+        )}`,
     });
   });
 
@@ -292,7 +398,9 @@ function buildPriorityItems({
       title: item.staff_member || "Absence",
       summary:
         item.summary ||
-        `${item.reason || "Absence"} affecting ${formatShortDate(item.shift_date || item.start_date)}`,
+        `${item.reason || "Absence"} affecting ${formatShortDate(
+          item.shift_date || item.start_date
+        )}`,
     });
   });
 
@@ -300,8 +408,7 @@ function buildPriorityItems({
     items.push({
       title: item.shift_name || "Agency cover",
       summary:
-        item.summary ||
-        "Shift currently depends on agency or bank cover.",
+        item.summary || "Shift currently depends on agency or bank cover.",
     });
   });
 
@@ -354,7 +461,9 @@ function renderProgressCards(cards = []) {
               </div>
               <div class="analytics-progress-track">
                 <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
+                  class="analytics-progress-bar analytics-progress-bar--${safeText(
+                    card.tone || "muted"
+                  )}"
                   style="width: ${safeText(card.percent || 0)}%;"
                 ></span>
               </div>
@@ -430,7 +539,9 @@ function renderRows(items = [], options = {}) {
                 <div class="record-row-meta">${safeText(meta)}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(status || "Recorded")}</span>
+                <span class="row-pill ${safeText(tone)}">${safeText(
+                  status || "Recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -475,7 +586,7 @@ function groupShiftsByDate(items = []) {
   });
 
   return [...map.entries()].sort(
-    (a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()
+    (a, b) => toTime(a[0]) - toTime(b[0])
   );
 }
 
@@ -507,7 +618,8 @@ function renderGroupedShiftBlocks(groups = []) {
                 ${items
                   .map((item) => {
                     const tone = getStatusTone(item.status || "");
-                    const assigned = item.staff_member || item.staff_name || "Unassigned";
+                    const assigned =
+                      item.staff_member || item.staff_name || "Unassigned";
                     const role = item.role || item.shift_role || "";
                     const lead = item.is_shift_lead ? "Shift lead" : "";
                     const source = item.source || "";
@@ -531,12 +643,18 @@ function renderGroupedShiftBlocks(groups = []) {
                         role="button"
                       >
                         <div class="record-row-main">
-                          <div class="record-row-title">${safeText(item.shift_name || "Shift")} • ${safeText(assigned)}</div>
-                          <div class="record-row-summary">${safeText(item.summary || "Planned rota assignment.")}</div>
+                          <div class="record-row-title">${safeText(
+                            item.shift_name || "Shift"
+                          )} • ${safeText(assigned)}</div>
+                          <div class="record-row-summary">${safeText(
+                            item.summary || "Planned rota assignment."
+                          )}</div>
                           <div class="record-row-meta">${safeText(meta)}</div>
                         </div>
                         <div class="record-row-side">
-                          <span class="row-pill ${safeText(tone)}">${safeText(item.status || "planned")}</span>
+                          <span class="row-pill ${safeText(tone)}">${safeText(
+                            item.status || "planned"
+                          )}</span>
                         </div>
                       </article>
                     `;
@@ -644,7 +762,11 @@ function renderRotaHtml({
               metaBuilder: (item) =>
                 [
                   item.reason || "",
-                  item.shift_date ? formatDate(item.shift_date) : item.start_date ? formatDate(item.start_date) : "",
+                  item.shift_date
+                    ? formatDate(item.shift_date)
+                    : item.start_date
+                    ? formatDate(item.start_date)
+                    : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -689,7 +811,10 @@ function buildFallbackRotaData(homeId) {
   return {
     summaryData: {
       summary: {
-        title: "Rota",
+        title:
+          state.currentUser?.home_name ||
+          state.currentUser?.homeName ||
+          `Home ${homeId} rota`,
         home_name:
           state.currentUser?.home_name ||
           state.currentUser?.homeName ||
@@ -815,14 +940,17 @@ function buildFallbackRotaData(homeId) {
 
 async function fetchRotaDataset(homeId) {
   const requests = [
-    apiGet(`/homes/${homeId}/rota`),
-    apiGet(`/homes/${homeId}/rota-absences`),
-    apiGet(`/homes/${homeId}/rota-gaps`),
-    apiGet(`/homes/${homeId}/notifications`),
+    apiGet(`/homes/${homeId}/rota`).catch(() => null),
+    apiGet(`/homes/${homeId}/rota-absences`).catch(() => null),
+    apiGet(`/homes/${homeId}/rota-gaps`).catch(() => null),
+    apiGet(`/homes/${homeId}/notifications`).catch(() => null),
   ];
 
-  const results = await Promise.allSettled(requests);
-  const hasLiveSuccess = results.some((result) => result.status === "fulfilled");
+  const [shiftData, absenceData, gapData, notificationData] =
+    await Promise.all(requests);
+
+  const responses = [shiftData, absenceData, gapData, notificationData];
+  const hasLiveSuccess = responses.some(hasUsableData);
 
   if (!hasLiveSuccess) {
     return {
@@ -832,11 +960,11 @@ async function fetchRotaDataset(homeId) {
   }
 
   return {
-    summaryData: {},
-    shiftData: results[0].status === "fulfilled" ? results[0].value : { items: [] },
-    absenceData: results[1].status === "fulfilled" ? results[1].value : { items: [] },
-    gapData: results[2].status === "fulfilled" ? results[2].value : { items: [] },
-    notificationData: results[3].status === "fulfilled" ? results[3].value : { items: [] },
+    summaryData: shiftData || {},
+    shiftData: shiftData || { items: [] },
+    absenceData: absenceData || { items: [] },
+    gapData: gapData || { items: [] },
+    notificationData: notificationData || { items: [] },
     isFallback: false,
   };
 }
@@ -953,10 +1081,10 @@ export async function loadRota() {
       "created_at",
     ]).slice(0, 6);
 
-    const notifications = sortNewestFirst(normaliseNotificationItems(notificationData), [
-      "created_at",
-      "updated_at",
-    ]).slice(0, 6);
+    const notifications = sortNewestFirst(
+      normaliseNotificationItems(notificationData),
+      ["created_at", "updated_at"]
+    ).slice(0, 6);
 
     const todayKey = new Date().toDateString();
     const todayShifts = shifts.filter((item) => {
@@ -964,18 +1092,25 @@ export async function loadRota() {
       return !Number.isNaN(d.getTime()) && d.toDateString() === todayKey;
     });
 
-    const unfilled = shifts.filter((item) =>
-      ["unfilled", "gap"].includes(String(item.status || "").toLowerCase()) ||
-      !String(item.staff_member || item.staff_name || "").trim()
+    const unfilled = shifts.filter(
+      (item) =>
+        ["unfilled", "gap"].includes(
+          String(item.status || "").toLowerCase().trim()
+        ) || !String(item.staff_member || item.staff_name || "").trim()
     );
 
     const agency = shifts.filter((item) =>
-      ["agency", "bank"].includes(String(item.source || item.status || "").toLowerCase())
+      ["agency", "bank", "bank_staff"].includes(
+        String(item.source || item.status || "").toLowerCase().trim()
+      )
     );
 
     const filled = shifts.filter((item) => !unfilled.includes(item));
     const internalCover = filled.filter(
-      (item) => !["agency", "bank"].includes(String(item.source || "").toLowerCase())
+      (item) =>
+        !["agency", "bank", "bank_staff"].includes(
+          String(item.source || "").toLowerCase().trim()
+        )
     );
     const shiftLeads = shifts.filter((item) => Boolean(item.is_shift_lead));
 
@@ -1007,6 +1142,7 @@ export async function loadRota() {
 
     const title =
       summary.title ||
+      summary.home_name ||
       state.currentUser?.home_name ||
       state.currentUser?.homeName ||
       `Home ${homeId} rota`;
@@ -1044,6 +1180,7 @@ export async function loadRota() {
       openActions: `${unfilled.length} gaps • ${agency.length} agency/bank`,
     });
   } catch (error) {
+    console.error("[rota] load failed", error);
     renderErrorState(error?.message || "The rota view could not be loaded.");
   }
 }
