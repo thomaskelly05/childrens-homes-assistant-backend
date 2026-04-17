@@ -464,6 +464,9 @@ function bindGlobalSearchMirrors() {
 
   if (!desktopSearch && !mobileSearch && !filter) return;
 
+  let debounceTimer = null;
+  let lastPayload = "";
+
   const syncSearchValues = (source, target) => {
     if (!source || !target) return;
     if (target.value === source.value) return;
@@ -471,30 +474,58 @@ function bindGlobalSearchMirrors() {
   };
 
   const dispatchSearchChanged = () => {
+    const payload = {
+      query: desktopSearch?.value || mobileSearch?.value || "",
+      recordType: filter?.value || "",
+      scope: state.currentScope || "child",
+      section:
+        state.currentSection || state.activeSection || state.currentView || "",
+    };
+
+    const payloadKey = JSON.stringify(payload);
+    if (payloadKey === lastPayload) return;
+    lastPayload = payloadKey;
+
     document.dispatchEvent(
       new CustomEvent("indicared:record-search-changed", {
-        detail: {
-          query: desktopSearch?.value || mobileSearch?.value || "",
-          recordType: filter?.value || "",
-          scope: state.currentScope || "child",
-          section:
-            state.currentSection || state.activeSection || state.currentView || "",
-        },
+        detail: payload,
       })
     );
   };
 
+  const scheduleDispatch = () => {
+    window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(dispatchSearchChanged, 220);
+  };
+
   desktopSearch?.addEventListener("input", () => {
     syncSearchValues(desktopSearch, mobileSearch);
-    dispatchSearchChanged();
+    scheduleDispatch();
   });
 
   mobileSearch?.addEventListener("input", () => {
     syncSearchValues(mobileSearch, desktopSearch);
+    scheduleDispatch();
+  });
+
+  desktopSearch?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    window.clearTimeout(debounceTimer);
     dispatchSearchChanged();
   });
 
-  filter?.addEventListener("change", dispatchSearchChanged);
+  mobileSearch?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    window.clearTimeout(debounceTimer);
+    dispatchSearchChanged();
+  });
+
+  filter?.addEventListener("change", () => {
+    window.clearTimeout(debounceTimer);
+    dispatchSearchChanged();
+  });
 }
 
 function bindGlobalRefreshShortcuts() {
