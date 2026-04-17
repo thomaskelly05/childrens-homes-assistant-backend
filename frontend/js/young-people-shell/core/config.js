@@ -1,1152 +1,1181 @@
-export const ROLE_SCOPE_ACCESS = Object.freeze({
-  // Direct care staff
-  staff: ["child", "home"],
-  rsw: ["child", "home"],
-  residential_support_worker: ["child", "home"],
+const API_BASE = window.location.origin;
 
-  // Management
-  manager: ["child", "home", "quality"],
-  registered_manager: ["child", "home", "quality"],
-  deputy_manager: ["child", "home", "quality"],
+const GET_CACHE_MS = 30000;
+const REQUEST_TIMEOUT_MS = 20000;
+const SSE_TIMEOUT_MS = 60000;
 
-  // Responsible individual / oversight
-  ri: ["child", "home", "quality"],
-  responsible_individual: ["child", "home", "quality"],
+const inflightGetRequests = new Map();
+const getResponseCache = new Map();
 
-  // Admin
-  admin: ["child", "home", "quality"],
-  administrator: ["child", "home", "quality"],
-  super_admin: ["child", "home", "quality"],
-  superadmin: ["child", "home", "quality"],
-});
+async function readJsonSafely(response) {
+  const text = await response.text();
 
-export const SCOPE_DEFAULT_SECTION = Object.freeze({
-  child: "workspace",
-  home: "home-dashboard",
-  quality: "provider-overview",
-});
+  if (!text) return null;
 
-export const SCOPE_SECTIONS = Object.freeze({
-  child: [
-    "workspace",
-    "overview",
-    "admission",
-    "profile",
-    "timeline",
-    "handover",
-    "daily-life",
-    "health",
-    "medication",
-    "education",
-    "family",
-    "calendar",
-    "therapy",
-    "risk",
-    "safeguarding",
-    "missing-from-care",
-    "readiness",
-    "reviews",
-    "reports",
-    "transition",
-    "leaving-care",
-    "documents",
-    "communication",
-    "manager",
-  ],
-  home: [
-    "home-dashboard",
-    "operations",
-    "calendar",
-    "team",
-    "rota",
-    "staff-profile",
-    "onboarding",
-    "supervision",
-    "training-centre",
-    "compliance",
-    "health-safety",
-    "maintenance",
-    "notifications",
-    "manager",
-    "quality",
-    "reports",
-    "ofsted-readiness",
-    "policies",
-    "documents",
-    "communication",
-  ],
-  quality: [
-    "provider-overview",
-    "quality",
-    "quality-audits",
-    "compliance",
-    "reg44",
-    "reg45",
-    "inspection-readiness",
-    "staff-profile",
-    "onboarding",
-    "supervision",
-    "training-centre",
-    "team",
-    "rota",
-    "notifications",
-    "reports",
-    "policies",
-    "documents",
-    "communication",
-  ],
-});
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
 
-export const SECTION_TITLES = Object.freeze({
-  workspace: "Today at a glance",
-  overview: "What matters today",
-  admission: "Admission and planning",
-  profile: "About this child",
-  timeline: "Timeline and recent events",
-  handover: "Handover",
-  "daily-life": "Daily life in placement",
-  health: "Health overview",
-  medication: "Medication and treatment",
-  education: "Education overview",
-  family: "Family and relationships",
-  calendar: "Calendar and appointments",
-  therapy: "Therapeutic support",
-  risk: "Risk assessment",
-  safeguarding: "Safeguarding",
-  "missing-from-care": "Missing from care",
-  readiness: "Independence and readiness",
-  reviews: "Reviews and outcomes",
-  reports: "Reports and reviews",
-  transition: "Transition planning",
-  "leaving-care": "Leaving placement",
-  documents: "Documents",
-  communication: "Communication log",
-  manager: "Manager review",
+function buildErrorMessage(response, data) {
+  if (data?.message) return data.message;
+  if (data?.error) return data.error;
+  if (data?.detail) return data.detail;
+  if (typeof data?.raw === "string" && data.raw.trim()) return data.raw.trim();
+  return `Request failed (${response.status})`;
+}
 
-  "home-dashboard": "Home dashboard",
-  operations: "Daily operations",
-  team: "Team and staffing",
-  rota: "Rota and cover",
-  "staff-profile": "Staff profiles",
-  onboarding: "Recruitment and onboarding",
-  supervision: "Supervision and development",
-  "training-centre": "Training and compliance",
-  compliance: "Compliance and statutory checks",
-  "health-safety": "Health and safety",
-  maintenance: "Maintenance and environment",
-  notifications: "Alerts and notifications",
-  quality: "Quality dashboard",
-  "ofsted-readiness": "Ofsted readiness",
-  policies: "Policies and guidance",
+const API_ROUTE_ALIASES = [
+  [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
+  [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
 
-  "provider-overview": "Provider overview",
-  "quality-audits": "Quality audits",
-  reg44: "Regulation 44",
-  reg45: "Regulation 45",
-  "inspection-readiness": "Inspection readiness",
-});
+  [/\/young-people\/(\d+)\/health-records$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/health"],
 
-export const SECTION_SUBTITLES = Object.freeze({
-  workspace:
-    "A calm, practical space to record, reflect, safeguard and respond to what matters today.",
-  overview:
-    "A clear picture of strengths, risks, priorities, progress and next steps.",
-  admission:
-    "Admission tasks, planning, baseline needs, risk and welcome arrangements.",
-  profile:
-    "Identity, communication, needs, strengths and what adults should hold in mind.",
-  timeline:
-    "A shared view of significant events, patterns, progress and concerns over time.",
-  handover:
-    "Support safe, thoughtful communication between adults across the shift.",
-  "daily-life":
-    "Daily routines, notes, achievements, appointments and life in placement.",
-  health:
-    "Health needs, appointments, professionals, outcomes and follow-up.",
-  medication:
-    "Medication administration, treatment plans, audits and health follow-up.",
-  education:
-    "Learning, attendance, support, strengths and educational experience.",
-  family:
-    "Family contact, important relationships and how these are experienced.",
-  calendar:
-    "Appointments, meetings and important dates that shape the week.",
-  therapy:
-    "Therapeutic input, recommendations, outcomes and emotional wellbeing support.",
-  risk:
-    "Risk assessments, triggers, protective factors and response guidance.",
-  safeguarding:
-    "Safeguarding concerns, referrals, linked actions and oversight.",
-  "missing-from-care":
-    "Missing episodes, returns, patterns, response quality and follow-up.",
-  readiness:
-    "Actions, practical tasks, independence work, preparation and follow-up.",
-  reviews:
-    "Review preparation, outcomes tracking, progress themes and next steps.",
-  reports:
-    "Structured summaries, reports and review outputs for the child or service.",
-  transition:
-    "Planning for change, independence, step-down and future moves.",
-  "leaving-care":
-    "Leaving placement planning, closure work, summaries and ending well.",
-  documents:
-    "Upload, organise and review statutory and supporting documents.",
-  communication:
-    "Track communication with professionals, families and partner agencies.",
-  manager:
-    "Oversight, management review, decision-making and quality assurance.",
+  [/\/young-people\/(\d+)\/education-records$/, "/young-people/$1/education"],
+  [/\/young-people\/(\d+)\/achievements$/, "/young-people/$1/education"],
 
-  "home-dashboard":
-    "A whole-home operational view for managers and senior staff.",
-  operations:
-    "Daily running of the home, live issues, occupancy, shift visibility and priorities.",
-  team:
-    "Team capacity, staffing, deployment and workforce context.",
-  rota:
-    "A live rota view across cover, absences, shift leads, agency use and gaps.",
-  "staff-profile":
-    "A live workforce view across staff roles, files, checks, training and readiness.",
-  onboarding:
-    "Track recruitment checks, induction, probation and safer recruitment progress.",
-  supervision:
-    "Supervision, training, appraisal, development and workforce support.",
-  "training-centre":
-    "Mandatory training, role development, compliance and workforce learning needs.",
-  compliance:
-    "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness.",
-  "health-safety":
-    "Fire, premises, risk controls, safety checks and environmental readiness.",
-  maintenance:
-    "Repairs, environment standards, premises issues and follow-up actions.",
-  notifications:
-    "A live action layer for reminders, escalations, acknowledgements and workforce follow-up.",
-  quality:
-    "Quality assurance, audits, trends, RI oversight and service performance.",
-  "ofsted-readiness":
-    "Inspection preparation, evidence, action tracking and readiness across the home.",
-  policies:
-    "Policy library, review dates, guidance and practice standards across the service.",
+  [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
 
-  "provider-overview":
-    "A cross-home quality and operational overview for provider and senior leaders.",
-  "quality-audits":
-    "Internal audit activity, findings, action plans and progress against improvement themes.",
-  reg44:
-    "Independent visit preparation, evidence collation, themes and resulting actions.",
-  reg45:
-    "Quality of care review planning, evidence, analysis and improvement actions.",
-  "inspection-readiness":
-    "Inspection evidence, gaps, readiness tracking and regulator-facing preparation.",
-});
+  [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/safeguarding$/, "/young-people/$1/incidents"],
 
-const NAV_GROUPS = [
-  {
-    id: "child_dashboard",
-    title: "Child dashboard",
-    items: [
-      {
-        id: "workspace",
-        label: "Today at a glance",
-        short_label: "Today",
-        icon: "home",
-        description:
-          "The main place to record, reflect and act on what matters today.",
-      },
-      {
-        id: "overview",
-        label: "What matters today",
-        short_label: "Overview",
-        icon: "layout-dashboard",
-        description:
-          "A clear picture of priorities, progress, strengths and current concerns.",
-      },
-      {
-        id: "timeline",
-        label: "Timeline and recent events",
-        short_label: "Timeline",
-        icon: "list-ordered",
-        description: "A clear view of what has happened over time.",
-      },
-      {
-        id: "calendar",
-        label: "Calendar and appointments",
-        short_label: "Calendar",
-        icon: "calendar",
-        description: "Appointments, meetings and important dates.",
-      },
-    ],
-  },
-  {
-    id: "child_admission_and_life",
-    title: "Admission and daily life",
-    items: [
-      {
-        id: "admission",
-        label: "Admission and planning",
-        short_label: "Admission",
-        icon: "clipboard-check",
-        description:
-          "Admission checklist, planning, baseline information and welcome arrangements.",
-      },
-      {
-        id: "handover",
-        label: "Handover",
-        short_label: "Handover",
-        icon: "repeat",
-        description:
-          "Support smooth, thoughtful communication between adults.",
-      },
-      {
-        id: "daily-life",
-        label: "Daily life in placement",
-        short_label: "Daily life",
-        icon: "home",
-        description:
-          "Daily routines, notes, appointments, achievements and life in placement.",
-      },
-      {
-        id: "communication",
-        label: "Communication log",
-        short_label: "Comms",
-        icon: "messages-square",
-        description:
-          "Professional liaison, family contact and important communication trails.",
-      },
-    ],
-  },
-  {
-    id: "child_identity_and_family",
-    title: "Identity and family",
-    items: [
-      {
-        id: "profile",
-        label: "About this child",
-        short_label: "Profile",
-        icon: "user",
-        description:
-          "Identity, communication, needs, strengths and what matters to them.",
-      },
-      {
-        id: "family",
-        label: "Family and relationships",
-        short_label: "Family",
-        icon: "users",
-        description:
-          "Family contact, important relationships and how contact is experienced.",
-      },
-      {
-        id: "documents",
-        label: "Documents",
-        short_label: "Documents",
-        icon: "folder",
-        description:
-          "Statutory documents, uploads and important child records.",
-      },
-    ],
-  },
-  {
-    id: "child_health_and_progress",
-    title: "Health and progress",
-    items: [
-      {
-        id: "health",
-        label: "Health overview",
-        short_label: "Health",
-        icon: "heart-pulse",
-        description:
-          "Health needs, professionals, appointments, outcomes and follow-up.",
-      },
-      {
-        id: "medication",
-        label: "Medication and treatment",
-        short_label: "Medication",
-        icon: "heart-pulse",
-        description:
-          "Medication administration, treatment plans and health monitoring.",
-      },
-      {
-        id: "education",
-        label: "Education overview",
-        short_label: "Education",
-        icon: "graduation-cap",
-        description:
-          "Learning, attendance, strengths, support and educational progress.",
-      },
-      {
-        id: "therapy",
-        label: "Therapeutic support",
-        short_label: "Therapy",
-        icon: "sparkles",
-        description:
-          "Therapy input, recommendations, outcomes and emotional wellbeing support.",
-      },
-      {
-        id: "readiness",
-        label: "Independence and readiness",
-        short_label: "Readiness",
-        icon: "shield-check",
-        description:
-          "Practical life skills, independence work, actions and preparation.",
-      },
-    ],
-  },
-  {
-    id: "child_risk_and_review",
-    title: "Risk and review",
-    items: [
-      {
-        id: "risk",
-        label: "Risk assessment",
-        short_label: "Risk",
-        icon: "shield-check",
-        description:
-          "Risk assessments, triggers, protective factors and response guidance.",
-      },
-      {
-        id: "safeguarding",
-        label: "Safeguarding",
-        short_label: "Safeguarding",
-        icon: "badge-check",
-        description:
-          "Safeguarding concerns, referrals, linked actions and oversight.",
-      },
-      {
-        id: "missing-from-care",
-        label: "Missing from care",
-        short_label: "Missing",
-        icon: "repeat",
-        description:
-          "Missing episodes, returns, patterns and follow-up.",
-      },
-      {
-        id: "reviews",
-        label: "Reviews and outcomes",
-        short_label: "Reviews",
-        icon: "file-text",
-        description:
-          "Review preparation, outcomes tracking and next steps.",
-      },
-      {
-        id: "reports",
-        label: "Reports and reviews",
-        short_label: "Reports",
-        icon: "file-text",
-        description:
-          "Reports, summaries and structured review outputs.",
-      },
-      {
-        id: "manager",
-        label: "Manager review",
-        short_label: "Manager",
-        icon: "clipboard-check",
-        description:
-          "Review workflows, oversight, decision-making and management actions.",
-      },
-    ],
-  },
-  {
-    id: "child_transition",
-    title: "Transition and leaving",
-    items: [
-      {
-        id: "transition",
-        label: "Transition planning",
-        short_label: "Transition",
-        icon: "repeat",
-        description:
-          "Planning for change, independence, step-down and future moves.",
-      },
-      {
-        id: "leaving-care",
-        label: "Leaving placement",
-        short_label: "Leaving",
-        icon: "home",
-        description:
-          "Leaving placement planning, summaries and ending well.",
-      },
-    ],
-  },
-  {
-    id: "home_operations",
-    title: "Home operations",
-    items: [
-      {
-        id: "home-dashboard",
-        label: "Home dashboard",
-        short_label: "Home",
-        icon: "building-2",
-        description:
-          "A whole-home dashboard with live operational visibility.",
-      },
-      {
-        id: "operations",
-        label: "Daily operations",
-        short_label: "Operations",
-        icon: "layout-dashboard",
-        description:
-          "Live events, shift visibility, occupancy and daily priorities across the home.",
-      },
-      {
-        id: "rota",
-        label: "Rota and cover",
-        short_label: "Rota",
-        icon: "calendar",
-        description:
-          "Shift cover, shift leads, absences, agency use and operational gaps.",
-      },
-      {
-        id: "team",
-        label: "Team and staffing",
-        short_label: "Team",
-        icon: "users-round",
-        description:
-          "Staffing, roles, rota context, sickness, vacancies and deployment.",
-      },
-      {
-        id: "notifications",
-        label: "Alerts and notifications",
-        short_label: "Alerts",
-        icon: "messages-square",
-        description:
-          "Reminders, escalations and live actions for staff and managers.",
-      },
-    ],
-  },
-  {
-    id: "home_staff_and_development",
-    title: "Staff and development",
-    items: [
-      {
-        id: "staff-profile",
-        label: "Staff profiles",
-        short_label: "Staff",
-        icon: "users-round",
-        description:
-          "Workforce profiles, checks, training, supervision and file readiness.",
-      },
-      {
-        id: "onboarding",
-        label: "Recruitment and onboarding",
-        short_label: "Onboarding",
-        icon: "clipboard-check",
-        description:
-          "Recruitment checks, induction, probation and safer recruitment workflow.",
-      },
-      {
-        id: "supervision",
-        label: "Supervision and development",
-        short_label: "Supervision",
-        icon: "badge-check",
-        description:
-          "Supervisions, appraisals, capability, training and workforce support.",
-      },
-      {
-        id: "training-centre",
-        label: "Training and compliance",
-        short_label: "Training",
-        icon: "graduation-cap",
-        description:
-          "Mandatory training, role development and workforce learning needs.",
-      },
-    ],
-  },
-  {
-    id: "home_compliance_and_quality",
-    title: "Compliance and quality",
-    items: [
-      {
-        id: "compliance",
-        label: "Compliance and statutory checks",
-        short_label: "Compliance",
-        icon: "badge-check",
-        description:
-          "Compliance across staff files, children’s files, statutory paperwork and inspection readiness.",
-      },
-      {
-        id: "health-safety",
-        label: "Health and safety",
-        short_label: "H&S",
-        icon: "shield-check",
-        description:
-          "Fire, premises, risk controls, safety checks and environmental readiness.",
-      },
-      {
-        id: "maintenance",
-        label: "Maintenance and environment",
-        short_label: "Maintenance",
-        icon: "building-2",
-        description:
-          "Repairs, environment standards, premises issues and follow-up actions.",
-      },
-      {
-        id: "quality",
-        label: "Quality dashboard",
-        short_label: "Quality",
-        icon: "bar-chart-3",
-        description:
-          "Quality assurance, audits, trends, RI oversight and service standards.",
-      },
-      {
-        id: "reports",
-        label: "Reports and reviews",
-        short_label: "Reports",
-        icon: "file-text",
-        description:
-          "Home reports, reviews and structured management outputs.",
-      },
-      {
-        id: "ofsted-readiness",
-        label: "Ofsted readiness",
-        short_label: "Ofsted",
-        icon: "clipboard-check",
-        description:
-          "Inspection evidence, gaps, action tracking and readiness across the home.",
-      },
-      {
-        id: "policies",
-        label: "Policies and guidance",
-        short_label: "Policies",
-        icon: "folder",
-        description:
-          "Policy library, review dates, guidance and practice standards.",
-      },
-      {
-        id: "documents",
-        label: "Documents",
-        short_label: "Documents",
-        icon: "folder",
-        description:
-          "Home documents, evidence packs and supporting records.",
-      },
-      {
-        id: "communication",
-        label: "Communication log",
-        short_label: "Comms",
-        icon: "messages-square",
-        description:
-          "Communication with professionals, families, providers and partner agencies.",
-      },
-      {
-        id: "manager",
-        label: "Manager review",
-        short_label: "Manager",
-        icon: "clipboard-check",
-        description:
-          "Home oversight, decision-making and management actions.",
-      },
-    ],
-  },
-  {
-    id: "quality_provider_and_audit",
-    title: "Provider and oversight",
-    items: [
-      {
-        id: "provider-overview",
-        label: "Provider overview",
-        short_label: "Provider",
-        icon: "building-2",
-        description:
-          "A cross-home quality and operational overview for provider and senior leaders.",
-      },
-      {
-        id: "quality",
-        label: "Quality dashboard",
-        short_label: "Quality",
-        icon: "bar-chart-3",
-        description:
-          "Quality assurance, audits, trends, RI oversight and service performance.",
-      },
-      {
-        id: "quality-audits",
-        label: "Quality audits",
-        short_label: "Audits",
-        icon: "clipboard-check",
-        description:
-          "Internal audits, findings, action plans and progress.",
-      },
-      {
-        id: "reg44",
-        label: "Regulation 44",
-        short_label: "Reg 44",
-        icon: "file-text",
-        description:
-          "Independent visit preparation, evidence, themes and resulting actions.",
-      },
-      {
-        id: "reg45",
-        label: "Regulation 45",
-        short_label: "Reg 45",
-        icon: "file-text",
-        description:
-          "Quality of care review planning, evidence and improvement actions.",
-      },
-      {
-        id: "inspection-readiness",
-        label: "Inspection readiness",
-        short_label: "Inspection",
-        icon: "badge-check",
-        description:
-          "Inspection evidence, gaps, readiness tracking and preparation.",
-      },
-      {
-        id: "compliance",
-        label: "Compliance and statutory checks",
-        short_label: "Compliance",
-        icon: "badge-check",
-        description:
-          "Cross-home compliance themes, overdue actions and statutory readiness.",
-      },
-      {
-        id: "reports",
-        label: "Reports and reviews",
-        short_label: "Reports",
-        icon: "file-text",
-        description:
-          "Provider reports, summaries and quality outputs.",
-      },
-      {
-        id: "policies",
-        label: "Policies and guidance",
-        short_label: "Policies",
-        icon: "folder",
-        description:
-          "Policy library, review dates and practice standards across services.",
-      },
-      {
-        id: "documents",
-        label: "Documents",
-        short_label: "Documents",
-        icon: "folder",
-        description:
-          "Inspection evidence, reports and provider-level supporting documents.",
-      },
-    ],
-  },
-  {
-    id: "quality_workforce",
-    title: "Workforce oversight",
-    items: [
-      {
-        id: "staff-profile",
-        label: "Staff profiles",
-        short_label: "Staff",
-        icon: "users-round",
-        description:
-          "Cross-home workforce profiles, file readiness and workforce overview.",
-      },
-      {
-        id: "onboarding",
-        label: "Recruitment and onboarding",
-        short_label: "Onboarding",
-        icon: "clipboard-check",
-        description:
-          "Recruitment checks, induction progress and probation themes.",
-      },
-      {
-        id: "supervision",
-        label: "Supervision and development",
-        short_label: "Supervision",
-        icon: "badge-check",
-        description:
-          "Supervision completion, development themes and workforce support.",
-      },
-      {
-        id: "training-centre",
-        label: "Training and compliance",
-        short_label: "Training",
-        icon: "graduation-cap",
-        description:
-          "Training completion, mandatory learning and workforce risks.",
-      },
-      {
-        id: "team",
-        label: "Team and staffing",
-        short_label: "Team",
-        icon: "users-round",
-        description:
-          "Team structure, staffing capacity, vacancies and deployment themes.",
-      },
-      {
-        id: "rota",
-        label: "Rota and cover",
-        short_label: "Rota",
-        icon: "calendar",
-        description:
-          "Shift coverage, agency usage, absence patterns and operational gaps.",
-      },
-      {
-        id: "notifications",
-        label: "Alerts and notifications",
-        short_label: "Alerts",
-        icon: "messages-square",
-        description:
-          "Cross-home reminders, escalations and live actions.",
-      },
-      {
-        id: "communication",
-        label: "Communication log",
-        short_label: "Comms",
-        icon: "messages-square",
-        description:
-          "Communication trails relevant to quality, staffing and oversight.",
-      },
-    ],
-  },
+  [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/child-compliance$/, "/young-people/$1/compliance"],
+
+  [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
+
+  [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
+  [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
+
+  [/\/young-people\/(\d+)\/communications$/, "/young-people/$1/family"],
+  [/\/young-people\/(\d+)\/therapy$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/keywork$/, "/young-people/$1/keywork"],
+
+  [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
+  [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
+
+  [/\/homes\/(\d+)\/staff$/, "/homes/$1/team"],
+  [/\/homes\/(\d+)\/staff-documents$/, "/homes/$1/staff-files"],
+  [/\/homes\/(\d+)\/notifications$/, "/homes/$1/communications"],
+  [/\/homes\/(\d+)\/inspection-readiness$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/safeguarding$/, "/homes/$1/quality"],
+  [/\/homes\/(\d+)\/child-compliance$/, "/homes/$1/compliance"],
 ];
 
-export const NAV_GROUPS_CONFIG = Object.freeze(
-  NAV_GROUPS.map((group) =>
-    Object.freeze({
-      ...group,
-      items: Object.freeze(group.items.map((item) => Object.freeze({ ...item }))),
-    })
-  )
-);
-
-export const NAV_SECTIONS = Object.freeze(
-  NAV_GROUPS.flatMap((group) =>
-    group.items.map((item) =>
-      Object.freeze({
-        ...item,
-        group_id: group.id,
-        group_title: group.title,
-      })
-    )
-  )
-);
-
-export const NAV_SECTION_MAP = Object.freeze(
-  Object.fromEntries(NAV_SECTIONS.map((item) => [item.id, item]))
-);
-
-export const NAV_GROUP_MAP = Object.freeze(
-  Object.fromEntries(NAV_GROUPS_CONFIG.map((group) => [group.id, group]))
-);
-
-export const QUICK_ACTIONS = Object.freeze([
-  {
-    id: "daily_note",
-    label: "Add daily note",
-    short_label: "Daily note",
-    record_type: "daily_note",
-    section_hint: "workspace",
-    description:
-      "Capture the day clearly, warmly and with the child at the centre.",
-  },
-  {
-    id: "incident",
-    label: "Add incident or important event",
-    short_label: "Incident",
-    record_type: "incident",
-    section_hint: "timeline",
-    description:
-      "Record a significant event clearly, safely and factually.",
-  },
-  {
-    id: "support_plan",
-    label: "Add care or support plan",
-    short_label: "Support plan",
-    record_type: "support_plan",
-    section_hint: "admission",
-    description:
-      "Create practical guidance to help adults respond consistently.",
-  },
-  {
-    id: "risk",
-    label: "Add risk assessment",
-    short_label: "Risk",
-    record_type: "risk",
-    section_hint: "risk",
-    description:
-      "Record risks, early signs, protective factors and response guidance.",
-  },
-  {
-    id: "health_record",
-    label: "Add health record",
-    short_label: "Health",
-    record_type: "health_record",
-    section_hint: "health",
-    description:
-      "Record health events, professionals, outcomes and follow-up.",
-  },
-  {
-    id: "education_record",
-    label: "Add education update",
-    short_label: "Education",
-    record_type: "education_record",
-    section_hint: "education",
-    description:
-      "Record learning, attendance, support, concerns and strengths.",
-  },
-  {
-    id: "family_contact",
-    label: "Add family contact",
-    short_label: "Family contact",
-    record_type: "family_contact",
-    section_hint: "family",
-    description:
-      "Record contact, presentation, concerns and next steps.",
-  },
-  {
-    id: "keywork",
-    label: "Add keywork session",
-    short_label: "Keywork",
-    record_type: "keywork",
-    section_hint: "daily-life",
-    description:
-      "Record direct work, reflection and agreed actions.",
-  },
-  {
-    id: "appointment",
-    label: "Add appointment",
-    short_label: "Appointment",
-    record_type: "appointment",
-    section_hint: "calendar",
-    description:
-      "Add an appointment, purpose, preparation and follow-up.",
-  },
-  {
-    id: "achievement_record",
-    label: "Add achievement",
-    short_label: "Achievement",
-    record_type: "achievement_record",
-    section_hint: "education",
-    description:
-      "Capture progress, strengths, success and what it meant.",
-  },
-  {
-    id: "safeguarding_record",
-    label: "Add safeguarding record",
-    short_label: "Safeguarding",
-    record_type: "safeguarding_record",
-    section_hint: "safeguarding",
-    description:
-      "Record safeguarding concerns, immediate action and referrals.",
-  },
-  {
-    id: "missing_episode",
-    label: "Add missing episode",
-    short_label: "Missing",
-    record_type: "missing_episode",
-    section_hint: "missing-from-care",
-    description:
-      "Record a missing episode, response, return and follow-up.",
-  },
-  {
-    id: "task",
-    label: "Add action",
-    short_label: "Action",
-    record_type: "task",
-    section_hint: "readiness",
-    description:
-      "Create a clear action with ownership and next steps.",
-  },
-  {
-    id: "upload_document",
-    label: "Upload document",
-    short_label: "Upload",
-    record_type: "document",
-    section_hint: "documents",
-    description:
-      "Upload a statutory or supporting document to the child or service record.",
-  },
-  {
-    id: "professional_message",
-    label: "Log communication",
-    short_label: "Communication",
-    record_type: "communication",
-    section_hint: "communication",
-    description:
-      "Record contact with professionals, family members and partner agencies.",
-  },
-  {
-    id: "staff_task",
-    label: "Add staff action",
-    short_label: "Staff action",
-    record_type: "task",
-    section_hint: "staff-profile",
-    description:
-      "Create a workforce action linked to onboarding, training, supervision or staffing.",
-  },
-  {
-    id: "policy_review",
-    label: "Add policy review action",
-    short_label: "Policy action",
-    record_type: "task",
-    section_hint: "policies",
-    description:
-      "Create an action linked to policy updates, review dates or guidance changes.",
-  },
-  {
-    id: "health_safety_check",
-    label: "Add health and safety check",
-    short_label: "H&S check",
-    record_type: "task",
-    section_hint: "health-safety",
-    description:
-      "Record a health and safety action, check or follow-up.",
-  },
-]);
-
-export const QUICK_ACTION_MAP = Object.freeze(
-  Object.fromEntries(QUICK_ACTIONS.map((action) => [action.id, action]))
-);
-
-export const SECTION_DEFAULT_ACTION = Object.freeze({
-  workspace: "daily_note",
-  overview: "daily_note",
-  admission: "support_plan",
-  profile: "profile_identity",
-  timeline: "incident",
-  handover: "daily_note",
-  "daily-life": "daily_note",
-  health: "health_record",
-  medication: "health_record",
-  education: "education_record",
-  family: "family_contact",
-  calendar: "appointment",
-  therapy: "task",
-  risk: "risk",
-  safeguarding: "safeguarding_record",
-  "missing-from-care": "missing_episode",
-  readiness: "task",
-  reviews: "task",
-  reports: "task",
-  transition: "task",
-  "leaving-care": "task",
-  documents: "upload_document",
-  communication: "professional_message",
-  manager: "task",
-
-  "home-dashboard": "task",
-  operations: "task",
-  team: "task",
-  rota: "staff_task",
-  "staff-profile": "staff_task",
-  onboarding: "staff_task",
-  supervision: "staff_task",
-  "training-centre": "staff_task",
-  compliance: "task",
-  "health-safety": "health_safety_check",
-  maintenance: "task",
-  notifications: "staff_task",
-  quality: "task",
-  "ofsted-readiness": "task",
-  policies: "policy_review",
-
-  "provider-overview": "task",
-  "quality-audits": "task",
-  reg44: "task",
-  reg45: "task",
-  "inspection-readiness": "task",
-});
-
-export const PROFILE_ACTIONS = Object.freeze([
-  {
-    id: "profile_identity",
-    label: "Identity and what matters",
-    short_label: "Identity",
-    record_type: "profile_identity",
-    description:
-      "Culture, language, strengths, interests and what matters most.",
-  },
-  {
-    id: "profile_communication",
-    label: "Communication and regulation",
-    short_label: "Communication",
-    record_type: "profile_communication",
-    description:
-      "How this child communicates, processes and what helps.",
-  },
-  {
-    id: "profile_education",
-    label: "Education profile",
-    short_label: "Education",
-    record_type: "profile_education",
-    description:
-      "School, support, learning access and educational context.",
-  },
-  {
-    id: "profile_health",
-    label: "Health profile",
-    short_label: "Health",
-    record_type: "profile_health",
-    description:
-      "Health contacts, diagnoses, allergies, medication and wellbeing.",
-  },
-  {
-    id: "profile_legal",
-    label: "Legal status",
-    short_label: "Legal",
-    record_type: "profile_legal",
-    description:
-      "Legal context, authority, restrictions and consent arrangements.",
-  },
-  {
-    id: "profile_formulation",
-    label: "Formulation",
-    short_label: "Formulation",
-    record_type: "profile_formulation",
-    description:
-      "Shared understanding of needs, behaviour, patterns and what helps.",
-  },
-]);
-
-export const PROFILE_ACTION_MAP = Object.freeze(
-  Object.fromEntries(PROFILE_ACTIONS.map((action) => [action.id, action]))
-);
-
-export function getAllowedScopesForRole(role = "staff") {
-  const safeRole = String(role || "staff").trim().toLowerCase();
-  return ROLE_SCOPE_ACCESS[safeRole] || ROLE_SCOPE_ACCESS.staff;
+function shouldResolveAlias(method = "GET") {
+  const upper = String(method || "GET").toUpperCase();
+  return upper === "GET" || upper === "HEAD";
 }
 
-export function canRoleAccessScope(role = "staff", scope = "child") {
-  return getAllowedScopesForRole(role).includes(scope);
+export function resolveApiUrl(url, method = "GET") {
+  if (!url || typeof url !== "string") return url;
+  if (!shouldResolveAlias(method)) return url;
+
+  const [pathname, queryString = ""] = url.split("?");
+  const suffix = queryString ? `?${queryString}` : "";
+
+  for (const [pattern, replacement] of API_ROUTE_ALIASES) {
+    if (pattern.test(pathname)) {
+      return pathname.replace(pattern, replacement) + suffix;
+    }
+  }
+
+  return url;
 }
 
-export function getDefaultScopeForRole(role = "staff") {
-  const allowed = getAllowedScopesForRole(role);
-
-  if (allowed.includes("home")) return "home";
-  if (allowed.includes("quality")) return "quality";
-  return allowed[0] || "child";
+function getCookie(name) {
+  const escaped = String(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(
+    new RegExp("(^|;\\s*)" + escaped + "=([^;]*)")
+  );
+  return match ? decodeURIComponent(match[2]) : "";
 }
 
-export function getSectionsForScope(scope = "child") {
-  return SCOPE_SECTIONS[scope] || SCOPE_SECTIONS.child;
+export function getCsrfToken() {
+  return getCookie("__Host-indicare_csrf") || getCookie("indicare_csrf") || "";
 }
 
-export function isSectionInScope(section = "", scope = "child") {
-  return getSectionsForScope(scope).includes(section);
+export function withCsrfHeaders(method = "GET", headers = {}) {
+  const upper = String(method || "GET").toUpperCase();
+  const nextHeaders = { ...(headers || {}) };
+
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(upper)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken && !nextHeaders["X-CSRF-Token"]) {
+      nextHeaders["X-CSRF-Token"] = csrfToken;
+    }
+  }
+
+  return nextHeaders;
 }
 
-export function getDefaultSectionForScope(scope = "child") {
-  return SCOPE_DEFAULT_SECTION[scope] || "workspace";
+function makeCacheKey(method, resolvedUrl) {
+  return `${String(method || "GET").toUpperCase()}::${resolvedUrl}`;
 }
 
-export function getSafeSectionForScope(section = "", scope = "child") {
-  return isSectionInScope(section, scope)
-    ? section
-    : getDefaultSectionForScope(scope);
+function getCachedResponse(cacheKey) {
+  const cached = getResponseCache.get(cacheKey);
+  if (!cached) return null;
+
+  const expired = Date.now() - cached.timestamp > GET_CACHE_MS;
+  if (expired) {
+    getResponseCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.data;
 }
 
-export function getSectionTitle(section = "") {
-  return SECTION_TITLES[section] || "Workspace";
+function setCachedResponse(cacheKey, data) {
+  getResponseCache.set(cacheKey, {
+    timestamp: Date.now(),
+    data,
+  });
 }
 
-export function getSectionSubtitle(section = "") {
-  return SECTION_SUBTITLES[section] || "";
+function shouldCacheRequest(method = "GET", options = {}) {
+  const upper = String(method || "GET").toUpperCase();
+  if (upper !== "GET") return false;
+  if (options.skipCache) return false;
+  return true;
 }
 
-export function getNavSection(sectionId = "") {
-  return NAV_SECTION_MAP[sectionId] || null;
+function isAbortError(error) {
+  return error?.name === "AbortError";
 }
 
-export function getQuickAction(actionId = "") {
-  return QUICK_ACTION_MAP[actionId] || null;
+function buildFetchConfig(method, options, headers) {
+  const config = {
+    credentials: "include",
+    ...options,
+    method,
+    headers,
+  };
+
+  delete config.accept;
+  delete config.invalidatePrefixes;
+  delete config.skipCache;
+  delete config.timeoutMs;
+
+  if (
+    config.body &&
+    typeof config.body !== "string" &&
+    !(config.body instanceof FormData)
+  ) {
+    config.body = JSON.stringify(config.body);
+  }
+
+  return config;
 }
 
-export function getProfileAction(actionId = "") {
-  return PROFILE_ACTION_MAP[actionId] || null;
+function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Request timed out") {
+  if (!timeoutMs && !externalSignal) {
+    return { signal: undefined, cleanup: () => {} };
+  }
+
+  const controller = new AbortController();
+  let timeoutId = null;
+
+  const abortFromExternal = () => {
+    try {
+      controller.abort(externalSignal?.reason);
+    } catch {
+      // ignore
+    }
+  };
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      abortFromExternal();
+    } else {
+      externalSignal.addEventListener("abort", abortFromExternal, { once: true });
+    }
+  }
+
+  if (timeoutMs > 0) {
+    timeoutId = setTimeout(() => {
+      try {
+        controller.abort(new Error(timeoutMessage));
+      } catch {
+        try {
+          controller.abort();
+        } catch {
+          // ignore
+        }
+      }
+    }, timeoutMs);
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (externalSignal) {
+        try {
+          externalSignal.removeEventListener("abort", abortFromExternal);
+        } catch {
+          // ignore
+        }
+      }
+    },
+  };
+}
+
+function buildAbortMessage(signal, fallback = "Request timed out") {
+  const reason = signal?.reason;
+
+  if (reason instanceof Error && reason.message) {
+    return reason.message;
+  }
+
+  if (typeof reason === "string" && reason.trim()) {
+    return reason.trim();
+  }
+
+  return fallback;
+}
+
+export function clearApiCache(url = null) {
+  if (!url) {
+    getResponseCache.clear();
+    inflightGetRequests.clear();
+    return;
+  }
+
+  const resolvedUrl = resolveApiUrl(url, "GET");
+  const cacheKey = makeCacheKey("GET", resolvedUrl);
+  getResponseCache.delete(cacheKey);
+  inflightGetRequests.delete(cacheKey);
+}
+
+function invalidateCacheByPrefixes(prefixes = []) {
+  if (!Array.isArray(prefixes) || !prefixes.length) {
+    clearApiCache();
+    return;
+  }
+
+  const safePrefixes = prefixes.filter(Boolean);
+  if (!safePrefixes.length) {
+    clearApiCache();
+    return;
+  }
+
+  for (const key of [...getResponseCache.keys()]) {
+    const [, urlPart = ""] = key.split("::");
+    if (safePrefixes.some((prefix) => urlPart.startsWith(prefix))) {
+      getResponseCache.delete(key);
+    }
+  }
+
+  for (const key of [...inflightGetRequests.keys()]) {
+    const [, urlPart = ""] = key.split("::");
+    if (safePrefixes.some((prefix) => urlPart.startsWith(prefix))) {
+      inflightGetRequests.delete(key);
+    }
+  }
+}
+
+function pushUniqueByKey(target, items, keyBuilder) {
+  const seen = new Set(target.map((item) => keyBuilder(item)));
+
+  for (const item of items) {
+    const key = keyBuilder(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    target.push(item);
+  }
+}
+
+function recordKey(item = {}) {
+  return [
+    item.record_type || item.source_table || "",
+    item.id ?? item.record_id ?? item.source_id ?? "",
+    item.title || item.name || item.staff_member || item.full_name || "",
+    item.date ||
+      item.created_at ||
+      item.updated_at ||
+      item.contact_datetime ||
+      item.event_datetime ||
+      item.review_date ||
+      item.start_datetime ||
+      item.session_date ||
+      item.visit_date ||
+      item.due_date ||
+      item.next_due_date ||
+      "",
+  ].join("::");
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function toIdArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
+
+async function apiGetSettled(urls = []) {
+  const settled = await Promise.allSettled(urls.map((url) => apiGet(url)));
+  return settled.map((result, index) => ({
+    url: urls[index],
+    ok: result.status === "fulfilled",
+    data: result.status === "fulfilled" ? result.value : null,
+    error: result.status === "rejected" ? result.reason : null,
+  }));
+}
+
+function mergeAssistantBundle(responses = []) {
+  const bundle = {
+    items: [],
+    daily_notes: [],
+    incidents: [],
+    tasks: [],
+    health_records: [],
+    education_records: [],
+    family_contact_records: [],
+    appointments: [],
+    monthly_reviews: [],
+    chronology_events: [],
+    risk_assessments: [],
+    support_plans: [],
+    compliance_items: [],
+    statutory_documents: [],
+    documents: [],
+    communications: [],
+    therapy: [],
+    therapy_records: [],
+    team: [],
+    supervisions: [],
+    reports: [],
+    rota: [],
+    staffing: [],
+    onboarding: [],
+    training: [],
+    probations: [],
+    vacancies: [],
+    pipeline: [],
+    shifts: [],
+    absences: [],
+    pipeline_candidates: [],
+    maintenance: [],
+    finance: [],
+    medication: [],
+    admissions: [],
+    discharges: [],
+    visitors: [],
+    staff_files: [],
+    audits: [],
+    manager_actions: [],
+    reg40: [],
+    reg44: [],
+    reg45: [],
+    home_incidents: [],
+    keywork: [],
+    transport: [],
+    home: null,
+    young_people: [],
+    summary: {},
+    alerts: [],
+    scope_meta: {},
+    homes: [],
+  };
+
+  for (const response of responses) {
+    if (!response?.ok || !response.data || typeof response.data !== "object") continue;
+    const data = response.data;
+
+    if (Array.isArray(data.items)) {
+      pushUniqueByKey(bundle.items, data.items, recordKey);
+    }
+
+    const mappings = [
+      ["daily_notes", bundle.daily_notes],
+      ["incidents", bundle.incidents],
+      ["home_incidents", bundle.home_incidents],
+      ["tasks", bundle.tasks],
+      ["health_records", bundle.health_records],
+      ["education_records", bundle.education_records],
+      ["family_contact_records", bundle.family_contact_records],
+      ["appointments", bundle.appointments],
+      ["monthly_reviews", bundle.monthly_reviews],
+      ["timeline", bundle.chronology_events],
+      ["chronology_events", bundle.chronology_events],
+      ["risk_assessments", bundle.risk_assessments],
+      ["risks", bundle.risk_assessments],
+      ["support_plans", bundle.support_plans],
+      ["compliance_items", bundle.compliance_items],
+      ["documents", bundle.documents],
+      ["statutory_documents", bundle.statutory_documents],
+      ["communications", bundle.communications],
+      ["therapy", bundle.therapy],
+      ["therapy_records", bundle.therapy_records],
+      ["team", bundle.team],
+      ["staff", bundle.team],
+      ["supervisions", bundle.supervisions],
+      ["reports", bundle.reports],
+      ["rota", bundle.rota],
+      ["onboarding", bundle.onboarding],
+      ["training", bundle.training],
+      ["probations", bundle.probations],
+      ["vacancies", bundle.vacancies],
+      ["pipeline", bundle.pipeline],
+      ["pipeline_candidates", bundle.pipeline_candidates],
+      ["shifts", bundle.shifts],
+      ["absences", bundle.absences],
+      ["maintenance", bundle.maintenance],
+      ["finance", bundle.finance],
+      ["medication", bundle.medication],
+      ["admissions", bundle.admissions],
+      ["discharges", bundle.discharges],
+      ["visitors", bundle.visitors],
+      ["staff_files", bundle.staff_files],
+      ["audits", bundle.audits],
+      ["manager_actions", bundle.manager_actions],
+      ["reg40", bundle.reg40],
+      ["reg44", bundle.reg44],
+      ["reg45", bundle.reg45],
+      ["keywork", bundle.keywork],
+      ["transport", bundle.transport],
+      ["young_people", bundle.young_people],
+      ["alerts", bundle.alerts],
+    ];
+
+    for (const [sourceKey, target] of mappings) {
+      const items = toArray(data[sourceKey]);
+      if (items.length) {
+        pushUniqueByKey(target, items, recordKey);
+      }
+    }
+
+    if (data.staffing) {
+      const staffingArray = Array.isArray(data.staffing) ? data.staffing : [data.staffing];
+      pushUniqueByKey(bundle.staffing, staffingArray, recordKey);
+    }
+
+    if (data.home && typeof data.home === "object") {
+      if (!bundle.home) {
+        bundle.home = data.home;
+      }
+      pushUniqueByKey(bundle.homes, [data.home], (item) => String(item?.id ?? ""));
+    }
+
+    if (Array.isArray(data.homes)) {
+      pushUniqueByKey(bundle.homes, data.homes, (item) => String(item?.id ?? ""));
+    }
+
+    if (data.summary && typeof data.summary === "object") {
+      bundle.summary = {
+        ...bundle.summary,
+        ...data.summary,
+      };
+    }
+
+    if (data.scope_meta && typeof data.scope_meta === "object") {
+      bundle.scope_meta = {
+        ...bundle.scope_meta,
+        ...data.scope_meta,
+      };
+    }
+  }
+
+  return bundle;
+}
+
+async function fetchHomeWideBundle(homeId) {
+  if (!homeId) return [];
+
+  const urls = [
+    `/homes/${homeId}/dashboard`,
+    `/homes/${homeId}/team`,
+    `/homes/${homeId}/tasks`,
+    `/homes/${homeId}/communications`,
+    `/homes/${homeId}/documents`,
+    `/homes/${homeId}/supervisions`,
+    `/homes/${homeId}/reports`,
+    `/homes/${homeId}/therapy`,
+    `/homes/${homeId}/compliance`,
+    `/homes/${homeId}/quality`,
+    `/homes/${homeId}/audits`,
+    `/homes/${homeId}/incidents`,
+  ];
+
+  return apiGetSettled(urls);
+}
+
+function resolveAccessibleHomeIds(context = {}) {
+  const accessLevel = String(context.access_level || "").toLowerCase();
+  const scope = String(context.scope || context.current_scope || "child").toLowerCase();
+  const homeId = Number(context.home_id);
+  const allowedHomeIds = toIdArray(
+    context.allowed_home_ids || context.allowedHomeIds || []
+  );
+
+  if (scope === "quality" && accessLevel === "provider" && allowedHomeIds.length) {
+    return allowedHomeIds;
+  }
+
+  if (Number.isFinite(homeId)) {
+    return [homeId];
+  }
+
+  if (allowedHomeIds.length) {
+    return [allowedHomeIds[0]];
+  }
+
+  return [];
+}
+
+export async function fetchYoungPersonAssistantBundle(youngPersonId) {
+  if (!youngPersonId) {
+    return mergeAssistantBundle([]);
+  }
+
+  const urls = [
+    `/young-people/${youngPersonId}/incidents`,
+    `/young-people/${youngPersonId}/tasks`,
+    `/young-people/${youngPersonId}/health`,
+    `/young-people/${youngPersonId}/education`,
+    `/young-people/${youngPersonId}/family`,
+    `/young-people/${youngPersonId}/appointments`,
+    `/young-people/${youngPersonId}/reports`,
+    `/young-people/${youngPersonId}/timeline`,
+    `/young-people/${youngPersonId}/plans`,
+    `/young-people/${youngPersonId}/compliance`,
+    `/young-people/${youngPersonId}/keywork`,
+  ];
+
+  const responses = await apiGetSettled(urls);
+  return mergeAssistantBundle(responses);
+}
+
+export async function fetchHomeAssistantBundle(context = {}) {
+  const homeIds = resolveAccessibleHomeIds({
+    ...context,
+    access_level: "home",
+  });
+
+  if (!homeIds.length) {
+    return mergeAssistantBundle([]);
+  }
+
+  const settledGroups = await Promise.all(homeIds.map((homeId) => fetchHomeWideBundle(homeId)));
+  const merged = mergeAssistantBundle(settledGroups.flat());
+
+  merged.scope_meta = {
+    ...(merged.scope_meta || {}),
+    scope: "home",
+    access_level: "home",
+    home_ids: homeIds,
+  };
+
+  return merged;
+}
+
+export async function fetchQualityAssistantBundle(context = {}) {
+  const homeIds = resolveAccessibleHomeIds(context);
+
+  if (!homeIds.length) {
+    return mergeAssistantBundle([]);
+  }
+
+  const settledGroups = await Promise.all(homeIds.map((homeId) => fetchHomeWideBundle(homeId)));
+  const merged = mergeAssistantBundle(settledGroups.flat());
+
+  merged.scope_meta = {
+    ...(merged.scope_meta || {}),
+    scope: "quality",
+    access_level:
+      String(context.access_level || "").toLowerCase() === "provider"
+        ? "provider"
+        : "home",
+    home_ids: homeIds,
+    provider_id: context.provider_id || null,
+    selected_home_id: context.home_id || null,
+  };
+
+  return merged;
+}
+
+export async function fetchAssistantScopeBundle(context = {}) {
+  const scope =
+    context.scope ||
+    context.current_scope ||
+    context.scope_type ||
+    "child";
+
+  const youngPersonId =
+    context.young_person_id ||
+    context.person_id ||
+    null;
+
+  if (scope === "home") {
+    return fetchHomeAssistantBundle(context);
+  }
+
+  if (scope === "quality") {
+    return fetchQualityAssistantBundle(context);
+  }
+
+  return fetchYoungPersonAssistantBundle(youngPersonId);
+}
+
+export async function apiRequest(url, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const resolvedUrl = resolveApiUrl(url, method);
+  const isFormData = options.body instanceof FormData;
+  const useCache = shouldCacheRequest(method, options);
+  const cacheKey = makeCacheKey(method, resolvedUrl);
+
+  if (useCache) {
+    const cached = getCachedResponse(cacheKey);
+    if (cached) return cached;
+
+    const inflight = inflightGetRequests.get(cacheKey);
+    if (inflight) return inflight;
+  }
+
+  const headers = withCsrfHeaders(method, {
+    Accept: options.accept || "application/json",
+    ...(options.headers || {}),
+  });
+
+  if (!isFormData && options.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const timeoutMs =
+    Number.isFinite(options.timeoutMs) && options.timeoutMs >= 0
+      ? options.timeoutMs
+      : REQUEST_TIMEOUT_MS;
+
+  const { signal, cleanup } = createTimeoutSignal(
+    timeoutMs,
+    options.signal,
+    "Request timed out"
+  );
+
+  const config = buildFetchConfig(method, { ...options, signal }, headers);
+
+  const requestPromise = (async () => {
+    let response;
+
+    try {
+      response = await fetch(`${API_BASE}${resolvedUrl}`, config);
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw new Error(buildAbortMessage(signal, "Request timed out"));
+      }
+      throw new Error("Network error");
+    } finally {
+      cleanup();
+    }
+
+    const data = await readJsonSafely(response);
+
+    if (!response.ok) {
+      const error = new Error(buildErrorMessage(response, data));
+      error.status = response.status;
+      error.data = data;
+      error.url = `${API_BASE}${resolvedUrl}`;
+      error.originalUrl = url;
+      throw error;
+    }
+
+    if (useCache) {
+      setCachedResponse(cacheKey, data);
+    }
+
+    return data;
+  })();
+
+  if (useCache) {
+    inflightGetRequests.set(cacheKey, requestPromise);
+  }
+
+  try {
+    return await requestPromise;
+  } finally {
+    if (useCache) {
+      inflightGetRequests.delete(cacheKey);
+    }
+  }
+}
+
+export async function apiGet(url, options = {}) {
+  return apiRequest(url, {
+    method: "GET",
+    ...options,
+  });
+}
+
+export async function apiSend(url, method = "POST", body = null, options = {}) {
+  const response = await apiRequest(url, {
+    method,
+    body,
+    skipCache: true,
+    ...options,
+  });
+
+  if (Array.isArray(options.invalidatePrefixes) && options.invalidatePrefixes.length) {
+    invalidateCacheByPrefixes(options.invalidatePrefixes);
+  } else {
+    clearApiCache();
+  }
+
+  return response;
+}
+
+export async function apiPost(url, body = null, options = {}) {
+  return apiSend(url, "POST", body, options);
+}
+
+export async function apiPut(url, body = null, options = {}) {
+  return apiSend(url, "PUT", body, options);
+}
+
+export async function apiPatch(url, body = null, options = {}) {
+  return apiSend(url, "PATCH", body, options);
+}
+
+export async function apiDelete(url, body = null, options = {}) {
+  return apiSend(url, "DELETE", body, options);
+}
+
+export function unwrapCreateResponse(recordType, response) {
+  if (!response || typeof response !== "object") return response;
+
+  const directKeys = ["item", "record", "data", recordType];
+
+  for (const key of directKeys) {
+    if (response[key] && typeof response[key] === "object") {
+      return response[key];
+    }
+  }
+
+  const commonByType = {
+    daily_note: ["daily_note"],
+    incident: ["incident"],
+    support_plan: ["support_plan", "plan"],
+    risk: ["risk", "risk_assessment"],
+    health_record: ["health_record"],
+    education_record: ["education_record"],
+    family_contact: ["family_contact_record", "contact"],
+    keywork: ["keywork", "keywork_session"],
+    appointment: ["appointment", "young_person_appointment"],
+    achievement_record: ["achievement_record", "achievement"],
+    safeguarding_record: ["safeguarding_record"],
+    missing_episode: ["missing_episode"],
+    task: ["task"],
+    profile_identity: ["identity_profile", "young_person_identity_profile"],
+    profile_communication: ["communication_profile", "young_person_communication_profile"],
+    profile_education: ["education_profile", "young_person_education_profile"],
+    profile_health: ["health_profile", "young_person_health_profile"],
+    profile_legal: ["legal_status", "young_person_legal_status"],
+    profile_formulation: ["formulation", "young_person_formulation", "young_person_formulations"],
+    communication: ["communication"],
+    document: ["document"],
+    therapy: ["therapy"],
+    team: ["team"],
+    supervision: ["supervision"],
+    compliance: ["compliance", "compliance_item"],
+    audit: ["audit"],
+    rota: ["rota_shift", "rota"],
+    staffing: ["staffing", "staffing_snapshot"],
+    onboarding: ["onboarding"],
+    training: ["training_record", "training"],
+    probation: ["probation"],
+    vacancy: ["vacancy"],
+    pipeline: ["pipeline_candidate", "pipeline"],
+    shift: ["shift"],
+    absence: ["absence"],
+    maintenance: ["maintenance_item"],
+    finance: ["finance_item"],
+    medication: ["medication_item"],
+    admission: ["admission"],
+    discharge: ["discharge"],
+    visitor: ["visitor_log"],
+    staff_file: ["staff_file"],
+    manager_action: ["manager_action"],
+    reg40: ["reg40_item"],
+    reg44: ["reg44_item"],
+    reg45: ["reg45_item"],
+    transport: ["transport_log"],
+  };
+
+  const keys = commonByType[recordType] || [];
+  for (const key of keys) {
+    if (response[key] && typeof response[key] === "object") {
+      return response[key];
+    }
+  }
+
+  return response;
+}
+
+export function buildInspectionUiEndpoints(homeId) {
+  const safeHomeId = Number(homeId);
+  if (!Number.isFinite(safeHomeId) || safeHomeId <= 0) {
+    return null;
+  }
+
+  return {
+    homeCards: "/inspection/ui/home-cards",
+    homeHeader: `/inspection/ui/homes/${safeHomeId}/header`,
+    sectionPanels: `/inspection/ui/homes/${safeHomeId}/sections`,
+    reasons: `/inspection/ui/homes/${safeHomeId}/reasons`,
+    actions: `/inspection/ui/homes/${safeHomeId}/actions`,
+    tasks: `/inspection/ui/homes/${safeHomeId}/tasks`,
+    briefing: `/inspection/ui/homes/${safeHomeId}/briefing`,
+    prep72h: `/inspection/ui/homes/${safeHomeId}/72-hour`,
+    refresh: `/inspection/homes/${safeHomeId}/refresh`,
+    syncTasks: `/inspection/homes/${safeHomeId}/sync-tasks`,
+  };
+}
+
+export async function getInspectionHomeCards(options = {}) {
+  return apiGet("/inspection/ui/home-cards", options);
+}
+
+export async function getInspectionHomeDetail(homeId, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+  return apiGet(endpoints.homeHeader, options);
+}
+
+export async function getInspectionSectionPanels(homeId, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+  return apiGet(endpoints.sectionPanels, options);
+}
+
+export async function getInspectionReasons(homeId, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+  return apiGet(endpoints.reasons, options);
+}
+
+export async function getInspectionActions(homeId, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+  return apiGet(endpoints.actions, options);
+}
+
+export async function getInspectionTasks(homeId, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+  return apiGet(endpoints.tasks, options);
+}
+
+export async function getInspectionBriefing(homeId, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+  return apiGet(endpoints.briefing, options);
+}
+
+export async function getInspection72Hour(homeId, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+  return apiGet(endpoints.prep72h, options);
+}
+
+export async function refreshInspectionCycle(homeId, body = {}, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+
+  return apiPost(endpoints.refresh, body, {
+    ...options,
+    invalidatePrefixes: [
+      "/inspection/ui",
+      `/inspection/ui/homes/${Number(homeId)}`,
+      `/inspection/homes/${Number(homeId)}`,
+      "/homes/",
+    ],
+  });
+}
+
+export async function syncInspectionTasks(homeId, body = {}, options = {}) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) throw new Error("A valid home id is required.");
+
+  return apiPost(endpoints.syncTasks, body, {
+    ...options,
+    invalidatePrefixes: [
+      "/inspection/ui",
+      `/inspection/ui/homes/${Number(homeId)}`,
+      `/inspection/homes/${Number(homeId)}`,
+      "/homes/",
+      "/tasks",
+    ],
+  });
+}
+
+export function buildSseContextFetch(url, payload, options = {}) {
+  const timeoutMs =
+    Number.isFinite(options.timeoutMs) && options.timeoutMs >= 0
+      ? options.timeoutMs
+      : SSE_TIMEOUT_MS;
+
+  const { signal, cleanup } = createTimeoutSignal(
+    timeoutMs,
+    options.signal,
+    "Assistant request timed out"
+  );
+
+  const request = fetch(`${API_BASE}${url}`, {
+    method: "POST",
+    credentials: "include",
+    signal,
+    headers: withCsrfHeaders("POST", {
+      Accept: "text/event-stream",
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
+      ...(options.headers || {}),
+    }),
+    body: JSON.stringify(payload || {}),
+  });
+
+  return {
+    request,
+    cleanup,
+    signal,
+  };
+}
+
+function parseSseBlock(block) {
+  const lines = block.split("\n");
+  let eventName = "message";
+  const dataLines = [];
+
+  for (const line of lines) {
+    if (!line || line.startsWith(":")) continue;
+
+    if (line.startsWith("event:")) {
+      eventName = line.slice(6).trim();
+      continue;
+    }
+
+    if (line.startsWith("data:")) {
+      dataLines.push(line.startsWith("data: ") ? line.slice(6) : line.slice(5));
+    }
+  }
+
+  return {
+    eventName,
+    payload: dataLines.join("\n"),
+  };
+}
+
+function consumeSseBuffer(buffer, onEvent) {
+  const parts = buffer.split("\n\n");
+  const completeBlocks = parts.slice(0, -1);
+  const remainder = parts[parts.length - 1] || "";
+
+  for (const block of completeBlocks) {
+    if (!block.trim()) continue;
+    const parsed = parseSseBlock(block);
+    onEvent(parsed.eventName, parsed.payload);
+  }
+
+  return remainder;
+}
+
+function resolveAssistantEndpoint(payload = {}) {
+  const assistantType =
+    payload?.context?.assistant_type ||
+    payload?.assistant_type ||
+    null;
+
+  if (assistantType === "public") {
+    return "/assistant";
+  }
+
+  if (assistantType === "young_people_os") {
+    return "/young-people/assistant";
+  }
+
+  const scope =
+    payload?.context?.scope ||
+    payload?.context?.current_scope ||
+    payload?.context?.scope_type ||
+    "child";
+
+  if (scope === "home") return "/home/assistant";
+  if (scope === "quality") return "/quality/assistant";
+  if (scope === "child" || scope === "young_person") return "/young-people/assistant";
+
+  return "/assistant";
+}
+
+function parseAssistantEventPayload(payloadValue = "") {
+  const raw = String(payloadValue || "");
+  if (!raw.trim()) {
+    return { raw: "", text: "" };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+
+    if (typeof parsed === "string") {
+      return { raw, parsed, text: parsed };
+    }
+
+    if (parsed && typeof parsed === "object") {
+      const text =
+        parsed.text ||
+        parsed.message ||
+        parsed.content?.text ||
+        (typeof parsed.content === "string" ? parsed.content : "") ||
+        parsed.answer ||
+        parsed.output ||
+        "";
+
+      return {
+        raw,
+        parsed,
+        text: typeof text === "string" ? text : "",
+      };
+    }
+
+    return { raw, parsed, text: "" };
+  } catch {
+    return { raw, text: raw };
+  }
+}
+
+export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
+  const endpoint = resolveAssistantEndpoint(payload);
+  const { request, cleanup, signal } = buildSseContextFetch(endpoint, payload, options);
+
+  let response;
+
+  try {
+    response = await request;
+  } catch (error) {
+    cleanup();
+    if (isAbortError(error)) {
+      throw new Error(buildAbortMessage(signal, "Assistant request timed out"));
+    }
+    throw new Error("Assistant network error");
+  }
+
+  if (!response.ok) {
+    cleanup();
+    const data = await readJsonSafely(response);
+    throw new Error(buildErrorMessage(response, data));
+  }
+
+  if (!response.body) {
+    cleanup();
+    throw new Error("No assistant response stream was returned.");
+  }
+
+  const {
+    onMeta = () => {},
+    onMessage = () => {},
+    onProgress = () => {},
+    onDone = () => {},
+  } = handlers;
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let streamedText = "";
+  let lastStructuredMessage = null;
+  let doneEmitted = false;
+
+  const finish = () => {
+    if (doneEmitted) return;
+    doneEmitted = true;
+
+    if (lastStructuredMessage && typeof lastStructuredMessage === "object") {
+      onDone({
+        ...lastStructuredMessage,
+        accumulated_text: streamedText,
+      });
+      return;
+    }
+
+    onDone(streamedText);
+  };
+
+  const handleEvent = (eventName, payloadValue) => {
+    if (payloadValue === "[DONE]" || eventName === "done") {
+      finish();
+      return;
+    }
+
+    if (eventName === "meta") {
+      try {
+        onMeta(JSON.parse(payloadValue || "{}"));
+      } catch {
+        onMeta({});
+      }
+      return;
+    }
+
+    if (eventName === "progress") {
+      onProgress(payloadValue || "");
+      return;
+    }
+
+    if (eventName === "message") {
+      const parsedEvent = parseAssistantEventPayload(payloadValue);
+
+      if (parsedEvent.text) {
+        streamedText += parsedEvent.text;
+      }
+
+      if (parsedEvent.parsed && typeof parsedEvent.parsed === "object") {
+        lastStructuredMessage = parsedEvent.parsed;
+        onMessage({
+          ...parsedEvent.parsed,
+          accumulated_text: streamedText,
+        });
+        return;
+      }
+
+      onMessage(streamedText);
+    }
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      buffer = consumeSseBuffer(buffer, handleEvent);
+    }
+
+    if (buffer.trim()) {
+      consumeSseBuffer(`${buffer}\n\n`, handleEvent);
+    }
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(buildAbortMessage(signal, "Assistant request timed out"));
+    }
+    throw error;
+  } finally {
+    finish();
+    cleanup();
+    try {
+      reader.releaseLock();
+    } catch {
+      // ignore
+    }
+  }
 }
