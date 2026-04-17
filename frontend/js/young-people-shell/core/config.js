@@ -1150,3 +1150,46 @@ export function getQuickAction(actionId = "") {
 export function getProfileAction(actionId = "") {
   return PROFILE_ACTION_MAP[actionId] || null;
 }
+
+export function buildInspectionUiEndpoints(homeId) {
+  const safeHomeId =
+    homeId !== null && homeId !== undefined && homeId !== ""
+      ? Number(homeId)
+      : null;
+
+  if (!Number.isFinite(safeHomeId) || safeHomeId <= 0) {
+    return {
+      homeId: null,
+      base: "",
+      readiness: "",
+      inspectionReadiness: "",
+      quality: "",
+      compliance: "",
+      dashboard: "",
+      tasks: "",
+      incidents: "",
+      documents: "",
+      audits: "",
+      syncTasks: "",
+      refreshCycle: "",
+    };
+  }
+
+  const base = `/homes/${safeHomeId}`;
+
+  return {
+    homeId: safeHomeId,
+    base,
+    readiness: `${base}/inspection-readiness`,
+    inspectionReadiness: `${base}/inspection-readiness`,
+    quality: `${base}/quality`,
+    compliance: `${base}/compliance`,
+    dashboard: `${base}/dashboard`,
+    tasks: `${base}/tasks`,
+    incidents: `${base}/incidents`,
+    documents: `${base}/documents`,
+    audits: `${base}/audits`,
+    syncTasks: `${base}/inspection-tasks/sync`,
+    refreshCycle: `${base}/inspection-cycle/refresh`,
+  };
+}
