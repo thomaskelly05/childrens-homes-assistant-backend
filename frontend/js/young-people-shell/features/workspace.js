@@ -16,153 +16,310 @@ import {
   mapFamilyContactRecord,
 } from "../core/adapters.js";
 
+/* -------------------------------- constants -------------------------------- */
+
+const SEARCHABLE_FIELDS = [
+  "title",
+  "summary",
+  "description",
+  "details",
+  "note",
+  "body",
+  "outcome",
+  "action_taken",
+  "location",
+  "type",
+  "category",
+  "status",
+  "record_type",
+];
+
+const WORKSPACE_RECORD_TYPE_MAP = Object.freeze({
+  daily_note: "chronology",
+  incident: "chronology",
+  support_plan: "plans",
+  risk: "plans",
+  appointment: "appointments",
+  health_record: "health",
+  education_record: "education",
+  family_contact: "family",
+  communication: "chronology",
+  document: "chronology",
+  task: "chronology",
+  safeguarding_record: "chronology",
+  missing_episode: "chronology",
+  achievement_record: "education",
+  keywork: "chronology",
+});
+
 /* -------------------------------- helpers -------------------------------- */
 
-const toText = (v, f = "") => escapeHtml(String(v ?? f ?? ""));
+const toText = (value, fallback = "") =>
+  escapeHtml(String(value ?? fallback ?? ""));
 
-const formatDate = (value) => {
+function normaliseText(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function makeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function formatDate(value) {
   if (!value) return "";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return String(value);
+
   return d.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
   });
-};
+}
 
-const isToday = (v) => {
-  if (!v) return false;
-  const d = new Date(v);
-  const n = new Date();
+function isToday(value) {
+  if (!value) return false;
+
+  const d = new Date(value);
+  const now = new Date();
+
+  if (Number.isNaN(d.getTime())) return false;
+
   return (
-    d.getDate() === n.getDate() &&
-    d.getMonth() === n.getMonth() &&
-    d.getFullYear() === n.getFullYear()
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear()
   );
-};
+}
 
-const isFuture = (v) => {
-  if (!v) return false;
-  return new Date(v).getTime() >= Date.now();
-};
+function isFuture(value) {
+  if (!value) return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  return d.getTime() >= Date.now();
+}
 
-const sortNewestFirst = (items = [], keys = []) => {
+function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
     return new Date(bValue).getTime() - new Date(aValue).getTime();
   });
-};
+}
+
+function getPrimaryDate(item = {}) {
+  return (
+    item.record_date ||
+    item.start_datetime ||
+    item.event_datetime ||
+    item.contact_datetime ||
+    item.review_date ||
+    item.created_at ||
+    item.updated_at ||
+    null
+  );
+}
+
+function getRecordTitle(item = {}) {
+  return (
+    item.title ||
+    item.summary ||
+    item.name ||
+    item.subject ||
+    item.label ||
+    "Record"
+  );
+}
+
+function getRecordSummary(item = {}) {
+  return (
+    item.summary ||
+    item.description ||
+    item.note ||
+    item.details ||
+    item.outcome ||
+    ""
+  );
+}
+
+function getRecordId(item = {}) {
+  return item.id || item.source_id || item.record_id || "";
+}
+
+function getRecordType(item = {}) {
+  return item.record_type || item.type || "record";
+}
+
+function getSeverity(item = {}) {
+  return String(
+    item.severity || item.significance || item.priority || ""
+  ).toLowerCase();
+}
+
+function getSearchHaystack(item = {}) {
+  return SEARCHABLE_FIELDS.map((field) => item?.[field])
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function recordMatchesQuery(item = {}, query = "") {
+  const safeQuery = normaliseText(query);
+  if (!safeQuery) return true;
+  return getSearchHaystack(item).includes(safeQuery);
+}
+
+function mapRecordTypeFilterToBuckets(recordType = "") {
+  const safeType = normaliseText(recordType);
+  if (!safeType) return null;
+  return WORKSPACE_RECORD_TYPE_MAP[safeType] || null;
+}
+
+function recordMatchesRecordType(item = {}, recordType = "") {
+  const safeType = normaliseText(recordType);
+  if (!safeType) return true;
+  return normaliseText(getRecordType(item)) === safeType;
+}
+
+function dedupeById(items = []) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = `${getRecordType(item)}::${getRecordId(item)}::${getPrimaryDate(item)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 /* -------------------------------- UI bits -------------------------------- */
 
-function renderEmpty(title, msg) {
+function renderEmpty(title, message) {
   return `
     <div class="empty-state">
       <div class="empty-state-inner">
         <div class="empty-state-icon">○</div>
         <h3>${toText(title)}</h3>
-        <p>${toText(msg)}</p>
+        <p>${toText(message)}</p>
       </div>
     </div>
   `;
 }
 
 function renderRows(items = []) {
-  if (!items.length) return renderEmpty("No records", "Nothing to show yet.");
+  if (!items.length) {
+    return renderEmpty("No records", "Nothing to show yet.");
+  }
 
   return `
     <div class="record-list">
       ${items
-        .map(
-          (i) => `
-        <article
-          class="record-row"
-          data-open-record="true"
-          data-record-id="${toText(i.id || i.source_id || "")}"
-          data-record-type="${toText(i.record_type || "")}"
-          data-title="${toText(i.title || i.summary || "Record")}"
-          role="button"
-          tabindex="0"
-        >
-          <div class="record-row-main">
-            <div class="record-row-title">${toText(
-              i.title || i.summary || "Record"
-            )}</div>
-            <div class="record-row-summary">${toText(
-              i.summary || i.description || ""
-            )}</div>
-            <div class="record-row-meta">
-              ${formatDate(
-                i.record_date ||
-                  i.start_datetime ||
-                  i.event_datetime ||
-                  i.contact_datetime ||
-                  i.review_date ||
-                  i.created_at ||
-                  i.updated_at
-              )}
-            </div>
-          </div>
-        </article>
-      `
-        )
+        .map((item) => {
+          const id = getRecordId(item);
+          const recordType = getRecordType(item);
+          const title = getRecordTitle(item);
+          const summary = getRecordSummary(item);
+          const dateLabel = formatDate(getPrimaryDate(item));
+
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${toText(id)}"
+              data-record-type="${toText(recordType)}"
+              data-title="${toText(title)}"
+              role="button"
+              tabindex="0"
+              aria-label="${toText(title)}"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(title)}</div>
+                <div class="record-row-summary">${toText(summary)}</div>
+                <div class="record-row-meta">
+                  ${
+                    recordType
+                      ? `<span class="row-pill muted">${toText(recordType.replaceAll("_", " "))}</span>`
+                      : ""
+                  }
+                  ${dateLabel ? `<span>${toText(dateLabel)}</span>` : ""}
+                </div>
+              </div>
+            </article>
+          `;
+        })
         .join("")}
     </div>
   `;
 }
 
-/* -------------------------------- main render -------------------------------- */
-
-function renderWorkspace({ today, recent, upcoming, urgent }) {
+function renderWorkspace({ today, recent, upcoming, urgent, searchActive = false }) {
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Workspace</div>
           <h2>Today’s workspace</h2>
+          ${
+            searchActive
+              ? `<p>Showing filtered workspace results.</p>`
+              : ""
+          }
         </div>
       </div>
 
       <div class="overview-stats-grid">
         <article class="overview-stat-card">
           <span class="overview-stat-label">Urgent</span>
-          <strong>${urgent.length}</strong>
+          <strong class="overview-stat-value">${urgent.length}</strong>
         </article>
 
         <article class="overview-stat-card">
           <span class="overview-stat-label">Today</span>
-          <strong>${today.length}</strong>
+          <strong class="overview-stat-value">${today.length}</strong>
         </article>
 
         <article class="overview-stat-card">
           <span class="overview-stat-label">Recent</span>
-          <strong>${recent.length}</strong>
+          <strong class="overview-stat-value">${recent.length}</strong>
         </article>
 
         <article class="overview-stat-card">
           <span class="overview-stat-label">Upcoming</span>
-          <strong>${upcoming.length}</strong>
+          <strong class="overview-stat-value">${upcoming.length}</strong>
         </article>
       </div>
 
       <div class="overview-grid">
-        <div>
-          <h3>Today</h3>
-          ${renderRows(today)}
+        <div class="overview-main">
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Today</h3>
+            </div>
+            ${renderRows(today)}
+          </section>
 
-          <h3>Recent</h3>
-          ${renderRows(recent)}
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Recent</h3>
+            </div>
+            ${renderRows(recent)}
+          </section>
         </div>
 
-        <aside>
-          <h3>Needs attention</h3>
-          ${renderRows(urgent)}
+        <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Needs attention</h3>
+            </div>
+            ${renderRows(urgent)}
+          </section>
 
-          <h3>Upcoming</h3>
-          ${renderRows(upcoming)}
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Upcoming</h3>
+            </div>
+            ${renderRows(upcoming)}
+          </section>
         </aside>
       </div>
     </section>
@@ -172,11 +329,23 @@ function renderWorkspace({ today, recent, upcoming, urgent }) {
 /* -------------------------------- data -------------------------------- */
 
 function getId() {
-  return state.youngPersonId || state.selectedYoungPerson?.id;
+  return state.youngPersonId || state.selectedYoungPerson?.id || null;
 }
 
-async function fetchAll(id) {
-  const safe = (p) => apiGet(p).catch(() => ({ items: [] }));
+async function fetchAll(id, search = {}) {
+  const safe = (path) => apiGet(path).catch(() => ({ items: [] }));
+
+  const recordTypeBucket = mapRecordTypeFilterToBuckets(search.record_type);
+
+  const shouldFetchPlans = !recordTypeBucket || recordTypeBucket === "plans";
+  const shouldFetchAppointments =
+    !recordTypeBucket || recordTypeBucket === "appointments";
+  const shouldFetchChronology =
+    !recordTypeBucket || recordTypeBucket === "chronology";
+  const shouldFetchHealth = !recordTypeBucket || recordTypeBucket === "health";
+  const shouldFetchEducation =
+    !recordTypeBucket || recordTypeBucket === "education";
+  const shouldFetchFamily = !recordTypeBucket || recordTypeBucket === "family";
 
   const [
     plans,
@@ -186,97 +355,140 @@ async function fetchAll(id) {
     education,
     family,
   ] = await Promise.all([
-    safe(`/young-people/${id}/plans`),
-    safe(`/young-people/${id}/appointments`),
-    safe(`/young-people/${id}/timeline`),
-    safe(`/young-people/${id}/health`),
-    safe(`/young-people/${id}/education`),
-    safe(`/young-people/${id}/family`),
+    shouldFetchPlans ? safe(`/young-people/${id}/plans`) : Promise.resolve({ items: [] }),
+    shouldFetchAppointments ? safe(`/young-people/${id}/appointments`) : Promise.resolve({ items: [] }),
+    shouldFetchChronology ? safe(`/young-people/${id}/timeline`) : Promise.resolve({ items: [] }),
+    shouldFetchHealth ? safe(`/young-people/${id}/health`) : Promise.resolve({ items: [] }),
+    shouldFetchEducation ? safe(`/young-people/${id}/education`) : Promise.resolve({ items: [] }),
+    shouldFetchFamily ? safe(`/young-people/${id}/family`) : Promise.resolve({ items: [] }),
   ]);
 
   return {
-    plans:
-      (
-        plans.items ||
+    plans: makeArray(
+      plans.items ||
         plans.risks ||
         plans.risk_assessments ||
         plans.support_plans ||
         []
-      ).map(mapSupportPlan) || [],
-    appointments:
-      (appointments.items || appointments.appointments || []).map(mapAppointment) || [],
-    chronology:
-      (
-        chronology.items ||
+    ).map(mapSupportPlan),
+
+    appointments: makeArray(
+      appointments.items || appointments.appointments || []
+    ).map(mapAppointment),
+
+    chronology: makeArray(
+      chronology.items ||
         chronology.timeline ||
         chronology.chronology_events ||
         []
-      ).map(mapChronologyEvent) || [],
-    health:
-      (health.items || health.health_records || []).map(mapHealthRecord) || [],
-    education:
-      (education.items || education.education_records || []).map(mapEducationRecord) || [],
-    family:
-      (family.items || family.family_contact_records || []).map(mapFamilyContactRecord) || [],
+    ).map(mapChronologyEvent),
+
+    health: makeArray(
+      health.items || health.health_records || []
+    ).map(mapHealthRecord),
+
+    education: makeArray(
+      education.items || education.education_records || []
+    ).map(mapEducationRecord),
+
+    family: makeArray(
+      family.items || family.family_contact_records || []
+    ).map(mapFamilyContactRecord),
   };
 }
 
+/* -------------------------------- filtering -------------------------------- */
+
+function filterCollection(items = [], search = {}) {
+  const query = normaliseText(search.query);
+  const recordType = normaliseText(search.record_type);
+
+  return items.filter((item) => {
+    if (!recordMatchesQuery(item, query)) return false;
+    if (!recordMatchesRecordType(item, recordType)) return false;
+    return true;
+  });
+}
+
+function applySearch(data, search = {}) {
+  return {
+    plans: filterCollection(data.plans, search),
+    appointments: filterCollection(data.appointments, search),
+    chronology: filterCollection(data.chronology, search),
+    health: filterCollection(data.health, search),
+    education: filterCollection(data.education, search),
+    family: filterCollection(data.family, search),
+  };
+}
+
+/* -------------------------------- builders -------------------------------- */
+
 function buildTodayItems(data) {
-  return [
-    ...data.appointments.filter((a) => isToday(a.start_datetime)),
-    ...data.health.filter((h) => isToday(h.event_datetime || h.record_date)),
-    ...data.education.filter((e) => isToday(e.record_date)),
-    ...data.family.filter((f) => isToday(f.contact_datetime)),
-  ];
+  return dedupeById([
+    ...data.appointments.filter((item) => isToday(item.start_datetime)),
+    ...data.health.filter((item) => isToday(item.event_datetime || item.record_date)),
+    ...data.education.filter((item) => isToday(item.record_date)),
+    ...data.family.filter((item) => isToday(item.contact_datetime)),
+  ]);
 }
 
 function buildRecentItems(data) {
-  return sortNewestFirst(
-    [
-      ...data.chronology,
-      ...data.health,
-      ...data.education,
-      ...data.family,
-      ...data.plans,
-    ],
-    [
-      "event_datetime",
-      "record_date",
-      "contact_datetime",
-      "review_date",
-      "created_at",
-      "updated_at",
-    ]
+  return dedupeById(
+    sortNewestFirst(
+      [
+        ...data.chronology,
+        ...data.health,
+        ...data.education,
+        ...data.family,
+        ...data.plans,
+      ],
+      [
+        "event_datetime",
+        "record_date",
+        "contact_datetime",
+        "review_date",
+        "created_at",
+        "updated_at",
+      ]
+    )
   ).slice(0, 10);
 }
 
 function buildUpcomingItems(data) {
-  return data.appointments
-    .filter((a) => isFuture(a.start_datetime))
-    .sort(
-      (a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
-    )
-    .slice(0, 10);
+  return dedupeById(
+    data.appointments
+      .filter((item) => isFuture(item.start_datetime))
+      .sort(
+        (a, b) =>
+          new Date(a.start_datetime).getTime() -
+          new Date(b.start_datetime).getTime()
+      )
+  ).slice(0, 10);
 }
 
 function buildUrgentItems(data) {
-  const urgentPlans = data.plans.filter((p) =>
-    ["high", "critical"].includes(String(p.severity || p.significance || "").toLowerCase())
+  const urgentPlans = data.plans.filter((item) =>
+    ["high", "critical"].includes(getSeverity(item))
   );
 
-  const urgentChronology = data.chronology.filter((c) =>
-    ["high", "critical"].includes(String(c.severity || c.significance || "").toLowerCase())
+  const urgentChronology = data.chronology.filter((item) =>
+    ["high", "critical"].includes(getSeverity(item))
   );
 
-  return [...urgentPlans, ...urgentChronology].slice(0, 10);
+  return dedupeById([...urgentPlans, ...urgentChronology]).slice(0, 10);
 }
 
 /* -------------------------------- controller -------------------------------- */
 
-export async function loadCurrentView() {
+export async function loadCurrentView(options = {}) {
   if (!els.viewContent) return;
 
   const id = getId();
+  const search = {
+    query: String(options?.search?.query || "").trim(),
+    record_type: String(options?.search?.record_type || "").trim(),
+  };
+  const searchActive = Boolean(search.query || search.record_type);
 
   if (!id) {
     els.viewContent.innerHTML = renderEmpty(
@@ -286,21 +498,30 @@ export async function loadCurrentView() {
     return;
   }
 
-  els.viewContent.innerHTML = `<div class="loading-state"><div class="spinner"></div></div>`;
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div>
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading workspace…</p>
+      </div>
+    </div>
+  `;
 
   try {
-    const data = await fetchAll(id);
+    const rawData = await fetchAll(id, search);
+    const filteredData = applySearch(rawData, search);
 
-    const today = buildTodayItems(data);
-    const recent = buildRecentItems(data);
-    const upcoming = buildUpcomingItems(data);
-    const urgent = buildUrgentItems(data);
+    const today = buildTodayItems(filteredData);
+    const recent = buildRecentItems(filteredData);
+    const upcoming = buildUpcomingItems(filteredData);
+    const urgent = buildUrgentItems(filteredData);
 
     els.viewContent.innerHTML = renderWorkspace({
       today,
       recent,
       upcoming,
       urgent,
+      searchActive,
     });
 
     updateWorkspaceSummaryStrip({
@@ -309,24 +530,18 @@ export async function loadCurrentView() {
         ? formatDate(upcoming[0].start_datetime)
         : "None",
       lastRecord: recent[0]
-        ? formatDate(
-            recent[0].created_at ||
-              recent[0].event_datetime ||
-              recent[0].record_date ||
-              recent[0].contact_datetime ||
-              recent[0].review_date
-          )
+        ? formatDate(getPrimaryDate(recent[0]))
         : "None",
       openActions: `${urgent.length} urgent`,
     });
 
     await onAssistantScopeChanged();
     renderAssistantControllerPanels();
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    console.error("[workspace] failed loading current view", error);
     els.viewContent.innerHTML = renderEmpty(
       "Error",
-      "Failed to load workspace"
+      "Failed to load workspace."
     );
   }
 }
