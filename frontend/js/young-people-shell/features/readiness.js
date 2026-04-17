@@ -1,10 +1,7 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
-import {
-  apiGet,
-  apiPost,
-  buildInspectionUiEndpoints,
-} from "../core/api.js";
+import { apiGet, apiSend } from "../core/api.js";
+import { buildInspectionUiEndpoints } from "../core/config.js";
 import { escapeHtml, formatDate, formatDateTime } from "../core/utils.js";
 import {
   mapComplianceItem,
@@ -558,7 +555,22 @@ function renderLegacyReadinessHtml({
 }
 
 function getInspectionEndpoints(homeId) {
-  return buildInspectionUiEndpoints(homeId);
+  const base = buildInspectionUiEndpoints(homeId);
+
+  if (!base?.homeId) return null;
+
+  return {
+    ...base,
+    homeCards: "/inspection/ui/home-cards",
+    homeHeader: `/inspection/ui/homes/${base.homeId}/header`,
+    sectionPanels: `/inspection/ui/homes/${base.homeId}/sections`,
+    reasons: `/inspection/ui/homes/${base.homeId}/reasons`,
+    actions: `/inspection/ui/homes/${base.homeId}/actions`,
+    tasks: `/inspection/ui/homes/${base.homeId}/tasks`,
+    briefing: `/inspection/ui/homes/${base.homeId}/briefing`,
+    prep72h: `/inspection/ui/homes/${base.homeId}/prep-72h`,
+    refresh: base.refreshCycle,
+  };
 }
 
 function getLegacyReadinessEndpoints() {
@@ -1336,7 +1348,7 @@ function bindInspectionReadinessEvents(endpoints) {
       refreshButton.disabled = true;
       refreshButton.textContent = "Refreshing...";
       try {
-        await apiPost(endpoints.refresh, {}, {
+        await apiSend(endpoints.refreshCycle, "POST", {}, {
           invalidatePrefixes: [
             "/inspection/ui",
             `/inspection/ui/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
@@ -1360,7 +1372,7 @@ function bindInspectionReadinessEvents(endpoints) {
       syncButton.disabled = true;
       syncButton.textContent = "Syncing...";
       try {
-        await apiPost(endpoints.syncTasks, {}, {
+        await apiSend(endpoints.syncTasks, "POST", {}, {
           invalidatePrefixes: [
             "/inspection/ui",
             `/inspection/ui/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
