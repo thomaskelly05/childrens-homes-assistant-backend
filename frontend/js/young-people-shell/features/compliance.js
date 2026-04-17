@@ -1,11 +1,17 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { apiGet } from "../core/api.js";
-import { escapeHtml } from "../core/utils.js";
+import { apiGet, buildInspectionUiEndpoints } from "../core/api.js";
+import { escapeHtml, formatDate, formatDateTime } from "../core/utils.js";
+import {
+  mapInspectionAction,
+  mapInspectionTask,
+  mapInspectionHeader,
+} from "../core/adapters.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
 function getHomeId() {
   return (
+    state.readinessSelectedHomeId ||
     state.homeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
@@ -32,39 +38,35 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function formatDate(value) {
-  if (!value) return "No date";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+function normaliseToken(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
 }
 
-function formatDateTime(value) {
-  if (!value) return "No date";
+function formatBand(value = "") {
+  const text = String(value || "").trim();
+  if (!text) return "Unknown";
+  return text
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+function getBandTone(value = "") {
+  const band = normaliseToken(value);
 
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (band === "outstanding") return "success";
+  if (band === "good") return "success";
+  if (band === "requires_improvement") return "warning";
+  if (band === "inadequate") return "danger";
+
+  return "muted";
 }
 
 function getStatusTone(status = "") {
-  const normalised = String(status || "")
-    .toLowerCase()
-    .trim()
-    .replaceAll(" ", "_");
+  const normalised = normaliseToken(status);
 
   if (
     [
@@ -76,6 +78,9 @@ function getStatusTone(status = "") {
       "non_compliant",
       "failed",
       "danger",
+      "blocked",
+      "escalated",
+      "inadequate",
     ].includes(normalised)
   ) {
     return "danger";
@@ -92,6 +97,10 @@ function getStatusTone(status = "") {
       "expiring",
       "at_risk",
       "due",
+      "requires_improvement",
+      "medium",
+      "open",
+      "in_progress",
     ].includes(normalised)
   ) {
     return "warning";
@@ -109,6 +118,9 @@ function getStatusTone(status = "") {
       "passed",
       "current",
       "reviewed",
+      "outstanding",
+      "resolved",
+      "closed",
     ].includes(normalised)
   ) {
     return "success";
@@ -143,6 +155,7 @@ function hasUsableData(data) {
   if (!data || typeof data !== "object") return false;
   if (Array.isArray(data.items) && data.items.length > 0) return true;
   if (Array.isArray(data.records) && data.records.length > 0) return true;
+  if (Array.isArray(data.rows) && data.rows.length > 0) return true;
   if (Array.isArray(data.workforce) && data.workforce.length > 0) return true;
   if (Array.isArray(data.staff) && data.staff.length > 0) return true;
   if (Array.isArray(data.training) && data.training.length > 0) return true;
@@ -154,11 +167,14 @@ function hasUsableData(data) {
   if (Array.isArray(data.documents) && data.documents.length > 0) return true;
   if (Array.isArray(data.inspection) && data.inspection.length > 0) return true;
   if (Array.isArray(data.readiness) && data.readiness.length > 0) return true;
+  if (Array.isArray(data.actions) && data.actions.length > 0) return true;
+  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
   if (data.summary && typeof data.summary === "object") return true;
   if (data.dashboard && typeof data.dashboard === "object") return true;
   if (data.compliance_summary && typeof data.compliance_summary === "object") return true;
   if (typeof data.compliance_score !== "undefined") return true;
   if (typeof data.score !== "undefined") return true;
+  if (typeof data.overall_score !== "undefined") return true;
   return false;
 }
 
@@ -327,7 +343,7 @@ function normaliseDocumentItems(data = {}) {
   }));
 }
 
-function normaliseInspectionItems(data = {}) {
+function normaliseInspectionReadinessItems(data = {}) {
   return toArray(data.items, [data.inspection, data.readiness, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
@@ -347,6 +363,19 @@ function normaliseInspectionItems(data = {}) {
   }));
 }
 
+function normaliseInspectionActions(data = {}) {
+  return toArray(data.items, [data.actions, data.rows, data.records]).map(mapInspectionAction);
+}
+
+function normaliseInspectionTasks(data = {}) {
+  return toArray(data.items, [data.tasks, data.rows, data.records]).map(mapInspectionTask);
+}
+
+function normaliseInspectionHeader(data = {}) {
+  const items = toArray(data.items, [data.rows, data.records]).map(mapInspectionHeader);
+  return items[0] || null;
+}
+
 function buildTopStats({
   summary = {},
   overdueSupervisions = [],
@@ -354,8 +383,22 @@ function buildTopStats({
   outstandingProbations = [],
   overdueChildFiles = [],
   overdueHomeDocs = [],
+  inspectionActions = [],
+  inspectionTasks = [],
+  inspectionHeader = null,
 }) {
-  const score = toNumber(summary.compliance_score ?? summary.score ?? 0);
+  const score = toNumber(
+    summary.compliance_score ??
+      summary.score ??
+      inspectionHeader?.confidence_score ??
+      0
+  );
+
+  const highPriorityInspectionActions = inspectionActions.filter((item) =>
+    ["critical", "high"].includes(normaliseToken(item.priority))
+  );
+
+  const openInspectionTasks = inspectionTasks.filter((item) => !item.completed);
 
   return [
     {
@@ -383,16 +426,22 @@ function buildTopStats({
       tone: outstandingProbations.length ? "warning" : "success",
     },
     {
-      label: "Child file gaps",
-      value: overdueChildFiles.length,
-      note: "Statutory paperwork due or missing",
-      tone: overdueChildFiles.length ? "danger" : "success",
+      label: "File / document gaps",
+      value: overdueChildFiles.length + overdueHomeDocs.length,
+      note: "Child and home statutory paperwork",
+      tone:
+        overdueChildFiles.length + overdueHomeDocs.length
+          ? "danger"
+          : "success",
     },
     {
-      label: "Home document gaps",
-      value: overdueHomeDocs.length,
-      note: "Statement of Purpose, Annex A and more",
-      tone: overdueHomeDocs.length ? "danger" : "success",
+      label: "Inspection actions",
+      value: highPriorityInspectionActions.length + openInspectionTasks.length,
+      note: "High-priority actions and linked tasks",
+      tone:
+        highPriorityInspectionActions.length || openInspectionTasks.length
+          ? "warning"
+          : "success",
     },
   ];
 }
@@ -405,9 +454,7 @@ function buildProgressCards({
   homeDocumentItems = [],
 }) {
   const compliantWorkforce = workforceItems.filter((item) =>
-    ["active", "ok", "good", "compliant"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    ["active", "ok", "good", "compliant"].includes(normaliseToken(item.status))
   ).length;
   const workforcePercent = workforceItems.length
     ? Math.round((compliantWorkforce / workforceItems.length) * 100)
@@ -415,7 +462,7 @@ function buildProgressCards({
 
   const validTraining = trainingItems.filter((item) =>
     ["active", "current", "up_to_date", "completed", "passed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseToken(item.status)
     )
   ).length;
   const trainingPercent = trainingItems.length
@@ -424,7 +471,7 @@ function buildProgressCards({
 
   const completedSupervisions = supervisionItems.filter((item) =>
     ["completed", "complete", "up_to_date", "current"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseToken(item.status)
     )
   ).length;
   const supervisionPercent = supervisionItems.length
@@ -433,7 +480,7 @@ function buildProgressCards({
 
   const childFileCurrent = childComplianceItems.filter((item) =>
     ["compliant", "up_to_date", "current", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseToken(item.status)
     )
   ).length;
   const childFilePercent = childComplianceItems.length
@@ -442,7 +489,7 @@ function buildProgressCards({
 
   const homeDocsCurrent = homeDocumentItems.filter((item) =>
     ["compliant", "up_to_date", "current", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseToken(item.status)
     )
   ).length;
   const homeDocPercent = homeDocumentItems.length
@@ -669,6 +716,8 @@ function buildPriorityItems({
   outstandingProbations = [],
   overdueChildFiles = [],
   overdueHomeDocs = [],
+  inspectionActions = [],
+  inspectionTasks = [],
 }) {
   const items = [];
 
@@ -730,7 +779,34 @@ function buildPriorityItems({
     });
   });
 
-  return items.slice(0, 8);
+  inspectionActions
+    .filter((item) => ["critical", "high"].includes(normaliseToken(item.priority)))
+    .slice(0, 3)
+    .forEach((item) => {
+      items.push({
+        title: item.action_title || "Inspection action",
+        summary:
+          item.action_description ||
+          (item.due_date
+            ? `Due ${formatDate(item.due_date)}`
+            : "High-priority inspection action."),
+      });
+    });
+
+  inspectionTasks
+    .filter((item) => !item.completed)
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.task_title || item.action_title || "Inspection task",
+        summary:
+          item.task_due_date
+            ? `Due ${formatDate(item.task_due_date)}`
+            : "Inspection-linked task remains open.",
+      });
+    });
+
+  return items.slice(0, 10);
 }
 
 function renderComplianceDashboardHtml({
@@ -744,6 +820,9 @@ function renderComplianceDashboardHtml({
   overdueChildFiles = [],
   overdueHomeDocs = [],
   inspectionReadiness = [],
+  inspectionActions = [],
+  inspectionTasks = [],
+  inspectionHeader = null,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--compliance">
@@ -751,7 +830,14 @@ function renderComplianceDashboardHtml({
         <div>
           <div class="eyebrow">Compliance</div>
           <h2>${safeText(homeName)}</h2>
-          <p>A live compliance view across workforce, children’s files, statutory paperwork and Ofsted readiness.</p>
+          <p>
+            ${
+              safeText(
+                inspectionHeader?.top_concerns ||
+                  "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness."
+              )
+            }
+          </p>
         </div>
       </div>
 
@@ -764,6 +850,67 @@ function renderComplianceDashboardHtml({
         </div>
         ${renderProgressCards(progressCards)}
       </div>
+
+      ${
+        inspectionHeader
+          ? `
+            <div class="overview-section-card">
+              <div class="overview-section-head">
+                <h3>Inspection position</h3>
+                <p>Headline inspection picture for this home.</p>
+              </div>
+              <div class="record-list">
+                <article class="record-row">
+                  <div class="record-row-main">
+                    <div class="record-row-title">Overall band</div>
+                    <div class="record-row-summary">
+                      Confidence ${safeText(inspectionHeader.confidence_score || 0)}
+                    </div>
+                  </div>
+                  <div class="record-row-side">
+                    <span class="row-pill ${safeText(getBandTone(inspectionHeader.overall_band))}">
+                      ${safeText(formatBand(inspectionHeader.overall_band))}
+                    </span>
+                  </div>
+                </article>
+
+                <article class="record-row">
+                  <div class="record-row-main">
+                    <div class="record-row-title">Experiences and progress</div>
+                  </div>
+                  <div class="record-row-side">
+                    <span class="row-pill ${safeText(getBandTone(inspectionHeader.experiences_band))}">
+                      ${safeText(formatBand(inspectionHeader.experiences_band))}
+                    </span>
+                  </div>
+                </article>
+
+                <article class="record-row">
+                  <div class="record-row-main">
+                    <div class="record-row-title">Helped and protected</div>
+                  </div>
+                  <div class="record-row-side">
+                    <span class="row-pill ${safeText(getBandTone(inspectionHeader.helped_band))}">
+                      ${safeText(formatBand(inspectionHeader.helped_band))}
+                    </span>
+                  </div>
+                </article>
+
+                <article class="record-row">
+                  <div class="record-row-main">
+                    <div class="record-row-title">Leadership and management</div>
+                  </div>
+                  <div class="record-row-side">
+                    <span class="row-pill ${safeText(getBandTone(inspectionHeader.leadership_band))}">
+                      ${safeText(formatBand(inspectionHeader.leadership_band))}
+                    </span>
+                  </div>
+                </article>
+              </div>
+            </div>
+          `
+          : ""
+      }
 
       <div class="overview-grid">
         <section class="overview-main">
@@ -835,6 +982,29 @@ function renderComplianceDashboardHtml({
                   .join(" • "),
             })}
           </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Inspection actions</h3>
+              <p>Best next compliance-led actions linked to the inspection picture.</p>
+            </div>
+
+            ${renderRows(inspectionActions, {
+              emptyMessage: "No inspection actions are currently linked.",
+              titleKey: "action_title",
+              summaryKey: "action_description",
+              recordType: "inspection_action",
+              metaBuilder: (item) =>
+                [
+                  item.section_name || item.section_code || "",
+                  item.owner_user_name || item.owner_staff_name || "Unassigned",
+                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+              statusKey: "priority",
+            })}
+          </div>
         </section>
 
         <aside class="overview-side">
@@ -878,12 +1048,33 @@ function renderComplianceDashboardHtml({
               emptyMessage: "No inspection readiness issues are currently flagged.",
               titleKey: "title",
               summaryKey: "summary",
-              recordType: "compliance",
+              recordType: "inspection_readiness",
               metaBuilder: (item) =>
                 [
                   item.category || "",
                   item.review_date ? `Due ${formatDate(item.review_date)}` : "",
                   item.updated_at ? formatDateTime(item.updated_at) : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+            })}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Linked inspection tasks</h3>
+              <p>Operational follow-through attached to inspection improvement.</p>
+            </div>
+
+            ${renderRows(inspectionTasks, {
+              emptyMessage: "No linked inspection tasks are currently open.",
+              titleKey: "task_title",
+              summaryKey: "action_title",
+              recordType: "inspection_task",
+              metaBuilder: (item) =>
+                [
+                  item.assigned_user_name || item.assigned_role || "Unassigned",
+                  item.task_due_date ? `Due ${formatDate(item.task_due_date)}` : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -1121,7 +1312,84 @@ function buildFallbackComplianceData(homeId) {
         },
       ],
     },
+    inspectionActionsData: {
+      items: [
+        {
+          id: 81,
+          action_title: "Resolve workforce training gaps",
+          action_description: "Bring overdue and expiring mandatory training back into date.",
+          section_name: "Leadership and management",
+          priority: "high",
+          due_date: plusDays(3),
+          owner_user_name: "Registered Manager",
+        },
+      ],
+    },
+    inspectionTasksData: {
+      items: [
+        {
+          id: 91,
+          task_title: "Update training matrix",
+          action_title: "Resolve workforce training gaps",
+          task_due_date: plusDays(2),
+          assigned_user_name: "Deputy Manager",
+          completed: false,
+          status: "open",
+        },
+      ],
+    },
+    inspectionHeaderData: {
+      items: [
+        {
+          home_id: homeId,
+          home_name: homeName,
+          overall_band: "good",
+          confidence_score: 76,
+          experiences_band: "good",
+          helped_band: "good",
+          leadership_band: "requires_improvement",
+          top_concerns: "Workforce readiness and document review cycles need closer grip.",
+        },
+      ],
+    },
     isFallback: true,
+  };
+}
+
+async function tryFetchInspectionComplianceData(homeId) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  if (!endpoints) return null;
+
+  const safeGet = (url) => apiGet(url).catch(() => null);
+
+  const [
+    headerData,
+    actionsData,
+    tasksData,
+  ] = await Promise.all([
+    safeGet(endpoints.homeHeader),
+    safeGet(endpoints.actions),
+    safeGet(endpoints.tasks),
+  ]);
+
+  const inspectionHeader = normaliseInspectionHeader(headerData || {});
+  const inspectionActions = sortSoonestFirst(
+    normaliseInspectionActions(actionsData || {}),
+    ["due_date", "created_at", "updated_at"]
+  );
+  const inspectionTasks = sortSoonestFirst(
+    normaliseInspectionTasks(tasksData || {}),
+    ["task_due_date", "created_at", "updated_at"]
+  );
+
+  if (!inspectionHeader && !inspectionActions.length && !inspectionTasks.length) {
+    return null;
+  }
+
+  return {
+    inspectionHeader,
+    inspectionActions,
+    inspectionTasks,
   };
 }
 
@@ -1152,6 +1420,8 @@ async function fetchComplianceDataset(homeId) {
     inspectionData,
   ] = await Promise.all(requests);
 
+  const inspectionUiData = await tryFetchInspectionComplianceData(homeId);
+
   const responses = [
     summaryData,
     workforceData,
@@ -1164,10 +1434,28 @@ async function fetchComplianceDataset(homeId) {
     inspectionData,
   ];
 
-  const hasLiveSuccess = responses.some(hasUsableData);
+  const hasLiveSuccess =
+    responses.some(hasUsableData) ||
+    Boolean(inspectionUiData?.inspectionHeader) ||
+    Boolean(inspectionUiData?.inspectionActions?.length) ||
+    Boolean(inspectionUiData?.inspectionTasks?.length);
 
   if (!hasLiveSuccess) {
-    return buildFallbackComplianceData(homeId);
+    const fallback = buildFallbackComplianceData(homeId);
+
+    return {
+      ...fallback,
+      inspectionHeader:
+        normaliseInspectionHeader(fallback.inspectionHeaderData || {}) || null,
+      inspectionActions: sortSoonestFirst(
+        normaliseInspectionActions(fallback.inspectionActionsData || {}),
+        ["due_date", "created_at", "updated_at"]
+      ),
+      inspectionTasks: sortSoonestFirst(
+        normaliseInspectionTasks(fallback.inspectionTasksData || {}),
+        ["task_due_date", "created_at", "updated_at"]
+      ),
+    };
   }
 
   return {
@@ -1180,6 +1468,9 @@ async function fetchComplianceDataset(homeId) {
     childComplianceData: childComplianceData || { items: [] },
     homeDocumentsData: homeDocumentsData || { items: [] },
     inspectionData: inspectionData || { items: [] },
+    inspectionHeader: inspectionUiData?.inspectionHeader || null,
+    inspectionActions: inspectionUiData?.inspectionActions || [],
+    inspectionTasks: inspectionUiData?.inspectionTasks || [],
     isFallback: false,
   };
 }
@@ -1213,6 +1504,9 @@ export async function loadCompliance() {
       childComplianceData,
       homeDocumentsData,
       inspectionData,
+      inspectionHeader,
+      inspectionActions,
+      inspectionTasks,
       isFallback,
     } = await fetchComplianceDataset(homeId);
 
@@ -1257,44 +1551,42 @@ export async function loadCompliance() {
       ["review_date", "updated_at", "created_at"]
     );
 
-    const inspectionItems = sortSoonestFirst(
-      normaliseInspectionItems(inspectionData),
+    const inspectionReadiness = sortSoonestFirst(
+      normaliseInspectionReadinessItems(inspectionData),
       ["review_date", "due_date", "updated_at", "created_at"]
+    ).filter((item) =>
+      ["overdue", "missing", "review_due", "due_soon", "warning", "attention"].includes(
+        normaliseToken(item.status)
+      )
     );
 
     const overdueSupervisions = supervisionItems.filter((item) =>
       ["overdue", "due", "due_soon", "review_due"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseToken(item.status)
       )
     );
 
     const expiringTraining = trainingItems.filter((item) =>
       ["due_soon", "overdue", "expired", "expiring"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseToken(item.status)
       )
     );
 
     const outstandingProbations = [...probationItems, ...inductionItems].filter((item) =>
       ["due", "due_soon", "overdue", "incomplete", "review_due"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseToken(item.status)
       )
     );
 
     const overdueChildFiles = childComplianceItems.filter((item) =>
       ["overdue", "missing", "review_due", "due_soon", "incomplete"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseToken(item.status)
       )
     );
 
     const overdueHomeDocs = homeDocumentItems.filter((item) =>
       ["overdue", "missing", "review_due", "due_soon", "incomplete"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    );
-
-    const inspectionReadiness = inspectionItems.filter((item) =>
-      ["overdue", "missing", "review_due", "due_soon", "warning", "attention"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseToken(item.status)
       )
     );
 
@@ -1305,6 +1597,9 @@ export async function loadCompliance() {
       outstandingProbations,
       overdueChildFiles,
       overdueHomeDocs,
+      inspectionActions,
+      inspectionTasks,
+      inspectionHeader,
     });
 
     const progressCards = buildProgressCards({
@@ -1321,9 +1616,12 @@ export async function loadCompliance() {
       outstandingProbations,
       overdueChildFiles,
       overdueHomeDocs,
+      inspectionActions,
+      inspectionTasks,
     });
 
     const homeName =
+      inspectionHeader?.home_name ||
       summary.home_name ||
       state.currentUser?.home_name ||
       state.currentUser?.homeName ||
@@ -1340,19 +1638,25 @@ export async function loadCompliance() {
       overdueChildFiles: overdueChildFiles.slice(0, 8),
       overdueHomeDocs: overdueHomeDocs.slice(0, 6),
       inspectionReadiness: inspectionReadiness.slice(0, 6),
+      inspectionActions: inspectionActions.slice(0, 6),
+      inspectionTasks: inspectionTasks.filter((item) => !item.completed).slice(0, 6),
+      inspectionHeader,
     });
 
     updateWorkspaceSummaryStrip({
       today: isFallback
-        ? `${toNumber(summary.compliance_score ?? summary.score ?? 0)}% compliant • demo preview`
-        : `${toNumber(summary.compliance_score ?? summary.score ?? 0)}% compliant`,
+        ? `${toNumber(summary.compliance_score ?? summary.score ?? inspectionHeader?.confidence_score ?? 0)}% compliant • demo preview`
+        : `${toNumber(summary.compliance_score ?? summary.score ?? inspectionHeader?.confidence_score ?? 0)}% compliant`,
       nextEvent:
-        inspectionReadiness[0]?.review_date
+        inspectionActions[0]?.due_date
+          ? `Inspection action due ${formatDate(inspectionActions[0].due_date)}`
+          : inspectionReadiness[0]?.review_date
           ? `Inspection item due ${formatDate(inspectionReadiness[0].review_date)}`
           : inspectionReadiness[0]?.due_date
           ? `Inspection item due ${formatDate(inspectionReadiness[0].due_date)}`
           : "No urgent inspection milestone",
       lastRecord:
+        inspectionHeader?.top_concerns ||
         overdueHomeDocs[0]?.title ||
         overdueChildFiles[0]?.young_person_name ||
         "Latest compliance data loaded",
