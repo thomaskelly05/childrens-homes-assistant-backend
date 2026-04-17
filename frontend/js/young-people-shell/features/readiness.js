@@ -1,6 +1,27 @@
 import { els } from "../dom.js";
-import { state } from "../state.js";
-import { apiGet, apiPost } from "../core/api.js";
+import {
+  state,
+  getCurrentReadinessHomeId,
+  setReadinessSelectedHomeId,
+  setReadinessLoading,
+  setReadinessRefreshing,
+  setReadinessSyncing,
+  setReadinessError,
+  setReadinessData,
+} from "../state.js";
+import {
+  apiGet,
+  getInspectionHomeCards,
+  getInspectionHomeDetail,
+  getInspectionSectionPanels,
+  getInspectionReasons,
+  getInspectionActions,
+  getInspectionTasks,
+  getInspectionBriefing,
+  getInspection72Hour,
+  refreshInspectionCycle,
+  syncInspectionTasks,
+} from "../core/api.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
 import {
   mapComplianceItem,
@@ -62,10 +83,6 @@ function getScopeTitle() {
 
 function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
-}
-
-function safeArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function firstArray(...values) {
@@ -535,44 +552,6 @@ function renderLegacyReadinessHtml({
       </div>
     </section>
   `;
-}
-
-function getInspectionEndpoints(homeId) {
-  return {
-    homeCards: "/inspection/ui/home-cards",
-    homeHeader: `/inspection/ui/homes/${homeId}/header`,
-    sectionPanels: `/inspection/ui/homes/${homeId}/sections`,
-    reasons: `/inspection/ui/homes/${homeId}/reasons`,
-    actions: `/inspection/ui/homes/${homeId}/actions`,
-    tasks: `/inspection/ui/homes/${homeId}/tasks`,
-    briefing: `/inspection/ui/homes/${homeId}/briefing`,
-    prep72h: `/inspection/ui/homes/${homeId}/72-hour`,
-    refresh: `/inspection/homes/${homeId}/refresh`,
-    syncTasks: `/inspection/homes/${homeId}/sync-tasks`,
-  };
-}
-
-function getLegacyReadinessEndpoints() {
-  const scope = getCurrentScope();
-  const id = getScopeEntityId();
-
-  if (!id) {
-    return null;
-  }
-
-  if (scope === "home" || scope === "quality") {
-    return {
-      compliance: `/homes/${id}/compliance`,
-      documents: `/homes/${id}/documents`,
-      tasks: null,
-    };
-  }
-
-  return {
-    compliance: `/young-people/${id}/compliance`,
-    tasks: `/young-people/${id}/tasks`,
-    documents: `/young-people/${id}/documents`,
-  };
 }
 
 function renderNoContext() {
@@ -1070,9 +1049,8 @@ function renderInspectionDetail({
 }
 
 function chooseSelectedHome(cards = []) {
-  const currentHomeId = getHomeId();
+  const currentHomeId = getCurrentReadinessHomeId();
   const selectedHomeId =
-    state.readinessSelectedHomeId ||
     currentHomeId ||
     cards[0]?.home_id ||
     null;
@@ -1081,7 +1059,7 @@ function chooseSelectedHome(cards = []) {
     cards.find((card) => Number(card.home_id) === Number(selectedHomeId)) || cards[0] || null;
 
   if (selectedCard?.home_id) {
-    state.readinessSelectedHomeId = selectedCard.home_id;
+    setReadinessSelectedHomeId(selectedCard.home_id);
   }
 
   return selectedCard;
@@ -1130,29 +1108,36 @@ function updateReadinessSummaryFromLegacy({
 }
 
 async function tryLoadInspectionReadiness() {
-  const homeId = getHomeId();
   const scope = getCurrentScope();
+  const preferredHomeId = getCurrentReadinessHomeId();
 
-  if (!homeId || (scope !== "home" && scope !== "quality")) {
+  if (!preferredHomeId || (scope !== "home" && scope !== "quality")) {
     return null;
   }
 
-  const endpoints = getInspectionEndpoints(homeId);
-
-  const [cardsRes, headerRes, sectionsRes, reasonsRes, actionsRes, tasksRes, briefingRes, prepRes] =
-    await Promise.all([
-      apiGet(endpoints.homeCards).catch(() => null),
-      apiGet(endpoints.homeHeader).catch(() => null),
-      apiGet(endpoints.sectionPanels).catch(() => null),
-      apiGet(endpoints.reasons).catch(() => null),
-      apiGet(endpoints.actions).catch(() => null),
-      apiGet(endpoints.tasks).catch(() => null),
-      apiGet(endpoints.briefing).catch(() => null),
-      apiGet(endpoints.prep72h).catch(() => null),
-    ]);
+  const [
+    cardsRes,
+    headerRes,
+    sectionsRes,
+    reasonsRes,
+    actionsRes,
+    tasksRes,
+    briefingRes,
+    prepRes,
+  ] = await Promise.all([
+    getInspectionHomeCards().catch(() => null),
+    getInspectionHomeDetail(preferredHomeId).catch(() => null),
+    getInspectionSectionPanels(preferredHomeId).catch(() => null),
+    getInspectionReasons(preferredHomeId).catch(() => null),
+    getInspectionActions(preferredHomeId).catch(() => null),
+    getInspectionTasks(preferredHomeId).catch(() => null),
+    getInspectionBriefing(preferredHomeId).catch(() => null),
+    getInspection72Hour(preferredHomeId).catch(() => null),
+  ]);
 
   const cards = normaliseApiRows(cardsRes);
   const selectedCard = chooseSelectedHome(cards);
+  const selectedHomeId = selectedCard?.home_id || preferredHomeId;
 
   const headerRows = normaliseApiRows(headerRes);
   const sectionRows = normaliseApiRows(sectionsRes);
@@ -1163,32 +1148,37 @@ async function tryLoadInspectionReadiness() {
   const prepRows = normaliseApiRows(prepRes);
 
   const header =
-    headerRows.find((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)) ||
+    headerRows.find((row) => Number(row.home_id) === Number(selectedHomeId)) ||
     headerRows[0] ||
     selectedCard ||
     null;
 
   const sections = sectionRows.filter(
-    (row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)
+    (row) => Number(row.home_id) === Number(selectedHomeId)
   );
+
   const reasons = sortNewestFirst(
-    reasonRows.filter((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)),
+    reasonRows.filter((row) => Number(row.home_id) === Number(selectedHomeId)),
     ["priority", "created_at"]
   );
+
   const actions = sortSoonestFirst(
-    actionRows.filter((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)),
+    actionRows.filter((row) => Number(row.home_id) === Number(selectedHomeId)),
     ["due_date", "created_at"]
   );
+
   const tasks = sortSoonestFirst(
-    taskRows.filter((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)),
+    taskRows.filter((row) => Number(row.home_id) === Number(selectedHomeId)),
     ["task_due_date", "action_due_date", "task_created_at"]
   );
+
   const briefing =
-    briefingRows.find((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)) ||
+    briefingRows.find((row) => Number(row.home_id) === Number(selectedHomeId)) ||
     briefingRows[0] ||
     null;
+
   const prep72h =
-    prepRows.find((row) => Number(row.home_id) === Number(selectedCard?.home_id || homeId)) ||
+    prepRows.find((row) => Number(row.home_id) === Number(selectedHomeId)) ||
     prepRows[0] ||
     null;
 
@@ -1206,6 +1196,18 @@ async function tryLoadInspectionReadiness() {
     return null;
   }
 
+  setReadinessData({
+    homeCards: cards,
+    header,
+    sections,
+    reasons,
+    actions,
+    tasks,
+    briefing,
+    prep72h,
+    selectedHomeId,
+  });
+
   return {
     cards,
     selectedCard,
@@ -1216,17 +1218,30 @@ async function tryLoadInspectionReadiness() {
     tasks,
     briefing,
     prep72h,
-    endpoints,
   };
 }
 
 async function loadLegacyReadiness() {
-  const endpoints = getLegacyReadinessEndpoints();
+  const scope = getCurrentScope();
+  const id = getScopeEntityId();
 
-  if (!endpoints) {
+  if (!id) {
     renderNoContext();
     return;
   }
+
+  const endpoints =
+    scope === "home" || scope === "quality"
+      ? {
+          compliance: `/homes/${id}/compliance`,
+          documents: `/homes/${id}/documents`,
+          tasks: null,
+        }
+      : {
+          compliance: `/young-people/${id}/compliance`,
+          tasks: `/young-people/${id}/tasks`,
+          documents: `/young-people/${id}/documents`,
+        };
 
   const [complianceData, tasksData, documentsData] = await Promise.all([
     apiGet(endpoints.compliance).catch(() => ({ items: [] })),
@@ -1296,8 +1311,8 @@ async function loadLegacyReadiness() {
   });
 }
 
-function bindInspectionReadinessEvents(endpoints) {
-  if (!els.viewContent || !endpoints) return;
+function bindInspectionReadinessEvents() {
+  if (!els.viewContent) return;
 
   els.viewContent
     .querySelectorAll("[data-readiness-home-card]")
@@ -1305,7 +1320,7 @@ function bindInspectionReadinessEvents(endpoints) {
       button.addEventListener("click", async () => {
         const homeId = Number(button.dataset.homeId || 0);
         if (!homeId) return;
-        state.readinessSelectedHomeId = homeId;
+        setReadinessSelectedHomeId(homeId);
         await loadReadiness();
       });
     });
@@ -1313,18 +1328,21 @@ function bindInspectionReadinessEvents(endpoints) {
   const refreshButton = els.viewContent.querySelector("[data-readiness-refresh='true']");
   if (refreshButton) {
     refreshButton.addEventListener("click", async () => {
+      const homeId = getCurrentReadinessHomeId();
+      if (!homeId) return;
+
       refreshButton.disabled = true;
       refreshButton.textContent = "Refreshing...";
+      setReadinessRefreshing(true);
+
       try {
-        if (apiPost) {
-          await apiPost(endpoints.refresh, {});
-        } else {
-          await fetch(endpoints.refresh, { method: "POST", credentials: "include" });
-        }
+        await refreshInspectionCycle(homeId, {});
         await loadReadiness();
       } catch (error) {
         console.error("Failed to refresh inspection cycle", error);
+        setReadinessError(error);
       } finally {
+        setReadinessRefreshing(false);
         refreshButton.disabled = false;
         refreshButton.textContent = "Refresh inspection cycle";
       }
@@ -1334,18 +1352,21 @@ function bindInspectionReadinessEvents(endpoints) {
   const syncButton = els.viewContent.querySelector("[data-readiness-sync='true']");
   if (syncButton) {
     syncButton.addEventListener("click", async () => {
+      const homeId = getCurrentReadinessHomeId();
+      if (!homeId) return;
+
       syncButton.disabled = true;
       syncButton.textContent = "Syncing...";
+      setReadinessSyncing(true);
+
       try {
-        if (apiPost) {
-          await apiPost(endpoints.syncTasks, {});
-        } else {
-          await fetch(endpoints.syncTasks, { method: "POST", credentials: "include" });
-        }
+        await syncInspectionTasks(homeId, {});
         await loadReadiness();
       } catch (error) {
         console.error("Failed to sync readiness tasks", error);
+        setReadinessError(error);
       } finally {
+        setReadinessSyncing(false);
         syncButton.disabled = false;
         syncButton.textContent = "Sync actions";
       }
@@ -1360,6 +1381,9 @@ export async function loadReadiness() {
     renderNoContext();
     return;
   }
+
+  setReadinessLoading(true);
+  setReadinessError(null);
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -1395,16 +1419,20 @@ export async function loadReadiness() {
       updateReadinessSummaryFromInspection(
         inspectionData.header || inspectionData.selectedCard || {}
       );
-      bindInspectionReadinessEvents(inspectionData.endpoints);
+      bindInspectionReadinessEvents();
+      setReadinessLoading(false);
       return;
     }
 
     await loadLegacyReadiness();
+    setReadinessLoading(false);
   } catch (error) {
     console.error("Failed to load readiness", error);
+    setReadinessError(error);
 
     try {
       await loadLegacyReadiness();
+      setReadinessLoading(false);
     } catch (legacyError) {
       els.viewContent.innerHTML = `
         <div class="empty-state">
@@ -1420,6 +1448,9 @@ export async function loadReadiness() {
         lastRecord: "No readiness data",
         openActions: "Check API routes",
       });
+
+      setReadinessLoading(false);
+      setReadinessError(legacyError || error);
     }
   }
 }
