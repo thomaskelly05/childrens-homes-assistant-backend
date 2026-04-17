@@ -3,6 +3,15 @@ export const DEFAULT_SCOPE = "child";
 export const DEFAULT_ROLE = "staff";
 
 const VALID_SCOPES = new Set(["child", "home", "quality"]);
+const VALID_READINESS_TABS = new Set([
+  "overview",
+  "judgements",
+  "reasons",
+  "actions",
+  "tasks",
+  "briefing",
+  "prep",
+]);
 
 function getValidScope(scope) {
   const safeScope = String(scope || DEFAULT_SCOPE).trim().toLowerCase();
@@ -14,6 +23,11 @@ function getScopeDefaultSection(scope = DEFAULT_SCOPE) {
   if (safeScope === "home") return "home-dashboard";
   if (safeScope === "quality") return "quality";
   return DEFAULT_SECTION;
+}
+
+function getValidReadinessTab(tab = "overview") {
+  const safeTab = String(tab || "overview").trim().toLowerCase();
+  return VALID_READINESS_TABS.has(safeTab) ? safeTab : "overview";
 }
 
 export function createAssistantMeta() {
@@ -83,6 +97,28 @@ export function createAssistantBundleState() {
     latestManagerBrief: null,
     latestQualityBrief: null,
     liveUpdates: [],
+  };
+}
+
+export function createReadinessState() {
+  return {
+    readinessSelectedHomeId: null,
+    readinessActiveTab: "overview",
+
+    readinessHomeCards: [],
+    readinessHeader: null,
+    readinessSections: [],
+    readinessReasons: [],
+    readinessActions: [],
+    readinessTasks: [],
+    readinessBriefing: null,
+    readinessPrep72h: null,
+
+    readinessLoadedAt: null,
+    readinessLoading: false,
+    readinessRefreshing: false,
+    readinessSyncing: false,
+    readinessError: null,
   };
 }
 
@@ -168,6 +204,9 @@ export const state = {
 
   // Whole-scope assistant bundle / live intelligence state
   ...createAssistantBundleState(),
+
+  // Inspection / readiness dashboard state
+  ...createReadinessState(),
 
   // Request optimisation state
   resourceCache: Object.create(null),
@@ -271,6 +310,18 @@ export function resetActiveRecordState() {
   state.recordDrawerOpen = false;
 }
 
+export function resetReadinessState({ preserveSelectedHomeId = false } = {}) {
+  const selectedHomeId = preserveSelectedHomeId
+    ? state.readinessSelectedHomeId
+    : null;
+
+  Object.assign(state, createReadinessState());
+
+  if (preserveSelectedHomeId) {
+    state.readinessSelectedHomeId = selectedHomeId;
+  }
+}
+
 export function resetWorkspaceState() {
   Object.assign(state, createYoungPersonState());
 
@@ -285,6 +336,7 @@ export function resetWorkspaceState() {
   resetActiveRecordState();
   resetComposerState();
   resetAssistantState();
+  resetReadinessState();
 }
 
 export function clearRequestOptimisationState() {
@@ -347,6 +399,112 @@ export function setAllowedHomeIds(homeIds = []) {
         .map((item) => Number(item))
         .filter((item) => Number.isFinite(item))
     : [];
+}
+
+// ========================
+// Readiness / inspection helpers
+// ========================
+
+export function setReadinessSelectedHomeId(homeId = null) {
+  const safeHomeId = Number(homeId);
+  state.readinessSelectedHomeId =
+    Number.isFinite(safeHomeId) && safeHomeId > 0 ? safeHomeId : null;
+}
+
+export function setReadinessActiveTab(tab = "overview") {
+  state.readinessActiveTab = getValidReadinessTab(tab);
+}
+
+export function setReadinessLoading(isLoading = false) {
+  state.readinessLoading = Boolean(isLoading);
+  if (isLoading) {
+    state.readinessError = null;
+  }
+}
+
+export function setReadinessRefreshing(isRefreshing = false) {
+  state.readinessRefreshing = Boolean(isRefreshing);
+  if (isRefreshing) {
+    state.readinessError = null;
+  }
+}
+
+export function setReadinessSyncing(isSyncing = false) {
+  state.readinessSyncing = Boolean(isSyncing);
+  if (isSyncing) {
+    state.readinessError = null;
+  }
+}
+
+export function setReadinessError(error = null) {
+  state.readinessError = error || null;
+}
+
+export function setReadinessData({
+  homeCards = null,
+  header = null,
+  sections = null,
+  reasons = null,
+  actions = null,
+  tasks = null,
+  briefing = null,
+  prep72h = null,
+  selectedHomeId = null,
+} = {}) {
+  if (Array.isArray(homeCards)) {
+    state.readinessHomeCards = homeCards;
+  }
+
+  if (header !== null) {
+    state.readinessHeader = header;
+  }
+
+  if (Array.isArray(sections)) {
+    state.readinessSections = sections;
+  }
+
+  if (Array.isArray(reasons)) {
+    state.readinessReasons = reasons;
+  }
+
+  if (Array.isArray(actions)) {
+    state.readinessActions = actions;
+  }
+
+  if (Array.isArray(tasks)) {
+    state.readinessTasks = tasks;
+  }
+
+  if (briefing !== null) {
+    state.readinessBriefing = briefing;
+  }
+
+  if (prep72h !== null) {
+    state.readinessPrep72h = prep72h;
+  }
+
+  if (selectedHomeId !== null && selectedHomeId !== undefined && selectedHomeId !== "") {
+    setReadinessSelectedHomeId(selectedHomeId);
+  }
+
+  state.readinessLoadedAt = new Date().toISOString();
+  state.readinessError = null;
+}
+
+export function getCurrentReadinessHomeId() {
+  if (state.readinessSelectedHomeId) {
+    return state.readinessSelectedHomeId;
+  }
+
+  if (state.homeId) {
+    return state.homeId;
+  }
+
+  if (state.allowedHomeIds?.length) {
+    return state.allowedHomeIds[0];
+  }
+
+  return null;
 }
 
 // ========================
