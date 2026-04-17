@@ -1,4 +1,4 @@
-import { state } from "../state.js";
+import { state, getCurrentReadinessHomeId } from "../state.js";
 import { openComposerFor } from "./composer.js";
 import {
   QUICK_ACTIONS as CONFIG_QUICK_ACTIONS,
@@ -7,6 +7,10 @@ import {
   SCOPE_SECTIONS,
   getSafeSectionForScope,
 } from "../core/config.js";
+import {
+  refreshInspectionCycle,
+  syncInspectionTasks,
+} from "../core/api.js";
 
 let actionRouterBound = false;
 
@@ -53,7 +57,7 @@ function hasChildContext() {
 }
 
 function hasHomeContext() {
-  return Boolean(getCurrentHomeId());
+  return Boolean(getCurrentHomeId() || getCurrentReadinessHomeId());
 }
 
 function ensureScopeContext() {
@@ -169,6 +173,12 @@ function resolveActionType(value = "") {
     draft_summary: "draft_summary",
     draft_handover: "draft_handover",
     draft_note: "draft_note",
+
+    inspection_refresh: "inspection_refresh",
+    refresh_inspection: "inspection_refresh",
+    sync_inspection: "inspection_sync",
+    inspection_sync: "inspection_sync",
+    sync_actions: "inspection_sync",
   };
 
   return aliases[type] || "create_record";
@@ -201,6 +211,10 @@ function normaliseActionKey(value = "") {
     new_staff_task: "staff_task",
     new_policy_review: "policy_review",
     new_health_safety_check: "health_safety_check",
+
+    inspection_refresh: "inspection_refresh",
+    inspection_sync: "inspection_sync",
+    sync_actions: "inspection_sync",
 
     edit_profile_identity: "profile_identity",
     edit_profile_communication: "profile_communication",
@@ -252,6 +266,12 @@ function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
     team: allowedSections.includes("team"),
     supervision: allowedSections.includes("supervision"),
     ai_generated_report: allowedSections.includes("reports"),
+    inspection_refresh:
+      allowedSections.includes("ofsted-readiness") ||
+      allowedSections.includes("inspection-readiness"),
+    inspection_sync:
+      allowedSections.includes("ofsted-readiness") ||
+      allowedSections.includes("inspection-readiness"),
 
     profile_identity: false,
     profile_communication: false,
@@ -291,6 +311,10 @@ function inferSectionForRecordType(recordType = "", scope = getCurrentScope()) {
     team: "team",
     supervision: "supervision",
     ai_generated_report: "reports",
+    inspection_refresh:
+      scope === "quality" ? "inspection-readiness" : "ofsted-readiness",
+    inspection_sync:
+      scope === "quality" ? "inspection-readiness" : "ofsted-readiness",
 
     profile_identity: "profile",
     profile_communication: "profile",
@@ -334,6 +358,14 @@ function inferRecordTypeFromActionType(actionType = "", suggestion = {}) {
     return "manager_action";
   }
 
+  if (resolvedAction === "inspection_refresh") {
+    return "inspection_refresh";
+  }
+
+  if (resolvedAction === "inspection_sync") {
+    return "inspection_sync";
+  }
+
   return resolveRecordType(
     suggestion.record_type ||
       suggestion.target_record_type ||
@@ -359,6 +391,7 @@ function buildDraftFromSuggestion(suggestion = {}, resolvedType = "") {
       suggestion.home_id ||
       metadata.home_id ||
       getCurrentHomeId() ||
+      getCurrentReadinessHomeId() ||
       null,
 
     scope,
@@ -411,7 +444,11 @@ function safeOpen(recordType, mode = "create", item = null) {
       ? {
           ...item,
           current_scope: scope,
-          home_id: item.home_id ?? getCurrentHomeId() ?? null,
+          home_id:
+            item.home_id ??
+            getCurrentHomeId() ??
+            getCurrentReadinessHomeId() ??
+            null,
           young_person_id:
             scope === "child"
               ? item.young_person_id ?? state.youngPersonId ?? null
@@ -419,7 +456,10 @@ function safeOpen(recordType, mode = "create", item = null) {
         }
       : {
           current_scope: scope,
-          home_id: scope !== "child" ? getCurrentHomeId() ?? null : null,
+          home_id:
+            scope !== "child"
+              ? getCurrentHomeId() ?? getCurrentReadinessHomeId() ?? null
+              : null,
           young_person_id: scope === "child" ? state.youngPersonId ?? null : null,
         };
 
@@ -463,6 +503,38 @@ function buildQuickActionMap() {
       };
     }
   );
+
+  actions.inspection_refresh = {
+    id: "inspection_refresh",
+    label: "Refresh inspection cycle",
+    short_label: "Refresh",
+    record_type: "inspection_refresh",
+    section_hint: inferSectionForRecordType("inspection_refresh"),
+    description: "Re-run the inspection readiness cycle for the selected home.",
+    run: async () => {
+      const homeId = getCurrentReadinessHomeId() || getCurrentHomeId();
+      if (!homeId) return false;
+      await refreshInspectionCycle(homeId, {});
+      await navigateToSection(inferSectionForRecordType("inspection_refresh"));
+      return true;
+    },
+  };
+
+  actions.inspection_sync = {
+    id: "inspection_sync",
+    label: "Sync inspection actions",
+    short_label: "Sync",
+    record_type: "inspection_sync",
+    section_hint: inferSectionForRecordType("inspection_sync"),
+    description: "Sync inspection improvement actions to operational tasks.",
+    run: async () => {
+      const homeId = getCurrentReadinessHomeId() || getCurrentHomeId();
+      if (!homeId) return false;
+      await syncInspectionTasks(homeId, {});
+      await navigateToSection(inferSectionForRecordType("inspection_sync"));
+      return true;
+    },
+  };
 
   return actions;
 }
@@ -748,6 +820,44 @@ function runDraftNoteSuggestion(suggestion = {}) {
   return true;
 }
 
+async function runInspectionRefreshSuggestion(suggestion = {}) {
+  if (!ensureScopeContext()) return false;
+  if (!isActionAllowedInScope("inspection_refresh")) return false;
+
+  const homeId =
+    suggestion.home_id ||
+    suggestion.metadata?.home_id ||
+    getCurrentReadinessHomeId() ||
+    getCurrentHomeId();
+
+  if (!homeId) return false;
+
+  await refreshInspectionCycle(homeId, {});
+  return navigateToSection(
+    cleanText(suggestion.target_section) ||
+      inferSectionForRecordType("inspection_refresh")
+  );
+}
+
+async function runInspectionSyncSuggestion(suggestion = {}) {
+  if (!ensureScopeContext()) return false;
+  if (!isActionAllowedInScope("inspection_sync")) return false;
+
+  const homeId =
+    suggestion.home_id ||
+    suggestion.metadata?.home_id ||
+    getCurrentReadinessHomeId() ||
+    getCurrentHomeId();
+
+  if (!homeId) return false;
+
+  await syncInspectionTasks(homeId, {});
+  return navigateToSection(
+    cleanText(suggestion.target_section) ||
+      inferSectionForRecordType("inspection_sync")
+  );
+}
+
 export async function runSuggestionAction(suggestion = {}) {
   const actionType = resolveActionType(suggestion.action_type);
 
@@ -770,6 +880,12 @@ export async function runSuggestionAction(suggestion = {}) {
   if (actionType === "draft_summary") return runDraftSummarySuggestion(suggestion);
   if (actionType === "draft_handover") return runDraftHandoverSuggestion(suggestion);
   if (actionType === "draft_note") return runDraftNoteSuggestion(suggestion);
+  if (actionType === "inspection_refresh") {
+    return runInspectionRefreshSuggestion(suggestion);
+  }
+  if (actionType === "inspection_sync") {
+    return runInspectionSyncSuggestion(suggestion);
+  }
 
   return runCreateSuggestion(suggestion);
 }
@@ -810,7 +926,11 @@ function buildSuggestionFromButton(button) {
 
     young_person_id:
       button.dataset.youngPersonId || state.youngPersonId || null,
-    home_id: button.dataset.homeId || getCurrentHomeId() || null,
+    home_id:
+      button.dataset.homeId ||
+      getCurrentReadinessHomeId() ||
+      getCurrentHomeId() ||
+      null,
 
     prefill: {},
     metadata: {
@@ -818,7 +938,11 @@ function buildSuggestionFromButton(button) {
       source_record_id: button.dataset.sourceRecordId || null,
       young_person_id:
         button.dataset.youngPersonId || state.youngPersonId || null,
-      home_id: button.dataset.homeId || getCurrentHomeId() || null,
+      home_id:
+        button.dataset.homeId ||
+        getCurrentReadinessHomeId() ||
+        getCurrentHomeId() ||
+        null,
       target_section: button.dataset.targetSection || "",
     },
   };
@@ -828,6 +952,7 @@ export function bindActionRouter({
   onMissingYoungPerson,
   onMissingHomeContext,
   onSectionChange,
+  onInspectionActionComplete,
   quickButtonSelector = "[data-quick-action], [data-action-router]",
   suggestionButtonSelector = "[data-suggestion-action]",
 } = {}) {
@@ -847,7 +972,15 @@ export function bindActionRouter({
       }
 
       const action = getActionFromButton(quickButton);
-      action?.run?.();
+      const result = await action?.run?.();
+
+      if (
+        action?.id === "inspection_refresh" ||
+        action?.id === "inspection_sync"
+      ) {
+        onInspectionActionComplete?.(action?.id, result);
+      }
+
       return;
     }
 
@@ -869,6 +1002,13 @@ export function bindActionRouter({
 
     if (didRun && actionType === "open_section") {
       onSectionChange?.(getCurrentSection());
+    }
+
+    if (
+      didRun &&
+      (actionType === "inspection_refresh" || actionType === "inspection_sync")
+    ) {
+      onInspectionActionComplete?.(actionType, didRun);
     }
   });
 }
