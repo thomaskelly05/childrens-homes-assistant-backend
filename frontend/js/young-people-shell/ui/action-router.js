@@ -45,7 +45,11 @@ function getCurrentHomeId() {
 }
 
 function hasChildContext() {
-  return Boolean(state.youngPersonId || state.selectedYoungPerson?.id);
+  return Boolean(
+    state.youngPersonId ||
+      state.selectedYoungPerson?.id ||
+      state.selectedYoungPerson?.young_person_id
+  );
 }
 
 function hasHomeContext() {
@@ -83,6 +87,7 @@ function resolveRecordType(value = "") {
 
     missing: "missing_episode",
     missing_episodes: "missing_episode",
+    missing_from_care: "missing_episode",
 
     health: "health_record",
     health_records: "health_record",
@@ -185,12 +190,17 @@ function normaliseActionKey(value = "") {
     new_task: "task",
     new_document: "document",
     new_upload: "document",
+    upload_document: "upload_document",
     new_professional_message: "communication",
     new_communication: "communication",
+    professional_message: "professional_message",
     new_therapy: "therapy",
     new_team: "team",
     new_supervision: "supervision",
     new_manager_action: "manager_action",
+    new_staff_task: "staff_task",
+    new_policy_review: "policy_review",
+    new_health_safety_check: "health_safety_check",
 
     edit_profile_identity: "profile_identity",
     edit_profile_communication: "profile_communication",
@@ -224,14 +234,15 @@ function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
     daily_note: false,
     incident: false,
     support_plan: false,
-    risk: true,
+    risk: allowedSections.includes("risk") || allowedSections.includes("manager"),
     health_record: false,
     education_record: false,
     family_contact: false,
     keywork: false,
     appointment: allowedSections.includes("calendar"),
     achievement_record: false,
-    safeguarding_record: scope === "quality",
+    safeguarding_record:
+      allowedSections.includes("safeguarding") || scope === "quality",
     missing_episode: false,
     task: true,
     manager_action: true,
@@ -253,12 +264,12 @@ function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
   return scopeSpecificMap[actionId] ?? true;
 }
 
-function inferSectionForRecordType(recordType = "") {
+function inferSectionForRecordType(recordType = "", scope = getCurrentScope()) {
   const map = {
-    daily_note: "workspace",
+    daily_note: scope === "child" ? "workspace" : "operations",
     incident: "timeline",
-    support_plan: "workspace",
-    risk: "risk",
+    support_plan: "admission",
+    risk: scope === "child" ? "risk" : "manager",
     health_record: "health",
     education_record: "education",
     family_contact: "family",
@@ -267,7 +278,12 @@ function inferSectionForRecordType(recordType = "") {
     achievement_record: "education",
     safeguarding_record: "safeguarding",
     missing_episode: "missing-from-care",
-    task: "readiness",
+    task:
+      scope === "home"
+        ? "operations"
+        : scope === "quality"
+        ? "quality-audits"
+        : "readiness",
     manager_action: "manager",
     document: "documents",
     communication: "communication",
@@ -401,7 +417,11 @@ function safeOpen(recordType, mode = "create", item = null) {
               ? item.young_person_id ?? state.youngPersonId ?? null
               : null,
         }
-      : item;
+      : {
+          current_scope: scope,
+          home_id: scope !== "child" ? getCurrentHomeId() ?? null : null,
+          young_person_id: scope === "child" ? state.youngPersonId ?? null : null,
+        };
 
   openComposerFor(resolvedType, mode, payload);
   return true;
@@ -643,7 +663,6 @@ async function runOpenRecordSuggestion(suggestion = {}) {
     );
 
   if (!targetSection) return false;
-
   return navigateToSection(targetSection);
 }
 
