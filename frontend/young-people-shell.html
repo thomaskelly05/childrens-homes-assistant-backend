@@ -1,1076 +1,211 @@
-<!DOCTYPE html>
-<html lang="en-GB">
-<head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
-  <title>IndiCare OS • Residential Care Workspace</title>
-  <meta
-    name="description"
-    content="IndiCare OS residential care workspace for child-centred recording, safeguarding, home operations, staffing, planning, compliance and quality oversight."
-  />
-  <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#f3f6fb" />
-  <meta name="application-name" content="IndiCare OS" />
-  <link rel="stylesheet" href="/css/young-people-shell.css" />
-</head>
-<body>
-  <a class="sr-only sr-only-focusable" href="#mainContent">Skip to main content</a>
-  <a class="sr-only sr-only-focusable" href="#assistantModal">Skip to assistant</a>
-
-  <noscript>
-    <div
-      style="padding:12px 16px;background:#fff4e5;color:#7a4b00;border-bottom:1px solid #f0d6a8;font:600 14px/1.5 Inter,system-ui,sans-serif;"
-      role="alert"
-    >
-      IndiCare OS works best with JavaScript enabled.
-    </div>
-  </noscript>
-
-  <div
-    id="app"
-    class="app-shell theme-system"
-    data-assistant-scope-type="child"
-    data-young-person-id=""
-    data-home-id=""
-    data-workspace="young-people-shell"
-    data-scope="child"
-    data-user-role="admin"
-  >
-    <header class="shell-topbar" role="banner">
-      <div class="shell-topbar-left">
-        <button
-          id="logoBtn"
-          class="brand-button"
-          type="button"
-          aria-label="Go to workspace home"
-        >
-          <span class="brand-mark" aria-hidden="true">IC</span>
-          <span class="brand-copy">
-            <strong>IndiCare OS</strong>
-            <small>Residential care made clearer</small>
-          </span>
-        </button>
-
-        <div
-          class="workspace-context-pill desktop-only"
-          aria-label="Current workspace"
-        >
-          <span class="workspace-context-pill-label">Current area</span>
-          <span class="workspace-context-pill-value">Residential care workspace</span>
-        </div>
+<section
+  id="assistantModal"
+  class="assistant-modal hidden"
+  aria-hidden="true"
+  aria-label="Workspace assistant"
+>
+  <div class="assistant-shell assistant-shell--minimal">
+    <div class="assistant-header assistant-header--minimal">
+      <div class="assistant-header-copy">
+        <h3>Assistant</h3>
+        <p>
+          Ask about the current child, home, quality view, records, compliance,
+          planning or next steps.
+        </p>
       </div>
 
-      <div class="shell-topbar-centre desktop-only">
-        <form
-          id="globalSearchForm"
-          class="topbar-search-wrap"
-          role="search"
-          aria-label="Search records"
-        >
-          <label class="sr-only" for="recordSearchInput">Search records</label>
-          <input
-            id="recordSearchInput"
-            class="search-input topbar-search-input"
-            type="search"
-            inputmode="search"
-            placeholder="Search notes, incidents, plans, documents or communication..."
-            autocomplete="off"
-            spellcheck="false"
-          />
-
-          <label class="sr-only" for="recordTypeFilter">Filter by record type</label>
-          <select
-            id="recordTypeFilter"
-            class="select-input topbar-search-filter"
-            aria-label="Filter by record type"
-          >
-            <option value="">All record types</option>
-            <option value="daily_note">Daily notes</option>
-            <option value="incident">Incidents and events</option>
-            <option value="support_plan">Care and support plans</option>
-            <option value="health_record">Health</option>
-            <option value="education_record">Education</option>
-            <option value="family_contact">Family contact</option>
-            <option value="appointment">Appointments</option>
-            <option value="task">Actions</option>
-            <option value="document">Documents</option>
-            <option value="communication">Communication</option>
-            <option value="therapy">Therapeutic work</option>
-          </select>
-        </form>
-      </div>
-
-      <div class="shell-topbar-right">
-        <div
-          id="scopeSwitch"
-          class="scope-switch desktop-only"
-          role="tablist"
-          aria-label="Switch workspace area"
-        >
-          <button
-            id="scopeChildBtn"
-            class="scope-switch-btn active"
-            type="button"
-            data-scope="child"
-            role="tab"
-            aria-selected="true"
-            aria-pressed="true"
-          >
-            Child
-          </button>
-
-          <button
-            id="scopeHomeBtn"
-            class="scope-switch-btn"
-            type="button"
-            data-scope="home"
-            role="tab"
-            aria-selected="false"
-            aria-pressed="false"
-          >
-            Home
-          </button>
-
-          <button
-            id="scopeQualityBtn"
-            class="scope-switch-btn"
-            type="button"
-            data-scope="quality"
-            role="tab"
-            aria-selected="false"
-            aria-pressed="false"
-          >
-            Quality
-          </button>
-        </div>
-
+      <div class="assistant-header-actions">
         <button
-          id="mobileNavBtn"
-          class="secondary-btn mobile-only"
+          id="assistantClearBtn"
+          class="ghost-btn"
           type="button"
-          aria-label="Open navigation"
-          aria-controls="mobileNavDrawer"
-          aria-expanded="false"
         >
-          Menu
-        </button>
-
-        <button id="refreshBtn" class="secondary-btn" type="button">
-          Refresh
+          Clear chat
         </button>
 
         <button
-          id="refreshWorkspaceBtn"
-          class="secondary-btn hidden"
-          type="button"
-          aria-hidden="true"
-          tabindex="-1"
-        >
-          Refresh area
-        </button>
-
-        <button id="homeBtn" class="ghost-btn desktop-only" type="button">
-          Dashboard
-        </button>
-      </div>
-    </header>
-
-    <main id="mainContent" class="shell-main">
-      <section
-        id="selectorScreen"
-        class="selector-screen hidden"
-        aria-labelledby="selectorHeading"
-      >
-        <div class="selector-screen-inner">
-          <div class="selector-page-head">
-            <div>
-              <div class="eyebrow">Children and young people</div>
-              <h1 id="selectorHeading">Choose a child or young person</h1>
-              <p>
-                Open one clear workspace for daily recording, safeguarding,
-                planning, chronology, health, education, relationships and review.
-              </p>
-            </div>
-
-            <div class="selector-tools">
-              <label class="sr-only" for="selectorSearch">Search young people</label>
-              <input
-                id="selectorSearch"
-                class="search-input"
-                type="search"
-                inputmode="search"
-                placeholder="Search by name, preferred name or home..."
-                autocomplete="off"
-                spellcheck="false"
-              />
-
-              <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
-              <input
-                id="youngPersonSearchInput"
-                class="search-input hidden"
-                type="search"
-                inputmode="search"
-                placeholder="Search by name, preferred name or home..."
-                autocomplete="off"
-                spellcheck="false"
-                aria-hidden="true"
-                tabindex="-1"
-              />
-
-              <button id="selectorRefreshBtn" class="secondary-btn" type="button">
-                Refresh list
-              </button>
-            </div>
-          </div>
-
-          <div id="selectorList" class="selector-list" aria-live="polite">
-            <div class="loading-state">
-              <div>
-                <div class="spinner" aria-hidden="true"></div>
-                <p>Loading children and young people…</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="workspaceScreen"
-        class="workspace-screen"
-        aria-labelledby="pageTitle"
-      >
-        <section
-          id="workspaceShell"
-          class="workspace-screen-inner workspace-screen-inner--menubar"
-        >
-          <aside
-            class="workspace-sidebar workspace-sidebar--hidden desktop-only"
-            aria-label="Workspace navigation"
-          >
-            <div class="workspace-sidebar-shell">
-              <div class="workspace-sidebar-brand">
-                <div class="workspace-sidebar-brand-dot" aria-hidden="true"></div>
-                <span>Residential care workspace</span>
-              </div>
-
-              <section
-                class="workspace-sidebar-profile-card"
-                aria-label="Current context"
-              >
-                <div class="workspace-sidebar-profile-top">
-                  <div
-                    class="workspace-sidebar-avatar"
-                    id="personAvatar"
-                    aria-hidden="true"
-                  >
-                    YP
-                  </div>
-
-                  <div class="workspace-sidebar-profile-copy">
-                    <h2 id="personName">Young person</h2>
-                    <p id="personMeta">Current child workspace</p>
-                  </div>
-                </div>
-
-                <div class="workspace-sidebar-meta-row">
-                  <span class="meta-chip">Live</span>
-                  <span class="meta-chip meta-chip--soft">Child first</span>
-                  <span class="meta-chip meta-chip--soft">Safeguarding</span>
-                </div>
-              </section>
-
-              <button
-                id="backToSelectorBtn"
-                class="ghost-btn workspace-back-btn"
-                type="button"
-              >
-                Change child
-              </button>
-
-              <nav
-                id="desktopNav"
-                class="workspace-nav workspace-nav--accordion workspace-nav--hidden"
-                aria-label="Workspace sections"
-              ></nav>
-            </div>
-          </aside>
-
-          <section class="workspace-stage">
-            <div class="workspace-stage-top">
-              <section class="workspace-stage-mobile-person mobile-only">
-                <div
-                  class="workspace-stage-mobile-avatar"
-                  id="mobilePersonAvatar"
-                  aria-hidden="true"
-                >
-                  YP
-                </div>
-
-                <div class="workspace-stage-mobile-copy">
-                  <h2 id="mobilePersonName">Young person</h2>
-                  <p id="mobilePersonMeta">Current child workspace</p>
-                </div>
-
-                <button id="mobileHomeBtn" class="ghost-btn" type="button">
-                  Dashboard
-                </button>
-              </section>
-
-              <section
-                class="workspace-header-band workspace-header-band--calm workspace-header-band--premium"
-                aria-labelledby="pageTitle"
-              >
-                <div class="workspace-header-main">
-                  <div class="workspace-header-copy">
-                    <div
-                      id="workspaceEyebrow"
-                      class="eyebrow hidden"
-                      aria-hidden="true"
-                    >
-                      Child workspace
-                    </div>
-                    <h1 id="pageTitle">Today at a glance</h1>
-                    <p id="pageSubtitle">
-                      A calm, practical workspace for recording, safeguarding,
-                      daily care, planning, continuity and clear next steps.
-                    </p>
-                  </div>
-
-                  <div class="workspace-header-actions">
-                    <button id="heroAssistantBtn" class="primary-btn" type="button">
-                      Ask assistant
-                    </button>
-
-                    <button
-                      id="profileOpenBtn"
-                      class="secondary-btn"
-                      type="button"
-                      data-view="profile"
-                    >
-                      View profile
-                    </button>
-
-                    <button
-                      id="profilePhotoUploadBtn"
-                      class="ghost-btn"
-                      type="button"
-                      data-action-router="edit-profile-identity"
-                    >
-                      Edit profile
-                    </button>
-
-                    <button
-                      id="changePersonBtn"
-                      class="ghost-btn desktop-only"
-                      type="button"
-                    >
-                      Change child
-                    </button>
-                  </div>
-                </div>
-
-                <div class="workspace-header-context workspace-header-context--compact">
-                  <div class="workspace-person-card">
-                    <div
-                      id="profileSnapshotPhotoWrap"
-                      class="profile-snapshot-photo-wrap"
-                      aria-label="Workspace avatar"
-                    >
-                      <div class="profile-photo-fallback" aria-hidden="true">YP</div>
-                    </div>
-
-                    <div class="workspace-person-copy">
-                      <h3 id="profileSnapshotName">Young person</h3>
-                      <p id="profileSnapshotMeta">
-                        Child-centred overview and current context
-                      </p>
-                    </div>
-                  </div>
-
-                  <div class="workspace-header-meta">
-                    <span class="meta-chip">Live</span>
-                    <span class="meta-chip meta-chip--soft">Current area</span>
-                    <span class="meta-chip meta-chip--soft">Ready to use</span>
-                  </div>
-
-                  <div
-                    id="workspaceSummaryStrip"
-                    class="workspace-summary-strip"
-                    data-workspace-summary-strip
-                    aria-label="Current summary"
-                  >
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Today</span>
-                      <strong id="summaryToday" class="workspace-summary-value">No summary yet</strong>
-                    </div>
-
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Next item</span>
-                      <strong id="summaryNextEvent" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Last update</span>
-                      <strong id="summaryLastRecord" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Actions</span>
-                      <strong id="summaryOpenActions" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section
-                id="quickCreateBar"
-                class="quick-actions-panel quick-actions-panel--osmenu"
-                aria-label="Workspace menu"
-              >
-                <div class="quick-actions-panel-head quick-actions-panel-head--compact">
-                  <div>
-                    <div class="eyebrow">Main menu</div>
-                    <h2>Choose an area or start work</h2>
-                  </div>
-                  <p>
-                    A simpler operating menu built around child journey, home operations,
-                    workforce and quality.
-                  </p>
-                </div>
-
-                <nav
-                  id="heroQuickActions"
-                  class="workspace-menubar workspace-menubar--grouped"
-                  role="navigation"
-                  aria-label="Main workspace menu"
-                >
-                  <details class="workspace-menu" data-workspace-menu open>
-                    <summary class="workspace-menu-trigger">Child journey</summary>
-                    <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="workspace">Today at a glance</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="admission">Admission and planning</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="daily-life">Daily life in placement</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="health">Health overview</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="education">Education overview</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="family">Family and relationships</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="reviews">Reviews and outcomes</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="transition">Transition planning</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="leaving-care">Leaving placement</button>
-                    </div>
-                  </details>
-
-                  <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Safeguarding and risk</summary>
-                    <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="timeline">Timeline and recent events</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="risk">Risk assessment</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="safeguarding">Safeguarding</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="missing-from-care">Missing from care</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="manager">Manager review</button>
-                    </div>
-                  </details>
-
-                  <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Home operations</summary>
-                    <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="home-dashboard">Home dashboard</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="operations">Daily operations</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="rota">Rota and cover</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="team">Team and staffing</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="health-safety">Health and safety</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="maintenance">Maintenance and environment</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="policies">Policies and guidance</button>
-                    </div>
-                  </details>
-
-                  <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Workforce</summary>
-                    <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="staff-profile">Staff profiles</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="onboarding">Recruitment and onboarding</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="supervision">Supervision and development</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="training-centre">Training and compliance</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="notifications">Alerts and notifications</button>
-                    </div>
-                  </details>
-
-                  <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Quality and inspection</summary>
-                    <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="quality">Quality dashboard</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="compliance">Compliance and statutory checks</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="ofsted-readiness">Ofsted readiness</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="provider-overview">Provider overview</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="quality-audits">Quality audits</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="reg44">Regulation 44</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="reg45">Regulation 45</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="inspection-readiness">Inspection readiness</button>
-                    </div>
-                  </details>
-
-                  <details class="workspace-menu" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Create and record</summary>
-                    <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-action-router="new-daily-note">Add daily note</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-incident">Add incident or important event</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-support-plan">Add care or support plan</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-health-record">Add health record</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-education-record">Add education update</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">Add family contact</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-task">Add action</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="upload-document">Upload document</button>
-                    </div>
-                  </details>
-                </nav>
-              </section>
-
-              <section
-                id="statusBar"
-                class="status-bar hidden"
-                role="status"
-                aria-live="polite"
-              ></section>
-
-              <section
-                id="statusMessage"
-                class="status-bar hidden"
-                role="status"
-                aria-live="polite"
-              ></section>
-            </div>
-
-            <div class="workspace-content-wrap workspace-content-wrap--single">
-              <section class="workspace-content" aria-label="Workspace content">
-                <div id="viewContent" class="workspace-view-content" aria-live="polite">
-                  <section class="overview-panel">
-                    <div class="loading-state">
-                      <div>
-                        <div class="spinner" aria-hidden="true"></div>
-                        <p>Loading workspace…</p>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-              </section>
-            </div>
-          </section>
-        </section>
-      </section>
-    </main>
-
-    <div
-      id="mobileNavBackdrop"
-      class="mobile-nav-backdrop hidden"
-      aria-hidden="true"
-    ></div>
-
-    <aside
-      id="mobileNavDrawer"
-      class="mobile-nav-drawer hidden"
-      aria-hidden="true"
-      aria-label="Mobile navigation"
-    >
-      <div class="mobile-nav-head">
-        <div>
-          <div class="eyebrow">Navigation</div>
-          <h3>Main menu</h3>
-        </div>
-
-        <button
-          id="closeMobileNavBtn"
+          id="closeAssistantBtn"
           class="secondary-btn icon-btn"
           type="button"
-          aria-label="Close navigation"
+          aria-label="Close assistant"
         >
           ✕
         </button>
       </div>
+    </div>
 
-      <div class="mobile-nav-context">
-        <div class="mobile-nav-person">
-          <div class="workspace-stage-mobile-avatar" aria-hidden="true">YP</div>
-          <div>
-            <strong id="mobileDrawerPersonName">Young person</strong>
-            <p id="mobileDrawerPersonMeta">Current workspace</p>
-          </div>
+    <div class="assistant-body assistant-body--minimal">
+      <div class="assistant-topline">
+        <div class="assistant-context-bar assistant-context-bar--minimal">
+          <span id="scopeBadge" class="meta-chip">Child assistant</span>
+          <span id="scopeHomeBadge" class="meta-chip meta-chip--soft hidden"></span>
+          <span id="scopeChildBadge" class="meta-chip meta-chip--soft hidden"></span>
+          <span id="scopeShiftBadge" class="meta-chip meta-chip--soft"></span>
         </div>
 
-        <div class="mobile-nav-search">
-          <label class="sr-only" for="mobileRecordSearchInput">Search records</label>
-          <input
-            id="mobileRecordSearchInput"
-            class="search-input"
-            type="search"
-            inputmode="search"
-            placeholder="Search records..."
-            autocomplete="off"
-            spellcheck="false"
-          />
-        </div>
-      </div>
+        <div class="assistant-topline-actions">
+          <button
+            id="assistantRefreshScopeBtn"
+            class="ghost-btn"
+            type="button"
+          >
+            Refresh scope
+          </button>
 
-      <div id="mobileNavContent" class="mobile-nav-content"></div>
-    </aside>
-
-    <nav
-      id="mobileBottomBar"
-      class="mobile-bottom-bar mobile-only"
-      aria-label="Quick navigation"
-    ></nav>
-
-    <section
-      id="fullscreenPanel"
-      class="fullscreen-panel hidden"
-      aria-hidden="true"
-      aria-labelledby="fullscreenPanelTitle"
-    >
-      <div class="fullscreen-panel-shell">
-        <header class="fullscreen-panel-head">
-          <div>
-            <div class="eyebrow">Workspace panel</div>
-            <h2 id="fullscreenPanelTitle">Details</h2>
-            <p id="fullscreenPanelSubtitle">Open an item to view more.</p>
-          </div>
-
-          <div class="fullscreen-panel-head-actions">
-            <div id="fullscreenPanelActions" class="fullscreen-panel-actions"></div>
-            <button
-              id="closeFullscreenPanelBtn"
-              class="secondary-btn"
-              type="button"
-            >
-              Close
-            </button>
-          </div>
-        </header>
-
-        <div id="fullscreenPanelBody" class="fullscreen-panel-body">
-          <div class="empty-state">
-            <div class="empty-state-inner">
-              <div class="empty-state-icon" aria-hidden="true">○</div>
-              <h3>Nothing open yet</h3>
-              <p>Select something from the workspace to open it here.</p>
-            </div>
-          </div>
+          <button
+            id="assistantRefreshAnalysisBtn"
+            class="ghost-btn"
+            type="button"
+          >
+            Refresh analysis
+          </button>
         </div>
       </div>
-    </section>
 
-    <section
-      id="composerPanel"
-      class="composer-panel hidden"
-      aria-hidden="true"
-      aria-labelledby="composerTitle"
-    >
-      <div class="composer-shell">
-        <header class="composer-header">
-          <div class="composer-header-left">
-            <div class="eyebrow">Create or edit</div>
-            <h2 id="composerTitle">New record</h2>
-            <p id="composerSubtitle">
-              Record clearly, kindly and professionally with the child at the centre.
-            </p>
-          </div>
-
-          <div class="composer-header-actions">
-            <div id="composerAutosaveStatus" class="composer-autosave-status">
-              Autosave ready
-            </div>
-
-            <button id="closeComposerBtn" class="secondary-btn" type="button">
-              Close
-            </button>
-
-            <button
-              id="composerSaveBtn"
-              class="secondary-btn hidden"
-              type="button"
-              aria-hidden="true"
-              tabindex="-1"
-            >
-              Save
-            </button>
-
-            <button
-              id="composerSaveDraftBtn"
-              class="secondary-btn"
-              type="button"
-            >
-              Save draft
-            </button>
-
-            <button id="composerCheckBtn" class="secondary-btn" type="button">
-              Review writing
-            </button>
-
-            <button id="composerSubmitBtn" class="primary-btn" type="button">
-              Send for review
-            </button>
-          </div>
-        </header>
-
-        <div class="composer-layout">
-          <section class="composer-main">
-            <form id="recordComposerForm" class="composer-form">
-              <div id="recordComposerFields" class="composer-fields"></div>
-            </form>
-          </section>
-
-          <aside class="composer-side">
-            <section class="composer-side-card">
-              <h3>Writing help</h3>
-              <div id="composerGuidanceText" class="composer-side-body">
-                Keep the child at the centre. Be clear, calm and factual.
-                Record what happened, what may have been going on for them,
-                what helped, and what adults need to do next.
-              </div>
-            </section>
-
-            <section class="composer-side-card">
-              <h3>Helpful prompts</h3>
-              <div id="composerPrompts" class="composer-prompt-list">
-                <div class="composer-prompt">What happened, in clear order?</div>
-                <div class="composer-prompt">What may the child or young person have been feeling or communicating?</div>
-                <div class="composer-prompt">What worked, what did not, and what needs to happen next?</div>
-              </div>
-            </section>
-
-            <section class="composer-side-card">
-              <h3>AI writing review</h3>
-              <div class="composer-ai-actions">
-                <button id="composerGrammarBtn" class="secondary-btn" type="button">
-                  Check tone and clarity
-                </button>
-                <button id="composerClarityBtn" class="secondary-btn" type="button">
-                  Make clearer
-                </button>
-                <button id="composerSafeguardingBtn" class="secondary-btn" type="button">
-                  Safeguarding review
-                </button>
-                <button id="composerChildVoiceBtn" class="secondary-btn" type="button">
-                  Strengthen child voice
-                </button>
-              </div>
-
-              <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">
-                No AI review has been run yet.
-              </div>
-            </section>
-          </aside>
-        </div>
+      <div id="assistantContext" class="assistant-context-text">
+        No context loaded.
       </div>
-    </section>
 
-    <section
-      id="suggestionsPanel"
-      class="fullscreen-panel hidden"
-      aria-hidden="true"
-      aria-labelledby="suggestionsPanelTitle"
-    >
-      <div class="fullscreen-panel-shell">
-        <header class="fullscreen-panel-head">
-          <div>
-            <div class="eyebrow">Suggestions</div>
-            <h2 id="suggestionsPanelTitle">Helpful next steps</h2>
-            <p id="suggestionsPanelSubtitle">
-              Linked records and actions that may help next.
-            </p>
-          </div>
-
-          <div class="fullscreen-panel-head-actions">
-            <button
-              id="closeSuggestionsPanelBtn"
-              class="secondary-btn"
-              type="button"
-            >
-              Close
-            </button>
-          </div>
-        </header>
-
-        <div id="suggestionsPanelBody" class="fullscreen-panel-body">
-          <div class="empty-state">
-            <div class="empty-state-inner">
-              <div class="empty-state-icon" aria-hidden="true">○</div>
-              <h3>No suggestions yet</h3>
-              <p>Suggestions will appear here when linked follow-up is available.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div
-      id="assistantBackdrop"
-      class="assistant-backdrop hidden"
-      aria-hidden="true"
-    ></div>
-
-    <section
-      id="assistantModal"
-      class="assistant-modal hidden"
-      aria-hidden="true"
-      aria-label="Workspace assistant"
-    >
-      <div class="assistant-shell assistant-shell--large">
-        <div class="assistant-header">
-          <div class="assistant-header-copy">
-            <h3>Assistant</h3>
+      <div
+        id="assistantMessages"
+        class="assistant-messages assistant-messages--minimal"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+      >
+        <article class="assistant-message assistant-message-system">
+          <div class="assistant-message-role">Assistant</div>
+          <div class="assistant-message-body">
             <p>
-              Ask questions, draft records and get support with child-centred care,
-              safeguarding, management oversight and next steps.
+              Ask about this workspace, recent events, risks, actions,
+              compliance, reports or next steps.
             </p>
           </div>
+        </article>
+      </div>
 
-          <div class="assistant-header-actions">
-            <button id="assistantClearBtn" class="ghost-btn" type="button">
-              Clear chat
-            </button>
-            <button
-              id="closeAssistantBtn"
-              class="secondary-btn icon-btn"
-              type="button"
-              aria-label="Close assistant"
-            >
-              ✕
-            </button>
+      <form id="assistantForm" class="assistant-form assistant-form--minimal">
+        <label class="sr-only" for="assistantInput">Ask the assistant</label>
+        <input
+          id="assistantInput"
+          class="text-input"
+          type="text"
+          placeholder="Ask about this workspace..."
+          autocomplete="off"
+        />
+        <button id="assistantSendBtn" class="primary-btn" type="submit">
+          Send
+        </button>
+      </form>
+
+      <div class="assistant-panels assistant-panels--minimal">
+        <details class="assistant-disclosure" open>
+          <summary class="assistant-disclosure-summary">
+            Current context
+          </summary>
+          <div class="assistant-disclosure-body">
+            <div id="assistantScopeSummary"></div>
           </div>
-        </div>
+        </details>
 
-        <div class="assistant-modal-layout assistant-modal-layout--minimal">
-          <div class="assistant-modal-main assistant-modal-main--minimal">
-            <div class="assistant-context-bar">
-              <span id="scopeBadge" class="meta-chip">Child assistant</span>
-              <span id="scopeHomeBadge" class="meta-chip meta-chip--soft hidden"></span>
-              <span id="scopeChildBadge" class="meta-chip meta-chip--soft hidden"></span>
-              <span id="scopeShiftBadge" class="meta-chip meta-chip--soft"></span>
-            </div>
+        <details class="assistant-disclosure">
+          <summary class="assistant-disclosure-summary">
+            Helpful actions
+          </summary>
+          <div class="assistant-disclosure-body">
+            <div id="assistantSuggestions" class="assistant-chip-row"></div>
+            <div id="assistantActions" class="hidden" aria-hidden="true"></div>
+          </div>
+        </details>
 
-            <div id="assistantContext" class="assistant-context-text">
-              No context loaded.
+        <details class="assistant-disclosure">
+          <summary class="assistant-disclosure-summary">
+            Sources
+          </summary>
+          <div class="assistant-disclosure-body">
+            <div id="assistantSources"></div>
+          </div>
+        </details>
+
+        <details class="assistant-disclosure">
+          <summary class="assistant-disclosure-summary">
+            Live status
+          </summary>
+          <div class="assistant-disclosure-body assistant-status-stack">
+            <div id="assistantScopeBundleStatus" class="assistant-inline-status">
+              No scoped records loaded.
             </div>
 
             <div
-              id="assistantMessages"
-              class="assistant-messages assistant-messages--modal"
-              role="log"
+              id="assistantScopeBundleError"
+              class="assistant-inline-status assistant-inline-status--error hidden"
               aria-live="polite"
-              aria-relevant="additions text"
-            >
-              <article class="assistant-message assistant-message-system">
-                <div class="assistant-message-role">Assistant</div>
-                <div class="assistant-message-body">
-                  <p>
-                    Ask about this child, the home, records, compliance,
-                    planning or next steps.
-                  </p>
-                </div>
-              </article>
-            </div>
+            ></div>
 
-            <form id="assistantForm" class="assistant-form assistant-form--sticky">
-              <label class="sr-only" for="assistantInput">Ask the assistant</label>
-              <input
-                id="assistantInput"
-                class="text-input"
-                type="text"
-                placeholder="Ask about this workspace..."
-                autocomplete="off"
-              />
-              <button id="assistantSendBtn" class="primary-btn" type="submit">
-                Send
+            <div id="assistantLiveStatus" class="assistant-inline-status">
+              Assistant ready.
+            </div>
+          </div>
+        </details>
+
+        <details class="assistant-disclosure">
+          <summary class="assistant-disclosure-summary">
+            Briefings
+          </summary>
+          <div class="assistant-disclosure-body assistant-brief-grid">
+            <section class="assistant-brief-card">
+              <h4>Shift brief</h4>
+              <div id="morningBriefBody">
+                <p>No shift brief available yet.</p>
+              </div>
+            </section>
+
+            <section class="assistant-brief-card">
+              <h4>Manager view</h4>
+              <div id="managerBriefBody">
+                <p>No manager summary available yet.</p>
+              </div>
+            </section>
+
+            <section class="assistant-brief-card">
+              <h4>Quality view</h4>
+              <div id="qualityBriefBody">
+                <p>No quality summary available yet.</p>
+              </div>
+            </section>
+          </div>
+        </details>
+
+        <details class="assistant-disclosure">
+          <summary class="assistant-disclosure-summary">
+            Recent updates
+          </summary>
+          <div class="assistant-disclosure-body">
+            <div class="assistant-context-row">
+              <button id="clearLiveUpdatesBtn" class="ghost-btn" type="button">
+                Clear updates
               </button>
-            </form>
+            </div>
 
-            <section class="assistant-meta-strip">
-              <details class="assistant-meta-panel">
-                <summary>Current context</summary>
-                <div id="assistantScopeSummary" class="assistant-meta-panel-body"></div>
-              </details>
-
-              <details class="assistant-meta-panel">
-                <summary>Helpful actions</summary>
-                <div class="assistant-meta-panel-body">
-                  <div id="assistantSuggestions" class="assistant-chip-row"></div>
-                  <div id="assistantActions" class="hidden" aria-hidden="true"></div>
-                </div>
-              </details>
-
-              <details class="assistant-meta-panel">
-                <summary>Sources</summary>
-                <div id="assistantSources" class="assistant-meta-panel-body"></div>
-              </details>
-            </section>
-          </div>
-
-          <aside class="assistant-modal-side assistant-modal-side--minimal">
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Refresh</h3>
-                <p>Update the scope or regenerate analysis.</p>
-              </div>
-
-              <div class="assistant-context-row">
-                <button id="assistantRefreshScopeBtn" class="secondary-btn" type="button">
-                  Refresh scope
-                </button>
-                <button id="assistantRefreshAnalysisBtn" class="secondary-btn" type="button">
-                  Refresh analysis
-                </button>
-              </div>
-
-              <div id="assistantScopeBundleStatus" class="assistant-inline-status">
-                No scoped records loaded.
-              </div>
-
-              <div
-                id="assistantScopeBundleError"
-                class="assistant-inline-status assistant-inline-status--error hidden"
-                aria-live="polite"
-              ></div>
-
-              <div id="assistantLiveStatus" class="assistant-inline-status">
-                Assistant ready.
-              </div>
-            </section>
-
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Briefs</h3>
-                <p>Compact operational summaries.</p>
-              </div>
-
-              <div class="assistant-brief-stack">
-                <details class="assistant-brief-panel">
-                  <summary>Shift brief</summary>
-                  <div id="morningBriefBody" class="assistant-brief-body">
-                    <p>No shift brief available yet.</p>
-                  </div>
-                </details>
-
-                <details class="assistant-brief-panel">
-                  <summary>Manager view</summary>
-                  <div id="managerBriefBody" class="assistant-brief-body">
-                    <p>No manager summary available yet.</p>
-                  </div>
-                </details>
-
-                <details class="assistant-brief-panel">
-                  <summary>Quality view</summary>
-                  <div id="qualityBriefBody" class="assistant-brief-body">
-                    <p>No quality summary available yet.</p>
-                  </div>
-                </details>
-              </div>
-            </section>
-
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Recent updates</h3>
-                <p>Refreshes and assistant activity.</p>
-              </div>
-
-              <div class="assistant-context-row">
-                <button id="clearLiveUpdatesBtn" class="ghost-btn" type="button">
-                  Clear updates
-                </button>
-              </div>
-
-              <div id="liveUpdatesBody">
-                <p>No live updates yet.</p>
-              </div>
-            </section>
-          </aside>
-        </div>
-      </div>
-
-      <div class="hidden" aria-hidden="true">
-        <div id="assistantModalMessages"></div>
-        <form id="assistantModalForm"></form>
-        <input id="assistantModalInput" />
-        <button id="assistantModalSendBtn" type="button"></button>
-        <div id="assistantModalScopeSummary"></div>
-        <div id="assistantModalSources"></div>
-        <span id="modalScopeHomeBadge"></span>
-        <span id="modalScopeChildBadge"></span>
-        <pre id="assistantRuntime"></pre>
-        <pre id="assistantExplainability"></pre>
-      </div>
-    </section>
-
-    <div
-      id="recordDrawerBackdrop"
-      class="record-drawer-backdrop hidden"
-      aria-hidden="true"
-    ></div>
-
-    <section
-      id="recordDrawer"
-      class="record-drawer hidden"
-      aria-hidden="true"
-      aria-labelledby="recordDrawerTitle"
-    >
-      <div class="record-drawer-panel">
-        <header class="record-drawer-head">
-          <div>
-            <div class="eyebrow">Record</div>
-            <h2 id="recordDrawerTitle">Record detail</h2>
-            <p id="recordDrawerSubtitle">Open a record to view details.</p>
-          </div>
-
-          <button id="closeRecordDrawerBtn" class="secondary-btn" type="button">
-            Close
-          </button>
-        </header>
-
-        <div id="recordDrawerActions" class="record-drawer-actions">
-          <button id="drawerEditBtn" class="secondary-btn" type="button">Edit</button>
-          <button id="drawerSubmitBtn" class="secondary-btn" type="button">Submit</button>
-          <button id="drawerApproveBtn" class="secondary-btn" type="button">Approve</button>
-          <button id="drawerReturnBtn" class="secondary-btn" type="button">Return</button>
-          <button id="drawerArchiveBtn" class="ghost-btn" type="button">Archive</button>
-        </div>
-
-        <div id="recordDrawerBody" class="record-drawer-body">
-          <div class="empty-state">
-            <div class="empty-state-inner">
-              <div class="empty-state-icon" aria-hidden="true">○</div>
-              <h3>Select a record</h3>
-              <p>Choose a record from the workspace to view it here.</p>
+            <div id="liveUpdatesBody">
+              <p>No live updates yet.</p>
             </div>
           </div>
-        </div>
+        </details>
       </div>
-    </section>
-
-    <footer class="app-footer" role="contentinfo">
-      <div class="app-footer-inner">
-        <div class="app-footer-brand">
-          <strong>IndiCare OS</strong>
-          <span>Residential care made clearer</span>
-        </div>
-
-        <div class="app-footer-copy">
-          <span>© 2026 IndiCare OS. All rights reserved.</span>
-        </div>
-      </div>
-    </footer>
-
-    <button
-      id="assistantLauncher"
-      class="assistant-fab"
-      type="button"
-      aria-label="Open assistant"
-      title="Open assistant"
-    >
-      <span class="assistant-fab-icon" aria-hidden="true">✦</span>
-      <span class="assistant-fab-label">Assistant</span>
-    </button>
+    </div>
   </div>
 
-  <script type="module" src="/js/young-people-shell/index.js"></script>
-</body>
-</html>
+  <div class="hidden" aria-hidden="true">
+    <div id="assistantModalMessages"></div>
+    <form id="assistantModalForm"></form>
+    <input id="assistantModalInput" />
+    <button id="assistantModalSendBtn" type="button"></button>
+    <div id="assistantModalScopeSummary"></div>
+    <div id="assistantModalSources"></div>
+    <span id="modalScopeHomeBadge"></span>
+    <span id="modalScopeChildBadge"></span>
+    <pre id="assistantRuntime"></pre>
+    <pre id="assistantExplainability"></pre>
+  </div>
+</section>
