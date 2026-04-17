@@ -39,9 +39,22 @@ function formatDate(value) {
   if (Number.isNaN(date.getTime())) return String(value);
 
   return date.toLocaleDateString("en-GB", {
+    weekday: "short",
     day: "numeric",
     month: "short",
     year: "numeric",
+  });
+}
+
+function formatShortDate(value) {
+  if (!value) return "No date";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
   });
 }
 
@@ -61,19 +74,23 @@ function formatDateTime(value) {
 }
 
 function getStatusTone(status = "") {
-  const normalised = String(status || "").toLowerCase();
+  const normalised = String(status || "")
+    .toLowerCase()
+    .trim()
+    .replaceAll(" ", "_");
 
   if (
     [
       "overdue",
       "critical",
-      "high",
       "failed",
       "missing",
-      "non_compliant",
       "rejected",
+      "withdrawn",
+      "expired",
+      "danger",
+      "not_started",
       "blocked",
-      "unsafe",
     ].includes(normalised)
   ) {
     return "danger";
@@ -83,13 +100,18 @@ function getStatusTone(status = "") {
     [
       "due_soon",
       "warning",
-      "pending",
-      "review_due",
-      "incomplete",
-      "awaiting",
-      "attention",
       "in_progress",
-      "at_risk",
+      "pending",
+      "pending_checks",
+      "awaiting_reference",
+      "awaiting_dbs",
+      "awaiting_documents",
+      "shortlisted",
+      "interview",
+      "offered",
+      "conditional_offer",
+      "review_due",
+      "attention",
     ].includes(normalised)
   ) {
     return "warning";
@@ -99,13 +121,15 @@ function getStatusTone(status = "") {
     [
       "complete",
       "completed",
-      "approved",
-      "passed",
-      "compliant",
       "active",
-      "ok",
+      "current",
       "cleared",
-      "signed_off",
+      "confirmed",
+      "good",
+      "compliant",
+      "on_track",
+      "started",
+      "hired",
     ].includes(normalised)
   ) {
     return "success";
@@ -114,313 +138,472 @@ function getStatusTone(status = "") {
   return "muted";
 }
 
-function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
-  });
+function toTime(value) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(aValue).getTime() - new Date(bValue).getTime();
+    return toTime(aValue) - toTime(bValue);
   });
+}
+
+function sortNewestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return toTime(bValue) - toTime(aValue);
+  });
+}
+
+function hasUsableData(data) {
+  if (!data || typeof data !== "object") return false;
+  if (Array.isArray(data.items) && data.items.length > 0) return true;
+  if (Array.isArray(data.records) && data.records.length > 0) return true;
+  if (Array.isArray(data.pipeline) && data.pipeline.length > 0) return true;
+  if (Array.isArray(data.candidates) && data.candidates.length > 0) return true;
+  if (Array.isArray(data.onboarding) && data.onboarding.length > 0) return true;
+  if (Array.isArray(data.inductions) && data.inductions.length > 0) return true;
+  if (Array.isArray(data.probations) && data.probations.length > 0) return true;
+  if (Array.isArray(data.training) && data.training.length > 0) return true;
+  if (Array.isArray(data.documents) && data.documents.length > 0) return true;
+  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
+  if (data.summary && typeof data.summary === "object") return true;
+  if (data.dashboard && typeof data.dashboard === "object") return true;
+  if (data.onboarding_summary && typeof data.onboarding_summary === "object") return true;
+  return false;
 }
 
 function normaliseSummary(data = {}) {
   return data.summary || data.onboarding_summary || data.dashboard || data || {};
 }
 
-function normaliseOnboardingItems(data = {}) {
-  return toArray(data.items, [data.onboarding, data.checklist, data.records]);
+function normalisePipelineItems(data = {}) {
+  return toArray(data.items, [data.pipeline, data.candidates, data.records]).map(
+    (item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_type: item.record_type || "pipeline_candidate",
+      full_name: item.full_name || item.candidate_name || item.name || "Candidate",
+      title: item.title || item.full_name || item.candidate_name || "Candidate",
+      role_applied_for: item.role_applied_for || item.role || item.job_title || "",
+      stage: item.stage || item.pipeline_stage || "",
+      status: item.status || item.stage || "pending",
+      start_target_date: item.start_target_date || item.planned_start_date || null,
+      dbs_status: item.dbs_status || item.dbs || "",
+      references: item.references || item.reference_status || "",
+      right_to_work: item.right_to_work || item.rtw_status || "",
+      mandatory_training_status:
+        item.mandatory_training_status || item.training_status || "",
+      summary:
+        item.summary ||
+        item.notes ||
+        [
+          item.stage || "",
+          item.role_applied_for || item.role || "",
+          item.start_target_date ? `Start ${formatShortDate(item.start_target_date)}` : "",
+        ]
+          .filter(Boolean)
+          .join(" • ") ||
+        "Candidate in recruitment pipeline.",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })
+  );
 }
 
-function normaliseRecruitmentItems(data = {}) {
-  return toArray(data.items, [data.recruitment, data.safer_recruitment, data.records]);
+function normaliseOnboardingItems(data = {}) {
+  return toArray(data.items, [data.onboarding, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    record_type: item.record_type || "onboarding",
+    full_name: item.full_name || item.staff_member || item.name || "Staff member",
+    title: item.title || item.full_name || item.staff_member || "Onboarding",
+    role: item.role || item.job_title || "",
+    stage: item.stage || item.onboarding_stage || "",
+    status: item.status || "in_progress",
+    start_target_date: item.start_target_date || item.start_date || null,
+    checklist_completion: toNumber(item.checklist_completion, 0),
+    dbs: item.dbs || item.dbs_status || "",
+    references: item.references || item.reference_status || "",
+    right_to_work: item.right_to_work || item.rtw_status || "",
+    induction: item.induction || item.induction_status || "",
+    shadow_shifts: toNumber(item.shadow_shifts, 0),
+    mandatory_training: item.mandatory_training || item.training_status || "",
+    summary:
+      item.summary ||
+      item.notes ||
+      [
+        item.stage || "",
+        item.role || "",
+        item.start_target_date ? `Start ${formatShortDate(item.start_target_date)}` : "",
+      ]
+        .filter(Boolean)
+        .join(" • ") ||
+      "Onboarding record.",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
 }
 
 function normaliseInductionItems(data = {}) {
-  return toArray(data.items, [data.inductions, data.induction, data.records]);
+  return toArray(data.items, [data.inductions, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    record_type: item.record_type || "induction",
+    full_name: item.full_name || item.staff_member || item.name || "Staff member",
+    title: item.title || item.full_name || "Induction",
+    role: item.role || "",
+    review_date: item.review_date || item.due_date || null,
+    due_date: item.due_date || item.review_date || null,
+    status: item.status || "in_progress",
+    checklist_completion: toNumber(item.checklist_completion, 0),
+    summary:
+      item.summary ||
+      item.notes ||
+      (item.review_date || item.due_date
+        ? `Review ${formatShortDate(item.review_date || item.due_date)}`
+        : "Induction record."),
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
 }
 
 function normaliseProbationItems(data = {}) {
-  return toArray(data.items, [data.probations, data.probation, data.records]);
+  return toArray(data.items, [data.probations, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    record_type: item.record_type || "probation",
+    full_name: item.full_name || item.staff_member || item.name || "Staff member",
+    title: item.title || item.full_name || "Probation",
+    role: item.role || "",
+    probation_stage: item.probation_stage || item.stage || "",
+    review_date: item.review_date || item.probation_end_date || item.due_date || null,
+    due_date: item.due_date || item.review_date || item.probation_end_date || null,
+    status: item.status || "active",
+    line_manager: item.line_manager || "",
+    summary:
+      item.summary ||
+      item.notes ||
+      [
+        item.probation_stage || item.stage || "",
+        item.review_date || item.probation_end_date
+          ? `Review ${formatShortDate(item.review_date || item.probation_end_date)}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" • ") ||
+      "Probation record.",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
 }
 
 function normaliseTrainingItems(data = {}) {
-  return toArray(data.items, [data.training, data.records]);
+  return toArray(data.items, [data.training, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    record_type: item.record_type || "training_record",
+    full_name: item.full_name || item.staff_member || item.name || "Staff member",
+    title: item.title || item.training_name || "Training",
+    training_name: item.training_name || item.title || "Training",
+    role: item.role || "",
+    status: item.status || "current",
+    next_due_date: item.next_due_date || item.expiry_date || item.review_date || null,
+    expiry_date: item.expiry_date || item.next_due_date || null,
+    summary:
+      item.summary ||
+      item.notes ||
+      (item.next_due_date || item.expiry_date
+        ? `Due ${formatShortDate(item.next_due_date || item.expiry_date)}`
+        : "Training record."),
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
 }
 
-function normaliseSupervisionItems(data = {}) {
-  return toArray(data.items, [data.supervisions, data.records]);
+function normaliseDocumentItems(data = {}) {
+  return toArray(data.items, [data.documents, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    record_type: item.record_type || "document",
+    title: item.title || item.document_type || "Document",
+    document_type: item.document_type || item.type || "",
+    staff_member: item.staff_member || item.full_name || item.name || "",
+    review_date: item.review_date || item.expiry_date || item.due_date || null,
+    status: item.status || "active",
+    summary:
+      item.summary ||
+      item.notes ||
+      (item.review_date
+        ? `Review ${formatShortDate(item.review_date)}`
+        : "Onboarding document."),
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
 }
 
 function normaliseTaskItems(data = {}) {
-  return toArray(data.items, [data.tasks, data.records]);
-}
-
-function normaliseNotificationItems(data = {}) {
-  return toArray(data.items, [data.notifications, data.records]);
+  return toArray(data.items, [data.tasks, data.records]).map((item) => ({
+    ...item,
+    id: item.id ?? item.record_id ?? item.source_id ?? null,
+    record_type: item.record_type || "task",
+    title: item.title || item.task || "Task",
+    task: item.task || item.title || "Task",
+    assigned_role: item.assigned_role || "",
+    due_date: item.due_date || null,
+    completed: Boolean(item.completed),
+    status: item.status || (item.completed ? "completed" : "open"),
+    summary:
+      item.summary ||
+      item.notes ||
+      item.task ||
+      "Onboarding task recorded.",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
 }
 
 function buildTopStats({
+  pipelineItems = [],
   onboardingItems = [],
-  recruitmentItems = [],
   inductionItems = [],
   probationItems = [],
-  trainingGaps = [],
-  supervisionGaps = [],
+  taskItems = [],
+  documentItems = [],
 }) {
-  const liveOnboarding = onboardingItems.filter((item) =>
-    ["pending", "in_progress", "review_due", "active", "due_soon"].includes(
-      String(item.status || "").toLowerCase()
+  const openPipeline = pipelineItems.filter((item) =>
+    !["hired", "withdrawn", "rejected", "completed"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
 
-  const recruitmentGaps = recruitmentItems.filter((item) =>
-    ["missing", "pending", "review_due", "failed", "awaiting"].includes(
-      String(item.status || "").toLowerCase()
+  const onboardingLive = onboardingItems.filter((item) =>
+    !["completed", "closed"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
 
-  const inductionGaps = inductionItems.filter((item) =>
-    ["missing", "pending", "review_due", "incomplete", "due_soon"].includes(
-      String(item.status || "").toLowerCase()
+  const inductionDue = inductionItems.filter((item) =>
+    ["due", "due_soon", "review_due", "overdue", "in_progress"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
 
-  const probationGaps = probationItems.filter((item) =>
-    ["pending", "review_due", "overdue", "incomplete"].includes(
-      String(item.status || "").toLowerCase()
+  const probationDue = probationItems.filter((item) =>
+    ["due", "due_soon", "review_due", "overdue", "active"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+    )
+  ).length;
+
+  const openTasks = taskItems.filter((item) => !item.completed).length;
+
+  const docGaps = documentItems.filter((item) =>
+    ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
 
   return [
     {
+      label: "Recruitment pipeline",
+      value: openPipeline,
+      note: "Candidates still in progress",
+      tone: openPipeline ? "muted" : "success",
+    },
+    {
       label: "Live onboarding",
-      value: liveOnboarding,
-      note: "New starters or incomplete starters",
-      tone: liveOnboarding ? "warning" : "muted",
+      value: onboardingLive,
+      note: "Staff not yet fully settled",
+      tone: onboardingLive ? "warning" : "success",
     },
     {
-      label: "Recruitment gaps",
-      value: recruitmentGaps,
-      note: "Safer recruitment checks missing or pending",
-      tone: recruitmentGaps ? "danger" : "success",
-    },
-    {
-      label: "Induction gaps",
-      value: inductionGaps,
-      note: "Induction items incomplete",
-      tone: inductionGaps ? "warning" : "success",
+      label: "Induction due",
+      value: inductionDue,
+      note: "Reviews or induction work pending",
+      tone: inductionDue ? "warning" : "success",
     },
     {
       label: "Probation due",
-      value: probationGaps,
-      note: "Probation reviews needing action",
-      tone: probationGaps ? "warning" : "success",
+      value: probationDue,
+      note: "Probation checkpoints needing review",
+      tone: probationDue ? "warning" : "success",
     },
     {
-      label: "Training gaps",
-      value: trainingGaps.length,
-      note: "Mandatory training due or overdue",
-      tone: trainingGaps.length ? "warning" : "success",
+      label: "Open actions",
+      value: openTasks,
+      note: "Outstanding recruitment or onboarding tasks",
+      tone: openTasks ? "warning" : "success",
     },
     {
-      label: "Supervision start gaps",
-      value: supervisionGaps.length,
-      note: "Early oversight needing booking",
-      tone: supervisionGaps.length ? "warning" : "success",
+      label: "Document gaps",
+      value: docGaps,
+      note: "Checks, references or evidence missing",
+      tone: docGaps ? "danger" : "success",
     },
   ];
 }
 
-function buildKpis({
-  recruitmentItems = [],
+function buildProgressCards({
+  pipelineItems = [],
+  onboardingItems = [],
   inductionItems = [],
   probationItems = [],
-  trainingItems = [],
-  supervisionItems = [],
 }) {
-  const clearedRecruitment = recruitmentItems.filter((item) =>
-    ["approved", "complete", "completed", "passed", "cleared"].includes(
-      String(item.status || "").toLowerCase()
+  const clearedPipeline = pipelineItems.filter((item) =>
+    ["offered", "conditional_offer", "hired", "completed"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
-  const recruitmentPercent =
-    recruitmentItems.length > 0
-      ? Math.round((clearedRecruitment / recruitmentItems.length) * 100)
-      : 0;
+  const pipelinePercent = pipelineItems.length
+    ? Math.round((clearedPipeline / pipelineItems.length) * 100)
+    : 0;
 
-  const completedInduction = inductionItems.filter((item) =>
-    ["complete", "completed", "signed_off"].includes(
-      String(item.status || "").toLowerCase()
+  const onboardingReady = onboardingItems.filter((item) =>
+    ["on_track", "completed", "active", "started"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
-  const inductionPercent =
-    inductionItems.length > 0
-      ? Math.round((completedInduction / inductionItems.length) * 100)
-      : 0;
+  const onboardingPercent = onboardingItems.length
+    ? Math.round((onboardingReady / onboardingItems.length) * 100)
+    : 0;
 
-  const completedProbation = probationItems.filter((item) =>
-    ["complete", "completed", "signed_off"].includes(
-      String(item.status || "").toLowerCase()
+  const inductionGood = inductionItems.filter((item) =>
+    ["completed", "complete", "on_track", "current"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
-  const probationPercent =
-    probationItems.length > 0
-      ? Math.round((completedProbation / probationItems.length) * 100)
-      : 0;
+  const inductionPercent = inductionItems.length
+    ? Math.round((inductionGood / inductionItems.length) * 100)
+    : 0;
 
-  const compliantTraining = trainingItems.filter((item) =>
-    ["complete", "completed", "passed", "up_to_date"].includes(
-      String(item.status || "").toLowerCase()
+  const probationGood = probationItems.filter((item) =>
+    ["active", "completed", "current", "good"].includes(
+      String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
-  const trainingPercent =
-    trainingItems.length > 0
-      ? Math.round((compliantTraining / trainingItems.length) * 100)
-      : 0;
-
-  const completedSupervision = supervisionItems.filter((item) =>
-    ["complete", "completed", "done", "booked"].includes(
-      String(item.status || "").toLowerCase()
-    )
-  ).length;
-  const supervisionPercent =
-    supervisionItems.length > 0
-      ? Math.round((completedSupervision / supervisionItems.length) * 100)
-      : 0;
+  const probationPercent = probationItems.length
+    ? Math.round((probationGood / probationItems.length) * 100)
+    : 0;
 
   return [
     {
-      label: "Safer recruitment",
-      value: `${recruitmentPercent}%`,
-      percent: recruitmentPercent,
+      label: "Recruitment conversion",
+      value: `${pipelinePercent}%`,
+      percent: pipelinePercent,
       tone:
-        recruitmentPercent >= 95
-          ? "success"
-          : recruitmentPercent >= 80
-          ? "warning"
-          : "danger",
+        pipelinePercent >= 70 ? "success" : pipelinePercent >= 40 ? "warning" : "danger",
     },
     {
-      label: "Induction completion",
+      label: "Onboarding progress",
+      value: `${onboardingPercent}%`,
+      percent: onboardingPercent,
+      tone:
+        onboardingPercent >= 80 ? "success" : onboardingPercent >= 60 ? "warning" : "danger",
+    },
+    {
+      label: "Induction health",
       value: `${inductionPercent}%`,
       percent: inductionPercent,
       tone:
-        inductionPercent >= 90
-          ? "success"
-          : inductionPercent >= 70
-          ? "warning"
-          : "danger",
+        inductionPercent >= 80 ? "success" : inductionPercent >= 60 ? "warning" : "danger",
     },
     {
-      label: "Probation completion",
+      label: "Probation health",
       value: `${probationPercent}%`,
       percent: probationPercent,
       tone:
-        probationPercent >= 90
-          ? "success"
-          : probationPercent >= 70
-          ? "warning"
-          : "danger",
-    },
-    {
-      label: "Training readiness",
-      value: `${trainingPercent}%`,
-      percent: trainingPercent,
-      tone:
-        trainingPercent >= 90
-          ? "success"
-          : trainingPercent >= 70
-          ? "warning"
-          : "danger",
-    },
-    {
-      label: "Supervision start",
-      value: `${supervisionPercent}%`,
-      percent: supervisionPercent,
-      tone:
-        supervisionPercent >= 90
-          ? "success"
-          : supervisionPercent >= 70
-          ? "warning"
-          : "danger",
+        probationPercent >= 80 ? "success" : probationPercent >= 60 ? "warning" : "danger",
     },
   ];
 }
 
 function buildPriorityItems({
-  recruitmentGaps = [],
-  inductionGaps = [],
-  probationGaps = [],
-  trainingGaps = [],
-  supervisionGaps = [],
-  tasks = [],
+  pipelineItems = [],
+  onboardingItems = [],
+  inductionItems = [],
+  probationItems = [],
+  documentItems = [],
+  taskItems = [],
 }) {
   const items = [];
 
-  recruitmentGaps.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.staff_member || item.candidate_name || "Recruitment gap",
-      summary:
-        item.summary ||
-        item.notes ||
-        item.check_name ||
-        "Safer recruitment evidence is incomplete.",
+  pipelineItems
+    .filter((item) =>
+      ["awaiting_dbs", "awaiting_reference", "awaiting_documents", "conditional_offer"].includes(
+        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      )
+    )
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.full_name || "Candidate",
+        summary: item.summary || "Recruitment checks still outstanding.",
+      });
     });
-  });
 
-  inductionGaps.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.staff_member || "Induction gap",
-      summary:
-        item.summary ||
-        item.next_step ||
-        "Induction requires completion or sign-off.",
+  inductionItems
+    .filter((item) =>
+      ["overdue", "due_soon", "review_due", "in_progress"].includes(
+        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      )
+    )
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.full_name || "Induction item",
+        summary: item.summary || "Induction follow-up is needed.",
+      });
     });
-  });
 
-  probationGaps.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.staff_member || "Probation review due",
-      summary: item.review_date
-        ? `Review due ${formatDate(item.review_date)}`
-        : "Probation checkpoint requires action.",
+  probationItems
+    .filter((item) =>
+      ["overdue", "due_soon", "review_due"].includes(
+        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      )
+    )
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.full_name || "Probation item",
+        summary: item.summary || "Probation review is due.",
+      });
     });
-  });
 
-  trainingGaps.slice(0, 1).forEach((item) => {
-    items.push({
-      title: item.staff_member || item.training_name || "Training gap",
-      summary: item.expiry_date
-        ? `Training due ${formatDate(item.expiry_date)}`
-        : "Mandatory training requires attention.",
+  documentItems
+    .filter((item) =>
+      ["missing", "review_due", "due_soon", "overdue", "expired"].includes(
+        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      )
+    )
+    .slice(0, 1)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Document gap",
+        summary: item.summary || "Required document evidence is missing.",
+      });
     });
-  });
 
-  supervisionGaps.slice(0, 1).forEach((item) => {
-    items.push({
-      title: item.staff_member || "Supervision start gap",
-      summary: item.next_due_date
-        ? `Supervision due ${formatDate(item.next_due_date)}`
-        : "Initial supervision is not yet booked or recorded.",
+  taskItems
+    .filter((item) => !item.completed)
+    .slice(0, 1)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Open onboarding action",
+        summary: item.summary || "Outstanding onboarding action remains open.",
+      });
     });
-  });
 
-  tasks.slice(0, 2).forEach((item) => {
+  if (!items.length) {
     items.push({
-      title: item.title || "Onboarding action",
-      summary:
-        item.task ||
-        item.summary ||
-        "Onboarding or recruitment task requires completion.",
+      title: "No major onboarding pressure",
+      summary: "Recruitment and onboarding flow is not currently surfacing urgent issues.",
     });
-  });
+  }
 
   return items.slice(0, 8);
 }
@@ -504,9 +687,8 @@ function renderRows(items = [], options = {}) {
         .map((item) => {
           const title =
             item?.[titleKey] ||
+            item?.full_name ||
             item?.staff_member ||
-            item?.candidate_name ||
-            item?.check_name ||
             item?.training_name ||
             item?.title ||
             "Record";
@@ -515,8 +697,7 @@ function renderRows(items = [], options = {}) {
             item?.[summaryKey] ||
             item?.notes ||
             item?.description ||
-            item?.next_step ||
-            item?.requirement ||
+            item?.role ||
             "No summary available.";
 
           const meta = metaBuilder
@@ -559,7 +740,7 @@ function renderPriorityList(items = []) {
   if (!items.length) {
     return `
       <div class="empty-state">
-        <p>No urgent onboarding risks are showing right now.</p>
+        <p>No urgent onboarding issues are showing right now.</p>
       </div>
     `;
   }
@@ -581,26 +762,25 @@ function renderPriorityList(items = []) {
 }
 
 function renderOnboardingHtml({
-  title = "Onboarding and induction",
+  title = "Recruitment and onboarding",
   topStats = [],
   progressCards = [],
   priorityItems = [],
-  recruitmentItems = [],
+  pipelineItems = [],
+  onboardingItems = [],
   inductionItems = [],
   probationItems = [],
-  trainingGaps = [],
-  supervisionGaps = [],
+  documentItems = [],
   taskItems = [],
-  notificationItems = [],
   isFallback = false,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
       <div class="overview-panel-head">
         <div>
-          <div class="eyebrow">Onboarding</div>
+          <div class="eyebrow">Recruitment and onboarding</div>
           <h2>${safeText(title)}</h2>
-          <p>A safer recruitment, induction and probation view aligned to workforce suitability, training, supervision and readiness.</p>
+          <p>A live view across recruitment checks, onboarding progress, induction, probation and safer recruitment readiness.</p>
           ${
             isFallback
               ? `<p class="overview-helper-text">Showing seeded preview data until live onboarding endpoints are available.</p>`
@@ -613,8 +793,8 @@ function renderOnboardingHtml({
 
       <div class="overview-section-card">
         <div class="overview-section-head">
-          <h3>Onboarding readiness</h3>
-          <p>A quick visual read across recruitment checks, induction, probation, training and supervision start.</p>
+          <h3>Progress snapshot</h3>
+          <p>A quick visual read across recruitment, onboarding, induction and probation health.</p>
         </div>
         ${renderProgressCards(progressCards)}
       </div>
@@ -623,42 +803,20 @@ function renderOnboardingHtml({
         <section class="overview-main">
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Safer recruitment checks</h3>
-              <p>Identity, references, DBS, right to work, health declarations and suitability evidence.</p>
+              <h3>Recruitment pipeline</h3>
+              <p>Candidates, stages and safer recruitment checks.</p>
             </div>
 
-            ${renderRows(recruitmentItems, {
-              emptyMessage: "No recruitment checks found.",
-              titleKey: "staff_member",
+            ${renderRows(pipelineItems, {
+              emptyMessage: "No pipeline candidates found.",
+              titleKey: "full_name",
               summaryKey: "summary",
-              recordType: "onboarding",
+              recordType: "pipeline_candidate",
               metaBuilder: (item) =>
                 [
-                  item.check_name || "",
-                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
-                  item.completed_at ? `Completed ${formatDate(item.completed_at)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
-
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Induction</h3>
-              <p>Core induction steps, policy familiarisation, shadow shifts, safeguarding, medication and practice readiness.</p>
-            </div>
-
-            ${renderRows(inductionItems, {
-              emptyMessage: "No induction records found.",
-              titleKey: "staff_member",
-              summaryKey: "summary",
-              recordType: "onboarding",
-              metaBuilder: (item) =>
-                [
+                  item.role_applied_for || "",
                   item.stage || "",
-                  item.next_review_date ? `Review ${formatDate(item.next_review_date)}` : "",
-                  item.next_step || "",
+                  item.start_target_date ? `Start ${formatDate(item.start_target_date)}` : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -667,24 +825,51 @@ function renderOnboardingHtml({
 
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Probation</h3>
-              <p>Early review points, supervision checkpoints and confirmation of suitability in post.</p>
+              <h3>Live onboarding</h3>
+              <p>Staff progressing through checks, induction and early readiness.</p>
             </div>
 
-            ${renderRows(probationItems, {
-              emptyMessage: "No probation records found.",
-              titleKey: "staff_member",
+            ${renderRows(onboardingItems, {
+              emptyMessage: "No onboarding records found.",
+              titleKey: "full_name",
               summaryKey: "summary",
               recordType: "onboarding",
               metaBuilder: (item) =>
                 [
-                  item.stage || "Probation",
-                  item.review_date ? `Due ${formatDate(item.review_date)}` : "",
-                  item.line_manager || "",
+                  item.role || "",
+                  item.stage || "",
+                  `${toNumber(item.checklist_completion)}% checklist`,
                 ]
                   .filter(Boolean)
                   .join(" • "),
             })}
+          </div>
+
+          <div class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Induction and probation</h3>
+              <p>Early support, induction review and probation checkpoints.</p>
+            </div>
+
+            ${renderRows(
+              [...inductionItems.slice(0, 5), ...probationItems.slice(0, 5)],
+              {
+                emptyMessage: "No induction or probation items found.",
+                titleKey: "full_name",
+                summaryKey: "summary",
+                recordType: "onboarding",
+                metaBuilder: (item) =>
+                  [
+                    item.role || "",
+                    item.review_date || item.due_date
+                      ? `Review ${formatDate(item.review_date || item.due_date)}`
+                      : "",
+                    item.probation_stage || "",
+                  ]
+                    .filter(Boolean)
+                    .join(" • "),
+              }
+            )}
           </div>
         </section>
 
@@ -692,7 +877,7 @@ function renderOnboardingHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Needs attention</h3>
-              <p>The highest priority onboarding and safer recruitment risks.</p>
+              <p>The most urgent recruitment and onboarding issues across the home.</p>
             </div>
 
             ${renderPriorityList(priorityItems)}
@@ -700,19 +885,20 @@ function renderOnboardingHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Training gaps</h3>
-              <p>Mandatory learning due, overdue or incomplete.</p>
+              <h3>Document readiness</h3>
+              <p>References, checks, certificates and onboarding evidence.</p>
             </div>
 
-            ${renderRows(trainingGaps, {
-              emptyMessage: "No onboarding training gaps found.",
-              titleKey: "staff_member",
+            ${renderRows(documentItems, {
+              emptyMessage: "No onboarding document gaps found.",
+              titleKey: "title",
               summaryKey: "summary",
-              recordType: "training",
+              recordType: "document",
               metaBuilder: (item) =>
                 [
-                  item.training_name || "",
-                  item.expiry_date ? `Due ${formatDate(item.expiry_date)}` : "",
+                  item.staff_member || "",
+                  item.document_type || "",
+                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -721,266 +907,28 @@ function renderOnboardingHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Supervision start</h3>
-              <p>Initial supervision and support arrangements needing action.</p>
+              <h3>Open actions</h3>
+              <p>Practical follow-up actions linked to safer recruitment and onboarding.</p>
             </div>
 
-            ${renderRows(supervisionGaps, {
-              emptyMessage: "No supervision start gaps found.",
-              titleKey: "staff_member",
+            ${renderRows(taskItems, {
+              emptyMessage: "No onboarding actions found.",
+              titleKey: "title",
               summaryKey: "summary",
-              recordType: "supervision",
+              recordType: "task",
               metaBuilder: (item) =>
                 [
-                  item.supervisor || "",
-                  item.next_due_date ? `Due ${formatDate(item.next_due_date)}` : "",
+                  item.assigned_role || "",
+                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
             })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Tasks and notifications</h3>
-              <p>Reminders and actions for managers and staff.</p>
-            </div>
-
-            ${renderRows(
-              [...taskItems.slice(0, 4), ...notificationItems.slice(0, 4)],
-              {
-                emptyMessage: "No onboarding actions or reminders found.",
-                titleKey: "title",
-                summaryKey: "summary",
-                recordType: "notification",
-                metaBuilder: (item) =>
-                  [
-                    item.staff_member || item.recipient_name || "",
-                    item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                    item.created_at ? formatDateTime(item.created_at) : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" • "),
-              }
-            )}
           </section>
         </aside>
       </div>
     </section>
   `;
-}
-
-function buildFallbackData(homeId) {
-  const now = new Date();
-  const plusDays = (days) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    return d.toISOString();
-  };
-  const minusDays = (days) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - days);
-    return d.toISOString();
-  };
-
-  return {
-    summaryData: {
-      summary: {
-        title: "Onboarding and induction",
-        home_name:
-          state.currentUser?.home_name ||
-          state.currentUser?.homeName ||
-          `Home ${homeId}`,
-      },
-    },
-    onboardingData: {
-      items: [
-        {
-          id: "onboarding-1",
-          staff_member: "Ben Carter",
-          stage: "Onboarding",
-          next_step: "Complete medication induction and final shadow shift.",
-          next_review_date: plusDays(3),
-          summary: "New starter with most recruitment checks complete. Final practice sign-off still needed.",
-          status: "in_progress",
-        },
-        {
-          id: "onboarding-2",
-          staff_member: "Aimee Khan",
-          stage: "Induction",
-          next_step: "Upload signed induction checklist and policy read log.",
-          next_review_date: plusDays(2),
-          summary: "Core induction progressing but evidence upload remains incomplete.",
-          status: "due_soon",
-        },
-      ],
-    },
-    recruitmentData: {
-      items: [
-        {
-          id: "recruitment-1",
-          staff_member: "Ben Carter",
-          check_name: "Reference check 2",
-          review_date: plusDays(1),
-          summary: "Second reference still awaiting upload to safer recruitment file.",
-          status: "missing",
-        },
-        {
-          id: "recruitment-2",
-          staff_member: "Aimee Khan",
-          check_name: "Right to work verification",
-          completed_at: minusDays(3),
-          summary: "Right to work documents reviewed and verified.",
-          status: "cleared",
-        },
-        {
-          id: "recruitment-3",
-          staff_member: "Ben Carter",
-          check_name: "DBS confirmation",
-          completed_at: minusDays(12),
-          summary: "Enhanced DBS cleared and recorded.",
-          status: "cleared",
-        },
-      ],
-    },
-    inductionData: {
-      items: [
-        {
-          id: "induction-1",
-          staff_member: "Ben Carter",
-          stage: "Practice induction",
-          next_step: "Manager sign-off after final shadow shift.",
-          next_review_date: plusDays(4),
-          summary: "Medication and behaviour support induction still incomplete.",
-          status: "review_due",
-        },
-        {
-          id: "induction-2",
-          staff_member: "Aimee Khan",
-          stage: "Core induction",
-          next_step: "Confirm safeguarding and whistleblowing discussion.",
-          next_review_date: plusDays(2),
-          summary: "Policy familiarisation nearly complete.",
-          status: "in_progress",
-        },
-      ],
-    },
-    probationData: {
-      items: [
-        {
-          id: "probation-1",
-          staff_member: "Ben Carter",
-          stage: "8-week review",
-          review_date: plusDays(5),
-          line_manager: "Sarah Ahmed",
-          summary: "Probation review to confirm progress, competence and support needs.",
-          status: "due_soon",
-        },
-      ],
-    },
-    trainingData: {
-      items: [
-        {
-          id: "training-1",
-          staff_member: "Ben Carter",
-          training_name: "PMVA",
-          expiry_date: minusDays(1),
-          summary: "PMVA is overdue and must be booked before lone deployment.",
-          status: "overdue",
-        },
-        {
-          id: "training-2",
-          staff_member: "Aimee Khan",
-          training_name: "Safeguarding",
-          expiry_date: plusDays(7),
-          summary: "Safeguarding refresher due this week.",
-          status: "due_soon",
-        },
-      ],
-    },
-    supervisionData: {
-      items: [
-        {
-          id: "supervision-1",
-          staff_member: "Ben Carter",
-          supervisor: "Sarah Ahmed",
-          next_due_date: plusDays(4),
-          summary: "Initial supervision still needs booking.",
-          status: "due_soon",
-        },
-      ],
-    },
-    taskData: {
-      items: [
-        {
-          id: "task-1",
-          title: "Book initial supervision",
-          task: "Arrange and record Ben Carter initial supervision.",
-          staff_member: "Ben Carter",
-          due_date: plusDays(4),
-          completed: false,
-          status: "due_soon",
-        },
-        {
-          id: "task-2",
-          title: "Upload induction evidence",
-          task: "Add signed induction checklist and safer recruitment file evidence.",
-          staff_member: "Aimee Khan",
-          due_date: plusDays(2),
-          completed: false,
-          status: "warning",
-        },
-      ],
-    },
-    notificationData: {
-      items: [
-        {
-          id: "notification-1",
-          title: "Probation checkpoint due",
-          recipient_name: "Sarah Ahmed",
-          summary: "Ben Carter probation review is due this week.",
-          created_at: minusDays(1),
-          status: "attention",
-        },
-      ],
-    },
-  };
-}
-
-async function fetchOnboardingDataset(homeId) {
-  const requests = [
-    apiGet(`/homes/${homeId}/onboarding`),
-    apiGet(`/homes/${homeId}/safer-recruitment`),
-    apiGet(`/homes/${homeId}/inductions`),
-    apiGet(`/homes/${homeId}/probations`),
-    apiGet(`/homes/${homeId}/training`),
-    apiGet(`/homes/${homeId}/supervisions`),
-    apiGet(`/homes/${homeId}/staff-tasks`),
-    apiGet(`/homes/${homeId}/notifications`),
-  ];
-
-  const results = await Promise.allSettled(requests);
-  const hasLiveSuccess = results.some((result) => result.status === "fulfilled");
-
-  if (!hasLiveSuccess) {
-    return {
-      ...buildFallbackData(homeId),
-      isFallback: true,
-    };
-  }
-
-  return {
-    summaryData: {},
-    onboardingData: results[0].status === "fulfilled" ? results[0].value : { items: [] },
-    recruitmentData: results[1].status === "fulfilled" ? results[1].value : { items: [] },
-    inductionData: results[2].status === "fulfilled" ? results[2].value : { items: [] },
-    probationData: results[3].status === "fulfilled" ? results[3].value : { items: [] },
-    trainingData: results[4].status === "fulfilled" ? results[4].value : { items: [] },
-    supervisionData: results[5].status === "fulfilled" ? results[5].value : { items: [] },
-    taskData: results[6].status === "fulfilled" ? results[6].value : { items: [] },
-    notificationData: results[7].status === "fulfilled" ? results[7].value : { items: [] },
-    isFallback: false,
-  };
 }
 
 function renderNoHomeContext() {
@@ -1000,8 +948,8 @@ function renderNoHomeContext() {
 
   updateWorkspaceSummaryStrip({
     today: "No onboarding context",
-    nextEvent: "No review loaded",
-    lastRecord: "No onboarding record loaded",
+    nextEvent: "No recruitment milestone loaded",
+    lastRecord: "No onboarding data",
     openActions: "No onboarding actions loaded",
   });
 }
@@ -1021,10 +969,10 @@ function renderLoadingState() {
   `;
 
   updateWorkspaceSummaryStrip({
-    today: "Loading onboarding view",
-    nextEvent: "Checking next review date",
-    lastRecord: "Loading latest onboarding activity",
-    openActions: "Loading actions",
+    today: "Loading onboarding",
+    nextEvent: "Checking start dates",
+    lastRecord: "Loading latest recruitment record",
+    openActions: "Loading onboarding actions",
   });
 }
 
@@ -1045,10 +993,186 @@ function renderErrorState(message) {
 
   updateWorkspaceSummaryStrip({
     today: "Onboarding unavailable",
-    nextEvent: "No event loaded",
+    nextEvent: "No milestone loaded",
     lastRecord: "No onboarding record loaded",
     openActions: "No actions loaded",
   });
+}
+
+function buildFallbackData(homeId) {
+  const homeName =
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    `Home ${homeId}`;
+
+  const now = new Date();
+  const plusDays = (days, hour = 9, minute = 0) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, minute, 0, 0);
+    return d.toISOString();
+  };
+
+  return {
+    summaryData: {
+      summary: {
+        title: `${homeName} onboarding`,
+        home_name: homeName,
+      },
+    },
+    pipelineData: {
+      items: [
+        {
+          id: "pipe-1",
+          full_name: "Amelia Reed",
+          role_applied_for: "Residential Worker",
+          stage: "Interview",
+          status: "interview",
+          start_target_date: plusDays(21),
+          summary: "Interview booked and references underway.",
+        },
+        {
+          id: "pipe-2",
+          full_name: "Daniel Price",
+          role_applied_for: "Waking Night",
+          stage: "Conditional offer",
+          status: "awaiting_dbs",
+          start_target_date: plusDays(14),
+          summary: "Conditional offer made, DBS still pending.",
+        },
+      ],
+    },
+    onboardingData: {
+      items: [
+        {
+          id: "onb-1",
+          full_name: "Holly Kent",
+          role: "Residential Worker",
+          stage: "Induction",
+          status: "in_progress",
+          checklist_completion: 65,
+          start_target_date: plusDays(7),
+          summary: "Induction active with shadow shifts underway.",
+        },
+        {
+          id: "onb-2",
+          full_name: "Marcus Ali",
+          role: "Senior Residential Worker",
+          stage: "Pre-start",
+          status: "awaiting_documents",
+          checklist_completion: 40,
+          start_target_date: plusDays(10),
+          summary: "Missing final right to work evidence.",
+        },
+      ],
+    },
+    inductionData: {
+      items: [
+        {
+          id: "ind-1",
+          full_name: "Holly Kent",
+          role: "Residential Worker",
+          review_date: plusDays(5),
+          status: "due_soon",
+          checklist_completion: 65,
+          summary: "Induction review due this week.",
+        },
+      ],
+    },
+    probationData: {
+      items: [
+        {
+          id: "prob-1",
+          full_name: "Jake Morton",
+          role: "Residential Worker",
+          probation_stage: "8-week review",
+          review_date: plusDays(9),
+          status: "due_soon",
+          summary: "Probation review approaching.",
+        },
+      ],
+    },
+    documentData: {
+      items: [
+        {
+          id: "doc-1",
+          title: "DBS evidence",
+          document_type: "DBS",
+          staff_member: "Daniel Price",
+          review_date: plusDays(3),
+          status: "missing",
+          summary: "DBS evidence still outstanding.",
+        },
+      ],
+    },
+    taskData: {
+      items: [
+        {
+          id: "task-1",
+          title: "Chase second reference",
+          task: "Follow up missing reference for candidate.",
+          due_date: plusDays(2),
+          completed: false,
+          status: "open",
+          assigned_role: "Manager",
+          summary: "Second reference still required before start.",
+        },
+      ],
+    },
+    isFallback: true,
+  };
+}
+
+async function fetchDataset(homeId) {
+  const safeGet = (url) => apiGet(url).catch(() => null);
+
+  const requests = [
+    safeGet(`/homes/${homeId}/onboarding`),
+    safeGet(`/homes/${homeId}/pipeline`),
+    safeGet(`/homes/${homeId}/inductions`),
+    safeGet(`/homes/${homeId}/probations`),
+    safeGet(`/homes/${homeId}/training`),
+    safeGet(`/homes/${homeId}/staff-documents`),
+    safeGet(`/homes/${homeId}/tasks`),
+  ];
+
+  const [
+    onboardingData,
+    pipelineData,
+    inductionData,
+    probationData,
+    trainingData,
+    documentData,
+    taskData,
+  ] = await Promise.all(requests);
+
+  const responses = [
+    onboardingData,
+    pipelineData,
+    inductionData,
+    probationData,
+    trainingData,
+    documentData,
+    taskData,
+  ];
+
+  const hasLiveSuccess = responses.some(hasUsableData);
+
+  if (!hasLiveSuccess) {
+    return buildFallbackData(homeId);
+  }
+
+  return {
+    summaryData: onboardingData || {},
+    pipelineData: pipelineData || { items: [] },
+    onboardingData: onboardingData || { items: [] },
+    inductionData: inductionData || { items: [] },
+    probationData: probationData || { items: [] },
+    trainingData: trainingData || { items: [] },
+    documentData: documentData || { items: [] },
+    taskData: taskData || { items: [] },
+    isFallback: false,
+  };
 }
 
 export async function loadOnboarding() {
@@ -1066,125 +1190,83 @@ export async function loadOnboarding() {
   try {
     const {
       summaryData,
+      pipelineData,
       onboardingData,
-      recruitmentData,
       inductionData,
       probationData,
       trainingData,
-      supervisionData,
+      documentData,
       taskData,
-      notificationData,
       isFallback,
-    } = await fetchOnboardingDataset(homeId);
+    } = await fetchDataset(homeId);
 
     const summary = normaliseSummary(summaryData);
-    const onboardingItems = sortSoonestFirst(normaliseOnboardingItems(onboardingData), [
-      "next_review_date",
+
+    const pipelineItems = sortSoonestFirst(normalisePipelineItems(pipelineData), [
+      "start_target_date",
       "updated_at",
       "created_at",
     ]).slice(0, 8);
 
-    const recruitmentItems = sortSoonestFirst(normaliseRecruitmentItems(recruitmentData), [
-      "review_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 8);
+    const onboardingItems = sortSoonestFirst(
+      normaliseOnboardingItems(onboardingData),
+      ["start_target_date", "updated_at", "created_at"]
+    ).slice(0, 8);
 
-    const inductionItems = sortSoonestFirst(normaliseInductionItems(inductionData), [
-      "next_review_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 8);
+    const inductionItems = sortSoonestFirst(
+      normaliseInductionItems(inductionData),
+      ["review_date", "due_date", "updated_at", "created_at"]
+    ).slice(0, 6);
 
-    const probationItems = sortSoonestFirst(normaliseProbationItems(probationData), [
-      "review_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 8);
+    const probationItems = sortSoonestFirst(
+      normaliseProbationItems(probationData),
+      ["review_date", "due_date", "updated_at", "created_at"]
+    ).slice(0, 6);
 
-    const trainingItems = sortSoonestFirst(normaliseTrainingItems(trainingData), [
-      "expiry_date",
-      "updated_at",
-      "created_at",
-    ]);
+    const trainingItems = sortSoonestFirst(
+      normaliseTrainingItems(trainingData),
+      ["next_due_date", "expiry_date", "updated_at", "created_at"]
+    ).slice(0, 6);
 
-    const supervisionItems = sortSoonestFirst(normaliseSupervisionItems(supervisionData), [
-      "next_due_date",
-      "updated_at",
-      "created_at",
-    ]);
+    const documentItems = sortSoonestFirst(
+      normaliseDocumentItems(documentData),
+      ["review_date", "updated_at", "created_at"]
+    ).slice(0, 6);
 
     const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
       "due_date",
       "updated_at",
       "created_at",
-    ]);
-
-    const notificationItems = sortNewestFirst(normaliseNotificationItems(notificationData), [
-      "created_at",
-      "updated_at",
-    ]).slice(0, 6);
-
-    const recruitmentGaps = recruitmentItems.filter((item) =>
-      ["missing", "pending", "review_due", "failed", "awaiting"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const inductionGaps = inductionItems.filter((item) =>
-      ["pending", "review_due", "incomplete", "due_soon", "in_progress"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const probationGaps = probationItems.filter((item) =>
-      ["pending", "review_due", "overdue", "incomplete", "due_soon"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const trainingGaps = trainingItems.filter((item) =>
-      ["due_soon", "overdue", "expired", "expiring", "incomplete"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const supervisionGaps = supervisionItems.filter((item) =>
-      ["due", "due_soon", "overdue", "review_due", "pending"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const openTasks = taskItems.filter((item) => !item.completed);
+    ]).filter((item) => !item.completed).slice(0, 6);
 
     const topStats = buildTopStats({
+      pipelineItems,
       onboardingItems,
-      recruitmentItems,
       inductionItems,
       probationItems,
-      trainingGaps,
-      supervisionGaps,
+      taskItems,
+      documentItems,
     });
 
-    const progressCards = buildKpis({
-      recruitmentItems,
+    const progressCards = buildProgressCards({
+      pipelineItems,
+      onboardingItems,
       inductionItems,
       probationItems,
-      trainingItems,
-      supervisionItems,
     });
 
     const priorityItems = buildPriorityItems({
-      recruitmentGaps,
-      inductionGaps,
-      probationGaps,
-      trainingGaps,
-      supervisionGaps,
-      tasks: openTasks,
+      pipelineItems,
+      onboardingItems,
+      inductionItems,
+      probationItems,
+      documentItems,
+      taskItems,
     });
 
     const title =
       summary.title ||
+      summary.home_name ||
       state.currentUser?.home_name ||
       state.currentUser?.homeName ||
       `Home ${homeId} onboarding`;
@@ -1194,34 +1276,43 @@ export async function loadOnboarding() {
       topStats,
       progressCards,
       priorityItems,
-      recruitmentItems,
+      pipelineItems,
+      onboardingItems,
       inductionItems,
-      probationItems,
-      trainingGaps: trainingGaps.slice(0, 6),
-      supervisionGaps: supervisionGaps.slice(0, 6),
-      taskItems: openTasks.slice(0, 6),
-      notificationItems,
+      probationItems: [...probationItems, ...trainingItems].slice(0, 8),
+      documentItems,
+      taskItems,
       isFallback,
     });
 
-    const nextProbation = probationGaps[0];
-    const latestNotification = notificationItems[0];
+    const nextMilestone =
+      pipelineItems[0]?.start_target_date ||
+      onboardingItems[0]?.start_target_date ||
+      inductionItems[0]?.review_date ||
+      probationItems[0]?.review_date ||
+      null;
+
+    const latestRecord =
+      onboardingItems[0]?.updated_at ||
+      pipelineItems[0]?.updated_at ||
+      null;
 
     updateWorkspaceSummaryStrip({
       today: isFallback
-        ? `${onboardingItems.length} live onboarding • preview mode`
-        : `${onboardingItems.length} live onboarding • ${openTasks.length} open actions`,
-      nextEvent: nextProbation?.review_date
-        ? `Probation due ${formatDate(nextProbation.review_date)}`
-        : "No immediate review loaded",
-      lastRecord: latestNotification?.created_at
-        ? `Latest reminder ${formatDateTime(latestNotification.created_at)}`
+        ? `${pipelineItems.length} pipeline • ${onboardingItems.length} onboarding • preview mode`
+        : `${pipelineItems.length} pipeline • ${onboardingItems.length} onboarding`,
+      nextEvent: nextMilestone
+        ? `Next milestone ${formatDate(nextMilestone)}`
+        : "No onboarding milestone loaded",
+      lastRecord: latestRecord
+        ? `Latest recruitment update ${formatDateTime(latestRecord)}`
         : isFallback
         ? "Preview onboarding data loaded"
-        : "No recent onboarding activity loaded",
-      openActions: `${openTasks.length} open • ${recruitmentGaps.length} recruitment gaps`,
+        : "No recent onboarding update",
+      openActions: `${taskItems.length} open • ${documentItems.length} document checks`,
     });
   } catch (error) {
+    console.error("[onboarding] load failed", error);
     renderErrorState(error?.message || "The onboarding view could not be loaded.");
   }
 }
