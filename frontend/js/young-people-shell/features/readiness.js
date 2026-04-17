@@ -1,32 +1,22 @@
 import { els } from "../dom.js";
-import {
-  state,
-  getCurrentReadinessHomeId,
-  setReadinessSelectedHomeId,
-  setReadinessLoading,
-  setReadinessRefreshing,
-  setReadinessSyncing,
-  setReadinessError,
-  setReadinessData,
-} from "../state.js";
+import { state } from "../state.js";
 import {
   apiGet,
-  getInspectionHomeCards,
-  getInspectionHomeDetail,
-  getInspectionSectionPanels,
-  getInspectionReasons,
-  getInspectionActions,
-  getInspectionTasks,
-  getInspectionBriefing,
-  getInspection72Hour,
-  refreshInspectionCycle,
-  syncInspectionTasks,
+  apiPost,
+  buildInspectionUiEndpoints,
 } from "../core/api.js";
-import { escapeHtml, formatDate } from "../core/utils.js";
+import { escapeHtml, formatDate, formatDateTime } from "../core/utils.js";
 import {
   mapComplianceItem,
   mapTask,
   mapStatutoryDocument,
+  mapInspectionAction,
+  mapInspectionTask,
+  mapInspectionHeader,
+  mapInspectionSectionPanel,
+  mapInspectionReason,
+  mapInspectionBriefing,
+  mapInspectionPrep72Hour,
 } from "../core/adapters.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
@@ -36,6 +26,7 @@ function getCurrentScope() {
 
 function getHomeId() {
   return (
+    state.readinessSelectedHomeId ||
     state.homeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
@@ -85,11 +76,23 @@ function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function firstArray(...values) {
   for (const value of values) {
     if (Array.isArray(value)) return value;
   }
   return [];
+}
+
+function normaliseToken(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
 }
 
 function sortSoonestFirst(items = [], keys = []) {
@@ -117,7 +120,7 @@ function renderEmptyState(message = "No information available.") {
 }
 
 function getGradeTone(band = "") {
-  const value = String(band || "").toLowerCase();
+  const value = normaliseToken(band);
   if (value === "outstanding") return "success";
   if (value === "good") return "positive";
   if (value === "requires_improvement") return "warning";
@@ -203,7 +206,7 @@ function buildOversightRows(complianceItems = [], tasks = []) {
   const complianceRows = complianceItems
     .filter((item) =>
       ["overdue", "escalated", "missing", "review_due", "due_soon", "expiring"].includes(
-        String(item.status || "").toLowerCase()
+        normaliseToken(item.status)
       )
     )
     .slice(0, 6)
@@ -253,7 +256,7 @@ function buildReadinessOverview({
 }) {
   const overdue = compliance.filter((item) =>
     ["overdue", "escalated", "missing", "review_due"].includes(
-      String(item.status || "").toLowerCase()
+      normaliseToken(item.status)
     )
   ).length;
 
@@ -266,7 +269,7 @@ function buildReadinessOverview({
   const openTasks = tasks.filter((item) => !item.completed).length;
 
   const reviewDueDocs = documents.filter((item) => {
-    const status = String(item.status || "").toLowerCase();
+    const status = normaliseToken(item.status);
     return ["review_due", "expiring", "expired", "overdue", "missing"].includes(status);
   }).length;
 
@@ -291,8 +294,8 @@ function getRowDate(item = {}) {
 }
 
 function getRowPill(item = {}) {
-  const status = String(item.status || "").toLowerCase();
-  const severity = String(item.severity || "").toLowerCase();
+  const status = normaliseToken(item.status);
+  const severity = normaliseToken(item.severity);
 
   if (
     ["overdue", "escalated", "expired", "missing", "review_due"].includes(status) ||
@@ -301,7 +304,7 @@ function getRowPill(item = {}) {
     return { label: "Needs review", tone: "warning" };
   }
 
-  if (["due_soon", "due soon", "review_due", "expiring"].includes(status)) {
+  if (["due_soon", "review_due", "expiring"].includes(status)) {
     return { label: status.replaceAll("_", " "), tone: "warning" };
   }
 
@@ -554,6 +557,33 @@ function renderLegacyReadinessHtml({
   `;
 }
 
+function getInspectionEndpoints(homeId) {
+  return buildInspectionUiEndpoints(homeId);
+}
+
+function getLegacyReadinessEndpoints() {
+  const scope = getCurrentScope();
+  const id = getScopeEntityId();
+
+  if (!id) {
+    return null;
+  }
+
+  if (scope === "home" || scope === "quality") {
+    return {
+      compliance: `/homes/${id}/compliance`,
+      documents: `/homes/${id}/documents`,
+      tasks: null,
+    };
+  }
+
+  return {
+    compliance: `/young-people/${id}/compliance`,
+    tasks: `/young-people/${id}/tasks`,
+    documents: `/young-people/${id}/documents`,
+  };
+}
+
 function renderNoContext() {
   if (!els.viewContent) return;
 
@@ -801,7 +831,7 @@ function renderActionRows(actions = []) {
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${toText(
-                  action.priority === "critical" || action.priority === "high"
+                  ["critical", "high"].includes(normaliseToken(action.priority))
                     ? "warning"
                     : "muted"
                 )}">
@@ -816,7 +846,7 @@ function renderActionRows(actions = []) {
   `;
 }
 
-function renderTaskRows(tasks = []) {
+function renderInspectionTaskRows(tasks = []) {
   if (!tasks.length) {
     return renderEmptyState("No linked inspection tasks are available.");
   }
@@ -834,7 +864,7 @@ function renderTaskRows(tasks = []) {
                     [
                       task.action_title || "",
                       task.task_due_date ? `Due ${formatDate(task.task_due_date)}` : "",
-                      task.assigned_user_name || "Unassigned",
+                      task.assigned_user_name || task.assigned_role || "Unassigned",
                     ]
                       .filter(Boolean)
                       .join(" • ")
@@ -1036,7 +1066,7 @@ function renderInspectionDetail({
               <h3>Linked tasks</h3>
               <p>Operational tasks connected to inspection improvement work.</p>
             </div>
-            ${renderTaskRows(tasks)}
+            ${renderInspectionTaskRows(tasks)}
           </section>
 
           <section class="overview-side-card">
@@ -1049,8 +1079,9 @@ function renderInspectionDetail({
 }
 
 function chooseSelectedHome(cards = []) {
-  const currentHomeId = getCurrentReadinessHomeId();
+  const currentHomeId = getHomeId();
   const selectedHomeId =
+    state.readinessSelectedHomeId ||
     currentHomeId ||
     cards[0]?.home_id ||
     null;
@@ -1059,20 +1090,26 @@ function chooseSelectedHome(cards = []) {
     cards.find((card) => Number(card.home_id) === Number(selectedHomeId)) || cards[0] || null;
 
   if (selectedCard?.home_id) {
-    setReadinessSelectedHomeId(selectedCard.home_id);
+    state.readinessSelectedHomeId = selectedCard.home_id;
   }
 
   return selectedCard;
 }
 
-function updateReadinessSummaryFromInspection(detail = {}) {
+function updateReadinessSummaryFromInspection(detail = {}, actions = [], tasks = []) {
+  const nextDue =
+    actions.find((item) => item.due_date)?.due_date ||
+    tasks.find((item) => item.task_due_date)?.task_due_date ||
+    detail.next_action_due_date ||
+    null;
+
   updateWorkspaceSummaryStrip({
     today: `${formatBand(detail.overall_band || "unknown")} • Score ${formatNumber(detail.overall_score)}`,
-    nextEvent: detail.next_action_due_date
-      ? `Next action due ${formatDate(detail.next_action_due_date)}`
+    nextEvent: nextDue
+      ? `Next action due ${formatDate(nextDue)}`
       : "No immediate inspection deadline",
     lastRecord: detail.top_concerns || "No major concerns recorded",
-    openActions: `${detail.open_actions || 0} open • ${detail.overdue_actions || 0} overdue`,
+    openActions: `${detail.open_actions || actions.length || 0} open • ${detail.overdue_actions || 0} overdue`,
   });
 }
 
@@ -1108,77 +1145,70 @@ function updateReadinessSummaryFromLegacy({
 }
 
 async function tryLoadInspectionReadiness() {
+  const homeId = getHomeId();
   const scope = getCurrentScope();
-  const preferredHomeId = getCurrentReadinessHomeId();
 
-  if (!preferredHomeId || (scope !== "home" && scope !== "quality")) {
+  if (!homeId || (scope !== "home" && scope !== "quality")) {
     return null;
   }
 
-  const [
-    cardsRes,
-    headerRes,
-    sectionsRes,
-    reasonsRes,
-    actionsRes,
-    tasksRes,
-    briefingRes,
-    prepRes,
-  ] = await Promise.all([
-    getInspectionHomeCards().catch(() => null),
-    getInspectionHomeDetail(preferredHomeId).catch(() => null),
-    getInspectionSectionPanels(preferredHomeId).catch(() => null),
-    getInspectionReasons(preferredHomeId).catch(() => null),
-    getInspectionActions(preferredHomeId).catch(() => null),
-    getInspectionTasks(preferredHomeId).catch(() => null),
-    getInspectionBriefing(preferredHomeId).catch(() => null),
-    getInspection72Hour(preferredHomeId).catch(() => null),
-  ]);
+  const endpoints = getInspectionEndpoints(homeId);
+  if (!endpoints) return null;
+
+  const safeGet = (url) => apiGet(url).catch(() => null);
+
+  const [cardsRes, headerRes, sectionsRes, reasonsRes, actionsRes, tasksRes, briefingRes, prepRes] =
+    await Promise.all([
+      safeGet(endpoints.homeCards),
+      safeGet(endpoints.homeHeader),
+      safeGet(endpoints.sectionPanels),
+      safeGet(endpoints.reasons),
+      safeGet(endpoints.actions),
+      safeGet(endpoints.tasks),
+      safeGet(endpoints.briefing),
+      safeGet(endpoints.prep72h),
+    ]);
 
   const cards = normaliseApiRows(cardsRes);
   const selectedCard = chooseSelectedHome(cards);
-  const selectedHomeId = selectedCard?.home_id || preferredHomeId;
 
-  const headerRows = normaliseApiRows(headerRes);
-  const sectionRows = normaliseApiRows(sectionsRes);
-  const reasonRows = normaliseApiRows(reasonsRes);
-  const actionRows = normaliseApiRows(actionsRes);
-  const taskRows = normaliseApiRows(tasksRes);
-  const briefingRows = normaliseApiRows(briefingRes);
-  const prepRows = normaliseApiRows(prepRes);
+  const headerRows = normaliseApiRows(headerRes).map(mapInspectionHeader);
+  const sectionRows = normaliseApiRows(sectionsRes).map(mapInspectionSectionPanel);
+  const reasonRows = normaliseApiRows(reasonsRes).map(mapInspectionReason);
+  const actionRows = normaliseApiRows(actionsRes).map(mapInspectionAction);
+  const taskRows = normaliseApiRows(tasksRes).map(mapInspectionTask);
+  const briefingRows = normaliseApiRows(briefingRes).map(mapInspectionBriefing);
+  const prepRows = normaliseApiRows(prepRes).map(mapInspectionPrep72Hour);
+
+  const targetHomeId = selectedCard?.home_id || homeId;
 
   const header =
-    headerRows.find((row) => Number(row.home_id) === Number(selectedHomeId)) ||
+    headerRows.find((row) => Number(row.home_id) === Number(targetHomeId)) ||
     headerRows[0] ||
     selectedCard ||
     null;
 
   const sections = sectionRows.filter(
-    (row) => Number(row.home_id) === Number(selectedHomeId)
+    (row) => Number(row.home_id) === Number(targetHomeId)
   );
-
   const reasons = sortNewestFirst(
-    reasonRows.filter((row) => Number(row.home_id) === Number(selectedHomeId)),
+    reasonRows.filter((row) => Number(row.home_id) === Number(targetHomeId)),
     ["priority", "created_at"]
   );
-
   const actions = sortSoonestFirst(
-    actionRows.filter((row) => Number(row.home_id) === Number(selectedHomeId)),
+    actionRows.filter((row) => Number(row.home_id) === Number(targetHomeId)),
     ["due_date", "created_at"]
   );
-
   const tasks = sortSoonestFirst(
-    taskRows.filter((row) => Number(row.home_id) === Number(selectedHomeId)),
-    ["task_due_date", "action_due_date", "task_created_at"]
+    taskRows.filter((row) => Number(row.home_id) === Number(targetHomeId)),
+    ["task_due_date", "action_due_date", "task_created_at", "created_at"]
   );
-
   const briefing =
-    briefingRows.find((row) => Number(row.home_id) === Number(selectedHomeId)) ||
+    briefingRows.find((row) => Number(row.home_id) === Number(targetHomeId)) ||
     briefingRows[0] ||
     null;
-
   const prep72h =
-    prepRows.find((row) => Number(row.home_id) === Number(selectedHomeId)) ||
+    prepRows.find((row) => Number(row.home_id) === Number(targetHomeId)) ||
     prepRows[0] ||
     null;
 
@@ -1196,18 +1226,6 @@ async function tryLoadInspectionReadiness() {
     return null;
   }
 
-  setReadinessData({
-    homeCards: cards,
-    header,
-    sections,
-    reasons,
-    actions,
-    tasks,
-    briefing,
-    prep72h,
-    selectedHomeId,
-  });
-
   return {
     cards,
     selectedCard,
@@ -1218,30 +1236,17 @@ async function tryLoadInspectionReadiness() {
     tasks,
     briefing,
     prep72h,
+    endpoints,
   };
 }
 
 async function loadLegacyReadiness() {
-  const scope = getCurrentScope();
-  const id = getScopeEntityId();
+  const endpoints = getLegacyReadinessEndpoints();
 
-  if (!id) {
+  if (!endpoints) {
     renderNoContext();
     return;
   }
-
-  const endpoints =
-    scope === "home" || scope === "quality"
-      ? {
-          compliance: `/homes/${id}/compliance`,
-          documents: `/homes/${id}/documents`,
-          tasks: null,
-        }
-      : {
-          compliance: `/young-people/${id}/compliance`,
-          tasks: `/young-people/${id}/tasks`,
-          documents: `/young-people/${id}/documents`,
-        };
 
   const [complianceData, tasksData, documentsData] = await Promise.all([
     apiGet(endpoints.compliance).catch(() => ({ items: [] })),
@@ -1279,7 +1284,7 @@ async function loadLegacyReadiness() {
 
   const overdueItems = complianceItems.filter((item) =>
     ["overdue", "escalated", "missing", "review_due"].includes(
-      String(item.status || "").toLowerCase()
+      normaliseToken(item.status)
     )
   );
 
@@ -1311,8 +1316,8 @@ async function loadLegacyReadiness() {
   });
 }
 
-function bindInspectionReadinessEvents() {
-  if (!els.viewContent) return;
+function bindInspectionReadinessEvents(endpoints) {
+  if (!els.viewContent || !endpoints) return;
 
   els.viewContent
     .querySelectorAll("[data-readiness-home-card]")
@@ -1320,7 +1325,7 @@ function bindInspectionReadinessEvents() {
       button.addEventListener("click", async () => {
         const homeId = Number(button.dataset.homeId || 0);
         if (!homeId) return;
-        setReadinessSelectedHomeId(homeId);
+        state.readinessSelectedHomeId = homeId;
         await loadReadiness();
       });
     });
@@ -1328,21 +1333,21 @@ function bindInspectionReadinessEvents() {
   const refreshButton = els.viewContent.querySelector("[data-readiness-refresh='true']");
   if (refreshButton) {
     refreshButton.addEventListener("click", async () => {
-      const homeId = getCurrentReadinessHomeId();
-      if (!homeId) return;
-
       refreshButton.disabled = true;
       refreshButton.textContent = "Refreshing...";
-      setReadinessRefreshing(true);
-
       try {
-        await refreshInspectionCycle(homeId, {});
+        await apiPost(endpoints.refresh, {}, {
+          invalidatePrefixes: [
+            "/inspection/ui",
+            `/inspection/ui/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
+            `/inspection/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
+            "/homes/",
+          ],
+        });
         await loadReadiness();
       } catch (error) {
         console.error("Failed to refresh inspection cycle", error);
-        setReadinessError(error);
       } finally {
-        setReadinessRefreshing(false);
         refreshButton.disabled = false;
         refreshButton.textContent = "Refresh inspection cycle";
       }
@@ -1352,21 +1357,22 @@ function bindInspectionReadinessEvents() {
   const syncButton = els.viewContent.querySelector("[data-readiness-sync='true']");
   if (syncButton) {
     syncButton.addEventListener("click", async () => {
-      const homeId = getCurrentReadinessHomeId();
-      if (!homeId) return;
-
       syncButton.disabled = true;
       syncButton.textContent = "Syncing...";
-      setReadinessSyncing(true);
-
       try {
-        await syncInspectionTasks(homeId, {});
+        await apiPost(endpoints.syncTasks, {}, {
+          invalidatePrefixes: [
+            "/inspection/ui",
+            `/inspection/ui/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
+            `/inspection/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
+            "/homes/",
+            "/tasks",
+          ],
+        });
         await loadReadiness();
       } catch (error) {
         console.error("Failed to sync readiness tasks", error);
-        setReadinessError(error);
       } finally {
-        setReadinessSyncing(false);
         syncButton.disabled = false;
         syncButton.textContent = "Sync actions";
       }
@@ -1381,9 +1387,6 @@ export async function loadReadiness() {
     renderNoContext();
     return;
   }
-
-  setReadinessLoading(true);
-  setReadinessError(null);
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -1417,22 +1420,20 @@ export async function loadReadiness() {
       `;
 
       updateReadinessSummaryFromInspection(
-        inspectionData.header || inspectionData.selectedCard || {}
+        inspectionData.header || inspectionData.selectedCard || {},
+        inspectionData.actions || [],
+        inspectionData.tasks || []
       );
-      bindInspectionReadinessEvents();
-      setReadinessLoading(false);
+      bindInspectionReadinessEvents(inspectionData.endpoints);
       return;
     }
 
     await loadLegacyReadiness();
-    setReadinessLoading(false);
   } catch (error) {
     console.error("Failed to load readiness", error);
-    setReadinessError(error);
 
     try {
       await loadLegacyReadiness();
-      setReadinessLoading(false);
     } catch (legacyError) {
       els.viewContent.innerHTML = `
         <div class="empty-state">
@@ -1448,9 +1449,6 @@ export async function loadReadiness() {
         lastRecord: "No readiness data",
         openActions: "Check API routes",
       });
-
-      setReadinessLoading(false);
-      setReadinessError(legacyError || error);
     }
   }
 }
