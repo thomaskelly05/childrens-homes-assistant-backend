@@ -5,6 +5,7 @@ import {
   NAV_GROUPS_CONFIG,
   SCOPE_SECTIONS,
   SCOPE_DEFAULT_SECTION,
+  getAllowedScopesForRole,
 } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 
@@ -57,9 +58,12 @@ import { loadOnboarding } from "../features/onboarding.js";
 import { loadNotifications } from "../features/notifications.js";
 import { loadRota } from "../features/rota.js";
 
-const PLACEHOLDER_LOADER = async (sectionId = "") => {
+const PLACEHOLDER_LOADER = async (section = "") => {
   const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
-  await renderPlaceholderFeaturePage(sectionId);
+  await renderPlaceholderFeaturePage({
+    section,
+    scope: state.currentScope || "child",
+  });
 };
 
 const SECTION_LOADERS = {
@@ -79,10 +83,7 @@ const SECTION_LOADERS = {
   risk: () => PLACEHOLDER_LOADER("risk"),
   safeguarding: () => PLACEHOLDER_LOADER("safeguarding"),
   "missing-from-care": () => PLACEHOLDER_LOADER("missing-from-care"),
-
-  // Child readiness
   readiness: loadReadiness,
-
   reviews: () => PLACEHOLDER_LOADER("reviews"),
   reports: loadReports,
   transition: () => PLACEHOLDER_LOADER("transition"),
@@ -91,7 +92,6 @@ const SECTION_LOADERS = {
   communication: loadCommunication,
   manager: loadManager,
 
-  // Home scope
   "home-dashboard": loadHomeDashboard,
   operations: () => PLACEHOLDER_LOADER("operations"),
   team: loadTeam,
@@ -105,18 +105,14 @@ const SECTION_LOADERS = {
   maintenance: () => PLACEHOLDER_LOADER("maintenance"),
   notifications: loadNotifications,
   quality: loadQualityDashboard,
-
-  // Home / quality inspection readiness
-  "ofsted-readiness": loadReadiness,
-  "inspection-readiness": loadReadiness,
-
+  "ofsted-readiness": () => PLACEHOLDER_LOADER("ofsted-readiness"),
   policies: () => PLACEHOLDER_LOADER("policies"),
 
-  // Quality scope
   "provider-overview": () => PLACEHOLDER_LOADER("provider-overview"),
   "quality-audits": () => PLACEHOLDER_LOADER("quality-audits"),
   reg44: () => PLACEHOLDER_LOADER("reg44"),
   reg45: () => PLACEHOLDER_LOADER("reg45"),
+  "inspection-readiness": () => PLACEHOLDER_LOADER("inspection-readiness"),
 };
 
 const ICON_MAP = {
@@ -168,7 +164,6 @@ let workspaceMenusBound = false;
 let overlayDismissBound = false;
 let workspaceMenuLinksBound = false;
 let loadingSectionPromise = null;
-let lastLoadingSectionId = null;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -176,6 +171,14 @@ function getNavIcon(icon) {
 
 function getCurrentScope() {
   return state.currentScope || "child";
+}
+
+function getCurrentRole() {
+  return String(state.userRole || "staff").trim().toLowerCase();
+}
+
+function getAllowedScopes() {
+  return getAllowedScopesForRole(getCurrentRole());
 }
 
 function getDefaultSectionForScope(scope = getCurrentScope()) {
@@ -208,7 +211,7 @@ function isChildScope() {
 }
 
 function shouldShowDesktopSidebar() {
-  return getCurrentScope() !== "child";
+  return false;
 }
 
 function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
@@ -219,6 +222,20 @@ function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
 
 function isSectionAllowed(sectionId, scope = getCurrentScope()) {
   return getAllowedSectionIdsForScope(scope).has(sectionId);
+}
+
+function ensureValidScopeForRole() {
+  const currentScope = getCurrentScope();
+  const allowedScopes = getAllowedScopes();
+
+  if (!allowedScopes.includes(currentScope)) {
+    const fallbackScope =
+      allowedScopes[0] ||
+      (currentScope === "quality" ? "quality" : currentScope === "home" ? "home" : "child");
+
+    setCurrentScope(fallbackScope);
+    state.currentScope = fallbackScope;
+  }
 }
 
 function ensureValidCurrentSection() {
@@ -262,6 +279,7 @@ function renderNavItem(item, { compact = false } = {}) {
   const isActive = item.id === getCurrentSection();
   const label = getSectionLabel(item);
   const description = getSectionDescription(item);
+
   const meta = compact
     ? ""
     : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
@@ -288,9 +306,7 @@ function renderNavItem(item, { compact = false } = {}) {
 }
 
 function buildDesktopNavHtml() {
-  return getScopedNavSections()
-    .map((item) => renderNavItem(item))
-    .join("");
+  return getScopedNavSections().map((item) => renderNavItem(item)).join("");
 }
 
 function buildMobileDrawerNavHtml() {
@@ -368,6 +384,7 @@ function syncDesktopSidebarChrome() {
 }
 
 function renderNavigation() {
+  ensureValidScopeForRole();
   ensureValidCurrentSection();
 
   if (els.desktopNav) {
@@ -444,6 +461,7 @@ function markActiveNav(section) {
 
 function markActiveScopeButtons() {
   const scope = getCurrentScope();
+  const allowedScopes = getAllowedScopes();
 
   const pairs = [
     [els.scopeChildBtn, "child"],
@@ -453,11 +471,28 @@ function markActiveScopeButtons() {
 
   pairs.forEach(([button, value]) => {
     if (!button) return;
-    const isActive = scope === value;
+
+    const visible = allowedScopes.includes(value);
+    const isActive = visible && scope === value;
+
+    button.classList.toggle("hidden", !visible);
     button.classList.toggle("active", isActive);
+    button.setAttribute("aria-hidden", visible ? "false" : "true");
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
     button.setAttribute("aria-selected", isActive ? "true" : "false");
+
+    if (!visible) {
+      button.setAttribute("tabindex", "-1");
+    } else {
+      button.removeAttribute("tabindex");
+    }
   });
+
+  if (els.scopeSwitch) {
+    const showSwitch = allowedScopes.length > 1;
+    els.scopeSwitch.classList.toggle("hidden", !showSwitch);
+    els.scopeSwitch.setAttribute("aria-hidden", showSwitch ? "false" : "true");
+  }
 }
 
 function updateSectionState(section) {
@@ -570,8 +605,10 @@ function bindWorkspaceMenuLinks() {
 
 function closeAssistantOverlay() {
   state.assistantOpen = false;
+
   const assistantModal = document.getElementById("assistantModal");
   const assistantBackdrop = document.getElementById("assistantBackdrop");
+
   assistantModal?.classList.add("hidden");
   assistantBackdrop?.classList.add("hidden");
   assistantModal?.setAttribute("aria-hidden", "true");
@@ -593,8 +630,10 @@ function closeSuggestionsOverlay() {
 
 function closeRecordDrawerOverlay() {
   state.recordDrawerOpen = false;
+
   const recordDrawer = document.getElementById("recordDrawer");
   const recordDrawerBackdrop = document.getElementById("recordDrawerBackdrop");
+
   recordDrawer?.classList.add("hidden");
   recordDrawerBackdrop?.classList.add("hidden");
   recordDrawer?.setAttribute("aria-hidden", "true");
@@ -655,6 +694,7 @@ function bindOverlayDismiss() {
 
     const recordDrawer = document.getElementById("recordDrawer");
     const recordDrawerBackdrop = document.getElementById("recordDrawerBackdrop");
+
     if (event.target === recordDrawerBackdrop) {
       closeRecordDrawerOverlay();
     }
@@ -708,6 +748,10 @@ async function applyScopeChange(scope) {
       ? scope
       : "child";
 
+  if (!getAllowedScopes().includes(safeScope)) {
+    return;
+  }
+
   setCurrentScope(safeScope);
   ensureValidCurrentSection();
   paintNavigationChrome();
@@ -732,12 +776,14 @@ async function applyScopeChange(scope) {
 }
 
 export async function loadSection(section) {
+  ensureValidScopeForRole();
+
   const scope = getCurrentScope();
   const safeSection = isSectionAllowed(section, scope)
     ? section
     : getDefaultSectionForScope(scope);
 
-  if (loadingSectionPromise && safeSection === lastLoadingSectionId) {
+  if (loadingSectionPromise && safeSection === getCurrentSection()) {
     return loadingSectionPromise;
   }
 
@@ -749,8 +795,7 @@ export async function loadSection(section) {
     return;
   }
 
-  const loader =
-    SECTION_LOADERS[safeSection] || (() => PLACEHOLDER_LOADER(safeSection));
+  const loader = SECTION_LOADERS[safeSection] || (() => PLACEHOLDER_LOADER(safeSection));
 
   updateSectionState(safeSection);
   showWorkspaceScreen();
@@ -758,7 +803,6 @@ export async function loadSection(section) {
   clearStatus();
   resetWorkspaceSummaryStrip();
 
-  lastLoadingSectionId = safeSection;
   loadingSectionPromise = (async () => {
     try {
       await loader();
@@ -771,7 +815,6 @@ export async function loadSection(section) {
       resetWorkspaceSummaryStrip();
     } finally {
       loadingSectionPromise = null;
-      lastLoadingSectionId = null;
     }
   })();
 
@@ -831,9 +874,7 @@ function bindSelectorControls() {
       await loadYoungPersonSelector();
       clearStatus();
     } catch (error) {
-      showError(
-        error?.message || "Failed to refresh children and young people."
-      );
+      showError(error?.message || "Failed to refresh children and young people.");
     }
   });
 }
@@ -1024,12 +1065,15 @@ export function bindNavEvents() {
 }
 
 export function rerenderNavigationForScope() {
+  ensureValidScopeForRole();
   ensureValidCurrentSection();
   paintNavigationChrome();
   renderAssistantControllerPanels();
 }
 
 export async function initialiseShellNavigation() {
+  ensureValidScopeForRole();
+
   if (!state.currentSection) {
     setCurrentSection(getDefaultSectionForScope());
   }
