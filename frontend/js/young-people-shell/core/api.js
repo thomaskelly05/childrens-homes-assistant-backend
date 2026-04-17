@@ -738,6 +738,28 @@ export async function apiSend(url, method = "POST", body = null, options = {}) {
   return response;
 }
 
+/* ADDED FIX */
+export async function syncInspectionTasks(homeId, payload = {}) {
+  if (!homeId) {
+    throw new Error("A homeId is required to sync inspection tasks.");
+  }
+
+  return apiSend(
+    `/homes/${homeId}/inspection-tasks/sync`,
+    "POST",
+    payload,
+    {
+      invalidatePrefixes: [
+        `/homes/${homeId}/quality`,
+        `/homes/${homeId}/compliance`,
+        `/homes/${homeId}/tasks`,
+        `/homes/${homeId}/dashboard`,
+        `/homes/${homeId}/inspection-readiness`,
+      ],
+    }
+  );
+}
+
 export function unwrapCreateResponse(recordType, response) {
   if (!response || typeof response !== "object") return response;
 
