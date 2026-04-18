@@ -1,25 +1,20 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
 
-function getHomeId() {
-  return (
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null
-  );
-}
+/* -------------------------------- helpers -------------------------------- */
 
-function toArray(value, fallbacks = []) {
+const SAFE_EMPTY = Object.freeze({ items: [] });
+
+function toArray(value, fallback = []) {
   if (Array.isArray(value)) return value;
-
-  for (const fallback of fallbacks) {
-    if (Array.isArray(fallback)) return fallback;
-  }
-
+  if (Array.isArray(fallback)) return fallback;
   return [];
 }
 
@@ -28,16 +23,29 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+function toBool(value) {
+  return Boolean(value);
+}
+
 function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function formatDate(value) {
-  if (!value) return "No date";
+function lower(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
 
+function titleCase(value) {
+  return String(value ?? "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+    .trim();
+}
+
+function formatDate(value, fallback = "No date") {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -45,12 +53,10 @@ function formatDate(value) {
   });
 }
 
-function formatDateTime(value) {
-  if (!value) return "No date";
-
+function formatDateTime(value, fallback = "No date") {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -60,370 +66,398 @@ function formatDateTime(value) {
   });
 }
 
-function getStatusTone(status = "") {
-  const normalised = String(status || "").toLowerCase();
+function isOverdue(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  date.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return date.getTime() < today.getTime();
+}
+
+function badgeClass(value) {
+  const v = lower(value);
 
   if (
     [
       "critical",
-      "overdue",
       "high",
+      "urgent",
+      "error",
       "failed",
-      "danger",
-      "escalated",
-      "unread_critical",
-    ].includes(normalised)
-  ) {
-    return "danger";
-  }
-
-  if (
-    [
-      "warning",
-      "due_soon",
-      "pending",
-      "attention",
+      "overdue",
+      "open",
       "unread",
-      "action_required",
-    ].includes(normalised)
+      "danger",
+      "red",
+      "pending",
+    ].includes(v)
   ) {
-    return "warning";
+    return "badge badge-danger";
   }
 
   if (
     [
-      "read",
-      "sent",
-      "completed",
-      "resolved",
+      "medium",
+      "warning",
+      "amber",
+      "scheduled",
+      "queued",
+      "processing",
       "acknowledged",
-      "success",
-    ].includes(normalised)
+      "in_progress",
+      "in progress",
+      "due",
+    ].includes(v)
   ) {
-    return "success";
+    return "badge badge-warning";
   }
 
-  return "muted";
+  if (
+    [
+      "low",
+      "sent",
+      "resolved",
+      "closed",
+      "read",
+      "completed",
+      "dismissed",
+      "success",
+      "green",
+      "done",
+    ].includes(v)
+  ) {
+    return "badge badge-success";
+  }
+
+  return "badge";
 }
 
-function sortNewestFirst(items = [], keys = []) {
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.selectedHomeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
+  );
+}
+
+async function safeGet(path) {
+  try {
+    return (await apiGet(path)) || SAFE_EMPTY;
+  } catch {
+    return SAFE_EMPTY;
+  }
+}
+
+function pickItems(response, keys = []) {
+  for (const key of keys) {
+    if (Array.isArray(response?.[key])) return response[key];
+  }
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response)) return response;
+  return [];
+}
+
+function sortNewest(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    return new Date(bValue || 0).getTime() - new Date(aValue || 0).getTime();
   });
 }
 
-function sortSoonestFirst(items = [], keys = []) {
+function sortSoonest(items = [], key) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(aValue).getTime() - new Date(bValue).getTime();
+    const aTime = a?.[key] ? new Date(a[key]).getTime() : Number.POSITIVE_INFINITY;
+    const bTime = b?.[key] ? new Date(b[key]).getTime() : Number.POSITIVE_INFINITY;
+    return aTime - bTime;
   });
 }
 
-function normaliseSummary(data = {}) {
-  return data.summary || data.notifications_summary || data.dashboard || data || {};
+/* -------------------------------- mappers -------------------------------- */
+
+function mapNotification(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || null,
+    staff_id: record.staff_id || null,
+    user_id: record.user_id || null,
+    notification_type: record.notification_type || "",
+    severity: record.severity || "",
+    title: record.title || "Notification",
+    message: record.message || "",
+    source_table: record.source_table || "",
+    source_id: record.source_id || null,
+    due_date: record.due_date || null,
+    read_at: record.read_at || null,
+    dismissed_at: record.dismissed_at || null,
+    status: record.status || "",
+    action_url: record.action_url || "",
+    action_label: record.action_label || "",
+    due_at: record.due_at || null,
+    acknowledged_by_user_id: record.acknowledged_by_user_id || null,
+    acknowledged_at: record.acknowledged_at || null,
+    resolved_by_user_id: record.resolved_by_user_id || null,
+    resolved_at: record.resolved_at || null,
+    expires_at: record.expires_at || null,
+    is_read:
+      record.is_read !== undefined
+        ? toBool(record.is_read)
+        : Boolean(record.read_at),
+    summary: record.message || "Notification recorded.",
+    record_type: "notification",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseNotificationItems(data = {}) {
-  return toArray(data.items, [data.notifications, data.records]);
+function mapNotificationQueue(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    user_id: record.user_id || null,
+    notification_type: record.notification_type || "",
+    title: record.title || "Queued notification",
+    message: record.body || record.message || "",
+    channel: record.channel || "",
+    status: record.status || "",
+    related_table: record.related_table || "",
+    related_id: record.related_id || null,
+    scheduled_for: record.scheduled_for || null,
+    sent_at: record.sent_at || null,
+    read_at: record.read_at || null,
+    summary: record.body || record.message || "Queued notification.",
+    record_type: "notification_queue",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseTaskItems(data = {}) {
-  return toArray(data.items, [data.tasks, data.records]);
+function mapOperationalNotification(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || null,
+    staff_id: record.staff_id || null,
+    notification_type: record.notification_type || "",
+    title: record.title || "Operational notification",
+    message: record.message || "",
+    severity: record.severity || "",
+    status: record.status || "",
+    due_at: record.due_at || null,
+    acknowledged_at: record.acknowledged_at || null,
+    resolved_at: record.resolved_at || null,
+    created_by_user_id: record.created_by_user_id || null,
+    assigned_to_user_id: record.assigned_to_user_id || null,
+    summary: record.message || "Operational notification recorded.",
+    record_type: "operational_notification",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseOnboardingItems(data = {}) {
-  return toArray(data.items, [data.onboarding, data.records]);
+function mapHomeNotification(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || null,
+    staff_id: record.staff_id || null,
+    notification_type: record.notification_type || "",
+    severity: record.severity || "",
+    title: record.title || "Home notification",
+    message: record.message || "",
+    status: record.status || "",
+    action_url: record.action_url || "",
+    action_label: record.action_label || "",
+    due_at: record.due_at || null,
+    acknowledged_by_user_id: record.acknowledged_by_user_id || null,
+    acknowledged_at: record.acknowledged_at || null,
+    resolved_by_user_id: record.resolved_by_user_id || null,
+    resolved_at: record.resolved_at || null,
+    summary: record.message || "Home notification recorded.",
+    record_type: "home_notification",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseSupervisionItems(data = {}) {
-  return toArray(data.items, [data.supervisions, data.records]);
-}
+/* -------------------------------- render -------------------------------- */
 
-function normaliseTrainingItems(data = {}) {
-  return toArray(data.items, [data.training, data.records]);
-}
-
-function normaliseComplianceItems(data = {}) {
-  return toArray(data.items, [data.compliance, data.records]);
-}
-
-function buildTopStats({
-  notifications = [],
-  unread = [],
-  critical = [],
-  managerActions = [],
-  staffActions = [],
-  escalations = [],
-}) {
-  return [
-    {
-      label: "Total notifications",
-      value: notifications.length,
-      note: "All current messages and prompts",
-      tone: "muted",
-    },
-    {
-      label: "Unread",
-      value: unread.length,
-      note: "Still needing acknowledgement",
-      tone: unread.length ? "warning" : "success",
-    },
-    {
-      label: "Critical",
-      value: critical.length,
-      note: "Urgent items needing action",
-      tone: critical.length ? "danger" : "success",
-    },
-    {
-      label: "Manager actions",
-      value: managerActions.length,
-      note: "Items assigned to leadership",
-      tone: managerActions.length ? "warning" : "muted",
-    },
-    {
-      label: "Staff actions",
-      value: staffActions.length,
-      note: "Items assigned to workers",
-      tone: staffActions.length ? "warning" : "muted",
-    },
-    {
-      label: "Escalations",
-      value: escalations.length,
-      note: "Items already escalated",
-      tone: escalations.length ? "danger" : "success",
-    },
-  ];
-}
-
-function buildProgressCards({
-  notifications = [],
-  readItems = [],
-  critical = [],
-  escalations = [],
-}) {
-  const readPercent =
-    notifications.length > 0
-      ? Math.round((readItems.length / notifications.length) * 100)
-      : 0;
-
-  const criticalPercent =
-    notifications.length > 0
-      ? Math.round((critical.length / notifications.length) * 100)
-      : 0;
-
-  const escalationPercent =
-    notifications.length > 0
-      ? Math.round((escalations.length / notifications.length) * 100)
-      : 0;
-
-  return [
-    {
-      label: "Read and acknowledged",
-      value: `${readPercent}%`,
-      percent: readPercent,
-      tone:
-        readPercent >= 85 ? "success" : readPercent >= 60 ? "warning" : "danger",
-    },
-    {
-      label: "Critical pressure",
-      value: `${criticalPercent}%`,
-      percent: criticalPercent,
-      tone:
-        criticalPercent <= 10 ? "success" : criticalPercent <= 25 ? "warning" : "danger",
-    },
-    {
-      label: "Escalation rate",
-      value: `${escalationPercent}%`,
-      percent: escalationPercent,
-      tone:
-        escalationPercent <= 5 ? "success" : escalationPercent <= 15 ? "warning" : "danger",
-    },
-  ];
-}
-
-function buildPriorityItems({
-  critical = [],
-  escalations = [],
-  onboardingDriven = [],
-  supervisionDriven = [],
-  trainingDriven = [],
-}) {
-  const items = [];
-
-  critical.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.title || "Critical notification",
-      summary:
-        item.summary ||
-        item.message ||
-        "This issue needs urgent attention.",
-    });
-  });
-
-  escalations.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.title || "Escalated item",
-      summary:
-        item.summary ||
-        item.message ||
-        "This item has already escalated and requires leadership action.",
-    });
-  });
-
-  onboardingDriven.slice(0, 1).forEach((item) => {
-    items.push({
-      title: item.title || "Onboarding action",
-      summary:
-        item.summary ||
-        item.message ||
-        "A staff onboarding issue still needs completion.",
-    });
-  });
-
-  supervisionDriven.slice(0, 1).forEach((item) => {
-    items.push({
-      title: item.title || "Supervision reminder",
-      summary:
-        item.summary ||
-        item.message ||
-        "A supervision task still needs action.",
-    });
-  });
-
-  trainingDriven.slice(0, 1).forEach((item) => {
-    items.push({
-      title: item.title || "Training reminder",
-      summary:
-        item.summary ||
-        item.message ||
-        "Training action still needs completion.",
-    });
-  });
-
-  return items.slice(0, 6);
-}
-
-function renderStatCards(cards = []) {
+function renderEmpty(title, message) {
   return `
-    <div class="overview-stats-grid overview-stats-grid--six">
-      ${cards
-        .map(
-          (card) => `
-            <article class="overview-stat-card ${
-              card.tone === "danger"
-                ? "overview-stat-card--danger"
-                : card.tone === "warning"
-                ? "overview-stat-card--warning"
-                : card.tone === "success"
-                ? "overview-stat-card--success"
-                : ""
-            }">
-              <span class="overview-stat-label">${safeText(card.label)}</span>
-              <strong class="overview-stat-value">${safeText(card.value)}</strong>
-              <span class="overview-stat-note">${safeText(card.note)}</span>
-            </article>
-          `
-        )
-        .join("")}
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon">○</div>
+        <h3>${safeText(title)}</h3>
+        <p>${safeText(message)}</p>
+      </div>
     </div>
   `;
 }
 
-function renderProgressCards(cards = []) {
+function renderSection(title, content) {
   return `
-    <div class="analytics-progress-grid">
-      ${cards
-        .map(
-          (card) => `
-            <article class="analytics-progress-card">
-              <div class="analytics-progress-head">
-                <span class="analytics-progress-label">${safeText(card.label)}</span>
-                <strong class="analytics-progress-value">${safeText(card.value)}</strong>
-              </div>
-              <div class="analytics-progress-track">
-                <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
-                  style="width: ${safeText(card.percent || 0)}%;"
-                ></span>
-              </div>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
+    <section class="overview-panel-section">
+      <div class="overview-panel-section-head">
+        <h3>${safeText(title)}</h3>
+      </div>
+      ${content}
+    </section>
   `;
 }
 
-function renderRows(items = [], options = {}) {
-  const {
-    emptyMessage = "Nothing to show right now.",
-    titleKey = "title",
-    summaryKey = "summary",
-    metaBuilder = null,
-    statusKey = "status",
-    recordType = "",
-  } = options;
+function renderStatCard(label, value, hint = "") {
+  return `
+    <article class="overview-stat-card">
+      <span class="overview-stat-label">${safeText(label)}</span>
+      <strong>${safeText(value)}</strong>
+      ${hint ? `<div class="overview-stat-subtle">${safeText(hint)}</div>` : ""}
+    </article>
+  `;
+}
 
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">○</div>
-          <h3>Nothing to show</h3>
-          <p>${safeText(emptyMessage)}</p>
+function renderNotificationCard(item = {}) {
+  const status = item.status || (item.is_read ? "read" : "unread");
+  const severity = item.severity || "";
+  const dueLabel =
+    item.due_at || item.due_date || item.scheduled_for
+      ? formatDateTime(item.due_at || item.due_date || item.scheduled_for, "No date")
+      : "";
+
+  return `
+    <article
+      class="record-card"
+      data-open-record="true"
+      data-record-id="${safeText(item.id || "")}"
+      data-record-type="${safeText(item.record_type || "notification")}"
+      data-title="${safeText(item.title || "Notification")}"
+      role="button"
+      tabindex="0"
+    >
+      <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+        <div>
+          <div class="record-card-title">${safeText(item.title || "Notification")}</div>
+          <div class="record-card-meta">${safeText(formatDateTime(item.created_at, "No date"))}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+          ${severity ? `<span class="${badgeClass(severity)}">${safeText(titleCase(severity))}</span>` : ""}
+          ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
         </div>
       </div>
-    `;
+
+      <div class="record-card-body">
+        <div class="record-card-summary">${safeText(item.summary || "")}</div>
+
+        <div class="details-grid" style="margin-top:12px;">
+          ${
+            item.notification_type
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Type</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.notification_type))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.channel
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Channel</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.channel))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            dueLabel
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Due</div>
+                  <div class="details-grid-value ${isOverdue(item.due_at || item.due_date) ? "text-danger" : ""}">
+                    ${safeText(dueLabel)}
+                  </div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.source_table || item.related_table
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Source</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.source_table || item.related_table))}</div>
+                </div>
+              `
+              : ""
+          }
+        </div>
+
+        ${
+          item.action_label || item.action_url
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Action</div>
+                <div>${safeText(item.action_label || item.action_url)}</div>
+              </div>
+            `
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function renderCardList(items = [], emptyTitle, emptyMessage) {
+  if (!items.length) return renderEmpty(emptyTitle, emptyMessage);
+  return `<div class="record-card-list">${items.map(renderNotificationCard).join("")}</div>`;
+}
+
+function renderTimeline(items = []) {
+  if (!items.length) {
+    return renderEmpty(
+      "No recent notification activity",
+      "There is no notification activity to display yet."
+    );
   }
 
   return `
-    <div class="record-list">
+    <div class="timeline-list">
       ${items
         .map((item) => {
-          const title =
-            item?.[titleKey] ||
-            item?.recipient_name ||
-            item?.staff_member ||
-            item?.full_name ||
-            "Notification";
-
-          const summary =
-            item?.[summaryKey] ||
-            item?.message ||
-            item?.notes ||
-            item?.description ||
-            "No summary available.";
-
-          const meta = metaBuilder
-            ? metaBuilder(item)
-            : item?.updated_at || item?.created_at || "";
-
-          const status = item?.[statusKey] || "";
-          const tone = getStatusTone(status);
-          const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const status = item.status || (item.is_read ? "read" : "unread");
+          const severity = item.severity || "";
+          const activityDate =
+            item.sent_at ||
+            item.resolved_at ||
+            item.acknowledged_at ||
+            item.read_at ||
+            item.created_at;
 
           return `
-            <article
-              class="record-row"
-              data-open-record="true"
-              data-record-id="${safeText(rowId)}"
-              data-record-type="${safeText(recordType || item?.record_type || "")}"
-              data-title="${safeText(title)}"
-              tabindex="0"
-              role="button"
-            >
-              <div class="record-row-main">
-                <div class="record-row-title">${safeText(title)}</div>
-                <div class="record-row-summary">${safeText(summary)}</div>
-                <div class="record-row-meta">${safeText(meta)}</div>
-              </div>
-              <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(
-                  status || "Recorded"
-                )}</span>
+            <article class="timeline-item">
+              <div class="timeline-item-date">${safeText(formatDateTime(activityDate, "No date"))}</div>
+              <div class="timeline-item-body">
+                <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+                  <strong>${safeText(item.title || "Notification")}</strong>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    ${severity ? `<span class="${badgeClass(severity)}">${safeText(titleCase(severity))}</span>` : ""}
+                    ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+                  </div>
+                </div>
+                <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
               </div>
             </article>
           `;
@@ -433,634 +467,301 @@ function renderRows(items = [], options = {}) {
   `;
 }
 
-function renderPriorityList(items = []) {
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No urgent notification pressure is showing right now.</p>
-      </div>
-    `;
-  }
+function renderWorkspace(payload) {
+  const {
+    unreadNotifications,
+    overdueNotifications,
+    activeOperationalNotifications,
+    queuedNotifications,
+    resolvedNotifications,
+    homeNotifications,
+    timeline,
+  } = payload;
 
   return `
-    <div class="priority-list">
-      ${items
-        .map(
-          (item) => `
-            <article class="priority-item">
-              <strong>${safeText(item.title)}</strong>
-              <p>${safeText(item.summary)}</p>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderNotificationsHtml({
-  title = "Notifications and actions",
-  topStats = [],
-  progressCards = [],
-  priorityItems = [],
-  notifications = [],
-  managerActions = [],
-  staffActions = [],
-  escalations = [],
-  onboardingDriven = [],
-  supervisionDriven = [],
-  trainingDriven = [],
-  isFallback = false,
-}) {
-  return `
-    <section class="overview-panel manager-dashboard manager-dashboard--home">
+    <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
-          <div class="eyebrow">Notifications and actions</div>
-          <h2>${safeText(title)}</h2>
-          <p>A live action layer across reminders, escalations, onboarding prompts, supervision prompts and compliance follow-up.</p>
-          ${
-            isFallback
-              ? `<p class="overview-helper-text">Showing seeded preview data until live notification endpoints are available.</p>`
-              : ""
-          }
+          <div class="eyebrow">Notifications and alerts</div>
+          <h2>Operational alerts, queued messages, unread items and resolved activity</h2>
+          <p class="overview-panel-subtitle">
+            A live workspace for notification flow across home alerts, operational prompts and queued communication.
+          </p>
         </div>
       </div>
 
-      ${renderStatCards(topStats)}
-
-      <div class="overview-section-card">
-        <div class="overview-section-head">
-          <h3>Notification snapshot</h3>
-          <p>A quick visual read across acknowledgement, urgency and escalation.</p>
-        </div>
-        ${renderProgressCards(progressCards)}
+      <div class="overview-stats-grid">
+        ${renderStatCard("Unread items", unreadNotifications.length)}
+        ${renderStatCard("Overdue items", overdueNotifications.length)}
+        ${renderStatCard("Operational alerts", activeOperationalNotifications.length)}
+        ${renderStatCard("Queued messages", queuedNotifications.length)}
+        ${renderStatCard("Resolved items", resolvedNotifications.length)}
       </div>
 
       <div class="overview-grid">
-        <section class="overview-main">
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>All current notifications</h3>
-              <p>Messages, reminders and prompts currently live in the system.</p>
-            </div>
+        <div>
+          ${renderSection(
+            "Unread notifications",
+            renderCardList(
+              unreadNotifications,
+              "No unread notifications",
+              "There are no unread notifications right now."
+            )
+          )}
 
-            ${renderRows(notifications, {
-              emptyMessage: "No notifications found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "notification",
-              metaBuilder: (item) =>
-                [
-                  item.recipient_name || "",
-                  item.channel || "",
-                  item.created_at ? formatDateTime(item.created_at) : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
+          ${renderSection(
+            "Overdue and urgent items",
+            renderCardList(
+              overdueNotifications,
+              "Nothing overdue",
+              "There are no overdue or urgent notifications."
+            )
+          )}
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Manager actions</h3>
-              <p>Notifications and prompts assigned to managers or leaders.</p>
-            </div>
+          ${renderSection(
+            "Notification activity timeline",
+            renderTimeline(timeline)
+          )}
+        </div>
 
-            ${renderRows(managerActions, {
-              emptyMessage: "No manager actions found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "notification",
-              metaBuilder: (item) =>
-                [
-                  item.recipient_name || "",
-                  item.action_due_date ? `Due ${formatDate(item.action_due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
+        <aside>
+          ${renderSection(
+            "Operational notifications",
+            renderCardList(
+              activeOperationalNotifications,
+              "No operational alerts",
+              "There are no active operational notifications."
+            )
+          )}
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Staff actions</h3>
-              <p>Notifications and prompts sent directly to staff members.</p>
-            </div>
+          ${renderSection(
+            "Queued notifications",
+            renderCardList(
+              queuedNotifications,
+              "No queued notifications",
+              "There are no queued notifications waiting to send."
+            )
+          )}
 
-            ${renderRows(staffActions, {
-              emptyMessage: "No staff actions found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "notification",
-              metaBuilder: (item) =>
-                [
-                  item.recipient_name || "",
-                  item.action_due_date ? `Due ${formatDate(item.action_due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
-        </section>
+          ${renderSection(
+            "Home notifications",
+            renderCardList(
+              homeNotifications,
+              "No home notifications",
+              "There are no active home notifications."
+            )
+          )}
 
-        <aside class="overview-side">
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Needs attention</h3>
-              <p>The most urgent notification and escalation themes.</p>
-            </div>
-
-            ${renderPriorityList(priorityItems)}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Escalations</h3>
-              <p>Items that have already escalated and need leadership action.</p>
-            </div>
-
-            ${renderRows(escalations, {
-              emptyMessage: "No escalations found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "notification",
-              metaBuilder: (item) =>
-                [
-                  item.recipient_name || "",
-                  item.escalated_at ? `Escalated ${formatDateTime(item.escalated_at)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Onboarding prompts</h3>
-              <p>Reminders driven by onboarding, induction and probation.</p>
-            </div>
-
-            ${renderRows(onboardingDriven, {
-              emptyMessage: "No onboarding-driven notifications found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "notification",
-              metaBuilder: (item) =>
-                [
-                  item.recipient_name || "",
-                  item.created_at ? formatDateTime(item.created_at) : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Supervision and training prompts</h3>
-              <p>Reminders linked to practice oversight and workforce learning.</p>
-            </div>
-
-            ${renderRows([...supervisionDriven.slice(0, 3), ...trainingDriven.slice(0, 3)], {
-              emptyMessage: "No supervision or training prompts found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "notification",
-              metaBuilder: (item) =>
-                [
-                  item.recipient_name || "",
-                  item.action_due_date ? `Due ${formatDate(item.action_due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
+          ${renderSection(
+            "Recently resolved",
+            renderCardList(
+              resolvedNotifications,
+              "No recently resolved items",
+              "No notifications have been resolved recently."
+            )
+          )}
         </aside>
       </div>
     </section>
   `;
 }
 
-function buildFallbackNotificationData(homeId) {
-  const now = new Date();
-  const plusDays = (days) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    return d.toISOString();
-  };
-  const minusDays = (days) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - days);
-    return d.toISOString();
-  };
+/* -------------------------------- fetch -------------------------------- */
+
+async function fetchAll(homeId) {
+  const [
+    notificationsRes,
+    notificationsCentreRes,
+    notificationQueueRes,
+    operationalNotificationsRes,
+    homeNotificationsRes,
+  ] = await Promise.all([
+    safeGet(`/homes/${homeId}/notifications`),
+    safeGet(`/homes/${homeId}/notifications-centre`),
+    safeGet(`/homes/${homeId}/notification-queue`),
+    safeGet(`/homes/${homeId}/operational-notifications`),
+    safeGet(`/homes/${homeId}/home-notifications`),
+  ]);
 
   return {
-    summaryData: {
-      summary: {
-        title: "Notifications and actions",
-        home_name:
-          state.currentUser?.home_name ||
-          state.currentUser?.homeName ||
-          `Home ${homeId}`,
-      },
-    },
-    notificationData: {
-      items: [
-        {
-          id: "n-1",
-          title: "Probation review overdue",
-          recipient_name: "Sarah Ahmed",
-          channel: "in_app",
-          created_at: minusDays(1),
-          action_due_date: plusDays(1),
-          escalated_at: minusDays(0.5),
-          summary: "Ben Carter probation review is overdue and should be completed this week.",
-          status: "critical",
-          audience: "manager",
-          source_type: "onboarding",
-        },
-        {
-          id: "n-2",
-          title: "Upload induction evidence",
-          recipient_name: "Aimee Khan",
-          channel: "in_app",
-          created_at: minusDays(1),
-          action_due_date: plusDays(2),
-          summary: "Please upload final induction checklist and signed evidence.",
-          status: "unread",
-          audience: "staff",
-          source_type: "onboarding",
-        },
-        {
-          id: "n-3",
-          title: "Safeguarding refresher due soon",
-          recipient_name: "Lena Morris",
-          channel: "in_app",
-          created_at: minusDays(1),
-          action_due_date: plusDays(6),
-          summary: "Your safeguarding refresher is due this week.",
-          status: "due_soon",
-          audience: "staff",
-          source_type: "training",
-        },
-        {
-          id: "n-4",
-          title: "Supervision reminder",
-          recipient_name: "Sarah Ahmed",
-          channel: "in_app",
-          created_at: minusDays(2),
-          action_due_date: plusDays(3),
-          summary: "Aimee Khan induction supervision is due this week.",
-          status: "warning",
-          audience: "manager",
-          source_type: "supervision",
-        },
-        {
-          id: "n-5",
-          title: "Right to work evidence missing",
-          recipient_name: "Tom Kelly",
-          channel: "in_app",
-          created_at: minusDays(1),
-          action_due_date: plusDays(1),
-          escalated_at: minusDays(0.25),
-          summary: "A recruitment file still needs right to work evidence before completion.",
-          status: "escalated",
-          audience: "leadership",
-          source_type: "compliance",
-        },
-      ],
-    },
-    taskData: {
-      items: [
-        {
-          id: "t-1",
-          title: "Book probation review",
-          task: "Arrange and record Ben Carter probation review.",
-          staff_member: "Ben Carter",
-          assigned_role: "Manager",
-          due_date: plusDays(1),
-          completed: false,
-          status: "overdue",
-        },
-        {
-          id: "t-2",
-          title: "Upload induction evidence",
-          task: "Add signed induction paperwork and certificates.",
-          staff_member: "Aimee Khan",
-          assigned_role: "Staff",
-          due_date: plusDays(2),
-          completed: false,
-          status: "due_soon",
-        },
-      ],
-    },
-    onboardingData: {
-      items: [
-        {
-          id: "o-1",
-          staff_member: "Ben Carter",
-          summary: "Probation review overdue and PMVA refresher outstanding.",
-          status: "in_progress",
-        },
-        {
-          id: "o-2",
-          staff_member: "Aimee Khan",
-          summary: "Final induction sign-off still missing.",
-          status: "due_soon",
-        },
-      ],
-    },
-    supervisionData: {
-      items: [
-        {
-          id: "s-1",
-          staff_member: "Ben Carter",
-          summary: "Probation supervision overdue.",
-          next_due_date: minusDays(5),
-          status: "overdue",
-        },
-        {
-          id: "s-2",
-          staff_member: "Aimee Khan",
-          summary: "Initial supervision due this week.",
-          next_due_date: plusDays(3),
-          status: "due_soon",
-        },
-      ],
-    },
-    trainingData: {
-      items: [
-        {
-          id: "tr-1",
-          staff_member: "Lena Morris",
-          summary: "Safeguarding refresher due this week.",
-          expiry_date: plusDays(6),
-          status: "due_soon",
-        },
-      ],
-    },
-    complianceData: {
-      items: [
-        {
-          id: "c-1",
-          staff_member: "Aimee Khan",
-          summary: "Right to work evidence missing from file.",
-          review_date: plusDays(1),
-          status: "missing",
-        },
-      ],
-    },
+    notifications: [
+      ...pickItems(notificationsRes, ["notifications", "items"]).map(mapNotification),
+      ...pickItems(notificationsCentreRes, ["notifications_centre", "items"]).map(mapNotification),
+    ],
+    notificationQueue: pickItems(
+      notificationQueueRes,
+      ["notification_queue", "items"]
+    ).map(mapNotificationQueue),
+    operationalNotifications: pickItems(
+      operationalNotificationsRes,
+      ["operational_notifications", "items"]
+    ).map(mapOperationalNotification),
+    homeNotifications: pickItems(
+      homeNotificationsRes,
+      ["home_notifications", "items"]
+    ).map(mapHomeNotification),
   };
 }
 
-async function fetchNotificationsDataset(homeId) {
-  const requests = [
-    apiGet(`/homes/${homeId}/notifications`),
-    apiGet(`/homes/${homeId}/staff-tasks`),
-    apiGet(`/homes/${homeId}/onboarding`),
-    apiGet(`/homes/${homeId}/supervisions`),
-    apiGet(`/homes/${homeId}/training`),
-    apiGet(`/homes/${homeId}/compliance`),
+/* ------------------------------- selectors ------------------------------- */
+
+function buildUnreadNotifications(data) {
+  return sortNewest(
+    data.notifications.filter((item) => {
+      const status = lower(item.status);
+      return !item.is_read && !["read", "resolved", "dismissed", "closed"].includes(status);
+    }),
+    ["due_at", "due_date", "created_at", "updated_at"]
+  ).slice(0, 12);
+}
+
+function buildOverdueNotifications(data) {
+  const combined = [
+    ...data.notifications,
+    ...data.operationalNotifications,
+    ...data.homeNotifications,
   ];
 
-  const results = await Promise.allSettled(requests);
-  const hasLiveSuccess = results.some((result) => result.status === "fulfilled");
-
-  if (!hasLiveSuccess) {
-    return {
-      ...buildFallbackNotificationData(homeId),
-      isFallback: true,
-    };
-  }
-
-  return {
-    summaryData: {},
-    notificationData: results[0].status === "fulfilled" ? results[0].value : { items: [] },
-    taskData: results[1].status === "fulfilled" ? results[1].value : { items: [] },
-    onboardingData: results[2].status === "fulfilled" ? results[2].value : { items: [] },
-    supervisionData: results[3].status === "fulfilled" ? results[3].value : { items: [] },
-    trainingData: results[4].status === "fulfilled" ? results[4].value : { items: [] },
-    complianceData: results[5].status === "fulfilled" ? results[5].value : { items: [] },
-    isFallback: false,
-  };
+  return sortSoonest(
+    combined.filter((item) => {
+      const status = lower(item.status);
+      const overdue = isOverdue(item.due_at || item.due_date);
+      const urgent = ["critical", "high", "urgent"].includes(lower(item.severity));
+      return !["resolved", "closed", "dismissed", "completed"].includes(status) && (overdue || urgent);
+    }),
+    "due_at"
+  ).slice(0, 12);
 }
 
-function renderNoHomeContext() {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">✉</div>
-          <h3>No home context available</h3>
-          <p>A home ID is needed before notifications can load.</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "No notification context",
-    nextEvent: "No due item loaded",
-    lastRecord: "No notification data",
-    openActions: "No actions loaded",
-  });
+function buildActiveOperationalNotifications(data) {
+  return sortNewest(
+    data.operationalNotifications.filter((item) => {
+      const status = lower(item.status);
+      return !["resolved", "closed", "dismissed"].includes(status);
+    }),
+    ["due_at", "created_at", "updated_at"]
+  ).slice(0, 10);
 }
 
-function renderLoadingState() {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="loading-state">
-        <div>
-          <div class="spinner" aria-hidden="true"></div>
-          <p>Loading notifications…</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "Loading notifications",
-    nextEvent: "Checking due items",
-    lastRecord: "Loading latest alert",
-    openActions: "Loading actions",
-  });
+function buildQueuedNotifications(data) {
+  return sortSoonest(
+    data.notificationQueue.filter((item) => {
+      const status = lower(item.status);
+      return !["sent", "cancelled", "failed", "read"].includes(status);
+    }),
+    "scheduled_for"
+  ).slice(0, 10);
 }
 
-function renderErrorState(message) {
-  if (!els.viewContent) return;
+function buildResolvedNotifications(data) {
+  const combined = [
+    ...data.notifications,
+    ...data.operationalNotifications,
+    ...data.homeNotifications,
+  ];
 
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">!</div>
-          <h3>Failed to load notifications</h3>
-          <p>${safeText(message || "The notifications view could not be loaded.")}</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "Notifications unavailable",
-    nextEvent: "No due item loaded",
-    lastRecord: "No notification loaded",
-    openActions: "No actions loaded",
-  });
+  return sortNewest(
+    combined.filter((item) => {
+      const status = lower(item.status);
+      return ["resolved", "dismissed", "closed", "read"].includes(status) || item.resolved_at || item.read_at;
+    }),
+    ["resolved_at", "read_at", "updated_at", "created_at"]
+  ).slice(0, 10);
 }
 
-export async function loadNotifications() {
+function buildHomeNotifications(data) {
+  return sortNewest(
+    data.homeNotifications.filter((item) => {
+      const status = lower(item.status);
+      return !["resolved", "dismissed", "closed"].includes(status);
+    }),
+    ["due_at", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildTimeline(data) {
+  return sortNewest(
+    [
+      ...data.notifications,
+      ...data.notificationQueue,
+      ...data.operationalNotifications,
+      ...data.homeNotifications,
+    ],
+    ["sent_at", "resolved_at", "acknowledged_at", "read_at", "scheduled_for", "created_at", "updated_at"]
+  ).slice(0, 25);
+}
+
+/* -------------------------------- public -------------------------------- */
+
+export async function loadCurrentView() {
   if (!els.viewContent) return;
 
   const homeId = getHomeId();
 
   if (!homeId) {
-    renderNoHomeContext();
+    els.viewContent.innerHTML = renderEmpty(
+      "No home selected",
+      "Select a home to view notifications and operational alerts."
+    );
     return;
   }
 
-  renderLoadingState();
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+    </div>
+  `;
 
   try {
-    const {
-      summaryData,
-      notificationData,
-      taskData,
-      onboardingData,
-      supervisionData,
-      trainingData,
-      complianceData,
-      isFallback,
-    } = await fetchNotificationsDataset(homeId);
+    const data = await fetchAll(homeId);
 
-    const summary = normaliseSummary(summaryData);
+    const unreadNotifications = buildUnreadNotifications(data);
+    const overdueNotifications = buildOverdueNotifications(data);
+    const activeOperationalNotifications = buildActiveOperationalNotifications(data);
+    const queuedNotifications = buildQueuedNotifications(data);
+    const resolvedNotifications = buildResolvedNotifications(data);
+    const homeNotifications = buildHomeNotifications(data);
+    const timeline = buildTimeline(data);
 
-    const notifications = sortNewestFirst(normaliseNotificationItems(notificationData), [
-      "created_at",
-      "updated_at",
-    ]).slice(0, 12);
-
-    const tasks = sortSoonestFirst(normaliseTaskItems(taskData), [
-      "due_date",
-      "updated_at",
-      "created_at",
-    ]);
-
-    const onboarding = normaliseOnboardingItems(onboardingData);
-    const supervisions = normaliseSupervisionItems(supervisionData);
-    const training = normaliseTrainingItems(trainingData);
-    const compliance = normaliseComplianceItems(complianceData);
-
-    const unread = notifications.filter((item) =>
-      ["unread", "unread_critical", "pending", "action_required"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const critical = notifications.filter((item) =>
-      ["critical", "overdue", "escalated", "unread_critical"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const managerActions = notifications.filter((item) =>
-      ["manager", "leadership"].includes(String(item.audience || "").toLowerCase())
-    );
-
-    const staffActions = notifications.filter((item) =>
-      String(item.audience || "").toLowerCase() === "staff"
-    );
-
-    const escalations = notifications.filter((item) =>
-      ["escalated"].includes(String(item.status || "").toLowerCase()) || item.escalated_at
-    );
-
-    const readItems = notifications.filter((item) =>
-      ["read", "acknowledged", "resolved", "completed"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    );
-
-    const onboardingDriven = notifications.filter(
-      (item) => String(item.source_type || "").toLowerCase() === "onboarding"
-    );
-
-    const supervisionDriven = notifications.filter(
-      (item) => String(item.source_type || "").toLowerCase() === "supervision"
-    );
-
-    const trainingDriven = notifications.filter(
-      (item) => String(item.source_type || "").toLowerCase() === "training"
-    );
-
-    const topStats = buildTopStats({
-      notifications,
-      unread,
-      critical,
-      managerActions,
-      staffActions,
-      escalations,
+    els.viewContent.innerHTML = renderWorkspace({
+      unreadNotifications,
+      overdueNotifications,
+      activeOperationalNotifications,
+      queuedNotifications,
+      resolvedNotifications,
+      homeNotifications,
+      timeline,
     });
 
-    const progressCards = buildProgressCards({
-      notifications,
-      readItems,
-      critical,
-      escalations,
-    });
-
-    const priorityItems = buildPriorityItems({
-      critical,
-      escalations,
-      onboardingDriven,
-      supervisionDriven,
-      trainingDriven,
-    });
-
-    const title =
-      summary.title ||
-      state.currentUser?.home_name ||
-      state.currentUser?.homeName ||
-      `Home ${homeId} notifications`;
-
-    els.viewContent.innerHTML = renderNotificationsHtml({
-      title,
-      topStats,
-      progressCards,
-      priorityItems,
-      notifications,
-      managerActions: managerActions.slice(0, 8),
-      staffActions: staffActions.slice(0, 8),
-      escalations: escalations.slice(0, 6),
-      onboardingDriven: onboardingDriven.slice(0, 6),
-      supervisionDriven: supervisionDriven.slice(0, 6),
-      trainingDriven: trainingDriven.slice(0, 6),
-      isFallback,
-    });
-
-    const nextTask = tasks.find((item) => !item.completed);
-    const latestNotification = notifications[0];
+    const nextQueued = queuedNotifications[0] || null;
+    const topUrgent = overdueNotifications[0] || null;
+    const latestActivity = timeline[0] || null;
 
     updateWorkspaceSummaryStrip({
-      today: isFallback
-        ? `${notifications.length} live notifications • preview mode`
-        : `${notifications.length} live notifications • ${unread.length} unread`,
-      nextEvent: nextTask?.due_date
-        ? `Action due ${formatDate(nextTask.due_date)}`
-        : "No immediate action due",
-      lastRecord: latestNotification?.created_at
-        ? `Latest alert ${formatDateTime(latestNotification.created_at)}`
-        : isFallback
-        ? "Preview notification data loaded"
-        : "No recent alert loaded",
-      openActions: `${managerActions.length} manager • ${staffActions.length} staff`,
+      today: `${unreadNotifications.length} unread notifications`,
+      nextEvent: nextQueued?.scheduled_for
+        ? formatDateTime(nextQueued.scheduled_for)
+        : "No queued sends",
+      lastRecord: latestActivity
+        ? formatDateTime(
+            latestActivity.sent_at ||
+              latestActivity.resolved_at ||
+              latestActivity.read_at ||
+              latestActivity.created_at
+          )
+        : "None",
+      openActions: topUrgent
+        ? `${safeText(topUrgent.title)}`
+        : `${activeOperationalNotifications.length} operational alerts`,
     });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
-    renderErrorState(error?.message || "The notifications view could not be loaded.");
+    console.error(error);
+    els.viewContent.innerHTML = renderEmpty(
+      "Unable to load notifications",
+      "Something went wrong while loading notifications and alerts."
+    );
   }
 }
