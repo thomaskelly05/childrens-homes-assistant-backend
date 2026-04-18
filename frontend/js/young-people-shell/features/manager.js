@@ -12,6 +12,8 @@ import {
 } from "../core/adapters.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
+/* -------------------------------- helpers -------------------------------- */
+
 function getCurrentScope() {
   return state.currentScope || "child";
 }
@@ -63,11 +65,26 @@ function getScopeTitle() {
   );
 }
 
+function toText(value, fallback = "") {
+  return escapeHtml(String(value ?? fallback ?? ""));
+}
+
+function toNumber(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function toTime(value) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
+    return toTime(bValue) - toTime(aValue);
   });
 }
 
@@ -75,12 +92,16 @@ function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(aValue).getTime() - new Date(bValue).getTime();
+    return toTime(aValue) - toTime(bValue);
   });
 }
 
-function toText(value, fallback = "") {
-  return escapeHtml(String(value ?? fallback ?? ""));
+function normaliseToken(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
 }
 
 function formatDateValue(value) {
@@ -112,10 +133,166 @@ function formatDateTimeValue(value) {
 function renderEmptyState(message = "No information available.") {
   return `
     <div class="empty-state">
-      <p>${toText(message)}</p>
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>No oversight data</h3>
+        <p>${toText(message)}</p>
+      </div>
     </div>
   `;
 }
+
+function dedupeBy(items = [], getKey) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = getKey(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function hasData(items = []) {
+  return Array.isArray(items) && items.length > 0;
+}
+
+/* ------------------------------ fallback data ----------------------------- */
+
+function buildFallbackManagerData(homeId) {
+  const now = new Date();
+  const plusDays = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    return d.toISOString();
+  };
+  const minusDays = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    return d.toISOString();
+  };
+
+  return {
+    incidents: [
+      mapIncident({
+        id: "incident-1",
+        title: "Missing from care episode",
+        incident_type: "Missing from care",
+        severity: "high",
+        workflow_status: "submitted",
+        incident_datetime: minusDays(2),
+        created_at: minusDays(2),
+        summary: "Missing episode recorded and awaiting manager review.",
+      }),
+      mapIncident({
+        id: "incident-2",
+        title: "Physical intervention",
+        incident_type: "Physical intervention",
+        severity: "critical",
+        workflow_status: "pending_review",
+        incident_datetime: minusDays(1),
+        created_at: minusDays(1),
+        summary: "Critical incident logged and needs management oversight.",
+      }),
+    ],
+    risks: [
+      mapRiskAssessment({
+        id: "risk-1",
+        title: "Community risk review",
+        workflow_status: "submitted",
+        review_date: plusDays(3),
+        created_at: minusDays(3),
+        summary: "Risk assessment updated and awaiting manager sign-off.",
+      }),
+      mapRiskAssessment({
+        id: "risk-2",
+        title: "Bedroom safety risk",
+        workflow_status: "active",
+        review_date: plusDays(7),
+        created_at: minusDays(6),
+        summary: "Current risk assessment due for routine review.",
+      }),
+    ],
+    complianceItems: [
+      mapComplianceItem({
+        id: "comp-1",
+        title: "Medication audit follow-up",
+        status: "overdue",
+        due_date: minusDays(2),
+        created_at: minusDays(5),
+        severity: "high",
+      }),
+      mapComplianceItem({
+        id: "comp-2",
+        title: "Care plan signature check",
+        status: "review_due",
+        due_date: plusDays(2),
+        created_at: minusDays(4),
+        severity: "medium",
+      }),
+    ],
+    tasks: [
+      mapTask({
+        id: "task-1",
+        title: "Review missing from care episode",
+        task: "Manager review needed for missing from care incident.",
+        assigned_role: "Manager",
+        due_date: plusDays(1),
+        completed: false,
+        created_at: minusDays(1),
+      }),
+      mapTask({
+        id: "task-2",
+        title: "Check medication audit actions",
+        task: "Confirm all audit actions are complete.",
+        assigned_role: "Deputy manager",
+        due_date: plusDays(3),
+        completed: false,
+        created_at: minusDays(1),
+      }),
+    ],
+    communications: [
+      typeof mapCommunicationRecord === "function"
+        ? mapCommunicationRecord({
+            id: "comm-1",
+            title: "Local authority update",
+            summary: "Update shared regarding current missing from care concerns.",
+            contact_datetime: minusDays(1),
+            status: "sent",
+          })
+        : {
+            id: "comm-1",
+            record_type: "communication",
+            title: "Local authority update",
+            summary: "Update shared regarding current missing from care concerns.",
+            contact_datetime: minusDays(1),
+            status: "sent",
+          },
+    ],
+    documents: [
+      typeof mapStatutoryDocument === "function"
+        ? mapStatutoryDocument({
+            id: "doc-1",
+            title: "Statement of Purpose",
+            document_type: "Statutory",
+            status: "review_due",
+            review_date: plusDays(5),
+            created_at: minusDays(10),
+          })
+        : {
+            id: "doc-1",
+            record_type: "document",
+            title: "Statement of Purpose",
+            document_type: "Statutory",
+            status: "review_due",
+            review_date: plusDays(5),
+            created_at: minusDays(10),
+          },
+    ],
+    isFallback: true,
+  };
+}
+
+/* --------------------------- manager action rows -------------------------- */
 
 function buildManagerActionRowsFromData({
   complianceItems = [],
@@ -128,7 +305,7 @@ function buildManagerActionRowsFromData({
   complianceItems
     .filter((item) =>
       ["overdue", "escalated", "review_due", "missing", "due_soon", "expiring"].includes(
-        String(item.status || "").toLowerCase()
+        normaliseToken(item.status)
       )
     )
     .slice(0, 6)
@@ -173,7 +350,7 @@ function buildManagerActionRowsFromData({
 
   incidents
     .filter((item) =>
-      ["high", "critical"].includes(String(item.severity || "").toLowerCase())
+      ["high", "critical"].includes(normaliseToken(item.severity))
     )
     .slice(0, 4)
     .forEach((item) => {
@@ -193,6 +370,7 @@ function buildManagerActionRowsFromData({
         action_at: item.occurred_at || item.incident_datetime || item.created_at || null,
         created_at: item.created_at || null,
         status: "needs_review",
+        severity: item.severity || "",
       });
     });
 
@@ -216,8 +394,13 @@ function buildManagerActionRowsFromData({
       });
     });
 
-  return sortNewestFirst(rows, ["action_at", "created_at"]).slice(0, 12);
+  return sortNewestFirst(
+    dedupeBy(rows, (item) => `${item.record_type}:${item.id}`),
+    ["action_at", "created_at"]
+  ).slice(0, 12);
 }
+
+/* ------------------------------ row shaping ------------------------------- */
 
 function buildReviewRecordRows(items = []) {
   return items.map((item) => ({
@@ -276,8 +459,8 @@ function getRowDate(item = {}) {
 }
 
 function getRowPill(item = {}) {
-  const status = String(item.status || item.workflow_status || "").toLowerCase();
-  const severity = String(item.severity || "").toLowerCase();
+  const status = normaliseToken(item.status || item.workflow_status || "");
+  const severity = normaliseToken(item.severity || "");
 
   if (
     ["high", "critical"].includes(severity) ||
@@ -290,12 +473,14 @@ function getRowPill(item = {}) {
     return { label: "Awaiting review", tone: "warning" };
   }
 
-  if (["approved", "active", "completed", "open", "recorded"].includes(status)) {
+  if (["approved", "active", "completed", "open", "recorded", "current"].includes(status)) {
     return { label: status.replaceAll("_", " "), tone: "muted" };
   }
 
   return { label: status ? status.replaceAll("_", " ") : "Recorded", tone: "muted" };
 }
+
+/* -------------------------------- render --------------------------------- */
 
 function renderRecordRows(items = [], emptyMessage = "No records found.") {
   if (!items.length) {
@@ -347,6 +532,7 @@ function renderManagerHtml({
   managerActions = [],
   communications = [],
   documents = [],
+  isFallback = false,
 }) {
   const scope = getCurrentScope();
   const overview = buildOverviewCards({
@@ -387,6 +573,11 @@ function renderManagerHtml({
           <div class="eyebrow">Oversight</div>
           <h2>${toText(title)} • ${toText(getScopeTitle())}</h2>
           <p>${toText(subtitle)}</p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview oversight data until live routes are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -518,6 +709,8 @@ function renderManagerHtml({
   `;
 }
 
+/* ------------------------------- endpoints -------------------------------- */
+
 function getManagerEndpoints() {
   const scope = getCurrentScope();
   const id = getScopeEntityId();
@@ -526,10 +719,10 @@ function getManagerEndpoints() {
 
   if (scope === "home" || scope === "quality") {
     return {
-      incidents: null,
-      risks: null,
+      incidents: `/homes/${id}/incidents`,
+      risks: `/homes/${id}/risks`,
       compliance: `/homes/${id}/compliance`,
-      tasks: null,
+      tasks: `/homes/${id}/tasks`,
       communications: `/homes/${id}/communications`,
       documents: `/homes/${id}/documents`,
     };
@@ -545,6 +738,8 @@ function getManagerEndpoints() {
   };
 }
 
+/* -------------------------------- states --------------------------------- */
+
 function renderNoContext() {
   if (!els.viewContent) return;
 
@@ -554,9 +749,9 @@ function renderNoContext() {
       : "A home context is needed before leadership and review can load.";
 
   els.viewContent.innerHTML = `
-    <div class="empty-state">
-      <p>${toText(message)}</p>
-    </div>
+    <section class="overview-panel">
+      ${renderEmptyState(message)}
+    </section>
   `;
 
   updateWorkspaceSummaryStrip({
@@ -565,6 +760,49 @@ function renderNoContext() {
     lastRecord: "No oversight data",
     openActions: "No actions loaded",
   });
+}
+
+function renderLoadingState() {
+  if (!els.viewContent) return;
+
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div>
+        <div class="spinner"></div>
+        <p>Loading manager review...</p>
+      </div>
+    </div>
+  `;
+
+  updateWorkspaceSummaryStrip({
+    today: "Loading oversight view",
+    nextEvent: "Checking reviews",
+    lastRecord: "Loading oversight records",
+    openActions: "Loading actions",
+  });
+}
+
+function renderErrorState(message) {
+  if (!els.viewContent) return;
+
+  els.viewContent.innerHTML = `
+    <section class="overview-panel">
+      ${renderEmptyState(message || "Failed to load manager review.")}
+    </section>
+  `;
+
+  updateWorkspaceSummaryStrip({
+    today: "Oversight unavailable",
+    nextEvent: "Unable to load",
+    lastRecord: "No oversight data",
+    openActions: "Check API routes",
+  });
+}
+
+/* -------------------------------- public --------------------------------- */
+
+export async function loadCurrentView() {
+  return loadManager();
 }
 
 export async function loadManager() {
@@ -576,14 +814,7 @@ export async function loadManager() {
     return;
   }
 
-  els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div>
-        <div class="spinner"></div>
-        <p>Loading manager review...</p>
-      </div>
-    </div>
-  `;
+  renderLoadingState();
 
   try {
     const [
@@ -600,81 +831,126 @@ export async function loadManager() {
       endpoints.risks
         ? apiGet(endpoints.risks).catch(() => ({ items: [] }))
         : Promise.resolve({ items: [] }),
-      apiGet(endpoints.compliance).catch(() => ({ items: [] })),
+      endpoints.compliance
+        ? apiGet(endpoints.compliance).catch(() => ({ items: [] }))
+        : Promise.resolve({ items: [] }),
       endpoints.tasks
         ? apiGet(endpoints.tasks).catch(() => ({ items: [] }))
         : Promise.resolve({ items: [] }),
       endpoints.communications
         ? apiGet(endpoints.communications).catch(() => ({ items: [] }))
         : Promise.resolve({ items: [] }),
-      apiGet(endpoints.documents).catch(() => ({ items: [] })),
+      endpoints.documents
+        ? apiGet(endpoints.documents).catch(() => ({ items: [] }))
+        : Promise.resolve({ items: [] }),
     ]);
 
-    const incidents = sortNewestFirst(
-      (incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident),
+    let incidents = sortNewestFirst(
+      (incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(
+        mapIncident
+      ),
       ["occurred_at", "incident_datetime", "created_at"]
     );
 
-    const risks = sortNewestFirst(
-      (risksData.items || risksData.records || risksData.risk_assessments || risksData.risks || []).map(
-        mapRiskAssessment
-      ),
+    let risks = sortNewestFirst(
+      (risksData.items ||
+        risksData.records ||
+        risksData.risk_assessments ||
+        risksData.risks ||
+        []).map(mapRiskAssessment),
       ["review_date", "updated_at", "created_at"]
     );
 
-    const complianceItems = sortSoonestFirst(
-      (complianceData.items || complianceData.records || complianceData.compliance_items || []).map(
-        mapComplianceItem
-      ),
+    let complianceItems = sortSoonestFirst(
+      (complianceData.items ||
+        complianceData.records ||
+        complianceData.compliance_items ||
+        []).map(mapComplianceItem),
       ["due_date", "created_at"]
     );
 
-    const tasks = sortSoonestFirst(
+    let tasks = sortSoonestFirst(
       (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
       ["due_date", "created_at"]
     );
 
-    const communications = sortNewestFirst(
+    let communications = sortNewestFirst(
       (
         communicationsData.items ||
         communicationsData.records ||
         communicationsData.communications ||
         []
-      ).map((item) => (typeof mapCommunicationRecord === "function" ? mapCommunicationRecord(item) : item)),
+      ).map((item) =>
+        typeof mapCommunicationRecord === "function" ? mapCommunicationRecord(item) : item
+      ),
       ["contact_datetime", "created_at", "updated_at"]
     ).slice(0, 8);
 
-    const documents = sortNewestFirst(
+    let documents = sortNewestFirst(
       (
         documentsData.items ||
         documentsData.records ||
         documentsData.documents ||
         documentsData.statutory_documents ||
         []
-      ).map((item) => (typeof mapStatutoryDocument === "function" ? mapStatutoryDocument(item) : item)),
+      ).map((item) =>
+        typeof mapStatutoryDocument === "function" ? mapStatutoryDocument(item) : item
+      ),
       ["review_date", "expiry_date", "created_at", "updated_at"]
     ).slice(0, 8);
 
-    const submittedRecords = [
-      ...incidents.filter((item) =>
-        ["submitted", "pending_review", "review"].includes(String(item.workflow_status || "").toLowerCase())
+    let isFallback = false;
+
+    if (
+      !hasData(incidents) &&
+      !hasData(risks) &&
+      !hasData(complianceItems) &&
+      !hasData(tasks) &&
+      !hasData(communications) &&
+      !hasData(documents)
+    ) {
+      const fallback = buildFallbackManagerData(getHomeId());
+      incidents = fallback.incidents;
+      risks = fallback.risks;
+      complianceItems = fallback.complianceItems;
+      tasks = fallback.tasks;
+      communications = fallback.communications;
+      documents = fallback.documents;
+      isFallback = true;
+    }
+
+    const submittedRecords = sortNewestFirst(
+      dedupeBy(
+        [
+          ...incidents.filter((item) =>
+            ["submitted", "pending_review", "review"].includes(
+              normaliseToken(item.workflow_status)
+            )
+          ),
+          ...risks.filter((item) =>
+            ["submitted", "pending_review", "review"].includes(
+              normaliseToken(item.workflow_status)
+            )
+          ),
+          ...complianceItems.filter((item) =>
+            ["submitted", "pending_review", "review"].includes(
+              normaliseToken(item.workflow_status || item.status)
+            )
+          ),
+        ],
+        (item) => `${item.record_type || "record"}:${item.id}`
       ),
-      ...risks.filter((item) =>
-        ["submitted", "pending_review", "review"].includes(String(item.workflow_status || "").toLowerCase())
-      ),
-      ...complianceItems.filter((item) =>
-        ["submitted", "pending_review", "review"].includes(String(item.workflow_status || item.status || "").toLowerCase())
-      ),
-    ]
-      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-      .slice(0, 12);
+      ["created_at", "updated_at", "occurred_at", "review_date"]
+    ).slice(0, 12);
 
     const highRiskIncidents = incidents.filter((item) =>
-      ["high", "critical"].includes(String(item.severity || "").toLowerCase())
+      ["high", "critical"].includes(normaliseToken(item.severity))
     );
 
     const complianceIssues = complianceItems.filter((item) =>
-      ["overdue", "escalated", "review_due", "missing"].includes(String(item.status || "").toLowerCase())
+      ["overdue", "escalated", "review_due", "missing"].includes(
+        normaliseToken(item.status)
+      )
     );
 
     const openTasks = tasks.filter((item) => !item.completed);
@@ -695,6 +971,7 @@ export async function loadManager() {
       managerActions,
       communications,
       documents,
+      isFallback,
     });
 
     const nextReview =
@@ -705,7 +982,9 @@ export async function loadManager() {
       null;
 
     updateWorkspaceSummaryStrip({
-      today: `${submittedRecords.length} awaiting review • ${openTasks.length} open actions`,
+      today: isFallback
+        ? `${submittedRecords.length} awaiting review • preview mode`
+        : `${submittedRecords.length} awaiting review • ${openTasks.length} open actions`,
       nextEvent: nextReview
         ? `Next review ${formatDateValue(
             nextReview.review_date ||
@@ -716,21 +995,17 @@ export async function loadManager() {
         : "No immediate review due",
       lastRecord: managerActions[0]
         ? `${managerActions[0].title || "Manager action"}`
+        : isFallback
+        ? "Preview oversight data loaded"
         : "No recent manager action",
-      openActions: `${complianceIssues.length} compliance issue${complianceIssues.length === 1 ? "" : "s"} • ${highRiskIncidents.length} high-risk incident${highRiskIncidents.length === 1 ? "" : "s"}`,
+      openActions: `${complianceIssues.length} compliance issue${
+        complianceIssues.length === 1 ? "" : "s"
+      } • ${highRiskIncidents.length} high-risk incident${
+        highRiskIncidents.length === 1 ? "" : "s"
+      }`,
     });
   } catch (error) {
-    els.viewContent.innerHTML = `
-      <div class="empty-state">
-        <p>${escapeHtml(error.message || "Failed to load manager review.")}</p>
-      </div>
-    `;
-
-    updateWorkspaceSummaryStrip({
-      today: "Oversight unavailable",
-      nextEvent: "Unable to load",
-      lastRecord: "No oversight data",
-      openActions: "Check API routes",
-    });
+    console.error("[manager] load failed", error);
+    renderErrorState(error?.message || "Failed to load manager review.");
   }
 }
