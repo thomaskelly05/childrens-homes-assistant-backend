@@ -12,12 +12,6 @@ import {
 
 const SAFE_EMPTY = Object.freeze({ items: [] });
 
-function toArray(value, fallback = []) {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(fallback)) return fallback;
-  return [];
-}
-
 function toBool(value) {
   return Boolean(value);
 }
@@ -112,8 +106,19 @@ function sortNewest(items = [], keys = []) {
   });
 }
 
+function sortSoonest(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    const aTime = aValue ? new Date(aValue).getTime() : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? new Date(bValue).getTime() : Number.POSITIVE_INFINITY;
+    return aTime - bTime;
+  });
+}
+
 function badgeClass(value) {
   const v = lower(value);
+
   if (
     [
       "critical",
@@ -128,10 +133,12 @@ function badgeClass(value) {
       "declined",
       "cancelled",
       "problem",
+      "failed",
     ].includes(v)
   ) {
     return "badge badge-danger";
   }
+
   if (
     [
       "medium",
@@ -149,6 +156,7 @@ function badgeClass(value) {
   ) {
     return "badge badge-warning";
   }
+
   if (
     [
       "low",
@@ -167,7 +175,35 @@ function badgeClass(value) {
   ) {
     return "badge badge-success";
   }
+
   return "badge";
+}
+
+function getSupportedRecordType(type = "") {
+  const normalised = String(type || "").toLowerCase().trim();
+
+  if (["notification", "task"].includes(normalised)) return normalised;
+
+  return "";
+}
+
+function buildCardAttrs(item = {}) {
+  const supportedType = getSupportedRecordType(item.record_type || "");
+  const rowId = item?.id || "";
+
+  if (!supportedType || !rowId) {
+    return `class="record-card"`;
+  }
+
+  return `
+    class="record-card"
+    data-open-record="true"
+    data-record-id="${safeText(rowId)}"
+    data-record-type="${safeText(supportedType)}"
+    data-title="${safeText(item.title || "Record")}"
+    role="button"
+    tabindex="0"
+  `;
 }
 
 /* -------------------------------- mappers -------------------------------- */
@@ -205,12 +241,13 @@ function mapMaintenanceJob(record = {}) {
       record.notes ||
       "Maintenance logged.",
     record_type: "maintenance_job",
+    source_type: record.issue_title ? "maintenance_request" : "maintenance_job",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
 }
 
-function mapEnvironmentCheck(record = {}) {
+function mapEnvironmentCheck(record = {}, sourceType = "environment_check") {
   return {
     id: record.id,
     provider_id: record.provider_id || null,
@@ -226,7 +263,8 @@ function mapEnvironmentCheck(record = {}) {
     findings: record.findings || record.finding_summary || record.issues_found || "",
     action_required: toBool(record.action_required),
     action_notes: record.action_notes || record.action_note || record.actions_required || "",
-    checked_by_user_id: record.checked_by_user_id || record.completed_by || record.completed_by_user_id || null,
+    checked_by_user_id:
+      record.checked_by_user_id || record.completed_by || record.completed_by_user_id || null,
     next_due_date: record.next_due_date || record.next_check_date || null,
     title: titleCase(record.check_type || "Environment check"),
     summary:
@@ -236,12 +274,13 @@ function mapEnvironmentCheck(record = {}) {
       record.action_note ||
       "Environment check recorded.",
     record_type: "environment_check",
+    source_type: sourceType,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
 }
 
-function mapVisitor(record = {}) {
+function mapVisitor(record = {}, sourceType = "visitor_log") {
   return {
     id: record.id,
     provider_id: record.provider_id || null,
@@ -269,6 +308,7 @@ function mapVisitor(record = {}) {
       record.notes ||
       "Visitor activity recorded.",
     record_type: "visitor_log",
+    source_type: sourceType,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -291,9 +331,7 @@ function mapVehicle(record = {}) {
         : ""),
     colour: record.colour || "",
     seats_count: record.seats_count || record.seats || null,
-    wheelchair_accessible: toBool(
-      record.wheelchair_accessible
-    ),
+    wheelchair_accessible: toBool(record.wheelchair_accessible),
     active: toBool(record.active),
     mot_expiry_date: record.mot_expiry_date || record.mot_due_date || null,
     tax_expiry_date: record.tax_expiry_date || record.tax_due_date || null,
@@ -339,7 +377,7 @@ function mapVehicleCheck(record = {}) {
   };
 }
 
-function mapVehicleJourney(record = {}) {
+function mapVehicleJourney(record = {}, sourceType = "vehicle_journey") {
   return {
     id: record.id,
     provider_id: record.provider_id || null,
@@ -365,12 +403,13 @@ function mapVehicleJourney(record = {}) {
       record.destination ||
       "Journey recorded.",
     record_type: "vehicle_journey",
+    source_type: sourceType,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
 }
 
-function mapInventoryItem(record = {}) {
+function mapInventoryItem(record = {}, sourceType = "inventory_item") {
   return {
     id: record.id,
     provider_id: record.provider_id || null,
@@ -393,6 +432,7 @@ function mapInventoryItem(record = {}) {
       record.category ||
       "Inventory record.",
     record_type: "inventory_item",
+    source_type: sourceType,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -479,7 +519,7 @@ function mapAllowancePayment(record = {}) {
   };
 }
 
-function mapOperationalNotification(record = {}) {
+function mapOperationalNotification(record = {}, sourceType = "notification") {
   return {
     id: record.id,
     provider_id: record.provider_id || null,
@@ -500,6 +540,7 @@ function mapOperationalNotification(record = {}) {
     action_label: record.action_label || "",
     summary: record.message || "Notification recorded.",
     record_type: "notification",
+    source_type: sourceType,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -553,12 +594,12 @@ function mapOperationalAction(record = {}) {
   };
 }
 
-function mapShiftLog(record = {}) {
+function mapShiftLog(record = {}, sourceType = "shift_log") {
   return {
     id: record.id,
     provider_id: record.provider_id || null,
     home_id: record.home_id || null,
-    shift_date: record.shift_date || null,
+    shift_date: record.shift_date || record.log_date || null,
     shift_type: record.shift_type || "",
     shift_lead_user_id: record.shift_lead_user_id || null,
     shift_lead_staff_id: record.shift_lead_staff_id || null,
@@ -570,7 +611,8 @@ function mapShiftLog(record = {}) {
     incidents_summary: record.incidents_summary || "",
     environment_summary: record.environment_summary || "",
     handover_notes: record.handover_notes || record.handover_summary || "",
-    manager_attention_items: record.manager_attention_items || record.operational_priorities || "",
+    manager_attention_items:
+      record.manager_attention_items || record.operational_priorities || "",
     status: record.status || "",
     title: `${titleCase(record.shift_type || "Shift")} shift log`,
     summary:
@@ -579,6 +621,7 @@ function mapShiftLog(record = {}) {
       record.staffing_summary ||
       "Shift log recorded.",
     record_type: "shift_log",
+    source_type: sourceType,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -641,15 +684,7 @@ function renderCard(item = {}) {
     item.created_at;
 
   return `
-    <article
-      class="record-card"
-      data-open-record="true"
-      data-record-id="${safeText(item.id || "")}"
-      data-record-type="${safeText(item.record_type || "record")}"
-      data-title="${safeText(item.title || "Record")}"
-      role="button"
-      tabindex="0"
-    >
+    <article ${buildCardAttrs(item)}>
       <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
         <div>
           <div class="record-card-title">${safeText(item.title || "Record")}</div>
@@ -718,11 +753,11 @@ function renderCard(item = {}) {
           }
 
           ${
-            item.target_completion_date || item.due_date
+            item.target_completion_date || item.due_date || item.next_due_date
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Due</div>
-                  <div class="details-grid-value">${safeText(formatDate(item.target_completion_date || item.due_date))}</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.target_completion_date || item.due_date || item.next_due_date))}</div>
                 </div>
               `
               : ""
@@ -734,6 +769,17 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Amount</div>
                   <div class="details-grid-value">£${safeText(toNumber(item.amount, 0).toFixed(2))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.source_type
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Source</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.source_type))}</div>
                 </div>
               `
               : ""
@@ -1043,33 +1089,39 @@ async function fetchAll(homeId) {
 
   return {
     maintenanceJobs: [
-      ...pickItems(maintenanceJobsRes, ["maintenance_jobs", "items"]).map(
-        mapMaintenanceJob
+      ...pickItems(maintenanceJobsRes, ["maintenance_jobs", "items"]).map((r) =>
+        mapMaintenanceJob(r)
       ),
-      ...pickItems(maintenanceRequestsRes, ["maintenance_requests", "items"]).map(
-        mapMaintenanceJob
+      ...pickItems(maintenanceRequestsRes, ["maintenance_requests", "items"]).map((r) =>
+        mapMaintenanceJob(r)
       ),
     ],
 
     environmentChecks: [
-      ...pickItems(environmentChecksRes, ["environment_checks", "items"]).map(
-        mapEnvironmentCheck
+      ...pickItems(environmentChecksRes, ["environment_checks", "items"]).map((r) =>
+        mapEnvironmentCheck(r, "environment_check")
       ),
-      ...pickItems(premisesChecksRes, ["premises_checks", "items"]).map(
-        mapEnvironmentCheck
+      ...pickItems(premisesChecksRes, ["premises_checks", "items"]).map((r) =>
+        mapEnvironmentCheck(r, "premises_check")
       ),
-      ...pickItems(safetyChecksRes, ["safety_checks", "items"]).map(
-        mapEnvironmentCheck
+      ...pickItems(safetyChecksRes, ["safety_checks", "items"]).map((r) =>
+        mapEnvironmentCheck(r, "safety_check")
       ),
-      ...pickItems(healthSafetyChecksRes, ["health_safety_checks", "items"]).map(
-        mapEnvironmentCheck
+      ...pickItems(healthSafetyChecksRes, ["health_safety_checks", "items"]).map((r) =>
+        mapEnvironmentCheck(r, "health_safety_check")
       ),
     ],
 
     visitors: [
-      ...pickItems(visitorLogRes, ["visitor_log", "items"]).map(mapVisitor),
-      ...pickItems(homeVisitorsLogRes, ["home_visitors_log", "items"]).map(mapVisitor),
-      ...pickItems(homeVisitorsRes, ["home_visitors", "items"]).map(mapVisitor),
+      ...pickItems(visitorLogRes, ["visitor_log", "items"]).map((r) =>
+        mapVisitor(r, "visitor_log")
+      ),
+      ...pickItems(homeVisitorsLogRes, ["home_visitors_log", "items"]).map((r) =>
+        mapVisitor(r, "home_visitors_log")
+      ),
+      ...pickItems(homeVisitorsRes, ["home_visitors", "items"]).map((r) =>
+        mapVisitor(r, "home_visitors")
+      ),
     ],
 
     vehicles: pickItems(vehiclesRes, ["home_vehicles", "vehicles", "items"]).map(
@@ -1081,18 +1133,24 @@ async function fetchAll(homeId) {
     ),
 
     vehicleJourneys: [
-      ...pickItems(vehicleJourneysRes, ["vehicle_journeys", "items"]).map(
-        mapVehicleJourney
+      ...pickItems(vehicleJourneysRes, ["vehicle_journeys", "items"]).map((r) =>
+        mapVehicleJourney(r, "vehicle_journey")
       ),
-      ...pickItems(transportJourneysRes, ["transport_journeys", "items"]).map(
-        mapVehicleJourney
+      ...pickItems(transportJourneysRes, ["transport_journeys", "items"]).map((r) =>
+        mapVehicleJourney(r, "transport_journey")
       ),
     ],
 
     inventory: [
-      ...pickItems(inventoryRes, ["inventory_items", "items"]).map(mapInventoryItem),
-      ...pickItems(homeAssetsRes, ["home_assets", "items"]).map(mapInventoryItem),
-      ...pickItems(premisesAssetsRes, ["premises_assets", "items"]).map(mapInventoryItem),
+      ...pickItems(inventoryRes, ["inventory_items", "items"]).map((r) =>
+        mapInventoryItem(r, "inventory_item")
+      ),
+      ...pickItems(homeAssetsRes, ["home_assets", "items"]).map((r) =>
+        mapInventoryItem(r, "home_asset")
+      ),
+      ...pickItems(premisesAssetsRes, ["premises_assets", "items"]).map((r) =>
+        mapInventoryItem(r, "premises_asset")
+      ),
     ],
 
     purchaseRequests: pickItems(
@@ -1110,14 +1168,14 @@ async function fetchAll(homeId) {
     ).map(mapAllowancePayment),
 
     notifications: [
-      ...pickItems(notificationsRes, ["notifications", "notification_queue", "items"]).map(
-        mapOperationalNotification
+      ...pickItems(notificationsRes, ["notifications", "items"]).map((r) =>
+        mapOperationalNotification(r, "notification")
       ),
-      ...pickItems(operationalNotificationsRes, ["operational_notifications", "items"]).map(
-        mapOperationalNotification
+      ...pickItems(operationalNotificationsRes, ["operational_notifications", "items"]).map((r) =>
+        mapOperationalNotification(r, "operational_notification")
       ),
-      ...pickItems(homeNotificationsRes, ["home_notifications", "items"]).map(
-        mapOperationalNotification
+      ...pickItems(homeNotificationsRes, ["home_notifications", "items"]).map((r) =>
+        mapOperationalNotification(r, "home_notification")
       ),
     ],
 
@@ -1132,9 +1190,15 @@ async function fetchAll(homeId) {
     ).map(mapOperationalAction),
 
     shiftLogs: [
-      ...pickItems(shiftLogsRes, ["shift_logs", "items"]).map(mapShiftLog),
-      ...pickItems(homeShiftLogsRes, ["home_shift_logs", "items"]).map(mapShiftLog),
-      ...pickItems(homeDailyLogsRes, ["home_daily_logs", "items"]).map(mapShiftLog),
+      ...pickItems(shiftLogsRes, ["shift_logs", "items"]).map((r) =>
+        mapShiftLog(r, "shift_log")
+      ),
+      ...pickItems(homeShiftLogsRes, ["home_shift_logs", "items"]).map((r) =>
+        mapShiftLog(r, "home_shift_log")
+      ),
+      ...pickItems(homeDailyLogsRes, ["home_daily_logs", "items"]).map((r) =>
+        mapShiftLog(r, "home_daily_log")
+      ),
     ],
   };
 }
@@ -1142,7 +1206,7 @@ async function fetchAll(homeId) {
 /* -------------------------------- builders -------------------------------- */
 
 function buildOpenMaintenance(data) {
-  return sortNewest(
+  return sortSoonest(
     data.maintenanceJobs.filter(
       (item) => !["completed", "cancelled", "resolved"].includes(lower(item.status))
     ),
@@ -1151,7 +1215,7 @@ function buildOpenMaintenance(data) {
 }
 
 function buildUrgentNotifications(data) {
-  return sortNewest(
+  return sortSoonest(
     data.notifications.filter((item) => {
       const severity = lower(item.severity);
       const status = lower(item.status);
@@ -1165,7 +1229,7 @@ function buildUrgentNotifications(data) {
 }
 
 function buildOpenOperationalActions(data) {
-  return sortNewest(
+  return sortSoonest(
     data.operationalActions.filter(
       (item) => !["completed", "cancelled", "closed"].includes(lower(item.status))
     ),
@@ -1174,7 +1238,7 @@ function buildOpenOperationalActions(data) {
 }
 
 function buildFailedEnvironmentChecks(data) {
-  return sortNewest(
+  return sortSoonest(
     data.environmentChecks.filter((item) => {
       const status = lower(item.status);
       return (
@@ -1182,7 +1246,7 @@ function buildFailedEnvironmentChecks(data) {
         ["action_required", "action required", "urgent_action", "unsafe", "fail"].includes(status)
       );
     }),
-    ["check_date", "next_due_date", "created_at", "updated_at"]
+    ["next_due_date", "check_date", "created_at", "updated_at"]
   ).slice(0, 10);
 }
 
@@ -1191,13 +1255,10 @@ function buildVisitorActivity(data) {
 }
 
 function buildDueVehicleChecks(data) {
-  return sortNewest(
+  return sortSoonest(
     data.vehicleChecks.filter((item) => {
       const status = lower(item.status);
-      return (
-        ["action_required", "unsafe", "open", "warning"].includes(status) ||
-        isOverdue(item.check_date)
-      );
+      return ["action_required", "unsafe", "open", "warning", "fail"].includes(status);
     }),
     ["check_date", "created_at", "updated_at"]
   ).slice(0, 8);
