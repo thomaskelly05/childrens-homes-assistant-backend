@@ -12,18 +12,16 @@ import {
 
 const SAFE_EMPTY = Object.freeze({ items: [] });
 
-function toArray(value, fallback = []) {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(fallback)) return fallback;
-  return [];
-}
-
 function toBool(value) {
   return Boolean(value);
 }
 
 function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
+}
+
+function plainText(value, fallback = "") {
+  return String(value ?? fallback ?? "");
 }
 
 function lower(value) {
@@ -35,17 +33,6 @@ function titleCase(value) {
     .replaceAll("_", " ")
     .replace(/\b\w/g, (match) => match.toUpperCase())
     .trim();
-}
-
-function formatDate(value, fallback = "No date") {
-  if (!value) return fallback;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function formatDateTime(value, fallback = "No date") {
@@ -65,9 +52,11 @@ function isOverdue(value) {
   if (!value) return false;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return false;
+
   const today = new Date();
   date.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
+
   return date.getTime() < today.getTime();
 }
 
@@ -137,6 +126,7 @@ function getHomeId() {
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
     state.selectedYoungPerson?.home_id ||
+    state.youngPerson?.home_id ||
     null
   );
 }
@@ -178,12 +168,34 @@ function sortSoonest(items = [], keys = []) {
 
 function dedupeBy(items = [], keyFn) {
   const seen = new Set();
+
   return items.filter((item) => {
     const key = keyFn(item);
-    if (!key || seen.has(key)) return false;
+    if (!key) return true;
+    if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+function canOpenRecord(item = {}) {
+  return Boolean(item.detail_url);
+}
+
+function buildRecordAttrs(item = {}) {
+  if (!canOpenRecord(item)) {
+    return `class="record-card"`;
+  }
+
+  return `
+    class="record-card"
+    data-open-record="true"
+    data-record-id="${safeText(item.id || "")}"
+    data-record-type="${safeText(item.record_type || "notification")}"
+    data-title="${safeText(item.title || "Notification")}"
+    role="button"
+    tabindex="0"
+  `;
 }
 
 /* -------------------------------- mappers -------------------------------- */
@@ -214,6 +226,7 @@ function mapNotification(record = {}) {
     resolved_by_user_id: record.resolved_by_user_id || null,
     resolved_at: record.resolved_at || null,
     expires_at: record.expires_at || null,
+    detail_url: record.detail_url || "",
     is_read:
       record.is_read !== undefined
         ? toBool(record.is_read)
@@ -241,6 +254,7 @@ function mapNotificationQueue(record = {}) {
     scheduled_for: record.scheduled_for || null,
     sent_at: record.sent_at || null,
     read_at: record.read_at || null,
+    detail_url: record.detail_url || "",
     summary: record.body || record.message || "Queued notification.",
     record_type: "notification_queue",
     created_at: record.created_at || null,
@@ -265,6 +279,7 @@ function mapOperationalNotification(record = {}) {
     resolved_at: record.resolved_at || null,
     created_by_user_id: record.created_by_user_id || null,
     assigned_to_user_id: record.assigned_to_user_id || null,
+    detail_url: record.detail_url || "",
     summary: record.message || "Operational notification recorded.",
     record_type: "operational_notification",
     created_at: record.created_at || null,
@@ -291,6 +306,7 @@ function mapHomeNotification(record = {}) {
     acknowledged_at: record.acknowledged_at || null,
     resolved_by_user_id: record.resolved_by_user_id || null,
     resolved_at: record.resolved_at || null,
+    detail_url: record.detail_url || "",
     summary: record.message || "Home notification recorded.",
     record_type: "home_notification",
     created_at: record.created_at || null,
@@ -339,15 +355,7 @@ function renderNotificationCard(item = {}) {
   const dueValue = item.due_at || item.due_date || item.scheduled_for || null;
 
   return `
-    <article
-      class="record-card"
-      data-open-record="true"
-      data-record-id="${safeText(item.id || "")}"
-      data-record-type="${safeText(item.record_type || "notification")}"
-      data-title="${safeText(item.title || "Notification")}"
-      role="button"
-      tabindex="0"
-    >
+    <article ${buildRecordAttrs(item)}>
       <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
         <div>
           <div class="record-card-title">${safeText(item.title || "Notification")}</div>
@@ -597,8 +605,7 @@ async function fetchAll(homeId) {
   return {
     notifications: dedupeBy(
       mergedNotifications,
-      (item) =>
-        `${item.record_type}:${item.id}:${item.title}:${item.created_at}`
+      (item) => `${item.record_type}:${item.id || ""}:${item.created_at || ""}`
     ),
     notificationQueue: pickItems(
       notificationQueueRes,
@@ -769,7 +776,7 @@ export async function loadCurrentView() {
           )
         : "None",
       openActions: topUrgent
-        ? `${safeText(topUrgent.title)}`
+        ? plainText(topUrgent.title)
         : `${activeOperationalNotifications.length} operational alerts`,
     });
 
