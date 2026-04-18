@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
+import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
@@ -49,8 +50,12 @@ function formatDateTime(value) {
   });
 }
 
+function normaliseStatus(value = "") {
+  return String(value || "").toLowerCase().trim().replaceAll(" ", "_");
+}
+
 function getStatusTone(status = "") {
-  const normalised = String(status || "").toLowerCase().replaceAll(" ", "_");
+  const normalised = normaliseStatus(status);
 
   if (
     [
@@ -66,6 +71,7 @@ function getStatusTone(status = "") {
       "missing",
       "non_compliant",
       "failed",
+      "expired",
     ].includes(normalised)
   ) {
     return "danger";
@@ -86,6 +92,7 @@ function getStatusTone(status = "") {
       "induction",
       "working_remotely",
       "visiting_professional",
+      "due",
     ].includes(normalised)
   ) {
     return "warning";
@@ -108,6 +115,53 @@ function getStatusTone(status = "") {
   }
 
   return "muted";
+}
+
+function toArray(value, fallbacks = []) {
+  if (Array.isArray(value)) return value;
+
+  for (const fallback of fallbacks) {
+    if (Array.isArray(fallback)) return fallback;
+  }
+
+  return [];
+}
+
+function toTime(value) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sortNewestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    return toTime(bValue) - toTime(aValue);
+  });
+}
+
+function sortSoonestFirst(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    return toTime(aValue || Number.POSITIVE_INFINITY) - toTime(bValue || Number.POSITIVE_INFINITY);
+  });
+}
+
+function hasUsableData(data) {
+  if (!data || typeof data !== "object") return false;
+  if (Array.isArray(data.items) && data.items.length > 0) return true;
+  if (Array.isArray(data.staff) && data.staff.length > 0) return true;
+  if (Array.isArray(data.supervisions) && data.supervisions.length > 0) return true;
+  if (Array.isArray(data.staff_supervisions) && data.staff_supervisions.length > 0) return true;
+  if (Array.isArray(data.staff_supervision_sessions) && data.staff_supervision_sessions.length > 0) return true;
+  if (Array.isArray(data.documents) && data.documents.length > 0) return true;
+  if (Array.isArray(data.staff_documents) && data.staff_documents.length > 0) return true;
+  if (Array.isArray(data.employee_files) && data.employee_files.length > 0) return true;
+  if (Array.isArray(data.communications) && data.communications.length > 0) return true;
+  if (Array.isArray(data.notifications) && data.notifications.length > 0) return true;
+  return false;
 }
 
 function renderEmptyState(message = "No workforce data available.") {
@@ -174,6 +228,7 @@ function renderRecordRows(items = [], options = {}) {
     metaBuilder = null,
     statusBuilder = null,
     recordType = "",
+    clickable = true,
   } = options;
 
   if (!items.length) {
@@ -192,26 +247,29 @@ function renderRecordRows(items = [], options = {}) {
             ? summaryBuilder(item)
             : item.summary || "Record available.";
 
-          const meta = metaBuilder
-            ? metaBuilder(item)
-            : "";
-
+          const meta = metaBuilder ? metaBuilder(item) : "";
           const rawStatus = statusBuilder
             ? statusBuilder(item)
             : item.status || "recorded";
 
           const tone = getStatusTone(rawStatus);
           const rowId = item?.id || "";
+          const interactiveAttrs =
+            clickable && rowId && (recordType || item.record_type)
+              ? `
+                data-open-record="true"
+                data-record-id="${safeText(rowId)}"
+                data-record-type="${safeText(recordType || item.record_type || "")}"
+                data-title="${safeText(title)}"
+                role="button"
+                tabindex="0"
+              `
+              : "";
 
           return `
             <article
-              class="record-row"
-              data-open-record="true"
-              data-record-id="${safeText(rowId)}"
-              data-record-type="${safeText(recordType || item.record_type || "team")}"
-              data-title="${safeText(title)}"
-              role="button"
-              tabindex="0"
+              class="record-row ${clickable ? "" : "record-row--static"}"
+              ${interactiveAttrs}
             >
               <div class="record-row-main">
                 <div class="record-row-title">${safeText(title)}</div>
@@ -252,6 +310,194 @@ function renderPriorityList(items = []) {
         .join("")}
     </div>
   `;
+}
+
+function normaliseTeamItems(data = {}) {
+  return toArray(data.items, [data.staff, data.team, data.records]).map((item) => ({
+    id: item.id ?? item.staff_id ?? null,
+    full_name:
+      item.full_name ||
+      [item.first_name, item.last_name].filter(Boolean).join(" ") ||
+      item.staff_member ||
+      "Staff member",
+    staff_member:
+      item.full_name ||
+      [item.first_name, item.last_name].filter(Boolean).join(" ") ||
+      item.staff_member ||
+      "Staff member",
+    role: item.role || item.job_role || item.role_title || "Team member",
+    status:
+      item.status ||
+      (item.active === false ? "inactive" : item.active === true ? "active" : "active"),
+    summary:
+      item.summary ||
+      item.notes ||
+      item.employment_status ||
+      `${item.role || item.role_title || "Team member"} profile recorded.`,
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+    record_type: "team",
+  }));
+}
+
+function normaliseSupervisionItems(data = {}) {
+  return toArray(data.items, [
+    data.supervisions,
+    data.staff_supervisions,
+    data.staff_supervision_sessions,
+    data.records,
+  ]).map((item) => ({
+    id: item.id ?? null,
+    staff_member: item.staff_member || item.full_name || "Staff member",
+    role: item.role || item.supervision_type || "",
+    due_date:
+      item.due_date ||
+      item.next_supervision_date ||
+      item.next_session_date ||
+      item.scheduled_date ||
+      null,
+    summary:
+      item.summary ||
+      item.agreed_actions ||
+      item.wellbeing_summary ||
+      "Supervision record.",
+    status:
+      item.status ||
+      item.session_status ||
+      (item.due_date || item.next_supervision_date || item.next_session_date
+        ? "due_soon"
+        : "recorded"),
+    record_type: "supervision",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+}
+
+function normaliseDocumentItems(data = {}) {
+  return toArray(data.items, [
+    data.documents,
+    data.staff_documents,
+    data.employee_files,
+    data.records,
+  ]).map((item) => ({
+    id: item.id ?? null,
+    title: item.title || item.file_type || item.document_type || "Document item",
+    document_type: item.document_type || item.file_type || "Document",
+    review_date: item.review_date || item.expiry_date || null,
+    summary:
+      item.summary ||
+      item.notes ||
+      item.status ||
+      "Document item recorded.",
+    status: item.status || (item.expiry_date ? "review_due" : "recorded"),
+    record_type: "document",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+}
+
+function normaliseCommunicationItems(data = {}) {
+  return toArray(data.items, [
+    data.communications,
+    data.notifications,
+    data.records,
+  ]).map((item) => ({
+    id: item.id ?? null,
+    title: item.title || item.subject || "Communication",
+    summary: item.summary || item.message || item.notes || "Communication logged.",
+    contact_datetime:
+      item.contact_datetime ||
+      item.created_at ||
+      item.updated_at ||
+      null,
+    status: item.status || "recorded",
+    record_type: "communication",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+}
+
+function buildStats(teamItems, supervisionItems, documentItems) {
+  return {
+    total: teamItems.length,
+    active: teamItems.filter((item) =>
+      ["active", "on_shift", "available"].includes(normaliseStatus(item.status))
+    ).length,
+    staffingPressure: teamItems.filter((item) =>
+      [
+        "off_shift",
+        "annual_leave",
+        "sick",
+        "bank_staff",
+        "agency",
+        "working_remotely",
+        "visiting_professional",
+      ].includes(normaliseStatus(item.status))
+    ).length,
+    supervisionGaps: supervisionItems.filter((item) =>
+      ["due", "due_soon", "overdue", "review_due"].includes(normaliseStatus(item.status))
+    ).length,
+    documentGaps: documentItems.filter((item) =>
+      ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
+        normaliseStatus(item.status)
+      )
+    ).length,
+  };
+}
+
+function buildPriorityItems(supervisionItems, documentItems, teamItems) {
+  const items = [];
+
+  supervisionItems
+    .filter((item) =>
+      ["overdue", "due_soon", "review_due", "due"].includes(normaliseStatus(item.status))
+    )
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.staff_member || "Supervision due",
+        summary: item.due_date
+          ? `Supervision due ${formatDate(item.due_date)}.`
+          : item.summary || "Supervision needs booking.",
+      });
+    });
+
+  documentItems
+    .filter((item) =>
+      ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
+        normaliseStatus(item.status)
+      )
+    )
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Document gap",
+        summary: item.review_date
+          ? `Review due ${formatDate(item.review_date)}.`
+          : item.summary || "Document needs attention.",
+      });
+    });
+
+  const pressureCount = teamItems.filter((item) =>
+    [
+      "off_shift",
+      "annual_leave",
+      "sick",
+      "bank_staff",
+      "agency",
+      "working_remotely",
+      "visiting_professional",
+    ].includes(normaliseStatus(item.status))
+  ).length;
+
+  if (pressureCount > 0) {
+    items.push({
+      title: "Staffing pressure",
+      summary: `${pressureCount} workforce record${pressureCount === 1 ? "" : "s"} need staffing attention.`,
+    });
+  }
+
+  return items.slice(0, 6);
 }
 
 function buildStaticTeamModel(homeId) {
@@ -404,53 +650,14 @@ function buildStaticTeamModel(homeId) {
     },
   ];
 
-  const stats = {
-    total: teamItems.length,
-    active: teamItems.filter((item) =>
-      ["active", "on_shift", "available"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    ).length,
-    staffingPressure: teamItems.filter((item) =>
-      ["off_shift", "annual_leave", "sick", "bank_staff", "agency", "working_remotely", "visiting_professional"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    ).length,
-    supervisionGaps: supervisionItems.filter((item) =>
-      ["due", "due_soon", "overdue", "review_due"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    ).length,
-    documentGaps: documentItems.filter((item) =>
-      ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
-        String(item.status || "").toLowerCase()
-      )
-    ).length,
-  };
-
-  const priorityItems = [
-    {
-      title: "Michael Osei",
-      summary: "Supervision overdue and needs booking.",
-    },
-    {
-      title: "Staff file review",
-      summary: "Document review due this week.",
-    },
-    {
-      title: "Weekend staffing",
-      summary: "Agency or bank support may still be needed for cover.",
-    },
-  ];
-
   return {
     homeName,
     teamItems,
     supervisionItems,
     documentItems,
     communicationItems,
-    stats,
-    priorityItems,
+    stats: buildStats(teamItems, supervisionItems, documentItems),
+    priorityItems: buildPriorityItems(teamItems, supervisionItems, documentItems),
   };
 }
 
@@ -462,6 +669,7 @@ function renderTeamPage({
   communicationItems,
   priorityItems,
   homeName,
+  isFallback = false,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
@@ -470,6 +678,11 @@ function renderTeamPage({
           <div class="eyebrow">Team and workforce</div>
           <h2>Team and staffing • ${safeText(homeName)}</h2>
           <p>A workforce view across team members, staffing pressures, supervision, documents and operational readiness.</p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live workforce endpoints are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -486,6 +699,7 @@ function renderTeamPage({
             ${renderRecordRows(teamItems, {
               emptyMessage: "No team records found.",
               recordType: "team",
+              clickable: false,
               titleBuilder: (item) => item.full_name || item.staff_member || "Staff member",
               summaryBuilder: (item) =>
                 item.summary || `${item.role || "Team member"} status recorded.`,
@@ -504,6 +718,7 @@ function renderTeamPage({
             ${renderRecordRows(supervisionItems.slice(0, 8), {
               emptyMessage: "No supervision items found.",
               recordType: "supervision",
+              clickable: true,
               titleBuilder: (item) => item.staff_member || "Supervision item",
               summaryBuilder: (item) => item.summary || "Supervision record.",
               metaBuilder: (item) =>
@@ -537,6 +752,7 @@ function renderTeamPage({
             ${renderRecordRows(documentItems.slice(0, 8), {
               emptyMessage: "No document readiness issues found.",
               recordType: "document",
+              clickable: true,
               titleBuilder: (item) =>
                 item.title || item.document_type || "Document item",
               summaryBuilder: (item) =>
@@ -561,6 +777,7 @@ function renderTeamPage({
             ${renderRecordRows(communicationItems.slice(0, 6), {
               emptyMessage: "No recent communications found.",
               recordType: "communication",
+              clickable: true,
               titleBuilder: (item) => item.title || "Communication",
               summaryBuilder: (item) => item.summary || "Communication logged.",
               metaBuilder: (item) =>
@@ -632,6 +849,71 @@ function renderErrorState(message) {
   });
 }
 
+async function fetchDataset(homeId) {
+  const safe = (url) => apiGet(url).catch(() => null);
+
+  const [
+    staffData,
+    supervisionData,
+    documentData,
+    communicationData,
+  ] = await Promise.all([
+    safe(`/homes/${homeId}/staff`),
+    safe(`/homes/${homeId}/supervisions`),
+    safe(`/homes/${homeId}/documents`),
+    safe(`/homes/${homeId}/communications`),
+  ]);
+
+  const hasLive =
+    hasUsableData(staffData) ||
+    hasUsableData(supervisionData) ||
+    hasUsableData(documentData) ||
+    hasUsableData(communicationData);
+
+  if (!hasLive) {
+    return {
+      ...buildStaticTeamModel(homeId),
+      isFallback: true,
+    };
+  }
+
+  const homeName =
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    `Home ${homeId}`;
+
+  const teamItems = sortNewestFirst(normaliseTeamItems(staffData), [
+    "updated_at",
+    "created_at",
+  ]);
+
+  const supervisionItems = sortSoonestFirst(
+    normaliseSupervisionItems(supervisionData),
+    ["due_date", "updated_at", "created_at"]
+  );
+
+  const documentItems = sortSoonestFirst(
+    normaliseDocumentItems(documentData),
+    ["review_date", "updated_at", "created_at"]
+  );
+
+  const communicationItems = sortNewestFirst(
+    normaliseCommunicationItems(communicationData),
+    ["contact_datetime", "updated_at", "created_at"]
+  );
+
+  return {
+    homeName,
+    teamItems,
+    supervisionItems,
+    documentItems,
+    communicationItems,
+    stats: buildStats(teamItems, supervisionItems, documentItems),
+    priorityItems: buildPriorityItems(teamItems, supervisionItems, documentItems),
+    isFallback: false,
+  };
+}
+
 export async function loadTeam() {
   if (!els.viewContent) return;
 
@@ -645,7 +927,7 @@ export async function loadTeam() {
   renderLoadingState();
 
   try {
-    const model = buildStaticTeamModel(homeId);
+    const model = await fetchDataset(homeId);
 
     els.viewContent.innerHTML = renderTeamPage({
       stats: model.stats,
@@ -655,18 +937,24 @@ export async function loadTeam() {
       communicationItems: model.communicationItems,
       priorityItems: model.priorityItems,
       homeName: model.homeName,
+      isFallback: model.isFallback,
     });
 
     const nextSupervision = model.supervisionItems.find((item) =>
       ["due", "due_soon", "overdue", "review_due"].includes(
-        String(item.status || "").toLowerCase()
+        normaliseStatus(item.status)
       )
     );
 
-    const latestProfile = model.teamItems[0];
+    const latestProfile = sortNewestFirst(model.teamItems, [
+      "updated_at",
+      "created_at",
+    ])[0];
 
     updateWorkspaceSummaryStrip({
-      today: `${toNumber(model.stats.total)} team • safe mode`,
+      today: model.isFallback
+        ? `${toNumber(model.stats.total)} team • preview mode`
+        : `${toNumber(model.stats.total)} team • live view`,
       nextEvent: nextSupervision?.due_date
         ? `Supervision due ${formatDate(nextSupervision.due_date)}`
         : "No immediate workforce review",
