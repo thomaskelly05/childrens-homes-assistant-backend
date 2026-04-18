@@ -66,11 +66,15 @@ function formatDateTime(value) {
   });
 }
 
-function getStatusTone(status = "") {
-  const normalised = String(status || "")
+function normaliseStatus(status = "") {
+  return String(status || "")
     .toLowerCase()
     .trim()
     .replaceAll(" ", "_");
+}
+
+function getStatusTone(status = "") {
+  const normalised = normaliseStatus(status);
 
   if (
     [
@@ -98,6 +102,7 @@ function getStatusTone(status = "") {
       "in_progress",
       "pending",
       "awaiting",
+      "open",
     ].includes(normalised)
   ) {
     return "warning";
@@ -135,6 +140,18 @@ function sortNewestFirst(items = [], keys = []) {
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
     return toTime(bValue) - toTime(aValue);
   });
+}
+
+function hasUsableData(data = {}) {
+  if (!data || typeof data !== "object") return false;
+  if (Array.isArray(data.items) && data.items.length > 0) return true;
+  if (Array.isArray(data.training) && data.training.length > 0) return true;
+  if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
+  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
+  if (Array.isArray(data.records) && data.records.length > 0) return true;
+  if (data.summary && typeof data.summary === "object") return true;
+  if (data.training_summary && typeof data.training_summary === "object") return true;
+  return false;
 }
 
 function normaliseSummary(data = {}) {
@@ -217,30 +234,30 @@ function buildStats(trainingItems = [], complianceItems = [], taskItems = []) {
   const total = trainingItems.length;
 
   const overdue = trainingItems.filter((item) =>
-    ["expired", "overdue"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    ["expired", "overdue"].includes(normaliseStatus(item.status))
   ).length;
 
   const dueSoon = trainingItems.filter((item) =>
     ["due", "due_soon", "review_due", "scheduled", "booked"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
   const current = trainingItems.filter((item) =>
     ["current", "completed", "complete", "up_to_date", "passed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
   const urgentCompliance = complianceItems.filter((item) =>
-    ["overdue", "escalated", "missing"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    ["overdue", "escalated", "missing"].includes(normaliseStatus(item.status))
   ).length;
 
-  const openActions = taskItems.filter((item) => !item.completed).length;
+  const openActions = taskItems.filter(
+    (item) =>
+      !item.completed &&
+      !["completed", "closed", "cancelled"].includes(normaliseStatus(item.status))
+  ).length;
 
   const uniqueStaff = new Set(
     trainingItems.map((item) => item.staff_member).filter(Boolean)
@@ -262,20 +279,18 @@ function buildProgressCards(trainingItems = []) {
 
   const current = trainingItems.filter((item) =>
     ["current", "completed", "complete", "up_to_date", "passed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
   const dueSoon = trainingItems.filter((item) =>
     ["due", "due_soon", "review_due", "scheduled", "booked"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
   const expired = trainingItems.filter((item) =>
-    ["expired", "overdue"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    ["expired", "overdue"].includes(normaliseStatus(item.status))
   ).length;
 
   const currentPercent = total ? Math.round((current / total) * 100) : 0;
@@ -313,7 +328,7 @@ function buildPriorityItems(trainingItems = [], complianceItems = [], taskItems 
   trainingItems
     .filter((item) =>
       ["expired", "overdue", "due_soon", "review_due"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseStatus(item.status)
       )
     )
     .slice(0, 3)
@@ -326,9 +341,7 @@ function buildPriorityItems(trainingItems = [], complianceItems = [], taskItems 
 
   complianceItems
     .filter((item) =>
-      ["overdue", "missing", "escalated"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
+      ["overdue", "missing", "escalated"].includes(normaliseStatus(item.status))
     )
     .slice(0, 2)
     .forEach((item) => {
@@ -339,7 +352,11 @@ function buildPriorityItems(trainingItems = [], complianceItems = [], taskItems 
     });
 
   taskItems
-    .filter((item) => !item.completed)
+    .filter(
+      (item) =>
+        !item.completed &&
+        !["completed", "closed", "cancelled"].includes(normaliseStatus(item.status))
+    )
     .slice(0, 2)
     .forEach((item) => {
       items.push({
@@ -543,6 +560,7 @@ function renderPriorityList(items = []) {
 }
 
 function renderTrainingCentrePage({
+  title = "Training centre",
   stats,
   progressCards,
   recentItems,
@@ -551,14 +569,20 @@ function renderTrainingCentrePage({
   complianceItems,
   taskItems,
   allItems,
+  isFallback = false,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Training and compliance</div>
-          <h2>Training centre</h2>
+          <h2>${safeText(title)}</h2>
           <p>Mandatory training, expiry pressure, compliance issues and linked follow-up actions across the home.</p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live training endpoints are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -734,14 +758,11 @@ function buildFallbackData(homeId) {
 }
 
 async function fetchDataset(homeId) {
-  const requests = [
-    apiGet(`/homes/${homeId}/training`),
-    apiGet(`/homes/${homeId}/compliance`),
-    apiGet(`/homes/${homeId}/tasks`),
-  ];
+  const trainingData = await apiGet(`/homes/${homeId}/training`).catch(() => null);
+  const complianceData = await apiGet(`/homes/${homeId}/compliance`).catch(() => null);
+  const taskData = await apiGet(`/homes/${homeId}/tasks`).catch(() => null);
 
-  const results = await Promise.allSettled(requests);
-  const hasLiveSuccess = results.some((result) => result.status === "fulfilled");
+  const hasLiveSuccess = [trainingData, complianceData, taskData].some(hasUsableData);
 
   if (!hasLiveSuccess) {
     return {
@@ -752,12 +773,9 @@ async function fetchDataset(homeId) {
 
   return {
     summaryData: {},
-    trainingData:
-      results[0].status === "fulfilled" ? results[0].value : { items: [] },
-    complianceData:
-      results[1].status === "fulfilled" ? results[1].value : { items: [] },
-    taskData:
-      results[2].status === "fulfilled" ? results[2].value : { items: [] },
+    trainingData: trainingData || { items: [] },
+    complianceData: complianceData || { items: [] },
+    taskData: taskData || { items: [] },
     isFallback: false,
   };
 }
@@ -839,11 +857,16 @@ export async function loadTrainingCentre() {
     const allItems = normaliseTrainingItems(trainingData);
     const complianceItems = normaliseComplianceItems(complianceData).slice(0, 8);
     const taskItems = normaliseTaskItems(taskData)
-      .filter((item) => !item.completed)
+      .filter(
+        (item) =>
+          !item.completed &&
+          !["completed", "closed", "cancelled"].includes(normaliseStatus(item.status))
+      )
       .slice(0, 8);
 
     const stats = buildStats(allItems, complianceItems, taskItems);
     const progressCards = buildProgressCards(allItems);
+
     const recentItems = sortNewestFirst(allItems, [
       "completed_date",
       "updated_at",
@@ -858,14 +881,21 @@ export async function loadTrainingCentre() {
     ])
       .filter((item) =>
         ["expired", "overdue", "due", "due_soon", "review_due", "scheduled", "booked"].includes(
-          String(item.status || "").toLowerCase().replaceAll(" ", "_")
+          normaliseStatus(item.status)
         )
       )
       .slice(0, 8);
 
     const priorityItems = buildPriorityItems(allItems, complianceItems, taskItems);
 
+    const title =
+      summary.title ||
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      `Home ${homeId} training`;
+
     els.viewContent.innerHTML = renderTrainingCentrePage({
+      title,
       stats,
       progressCards,
       recentItems,
@@ -874,11 +904,6 @@ export async function loadTrainingCentre() {
       complianceItems,
       taskItems,
       allItems,
-      title:
-        summary.title ||
-        state.currentUser?.home_name ||
-        state.currentUser?.homeName ||
-        `Home ${homeId} training`,
       isFallback,
     });
 
