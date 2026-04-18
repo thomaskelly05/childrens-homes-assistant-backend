@@ -17,6 +17,8 @@ import {
 } from "../core/adapters.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
+/* -------------------------------- helpers -------------------------------- */
+
 function getCurrentScope() {
   return state.currentScope || "child";
 }
@@ -73,6 +75,11 @@ function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function toNumber(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
 function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -108,10 +115,24 @@ function sortNewestFirst(items = [], keys = []) {
   });
 }
 
+function dedupeBy(items = [], getKey) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = getKey(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function renderEmptyState(message = "No information available.") {
   return `
     <div class="empty-state">
-      <p>${toText(message)}</p>
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>No readiness data</h3>
+        <p>${toText(message)}</p>
+      </div>
     </div>
   `;
 }
@@ -141,6 +162,388 @@ function formatNumber(value, fallback = "0") {
   if (!Number.isFinite(number)) return fallback;
   return number % 1 === 0 ? String(number) : number.toFixed(1);
 }
+
+function normaliseApiRows(payload) {
+  return firstArray(
+    payload?.items,
+    payload?.rows,
+    payload?.data,
+    payload?.results,
+    payload?.records
+  );
+}
+
+function getRowDate(item = {}) {
+  return (
+    item.due_date ||
+    item.review_date ||
+    item.expiry_date ||
+    item.action_at ||
+    item.task_due_date ||
+    item.action_due_date ||
+    item.created_at ||
+    item.updated_at ||
+    ""
+  );
+}
+
+function getRowPill(item = {}) {
+  const status = normaliseToken(item.status);
+  const severity = normaliseToken(item.severity);
+  const priority = normaliseToken(item.priority);
+
+  if (
+    ["overdue", "escalated", "expired", "missing", "review_due", "failed"].includes(
+      status
+    ) ||
+    ["high", "critical"].includes(severity) ||
+    ["high", "critical"].includes(priority)
+  ) {
+    return { label: "Needs review", tone: "warning" };
+  }
+
+  if (["due_soon", "expiring", "open", "pending"].includes(status)) {
+    return { label: status.replaceAll("_", " "), tone: "warning" };
+  }
+
+  if (["completed", "active", "recorded", "current"].includes(status)) {
+    return { label: status.replaceAll("_", " "), tone: "muted" };
+  }
+
+  return {
+    label: status ? status.replaceAll("_", " ") : "Recorded",
+    tone: "muted",
+  };
+}
+
+/* ------------------------------ fallback data ----------------------------- */
+
+function buildFallbackInspectionData(homeId) {
+  const baseHomeName =
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    `Home ${homeId}`;
+
+  const now = new Date();
+  const plusDays = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    return d.toISOString();
+  };
+  const minusDays = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    return d.toISOString();
+  };
+
+  return {
+    cards: [
+      {
+        home_id: homeId,
+        home_name: baseHomeName,
+        overall_band: "good",
+        overall_score: 74.2,
+        confidence_score: 71.5,
+        experiences_band: "good",
+        experiences_score: 75.4,
+        helped_band: "requires_improvement",
+        helped_score: 68.5,
+        leadership_band: "good",
+        leadership_score: 77.1,
+        open_actions: 5,
+        overdue_actions: 2,
+        critical_actions: 1,
+        open_lines_of_enquiry: 3,
+        top_actions_summary: "Two overdue actions and one safeguarding-linked improvement priority.",
+        top_concerns: "Return interview follow-up and evidence freshness remain the main pressure points.",
+        scored_at: minusDays(1),
+      },
+    ],
+    header: {
+      home_id: homeId,
+      home_name: baseHomeName,
+      overall_band: "good",
+      overall_score: 74.2,
+      confidence_score: 71.5,
+      data_completeness_score: 78.2,
+      evidence_freshness_score: 69.4,
+      limiting_judgement_triggered: false,
+      limiting_reason: "",
+      experiences_band: "good",
+      experiences_score: 75.4,
+      helped_band: "requires_improvement",
+      helped_score: 68.5,
+      leadership_band: "good",
+      leadership_score: 77.1,
+      open_actions: 5,
+      overdue_actions: 2,
+      critical_actions: 1,
+      impactful_open_actions: 2,
+      band_shifting_actions: 1,
+      overall_band_shifting_actions: 0,
+      top_concerns:
+        "Return interviews and action follow-up remain the strongest pressure points.",
+      top_actions_text:
+        "Close overdue return-interview actions and tighten evidence freshness in safeguarding oversight.",
+      narrative_summary:
+        "The home shows stable care and warm relationships, with most pressure sitting in follow-up discipline rather than core care quality.",
+      strengths_summary:
+        "Consistent care routines, positive feedback from young people and stronger internal oversight.",
+      concerns_summary:
+        "Some actions remain overdue and evidence is not always refreshed quickly enough.",
+      scored_at: minusDays(1),
+    },
+    sections: [
+      {
+        home_id: homeId,
+        section_code: "experiences",
+        section_name: "Experiences and progress",
+        score_band: "good",
+        score_value: 75.4,
+        confidence_score: 73.2,
+        data_completeness_score: 80.1,
+        evidence_freshness_score: 72.5,
+        limiting_issue_present: false,
+        summary_text:
+          "Young people’s day-to-day experiences are broadly positive with improving consistency.",
+        strengths_text:
+          "Positive routines, good engagement and clearer celebration of progress.",
+        concerns_text:
+          "Some monthly review evidence still needs tightening to show impact more clearly.",
+      },
+      {
+        home_id: homeId,
+        section_code: "helped",
+        section_name: "Help and protection",
+        score_band: "requires_improvement",
+        score_value: 68.5,
+        confidence_score: 66.3,
+        data_completeness_score: 72.7,
+        evidence_freshness_score: 61.8,
+        limiting_issue_present: false,
+        summary_text:
+          "Safeguarding responses are mostly appropriate but follow-through needs to be more timely.",
+        strengths_text:
+          "Good initial response and awareness of safeguarding thresholds.",
+        concerns_text:
+          "Return interviews and linked tasks are not always being closed quickly enough.",
+      },
+      {
+        home_id: homeId,
+        section_code: "leadership",
+        section_name: "Leadership and management",
+        score_band: "good",
+        score_value: 77.1,
+        confidence_score: 75.2,
+        data_completeness_score: 82.4,
+        evidence_freshness_score: 74.3,
+        limiting_issue_present: false,
+        summary_text:
+          "Leaders know the service well and are using actions more effectively.",
+        strengths_text:
+          "Oversight is becoming more structured and quality assurance is more visible.",
+        concerns_text:
+          "Some improvement work still relies on follow-up reminders rather than first-time closure.",
+      },
+    ],
+    reasons: [
+      {
+        home_id: homeId,
+        section_code: "helped",
+        section_name: "Help and protection",
+        reason_type: "concern",
+        priority: 1,
+        title: "Return interview follow-up not consistently evidenced",
+        description:
+          "A small number of missing-from-care episodes do not yet show timely return-interview evidence and manager closure.",
+        created_at: minusDays(1),
+      },
+      {
+        home_id: homeId,
+        section_code: "leadership",
+        section_name: "Leadership and management",
+        reason_type: "strength",
+        priority: 2,
+        title: "Leadership oversight is stronger",
+        description:
+          "Improvement actions are better organised and linked to clearer priorities.",
+        created_at: minusDays(1),
+      },
+      {
+        home_id: homeId,
+        section_code: "experiences",
+        section_name: "Experiences and progress",
+        reason_type: "context",
+        priority: 3,
+        title: "Progress evidence is improving",
+        description:
+          "Achievements, routines and direct work are being captured more consistently than before.",
+        created_at: minusDays(1),
+      },
+    ],
+    actions: [
+      {
+        home_id: homeId,
+        section_code: "helped",
+        section_name: "Help and protection",
+        action_title: "Close overdue return interview actions",
+        action_description:
+          "Review all open return-interview actions and ensure each is evidenced and closed.",
+        priority: "critical",
+        owner_user_name: "Sarah Ahmed",
+        due_date: plusDays(2),
+        recoverable_points_estimate: 2.5,
+        projected_section_band: "good",
+        status: "open",
+      },
+      {
+        home_id: homeId,
+        section_code: "leadership",
+        section_name: "Leadership and management",
+        action_title: "Tighten monthly action closure discipline",
+        action_description:
+          "Managers to review all overdue actions weekly and evidence closure more promptly.",
+        priority: "high",
+        owner_user_name: "Tom Patel",
+        due_date: plusDays(5),
+        recoverable_points_estimate: 1.3,
+        projected_section_band: "good",
+        status: "open",
+      },
+    ],
+    tasks: [
+      {
+        home_id: homeId,
+        task_title: "Review open return interview tasks",
+        action_title: "Close overdue return interview actions",
+        task_due_date: plusDays(2),
+        assigned_user_name: "Sarah Ahmed",
+        completed: false,
+      },
+      {
+        home_id: homeId,
+        task_title: "Audit evidence freshness",
+        action_title: "Tighten monthly action closure discipline",
+        task_due_date: plusDays(4),
+        assigned_user_name: "Tom Patel",
+        completed: false,
+      },
+    ],
+    briefing: {
+      home_id: homeId,
+      headline_summary:
+        "The home appears broadly good, with the strongest pressure sitting in safeguarding follow-through rather than overall care quality.",
+      overall_position_statement:
+        "Evidence suggests a stable home with positive routines and improving leadership grip, but a few overdue actions are preventing a cleaner picture.",
+      likely_inspector_focus:
+        "Inspectors are likely to focus on how safeguarding follow-up and return-interview learning are tracked to completion.",
+      immediate_priority_actions:
+        "Clear overdue safeguarding-linked actions, refresh stale evidence and ensure manager commentary is current.",
+    },
+    prep72h: {
+      home_id: homeId,
+      inspection_pressure_level: "heightened",
+      primary_focus_area: "Help and protection",
+      top_concerns:
+        "Return interviews, action closure and evidence freshness.",
+      urgent_actions:
+        "Complete open return-interview follow-up and refresh key evidence before any visit window.",
+    },
+    isFallback: true,
+  };
+}
+
+function buildFallbackLegacyData() {
+  const now = new Date();
+  const plusDays = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    return d.toISOString();
+  };
+  const minusDays = (days) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    return d.toISOString();
+  };
+
+  return {
+    complianceItems: [
+      mapComplianceItem({
+        id: "comp-1",
+        title: "Medication audit follow-up",
+        status: "overdue",
+        severity: "high",
+        due_date: minusDays(2),
+        created_at: minusDays(8),
+      }),
+      mapComplianceItem({
+        id: "comp-2",
+        title: "Risk assessment review",
+        status: "due_soon",
+        severity: "medium",
+        due_date: plusDays(3),
+        created_at: minusDays(4),
+      }),
+      mapComplianceItem({
+        id: "comp-3",
+        title: "Key statutory record check",
+        status: "review_due",
+        severity: "medium",
+        due_date: plusDays(5),
+        created_at: minusDays(2),
+      }),
+    ],
+    tasks: [
+      mapTask({
+        id: "task-1",
+        title: "Update audit tracker",
+        task_type: "quality",
+        assigned_role: "Manager",
+        due_date: plusDays(2),
+        completed: false,
+        created_at: minusDays(1),
+      }),
+      mapTask({
+        id: "task-2",
+        title: "Check document expiry dates",
+        task_type: "compliance",
+        assigned_role: "Deputy manager",
+        due_date: plusDays(4),
+        completed: false,
+        created_at: minusDays(1),
+      }),
+    ],
+    documents: [
+      mapStatutoryDocument({
+        id: "doc-1",
+        title: "Statement of Purpose",
+        document_type: "Statutory",
+        status: "active",
+        review_date: plusDays(30),
+        created_at: minusDays(20),
+      }),
+      mapStatutoryDocument({
+        id: "doc-2",
+        title: "Annex A",
+        document_type: "Statutory",
+        status: "review_due",
+        review_date: plusDays(6),
+        created_at: minusDays(15),
+      }),
+      mapStatutoryDocument({
+        id: "doc-3",
+        title: "Medication procedure",
+        document_type: "Policy",
+        status: "expiring",
+        expiry_date: plusDays(10),
+        created_at: minusDays(12),
+      }),
+    ],
+    isFallback: true,
+  };
+}
+
+/* ------------------------------- row builders ------------------------------ */
 
 function buildComplianceRows(items = []) {
   return items.map((item) => ({
@@ -279,38 +682,7 @@ function buildReadinessOverview({
   };
 }
 
-function getRowDate(item = {}) {
-  return (
-    item.due_date ||
-    item.review_date ||
-    item.expiry_date ||
-    item.action_at ||
-    item.created_at ||
-    ""
-  );
-}
-
-function getRowPill(item = {}) {
-  const status = normaliseToken(item.status);
-  const severity = normaliseToken(item.severity);
-
-  if (
-    ["overdue", "escalated", "expired", "missing", "review_due"].includes(status) ||
-    ["high", "critical"].includes(severity)
-  ) {
-    return { label: "Needs review", tone: "warning" };
-  }
-
-  if (["due_soon", "review_due", "expiring"].includes(status)) {
-    return { label: status.replaceAll("_", " "), tone: "warning" };
-  }
-
-  if (["completed", "active", "open", "recorded"].includes(status)) {
-    return { label: status.replaceAll("_", " "), tone: "muted" };
-  }
-
-  return { label: status ? status.replaceAll("_", " ") : "Recorded", tone: "muted" };
-}
+/* -------------------------------- renderers ------------------------------- */
 
 function renderRecordRows(items = [], emptyMessage = "No records found.") {
   if (!items.length) {
@@ -361,6 +733,7 @@ function renderLegacyReadinessHtml({
   openTasks = [],
   documents = [],
   oversightRows = [],
+  isFallback = false,
 }) {
   const scope = getCurrentScope();
   const overview = buildReadinessOverview({
@@ -391,6 +764,11 @@ function renderLegacyReadinessHtml({
           <div class="eyebrow">Readiness</div>
           <h2>${toText(title)} • ${toText(getScopeTitle())}</h2>
           <p>${toText(subtitle)}</p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview readiness data until live routes are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -552,80 +930,6 @@ function renderLegacyReadinessHtml({
       </div>
     </section>
   `;
-}
-
-function getInspectionEndpoints(homeId) {
-  const base = buildInspectionUiEndpoints(homeId);
-
-  if (!base?.homeId) return null;
-
-  return {
-    ...base,
-    homeCards: "/inspection/ui/home-cards",
-    homeHeader: `/inspection/ui/homes/${base.homeId}/header`,
-    sectionPanels: `/inspection/ui/homes/${base.homeId}/sections`,
-    reasons: `/inspection/ui/homes/${base.homeId}/reasons`,
-    actions: `/inspection/ui/homes/${base.homeId}/actions`,
-    tasks: `/inspection/ui/homes/${base.homeId}/tasks`,
-    briefing: `/inspection/ui/homes/${base.homeId}/briefing`,
-    prep72h: `/inspection/ui/homes/${base.homeId}/prep-72h`,
-    refresh: base.refreshCycle,
-  };
-}
-
-function getLegacyReadinessEndpoints() {
-  const scope = getCurrentScope();
-  const id = getScopeEntityId();
-
-  if (!id) {
-    return null;
-  }
-
-  if (scope === "home" || scope === "quality") {
-    return {
-      compliance: `/homes/${id}/compliance`,
-      documents: `/homes/${id}/documents`,
-      tasks: null,
-    };
-  }
-
-  return {
-    compliance: `/young-people/${id}/compliance`,
-    tasks: `/young-people/${id}/tasks`,
-    documents: `/young-people/${id}/documents`,
-  };
-}
-
-function renderNoContext() {
-  if (!els.viewContent) return;
-
-  const message =
-    getCurrentScope() === "child"
-      ? "Select a young person before opening readiness."
-      : "A home context is needed before readiness can load.";
-
-  els.viewContent.innerHTML = `
-    <div class="empty-state">
-      <p>${toText(message)}</p>
-    </div>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "No readiness context",
-    nextEvent: "No deadline loaded",
-    lastRecord: "No readiness data",
-    openActions: "No actions loaded",
-  });
-}
-
-function normaliseApiRows(payload) {
-  return firstArray(
-    payload?.items,
-    payload?.rows,
-    payload?.data,
-    payload?.results,
-    payload?.records
-  );
 }
 
 function renderStatCard(label, value, note = "", tone = "muted") {
@@ -1029,8 +1333,8 @@ function renderInspectionDetail({
       <div class="overview-stats-grid">
         ${renderStatCard("Overall band", formatBand(topBand), `Score ${formatNumber(topScore)}`, getGradeTone(topBand))}
         ${renderStatCard("Confidence", formatNumber(confidenceScore), "Inspection confidence", getConfidenceTone(confidenceScore))}
-        ${renderStatCard("Open actions", detail.open_actions || 0, `${detail.overdue_actions || 0} overdue`, detail.overdue_actions > 0 ? "warning" : "muted")}
-        ${renderStatCard("Critical actions", detail.critical_actions || 0, `${detail.open_lines_of_enquiry || 0} open lines of enquiry`, detail.critical_actions > 0 ? "warning" : "muted")}
+        ${renderStatCard("Open actions", detail.open_actions || 0, `${detail.overdue_actions || 0} overdue`, Number(detail.overdue_actions || 0) > 0 ? "warning" : "muted")}
+        ${renderStatCard("Critical actions", detail.critical_actions || 0, `${detail.open_lines_of_enquiry || 0} open lines of enquiry`, Number(detail.critical_actions || 0) > 0 ? "warning" : "muted")}
       </div>
 
       <div class="overview-grid">
@@ -1090,25 +1394,90 @@ function renderInspectionDetail({
   `;
 }
 
-function chooseSelectedHome(cards = []) {
-  const currentHomeId = getHomeId();
-  const selectedHomeId =
-    state.readinessSelectedHomeId ||
-    currentHomeId ||
-    cards[0]?.home_id ||
-    null;
-
-  const selectedCard =
-    cards.find((card) => Number(card.home_id) === Number(selectedHomeId)) || cards[0] || null;
-
-  if (selectedCard?.home_id) {
-    state.readinessSelectedHomeId = selectedCard.home_id;
-  }
-
-  return selectedCard;
+function renderInspectionWorkspace({
+  cards,
+  selectedCard,
+  header,
+  sections,
+  reasons,
+  actions,
+  tasks,
+  briefing,
+  prep72h,
+}) {
+  return `
+    <div class="overview-grid">
+      <section class="overview-main">
+        <section class="overview-section-card">
+          <div class="overview-section-head">
+            <h3>Homes</h3>
+            <p>Live inspection readiness across available homes.</p>
+          </div>
+          ${renderHomeCards(cards, selectedCard?.home_id || state.readinessSelectedHomeId)}
+        </section>
+      </section>
+    </div>
+    ${renderInspectionDetail({
+      selectedCard,
+      header,
+      sections,
+      reasons,
+      actions,
+      tasks,
+      briefing,
+      prep72h,
+    })}
+  `;
 }
 
-function updateReadinessSummaryFromInspection(detail = {}, actions = [], tasks = []) {
+/* --------------------------- endpoint resolution -------------------------- */
+
+function getInspectionEndpoints(homeId) {
+  const base = buildInspectionUiEndpoints(homeId);
+
+  if (!base?.homeId) return null;
+
+  return {
+    ...base,
+    homeCards: base.homeCards || "/inspection/ui/home-cards",
+    homeHeader: base.homeHeader || `/inspection/ui/homes/${base.homeId}/header`,
+    sectionPanels: base.sectionPanels || `/inspection/ui/homes/${base.homeId}/sections`,
+    reasons: base.reasons || `/inspection/ui/homes/${base.homeId}/reasons`,
+    actions: base.actions || `/inspection/ui/homes/${base.homeId}/actions`,
+    tasks: base.tasks || `/inspection/ui/homes/${base.homeId}/tasks`,
+    briefing: base.briefing || `/inspection/ui/homes/${base.homeId}/briefing`,
+    prep72h: base.prep72h || `/inspection/ui/homes/${base.homeId}/prep-72h`,
+    refreshCycle: base.refreshCycle || base.refresh || null,
+    syncTasks: base.syncTasks || base.sync || null,
+  };
+}
+
+function getLegacyReadinessEndpoints() {
+  const scope = getCurrentScope();
+  const id = getScopeEntityId();
+
+  if (!id) {
+    return null;
+  }
+
+  if (scope === "home" || scope === "quality") {
+    return {
+      compliance: `/homes/${id}/compliance`,
+      documents: `/homes/${id}/documents`,
+      tasks: `/homes/${id}/tasks`,
+    };
+  }
+
+  return {
+    compliance: `/young-people/${id}/compliance`,
+    tasks: `/young-people/${id}/tasks`,
+    documents: `/young-people/${id}/documents`,
+  };
+}
+
+/* ----------------------------- summary helpers ---------------------------- */
+
+function updateReadinessSummaryFromInspection(detail = {}, actions = [], tasks = [], isFallback = false) {
   const nextDue =
     actions.find((item) => item.due_date)?.due_date ||
     tasks.find((item) => item.task_due_date)?.task_due_date ||
@@ -1116,7 +1485,9 @@ function updateReadinessSummaryFromInspection(detail = {}, actions = [], tasks =
     null;
 
   updateWorkspaceSummaryStrip({
-    today: `${formatBand(detail.overall_band || "unknown")} • Score ${formatNumber(detail.overall_score)}`,
+    today: isFallback
+      ? `${formatBand(detail.overall_band || "unknown")} • preview mode`
+      : `${formatBand(detail.overall_band || "unknown")} • Score ${formatNumber(detail.overall_score)}`,
     nextEvent: nextDue
       ? `Next action due ${formatDate(nextDue)}`
       : "No immediate inspection deadline",
@@ -1131,6 +1502,7 @@ function updateReadinessSummaryFromLegacy({
   openTasks = [],
   oversightRows = [],
   documents = [],
+  isFallback = false,
 }) {
   const nextDeadline =
     overdueItems[0] ||
@@ -1140,7 +1512,9 @@ function updateReadinessSummaryFromLegacy({
     null;
 
   updateWorkspaceSummaryStrip({
-    today: `${overdueItems.length} overdue • ${openTasks.length} open actions`,
+    today: isFallback
+      ? `${overdueItems.length} overdue • preview mode`
+      : `${overdueItems.length} overdue • ${openTasks.length} open actions`,
     nextEvent: nextDeadline
       ? `Next due ${formatDate(
           nextDeadline.due_date ||
@@ -1156,6 +1530,28 @@ function updateReadinessSummaryFromLegacy({
   });
 }
 
+/* -------------------------- inspection data flow -------------------------- */
+
+function chooseSelectedHome(cards = []) {
+  const currentHomeId = getHomeId();
+  const selectedHomeId =
+    state.readinessSelectedHomeId ||
+    currentHomeId ||
+    cards[0]?.home_id ||
+    null;
+
+  const selectedCard =
+    cards.find((card) => Number(card.home_id) === Number(selectedHomeId)) ||
+    cards[0] ||
+    null;
+
+  if (selectedCard?.home_id) {
+    state.readinessSelectedHomeId = selectedCard.home_id;
+  }
+
+  return selectedCard;
+}
+
 async function tryLoadInspectionReadiness() {
   const homeId = getHomeId();
   const scope = getCurrentScope();
@@ -1167,21 +1563,33 @@ async function tryLoadInspectionReadiness() {
   const endpoints = getInspectionEndpoints(homeId);
   if (!endpoints) return null;
 
-  const safeGet = (url) => apiGet(url).catch(() => null);
+  const safeRead = (url) => (url ? apiGet(url).catch(() => null) : Promise.resolve(null));
 
-  const [cardsRes, headerRes, sectionsRes, reasonsRes, actionsRes, tasksRes, briefingRes, prepRes] =
-    await Promise.all([
-      safeGet(endpoints.homeCards),
-      safeGet(endpoints.homeHeader),
-      safeGet(endpoints.sectionPanels),
-      safeGet(endpoints.reasons),
-      safeGet(endpoints.actions),
-      safeGet(endpoints.tasks),
-      safeGet(endpoints.briefing),
-      safeGet(endpoints.prep72h),
-    ]);
+  const [
+    cardsRes,
+    headerRes,
+    sectionsRes,
+    reasonsRes,
+    actionsRes,
+    tasksRes,
+    briefingRes,
+    prepRes,
+  ] = await Promise.all([
+    safeRead(endpoints.homeCards),
+    safeRead(endpoints.homeHeader),
+    safeRead(endpoints.sectionPanels),
+    safeRead(endpoints.reasons),
+    safeRead(endpoints.actions),
+    safeRead(endpoints.tasks),
+    safeRead(endpoints.briefing),
+    safeRead(endpoints.prep72h),
+  ]);
 
-  const cards = normaliseApiRows(cardsRes);
+  const cards = dedupeBy(
+    normaliseApiRows(cardsRes),
+    (row) => `card:${row.home_id}:${row.scored_at || ""}`
+  );
+
   const selectedCard = chooseSelectedHome(cards);
 
   const headerRows = normaliseApiRows(headerRes).map(mapInspectionHeader);
@@ -1203,22 +1611,27 @@ async function tryLoadInspectionReadiness() {
   const sections = sectionRows.filter(
     (row) => Number(row.home_id) === Number(targetHomeId)
   );
+
   const reasons = sortNewestFirst(
     reasonRows.filter((row) => Number(row.home_id) === Number(targetHomeId)),
     ["priority", "created_at"]
   );
+
   const actions = sortSoonestFirst(
     actionRows.filter((row) => Number(row.home_id) === Number(targetHomeId)),
     ["due_date", "created_at"]
   );
+
   const tasks = sortSoonestFirst(
     taskRows.filter((row) => Number(row.home_id) === Number(targetHomeId)),
     ["task_due_date", "action_due_date", "task_created_at", "created_at"]
   );
+
   const briefing =
     briefingRows.find((row) => Number(row.home_id) === Number(targetHomeId)) ||
     briefingRows[0] ||
     null;
+
   const prep72h =
     prepRows.find((row) => Number(row.home_id) === Number(targetHomeId)) ||
     prepRows[0] ||
@@ -1235,7 +1648,12 @@ async function tryLoadInspectionReadiness() {
     prep72h;
 
   if (!hasInspectionData) {
-    return null;
+    const fallback = buildFallbackInspectionData(homeId);
+    return {
+      ...fallback,
+      selectedCard: fallback.cards[0] || null,
+      endpoints,
+    };
   }
 
   return {
@@ -1249,8 +1667,11 @@ async function tryLoadInspectionReadiness() {
     briefing,
     prep72h,
     endpoints,
+    isFallback: false,
   };
 }
+
+/* ---------------------------- legacy data flow ---------------------------- */
 
 async function loadLegacyReadiness() {
   const endpoints = getLegacyReadinessEndpoints();
@@ -1268,7 +1689,7 @@ async function loadLegacyReadiness() {
     apiGet(endpoints.documents).catch(() => ({ items: [] })),
   ]);
 
-  const complianceItems = sortSoonestFirst(
+  let complianceItems = sortSoonestFirst(
     (
       complianceData.items ||
       complianceData.records ||
@@ -1278,12 +1699,12 @@ async function loadLegacyReadiness() {
     ["due_date", "created_at"]
   );
 
-  const tasks = sortSoonestFirst(
+  let tasks = sortSoonestFirst(
     (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
     ["due_date", "created_at"]
   );
 
-  const documents = sortNewestFirst(
+  let documents = sortNewestFirst(
     (
       documentsData.items ||
       documentsData.records ||
@@ -1293,6 +1714,16 @@ async function loadLegacyReadiness() {
     ).map(mapStatutoryDocument),
     ["review_date", "expiry_date", "created_at"]
   );
+
+  let isFallback = false;
+
+  if (!complianceItems.length && !tasks.length && !documents.length) {
+    const fallback = buildFallbackLegacyData();
+    complianceItems = fallback.complianceItems;
+    tasks = fallback.tasks;
+    documents = fallback.documents;
+    isFallback = true;
+  }
 
   const overdueItems = complianceItems.filter((item) =>
     ["overdue", "escalated", "missing", "review_due"].includes(
@@ -1317,6 +1748,7 @@ async function loadLegacyReadiness() {
     openTasks,
     documents,
     oversightRows,
+    isFallback,
   });
 
   updateReadinessSummaryFromLegacy({
@@ -1325,25 +1757,26 @@ async function loadLegacyReadiness() {
     openTasks,
     oversightRows,
     documents,
+    isFallback,
   });
 }
+
+/* -------------------------------- bindings -------------------------------- */
 
 function bindInspectionReadinessEvents(endpoints) {
   if (!els.viewContent || !endpoints) return;
 
-  els.viewContent
-    .querySelectorAll("[data-readiness-home-card]")
-    .forEach((button) => {
-      button.addEventListener("click", async () => {
-        const homeId = Number(button.dataset.homeId || 0);
-        if (!homeId) return;
-        state.readinessSelectedHomeId = homeId;
-        await loadReadiness();
-      });
+  els.viewContent.querySelectorAll("[data-readiness-home-card]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const homeId = Number(button.dataset.homeId || 0);
+      if (!homeId) return;
+      state.readinessSelectedHomeId = homeId;
+      await loadReadiness();
     });
+  });
 
   const refreshButton = els.viewContent.querySelector("[data-readiness-refresh='true']");
-  if (refreshButton) {
+  if (refreshButton && endpoints.refreshCycle) {
     refreshButton.addEventListener("click", async () => {
       refreshButton.disabled = true;
       refreshButton.textContent = "Refreshing...";
@@ -1367,7 +1800,7 @@ function bindInspectionReadinessEvents(endpoints) {
   }
 
   const syncButton = els.viewContent.querySelector("[data-readiness-sync='true']");
-  if (syncButton) {
+  if (syncButton && endpoints.syncTasks) {
     syncButton.addEventListener("click", async () => {
       syncButton.disabled = true;
       syncButton.textContent = "Syncing...";
@@ -1392,13 +1825,32 @@ function bindInspectionReadinessEvents(endpoints) {
   }
 }
 
-export async function loadReadiness() {
+/* -------------------------------- states --------------------------------- */
+
+function renderNoContext() {
   if (!els.viewContent) return;
 
-  if (!getScopeEntityId()) {
-    renderNoContext();
-    return;
-  }
+  const message =
+    getCurrentScope() === "child"
+      ? "Select a young person before opening readiness."
+      : "A home context is needed before readiness can load.";
+
+  els.viewContent.innerHTML = `
+    <section class="overview-panel">
+      ${renderEmptyState(message)}
+    </section>
+  `;
+
+  updateWorkspaceSummaryStrip({
+    today: "No readiness context",
+    nextEvent: "No deadline loaded",
+    lastRecord: "No readiness data",
+    openActions: "No actions loaded",
+  });
+}
+
+function renderLoadingState() {
+  if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -1409,33 +1861,43 @@ export async function loadReadiness() {
     </div>
   `;
 
+  updateWorkspaceSummaryStrip({
+    today: "Loading readiness",
+    nextEvent: "Checking deadlines",
+    lastRecord: "Loading latest readiness output",
+    openActions: "Loading actions",
+  });
+}
+
+/* -------------------------------- public --------------------------------- */
+
+export async function loadCurrentView() {
+  return loadReadiness();
+}
+
+export async function loadReadiness() {
+  if (!els.viewContent) return;
+
+  if (!getScopeEntityId()) {
+    renderNoContext();
+    return;
+  }
+
+  renderLoadingState();
+
   try {
     const inspectionData = await tryLoadInspectionReadiness();
 
-    if (inspectionData) {
-      els.viewContent.innerHTML = `
-        <div class="overview-grid">
-          <section class="overview-main">
-            <section class="overview-section-card">
-              <div class="overview-section-head">
-                <h3>Homes</h3>
-                <p>Live inspection readiness across available homes.</p>
-              </div>
-              ${renderHomeCards(
-                inspectionData.cards,
-                inspectionData.selectedCard?.home_id || state.readinessSelectedHomeId
-              )}
-            </section>
-          </section>
-        </div>
-        ${renderInspectionDetail(inspectionData)}
-      `;
+    if (inspectionData && (getCurrentScope() === "home" || getCurrentScope() === "quality")) {
+      els.viewContent.innerHTML = renderInspectionWorkspace(inspectionData);
 
       updateReadinessSummaryFromInspection(
         inspectionData.header || inspectionData.selectedCard || {},
         inspectionData.actions || [],
-        inspectionData.tasks || []
+        inspectionData.tasks || [],
+        inspectionData.isFallback
       );
+
       bindInspectionReadinessEvents(inspectionData.endpoints);
       return;
     }
@@ -1448,11 +1910,11 @@ export async function loadReadiness() {
       await loadLegacyReadiness();
     } catch (legacyError) {
       els.viewContent.innerHTML = `
-        <div class="empty-state">
-          <p>${escapeHtml(
+        <section class="overview-panel">
+          ${renderEmptyState(
             legacyError.message || error.message || "Failed to load readiness."
-          )}</p>
-        </div>
+          )}
+        </section>
       `;
 
       updateWorkspaceSummaryStrip({
