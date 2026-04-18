@@ -15,7 +15,7 @@ import {
   mapInspectionAction,
   mapInspectionTask,
   mapInspectionBriefing,
-  mapInspection72Hour,
+  mapInspectionPrep72Hour,
 } from "../core/adapters.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
@@ -1526,7 +1526,7 @@ async function tryFetchInspectionDataset(homeId) {
   const prep72h = toArray(prep72hData?.items, [
     prep72hData?.rows,
     prep72hData?.records,
-  ]).map(mapInspection72Hour);
+  ]).map(mapInspectionPrep72Hour);
 
   const hasInspectionData =
     cards.length ||
