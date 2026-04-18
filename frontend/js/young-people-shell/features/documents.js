@@ -12,14 +12,22 @@ function getCurrentScope() {
 function getHomeId() {
   return (
     state.homeId ||
+    state.selectedHomeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    state.youngPerson?.home_id ||
     null
   );
 }
 
 function getYoungPersonId() {
-  return state.youngPersonId || null;
+  return (
+    state.youngPersonId ||
+    state.selectedYoungPerson?.id ||
+    state.youngPerson?.id ||
+    null
+  );
 }
 
 function safeText(value, fallback = "") {
@@ -58,19 +66,19 @@ function getStatusTone(status = "") {
   const s = String(status || "").toLowerCase();
 
   if (
-    ["overdue", "expired", "missing", "non_compliant", "failed"].includes(s)
+    ["overdue", "expired", "missing", "non_compliant", "failed", "archived"].includes(s)
   ) {
     return "danger";
   }
 
   if (
-    ["due_soon", "review_due", "warning", "attention", "expiring"].includes(s)
+    ["due_soon", "review_due", "warning", "attention", "expiring", "draft"].includes(s)
   ) {
     return "warning";
   }
 
   if (
-    ["valid", "active", "current", "reviewed", "compliant"].includes(s)
+    ["valid", "active", "current", "reviewed", "compliant", "approved"].includes(s)
   ) {
     return "success";
   }
@@ -80,17 +88,25 @@ function getStatusTone(status = "") {
 
 function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(aValue).getTime() - new Date(bValue).getTime();
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || null;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || null;
+
+    const aTime = aValue ? new Date(aValue).getTime() : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? new Date(bValue).getTime() : Number.POSITIVE_INFINITY;
+
+    return aTime - bTime;
   });
 }
 
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || null;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || null;
+
+    const aTime = aValue ? new Date(aValue).getTime() : 0;
+    const bTime = bValue ? new Date(bValue).getTime() : 0;
+
+    return bTime - aTime;
   });
 }
 
@@ -107,6 +123,7 @@ function toArray(value, fallbacks = []) {
 /* =========================
    DEMO DATA (SAFE FALLBACK)
    ========================= */
+
 function getDemoDocuments(scope = "home") {
   if (scope === "child") {
     return [
@@ -118,6 +135,7 @@ function getDemoDocuments(scope = "home") {
         status: "active",
         review_date: "2026-05-01",
         created_at: "2026-03-01T10:00:00Z",
+        record_type: "document",
       },
       {
         id: 102,
@@ -127,6 +145,7 @@ function getDemoDocuments(scope = "home") {
         status: "review_due",
         review_date: "2026-04-20",
         created_at: "2026-03-18T09:30:00Z",
+        record_type: "document",
       },
       {
         id: 103,
@@ -136,6 +155,7 @@ function getDemoDocuments(scope = "home") {
         status: "valid",
         review_date: "2026-06-10",
         created_at: "2026-02-22T14:15:00Z",
+        record_type: "document",
       },
       {
         id: 104,
@@ -145,6 +165,7 @@ function getDemoDocuments(scope = "home") {
         status: "expired",
         review_date: "2026-03-15",
         created_at: "2026-01-12T11:45:00Z",
+        record_type: "document",
       },
     ];
   }
@@ -158,6 +179,7 @@ function getDemoDocuments(scope = "home") {
       status: "active",
       review_date: "2026-05-01",
       created_at: "2026-03-01T10:00:00Z",
+      record_type: "statutory_document",
     },
     {
       id: 2,
@@ -167,6 +189,7 @@ function getDemoDocuments(scope = "home") {
       status: "review_due",
       review_date: "2026-04-20",
       created_at: "2026-03-18T09:30:00Z",
+      record_type: "statutory_document",
     },
     {
       id: 3,
@@ -176,6 +199,7 @@ function getDemoDocuments(scope = "home") {
       status: "valid",
       review_date: "2026-06-10",
       created_at: "2026-02-22T14:15:00Z",
+      record_type: "document",
     },
     {
       id: 4,
@@ -185,61 +209,139 @@ function getDemoDocuments(scope = "home") {
       status: "expired",
       review_date: "2026-03-15",
       created_at: "2026-01-12T11:45:00Z",
+      record_type: "document",
     },
   ];
 }
 
-function normaliseDocuments(data = {}, scope = "home") {
-  const rawItems = toArray(data.items, [
-    data.documents,
-    data.records,
-    data.statutory_documents,
-  ]);
-
-  if (!rawItems.length) {
-    return getDemoDocuments(scope);
+function pickRawDocumentItems(data = {}, scope = "home") {
+  if (scope === "child") {
+    return toArray(data.items, [
+      data.documents,
+      data.records,
+      data.statutory_documents,
+      data.young_person_essential_documents,
+      data.child_documents,
+    ]);
   }
 
+  return toArray(data.items, [
+    data.documents,
+    data.records,
+    data.home_documents,
+    data.statutory_documents,
+    data.policy_register,
+    data.policies,
+  ]);
+}
+
+function normaliseRecordType(item = {}) {
+  const raw = String(
+    item.record_type ||
+      item.source_table ||
+      item.type ||
+      item.document_type ||
+      ""
+  )
+    .toLowerCase()
+    .trim();
+
+  if (
+    [
+      "statutory_document",
+      "statutory_documents",
+      "young_person_essential_documents",
+    ].includes(raw)
+  ) {
+    return "statutory_document";
+  }
+
+  if (["policy_register", "policy", "policies"].includes(raw)) {
+    return "document";
+  }
+
+  if (["home_documents", "documents", "document"].includes(raw)) {
+    return "document";
+  }
+
+  return raw || "document";
+}
+
+function shouldUseStatutoryMapper(item = {}) {
+  const recordType = normaliseRecordType(item);
+
+  return (
+    recordType === "statutory_document" ||
+    item.compliance_category ||
+    item.linked_standard_code ||
+    item.file_document_id ||
+    item.statutory_document_id
+  );
+}
+
+function normaliseDocuments(data = {}, scope = "home") {
+  const rawItems = pickRawDocumentItems(data, scope);
+
   return rawItems.map((item) => {
-    const mapped =
-      item?.record_type === "statutory_document" ||
-      item?.document_type ||
-      item?.file_name
-        ? mapStatutoryDocument(item)
-        : item;
+    const mapped = shouldUseStatutoryMapper(item)
+      ? mapStatutoryDocument(item)
+      : item;
+
+    const recordType = normaliseRecordType({
+      ...item,
+      ...mapped,
+    });
 
     return {
       ...mapped,
-      id: mapped.id ?? item.id ?? item.source_id ?? null,
-      record_type: mapped.record_type || "document",
+      id:
+        mapped.id ??
+        item.id ??
+        item.document_id ??
+        item.source_id ??
+        item.file_document_id ??
+        item.statutory_document_id ??
+        null,
+      record_type: recordType,
       title:
         mapped.title ||
         item.title ||
-        item.document_type ||
+        item.document_title ||
+        item.policy_name ||
         item.file_name ||
+        item.document_type ||
         "Document",
       document_type:
         mapped.document_type ||
         item.document_type ||
         item.category ||
+        item.document_category ||
+        item.compliance_category ||
         "Document",
       summary:
         mapped.summary ||
         item.summary ||
         item.description ||
         item.notes ||
+        item.content ||
         "No description",
       status:
         mapped.status ||
         item.status ||
+        item.approval_status ||
         "recorded",
       review_date:
         mapped.review_date ||
         item.review_date ||
+        item.next_review_date ||
         null,
       expiry_date:
         mapped.expiry_date ||
         item.expiry_date ||
+        null,
+      issue_date:
+        mapped.issue_date ||
+        item.issue_date ||
         null,
       created_at:
         mapped.created_at ||
@@ -256,6 +358,11 @@ function normaliseDocuments(data = {}, scope = "home") {
       compliance_category:
         mapped.compliance_category ||
         item.compliance_category ||
+        item.category ||
+        "",
+      confidentiality_level:
+        mapped.confidentiality_level ||
+        item.confidentiality_level ||
         "",
     };
   });
@@ -263,13 +370,13 @@ function normaliseDocuments(data = {}, scope = "home") {
 
 function buildDocumentStats(items = []) {
   const active = items.filter((doc) =>
-    ["valid", "active", "current", "reviewed", "compliant"].includes(
+    ["valid", "active", "current", "reviewed", "compliant", "approved"].includes(
       String(doc.status || "").toLowerCase()
     )
   ).length;
 
   const reviewDue = items.filter((doc) =>
-    ["review_due", "due_soon", "expiring", "warning"].includes(
+    ["review_due", "due_soon", "expiring", "warning", "attention"].includes(
       String(doc.status || "").toLowerCase()
     )
   ).length;
@@ -384,22 +491,41 @@ function renderPriorityList(items = []) {
   }
 
   return `
-    <div class="priority-list">
-      ${items.slice(0, 6)
-        .map(
-          (doc) => `
-            <article class="priority-item">
-              <strong>${safeText(doc.title || doc.document_type || "Document")}</strong>
-              <p>${safeText(
-                doc.review_date
-                  ? `Review due ${formatDate(doc.review_date)}`
-                  : doc.expiry_date
-                  ? `Expiry ${formatDate(doc.expiry_date)}`
-                  : doc.summary || "Document needs review."
-              )}</p>
+    <div class="record-list">
+      ${items
+        .slice(0, 6)
+        .map((doc) => {
+          const tone = getStatusTone(doc.status);
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${safeText(doc.id ?? "")}"
+              data-record-type="${safeText(doc.record_type || "document")}"
+              data-title="${safeText(doc.title || doc.document_type || "Document")}"
+              role="button"
+              tabindex="0"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(
+                  doc.title || doc.document_type || "Document"
+                )}</div>
+                <div class="record-row-summary">${safeText(
+                  doc.review_date
+                    ? `Review due ${formatDate(doc.review_date)}`
+                    : doc.expiry_date
+                    ? `Expiry ${formatDate(doc.expiry_date)}`
+                    : doc.summary || "Document needs review."
+                )}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${safeText(tone)}">
+                  ${safeText(doc.status || "Attention")}
+                </span>
+              </div>
             </article>
-          `
-        )
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -413,6 +539,7 @@ function renderDocumentsPage({
   reviewItems,
   recentItems,
   allItems,
+  isDemo = false,
 }) {
   return `
     <section class="overview-panel">
@@ -421,6 +548,11 @@ function renderDocumentsPage({
           <div class="eyebrow">Documents</div>
           <h2>${safeText(title)}</h2>
           <p>${safeText(subtitle)}</p>
+          ${
+            isDemo
+              ? `<p class="overview-panel-subtitle">Showing demo fallback data.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -547,9 +679,33 @@ export async function loadDocuments() {
         ? `/young-people/${youngPersonId}/documents`
         : `/homes/${homeId}/documents`;
 
-    const data = await apiGet(endpoint).catch(() => ({ items: [] }));
+    const data = await apiGet(endpoint);
+    const allItems = normaliseDocuments(data || {}, scope);
 
-    const allItems = normaliseDocuments(data, scope);
+    if (!allItems.length) {
+      els.viewContent.innerHTML = renderDocumentsPage({
+        title: scope === "child" ? "Documents and uploads" : "Service documents",
+        subtitle:
+          scope === "child"
+            ? "Child documents, uploads and review-sensitive records."
+            : "Home-wide uploads, statutory documents and review-sensitive records.",
+        stats: buildDocumentStats([]),
+        priorityItems: [],
+        reviewItems: [],
+        recentItems: [],
+        allItems: [],
+        isDemo: false,
+      });
+
+      updateWorkspaceSummaryStrip({
+        today: "0 documents",
+        nextEvent: "No review date loaded",
+        lastRecord: "No recent document activity",
+        openActions: "0 urgent • 0 review due",
+      });
+      return;
+    }
+
     const stats = buildDocumentStats(allItems);
     const priorityItems = buildPriorityItems(allItems);
     const reviewItems = priorityItems.slice(0, 8);
@@ -577,6 +733,7 @@ export async function loadDocuments() {
       reviewItems,
       recentItems,
       allItems,
+      isDemo: false,
     });
 
     updateWorkspaceSummaryStrip({
@@ -600,12 +757,16 @@ export async function loadDocuments() {
 
     els.viewContent.innerHTML = renderDocumentsPage({
       title: scope === "child" ? "Documents and uploads" : "Service documents",
-      subtitle: "Showing demo fallback data for now.",
+      subtitle:
+        scope === "child"
+          ? "Child documents, uploads and review-sensitive records."
+          : "Home-wide uploads, statutory documents and review-sensitive records.",
       stats,
       priorityItems,
       reviewItems,
       recentItems,
       allItems: demoItems,
+      isDemo: true,
     });
 
     updateWorkspaceSummaryStrip({
