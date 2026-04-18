@@ -12,9 +12,13 @@ import {
 
 const SAFE_EMPTY = Object.freeze({ items: [] });
 
-function toArray(value, fallback = []) {
+function toArray(value, fallbacks = []) {
   if (Array.isArray(value)) return value;
-  if (Array.isArray(fallback)) return fallback;
+
+  for (const fallback of fallbacks) {
+    if (Array.isArray(fallback)) return fallback;
+  }
+
   return [];
 }
 
@@ -92,7 +96,7 @@ function isOverdue(value) {
 }
 
 function badgeClass(value) {
-  const v = lower(value);
+  const v = lower(value).replaceAll(" ", "_");
 
   if (
     [
@@ -110,6 +114,8 @@ function badgeClass(value) {
       "stale",
       "missing",
       "draft",
+      "held",
+      "problem",
     ].includes(v)
   ) {
     return "badge badge-danger";
@@ -125,10 +131,11 @@ function badgeClass(value) {
       "amber",
       "medium",
       "in_progress",
-      "in progress",
-      "held",
+      "held_for_review",
       "partial",
       "ri",
+      "review_due",
+      "awaiting_approval",
     ].includes(v)
   ) {
     return "badge badge-warning";
@@ -149,7 +156,7 @@ function badgeClass(value) {
       "published",
       "ready",
       "up_to_date",
-      "up to date",
+      "current",
     ].includes(v)
   ) {
     return "badge badge-success";
@@ -202,12 +209,268 @@ function sortSoonest(items = [], key) {
   });
 }
 
+function dedupeBy(items = [], buildKey) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = buildKey(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/* ------------------------------ demo fallback ----------------------------- */
+
+function buildFallbackData(homeId) {
+  const homeName =
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    `Home ${homeId}`;
+
+  const now = new Date();
+
+  const plusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  const minusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  return {
+    monthlyReviews: [
+      mapMonthlyReview({
+        id: "mr-1",
+        provider_id: 1,
+        home_id: homeId,
+        review_month: minusDays(30),
+        status: "approved",
+        review_title: `${homeName} monthly review`,
+        summary_of_month:
+          "Overall month showed stable routines, improved engagement and consistent safeguarding oversight.",
+        manager_analysis:
+          "Staffing consistency improved. Education attendance remains a continued focus.",
+        actions_for_next_month:
+          "Increase direct work evidence and complete two overdue keywork actions.",
+        approved_at: minusDays(6),
+        created_at: minusDays(8),
+        updated_at: minusDays(6),
+      }),
+      mapMonthlyReview({
+        id: "mr-2",
+        provider_id: 1,
+        home_id: homeId,
+        review_month: plusDays(0),
+        status: "draft",
+        review_title: `${homeName} current monthly review draft`,
+        summary_of_month:
+          "Draft review in progress with early themes around attendance, routines and family engagement.",
+        manager_analysis:
+          "Needs final manager analysis and sign-off before completion.",
+        actions_for_next_month:
+          "Finalise report and confirm outstanding placement actions.",
+        created_at: minusDays(1),
+        updated_at: minusDays(1),
+      }),
+    ],
+
+    monthlyReviewActions: [
+      mapMonthlyReviewAction({
+        id: "mra-1",
+        provider_id: 1,
+        monthly_review_id: "mr-1",
+        action_text: "Complete follow-up on attendance escalation plan.",
+        due_date: plusDays(2),
+        status: "open",
+        created_at: minusDays(5),
+      }),
+      mapMonthlyReviewAction({
+        id: "mra-2",
+        provider_id: 1,
+        monthly_review_id: "mr-1",
+        action_text: "Evidence direct work outcomes in next review cycle.",
+        due_date: minusDays(2),
+        status: "overdue",
+        created_at: minusDays(10),
+      }),
+    ],
+
+    aiReports: [
+      mapAIReport({
+        id: "air-1",
+        provider_id: 1,
+        home_id: homeId,
+        report_type: "monthly_review",
+        title: "AI monthly review draft",
+        review_month: minusDays(20),
+        report_text:
+          "Draft generated from current records highlighting safeguarding stability, education concerns and improved routines.",
+        status: "generated",
+        created_at: minusDays(3),
+        updated_at: minusDays(3),
+      }),
+      mapAIReport({
+        id: "air-2",
+        provider_id: 1,
+        home_id: homeId,
+        report_type: "manager_summary",
+        title: "Manager summary output",
+        review_month: minusDays(5),
+        report_text:
+          "Manager summary generated with focus on staffing consistency, actions and evidence freshness.",
+        status: "ready",
+        created_at: minusDays(2),
+        updated_at: minusDays(2),
+      }),
+    ],
+
+    reportDeliveryLog: [
+      mapReportDelivery({
+        id: "rd-1",
+        report_type: "monthly_review",
+        home_id: homeId,
+        provider_id: 1,
+        period_start: minusDays(30),
+        period_end: minusDays(1),
+        email_to: "manager@example.com",
+        delivery_status: "sent",
+        delivered_at: minusDays(1),
+        created_at: minusDays(1),
+      }),
+      mapReportDelivery({
+        id: "rd-2",
+        report_type: "inspection_pack",
+        home_id: homeId,
+        provider_id: 1,
+        period_start: minusDays(14),
+        period_end: minusDays(1),
+        email_to: "ri@example.com",
+        delivery_status: "failed",
+        delivery_error: "Attachment generation failed during delivery.",
+        created_at: minusDays(2),
+      }),
+    ],
+
+    reportFactSnapshots: [
+      mapReportFactSnapshot({
+        id: "snap-1",
+        report_type: "monthly_review",
+        home_id: homeId,
+        provider_id: 1,
+        snapshot_key: "monthly-review-apr-2026",
+        source_updated_at: minusDays(1),
+        status: "generated",
+        created_at: minusDays(1),
+      }),
+      mapReportFactSnapshot({
+        id: "snap-2",
+        report_type: "inspection_pack",
+        home_id: homeId,
+        provider_id: 1,
+        snapshot_key: "inspection-pack-current",
+        source_updated_at: minusDays(3),
+        status: "generated",
+        created_at: minusDays(3),
+      }),
+    ],
+
+    aiMeetingNotes: [
+      mapAIMeetingNote({
+        id: "note-1",
+        provider_id: 1,
+        title: "Team meeting note",
+        service_type: "home",
+        shift_type: "day",
+        record_author: "Sarah Ahmed",
+        note_status: "approved",
+        final_note:
+          "Staff discussed routines, education attendance and environment actions for the coming week.",
+        created_at: minusDays(2),
+        updated_at: minusDays(2),
+      }),
+      mapAIMeetingNote({
+        id: "note-2",
+        provider_id: 1,
+        title: "Handover planning note",
+        service_type: "home",
+        shift_type: "night",
+        record_author: "Tom Patel",
+        note_status: "draft",
+        safeguarding_flag: true,
+        safeguarding_reason:
+          "Contains discussion about recent incident follow-up and observation planning.",
+        ai_draft:
+          "Draft note captured safeguarding updates and overnight planning priorities.",
+        created_at: minusDays(1),
+        updated_at: minusDays(1),
+      }),
+    ],
+
+    handoverRecords: [
+      mapHandoverRecord({
+        id: "hr-1",
+        provider_id: 1,
+        handover_date: minusDays(1),
+        shift_type: "day",
+        title: "Day handover",
+        summary_text:
+          "Handover generated covering routines, appointments and outstanding manager actions.",
+        status: "generated",
+        created_at: minusDays(1),
+        updated_at: minusDays(1),
+      }),
+      mapHandoverRecord({
+        id: "hr-2",
+        provider_id: 1,
+        handover_date: minusDays(0),
+        shift_type: "night",
+        title: "Night handover",
+        summary_text:
+          "Night handover captured wellbeing observation priorities and staffing notes.",
+        status: "draft",
+        created_at: minusDays(0),
+        updated_at: minusDays(0),
+      }),
+    ],
+
+    inspectionPackJobs: [
+      mapInspectionPackJob({
+        id: "ip-1",
+        provider_id: 1,
+        scope_type: "home",
+        scope_id: homeId,
+        pack_type: "inspection",
+        status: "completed",
+        generated_file_path: "/generated/inspection-pack-apr-2026.pdf",
+        completed_at: minusDays(4),
+        created_at: minusDays(4),
+      }),
+      mapInspectionPackJob({
+        id: "ip-2",
+        provider_id: 1,
+        scope_type: "home",
+        scope_id: homeId,
+        pack_type: "readiness",
+        status: "processing",
+        created_at: minusDays(1),
+      }),
+    ],
+  };
+}
+
 /* -------------------------------- mappers -------------------------------- */
 
 function mapMonthlyReview(record = {}) {
   return {
     id: record.id,
     provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
     young_person_id: record.young_person_id || null,
     review_month: record.review_month || null,
     status: record.status || "",
@@ -259,6 +522,7 @@ function mapAIReport(record = {}) {
   return {
     id: record.id,
     provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
     young_person_id: record.young_person_id || null,
     report_type: record.report_type || "",
     title: record.title || "AI report",
@@ -318,9 +582,7 @@ function mapReportFactSnapshot(record = {}) {
     status: record.status || "",
     generated_by: record.generated_by || null,
     title: `${titleCase(record.report_type || "Report")} snapshot`,
-    summary:
-      record.snapshot_key ||
-      "Report fact snapshot available.",
+    summary: record.snapshot_key || "Report fact snapshot available.",
     record_type: "report_fact_snapshot",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -533,6 +795,17 @@ function renderCard(item = {}) {
               `
               : ""
           }
+
+          ${
+            item.generated_file_path
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Generated file</div>
+                  <div class="details-grid-value">${safeText(item.generated_file_path)}</div>
+                </div>
+              `
+              : ""
+          }
         </div>
 
         ${
@@ -578,17 +851,6 @@ function renderCard(item = {}) {
             `
             : ""
         }
-
-        ${
-          item.generated_file_path
-            ? `
-              <div class="record-card-block">
-                <div class="record-card-block-label">Generated file</div>
-                <div>${safeText(item.generated_file_path)}</div>
-              </div>
-            `
-            : ""
-        }
       </div>
     </article>
   `;
@@ -597,6 +859,32 @@ function renderCard(item = {}) {
 function renderCardList(items = [], emptyTitle, emptyMessage) {
   if (!items.length) return renderEmpty(emptyTitle, emptyMessage);
   return `<div class="record-card-list">${items.map(renderCard).join("")}</div>`;
+}
+
+function renderPriorityList(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No urgent reporting issues are showing right now.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="priority-list">
+      ${items
+        .slice(0, 6)
+        .map(
+          (item) => `
+            <article class="priority-item">
+              <strong>${safeText(item.title || "Reporting issue")}</strong>
+              <p>${safeText(item.summary || "Needs attention.")}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function renderTimeline(items = []) {
@@ -653,7 +941,9 @@ function renderWorkspace(payload) {
     recentMeetingNotes,
     recentHandovers,
     inspectionPackJobs,
+    priorityItems,
     timeline,
+    isFallback,
   } = payload;
 
   return `
@@ -665,6 +955,11 @@ function renderWorkspace(payload) {
           <p class="overview-panel-subtitle">
             Live reporting workspace across operational reporting, generated outputs, snapshots and delivery status.
           </p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live reporting endpoints are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -709,6 +1004,11 @@ function renderWorkspace(payload) {
         </div>
 
         <aside>
+          ${renderSection(
+            "Needs attention",
+            renderPriorityList(priorityItems)
+          )}
+
           ${renderSection(
             "Failed or held deliveries",
             renderCardList(
@@ -816,6 +1116,32 @@ async function fetchAll(homeId) {
   };
 }
 
+async function fetchDataset(homeId) {
+  const data = await fetchAll(homeId);
+
+  const hasLiveData =
+    data.monthlyReviews.length ||
+    data.monthlyReviewActions.length ||
+    data.aiReports.length ||
+    data.reportDeliveryLog.length ||
+    data.reportFactSnapshots.length ||
+    data.aiMeetingNotes.length ||
+    data.handoverRecords.length ||
+    data.inspectionPackJobs.length;
+
+  if (!hasLiveData) {
+    return {
+      ...buildFallbackData(homeId),
+      isFallback: true,
+    };
+  }
+
+  return {
+    ...data,
+    isFallback: false,
+  };
+}
+
 /* ------------------------------- selectors ------------------------------- */
 
 function buildLatestMonthlyReviews(data) {
@@ -825,7 +1151,7 @@ function buildLatestMonthlyReviews(data) {
 function buildOutstandingMonthlyReviewActions(data) {
   return sortSoonest(
     data.monthlyReviewActions.filter((item) => {
-      const status = lower(item.status);
+      const status = lower(item.status).replaceAll(" ", "_");
       return !["completed", "closed", "cancelled"].includes(status);
     }),
     "due_date"
@@ -839,7 +1165,7 @@ function buildRecentAIReports(data) {
 function buildFailedDeliveries(data) {
   return sortNewest(
     data.reportDeliveryLog.filter((item) => {
-      const status = lower(item.delivery_status);
+      const status = lower(item.delivery_status).replaceAll(" ", "_");
       return ["failed", "error", "held", "pending"].includes(status) || item.delivery_error;
     }),
     ["delivered_at", "created_at"]
@@ -868,18 +1194,100 @@ function buildInspectionPackJobs(data) {
   return sortNewest(data.inspectionPackJobs, ["completed_at", "created_at"]).slice(0, 8);
 }
 
+function buildPriorityItems(data) {
+  const items = [];
+
+  const overdueActions = buildOutstandingMonthlyReviewActions(data).filter((item) =>
+    isOverdue(item.due_date)
+  );
+
+  overdueActions.slice(0, 2).forEach((item) => {
+    items.push({
+      title: item.title || "Monthly review action",
+      summary: item.due_date
+        ? `Overdue since ${formatDate(item.due_date)}`
+        : item.summary || "Open monthly review action needs attention.",
+    });
+  });
+
+  buildFailedDeliveries(data)
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Failed delivery",
+        summary:
+          item.delivery_error ||
+          item.summary ||
+          "Report delivery failed or is being held.",
+      });
+    });
+
+  const draftMonthlyReviews = buildLatestMonthlyReviews(data).filter((item) =>
+    ["draft", "pending", "submitted"].includes(lower(item.status).replaceAll(" ", "_"))
+  );
+
+  draftMonthlyReviews.slice(0, 1).forEach((item) => {
+    items.push({
+      title: item.title || "Draft monthly review",
+      summary:
+        item.manager_analysis ||
+        item.actions_for_next_month ||
+        item.summary ||
+        "Monthly review still requires completion or sign-off.",
+    });
+  });
+
+  const draftNotes = buildRecentMeetingNotes(data).filter((item) =>
+    ["draft", "pending"].includes(lower(item.note_status).replaceAll(" ", "_")) ||
+    item.safeguarding_flag
+  );
+
+  draftNotes.slice(0, 1).forEach((item) => {
+    items.push({
+      title: item.title || "Meeting note requires review",
+      summary:
+        item.safeguarding_reason ||
+        item.summary ||
+        "Meeting note requires review before final use.",
+    });
+  });
+
+  const incompletePackJobs = buildInspectionPackJobs(data).filter((item) =>
+    ["processing", "failed", "pending", "held"].includes(lower(item.status).replaceAll(" ", "_"))
+  );
+
+  incompletePackJobs.slice(0, 1).forEach((item) => {
+    items.push({
+      title: item.title || "Inspection pack job",
+      summary: item.summary || "Inspection pack job is not yet complete.",
+    });
+  });
+
+  if (!items.length) {
+    items.push({
+      title: "No major reporting pressure",
+      summary: "Reporting outputs are not currently surfacing urgent issues.",
+    });
+  }
+
+  return items.slice(0, 6);
+}
+
 function buildTimeline(data) {
   return sortNewest(
-    [
-      ...data.monthlyReviews,
-      ...data.monthlyReviewActions,
-      ...data.aiReports,
-      ...data.reportDeliveryLog,
-      ...data.reportFactSnapshots,
-      ...data.aiMeetingNotes,
-      ...data.handoverRecords,
-      ...data.inspectionPackJobs,
-    ],
+    dedupeBy(
+      [
+        ...data.monthlyReviews,
+        ...data.monthlyReviewActions,
+        ...data.aiReports,
+        ...data.reportDeliveryLog,
+        ...data.reportFactSnapshots,
+        ...data.aiMeetingNotes,
+        ...data.handoverRecords,
+        ...data.inspectionPackJobs,
+      ],
+      (item) => `${item.record_type}:${item.id}:${item.title || ""}:${item.created_at || ""}`
+    ),
     [
       "review_month",
       "period_end",
@@ -893,20 +1301,26 @@ function buildTimeline(data) {
   ).slice(0, 25);
 }
 
-/* -------------------------------- public -------------------------------- */
+/* ------------------------------ ui states -------------------------------- */
 
-export async function loadCurrentView() {
+function renderNoHomeContext() {
   if (!els.viewContent) return;
 
-  const homeId = getHomeId();
+  els.viewContent.innerHTML = renderEmpty(
+    "No home selected",
+    "Select a home to view reporting, outputs and generated packs."
+  );
 
-  if (!homeId) {
-    els.viewContent.innerHTML = renderEmpty(
-      "No home selected",
-      "Select a home to view reporting, outputs and generated packs."
-    );
-    return;
-  }
+  updateWorkspaceSummaryStrip({
+    today: "No reports context",
+    nextEvent: "No review action due",
+    lastRecord: "No reporting data",
+    openActions: "No reporting actions loaded",
+  });
+}
+
+function renderLoadingState() {
+  if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -914,8 +1328,50 @@ export async function loadCurrentView() {
     </div>
   `;
 
+  updateWorkspaceSummaryStrip({
+    today: "Loading reports",
+    nextEvent: "Checking actions",
+    lastRecord: "Loading latest output",
+    openActions: "Loading reporting actions",
+  });
+}
+
+function renderErrorState(message) {
+  if (!els.viewContent) return;
+
+  els.viewContent.innerHTML = renderEmpty(
+    "Unable to load reports",
+    message || "Something went wrong while loading reports and generated outputs."
+  );
+
+  updateWorkspaceSummaryStrip({
+    today: "Reports unavailable",
+    nextEvent: "No review action due",
+    lastRecord: "No reporting data",
+    openActions: "Check reporting routes",
+  });
+}
+
+/* -------------------------------- public -------------------------------- */
+
+export async function loadReports() {
+  return loadCurrentView();
+}
+
+export async function loadCurrentView() {
+  if (!els.viewContent) return;
+
+  const homeId = getHomeId();
+
+  if (!homeId) {
+    renderNoHomeContext();
+    return;
+  }
+
+  renderLoadingState();
+
   try {
-    const data = await fetchAll(homeId);
+    const data = await fetchDataset(homeId);
 
     const latestMonthlyReviews = buildLatestMonthlyReviews(data);
     const outstandingMonthlyReviewActions = buildOutstandingMonthlyReviewActions(data);
@@ -925,6 +1381,7 @@ export async function loadCurrentView() {
     const recentMeetingNotes = buildRecentMeetingNotes(data);
     const recentHandovers = buildRecentHandovers(data);
     const inspectionPackJobs = buildInspectionPackJobs(data);
+    const priorityItems = buildPriorityItems(data);
     const timeline = buildTimeline(data);
 
     els.viewContent.innerHTML = renderWorkspace({
@@ -936,7 +1393,9 @@ export async function loadCurrentView() {
       recentMeetingNotes,
       recentHandovers,
       inspectionPackJobs,
+      priorityItems,
       timeline,
+      isFallback: data.isFallback,
     });
 
     const mostRecentMonthlyReview = latestMonthlyReviews[0] || null;
@@ -946,32 +1405,39 @@ export async function loadCurrentView() {
       recentSnapshots[0] ||
       recentMeetingNotes[0] ||
       recentHandovers[0] ||
+      inspectionPackJobs[0] ||
       null;
 
     updateWorkspaceSummaryStrip({
-      today: mostRecentMonthlyReview
+      today: data.isFallback
+        ? `${latestMonthlyReviews.length} reviews • preview mode`
+        : mostRecentMonthlyReview
         ? `${safeText(formatMonth(mostRecentMonthlyReview.review_month))} review`
         : `${recentAIReports.length} AI reports`,
       nextEvent: nextOpenAction?.due_date
-        ? formatDate(nextOpenAction.due_date)
+        ? `Due ${formatDate(nextOpenAction.due_date)}`
         : "No review action due",
       lastRecord: latestOutput
-        ? formatDate(
+        ? `Latest output ${formatDate(
             latestOutput.review_month ||
               latestOutput.source_updated_at ||
+              latestOutput.handover_date ||
               latestOutput.created_at
-          )
-        : "None",
-      openActions: `${outstandingMonthlyReviewActions.length} reporting actions open`,
+          )}`
+        : data.isFallback
+        ? "Preview reporting data loaded"
+        : "No recent reporting output",
+      openActions: `${outstandingMonthlyReviewActions.length} review action${
+        outstandingMonthlyReviewActions.length === 1 ? "" : "s"
+      }`,
     });
 
     await onAssistantScopeChanged();
     renderAssistantControllerPanels();
   } catch (error) {
-    console.error(error);
-    els.viewContent.innerHTML = renderEmpty(
-      "Unable to load reports",
-      "Something went wrong while loading reports and generated outputs."
+    console.error("[reports] load failed", error);
+    renderErrorState(
+      error?.message || "Something went wrong while loading reports and generated outputs."
     );
   }
 }
