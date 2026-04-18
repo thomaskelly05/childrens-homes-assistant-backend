@@ -30,6 +30,8 @@ export {
   renderEmptyState,
 } from "./helpers.js";
 
+/* -------------------------------- scope -------------------------------- */
+
 function getCurrentScope() {
   return state.currentScope || "child";
 }
@@ -41,6 +43,73 @@ function getHomeScopedBase() {
 function getChildScopedBase() {
   return "/young-people";
 }
+
+/* ------------------------------- record map ------------------------------ */
+
+const RECORD_CONFIG = {
+  daily_note: { label: "Daily note" },
+  incident: { label: "Incident" },
+  support_plan: { label: "Support plan" },
+  risk: { label: "Risk assessment" },
+  appointment: { label: "Appointment" },
+  health_record: { label: "Health record" },
+  education_record: { label: "Education record" },
+  family_contact: { label: "Family contact" },
+  keywork: { label: "Keywork session" },
+  report: { label: "Report" },
+  chronology_event: { label: "Chronology event" },
+  compliance_item: { label: "Compliance item" },
+  safeguarding_record: { label: "Safeguarding record" },
+  missing_episode: { label: "Missing episode" },
+  task: { label: "Task" },
+  achievement_record: { label: "Achievement" },
+  medication_profile: { label: "Medication profile" },
+  medication_record: { label: "Medication record" },
+  communication: { label: "Communication" },
+  document: { label: "Document" },
+  therapy: { label: "Therapy" },
+  team: { label: "Team item" },
+  supervision: { label: "Supervision" },
+  compliance: { label: "Compliance" },
+  audit: { label: "Audit" },
+  manager_action: { label: "Manager action" },
+  onboarding: { label: "Onboarding" },
+  notification: { label: "Notification" },
+  shift_log: { label: "Shift log" },
+  handover: { label: "Handover" },
+  finance: { label: "Finance item" },
+  home_notification: { label: "Home notification" },
+  operational_notification: { label: "Operational notification" },
+};
+
+/* ------------------------------- utilities ------------------------------- */
+
+function lower(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function prettifyKey(key) {
+  return String(key || "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function safeString(value, fallback = "") {
+  return String(value ?? fallback ?? "");
+}
+
+function hasValue(value) {
+  return value !== null && value !== undefined && value !== "";
+}
+
+function firstDefined(...values) {
+  for (const value of values) {
+    if (hasValue(value)) return value;
+  }
+  return null;
+}
+
+/* ---------------------------- route resolution --------------------------- */
 
 function buildScopedDetailUrl(recordType, id) {
   const childBase = getChildScopedBase();
@@ -68,9 +137,13 @@ function buildScopedDetailUrl(recordType, id) {
     medication_record: `${childBase}/medication-records/${id}`,
     communication: `${childBase}/communications/${id}`,
     document: `${childBase}/documents/${id}`,
+    therapy: `${childBase}/therapy/${id}`,
   };
 
   const homeRoutes = {
+    daily_note: `${homeBase}/daily-notes/${id}`,
+    incident: `${homeBase}/incidents/${id}`,
+    support_plan: `${homeBase}/plans/${id}`,
     risk: `${homeBase}/risks/${id}`,
     appointment: `${homeBase}/appointments/${id}`,
     task: `${homeBase}/tasks/${id}`,
@@ -81,8 +154,16 @@ function buildScopedDetailUrl(recordType, id) {
     team: `${homeBase}/team/${id}`,
     supervision: `${homeBase}/supervisions/${id}`,
     compliance: `${homeBase}/compliance/${id}`,
+    compliance_item: `${homeBase}/compliance/${id}`,
     audit: `${homeBase}/audits/${id}`,
     report: `${homeBase}/reports/${id}`,
+    handover: `${homeBase}/handover/${id}`,
+    shift_log: `${homeBase}/shift-logs/${id}`,
+    onboarding: `${homeBase}/onboarding/${id}`,
+    notification: `${homeBase}/notifications/${id}`,
+    home_notification: `${homeBase}/home-notifications/${id}`,
+    operational_notification: `${homeBase}/operational-notifications/${id}`,
+    finance: `${homeBase}/finance/${id}`,
   };
 
   if (scope === "child") {
@@ -147,6 +228,24 @@ function buildScopedWorkflowUrl(recordType, id, action) {
   };
 
   const homeActions = {
+    daily_note: {
+      submit: `${homeBase}/daily-notes/${id}/submit`,
+      approve: `${homeBase}/daily-notes/${id}/approve`,
+      return: `${homeBase}/daily-notes/${id}/return`,
+      archive: `${homeBase}/daily-notes/${id}/archive`,
+    },
+    incident: {
+      submit: `${homeBase}/incidents/${id}/submit`,
+      approve: `${homeBase}/incidents/${id}/approve`,
+      return: `${homeBase}/incidents/${id}/return`,
+      archive: `${homeBase}/incidents/${id}/archive`,
+    },
+    support_plan: {
+      submit: `${homeBase}/plans/${id}/submit`,
+      approve: `${homeBase}/plans/${id}/approve`,
+      return: `${homeBase}/plans/${id}/return`,
+      archive: `${homeBase}/plans/${id}/archive`,
+    },
     risk: {
       submit: `${homeBase}/risks/${id}/submit`,
       approve: `${homeBase}/risks/${id}/approve`,
@@ -167,37 +266,10 @@ function buildScopedWorkflowUrl(recordType, id, action) {
   return map?.[action] || null;
 }
 
-const RECORD_CONFIG = {
-  daily_note: { label: "Daily note" },
-  incident: { label: "Important event" },
-  support_plan: { label: "Support plan" },
-  risk: { label: "Risk assessment" },
-  appointment: { label: "Appointment" },
-  health_record: { label: "Health record" },
-  education_record: { label: "Education record" },
-  family_contact: { label: "Family contact" },
-  keywork: { label: "Keywork session" },
-  report: { label: "Report" },
-  chronology_event: { label: "Chronology event" },
-  compliance_item: { label: "Compliance item" },
-  safeguarding_record: { label: "Safeguarding record" },
-  missing_episode: { label: "Missing episode" },
-  task: { label: "Task" },
-  achievement_record: { label: "Achievement" },
-  medication_profile: { label: "Medication profile" },
-  medication_record: { label: "Medication record" },
-  communication: { label: "Communication" },
-  document: { label: "Document" },
-  therapy: { label: "Therapy" },
-  team: { label: "Team item" },
-  supervision: { label: "Supervision" },
-  compliance: { label: "Compliance" },
-  audit: { label: "Audit" },
-  manager_action: { label: "Manager action" },
-};
+/* --------------------------- record type normalise ----------------------- */
 
 export function normaliseRecordType(item = {}) {
-  const raw = String(
+  const raw = lower(
     item.record_type ||
       item.primary_record_type ||
       item.source_table ||
@@ -205,42 +277,135 @@ export function normaliseRecordType(item = {}) {
       item.category ||
       item.type ||
       ""
-  )
-    .toLowerCase()
-    .trim();
+  );
 
-  if (raw === "plan" || raw === "support_plans") return "support_plan";
-  if (raw === "daily_notes") return "daily_note";
-  if (raw === "incidents") return "incident";
-  if (raw === "risk_assessment" || raw === "risk_assessments") return "risk";
-  if (raw === "health_records") return "health_record";
-  if (raw === "education_records") return "education_record";
-  if (raw === "family_contact_records") return "family_contact";
-  if (raw === "keywork_sessions") return "keywork";
-  if (raw === "ai_generated_reports") return "report";
-  if (raw === "chronology_events") return "chronology_event";
-  if (raw === "compliance_items") return "compliance_item";
-  if (raw === "young_person_appointments" || raw === "appointments") return "appointment";
-  if (raw === "safeguarding_records") return "safeguarding_record";
-  if (raw === "missing_episodes") return "missing_episode";
-  if (raw === "tasks") return "task";
-  if (raw === "achievement_records") return "achievement_record";
-  if (raw === "medication_profiles") return "medication_profile";
-  if (raw === "medication_records") return "medication_record";
-  if (raw === "communications") return "communication";
-  if (raw === "documents") return "document";
-  if (raw === "therapy_records" || raw === "therapeutic_services" || raw === "therapy") return "therapy";
-  if (raw === "team_items" || raw === "staff" || raw === "team") return "team";
-  if (raw === "supervisions") return "supervision";
-  if (raw === "audits") return "audit";
-  if (raw === "compliance") return "compliance";
-  if (raw === "manager_actions") return "manager_action";
+  const map = {
+    plan: "support_plan",
+    support_plans: "support_plan",
+    support_plan: "support_plan",
 
-  return raw;
+    daily_notes: "daily_note",
+    daily_note: "daily_note",
+
+    incidents: "incident",
+    incident: "incident",
+
+    risk_assessment: "risk",
+    risk_assessments: "risk",
+    risks: "risk",
+    risk: "risk",
+
+    health_records: "health_record",
+    health_record: "health_record",
+
+    education_records: "education_record",
+    education_record: "education_record",
+
+    family_contact_records: "family_contact",
+    family_contact_record: "family_contact",
+    family_contact: "family_contact",
+    contact: "family_contact",
+
+    keywork_sessions: "keywork",
+    keywork_session: "keywork",
+    keywork: "keywork",
+
+    ai_generated_reports: "report",
+    reports: "report",
+    report: "report",
+
+    chronology_events: "chronology_event",
+    chronology_event: "chronology_event",
+
+    compliance_items: "compliance_item",
+    compliance_item: "compliance_item",
+
+    young_person_appointments: "appointment",
+    appointments: "appointment",
+    appointment: "appointment",
+
+    safeguarding_records: "safeguarding_record",
+    safeguarding_record: "safeguarding_record",
+
+    missing_episodes: "missing_episode",
+    missing_episode: "missing_episode",
+
+    tasks: "task",
+    task: "task",
+
+    achievement_records: "achievement_record",
+    achievement_record: "achievement_record",
+
+    medication_profiles: "medication_profile",
+    medication_profile: "medication_profile",
+
+    medication_records: "medication_record",
+    medication_record: "medication_record",
+
+    communications: "communication",
+    communication: "communication",
+
+    documents: "document",
+    document: "document",
+
+    therapy_records: "therapy",
+    therapeutic_services: "therapy",
+    therapy_sessions: "therapy",
+    therapy: "therapy",
+
+    team_items: "team",
+    staff: "team",
+    team: "team",
+
+    supervisions: "supervision",
+    supervision_sessions: "supervision",
+    supervision: "supervision",
+
+    audits: "audit",
+    audit: "audit",
+
+    compliance: "compliance",
+
+    manager_actions: "manager_action",
+    manager_action: "manager_action",
+
+    onboarding: "onboarding",
+    onboarding_programmes: "onboarding",
+    onboarding_plans: "onboarding",
+
+    notifications: "notification",
+    notification: "notification",
+    home_notifications: "home_notification",
+    operational_notifications: "operational_notification",
+
+    shift_logs: "shift_log",
+    shift_log: "shift_log",
+
+    handover: "handover",
+    handovers: "handover",
+
+    petty_cash_transactions: "finance",
+    purchase_requests: "finance",
+    allowance_payments: "finance",
+    young_person_financial_transactions: "finance",
+    finance: "finance",
+  };
+
+  return map[raw] || raw;
 }
 
+/* ------------------------------ record ids ------------------------------- */
+
 export function getRecordId(item = {}) {
-  return item.record_id || item.source_id || item.id || null;
+  return firstDefined(
+    item.record_id,
+    item.source_id,
+    item.id,
+    item.incident_id,
+    item.task_id,
+    item.document_id,
+    item.report_id
+  );
 }
 
 export function getRecordUrl(item = {}) {
@@ -250,41 +415,46 @@ export function getRecordUrl(item = {}) {
   return buildScopedDetailUrl(type, id);
 }
 
-function buildSubtitle(type, item = {}, detail = {}) {
-  const dateValue =
-    item.event_datetime ||
-    item.start_datetime ||
-    item.contact_datetime ||
-    item.session_date ||
-    item.record_date ||
-    item.recorded_at ||
-    item.occurred_at ||
-    item.audit_date ||
-    item.review_date ||
-    item.created_at ||
-    detail.event_datetime ||
-    detail.start_datetime ||
-    detail.contact_datetime ||
-    detail.session_date ||
-    detail.record_date ||
-    detail.note_date ||
-    detail.incident_datetime ||
-    detail.audit_date ||
-    detail.review_date ||
-    detail.created_at ||
-    null;
+/* ----------------------------- drawer content ---------------------------- */
 
-  const status =
-    item.workflow_status ||
-    item.status ||
-    item.approval_status ||
-    detail.workflow_status ||
-    detail.status ||
-    detail.approval_status ||
-    "";
+function buildSubtitle(type, item = {}, detail = {}) {
+  const dateValue = firstDefined(
+    item.event_datetime,
+    item.start_datetime,
+    item.contact_datetime,
+    item.session_date,
+    item.record_date,
+    item.recorded_at,
+    item.occurred_at,
+    item.audit_date,
+    item.review_date,
+    item.note_date,
+    item.incident_datetime,
+    item.created_at,
+    detail.event_datetime,
+    detail.start_datetime,
+    detail.contact_datetime,
+    detail.session_date,
+    detail.record_date,
+    detail.note_date,
+    detail.incident_datetime,
+    detail.audit_date,
+    detail.review_date,
+    detail.created_at
+  );
+
+  const status = firstDefined(
+    item.workflow_status,
+    item.status,
+    item.approval_status,
+    detail.workflow_status,
+    detail.status,
+    detail.approval_status,
+    ""
+  );
 
   return [
-    String(type || "record").replaceAll("_", " "),
+    safeString(type || "record").replaceAll("_", " "),
     dateValue ? formatDate(dateValue) : "",
     status || "",
   ]
@@ -327,16 +497,13 @@ function detailObjectFromResponse(data = {}) {
     data.audit ||
     data.compliance ||
     data.manager_action ||
+    data.notification ||
+    data.home_notification ||
+    data.operational_notification ||
     data.item ||
     data.record ||
     data
   );
-}
-
-function prettifyKey(key) {
-  return String(key || "")
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 function renderRichEmptyState(title, message) {
@@ -373,7 +540,14 @@ function renderObjectValue(value) {
 function renderDetailRows(detail = {}) {
   const rows = Object.entries(detail).filter(
     ([key, value]) =>
-      !["id", "young_person_id", "home_id", "created_by", "updated_by", "_local_only"].includes(key) &&
+      ![
+        "id",
+        "young_person_id",
+        "home_id",
+        "created_by",
+        "updated_by",
+        "_local_only",
+      ].includes(key) &&
       value !== null &&
       value !== "" &&
       value !== undefined
@@ -414,6 +588,8 @@ function renderDrawerSection(detail = {}) {
   `;
 }
 
+/* ------------------------------ drawer state ----------------------------- */
+
 export function openDrawer() {
   els.drawer?.classList.remove("hidden");
   els.drawerBackdrop?.classList.remove("hidden");
@@ -429,6 +605,8 @@ export function closeDrawer() {
   state.activeRecordItem = null;
   state.activeRecordType = null;
   state.recordDrawerOpen = false;
+
+  hideSuggestionsPanel();
 }
 
 function setDrawerButtons(type) {
@@ -445,10 +623,22 @@ function setDrawerButtons(type) {
 
   if (!hasWorkflow) return;
 
-  els.drawerSubmitBtn?.classList.toggle("hidden", !buildScopedWorkflowUrl(type, id, "submit"));
-  els.drawerApproveBtn?.classList.toggle("hidden", !buildScopedWorkflowUrl(type, id, "approve"));
-  els.drawerReturnBtn?.classList.toggle("hidden", !buildScopedWorkflowUrl(type, id, "return"));
-  els.drawerArchiveBtn?.classList.toggle("hidden", !buildScopedWorkflowUrl(type, id, "archive"));
+  els.drawerSubmitBtn?.classList.toggle(
+    "hidden",
+    !buildScopedWorkflowUrl(type, id, "submit")
+  );
+  els.drawerApproveBtn?.classList.toggle(
+    "hidden",
+    !buildScopedWorkflowUrl(type, id, "approve")
+  );
+  els.drawerReturnBtn?.classList.toggle(
+    "hidden",
+    !buildScopedWorkflowUrl(type, id, "return")
+  );
+  els.drawerArchiveBtn?.classList.toggle(
+    "hidden",
+    !buildScopedWorkflowUrl(type, id, "archive")
+  );
 
   if (type === "appointment") {
     if (els.drawerApproveBtn) els.drawerApproveBtn.textContent = "Complete";
@@ -472,6 +662,8 @@ function setDrawerWorkflowBusy(isBusy) {
     button.disabled = Boolean(isBusy);
   });
 }
+
+/* ------------------------------ suggestions ------------------------------ */
 
 function buildSuggestionContext(type, detail = {}, item = {}) {
   return {
@@ -503,9 +695,12 @@ function shouldShowSuggestionsForType(type) {
     "supervision",
     "audit",
     "compliance",
+    "compliance_item",
     "manager_action",
   ].includes(type);
 }
+
+/* -------------------------------- fetch -------------------------------- */
 
 async function fetchRecordDetail(url) {
   if (!url) {
@@ -514,6 +709,8 @@ async function fetchRecordDetail(url) {
 
   return apiGet(url);
 }
+
+/* ------------------------------ public api ------------------------------- */
 
 export async function openRecordDetail(item) {
   const type = normaliseRecordType(item);
