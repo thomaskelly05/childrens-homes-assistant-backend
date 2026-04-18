@@ -1,30 +1,25 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
 
-function getHomeId() {
-  return (
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null
-  );
-}
+/* -------------------------------- helpers -------------------------------- */
 
-function safeText(value, fallback = "") {
-  return escapeHtml(String(value ?? fallback ?? ""));
-}
+const SAFE_EMPTY = Object.freeze({ items: [] });
 
-function toArray(value, fallbacks = []) {
+function toArray(value, fallback = []) {
   if (Array.isArray(value)) return value;
-
-  for (const fallback of fallbacks) {
-    if (Array.isArray(fallback)) return fallback;
-  }
-
+  if (Array.isArray(fallback)) return fallback;
   return [];
+}
+
+function toBool(value) {
+  return Boolean(value);
 }
 
 function toNumber(value, fallback = 0) {
@@ -32,18 +27,18 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
-function toTime(value) {
-  if (!value) return 0;
-  const parsed = new Date(value).getTime();
-  return Number.isFinite(parsed) ? parsed : 0;
+function safeText(value, fallback = "") {
+  return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function formatDate(value) {
-  if (!value) return "No date";
+function lower(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
 
+function formatDate(value, fallback = "No date") {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -51,12 +46,10 @@ function formatDate(value) {
   });
 }
 
-function formatDateTime(value) {
-  if (!value) return "No date";
-
+function formatDateTime(value, fallback = "No date") {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -66,626 +59,492 @@ function formatDateTime(value) {
   });
 }
 
-function getStatusTone(status = "") {
-  const normalised = String(status || "")
-    .toLowerCase()
-    .trim()
-    .replaceAll(" ", "_");
-
-  if (
-    [
-      "critical",
-      "high",
-      "danger",
-      "overdue",
-      "expired",
-      "failed",
-      "blocked",
-      "missing",
-      "non_compliant",
-      "escalated",
-      "incident",
-      "open_risk",
-    ].includes(normalised)
-  ) {
-    return "danger";
-  }
-
-  if (
-    [
-      "warning",
-      "due",
-      "due_soon",
-      "review_due",
-      "attention",
-      "pending",
-      "in_progress",
-      "scheduled",
-      "booked",
-      "action_required",
-    ].includes(normalised)
-  ) {
-    return "warning";
-  }
-
-  if (
-    [
-      "active",
-      "current",
-      "complete",
-      "completed",
-      "resolved",
-      "closed",
-      "reviewed",
-      "compliant",
-      "ok",
-      "passed",
-      "good",
-    ].includes(normalised)
-  ) {
-    return "success";
-  }
-
-  return "muted";
+function isOverdue(value) {
+  if (!value) return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime() < now.getTime();
 }
 
-function sortNewestFirst(items = [], keys = []) {
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.selectedHomeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
+  );
+}
+
+function sortNewest(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(bValue) - toTime(aValue);
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
   });
 }
 
-function sortSoonestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue) - toTime(bValue);
-  });
-}
-
-function hasUsableData(data) {
-  if (!data || typeof data !== "object") return false;
-  if (Array.isArray(data.items) && data.items.length > 0) return true;
-  if (Array.isArray(data.records) && data.records.length > 0) return true;
-  if (Array.isArray(data.audits) && data.audits.length > 0) return true;
-  if (Array.isArray(data.maintenance) && data.maintenance.length > 0) return true;
-  if (Array.isArray(data.health_safety) && data.health_safety.length > 0) return true;
-  if (Array.isArray(data.risk_assessments) && data.risk_assessments.length > 0) return true;
-  if (Array.isArray(data.fire_checks) && data.fire_checks.length > 0) return true;
-  if (Array.isArray(data.incidents) && data.incidents.length > 0) return true;
-  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
-  if (Array.isArray(data.documents) && data.documents.length > 0) return true;
-  if (data.summary && typeof data.summary === "object") return true;
-  if (data.dashboard && typeof data.dashboard === "object") return true;
-  if (data.health_safety_summary && typeof data.health_safety_summary === "object") return true;
-  return false;
-}
-
-function normaliseSummary(data = {}) {
-  return data.summary || data.health_safety_summary || data.dashboard || data || {};
-}
-
-function normaliseAuditItems(data = {}) {
-  return toArray(data.items, [data.audits, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "audit",
-    title: item.title || item.audit_name || "Audit item",
-    audit_name: item.audit_name || item.title || "Audit item",
-    status: item.status || "recorded",
-    priority: item.priority || "",
-    audit_date: item.audit_date || item.review_date || item.created_at || null,
-    due_date: item.due_date || item.review_date || null,
-    owner: item.owner || item.auditor || "",
-    summary:
-      item.summary ||
-      item.finding ||
-      item.notes ||
-      "Audit item recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseMaintenanceItems(data = {}) {
-  return toArray(data.items, [data.maintenance, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "maintenance",
-    title: item.title || "Maintenance item",
-    priority: item.priority || "",
-    status: item.status || "open",
-    reported_date: item.reported_date || item.created_at || null,
-    due_date: item.due_date || item.reported_date || null,
-    location: item.location || "",
-    summary:
-      item.summary ||
-      item.notes ||
-      item.description ||
-      "Maintenance item recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseRiskItems(data = {}) {
-  return toArray(data.items, [data.risk_assessments, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "risk_assessment",
-    title: item.title || item.category || "Risk assessment",
-    category: item.category || "",
-    severity: item.severity || "",
-    status: item.status || item.approval_status || "active",
-    review_date: item.review_date || null,
-    owner: item.owner || item.assigned_to || "",
-    summary:
-      item.summary ||
-      item.concern_summary ||
-      item.notes ||
-      "Risk assessment recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseFireCheckItems(data = {}) {
-  return toArray(data.items, [data.fire_checks, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "fire_check",
-    title: item.title || item.check_type || "Fire safety check",
-    check_type: item.check_type || "",
-    status: item.status || "recorded",
-    due_date: item.due_date || item.review_date || item.check_date || null,
-    completed_date: item.completed_date || item.check_date || null,
-    owner: item.owner || item.checked_by || "",
-    summary:
-      item.summary ||
-      item.notes ||
-      item.outcome ||
-      "Fire safety check recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseIncidentItems(data = {}) {
-  return toArray(data.items, [data.incidents, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "health_safety_incident",
-    title: item.title || item.incident_type || "Health and safety incident",
-    incident_type: item.incident_type || item.title || "Incident",
-    severity: item.severity || "",
-    status: item.status || "recorded",
-    occurred_at: item.occurred_at || item.incident_datetime || item.created_at || null,
-    summary:
-      item.summary ||
-      item.description ||
-      item.notes ||
-      "Incident recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseDocumentItems(data = {}) {
-  return toArray(data.items, [data.documents, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "document",
-    title: item.title || item.document_type || "Document",
-    document_type: item.document_type || item.type || "",
-    status: item.status || "active",
-    review_date: item.review_date || item.expiry_date || null,
-    expiry_date: item.expiry_date || null,
-    compliance_category: item.compliance_category || "",
-    summary:
-      item.summary ||
-      item.description ||
-      item.notes ||
-      "Document available.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseTaskItems(data = {}) {
-  return toArray(data.items, [data.tasks, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "task",
-    title: item.title || item.task || "Task",
-    task: item.task || item.title || "Task",
-    assigned_role: item.assigned_role || "",
-    due_date: item.due_date || null,
-    completed: Boolean(item.completed),
-    status: item.status || (item.completed ? "completed" : "open"),
-    summary:
-      item.summary ||
-      item.notes ||
-      item.task ||
-      "Task recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function buildTopStats({
-  auditItems = [],
-  maintenanceItems = [],
-  riskItems = [],
-  fireCheckItems = [],
-  incidentItems = [],
-  taskItems = [],
-}) {
-  const overdueAudits = auditItems.filter((item) =>
-    ["overdue", "due_soon", "review_due", "open"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const urgentMaintenance = maintenanceItems.filter((item) =>
-    ["high", "critical"].includes(String(item.priority || "").toLowerCase()) ||
-    ["open", "overdue", "blocked"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const reviewDueRisks = riskItems.filter((item) =>
-    ["review_due", "due_soon", "overdue", "active"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const fireDue = fireCheckItems.filter((item) =>
-    ["due", "due_soon", "review_due", "overdue"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const incidentPressure = incidentItems.filter((item) =>
-    ["high", "critical"].includes(String(item.severity || "").toLowerCase()) ||
-    ["open", "overdue", "escalated"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const openTasks = taskItems.filter((item) => !item.completed).length;
-
-  return [
-    {
-      label: "Audits due",
-      value: overdueAudits,
-      note: "Health and safety checks needing review",
-      tone: overdueAudits ? "warning" : "success",
-    },
-    {
-      label: "Urgent maintenance",
-      value: urgentMaintenance,
-      note: "Premises issues affecting safety",
-      tone: urgentMaintenance ? "danger" : "success",
-    },
-    {
-      label: "Risk reviews due",
-      value: reviewDueRisks,
-      note: "Assessments needing update",
-      tone: reviewDueRisks ? "warning" : "success",
-    },
-    {
-      label: "Fire checks due",
-      value: fireDue,
-      note: "Safety testing or checks due",
-      tone: fireDue ? "warning" : "success",
-    },
-    {
-      label: "Incident pressure",
-      value: incidentPressure,
-      note: "Safety incidents needing oversight",
-      tone: incidentPressure ? "danger" : "success",
-    },
-    {
-      label: "Open actions",
-      value: openTasks,
-      note: "Outstanding health and safety tasks",
-      tone: openTasks ? "warning" : "success",
-    },
-  ];
-}
-
-function buildProgressCards({
-  auditItems = [],
-  maintenanceItems = [],
-  fireCheckItems = [],
-  riskItems = [],
-}) {
-  const completedAudits = auditItems.filter((item) =>
-    ["completed", "reviewed", "current", "compliant"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const auditPercent = auditItems.length
-    ? Math.round((completedAudits / auditItems.length) * 100)
-    : 0;
-
-  const closedMaintenance = maintenanceItems.filter((item) =>
-    ["resolved", "completed", "closed", "reviewed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const maintenancePercent = maintenanceItems.length
-    ? Math.round((closedMaintenance / maintenanceItems.length) * 100)
-    : 0;
-
-  const completeFireChecks = fireCheckItems.filter((item) =>
-    ["completed", "reviewed", "current", "passed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const firePercent = fireCheckItems.length
-    ? Math.round((completeFireChecks / fireCheckItems.length) * 100)
-    : 0;
-
-  const reviewedRisks = riskItems.filter((item) =>
-    ["reviewed", "current", "active", "approved"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const riskPercent = riskItems.length
-    ? Math.round((reviewedRisks / riskItems.length) * 100)
-    : 0;
-
-  return [
-    {
-      label: "Audit position",
-      value: `${auditPercent}%`,
-      percent: auditPercent,
-      tone: auditPercent >= 85 ? "success" : auditPercent >= 65 ? "warning" : "danger",
-    },
-    {
-      label: "Maintenance closure",
-      value: `${maintenancePercent}%`,
-      percent: maintenancePercent,
-      tone:
-        maintenancePercent >= 85 ? "success" : maintenancePercent >= 65 ? "warning" : "danger",
-    },
-    {
-      label: "Fire safety checks",
-      value: `${firePercent}%`,
-      percent: firePercent,
-      tone: firePercent >= 90 ? "success" : firePercent >= 70 ? "warning" : "danger",
-    },
-    {
-      label: "Risk review health",
-      value: `${riskPercent}%`,
-      percent: riskPercent,
-      tone: riskPercent >= 85 ? "success" : riskPercent >= 65 ? "warning" : "danger",
-    },
-  ];
-}
-
-function buildPriorityItems({
-  auditItems = [],
-  maintenanceItems = [],
-  riskItems = [],
-  fireCheckItems = [],
-  incidentItems = [],
-  taskItems = [],
-}) {
-  const items = [];
-
-  auditItems
-    .filter((item) =>
-      ["overdue", "due_soon", "review_due", "open"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 2)
-    .forEach((item) => {
-      items.push({
-        title: item.title || item.audit_name || "Audit item",
-        summary: item.summary || "Audit follow-up is needed.",
-      });
-    });
-
-  maintenanceItems
-    .filter((item) =>
-      ["high", "critical"].includes(String(item.priority || "").toLowerCase()) ||
-      ["open", "overdue", "blocked"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 2)
-    .forEach((item) => {
-      items.push({
-        title: item.title || "Maintenance issue",
-        summary: item.summary || "Premises safety issue needs action.",
-      });
-    });
-
-  riskItems
-    .filter((item) =>
-      ["review_due", "due_soon", "overdue"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 1)
-    .forEach((item) => {
-      items.push({
-        title: item.title || "Risk review due",
-        summary: item.summary || "Risk assessment needs review.",
-      });
-    });
-
-  fireCheckItems
-    .filter((item) =>
-      ["due", "due_soon", "overdue", "review_due"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 1)
-    .forEach((item) => {
-      items.push({
-        title: item.title || "Fire safety check due",
-        summary: item.summary || "Fire safety check needs completion.",
-      });
-    });
-
-  incidentItems
-    .filter((item) =>
-      ["high", "critical"].includes(String(item.severity || "").toLowerCase()) ||
-      ["open", "escalated", "overdue"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 1)
-    .forEach((item) => {
-      items.push({
-        title: item.title || item.incident_type || "Incident",
-        summary: item.summary || "Health and safety incident needs review.",
-      });
-    });
-
-  taskItems
-    .filter((item) => !item.completed)
-    .slice(0, 1)
-    .forEach((item) => {
-      items.push({
-        title: item.title || "Open action",
-        summary: item.summary || "Outstanding health and safety action remains open.",
-      });
-    });
-
-  if (!items.length) {
-    items.push({
-      title: "No major safety pressure",
-      summary: "The health and safety view is not currently surfacing urgent issues.",
-    });
+function pickItems(response, candidates = []) {
+  for (const key of candidates) {
+    if (Array.isArray(response?.[key])) return response[key];
   }
-
-  return items.slice(0, 8);
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response)) return response;
+  return [];
 }
 
-function renderStatCards(cards = []) {
+async function safeGet(path) {
+  try {
+    return (await apiGet(path)) || SAFE_EMPTY;
+  } catch {
+    return SAFE_EMPTY;
+  }
+}
+
+function badgeClass(value) {
+  const v = lower(value);
+  if (
+    ["critical", "urgent", "unsafe", "high", "open", "overdue", "action_required", "action required"].includes(v)
+  ) {
+    return "badge badge-danger";
+  }
+  if (["medium", "warning", "pending", "in_progress", "in progress", "due"].includes(v)) {
+    return "badge badge-warning";
+  }
+  if (["pass", "completed", "resolved", "closed", "good", "low"].includes(v)) {
+    return "badge badge-success";
+  }
+  return "badge";
+}
+
+/* -------------------------------- mappers -------------------------------- */
+
+function mapEnvironmentCheck(record = {}) {
+  return {
+    id: record.id,
+    home_id: record.home_id || null,
+    area_id: record.area_id || null,
+    room_id: record.room_id || null,
+    check_date: record.check_date || null,
+    check_type: record.check_type || "",
+    status: record.status || "",
+    cleanliness_rating: toNumber(record.cleanliness_rating, null),
+    safety_rating: toNumber(record.safety_rating, null),
+    homeliness_rating: toNumber(record.homeliness_rating, null),
+    findings: record.findings || "",
+    action_required: toBool(record.action_required),
+    action_notes: record.action_notes || "",
+    checked_by_user_id: record.checked_by_user_id || null,
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+    title: record.check_type ? String(record.check_type).replaceAll("_", " ") : "Environment check",
+    summary: record.findings || record.action_notes || "Environment check recorded.",
+    record_type: "environment_check",
+  };
+}
+
+function mapHealthSafetyCheck(record = {}) {
+  return {
+    id: record.id,
+    home_id: record.home_id || null,
+    room_id: record.room_id || null,
+    check_type: record.check_type || "",
+    check_title: record.check_title || "",
+    check_date: record.check_date || null,
+    status: record.status || "",
+    finding_summary: record.finding_summary || "",
+    action_required: toBool(record.action_required),
+    action_note: record.action_note || "",
+    next_due_date: record.next_due_date || null,
+    completed_by_user_id: record.completed_by_user_id || null,
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+    title: record.check_title || record.check_type || "Health and safety check",
+    summary: record.finding_summary || record.action_note || "Health and safety check recorded.",
+    record_type: "health_safety_check",
+  };
+}
+
+function mapSafetyCheck(record = {}) {
+  return {
+    id: record.id,
+    home_id: record.home_id || null,
+    room_id: record.room_id || null,
+    template_id: record.template_id || null,
+    check_date: record.check_date || null,
+    check_type: record.check_type || "",
+    outcome_status: record.outcome_status || "",
+    findings: record.findings || "",
+    action_required: record.action_required || "",
+    action_due_date: record.action_due_date || null,
+    completed_by_user_id: record.completed_by_user_id || null,
+    reviewed_by_user_id: record.reviewed_by_user_id || null,
+    reviewed_at: record.reviewed_at || null,
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+    title: record.check_type || "Safety check",
+    summary: record.findings || record.action_required || "Safety check recorded.",
+    record_type: "safety_check",
+  };
+}
+
+function mapFireSafetyCheck(record = {}) {
+  return {
+    id: record.id,
+    home_id: record.home_id || null,
+    check_date: record.check_date || null,
+    check_type: record.check_type || "",
+    area: record.area || "",
+    equipment_checked: record.equipment_checked || "",
+    outcome: record.outcome || "",
+    issues_found: record.issues_found || "",
+    actions_required: record.actions_required || "",
+    next_due_date: record.next_due_date || null,
+    completed_by: record.completed_by || null,
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+    title: record.check_type || "Fire safety check",
+    summary: record.issues_found || record.actions_required || record.outcome || "Fire safety check recorded.",
+    record_type: "fire_safety_check",
+  };
+}
+
+function mapFireDrill(record = {}) {
+  return {
+    id: record.id,
+    home_id: record.home_id || null,
+    drill_datetime: record.drill_datetime || null,
+    shift_type: record.shift_type || "",
+    evacuation_time_seconds: toNumber(record.evacuation_time_seconds, null),
+    issues_identified: record.issues_identified || "",
+    learning_points: record.learning_points || "",
+    follow_up_actions: record.follow_up_actions || "",
+    completed_by_user_id: record.completed_by_user_id || null,
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+    title: "Fire drill",
+    summary:
+      record.issues_identified ||
+      record.learning_points ||
+      record.follow_up_actions ||
+      "Fire drill recorded.",
+    record_type: "fire_drill",
+  };
+}
+
+function mapMaintenanceJob(record = {}) {
+  return {
+    id: record.id,
+    home_id: record.home_id || null,
+    area_id: record.area_id || null,
+    room_id: record.room_id || null,
+    job_title: record.job_title || record.title || "",
+    job_description: record.job_description || record.description || "",
+    reported_date: record.reported_date || record.reported_at || null,
+    priority: record.priority || "",
+    status: record.status || "",
+    reported_by_user_id: record.reported_by_user_id || null,
+    assigned_to_user_id: record.assigned_to_user_id || null,
+    contractor_name: record.contractor_name || "",
+    contractor_contact: record.contractor_contact || "",
+    target_completion_date: record.target_completion_date || record.due_date || null,
+    completed_date: record.completed_date || record.completed_at || null,
+    completion_notes: record.completion_notes || "",
+    cost_amount: record.cost_amount ?? record.cost_estimate ?? null,
+    notes: record.notes || "",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+    title: record.job_title || record.title || "Maintenance job",
+    summary:
+      record.job_description ||
+      record.description ||
+      record.notes ||
+      "Maintenance issue recorded.",
+    record_type: "maintenance_job",
+  };
+}
+
+function mapVisitorLog(record = {}) {
+  return {
+    id: record.id,
+    home_id: record.home_id || null,
+    visitor_name: record.visitor_name || "",
+    organisation_name: record.organisation_name || "",
+    visitor_type: record.visitor_type || "",
+    purpose_of_visit: record.purpose_of_visit || "",
+    arrived_at: record.arrived_at || record.arrival_time || null,
+    departed_at: record.departed_at || record.departure_time || null,
+    signed_in_by_user_id: record.signed_in_by_user_id || null,
+    signed_out_by_user_id: record.signed_out_by_user_id || null,
+    dbs_checked: toBool(record.dbs_checked),
+    identification_seen: toBool(record.identification_seen || record.identity_checked),
+    escorted: toBool(record.escorted || record.supervised_visit),
+    notes: record.notes || "",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+    title: record.visitor_name || "Visitor log",
+    summary: record.purpose_of_visit || record.notes || "Visitor recorded.",
+    record_type: "visitor_log",
+  };
+}
+
+/* -------------------------------- render -------------------------------- */
+
+function renderEmpty(title, message) {
   return `
-    <div class="overview-stats-grid overview-stats-grid--six">
-      ${cards
-        .map(
-          (card) => `
-            <article class="overview-stat-card ${
-              card.tone === "danger"
-                ? "overview-stat-card--danger"
-                : card.tone === "warning"
-                ? "overview-stat-card--warning"
-                : card.tone === "success"
-                ? "overview-stat-card--success"
-                : ""
-            }">
-              <span class="overview-stat-label">${safeText(card.label)}</span>
-              <strong class="overview-stat-value">${safeText(card.value)}</strong>
-              <span class="overview-stat-note">${safeText(card.note)}</span>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderProgressCards(cards = []) {
-  return `
-    <div class="analytics-progress-grid">
-      ${cards
-        .map(
-          (card) => `
-            <article class="analytics-progress-card">
-              <div class="analytics-progress-head">
-                <span class="analytics-progress-label">${safeText(card.label)}</span>
-                <strong class="analytics-progress-value">${safeText(card.value)}</strong>
-              </div>
-              <div class="analytics-progress-track">
-                <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
-                  style="width: ${safeText(card.percent || 0)}%;"
-                ></span>
-              </div>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderRows(items = [], options = {}) {
-  const {
-    emptyMessage = "Nothing to show right now.",
-    titleKey = "title",
-    summaryKey = "summary",
-    metaBuilder = null,
-    statusKey = "status",
-    recordType = "",
-  } = options;
-
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">○</div>
-          <h3>Nothing to show</h3>
-          <p>${safeText(emptyMessage)}</p>
-        </div>
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon">○</div>
+        <h3>${safeText(title)}</h3>
+        <p>${safeText(message)}</p>
       </div>
-    `;
+    </div>
+  `;
+}
+
+function renderStatCard(label, value, hint = "") {
+  return `
+    <article class="overview-stat-card">
+      <span class="overview-stat-label">${safeText(label)}</span>
+      <strong>${safeText(value)}</strong>
+      ${hint ? `<div class="overview-stat-subtle">${safeText(hint)}</div>` : ""}
+    </article>
+  `;
+}
+
+function renderSection(title, content, action = "") {
+  return `
+    <section class="overview-panel-section">
+      <div class="overview-panel-section-head">
+        <h3>${safeText(title)}</h3>
+        ${action ? `<div class="overview-panel-section-action">${action}</div>` : ""}
+      </div>
+      ${content}
+    </section>
+  `;
+}
+
+function renderRecordCard(item = {}) {
+  const statusText =
+    item.status ||
+    item.outcome_status ||
+    item.priority ||
+    (item.action_required ? "action required" : "recorded");
+
+  return `
+    <article
+      class="record-card"
+      data-open-record="true"
+      data-record-id="${safeText(item.id || "")}"
+      data-record-type="${safeText(item.record_type || "record")}"
+      data-title="${safeText(item.title || "Record")}"
+      role="button"
+      tabindex="0"
+    >
+      <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+        <div>
+          <div class="record-card-title">${safeText(item.title || "Record")}</div>
+          <div class="record-card-meta">
+            ${
+              item.check_date
+                ? `Date: ${safeText(formatDate(item.check_date))}`
+                : item.drill_datetime
+                  ? `Drill: ${safeText(formatDateTime(item.drill_datetime))}`
+                  : item.arrived_at
+                    ? `Arrival: ${safeText(formatDateTime(item.arrived_at))}`
+                    : item.reported_date
+                      ? `Reported: ${safeText(formatDate(item.reported_date))}`
+                      : ""
+            }
+          </div>
+        </div>
+        <span class="${badgeClass(statusText)}">${safeText(statusText)}</span>
+      </div>
+
+      <div class="record-card-body">
+        <div class="record-card-summary">${safeText(item.summary || "")}</div>
+
+        <div class="details-grid" style="margin-top:12px;">
+          ${
+            item.next_due_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Next due</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.next_due_date))}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.target_completion_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Target completion</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.target_completion_date))}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.completed_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Completed</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.completed_date))}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.visitor_type
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Visitor type</div>
+                  <div class="details-grid-value">${safeText(item.visitor_type)}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.contractor_name
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Contractor</div>
+                  <div class="details-grid-value">${safeText(item.contractor_name)}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            Number.isFinite(item.evacuation_time_seconds) && item.evacuation_time_seconds !== null
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Evacuation time</div>
+                  <div class="details-grid-value">${safeText(`${item.evacuation_time_seconds} sec`)}</div>
+                </div>
+              `
+              : ""
+          }
+        </div>
+
+        ${
+          item.findings
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Findings</div>
+                <div>${safeText(item.findings)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.finding_summary
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Finding summary</div>
+                <div>${safeText(item.finding_summary)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.issues_found
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Issues found</div>
+                <div>${safeText(item.issues_found)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.action_notes || item.action_note || item.actions_required
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Actions</div>
+                <div>${safeText(item.action_notes || item.action_note || item.actions_required)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.job_description
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Job description</div>
+                <div>${safeText(item.job_description)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.notes
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Notes</div>
+                <div>${safeText(item.notes)}</div>
+              </div>
+            `
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function renderCardList(items = [], emptyTitle, emptyMessage) {
+  if (!items.length) return renderEmpty(emptyTitle, emptyMessage);
+
+  return `
+    <div class="record-card-list">
+      ${items.map((item) => renderRecordCard(item)).join("")}
+    </div>
+  `;
+}
+
+function renderTimeline(items = []) {
+  if (!items.length) {
+    return renderEmpty(
+      "No recent activity",
+      "No recent health and safety activity has been recorded yet."
+    );
   }
 
   return `
-    <div class="record-list">
+    <div class="timeline-list">
       ${items
         .map((item) => {
-          const title =
-            item?.[titleKey] ||
-            item?.audit_name ||
-            item?.incident_type ||
-            item?.title ||
-            "Record";
+          const dateValue =
+            item.check_date ||
+            item.drill_datetime ||
+            item.arrived_at ||
+            item.reported_date ||
+            item.created_at;
 
-          const summary =
-            item?.[summaryKey] ||
-            item?.notes ||
-            item?.description ||
-            "No summary available.";
-
-          const meta = metaBuilder
-            ? metaBuilder(item)
-            : item?.updated_at || item?.created_at || "";
-
-          const status = item?.[statusKey] || "";
-          const tone = getStatusTone(status);
-          const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const statusText =
+            item.status ||
+            item.outcome_status ||
+            item.priority ||
+            (item.action_required ? "action required" : "recorded");
 
           return `
-            <article
-              class="record-row"
-              data-open-record="true"
-              data-record-id="${safeText(rowId)}"
-              data-record-type="${safeText(recordType || item?.record_type || "")}"
-              data-title="${safeText(title)}"
-              tabindex="0"
-              role="button"
-            >
-              <div class="record-row-main">
-                <div class="record-row-title">${safeText(title)}</div>
-                <div class="record-row-summary">${safeText(summary)}</div>
-                <div class="record-row-meta">${safeText(meta)}</div>
-              </div>
-              <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(
-                  status || "Recorded"
-                )}</span>
+            <article class="timeline-item">
+              <div class="timeline-item-date">${safeText(formatDateTime(dateValue, "No date"))}</div>
+              <div class="timeline-item-body">
+                <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+                  <strong>${safeText(item.title || "Record")}</strong>
+                  <span class="${badgeClass(statusText)}">${safeText(statusText)}</span>
+                </div>
+                <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
               </div>
             </article>
           `;
@@ -695,626 +554,286 @@ function renderRows(items = [], options = {}) {
   `;
 }
 
-function renderPriorityList(items = []) {
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No urgent health and safety issues are showing right now.</p>
-      </div>
-    `;
-  }
+function renderWorkspace(payload) {
+  const {
+    urgentChecks,
+    overdueChecks,
+    openMaintenance,
+    recentFire,
+    recentVisitors,
+    timeline,
+    nextFireCheckDue,
+  } = payload;
 
   return `
-    <div class="priority-list">
-      ${items
-        .map(
-          (item) => `
-            <article class="priority-item">
-              <strong>${safeText(item.title)}</strong>
-              <p>${safeText(item.summary)}</p>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderHealthSafetyHtml({
-  title = "Health and safety",
-  topStats = [],
-  progressCards = [],
-  priorityItems = [],
-  auditItems = [],
-  maintenanceItems = [],
-  riskItems = [],
-  fireCheckItems = [],
-  incidentItems = [],
-  taskItems = [],
-  documentItems = [],
-  isFallback = false,
-}) {
-  return `
-    <section class="overview-panel manager-dashboard manager-dashboard--health-safety">
+    <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Health and safety</div>
-          <h2>${safeText(title)}</h2>
-          <p>A live view across audits, premises issues, fire safety, risk reviews, incidents and safety actions.</p>
-          ${
-            isFallback
-              ? `<p class="overview-helper-text">Showing seeded preview data until live health and safety endpoints are available.</p>`
-              : ""
-          }
+          <h2>Environment, fire, premises and visitor safety</h2>
+          <p class="overview-panel-subtitle">
+            Daily operational safety, premises oversight, maintenance follow-up and visitor monitoring.
+          </p>
         </div>
       </div>
 
-      ${renderStatCards(topStats)}
-
-      <div class="overview-section-card">
-        <div class="overview-section-head">
-          <h3>Safety snapshot</h3>
-          <p>A quick visual read across audit position, premises safety, fire checks and risk review health.</p>
-        </div>
-        ${renderProgressCards(progressCards)}
+      <div class="overview-stats-grid">
+        ${renderStatCard("Urgent safety items", urgentChecks.length)}
+        ${renderStatCard("Overdue checks", overdueChecks.length)}
+        ${renderStatCard("Open maintenance", openMaintenance.length)}
+        ${renderStatCard("Recent fire records", recentFire.length)}
+        ${renderStatCard(
+          "Next due check",
+          nextFireCheckDue ? formatDate(nextFireCheckDue) : "None due"
+        )}
       </div>
 
       <div class="overview-grid">
-        <section class="overview-main">
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Audits and checks</h3>
-              <p>Health and safety assurance work, audits and review-sensitive checks.</p>
-            </div>
+        <div>
+          ${renderSection(
+            "Urgent safety items",
+            renderCardList(
+              urgentChecks,
+              "No urgent safety items",
+              "There are no urgent or unsafe health and safety records right now."
+            )
+          )}
 
-            ${renderRows(auditItems, {
-              emptyMessage: "No audit or check items found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "audit",
-              metaBuilder: (item) =>
-                [
-                  item.owner || "",
-                  item.audit_date ? formatDate(item.audit_date) : "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
+          ${renderSection(
+            "Open maintenance",
+            renderCardList(
+              openMaintenance,
+              "No open maintenance",
+              "There are no open maintenance jobs at present."
+            )
+          )}
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Maintenance and premises safety</h3>
-              <p>Environmental and building issues affecting the home.</p>
-            </div>
+          ${renderSection("Recent activity", renderTimeline(timeline))}
+        </div>
 
-            ${renderRows(maintenanceItems, {
-              emptyMessage: "No maintenance safety items found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "maintenance",
-              metaBuilder: (item) =>
-                [
-                  item.location || "",
-                  item.priority || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
+        <aside>
+          ${renderSection(
+            "Overdue checks",
+            renderCardList(
+              overdueChecks,
+              "No overdue checks",
+              "No health and safety checks appear overdue."
+            )
+          )}
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Risk assessments</h3>
-              <p>Risk controls, reviews and safety planning activity.</p>
-            </div>
+          ${renderSection(
+            "Fire safety and drills",
+            renderCardList(
+              recentFire,
+              "No fire records",
+              "No recent fire safety records have been found."
+            )
+          )}
 
-            ${renderRows(riskItems, {
-              emptyMessage: "No risk assessments found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "risk_assessment",
-              metaBuilder: (item) =>
-                [
-                  item.category || "",
-                  item.severity || "",
-                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
-        </section>
-
-        <aside class="overview-side">
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Needs attention</h3>
-              <p>The most urgent health and safety issues across the home.</p>
-            </div>
-
-            ${renderPriorityList(priorityItems)}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Fire safety</h3>
-              <p>Fire checks, testing and review-sensitive safety items.</p>
-            </div>
-
-            ${renderRows(fireCheckItems, {
-              emptyMessage: "No fire safety items found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "fire_check",
-              metaBuilder: (item) =>
-                [
-                  item.owner || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                  item.completed_date ? `Done ${formatDate(item.completed_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Incidents</h3>
-              <p>Health and safety incidents affecting oversight and action.</p>
-            </div>
-
-            ${renderRows(incidentItems, {
-              emptyMessage: "No health and safety incidents found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "health_safety_incident",
-              metaBuilder: (item) =>
-                [
-                  item.severity || "",
-                  item.occurred_at ? formatDateTime(item.occurred_at) : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Open actions</h3>
-              <p>Tasks linked to audits, premises, fire or safety follow-up.</p>
-            </div>
-
-            ${renderRows(taskItems, {
-              emptyMessage: "No health and safety tasks found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "task",
-              metaBuilder: (item) =>
-                [
-                  item.assigned_role || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Safety documents</h3>
-              <p>Policies, certificates and review-sensitive documents.</p>
-            </div>
-
-            ${renderRows(documentItems, {
-              emptyMessage: "No safety documents found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "document",
-              metaBuilder: (item) =>
-                [
-                  item.document_type || "",
-                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
-                  item.expiry_date ? `Expiry ${formatDate(item.expiry_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
+          ${renderSection(
+            "Recent visitors",
+            renderCardList(
+              recentVisitors,
+              "No visitor records",
+              "No recent visitors have been logged."
+            )
+          )}
         </aside>
       </div>
     </section>
   `;
 }
 
-function renderNoHomeContext() {
-  if (!els.viewContent) return;
+/* -------------------------------- fetch -------------------------------- */
 
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">⚠</div>
-          <h3>No home context available</h3>
-          <p>A home ID is needed before health and safety can load.</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "No safety context",
-    nextEvent: "No review loaded",
-    lastRecord: "No health and safety data",
-    openActions: "No actions loaded",
-  });
-}
-
-function renderLoadingState() {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="loading-state">
-        <div>
-          <div class="spinner" aria-hidden="true"></div>
-          <p>Loading health and safety…</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "Loading health and safety",
-    nextEvent: "Checking next safety review",
-    lastRecord: "Loading latest safety record",
-    openActions: "Loading safety actions",
-  });
-}
-
-function renderErrorState(message) {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">!</div>
-          <h3>Failed to load health and safety</h3>
-          <p>${safeText(message || "The health and safety view could not be loaded.")}</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "Health and safety unavailable",
-    nextEvent: "No review loaded",
-    lastRecord: "No safety data loaded",
-    openActions: "No actions loaded",
-  });
-}
-
-function buildFallbackData(homeId) {
-  const now = new Date();
-  const plusDays = (days, hour = 9, minute = 0) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-  };
-  const minusDays = (days, hour = 9, minute = 0) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - days);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-  };
-
-  return {
-    summaryData: {
-      summary: {
-        title:
-          state.currentUser?.home_name ||
-          state.currentUser?.homeName ||
-          `Home ${homeId} health and safety`,
-      },
-    },
-    auditData: {
-      items: [
-        {
-          id: "audit-1",
-          title: "Monthly health and safety walkaround",
-          status: "due_soon",
-          due_date: plusDays(3),
-          owner: "Manager",
-          summary: "Monthly premises and safety assurance walkaround due this week.",
-        },
-      ],
-    },
-    maintenanceData: {
-      items: [
-        {
-          id: "maint-1",
-          title: "Rear garden gate lock",
-          priority: "high",
-          status: "open",
-          location: "Garden",
-          due_date: plusDays(1),
-          summary: "Lock is loose and needs urgent repair.",
-        },
-      ],
-    },
-    riskData: {
-      items: [
-        {
-          id: "risk-1",
-          title: "Kitchen access risk assessment",
-          category: "Environment",
-          severity: "medium",
-          status: "review_due",
-          review_date: plusDays(5),
-          summary: "Review safety controls for access during meal preparation.",
-        },
-      ],
-    },
-    fireCheckData: {
-      items: [
-        {
-          id: "fire-1",
-          title: "Fire alarm weekly test",
-          check_type: "Alarm test",
-          status: "due_soon",
-          due_date: plusDays(2),
-          owner: "Deputy manager",
-          summary: "Weekly fire alarm test needs completing.",
-        },
-      ],
-    },
-    incidentData: {
-      items: [
-        {
-          id: "incident-1",
-          title: "Hot water temperature concern",
-          incident_type: "Environmental incident",
-          severity: "high",
-          status: "open",
-          occurred_at: minusDays(1),
-          summary: "Water temperature exceeded safe range in upstairs bathroom.",
-        },
-      ],
-    },
-    taskData: {
-      items: [
-        {
-          id: "task-1",
-          title: "Record fire drill outcome",
-          due_date: plusDays(1),
-          completed: false,
-          status: "open",
-          assigned_role: "Shift lead",
-          summary: "Upload evidence and observations from last fire drill.",
-        },
-      ],
-    },
-    documentData: {
-      items: [
-        {
-          id: "doc-1",
-          title: "Legionella certificate",
-          document_type: "Certificate",
-          status: "review_due",
-          review_date: plusDays(7),
-          summary: "Certificate review due next week.",
-        },
-      ],
-    },
-    isFallback: true,
-  };
-}
-
-async function fetchDataset(homeId) {
-  const safeGet = (url) => apiGet(url).catch(() => null);
-
-  const requests = [
-    safeGet(`/homes/${homeId}/health-safety`),
-    safeGet(`/homes/${homeId}/audits`),
-    safeGet(`/homes/${homeId}/maintenance`),
-    safeGet(`/homes/${homeId}/risk-assessments`),
-    safeGet(`/homes/${homeId}/fire-checks`),
-    safeGet(`/homes/${homeId}/incidents`),
-    safeGet(`/homes/${homeId}/tasks`),
-    safeGet(`/homes/${homeId}/documents`),
-  ];
-
+async function fetchAll(homeId) {
   const [
-    summaryData,
-    auditData,
-    maintenanceData,
-    riskData,
-    fireCheckData,
-    incidentData,
-    taskData,
-    documentData,
-  ] = await Promise.all(requests);
-
-  const responses = [
-    summaryData,
-    auditData,
-    maintenanceData,
-    riskData,
-    fireCheckData,
-    incidentData,
-    taskData,
-    documentData,
-  ];
-
-  const hasLiveSuccess = responses.some(hasUsableData);
-
-  if (!hasLiveSuccess) {
-    return buildFallbackData(homeId);
-  }
+    environmentRes,
+    healthSafetyRes,
+    safetyRes,
+    fireSafetyRes,
+    fireDrillRes,
+    maintenanceRes,
+    visitorRes,
+  ] = await Promise.all([
+    safeGet(`/homes/${homeId}/environment-checks`),
+    safeGet(`/homes/${homeId}/health-safety-checks`),
+    safeGet(`/homes/${homeId}/safety-checks`),
+    safeGet(`/homes/${homeId}/fire-safety-checks`),
+    safeGet(`/homes/${homeId}/fire-drills`),
+    safeGet(`/homes/${homeId}/maintenance-jobs`),
+    safeGet(`/homes/${homeId}/visitor-log`),
+  ]);
 
   return {
-    summaryData: summaryData || {},
-    auditData: auditData || { items: [] },
-    maintenanceData: maintenanceData || { items: [] },
-    riskData: riskData || { items: [] },
-    fireCheckData: fireCheckData || { items: [] },
-    incidentData: incidentData || { items: [] },
-    taskData: taskData || { items: [] },
-    documentData: documentData || { items: [] },
-    isFallback: false,
+    environmentChecks: pickItems(environmentRes, ["environment_checks", "checks", "items"]).map(
+      mapEnvironmentCheck
+    ),
+    healthSafetyChecks: pickItems(healthSafetyRes, ["health_safety_checks", "checks", "items"]).map(
+      mapHealthSafetyCheck
+    ),
+    safetyChecks: pickItems(safetyRes, ["safety_checks", "checks", "items"]).map(mapSafetyCheck),
+    fireSafetyChecks: pickItems(fireSafetyRes, ["fire_safety_checks", "checks", "items"]).map(
+      mapFireSafetyCheck
+    ),
+    fireDrills: pickItems(fireDrillRes, ["fire_drills", "drills", "items"]).map(mapFireDrill),
+    maintenanceJobs: pickItems(maintenanceRes, ["maintenance_jobs", "jobs", "items"]).map(
+      mapMaintenanceJob
+    ),
+    visitorLog: pickItems(visitorRes, ["visitor_log", "visitors", "items"]).map(mapVisitorLog),
   };
 }
 
-export async function loadHealthSafety() {
+/* -------------------------------- builders -------------------------------- */
+
+function buildUrgentChecks(data) {
+  const urgent = [
+    ...data.environmentChecks.filter(
+      (item) => item.action_required || ["urgent_action", "unsafe", "critical"].includes(lower(item.status))
+    ),
+    ...data.healthSafetyChecks.filter(
+      (item) => item.action_required || ["urgent", "unsafe", "critical", "fail"].includes(lower(item.status))
+    ),
+    ...data.safetyChecks.filter(
+      (item) =>
+        ["overdue", "failed", "unsafe", "critical"].includes(lower(item.outcome_status)) ||
+        Boolean(item.action_required)
+    ),
+    ...data.fireSafetyChecks.filter(
+      (item) =>
+        item.issues_found ||
+        item.actions_required ||
+        ["fail", "action_required", "urgent"].includes(lower(item.outcome))
+    ),
+  ];
+
+  return sortNewest(urgent, ["check_date", "created_at", "updated_at"]).slice(0, 12);
+}
+
+function buildOverdueChecks(data) {
+  const overdue = [
+    ...data.healthSafetyChecks.filter((item) => isOverdue(item.next_due_date)),
+    ...data.safetyChecks.filter((item) => isOverdue(item.action_due_date)),
+    ...data.fireSafetyChecks.filter((item) => isOverdue(item.next_due_date)),
+  ];
+
+  return sortNewest(overdue, ["next_due_date", "action_due_date", "check_date"]).slice(0, 10);
+}
+
+function buildOpenMaintenance(data) {
+  return sortNewest(
+    data.maintenanceJobs.filter(
+      (item) => !["completed", "cancelled", "resolved", "closed"].includes(lower(item.status))
+    ),
+    ["reported_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildRecentFire(data) {
+  return sortNewest(
+    [...data.fireSafetyChecks, ...data.fireDrills],
+    ["check_date", "drill_datetime", "created_at", "updated_at"]
+  ).slice(0, 8);
+}
+
+function buildRecentVisitors(data) {
+  return sortNewest(data.visitorLog, ["arrived_at", "created_at", "updated_at"]).slice(0, 8);
+}
+
+function buildTimeline(data) {
+  return sortNewest(
+    [
+      ...data.environmentChecks,
+      ...data.healthSafetyChecks,
+      ...data.safetyChecks,
+      ...data.fireSafetyChecks,
+      ...data.fireDrills,
+      ...data.maintenanceJobs,
+      ...data.visitorLog,
+    ],
+    ["check_date", "drill_datetime", "arrived_at", "reported_date", "created_at", "updated_at"]
+  ).slice(0, 20);
+}
+
+function buildNextFireCheckDue(data) {
+  const candidates = [
+    ...data.fireSafetyChecks.map((item) => item.next_due_date).filter(Boolean),
+    ...data.healthSafetyChecks
+      .filter((item) => lower(item.check_type).includes("fire"))
+      .map((item) => item.next_due_date)
+      .filter(Boolean),
+  ]
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  return candidates[0] || null;
+}
+
+/* -------------------------------- public -------------------------------- */
+
+export async function loadCurrentView() {
   if (!els.viewContent) return;
 
   const homeId = getHomeId();
 
   if (!homeId) {
-    renderNoHomeContext();
+    els.viewContent.innerHTML = renderEmpty(
+      "No home selected",
+      "Select a home to view health and safety information."
+    );
     return;
   }
 
-  renderLoadingState();
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+    </div>
+  `;
 
   try {
-    const {
-      summaryData,
-      auditData,
-      maintenanceData,
-      riskData,
-      fireCheckData,
-      incidentData,
-      taskData,
-      documentData,
-      isFallback,
-    } = await fetchDataset(homeId);
+    const data = await fetchAll(homeId);
 
-    const summary = normaliseSummary(summaryData);
+    const urgentChecks = buildUrgentChecks(data);
+    const overdueChecks = buildOverdueChecks(data);
+    const openMaintenance = buildOpenMaintenance(data);
+    const recentFire = buildRecentFire(data);
+    const recentVisitors = buildRecentVisitors(data);
+    const timeline = buildTimeline(data);
+    const nextFireCheckDue = buildNextFireCheckDue(data);
 
-    const auditItems = sortSoonestFirst(normaliseAuditItems(auditData), [
-      "due_date",
-      "audit_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 8);
-
-    const maintenanceItems = sortSoonestFirst(
-      normaliseMaintenanceItems(maintenanceData),
-      ["due_date", "reported_date", "updated_at", "created_at"]
-    ).slice(0, 8);
-
-    const riskItems = sortSoonestFirst(normaliseRiskItems(riskData), [
-      "review_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 8);
-
-    const fireCheckItems = sortSoonestFirst(
-      normaliseFireCheckItems(fireCheckData),
-      ["due_date", "completed_date", "updated_at", "created_at"]
-    ).slice(0, 8);
-
-    const incidentItems = sortNewestFirst(normaliseIncidentItems(incidentData), [
-      "occurred_at",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 6);
-
-    const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
-      "due_date",
-      "updated_at",
-      "created_at",
-    ])
-      .filter((item) => !item.completed)
-      .slice(0, 6);
-
-    const documentItems = sortSoonestFirst(normaliseDocumentItems(documentData), [
-      "review_date",
-      "expiry_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 6);
-
-    const topStats = buildTopStats({
-      auditItems,
-      maintenanceItems,
-      riskItems,
-      fireCheckItems,
-      incidentItems,
-      taskItems,
+    els.viewContent.innerHTML = renderWorkspace({
+      urgentChecks,
+      overdueChecks,
+      openMaintenance,
+      recentFire,
+      recentVisitors,
+      timeline,
+      nextFireCheckDue,
     });
-
-    const progressCards = buildProgressCards({
-      auditItems,
-      maintenanceItems,
-      fireCheckItems,
-      riskItems,
-    });
-
-    const priorityItems = buildPriorityItems({
-      auditItems,
-      maintenanceItems,
-      riskItems,
-      fireCheckItems,
-      incidentItems,
-      taskItems,
-    });
-
-    const title =
-      summary.title ||
-      state.currentUser?.home_name ||
-      state.currentUser?.homeName ||
-      `Home ${homeId} health and safety`;
-
-    els.viewContent.innerHTML = renderHealthSafetyHtml({
-      title,
-      topStats,
-      progressCards,
-      priorityItems,
-      auditItems,
-      maintenanceItems,
-      riskItems,
-      fireCheckItems,
-      incidentItems,
-      taskItems,
-      documentItems,
-      isFallback,
-    });
-
-    const nextReview =
-      auditItems[0]?.due_date ||
-      fireCheckItems[0]?.due_date ||
-      riskItems[0]?.review_date ||
-      taskItems[0]?.due_date ||
-      null;
-
-    const latestRecord =
-      incidentItems[0]?.occurred_at ||
-      maintenanceItems[0]?.updated_at ||
-      auditItems[0]?.updated_at ||
-      null;
 
     updateWorkspaceSummaryStrip({
-      today: isFallback
-        ? `${topStats[0].value} audits due • preview mode`
-        : `${topStats[0].value} audits due • ${topStats[1].value} urgent maintenance`,
-      nextEvent: nextReview
-        ? `Next safety date ${formatDate(nextReview)}`
-        : "No review date loaded",
-      lastRecord: latestRecord
-        ? `Latest safety update ${formatDateTime(latestRecord)}`
-        : isFallback
-        ? "Preview safety data loaded"
-        : "No recent safety update",
-      openActions: `${taskItems.length} open • ${priorityItems.length} priority`,
+      today: `${urgentChecks.length} urgent items`,
+      nextEvent: nextFireCheckDue ? formatDate(nextFireCheckDue) : "No due check",
+      lastRecord: timeline[0]
+        ? formatDate(
+            timeline[0].check_date ||
+              timeline[0].reported_date ||
+              timeline[0].arrived_at ||
+              timeline[0].drill_datetime ||
+              timeline[0].created_at
+          )
+        : "None",
+      openActions: `${openMaintenance.length} maintenance open`,
     });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
-    console.error("[health-safety] load failed", error);
-    renderErrorState(error?.message || "The health and safety view could not be loaded.");
+    console.error(error);
+    els.viewContent.innerHTML = renderEmpty(
+      "Unable to load health and safety",
+      "Something went wrong while loading health and safety records."
+    );
   }
 }
