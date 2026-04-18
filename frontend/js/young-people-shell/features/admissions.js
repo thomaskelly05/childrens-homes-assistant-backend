@@ -1,26 +1,25 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
 
-function getHomeId() {
-  return (
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null
-  );
+/* -------------------------------- helpers -------------------------------- */
+
+const SAFE_EMPTY = Object.freeze({ items: [] });
+
+function toArray(value, fallback = []) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(fallback)) return fallback;
+  return [];
 }
 
-function toArray(value, fallbacks = []) {
-  if (Array.isArray(value)) return value;
-
-  for (const fallback of fallbacks) {
-    if (Array.isArray(fallback)) return fallback;
-  }
-
-  return [];
+function toBool(value) {
+  return Boolean(value);
 }
 
 function toNumber(value, fallback = 0) {
@@ -32,12 +31,21 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function formatDate(value) {
-  if (!value) return "No date";
+function lower(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
 
+function titleCase(value) {
+  return String(value ?? "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+    .trim();
+}
+
+function formatDate(value, fallback = "No date") {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -45,12 +53,10 @@ function formatDate(value) {
   });
 }
 
-function formatDateTime(value) {
-  if (!value) return "No date";
-
+function formatDateTime(value, fallback = "No date") {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -60,577 +66,821 @@ function formatDateTime(value) {
   });
 }
 
-function getStatusTone(status = "") {
-  const normalised = String(status || "")
-    .toLowerCase()
-    .trim()
-    .replaceAll(" ", "_");
-
-  if (
-    [
-      "high",
-      "critical",
-      "rejected",
-      "withdrawn",
-      "declined",
-      "failed",
-      "cancelled",
-      "blocked",
-      "overdue",
-      "missing",
-      "at_risk",
-    ].includes(normalised)
-  ) {
-    return "danger";
-  }
-
-  if (
-    [
-      "pending",
-      "under_consideration",
-      "in_progress",
-      "awaiting_information",
-      "awaiting_decision",
-      "planned",
-      "matching",
-      "review_due",
-      "due_soon",
-      "warning",
-      "shortlist",
-    ].includes(normalised)
-  ) {
-    return "warning";
-  }
-
-  if (
-    [
-      "accepted",
-      "approved",
-      "active",
-      "placed",
-      "admitted",
-      "completed",
-      "current",
-      "good",
-      "confirmed",
-    ].includes(normalised)
-  ) {
-    return "success";
-  }
-
-  return "muted";
+function isOverdue(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime() < today.getTime();
 }
 
-function toTime(value) {
-  if (!value) return 0;
-  const parsed = new Date(value).getTime();
-  return Number.isFinite(parsed) ? parsed : 0;
+function daysUntil(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  return Math.round((date.getTime() - today.getTime()) / 86400000);
 }
 
-function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(bValue) - toTime(aValue);
-  });
-}
-
-function sortSoonestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue) - toTime(bValue);
-  });
-}
-
-function hasUsableData(data) {
-  if (!data || typeof data !== "object") return false;
-  if (Array.isArray(data.items) && data.items.length > 0) return true;
-  if (Array.isArray(data.records) && data.records.length > 0) return true;
-  if (Array.isArray(data.admissions) && data.admissions.length > 0) return true;
-  if (Array.isArray(data.referrals) && data.referrals.length > 0) return true;
-  if (Array.isArray(data.transitions) && data.transitions.length > 0) return true;
-  if (Array.isArray(data.documents) && data.documents.length > 0) return true;
-  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
-  if (Array.isArray(data.placements) && data.placements.length > 0) return true;
-  if (data.summary && typeof data.summary === "object") return true;
-  if (data.dashboard && typeof data.dashboard === "object") return true;
-  if (data.admissions_summary && typeof data.admissions_summary === "object") return true;
-  return false;
-}
-
-function normaliseSummary(data = {}) {
-  return data.summary || data.admissions_summary || data.dashboard || data || {};
-}
-
-function normaliseAdmissionItems(data = {}) {
-  return toArray(data.items, [data.admissions, data.placements, data.records]).map(
-    (item) => ({
-      ...item,
-      id: item.id ?? item.record_id ?? item.source_id ?? null,
-      record_type: item.record_type || "admission",
-      title:
-        item.title ||
-        item.young_person_name ||
-        item.child_name ||
-        "Admission",
-      young_person_name:
-        item.young_person_name ||
-        item.child_name ||
-        item.full_name ||
-        "Young person",
-      referral_source: item.referral_source || item.local_authority || "",
-      status: item.status || "under_consideration",
-      placement_type: item.placement_type || "",
-      referral_date: item.referral_date || item.created_at || null,
-      planned_admission_date:
-        item.planned_admission_date || item.admission_date || null,
-      admission_date: item.admission_date || null,
-      summary:
-        item.summary ||
-        item.notes ||
-        item.reason_for_placement ||
-        "Admission record.",
-      created_at: item.created_at || null,
-      updated_at: item.updated_at || null,
-    })
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.selectedHomeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
   );
 }
 
-function normaliseReferralItems(data = {}) {
-  return toArray(data.items, [data.referrals, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "referral",
-    title:
-      item.title ||
-      item.young_person_name ||
-      item.child_name ||
-      "Referral",
-    young_person_name:
-      item.young_person_name ||
-      item.child_name ||
-      item.full_name ||
-      "Young person",
-    local_authority: item.local_authority || item.referral_source || "",
-    status: item.status || "pending",
-    referral_date: item.referral_date || item.created_at || null,
-    decision_due_date: item.decision_due_date || null,
-    summary:
-      item.summary ||
-      item.notes ||
-      item.reason ||
-      "Referral record.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+function pickItems(response, candidates = []) {
+  for (const key of candidates) {
+    if (Array.isArray(response?.[key])) return response[key];
+  }
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response)) return response;
+  return [];
 }
 
-function normaliseTransitionItems(data = {}) {
-  return toArray(data.items, [data.transitions, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "transition",
-    title:
-      item.title ||
-      item.young_person_name ||
-      item.child_name ||
-      "Transition",
-    young_person_name:
-      item.young_person_name ||
-      item.child_name ||
-      item.full_name ||
-      "Young person",
-    status: item.status || "planned",
-    move_date: item.move_date || item.planned_admission_date || null,
-    stage: item.stage || "",
-    summary:
-      item.summary ||
-      item.notes ||
-      item.transition_plan ||
-      "Transition record.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+async function safeGet(path) {
+  try {
+    return (await apiGet(path)) || SAFE_EMPTY;
+  } catch {
+    return SAFE_EMPTY;
+  }
 }
 
-function normaliseDocumentItems(data = {}) {
-  return toArray(data.items, [data.documents, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "document",
-    title: item.title || item.document_type || "Admission document",
-    document_type: item.document_type || item.type || "",
-    young_person_name:
-      item.young_person_name ||
-      item.child_name ||
-      item.full_name ||
+function sortNewest(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+}
+
+function badgeClass(value) {
+  const v = lower(value);
+  if (
+    [
+      "declined",
+      "withdrawn",
+      "cancelled",
+      "closed",
+      "disrupted",
+      "urgent",
+      "high",
+      "critical",
+      "overdue",
+      "at_risk",
+      "at risk",
+    ].includes(v)
+  ) {
+    return "badge badge-danger";
+  }
+  if (
+    [
+      "screening",
+      "matching",
+      "decision_pending",
+      "decision pending",
+      "visit_planned",
+      "visit planned",
+      "in_progress",
+      "in progress",
+      "planned",
+      "scheduled",
+      "pending",
+      "draft",
+      "open",
+      "waitlist",
+    ].includes(v)
+  ) {
+    return "badge badge-warning";
+  }
+  if (
+    [
+      "accepted",
+      "completed",
+      "admitted",
+      "active",
+      "achieved",
+      "good",
+      "approved",
+      "pass",
+    ].includes(v)
+  ) {
+    return "badge badge-success";
+  }
+  return "badge";
+}
+
+/* -------------------------------- mappers -------------------------------- */
+
+function mapReferral(record = {}) {
+  const firstName =
+    record.young_person_first_name ||
+    record.child_first_name ||
+    record.first_name ||
+    "";
+  const lastName =
+    record.young_person_last_name ||
+    record.child_last_name ||
+    record.last_name ||
+    "";
+  const preferred =
+    record.young_person_preferred_name ||
+    record.preferred_name ||
+    record.young_person_name ||
+    "";
+  const personName = preferred || [firstName, lastName].filter(Boolean).join(" ").trim() || "Young person";
+
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || record.linked_young_person_id || null,
+    referral_reference: record.referral_reference || "",
+    referral_source: record.referral_source || "",
+    local_authority_name:
+      record.local_authority_name || record.local_authority || record.placing_authority_name || "",
+    social_worker_name:
+      record.social_worker_name || record.referring_worker_name || "",
+    social_worker_email:
+      record.social_worker_email || record.referring_worker_email || "",
+    social_worker_phone:
+      record.social_worker_phone || record.referring_worker_phone || "",
+    date_of_birth: record.date_of_birth || null,
+    gender: record.gender || "",
+    ethnicity: record.ethnicity || "",
+    referral_date: record.referral_date || record.enquiry_date || null,
+    requested_move_in_date:
+      record.requested_move_in_date || record.desired_start_date || record.planned_admission_date || null,
+    status: record.referral_status || record.status || record.current_stage || "",
+    decision_outcome: record.decision_outcome || record.decision || record.outcome_decision || "",
+    decision_date: record.decision_date || null,
+    presenting_needs: record.presenting_needs || "",
+    known_risks: record.known_risks || record.risk_summary || "",
+    matching_summary: record.matching_summary || record.matching_considerations || "",
+    decision_rationale: record.decision_rationale || record.decision_reason || record.outcome_reason || "",
+    notes: record.notes || "",
+    title: `${personName} referral`,
+    person_name: personName,
+    summary:
+      record.presenting_needs ||
+      record.matching_summary ||
+      record.referral_summary ||
+      "Referral received.",
+    record_type: "referral",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapPreAdmissionAssessment(record = {}) {
+  return {
+    id: record.id,
+    referral_id: record.referral_id || null,
+    young_person_id: record.young_person_id || null,
+    home_id: record.home_id || null,
+    assessment_date: record.assessment_date || null,
+    assessor_user_id: record.assessor_user_id || record.assessed_by_user_id || null,
+    status: record.status || record.assessment_status || "",
+    presenting_needs: record.presenting_needs || record.needs_summary || "",
+    known_risks: record.known_risks || record.risk_summary || "",
+    communication_needs: record.communication_needs || record.communication_summary || "",
+    education_needs: record.education_needs || record.education_summary || "",
+    health_needs: record.health_needs || record.health_summary || "",
+    family_context: record.family_context || record.family_summary || "",
+    matching_considerations: record.matching_considerations || record.matching_summary || "",
+    rationale: record.rationale || record.admission_recommendation || record.outcome_recommendation || "",
+    title: "Pre-admission assessment",
+    summary:
+      record.matching_considerations ||
+      record.matching_summary ||
+      record.rationale ||
+      record.outcome_recommendation ||
+      "Assessment completed.",
+    record_type: "pre_admission_assessment",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapPreAdmissionVisit(record = {}) {
+  return {
+    id: record.id,
+    referral_id: record.referral_id || null,
+    home_id: record.home_id || null,
+    visit_type: record.visit_type || "",
+    planned_datetime: record.planned_datetime || null,
+    completed_datetime: record.completed_datetime || null,
+    attended_by_json: record.attended_by_json || null,
+    visit_summary: record.visit_summary || "",
+    young_person_response: record.young_person_response || "",
+    family_response: record.family_response || "",
+    staff_reflection: record.staff_reflection || "",
+    outcome: record.outcome || "",
+    status: record.status || "",
+    title: titleCase(record.visit_type || "Pre-admission visit"),
+    summary:
+      record.visit_summary ||
+      record.young_person_response ||
+      record.outcome ||
+      "Visit recorded.",
+    record_type: "pre_admission_visit",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapAdmissionPlan(record = {}) {
+  return {
+    id: record.id,
+    young_person_id: record.young_person_id || null,
+    referral_id: record.referral_id || null,
+    home_id: record.home_id || null,
+    planned_admission_date: record.planned_admission_date || null,
+    actual_admission_date: record.actual_admission_date || null,
+    admission_status: record.admission_status || "",
+    welcome_arrangements: record.welcome_arrangements || "",
+    room_preparation_notes: record.room_preparation_notes || "",
+    staff_briefing_notes: record.staff_briefing_notes || "",
+    education_transition_notes: record.education_transition_notes || "",
+    health_transition_notes: record.health_transition_notes || "",
+    family_contact_arrangements: record.family_contact_arrangements || "",
+    transport_arrangements: record.transport_arrangements || "",
+    immediate_risk_actions: record.immediate_risk_actions || "",
+    first_72_hours_plan: record.first_72_hours_plan || "",
+    lead_staff_user_id: record.lead_staff_user_id || null,
+    manager_user_id: record.manager_user_id || null,
+    title: "Admission plan",
+    summary:
+      record.first_72_hours_plan ||
+      record.immediate_risk_actions ||
+      record.welcome_arrangements ||
+      "Admission planning in place.",
+    record_type: "admission_plan",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapAdmissionChecklist(record = {}) {
+  return {
+    id: record.id,
+    admission_plan_id: record.admission_plan_id || record.admission_id || null,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || null,
+    referral_id: record.referral_id || null,
+    checklist_type: record.checklist_type || "",
+    item_code: record.item_code || "",
+    item_title: record.item_title || record.item_label || "",
+    item_description: record.item_description || "",
+    is_required: toBool(record.is_required ?? record.required),
+    status: record.status || (toBool(record.completed) ? "completed" : ""),
+    completed_at: record.completed_at || null,
+    due_date: record.due_date || null,
+    assigned_user_id: record.assigned_user_id || null,
+    completed_by_user_id: record.completed_by_user_id || record.completed_by || null,
+    notes: record.notes || "",
+    title: record.item_title || record.item_label || "Admission checklist item",
+    summary: record.item_description || record.notes || "Checklist item recorded.",
+    record_type: "admission_checklist",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapAdmissionEvent(record = {}) {
+  return {
+    id: record.id,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || null,
+    referral_id: record.referral_id || null,
+    admission_type: record.admission_type || "",
+    admission_status: record.admission_status || record.status || "",
+    admission_date: record.admission_date || null,
+    arrival_time: record.arrival_time || record.admission_time || null,
+    admitted_by_user_id: record.admitted_by_user_id || record.admitting_user_id || null,
+    room_id: record.room_id || null,
+    placement_reason: record.placement_reason || record.referral_information_summary || "",
+    initial_observations: record.initial_observations || record.first_day_observations || "",
+    welcome_notes: record.welcome_notes || "",
+    immediate_actions: record.immediate_actions || "",
+    child_initial_presentation: record.child_initial_presentation || "",
+    child_initial_wishes_feelings: record.child_initial_wishes_feelings || "",
+    title: "Admission event",
+    summary:
+      record.initial_observations ||
+      record.immediate_actions ||
+      record.welcome_notes ||
+      "Young person admitted.",
+    record_type: "admission_event",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapPlacementPeriod(record = {}) {
+  return {
+    id: record.id,
+    young_person_id: record.young_person_id || null,
+    home_id: record.home_id || null,
+    admission_date: record.admission_date || record.start_date || null,
+    discharge_date: record.discharge_date || record.end_date || null,
+    placement_status: record.placement_status || "",
+    legal_basis: record.legal_basis || record.legal_status || "",
+    placing_authority_name: record.placing_authority_name || record.authority_name || "",
+    primary_social_worker_name: record.primary_social_worker_name || record.social_worker_name || "",
+    placement_reason: record.placement_reason || record.admission_reason || "",
+    planned_duration_text: record.planned_duration_text || "",
+    ending_reason: record.ending_reason || record.discharge_reason || "",
+    ending_summary: record.ending_summary || "",
+    title: "Placement period",
+    summary:
+      record.placement_reason ||
+      record.ending_summary ||
+      record.planned_duration_text ||
+      "Placement timeline recorded.",
+    record_type: "placement_period",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapPlacementPlan(record = {}) {
+  return {
+    id: record.id,
+    young_person_id: record.young_person_id || null,
+    home_id: record.home_id || null,
+    plan_title: record.plan_title || "",
+    start_date: record.start_date || null,
+    review_date: record.review_date || null,
+    status: record.status || "",
+    placement_objectives: record.placement_objectives || "",
+    daily_routines: record.daily_routines || "",
+    education_arrangements: record.education_arrangements || "",
+    health_arrangements: record.health_arrangements || "",
+    contact_arrangements: record.contact_arrangements || "",
+    behaviour_support_guidance: record.behaviour_support_guidance || "",
+    safeguarding_arrangements: record.safeguarding_arrangements || "",
+    bedroom_plan: record.bedroom_plan || "",
+    transport_arrangements: record.transport_arrangements || "",
+    created_by: record.created_by || null,
+    approved_by: record.approved_by || null,
+    approved_at: record.approved_at || null,
+    title: record.plan_title || "Placement plan",
+    summary:
+      record.placement_objectives ||
+      record.daily_routines ||
+      record.behaviour_support_guidance ||
+      "Placement plan recorded.",
+    record_type: "placement_plan",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapPlacementGoal(record = {}) {
+  return {
+    id: record.id,
+    young_person_id: record.young_person_id || null,
+    placement_period_id: record.placement_period_id || null,
+    goal_area: record.goal_area || "",
+    goal_title: record.goal_title || "",
+    goal_description: record.goal_description || "",
+    target_date: record.target_date || null,
+    status: record.status || "",
+    progress_summary: record.progress_summary || "",
+    achieved_at: record.achieved_at || null,
+    owner_user_id: record.owner_user_id || null,
+    title: record.goal_title || "Placement goal",
+    summary:
+      record.progress_summary ||
+      record.goal_description ||
+      "Goal progress recorded.",
+    record_type: "placement_goal",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapTransitionPlan(record = {}) {
+  return {
+    id: record.id,
+    young_person_id: record.young_person_id || null,
+    home_id: record.home_id || null,
+    placement_period_id: record.placement_period_id || null,
+    transition_type: record.transition_type || "",
+    target_move_date: record.target_move_date || record.planned_move_date || null,
+    status: record.status || record.plan_status || "",
+    destination_summary: record.destination_summary || record.destination_details || "",
+    reason_for_transition: record.reason_for_transition || "",
+    emotional_preparation_plan:
+      record.emotional_preparation_plan || record.emotional_preparation || "",
+    practical_preparation_plan:
+      record.practical_preparation_plan || record.practical_preparation || "",
+    education_transition_plan: record.education_transition_plan || "",
+    health_transition_plan: record.health_transition_plan || "",
+    family_transition_plan: record.family_transition_plan || "",
+    child_voice: record.child_voice || "",
+    lead_user_id: record.lead_user_id || record.owner_id || null,
+    reviewed_by_user_id: record.reviewed_by_user_id || null,
+    reviewed_at: record.reviewed_at || null,
+    title: titleCase(record.transition_type || "Transition plan"),
+    summary:
+      record.destination_summary ||
+      record.destination_details ||
+      record.reason_for_transition ||
+      "Transition planning recorded.",
+    record_type: "transition_plan",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapTransitionAction(record = {}) {
+  return {
+    id: record.id,
+    transition_plan_id: record.transition_plan_id || null,
+    young_person_id: record.young_person_id || null,
+    action_title: record.action_title || record.title || "",
+    action_description: record.action_description || record.description || "",
+    action_area: record.action_area || record.action_type || "",
+    owner_user_id: record.owner_user_id || record.assigned_to_user_id || null,
+    due_date: record.due_date || null,
+    completed_at: record.completed_at || null,
+    completed_by_user_id: record.completed_by_user_id || null,
+    status:
+      record.status || (toBool(record.completed) ? "completed" : ""),
+    notes: record.notes || "",
+    title: record.action_title || record.title || "Transition action",
+    summary:
+      record.action_description ||
+      record.description ||
+      record.notes ||
+      "Transition action recorded.",
+    record_type: "transition_action",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapDischargeRecord(record = {}) {
+  return {
+    id: record.id,
+    young_person_id: record.young_person_id || null,
+    home_id: record.home_id || null,
+    discharge_date: record.discharge_date || null,
+    discharge_type: record.discharge_type || "",
+    destination: record.destination || "",
+    summary_of_placement:
+      record.summary_of_placement ||
+      record.move_summary ||
+      record.ending_summary ||
       "",
-    status: item.status || "active",
-    review_date: item.review_date || item.due_date || null,
+    achievements_summary: record.achievements_summary || "",
+    final_child_voice:
+      record.final_child_voice || record.child_voice_summary || "",
+    final_manager_summary:
+      record.final_manager_summary || record.recommendations_for_next_service || "",
+    follow_up_required: toBool(record.follow_up_required),
+    follow_up_notes: record.follow_up_notes || "",
+    completed_by_user_id: record.completed_by_user_id || record.created_by || record.recorded_by_user_id || null,
+    approved_by_user_id: record.approved_by_user_id || null,
+    approved_at: record.approved_at || null,
+    title: "Discharge summary",
     summary:
-      item.summary ||
-      item.notes ||
-      "Admission document record.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+      record.summary_of_placement ||
+      record.move_summary ||
+      record.achievements_summary ||
+      "Discharge recorded.",
+    record_type: "discharge_record",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseTaskItems(data = {}) {
-  return toArray(data.items, [data.tasks, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "task",
-    title: item.title || item.task || "Task",
-    task: item.task || item.title || "Task",
-    assigned_role: item.assigned_role || "",
-    staff_member: item.staff_member || "",
-    due_date: item.due_date || null,
-    completed: Boolean(item.completed),
-    status: item.status || (item.completed ? "completed" : "open"),
-    summary:
-      item.summary ||
-      item.notes ||
-      item.task ||
-      "Admission task recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
+/* -------------------------------- render -------------------------------- */
 
-function buildTopStats({
-  admissionItems = [],
-  referralItems = [],
-  transitionItems = [],
-  documentItems = [],
-  openTasks = [],
-}) {
-  const liveAdmissions = admissionItems.filter((item) =>
-    ["accepted", "approved", "active", "placed", "admitted"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const activeReferrals = referralItems.filter((item) =>
-    !["accepted", "rejected", "withdrawn", "declined", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const liveTransitions = transitionItems.filter((item) =>
-    ["planned", "in_progress", "matching", "due_soon"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  const documentGaps = documentItems.filter((item) =>
-    ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-
-  return [
-    {
-      label: "Active referrals",
-      value: activeReferrals,
-      note: "Referrals still in progress",
-      tone: activeReferrals ? "muted" : "success",
-    },
-    {
-      label: "Admissions live",
-      value: liveAdmissions,
-      note: "Accepted or admitted placements",
-      tone: liveAdmissions ? "success" : "muted",
-    },
-    {
-      label: "Transitions active",
-      value: liveTransitions,
-      note: "Move-in planning underway",
-      tone: liveTransitions ? "warning" : "success",
-    },
-    {
-      label: "Document gaps",
-      value: documentGaps,
-      note: "Placement paperwork needing action",
-      tone: documentGaps ? "danger" : "success",
-    },
-    {
-      label: "Open tasks",
-      value: openTasks.length,
-      note: "Outstanding admission actions",
-      tone: openTasks.length ? "warning" : "success",
-    },
-    {
-      label: "All records",
-      value: admissionItems.length + referralItems.length + transitionItems.length,
-      note: "Admissions workflow records loaded",
-      tone: "muted",
-    },
-  ];
-}
-
-function buildProgressCards({
-  referralItems = [],
-  admissionItems = [],
-  transitionItems = [],
-  documentItems = [],
-}) {
-  const acceptedReferrals = referralItems.filter((item) =>
-    ["accepted", "approved", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const referralPercent = referralItems.length
-    ? Math.round((acceptedReferrals / referralItems.length) * 100)
-    : 0;
-
-  const settledAdmissions = admissionItems.filter((item) =>
-    ["admitted", "active", "placed", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const admissionPercent = admissionItems.length
-    ? Math.round((settledAdmissions / admissionItems.length) * 100)
-    : 0;
-
-  const onTrackTransitions = transitionItems.filter((item) =>
-    ["planned", "completed", "active", "good"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const transitionPercent = transitionItems.length
-    ? Math.round((onTrackTransitions / transitionItems.length) * 100)
-    : 0;
-
-  const compliantDocs = documentItems.filter((item) =>
-    ["active", "valid", "current", "reviewed", "compliant"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const documentPercent = documentItems.length
-    ? Math.round((compliantDocs / documentItems.length) * 100)
-    : 0;
-
-  return [
-    {
-      label: "Referral conversion",
-      value: `${referralPercent}%`,
-      percent: referralPercent,
-      tone:
-        referralPercent >= 70 ? "success" : referralPercent >= 40 ? "warning" : "danger",
-    },
-    {
-      label: "Admission readiness",
-      value: `${admissionPercent}%`,
-      percent: admissionPercent,
-      tone:
-        admissionPercent >= 75 ? "success" : admissionPercent >= 50 ? "warning" : "danger",
-    },
-    {
-      label: "Transition planning",
-      value: `${transitionPercent}%`,
-      percent: transitionPercent,
-      tone:
-        transitionPercent >= 80 ? "success" : transitionPercent >= 60 ? "warning" : "danger",
-    },
-    {
-      label: "Document readiness",
-      value: `${documentPercent}%`,
-      percent: documentPercent,
-      tone:
-        documentPercent >= 85 ? "success" : documentPercent >= 65 ? "warning" : "danger",
-    },
-  ];
-}
-
-function buildPriorityItems({
-  referralItems = [],
-  admissionItems = [],
-  transitionItems = [],
-  documentItems = [],
-  taskItems = [],
-}) {
-  const items = [];
-
-  referralItems
-    .filter((item) =>
-      ["pending", "under_consideration", "awaiting_information", "awaiting_decision"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 2)
-    .forEach((item) => {
-      items.push({
-        title: item.young_person_name || "Referral",
-        summary: item.summary || "Referral still requires decision or information.",
-      });
-    });
-
-  transitionItems
-    .filter((item) =>
-      ["planned", "due_soon", "in_progress", "review_due"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 2)
-    .forEach((item) => {
-      items.push({
-        title: item.young_person_name || "Transition",
-        summary: item.summary || "Transition planning still needs follow-up.",
-      });
-    });
-
-  documentItems
-    .filter((item) =>
-      ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .slice(0, 2)
-    .forEach((item) => {
-      items.push({
-        title: item.title || "Placement document",
-        summary: item.summary || "A document required for admission remains incomplete.",
-      });
-    });
-
-  taskItems
-    .filter((item) => !item.completed)
-    .slice(0, 2)
-    .forEach((item) => {
-      items.push({
-        title: item.title || "Admission action",
-        summary: item.summary || "Outstanding admission action remains open.",
-      });
-    });
-
-  if (!items.length) {
-    items.push({
-      title: "No major admissions pressure",
-      summary: "Admissions and transitions are not currently surfacing urgent issues.",
-    });
-  }
-
-  return items.slice(0, 8);
-}
-
-function renderStatCards(cards = []) {
+function renderEmpty(title, message) {
   return `
-    <div class="overview-stats-grid overview-stats-grid--six">
-      ${cards
-        .map(
-          (card) => `
-            <article class="overview-stat-card ${
-              card.tone === "danger"
-                ? "overview-stat-card--danger"
-                : card.tone === "warning"
-                ? "overview-stat-card--warning"
-                : card.tone === "success"
-                ? "overview-stat-card--success"
-                : ""
-            }">
-              <span class="overview-stat-label">${safeText(card.label)}</span>
-              <strong class="overview-stat-value">${safeText(card.value)}</strong>
-              <span class="overview-stat-note">${safeText(card.note)}</span>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderProgressCards(cards = []) {
-  return `
-    <div class="analytics-progress-grid">
-      ${cards
-        .map(
-          (card) => `
-            <article class="analytics-progress-card">
-              <div class="analytics-progress-head">
-                <span class="analytics-progress-label">${safeText(card.label)}</span>
-                <strong class="analytics-progress-value">${safeText(card.value)}</strong>
-              </div>
-              <div class="analytics-progress-track">
-                <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
-                  style="width: ${safeText(card.percent || 0)}%;"
-                ></span>
-              </div>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderRows(items = [], options = {}) {
-  const {
-    emptyMessage = "Nothing to show right now.",
-    titleKey = "title",
-    summaryKey = "summary",
-    metaBuilder = null,
-    statusKey = "status",
-    recordType = "",
-  } = options;
-
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">○</div>
-          <h3>Nothing to show</h3>
-          <p>${safeText(emptyMessage)}</p>
-        </div>
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon">○</div>
+        <h3>${safeText(title)}</h3>
+        <p>${safeText(message)}</p>
       </div>
-    `;
+    </div>
+  `;
+}
+
+function renderStatCard(label, value, hint = "") {
+  return `
+    <article class="overview-stat-card">
+      <span class="overview-stat-label">${safeText(label)}</span>
+      <strong>${safeText(value)}</strong>
+      ${hint ? `<div class="overview-stat-subtle">${safeText(hint)}</div>` : ""}
+    </article>
+  `;
+}
+
+function renderSection(title, content) {
+  return `
+    <section class="overview-panel-section">
+      <div class="overview-panel-section-head">
+        <h3>${safeText(title)}</h3>
+      </div>
+      ${content}
+    </section>
+  `;
+}
+
+function renderCard(item = {}) {
+  const status =
+    item.status ||
+    item.referral_status ||
+    item.admission_status ||
+    item.placement_status ||
+    item.plan_status ||
+    item.decision_outcome ||
+    "";
+
+  const primaryDate =
+    item.referral_date ||
+    item.assessment_date ||
+    item.planned_datetime ||
+    item.completed_datetime ||
+    item.planned_admission_date ||
+    item.actual_admission_date ||
+    item.admission_date ||
+    item.target_date ||
+    item.target_move_date ||
+    item.due_date ||
+    item.discharge_date ||
+    item.review_date ||
+    item.created_at;
+
+  return `
+    <article
+      class="record-card"
+      data-open-record="true"
+      data-record-id="${safeText(item.id || "")}"
+      data-record-type="${safeText(item.record_type || "record")}"
+      data-title="${safeText(item.title || "Record")}"
+      role="button"
+      tabindex="0"
+    >
+      <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+        <div>
+          <div class="record-card-title">${safeText(item.title || "Record")}</div>
+          <div class="record-card-meta">${safeText(formatDateTime(primaryDate, "No date"))}</div>
+        </div>
+        ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+      </div>
+
+      <div class="record-card-body">
+        <div class="record-card-summary">${safeText(item.summary || "")}</div>
+
+        <div class="details-grid" style="margin-top:12px;">
+          ${
+            item.person_name
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Young person</div>
+                  <div class="details-grid-value">${safeText(item.person_name)}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.referral_source
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Source</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.referral_source))}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.requested_move_in_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Requested move in</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.requested_move_in_date))}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.target_move_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Target move</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.target_move_date))}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.discharge_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Discharge</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.discharge_date))}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.social_worker_name
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Social worker</div>
+                  <div class="details-grid-value">${safeText(item.social_worker_name)}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.local_authority_name
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Authority</div>
+                  <div class="details-grid-value">${safeText(item.local_authority_name)}</div>
+                </div>
+              `
+              : ""
+          }
+        </div>
+
+        ${
+          item.presenting_needs
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Presenting needs</div>
+                <div>${safeText(item.presenting_needs)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.known_risks
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Known risks</div>
+                <div>${safeText(item.known_risks)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.matching_summary || item.matching_considerations
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Matching</div>
+                <div>${safeText(item.matching_summary || item.matching_considerations)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.first_72_hours_plan
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">First 72 hours</div>
+                <div>${safeText(item.first_72_hours_plan)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.immediate_risk_actions
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Immediate risk actions</div>
+                <div>${safeText(item.immediate_risk_actions)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.visit_summary
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Visit summary</div>
+                <div>${safeText(item.visit_summary)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.progress_summary
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Progress</div>
+                <div>${safeText(item.progress_summary)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.destination_summary || item.destination
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Destination</div>
+                <div>${safeText(item.destination_summary || item.destination)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.summary_of_placement
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Placement summary</div>
+                <div>${safeText(item.summary_of_placement)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.notes
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Notes</div>
+                <div>${safeText(item.notes)}</div>
+              </div>
+            `
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function renderCardList(items = [], emptyTitle, emptyMessage) {
+  if (!items.length) return renderEmpty(emptyTitle, emptyMessage);
+  return `<div class="record-card-list">${items.map(renderCard).join("")}</div>`;
+}
+
+function renderTimeline(items = []) {
+  if (!items.length) {
+    return renderEmpty(
+      "No admissions activity",
+      "No admissions, placement or transition activity has been recorded yet."
+    );
   }
 
   return `
-    <div class="record-list">
+    <div class="timeline-list">
       ${items
         .map((item) => {
-          const title =
-            item?.[titleKey] ||
-            item?.young_person_name ||
-            item?.title ||
-            "Record";
+          const dateValue =
+            item.referral_date ||
+            item.assessment_date ||
+            item.completed_datetime ||
+            item.planned_datetime ||
+            item.actual_admission_date ||
+            item.admission_date ||
+            item.review_date ||
+            item.target_move_date ||
+            item.due_date ||
+            item.discharge_date ||
+            item.created_at;
 
-          const summary =
-            item?.[summaryKey] ||
-            item?.notes ||
-            item?.description ||
-            "No summary available.";
-
-          const meta = metaBuilder
-            ? metaBuilder(item)
-            : item?.updated_at || item?.created_at || "";
-
-          const status = item?.[statusKey] || "";
-          const tone = getStatusTone(status);
-          const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const status =
+            item.status ||
+            item.referral_status ||
+            item.admission_status ||
+            item.placement_status ||
+            item.plan_status ||
+            item.decision_outcome ||
+            "";
 
           return `
-            <article
-              class="record-row"
-              data-open-record="true"
-              data-record-id="${safeText(rowId)}"
-              data-record-type="${safeText(recordType || item?.record_type || "")}"
-              data-title="${safeText(title)}"
-              tabindex="0"
-              role="button"
-            >
-              <div class="record-row-main">
-                <div class="record-row-title">${safeText(title)}</div>
-                <div class="record-row-summary">${safeText(summary)}</div>
-                <div class="record-row-meta">${safeText(meta)}</div>
-              </div>
-              <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(
-                  status || "Recorded"
-                )}</span>
+            <article class="timeline-item">
+              <div class="timeline-item-date">${safeText(formatDateTime(dateValue, "No date"))}</div>
+              <div class="timeline-item-body">
+                <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+                  <strong>${safeText(item.title || "Record")}</strong>
+                  ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+                </div>
+                <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
               </div>
             </article>
           `;
@@ -640,534 +890,441 @@ function renderRows(items = [], options = {}) {
   `;
 }
 
-function renderPriorityList(items = []) {
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No urgent admission issues are showing right now.</p>
-      </div>
-    `;
-  }
+function renderWorkspace(payload) {
+  const {
+    liveReferrals,
+    upcomingAdmissions,
+    openChecklistItems,
+    activePlacements,
+    activeTransitions,
+    recentDischarges,
+    timeline,
+    overdueTransitionActions,
+    pendingVisits,
+  } = payload;
 
   return `
-    <div class="priority-list">
-      ${items
-        .map(
-          (item) => `
-            <article class="priority-item">
-              <strong>${safeText(item.title)}</strong>
-              <p>${safeText(item.summary)}</p>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderAdmissionsHtml({
-  title = "Admissions and transitions",
-  topStats = [],
-  progressCards = [],
-  priorityItems = [],
-  referralItems = [],
-  admissionItems = [],
-  transitionItems = [],
-  documentItems = [],
-  taskItems = [],
-  isFallback = false,
-}) {
-  return `
-    <section class="overview-panel manager-dashboard manager-dashboard--admissions">
+    <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
-          <div class="eyebrow">Admissions and transitions</div>
-          <h2>${safeText(title)}</h2>
-          <p>A live view across referrals, placement planning, admissions, transition work and required documents.</p>
-          ${
-            isFallback
-              ? `<p class="overview-helper-text">Showing seeded preview data until live admissions endpoints are available.</p>`
-              : ""
-          }
+          <div class="eyebrow">Admissions and placement journey</div>
+          <h2>Referral, pre-admission, admission, placement and transition</h2>
+          <p class="overview-panel-subtitle">
+            End-to-end child journey from referral through move-in, placement oversight, transition planning and leaving.
+          </p>
         </div>
       </div>
 
-      ${renderStatCards(topStats)}
-
-      <div class="overview-section-card">
-        <div class="overview-section-head">
-          <h3>Admissions snapshot</h3>
-          <p>A quick visual read across referral flow, admission readiness and transition planning.</p>
-        </div>
-        ${renderProgressCards(progressCards)}
+      <div class="overview-stats-grid">
+        ${renderStatCard("Live referrals", liveReferrals.length)}
+        ${renderStatCard("Upcoming admissions", upcomingAdmissions.length)}
+        ${renderStatCard("Open checklist items", openChecklistItems.length)}
+        ${renderStatCard("Active placements", activePlacements.length)}
+        ${renderStatCard("Active transitions", activeTransitions.length)}
       </div>
 
       <div class="overview-grid">
-        <section class="overview-main">
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Referrals</h3>
-              <p>Incoming referrals, matching considerations and local authority communication.</p>
-            </div>
+        <div>
+          ${renderSection(
+            "Live referrals",
+            renderCardList(
+              liveReferrals,
+              "No live referrals",
+              "There are no active referral cases at the moment."
+            )
+          )}
 
-            ${renderRows(referralItems, {
-              emptyMessage: "No referrals found.",
-              titleKey: "young_person_name",
-              summaryKey: "summary",
-              recordType: "referral",
-              metaBuilder: (item) =>
-                [
-                  item.local_authority || item.referral_source || "",
-                  item.referral_date ? `Referral ${formatDate(item.referral_date)}` : "",
-                  item.decision_due_date ? `Decision ${formatDate(item.decision_due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
+          ${renderSection(
+            "Upcoming admissions",
+            renderCardList(
+              upcomingAdmissions,
+              "No upcoming admissions",
+              "There are no planned admissions currently scheduled."
+            )
+          )}
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Admissions</h3>
-              <p>Placement decisions, admission readiness and active admission records.</p>
-            </div>
+          ${renderSection(
+            "Open admission checklist items",
+            renderCardList(
+              openChecklistItems,
+              "No open checklist items",
+              "All known admission checklist items are complete."
+            )
+          )}
 
-            ${renderRows(admissionItems, {
-              emptyMessage: "No admissions found.",
-              titleKey: "young_person_name",
-              summaryKey: "summary",
-              recordType: "admission",
-              metaBuilder: (item) =>
-                [
-                  item.referral_source || "",
-                  item.planned_admission_date
-                    ? `Planned ${formatDate(item.planned_admission_date)}`
-                    : item.admission_date
-                    ? `Admitted ${formatDate(item.admission_date)}`
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
+          ${renderSection("Journey timeline", renderTimeline(timeline))}
+        </div>
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Transitions</h3>
-              <p>Move planning, staged admission work and transition support.</p>
-            </div>
+        <aside>
+          ${renderSection(
+            "Pending pre-admission visits",
+            renderCardList(
+              pendingVisits,
+              "No pending visits",
+              "No pre-admission visits are currently awaiting completion."
+            )
+          )}
 
-            ${renderRows(transitionItems, {
-              emptyMessage: "No transition records found.",
-              titleKey: "young_person_name",
-              summaryKey: "summary",
-              recordType: "transition",
-              metaBuilder: (item) =>
-                [
-                  item.stage || "",
-                  item.move_date ? `Move ${formatDate(item.move_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
-        </section>
+          ${renderSection(
+            "Active placements",
+            renderCardList(
+              activePlacements,
+              "No active placements",
+              "No active placement periods were returned for this home."
+            )
+          )}
 
-        <aside class="overview-side">
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Needs attention</h3>
-              <p>The most urgent admissions and transition issues across the home.</p>
-            </div>
+          ${renderSection(
+            "Active transitions",
+            renderCardList(
+              activeTransitions,
+              "No active transitions",
+              "There are no active transition plans for this home."
+            )
+          )}
 
-            ${renderPriorityList(priorityItems)}
-          </section>
+          ${renderSection(
+            "Overdue transition actions",
+            renderCardList(
+              overdueTransitionActions,
+              "No overdue actions",
+              "There are no overdue transition actions."
+            )
+          )}
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Placement documents</h3>
-              <p>Admission paperwork, plans and supporting evidence.</p>
-            </div>
-
-            ${renderRows(documentItems, {
-              emptyMessage: "No admission document gaps found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "document",
-              metaBuilder: (item) =>
-                [
-                  item.young_person_name || "",
-                  item.document_type || "",
-                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Open actions</h3>
-              <p>Outstanding admission and transition tasks requiring follow-up.</p>
-            </div>
-
-            ${renderRows(taskItems, {
-              emptyMessage: "No admission actions found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "task",
-              metaBuilder: (item) =>
-                [
-                  item.assigned_role || item.staff_member || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
+          ${renderSection(
+            "Recent discharges",
+            renderCardList(
+              recentDischarges,
+              "No recent discharges",
+              "No recent discharges have been recorded."
+            )
+          )}
         </aside>
       </div>
     </section>
   `;
 }
 
-function renderNoHomeContext() {
-  if (!els.viewContent) return;
+/* -------------------------------- fetch -------------------------------- */
 
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">⌂</div>
-          <h3>No home context available</h3>
-          <p>A home ID is needed before admissions can load.</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "No admissions context",
-    nextEvent: "No move date loaded",
-    lastRecord: "No admissions data",
-    openActions: "No admissions actions loaded",
-  });
-}
-
-function renderLoadingState() {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="loading-state">
-        <div>
-          <div class="spinner" aria-hidden="true"></div>
-          <p>Loading admissions…</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "Loading admissions",
-    nextEvent: "Checking move dates",
-    lastRecord: "Loading latest admission activity",
-    openActions: "Loading admission actions",
-  });
-}
-
-function renderErrorState(message) {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">!</div>
-          <h3>Failed to load admissions</h3>
-          <p>${safeText(message || "The admissions view could not be loaded.")}</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "Admissions unavailable",
-    nextEvent: "No move date loaded",
-    lastRecord: "No admissions data",
-    openActions: "No admissions actions loaded",
-  });
-}
-
-function buildFallbackData(homeId) {
-  const homeName =
-    state.currentUser?.home_name ||
-    state.currentUser?.homeName ||
-    `Home ${homeId}`;
-
-  const now = new Date();
-  const plusDays = (days, hour = 9, minute = 0) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-  };
-  const minusDays = (days, hour = 9, minute = 0) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - days);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-  };
-
-  return {
-    summaryData: {
-      summary: {
-        title: `${homeName} admissions`,
-        home_name: homeName,
-      },
-    },
-    referralData: {
-      items: [
-        {
-          id: "ref-1",
-          young_person_name: "Amir Khan",
-          local_authority: "Birmingham",
-          status: "under_consideration",
-          referral_date: minusDays(2),
-          decision_due_date: plusDays(2),
-          summary: "Referral under consideration with matching discussion underway.",
-        },
-      ],
-    },
-    admissionData: {
-      items: [
-        {
-          id: "adm-1",
-          young_person_name: "Maya Jones",
-          referral_source: "Local authority",
-          status: "approved",
-          planned_admission_date: plusDays(5),
-          summary: "Admission approved and placement planning underway.",
-        },
-      ],
-    },
-    transitionData: {
-      items: [
-        {
-          id: "tran-1",
-          young_person_name: "Maya Jones",
-          stage: "Planning",
-          move_date: plusDays(5),
-          status: "planned",
-          summary: "Bedroom setup, transition visits and intro pack still in progress.",
-        },
-      ],
-    },
-    documentData: {
-      items: [
-        {
-          id: "doc-1",
-          title: "Placement plan",
-          young_person_name: "Maya Jones",
-          document_type: "Placement",
-          review_date: plusDays(3),
-          status: "review_due",
-          summary: "Placement plan draft requires final review before admission.",
-        },
-        {
-          id: "doc-2",
-          title: "Consent documentation",
-          young_person_name: "Maya Jones",
-          document_type: "Consent",
-          review_date: plusDays(1),
-          status: "missing",
-          summary: "Final consent documents still outstanding.",
-        },
-      ],
-    },
-    taskData: {
-      items: [
-        {
-          id: "task-1",
-          title: "Confirm transition visit",
-          due_date: plusDays(1),
-          completed: false,
-          status: "open",
-          assigned_role: "Manager",
-          summary: "Confirm final transition visit with placing authority and family.",
-        },
-      ],
-    },
-    isFallback: true,
-  };
-}
-
-async function fetchDataset(homeId) {
-  const safeGet = (url) => apiGet(url).catch(() => null);
-
-  const requests = [
-    safeGet(`/homes/${homeId}/admissions`),
-    safeGet(`/homes/${homeId}/referrals`),
-    safeGet(`/homes/${homeId}/transitions`),
-    safeGet(`/homes/${homeId}/admission-documents`),
-    safeGet(`/homes/${homeId}/admission-tasks`),
-  ];
-
+async function fetchAll(homeId) {
   const [
-    admissionData,
-    referralData,
-    transitionData,
-    documentData,
-    taskData,
-  ] = await Promise.all(requests);
-
-  const responses = [
-    admissionData,
-    referralData,
-    transitionData,
-    documentData,
-    taskData,
-  ];
-
-  const hasLiveSuccess = responses.some(hasUsableData);
-
-  if (!hasLiveSuccess) {
-    return buildFallbackData(homeId);
-  }
+    referralsRes,
+    preAdmissionAssessmentsRes,
+    preAdmissionVisitsRes,
+    admissionPlansRes,
+    admissionChecklistRes,
+    admissionEventsRes,
+    placementPeriodsRes,
+    placementPlansRes,
+    placementGoalsRes,
+    transitionPlansRes,
+    transitionActionsRes,
+    dischargeSummariesRes,
+    dischargeEventsRes,
+    dischargeRecordsRes,
+  ] = await Promise.all([
+    safeGet(`/homes/${homeId}/referrals`),
+    safeGet(`/homes/${homeId}/pre-admission-assessments`),
+    safeGet(`/homes/${homeId}/pre-admission-visits`),
+    safeGet(`/homes/${homeId}/admission-plans`),
+    safeGet(`/homes/${homeId}/admission-checklists`),
+    safeGet(`/homes/${homeId}/admission-events`),
+    safeGet(`/homes/${homeId}/placement-periods`),
+    safeGet(`/homes/${homeId}/placement-plans`),
+    safeGet(`/homes/${homeId}/placement-goals`),
+    safeGet(`/homes/${homeId}/transition-plans`),
+    safeGet(`/homes/${homeId}/transition-actions`),
+    safeGet(`/homes/${homeId}/discharge-summaries`),
+    safeGet(`/homes/${homeId}/discharge-events`),
+    safeGet(`/homes/${homeId}/discharge-records`),
+  ]);
 
   return {
-    summaryData: admissionData || {},
-    admissionData: admissionData || { items: [] },
-    referralData: referralData || { items: [] },
-    transitionData: transitionData || { items: [] },
-    documentData: documentData || { items: [] },
-    taskData: taskData || { items: [] },
-    isFallback: false,
+    referrals: pickItems(referralsRes, [
+      "referrals",
+      "referral_records",
+      "admission_referrals",
+      "items",
+    ]).map(mapReferral),
+
+    preAdmissionAssessments: pickItems(preAdmissionAssessmentsRes, [
+      "pre_admission_assessments",
+      "admission_assessments",
+      "items",
+    ]).map(mapPreAdmissionAssessment),
+
+    preAdmissionVisits: pickItems(preAdmissionVisitsRes, [
+      "pre_admission_visits",
+      "items",
+    ]).map(mapPreAdmissionVisit),
+
+    admissionPlans: pickItems(admissionPlansRes, [
+      "admission_plans",
+      "items",
+    ]).map(mapAdmissionPlan),
+
+    admissionChecklists: pickItems(admissionChecklistRes, [
+      "admission_checklists",
+      "admission_checklist_items",
+      "items",
+    ]).map(mapAdmissionChecklist),
+
+    admissionEvents: pickItems(admissionEventsRes, [
+      "admission_events",
+      "admissions",
+      "items",
+    ]).map(mapAdmissionEvent),
+
+    placementPeriods: pickItems(placementPeriodsRes, [
+      "placement_periods",
+      "placement_history",
+      "items",
+    ]).map(mapPlacementPeriod),
+
+    placementPlans: pickItems(placementPlansRes, [
+      "placement_plans",
+      "items",
+    ]).map(mapPlacementPlan),
+
+    placementGoals: pickItems(placementGoalsRes, [
+      "placement_goals",
+      "child_goals",
+      "items",
+    ]).map(mapPlacementGoal),
+
+    transitionPlans: pickItems(transitionPlansRes, [
+      "transition_plans",
+      "items",
+    ]).map(mapTransitionPlan),
+
+    transitionActions: pickItems(transitionActionsRes, [
+      "transition_actions",
+      "transition_plan_actions",
+      "items",
+    ]).map(mapTransitionAction),
+
+    dischargeSummaries: pickItems(dischargeSummariesRes, [
+      "discharge_summaries",
+      "items",
+    ]).map(mapDischargeRecord),
+
+    dischargeEvents: pickItems(dischargeEventsRes, [
+      "discharge_events",
+      "items",
+    ]).map(mapDischargeRecord),
+
+    dischargeRecords: pickItems(dischargeRecordsRes, [
+      "discharge_records",
+      "items",
+    ]).map(mapDischargeRecord),
   };
 }
 
-export async function loadAdmissions() {
+/* -------------------------------- builders -------------------------------- */
+
+function buildLiveReferrals(data) {
+  return sortNewest(
+    data.referrals.filter(
+      (item) =>
+        ![
+          "accepted",
+          "declined",
+          "withdrawn",
+          "closed",
+          "admitted",
+        ].includes(lower(item.status))
+    ),
+    ["referral_date", "created_at", "updated_at"]
+  ).slice(0, 12);
+}
+
+function buildUpcomingAdmissions(data) {
+  return sortNewest(
+    [
+      ...data.admissionPlans.filter((item) => {
+        const status = lower(item.admission_status);
+        return !["admitted", "cancelled"].includes(status);
+      }),
+      ...data.admissionEvents.filter((item) => {
+        const status = lower(item.admission_status);
+        return ["planned", "scheduled", "in_progress", "in progress"].includes(status);
+      }),
+    ],
+    ["planned_admission_date", "admission_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildOpenChecklistItems(data) {
+  return sortNewest(
+    data.admissionChecklists.filter((item) => !["completed", "not_applicable", "not applicable"].includes(lower(item.status))),
+    ["due_date", "created_at", "updated_at"]
+  ).slice(0, 12);
+}
+
+function buildActivePlacements(data) {
+  return sortNewest(
+    [
+      ...data.placementPeriods.filter((item) =>
+        ["active", "planned"].includes(lower(item.placement_status))
+      ),
+      ...data.placementPlans.filter((item) =>
+        !["closed", "archived", "ended"].includes(lower(item.status))
+      ),
+    ],
+    ["admission_date", "start_date", "review_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildActiveTransitions(data) {
+  return sortNewest(
+    data.transitionPlans.filter(
+      (item) => !["completed", "cancelled", "closed"].includes(lower(item.status))
+    ),
+    ["target_move_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildOverdueTransitionActions(data) {
+  return sortNewest(
+    data.transitionActions.filter(
+      (item) =>
+        !["completed", "cancelled"].includes(lower(item.status)) && isOverdue(item.due_date)
+    ),
+    ["due_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildPendingVisits(data) {
+  return sortNewest(
+    data.preAdmissionVisits.filter(
+      (item) => !["completed", "cancelled", "no_show", "no show"].includes(lower(item.status))
+    ),
+    ["planned_datetime", "created_at", "updated_at"]
+  ).slice(0, 8);
+}
+
+function buildRecentDischarges(data) {
+  return sortNewest(
+    [...data.dischargeSummaries, ...data.dischargeEvents, ...data.dischargeRecords],
+    ["discharge_date", "created_at", "updated_at"]
+  ).slice(0, 8);
+}
+
+function buildTimeline(data) {
+  return sortNewest(
+    [
+      ...data.referrals,
+      ...data.preAdmissionAssessments,
+      ...data.preAdmissionVisits,
+      ...data.admissionPlans,
+      ...data.admissionEvents,
+      ...data.placementPeriods,
+      ...data.placementPlans,
+      ...data.placementGoals,
+      ...data.transitionPlans,
+      ...data.transitionActions,
+      ...data.dischargeSummaries,
+      ...data.dischargeEvents,
+      ...data.dischargeRecords,
+    ],
+    [
+      "referral_date",
+      "assessment_date",
+      "planned_datetime",
+      "completed_datetime",
+      "planned_admission_date",
+      "actual_admission_date",
+      "admission_date",
+      "start_date",
+      "review_date",
+      "target_move_date",
+      "due_date",
+      "discharge_date",
+      "created_at",
+      "updated_at",
+    ]
+  ).slice(0, 25);
+}
+
+/* -------------------------------- public -------------------------------- */
+
+export async function loadCurrentView() {
   if (!els.viewContent) return;
 
   const homeId = getHomeId();
 
   if (!homeId) {
-    renderNoHomeContext();
+    els.viewContent.innerHTML = renderEmpty(
+      "No home selected",
+      "Select a home to view admissions and placement activity."
+    );
     return;
   }
 
-  renderLoadingState();
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+    </div>
+  `;
 
   try {
-    const {
-      summaryData,
-      admissionData,
-      referralData,
-      transitionData,
-      documentData,
-      taskData,
-      isFallback,
-    } = await fetchDataset(homeId);
+    const data = await fetchAll(homeId);
 
-    const summary = normaliseSummary(summaryData);
+    const liveReferrals = buildLiveReferrals(data);
+    const upcomingAdmissions = buildUpcomingAdmissions(data);
+    const openChecklistItems = buildOpenChecklistItems(data);
+    const activePlacements = buildActivePlacements(data);
+    const activeTransitions = buildActiveTransitions(data);
+    const overdueTransitionActions = buildOverdueTransitionActions(data);
+    const pendingVisits = buildPendingVisits(data);
+    const recentDischarges = buildRecentDischarges(data);
+    const timeline = buildTimeline(data);
 
-    const admissionItems = sortSoonestFirst(
-      normaliseAdmissionItems(admissionData),
-      ["planned_admission_date", "admission_date", "updated_at", "created_at"]
-    ).slice(0, 8);
+    const nextAdmission =
+      upcomingAdmissions.find((item) => item.planned_admission_date || item.admission_date) || null;
 
-    const referralItems = sortSoonestFirst(
-      normaliseReferralItems(referralData),
-      ["decision_due_date", "referral_date", "updated_at", "created_at"]
-    ).slice(0, 8);
-
-    const transitionItems = sortSoonestFirst(
-      normaliseTransitionItems(transitionData),
-      ["move_date", "updated_at", "created_at"]
-    ).slice(0, 8);
-
-    const documentItems = sortSoonestFirst(
-      normaliseDocumentItems(documentData),
-      ["review_date", "updated_at", "created_at"]
-    ).slice(0, 6);
-
-    const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
-      "due_date",
-      "updated_at",
-      "created_at",
-    ]).filter((item) => !item.completed).slice(0, 6);
-
-    const topStats = buildTopStats({
-      admissionItems,
-      referralItems,
-      transitionItems,
-      documentItems,
-      openTasks: taskItems,
+    els.viewContent.innerHTML = renderWorkspace({
+      liveReferrals,
+      upcomingAdmissions,
+      openChecklistItems,
+      activePlacements,
+      activeTransitions,
+      overdueTransitionActions,
+      pendingVisits,
+      recentDischarges,
+      timeline,
     });
-
-    const progressCards = buildProgressCards({
-      referralItems,
-      admissionItems,
-      transitionItems,
-      documentItems,
-    });
-
-    const priorityItems = buildPriorityItems({
-      referralItems,
-      admissionItems,
-      transitionItems,
-      documentItems,
-      taskItems,
-    });
-
-    const title =
-      summary.title ||
-      summary.home_name ||
-      state.currentUser?.home_name ||
-      state.currentUser?.homeName ||
-      `Home ${homeId} admissions`;
-
-    els.viewContent.innerHTML = renderAdmissionsHtml({
-      title,
-      topStats,
-      progressCards,
-      priorityItems,
-      referralItems,
-      admissionItems,
-      transitionItems,
-      documentItems,
-      taskItems,
-      isFallback,
-    });
-
-    const nextMilestone =
-      transitionItems[0]?.move_date ||
-      admissionItems[0]?.planned_admission_date ||
-      referralItems[0]?.decision_due_date ||
-      null;
-
-    const latestRecord =
-      referralItems[0]?.updated_at ||
-      admissionItems[0]?.updated_at ||
-      transitionItems[0]?.updated_at ||
-      null;
 
     updateWorkspaceSummaryStrip({
-      today: isFallback
-        ? `${referralItems.length} referrals • ${admissionItems.length} admissions • preview mode`
-        : `${referralItems.length} referrals • ${admissionItems.length} admissions`,
-      nextEvent: nextMilestone
-        ? `Next milestone ${formatDate(nextMilestone)}`
-        : "No admission milestone loaded",
-      lastRecord: latestRecord
-        ? `Latest admissions update ${formatDateTime(latestRecord)}`
-        : isFallback
-        ? "Preview admissions data loaded"
-        : "No recent admissions update",
-      openActions: `${taskItems.length} open • ${documentItems.filter((item) => ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(String(item.status || "").toLowerCase().replaceAll(" ", "_"))).length} document gaps`,
+      today: `${liveReferrals.length} live referrals`,
+      nextEvent: nextAdmission
+        ? formatDate(nextAdmission.planned_admission_date || nextAdmission.admission_date)
+        : "No planned admission",
+      lastRecord: timeline[0]
+        ? formatDate(
+            timeline[0].referral_date ||
+              timeline[0].assessment_date ||
+              timeline[0].completed_datetime ||
+              timeline[0].planned_datetime ||
+              timeline[0].actual_admission_date ||
+              timeline[0].admission_date ||
+              timeline[0].target_move_date ||
+              timeline[0].discharge_date ||
+              timeline[0].created_at
+          )
+        : "None",
+      openActions: `${openChecklistItems.length} checklist items open`,
     });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
-    console.error("[admissions] load failed", error);
-    renderErrorState(error?.message || "The admissions view could not be loaded.");
+    console.error(error);
+    els.viewContent.innerHTML = renderEmpty(
+      "Unable to load admissions",
+      "Something went wrong while loading admissions and placement records."
+    );
   }
 }
