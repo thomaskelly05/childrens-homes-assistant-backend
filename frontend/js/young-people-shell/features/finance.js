@@ -32,6 +32,10 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function plainText(value, fallback = "") {
+  return String(value ?? fallback ?? "");
+}
+
 function formatCurrency(value) {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return "£0.00";
@@ -169,12 +173,44 @@ function normaliseSummary(data = {}) {
   return data.summary || data.finance_summary || data.dashboard || data || {};
 }
 
+function getSupportedRecordType(type = "") {
+  const normalised = String(type || "").toLowerCase().trim();
+
+  if (normalised === "task") return "task";
+  return "";
+}
+
+function buildRowAttrs(item = {}, recordType = "") {
+  const supportedType = getSupportedRecordType(recordType || item?.record_type || "");
+  const rowId = item?.id || item?.record_id || item?.source_id || "";
+  const title =
+    item?.title ||
+    item?.supplier ||
+    item?.young_person_name ||
+    item?.category ||
+    "Record";
+
+  if (!supportedType || !rowId) {
+    return `class="record-row"`;
+  }
+
+  return `
+    class="record-row"
+    data-open-record="true"
+    data-record-id="${safeText(rowId)}"
+    data-record-type="${safeText(supportedType)}"
+    data-title="${safeText(title)}"
+    tabindex="0"
+    role="button"
+  `;
+}
+
 function normaliseTransactionItems(data = {}) {
   return toArray(data.items, [data.finance, data.transactions, data.records]).map(
     (item) => ({
       ...item,
       id: item.id ?? item.record_id ?? item.source_id ?? null,
-      record_type: item.record_type || "finance_item",
+      record_type: "finance_item",
       title: item.title || item.category || item.description || "Transaction",
       category: item.category || item.cost_centre || "General",
       amount: toNumber(item.amount, 0),
@@ -203,7 +239,7 @@ function normaliseInvoiceItems(data = {}) {
   return toArray(data.items, [data.invoices, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "invoice",
+    record_type: "invoice",
     title: item.title || item.invoice_number || item.supplier || "Invoice",
     supplier: item.supplier || item.provider || "Supplier",
     invoice_number: item.invoice_number || "",
@@ -225,7 +261,7 @@ function normaliseAllowanceItems(data = {}) {
   return toArray(data.items, [data.allowances, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "allowance",
+    record_type: "allowance",
     title: item.title || item.young_person_name || "Allowance",
     young_person_name:
       item.young_person_name ||
@@ -249,7 +285,7 @@ function normaliseBudgetItems(data = {}) {
   return toArray(data.items, [data.budgets, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "budget",
+    record_type: "budget",
     title: item.title || item.category || "Budget",
     category: item.category || item.cost_centre || "Budget line",
     allocated: toNumber(item.allocated, 0),
@@ -277,7 +313,7 @@ function normaliseTaskItems(data = {}) {
   return toArray(data.items, [data.tasks, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "task",
+    record_type: "task",
     title: item.title || item.task || "Task",
     task: item.task || item.title || "Task",
     assigned_role: item.assigned_role || "",
@@ -614,18 +650,9 @@ function renderRows(items = [], options = {}) {
 
           const status = item?.[statusKey] || "";
           const tone = getStatusTone(status);
-          const rowId = item?.id || item?.record_id || item?.source_id || "";
 
           return `
-            <article
-              class="record-row"
-              data-open-record="true"
-              data-record-id="${safeText(rowId)}"
-              data-record-type="${safeText(recordType || item?.record_type || "")}"
-              data-title="${safeText(title)}"
-              tabindex="0"
-              role="button"
-            >
+            <article ${buildRowAttrs(item, recordType)}>
               <div class="record-row-main">
                 <div class="record-row-title">${safeText(title)}</div>
                 <div class="record-row-summary">${safeText(summary)}</div>
@@ -908,12 +935,14 @@ function buildFallbackData(homeId) {
     `Home ${homeId}`;
 
   const now = new Date();
+
   const plusDays = (days, hour = 9, minute = 0) => {
     const d = new Date(now);
     d.setDate(d.getDate() + days);
     d.setHours(hour, minute, 0, 0);
     return d.toISOString();
   };
+
   const minusDays = (days, hour = 9, minute = 0) => {
     const d = new Date(now);
     d.setDate(d.getDate() - days);
@@ -1027,14 +1056,12 @@ function buildFallbackData(homeId) {
 }
 
 async function fetchDataset(homeId) {
-  const safeGet = (url) => apiGet(url).catch(() => null);
-
   const requests = [
-    safeGet(`/homes/${homeId}/finance`),
-    safeGet(`/homes/${homeId}/finance-invoices`),
-    safeGet(`/homes/${homeId}/allowances`),
-    safeGet(`/homes/${homeId}/budgets`),
-    safeGet(`/homes/${homeId}/finance-tasks`),
+    apiGet(`/homes/${homeId}/finance`).catch(() => null),
+    apiGet(`/homes/${homeId}/finance-invoices`).catch(() => null),
+    apiGet(`/homes/${homeId}/allowances`).catch(() => null),
+    apiGet(`/homes/${homeId}/budgets`).catch(() => null),
+    apiGet(`/homes/${homeId}/finance-tasks`).catch(() => null),
   ];
 
   const [
@@ -1121,7 +1148,9 @@ export async function loadFinance() {
       "due_date",
       "updated_at",
       "created_at",
-    ]).filter((item) => !item.completed).slice(0, 6);
+    ])
+      .filter((item) => !item.completed)
+      .slice(0, 6);
 
     const topStats = buildTopStats({
       transactionItems,
@@ -1177,6 +1206,12 @@ export async function loadFinance() {
       transactionItems[0]?.created_at ||
       null;
 
+    const flaggedInvoices = invoiceItems.filter((item) =>
+      ["due_soon", "overdue", "unpaid", "pending", "part_paid"].includes(
+        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      )
+    ).length;
+
     updateWorkspaceSummaryStrip({
       today: isFallback
         ? `${transactionItems.length} finance items • preview mode`
@@ -1189,7 +1224,7 @@ export async function loadFinance() {
         : isFallback
         ? "Preview finance data loaded"
         : "No recent finance activity loaded",
-      openActions: `${invoiceItems.filter((i) => ["due_soon", "overdue", "unpaid", "pending", "part_paid"].includes(String(i.status || "").toLowerCase().replaceAll(" ", "_"))).length} invoices • ${taskItems.length} actions`,
+      openActions: `${flaggedInvoices} invoices • ${taskItems.length} actions`,
     });
   } catch (error) {
     console.error("[finance] load failed", error);
