@@ -1,6 +1,7 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { apiGet, buildInspectionUiEndpoints } from "../core/api.js";
+import { apiGet } from "../core/api.js";
+import { buildInspectionUiEndpoints } from "../core/config.js";
 import { escapeHtml, formatDate, formatDateTime } from "../core/utils.js";
 import {
   mapInspectionAction,
@@ -1360,6 +1361,12 @@ async function tryFetchInspectionComplianceData(homeId) {
   const endpoints = buildInspectionUiEndpoints(homeId);
   if (!endpoints) return null;
 
+  const inspectionUiEndpoints = {
+    homeHeader: `/inspection/ui/homes/${endpoints.homeId}/header`,
+    actions: `/inspection/ui/homes/${endpoints.homeId}/actions`,
+    tasks: `/inspection/ui/homes/${endpoints.homeId}/tasks`,
+  };
+
   const safeGet = (url) => apiGet(url).catch(() => null);
 
   const [
@@ -1367,9 +1374,9 @@ async function tryFetchInspectionComplianceData(homeId) {
     actionsData,
     tasksData,
   ] = await Promise.all([
-    safeGet(endpoints.homeHeader),
-    safeGet(endpoints.actions),
-    safeGet(endpoints.tasks),
+    safeGet(inspectionUiEndpoints.homeHeader),
+    safeGet(inspectionUiEndpoints.actions),
+    safeGet(inspectionUiEndpoints.tasks),
   ]);
 
   const inspectionHeader = normaliseInspectionHeader(headerData || {});
