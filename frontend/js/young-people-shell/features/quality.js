@@ -6,9 +6,7 @@ import {
   formatDate,
   formatDateTime,
 } from "../core/utils.js";
-import {
-  buildInspectionUiEndpoints,
-} from "../core/api.js";
+import { buildInspectionUiEndpoints } from "../core/config.js";
 import {
   mapInspectionHomeCard,
   mapInspectionHeader,
@@ -1449,8 +1447,19 @@ function buildFallbackQualityData(homeId) {
 }
 
 async function tryFetchInspectionDataset(homeId) {
-  const endpoints = buildInspectionUiEndpoints(homeId);
-  if (!endpoints) return null;
+  const base = buildInspectionUiEndpoints(homeId);
+  if (!base?.homeId) return null;
+
+  const endpoints = {
+    homeCards: "/inspection/ui/home-cards",
+    homeHeader: `/inspection/ui/homes/${base.homeId}/header`,
+    sectionPanels: `/inspection/ui/homes/${base.homeId}/sections`,
+    reasons: `/inspection/ui/homes/${base.homeId}/reasons`,
+    actions: `/inspection/ui/homes/${base.homeId}/actions`,
+    tasks: `/inspection/ui/homes/${base.homeId}/tasks`,
+    briefing: `/inspection/ui/homes/${base.homeId}/briefing`,
+    prep72h: `/inspection/ui/homes/${base.homeId}/prep-72h`,
+  };
 
   const safeGet = (url) => apiGet(url).catch(() => null);
 
