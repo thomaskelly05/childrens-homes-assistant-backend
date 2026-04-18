@@ -2,6 +2,11 @@ import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
 
 function getHomeId() {
   return (
@@ -14,6 +19,16 @@ function getHomeId() {
 
 function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
+}
+
+function toArray(value, fallbacks = []) {
+  if (Array.isArray(value)) return value;
+
+  for (const fallback of fallbacks) {
+    if (Array.isArray(fallback)) return fallback;
+  }
+
+  return [];
 }
 
 function formatDateTime(value) {
@@ -31,28 +46,48 @@ function formatDateTime(value) {
 }
 
 function getStatusTone(status = "") {
-  const normalised = String(status || "").toLowerCase();
+  const normalised = String(status || "").trim().toLowerCase();
 
   if (
-    ["overdue", "escalated", "failed", "urgent", "critical", "unresolved"].includes(
-      normalised
-    )
+    [
+      "overdue",
+      "escalated",
+      "failed",
+      "urgent",
+      "critical",
+      "unresolved",
+      "high",
+    ].includes(normalised)
   ) {
     return "danger";
   }
 
   if (
-    ["due_soon", "pending", "awaiting_reply", "review_due", "warning"].includes(
-      normalised
-    )
+    [
+      "due_soon",
+      "pending",
+      "awaiting_reply",
+      "awaiting response",
+      "review_due",
+      "warning",
+      "open",
+      "in_progress",
+      "in progress",
+    ].includes(normalised)
   ) {
     return "warning";
   }
 
   if (
-    ["completed", "sent", "resolved", "closed", "ok", "active"].includes(
-      normalised
-    )
+    [
+      "completed",
+      "sent",
+      "resolved",
+      "closed",
+      "ok",
+      "active",
+      "done",
+    ].includes(normalised)
   ) {
     return "success";
   }
@@ -66,6 +101,59 @@ function sortNewestFirst(items = [], keys = []) {
     const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
     return new Date(bValue).getTime() - new Date(aValue).getTime();
   });
+}
+
+function normaliseCommunicationRecord(item = {}) {
+  return {
+    id: item.id || item.record_id || item.source_id || null,
+    record_type:
+      item.record_type ||
+      item.communication_type ||
+      item.channel ||
+      "communication",
+    title:
+      item.subject ||
+      item.title ||
+      item.contact_person ||
+      item.full_name ||
+      item.contact_name ||
+      item.organisation_name ||
+      "Communication record",
+    summary:
+      item.summary ||
+      item.full_note ||
+      item.notes ||
+      item.description ||
+      item.message ||
+      item.purpose_of_visit ||
+      "",
+    organisation:
+      item.organisation ||
+      item.organisation_name ||
+      item.audience_type ||
+      "",
+    contact_type:
+      item.contact_type ||
+      item.communication_type ||
+      item.channel ||
+      item.direction ||
+      "",
+    relationship:
+      item.relationship ||
+      item.relationship_to_child ||
+      item.relationship_to_young_person ||
+      "",
+    status: item.status || item.workflow_status || "",
+    contact_datetime:
+      item.contact_datetime ||
+      item.communication_datetime ||
+      item.created_at ||
+      item.updated_at ||
+      null,
+    created_at: item.created_at || null,
+    updated_at: item.updated_at || null,
+    raw: item,
+  };
 }
 
 function renderEmptyState(message = "No communication records found.") {
@@ -89,18 +177,8 @@ function renderRecordRows(items = [], emptyMessage = "No communication records f
     <div class="record-list">
       ${items
         .map((item) => {
-          const title =
-            item.contact_person ||
-            item.full_name ||
-            item.title ||
-            "Communication record";
-
-          const summary =
-            item.summary ||
-            item.notes ||
-            item.description ||
-            item.message ||
-            "Communication record";
+          const title = item.title || "Communication record";
+          const summary = item.summary || "Communication record";
 
           const meta = [
             item.organisation || "",
@@ -110,14 +188,14 @@ function renderRecordRows(items = [], emptyMessage = "No communication records f
             .filter(Boolean)
             .join(" • ");
 
-          const status = item.status || item.workflow_status || "";
+          const status = item.status || "";
           const tone = getStatusTone(status);
 
           return `
             <article
               class="record-row"
               data-open-record="true"
-              data-record-id="${safeText(item.id || item.record_id || item.source_id || "")}"
+              data-record-id="${safeText(item.id || "")}"
               data-record-type="${safeText(item.record_type || "communication")}"
               data-title="${safeText(title)}"
               tabindex="0"
@@ -129,7 +207,9 @@ function renderRecordRows(items = [], emptyMessage = "No communication records f
                 <div class="record-row-meta">${safeText(meta)}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(status || "Recorded")}</span>
+                <span class="row-pill ${safeText(tone)}">${safeText(
+                  status || "Recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -139,26 +219,39 @@ function renderRecordRows(items = [], emptyMessage = "No communication records f
   `;
 }
 
+function isFamilyLinked(item = {}) {
+  const haystack = [
+    item.contact_type,
+    item.relationship,
+    item.summary,
+    item.organisation,
+    item.title,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return /family|parent|mum|mom|dad|carer|grandparent|sibling|contact/i.test(
+    haystack
+  );
+}
+
 function buildCommunicationStats(items = []) {
   const recent = items.length;
 
   const pending = items.filter((item) =>
-    ["pending", "awaiting_reply", "review_due"].includes(
-      String(item.status || item.workflow_status || "").toLowerCase()
+    ["pending", "awaiting_reply", "awaiting response", "review_due", "open"].includes(
+      String(item.status || "").toLowerCase()
     )
   ).length;
 
   const resolved = items.filter((item) =>
-    ["resolved", "closed", "completed", "sent"].includes(
-      String(item.status || item.workflow_status || "").toLowerCase()
+    ["resolved", "closed", "completed", "sent", "done"].includes(
+      String(item.status || "").toLowerCase()
     )
   ).length;
 
-  const familyLinked = items.filter((item) =>
-    /family|parent|mum|mom|dad|carer/i.test(
-      String(item.contact_type || item.relationship || item.summary || item.organisation || "")
-    )
-  ).length;
+  const familyLinked = items.filter((item) => isFamilyLinked(item)).length;
 
   return {
     recent,
@@ -170,8 +263,8 @@ function buildCommunicationStats(items = []) {
 
 function buildAttentionItems(items = []) {
   return items.filter((item) =>
-    ["pending", "awaiting_reply", "review_due", "overdue", "escalated"].includes(
-      String(item.status || item.workflow_status || "").toLowerCase()
+    ["pending", "awaiting_reply", "awaiting response", "review_due", "overdue", "escalated", "open"].includes(
+      String(item.status || "").toLowerCase()
     )
   );
 }
@@ -182,11 +275,7 @@ function renderCommunicationHtml({
   attentionItems = [],
 }) {
   const recentItems = items.slice(0, 8);
-  const familyItems = items.filter((item) =>
-    /family|parent|mum|mom|dad|carer/i.test(
-      String(item.contact_type || item.relationship || item.summary || item.organisation || "")
-    )
-  );
+  const familyItems = items.filter((item) => isFamilyLinked(item));
 
   return `
     <section class="overview-panel">
@@ -236,7 +325,10 @@ function renderCommunicationHtml({
               <p>Latest professional and family communication across the home.</p>
             </div>
 
-            ${renderRecordRows(recentItems, "No recent communication records found.")}
+            ${renderRecordRows(
+              recentItems,
+              "No recent communication records found."
+            )}
           </section>
 
           <section class="overview-section-card">
@@ -245,7 +337,10 @@ function renderCommunicationHtml({
               <p>Communication records that appear linked to family or carers.</p>
             </div>
 
-            ${renderRecordRows(familyItems.slice(0, 8), "No family-linked communication records found.")}
+            ${renderRecordRows(
+              familyItems.slice(0, 8),
+              "No family-linked communication records found."
+            )}
           </section>
         </section>
 
@@ -256,7 +351,10 @@ function renderCommunicationHtml({
               <p>Communication that may need reply, review or follow-up.</p>
             </div>
 
-            ${renderRecordRows(attentionItems.slice(0, 8), "No communication follow-up is currently showing.")}
+            ${renderRecordRows(
+              attentionItems.slice(0, 8),
+              "No communication follow-up is currently showing."
+            )}
           </section>
 
           <section class="overview-side-card">
@@ -271,6 +369,78 @@ function renderCommunicationHtml({
       </div>
     </section>
   `;
+}
+
+async function fetchCommunication(homeId) {
+  const safe = async (path) => {
+    try {
+      return await apiGet(path);
+    } catch {
+      return null;
+    }
+  };
+
+  const [homeComms, notifications, directoryContacts] = await Promise.all([
+    safe(`/homes/${homeId}/communications`),
+    safe(`/homes/${homeId}/notifications`),
+    safe(`/homes/${homeId}/directory-contacts`),
+  ]);
+
+  const communicationItems = toArray(
+    homeComms?.items,
+    [
+      homeComms?.communications,
+      homeComms?.records,
+      homeComms?.data,
+    ]
+  ).map(normaliseCommunicationRecord);
+
+  const notificationItems = toArray(
+    notifications?.items,
+    [
+      notifications?.notifications,
+      notifications?.records,
+    ]
+  ).map((item) =>
+    normaliseCommunicationRecord({
+      ...item,
+      record_type: "notification",
+      title: item.title || item.notification_type || "Notification",
+      summary: item.message || item.summary || "",
+      communication_type: item.notification_type || "notification",
+      communication_datetime: item.created_at || item.updated_at,
+      status: item.status || "active",
+      organisation_name: "Home notification",
+    })
+  );
+
+  const contactItems = toArray(
+    directoryContacts?.items,
+    [
+      directoryContacts?.contacts,
+      directoryContacts?.records,
+    ]
+  ).map((item) =>
+    normaliseCommunicationRecord({
+      ...item,
+      record_type: "directory_contact",
+      title: item.contact_name || item.full_name || "Directory contact",
+      summary:
+        item.notes ||
+        item.contact_role ||
+        item.organisation_name ||
+        "Directory contact",
+      communication_type: item.contact_role || "directory_contact",
+      communication_datetime: item.updated_at || item.created_at,
+      status: item.active === false ? "inactive" : "active",
+      organisation_name: item.organisation_name || "",
+    })
+  );
+
+  return sortNewestFirst(
+    [...communicationItems, ...notificationItems, ...contactItems],
+    ["contact_datetime", "updated_at", "created_at"]
+  );
 }
 
 export async function loadCommunication() {
@@ -305,15 +475,7 @@ export async function loadCommunication() {
   `;
 
   try {
-    const data = await apiGet(`/homes/${homeId}/communications`).catch(() => ({
-      items: [],
-    }));
-
-    const items = sortNewestFirst(
-      data.items || data.communications || data.records || [],
-      ["contact_datetime", "updated_at", "created_at"]
-    );
-
+    const items = await fetchCommunication(homeId);
     const stats = buildCommunicationStats(items);
     const attentionItems = buildAttentionItems(items);
 
@@ -322,14 +484,32 @@ export async function loadCommunication() {
       stats,
       attentionItems,
     });
+
+    updateWorkspaceSummaryStrip({
+      today: `${stats.recent} records`,
+      nextEvent: attentionItems[0]
+        ? attentionItems[0].title || "Follow-up due"
+        : "No follow-up",
+      lastRecord: items[0]
+        ? formatDateTime(items[0].contact_datetime || items[0].created_at)
+        : "None",
+      openActions: `${stats.pending} pending`,
+    });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
+    console.error(error);
+
     els.viewContent.innerHTML = `
       <section class="overview-panel">
         <div class="empty-state">
           <div class="empty-state-inner">
             <div class="empty-state-icon" aria-hidden="true">!</div>
             <h3>Failed to load communication</h3>
-            <p>${safeText(error?.message || "Communication records could not be loaded.")}</p>
+            <p>${safeText(
+              error?.message || "Communication records could not be loaded."
+            )}</p>
           </div>
         </div>
       </section>
