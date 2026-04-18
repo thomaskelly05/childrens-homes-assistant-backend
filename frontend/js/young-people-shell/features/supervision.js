@@ -66,8 +66,12 @@ function formatDateTime(value) {
   });
 }
 
+function normaliseStatus(value = "") {
+  return String(value || "").toLowerCase().trim().replaceAll(" ", "_");
+}
+
 function getStatusTone(status = "") {
-  const normalised = String(status || "").toLowerCase();
+  const normalised = normaliseStatus(status);
 
   if (
     [
@@ -132,32 +136,89 @@ function sortSoonestFirst(items = [], keys = []) {
   });
 }
 
+function hasUsableData(data = {}) {
+  if (!data || typeof data !== "object") return false;
+  if (Array.isArray(data.items) && data.items.length > 0) return true;
+  if (Array.isArray(data.supervisions) && data.supervisions.length > 0) return true;
+  if (Array.isArray(data.staff_supervisions) && data.staff_supervisions.length > 0) return true;
+  if (Array.isArray(data.staff_supervision_sessions) && data.staff_supervision_sessions.length > 0) return true;
+  if (Array.isArray(data.supervision_sessions) && data.supervision_sessions.length > 0) return true;
+  if (Array.isArray(data.records) && data.records.length > 0) return true;
+  if (data.summary && typeof data.summary === "object") return true;
+  if (data.supervision_summary && typeof data.supervision_summary === "object") return true;
+  return false;
+}
+
 function normaliseSummary(data = {}) {
   return data.summary || data.supervision_summary || data.dashboard || {};
 }
 
 function normaliseSupervisionItems(data = {}) {
-  return toArray(data.items, [data.supervisions, data.records]).map((item) => ({
+  return toArray(data.items, [
+    data.supervisions,
+    data.staff_supervisions,
+    data.staff_supervision_sessions,
+    data.supervision_sessions,
+    data.records,
+  ]).map((item) => ({
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "supervision",
-    title: item.title || item.staff_member || "Supervision record",
-    staff_member: item.staff_member || item.name || "Staff member",
-    supervisor: item.supervisor || item.line_manager || "",
-    supervision_type: item.supervision_type || item.type || "supervision",
-    probation_stage: item.probation_stage || "",
+    title:
+      item.title ||
+      item.staff_member ||
+      item.full_name ||
+      "Supervision record",
+    staff_member:
+      item.staff_member ||
+      item.full_name ||
+      item.name ||
+      "Staff member",
+    supervisor:
+      item.supervisor ||
+      item.supervisor_name ||
+      item.line_manager ||
+      "",
+    supervision_type:
+      item.supervision_type ||
+      item.session_type ||
+      item.type ||
+      "supervision",
+    probation_stage: item.probation_stage || item.review_stage || "",
     summary:
       item.summary ||
       item.strengths ||
       item.development_needs ||
       item.actions_agreed ||
+      item.reflective_discussion ||
       "Supervision record logged.",
     strengths: item.strengths || "",
-    development_needs: item.development_needs || "",
-    actions_agreed: item.actions_agreed || "",
-    session_date: item.session_date || item.completed_at || item.created_at || null,
-    next_due_date: item.next_due_date || item.review_date || null,
-    status: item.status || "recorded",
+    development_needs:
+      item.development_needs ||
+      item.development_areas ||
+      "",
+    actions_agreed:
+      item.actions_agreed ||
+      item.actions_text ||
+      "",
+    session_date:
+      item.session_date ||
+      item.completed_date ||
+      item.completed_at ||
+      item.supervision_date ||
+      item.scheduled_date ||
+      item.created_at ||
+      null,
+    next_due_date:
+      item.next_due_date ||
+      item.next_supervision_date ||
+      item.next_session_date ||
+      item.review_date ||
+      null,
+    status:
+      item.status ||
+      item.session_status ||
+      "recorded",
     created_at: item.created_at || null,
     updated_at: item.updated_at || null,
   }));
@@ -165,30 +226,30 @@ function normaliseSupervisionItems(data = {}) {
 
 function buildStats(items = []) {
   const overdue = items.filter((item) =>
-    ["overdue", "expired", "missed"].includes(
-      String(item.status || "").toLowerCase()
-    )
+    ["overdue", "expired", "missed"].includes(normaliseStatus(item.status))
   ).length;
 
   const dueSoon = items.filter((item) =>
     ["due", "due_soon", "review_due", "scheduled"].includes(
-      String(item.status || "").toLowerCase()
+      normaliseStatus(item.status)
     )
   ).length;
 
   const probation = items.filter((item) =>
     ["probation", "induction"].includes(
-      String(item.status || item.probation_stage || "").toLowerCase()
+      normaliseStatus(item.status || item.probation_stage)
     )
   ).length;
 
   const completed = items.filter((item) =>
     ["completed", "complete", "up_to_date", "current", "signed_off"].includes(
-      String(item.status || "").toLowerCase()
+      normaliseStatus(item.status)
     )
   ).length;
 
-  const actions = items.filter((item) => item.actions_agreed).length;
+  const actions = items.filter(
+    (item) => item.actions_agreed || item.development_needs
+  ).length;
 
   const uniqueStaff = new Set(
     items.map((item) => item.staff_member).filter(Boolean)
@@ -207,7 +268,7 @@ function buildStats(items = []) {
 
 function buildPriorityItems(items = []) {
   return items.filter((item) => {
-    const status = String(item.status || "").toLowerCase();
+    const status = normaliseStatus(item.status);
 
     return (
       [
@@ -231,7 +292,22 @@ function buildRecentItems(items = []) {
 }
 
 function buildDueItems(items = []) {
-  return sortSoonestFirst(items, ["next_due_date", "updated_at", "created_at"]);
+  return sortSoonestFirst(
+    items.filter((item) =>
+      [
+        "overdue",
+        "expired",
+        "missed",
+        "due",
+        "due_soon",
+        "review_due",
+        "scheduled",
+        "probation",
+        "induction",
+      ].includes(normaliseStatus(item.status))
+    ),
+    ["next_due_date", "updated_at", "created_at"]
+  );
 }
 
 function buildActionItems(items = []) {
@@ -394,20 +470,27 @@ function renderPriorityList(items = []) {
 }
 
 function renderSupervisionPage({
+  title,
   stats,
   recentItems,
   dueItems,
   priorityItems,
   actionItems,
   allItems,
+  isFallback = false,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Supervision</div>
-          <h2>Supervision and development</h2>
+          <h2>${safeText(title || "Supervision and development")}</h2>
           <p>Supervision oversight, due dates, probation, development needs and agreed actions across the home.</p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live supervision endpoints are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -559,11 +642,10 @@ function buildFallbackData(homeId) {
 }
 
 async function fetchDataset(homeId) {
-  const requests = [apiGet(`/homes/${homeId}/supervisions`)];
-  const results = await Promise.allSettled(requests);
-  const hasLiveSuccess = results.some((result) => result.status === "fulfilled");
+  const supervisionPromise = apiGet(`/homes/${homeId}/supervisions`).catch(() => null);
+  const result = await supervisionPromise;
 
-  if (!hasLiveSuccess) {
+  if (!hasUsableData(result)) {
     return {
       ...buildFallbackData(homeId),
       isFallback: true,
@@ -571,9 +653,8 @@ async function fetchDataset(homeId) {
   }
 
   return {
-    summaryData: {},
-    supervisionData:
-      results[0].status === "fulfilled" ? results[0].value : { items: [] },
+    summaryData: result || {},
+    supervisionData: result || { items: [] },
     isFallback: false,
   };
 }
@@ -654,38 +735,23 @@ export async function loadSupervision() {
 
     const stats = buildStats(allItems);
     const recentItems = buildRecentItems(allItems).slice(0, 8);
-    const dueItems = buildDueItems(allItems)
-      .filter((item) =>
-        [
-          "overdue",
-          "expired",
-          "missed",
-          "due",
-          "due_soon",
-          "review_due",
-          "scheduled",
-          "probation",
-          "induction",
-        ].includes(String(item.status || "").toLowerCase())
-      )
-      .slice(0, 8);
-
+    const dueItems = buildDueItems(allItems).slice(0, 8);
     const priorityItems = buildPriorityItems(allItems);
     const actionItems = buildActionItems(allItems).slice(0, 8);
     const latest = recentItems[0];
 
     els.viewContent.innerHTML = renderSupervisionPage({
+      title:
+        summary.title ||
+        state.currentUser?.home_name ||
+        state.currentUser?.homeName ||
+        `Home ${homeId} supervision`,
       stats,
       recentItems,
       dueItems,
       priorityItems,
       actionItems,
       allItems,
-      title:
-        summary.title ||
-        state.currentUser?.home_name ||
-        state.currentUser?.homeName ||
-        `Home ${homeId} supervision`,
       isFallback,
     });
 
