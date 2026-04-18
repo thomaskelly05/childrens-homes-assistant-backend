@@ -9,8 +9,53 @@ function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function getCurrentScope() {
+  return state.currentScope || "child";
+}
+
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
+  );
+}
+
+function getYoungPersonId() {
+  return state.youngPersonId || state.selectedYoungPerson?.id || null;
+}
+
+function getScopeTitle() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") {
+    return (
+      state.currentUser?.home_name ||
+      state.currentUser?.homeName ||
+      (getHomeId() ? `Home ${getHomeId()}` : "Home")
+    );
+  }
+
+  const person = state.selectedYoungPerson || state.youngPerson || {};
+  return (
+    person.full_name ||
+    person.name ||
+    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
+    person.preferred_name ||
+    "Young person"
+  );
+}
+
 function getAppointmentStart(item = {}) {
-  return item.start_datetime || item.appointment_date || item.created_at || null;
+  return (
+    item.start_datetime ||
+    item.appointment_date ||
+    item.scheduled_time ||
+    item.created_at ||
+    null
+  );
 }
 
 function getAppointmentEnd(item = {}) {
@@ -76,6 +121,11 @@ function formatDateTime(value) {
 
 function formatTime(value) {
   if (!value) return "";
+
+  if (/^\d{2}:\d{2}/.test(String(value))) {
+    return String(value).slice(0, 5);
+  }
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleTimeString("en-GB", {
@@ -147,13 +197,17 @@ function groupByDay(items = []) {
 function renderEmptyState(message = "No appointments found.") {
   return `
     <div class="empty-state">
-      <p>${toText(message)}</p>
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">◌</div>
+        <h3>No calendar data</h3>
+        <p>${toText(message)}</p>
+      </div>
     </div>
   `;
 }
 
 function getRowPill(item = {}) {
-  const status = String(item.status || "").toLowerCase();
+  const status = String(item.status || "").toLowerCase().replaceAll(" ", "_");
 
   if (["cancelled", "missed", "dna", "overdue"].includes(status)) {
     return { label: status.replaceAll("_", " "), tone: "warning" };
@@ -230,20 +284,27 @@ function renderCalendarGroups(groups = []) {
 }
 
 function renderCalendarHtml({
+  title = "Appointments",
   uniqueAppointments = [],
   todayItems = [],
   upcomingItems = [],
   completedItems = [],
   cancelledItems = [],
   groupedUpcoming = [],
+  isFallback = false,
 }) {
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Appointments</div>
-          <h2>Appointments and key dates</h2>
+          <h2>${toText(title)}</h2>
           <p>Today’s appointments, upcoming plans and appointment history.</p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live appointment endpoints are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -327,6 +388,166 @@ function renderCalendarHtml({
   `;
 }
 
+function buildFallbackAppointments(scope = "child") {
+  const now = new Date();
+  const plusDays = (days, hour = 10, minute = 0) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, minute, 0, 0);
+    return d.toISOString();
+  };
+
+  if (scope === "home") {
+    return [
+      {
+        id: "apt-home-1",
+        title: "Fire service visit",
+        appointment_type: "Professional visit",
+        start_datetime: plusDays(1, 10, 0),
+        end_datetime: plusDays(1, 11, 0),
+        location: "Home",
+        professional_name: "Watch Manager Lewis",
+        professional_role: "Fire Service",
+        status: "booked",
+        record_type: "appointment",
+      },
+      {
+        id: "apt-home-2",
+        title: "Therapy consultation",
+        appointment_type: "Consultation",
+        start_datetime: plusDays(2, 14, 0),
+        end_datetime: plusDays(2, 15, 0),
+        location: "Meeting room",
+        professional_name: "Priya Shah",
+        professional_role: "Therapist",
+        status: "confirmed",
+        record_type: "appointment",
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "apt-child-1",
+      title: "CAMHS appointment",
+      appointment_type: "CAMHS",
+      start_datetime: plusDays(0, 15, 30),
+      end_datetime: plusDays(0, 16, 30),
+      location: "Clinic",
+      professional_name: "Dr Patel",
+      professional_role: "CAMHS clinician",
+      status: "booked",
+      record_type: "appointment",
+    },
+    {
+      id: "apt-child-2",
+      title: "Dental check-up",
+      appointment_type: "Dentist",
+      start_datetime: plusDays(3, 9, 0),
+      end_datetime: plusDays(3, 9, 30),
+      location: "Dental practice",
+      professional_name: "NHS Dentist",
+      professional_role: "Dentist",
+      status: "confirmed",
+      record_type: "appointment",
+    },
+    {
+      id: "apt-child-3",
+      title: "PEP review",
+      appointment_type: "Education meeting",
+      start_datetime: plusDays(-4, 13, 0),
+      end_datetime: plusDays(-4, 14, 0),
+      location: "School",
+      professional_name: "Virtual School",
+      professional_role: "PEP review",
+      status: "completed",
+      record_type: "appointment",
+    },
+  ];
+}
+
+async function fetchCalendarDataset() {
+  const scope = getCurrentScope();
+  const youngPersonId = getYoungPersonId();
+  const homeId = getHomeId();
+
+  if (scope === "child") {
+    if (!youngPersonId) {
+      return { items: [], isFallback: false, missingContext: true };
+    }
+
+    const [appointmentsData, youngPersonAppointmentsData] = await Promise.all([
+      apiGet(`/young-people/${youngPersonId}/appointments`).catch(() => ({ items: [] })),
+      apiGet(`/young-people/${youngPersonId}/young-person-appointments`).catch(() => ({ items: [] })),
+    ]);
+
+    const merged = [
+      ...(appointmentsData.items ||
+        appointmentsData.records ||
+        appointmentsData.appointments ||
+        []),
+      ...(youngPersonAppointmentsData.items ||
+        youngPersonAppointmentsData.records ||
+        youngPersonAppointmentsData.young_person_appointments ||
+        []),
+    ].map(mapAppointment);
+
+    if (!merged.length) {
+      return {
+        items: buildFallbackAppointments("child").map(mapAppointment),
+        isFallback: true,
+        missingContext: false,
+      };
+    }
+
+    return { items: merged, isFallback: false, missingContext: false };
+  }
+
+  if (!homeId) {
+    return { items: [], isFallback: false, missingContext: true };
+  }
+
+  const homeAppointments = await apiGet(`/homes/${homeId}/appointments`).catch(() => ({
+    items: [],
+  }));
+
+  const merged = (
+    homeAppointments.items ||
+    homeAppointments.records ||
+    homeAppointments.appointments ||
+    []
+  ).map(mapAppointment);
+
+  if (!merged.length) {
+    return {
+      items: buildFallbackAppointments("home").map(mapAppointment),
+      isFallback: true,
+      missingContext: false,
+    };
+  }
+
+  return { items: merged, isFallback: false, missingContext: false };
+}
+
+function renderNoContext() {
+  if (!els.viewContent) return;
+
+  const scope = getCurrentScope();
+  const message =
+    scope === "child"
+      ? "No young person selected."
+      : "No home selected.";
+
+  els.viewContent.innerHTML = renderEmptyState(message);
+
+  updateWorkspaceSummaryStrip({
+    today: "No calendar context",
+    nextEvent: "No appointments loaded",
+    lastRecord: "No calendar data",
+    openActions: "No actions loaded",
+  });
+}
+
 export async function loadCalendar() {
   if (!els.viewContent) return;
 
@@ -340,25 +561,16 @@ export async function loadCalendar() {
   `;
 
   try {
-    const [appointmentsData, youngPersonAppointmentsData] = await Promise.all([
-      apiGet(`/young-people/${state.youngPersonId}/appointments`).catch(() => ({ items: [] })),
-      apiGet(`/young-people/${state.youngPersonId}/young-person-appointments`).catch(() => ({ items: [] })),
-    ]);
+    const { items, isFallback, missingContext } = await fetchCalendarDataset();
 
-    const mergedAppointments = [
-      ...(appointmentsData.items ||
-        appointmentsData.records ||
-        appointmentsData.appointments ||
-        []),
-      ...(youngPersonAppointmentsData.items ||
-        youngPersonAppointmentsData.records ||
-        youngPersonAppointmentsData.young_person_appointments ||
-        []),
-    ].map(mapAppointment);
+    if (missingContext) {
+      renderNoContext();
+      return;
+    }
 
     const seen = new Set();
     const uniqueAppointments = sortByStart(
-      mergedAppointments.filter((item, index) => {
+      items.filter((item, index) => {
         const id = getAppointmentId(item);
         const fallbackKey = `${getAppointmentStart(item)}::${item.title || item.appointment_type || ""}::${item.location || ""}`;
         const key = id ?? fallbackKey ?? index;
@@ -393,19 +605,23 @@ export async function loadCalendar() {
     const groupedUpcoming = groupByDay(upcomingItems);
 
     els.viewContent.innerHTML = renderCalendarHtml({
+      title: `${getScopeTitle()} appointments`,
       uniqueAppointments,
       todayItems,
       upcomingItems,
       completedItems,
       cancelledItems,
       groupedUpcoming,
+      isFallback,
     });
 
     const nextUpcoming = upcomingItems[0] || null;
     const latestCompleted = completedItems[0] || null;
 
     updateWorkspaceSummaryStrip({
-      today: `${todayItems.length} today • ${upcomingItems.length} upcoming`,
+      today: isFallback
+        ? `${todayItems.length} today • ${upcomingItems.length} upcoming • preview mode`
+        : `${todayItems.length} today • ${upcomingItems.length} upcoming`,
       nextEvent: nextUpcoming
         ? `${nextUpcoming.title || nextUpcoming.appointment_type || "Appointment"} • ${formatDateTime(
             getAppointmentStart(nextUpcoming)
@@ -413,13 +629,15 @@ export async function loadCalendar() {
         : "No upcoming appointments",
       lastRecord: latestCompleted
         ? `Last completed ${formatDateTime(getAppointmentStart(latestCompleted))}`
+        : isFallback
+        ? "Preview calendar data loaded"
         : "No completed appointments",
       openActions: `${cancelledItems.length} cancelled • ${completedItems.length} completed`,
     });
   } catch (error) {
     els.viewContent.innerHTML = `
       <div class="empty-state">
-        <p>${escapeHtml(error.message || "Failed to load calendar.")}</p>
+        <p>${escapeHtml(error?.message || "Failed to load calendar.")}</p>
       </div>
     `;
 
