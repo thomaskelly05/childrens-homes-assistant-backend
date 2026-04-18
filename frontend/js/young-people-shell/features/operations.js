@@ -1,26 +1,25 @@
-import { state } from "../state.js";
 import { els } from "../dom.js";
+import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
 
-function getHomeId() {
-  return (
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null
-  );
+/* -------------------------------- helpers -------------------------------- */
+
+const SAFE_EMPTY = Object.freeze({ items: [] });
+
+function toArray(value, fallback = []) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(fallback)) return fallback;
+  return [];
 }
 
-function toArray(value, fallbacks = []) {
-  if (Array.isArray(value)) return value;
-
-  for (const fallback of fallbacks) {
-    if (Array.isArray(fallback)) return fallback;
-  }
-
-  return [];
+function toBool(value) {
+  return Boolean(value);
 }
 
 function toNumber(value, fallback = 0) {
@@ -32,12 +31,21 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function formatDate(value) {
-  if (!value) return "No date";
+function lower(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
 
+function titleCase(value) {
+  return String(value ?? "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+    .trim();
+}
+
+function formatDate(value, fallback = "No date") {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -45,12 +53,10 @@ function formatDate(value) {
   });
 }
 
-function formatDateTime(value) {
-  if (!value) return "No date";
-
+function formatDateTime(value, fallback = "No date") {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -60,716 +66,795 @@ function formatDateTime(value) {
   });
 }
 
-function getStatusTone(status = "") {
-  const normalised = String(status || "")
-    .toLowerCase()
-    .trim()
-    .replaceAll(" ", "_");
+function isOverdue(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime() < today.getTime();
+}
 
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.selectedHomeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    null
+  );
+}
+
+async function safeGet(path) {
+  try {
+    return (await apiGet(path)) || SAFE_EMPTY;
+  } catch {
+    return SAFE_EMPTY;
+  }
+}
+
+function pickItems(response, candidates = []) {
+  for (const key of candidates) {
+    if (Array.isArray(response?.[key])) return response[key];
+  }
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response)) return response;
+  return [];
+}
+
+function sortNewest(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    return new Date(bValue).getTime() - new Date(aValue).getTime();
+  });
+}
+
+function badgeClass(value) {
+  const v = lower(value);
   if (
     [
-      "overdue",
       "critical",
       "high",
-      "danger",
-      "failed",
-      "missing",
-      "escalated",
-      "vacant",
-      "vacancy",
-      "absent",
-      "sick",
-      "blocked",
-      "cancelled",
-      "incident",
-      "offline",
-    ].includes(normalised)
-  ) {
-    return "danger";
-  }
-
-  if (
-    [
-      "warning",
-      "due",
-      "due_soon",
-      "review_due",
-      "attention",
-      "limited",
-      "agency",
-      "bank_staff",
-      "planned",
+      "urgent",
+      "unsafe",
+      "action_required",
+      "action required",
       "open",
-      "pending",
-      "in_progress",
-      "awaiting",
-    ].includes(normalised)
+      "overdue",
+      "reported",
+      "declined",
+      "cancelled",
+      "problem",
+    ].includes(v)
   ) {
-    return "warning";
+    return "badge badge-danger";
   }
-
   if (
     [
-      "success",
-      "good",
-      "active",
-      "on_shift",
-      "available",
-      "booked",
-      "confirmed",
-      "current",
-      "completed",
-      "resolved",
-      "ok",
-    ].includes(normalised)
+      "medium",
+      "pending",
+      "submitted",
+      "planned",
+      "draft",
+      "in_progress",
+      "in progress",
+      "ordered",
+      "awaiting_contractor",
+      "priority",
+      "warning",
+    ].includes(v)
   ) {
-    return "success";
+    return "badge badge-warning";
   }
-
-  return "muted";
+  if (
+    [
+      "low",
+      "completed",
+      "approved",
+      "resolved",
+      "pass",
+      "active",
+      "received",
+      "paid",
+      "good",
+      "safe",
+      "in_stock",
+      "in stock",
+    ].includes(v)
+  ) {
+    return "badge badge-success";
+  }
+  return "badge";
 }
 
-function toTime(value) {
-  if (!value) return 0;
-  const time = new Date(value).getTime();
-  return Number.isFinite(time) ? time : 0;
-}
+/* -------------------------------- mappers -------------------------------- */
 
-function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(bValue) - toTime(aValue);
-  });
-}
-
-function sortSoonestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue) - toTime(bValue);
-  });
-}
-
-function hasUsableData(data) {
-  if (!data || typeof data !== "object") return false;
-  if (Array.isArray(data.items) && data.items.length > 0) return true;
-  if (Array.isArray(data.records) && data.records.length > 0) return true;
-  if (Array.isArray(data.young_people) && data.young_people.length > 0) return true;
-  if (Array.isArray(data.team) && data.team.length > 0) return true;
-  if (Array.isArray(data.staff) && data.staff.length > 0) return true;
-  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
-  if (Array.isArray(data.shifts) && data.shifts.length > 0) return true;
-  if (Array.isArray(data.rota) && data.rota.length > 0) return true;
-  if (Array.isArray(data.absences) && data.absences.length > 0) return true;
-  if (Array.isArray(data.maintenance) && data.maintenance.length > 0) return true;
-  if (Array.isArray(data.communications) && data.communications.length > 0) return true;
-  if (Array.isArray(data.home_incidents) && data.home_incidents.length > 0) return true;
-  if (Array.isArray(data.incidents) && data.incidents.length > 0) return true;
-  if (Array.isArray(data.visitors) && data.visitors.length > 0) return true;
-  if (Array.isArray(data.transport) && data.transport.length > 0) return true;
-  if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0) return true;
-  if (data.summary && typeof data.summary === "object") return true;
-  if (data.home && typeof data.home === "object") return true;
-  return false;
-}
-
-function normaliseSummary(data = {}) {
-  return data.summary || data.dashboard || data.home_summary || {};
-}
-
-function normaliseYoungPeople(data = {}) {
-  return toArray(data.young_people, [data.items]).map((item) => ({
-    ...item,
-    id: item.id ?? item.young_person_id ?? null,
-    record_type: item.record_type || "young_person",
-    full_name:
-      item.full_name ||
-      [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
-      item.preferred_name ||
-      "Young person",
-    preferred_name:
-      item.preferred_name ||
-      item.first_name ||
-      item.full_name ||
-      "Young person",
-    placement_status: item.placement_status || "active",
-    summary_risk_level: item.summary_risk_level || "unknown",
-  }));
-}
-
-function normaliseTeamItems(data = {}) {
-  return toArray(data.items, [data.team, data.staff, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "team",
-    full_name:
-      item.full_name ||
-      item.staff_member ||
-      item.name ||
-      item.title ||
-      "Staff member",
-    staff_member:
-      item.staff_member ||
-      item.full_name ||
-      item.name ||
-      "Staff member",
-    role: item.role || item.job_title || "",
-    status: item.status || item.employment_status || "active",
+function mapMaintenanceJob(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    area_id: record.area_id || null,
+    room_id: record.room_id || null,
+    job_title: record.job_title || record.title || record.issue_title || "Maintenance job",
+    job_description:
+      record.job_description || record.description || record.issue_description || "",
+    reported_date: record.reported_date || record.reported_at || null,
+    priority: record.priority || record.severity || "",
+    status: record.status || "",
+    reported_by_user_id: record.reported_by_user_id || null,
+    assigned_to_user_id: record.assigned_to_user_id || null,
+    contractor_name: record.contractor_name || "",
+    contractor_contact: record.contractor_contact || "",
+    target_completion_date: record.target_completion_date || record.due_date || null,
+    completed_date: record.completed_date || record.completed_at || null,
+    completion_notes: record.completion_notes || "",
+    cost_amount: record.cost_amount || record.cost_estimate || null,
+    area: record.area || "",
+    room_name: record.room_name || "",
+    category: record.category || record.issue_category || "",
+    notes: record.notes || "",
+    title: record.job_title || record.title || record.issue_title || "Maintenance job",
     summary:
-      item.summary ||
-      item.notes ||
-      `${item.role || "Team member"} status recorded.`,
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
+      record.job_description ||
+      record.description ||
+      record.issue_description ||
+      record.notes ||
+      "Maintenance logged.",
+    record_type: "maintenance_job",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseTaskItems(data = {}) {
-  return toArray(data.items, [data.tasks, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "task",
-    title: item.title || item.task || "Task",
-    task: item.task || item.title || "Task",
+function mapEnvironmentCheck(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    area_id: record.area_id || null,
+    room_id: record.room_id || null,
+    check_date: record.check_date || null,
+    check_type: record.check_type || "",
+    status: record.status || record.outcome || record.outcome_status || "",
+    cleanliness_rating: record.cleanliness_rating ?? null,
+    safety_rating: record.safety_rating ?? null,
+    homeliness_rating: record.homeliness_rating ?? null,
+    findings: record.findings || record.finding_summary || record.issues_found || "",
+    action_required: toBool(record.action_required),
+    action_notes: record.action_notes || record.action_note || record.actions_required || "",
+    checked_by_user_id: record.checked_by_user_id || record.completed_by || record.completed_by_user_id || null,
+    next_due_date: record.next_due_date || record.next_check_date || null,
+    title: titleCase(record.check_type || "Environment check"),
     summary:
-      item.summary ||
-      item.notes ||
-      item.description ||
-      item.task ||
-      "Task recorded.",
-    status: item.status || (item.completed ? "completed" : "open"),
-    completed: Boolean(item.completed),
-    due_date: item.due_date || null,
-    assigned_role: item.assigned_role || "",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+      record.findings ||
+      record.finding_summary ||
+      record.action_notes ||
+      record.action_note ||
+      "Environment check recorded.",
+    record_type: "environment_check",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseShiftItems(data = {}) {
-  return toArray(data.items, [data.shifts, data.rota, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "shift",
-    title: item.shift_name || item.shift || "Shift",
-    shift_name: item.shift_name || item.shift || "Shift",
-    date: item.date || item.rota_date || item.shift_date || null,
-    lead: item.lead || item.shift_lead || "",
-    status: item.status || "planned",
+function mapVisitor(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    young_person_id:
+      record.young_person_id || record.related_young_person_id || null,
+    visitor_name: record.visitor_name || "",
+    organisation_name: record.organisation_name || record.organisation || "",
+    visitor_type: record.visitor_type || "",
+    purpose_of_visit: record.purpose_of_visit || record.purpose || "",
+    arrived_at: record.arrived_at || record.arrival_time || record.sign_in_time || null,
+    departed_at: record.departed_at || record.departure_time || record.sign_out_time || null,
+    signed_in_by_user_id: record.signed_in_by_user_id || null,
+    signed_out_by_user_id: record.signed_out_by_user_id || null,
+    dbs_checked: toBool(record.dbs_checked),
+    identification_seen: toBool(
+      record.identification_seen ?? record.identity_checked ?? record.id_checked
+    ),
+    escorted: toBool(record.escorted ?? record.supervised_visit ?? record.supervised),
+    notes: record.notes || "",
+    title: record.visitor_name || "Visitor",
     summary:
-      item.summary ||
-      item.note ||
-      [item.start_time, item.end_time].filter(Boolean).join(" – ") ||
-      "Shift recorded.",
-    start_time: item.start_time || "",
-    end_time: item.end_time || "",
-    staff: Array.isArray(item.staff) ? item.staff : [],
-    young_people_present: Array.isArray(item.young_people_present)
-      ? item.young_people_present
-      : [],
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseAbsenceItems(data = {}) {
-  return toArray(data.items, [data.absences, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "absence",
-    title: item.staff_member || item.title || "Absence",
-    staff_member: item.staff_member || item.name || "Staff member",
-    absence_type: item.absence_type || "",
-    status: item.status || "recorded",
-    start_date: item.start_date || null,
-    end_date: item.end_date || null,
-    impact: item.impact || "",
-    cover_plan: item.cover_plan || "",
-    summary:
-      item.summary ||
-      item.cover_plan ||
-      item.absence_type ||
-      "Absence recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseMaintenanceItems(data = {}) {
-  return toArray(data.items, [data.maintenance, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "maintenance",
-    title: item.title || "Maintenance item",
-    priority: item.priority || "",
-    status: item.status || "open",
-    reported_date: item.reported_date || item.created_at || null,
-    due_date: item.due_date || item.reported_date || null,
-    summary:
-      item.summary ||
-      item.notes ||
-      item.description ||
-      "Maintenance item recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseCommunicationItems(data = {}) {
-  return toArray(data.items, [data.communications, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "communication",
-    title: item.title || item.contact_type || "Communication",
-    status: item.status || "recorded",
-    summary: item.summary || item.notes || "Communication logged.",
-    contact_datetime: item.contact_datetime || item.created_at || null,
-    communication_type: item.communication_type || item.contact_type || "",
-    organisation: item.organisation || "",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseIncidentItems(data = {}) {
-  return toArray(data.items, [data.home_incidents, data.incidents, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "home_incident",
-    title: item.title || item.incident_type || "Home incident",
-    incident_type: item.incident_type || item.title || "Incident",
-    status: item.status || "recorded",
-    severity: item.severity || "",
-    date: item.date || item.incident_datetime || item.created_at || null,
-    summary:
-      item.summary ||
-      item.description ||
-      "Home incident recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseVisitorItems(data = {}) {
-  return toArray(data.items, [data.visitors, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "visitor",
-    title: item.visitor_name || item.title || "Visitor",
-    visitor_name: item.visitor_name || "",
-    organisation: item.organisation || "",
-    visit_date: item.visit_date || null,
-    status: item.status || "recorded",
-    purpose: item.purpose || "",
-    summary:
-      item.summary ||
-      item.purpose ||
+      record.purpose_of_visit ||
+      record.purpose ||
+      record.notes ||
       "Visitor activity recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+    record_type: "visitor_log",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseTransportItems(data = {}) {
-  return toArray(data.items, [data.transport, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "transport",
-    title: item.journey || item.title || "Transport",
-    journey: item.journey || "",
-    driver: item.driver || "",
-    date: item.date || null,
-    status: item.status || "recorded",
+function mapVehicle(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    vehicle_name: record.vehicle_name || "",
+    registration_number: record.registration_number || "",
+    make:
+      record.make ||
+      (record.make_model ? String(record.make_model).split(" ")[0] : ""),
+    model:
+      record.model ||
+      (record.make_model
+        ? String(record.make_model).split(" ").slice(1).join(" ")
+        : ""),
+    colour: record.colour || "",
+    seats_count: record.seats_count || record.seats || null,
+    wheelchair_accessible: toBool(
+      record.wheelchair_accessible
+    ),
+    active: toBool(record.active),
+    mot_expiry_date: record.mot_expiry_date || record.mot_due_date || null,
+    tax_expiry_date: record.tax_expiry_date || record.tax_due_date || null,
+    insurance_expiry_date:
+      record.insurance_expiry_date || record.insurance_due_date || null,
+    service_due_date: record.service_due_date || null,
+    notes: record.notes || "",
+    title: record.vehicle_name || record.registration_number || "Vehicle",
     summary:
-      item.summary ||
-      item.notes ||
-      item.journey ||
-      "Transport activity recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+      `${record.registration_number || ""} ${record.make || record.make_model || ""} ${record.model || ""}`.trim() ||
+      "Vehicle profile.",
+    record_type: "vehicle",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function normaliseInspectionActions(data = {}) {
-  return toArray(data.items, [data.inspection_actions, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.source_id ?? null,
-    record_type: item.record_type || "inspection_action",
-    title: item.action_title || item.title || "Inspection action",
-    status: item.status || item.priority || "open",
-    priority: item.priority || "",
-    due_date: item.due_date || null,
-    owner_user_name: item.owner_user_name || item.owner_staff_name || "",
+function mapVehicleCheck(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    vehicle_id: record.vehicle_id || null,
+    home_id: record.home_id || null,
+    check_date: record.check_date || null,
+    mileage: record.mileage ?? null,
+    fuel_level_text: record.fuel_level_text || record.fuel_level || "",
+    tyres_ok: toBool(record.tyres_ok),
+    lights_ok: toBool(record.lights_ok),
+    cleanliness_ok: toBool(record.cleanliness_ok),
+    damage_noted: record.damage_noted || "",
+    status: record.status || (toBool(record.roadworthy) ? "pass" : ""),
+    checked_by_user_id: record.checked_by_user_id || record.completed_by_user_id || null,
+    notes: record.notes || record.actions_required || "",
+    title: "Vehicle check",
     summary:
-      item.summary ||
-      item.action_description ||
-      item.evidence_required ||
-      "Inspection action available.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+      record.damage_noted ||
+      record.actions_required ||
+      record.notes ||
+      "Vehicle check recorded.",
+    record_type: "vehicle_check",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function buildTopStats({
-  youngPeople = [],
-  openTasks = [],
-  liveShifts = [],
-  activeIncidents = [],
-  absences = [],
-  urgentMaintenance = [],
-}) {
-  return [
-    {
-      label: "Children in home",
-      value: youngPeople.length,
-      note: "Current live children",
-      tone: "muted",
-    },
-    {
-      label: "Open actions",
-      value: openTasks.length,
-      note: "Tasks needing completion",
-      tone: openTasks.length ? "warning" : "success",
-    },
-    {
-      label: "Live shifts",
-      value: liveShifts.length,
-      note: "Operational shift records",
-      tone: "muted",
-    },
-    {
-      label: "Recent incidents",
-      value: activeIncidents.length,
-      note: "Operational issues recorded",
-      tone: activeIncidents.length ? "warning" : "success",
-    },
-    {
-      label: "Staff absent",
-      value: absences.length,
-      note: "Absence affecting cover",
-      tone: absences.length ? "warning" : "success",
-    },
-    {
-      label: "Urgent maintenance",
-      value: urgentMaintenance.length,
-      note: "Premises issues needing action",
-      tone: urgentMaintenance.length ? "danger" : "success",
-    },
-  ];
+function mapVehicleJourney(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    vehicle_id: record.vehicle_id || null,
+    home_id: record.home_id || null,
+    driver_staff_id: record.driver_staff_id || null,
+    driver_user_id: record.driver_user_id || null,
+    young_person_id: record.young_person_id || null,
+    journey_date: record.journey_date || null,
+    start_time: record.start_time || record.departure_time || null,
+    end_time: record.end_time || record.arrival_time || null,
+    start_mileage: record.start_mileage || record.mileage_start || null,
+    end_mileage: record.end_mileage || record.mileage_end || null,
+    journey_purpose: record.journey_purpose || record.purpose || "",
+    destination: record.destination || record.to_location || "",
+    passengers_summary: record.passengers_summary || "",
+    notes: record.notes || record.risk_considerations || "",
+    status: record.status || "",
+    title: "Vehicle journey",
+    summary:
+      record.journey_purpose ||
+      record.purpose ||
+      record.destination ||
+      "Journey recorded.",
+    record_type: "vehicle_journey",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function buildOperationsKpis({
-  tasks = [],
-  shifts = [],
-  incidents = [],
-  maintenance = [],
-  absences = [],
-  inspectionActions = [],
-}) {
-  const completedTasks = tasks.filter((item) => item.completed).length;
-  const taskPercent = tasks.length
-    ? Math.round((completedTasks / tasks.length) * 100)
-    : 0;
-
-  const activeShifts = shifts.filter((item) =>
-    ["planned", "active", "confirmed", "on_shift"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const shiftPercent = shifts.length
-    ? Math.round((activeShifts / shifts.length) * 100)
-    : 0;
-
-  const resolvedIncidents = incidents.filter((item) =>
-    ["resolved", "closed", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const incidentPercent = incidents.length
-    ? Math.round((resolvedIncidents / incidents.length) * 100)
-    : 100;
-
-  const closedMaintenance = maintenance.filter((item) =>
-    ["resolved", "completed", "closed", "reviewed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const maintenancePercent = maintenance.length
-    ? Math.round((closedMaintenance / maintenance.length) * 100)
-    : 100;
-
-  const coveredAbsences = absences.filter((item) =>
-    item.cover_plan || ["covered", "resolved"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const absencePercent = absences.length
-    ? Math.round((coveredAbsences / absences.length) * 100)
-    : 100;
-
-  const resolvedInspection = inspectionActions.filter((item) =>
-    ["completed", "resolved", "closed"].includes(
-      String(item.status || item.priority || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
-  const inspectionPercent = inspectionActions.length
-    ? Math.round((resolvedInspection / inspectionActions.length) * 100)
-    : 100;
-
-  return [
-    {
-      label: "Task completion",
-      value: `${taskPercent}%`,
-      percent: taskPercent,
-      tone: taskPercent >= 85 ? "success" : taskPercent >= 65 ? "warning" : "danger",
-    },
-    {
-      label: "Shift coverage",
-      value: `${shiftPercent}%`,
-      percent: shiftPercent,
-      tone: shiftPercent >= 90 ? "success" : shiftPercent >= 70 ? "warning" : "danger",
-    },
-    {
-      label: "Incident resolution",
-      value: `${incidentPercent}%`,
-      percent: incidentPercent,
-      tone: incidentPercent >= 85 ? "success" : incidentPercent >= 65 ? "warning" : "danger",
-    },
-    {
-      label: "Maintenance closure",
-      value: `${maintenancePercent}%`,
-      percent: maintenancePercent,
-      tone:
-        maintenancePercent >= 85 ? "success" : maintenancePercent >= 65 ? "warning" : "danger",
-    },
-    {
-      label: "Absence cover",
-      value: `${absencePercent}%`,
-      percent: absencePercent,
-      tone: absencePercent >= 85 ? "success" : absencePercent >= 65 ? "warning" : "danger",
-    },
-    {
-      label: "Inspection actions",
-      value: `${inspectionPercent}%`,
-      percent: inspectionPercent,
-      tone:
-        inspectionPercent >= 85 ? "success" : inspectionPercent >= 65 ? "warning" : "danger",
-    },
-  ];
+function mapInventoryItem(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    area_id: record.area_id || null,
+    item_name: record.item_name || record.asset_name || "",
+    category: record.category || record.asset_category || record.asset_type || "",
+    quantity: record.quantity ?? 1,
+    unit_text: record.unit_text || "",
+    status: record.status || record.condition_status || "",
+    purchase_date: record.purchase_date || null,
+    replacement_due_date: record.replacement_due_date || record.next_service_due || null,
+    condition_text: record.condition_text || "",
+    serial_number: record.serial_number || "",
+    notes: record.notes || "",
+    title: record.item_name || record.asset_name || "Inventory item",
+    summary:
+      record.condition_text ||
+      record.notes ||
+      record.category ||
+      "Inventory record.",
+    record_type: "inventory_item",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function buildPriorityItems({
-  openTasks = [],
-  urgentIncidents = [],
-  absences = [],
-  urgentMaintenance = [],
-  inspectionActions = [],
-}) {
-  const items = [];
-
-  inspectionActions.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.title || "Inspection action",
-      summary:
-        item.summary ||
-        (item.due_date ? `Due ${formatDate(item.due_date)}` : "Inspection action requires follow-up."),
-    });
-  });
-
-  urgentIncidents.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.title || item.incident_type || "Incident",
-      summary:
-        item.summary ||
-        (item.date ? `Recorded ${formatDateTime(item.date)}` : "Incident needs review."),
-    });
-  });
-
-  urgentMaintenance.slice(0, 2).forEach((item) => {
-    items.push({
-      title: item.title || "Maintenance issue",
-      summary:
-        item.summary ||
-        (item.due_date ? `Due ${formatDate(item.due_date)}` : "Maintenance needs attention."),
-    });
-  });
-
-  absences.slice(0, 1).forEach((item) => {
-    items.push({
-      title: item.staff_member || "Staff absence",
-      summary:
-        item.cover_plan ||
-        item.summary ||
-        "Cover arrangements require review.",
-    });
-  });
-
-  openTasks.slice(0, 1).forEach((item) => {
-    items.push({
-      title: item.title || item.task || "Open task",
-      summary:
-        item.summary ||
-        (item.due_date ? `Due ${formatDate(item.due_date)}` : "Outstanding operational action."),
-    });
-  });
-
-  return items.slice(0, 8);
+function mapPurchaseRequest(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || null,
+    request_type: record.request_type || "",
+    request_title: record.request_title || "",
+    request_description: record.request_description || "",
+    requested_by_user_id: record.requested_by_user_id || null,
+    requested_date: record.requested_date || null,
+    estimated_cost: record.estimated_cost ?? null,
+    approved_cost: record.approved_cost ?? null,
+    supplier_name: record.supplier_name || "",
+    urgency: record.urgency || "",
+    status: record.status || "",
+    approved_by_user_id: record.approved_by_user_id || null,
+    approved_at: record.approved_at || null,
+    purchased_at: record.purchased_at || null,
+    notes: record.notes || "",
+    title: record.request_title || "Purchase request",
+    summary:
+      record.request_description ||
+      record.notes ||
+      record.request_type ||
+      "Purchase request logged.",
+    record_type: "purchase_request",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function buildMiniMetrics({
-  openTasks = [],
-  liveShifts = [],
-  recentCommunications = [],
-  visitors = [],
-  transport = [],
-  incidents = [],
-}) {
-  return [
-    { label: "Tasks", value: openTasks.length },
-    { label: "Shifts", value: liveShifts.length },
-    { label: "Comms", value: recentCommunications.length },
-    { label: "Visitors", value: visitors.length },
-    { label: "Transport", value: transport.length },
-    { label: "Incidents", value: incidents.length },
-  ];
+function mapPettyCash(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    petty_cash_account_id: record.petty_cash_account_id || null,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || null,
+    transaction_date: record.transaction_date || null,
+    transaction_type: record.transaction_type || "",
+    amount: record.amount ?? null,
+    description: record.description || "",
+    requested_by_user_id: record.requested_by_user_id || null,
+    approved_by_user_id: record.approved_by_user_id || null,
+    running_balance_after: record.running_balance_after ?? null,
+    notes: record.notes || "",
+    title: titleCase(record.transaction_type || "Petty cash"),
+    summary:
+      record.description ||
+      record.notes ||
+      "Petty cash transaction.",
+    record_type: "petty_cash_transaction",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
 }
 
-function renderEmptyState(message = "No operational data available.") {
+function mapAllowancePayment(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    allowance_id: record.allowance_id || null,
+    young_person_id: record.young_person_id || null,
+    home_id: record.home_id || null,
+    payment_date: record.payment_date || null,
+    amount: record.amount ?? null,
+    payment_method: record.payment_method || "",
+    payment_status: record.payment_status || "",
+    paid_by_user_id: record.paid_by_user_id || null,
+    received_confirmed: toBool(record.received_confirmed),
+    notes: record.notes || "",
+    title: "Allowance payment",
+    summary:
+      `£${toNumber(record.amount, 0).toFixed(2)} ${record.payment_method || ""}`.trim(),
+    record_type: "allowance_payment",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapOperationalNotification(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    young_person_id: record.young_person_id || null,
+    staff_id: record.staff_id || null,
+    notification_type: record.notification_type || "",
+    severity: record.severity || "",
+    title: record.title || "Notification",
+    message: record.message || "",
+    status: record.status || "",
+    due_at: record.due_at || null,
+    acknowledged_by_user_id: record.acknowledged_by_user_id || null,
+    acknowledged_at: record.acknowledged_at || null,
+    resolved_by_user_id: record.resolved_by_user_id || null,
+    resolved_at: record.resolved_at || null,
+    action_url: record.action_url || "",
+    action_label: record.action_label || "",
+    summary: record.message || "Notification recorded.",
+    record_type: "notification",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapHomeOperationsLog(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    log_date: record.log_date || null,
+    log_type: record.log_type || "",
+    title: record.title || "Operations log",
+    summary: record.summary || "",
+    severity: record.severity || "",
+    linked_table: record.linked_table || "",
+    linked_id: record.linked_id || null,
+    recorded_by_user_id: record.recorded_by_user_id || null,
+    record_type: "operations_log",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapOperationalAction(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    related_room_id: record.related_room_id || null,
+    related_young_person_id: record.related_young_person_id || null,
+    related_staff_id: record.related_staff_id || null,
+    action_title: record.action_title || "",
+    action_description: record.action_description || "",
+    action_type: record.action_type || "",
+    priority: record.priority || "",
+    status: record.status || "",
+    assigned_to_user_id: record.assigned_to_user_id || null,
+    due_date: record.due_date || null,
+    completed_at: record.completed_at || null,
+    completed_by_user_id: record.completed_by_user_id || null,
+    notes: record.notes || "",
+    title: record.action_title || "Operational action",
+    summary:
+      record.action_description ||
+      record.notes ||
+      "Operational action recorded.",
+    record_type: "operational_action",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapShiftLog(record = {}) {
+  return {
+    id: record.id,
+    provider_id: record.provider_id || null,
+    home_id: record.home_id || null,
+    shift_date: record.shift_date || null,
+    shift_type: record.shift_type || "",
+    shift_lead_user_id: record.shift_lead_user_id || null,
+    shift_lead_staff_id: record.shift_lead_staff_id || null,
+    staffing_summary: record.staffing_summary || "",
+    young_people_summary: record.young_people_summary || "",
+    safeguarding_summary: record.safeguarding_summary || "",
+    health_summary: record.health_summary || "",
+    appointments_summary: record.appointments_summary || "",
+    incidents_summary: record.incidents_summary || "",
+    environment_summary: record.environment_summary || "",
+    handover_notes: record.handover_notes || record.handover_summary || "",
+    manager_attention_items: record.manager_attention_items || record.operational_priorities || "",
+    status: record.status || "",
+    title: `${titleCase(record.shift_type || "Shift")} shift log`,
+    summary:
+      record.handover_notes ||
+      record.handover_summary ||
+      record.staffing_summary ||
+      "Shift log recorded.",
+    record_type: "shift_log",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+/* -------------------------------- render -------------------------------- */
+
+function renderEmpty(title, message) {
   return `
     <div class="empty-state">
       <div class="empty-state-inner">
-        <div class="empty-state-icon" aria-hidden="true">◌</div>
-        <h3>No operational data</h3>
+        <div class="empty-state-icon">○</div>
+        <h3>${safeText(title)}</h3>
         <p>${safeText(message)}</p>
       </div>
     </div>
   `;
 }
 
-function renderStatCards(cards = []) {
+function renderStatCard(label, value, hint = "") {
   return `
-    <div class="overview-stats-grid overview-stats-grid--six">
-      ${cards
-        .map(
-          (card) => `
-            <article class="overview-stat-card ${
-              card.tone === "danger"
-                ? "overview-stat-card--danger"
-                : card.tone === "warning"
-                ? "overview-stat-card--warning"
-                : card.tone === "success"
-                ? "overview-stat-card--success"
-                : ""
-            }">
-              <span class="overview-stat-label">${safeText(card.label)}</span>
-              <strong class="overview-stat-value">${safeText(card.value)}</strong>
-              <span class="overview-stat-note">${safeText(card.note)}</span>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
+    <article class="overview-stat-card">
+      <span class="overview-stat-label">${safeText(label)}</span>
+      <strong>${safeText(value)}</strong>
+      ${hint ? `<div class="overview-stat-subtle">${safeText(hint)}</div>` : ""}
+    </article>
   `;
 }
 
-function renderProgressCards(cards = []) {
+function renderSection(title, content) {
   return `
-    <div class="analytics-progress-grid">
-      ${cards
-        .map(
-          (card) => `
-            <article class="analytics-progress-card">
-              <div class="analytics-progress-head">
-                <span class="analytics-progress-label">${safeText(card.label)}</span>
-                <strong class="analytics-progress-value">${safeText(card.value)}</strong>
-              </div>
-              <div class="analytics-progress-track">
-                <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(
-                    card.tone || "muted"
-                  )}"
-                  style="width: ${safeText(card.percent || 0)}%;"
-                ></span>
-              </div>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderRows(items = [], options = {}) {
-  const {
-    emptyMessage = "Nothing to show right now.",
-    titleKey = "title",
-    summaryKey = "summary",
-    metaBuilder = null,
-    statusKey = "status",
-    recordType = "",
-  } = options;
-
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">○</div>
-          <h3>Nothing to show</h3>
-          <p>${safeText(emptyMessage)}</p>
-        </div>
+    <section class="overview-panel-section">
+      <div class="overview-panel-section-head">
+        <h3>${safeText(title)}</h3>
       </div>
-    `;
+      ${content}
+    </section>
+  `;
+}
+
+function renderCard(item = {}) {
+  const status =
+    item.status ||
+    item.priority ||
+    item.payment_status ||
+    item.severity ||
+    "";
+
+  const primaryDate =
+    item.reported_date ||
+    item.check_date ||
+    item.arrived_at ||
+    item.transaction_date ||
+    item.payment_date ||
+    item.requested_date ||
+    item.log_date ||
+    item.shift_date ||
+    item.due_at ||
+    item.due_date ||
+    item.created_at;
+
+  return `
+    <article
+      class="record-card"
+      data-open-record="true"
+      data-record-id="${safeText(item.id || "")}"
+      data-record-type="${safeText(item.record_type || "record")}"
+      data-title="${safeText(item.title || "Record")}"
+      role="button"
+      tabindex="0"
+    >
+      <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+        <div>
+          <div class="record-card-title">${safeText(item.title || "Record")}</div>
+          <div class="record-card-meta">${safeText(formatDateTime(primaryDate, "No date"))}</div>
+        </div>
+        ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+      </div>
+
+      <div class="record-card-body">
+        <div class="record-card-summary">${safeText(item.summary || "")}</div>
+
+        <div class="details-grid" style="margin-top:12px;">
+          ${
+            item.priority
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Priority</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.priority))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.check_type
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Check type</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.check_type))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.visitor_type
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Visitor type</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.visitor_type))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.registration_number
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Registration</div>
+                  <div class="details-grid-value">${safeText(item.registration_number)}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.destination
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Destination</div>
+                  <div class="details-grid-value">${safeText(item.destination)}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.target_completion_date || item.due_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Due</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.target_completion_date || item.due_date))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.amount !== null && item.amount !== undefined
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Amount</div>
+                  <div class="details-grid-value">£${safeText(toNumber(item.amount, 0).toFixed(2))}</div>
+                </div>
+              `
+              : ""
+          }
+        </div>
+
+        ${
+          item.job_description
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Description</div>
+                <div>${safeText(item.job_description)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.findings
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Findings</div>
+                <div>${safeText(item.findings)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.purpose_of_visit
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Purpose</div>
+                <div>${safeText(item.purpose_of_visit)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.message
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Message</div>
+                <div>${safeText(item.message)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.action_notes
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Action notes</div>
+                <div>${safeText(item.action_notes)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.notes
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Notes</div>
+                <div>${safeText(item.notes)}</div>
+              </div>
+            `
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function renderCardList(items = [], emptyTitle, emptyMessage) {
+  if (!items.length) return renderEmpty(emptyTitle, emptyMessage);
+  return `<div class="record-card-list">${items.map(renderCard).join("")}</div>`;
+}
+
+function renderTimeline(items = []) {
+  if (!items.length) {
+    return renderEmpty(
+      "No operational activity",
+      "No shift, maintenance, environment, visitor, vehicle or financial activity has been recorded yet."
+    );
   }
 
   return `
-    <div class="record-list">
+    <div class="timeline-list">
       ${items
         .map((item) => {
-          const title =
-            item?.[titleKey] ||
-            item?.name ||
-            item?.staff_member ||
-            item?.visitor_name ||
-            item?.journey ||
-            item?.shift_name ||
-            "Record";
+          const dateValue =
+            item.reported_date ||
+            item.check_date ||
+            item.arrived_at ||
+            item.transaction_date ||
+            item.payment_date ||
+            item.requested_date ||
+            item.log_date ||
+            item.shift_date ||
+            item.due_at ||
+            item.created_at;
 
-          const summary =
-            item?.[summaryKey] ||
-            item?.notes ||
-            item?.description ||
-            item?.role ||
-            item?.organisation ||
-            "No summary available.";
-
-          const meta = metaBuilder
-            ? metaBuilder(item)
-            : item?.updated_at || item?.created_at || "";
-
-          const status = item?.[statusKey] || "";
-          const tone = getStatusTone(status);
-          const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const status =
+            item.status ||
+            item.priority ||
+            item.payment_status ||
+            item.severity ||
+            "";
 
           return `
-            <article
-              class="record-row"
-              data-open-record="true"
-              data-record-id="${safeText(rowId)}"
-              data-record-type="${safeText(recordType || item?.record_type || "")}"
-              data-title="${safeText(title)}"
-              tabindex="0"
-              role="button"
-            >
-              <div class="record-row-main">
-                <div class="record-row-title">${safeText(title)}</div>
-                <div class="record-row-summary">${safeText(summary)}</div>
-                <div class="record-row-meta">${safeText(meta)}</div>
-              </div>
-              <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(
-                  status || "Recorded"
-                )}</span>
+            <article class="timeline-item">
+              <div class="timeline-item-date">${safeText(formatDateTime(dateValue, "No date"))}</div>
+              <div class="timeline-item-body">
+                <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+                  <strong>${safeText(item.title || "Record")}</strong>
+                  ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+                </div>
+                <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
               </div>
             </article>
           `;
@@ -779,796 +864,470 @@ function renderRows(items = [], options = {}) {
   `;
 }
 
-function renderPriorityList(items = []) {
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No urgent operational issues are showing right now.</p>
-      </div>
-    `;
-  }
+function renderWorkspace(payload) {
+  const {
+    openMaintenance,
+    urgentNotifications,
+    openOperationalActions,
+    failedEnvironmentChecks,
+    visitorActivity,
+    dueVehicleChecks,
+    recentFinance,
+    recentShiftLogs,
+    timeline,
+  } = payload;
 
   return `
-    <div class="priority-list">
-      ${items
-        .map(
-          (item) => `
-            <article class="priority-item">
-              <strong>${safeText(item.title)}</strong>
-              <p>${safeText(item.summary)}</p>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderMiniChart(title, items = [], key = "value") {
-  const max = Math.max(...items.map((item) => toNumber(item?.[key], 0)), 1);
-
-  return `
-    <section class="overview-side-card">
-      <div class="overview-section-head">
-        <h3>${safeText(title)}</h3>
-        <p>Quick visual comparison.</p>
-      </div>
-
-      <div class="mini-chart">
-        ${items
-          .map((item) => {
-            const value = toNumber(item?.[key], 0);
-            const width = Math.max(8, Math.round((value / max) * 100));
-            return `
-              <div class="mini-chart-row">
-                <span class="mini-chart-label">${safeText(item.label)}</span>
-                <div class="mini-chart-bar-wrap">
-                  <span class="mini-chart-bar" style="width: ${safeText(width)}%;"></span>
-                </div>
-                <strong class="mini-chart-value">${safeText(value)}</strong>
-              </div>
-            `;
-          })
-          .join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderOperationsHtml({
-  homeName = "Operations",
-  topStats = [],
-  progressCards = [],
-  priorityItems = [],
-  youngPeople = [],
-  openTasks = [],
-  liveShifts = [],
-  absenceItems = [],
-  incidentItems = [],
-  maintenanceItems = [],
-  communicationItems = [],
-  visitorItems = [],
-  transportItems = [],
-  inspectionActions = [],
-  miniMetrics = [],
-}) {
-  return `
-    <section class="overview-panel manager-dashboard manager-dashboard--operations">
+    <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
-          <div class="eyebrow">Operations</div>
-          <h2>${safeText(homeName)}</h2>
-          <p>A live operational view across shifts, staffing, absences, incidents, visitors, transport, maintenance and readiness actions.</p>
+          <div class="eyebrow">Home operations</div>
+          <h2>Environment, maintenance, visitors, vehicles, purchases and shift operations</h2>
+          <p class="overview-panel-subtitle">
+            Daily operational oversight for the home, including issues needing action and recent activity across the running of the service.
+          </p>
         </div>
       </div>
 
-      ${renderStatCards(topStats)}
-
-      <div class="overview-section-card">
-        <div class="overview-section-head">
-          <h3>Operational performance</h3>
-          <p>A quick visual read across daily running, cover and follow-up.</p>
-        </div>
-        ${renderProgressCards(progressCards)}
+      <div class="overview-stats-grid">
+        ${renderStatCard("Open maintenance", openMaintenance.length)}
+        ${renderStatCard("Urgent notifications", urgentNotifications.length)}
+        ${renderStatCard("Open operational actions", openOperationalActions.length)}
+        ${renderStatCard("Environment concerns", failedEnvironmentChecks.length)}
+        ${renderStatCard("Due vehicle checks", dueVehicleChecks.length)}
       </div>
 
       <div class="overview-grid">
-        <section class="overview-main">
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Needs attention now</h3>
-              <p>The most urgent operational issues across the home.</p>
-            </div>
-            ${renderPriorityList(priorityItems)}
-          </div>
+        <div>
+          ${renderSection(
+            "Open maintenance",
+            renderCardList(
+              openMaintenance,
+              "No open maintenance",
+              "There are no open maintenance items recorded for this home."
+            )
+          )}
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Children present</h3>
-              <p>Current live children and placement context.</p>
-            </div>
-            ${renderRows(youngPeople, {
-              emptyMessage: "No child records found.",
-              titleKey: "preferred_name",
-              summaryKey: "full_name",
-              recordType: "young_person",
-              metaBuilder: (item) =>
-                [
-                  item.summary_risk_level ? `Risk ${item.summary_risk_level}` : "",
-                  item.placement_status || "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-              statusKey: "placement_status",
-            })}
-          </div>
+          ${renderSection(
+            "Urgent operational notifications",
+            renderCardList(
+              urgentNotifications,
+              "No urgent notifications",
+              "There are no urgent operational notifications at the moment."
+            )
+          )}
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Shift view</h3>
-              <p>Current and upcoming operational shifts.</p>
-            </div>
-            ${renderRows(liveShifts, {
-              emptyMessage: "No shift records found.",
-              titleKey: "shift_name",
-              summaryKey: "summary",
-              recordType: "shift",
-              metaBuilder: (item) =>
-                [
-                  item.date ? formatDate(item.date) : "",
-                  item.lead ? `Lead ${item.lead}` : "",
-                  item.start_time && item.end_time
-                    ? `${item.start_time} – ${item.end_time}`
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
+          ${renderSection(
+            "Open operational actions",
+            renderCardList(
+              openOperationalActions,
+              "No open actions",
+              "There are no open operational actions currently assigned."
+            )
+          )}
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Open operational actions</h3>
-              <p>Tasks and follow-up work needing completion.</p>
-            </div>
-            ${renderRows(openTasks, {
-              emptyMessage: "No open tasks found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "task",
-              metaBuilder: (item) =>
-                [
-                  item.assigned_role || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
+          ${renderSection("Operations timeline", renderTimeline(timeline))}
+        </div>
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Incidents and disruptions</h3>
-              <p>Operational incidents affecting the running of the home.</p>
-            </div>
-            ${renderRows(incidentItems, {
-              emptyMessage: "No incident records found.",
-              titleKey: "incident_type",
-              summaryKey: "summary",
-              recordType: "home_incident",
-              metaBuilder: (item) =>
-                [
-                  item.date ? formatDateTime(item.date) : "",
-                  item.severity || "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-              statusKey: "status",
-            })}
-          </div>
-        </section>
+        <aside>
+          ${renderSection(
+            "Environment checks needing action",
+            renderCardList(
+              failedEnvironmentChecks,
+              "No current environment concerns",
+              "Recent environment and safety checks do not show outstanding concerns."
+            )
+          )}
 
-        <aside class="overview-side">
-          ${renderMiniChart("Operational activity", miniMetrics, "value")}
+          ${renderSection(
+            "Recent visitors",
+            renderCardList(
+              visitorActivity,
+              "No recent visitors",
+              "No visitor activity has been recorded recently."
+            )
+          )}
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Absence and cover</h3>
-              <p>Current absences and operational impact.</p>
-            </div>
-            ${renderRows(absenceItems, {
-              emptyMessage: "No absence records found.",
-              titleKey: "staff_member",
-              summaryKey: "summary",
-              recordType: "absence",
-              metaBuilder: (item) =>
-                [
-                  item.absence_type || "",
-                  item.start_date ? formatDate(item.start_date) : "",
-                  item.end_date ? `to ${formatDate(item.end_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
+          ${renderSection(
+            "Vehicle checks due or open",
+            renderCardList(
+              dueVehicleChecks,
+              "No vehicle checks due",
+              "There are no due or open vehicle check concerns."
+            )
+          )}
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Maintenance</h3>
-              <p>Environment and repair issues affecting the home.</p>
-            </div>
-            ${renderRows(maintenanceItems, {
-              emptyMessage: "No maintenance issues found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "maintenance",
-              metaBuilder: (item) =>
-                [
-                  item.priority || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
+          ${renderSection(
+            "Recent finance activity",
+            renderCardList(
+              recentFinance,
+              "No finance activity",
+              "No purchase, petty cash or allowance activity has been recorded recently."
+            )
+          )}
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Visitors and transport</h3>
-              <p>Movements and external activity affecting the day.</p>
-            </div>
-            ${renderRows([...visitorItems, ...transportItems].slice(0, 8), {
-              emptyMessage: "No visitor or transport records found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "operations",
-              metaBuilder: (item) =>
-                [
-                  item.visit_date ? formatDateTime(item.visit_date) : "",
-                  item.date ? formatDateTime(item.date) : "",
-                  item.organisation || item.driver || "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Recent communication</h3>
-              <p>Latest liaison with professionals and partners.</p>
-            </div>
-            ${renderRows(communicationItems, {
-              emptyMessage: "No recent communication found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "communication",
-              metaBuilder: (item) =>
-                [
-                  item.organisation || "",
-                  item.contact_datetime ? formatDateTime(item.contact_datetime) : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Inspection-linked actions</h3>
-              <p>Operational work that may affect readiness and inspection confidence.</p>
-            </div>
-            ${renderRows(inspectionActions, {
-              emptyMessage: "No inspection-linked operational actions found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "inspection_action",
-              metaBuilder: (item) =>
-                [
-                  item.owner_user_name || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-              statusKey: "priority",
-            })}
-          </section>
+          ${renderSection(
+            "Recent shift and operations logs",
+            renderCardList(
+              recentShiftLogs,
+              "No recent shift logs",
+              "No recent shift logs or operations logs were returned."
+            )
+          )}
         </aside>
       </div>
     </section>
   `;
 }
 
-function renderNoHomeContext() {
-  if (!els.viewContent) return;
+/* -------------------------------- fetch -------------------------------- */
 
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      ${renderEmptyState("A home ID is needed before operations can load.")}
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "No operations context",
-    nextEvent: "No home loaded",
-    lastRecord: "No operational data",
-    openActions: "No actions loaded",
-  });
-}
-
-function renderLoadingState() {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="loading-state">
-        <div>
-          <div class="spinner" aria-hidden="true"></div>
-          <p>Loading operations…</p>
-        </div>
-      </div>
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "Loading operations view",
-    nextEvent: "Checking next operational event",
-    lastRecord: "Loading latest operational record",
-    openActions: "Loading actions",
-  });
-}
-
-function renderErrorState(message) {
-  if (!els.viewContent) return;
-
-  els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      ${renderEmptyState(message || "The operations view could not be loaded.")}
-    </section>
-  `;
-
-  updateWorkspaceSummaryStrip({
-    today: "Operations unavailable",
-    nextEvent: "Unable to load",
-    lastRecord: "No operational data",
-    openActions: "Check API routes",
-  });
-}
-
-function buildFallbackData(homeId) {
-  const homeName =
-    state.currentUser?.home_name ||
-    state.currentUser?.homeName ||
-    `Home ${homeId}`;
-
-  const now = new Date();
-  const minusDays = (days, hour = 9, minute = 0) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - days);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-  };
-  const plusDays = (days, hour = 9, minute = 0) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-  };
-
-  return {
-    summaryData: {
-      home: { id: homeId, name: homeName, home_name: homeName },
-      summary: { home_name: homeName },
-      young_people: [
-        {
-          id: 1,
-          preferred_name: "Jay",
-          full_name: "Jay Smith",
-          placement_status: "active",
-          summary_risk_level: "medium",
-        },
-        {
-          id: 2,
-          preferred_name: "Amira",
-          full_name: "Amira Khan",
-          placement_status: "active",
-          summary_risk_level: "high",
-        },
-      ],
-    },
-    teamData: {
-      items: [
-        { id: 11, full_name: "Sarah Jones", role: "Manager", status: "on_shift" },
-        { id: 12, full_name: "Leah Brown", role: "Senior RSW", status: "on_shift" },
-        { id: 13, full_name: "Ben Carter", role: "RSW", status: "sick" },
-      ],
-    },
-    taskData: {
-      items: [
-        {
-          id: 21,
-          title: "Update handover summary",
-          status: "open",
-          completed: false,
-          due_date: plusDays(0, 18, 0),
-          assigned_role: "Shift lead",
-        },
-        {
-          id: 22,
-          title: "Check missing return paperwork",
-          status: "overdue",
-          completed: false,
-          due_date: minusDays(1, 12, 0),
-          assigned_role: "Manager",
-        },
-      ],
-    },
-    shiftData: {
-      items: [
-        {
-          id: 31,
-          shift_name: "Day shift",
-          status: "on_shift",
-          date: plusDays(0, 8, 0),
-          lead: "Sarah Jones",
-          start_time: "08:00",
-          end_time: "20:00",
-        },
-        {
-          id: 32,
-          shift_name: "Night shift",
-          status: "planned",
-          date: plusDays(0, 20, 0),
-          lead: "Tom Patel",
-          start_time: "20:00",
-          end_time: "08:00",
-        },
-      ],
-    },
-    absenceData: {
-      items: [
-        {
-          id: 41,
-          staff_member: "Ben Carter",
-          absence_type: "Sickness",
-          status: "absent",
-          start_date: minusDays(1),
-          cover_plan: "Agency cover booked.",
-        },
-      ],
-    },
-    maintenanceData: {
-      items: [
-        {
-          id: 51,
-          title: "Boiler pressure issue",
-          priority: "high",
-          status: "open",
-          due_date: plusDays(1),
-          summary: "Engineer booked for tomorrow morning.",
-        },
-      ],
-    },
-    communicationData: {
-      items: [
-        {
-          id: 61,
-          title: "School liaison",
-          organisation: "School",
-          status: "sent",
-          contact_datetime: minusDays(0, 14, 20),
-          summary: "Updated school regarding attendance plan.",
-        },
-      ],
-    },
-    incidentData: {
-      items: [
-        {
-          id: 71,
-          incident_type: "Missing from care",
-          status: "review_due",
-          severity: "high",
-          date: minusDays(2, 19, 10),
-          summary: "Returned safely. Follow-up interview required.",
-        },
-      ],
-    },
-    visitorData: {
-      items: [
-        {
-          id: 81,
-          visitor_name: "Priya Shah",
-          organisation: "Therapy",
-          visit_date: plusDays(1, 11, 0),
-          status: "booked",
-          purpose: "Clinical consultation",
-        },
-      ],
-    },
-    transportData: {
-      items: [
-        {
-          id: 91,
-          journey: "School transport",
-          driver: "Leah Brown",
-          date: plusDays(0, 7, 45),
-          status: "planned",
-        },
-      ],
-    },
-    inspectionActionsData: {
-      items: [
-        {
-          id: 101,
-          action_title: "Evidence shift leadership oversight",
-          priority: "high",
-          due_date: plusDays(3),
-          owner_user_name: "Sarah Jones",
-          action_description: "Complete and upload operational oversight evidence.",
-        },
-      ],
-    },
-    isFallback: true,
-  };
-}
-
-async function fetchDataset(homeId) {
-  const safeGet = (url) => apiGet(url).catch(() => null);
-
-  const requests = [
-    safeGet(`/homes/${homeId}/dashboard`),
-    safeGet(`/homes/${homeId}/team`),
-    safeGet(`/homes/${homeId}/tasks`),
-    safeGet(`/homes/${homeId}/rota`),
-    safeGet(`/homes/${homeId}/absences`),
-    safeGet(`/homes/${homeId}/maintenance`),
-    safeGet(`/homes/${homeId}/communications`),
-    safeGet(`/homes/${homeId}/incidents`),
-    safeGet(`/homes/${homeId}/visitors`),
-    safeGet(`/homes/${homeId}/transport`),
-    safeGet(`/inspection/ui/homes/${homeId}/actions`),
-  ];
-
+async function fetchAll(homeId) {
   const [
-    summaryData,
-    teamData,
-    taskData,
-    shiftData,
-    absenceData,
-    maintenanceData,
-    communicationData,
-    incidentData,
-    visitorData,
-    transportData,
-    inspectionActionsData,
-  ] = await Promise.all(requests);
-
-  const responses = [
-    summaryData,
-    teamData,
-    taskData,
-    shiftData,
-    absenceData,
-    maintenanceData,
-    communicationData,
-    incidentData,
-    visitorData,
-    transportData,
-    inspectionActionsData,
-  ];
-
-  const hasLiveSuccess = responses.some(hasUsableData);
-
-  if (!hasLiveSuccess) {
-    return buildFallbackData(homeId);
-  }
+    maintenanceJobsRes,
+    maintenanceRequestsRes,
+    environmentChecksRes,
+    premisesChecksRes,
+    safetyChecksRes,
+    healthSafetyChecksRes,
+    visitorLogRes,
+    homeVisitorsLogRes,
+    homeVisitorsRes,
+    vehiclesRes,
+    vehicleChecksRes,
+    vehicleJourneysRes,
+    transportJourneysRes,
+    inventoryRes,
+    homeAssetsRes,
+    premisesAssetsRes,
+    purchaseRequestsRes,
+    pettyCashRes,
+    allowancePaymentsRes,
+    notificationsRes,
+    operationalNotificationsRes,
+    homeNotificationsRes,
+    operationsLogRes,
+    operationalActionsRes,
+    shiftLogsRes,
+    homeShiftLogsRes,
+    homeDailyLogsRes,
+  ] = await Promise.all([
+    safeGet(`/homes/${homeId}/maintenance-jobs`),
+    safeGet(`/homes/${homeId}/maintenance-requests`),
+    safeGet(`/homes/${homeId}/environment-checks`),
+    safeGet(`/homes/${homeId}/premises-checks`),
+    safeGet(`/homes/${homeId}/safety-checks`),
+    safeGet(`/homes/${homeId}/health-safety-checks`),
+    safeGet(`/homes/${homeId}/visitor-log`),
+    safeGet(`/homes/${homeId}/home-visitors-log`),
+    safeGet(`/homes/${homeId}/home-visitors`),
+    safeGet(`/homes/${homeId}/vehicles`),
+    safeGet(`/homes/${homeId}/vehicle-checks`),
+    safeGet(`/homes/${homeId}/vehicle-journeys`),
+    safeGet(`/homes/${homeId}/transport-journeys`),
+    safeGet(`/homes/${homeId}/inventory-items`),
+    safeGet(`/homes/${homeId}/home-assets`),
+    safeGet(`/homes/${homeId}/premises-assets`),
+    safeGet(`/homes/${homeId}/purchase-requests`),
+    safeGet(`/homes/${homeId}/petty-cash-transactions`),
+    safeGet(`/homes/${homeId}/allowance-payments`),
+    safeGet(`/homes/${homeId}/notifications`),
+    safeGet(`/homes/${homeId}/operational-notifications`),
+    safeGet(`/homes/${homeId}/home-notifications`),
+    safeGet(`/homes/${homeId}/home-operations-log`),
+    safeGet(`/homes/${homeId}/home-operational-actions`),
+    safeGet(`/homes/${homeId}/shift-logs`),
+    safeGet(`/homes/${homeId}/home-shift-logs`),
+    safeGet(`/homes/${homeId}/home-daily-logs`),
+  ]);
 
   return {
-    summaryData: summaryData || {},
-    teamData: teamData || { items: [] },
-    taskData: taskData || { items: [] },
-    shiftData: shiftData || { items: [] },
-    absenceData: absenceData || { items: [] },
-    maintenanceData: maintenanceData || { items: [] },
-    communicationData: communicationData || { items: [] },
-    incidentData: incidentData || { items: [] },
-    visitorData: visitorData || { items: [] },
-    transportData: transportData || { items: [] },
-    inspectionActionsData: inspectionActionsData || { items: [] },
-    isFallback: false,
+    maintenanceJobs: [
+      ...pickItems(maintenanceJobsRes, ["maintenance_jobs", "items"]).map(
+        mapMaintenanceJob
+      ),
+      ...pickItems(maintenanceRequestsRes, ["maintenance_requests", "items"]).map(
+        mapMaintenanceJob
+      ),
+    ],
+
+    environmentChecks: [
+      ...pickItems(environmentChecksRes, ["environment_checks", "items"]).map(
+        mapEnvironmentCheck
+      ),
+      ...pickItems(premisesChecksRes, ["premises_checks", "items"]).map(
+        mapEnvironmentCheck
+      ),
+      ...pickItems(safetyChecksRes, ["safety_checks", "items"]).map(
+        mapEnvironmentCheck
+      ),
+      ...pickItems(healthSafetyChecksRes, ["health_safety_checks", "items"]).map(
+        mapEnvironmentCheck
+      ),
+    ],
+
+    visitors: [
+      ...pickItems(visitorLogRes, ["visitor_log", "items"]).map(mapVisitor),
+      ...pickItems(homeVisitorsLogRes, ["home_visitors_log", "items"]).map(mapVisitor),
+      ...pickItems(homeVisitorsRes, ["home_visitors", "items"]).map(mapVisitor),
+    ],
+
+    vehicles: pickItems(vehiclesRes, ["home_vehicles", "vehicles", "items"]).map(
+      mapVehicle
+    ),
+
+    vehicleChecks: pickItems(vehicleChecksRes, ["vehicle_checks", "items"]).map(
+      mapVehicleCheck
+    ),
+
+    vehicleJourneys: [
+      ...pickItems(vehicleJourneysRes, ["vehicle_journeys", "items"]).map(
+        mapVehicleJourney
+      ),
+      ...pickItems(transportJourneysRes, ["transport_journeys", "items"]).map(
+        mapVehicleJourney
+      ),
+    ],
+
+    inventory: [
+      ...pickItems(inventoryRes, ["inventory_items", "items"]).map(mapInventoryItem),
+      ...pickItems(homeAssetsRes, ["home_assets", "items"]).map(mapInventoryItem),
+      ...pickItems(premisesAssetsRes, ["premises_assets", "items"]).map(mapInventoryItem),
+    ],
+
+    purchaseRequests: pickItems(
+      purchaseRequestsRes,
+      ["purchase_requests", "items"]
+    ).map(mapPurchaseRequest),
+
+    pettyCash: pickItems(pettyCashRes, ["petty_cash_transactions", "items"]).map(
+      mapPettyCash
+    ),
+
+    allowancePayments: pickItems(
+      allowancePaymentsRes,
+      ["allowance_payments", "items"]
+    ).map(mapAllowancePayment),
+
+    notifications: [
+      ...pickItems(notificationsRes, ["notifications", "notification_queue", "items"]).map(
+        mapOperationalNotification
+      ),
+      ...pickItems(operationalNotificationsRes, ["operational_notifications", "items"]).map(
+        mapOperationalNotification
+      ),
+      ...pickItems(homeNotificationsRes, ["home_notifications", "items"]).map(
+        mapOperationalNotification
+      ),
+    ],
+
+    operationsLog: pickItems(
+      operationsLogRes,
+      ["home_operations_log", "items"]
+    ).map(mapHomeOperationsLog),
+
+    operationalActions: pickItems(
+      operationalActionsRes,
+      ["home_operational_actions", "items"]
+    ).map(mapOperationalAction),
+
+    shiftLogs: [
+      ...pickItems(shiftLogsRes, ["shift_logs", "items"]).map(mapShiftLog),
+      ...pickItems(homeShiftLogsRes, ["home_shift_logs", "items"]).map(mapShiftLog),
+      ...pickItems(homeDailyLogsRes, ["home_daily_logs", "items"]).map(mapShiftLog),
+    ],
   };
 }
 
-export async function loadOperations() {
+/* -------------------------------- builders -------------------------------- */
+
+function buildOpenMaintenance(data) {
+  return sortNewest(
+    data.maintenanceJobs.filter(
+      (item) => !["completed", "cancelled", "resolved"].includes(lower(item.status))
+    ),
+    ["target_completion_date", "reported_date", "created_at", "updated_at"]
+  ).slice(0, 12);
+}
+
+function buildUrgentNotifications(data) {
+  return sortNewest(
+    data.notifications.filter((item) => {
+      const severity = lower(item.severity);
+      const status = lower(item.status);
+      return (
+        ["high", "critical", "urgent"].includes(severity) &&
+        !["resolved", "closed", "dismissed", "completed"].includes(status)
+      );
+    }),
+    ["due_at", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildOpenOperationalActions(data) {
+  return sortNewest(
+    data.operationalActions.filter(
+      (item) => !["completed", "cancelled", "closed"].includes(lower(item.status))
+    ),
+    ["due_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildFailedEnvironmentChecks(data) {
+  return sortNewest(
+    data.environmentChecks.filter((item) => {
+      const status = lower(item.status);
+      return (
+        item.action_required ||
+        ["action_required", "action required", "urgent_action", "unsafe", "fail"].includes(status)
+      );
+    }),
+    ["check_date", "next_due_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildVisitorActivity(data) {
+  return sortNewest(data.visitors, ["arrived_at", "created_at", "updated_at"]).slice(0, 8);
+}
+
+function buildDueVehicleChecks(data) {
+  return sortNewest(
+    data.vehicleChecks.filter((item) => {
+      const status = lower(item.status);
+      return (
+        ["action_required", "unsafe", "open", "warning"].includes(status) ||
+        isOverdue(item.check_date)
+      );
+    }),
+    ["check_date", "created_at", "updated_at"]
+  ).slice(0, 8);
+}
+
+function buildRecentFinance(data) {
+  return sortNewest(
+    [...data.purchaseRequests, ...data.pettyCash, ...data.allowancePayments],
+    ["requested_date", "transaction_date", "payment_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildRecentShiftLogs(data) {
+  return sortNewest(
+    [...data.shiftLogs, ...data.operationsLog],
+    ["shift_date", "log_date", "created_at", "updated_at"]
+  ).slice(0, 10);
+}
+
+function buildTimeline(data) {
+  return sortNewest(
+    [
+      ...data.maintenanceJobs,
+      ...data.environmentChecks,
+      ...data.visitors,
+      ...data.vehicleChecks,
+      ...data.vehicleJourneys,
+      ...data.purchaseRequests,
+      ...data.pettyCash,
+      ...data.allowancePayments,
+      ...data.notifications,
+      ...data.operationalActions,
+      ...data.operationsLog,
+      ...data.shiftLogs,
+    ],
+    [
+      "reported_date",
+      "check_date",
+      "arrived_at",
+      "journey_date",
+      "requested_date",
+      "transaction_date",
+      "payment_date",
+      "log_date",
+      "shift_date",
+      "due_at",
+      "created_at",
+      "updated_at",
+    ]
+  ).slice(0, 25);
+}
+
+/* -------------------------------- public -------------------------------- */
+
+export async function loadCurrentView() {
   if (!els.viewContent) return;
 
   const homeId = getHomeId();
 
   if (!homeId) {
-    renderNoHomeContext();
+    els.viewContent.innerHTML = renderEmpty(
+      "No home selected",
+      "Select a home to view operational activity."
+    );
     return;
   }
 
-  renderLoadingState();
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+    </div>
+  `;
 
   try {
-    const {
-      summaryData,
-      teamData,
-      taskData,
-      shiftData,
-      absenceData,
-      maintenanceData,
-      communicationData,
-      incidentData,
-      visitorData,
-      transportData,
-      inspectionActionsData,
-      isFallback,
-    } = await fetchDataset(homeId);
+    const data = await fetchAll(homeId);
 
-    const summary = normaliseSummary(summaryData);
-    const youngPeople = normaliseYoungPeople(summaryData);
+    const openMaintenance = buildOpenMaintenance(data);
+    const urgentNotifications = buildUrgentNotifications(data);
+    const openOperationalActions = buildOpenOperationalActions(data);
+    const failedEnvironmentChecks = buildFailedEnvironmentChecks(data);
+    const visitorActivity = buildVisitorActivity(data);
+    const dueVehicleChecks = buildDueVehicleChecks(data);
+    const recentFinance = buildRecentFinance(data);
+    const recentShiftLogs = buildRecentShiftLogs(data);
+    const timeline = buildTimeline(data);
 
-    const teamItems = sortNewestFirst(normaliseTeamItems(teamData), [
-      "updated_at",
-      "created_at",
-    ]);
-
-    const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
-      "due_date",
-      "updated_at",
-      "created_at",
-    ]);
-    const openTasks = taskItems.filter((item) => !item.completed);
-
-    const shiftItems = sortSoonestFirst(normaliseShiftItems(shiftData), [
-      "date",
-      "updated_at",
-      "created_at",
-    ]);
-    const liveShifts = shiftItems.slice(0, 8);
-
-    const absenceItems = sortNewestFirst(normaliseAbsenceItems(absenceData), [
-      "start_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 6);
-
-    const maintenanceItems = sortSoonestFirst(
-      normaliseMaintenanceItems(maintenanceData),
-      ["due_date", "reported_date", "updated_at", "created_at"]
-    ).slice(0, 6);
-
-    const communicationItems = sortNewestFirst(
-      normaliseCommunicationItems(communicationData),
-      ["contact_datetime", "updated_at", "created_at"]
-    ).slice(0, 6);
-
-    const incidentItems = sortNewestFirst(normaliseIncidentItems(incidentData), [
-      "date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 6);
-
-    const visitorItems = sortSoonestFirst(normaliseVisitorItems(visitorData), [
-      "visit_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 4);
-
-    const transportItems = sortSoonestFirst(normaliseTransportItems(transportData), [
-      "date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 4);
-
-    const inspectionActions = sortSoonestFirst(
-      normaliseInspectionActions(inspectionActionsData),
-      ["due_date", "updated_at", "created_at"]
-    ).slice(0, 6);
-
-    const urgentIncidents = incidentItems.filter((item) =>
-      ["high", "critical"].includes(String(item.severity || "").toLowerCase()) ||
-      ["review_due", "overdue", "escalated", "open"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    );
-
-    const urgentMaintenance = maintenanceItems.filter((item) =>
-      ["high", "critical"].includes(String(item.priority || "").toLowerCase()) ||
-      ["open", "overdue", "blocked"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
-    );
-
-    const topStats = buildTopStats({
-      youngPeople,
-      openTasks,
-      liveShifts,
-      activeIncidents: incidentItems,
-      absences: absenceItems,
-      urgentMaintenance,
-    });
-
-    const progressCards = buildOperationsKpis({
-      tasks: taskItems,
-      shifts: shiftItems,
-      incidents: incidentItems,
-      maintenance: maintenanceItems,
-      absences: absenceItems,
-      inspectionActions,
-    });
-
-    const priorityItems = buildPriorityItems({
-      openTasks,
-      urgentIncidents,
-      absences: absenceItems,
-      urgentMaintenance,
-      inspectionActions,
-    });
-
-    const miniMetrics = buildMiniMetrics({
-      openTasks,
-      liveShifts,
-      recentCommunications: communicationItems,
-      visitors: visitorItems,
-      transport: transportItems,
-      incidents: incidentItems,
-    });
-
-    const homeName =
-      summary.home_name ||
-      summaryData?.home?.home_name ||
-      summaryData?.home?.name ||
-      state.currentUser?.home_name ||
-      state.currentUser?.homeName ||
-      `Home ${homeId}`;
-
-    els.viewContent.innerHTML = renderOperationsHtml({
-      homeName,
-      topStats,
-      progressCards,
-      priorityItems,
-      youngPeople,
-      openTasks: openTasks.slice(0, 8),
-      liveShifts,
-      absenceItems,
-      incidentItems,
-      maintenanceItems,
-      communicationItems,
-      visitorItems,
-      transportItems,
-      inspectionActions,
-      miniMetrics,
-    });
-
-    const nextEvent =
-      inspectionActions[0]?.due_date ||
-      openTasks[0]?.due_date ||
-      liveShifts[0]?.date ||
+    const nextOpenAction =
+      openOperationalActions.find((item) => item.due_date) ||
+      openMaintenance.find((item) => item.target_completion_date) ||
       null;
 
-    const latestRecord =
-      communicationItems[0]?.contact_datetime ||
-      incidentItems[0]?.date ||
-      maintenanceItems[0]?.reported_date ||
-      null;
+    els.viewContent.innerHTML = renderWorkspace({
+      openMaintenance,
+      urgentNotifications,
+      openOperationalActions,
+      failedEnvironmentChecks,
+      visitorActivity,
+      dueVehicleChecks,
+      recentFinance,
+      recentShiftLogs,
+      timeline,
+    });
 
     updateWorkspaceSummaryStrip({
-      today: isFallback
-        ? `${youngPeople.length} children • ${openTasks.length} open actions • demo preview`
-        : `${youngPeople.length} children • ${openTasks.length} open actions`,
-      nextEvent: nextEvent
-        ? `Next event ${formatDateTime(nextEvent)}`
-        : "No immediate event loaded",
-      lastRecord: latestRecord
-        ? `Latest update ${formatDateTime(latestRecord)}`
-        : "No recent operational record loaded",
-      openActions: `${openTasks.length} open • ${inspectionActions.length} inspection-linked`,
+      today: `${openMaintenance.length} maintenance items open`,
+      nextEvent: nextOpenAction
+        ? formatDate(nextOpenAction.due_date || nextOpenAction.target_completion_date)
+        : "No due action",
+      lastRecord: timeline[0]
+        ? formatDate(
+            timeline[0].reported_date ||
+              timeline[0].check_date ||
+              timeline[0].arrived_at ||
+              timeline[0].transaction_date ||
+              timeline[0].payment_date ||
+              timeline[0].log_date ||
+              timeline[0].shift_date ||
+              timeline[0].created_at
+          )
+        : "None",
+      openActions: `${openOperationalActions.length} operational actions open`,
     });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
-    console.error("[operations] load failed", error);
-    renderErrorState(error?.message || "The operations view could not be loaded.");
+    console.error(error);
+    els.viewContent.innerHTML = renderEmpty(
+      "Unable to load operations",
+      "Something went wrong while loading operational records."
+    );
   }
 }
