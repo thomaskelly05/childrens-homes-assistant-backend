@@ -120,8 +120,38 @@ function sortSoonest(items = [], dateKey) {
   });
 }
 
+function dedupeBy(items = [], keyBuilder) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = keyBuilder(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function hasLiveData(data = {}) {
+  return (
+    data.qualityAudits.length ||
+    data.qualityAuditFindings.length ||
+    data.qualityAuditActions.length ||
+    data.complianceItems.length ||
+    data.reg44Visits.length ||
+    data.reg44Findings.length ||
+    data.reg44Actions.length ||
+    data.reg45Reviews.length ||
+    data.reg45Actions.length ||
+    data.inspectionScores.length ||
+    data.inspectionSectionScores.length ||
+    data.inspectionReasons.length ||
+    data.inspectionLines.length ||
+    data.inspectionActions.length ||
+    data.managerReviewQueue.length
+  );
+}
+
 function badgeClass(value) {
-  const v = lower(value);
+  const v = lower(value).replaceAll(" ", "_");
 
   if (
     [
@@ -131,10 +161,8 @@ function badgeClass(value) {
       "overdue",
       "inadequate",
       "requires_action",
-      "requires action",
       "open",
       "not_started",
-      "not started",
       "due",
       "problematic",
       "red",
@@ -145,7 +173,9 @@ function badgeClass(value) {
       "stale",
       "missing",
       "critical_action",
-      "critical action",
+      "expired",
+      "escalated",
+      "failed",
     ].includes(v)
   ) {
     return "badge badge-danger";
@@ -156,20 +186,20 @@ function badgeClass(value) {
       "medium",
       "warning",
       "in_progress",
-      "in progress",
       "pending",
       "planned",
       "draft",
       "amber",
       "awaiting_review",
-      "awaiting review",
       "monitor",
       "submitted",
       "scheduled",
       "active",
       "under_review",
-      "under review",
       "ri",
+      "review_due",
+      "awaiting_approval",
+      "requires_improvement",
     ].includes(v)
   ) {
     return "badge badge-warning";
@@ -190,13 +220,336 @@ function badgeClass(value) {
       "ok",
       "satisfied",
       "up_to_date",
-      "up to date",
+      "current",
+      "compliant",
     ].includes(v)
   ) {
     return "badge badge-success";
   }
 
   return "badge";
+}
+
+/* ------------------------------ demo fallback ----------------------------- */
+
+function buildFallbackData(homeId) {
+  const now = new Date();
+
+  const plusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  const minusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  return {
+    qualityAudits: [
+      mapQualityAudit({
+        id: "qa-1",
+        home_id: homeId,
+        audit_type: "monthly_quality_audit",
+        audit_title: "Monthly quality audit",
+        audit_date: minusDays(10),
+        overall_outcome: "good",
+        summary:
+          "Overall practice remains stable with clear routines, improved recording consistency and some gaps in review timeliness.",
+        strengths:
+          "Daily recording quality improved. Team oversight is stronger. Safer escalation pathways are evident.",
+        concerns:
+          "Two review-sensitive actions remain open and one compliance item is overdue.",
+        recommendations:
+          "Close overdue action, refresh supervision follow-up, and improve document review discipline.",
+        status: "completed",
+        created_at: minusDays(10),
+        updated_at: minusDays(9),
+      }),
+    ],
+
+    qualityAuditFindings: [
+      mapQualityAuditFinding({
+        id: "qf-1",
+        audit_id: "qa-1",
+        home_id: homeId,
+        finding_type: "concern",
+        priority: "high",
+        title: "Review dates not consistently closed",
+        details: "A small number of review-linked items remained open beyond target date.",
+        action_required: true,
+        created_at: minusDays(9),
+      }),
+      mapQualityAuditFinding({
+        id: "qf-2",
+        audit_id: "qa-1",
+        home_id: homeId,
+        finding_type: "strength",
+        priority: "medium",
+        title: "Improved recording consistency",
+        details: "Daily records show stronger chronology and clearer professional language.",
+        action_required: false,
+        created_at: minusDays(8),
+      }),
+    ],
+
+    qualityAuditActions: [
+      mapQualityAuditAction({
+        id: "qaa-1",
+        quality_audit_id: "qa-1",
+        home_id: homeId,
+        action_title: "Close overdue review items",
+        action_description: "Resolve overdue compliance and document review items.",
+        priority: "high",
+        due_date: plusDays(2),
+        status: "open",
+        created_at: minusDays(7),
+        updated_at: minusDays(6),
+      }),
+      mapQualityAuditAction({
+        id: "qaa-2",
+        quality_audit_id: "qa-1",
+        home_id: homeId,
+        action_title: "Refresh manager oversight tracker",
+        action_description: "Tighten weekly oversight of open quality actions.",
+        priority: "medium",
+        due_date: plusDays(6),
+        status: "in_progress",
+        created_at: minusDays(6),
+        updated_at: minusDays(5),
+      }),
+    ],
+
+    complianceItems: [
+      mapComplianceItem({
+        id: "ci-1",
+        home_id: homeId,
+        title: "Statement of purpose review overdue",
+        due_date: minusDays(3),
+        status: "overdue",
+        severity: "high",
+        escalation_level: 2,
+        created_at: minusDays(12),
+        updated_at: minusDays(3),
+      }),
+      mapComplianceItem({
+        id: "ci-2",
+        home_id: homeId,
+        title: "Annex A update due soon",
+        due_date: plusDays(4),
+        status: "due_soon",
+        severity: "medium",
+        escalation_level: 1,
+        created_at: minusDays(5),
+        updated_at: minusDays(2),
+      }),
+    ],
+
+    reg44Visits: [
+      mapReg44Visit({
+        id: "r44-1",
+        home_id: homeId,
+        visit_date: minusDays(14),
+        independent_person_name: "Jane Porter",
+        overall_summary:
+          "Visit noted warm interactions and predictable routines, with a recommendation to improve evidence of action closure.",
+        recommendations_summary:
+          "Strengthen tracking of action completion and documentary evidence.",
+        created_at: minusDays(14),
+        updated_at: minusDays(13),
+      }),
+    ],
+
+    reg44Findings: [
+      mapReg44Finding({
+        id: "r44f-1",
+        reg44_visit_id: "r44-1",
+        finding_type: "recommendation",
+        judgement_area: "leadership_and_management",
+        finding_text:
+          "Action tracking requires greater consistency to evidence completion.",
+        priority: "medium",
+        requires_action: true,
+        created_at: minusDays(13),
+      }),
+    ],
+
+    reg44Actions: [
+      mapReg44Action({
+        id: "r44a-1",
+        reg44_finding_id: "r44f-1",
+        home_id: homeId,
+        action_title: "Evidence completion of Reg 44 actions",
+        action_description: "Upload closure evidence and confirm review of outstanding items.",
+        due_date: plusDays(3),
+        status: "open",
+        created_at: minusDays(12),
+      }),
+    ],
+
+    reg45Reviews: [
+      mapReg45Review({
+        id: "r45-1",
+        home_id: homeId,
+        review_period_start: minusDays(90),
+        review_period_end: minusDays(1),
+        review_status: "approved",
+        overall_quality_summary:
+          "Service quality remains broadly positive with improved consistency in practice and ongoing attention required around tracking and review completion.",
+        action_plan_summary:
+          "Action plan includes documentation freshness, action closure, and sharper audit follow-through.",
+        created_at: minusDays(2),
+        updated_at: minusDays(1),
+      }),
+    ],
+
+    reg45Actions: [
+      mapReg45Action({
+        id: "r45a-1",
+        reg45_review_id: "r45-1",
+        home_id: homeId,
+        action_title: "Complete quarterly action plan review",
+        action_description: "Check progress across all open quality actions and update evidence.",
+        due_date: plusDays(5),
+        priority: "medium",
+        status: "open",
+        created_at: minusDays(1),
+      }),
+    ],
+
+    inspectionScores: [
+      mapInspectionScore({
+        id: "is-1",
+        home_id: homeId,
+        period_start: minusDays(30),
+        period_end: minusDays(1),
+        overall_band: "good",
+        overall_score: 73.4,
+        confidence_score: 78.2,
+        data_completeness_score: 80.1,
+        evidence_freshness_score: 69.8,
+        limiting_judgement_triggered: false,
+        narrative_summary:
+          "Current evidence suggests a good profile overall, with leadership strengthened but action closure still affecting readiness confidence.",
+        strengths_summary:
+          "Safer routines, stronger chronology, improved leadership grip.",
+        concerns_summary:
+          "Some evidence freshness and action completion gaps remain.",
+        created_at: minusDays(1),
+        updated_at: minusDays(1),
+      }),
+    ],
+
+    inspectionSectionScores: [
+      mapInspectionSectionScore({
+        id: "iss-1",
+        inspection_score_id: "is-1",
+        section_code: "leadership_management",
+        section_name: "Leadership and management",
+        score_value: 71.2,
+        score_band: "good",
+        confidence_score: 76.0,
+        summary_text: "Leadership is stable but some actions remain live.",
+        strengths_text: "Clear oversight and better quality assurance rhythm.",
+        concerns_text: "Need stronger action closure evidence.",
+        created_at: minusDays(1),
+      }),
+      mapInspectionSectionScore({
+        id: "iss-2",
+        inspection_score_id: "is-1",
+        section_code: "helped_protected",
+        section_name: "Helped and protected",
+        score_value: 75.8,
+        score_band: "good",
+        confidence_score: 80.5,
+        summary_text: "Safeguarding systems are consistent and visible.",
+        strengths_text: "Risk awareness and escalation are clear.",
+        concerns_text: "",
+        created_at: minusDays(1),
+      }),
+    ],
+
+    inspectionReasons: [
+      mapInspectionReason({
+        id: "ir-1",
+        inspection_score_id: "is-1",
+        section_score_id: "iss-1",
+        reason_type: "concern",
+        priority: 1,
+        title: "Action closure evidence is inconsistent",
+        description:
+          "A small number of actions remain live without clear closure evidence.",
+        impact_weight: 8.4,
+        created_at: minusDays(1),
+      }),
+    ],
+
+    inspectionLines: [
+      mapInspectionLineOfEnquiry({
+        id: "ile-1",
+        inspection_score_id: "is-1",
+        home_id: homeId,
+        priority: "high",
+        line_of_enquiry: "How consistently are improvement actions tracked to completion?",
+        rationale:
+          "Recent quality and Reg 44 activity indicates action closure evidence is variable.",
+        status: "open",
+        due_date: plusDays(4),
+        created_at: minusDays(1),
+      }),
+    ],
+
+    inspectionActions: [
+      mapInspectionAction({
+        id: "ia-1",
+        inspection_score_id: "is-1",
+        line_of_enquiry_id: "ile-1",
+        home_id: homeId,
+        action_title: "Evidence action completion in quality tracker",
+        action_description:
+          "Update quality tracker with closure notes and linked evidence.",
+        action_type: "quality_improvement",
+        priority: "high",
+        due_date: plusDays(2),
+        status: "open",
+        evidence_required: "Closure note and linked documentary evidence.",
+        created_at: minusDays(1),
+      }),
+      mapInspectionAction({
+        id: "ia-2",
+        inspection_score_id: "is-1",
+        line_of_enquiry_id: "ile-1",
+        home_id: homeId,
+        action_title: "Refresh readiness evidence pack",
+        action_description:
+          "Bring freshness of evidence pack up to date for current cycle.",
+        action_type: "inspection_readiness",
+        priority: "medium",
+        due_date: plusDays(7),
+        status: "planned",
+        created_at: minusDays(1),
+      }),
+    ],
+
+    managerReviewQueue: [
+      mapManagerReviewRecord({
+        id: "mrq-1",
+        home_id: homeId,
+        source_table: "quality_audit_actions",
+        source_id: "qaa-1",
+        record_type: "quality_action",
+        workflow_status: "awaiting_review",
+        priority: "high",
+        due_date: plusDays(1),
+        review_reason: "Manager sign-off needed on closure evidence.",
+        created_at: minusDays(1),
+      }),
+    ],
+  };
 }
 
 /* -------------------------------- mappers -------------------------------- */
@@ -238,6 +591,7 @@ function mapQualityAuditFinding(record = {}) {
     action_required: toBool(record.action_required),
     linked_record_type: record.linked_record_type || "",
     linked_record_id: record.linked_record_id || null,
+    summary: record.details || "Audit finding recorded.",
     record_type: "quality_audit_finding",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -273,6 +627,7 @@ function mapComplianceItem(record = {}) {
     id: record.id,
     provider_id: record.provider_id || null,
     young_person_id: record.young_person_id || null,
+    home_id: record.home_id || null,
     rule_id: record.rule_id || null,
     record_type_name: record.record_type || "",
     source_table: record.source_table || "",
@@ -468,6 +823,7 @@ function mapInspectionReason(record = {}) {
     source_table: record.source_table || "",
     source_record_id: record.source_record_id || null,
     evidence_fact_id: record.evidence_fact_id || null,
+    summary: record.description || "Inspection reason recorded.",
     record_type: "inspection_reason",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -795,6 +1151,32 @@ function renderCardList(items = [], emptyTitle, emptyMessage) {
   return `<div class="record-card-list">${items.map(renderCard).join("")}</div>`;
 }
 
+function renderPriorityList(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No urgent quality issues are showing right now.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="priority-list">
+      ${items
+        .slice(0, 6)
+        .map(
+          (item) => `
+            <article class="priority-item">
+              <strong>${safeText(item.title || "Quality issue")}</strong>
+              <p>${safeText(item.summary || "Needs attention.")}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderTimeline(items = []) {
   if (!items.length) {
     return renderEmpty(
@@ -857,6 +1239,8 @@ function renderWorkspace(payload) {
     openLinesOfEnquiry,
     recentTimeline,
     recentFindings,
+    priorityItems,
+    isFallback,
   } = payload;
 
   return `
@@ -868,6 +1252,11 @@ function renderWorkspace(payload) {
           <p class="overview-panel-subtitle">
             Oversight of home quality activity, open actions, inspection pressure and management review needs.
           </p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live quality endpoints are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -912,6 +1301,11 @@ function renderWorkspace(payload) {
         </div>
 
         <aside>
+          ${renderSection(
+            "Needs attention",
+            renderPriorityList(priorityItems)
+          )}
+
           ${renderSection(
             "Open quality audit actions",
             renderCardList(
@@ -1065,6 +1459,19 @@ async function fetchAll(homeId) {
   };
 }
 
+async function fetchDataset(homeId) {
+  const live = await fetchAll(homeId);
+
+  if (hasLiveData(live)) {
+    return { ...live, isFallback: false };
+  }
+
+  return {
+    ...buildFallbackData(homeId),
+    isFallback: true,
+  };
+}
+
 /* ------------------------------- selectors ------------------------------- */
 
 function buildOverdueCompliance(data) {
@@ -1166,22 +1573,88 @@ function buildRecentFindings(data) {
   ).slice(0, 10);
 }
 
+function buildPriorityItems(data) {
+  const items = [];
+
+  buildUrgentInspectionActions(data)
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Inspection action",
+        summary: item.due_date
+          ? `${item.summary || "Inspection action open."} Due ${formatDate(item.due_date)}`
+          : item.summary || "Inspection action open.",
+      });
+    });
+
+  buildOverdueCompliance(data)
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Compliance item",
+        summary: item.due_date
+          ? `Overdue since ${formatDate(item.due_date)}`
+          : item.summary || "Compliance item overdue.",
+      });
+    });
+
+  buildManagerReviewItems(data)
+    .filter((item) => ["high", "critical"].includes(lower(item.priority)))
+    .slice(0, 1)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Manager review item",
+        summary: item.summary || item.review_reason || "Manager review needed.",
+      });
+    });
+
+  buildReg44OpenActions(data)
+    .slice(0, 1)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Reg 44 action",
+        summary: item.summary || "Reg 44 action still open.",
+      });
+    });
+
+  buildReg45OpenActions(data)
+    .slice(0, 1)
+    .forEach((item) => {
+      items.push({
+        title: item.title || "Reg 45 action",
+        summary: item.summary || "Reg 45 action still open.",
+      });
+    });
+
+  if (!items.length) {
+    items.push({
+      title: "No major quality pressure",
+      summary: "Quality and readiness are not currently surfacing urgent issues.",
+    });
+  }
+
+  return items.slice(0, 6);
+}
+
 function buildTimeline(data) {
   return sortNewest(
-    [
-      ...data.qualityAudits,
-      ...data.qualityAuditActions,
-      ...data.complianceItems,
-      ...data.reg44Visits,
-      ...data.reg44Actions,
-      ...data.reg45Reviews,
-      ...data.reg45Actions,
-      ...data.inspectionScores,
-      ...data.inspectionSectionScores,
-      ...data.inspectionLines,
-      ...data.inspectionActions,
-      ...data.managerReviewQueue,
-    ],
+    dedupeBy(
+      [
+        ...data.qualityAudits,
+        ...data.qualityAuditActions,
+        ...data.complianceItems,
+        ...data.reg44Visits,
+        ...data.reg44Actions,
+        ...data.reg45Reviews,
+        ...data.reg45Actions,
+        ...data.inspectionScores,
+        ...data.inspectionSectionScores,
+        ...data.inspectionLines,
+        ...data.inspectionActions,
+        ...data.managerReviewQueue,
+      ],
+      (item) => `${item.record_type}:${item.id}:${item.title || ""}:${item.created_at || ""}`
+    ),
     [
       "due_date",
       "audit_date",
@@ -1195,20 +1668,26 @@ function buildTimeline(data) {
   ).slice(0, 25);
 }
 
-/* -------------------------------- public -------------------------------- */
+/* ------------------------------ ui states -------------------------------- */
 
-export async function loadCurrentView() {
+function renderNoHomeContext() {
   if (!els.viewContent) return;
 
-  const homeId = getHomeId();
+  els.viewContent.innerHTML = renderEmpty(
+    "No home selected",
+    "Select a home to view quality, compliance and readiness information."
+  );
 
-  if (!homeId) {
-    els.viewContent.innerHTML = renderEmpty(
-      "No home selected",
-      "Select a home to view quality, compliance and readiness information."
-    );
-    return;
-  }
+  updateWorkspaceSummaryStrip({
+    today: "No quality context",
+    nextEvent: "No due quality action",
+    lastRecord: "No quality data",
+    openActions: "No quality actions loaded",
+  });
+}
+
+function renderLoadingState() {
+  if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
     <div class="loading-state">
@@ -1216,8 +1695,50 @@ export async function loadCurrentView() {
     </div>
   `;
 
+  updateWorkspaceSummaryStrip({
+    today: "Loading quality",
+    nextEvent: "Checking actions",
+    lastRecord: "Loading latest quality record",
+    openActions: "Loading quality actions",
+  });
+}
+
+function renderErrorState(message) {
+  if (!els.viewContent) return;
+
+  els.viewContent.innerHTML = renderEmpty(
+    "Unable to load quality",
+    message || "Something went wrong while loading quality and readiness records."
+  );
+
+  updateWorkspaceSummaryStrip({
+    today: "Quality unavailable",
+    nextEvent: "No due quality action",
+    lastRecord: "No quality data",
+    openActions: "Check quality routes",
+  });
+}
+
+/* -------------------------------- public -------------------------------- */
+
+export async function loadQuality() {
+  return loadCurrentView();
+}
+
+export async function loadCurrentView() {
+  if (!els.viewContent) return;
+
+  const homeId = getHomeId();
+
+  if (!homeId) {
+    renderNoHomeContext();
+    return;
+  }
+
+  renderLoadingState();
+
   try {
-    const data = await fetchAll(homeId);
+    const data = await fetchDataset(homeId);
 
     const overdueCompliance = buildOverdueCompliance(data);
     const openQualityActions = buildOpenQualityActions(data);
@@ -1230,6 +1751,7 @@ export async function loadCurrentView() {
     const openLinesOfEnquiry = buildOpenLinesOfEnquiry(data);
     const recentFindings = buildRecentFindings(data);
     const recentTimeline = buildTimeline(data);
+    const priorityItems = buildPriorityItems(data);
 
     els.viewContent.innerHTML = renderWorkspace({
       overdueCompliance,
@@ -1243,6 +1765,8 @@ export async function loadCurrentView() {
       openLinesOfEnquiry,
       recentTimeline,
       recentFindings,
+      priorityItems,
+      isFallback: data.isFallback,
     });
 
     const latestInspectionRecord = latestInspection[0] || null;
@@ -1255,31 +1779,39 @@ export async function loadCurrentView() {
       null;
 
     updateWorkspaceSummaryStrip({
-      today: latestInspectionRecord
+      today: data.isFallback
+        ? `${overdueCompliance.length} quality issues • preview mode`
+        : latestInspectionRecord
         ? `${safeText(titleCase(latestInspectionRecord.overall_band || "unknown"))} readiness`
         : `${overdueCompliance.length} compliance items overdue`,
       nextEvent: nextPriorityAction?.due_date
-        ? formatDate(nextPriorityAction.due_date)
+        ? `Due ${formatDate(nextPriorityAction.due_date)}`
         : "No due quality action",
       lastRecord: recentTimeline[0]
-        ? formatDate(
+        ? `Latest quality activity ${formatDate(
             recentTimeline[0].audit_date ||
               recentTimeline[0].visit_date ||
               recentTimeline[0].review_period_end ||
               recentTimeline[0].period_end ||
               recentTimeline[0].created_at
-          )
-        : "None",
-      openActions: `${openQualityActions.length + reg44OpenActions.length + reg45OpenActions.length + urgentInspectionActions.length} quality actions open`,
+          )}`
+        : data.isFallback
+        ? "Preview quality data loaded"
+        : "No recent quality activity",
+      openActions: `${
+        openQualityActions.length +
+        reg44OpenActions.length +
+        reg45OpenActions.length +
+        urgentInspectionActions.length
+      } quality actions open`,
     });
 
     await onAssistantScopeChanged();
     renderAssistantControllerPanels();
   } catch (error) {
-    console.error(error);
-    els.viewContent.innerHTML = renderEmpty(
-      "Unable to load quality",
-      "Something went wrong while loading quality and readiness records."
+    console.error("[quality] load failed", error);
+    renderErrorState(
+      error?.message || "Something went wrong while loading quality and readiness records."
     );
   }
 }
