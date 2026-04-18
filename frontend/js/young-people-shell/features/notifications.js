@@ -18,11 +18,6 @@ function toArray(value, fallback = []) {
   return [];
 }
 
-function toNumber(value, fallback = 0) {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : fallback;
-}
-
 function toBool(value) {
   return Boolean(value);
 }
@@ -126,6 +121,7 @@ function badgeClass(value) {
       "success",
       "green",
       "done",
+      "active",
     ].includes(v)
   ) {
     return "badge badge-success";
@@ -170,11 +166,23 @@ function sortNewest(items = [], keys = []) {
   });
 }
 
-function sortSoonest(items = [], key) {
+function sortSoonest(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aTime = a?.[key] ? new Date(a[key]).getTime() : Number.POSITIVE_INFINITY;
-    const bTime = b?.[key] ? new Date(b[key]).getTime() : Number.POSITIVE_INFINITY;
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    const aTime = aValue ? new Date(aValue).getTime() : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? new Date(bValue).getTime() : Number.POSITIVE_INFINITY;
     return aTime - bTime;
+  });
+}
+
+function dedupeBy(items = [], keyFn) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = keyFn(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 
@@ -328,10 +336,7 @@ function renderStatCard(label, value, hint = "") {
 function renderNotificationCard(item = {}) {
   const status = item.status || (item.is_read ? "read" : "unread");
   const severity = item.severity || "";
-  const dueLabel =
-    item.due_at || item.due_date || item.scheduled_for
-      ? formatDateTime(item.due_at || item.due_date || item.scheduled_for, "No date")
-      : "";
+  const dueValue = item.due_at || item.due_date || item.scheduled_for || null;
 
   return `
     <article
@@ -381,12 +386,12 @@ function renderNotificationCard(item = {}) {
           }
 
           ${
-            dueLabel
+            dueValue
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Due</div>
-                  <div class="details-grid-value ${isOverdue(item.due_at || item.due_date) ? "text-danger" : ""}">
-                    ${safeText(dueLabel)}
+                  <div class="details-grid-value ${isOverdue(dueValue) ? "text-danger" : ""}">
+                    ${safeText(formatDateTime(dueValue, "No date"))}
                   </div>
                 </div>
               `
@@ -444,6 +449,7 @@ function renderTimeline(items = []) {
             item.resolved_at ||
             item.acknowledged_at ||
             item.read_at ||
+            item.scheduled_for ||
             item.created_at;
 
           return `
@@ -583,11 +589,17 @@ async function fetchAll(homeId) {
     safeGet(`/homes/${homeId}/home-notifications`),
   ]);
 
+  const mergedNotifications = [
+    ...pickItems(notificationsRes, ["notifications", "items"]).map(mapNotification),
+    ...pickItems(notificationsCentreRes, ["notifications_centre", "notifications", "items"]).map(mapNotification),
+  ];
+
   return {
-    notifications: [
-      ...pickItems(notificationsRes, ["notifications", "items"]).map(mapNotification),
-      ...pickItems(notificationsCentreRes, ["notifications_centre", "items"]).map(mapNotification),
-    ],
+    notifications: dedupeBy(
+      mergedNotifications,
+      (item) =>
+        `${item.record_type}:${item.id}:${item.title}:${item.created_at}`
+    ),
     notificationQueue: pickItems(
       notificationQueueRes,
       ["notification_queue", "items"]
@@ -625,11 +637,12 @@ function buildOverdueNotifications(data) {
   return sortSoonest(
     combined.filter((item) => {
       const status = lower(item.status);
-      const overdue = isOverdue(item.due_at || item.due_date);
+      const dueValue = item.due_at || item.due_date || null;
+      const overdue = isOverdue(dueValue);
       const urgent = ["critical", "high", "urgent"].includes(lower(item.severity));
       return !["resolved", "closed", "dismissed", "completed"].includes(status) && (overdue || urgent);
     }),
-    "due_at"
+    ["due_at", "due_date", "created_at"]
   ).slice(0, 12);
 }
 
@@ -649,7 +662,7 @@ function buildQueuedNotifications(data) {
       const status = lower(item.status);
       return !["sent", "cancelled", "failed", "read"].includes(status);
     }),
-    "scheduled_for"
+    ["scheduled_for", "created_at"]
   ).slice(0, 10);
 }
 
@@ -692,6 +705,10 @@ function buildTimeline(data) {
 }
 
 /* -------------------------------- public -------------------------------- */
+
+export async function loadNotifications() {
+  return loadCurrentView();
+}
 
 export async function loadCurrentView() {
   if (!els.viewContent) return;
@@ -747,6 +764,7 @@ export async function loadCurrentView() {
             latestActivity.sent_at ||
               latestActivity.resolved_at ||
               latestActivity.read_at ||
+              latestActivity.scheduled_for ||
               latestActivity.created_at
           )
         : "None",
