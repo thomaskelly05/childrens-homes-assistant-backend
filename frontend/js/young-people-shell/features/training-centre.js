@@ -139,7 +139,11 @@ function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue) - toTime(bValue);
+
+    const aTime = aValue ? toTime(aValue) : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? toTime(bValue) : Number.POSITIVE_INFINITY;
+
+    return aTime - bTime;
   });
 }
 
@@ -155,11 +159,13 @@ function hasUsableData(data = {}) {
   if (!data || typeof data !== "object") return false;
   if (Array.isArray(data.items) && data.items.length > 0) return true;
   if (Array.isArray(data.training) && data.training.length > 0) return true;
-  if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
+  if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0)
+    return true;
   if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
   if (Array.isArray(data.records) && data.records.length > 0) return true;
   if (data.summary && typeof data.summary === "object") return true;
-  if (data.training_summary && typeof data.training_summary === "object") return true;
+  if (data.training_summary && typeof data.training_summary === "object")
+    return true;
   return false;
 }
 
@@ -200,22 +206,26 @@ function normaliseTrainingItems(data = {}) {
 }
 
 function normaliseComplianceItems(data = {}) {
-  return toArray(data.items, [data.compliance_items, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "compliance_item",
-    title: item.title || item.training_name || "Compliance item",
-    staff_member: item.staff_member || item.name || "",
-    status: item.status || "recorded",
-    severity: item.severity || "",
-    due_date: item.due_date || item.review_date || null,
-    summary:
-      item.summary ||
-      item.notes ||
-      (item.due_date ? `Due ${formatDate(item.due_date)}` : "Compliance item."),
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
+  return toArray(data.items, [data.compliance_items, data.records]).map(
+    (item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_type: item.record_type || "compliance_item",
+      title: item.title || item.training_name || "Compliance item",
+      staff_member: item.staff_member || item.name || "",
+      status: item.status || "recorded",
+      severity: item.severity || "",
+      due_date: item.due_date || item.review_date || null,
+      summary:
+        item.summary ||
+        item.notes ||
+        (item.due_date
+          ? `Due ${formatDate(item.due_date)}`
+          : "Compliance item."),
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })
+  );
 }
 
 function normaliseTaskItems(data = {}) {
@@ -312,21 +322,33 @@ function buildProgressCards(trainingItems = []) {
       value: `${currentPercent}%`,
       percent: currentPercent,
       tone:
-        currentPercent >= 85 ? "success" : currentPercent >= 70 ? "warning" : "danger",
+        currentPercent >= 85
+          ? "success"
+          : currentPercent >= 70
+          ? "warning"
+          : "danger",
     },
     {
       label: "Due soon",
       value: `${dueSoonPercent}%`,
       percent: dueSoonPercent,
       tone:
-        dueSoonPercent <= 10 ? "success" : dueSoonPercent <= 20 ? "warning" : "danger",
+        dueSoonPercent <= 10
+          ? "success"
+          : dueSoonPercent <= 20
+          ? "warning"
+          : "danger",
     },
     {
       label: "Expired",
       value: `${expiredPercent}%`,
       percent: expiredPercent,
       tone:
-        expiredPercent <= 5 ? "success" : expiredPercent <= 10 ? "warning" : "danger",
+        expiredPercent <= 5
+          ? "success"
+          : expiredPercent <= 10
+          ? "warning"
+          : "danger",
     },
   ];
 }
@@ -343,7 +365,9 @@ function buildPriorityItems(trainingItems = [], complianceItems = [], taskItems 
     .slice(0, 3)
     .forEach((item) => {
       items.push({
-        title: `${item.staff_member || "Staff member"} • ${item.training_name || "Training"}`,
+        title: `${item.staff_member || "Staff member"} • ${
+          item.training_name || "Training"
+        }`,
         summary: item.summary || "Training needs review.",
       });
     });
@@ -383,6 +407,8 @@ function buildPriorityItems(trainingItems = [], complianceItems = [], taskItems 
 
   return items.slice(0, 8);
 }
+
+/* -------------------------------- render -------------------------------- */
 
 function renderEmptyState(message = "No training records.") {
   return `
@@ -433,7 +459,9 @@ function renderStatCards(stats) {
         stats.urgentCompliance > 0 ? "overview-stat-card--warning" : ""
       }">
         <span class="overview-stat-label">Compliance pressure</span>
-        <strong class="overview-stat-value">${safeText(stats.urgentCompliance)}</strong>
+        <strong class="overview-stat-value">${safeText(
+          stats.urgentCompliance
+        )}</strong>
         <span class="overview-stat-note">Training-linked issues</span>
       </article>
 
@@ -461,7 +489,9 @@ function renderProgressCards(cards = []) {
               </div>
               <div class="analytics-progress-track">
                 <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
+                  class="analytics-progress-bar analytics-progress-bar--${safeText(
+                    card.tone || "muted"
+                  )}"
                   style="width: ${safeText(card.percent || 0)}%;"
                 ></span>
               </div>
@@ -510,10 +540,7 @@ function renderRecordRows(items = [], options = {}) {
                 .filter(Boolean)
                 .join(" • ");
 
-          const status = statusBuilder
-            ? statusBuilder(item)
-            : item.status || "recorded";
-
+          const status = statusBuilder ? statusBuilder(item) : item.status || "recorded";
           const tone = getStatusTone(status);
 
           return `
@@ -616,7 +643,9 @@ function renderTrainingCentrePage({
             ${renderRecordRows(recentItems, {
               emptyMessage: "No recent training records found.",
               titleBuilder: (item) =>
-                `${item.training_name || item.title || "Training"}${item.staff_member ? ` • ${item.staff_member}` : ""}`,
+                `${item.training_name || item.title || "Training"}${
+                  item.staff_member ? ` • ${item.staff_member}` : ""
+                }`,
             })}
           </section>
 
@@ -629,7 +658,9 @@ function renderTrainingCentrePage({
             ${renderRecordRows(dueItems, {
               emptyMessage: "No due or expiring training items found.",
               titleBuilder: (item) =>
-                `${item.training_name || item.title || "Training"}${item.staff_member ? ` • ${item.staff_member}` : ""}`,
+                `${item.training_name || item.title || "Training"}${
+                  item.staff_member ? ` • ${item.staff_member}` : ""
+                }`,
             })}
           </section>
         </section>
@@ -683,6 +714,8 @@ function renderTrainingCentrePage({
     </section>
   `;
 }
+
+/* -------------------------------- fallback -------------------------------- */
 
 function buildFallbackData(homeId) {
   const now = new Date();
@@ -766,6 +799,8 @@ function buildFallbackData(homeId) {
   };
 }
 
+/* -------------------------------- fetch -------------------------------- */
+
 async function fetchDataset(homeId) {
   const safeGet = (path) => apiGet(path).catch(() => null);
 
@@ -795,6 +830,8 @@ async function fetchDataset(homeId) {
     isFallback: false,
   };
 }
+
+/* -------------------------------- states -------------------------------- */
 
 function renderNoHomeContext() {
   if (!els.viewContent) return;
@@ -852,6 +889,8 @@ function renderErrorState(message) {
   });
 }
 
+/* -------------------------------- public -------------------------------- */
+
 export async function loadTrainingCentre() {
   if (!els.viewContent) return;
 
@@ -869,7 +908,6 @@ export async function loadTrainingCentre() {
       await fetchDataset(homeId);
 
     const summary = normaliseSummary(summaryData);
-
     const allItems = normaliseTrainingItems(trainingData);
 
     const complianceItems = normaliseComplianceItems(complianceData).slice(0, 8);
@@ -898,9 +936,15 @@ export async function loadTrainingCentre() {
       "created_at",
     ])
       .filter((item) =>
-        ["expired", "overdue", "due", "due_soon", "review_due", "scheduled", "booked"].includes(
-          normaliseStatus(item.status)
-        )
+        [
+          "expired",
+          "overdue",
+          "due",
+          "due_soon",
+          "review_due",
+          "scheduled",
+          "booked",
+        ].includes(normaliseStatus(item.status))
       )
       .slice(0, 8);
 
@@ -937,14 +981,13 @@ export async function loadTrainingCentre() {
         nextDue?.expiry_date || nextDue?.next_due_date
           ? `Next due ${formatDate(nextDue.expiry_date || nextDue.next_due_date)}`
           : "No urgent training due date",
-      lastRecord:
-        latest?.completed_date
-          ? `Latest training ${formatDateTime(latest.completed_date)}`
-          : latest?.updated_at
-          ? `Latest record ${formatDateTime(latest.updated_at)}`
-          : isFallback
-          ? "Preview training data loaded"
-          : "No recent training record",
+      lastRecord: latest?.completed_date
+        ? `Latest training ${formatDateTime(latest.completed_date)}`
+        : latest?.updated_at
+        ? `Latest record ${formatDateTime(latest.updated_at)}`
+        : isFallback
+        ? "Preview training data loaded"
+        : "No recent training record",
       openActions: `${toNumber(stats.openActions)} action${
         stats.openActions === 1 ? "" : "s"
       } • ${toNumber(stats.overdue)} overdue`,
