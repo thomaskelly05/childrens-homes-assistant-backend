@@ -459,9 +459,8 @@ function renderScopeBadges() {
   }
 
   if (els.scopeShiftBadge) {
-    els.scopeShiftBadge.textContent = escapeHtml(
-      state.currentSection || state.activeSection || "workspace"
-    );
+    els.scopeShiftBadge.textContent =
+      state.currentSection || state.activeSection || "workspace";
   }
 }
 
@@ -658,14 +657,6 @@ function bindRefreshButtons() {
 
   els.assistantRefreshAnalysisBtn?.addEventListener("click", async () => {
     await refreshAssistantAnalysisOnly();
-  });
-
-  els.refreshBtn?.addEventListener("click", async () => {
-    await onWorkspaceRefreshRequested();
-  });
-
-  els.refreshWorkspaceBtn?.addEventListener("click", async () => {
-    await onWorkspaceRefreshRequested();
   });
 
   els.clearLiveUpdatesBtn?.addEventListener("click", () => {
