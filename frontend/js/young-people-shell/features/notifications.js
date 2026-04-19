@@ -50,19 +50,6 @@ function formatDateTime(value, fallback = "No date") {
   });
 }
 
-function formatDate(value, fallback = "No date") {
-  if (!value) return fallback;
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function isOverdue(value) {
   if (!value) return false;
 
@@ -211,6 +198,7 @@ function hasUsableData(data = {}) {
   if (Array.isArray(data.notification_queue) && data.notification_queue.length > 0) return true;
   if (Array.isArray(data.operational_notifications) && data.operational_notifications.length > 0) return true;
   if (Array.isArray(data.home_notifications) && data.home_notifications.length > 0) return true;
+  if (Array.isArray(data.notifications_centre) && data.notifications_centre.length > 0) return true;
   return false;
 }
 
@@ -788,7 +776,7 @@ async function fetchAll(homeId) {
       "notifications_centre",
       "notifications",
       "items",
-    ]).map((item) => mapNotification(item, "notification"))
+    ]).map((item) => mapNotification(item, "notification")),
   ];
 
   return {
