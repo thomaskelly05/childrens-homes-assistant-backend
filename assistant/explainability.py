@@ -45,10 +45,20 @@ def _normalise_list(value: Any) -> list[str]:
         return []
 
     cleaned: list[str] = []
+    seen: set[str] = set()
+
     for item in value:
         text = _safe_string(item)
-        if text:
-            cleaned.append(text)
+        if not text:
+            continue
+
+        lowered = text.lower()
+        if lowered in seen:
+            continue
+
+        seen.add(lowered)
+        cleaned.append(text)
+
     return cleaned
 
 
@@ -58,12 +68,18 @@ def _extract_runtime_attr(runtime: Any, name: str, default: Any = "") -> Any:
     return getattr(runtime, name, default)
 
 
+def _extract_orchestration_attr(orchestration: Any, name: str, default: Any = "") -> Any:
+    if orchestration is None:
+        return default
+    return getattr(orchestration, name, default)
+
+
 def _mode_label(mode: str) -> str:
-    return MODE_LABELS.get(_safe_string(mode), "practice support")
+    return MODE_LABELS.get(_safe_string(mode).lower(), "practice support")
 
 
 def _output_label(output_type: str) -> str:
-    return OUTPUT_LABELS.get(_safe_string(output_type), "response")
+    return OUTPUT_LABELS.get(_safe_string(output_type).lower(), "response")
 
 
 def _summarise_request(message: str, limit: int = 140) -> str:
@@ -73,8 +89,58 @@ def _summarise_request(message: str, limit: int = 140) -> str:
     return text[:limit].rsplit(" ", 1)[0].strip() + "..."
 
 
+def _has_document(orchestration: Any) -> bool:
+    if bool(_extract_orchestration_attr(orchestration, "has_document", False)):
+        return True
+
+    trimmed_document_text = _safe_string(
+        _extract_orchestration_attr(orchestration, "trimmed_document_text", "")
+    )
+    return bool(trimmed_document_text)
+
+
+def _extract_regulation_basis(orchestration: Any) -> list[str]:
+    regulation_basis = _extract_orchestration_attr(orchestration, "regulation_basis", None)
+    if isinstance(regulation_basis, list):
+        return _normalise_list(regulation_basis)
+
+    regulation_payload = _extract_orchestration_attr(orchestration, "regulation_payload", None)
+    if not isinstance(regulation_payload, list):
+        return []
+
+    cleaned: list[str] = []
+    seen: set[str] = set()
+
+    for item in regulation_payload:
+        if not isinstance(item, dict):
+            continue
+
+        candidates = [
+            item.get("label"),
+            item.get("title"),
+            item.get("name"),
+            item.get("reference"),
+            item.get("regulation"),
+        ]
+
+        for candidate in candidates:
+            text = _safe_string(candidate)
+            if not text:
+                continue
+
+            lowered = text.lower()
+            if lowered in seen:
+                continue
+
+            seen.add(lowered)
+            cleaned.append(text)
+            break
+
+    return cleaned
+
+
 def _classification_signals(orchestration: Any) -> list[str]:
-    runtime = getattr(orchestration, "runtime", None)
+    runtime = _extract_orchestration_attr(orchestration, "runtime", None)
     if runtime is None:
         return []
 
@@ -103,15 +169,21 @@ def _classification_signals(orchestration: Any) -> list[str]:
     if response_stance:
         signals.append(f"Response stance set to {response_stance}.")
 
-    return signals[:6]
+    deduped: list[str] = []
+    for signal in signals:
+        if signal not in deduped:
+            deduped.append(signal)
+
+    return deduped[:6]
 
 
 def _planning_reasons(orchestration: Any) -> list[str]:
     reasons: list[str] = []
 
-    runtime = getattr(orchestration, "runtime", None)
-    guidance_plan = getattr(orchestration, "guidance_plan", None)
-    model_plan = getattr(orchestration, "model_plan", None)
+    runtime = _extract_orchestration_attr(orchestration, "runtime", None)
+    guidance_plan = _extract_orchestration_attr(orchestration, "guidance_plan", None)
+    model_plan = _extract_orchestration_attr(orchestration, "model_plan", None)
+    response_plan = _extract_orchestration_attr(orchestration, "response_plan", None)
 
     if runtime is not None:
         retrieval_level = _safe_string(_extract_runtime_attr(runtime, "retrieval_level"))
@@ -128,14 +200,25 @@ def _planning_reasons(orchestration: Any) -> list[str]:
             reasons.append("Trusted guidance search was enabled.")
             if reason:
                 reasons.append(reason)
-        else:
-            if reason:
-                reasons.append(reason)
+        elif reason:
+            reasons.append(reason)
 
     if model_plan is not None:
         model = _safe_string(getattr(model_plan, "model", ""))
         if model:
             reasons.append(f"Model selected: {model}.")
+
+    if response_plan is not None:
+        if bool(getattr(response_plan, "should_use_memory", False)):
+            reasons.append("Relevant prior context was considered.")
+        if bool(getattr(response_plan, "should_use_retrieval", False)):
+            reasons.append("Evidence retrieval was considered for grounding.")
+        if bool(getattr(response_plan, "should_use_reflection", False)):
+            reasons.append("Reflective framing was considered where appropriate.")
+        if bool(getattr(response_plan, "should_use_supervision", False)):
+            reasons.append("Supervision-style thinking was considered where relevant.")
+        if bool(getattr(response_plan, "should_use_leadership_lens", False)):
+            reasons.append("Leadership and oversight framing was considered.")
 
     deduped: list[str] = []
     for reason in reasons:
@@ -150,10 +233,9 @@ def build_explainability_payload(
     user_message: str,
     orchestration: Any,
 ) -> dict[str, Any]:
-    runtime = getattr(orchestration, "runtime", None)
-    guidance_plan = getattr(orchestration, "guidance_plan", None)
-    model_plan = getattr(orchestration, "model_plan", None)
-    regulation_basis = getattr(orchestration, "regulation_basis", None)
+    runtime = _extract_orchestration_attr(orchestration, "runtime", None)
+    guidance_plan = _extract_orchestration_attr(orchestration, "guidance_plan", None)
+    model_plan = _extract_orchestration_attr(orchestration, "model_plan", None)
 
     mode = _safe_string(_extract_runtime_attr(runtime, "mode", "general_practice"))
     task_type = _safe_string(_extract_runtime_attr(runtime, "task_type", "guidance"))
@@ -196,9 +278,9 @@ def build_explainability_payload(
         "max_tokens": getattr(model_plan, "max_tokens", None)
         if model_plan is not None
         else None,
-        "selected_mode": _safe_string(getattr(orchestration, "selected_mode", "")),
-        "has_document": bool(getattr(orchestration, "has_document", False)),
-        "regulation_basis": _normalise_list(regulation_basis),
+        "selected_mode": _safe_string(_extract_orchestration_attr(orchestration, "selected_mode", "")),
+        "has_document": _has_document(orchestration),
+        "regulation_basis": _extract_regulation_basis(orchestration),
         "planning_reasons": _planning_reasons(orchestration),
     }
 
@@ -206,11 +288,11 @@ def build_explainability_payload(
 
 
 def _line_for_initial_review(orchestration: Any) -> str:
-    runtime = getattr(orchestration, "runtime", None)
+    runtime = _extract_orchestration_attr(orchestration, "runtime", None)
     mode = _safe_string(_extract_runtime_attr(runtime, "mode", "general_practice"))
     safeguarding_level = _safe_string(_extract_runtime_attr(runtime, "safeguarding_level", "normal"))
     output_type = _safe_string(_extract_runtime_attr(runtime, "output_type", "plain_response"))
-    has_document = bool(getattr(orchestration, "has_document", False))
+    has_document = _has_document(orchestration)
 
     mode_text = _mode_label(mode)
     output_text = _output_label(output_type)
@@ -232,7 +314,11 @@ def _line_for_initial_review(orchestration: Any) -> str:
     )
 
 
-def _line_for_search(orchestration: Any, search_enabled: bool, has_search_results: bool) -> str:
+def _line_for_search(
+    orchestration: Any,
+    search_enabled: bool,
+    has_search_results: bool,
+) -> str:
     if not search_enabled:
         return "Using the internal practice and response framework without adding a live guidance search."
 
@@ -242,13 +328,11 @@ def _line_for_search(orchestration: Any, search_enabled: bool, has_search_result
             "in defensible practice."
         )
 
-    return (
-        "Checking whether trusted guidance needs to be brought in for this request."
-    )
+    return "Checking whether trusted guidance needs to be brought in for this request."
 
 
 def _line_for_final_plan(orchestration: Any) -> str:
-    runtime = getattr(orchestration, "runtime", None)
+    runtime = _extract_orchestration_attr(orchestration, "runtime", None)
     task_type = _safe_string(_extract_runtime_attr(runtime, "task_type", "guidance"))
     role_profile = _safe_string(_extract_runtime_attr(runtime, "user_role_profile", "staff"))
     response_stance = _safe_string(_extract_runtime_attr(runtime, "response_stance", "balanced"))
