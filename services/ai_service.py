@@ -255,6 +255,11 @@ def _normalise_sources(value: Any) -> list[dict]:
             "record_type": item.get("record_type"),
             "record_id": item.get("record_id"),
             "citation_ref": item.get("citation_ref"),
+            "date": item.get("date"),
+            "scope_type": item.get("scope_type"),
+            "young_person_id": item.get("young_person_id"),
+            "home_id": item.get("home_id"),
+            "deep_link": item.get("deep_link"),
         }
 
         key = "|".join(
@@ -281,6 +286,34 @@ def _normalise_sources(value: Any) -> list[dict]:
     return cleaned
 
 
+def _merge_sources(*source_lists: list[dict]) -> list[dict]:
+    merged: list[dict] = []
+    seen: set[str] = set()
+
+    for source_list in source_lists:
+        for item in _normalise_sources(source_list):
+            key = "|".join(
+                str(item.get(k) or "")
+                for k in [
+                    "type",
+                    "label",
+                    "document_title",
+                    "section",
+                    "page_number",
+                    "url",
+                    "record_type",
+                    "record_id",
+                    "citation_ref",
+                ]
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(item)
+
+    return merged
+
+
 def _normalise_evidence_index(value: Any, *, limit: int = 200) -> list[dict]:
     if not isinstance(value, list):
         return []
@@ -303,7 +336,12 @@ def _normalise_evidence_index(value: Any, *, limit: int = 200) -> list[dict]:
             "description": item.get("description"),
             "event_at": item.get("event_at"),
             "updated_at": item.get("updated_at"),
+            "date": item.get("date"),
             "url": item.get("url"),
+            "scope_type": item.get("scope_type"),
+            "young_person_id": item.get("young_person_id"),
+            "home_id": item.get("home_id"),
+            "deep_link": item.get("deep_link"),
         }
 
         key = "|".join(
@@ -325,6 +363,31 @@ def _normalise_evidence_index(value: Any, *, limit: int = 200) -> list[dict]:
         cleaned.append(evidence)
 
     return cleaned
+
+
+def _merge_evidence_indexes(*evidence_lists: list[dict]) -> list[dict]:
+    merged: list[dict] = []
+    seen: set[str] = set()
+
+    for evidence_list in evidence_lists:
+        for item in _normalise_evidence_index(evidence_list):
+            key = "|".join(
+                str(item.get(k) or "")
+                for k in [
+                    "citation_ref",
+                    "record_type",
+                    "record_id",
+                    "label",
+                    "section",
+                    "url",
+                ]
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(item)
+
+    return merged
 
 
 def _normalise_suggested_actions(value: Any) -> list[Any]:
@@ -642,11 +705,15 @@ async def generate_ai_stream(
     task_type = getattr(runtime, "task_type", "guidance")
     output_type = getattr(runtime, "output_type", "plain_response")
 
-    sources_used = _normalise_sources(orchestration.sources)
+    orchestration_sources = _normalise_sources(orchestration.sources)
     runtime_payload = dict(orchestration.runtime_payload or {})
     explainability_payload = build_explainability_payload(
         user_message=message,
         orchestration=orchestration,
+    )
+
+    orchestration_evidence_index = _normalise_evidence_index(
+        runtime_payload.get("evidence_index") or []
     )
 
     request_audit_event = log_assistant_request_started(
@@ -711,7 +778,7 @@ async def generate_ai_stream(
             "Starting AI stream session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s response_mode=%s model=%s temperature=%s max_tokens=%s "
             "history_count=%s has_document=%s sources=%s guidance_enabled=%s guidance_reason=%s "
-            "guidance_skipped=%s"
+            "guidance_skipped=%s evidence=%s"
         ),
         session_id,
         mode,
@@ -724,10 +791,11 @@ async def generate_ai_stream(
         model_plan.max_tokens,
         len(messages),
         bool(trimmed_document_text),
-        len(sources_used),
+        len(orchestration_sources),
         guidance_enabled,
         guidance_plan.reason,
         skip_guidance_search,
+        len(orchestration_evidence_index),
     )
 
     provider = get_llm_provider()
@@ -850,7 +918,10 @@ async def generate_ai_stream(
 
     final_answer_text = "".join(final_answer_parts).strip()
 
-    final_sources = _normalise_sources(provider_meta_sources or sources_used)
+    final_sources = _merge_sources(
+        orchestration_sources,
+        provider_meta_sources,
+    )
 
     final_runtime = {
         **runtime_payload,
@@ -863,10 +934,10 @@ async def generate_ai_stream(
         "safeguarding_level": safeguarding_level,
     }
 
-    final_evidence_index = _normalise_evidence_index(
-        provider_evidence_index
-        or final_runtime.get("evidence_index")
-        or []
+    final_evidence_index = _merge_evidence_indexes(
+        orchestration_evidence_index,
+        final_runtime.get("evidence_index") or [],
+        provider_evidence_index,
     )
 
     source_group_counts = _classify_source_groups(final_sources)
@@ -937,16 +1008,10 @@ async def generate_ai_stream(
         "sources": final_sources,
         "runtime": final_runtime,
         "explainability": final_explainability,
+        "assistant_scope": provider_assistant_scope or {},
+        "assistant_context": provider_assistant_context or {},
+        "suggested_actions": provider_suggested_actions or [],
     }
-
-    if provider_assistant_scope:
-        meta_payload["assistant_scope"] = provider_assistant_scope
-
-    if provider_assistant_context:
-        meta_payload["assistant_context"] = provider_assistant_context
-
-    if provider_suggested_actions:
-        meta_payload["suggested_actions"] = provider_suggested_actions
 
     if final_evidence_index:
         meta_payload["evidence_index"] = final_evidence_index
@@ -976,11 +1041,13 @@ async def generate_ai_stream(
     yield meta_payload
 
     logger.info(
-        "Completed AI stream session_id=%s success=%s evidence_sufficiency=%s answer_confidence=%s",
+        "Completed AI stream session_id=%s success=%s evidence_sufficiency=%s answer_confidence=%s sources=%s evidence=%s",
         session_id,
         provider_success,
         evidence_sufficiency,
         answer_confidence,
+        len(final_sources),
+        len(final_evidence_index),
     )
 
 
