@@ -183,6 +183,36 @@ function isSectionAllowed(sectionId, scope = getCurrentScope()) {
   return getAllowedSectionIdsForScope(scope).has(sectionId);
 }
 
+function updateAppShellDataset() {
+  const app = document.getElementById("app");
+  if (!app) return;
+
+  const scope = getCurrentScope();
+  const section = getCurrentSection();
+
+  app.dataset.scope = scope;
+  app.dataset.section = section;
+  app.dataset.assistantScopeType =
+    scope === "child" ? "child" : scope === "home" ? "home" : "quality";
+
+  app.dataset.youngPersonId = state.youngPersonId || "";
+  app.dataset.homeId =
+    state.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    "";
+  app.dataset.providerId =
+    state.providerId ||
+    state.currentUser?.provider_id ||
+    state.currentUser?.providerId ||
+    "";
+  app.dataset.userRole = state.userRole || "staff";
+  app.dataset.allowedHomeIds = JSON.stringify(
+    Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
+  );
+}
+
 function updateSectionState(section) {
   setCurrentSection(section);
   state.activeSection = section;
@@ -226,7 +256,9 @@ function getMobileBottomSections() {
 }
 
 async function runPlaceholderLoader(options = {}) {
-  const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
+  const { renderPlaceholderFeaturePage } = await import(
+    "../features/placeholder.js"
+  );
 
   const section = options.section || getCurrentSection();
   const config = getSectionConfig(section);
@@ -289,36 +321,6 @@ const SECTION_LOADERS = {
   reg45: loadReg45,
   "inspection-readiness": loadReadiness,
 };
-
-function updateAppShellDataset() {
-  const app = document.getElementById("app");
-  if (!app) return;
-
-  const scope = getCurrentScope();
-  const section = getCurrentSection();
-
-  app.dataset.scope = scope;
-  app.dataset.section = section;
-  app.dataset.assistantScopeType =
-    scope === "child" ? "child" : scope === "home" ? "home" : "quality";
-
-  app.dataset.youngPersonId = state.youngPersonId || "";
-  app.dataset.homeId =
-    state.homeId ||
-    state.selectedYoungPerson?.home_id ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    "";
-  app.dataset.providerId =
-    state.providerId ||
-    state.currentUser?.provider_id ||
-    state.currentUser?.providerId ||
-    "";
-  app.dataset.userRole = state.userRole || "staff";
-  app.dataset.allowedHomeIds = JSON.stringify(
-    Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
-  );
-}
 
 function renderNavItem(item, { compact = false } = {}) {
   const isActive = item.id === getCurrentSection();
@@ -715,6 +717,7 @@ function bindOverlayDismiss() {
     if (event.target === recordDrawerBackdrop) {
       closeRecordDrawerOverlay();
     }
+
     if (
       recordDrawer &&
       !recordDrawer.classList.contains("hidden") &&
@@ -915,7 +918,9 @@ function bindSelectorControls() {
       await loadYoungPersonSelector();
       clearStatus();
     } catch (error) {
-      showError(error?.message || "Failed to refresh children and young people.");
+      showError(
+        error?.message || "Failed to refresh children and young people."
+      );
     }
   });
 }
@@ -992,7 +997,10 @@ function bindSearchControls() {
     try {
       await reloadCurrentSection();
     } catch (error) {
-      console.error("[nav] failed reloading section after clearing search", error);
+      console.error(
+        "[nav] failed reloading section after clearing search",
+        error
+      );
     }
   };
 
