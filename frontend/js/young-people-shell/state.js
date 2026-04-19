@@ -40,8 +40,10 @@ export function createAssistantMeta() {
     suggested_actions: [],
 
     intent: null,
+    secondary_intents: [],
     retrieval_mode: "whole_scope",
     output_mode: "answer",
+
     chronology: [],
     facts: {},
     care_domains: {},
@@ -55,6 +57,21 @@ export function createAssistantMeta() {
 
     last_bundle_refresh_at: null,
     last_analysis_at: null,
+  };
+}
+
+export function createAssistantUiState() {
+  return {
+    assistantOpen: false,
+    assistantSending: false,
+    assistantAutoScroll: true,
+    assistantLastError: null,
+  };
+}
+
+export function createAssistantChatState() {
+  return {
+    assistantMessages: [],
   };
 }
 
@@ -123,8 +140,6 @@ function createUiState() {
     loading: false,
     error: null,
     mobileNavOpen: false,
-    assistantOpen: false,
-    assistantSending: false,
     fullscreenPanelOpen: false,
     recordDrawerOpen: false,
   };
@@ -168,6 +183,8 @@ export const state = {
   currentScope: DEFAULT_SCOPE,
 
   ...createUiState(),
+  ...createAssistantUiState(),
+  ...createAssistantChatState(),
   ...createSuggestionState(),
   ...createComposerState(),
 
@@ -176,7 +193,6 @@ export const state = {
 
   ...createContextState(),
 
-  assistantMessages: [],
   assistantMeta: createAssistantMeta(),
 
   assistantContext: null,
@@ -222,6 +238,17 @@ function ensureAssistantMeta() {
   state.assistantMeta.scrubber_meta = state.assistantMeta.scrubber_meta || {};
   state.assistantMeta.scrubber_reverse_map =
     state.assistantMeta.scrubber_reverse_map || {};
+  state.assistantMeta.secondary_intents = Array.isArray(
+    state.assistantMeta.secondary_intents
+  )
+    ? state.assistantMeta.secondary_intents
+    : [];
+}
+
+function ensureAssistantMessages() {
+  if (!Array.isArray(state.assistantMessages)) {
+    state.assistantMessages = [];
+  }
 }
 
 export function normaliseUserRole(role) {
@@ -240,9 +267,7 @@ export function getDefaultScopeForRole(role = state.userRole) {
 
   if (["ri", "admin"].includes(safeRole)) return "quality";
 
-  if (
-    ["manager", "registered_manager", "deputy_manager"].includes(safeRole)
-  ) {
+  if (["manager", "registered_manager", "deputy_manager"].includes(safeRole)) {
     return "home";
   }
 
@@ -260,8 +285,9 @@ function syncSectionAliases(section) {
 }
 
 export function resetAssistantState() {
-  state.assistantMessages = [];
-  state.assistantSending = false;
+  Object.assign(state, createAssistantUiState());
+  Object.assign(state, createAssistantChatState());
+
   state.assistantMeta = createAssistantMeta();
 
   state.assistantContext = null;
@@ -577,6 +603,34 @@ export function pushAssistantLiveUpdate(update = null) {
 
 export function clearAssistantLiveUpdates() {
   state.liveUpdates = [];
+}
+
+export function pushAssistantMessage(message = {}) {
+  ensureAssistantMessages();
+  state.assistantMessages.push(message);
+}
+
+export function replaceLastAssistantMessage(message = {}) {
+  ensureAssistantMessages();
+
+  if (!state.assistantMessages.length) {
+    state.assistantMessages.push(message);
+    return;
+  }
+
+  state.assistantMessages[state.assistantMessages.length - 1] = message;
+}
+
+export function updateLastAssistantMessage(updater) {
+  ensureAssistantMessages();
+
+  if (!state.assistantMessages.length) return;
+
+  const lastIndex = state.assistantMessages.length - 1;
+  const current = state.assistantMessages[lastIndex];
+
+  state.assistantMessages[lastIndex] =
+    typeof updater === "function" ? updater(current) : current;
 }
 
 export function getCurrentScopeEntity() {
