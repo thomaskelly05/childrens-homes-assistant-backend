@@ -9,6 +9,7 @@ let citationEventsBound = false;
 const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w:-]*)\]/gi;
 const RECORD_LINK_REGEX =
   /\b(incident|record|note|task|document|report|chronology|entry)\s+(number\s+)?(#?\d+)\b/gi;
+
 const MAX_SOURCE_EXCERPT = 220;
 
 function qs(id) {
@@ -79,6 +80,76 @@ function getAssistantMeta() {
     state.assistantMeta.assistant_context || {};
 
   return state.assistantMeta;
+}
+
+function extractAssistantContent(message = {}) {
+  if (typeof message === "string") return message;
+  if (!message || typeof message !== "object") return "";
+
+  const directCandidates = [
+    message.content,
+    message.text,
+    message.message,
+    message.response,
+    message.answer,
+    message.output,
+    message.accumulated_text,
+  ];
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate;
+    }
+  }
+
+  if (message.content && typeof message.content === "object") {
+    const content = message.content;
+    const nestedCandidates = [
+      content.text,
+      content.message,
+      content.response,
+      content.answer,
+      content.output,
+      content.content,
+      content.accumulated_text,
+    ];
+
+    for (const candidate of nestedCandidates) {
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate;
+      }
+    }
+
+    if (Array.isArray(content.parts)) {
+      const joined = content.parts
+        .map((part) => {
+          if (typeof part === "string") return part;
+          if (part && typeof part.text === "string") return part.text;
+          if (part && typeof part.content === "string") return part.content;
+          return "";
+        })
+        .filter(Boolean)
+        .join("\n");
+
+      if (joined.trim()) return joined;
+    }
+  }
+
+  if (Array.isArray(message.parts)) {
+    const joined = message.parts
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part.text === "string") return part.text;
+        if (part && typeof part.content === "string") return part.content;
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+
+    if (joined.trim()) return joined;
+  }
+
+  return "";
 }
 
 function formatRole(role = "") {
@@ -329,48 +400,6 @@ function renderAssistantRichText(text = "") {
 
 function renderUserRichText(text = "") {
   return `<p>${escapeHtml(String(text || ""))}</p>`;
-}
-
-function extractAssistantContent(message = {}) {
-  if (typeof message === "string") return message;
-  if (!message || typeof message !== "object") return "";
-
-  const directCandidates = [
-    message.content,
-    message.text,
-    message.message,
-    message.response,
-    message.answer,
-    message.output,
-    message.accumulated_text,
-  ];
-
-  for (const candidate of directCandidates) {
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate;
-    }
-  }
-
-  if (message.content && typeof message.content === "object") {
-    const content = message.content;
-    const nestedCandidates = [
-      content.text,
-      content.message,
-      content.response,
-      content.answer,
-      content.output,
-      content.content,
-      content.accumulated_text,
-    ];
-
-    for (const candidate of nestedCandidates) {
-      if (typeof candidate === "string" && candidate.trim()) {
-        return candidate;
-      }
-    }
-  }
-
-  return "";
 }
 
 function renderMessage(message = {}) {
@@ -665,13 +694,15 @@ function renderSuggestedActions() {
 
 function renderScopeSummary() {
   const host = getEl(els.assistantScopeSummary, "assistantScopeSummary");
-  if (!host) return;
+  const modalHost = getEl(
+    els.assistantModalScopeSummary,
+    "assistantModalScopeSummary"
+  );
 
   const meta = getAssistantMeta();
   const runtime = meta.runtime || {};
-  const scope = getCurrentScope();
 
-  host.innerHTML = `
+  const html = `
     <div class="assistant-scope-summary">
       <div class="assistant-scope-summary-row">
         <span>Scope</span>
@@ -687,10 +718,33 @@ function renderScopeSummary() {
       </div>
       <div class="assistant-scope-summary-row">
         <span>Mode</span>
-        <strong>${escapeHtml(scope)}</strong>
+        <strong>${escapeHtml(getCurrentScope())}</strong>
       </div>
     </div>
   `;
+
+  if (host) host.innerHTML = html;
+  if (modalHost) modalHost.innerHTML = html;
+}
+
+function renderRuntimeAndExplainability() {
+  const meta = getAssistantMeta();
+
+  if (els.assistantRuntime) {
+    els.assistantRuntime.textContent = JSON.stringify(
+      meta.runtime || {},
+      null,
+      2
+    );
+  }
+
+  if (els.assistantExplainability) {
+    els.assistantExplainability.textContent = JSON.stringify(
+      meta.explainability || {},
+      null,
+      2
+    );
+  }
 }
 
 function syncAssistantVisibility() {
@@ -703,6 +757,7 @@ function syncAssistantVisibility() {
 
   if (els.assistantBackdrop) {
     els.assistantBackdrop.classList.toggle("hidden", !isOpen);
+    els.assistantBackdrop.setAttribute("aria-hidden", isOpen ? "false" : "true");
   }
 }
 
@@ -805,6 +860,7 @@ function renderAllAssistantUi() {
   renderStandaloneSources();
   renderSuggestedActions();
   renderScopeSummary();
+  renderRuntimeAndExplainability();
 }
 
 export function bindAssistantUi() {
@@ -869,6 +925,7 @@ export function setAssistantRuntime(runtime = null) {
 export function setAssistantExplainability(explainability = null) {
   const meta = getAssistantMeta();
   meta.explainability = explainability || {};
+  renderAllAssistantUi();
 }
 
 export function setAssistantScopeSummary(scopeSummary = null) {
