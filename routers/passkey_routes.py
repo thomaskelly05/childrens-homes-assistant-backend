@@ -5,7 +5,7 @@ import secrets
 import time
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from psycopg2.extras import RealDictCursor
 
@@ -15,7 +15,7 @@ from auth.mfa_guard import (
     SESSION_USER_ID_KEY,
 )
 from auth.routes import settings as auth_settings
-from auth.tokens import create_session_token
+from auth.tokens import create_session_token, decode_session_token
 from db.connection import get_db
 from db.passkeys_db import (
     create_user_passkey,
@@ -30,6 +30,10 @@ router = APIRouter(prefix="/auth/passkeys", tags=["Passkeys"])
 
 RP_ID = os.getenv("PASSKEY_RP_ID", "app.indicare.co.uk")
 RP_NAME = os.getenv("PASSKEY_RP_NAME", "IndiCare")
+PASSKEY_CHALLENGE_MAX_AGE_SECONDS = int(
+    os.getenv("PASSKEY_CHALLENGE_MAX_AGE_SECONDS", "300")
+)
+
 ALLOWED_ORIGINS = {
     origin.strip()
     for origin in os.getenv(
@@ -53,14 +57,16 @@ class PasskeyAuthenticateVerifyRequest(BaseModel):
     credential: dict[str, Any] | None = None
 
 
-def _b64url_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+def _safe_string(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
 
 
-def _b64url_decode(data: str) -> bytes:
-    data = (data or "").strip()
-    padding = "=" * (-len(data) % 4)
-    return base64.urlsafe_b64decode(data + padding)
+def _normalise_email(value: str | None) -> str:
+    return _safe_string(value).lower()
 
 
 def _safe_json(value: Any) -> str | None:
@@ -72,16 +78,22 @@ def _safe_json(value: Any) -> str | None:
         return None
 
 
-def _safe_string(value: Any) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value.strip()
-    return str(value).strip()
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
-def _normalise_email(value: str | None) -> str:
-    return _safe_string(value).lower()
+def _b64url_decode(data: str) -> bytes:
+    data = (data or "").strip()
+    padding = "=" * (-len(data) % 4)
+    return base64.urlsafe_b64decode(data + padding)
+
+
+def _now() -> int:
+    return int(time.time())
+
+
+def _request_id(request: Request) -> str | None:
+    return getattr(request.state, "request_id", None)
 
 
 def _set_session_cookie(response: Response, token: str, remember: bool = False) -> None:
@@ -118,20 +130,135 @@ def _set_csrf_cookie(response: Response, csrf_token: str, remember: bool = False
     )
 
 
+def _extract_token(request: Request, authorization: str | None = None) -> str | None:
+    cookie_token = _safe_string(request.cookies.get(auth_settings.session_cookie_name))
+    if cookie_token:
+        return cookie_token
+
+    if not authorization:
+        return None
+
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None
+
+    token = parts[1].strip()
+    return token or None
+
+
+def _clear_passkey_register_state(request: Request) -> None:
+    request.session.pop("passkey_register_challenge", None)
+    request.session.pop("passkey_register_user_id", None)
+    request.session.pop("passkey_register_started_at", None)
+
+
+def _clear_passkey_auth_state(request: Request) -> None:
+    request.session.pop("passkey_auth_challenge", None)
+    request.session.pop("passkey_auth_started_at", None)
+    request.session.pop("passkey_auth_user_hint", None)
+
+
+def _clear_all_passkey_state(request: Request) -> None:
+    _clear_passkey_register_state(request)
+    _clear_passkey_auth_state(request)
+
+
+def _set_authenticated_session(
+    *,
+    request: Request,
+    response: Response,
+    user: dict[str, Any],
+    remember: bool = False,
+) -> None:
+    token = create_session_token(int(user["id"]))
+    csrf_token = secrets.token_urlsafe(32)
+
+    try:
+        request.session.clear()
+    except Exception:
+        pass
+
+    request.session[SESSION_USER_ID_KEY] = int(user["id"])
+    request.session[SESSION_USER_EMAIL_KEY] = user["email"]
+    request.session[SESSION_MFA_VERIFIED_KEY] = True
+    request.session["csrf_token"] = csrf_token
+    request.session["remember"] = remember
+    request.session["login_at"] = _now()
+    request.session["mfa_verified_at"] = _now()
+    request.session["preauth_pending"] = False
+
+    _clear_all_passkey_state(request)
+
+    _set_session_cookie(response, token, remember=remember)
+    _set_csrf_cookie(response, csrf_token, remember=remember)
+
+
 def _get_user_id_from_session(request: Request) -> int:
-    user_id = request.session.get(SESSION_USER_ID_KEY) or request.session.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return int(user_id)
+    raw_user_id = request.session.get(SESSION_USER_ID_KEY) or request.session.get("user_id")
+    if raw_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+    try:
+        return int(raw_user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session",
+        )
 
 
 def _get_user_email_from_session(request: Request, user_id: int) -> str:
-    email = _safe_string(
+    return _safe_string(
         request.session.get(SESSION_USER_EMAIL_KEY)
         or request.session.get("user_email")
         or f"user-{user_id}@indicare.local"
     )
-    return email
+
+
+def _get_authenticated_user_from_request(
+    request: Request,
+    conn: Any,
+    authorization: str | None = None,
+) -> dict[str, Any]:
+    token = _extract_token(request, authorization)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    payload = decode_session_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session",
+        )
+
+    raw_user_id = payload.get("sub")
+    try:
+        token_user_id = int(raw_user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session",
+        )
+
+    session_user_id = request.session.get(SESSION_USER_ID_KEY)
+    try:
+        session_user_id = int(session_user_id) if session_user_id is not None else None
+    except (TypeError, ValueError):
+        session_user_id = None
+
+    if session_user_id != token_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session mismatch",
+        )
+
+    user = _get_user_by_id(conn, token_user_id)
+    return _validate_active_user(user)
 
 
 def _get_user_by_email(conn: Any, email: str) -> dict[str, Any] | None:
@@ -186,20 +313,217 @@ def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
         return dict(row) if row else None
 
 
-def _validate_login_user(user: dict[str, Any] | None) -> dict[str, Any]:
+def _validate_active_user(user: dict[str, Any] | None) -> dict[str, Any]:
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid passkey sign-in")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid passkey sign-in",
+        )
     if user.get("archived") is True:
-        raise HTTPException(status_code=403, detail="User is archived")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is archived",
+        )
     if user.get("is_active") is False:
-        raise HTTPException(status_code=403, detail="User account is inactive")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive",
+        )
     return user
 
 
+def _parse_client_data_json(encoded: str) -> dict[str, Any]:
+    try:
+        client_data_raw = _b64url_decode(encoded)
+        return json.loads(client_data_raw.decode("utf-8"))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid clientDataJSON",
+        )
+
+
+def _assert_allowed_origin(origin: str | None) -> None:
+    if origin not in ALLOWED_ORIGINS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid passkey origin",
+        )
+
+
+def _assert_challenge(expected: str | None, actual: str | None) -> None:
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No passkey challenge is pending",
+        )
+    if actual != expected:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Challenge mismatch",
+        )
+
+
+def _assert_challenge_fresh(started_at: Any) -> None:
+    try:
+        started_at_int = int(started_at)
+    except (TypeError, ValueError):
+        started_at_int = None
+
+    if not started_at_int:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passkey challenge is invalid or expired",
+        )
+
+    if (_now() - started_at_int) > PASSKEY_CHALLENGE_MAX_AGE_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passkey challenge has expired",
+        )
+
+
+def _validate_passkey_registration_ceremony(
+    *,
+    request: Request,
+    user_id: int,
+    credential: dict[str, Any],
+) -> tuple[str, Any]:
+    expected_challenge = request.session.get("passkey_register_challenge")
+    expected_user_id = request.session.get("passkey_register_user_id")
+    started_at = request.session.get("passkey_register_started_at")
+
+    if expected_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No passkey registration is pending",
+        )
+
+    try:
+        expected_user_id = int(expected_user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passkey registration session mismatch",
+        )
+
+    if expected_user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passkey registration session mismatch",
+        )
+
+    _assert_challenge_fresh(started_at)
+
+    credential_id = _safe_string(credential.get("id"))
+    response_data = credential.get("response") or {}
+
+    if not credential_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing credential id",
+        )
+
+    client_data_json = response_data.get("clientDataJSON")
+    attestation_object = response_data.get("attestationObject")
+
+    if not client_data_json or not attestation_object:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing passkey attestation data",
+        )
+
+    client_data = _parse_client_data_json(client_data_json)
+
+    ceremony_type = client_data.get("type")
+    challenge = client_data.get("challenge")
+    origin = client_data.get("origin")
+
+    if ceremony_type != "webauthn.create":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid passkey ceremony type",
+        )
+
+    _assert_challenge(expected_challenge, challenge)
+    _assert_allowed_origin(origin)
+
+    return credential_id, attestation_object
+
+
+def _validate_passkey_authentication_ceremony(
+    request: Request,
+    credential: dict[str, Any],
+) -> str:
+    expected_challenge = request.session.get("passkey_auth_challenge")
+    started_at = request.session.get("passkey_auth_started_at")
+
+    _assert_challenge_fresh(started_at)
+
+    credential_id = _safe_string(credential.get("id"))
+    response_data = credential.get("response") or {}
+
+    if not credential_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing credential id",
+        )
+
+    client_data_json = response_data.get("clientDataJSON")
+    authenticator_data = response_data.get("authenticatorData")
+    signature = response_data.get("signature")
+
+    if not client_data_json or not authenticator_data or not signature:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing passkey assertion data",
+        )
+
+    client_data = _parse_client_data_json(client_data_json)
+
+    ceremony_type = client_data.get("type")
+    challenge = client_data.get("challenge")
+    origin = client_data.get("origin")
+
+    if ceremony_type != "webauthn.get":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid passkey ceremony type",
+        )
+
+    _assert_challenge(expected_challenge, challenge)
+    _assert_allowed_origin(origin)
+
+    return credential_id
+
+
+def _build_user_payload(user: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "role": user["role"],
+        "home_id": user.get("home_id"),
+        "first_name": user.get("first_name"),
+        "last_name": user.get("last_name"),
+        "is_active": bool(user.get("is_active")),
+        "subscription_active": bool(user.get("subscription_active")),
+        "subscription_status": user.get("subscription_status") or "inactive",
+        "plan_name": user.get("plan_name"),
+        "mfa_enabled": True,
+        "mfa_verified": True,
+        "mfa_pending": False,
+        "has_passkeys": True,
+    }
+
+
 @router.get("")
-def list_passkeys_route(request: Request, conn=Depends(get_db)):
-    user_id = _get_user_id_from_session(request)
-    items = list_user_passkeys(user_id)
+def list_passkeys_route(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    conn=Depends(get_db),
+):
+    user = _get_authenticated_user_from_request(request, conn, authorization)
+    items = list_user_passkeys(int(user["id"]))
     return {
         "ok": True,
         "items": items,
@@ -208,9 +532,13 @@ def list_passkeys_route(request: Request, conn=Depends(get_db)):
 
 
 @router.get("/status")
-def passkey_status(request: Request, conn=Depends(get_db)):
-    user_id = _get_user_id_from_session(request)
-    has_keys = user_has_passkeys(user_id)
+def passkey_status(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    conn=Depends(get_db),
+):
+    user = _get_authenticated_user_from_request(request, conn, authorization)
+    has_keys = user_has_passkeys(int(user["id"]))
     return {
         "ok": True,
         "has_passkeys": has_keys,
@@ -219,9 +547,14 @@ def passkey_status(request: Request, conn=Depends(get_db)):
 
 
 @router.post("/register/options")
-def register_passkey_options(request: Request):
-    user_id = _get_user_id_from_session(request)
-    user_email = _get_user_email_from_session(request, user_id)
+def register_passkey_options(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    conn=Depends(get_db),
+):
+    user = _get_authenticated_user_from_request(request, conn, authorization)
+    user_id = int(user["id"])
+    user_email = _get_user_email_from_session(request, user_id) or user["email"]
 
     challenge_bytes = secrets.token_bytes(32)
     user_handle_bytes = f"indicare-user-{user_id}".encode("utf-8")
@@ -231,6 +564,7 @@ def register_passkey_options(request: Request):
 
     request.session["passkey_register_challenge"] = challenge_b64
     request.session["passkey_register_user_id"] = user_id
+    request.session["passkey_register_started_at"] = _now()
 
     options: dict[str, Any] = {
         "challenge": challenge_b64,
@@ -284,50 +618,18 @@ def register_passkey_options(request: Request):
 def register_passkey_verify(
     payload: PasskeyRegisterVerifyRequest,
     request: Request,
+    authorization: str | None = Header(default=None),
     conn=Depends(get_db),
 ):
-    user_id = _get_user_id_from_session(request)
-
-    expected_challenge = request.session.get("passkey_register_challenge")
-    expected_user_id = request.session.get("passkey_register_user_id")
-
-    if not expected_challenge or not expected_user_id:
-        raise HTTPException(status_code=400, detail="No passkey registration is pending")
-
-    if int(expected_user_id) != user_id:
-        raise HTTPException(status_code=400, detail="Passkey registration session mismatch")
+    user = _get_authenticated_user_from_request(request, conn, authorization)
+    user_id = int(user["id"])
 
     credential = payload.credential or {}
-    credential_id = _safe_string(credential.get("id"))
-    response = credential.get("response") or {}
-
-    if not credential_id:
-        raise HTTPException(status_code=400, detail="Missing credential id")
-
-    client_data_json = response.get("clientDataJSON")
-    attestation_object = response.get("attestationObject")
-
-    if not client_data_json or not attestation_object:
-        raise HTTPException(status_code=400, detail="Missing passkey attestation data")
-
-    try:
-        client_data_raw = _b64url_decode(client_data_json)
-        client_data = json.loads(client_data_raw.decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid clientDataJSON")
-
-    challenge = client_data.get("challenge")
-    origin = client_data.get("origin")
-    ceremony_type = client_data.get("type")
-
-    if ceremony_type != "webauthn.create":
-        raise HTTPException(status_code=400, detail="Invalid passkey ceremony type")
-
-    if challenge != expected_challenge:
-        raise HTTPException(status_code=400, detail="Challenge mismatch")
-
-    if origin not in ALLOWED_ORIGINS:
-        raise HTTPException(status_code=400, detail="Invalid passkey origin")
+    credential_id, attestation_object = _validate_passkey_registration_ceremony(
+        request=request,
+        user_id=user_id,
+        credential=credential,
+    )
 
     transports = credential.get("transports")
     nickname = _safe_string(payload.nickname) or "My passkey"
@@ -345,11 +647,16 @@ def register_passkey_verify(
     except Exception as exc:
         message = str(exc).lower()
         if "unique" in message or "duplicate" in message:
-            raise HTTPException(status_code=409, detail="This passkey is already registered")
-        raise HTTPException(status_code=500, detail=f"Could not save passkey: {str(exc)}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This passkey is already registered",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not save passkey",
+        )
 
-    request.session.pop("passkey_register_challenge", None)
-    request.session.pop("passkey_register_user_id", None)
+    _clear_passkey_register_state(request)
 
     return {
         "ok": True,
@@ -366,21 +673,33 @@ def authenticate_passkey_options(
 ):
     email = _normalise_email(payload.email)
     if not email:
-        raise HTTPException(status_code=400, detail="Email is required for passkey sign-in")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is required for passkey sign-in",
+        )
 
     user = _get_user_by_email(conn, email)
     if not user:
-        raise HTTPException(status_code=404, detail="No passkeys registered for this account")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No passkeys registered for this account",
+        )
 
-    user = _validate_login_user(user)
+    user = _validate_active_user(user)
 
     try:
         passkeys = list_user_passkeys(int(user["id"]))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Could not read passkeys: {str(exc)}")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not read passkeys",
+        )
 
     if not passkeys:
-        raise HTTPException(status_code=404, detail="No passkeys registered for this account")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No passkeys registered for this account",
+        )
 
     allow_credentials: list[dict[str, str]] = []
     for item in passkeys:
@@ -394,11 +713,14 @@ def authenticate_passkey_options(
             )
 
     if not allow_credentials:
-        raise HTTPException(status_code=404, detail="No usable passkeys registered for this account")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No usable passkeys registered for this account",
+        )
 
     challenge_b64 = _b64url_encode(secrets.token_bytes(32))
     request.session["passkey_auth_challenge"] = challenge_b64
-    request.session["passkey_auth_started_at"] = int(time.time())
+    request.session["passkey_auth_started_at"] = _now()
     request.session["passkey_auth_user_hint"] = int(user["id"])
 
     options: dict[str, Any] = {
@@ -422,72 +744,39 @@ def authenticate_passkey_verify(
     response: Response,
     conn=Depends(get_db),
 ):
-    expected_challenge = request.session.get("passkey_auth_challenge")
-    if not expected_challenge:
-        raise HTTPException(status_code=400, detail="No passkey sign-in is pending")
-
     credential = payload.credential or {}
-    credential_id = _safe_string(credential.get("id"))
-    response_data = credential.get("response") or {}
-
-    if not credential_id:
-        raise HTTPException(status_code=400, detail="Missing credential id")
-
-    client_data_json = response_data.get("clientDataJSON")
-    authenticator_data = response_data.get("authenticatorData")
-    signature = response_data.get("signature")
-
-    if not client_data_json or not authenticator_data or not signature:
-        raise HTTPException(status_code=400, detail="Missing passkey assertion data")
-
-    try:
-        client_data_raw = _b64url_decode(client_data_json)
-        client_data = json.loads(client_data_raw.decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid clientDataJSON")
-
-    challenge = client_data.get("challenge")
-    origin = client_data.get("origin")
-    ceremony_type = client_data.get("type")
-
-    if ceremony_type != "webauthn.get":
-        raise HTTPException(status_code=400, detail="Invalid passkey ceremony type")
-
-    if challenge != expected_challenge:
-        raise HTTPException(status_code=400, detail="Challenge mismatch")
-
-    if origin not in ALLOWED_ORIGINS:
-        raise HTTPException(status_code=400, detail="Invalid passkey origin")
+    credential_id = _validate_passkey_authentication_ceremony(request, credential)
 
     stored_passkey = get_passkey_by_credential_id(credential_id)
     if not stored_passkey:
-        raise HTTPException(status_code=401, detail="Unknown passkey")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unknown passkey",
+        )
 
-    user = _get_user_by_id(conn, int(stored_passkey["user_id"]))
-    user = _validate_login_user(user)
-
-    token = create_session_token(int(user["id"]))
-    csrf_token = secrets.token_urlsafe(32)
-    remember = False
-
+    hinted_user_id = request.session.get("passkey_auth_user_hint")
     try:
-        request.session.clear()
-    except Exception:
-        pass
+        hinted_user_id = int(hinted_user_id) if hinted_user_id is not None else None
+    except (TypeError, ValueError):
+        hinted_user_id = None
 
-    request.session[SESSION_USER_ID_KEY] = int(user["id"])
-    request.session[SESSION_USER_EMAIL_KEY] = user["email"]
-    request.session[SESSION_MFA_VERIFIED_KEY] = True
-    request.session["csrf_token"] = csrf_token
-    request.session["remember"] = remember
-    request.session["login_at"] = int(time.time())
-    request.session.pop("preauth_pending", None)
-    request.session.pop("passkey_auth_challenge", None)
-    request.session.pop("passkey_auth_started_at", None)
-    request.session.pop("passkey_auth_user_hint", None)
+    stored_user_id = int(stored_passkey["user_id"])
+    if hinted_user_id is not None and hinted_user_id != stored_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Passkey account mismatch",
+        )
 
-    _set_session_cookie(response, token, remember=remember)
-    _set_csrf_cookie(response, csrf_token, remember=remember)
+    user = _get_user_by_id(conn, stored_user_id)
+    user = _validate_active_user(user)
+
+    remember = False
+    _set_authenticated_session(
+        request=request,
+        response=response,
+        user=user,
+        remember=remember,
+    )
 
     current_sign_count = int(stored_passkey.get("sign_count") or 0)
     try:
@@ -499,32 +788,25 @@ def authenticate_passkey_verify(
         "ok": True,
         "message": "Passkey sign-in successful",
         "authenticated": True,
-        "user": {
-            "id": user["id"],
-            "email": user["email"],
-            "role": user["role"],
-            "home_id": user.get("home_id"),
-            "first_name": user.get("first_name"),
-            "last_name": user.get("last_name"),
-            "is_active": bool(user.get("is_active")),
-            "subscription_active": bool(user.get("subscription_active")),
-            "subscription_status": user.get("subscription_status") or "inactive",
-            "plan_name": user.get("plan_name"),
-            "mfa_enabled": True,
-            "mfa_verified": True,
-            "mfa_pending": False,
-            "has_passkeys": True,
-        },
+        "user": _build_user_payload(user),
     }
 
 
 @router.delete("/{passkey_id}")
-def delete_passkey_route(passkey_id: int, request: Request, conn=Depends(get_db)):
-    user_id = _get_user_id_from_session(request)
-    deleted = delete_user_passkey(user_id, passkey_id)
+def delete_passkey_route(
+    passkey_id: int,
+    request: Request,
+    authorization: str | None = Header(default=None),
+    conn=Depends(get_db),
+):
+    user = _get_authenticated_user_from_request(request, conn, authorization)
+    deleted = delete_user_passkey(int(user["id"]), passkey_id)
 
     if not deleted:
-        raise HTTPException(status_code=404, detail="Passkey not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Passkey not found",
+        )
 
     return {
         "ok": True,
@@ -533,14 +815,19 @@ def delete_passkey_route(passkey_id: int, request: Request, conn=Depends(get_db)
 
 
 @router.post("/register/start")
-def start_passkey_registration(request: Request):
-    return register_passkey_options(request)
+def start_passkey_registration(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    conn=Depends(get_db),
+):
+    return register_passkey_options(request, authorization, conn)
 
 
 @router.post("/register/finish")
 def finish_passkey_registration(
     payload: PasskeyRegisterVerifyRequest,
     request: Request,
+    authorization: str | None = Header(default=None),
     conn=Depends(get_db),
 ):
-    return register_passkey_verify(payload, request, conn)
+    return register_passkey_verify(payload, request, authorization, conn)
