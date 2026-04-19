@@ -12,34 +12,23 @@ import { fetchAssistantScopeBundle } from "../core/api.js";
 import * as aiScrubber from "../core/ai-scrubber.js";
 import {
   buildAssistantEvidenceContext,
-  buildMorningBriefContext,
-  buildManagerBriefContext,
-  buildQualityBriefContext,
 } from "../core/assistant-runtime.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
 import {
-  askAssistantBrain,
   buildMorningBrief,
   buildManagerBrief,
   buildQualityBrief,
-  buildReg45Support,
 } from "../assistant/brain.js";
 
 let assistantControllerBound = false;
 let latestRefreshToken = 0;
-let assistantMessageBound = false;
 
 const MAX_BRIEF_EVIDENCE = 10;
 const MAX_BRIEF_CHRONOLOGY = 5;
 
 function safeArray(value) {
   return Array.isArray(value) ? value : [];
-}
-
-function cleanText(value) {
-  if (value === null || value === undefined) return "";
-  return String(value).trim();
 }
 
 function getAllowedHomeIds() {
@@ -116,68 +105,6 @@ function ensureAssistantMeta() {
   )
     ? state.assistantMeta.suggested_actions
     : [];
-}
-
-function extractRenderableText(value) {
-  if (typeof value === "string") return value;
-  if (!value || typeof value !== "object") return "";
-
-  const directCandidates = [
-    value.text,
-    value.message,
-    value.content,
-    value.answer,
-    value.output,
-    value.response,
-    value.summary,
-    value.label,
-    value.title,
-  ];
-
-  for (const candidate of directCandidates) {
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate;
-    }
-  }
-
-  if (value.content && typeof value.content === "object") {
-    const nested = value.content;
-    const nestedCandidates = [
-      nested.text,
-      nested.message,
-      nested.content,
-      nested.answer,
-      nested.output,
-      nested.response,
-      nested.summary,
-    ];
-
-    for (const candidate of nestedCandidates) {
-      if (typeof candidate === "string" && candidate.trim()) {
-        return candidate;
-      }
-    }
-  }
-
-  if (Array.isArray(value.parts)) {
-    const joined = value.parts
-      .map((part) => {
-        if (typeof part === "string") return part;
-        if (part && typeof part.text === "string") return part.text;
-        if (part && typeof part.content === "string") return part.content;
-        return "";
-      })
-      .filter(Boolean)
-      .join("\n");
-
-    if (joined.trim()) return joined;
-  }
-
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return "";
-  }
 }
 
 function scrubAssistantBundle(bundle = {}, context = {}) {
@@ -438,12 +365,8 @@ function renderLiveUpdates() {
 
   els.liveUpdatesBody.innerHTML = updates
     .map((update) => {
-      const title = escapeHtml(
-        extractRenderableText(update.title) || "Update"
-      );
-      const message = escapeHtml(
-        extractRenderableText(update.message || update) || ""
-      );
+      const title = escapeHtml(String(update.title || "Update"));
+      const message = escapeHtml(String(update.message || ""));
       const timestamp = update.created_at
         ? escapeHtml(formatDate(update.created_at))
         : "";
@@ -487,181 +410,27 @@ function renderAssistantExtraPanels() {
   renderLiveUpdates();
 }
 
-function setAssistantResponseMeta(result = {}) {
-  ensureAssistantMeta();
-
-  state.assistantMeta.sources = safeArray(result.top_sources || result.sources);
-  state.assistantMeta.suggested_actions = safeArray(result.suggested_actions);
-  state.assistantMeta.runtime = {
-    ...(state.assistantMeta.runtime || {}),
-    evidence_count: result.evidence_count || 0,
-    intent: result.intent || "unknown",
-    mode: "local_brain",
-    updated_at: new Date().toISOString(),
-  };
-  state.assistantMeta.explainability = {
-    ...(state.assistantMeta.explainability || {}),
-    evidence_count: result.evidence_count || 0,
-    reasoning_summary:
-      "Local assistant reasoning used scoped residential care evidence only.",
-  };
-  state.assistantMeta.assistant_scope = {
-    ...(state.assistantMeta.assistant_scope || {}),
-    ...currentAssistantContext(),
-  };
-}
-
-function formatBrainAnswerAsHtml(answer = "") {
-  const safe = escapeHtml(answer);
-  return safe
-    .split("\n\n")
-    .map((block) => {
-      const trimmed = block.trim();
-      if (!trimmed) return "";
-
-      if (
-        trimmed.startsWith("- ") ||
-        trimmed.split("\n").every((line) => line.trim().startsWith("- "))
-      ) {
-        const items = trimmed
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((line) => `<li>${line.replace(/^- /, "")}</li>`)
-          .join("");
-
-        return `<ul>${items}</ul>`;
-      }
-
-      return trimmed
-        .split("\n")
-        .map((line) => `<p>${line}</p>`)
-        .join("");
-    })
-    .join("");
-}
-
-function appendAssistantMessage(role = "assistant", content = "") {
-  if (!els.assistantMessages) return;
-
-  const article = document.createElement("article");
-  article.className = `assistant-message assistant-message-${role}`;
-
-  const roleLabel = role === "user" ? "You" : "Assistant";
-
-  article.innerHTML = `
-    <div class="assistant-message-role">${escapeHtml(roleLabel)}</div>
-    <div class="assistant-message-body">
-      ${formatBrainAnswerAsHtml(content)}
-    </div>
-  `;
-
-  els.assistantMessages.appendChild(article);
-  els.assistantMessages.scrollTop = els.assistantMessages.scrollHeight;
-}
-
-function renderAssistantSources(sources = []) {
-  if (!els.assistantSources) return;
-
-  const safeSources = safeArray(sources);
-
-  if (!safeSources.length) {
-    els.assistantSources.innerHTML = `<p>No sources available yet.</p>`;
-    return;
-  }
-
-  els.assistantSources.innerHTML = safeSources
-    .map((item) => {
-      const title = escapeHtml(item.title || item.label || "Record");
-      const summary = escapeHtml(item.summary || item.excerpt || "");
-      const citation = escapeHtml(item.citation || item.citation_ref || "");
-      const meta = [item.section, item.record_type, item.date]
-        .filter(Boolean)
-        .map((x) => escapeHtml(String(x)))
-        .join(" • ");
-
-      return `
-        <div class="entity-row">
-          <div class="entity-title">${title}</div>
-          ${meta ? `<div class="entity-meta">${meta}</div>` : ""}
-          ${summary ? `<div class="entity-meta entity-meta-description">${summary}</div>` : ""}
-          ${citation ? `<div class="entity-meta">${citation}</div>` : ""}
-        </div>
-      `;
-    })
-    .join("");
-}
-
-function renderAssistantSuggestedActions(actions = []) {
-  if (!els.assistantSuggestions) return;
-
-  const safeActions = safeArray(actions);
-
-  if (!safeActions.length) {
-    els.assistantSuggestions.innerHTML = `<span class="chip">No suggested actions yet</span>`;
-    return;
-  }
-
-  els.assistantSuggestions.innerHTML = safeActions
-    .map((item) => {
-      const label =
-        typeof item === "string"
-          ? item
-          : item?.label || item?.title || item?.type || "Action";
-
-      return `<span class="chip">${escapeHtml(label)}</span>`;
-    })
-    .join("");
-}
-
-function renderAssistantScopeSummary(result = {}) {
-  if (!els.assistantScopeSummary) return;
-
-  const context = currentAssistantContext();
-  const evidenceCount = result.evidence_count || 0;
-  const intent = result.intent || "unknown";
-  const summary = result.brain_summary || {};
-
-  els.assistantScopeSummary.innerHTML = `
-    <div class="profile-stack">
-      <div class="profile-card">
-        <div class="profile-card-title">Current scope</div>
-        <div class="profile-card-text">
-          Scope: ${escapeHtml(context.scope)}<br />
-          Section: ${escapeHtml(context.section)}<br />
-          Role: ${escapeHtml(context.role)}
-        </div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Analysis</div>
-        <div class="profile-card-text">
-          Intent: ${escapeHtml(intent)}<br />
-          Evidence count: ${escapeHtml(String(evidenceCount))}<br />
-          Open tasks: ${escapeHtml(String(summary.open_tasks ?? 0))}<br />
-          Overdue items: ${escapeHtml(String(summary.overdue ?? summary.overdue_items ?? 0))}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 function setAssistantContextText() {
   if (!els.assistantContext) return;
 
   const context = currentAssistantContext();
 
   if (context.scope === "child") {
-    els.assistantContext.textContent = `Scoped to ${context.person.name} in ${context.person.home_name || context.home.home_name || "the home"}.`;
+    els.assistantContext.textContent = `Scoped to ${context.person.name} in ${
+      context.person.home_name || context.home.home_name || "the home"
+    }.`;
     return;
   }
 
   if (context.scope === "home") {
-    els.assistantContext.textContent = `Scoped to home oversight for ${context.home.home_name || "the current home"}.`;
+    els.assistantContext.textContent = `Scoped to home oversight for ${
+      context.home.home_name || "the current home"
+    }.`;
     return;
   }
 
-  els.assistantContext.textContent = `Scoped to quality and oversight across authorised homes.`;
+  els.assistantContext.textContent =
+    "Scoped to quality and oversight across authorised homes.";
 }
 
 function renderScopeBadges() {
@@ -714,11 +483,11 @@ function writeBriefsFromBrain() {
 }
 
 async function buildDerivedAssistantStateFromBundle(bundle) {
-  const records_payload = bundle || {};
+  const recordsPayload = bundle || {};
 
   const runtime = await buildAssistantEvidenceContext({
     message: "summary",
-    records_payload,
+    records_payload: recordsPayload,
     fetchScopeBundle: false,
   });
 
@@ -905,102 +674,6 @@ function bindRefreshButtons() {
   });
 }
 
-function clearAssistantMessages() {
-  if (!els.assistantMessages) return;
-
-  els.assistantMessages.innerHTML = `
-    <article class="assistant-message assistant-message-system">
-      <div class="assistant-message-role">Assistant</div>
-      <div class="assistant-message-body">
-        <p>
-          Ask about this workspace, this child, the home, compliance,
-          quality, records or next steps.
-        </p>
-      </div>
-    </article>
-  `;
-}
-
-function bindAssistantMessaging() {
-  if (assistantMessageBound) return;
-  assistantMessageBound = true;
-
-  els.assistantForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const question = cleanText(els.assistantInput?.value || "");
-    if (!question) return;
-
-    const bundle = getBundlePayload();
-    const context = currentAssistantContext();
-
-    appendAssistantMessage("user", question);
-
-    if (els.assistantInput) {
-      els.assistantInput.value = "";
-    }
-
-    try {
-      const result = askAssistantBrain(question, bundle, { context });
-
-      appendAssistantMessage("assistant", result.answer);
-      setAssistantResponseMeta(result);
-      renderAssistantSources(result.top_sources);
-      renderAssistantSuggestedActions(result.suggested_actions);
-      renderAssistantScopeSummary(result);
-
-      if (result.intent === "handover") {
-        state.latestMorningBrief = result;
-      }
-
-      if (result.intent === "manager") {
-        state.latestManagerBrief = result;
-      }
-
-      if (result.intent === "quality") {
-        state.latestQualityBrief = result;
-      }
-
-      if (result.intent === "reg45") {
-        state.latestQualityBrief = buildReg45Support(question, bundle, {
-          context,
-        });
-      }
-
-      pushAssistantLiveUpdate({
-        title: "Assistant response generated",
-        message: `Answered using ${result.evidence_count || 0} scoped evidence item(s).`,
-        created_at: new Date().toISOString(),
-      });
-
-      refreshAssistantUi();
-      renderAssistantExtraPanels();
-    } catch (error) {
-      console.error("[assistant-controller] assistant question failed", error);
-
-      appendAssistantMessage(
-        "assistant",
-        "Sorry, I could not generate a response from the scoped records just now."
-      );
-
-      pushAssistantLiveUpdate({
-        title: "Assistant response failed",
-        message: error?.message || "Unknown assistant error.",
-        created_at: new Date().toISOString(),
-      });
-
-      renderAssistantExtraPanels();
-    }
-  });
-
-  els.assistantClearBtn?.addEventListener("click", () => {
-    clearAssistantMessages();
-    renderAssistantSources([]);
-    renderAssistantSuggestedActions([]);
-    renderAssistantScopeSummary({});
-  });
-}
-
 export function renderAssistantControllerPanels() {
   renderAssistantExtraPanels();
   renderScopeBadges();
@@ -1012,7 +685,6 @@ export function bindAssistantController() {
   assistantControllerBound = true;
 
   bindRefreshButtons();
-  bindAssistantMessaging();
   renderAssistantExtraPanels();
   renderScopeBadges();
   setAssistantContextText();
