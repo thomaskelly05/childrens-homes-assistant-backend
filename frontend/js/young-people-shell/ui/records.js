@@ -6,14 +6,10 @@ import {
   evaluateRecordSuggestions,
   mergeSuggestionLists,
 } from "../core/rules-client.js";
-import {
-  showSuggestionsPanel,
-  hideSuggestionsPanel,
-} from "./suggestions.js";
 
 /* ------------------------- local helper replacements ------------------------- */
 
-function statusBadgeClass(status = "") {
+function statusBadgeTone(status = "") {
   const value = String(status || "")
     .trim()
     .toLowerCase()
@@ -71,152 +67,103 @@ function statusBadgeClass(status = "") {
   return "muted";
 }
 
-function renderBadges(values = []) {
-  const items = Array.isArray(values)
-    ? values.filter(Boolean)
-    : [values].filter(Boolean);
+/* -------------------------- local suggestions bridge ------------------------- */
 
-  if (!items.length) return "";
+function showSuggestionsPanelSafe(suggestions = [], meta = {}) {
+  try {
+    const panel = document.getElementById("suggestionsPanel");
+    const body = document.getElementById("suggestionsPanelBody");
+    const title = document.getElementById("suggestionsPanelTitle");
+    const subtitle = document.getElementById("suggestionsPanelSubtitle");
 
-  return `
-    <div class="badge-row">
-      ${items
-        .map(
-          (item) => `
-            <span class="row-pill ${escapeHtml(statusBadgeClass(item))}">
-              ${escapeHtml(String(item))}
-            </span>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
+    if (!panel || !body) return;
 
-function renderSummaryStat(label, value, note = "") {
-  return `
-    <article class="overview-stat-card">
-      <span class="overview-stat-label">${escapeHtml(String(label || ""))}</span>
-      <strong class="overview-stat-value">${escapeHtml(String(value ?? "—"))}</strong>
-      ${note ? `<span class="overview-stat-note">${escapeHtml(String(note))}</span>` : ""}
-    </article>
-  `;
-}
+    if (title) {
+      title.textContent = suggestions.length
+        ? `Suggested follow-ups`
+        : "Suggestions";
+    }
 
-function renderEmptyState(title = "Nothing to show", message = "No records found.") {
-  return `
-    <div class="empty-state">
-      <div class="empty-state-inner">
-        <div class="empty-state-icon" aria-hidden="true">○</div>
-        <h3>${escapeHtml(String(title))}</h3>
-        <p>${escapeHtml(String(message))}</p>
-      </div>
-    </div>
-  `;
-}
+    if (subtitle) {
+      const bits = [];
+      if (meta.source_record_type) bits.push(String(meta.source_record_type).replaceAll("_", " "));
+      if (meta.source_record_id) bits.push(`Source #${meta.source_record_id}`);
+      if (meta.scope) bits.push(`Scope: ${meta.scope}`);
+      subtitle.textContent = bits.join(" • ");
+    }
 
-function renderSection(title = "", bodyHtml = "", subtitle = "") {
-  return `
-    <section class="overview-section-card">
-      <div class="overview-section-head">
-        <h3>${escapeHtml(String(title || ""))}</h3>
-        ${subtitle ? `<p>${escapeHtml(String(subtitle))}</p>` : ""}
-      </div>
-      ${bodyHtml || ""}
-    </section>
-  `;
-}
+    if (!Array.isArray(suggestions) || !suggestions.length) {
+      body.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-inner">
+            <div class="empty-state-icon" aria-hidden="true">○</div>
+            <h3>No suggestions</h3>
+            <p>No suggestions right now.</p>
+          </div>
+        </div>
+      `;
+    } else {
+      body.innerHTML = `
+        <div class="record-list">
+          ${suggestions
+            .map((item, index) => {
+              const titleText =
+                item.title ||
+                item.label ||
+                item.name ||
+                `Suggestion ${index + 1}`;
 
-function renderRowList(items = [], options = {}) {
-  const {
-    titleKey = "title",
-    summaryKey = "summary",
-    metaBuilder = null,
-    statusKey = "status",
-    recordTypeKey = "record_type",
-    idKey = "id",
-    emptyTitle = "Nothing to show",
-    emptyMessage = "No records found.",
-  } = options;
+              const description =
+                item.description ||
+                item.summary ||
+                item.reason ||
+                "";
 
-  if (!Array.isArray(items) || !items.length) {
-    return renderEmptyState(emptyTitle, emptyMessage);
-  }
+              const actionType =
+                item.action_type ||
+                item.record_type ||
+                item.target_record_type ||
+                "create_record";
 
-  return `
-    <div class="record-list">
-      ${items
-        .map((item) => {
-          const title = item?.[titleKey] || item?.name || "Record";
-          const summary = item?.[summaryKey] || "";
-          const meta = typeof metaBuilder === "function" ? metaBuilder(item) : "";
-          const status = item?.[statusKey] || "";
-          const recordType = item?.[recordTypeKey] || "";
-          const id = item?.[idKey] ?? "";
-
-          return `
-            <article
-              class="record-row"
-              data-open-record="true"
-              data-record-id="${escapeHtml(String(id))}"
-              data-record-type="${escapeHtml(String(recordType))}"
-              data-title="${escapeHtml(String(title))}"
-              tabindex="0"
-              role="button"
-            >
-              <div class="record-row-main">
-                <div class="record-row-title">${escapeHtml(String(title))}</div>
-                ${summary ? `<div class="record-row-summary">${escapeHtml(String(summary))}</div>` : ""}
-                ${meta ? `<div class="record-row-meta">${escapeHtml(String(meta))}</div>` : ""}
-              </div>
-              <div class="record-row-side">
-                ${status ? `<span class="row-pill ${escapeHtml(statusBadgeClass(status))}">${escapeHtml(String(status))}</span>` : ""}
-              </div>
-            </article>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
-function renderRecordsTable(items = [], columns = [], emptyMessage = "No records found.") {
-  if (!Array.isArray(items) || !items.length) {
-    return renderEmptyState("Nothing to show", emptyMessage);
-  }
-
-  return `
-    <div class="table-wrap">
-      <table class="records-table">
-        <thead>
-          <tr>
-            ${columns
-              .map((col) => `<th>${escapeHtml(String(col.label || ""))}</th>`)
-              .join("")}
-          </tr>
-        </thead>
-        <tbody>
-          ${items
-            .map((item) => {
               return `
-                <tr>
-                  ${columns
-                    .map((col) => {
-                      const value =
-                        typeof col.render === "function"
-                          ? col.render(item)
-                          : item?.[col.key] ?? "";
-                      return `<td>${escapeHtml(String(value ?? ""))}</td>`;
-                    })
-                    .join("")}
-                </tr>
+                <article class="record-row">
+                  <div class="record-row-main">
+                    <div class="record-row-title">${escapeHtml(String(titleText))}</div>
+                    ${
+                      description
+                        ? `<div class="record-row-summary">${escapeHtml(String(description))}</div>`
+                        : ""
+                    }
+                    <div class="record-row-meta">${escapeHtml(String(actionType).replaceAll("_", " "))}</div>
+                  </div>
+                </article>
               `;
             })
             .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
+        </div>
+      `;
+    }
+
+    panel.classList.remove("hidden");
+    panel.setAttribute("aria-hidden", "false");
+  } catch (error) {
+    console.error("[records] failed to show suggestions panel", error);
+  }
+}
+
+function hideSuggestionsPanelSafe() {
+  try {
+    const panel = document.getElementById("suggestionsPanel");
+    const body = document.getElementById("suggestionsPanelBody");
+
+    if (body) body.innerHTML = "";
+    if (panel) {
+      panel.classList.add("hidden");
+      panel.setAttribute("aria-hidden", "true");
+    }
+  } catch (error) {
+    console.error("[records] failed to hide suggestions panel", error);
+  }
 }
 
 /* -------------------------------- scope -------------------------------- */
@@ -690,9 +637,7 @@ function renderObjectValue(value) {
   }
 
   if (typeof value === "object") {
-    return `<pre class="drawer-code-block">${escapeHtml(
-      JSON.stringify(value, null, 2)
-    )}</pre>`;
+    return `<pre class="drawer-code-block">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
   }
 
   return escapeHtml(String(value));
@@ -767,7 +712,7 @@ export function closeDrawer() {
   state.activeRecordType = null;
   state.recordDrawerOpen = false;
 
-  hideSuggestionsPanel();
+  hideSuggestionsPanelSafe();
 }
 
 function setDrawerButtons(type) {
@@ -937,7 +882,7 @@ export async function openRecordDetail(item) {
         els.drawerBody.innerHTML = renderDrawerSection(fallbackDetail);
       }
 
-      hideSuggestionsPanel();
+      hideSuggestionsPanelSafe();
       return;
     }
 
@@ -972,16 +917,16 @@ export async function openRecordDetail(item) {
       );
 
       if (suggestions.length) {
-        showSuggestionsPanel(suggestions, {
+        showSuggestionsPanelSafe(suggestions, {
           source_record_type: type,
           source_record_id: suggestionRecord.id,
           scope: getCurrentScope(),
         });
       } else {
-        hideSuggestionsPanel();
+        hideSuggestionsPanelSafe();
       }
     } else {
-      hideSuggestionsPanel();
+      hideSuggestionsPanelSafe();
     }
   } catch (error) {
     if (els.drawerSubtitle) {
@@ -995,7 +940,7 @@ export async function openRecordDetail(item) {
       );
     }
 
-    hideSuggestionsPanel();
+    hideSuggestionsPanelSafe();
   }
 }
 
@@ -1083,12 +1028,3 @@ export function bindRecordDrawerEvents({ onEdit, onWorkflowComplete } = {}) {
     await handleWorkflowAction("archive");
   });
 }
-
-export {
-  renderBadges,
-  renderSummaryStat,
-  renderEmptyState,
-  renderSection,
-  renderRowList,
-  renderRecordsTable,
-};
