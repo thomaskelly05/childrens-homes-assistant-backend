@@ -37,13 +37,25 @@ let assistantPromptDelegatesBound = false;
 
 const MAX_UI_PROMPTS = 8;
 
-function syncAssistantUi() {
+function ensureAssistantMessageLists() {
   ensureAssistantState();
+
+  if (!Array.isArray(state.assistantMessages)) {
+    state.assistantMessages = [];
+  }
+
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+}
+
+function syncAssistantUi() {
+  ensureAssistantMessageLists();
   refreshAssistantUi();
 }
 
 export function openAssistant() {
-  ensureAssistantState();
+  ensureAssistantMessageLists();
   updateAssistantContext();
   state.assistantOpen = true;
   syncAssistantUi();
@@ -55,17 +67,17 @@ export function closeAssistant() {
 }
 
 export function renderAssistantMessages() {
-  ensureAssistantState();
+  ensureAssistantMessageLists();
   syncAssistantUi();
 }
 
 export function renderAssistantInsights() {
-  ensureAssistantState();
+  ensureAssistantMessageLists();
   syncAssistantUi();
 }
 
 function addAssistantPlaceholder() {
-  ensureAssistantState();
+  ensureAssistantMessageLists();
 
   const entry = cloneAssistantMessage({
     role: "assistant",
@@ -74,21 +86,20 @@ function addAssistantPlaceholder() {
   });
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
+  state.assistantModalMessages.push(cloneAssistantMessage(entry));
   syncAssistantUi();
 }
 
 function updateLastAssistantStreamingText(text) {
+  ensureAssistantMessageLists();
+
   const safeValue =
     typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
 
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const lists = [state.assistantMessages, state.assistantModalMessages];
 
   lists.forEach((list) => {
-    if (!list.length) return;
+    if (!Array.isArray(list) || !list.length) return;
 
     const last = list[list.length - 1];
     if (last?.role === "assistant" && last?._streaming) {
@@ -100,17 +111,18 @@ function updateLastAssistantStreamingText(text) {
 }
 
 function replaceLastAssistantPlaceholder(text) {
+  ensureAssistantMessageLists();
+
   const safeValue =
     typeof text === "string"
       ? text
       : extractStreamText(text) || "No assistant reply returned.";
 
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const lists = [state.assistantMessages, state.assistantModalMessages];
 
   lists.forEach((list) => {
+    if (!Array.isArray(list)) return;
+
     if (!list.length) {
       list.push(
         cloneAssistantMessage({
@@ -230,15 +242,11 @@ function buildAssistantContextPayload(message = "") {
     whole_os_default: true,
     section_only_requested: retrievalMode === "section_only",
     use_whole_scope_records: retrievalMode !== "section_only",
-    ask_for_dates:
-      intent === "factual_lookup" || intent === "chronology",
-    ask_for_chronology:
-      intent === "chronology" || intent === "review",
-    ask_for_summary:
-      intent === "summary" || intent === "review",
+    ask_for_dates: intent === "factual_lookup" || intent === "chronology",
+    ask_for_chronology: intent === "chronology" || intent === "review",
+    ask_for_summary: intent === "summary" || intent === "review",
     ask_for_review_pack: intent === "review",
-    ask_for_compliance_view:
-      intent === "compliance" || scope === "quality",
+    ask_for_compliance_view: intent === "compliance" || scope === "quality",
     suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(
       0,
       MAX_UI_PROMPTS
@@ -259,15 +267,18 @@ function buildSafeAssistantRequestPayload(payload) {
     context: {
       assistant_type: context.assistant_type || "young_people_os",
       assistant_identity:
-        context.assistant_identity && typeof context.assistant_identity === "object"
+        context.assistant_identity &&
+        typeof context.assistant_identity === "object"
           ? context.assistant_identity
           : null,
       response_contract:
-        context.response_contract && typeof context.response_contract === "object"
+        context.response_contract &&
+        typeof context.response_contract === "object"
           ? context.response_contract
           : null,
       inspection_framework:
-        context.inspection_framework && typeof context.inspection_framework === "object"
+        context.inspection_framework &&
+        typeof context.inspection_framework === "object"
           ? context.inspection_framework
           : null,
       scope: context.scope || null,
@@ -388,7 +399,7 @@ function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
 }
 
 function getSourcesSafe() {
-  ensureAssistantState();
+  ensureAssistantMessageLists();
   return Array.isArray(state.assistantMeta?.sources)
     ? state.assistantMeta.sources
     : [];
@@ -417,11 +428,9 @@ export function updateAssistantContext() {
   const section = getCurrentSection();
   const accessLevel = getAccessLevelForScope(scope);
 
-  ensureAssistantState();
+  ensureAssistantMessageLists();
 
-  const sectionLabel = String(section)
-    .replaceAll("_", " ")
-    .replaceAll("-", " ");
+  const sectionLabel = String(section).replaceAll("_", " ").replaceAll("-", " ");
 
   const contextSummary =
     scope === "child"
@@ -494,7 +503,7 @@ export async function askAssistant(question) {
 
   if (!trimmed || state.assistantSending) return;
 
-  ensureAssistantState();
+  ensureAssistantMessageLists();
 
   if (getCurrentScope() === "child" && !state.youngPersonId) {
     appendAssistantSystemMessage(
@@ -505,7 +514,7 @@ export async function askAssistant(question) {
 
   const intent = detectAssistantIntent(trimmed);
 
-  if (intent === "greeting") {
+  if (intent === "greeting" || isGreeting(trimmed)) {
     await answerLocallyForGreeting(trimmed);
     return;
   }
@@ -693,7 +702,7 @@ export function bindAssistantEvents() {
   if (assistantEventsBound) return;
   assistantEventsBound = true;
 
-  ensureAssistantState();
+  ensureAssistantMessageLists();
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
   els.heroAssistantBtn?.addEventListener("click", openAssistant);
@@ -722,7 +731,7 @@ export function bindAssistantEvents() {
 }
 
 export function loadAssistant() {
-  ensureAssistantState();
+  ensureAssistantMessageLists();
   updateAssistantContext();
   syncAssistantUi();
 }
