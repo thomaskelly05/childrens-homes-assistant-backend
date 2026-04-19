@@ -80,6 +80,15 @@ export function ensureAssistantState() {
   state.assistantMeta.scrubber_meta = state.assistantMeta.scrubber_meta || {};
   state.assistantMeta.scrubber_reverse_map =
     state.assistantMeta.scrubber_reverse_map || {};
+  state.assistantMeta.secondary_intents = Array.isArray(
+    state.assistantMeta.secondary_intents
+  )
+    ? state.assistantMeta.secondary_intents
+    : [];
+  state.assistantMeta.live_summary =
+    state.assistantMeta.live_summary !== undefined
+      ? state.assistantMeta.live_summary
+      : null;
 }
 
 export function getAssistantMeta() {
@@ -94,21 +103,33 @@ export function mergeAssistantMeta(nextMeta = {}) {
 
   state.assistantMeta = {
     ...previous,
+    intent: nextMeta.intent || previous.intent || null,
+    secondary_intents: Array.isArray(nextMeta.secondary_intents)
+      ? nextMeta.secondary_intents
+      : previous.secondary_intents || [],
+    retrieval_mode:
+      nextMeta.retrieval_mode || previous.retrieval_mode || "whole_scope",
+    output_mode: nextMeta.output_mode || previous.output_mode || "answer",
+
     sources: Array.isArray(nextMeta.sources)
       ? nextMeta.sources
       : previous.sources || [],
+
     runtime:
       nextMeta.runtime && typeof nextMeta.runtime === "object"
         ? { ...(previous.runtime || {}), ...nextMeta.runtime }
         : previous.runtime || {},
+
     explainability:
       nextMeta.explainability && typeof nextMeta.explainability === "object"
         ? { ...(previous.explainability || {}), ...nextMeta.explainability }
         : previous.explainability || {},
+
     assistant_scope:
       nextMeta.assistant_scope && typeof nextMeta.assistant_scope === "object"
         ? { ...(previous.assistant_scope || {}), ...nextMeta.assistant_scope }
         : previous.assistant_scope || {},
+
     assistant_context:
       nextMeta.assistant_context && typeof nextMeta.assistant_context === "object"
         ? {
@@ -116,33 +137,41 @@ export function mergeAssistantMeta(nextMeta = {}) {
             ...nextMeta.assistant_context,
           }
         : previous.assistant_context || {},
+
     suggested_actions: Array.isArray(nextMeta.suggested_actions)
       ? nextMeta.suggested_actions
       : previous.suggested_actions || [],
+
     scrubber_reverse_map:
       nextMeta.scrubber_reverse_map &&
       typeof nextMeta.scrubber_reverse_map === "object"
         ? nextMeta.scrubber_reverse_map
         : previous.scrubber_reverse_map || {},
+
     scrubber_enabled:
       typeof nextMeta.scrubber_enabled === "boolean"
         ? nextMeta.scrubber_enabled
         : Boolean(previous.scrubber_enabled),
+
     scrubber_meta:
       nextMeta.scrubber_meta && typeof nextMeta.scrubber_meta === "object"
         ? { ...(previous.scrubber_meta || {}), ...nextMeta.scrubber_meta }
         : previous.scrubber_meta || {},
+
     chronology: Array.isArray(nextMeta.chronology)
       ? nextMeta.chronology
       : previous.chronology || [],
+
     facts:
       nextMeta.facts && typeof nextMeta.facts === "object"
         ? { ...(previous.facts || {}), ...nextMeta.facts }
         : previous.facts || {},
+
     care_domains:
       nextMeta.care_domains && typeof nextMeta.care_domains === "object"
         ? { ...(previous.care_domains || {}), ...nextMeta.care_domains }
         : previous.care_domains || {},
+
     evidence_summary:
       nextMeta.evidence_summary && typeof nextMeta.evidence_summary === "object"
         ? {
@@ -150,6 +179,7 @@ export function mergeAssistantMeta(nextMeta = {}) {
             ...nextMeta.evidence_summary,
           }
         : previous.evidence_summary || {},
+
     evidence_sufficiency:
       nextMeta.evidence_sufficiency &&
       typeof nextMeta.evidence_sufficiency === "object"
@@ -158,10 +188,12 @@ export function mergeAssistantMeta(nextMeta = {}) {
             ...nextMeta.evidence_sufficiency,
           }
         : previous.evidence_sufficiency || {},
+
     live_summary:
       nextMeta.live_summary !== undefined
         ? nextMeta.live_summary
         : previous.live_summary || null,
+
     last_analysis_at: nextMeta.last_analysis_at || previous.last_analysis_at || null,
     last_bundle_refresh_at:
       nextMeta.last_bundle_refresh_at ||
@@ -282,6 +314,53 @@ export function getReadableSectionSubtitle() {
   return getSectionSubtitle(getCurrentSection()) || "";
 }
 
+export function inferAnalysisLens({
+  scope = getCurrentScope(),
+  section = getCurrentSection(),
+  role = state.userRole || "staff",
+  intent = ASSISTANT_INTENT.summary,
+} = {}) {
+  const safeScope = String(scope || "child").toLowerCase();
+  const safeSection = String(section || "workspace").toLowerCase();
+  const safeRole = String(role || "staff").toLowerCase();
+  const safeIntent = String(intent || ASSISTANT_INTENT.summary).toLowerCase();
+
+  if (
+    /safeguarding|risk|missing/.test(safeSection) ||
+    safeIntent === ASSISTANT_INTENT.risk
+  ) {
+    return "safeguarding";
+  }
+
+  if (
+    safeScope === "quality" ||
+    safeIntent === ASSISTANT_INTENT.quality ||
+    safeIntent === ASSISTANT_INTENT.compliance ||
+    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
+  ) {
+    return safeRole === "ri" || safeRole === "admin" ? "quality" : "inspection";
+  }
+
+  if (
+    safeIntent === ASSISTANT_INTENT.management ||
+    ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
+    /manager|team|supervision|home-dashboard/.test(safeSection)
+  ) {
+    return "manager";
+  }
+
+  if (
+    safeIntent === ASSISTANT_INTENT.handover ||
+    /handover|workspace/.test(safeSection)
+  ) {
+    return "shift";
+  }
+
+  if (safeScope === "child") return "child_centred";
+  if (safeScope === "home") return "operational";
+  return "general";
+}
+
 export function extractAssistantContent(message = {}) {
   if (typeof message === "string") return message;
   if (!message || typeof message !== "object") return "";
@@ -346,7 +425,7 @@ export function extractAssistantContent(message = {}) {
       .filter(Boolean)
       .join("\n");
 
-      if (joined.trim()) return joined;
+    if (joined.trim()) return joined;
   }
 
   return "";
@@ -546,16 +625,40 @@ export function detectAssistantIntents(text = "") {
   }
 
   const checks = [
-    [ASSISTANT_INTENT.review, /reg\s*45|regulation\s*45|qa full summary|full summary|comprehensive summary|full review|period review|six month|6 month|twelve month|12 month/],
-    [ASSISTANT_INTENT.chronology, /chronology|timeline|what happened|history|in date order|events over time/],
-    [ASSISTANT_INTENT.factual_lookup, /when was|what date|dates|last incident|last missing|next appointment|how many|overdue|due soon|upcoming|latest/],
+    [
+      ASSISTANT_INTENT.review,
+      /reg\s*45|regulation\s*45|qa full summary|full summary|comprehensive summary|full review|period review|six month|6 month|twelve month|12 month/,
+    ],
+    [
+      ASSISTANT_INTENT.chronology,
+      /chronology|timeline|what happened|history|in date order|events over time/,
+    ],
+    [
+      ASSISTANT_INTENT.factual_lookup,
+      /when was|what date|dates|last incident|last missing|next appointment|how many|overdue|due soon|upcoming|latest/,
+    ],
     [ASSISTANT_INTENT.handover, /handover|next shift|shift brief|morning brief/],
     [ASSISTANT_INTENT.drafting, /draft|write|reword|rewrite|wording|improve this/],
-    [ASSISTANT_INTENT.compliance, /compliance|ofsted|supervision|training|statutory|audit|reg\s*40|reg\s*44|quality standards|inspection risk|scrutiny|sccif/],
-    [ASSISTANT_INTENT.risk, /risk|safeguarding|harm|trigger|protective factor|missing from care|missing episode/],
-    [ASSISTANT_INTENT.quality, /quality|ri|inspection|governance|provider|home compare|compare homes|all homes/],
-    [ASSISTANT_INTENT.management, /manager|oversight|leadership|escalation|registered manager/],
-    [ASSISTANT_INTENT.summary, /summary|summarise|summarize|what matters|overview|lived experience|key work|keywork/],
+    [
+      ASSISTANT_INTENT.compliance,
+      /compliance|ofsted|supervision|training|statutory|audit|reg\s*40|reg\s*44|quality standards|inspection risk|scrutiny|sccif/,
+    ],
+    [
+      ASSISTANT_INTENT.risk,
+      /risk|safeguarding|harm|trigger|protective factor|missing from care|missing episode/,
+    ],
+    [
+      ASSISTANT_INTENT.quality,
+      /quality|ri|inspection|governance|provider|home compare|compare homes|all homes/,
+    ],
+    [
+      ASSISTANT_INTENT.management,
+      /manager|oversight|leadership|escalation|registered manager/,
+    ],
+    [
+      ASSISTANT_INTENT.summary,
+      /summary|summarise|summarize|what matters|overview|lived experience|key work|keywork/,
+    ],
   ];
 
   for (const [intent, regex] of checks) {
@@ -566,11 +669,11 @@ export function detectAssistantIntents(text = "") {
     intents.push(ASSISTANT_INTENT.unknown);
   }
 
-  const unique = [...new Set(intents)];
+  const uniqueIntents = [...new Set(intents)];
 
   return {
-    primary_intent: unique[0],
-    secondary_intents: unique.slice(1),
+    primary_intent: uniqueIntents[0],
+    secondary_intents: uniqueIntents.slice(1),
   };
 }
 
@@ -640,6 +743,13 @@ export function detectOutputMode(intent = ASSISTANT_INTENT.unknown, text = "") {
   }
 
   if (intent === ASSISTANT_INTENT.factual_lookup) return "factual_answer";
+  if (intent === ASSISTANT_INTENT.summary) return "summary";
+  if (intent === ASSISTANT_INTENT.chronology) return "chronology";
+  if (intent === ASSISTANT_INTENT.review) return "review_pack";
+  if (intent === ASSISTANT_INTENT.handover) return "handover";
+  if (intent === ASSISTANT_INTENT.compliance) return "compliance_brief";
+  if (intent === ASSISTANT_INTENT.management) return "management_brief";
+  if (intent === ASSISTANT_INTENT.quality) return "quality_brief";
   if (intent === ASSISTANT_INTENT.drafting) return "drafting";
 
   return "answer";
@@ -761,18 +871,19 @@ export function sanitiseSourcesForUi(sources = []) {
     .map((source, index) => ({
       type: source.type || source.record_type || "record",
       label: String(source.label || source.title || source.document_title || "Record"),
-      excerpt: String(source.excerpt || source.summary || "").slice(
-        0,
-        MAX_SOURCE_EXCERPT
-      ),
+      title: String(source.title || source.label || source.document_title || "Record"),
+      excerpt: String(
+        source.excerpt || source.summary || source.description || ""
+      ).slice(0, MAX_SOURCE_EXCERPT),
+      description: String(
+        source.description || source.summary || source.excerpt || ""
+      ).slice(0, MAX_SOURCE_EXCERPT),
       section: source.section || "",
       record_type: source.record_type || source.type || null,
       record_id: source.record_id || source.id || null,
       citation_ref: source.citation_ref || buildCitationRef(source, index),
       url: source.url || null,
-      title: source.title || source.label || source.document_title || "Record",
-      description: source.description || source.summary || source.excerpt || "",
-      created_at: source.created_at || null,
+      created_at: source.created_at || source.date || null,
       evidence_kind: source.evidence_kind || "direct",
     }));
 }
