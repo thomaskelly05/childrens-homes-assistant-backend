@@ -23,12 +23,15 @@ import { refreshWorkspaceSummary } from "./ui/workspace-summary-controller.js";
 import {
   ROLE_SCOPE_ACCESS,
   SCOPE_DEFAULT_SECTION,
+  SCOPE_SECTIONS,
   getDefaultScopeForRole as getConfigDefaultScopeForRole,
   canRoleAccessScope,
 } from "./core/config.js";
 
 let scopeEventsBound = false;
 let bootstrapped = false;
+let globalSearchMirrorsBound = false;
+let globalRefreshShortcutsBound = false;
 
 function showWorkspace() {
   els.selectorScreen?.classList.add("hidden");
@@ -250,9 +253,15 @@ function getDefaultSectionForScope(scope = state.currentScope || "child") {
   return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
 }
 
-function shouldForceRoleDefaultScope() {
-  const role = getCurrentRole();
-  return role === "admin" || role === "manager" || role === "ri";
+function getAllowedSectionsForScope(scope = state.currentScope || "child") {
+  return SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"];
+}
+
+function isSectionAllowedInScope(
+  section = "",
+  scope = state.currentScope || "child"
+) {
+  return getAllowedSectionsForScope(scope).includes(section);
 }
 
 function ensureValidScopeForRole() {
@@ -265,19 +274,18 @@ function ensureValidScopeForRole() {
 }
 
 function ensureInitialSectionForScope() {
-  const expectedDefault = getDefaultSectionForScope(state.currentScope);
+  const scope = state.currentScope || "child";
+  const expectedDefault = getDefaultSectionForScope(scope);
+  const currentSection =
+    state.currentSection || state.activeSection || state.currentView || "";
 
-  if (!state.currentSection) {
-    state.currentSection = expectedDefault;
-  }
+  const safeSection = isSectionAllowedInScope(currentSection, scope)
+    ? currentSection
+    : expectedDefault;
 
-  if (!state.activeSection) {
-    state.activeSection = state.currentSection;
-  }
-
-  if (!state.currentView) {
-    state.currentView = state.currentSection;
-  }
+  state.currentSection = safeSection;
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
 }
 
 function syncScopeButtons() {
@@ -458,6 +466,9 @@ function syncVisibleScreen() {
 }
 
 function bindGlobalSearchMirrors() {
+  if (globalSearchMirrorsBound) return;
+  globalSearchMirrorsBound = true;
+
   const desktopSearch = document.getElementById("recordSearchInput");
   const mobileSearch = document.getElementById("mobileRecordSearchInput");
   const filter = document.getElementById("recordTypeFilter");
@@ -529,6 +540,9 @@ function bindGlobalSearchMirrors() {
 }
 
 function bindGlobalRefreshShortcuts() {
+  if (globalRefreshShortcutsBound) return;
+  globalRefreshShortcutsBound = true;
+
   window.addEventListener("popstate", async () => {
     try {
       const restoredYoungPerson = await restoreSelectedYoungPerson();
@@ -555,16 +569,8 @@ async function bootstrap() {
     hydrateRuntimeContextFromDom();
     hydrateRuntimeContextFromSession();
 
-    if (shouldForceRoleDefaultScope()) {
-      state.currentScope = getDefaultScopeForRole();
-    }
-
     ensureValidScopeForRole();
-
-    state.currentSection = getDefaultSectionForScope(state.currentScope);
-    state.activeSection = state.currentSection;
-    state.currentView = state.currentSection;
-
+    ensureInitialSectionForScope();
     syncDomDatasetFromState();
 
     console.log("[young-people-shell] boot", {
