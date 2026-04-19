@@ -72,6 +72,7 @@ export function createAssistantUiState() {
 export function createAssistantChatState() {
   return {
     assistantMessages: [],
+    assistantModalMessages: [],
   };
 }
 
@@ -248,6 +249,10 @@ function ensureAssistantMeta() {
 function ensureAssistantMessages() {
   if (!Array.isArray(state.assistantMessages)) {
     state.assistantMessages = [];
+  }
+
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
   }
 }
 
@@ -630,6 +635,35 @@ export function updateLastAssistantMessage(updater) {
   const current = state.assistantMessages[lastIndex];
 
   state.assistantMessages[lastIndex] =
+    typeof updater === "function" ? updater(current) : current;
+}
+
+export function pushAssistantModalMessage(message = {}) {
+  ensureAssistantMessages();
+  state.assistantModalMessages.push(message);
+}
+
+export function replaceLastAssistantModalMessage(message = {}) {
+  ensureAssistantMessages();
+
+  if (!state.assistantModalMessages.length) {
+    state.assistantModalMessages.push(message);
+    return;
+  }
+
+  state.assistantModalMessages[state.assistantModalMessages.length - 1] =
+    message;
+}
+
+export function updateLastAssistantModalMessage(updater) {
+  ensureAssistantMessages();
+
+  if (!state.assistantModalMessages.length) return;
+
+  const lastIndex = state.assistantModalMessages.length - 1;
+  const current = state.assistantModalMessages[lastIndex];
+
+  state.assistantModalMessages[lastIndex] =
     typeof updater === "function" ? updater(current) : current;
 }
 
