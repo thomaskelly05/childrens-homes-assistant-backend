@@ -1,4 +1,7 @@
-import { state, createAssistantMeta } from "../state.js";
+import {
+  state,
+  createAssistantMeta,
+} from "../state.js";
 import { els } from "../dom.js";
 import { apiStreamAssistant } from "../core/api.js";
 import * as aiScrubber from "../core/ai-scrubber.js";
@@ -7,113 +10,37 @@ import {
   appendAssistantSystemMessage,
   appendAssistantUserMessage,
 } from "./assistant-ui.js";
+import {
+  refreshAssistantAnalysisOnly,
+} from "./assistant-controller.js";
+import {
+  ensureAssistantState,
+  getAssistantMeta,
+  mergeAssistantMeta,
+  getCurrentScope,
+  getCurrentSection,
+  getSelectedYoungPerson,
+  getFullYoungPersonName,
+  getHomeName,
+  getAllowedHomeIds,
+  getAccessLevelForScope,
+  getAssistantScopeType,
+  getAssistantTypeForScope,
+  detectAssistantIntent,
+  detectAssistantIntents,
+  detectRetrievalMode,
+  detectOutputMode,
+  detectAssistantResponseMode,
+  assistantPromptsForView,
+} from "../assistant/helpers.js";
 
 let assistantEventsBound = false;
 let assistantPromptDelegatesBound = false;
-
-const ASSISTANT_INTENT = {
-  greeting: "greeting",
-  factual_lookup: "factual_lookup",
-  summary: "summary",
-  chronology: "chronology",
-  review: "review",
-  handover: "handover",
-  drafting: "drafting",
-  compliance: "compliance",
-  risk: "risk",
-  quality: "quality",
-  management: "management",
-  unknown: "unknown",
-};
 
 const MAX_SAFE_MESSAGE_LENGTH = 3000;
 const MAX_SOURCE_ITEMS = 12;
 const MAX_SOURCE_EXCERPT = 240;
 const MAX_UI_PROMPTS = 8;
-
-function getCurrentScope() {
-  return state.currentScope || "child";
-}
-
-function getCurrentSection() {
-  return (
-    state.currentSection ||
-    state.activeSection ||
-    state.currentView ||
-    "workspace"
-  );
-}
-
-function getSelectedYoungPerson() {
-  return state.selectedYoungPerson || state.youngPerson || null;
-}
-
-function getFullYoungPersonName() {
-  const person = getSelectedYoungPerson() || {};
-
-  return (
-    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
-    person.preferred_name ||
-    person.full_name ||
-    person.name ||
-    "Young person"
-  );
-}
-
-function getHomeName() {
-  const person = getSelectedYoungPerson() || {};
-
-  return (
-    person.home_name ||
-    state.currentUser?.home_name ||
-    state.currentUser?.homeName ||
-    (state.homeId ? `Home ${state.homeId}` : "Home")
-  );
-}
-
-function getAllowedHomeIds() {
-  return Array.isArray(state.allowedHomeIds)
-    ? state.allowedHomeIds
-        .map((item) => Number(item))
-        .filter((item) => Number.isFinite(item))
-    : [];
-}
-
-function getAccessLevelForScope(scope = getCurrentScope()) {
-  const role = String(state.userRole || "").toLowerCase();
-
-  if (scope === "child") return "child";
-  if (scope === "home") return "home";
-
-  if (scope === "quality") {
-    return [
-      "ri",
-      "responsible_individual",
-      "admin",
-      "administrator",
-      "super_admin",
-      "superadmin",
-    ].includes(role)
-      ? "provider"
-      : "home";
-  }
-
-  return "home";
-}
-
-function getAssistantScopeType() {
-  const scope = getCurrentScope();
-
-  if (scope === "home") return "home";
-  if (scope === "quality") return "quality";
-  return state.youngPersonId ? "young_person" : "global";
-}
-
-function getAssistantTypeForScope(scope = getCurrentScope()) {
-  if (scope === "home") return "home_os";
-  if (scope === "quality") return "quality_os";
-  return "young_people_os";
-}
 
 function extractStreamText(payload) {
   if (typeof payload === "string") return payload;
@@ -184,439 +111,175 @@ function extractStreamText(payload) {
   return "";
 }
 
-function resolveRelativeMonthRange(months = 6) {
-  const end = new Date();
-  const start = new Date(end);
-  start.setMonth(start.getMonth() - months);
-  return { startDate: start, endDate: end, inferred: true };
+function trimForOutbound(value = "", max = MAX_SAFE_MESSAGE_LENGTH) {
+  return String(value || "").trim().slice(0, max);
 }
 
-function resolveExplicitDateRange(text = "") {
-  const value = String(text || "").trim();
-  const matches =
-    value.match(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/g) || [];
-
-  if (matches.length < 2) return null;
-
-  const parseDate = (raw) => {
-    const parts = raw.split(/[./-]/).map((item) => item.trim());
-    if (parts.length !== 3) return null;
-
-    let [day, month, year] = parts.map(Number);
-    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) {
-      return null;
-    }
-
-    if (year < 100) {
-      year += 2000;
-    }
-
-    const result = new Date(year, month - 1, day);
-    if (Number.isNaN(result.getTime())) return null;
-    return result;
-  };
-
-  const startDate = parseDate(matches[0]);
-  const endDate = parseDate(matches[1]);
-
-  if (!startDate || !endDate) return null;
-
-  return {
-    startDate,
-    endDate,
-    inferred: false,
-  };
+function buildCitationRef(source = {}, index = 0) {
+  const recordType = source.record_type || source.type || "record";
+  const recordId = source.record_id || source.id || `idx_${index + 1}`;
+  return `${recordType}:${recordId}`;
 }
 
-function resolveReg45DateRange(message = "") {
-  const text = String(message || "").toLowerCase().trim();
+function dedupeSources(sources = []) {
+  const seen = new Set();
+  const result = [];
 
-  const explicit = resolveExplicitDateRange(text);
-  if (explicit) return explicit;
+  for (const source of Array.isArray(sources) ? sources : []) {
+    const key = `${source.record_type || source.type || "record"}::${
+      source.record_id || source.id || source.label || ""
+    }`;
 
-  if (
-    /last\s+6\s+months|past\s+6\s+months|previous\s+6\s+months|six\s+months|6\s+months/.test(
-      text
-    )
-  ) {
-    return resolveRelativeMonthRange(6);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(source);
   }
 
-  if (
-    /last\s+12\s+months|past\s+12\s+months|previous\s+12\s+months|twelve\s+months|12\s+months/.test(
-      text
-    )
-  ) {
-    return resolveRelativeMonthRange(12);
-  }
-
-  return null;
+  return result;
 }
 
-function getDefaultReg45DateRange() {
-  return resolveRelativeMonthRange(6);
+function sanitiseSourcesForUi(sources = []) {
+  return dedupeSources(sources)
+    .slice(0, MAX_SOURCE_ITEMS)
+    .map((source, index) => ({
+      type: source.type || source.record_type || "record",
+      label: String(source.label || source.title || source.document_title || "Record"),
+      title: String(source.title || source.label || source.document_title || "Record"),
+      excerpt: String(source.excerpt || source.summary || source.description || "").slice(
+        0,
+        MAX_SOURCE_EXCERPT
+      ),
+      description: String(
+        source.description || source.excerpt || source.summary || ""
+      ).slice(0, MAX_SOURCE_EXCERPT),
+      section: source.section || "",
+      record_type: source.record_type || source.type || null,
+      record_id: source.record_id || source.id || null,
+      citation_ref: source.citation_ref || buildCitationRef(source, index),
+      evidence_kind: source.evidence_kind || "direct",
+      created_at: source.created_at || source.date || null,
+      url: source.url || null,
+    }));
 }
 
-function ensureAssistantState() {
-  if (!Array.isArray(state.assistantMessages)) {
-    state.assistantMessages = [];
-  }
-
-  if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
-    state.assistantMeta = createAssistantMeta();
-  }
-
-  if (!Array.isArray(state.assistantMeta.sources)) {
-    state.assistantMeta.sources = [];
-  }
-
-  if (!Array.isArray(state.assistantMeta.suggested_actions)) {
-    state.assistantMeta.suggested_actions = [];
-  }
-
-  if (
-    !state.assistantMeta.scrubber_reverse_map ||
-    typeof state.assistantMeta.scrubber_reverse_map !== "object"
-  ) {
-    state.assistantMeta.scrubber_reverse_map = {};
-  }
-
-  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
-  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
-  state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
-  state.assistantMeta.assistant_context =
-    state.assistantMeta.assistant_context || {};
-}
-
-function cloneMessageEntry(entry = {}) {
-  return {
-    id:
-      entry.id ||
-      `assistant-msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    role: entry.role || "assistant",
-    content:
-      typeof entry.content === "string"
-        ? entry.content
-        : extractStreamText(entry.content || ""),
-    created_at: entry.created_at || new Date().toISOString(),
-    _streaming: !!entry._streaming,
-  };
-}
-
-function mergeAssistantMeta(nextMeta = {}) {
+function getSourcesSafe() {
   ensureAssistantState();
-
-  const previous = state.assistantMeta || createAssistantMeta();
-
-  state.assistantMeta = {
-    ...previous,
-    sources: Array.isArray(nextMeta.sources)
-      ? nextMeta.sources
-      : previous.sources || [],
-    runtime:
-      nextMeta.runtime && typeof nextMeta.runtime === "object"
-        ? {
-            ...(previous.runtime || {}),
-            ...nextMeta.runtime,
-          }
-        : previous.runtime || {},
-    explainability:
-      nextMeta.explainability && typeof nextMeta.explainability === "object"
-        ? {
-            ...(previous.explainability || {}),
-            ...nextMeta.explainability,
-          }
-        : previous.explainability || {},
-    assistant_scope:
-      nextMeta.assistant_scope && typeof nextMeta.assistant_scope === "object"
-        ? {
-            ...(previous.assistant_scope || {}),
-            ...nextMeta.assistant_scope,
-          }
-        : previous.assistant_scope || {},
-    assistant_context:
-      nextMeta.assistant_context && typeof nextMeta.assistant_context === "object"
-        ? {
-            ...(previous.assistant_context || {}),
-            ...nextMeta.assistant_context,
-          }
-        : previous.assistant_context || {},
-    suggested_actions: Array.isArray(nextMeta.suggested_actions)
-      ? nextMeta.suggested_actions
-      : previous.suggested_actions || [],
-    scrubber_reverse_map:
-      nextMeta.scrubber_reverse_map &&
-      typeof nextMeta.scrubber_reverse_map === "object"
-        ? nextMeta.scrubber_reverse_map
-        : previous.scrubber_reverse_map || {},
-    scrubber_enabled:
-      typeof nextMeta.scrubber_enabled === "boolean"
-        ? nextMeta.scrubber_enabled
-        : Boolean(previous.scrubber_enabled),
-    scrubber_meta:
-      nextMeta.scrubber_meta && typeof nextMeta.scrubber_meta === "object"
-        ? {
-            ...(previous.scrubber_meta || {}),
-            ...nextMeta.scrubber_meta,
-          }
-        : previous.scrubber_meta || {},
-    last_analysis_at: nextMeta.last_analysis_at || previous.last_analysis_at || null,
-  };
+  return Array.isArray(state.assistantMeta?.sources)
+    ? state.assistantMeta.sources
+    : [];
 }
 
-function syncAssistantUi() {
-  ensureAssistantState();
+function applyAssistantMeta(meta = {}) {
+  const nextMeta = { ...meta };
+
+  if (nextMeta.sources) {
+    nextMeta.sources = sanitiseSourcesForUi(nextMeta.sources);
+  }
+
+  mergeAssistantMeta(nextMeta);
+  refreshAssistantUi();
+}
+
+function setAssistantSending(flag) {
+  state.assistantSending = !!flag;
   refreshAssistantUi();
 }
 
 export function openAssistant() {
   ensureAssistantState();
-  updateAssistantContext();
   state.assistantOpen = true;
-  syncAssistantUi();
+  refreshAssistantUi();
 }
 
 export function closeAssistant() {
   state.assistantOpen = false;
-  syncAssistantUi();
+  refreshAssistantUi();
 }
 
-export function renderAssistantMessages() {
-  ensureAssistantState();
-  syncAssistantUi();
-}
-
-export function renderAssistantInsights() {
-  ensureAssistantState();
-  syncAssistantUi();
-}
-
-function addAssistantPlaceholder() {
+function addAssistantPlaceholder(extra = {}) {
   ensureAssistantState();
 
-  const entry = cloneMessageEntry({
-    role: "assistant",
-    content: "Thinking…",
+  appendAssistantSystemMessage("Thinking…", {
+    status: "streaming",
     _streaming: true,
+    intent: extra.intent || null,
+    citations: [],
+    actions: [],
+    scope_snapshot: extra.scope_snapshot || null,
   });
-
-  state.assistantMessages.push(entry);
-  syncAssistantUi();
 }
 
-function updateLastAssistantStreamingText(text) {
+function updateLastAssistantStreamingText(text, extra = {}) {
   const safeValue =
     typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
 
-  const list = state.assistantMessages || [];
+  const list = Array.isArray(state.assistantMessages)
+    ? state.assistantMessages
+    : [];
+
   if (!list.length) return;
 
   const last = list[list.length - 1];
-  if (last?.role === "assistant" && last?._streaming) {
-    last.content = safeValue;
-  }
+  if (!last || last.role !== "assistant" || !last._streaming) return;
 
-  syncAssistantUi();
+  last.content = safeValue;
+  last.status = "streaming";
+  if (extra.intent) last.intent = extra.intent;
+  if (Array.isArray(extra.citations)) last.citations = extra.citations;
+  if (Array.isArray(extra.actions)) last.actions = extra.actions;
+
+  refreshAssistantUi();
 }
 
-function replaceLastAssistantPlaceholder(text) {
+function replaceLastAssistantPlaceholder(text, extra = {}) {
   const safeValue =
     typeof text === "string"
       ? text
       : extractStreamText(text) || "No assistant reply returned.";
 
-  const list = state.assistantMessages || [];
+  const list = Array.isArray(state.assistantMessages)
+    ? state.assistantMessages
+    : [];
 
   if (!list.length) {
-    list.push(
-      cloneMessageEntry({
-        role: "assistant",
-        content: safeValue,
-      })
-    );
-  } else {
-    const last = list[list.length - 1];
-    if (last?.role === "assistant" && last?._streaming) {
-      last.content = safeValue;
-      last._streaming = false;
-    } else {
-      list.push(
-        cloneMessageEntry({
-          role: "assistant",
-          content: safeValue,
-        })
-      );
-    }
+    appendAssistantSystemMessage(safeValue, {
+      status: "complete",
+      _streaming: false,
+      intent: extra.intent || null,
+      citations: extra.citations || [],
+      actions: extra.actions || [],
+      scope_snapshot: extra.scope_snapshot || null,
+    });
+    return;
   }
 
-  syncAssistantUi();
-}
+  const last = list[list.length - 1];
 
-function setAssistantSending(flag) {
-  state.assistantSending = !!flag;
-  syncAssistantUi();
+  if (last?.role === "assistant" && last?._streaming) {
+    last.content = safeValue;
+    last.status = "complete";
+    last._streaming = false;
+    if (extra.intent) last.intent = extra.intent;
+    if (Array.isArray(extra.citations)) last.citations = extra.citations;
+    if (Array.isArray(extra.actions)) last.actions = extra.actions;
+    refreshAssistantUi();
+    return;
+  }
+
+  appendAssistantSystemMessage(safeValue, {
+    status: "complete",
+    _streaming: false,
+    intent: extra.intent || null,
+    citations: extra.citations || [],
+    actions: extra.actions || [],
+    scope_snapshot: extra.scope_snapshot || null,
+  });
 }
 
 function isGreeting(text = "") {
   return /^(hi|hello|hey|hiya|morning|good morning|afternoon|good afternoon|evening|good evening)\b/i.test(
     String(text || "").trim()
   );
-}
-
-function detectAssistantIntent(text = "") {
-  const value = String(text || "").trim().toLowerCase();
-
-  if (!value) return ASSISTANT_INTENT.unknown;
-  if (isGreeting(value)) return ASSISTANT_INTENT.greeting;
-
-  if (
-    /reg\s*45|regulation\s*45|qa full summary|full summary|comprehensive summary|full review|period review|six month|6 month|twelve month|12 month/.test(
-      value
-    )
-  ) {
-    return ASSISTANT_INTENT.review;
-  }
-
-  if (
-    /chronology|timeline|what happened|history|in date order|events over time/.test(
-      value
-    )
-  ) {
-    return ASSISTANT_INTENT.chronology;
-  }
-
-  if (
-    /when was|what date|dates|last incident|last missing|next appointment|how many|overdue|due soon|upcoming|latest/.test(
-      value
-    )
-  ) {
-    return ASSISTANT_INTENT.factual_lookup;
-  }
-
-  if (/handover|next shift|shift brief|morning brief/.test(value)) {
-    return ASSISTANT_INTENT.handover;
-  }
-
-  if (/draft|write|reword|rewrite|wording|improve this/.test(value)) {
-    return ASSISTANT_INTENT.drafting;
-  }
-
-  if (
-    /compliance|ofsted|supervision|training|statutory|audit|reg\s*40|reg\s*44|quality standards|inspection risk|scrutiny|sccif/.test(
-      value
-    )
-  ) {
-    return ASSISTANT_INTENT.compliance;
-  }
-
-  if (
-    /risk|safeguarding|harm|trigger|protective factor|missing from care|missing episode/.test(
-      value
-    )
-  ) {
-    return ASSISTANT_INTENT.risk;
-  }
-
-  if (
-    /quality|ri|inspection|governance|provider|home compare|compare homes|all homes/.test(
-      value
-    )
-  ) {
-    return ASSISTANT_INTENT.quality;
-  }
-
-  if (/manager|oversight|leadership|escalation|registered manager/.test(value)) {
-    return ASSISTANT_INTENT.management;
-  }
-
-  if (
-    /summary|summarise|summarize|what matters|overview|lived experience|key work|keywork/.test(
-      value
-    )
-  ) {
-    return ASSISTANT_INTENT.summary;
-  }
-
-  return ASSISTANT_INTENT.unknown;
-}
-
-function detectRetrievalMode(text = "", intent = ASSISTANT_INTENT.unknown) {
-  const value = String(text || "").trim().toLowerCase();
-
-  if (
-    /this section|this page|this screen|current view|current section|workspace section/.test(
-      value
-    )
-  ) {
-    return "section_only";
-  }
-
-  if (
-    [
-      ASSISTANT_INTENT.summary,
-      ASSISTANT_INTENT.chronology,
-      ASSISTANT_INTENT.review,
-      ASSISTANT_INTENT.factual_lookup,
-      ASSISTANT_INTENT.compliance,
-      ASSISTANT_INTENT.risk,
-      ASSISTANT_INTENT.quality,
-      ASSISTANT_INTENT.management,
-    ].includes(intent)
-  ) {
-    return "whole_scope";
-  }
-
-  if (
-    intent === ASSISTANT_INTENT.handover ||
-    intent === ASSISTANT_INTENT.drafting
-  ) {
-    return /this section|this page|this draft/.test(value)
-      ? "section_only"
-      : "whole_scope";
-  }
-
-  return "whole_scope";
-}
-
-function detectOutputMode(intent = ASSISTANT_INTENT.unknown, text = "") {
-  const value = String(text || "").toLowerCase();
-
-  if (/reg\s*45|regulation\s*45/.test(value)) {
-    return "children_home_reg45_template";
-  }
-
-  if (/handover|next shift|morning brief|shift brief/.test(value)) {
-    return "children_home_handover_template";
-  }
-
-  if (/manager brief|manager summary|leadership brief/.test(value)) {
-    return "children_home_manager_brief_template";
-  }
-
-  if (/quality brief|quality summary|inspection readiness|ri summary|scrutiny/.test(value)) {
-    return "children_home_quality_brief_template";
-  }
-
-  if (/chronology|timeline/.test(value)) {
-    return "children_home_chronology_template";
-  }
-
-  if (/full summary|comprehensive summary|overview/.test(value)) {
-    return "children_home_summary_template";
-  }
-
-  if (intent === ASSISTANT_INTENT.factual_lookup) return "factual_answer";
-  if (intent === ASSISTANT_INTENT.drafting) return "drafting";
-
-  return "answer";
-}
-
-function detectAssistantResponseMode(text) {
-  return /6 month|six month|12 month|twelve month|summary|timeline|chronology|review|report|audit|compliance|ofsted|ri|full summary|reg 45|regulation 45/i.test(
-    String(text || "")
-  )
-    ? "deep"
-    : "balanced";
 }
 
 function buildRoleAwareGreeting() {
@@ -686,285 +349,79 @@ function buildUnknownIntentPrompt() {
   ].join("\n");
 }
 
-function assistantPromptsForView(view, scope = getCurrentScope()) {
-  const childMap = {
-    workspace: [
-      "Give me a full summary for this young person.",
-      "Create a chronology for this young person.",
-      "What matters most right now across the whole record?",
-    ],
-    overview: [
-      "What matters most right now across the whole record?",
-      "Summarise the main themes for this young person.",
-      "What should staff prioritise next?",
-    ],
-    profile: [
-      "Summarise this young person’s needs and what helps.",
-      "What should adults hold in mind day to day?",
-      "What are the most important communication needs?",
-    ],
-    timeline: [
-      "Create a chronology summary for this young person.",
-      "What are the key turning points recently?",
-      "What patterns can you see across incidents and presentation?",
-    ],
-    handover: [
-      "Give me a handover for this young person.",
-      "What does the next shift most need to know?",
-      "What follow-up should the next shift complete?",
-    ],
-    health: [
-      "Summarise current health and wellbeing needs.",
-      "What follow-up is needed from recent health records?",
-      "What are the main health themes recently?",
-    ],
-    education: [
-      "Summarise education themes and needs.",
-      "What helps this young person engage with learning?",
-      "What are the current school concerns and strengths?",
-    ],
-    family: [
-      "Summarise key relationship and family themes.",
-      "What should adults hold in mind around contact?",
-      "What patterns can you see around family contact?",
-    ],
-    calendar: [
-      "What is the next appointment?",
-      "What appointments need preparing for?",
-      "What follow-up is due from recent appointments?",
-    ],
-    readiness: [
-      "What is overdue or due soon?",
-      "What should be completed next?",
-      "Summarise the open actions for this young person.",
-    ],
-    manager: [
-      "What needs manager review right now?",
-      "What themes should leadership notice?",
-      "What risks or compliance issues need oversight?",
-    ],
-    reports: [
-      "Give me a full summary for this young person.",
-      "Create a chronology and analysis for this young person.",
-      "Draft a professional summary for a review meeting.",
-    ],
-  };
+function inferAnalysisLens({
+  scope = getCurrentScope(),
+  section = getCurrentSection(),
+  role = state.userRole || "staff",
+  intent = ASSISTANT_INTENT.summary,
+} = {}) {
+  const safeRole = String(role || "staff").toLowerCase();
+  const safeSection = String(section || "").toLowerCase();
+  const safeIntent = String(intent || "summary").toLowerCase();
 
-  const homeMap = {
-    "home-dashboard": [
-      "Give me a full summary for the home.",
-      "Create a chronology for the home.",
-      "What needs management attention right now across the whole service?",
-    ],
-    compliance: [
-      "What compliance issues need urgent action?",
-      "Summarise gaps across workforce and statutory paperwork.",
-      "What would Ofsted notice first right now?",
-    ],
-    manager: [
-      "What needs leadership review right now?",
-      "Summarise the main management pressures across the home.",
-      "What actions should the manager prioritise this week?",
-    ],
-    readiness: [
-      "What is overdue or due soon across the home?",
-      "What actions should be completed first?",
-      "Summarise the service readiness risks.",
-    ],
-    reports: [
-      "Summarise the service for reporting purposes.",
-      "Create a chronology and thematic summary for the home.",
-      "Draft a home-level review summary.",
-    ],
-    team: [
-      "Summarise staffing issues across the home.",
-      "What workforce risks are emerging?",
-      "What should leadership notice about team capacity?",
-    ],
-    supervision: [
-      "Which supervisions are overdue or due soon?",
-      "Summarise workforce oversight gaps.",
-      "What supervision actions should be prioritised?",
-    ],
-    communication: [
-      "Summarise recent professional communication across the home.",
-      "What communication follow-up is outstanding?",
-      "Draft a service-level professional update.",
-    ],
-    documents: [
-      "What service documents are due review or missing?",
-      "Summarise document compliance gaps.",
-      "What statutory paperwork needs attention?",
-    ],
-    therapy: [
-      "Summarise therapeutic service activity across the home.",
-      "What recommendations need operational follow-up?",
-      "What therapeutic themes are emerging?",
-    ],
-    quality: [
-      "Summarise the current quality picture for the home.",
-      "What are the biggest inspection readiness risks?",
-      "What actions should be prioritised before scrutiny?",
-    ],
-  };
+  if (
+    /safeguarding|risk|missing/.test(safeSection) ||
+    safeIntent === "risk"
+  ) {
+    return "safeguarding";
+  }
 
-  const qualityMap = {
-    quality: [
-      "Summarise current quality themes across all homes I oversee.",
-      "Compare compliance risk across my homes.",
-      "What would an RI notice first?",
-    ],
-    compliance: [
-      "What compliance gaps create the biggest Ofsted risk?",
-      "Compare overdue compliance across homes.",
-      "What needs urgent correction before inspection?",
-    ],
-    reports: [
-      "Draft a provider-wide quality summary.",
-      "What themes should be highlighted in reporting?",
-      "Create a chronology and audit summary across homes.",
-    ],
-    manager: [
-      "What leadership themes need escalation?",
-      "Which home needs the most support right now?",
-      "Where is oversight weakest right now?",
-    ],
-    team: [
-      "Summarise staffing and workforce quality concerns across homes.",
-      "What training or supervision gaps are emerging?",
-      "What workforce risks affect compliance?",
-    ],
-    supervision: [
-      "What supervision compliance risks are present across homes?",
-      "Where are staff oversight gaps strongest?",
-      "Summarise overdue supervisions by home.",
-    ],
-    documents: [
-      "What statutory paperwork gaps need urgent action?",
-      "Compare document quality and review issues across homes.",
-      "Which home creates the biggest inspection risk?",
-    ],
-  };
+  if (
+    scope === "quality" ||
+    safeIntent === "quality" ||
+    safeIntent === "compliance" ||
+    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
+  ) {
+    return safeRole === "ri" || safeRole === "admin" ? "quality" : "inspection";
+  }
 
-  const map =
-    scope === "home"
-      ? homeMap
-      : scope === "quality"
-        ? qualityMap
-        : childMap;
+  if (
+    safeIntent === "management" ||
+    ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
+    /manager|team|supervision|home-dashboard/.test(safeSection)
+  ) {
+    return "manager";
+  }
 
-  return map[view] || [
-    scope === "child"
-      ? "What matters most right now across the whole record?"
-      : "What matters most right now across the whole service record?",
-    "What needs attention next?",
-    "Give me a concise summary.",
-  ];
-}
+  if (safeIntent === "handover" || safeIntent === "morning_brief") {
+    return "shift";
+  }
 
-export function updateAssistantContext() {
-  const scope = getCurrentScope();
-  const section = getCurrentSection();
-  const accessLevel = getAccessLevelForScope(scope);
-
-  ensureAssistantState();
-
-  const sectionLabel = String(section)
-    .replaceAll("_", " ")
-    .replaceAll("-", " ");
-
-  const contextSummary =
-    scope === "child"
-      ? state.youngPersonId
-        ? {
-            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • child-only OS scope • section: ${sectionLabel}`,
-            scope_type: "young_person",
-            current_scope: scope,
-            current_section: section,
-            access_level: "child",
-            young_person_name: getFullYoungPersonName(),
-            home_name: getHomeName(),
-            allowed_home_ids: [state.homeId].filter(Boolean),
-            retrieval_default: "whole_scope",
-            suggested_prompts: assistantPromptsForView(section, scope),
-          }
-        : {
-            summary: "No young person selected.",
-            scope_type: "global",
-            current_scope: scope,
-            current_section: section,
-            access_level: "child",
-            young_person_name: null,
-            home_name: getHomeName(),
-            allowed_home_ids: [state.homeId].filter(Boolean),
-            retrieval_default: "whole_scope",
-            suggested_prompts: assistantPromptsForView(section, scope),
-          }
-      : scope === "home"
-        ? {
-            summary: `Home: ${getHomeName()} • home-only OS scope • section: ${sectionLabel}`,
-            scope_type: "home",
-            current_scope: scope,
-            current_section: section,
-            access_level: "home",
-            young_person_name: null,
-            home_name: getHomeName(),
-            allowed_home_ids: [state.homeId].filter(Boolean),
-            retrieval_default: "whole_scope",
-            suggested_prompts: assistantPromptsForView(section, scope),
-          }
-        : {
-            summary:
-              accessLevel === "provider"
-                ? `Quality: provider-wide oversight across allowed homes • section: ${sectionLabel}`
-                : `Quality: ${getHomeName()} only • section: ${sectionLabel}`,
-            scope_type: "quality",
-            current_scope: scope,
-            current_section: section,
-            access_level: accessLevel,
-            young_person_name: null,
-            home_name: getHomeName(),
-            allowed_home_ids:
-              accessLevel === "provider"
-                ? getAllowedHomeIds()
-                : [state.homeId].filter(Boolean),
-            retrieval_default: "whole_scope",
-            suggested_prompts: assistantPromptsForView(section, scope),
-          };
-
-  mergeAssistantMeta({
-    assistant_context: contextSummary,
-  });
-
-  syncAssistantUi();
+  if (scope === "child") return "child_centred";
+  if (scope === "home") return "operational";
+  return "general";
 }
 
 function buildAssistantContextPayload(message = "") {
   const person = getSelectedYoungPerson() || {};
   const scope = getCurrentScope();
   const section = getCurrentSection();
-  const intent = detectAssistantIntent(message);
+
+  const intentMeta = detectAssistantIntents(message);
+  const intent = intentMeta.primary_intent;
+  const secondaryIntents = intentMeta.secondary_intents || [];
   const retrievalMode = detectRetrievalMode(message, intent);
   const outputMode = detectOutputMode(intent, message);
   const accessLevel = getAccessLevelForScope(scope);
   const assistantType = getAssistantTypeForScope(scope);
+  const analysisLens = inferAnalysisLens({
+    scope,
+    section,
+    role: state.userRole,
+    intent,
+  });
 
   const allowedHomeIds =
     scope === "quality" && accessLevel === "provider"
       ? getAllowedHomeIds()
       : [Number(state.homeId)].filter((item) => Number.isFinite(item));
 
-  const reg45Range =
-    /reg\s*45|regulation\s*45/.test(String(message || "").toLowerCase())
-      ? resolveReg45DateRange(message) || getDefaultReg45DateRange()
-      : null;
-
   return {
     assistant_type: assistantType,
     assistant_identity: {
       product_name: "IndiCare OS",
       domain: "children_residential_home_operating_system",
-      reasoning_model: "ofsted_ri_manager_rsw_therapeutic",
+      reasoning_model: "residential_care_operational_reasoning",
       answer_style: "evidence_led_children_home_operational_assistant",
     },
     response_contract: {
@@ -1015,76 +472,27 @@ function buildAssistantContextPayload(message = "") {
     current_section: section,
     user_role: state.userRole || "staff",
     assistant_intent: intent,
+    secondary_intents: secondaryIntents,
+    analysis_lens: analysisLens,
     retrieval_mode: retrievalMode,
     output_mode: outputMode,
     whole_os_default: true,
     section_only_requested: retrievalMode === "section_only",
     use_whole_scope_records: retrievalMode !== "section_only",
     ask_for_dates:
-      intent === ASSISTANT_INTENT.factual_lookup ||
-      intent === ASSISTANT_INTENT.chronology,
+      intent === "factual_lookup" || intent === "chronology",
     ask_for_chronology:
-      intent === ASSISTANT_INTENT.chronology ||
-      intent === ASSISTANT_INTENT.review,
+      intent === "chronology" || intent === "review",
     ask_for_summary:
-      intent === ASSISTANT_INTENT.summary ||
-      intent === ASSISTANT_INTENT.review,
-    ask_for_review_pack: intent === ASSISTANT_INTENT.review,
+      intent === "summary" || intent === "review",
+    ask_for_review_pack: intent === "review",
     ask_for_compliance_view:
-      intent === ASSISTANT_INTENT.compliance || scope === "quality",
+      intent === "compliance" || scope === "quality",
     suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(
       0,
       MAX_UI_PROMPTS
     ),
-    reg45_requested: Boolean(reg45Range),
-    reporting_period_start: reg45Range?.startDate?.toISOString?.() || null,
-    reporting_period_end: reg45Range?.endDate?.toISOString?.() || null,
-    reporting_period_inferred: Boolean(reg45Range?.inferred),
   };
-}
-
-function trimForOutbound(value = "", max = MAX_SAFE_MESSAGE_LENGTH) {
-  return String(value || "").trim().slice(0, max);
-}
-
-function buildCitationRef(source = {}, index = 0) {
-  const recordType = source.record_type || source.type || "record";
-  const recordId = source.record_id || source.id || `idx_${index + 1}`;
-  return `${recordType}:${recordId}`;
-}
-
-function dedupeSources(sources = []) {
-  const seen = new Set();
-  const result = [];
-
-  for (const source of Array.isArray(sources) ? sources : []) {
-    const key = `${source.record_type || source.type || "record"}::${
-      source.record_id || source.id || source.label || ""
-    }`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(source);
-  }
-
-  return result;
-}
-
-function sanitiseSourcesForUi(sources = []) {
-  return dedupeSources(sources)
-    .slice(0, MAX_SOURCE_ITEMS)
-    .map((source, index) => ({
-      type: source.type || source.record_type || "record",
-      label: String(source.label || source.title || source.document_title || "Record"),
-      excerpt: String(source.excerpt || source.summary || "").slice(
-        0,
-        MAX_SOURCE_EXCERPT
-      ),
-      section: source.section || "",
-      record_type: source.record_type || source.type || null,
-      record_id: source.record_id || source.id || null,
-      citation_ref: source.citation_ref || buildCitationRef(source, index),
-      url: source.url || null,
-    }));
 }
 
 function buildSafeAssistantRequestPayload(payload) {
@@ -1129,6 +537,10 @@ function buildSafeAssistantRequestPayload(payload) {
       current_section: context.current_section || null,
       user_role: context.user_role || "staff",
       assistant_intent: context.assistant_intent || "summary",
+      secondary_intents: Array.isArray(context.secondary_intents)
+        ? context.secondary_intents
+        : [],
+      analysis_lens: context.analysis_lens || "general",
       retrieval_mode: context.retrieval_mode || "whole_scope",
       output_mode: context.output_mode || "answer",
       whole_os_default: Boolean(context.whole_os_default),
@@ -1142,10 +554,6 @@ function buildSafeAssistantRequestPayload(payload) {
       suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
         ? context.suggested_prompts_ui_only.slice(0, MAX_UI_PROMPTS)
         : [],
-      reg45_requested: Boolean(context.reg45_requested),
-      reporting_period_start: context.reporting_period_start || null,
-      reporting_period_end: context.reporting_period_end || null,
-      reporting_period_inferred: Boolean(context.reporting_period_inferred),
     },
   };
 }
@@ -1224,32 +632,42 @@ function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
   return text;
 }
 
-function getSourcesSafe() {
-  ensureAssistantState();
-  return Array.isArray(state.assistantMeta?.sources)
-    ? state.assistantMeta.sources
-    : [];
-}
-
-function applyAssistantMeta(meta = {}) {
-  const nextMeta = { ...meta };
-
-  if (nextMeta.sources) {
-    nextMeta.sources = sanitiseSourcesForUi(nextMeta.sources);
-  }
-
-  mergeAssistantMeta(nextMeta);
-  syncAssistantUi();
-}
-
 async function answerLocallyForGreeting(question) {
-  appendAssistantUserMessage(question);
-  appendAssistantSystemMessage(buildRoleAwareGreeting());
+  const intentMeta = detectAssistantIntents(question);
+  appendAssistantUserMessage(question, {
+    intent: intentMeta.primary_intent,
+    scope_snapshot: {
+      scope: getCurrentScope(),
+      section: getCurrentSection(),
+    },
+  });
+
+  appendAssistantSystemMessage(buildRoleAwareGreeting(), {
+    intent: intentMeta.primary_intent,
+    scope_snapshot: {
+      scope: getCurrentScope(),
+      section: getCurrentSection(),
+    },
+  });
 }
 
 async function answerLocallyForUnknown(question) {
-  appendAssistantUserMessage(question);
-  appendAssistantSystemMessage(buildUnknownIntentPrompt());
+  const intentMeta = detectAssistantIntents(question);
+  appendAssistantUserMessage(question, {
+    intent: intentMeta.primary_intent,
+    scope_snapshot: {
+      scope: getCurrentScope(),
+      section: getCurrentSection(),
+    },
+  });
+
+  appendAssistantSystemMessage(buildUnknownIntentPrompt(), {
+    intent: intentMeta.primary_intent,
+    scope_snapshot: {
+      scope: getCurrentScope(),
+      section: getCurrentSection(),
+    },
+  });
 }
 
 export async function askAssistant(question) {
@@ -1266,20 +684,37 @@ export async function askAssistant(question) {
     return;
   }
 
-  const intent = detectAssistantIntent(trimmed);
+  const intentMeta = detectAssistantIntents(trimmed);
+  const primaryIntent = intentMeta.primary_intent;
+  const section = getCurrentSection();
+  const scope = getCurrentScope();
+  const analysisLens = inferAnalysisLens({
+    scope,
+    section,
+    role: state.userRole,
+    intent: primaryIntent,
+  });
 
-  if (intent === ASSISTANT_INTENT.greeting) {
+  if (isGreeting(trimmed)) {
     await answerLocallyForGreeting(trimmed);
     return;
   }
 
-  if (intent === ASSISTANT_INTENT.unknown && trimmed.length < 8) {
+  if (primaryIntent === "unknown" && trimmed.length < 8) {
     await answerLocallyForUnknown(trimmed);
     return;
   }
 
-  appendAssistantUserMessage(trimmed);
-  addAssistantPlaceholder();
+  appendAssistantUserMessage(trimmed, {
+    intent: primaryIntent,
+    scope_snapshot: { scope, section },
+  });
+
+  addAssistantPlaceholder({
+    intent: primaryIntent,
+    scope_snapshot: { scope, section },
+  });
+
   setAssistantSending(true);
 
   try {
@@ -1297,6 +732,16 @@ export async function askAssistant(question) {
       scrubber_reverse_map: scrubbed.reverseMap || {},
       scrubber_enabled: scrubbed.meta?.enabled ?? false,
       scrubber_meta: scrubbed.meta || {},
+      runtime: {
+        ...(getAssistantMeta().runtime || {}),
+        analysis_lens: analysisLens,
+        assistant_intent: primaryIntent,
+        secondary_intents: intentMeta.secondary_intents || [],
+      },
+      assistant_context: {
+        ...(getAssistantMeta().assistant_context || {}),
+        analysis_lens: analysisLens,
+      },
     });
 
     await apiStreamAssistant(scrubbed.payload, {
@@ -1306,6 +751,8 @@ export async function askAssistant(question) {
           runtime: {
             ...(meta?.runtime || {}),
             assistant_intent: contextPayload.assistant_intent,
+            secondary_intents: contextPayload.secondary_intents || [],
+            analysis_lens: contextPayload.analysis_lens,
             retrieval_mode: contextPayload.retrieval_mode,
             output_mode: contextPayload.output_mode,
             whole_os_default: true,
@@ -1313,15 +760,12 @@ export async function askAssistant(question) {
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
             ai_scrubber_enabled: scrubbed.meta?.enabled ?? false,
-            reporting_period_start: contextPayload.reporting_period_start,
-            reporting_period_end: contextPayload.reporting_period_end,
-            reporting_period_inferred: contextPayload.reporting_period_inferred,
           },
           explainability: {
             ...(meta?.explainability || {}),
             reasoning_summary:
               meta?.explainability?.reasoning_summary ||
-              "This answer used a children’s residential home reasoning model with Ofsted, RI, registered manager, RSW and therapeutic lenses.",
+              `This answer used an evidence-led children’s home reasoning approach with a ${contextPayload.analysis_lens} lens.`,
             ai_scrubber:
               scrubbed.meta?.enabled
                 ? "Client-side AI scrubber applied before outbound request."
@@ -1334,9 +778,7 @@ export async function askAssistant(question) {
             access_level: contextPayload.access_level,
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
-            reporting_period_start: contextPayload.reporting_period_start,
-            reporting_period_end: contextPayload.reporting_period_end,
-            reporting_period_inferred: contextPayload.reporting_period_inferred,
+            analysis_lens: contextPayload.analysis_lens,
           },
           assistant_scope: {
             ...(meta?.assistant_scope || {}),
@@ -1344,6 +786,7 @@ export async function askAssistant(question) {
             access_level: contextPayload.access_level,
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
+            analysis_lens: contextPayload.analysis_lens,
           },
           sources: meta?.sources || [],
           suggested_actions: meta?.suggested_actions || [],
@@ -1353,16 +796,22 @@ export async function askAssistant(question) {
           last_analysis_at: new Date().toISOString(),
         });
       },
+
       onProgress: () => {},
+
       onMessage: (streamedPayload) => {
         const safeValue = extractStreamText(streamedPayload) || "Thinking…";
         const restored = restoreAssistantReplyTokens(
           safeValue,
           scrubbed.reverseMap
         );
-        updateLastAssistantStreamingText(restored || "Thinking…");
+
+        updateLastAssistantStreamingText(restored || "Thinking…", {
+          intent: primaryIntent,
+        });
       },
-      onDone: (streamedPayload) => {
+
+      onDone: async (streamedPayload) => {
         const safeValue =
           extractStreamText(streamedPayload) || "No assistant reply returned.";
 
@@ -1370,6 +819,13 @@ export async function askAssistant(question) {
           safeValue.trim(),
           scrubbed.reverseMap
         );
+
+        const suggestedActions =
+          streamedPayload?.suggested_actions || getAssistantMeta().suggested_actions || [];
+
+        const sourceRefs = Array.isArray(streamedPayload?.sources)
+          ? sanitiseSourcesForUi(streamedPayload.sources).map((s) => s.citation_ref)
+          : getSourcesSafe().map((s) => s.citation_ref);
 
         if (
           streamedPayload &&
@@ -1390,20 +846,32 @@ export async function askAssistant(question) {
             suggested_actions: streamedPayload.suggested_actions || [],
             last_analysis_at: new Date().toISOString(),
           });
+        } else {
+          await refreshAssistantAnalysisOnly();
         }
 
         replaceLastAssistantPlaceholder(
-          restored || "No assistant reply returned."
+          restored || "No assistant reply returned.",
+          {
+            intent: primaryIntent,
+            citations: sourceRefs,
+            actions: suggestedActions,
+            scope_snapshot: { scope, section },
+          }
         );
       },
     });
   } catch (error) {
     replaceLastAssistantPlaceholder(
-      error?.message || "The assistant could not answer right now."
+      error?.message || "The assistant could not answer right now.",
+      {
+        intent: primaryIntent,
+        scope_snapshot: { scope, section },
+      }
     );
   } finally {
     setAssistantSending(false);
-    syncAssistantUi();
+    refreshAssistantUi();
   }
 }
 
@@ -1414,7 +882,7 @@ export function clearAssistantMessages() {
     state.assistantMeta = createAssistantMeta();
   }
 
-  syncAssistantUi();
+  refreshAssistantUi();
 }
 
 function handleQuickAction(actionId = "") {
@@ -1482,6 +950,5 @@ export function bindAssistantEvents() {
 
 export function loadAssistant() {
   ensureAssistantState();
-  updateAssistantContext();
-  syncAssistantUi();
+  refreshAssistantUi();
 }
