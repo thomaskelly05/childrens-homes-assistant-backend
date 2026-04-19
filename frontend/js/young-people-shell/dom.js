@@ -144,18 +144,6 @@ export const els = {
   scopeShiftBadge: byId("scopeShiftBadge"),
 
   /* --------------------------------
-     Assistant modal compatibility nodes
-  --------------------------------- */
-  assistantModalMessages: byId("assistantModalMessages"),
-  assistantModalForm: byId("assistantModalForm"),
-  assistantModalInput: byId("assistantModalInput"),
-  assistantModalSendBtn: byId("assistantModalSendBtn"),
-  assistantModalScopeSummary: byId("assistantModalScopeSummary"),
-  assistantModalSources: byId("assistantModalSources"),
-  modalScopeHomeBadge: byId("modalScopeHomeBadge"),
-  modalScopeChildBadge: byId("modalScopeChildBadge"),
-
-  /* --------------------------------
      Assistant controller / intelligence panels
   --------------------------------- */
   assistantScopeBundleStatus: byId("assistantScopeBundleStatus"),
