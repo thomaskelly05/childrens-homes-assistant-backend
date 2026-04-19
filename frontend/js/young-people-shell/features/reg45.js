@@ -10,12 +10,20 @@ import {
 
 /* ------------------------------- helpers ------------------------------- */
 
+const SAFE_EMPTY = Object.freeze({ items: [] });
+
 function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function toArray(value) {
-  return Array.isArray(value) ? value : [];
+function toArray(value, fallbacks = []) {
+  if (Array.isArray(value)) return value;
+
+  for (const fallback of fallbacks) {
+    if (Array.isArray(fallback)) return fallback;
+  }
+
+  return [];
 }
 
 function lower(value) {
@@ -27,14 +35,37 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
-function formatDate(value) {
-  if (!value) return "No date";
+function toTime(value) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function formatDate(value, fallback = "No date") {
+  if (!value) return fallback;
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
+
   return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
+  });
+}
+
+function formatDateTime(value, fallback = "No date") {
+  if (!value) return fallback;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -58,6 +89,10 @@ function getBadgeClass(status = "") {
       "late",
       "open",
       "stalled",
+      "escalated",
+      "not_started",
+      "failed",
+      "red",
     ].includes(v)
   ) {
     return "badge badge-danger";
@@ -72,6 +107,11 @@ function getBadgeClass(status = "") {
       "review_due",
       "planned",
       "monitoring",
+      "awaiting_approval",
+      "active",
+      "warning",
+      "medium",
+      "amber",
     ].includes(v)
   ) {
     return "badge badge-warning";
@@ -84,8 +124,10 @@ function getBadgeClass(status = "") {
       "good",
       "outstanding",
       "closed",
-      "active",
       "current",
+      "up_to_date",
+      "resolved",
+      "green",
     ].includes(v)
   ) {
     return "badge badge-success";
@@ -94,39 +136,87 @@ function getBadgeClass(status = "") {
   return "badge";
 }
 
+function safeStatusLabel(status = "") {
+  return String(status || "").replaceAll("_", " ").trim() || "Recorded";
+}
+
+function isClosedStatus(status = "") {
+  return ["completed", "closed", "cancelled", "resolved", "approved"].includes(
+    lower(status)
+  );
+}
+
+function isOverdueDate(dateValue, status = "") {
+  if (!dateValue || isClosedStatus(status)) return false;
+
+  const due = new Date(dateValue);
+  if (Number.isNaN(due.getTime())) return false;
+
+  const now = new Date();
+  due.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  return due.getTime() < now.getTime();
+}
+
 function sortNewest(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return new Date(bValue || 0).getTime() - new Date(aValue || 0).getTime();
+    return toTime(bValue) - toTime(aValue);
   });
 }
 
 function sortSoonest(items = [], key = "due_date") {
   return [...items].sort((a, b) => {
-    const aTime = a?.[key] ? new Date(a[key]).getTime() : Number.POSITIVE_INFINITY;
-    const bTime = b?.[key] ? new Date(b[key]).getTime() : Number.POSITIVE_INFINITY;
+    const aTime = a?.[key] ? toTime(a[key]) : Number.POSITIVE_INFINITY;
+    const bTime = b?.[key] ? toTime(b[key]) : Number.POSITIVE_INFINITY;
     return aTime - bTime;
+  });
+}
+
+function dedupeBy(items = [], buildKey) {
+  const seen = new Set();
+
+  return items.filter((item) => {
+    const key = buildKey(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 
 function getHomeIds() {
   if (Array.isArray(state.allowedHomeIds) && state.allowedHomeIds.length) {
-    return state.allowedHomeIds;
+    return state.allowedHomeIds
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item) && item > 0);
   }
 
-  if (state.homeId) return [state.homeId];
+  const homeId = Number(
+    state.homeId || state.currentUser?.home_id || state.currentUser?.homeId || 0
+  );
 
-  return [];
+  return Number.isFinite(homeId) && homeId > 0 ? [homeId] : [];
+}
+
+async function safeGet(url) {
+  try {
+    return (await apiGet(url)) || SAFE_EMPTY;
+  } catch {
+    return SAFE_EMPTY;
+  }
 }
 
 /* ------------------------------- mappers ------------------------------- */
 
-function mapReg45Review(record = {}) {
+function mapReg45Review(record = {}, fallbackHomeId = null) {
+  const homeId = record.home_id || fallbackHomeId || null;
+
   return {
-    id: record.id,
-    home_id: record.home_id || null,
-    home_name: record.home_name || `Home ${record.home_id || ""}`.trim(),
+    id: record.id ?? record.reg45_review_id ?? null,
+    home_id: homeId,
+    home_name: record.home_name || (homeId ? `Home ${homeId}` : "Home"),
     review_period_start: record.review_period_start || null,
     review_period_end: record.review_period_end || null,
     review_status: record.review_status || record.status || "",
@@ -141,7 +231,9 @@ function mapReg45Review(record = {}) {
     approved_at: record.approved_at || null,
     title:
       record.title ||
-      `Reg 45 review${record.review_period_end ? ` - ${formatDate(record.review_period_end)}` : ""}`,
+      `Reg 45 review${
+        record.review_period_end ? ` - ${formatDate(record.review_period_end)}` : ""
+      }`,
     summary:
       record.overall_quality_summary ||
       record.action_plan_summary ||
@@ -153,15 +245,18 @@ function mapReg45Review(record = {}) {
   };
 }
 
-function mapReg45Action(record = {}) {
+function mapReg45Action(record = {}, fallbackHomeId = null) {
+  const homeId = record.home_id || fallbackHomeId || null;
+
   return {
-    id: record.id,
+    id: record.id ?? record.reg45_action_id ?? null,
     reg45_review_id: record.reg45_review_id || null,
-    home_id: record.home_id || null,
-    home_name: record.home_name || `Home ${record.home_id || ""}`.trim(),
+    home_id: homeId,
+    home_name: record.home_name || (homeId ? `Home ${homeId}` : "Home"),
+    owner_user_name:
+      record.owner_user_name || record.owner_name || record.owner_staff_name || "",
     action_title: record.action_title || "Reg 45 action",
     action_description: record.action_description || "",
-    owner_user_name: record.owner_user_name || record.owner_name || "",
     due_date: record.due_date || null,
     priority: record.priority || "",
     status: record.status || "",
@@ -203,85 +298,95 @@ function buildFallbackData(homeIds = []) {
 
   return {
     reviews: [
-      mapReg45Review({
-        id: "reg45-1",
-        home_id: homeId,
-        home_name: homeName,
-        review_period_start: minusDays(180),
-        review_period_end: minusDays(1),
-        review_status: "approved",
-        overall_quality_summary:
-          "Overall quality of care remains stable with stronger routines, improved relationship consistency and better evidence of direct work.",
-        action_plan_summary:
-          "Priority remains on education attendance, supervision timeliness and strengthening management oversight evidence.",
-        strengths_summary:
-          "Staff consistency, calmer routines and improved child-focused recording.",
-        concerns_summary:
-          "Education drift for one child and some slippage in supervision timescales.",
-        reviewed_by_user_name: "Sarah Jones",
-        approved_by_user_name: "David Clarke",
-        approved_at: minusDays(1),
-        created_at: minusDays(7),
-        updated_at: minusDays(1),
-      }),
-      mapReg45Review({
-        id: "reg45-2",
-        home_id: homeId,
-        home_name: homeName,
-        review_period_start: minusDays(30),
-        review_period_end: plusDays(150),
-        review_status: "draft",
-        overall_quality_summary:
-          "Draft review in progress with emerging themes around attendance, staff capacity and document freshness.",
-        action_plan_summary:
-          "Draft action plan still needs manager approval and dates.",
-        created_at: minusDays(2),
-        updated_at: minusDays(1),
-      }),
+      mapReg45Review(
+        {
+          id: "reg45-1",
+          home_name: homeName,
+          review_period_start: minusDays(180),
+          review_period_end: minusDays(1),
+          review_status: "approved",
+          overall_quality_summary:
+            "Overall quality of care remains stable with stronger routines, improved relationship consistency and better evidence of direct work.",
+          action_plan_summary:
+            "Priority remains on education attendance, supervision timeliness and strengthening management oversight evidence.",
+          strengths_summary:
+            "Staff consistency, calmer routines and improved child-focused recording.",
+          concerns_summary:
+            "Education drift for one child and some slippage in supervision timescales.",
+          reviewed_by_user_name: "Sarah Jones",
+          approved_by_user_name: "David Clarke",
+          approved_at: minusDays(1),
+          created_at: minusDays(7),
+          updated_at: minusDays(1),
+        },
+        homeId
+      ),
+      mapReg45Review(
+        {
+          id: "reg45-2",
+          home_name: homeName,
+          review_period_start: minusDays(30),
+          review_period_end: plusDays(150),
+          review_status: "draft",
+          overall_quality_summary:
+            "Draft review in progress with emerging themes around attendance, staff capacity and document freshness.",
+          action_plan_summary:
+            "Draft action plan still needs manager approval and dates.",
+          created_at: minusDays(2),
+          updated_at: minusDays(1),
+        },
+        homeId
+      ),
     ],
     actions: [
-      mapReg45Action({
-        id: "reg45-action-1",
-        reg45_review_id: "reg45-1",
-        home_id: homeId,
-        home_name: homeName,
-        action_title: "Complete overdue supervision cycle",
-        action_description:
-          "Bring outstanding supervision sessions back into timescale and record management reflection clearly.",
-        owner_user_name: "Sarah Jones",
-        due_date: plusDays(5),
-        priority: "high",
-        status: "open",
-        created_at: minusDays(3),
-      }),
-      mapReg45Action({
-        id: "reg45-action-2",
-        reg45_review_id: "reg45-1",
-        home_id: homeId,
-        home_name: homeName,
-        action_title: "Strengthen attendance escalation evidence",
-        action_description:
-          "Ensure attendance concerns are tracked, escalated and reflected in reporting.",
-        owner_user_name: "Tom Patel",
-        due_date: plusDays(10),
-        priority: "medium",
-        status: "in_progress",
-        created_at: minusDays(4),
-      }),
-      mapReg45Action({
-        id: "reg45-action-3",
-        reg45_review_id: "reg45-1",
-        home_id: homeId,
-        home_name: homeName,
-        action_title: "Update quality monitoring examples",
-        action_description:
-          "Add stronger examples of management challenge, review and follow-through.",
-        owner_user_name: "Sarah Jones",
-        due_date: minusDays(2),
-        priority: "high",
-        status: "overdue",
-        created_at: minusDays(8),
-      }),
+      mapReg45Action(
+        {
+          id: "reg45-action-1",
+          reg45_review_id: "reg45-1",
+          home_name: homeName,
+          action_title: "Complete overdue supervision cycle",
+          action_description:
+            "Bring outstanding supervision sessions back into timescale and record management reflection clearly.",
+          owner_user_name: "Sarah Jones",
+          due_date: plusDays(5),
+          priority: "high",
+          status: "open",
+          created_at: minusDays(3),
+        },
+        homeId
+      ),
+      mapReg45Action(
+        {
+          id: "reg45-action-2",
+          reg45_review_id: "reg45-1",
+          home_name: homeName,
+          action_title: "Strengthen attendance escalation evidence",
+          action_description:
+            "Ensure attendance concerns are tracked, escalated and reflected in reporting.",
+          owner_user_name: "Tom Patel",
+          due_date: plusDays(10),
+          priority: "medium",
+          status: "in_progress",
+          created_at: minusDays(4),
+        },
+        homeId
+      ),
+      mapReg45Action(
+        {
+          id: "reg45-action-3",
+          reg45_review_id: "reg45-1",
+          home_name: homeName,
+          action_title: "Update quality monitoring examples",
+          action_description:
+            "Add stronger examples of management challenge, review and follow-through.",
+          owner_user_name: "Sarah Jones",
+          due_date: minusDays(2),
+          priority: "high",
+          status: "overdue",
+          created_at: minusDays(8),
+        },
+        homeId
+      ),
     ],
     isFallback: true,
   };
@@ -290,8 +395,6 @@ function buildFallbackData(homeIds = []) {
 /* -------------------------------- fetch -------------------------------- */
 
 async function fetchAll(homeIds = []) {
-  const safeGet = (url) => apiGet(url).catch(() => null);
-
   const results = await Promise.all(
     homeIds.map(async (homeId) => {
       const [reviewsRes, actionsRes] = await Promise.all([
@@ -299,13 +402,19 @@ async function fetchAll(homeIds = []) {
         safeGet(`/homes/${homeId}/reg45-actions`),
       ]);
 
+      const reviewItems = toArray(reviewsRes?.reg45_reviews, [
+        reviewsRes?.items,
+        reviewsRes,
+      ]).map((item) => mapReg45Review(item, homeId));
+
+      const actionItems = toArray(actionsRes?.reg45_actions, [
+        actionsRes?.items,
+        actionsRes,
+      ]).map((item) => mapReg45Action(item, homeId));
+
       return {
-        reviews: toArray(
-          reviewsRes?.reg45_reviews || reviewsRes?.items || reviewsRes
-        ).map(mapReg45Review),
-        actions: toArray(
-          actionsRes?.reg45_actions || actionsRes?.items || actionsRes
-        ).map(mapReg45Action),
+        reviews: reviewItems,
+        actions: actionItems,
       };
     })
   );
@@ -337,25 +446,35 @@ function buildLatestReviews(data) {
 
 function buildOpenActions(data) {
   return sortSoonest(
-    data.actions.filter((item) => {
-      const status = lower(item.status);
-      return !["completed", "closed", "cancelled"].includes(status);
-    }),
+    data.actions.filter((item) => !isClosedStatus(item.status)),
     "due_date"
   ).slice(0, 10);
 }
 
 function buildOverdueActions(data) {
-  return buildOpenActions(data).filter((item) => lower(item.status) === "overdue");
+  return sortSoonest(
+    data.actions.filter(
+      (item) => lower(item.status) === "overdue" || isOverdueDate(item.due_date, item.status)
+    ),
+    "due_date"
+  ).slice(0, 10);
 }
 
 function buildCompletedActions(data) {
   return sortNewest(
-    data.actions.filter((item) => {
-      const status = lower(item.status);
-      return ["completed", "closed"].includes(status);
-    }),
+    data.actions.filter((item) => isClosedStatus(item.status)),
     ["completed_at", "updated_at", "created_at"]
+  ).slice(0, 8);
+}
+
+function buildDraftReviews(data) {
+  return sortNewest(
+    data.reviews.filter((item) =>
+      ["draft", "pending", "submitted", "awaiting_approval"].includes(
+        lower(item.review_status)
+      )
+    ),
+    ["updated_at", "created_at"]
   ).slice(0, 8);
 }
 
@@ -372,7 +491,11 @@ function buildPriorityItems({ overdueActions, openActions, reviews }) {
   });
 
   reviews
-    .filter((item) => ["draft", "pending", "submitted"].includes(lower(item.review_status)))
+    .filter((item) =>
+      ["draft", "pending", "submitted", "awaiting_approval"].includes(
+        lower(item.review_status)
+      )
+    )
     .slice(0, 2)
     .forEach((item) => {
       items.push({
@@ -406,6 +529,16 @@ function buildPriorityItems({ overdueActions, openActions, reviews }) {
   return items.slice(0, 6);
 }
 
+function buildTimeline(data) {
+  return sortNewest(
+    dedupeBy(
+      [...data.reviews, ...data.actions],
+      (item) => `${item.record_type}:${item.id}:${item.home_id || ""}`
+    ),
+    ["due_date", "review_period_end", "approved_at", "completed_at", "updated_at", "created_at"]
+  ).slice(0, 25);
+}
+
 /* -------------------------------- render -------------------------------- */
 
 function renderEmpty(title, message) {
@@ -417,6 +550,19 @@ function renderEmpty(title, message) {
         <p>${safeText(message)}</p>
       </div>
     </div>
+  `;
+}
+
+function renderLoading() {
+  return `
+    <section class="overview-panel">
+      <div class="loading-state">
+        <div>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading Regulation 45...</p>
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -466,7 +612,13 @@ function renderCard(item = {}) {
           <div class="record-card-title">${safeText(item.title || "Record")}</div>
           <div class="record-card-meta">${safeText(formatDateTime(primaryDate, "No date"))}</div>
         </div>
-        ${status ? `<span class="${getBadgeClass(status)}">${safeText(status.replaceAll("_", " "))}</span>` : ""}
+        ${
+          status
+            ? `<span class="${getBadgeClass(status)}">${safeText(
+                safeStatusLabel(status)
+              )}</span>`
+            : ""
+        }
       </div>
 
       <div class="record-card-body">
@@ -474,12 +626,25 @@ function renderCard(item = {}) {
 
         <div class="details-grid" style="margin-top:12px;">
           ${
+            item.home_name
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Home</div>
+                  <div class="details-grid-value">${safeText(item.home_name)}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
             item.review_period_start || item.review_period_end
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Review period</div>
                   <div class="details-grid-value">
-                    ${safeText(formatDateRange(item.review_period_start, item.review_period_end))}
+                    ${safeText(
+                      formatDateRange(item.review_period_start, item.review_period_end)
+                    )}
                   </div>
                 </div>
               `
@@ -492,6 +657,28 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Owner</div>
                   <div class="details-grid-value">${safeText(item.owner_user_name)}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.reviewed_by_user_name
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Reviewed by</div>
+                  <div class="details-grid-value">${safeText(item.reviewed_by_user_name)}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.approved_by_user_name
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Approved by</div>
+                  <div class="details-grid-value">${safeText(item.approved_by_user_name)}</div>
                 </div>
               `
               : ""
@@ -526,6 +713,17 @@ function renderCard(item = {}) {
               <div class="record-card-block">
                 <div class="record-card-block-label">Overall quality summary</div>
                 <div>${safeText(item.overall_quality_summary)}</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          item.strengths_summary
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Strengths</div>
+                <div>${safeText(item.strengths_summary)}</div>
               </div>
             `
             : ""
@@ -609,13 +807,65 @@ function renderPriorityList(items = []) {
   `;
 }
 
+function renderTimeline(items = []) {
+  if (!items.length) {
+    return renderEmpty(
+      "No Reg 45 activity yet",
+      "There is no recent Regulation 45 activity to display."
+    );
+  }
+
+  return `
+    <div class="timeline-list">
+      ${items
+        .map((item) => {
+          const dateValue =
+            item.due_date ||
+            item.review_period_end ||
+            item.approved_at ||
+            item.completed_at ||
+            item.updated_at ||
+            item.created_at;
+
+          const status = item.review_status || item.status || item.priority || "";
+
+          return `
+            <article class="timeline-item">
+              <div class="timeline-item-date">${safeText(
+                formatDateTime(dateValue, "No date")
+              )}</div>
+              <div class="timeline-item-body">
+                <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+                  <strong>${safeText(item.title || "Record")}</strong>
+                  ${
+                    status
+                      ? `<span class="${getBadgeClass(status)}">${safeText(
+                          safeStatusLabel(status)
+                        )}</span>`
+                      : ""
+                  }
+                </div>
+                <div class="timeline-item-summary">${safeText(
+                  [item.home_name, item.summary].filter(Boolean).join(" • ")
+                )}</div>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function renderWorkspace(payload) {
   const {
     latestReviews,
     openActions,
     overdueActions,
     completedActions,
+    draftReviews,
     priorityItems,
+    timeline,
     isFallback,
   } = payload;
 
@@ -638,6 +888,7 @@ function renderWorkspace(payload) {
 
       <div class="overview-stats-grid">
         ${renderStatCard("Reviews", latestReviews.length)}
+        ${renderStatCard("Draft reviews", draftReviews.length)}
         ${renderStatCard("Open actions", openActions.length)}
         ${renderStatCard("Overdue actions", overdueActions.length)}
         ${renderStatCard("Completed actions", completedActions.length)}
@@ -662,6 +913,11 @@ function renderWorkspace(payload) {
               "There are no open Regulation 45 actions currently recorded."
             )
           )}
+
+          ${renderSection(
+            "Reg 45 activity timeline",
+            renderTimeline(timeline)
+          )}
         </div>
 
         <aside>
@@ -676,6 +932,15 @@ function renderWorkspace(payload) {
               overdueActions,
               "No overdue actions",
               "There are no overdue Regulation 45 actions."
+            )
+          )}
+
+          ${renderSection(
+            "Draft or pending reviews",
+            renderCardList(
+              draftReviews,
+              "No draft reviews",
+              "There are no draft or pending Regulation 45 reviews."
             )
           )}
 
@@ -701,10 +966,14 @@ export async function loadReg45() {
   const homeIds = getHomeIds();
 
   if (!homeIds.length) {
-    els.viewContent.innerHTML = renderEmpty(
-      "No home selected",
-      "A home context is needed before Regulation 45 can load."
-    );
+    els.viewContent.innerHTML = `
+      <section class="overview-panel">
+        ${renderEmpty(
+          "No home selected",
+          "A home context is needed before Regulation 45 can load."
+        )}
+      </section>
+    `;
 
     updateWorkspaceSummaryStrip({
       today: "No Reg 45 context",
@@ -715,11 +984,7 @@ export async function loadReg45() {
     return;
   }
 
-  els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div class="spinner"></div>
-    </div>
-  `;
+  els.viewContent.innerHTML = renderLoading();
 
   try {
     const data = await fetchAll(homeIds);
@@ -728,18 +993,22 @@ export async function loadReg45() {
     const openActions = buildOpenActions(data);
     const overdueActions = buildOverdueActions(data);
     const completedActions = buildCompletedActions(data);
+    const draftReviews = buildDraftReviews(data);
     const priorityItems = buildPriorityItems({
       overdueActions,
       openActions,
       reviews: latestReviews,
     });
+    const timeline = buildTimeline(data);
 
     els.viewContent.innerHTML = renderWorkspace({
       latestReviews,
       openActions,
       overdueActions,
       completedActions,
+      draftReviews,
       priorityItems,
+      timeline,
       isFallback: data.isFallback,
     });
 
@@ -747,7 +1016,9 @@ export async function loadReg45() {
     const nextAction = openActions[0] || null;
 
     updateWorkspaceSummaryStrip({
-      today: latestReview?.review_period_end
+      today: data.isFallback
+        ? `${latestReviews.length} reviews • preview mode`
+        : latestReview?.review_period_end
         ? `Latest review ${formatDate(latestReview.review_period_end)}`
         : `${latestReviews.length} reviews loaded`,
       nextEvent: nextAction?.due_date
@@ -758,9 +1029,7 @@ export async function loadReg45() {
         : latestReview?.updated_at
         ? `Updated ${formatDate(latestReview.updated_at)}`
         : "No review approved yet",
-      openActions: `${openActions.length} open action${
-        openActions.length === 1 ? "" : "s"
-      }`,
+      openActions: `${openActions.length} open • ${overdueActions.length} overdue`,
     });
 
     await onAssistantScopeChanged();
@@ -768,10 +1037,14 @@ export async function loadReg45() {
   } catch (error) {
     console.error("[reg45] load failed", error);
 
-    els.viewContent.innerHTML = renderEmpty(
-      "Unable to load Regulation 45",
-      error?.message || "Something went wrong while loading Regulation 45."
-    );
+    els.viewContent.innerHTML = `
+      <section class="overview-panel">
+        ${renderEmpty(
+          "Unable to load Regulation 45",
+          error?.message || "Something went wrong while loading Regulation 45."
+        )}
+      </section>
+    `;
 
     updateWorkspaceSummaryStrip({
       today: "Reg 45 unavailable",
