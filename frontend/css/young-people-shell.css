@@ -1595,6 +1595,8 @@ summary:focus-visible {
 }
 
 .assistant-modal {
+  position: fixed;
+  inset: 0;
   z-index: 89;
   display: flex;
   justify-content: center;
@@ -1612,8 +1614,10 @@ summary:focus-visible {
 .assistant-shell,
 .assistant-shell--large {
   width: min(1180px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .assistant-header {
@@ -1634,21 +1638,26 @@ summary:focus-visible {
   background: var(--panel);
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
-  max-height: calc(100vh - 180px);
-  overflow: auto;
   box-shadow: var(--shadow-lg);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .assistant-modal-layout--split {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.85fr);
+  min-height: 0;
+  max-height: calc(100vh - 180px);
 }
 
 .assistant-modal-main {
   padding: 18px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .assistant-modal-side {
@@ -1656,6 +1665,9 @@ summary:focus-visible {
   gap: 12px;
   padding: 18px 18px 18px 0;
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
 }
 
 .assistant-footer {
@@ -1671,6 +1683,7 @@ summary:focus-visible {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  flex: 0 0 auto;
 }
 
 .assistant-context-text {
@@ -1682,6 +1695,7 @@ summary:focus-visible {
   color: var(--text-soft);
   font-size: 12px;
   line-height: 1.45;
+  flex: 0 0 auto;
 }
 
 .assistant-helper-text {
@@ -1703,11 +1717,12 @@ summary:focus-visible {
 }
 
 .assistant-messages {
+  flex: 1 1 auto;
   min-height: 280px;
   max-height: 560px;
+  min-width: 0;
   overflow: auto;
-  display: grid;
-  gap: 10px;
+  display: block;
   padding-right: 2px;
   padding-bottom: 4px;
 }
@@ -1723,6 +1738,10 @@ summary:focus-visible {
   border-radius: 16px;
   background: var(--panel-soft);
   border: 1px solid var(--border);
+}
+
+.assistant-message + .assistant-message {
+  margin-top: 10px;
 }
 
 .assistant-message-system {
@@ -1774,6 +1793,8 @@ summary:focus-visible {
   display: grid;
   grid-template-columns: 1fr 108px;
   gap: 8px;
+  align-items: end;
+  flex: 0 0 auto;
 }
 
 .assistant-form .text-input {
