@@ -3,12 +3,20 @@ import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
+
+const SAFE_EMPTY = Object.freeze({ items: [] });
 
 function getHomeId() {
   return (
     state.homeId ||
+    state.selectedHomeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
     null
   );
 }
@@ -85,6 +93,7 @@ function getStatusTone(status = "") {
       "high",
       "missing",
       "non_compliant",
+      "escalated",
     ].includes(normalised)
   ) {
     return "danger";
@@ -758,11 +767,18 @@ function buildFallbackData(homeId) {
 }
 
 async function fetchDataset(homeId) {
-  const trainingData = await apiGet(`/homes/${homeId}/training`).catch(() => null);
-  const complianceData = await apiGet(`/homes/${homeId}/compliance`).catch(() => null);
-  const taskData = await apiGet(`/homes/${homeId}/tasks`).catch(() => null);
+  const safeGet = (path) => apiGet(path).catch(() => null);
 
-  const hasLiveSuccess = [trainingData, complianceData, taskData].some(hasUsableData);
+  const [summaryData, trainingData, complianceData, taskData] = await Promise.all([
+    safeGet(`/homes/${homeId}/training-summary`),
+    safeGet(`/homes/${homeId}/training`),
+    safeGet(`/homes/${homeId}/compliance`),
+    safeGet(`/homes/${homeId}/tasks`),
+  ]);
+
+  const hasLiveSuccess = [summaryData, trainingData, complianceData, taskData].some(
+    hasUsableData
+  );
 
   if (!hasLiveSuccess) {
     return {
@@ -772,7 +788,7 @@ async function fetchDataset(homeId) {
   }
 
   return {
-    summaryData: {},
+    summaryData: summaryData || {},
     trainingData: trainingData || { items: [] },
     complianceData: complianceData || { items: [] },
     taskData: taskData || { items: [] },
@@ -855,7 +871,9 @@ export async function loadTrainingCentre() {
     const summary = normaliseSummary(summaryData);
 
     const allItems = normaliseTrainingItems(trainingData);
+
     const complianceItems = normaliseComplianceItems(complianceData).slice(0, 8);
+
     const taskItems = normaliseTaskItems(taskData)
       .filter(
         (item) =>
@@ -890,6 +908,7 @@ export async function loadTrainingCentre() {
 
     const title =
       summary.title ||
+      summary.home_name ||
       state.currentUser?.home_name ||
       state.currentUser?.homeName ||
       `Home ${homeId} training`;
@@ -921,6 +940,8 @@ export async function loadTrainingCentre() {
       lastRecord:
         latest?.completed_date
           ? `Latest training ${formatDateTime(latest.completed_date)}`
+          : latest?.updated_at
+          ? `Latest record ${formatDateTime(latest.updated_at)}`
           : isFallback
           ? "Preview training data loaded"
           : "No recent training record",
@@ -928,6 +949,9 @@ export async function loadTrainingCentre() {
         stats.openActions === 1 ? "" : "s"
       } • ${toNumber(stats.overdue)} overdue`,
     });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
     console.error("[training-centre] load failed", error);
     renderErrorState(error?.message || "Failed to load training data.");
