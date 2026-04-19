@@ -7,8 +7,11 @@ import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 function getHomeId() {
   return (
     state.homeId ||
+    state.selectedHomeId ||
+    state.readinessSelectedHomeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
+    state.selectedYoungPerson?.home_id ||
     null
   );
 }
@@ -150,32 +153,45 @@ function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue) - toTime(bValue);
+
+    const aTime = aValue ? toTime(aValue) : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? toTime(bValue) : Number.POSITIVE_INFINITY;
+
+    return aTime - bTime;
   });
 }
 
 function hasUsableData(data) {
   if (!data || typeof data !== "object") return false;
-  if (Array.isArray(data.items) && data.items.length > 0) return true;
-  if (Array.isArray(data.young_people) && data.young_people.length > 0) return true;
-  if (Array.isArray(data.records) && data.records.length > 0) return true;
-  if (Array.isArray(data.team) && data.team.length > 0) return true;
-  if (Array.isArray(data.staff) && data.staff.length > 0) return true;
-  if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
-  if (Array.isArray(data.communications) && data.communications.length > 0) return true;
-  if (Array.isArray(data.documents) && data.documents.length > 0) return true;
-  if (Array.isArray(data.statutory_documents) && data.statutory_documents.length > 0) return true;
-  if (Array.isArray(data.supervisions) && data.supervisions.length > 0) return true;
-  if (Array.isArray(data.therapy) && data.therapy.length > 0) return true;
-  if (Array.isArray(data.therapy_records) && data.therapy_records.length > 0) return true;
-  if (Array.isArray(data.reports) && data.reports.length > 0) return true;
-  if (Array.isArray(data.monthly_reviews) && data.monthly_reviews.length > 0) return true;
-  if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
-  if (Array.isArray(data.inspection_home_cards) && data.inspection_home_cards.length > 0) return true;
-  if (Array.isArray(data.inspection_headers) && data.inspection_headers.length > 0) return true;
-  if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0) return true;
+
+  const candidateKeys = [
+    "items",
+    "young_people",
+    "records",
+    "team",
+    "staff",
+    "tasks",
+    "communications",
+    "documents",
+    "statutory_documents",
+    "supervisions",
+    "therapy",
+    "therapy_records",
+    "reports",
+    "monthly_reviews",
+    "compliance_items",
+    "inspection_home_cards",
+    "inspection_headers",
+    "inspection_actions",
+  ];
+
+  if (candidateKeys.some((key) => Array.isArray(data[key]) && data[key].length > 0)) {
+    return true;
+  }
+
   if (data.summary && typeof data.summary === "object") return true;
   if (data.home && typeof data.home === "object") return true;
+
   return false;
 }
 
@@ -366,6 +382,7 @@ function normaliseInspectionCards(data = {}) {
   return toArray(data.items, [data.inspection_home_cards, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.home_id ?? item.source_id ?? null,
+    home_id: item.home_id ?? item.id ?? null,
     record_type: item.record_type || "inspection_home_card",
     title: item.home_name || "Inspection card",
     status: item.overall_band || "recorded",
@@ -552,6 +569,13 @@ function buildPriorityItems({
         : "Document review is approaching.",
     });
   });
+
+  if (!items.length) {
+    items.push({
+      title: "No major pressure points",
+      summary: "No urgent home-wide issues are showing right now.",
+    });
+  }
 
   return items.slice(0, 8);
 }
@@ -953,6 +977,7 @@ function renderHomeDashboardHtml({
   recentReports = [],
   inspectionCards = [],
   inspectionActions = [],
+  isFallback = false,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
@@ -961,6 +986,11 @@ function renderHomeDashboardHtml({
           <div class="eyebrow">Home dashboard</div>
           <h2>${safeText(homeName)}</h2>
           <p>A live home-wide management view across children, staffing, communication, documents, therapy, inspection readiness and oversight.</p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live home routes are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -1259,7 +1289,10 @@ function renderHomeDashboardHtml({
               summaryKey: "summary",
               recordType: "report",
               metaBuilder: (item) =>
-                [item.review_month || "", item.status || ""]
+                [
+                  item.review_month ? formatDate(item.review_month) : "",
+                  item.status || "",
+                ]
                   .filter(Boolean)
                   .join(" • "),
             })}
@@ -1465,7 +1498,7 @@ function buildFallbackData(homeId) {
           id: 701,
           title: "Monthly home summary",
           summary: "Summary of incidents, staffing and quality themes.",
-          review_month: "2026-03",
+          review_month: "2026-03-01",
           status: "completed",
           created_at: minusDays(8, 9, 0),
         },
@@ -1686,7 +1719,9 @@ export async function loadHomeDashboard() {
 
     const inspectionCards = sortNewestFirst(
       normaliseInspectionCards(inspectionCardsData).filter(
-        (item) => Number(item.id) === Number(homeId) || Number(item.home_id) === Number(homeId)
+        (item) =>
+          Number(item.id) === Number(homeId) ||
+          Number(item.home_id) === Number(homeId)
       ),
       ["updated_at", "created_at"]
     ).slice(0, 1);
@@ -1770,6 +1805,7 @@ export async function loadHomeDashboard() {
       recentReports,
       inspectionCards,
       inspectionActions,
+      isFallback,
     });
 
     const nextDueSupervision = dueSupervisions[0];
