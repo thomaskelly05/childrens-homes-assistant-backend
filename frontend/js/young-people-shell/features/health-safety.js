@@ -115,6 +115,7 @@ async function safeGet(path) {
 
 function badgeClass(value) {
   const v = lower(value);
+
   if (
     [
       "critical",
@@ -132,6 +133,7 @@ function badgeClass(value) {
   ) {
     return "badge badge-danger";
   }
+
   if (
     [
       "medium",
@@ -146,6 +148,7 @@ function badgeClass(value) {
   ) {
     return "badge badge-warning";
   }
+
   if (
     [
       "pass",
@@ -160,6 +163,7 @@ function badgeClass(value) {
   ) {
     return "badge badge-success";
   }
+
   return "badge";
 }
 
@@ -914,15 +918,24 @@ async function fetchAll(homeId) {
 function buildUrgentChecks(data) {
   const urgent = [
     ...data.environmentChecks.filter(
-      (item) => item.action_required || ["urgent_action", "unsafe", "critical", "action_required"].includes(lower(item.status))
+      (item) =>
+        item.action_required ||
+        ["urgent_action", "unsafe", "critical", "action_required"].includes(
+          lower(item.status)
+        )
     ),
     ...data.healthSafetyChecks.filter(
-      (item) => item.action_required || ["urgent", "unsafe", "critical", "fail", "action_required"].includes(lower(item.status))
+      (item) =>
+        item.action_required ||
+        ["urgent", "unsafe", "critical", "fail", "action_required"].includes(
+          lower(item.status)
+        )
     ),
     ...data.safetyChecks.filter(
       (item) =>
-        ["overdue", "failed", "fail", "unsafe", "critical"].includes(lower(item.outcome_status)) ||
-        Boolean(item.action_required)
+        ["overdue", "failed", "fail", "unsafe", "critical"].includes(
+          lower(item.outcome_status)
+        ) || Boolean(item.action_required)
     ),
     ...data.fireSafetyChecks.filter(
       (item) =>
@@ -1084,4 +1097,8 @@ export async function loadHealthSafety() {
       openActions: "Check safety routes",
     });
   }
+}
+
+export async function loadCurrentView() {
+  return loadHealthSafety();
 }
