@@ -1,10 +1,14 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { escapeHtml } from "../core/utils.js";
+import { escapeHtml, getDisplayName } from "../core/utils.js";
 import {
-  resolveEl,
+  getSectionTitle,
+  getSectionSubtitle,
+} from "../core/config.js";
+import {
   ensureAssistantState,
   getAssistantMeta,
+  getCurrentPerson,
   getCurrentScope,
   getCurrentSection,
   getPersonLabel,
@@ -13,9 +17,9 @@ import {
   getReadableSectionLabel,
   getReadableSectionSubtitle,
   extractAssistantContent,
+  cloneAssistantMessage,
   sourceCitationRef,
   sourceSafeDomId,
-  getSources,
   buildSourceMap,
   buildRecordLookupMap,
   RECORD_LINK_REGEX,
@@ -24,10 +28,32 @@ import {
 let assistantUiBound = false;
 let citationEventsBound = false;
 
-function formatRole(role = "") {
-  if (role === "user") return "You";
-  if (role === "assistant") return "Assistant";
-  return "System";
+function qs(id) {
+  return document.getElementById(id);
+}
+
+function getEl(...candidates) {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    if (typeof candidate === "string") {
+      const found = qs(candidate);
+      if (found) return found;
+      continue;
+    }
+
+    return candidate;
+  }
+
+  return null;
+}
+
+function normaliseAssistantMessages() {
+  ensureAssistantState();
+
+  state.assistantMessages = Array.isArray(state.assistantMessages)
+    ? state.assistantMessages.map((entry) => cloneAssistantMessage(entry))
+    : [];
 }
 
 function renderInlineText(text = "") {
@@ -41,14 +67,12 @@ function renderCitationChip(ref = "", source = null) {
   const safeRef = escapeHtml(ref);
   const label = source?.label || source?.title || source?.document_title || ref;
   const safeLabel = escapeHtml(String(label || ref));
-  const evidenceKind = escapeHtml(String(source?.evidence_kind || "direct"));
 
   return `
     <button
       class="assistant-citation-chip"
       type="button"
       data-citation-ref="${safeRef}"
-      data-evidence-kind="${evidenceKind}"
       title="${safeLabel}"
       aria-label="View source ${safeLabel}"
     >
@@ -124,8 +148,7 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
         parts.push(renderInlineText(match));
       }
     } else if (citationRef) {
-      const source =
-        sourceMap.get(String(citationRef || "").toLowerCase()) || null;
+      const source = sourceMap.get(String(citationRef || "").toLowerCase()) || null;
       parts.push(renderCitationChip(citationRef, source));
     }
 
@@ -149,9 +172,7 @@ function renderAssistantRichText(text = "") {
 
   const flushList = () => {
     if (!listItems.length) return;
-    blocks.push(
-      `<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`
-    );
+    blocks.push(`<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
     listItems = [];
   };
 
@@ -193,48 +214,92 @@ function renderUserRichText(text = "") {
   return `<p>${escapeHtml(String(text || ""))}</p>`;
 }
 
-function renderEvidenceBadge(message = {}) {
-  const citations = Array.isArray(message.citations) ? message.citations : [];
-  const actions = Array.isArray(message.actions) ? message.actions : [];
-  const intent = message.intent ? escapeHtml(String(message.intent)) : "";
-  const parts = [];
-
-  if (intent) {
-    parts.push(`<span class="meta-chip meta-chip--soft">${intent}</span>`);
-  }
-
-  if (citations.length) {
-    parts.push(
-      `<span class="meta-chip meta-chip--soft">${escapeHtml(
-        String(citations.length)
-      )} source${citations.length === 1 ? "" : "s"}</span>`
-    );
-  }
-
-  if (actions.length) {
-    parts.push(
-      `<span class="meta-chip meta-chip--soft">${escapeHtml(
-        String(actions.length)
-      )} action${actions.length === 1 ? "" : "s"}</span>`
-    );
-  }
-
-  if (!parts.length) return "";
-  return `<div class="assistant-message-meta-row">${parts.join("")}</div>`;
+function formatRole(role = "") {
+  if (role === "user") return "You";
+  if (role === "assistant") return "Assistant";
+  return "System";
 }
 
-function renderStreamingIndicator(message = {}) {
-  const isStreaming =
-    message.status === "streaming" || Boolean(message._streaming);
+function renderIntentPill(intent = "") {
+  if (!intent) return "";
+  return `<span class="meta-chip meta-chip--soft">${escapeHtml(
+    String(intent).replaceAll("_", " ")
+  )}</span>`;
+}
 
-  if (!isStreaming) return "";
+function renderStatusPill(status = "") {
+  if (!status) return "";
+  const safeStatus = String(status).toLowerCase();
+
+  let className = "meta-chip meta-chip--soft";
+  if (safeStatus === "streaming") className = "meta-chip";
+  if (safeStatus === "error") className = "meta-chip meta-chip--danger";
+  if (safeStatus === "complete") className = "meta-chip meta-chip--success";
+
+  return `<span class="${className}">${escapeHtml(safeStatus)}</span>`;
+}
+
+function renderMessageActions(actions = []) {
+  if (!Array.isArray(actions) || !actions.length) return "";
+
+  const chips = actions
+    .map((action) => {
+      if (typeof action === "string") {
+        return `
+          <button
+            class="chip assistant-action-chip"
+            type="button"
+            data-assistant-chip="${escapeHtml(action)}"
+          >
+            ${escapeHtml(action)}
+          </button>
+        `;
+      }
+
+      const label =
+        action?.label ||
+        action?.title ||
+        action?.type ||
+        "Action";
+
+      const prompt =
+        action?.prompt ||
+        action?.label ||
+        action?.title ||
+        "";
+
+      return `
+        <button
+          class="chip assistant-action-chip"
+          type="button"
+          data-assistant-chip="${escapeHtml(String(prompt))}"
+          data-action-type="${escapeHtml(String(action?.type || ""))}"
+          data-record-type="${escapeHtml(String(action?.record_type || ""))}"
+        >
+          ${escapeHtml(String(label))}
+        </button>
+      `;
+    })
+    .join("");
 
   return `
-    <div class="assistant-message-streaming" aria-live="polite">
-      <span class="assistant-message-streaming-dot"></span>
-      <span>Streaming response…</span>
+    <div class="assistant-message-actions">
+      ${chips}
     </div>
   `;
+}
+
+function renderMessageMeta(message = {}) {
+  const pills = [
+    renderIntentPill(message.intent),
+    renderStatusPill(message.status),
+  ]
+    .filter(Boolean)
+    .join("");
+
+  if (!pills) return "";
+
+  return `<div class="assistant-message-meta">${pills}</div>`;
 }
 
 function renderMessage(message = {}) {
@@ -244,13 +309,9 @@ function renderMessage(message = {}) {
   const content = extractAssistantContent(message);
 
   return `
-    <article
-      class="assistant-message ${escapeHtml(roleClass)}"
-      data-message-id="${escapeHtml(String(message.id || ""))}"
-      data-message-status="${escapeHtml(String(message.status || "complete"))}"
-    >
+    <article class="assistant-message ${escapeHtml(roleClass)}">
       <div class="assistant-message-role">${escapeHtml(formatRole(role))}</div>
-      ${renderEvidenceBadge(message)}
+      ${renderMessageMeta(message)}
       <div class="assistant-message-body">
         ${
           role === "assistant"
@@ -258,7 +319,11 @@ function renderMessage(message = {}) {
             : renderUserRichText(content)
         }
       </div>
-      ${renderStreamingIndicator(message)}
+      ${
+        role === "assistant" && Array.isArray(message.actions) && message.actions.length
+          ? renderMessageActions(message.actions)
+          : ""
+      }
     </article>
   `;
 }
@@ -295,16 +360,8 @@ function buildIntroMessageHtml() {
   `;
 }
 
-function shouldStickToBottom(host) {
-  if (!host) return false;
-  const threshold = 48;
-  return host.scrollHeight - host.scrollTop - host.clientHeight <= threshold;
-}
-
 function renderMessageList(host, messages = []) {
   if (!host) return;
-
-  const shouldAutoScroll = shouldStickToBottom(host) || state.assistantAutoScroll;
 
   host.innerHTML = `
     ${!messages.length ? buildIntroMessageHtml() : ""}
@@ -313,16 +370,14 @@ function renderMessageList(host, messages = []) {
     </div>
   `;
 
-  if (shouldAutoScroll) {
-    host.scrollTop = host.scrollHeight;
-  }
+  host.scrollTop = host.scrollHeight;
 }
 
 function renderMessages() {
-  ensureAssistantState();
+  normaliseAssistantMessages();
 
   renderMessageList(
-    resolveEl(els.assistantMessages, "assistantMessages"),
+    getEl(els.assistantMessages, "assistantMessages"),
     state.assistantMessages
   );
 }
@@ -333,10 +388,10 @@ function renderScopeBadges() {
   const childName = getPersonLabel();
   const section = getReadableSectionLabel();
 
-  const scopeBadge = resolveEl(els.scopeBadge, "scopeBadge");
-  const homeBadge = resolveEl(els.scopeHomeBadge, "scopeHomeBadge");
-  const childBadge = resolveEl(els.scopeChildBadge, "scopeChildBadge");
-  const shiftBadge = resolveEl(els.scopeShiftBadge, "scopeShiftBadge");
+  const scopeBadge = getEl(els.scopeBadge, "scopeBadge");
+  const homeBadge = getEl(els.scopeHomeBadge, "scopeHomeBadge");
+  const childBadge = getEl(els.scopeChildBadge, "scopeChildBadge");
+  const shiftBadge = getEl(els.scopeShiftBadge, "scopeShiftBadge");
 
   if (scopeBadge) {
     scopeBadge.textContent = getScopeLabel();
@@ -363,7 +418,7 @@ function renderScopeBadges() {
 function renderContextText() {
   const scope = getCurrentScope();
   const section = getReadableSectionLabel();
-  const contextEl = resolveEl(els.assistantContext, "assistantContext");
+  const contextEl = getEl(els.assistantContext, "assistantContext");
 
   if (!contextEl) return;
 
@@ -389,18 +444,6 @@ function renderContextText() {
       : `${getHomeLabel()} • quality • ${section}`;
 }
 
-function renderEvidenceKindPill(kind = "direct") {
-  const safeKind = String(kind || "direct").toLowerCase();
-  const label =
-    safeKind === "inference"
-      ? "Pattern"
-      : safeKind === "action"
-        ? "Action"
-        : "Evidence";
-
-  return `<span class="meta-chip meta-chip--soft">${escapeHtml(label)}</span>`;
-}
-
 function renderSourcesHtml(sources = []) {
   if (!Array.isArray(sources) || !sources.length) {
     return `<p class="assistant-muted">No sources yet.</p>`;
@@ -422,6 +465,7 @@ function renderSourcesHtml(sources = []) {
           const meta = [
             source?.record_type || source?.type || "",
             source?.section || "",
+            source?.evidence_kind || "",
             source?.created_at
               ? new Date(source.created_at).toLocaleDateString("en-GB")
               : "",
@@ -433,7 +477,7 @@ function renderSourcesHtml(sources = []) {
           const description = escapeHtml(
             String(
               source?.description || source?.excerpt || source?.summary || ""
-            )
+            ).slice(0, 220)
           );
 
           return `
@@ -453,14 +497,11 @@ function renderSourcesHtml(sources = []) {
                 <strong>${title}</strong>
                 <span>${escapeHtml(citationRef)}</span>
               </div>
-              <div class="assistant-source-row-meta-wrap">
-                ${source?.evidence_kind ? renderEvidenceKindPill(source.evidence_kind) : ""}
-                ${
-                  meta
-                    ? `<div class="assistant-source-row-meta">${meta}</div>`
-                    : ""
-                }
-              </div>
+              ${
+                meta
+                  ? `<div class="assistant-source-row-meta">${meta}</div>`
+                  : ""
+              }
               ${
                 description
                   ? `<div class="assistant-source-row-text">${description}</div>`
@@ -475,8 +516,8 @@ function renderSourcesHtml(sources = []) {
 }
 
 function renderStandaloneSources() {
-  const html = renderSourcesHtml(getSources());
-  const sourcesEl = resolveEl(els.assistantSources, "assistantSources");
+  const html = renderSourcesHtml(getAssistantMeta().sources || []);
+  const sourcesEl = getEl(els.assistantSources, "assistantSources");
   if (sourcesEl) sourcesEl.innerHTML = html;
 }
 
@@ -485,7 +526,7 @@ function renderSuggestedActions() {
   const actions = Array.isArray(meta.suggested_actions)
     ? meta.suggested_actions
     : [];
-  const host = resolveEl(els.assistantSuggestions, "assistantSuggestions");
+  const host = getEl(els.assistantSuggestions, "assistantSuggestions");
 
   if (!host) return;
 
@@ -501,10 +542,15 @@ function renderSuggestedActions() {
           ? action
           : action?.label || action?.title || action?.type || "Action";
 
+      const prompt =
+        typeof action === "string"
+          ? action
+          : action?.prompt || action?.label || action?.title || "";
+
       const actionType =
         typeof action === "string"
           ? ""
-          : action?.action_type || action?.type || "create_record";
+          : action?.action_type || action?.type || "";
 
       const recordType =
         typeof action === "string"
@@ -515,10 +561,9 @@ function renderSuggestedActions() {
         <button
           class="chip assistant-action-chip"
           type="button"
-          data-suggestion-action
+          data-assistant-chip="${escapeHtml(String(prompt))}"
           data-action-type="${escapeHtml(String(actionType))}"
           data-record-type="${escapeHtml(String(recordType))}"
-          data-title="${escapeHtml(String(label))}"
         >
           ${escapeHtml(String(label))}
         </button>
@@ -528,7 +573,7 @@ function renderSuggestedActions() {
 }
 
 function renderScopeSummary() {
-  const host = resolveEl(els.assistantScopeSummary, "assistantScopeSummary");
+  const host = getEl(els.assistantScopeSummary, "assistantScopeSummary");
   const meta = getAssistantMeta();
   const runtime = meta.runtime || {};
   const context = meta.assistant_context || {};
@@ -545,17 +590,15 @@ function renderScopeSummary() {
       </div>
       <div class="assistant-scope-summary-row">
         <span>Evidence</span>
-        <strong>${escapeHtml(String(runtime.evidence_count || 0))}</strong>
+        <strong>${escapeHtml(String(runtime.evidence_count || context?.evidence_summary?.total || 0))}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Mode</span>
-        <strong>${escapeHtml(
-          String(runtime.retrieval_mode || context.requested_scope_mode || getCurrentScope())
-        )}</strong>
+        <strong>${escapeHtml(String(runtime.output_mode || meta.output_mode || getCurrentScope()))}</strong>
       </div>
       <div class="assistant-scope-summary-row">
-        <span>Intent</span>
-        <strong>${escapeHtml(String(runtime.assistant_intent || meta.intent || "unknown"))}</strong>
+        <span>Lens</span>
+        <strong>${escapeHtml(String(runtime.analysis_lens || context.analysis_lens || "general"))}</strong>
       </div>
     </div>
   `;
@@ -567,7 +610,11 @@ function renderRuntimeAndExplainability() {
   const meta = getAssistantMeta();
 
   if (els.assistantRuntime) {
-    els.assistantRuntime.textContent = JSON.stringify(meta.runtime || {}, null, 2);
+    els.assistantRuntime.textContent = JSON.stringify(
+      meta.runtime || {},
+      null,
+      2
+    );
   }
 
   if (els.assistantExplainability) {
@@ -595,137 +642,14 @@ function syncAssistantVisibility() {
 
 function syncAssistantSendButtons() {
   const sending = Boolean(state.assistantSending);
+
   if (els.assistantSendBtn) els.assistantSendBtn.disabled = sending;
 }
 
 function syncAssistantInputs() {
   const disabled = Boolean(state.assistantSending);
+
   if (els.assistantInput) els.assistantInput.disabled = disabled;
-}
-
-function renderLiveStatus() {
-  const liveStatusEl = resolveEl(els.assistantLiveStatus, "assistantLiveStatus");
-  if (!liveStatusEl) return;
-
-  if (state.assistantSending) {
-    liveStatusEl.textContent = "Assistant is analysing the current scope…";
-    return;
-  }
-
-  const meta = getAssistantMeta();
-  const lastAnalysisAt = meta.last_analysis_at;
-
-  liveStatusEl.textContent = lastAnalysisAt
-    ? `Assistant ready. Last analysis ${new Date(lastAnalysisAt).toLocaleString("en-GB")}.`
-    : "Assistant ready.";
-}
-
-function renderBundleStatus() {
-  const bundleStatusEl = resolveEl(
-    els.assistantScopeBundleStatus,
-    "assistantScopeBundleStatus"
-  );
-  const bundleErrorEl = resolveEl(
-    els.assistantScopeBundleError,
-    "assistantScopeBundleError"
-  );
-
-  if (bundleStatusEl) {
-    if (state.scopeBundleLoading) {
-      bundleStatusEl.textContent = "Refreshing scoped records…";
-    } else if (state.scopeBundleLoadedAt) {
-      bundleStatusEl.textContent = `Scoped records loaded ${new Date(
-        state.scopeBundleLoadedAt
-      ).toLocaleString("en-GB")}.`;
-    } else {
-      bundleStatusEl.textContent = "No scoped records loaded.";
-    }
-  }
-
-  if (bundleErrorEl) {
-    const hasError = Boolean(state.scopeBundleError);
-    bundleErrorEl.textContent = hasError ? String(state.scopeBundleError) : "";
-    bundleErrorEl.classList.toggle("hidden", !hasError);
-  }
-}
-
-function renderDerivedBriefs() {
-  if (els.morningBriefBody) {
-    els.morningBriefBody.innerHTML = state.latestMorningBrief
-      ? `<div class="assistant-structured-answer">${renderAssistantRichText(
-          String(state.latestMorningBrief)
-        )}</div>`
-      : `<p>No shift brief available yet.</p>`;
-  }
-
-  if (els.managerBriefBody) {
-    els.managerBriefBody.innerHTML = state.latestManagerBrief
-      ? `<div class="assistant-structured-answer">${renderAssistantRichText(
-          String(state.latestManagerBrief)
-        )}</div>`
-      : `<p>No manager summary available yet.</p>`;
-  }
-
-  if (els.qualityBriefBody) {
-    els.qualityBriefBody.innerHTML = state.latestQualityBrief
-      ? `<div class="assistant-structured-answer">${renderAssistantRichText(
-          String(state.latestQualityBrief)
-        )}</div>`
-      : `<p>No quality summary available yet.</p>`;
-  }
-}
-
-function renderLiveUpdates() {
-  if (!els.liveUpdatesBody) return;
-
-  const updates = Array.isArray(state.liveUpdates) ? state.liveUpdates : [];
-
-  if (!updates.length) {
-    els.liveUpdatesBody.innerHTML = `<p>No live updates yet.</p>`;
-    return;
-  }
-
-  els.liveUpdatesBody.innerHTML = `
-    <div class="assistant-live-update-list">
-      ${updates
-        .map((update) => {
-          const title = escapeHtml(String(update.title || "Update"));
-          const body = escapeHtml(String(update.message || update.summary || ""));
-          const timestamp = update.created_at
-            ? new Date(update.created_at).toLocaleString("en-GB")
-            : "";
-
-          return `
-            <article class="assistant-live-update-item">
-              <strong>${title}</strong>
-              ${timestamp ? `<div class="assistant-live-update-time">${escapeHtml(timestamp)}</div>` : ""}
-              ${body ? `<p>${body}</p>` : ""}
-            </article>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
-function renderAllAssistantUi() {
-  ensureAssistantState();
-  getAssistantMeta();
-
-  syncAssistantVisibility();
-  syncAssistantSendButtons();
-  syncAssistantInputs();
-  renderScopeBadges();
-  renderContextText();
-  renderMessages();
-  renderStandaloneSources();
-  renderSuggestedActions();
-  renderScopeSummary();
-  renderRuntimeAndExplainability();
-  renderLiveStatus();
-  renderBundleStatus();
-  renderDerivedBriefs();
-  renderLiveUpdates();
 }
 
 function scrollSourceIntoView(ref = "") {
@@ -800,19 +724,25 @@ function bindCitationEvents() {
   });
 }
 
+function renderAllAssistantUi() {
+  ensureAssistantState();
+
+  syncAssistantVisibility();
+  syncAssistantSendButtons();
+  syncAssistantInputs();
+  renderScopeBadges();
+  renderContextText();
+  renderMessages();
+  renderStandaloneSources();
+  renderSuggestedActions();
+  renderScopeSummary();
+  renderRuntimeAndExplainability();
+}
+
 export function bindAssistantUi() {
   if (assistantUiBound) return;
   assistantUiBound = true;
-
   bindCitationEvents();
-
-  const messagesHost = resolveEl(els.assistantMessages, "assistantMessages");
-  if (messagesHost) {
-    messagesHost.addEventListener("scroll", () => {
-      state.assistantAutoScroll = shouldStickToBottom(messagesHost);
-    });
-  }
-
   renderAllAssistantUi();
 }
 
@@ -823,7 +753,7 @@ export function refreshAssistantUi() {
 export function appendAssistantSystemMessage(text, extra = {}) {
   ensureAssistantState();
 
-  const entry = {
+  const entry = cloneAssistantMessage({
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: "assistant",
     content: typeof text === "string" ? text : extractAssistantContent(text),
@@ -835,21 +765,18 @@ export function appendAssistantSystemMessage(text, extra = {}) {
     scope_snapshot:
       extra.scope_snapshot && typeof extra.scope_snapshot === "object"
         ? extra.scope_snapshot
-        : {
-            scope: getCurrentScope(),
-            section: getCurrentSection(),
-          },
+        : null,
     _streaming: Boolean(extra._streaming),
-  };
+  });
 
   state.assistantMessages.push(entry);
-  refreshAssistantUi();
+  renderAllAssistantUi();
 }
 
 export function appendAssistantUserMessage(text, extra = {}) {
   ensureAssistantState();
 
-  const entry = {
+  const entry = cloneAssistantMessage({
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: "user",
     content: String(text || ""),
@@ -861,18 +788,14 @@ export function appendAssistantUserMessage(text, extra = {}) {
     scope_snapshot:
       extra.scope_snapshot && typeof extra.scope_snapshot === "object"
         ? extra.scope_snapshot
-        : {
-            scope: getCurrentScope(),
-            section: getCurrentSection(),
-          },
-    _streaming: false,
-  };
+        : null,
+  });
 
   state.assistantMessages.push(entry);
-  refreshAssistantUi();
+  renderAllAssistantUi();
 }
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
-  refreshAssistantUi();
+  renderAllAssistantUi();
 }
