@@ -262,10 +262,6 @@ function ensureAssistantState() {
     state.assistantMessages = [];
   }
 
-  if (!Array.isArray(state.assistantModalMessages)) {
-    state.assistantModalMessages = [];
-  }
-
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
     state.assistantMeta = createAssistantMeta();
   }
@@ -405,7 +401,6 @@ function addAssistantPlaceholder() {
   });
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
   syncAssistantUi();
 }
 
@@ -413,19 +408,13 @@ function updateLastAssistantStreamingText(text) {
   const safeValue =
     typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
 
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const list = state.assistantMessages || [];
+  if (!list.length) return;
 
-  lists.forEach((list) => {
-    if (!list.length) return;
-
-    const last = list[list.length - 1];
-    if (last?.role === "assistant" && last?._streaming) {
-      last.content = safeValue;
-    }
-  });
+  const last = list[list.length - 1];
+  if (last?.role === "assistant" && last?._streaming) {
+    last.content = safeValue;
+  }
 
   syncAssistantUi();
 }
@@ -436,22 +425,16 @@ function replaceLastAssistantPlaceholder(text) {
       ? text
       : extractStreamText(text) || "No assistant reply returned.";
 
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const list = state.assistantMessages || [];
 
-  lists.forEach((list) => {
-    if (!list.length) {
-      list.push(
-        cloneMessageEntry({
-          role: "assistant",
-          content: safeValue,
-        })
-      );
-      return;
-    }
-
+  if (!list.length) {
+    list.push(
+      cloneMessageEntry({
+        role: "assistant",
+        content: safeValue,
+      })
+    );
+  } else {
     const last = list[list.length - 1];
     if (last?.role === "assistant" && last?._streaming) {
       last.content = safeValue;
@@ -464,7 +447,7 @@ function replaceLastAssistantPlaceholder(text) {
         })
       );
     }
-  });
+  }
 
   syncAssistantUi();
 }
@@ -867,8 +850,8 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
     scope === "home"
       ? homeMap
       : scope === "quality"
-      ? qualityMap
-      : childMap;
+        ? qualityMap
+        : childMap;
 
   return map[view] || [
     scope === "child"
@@ -918,36 +901,36 @@ export function updateAssistantContext() {
             suggested_prompts: assistantPromptsForView(section, scope),
           }
       : scope === "home"
-      ? {
-          summary: `Home: ${getHomeName()} • home-only OS scope • section: ${sectionLabel}`,
-          scope_type: "home",
-          current_scope: scope,
-          current_section: section,
-          access_level: "home",
-          young_person_name: null,
-          home_name: getHomeName(),
-          allowed_home_ids: [state.homeId].filter(Boolean),
-          retrieval_default: "whole_scope",
-          suggested_prompts: assistantPromptsForView(section, scope),
-        }
-      : {
-          summary:
-            accessLevel === "provider"
-              ? `Quality: provider-wide oversight across allowed homes • section: ${sectionLabel}`
-              : `Quality: ${getHomeName()} only • section: ${sectionLabel}`,
-          scope_type: "quality",
-          current_scope: scope,
-          current_section: section,
-          access_level: accessLevel,
-          young_person_name: null,
-          home_name: getHomeName(),
-          allowed_home_ids:
-            accessLevel === "provider"
-              ? getAllowedHomeIds()
-              : [state.homeId].filter(Boolean),
-          retrieval_default: "whole_scope",
-          suggested_prompts: assistantPromptsForView(section, scope),
-        };
+        ? {
+            summary: `Home: ${getHomeName()} • home-only OS scope • section: ${sectionLabel}`,
+            scope_type: "home",
+            current_scope: scope,
+            current_section: section,
+            access_level: "home",
+            young_person_name: null,
+            home_name: getHomeName(),
+            allowed_home_ids: [state.homeId].filter(Boolean),
+            retrieval_default: "whole_scope",
+            suggested_prompts: assistantPromptsForView(section, scope),
+          }
+        : {
+            summary:
+              accessLevel === "provider"
+                ? `Quality: provider-wide oversight across allowed homes • section: ${sectionLabel}`
+                : `Quality: ${getHomeName()} only • section: ${sectionLabel}`,
+            scope_type: "quality",
+            current_scope: scope,
+            current_section: section,
+            access_level: accessLevel,
+            young_person_name: null,
+            home_name: getHomeName(),
+            allowed_home_ids:
+              accessLevel === "provider"
+                ? getAllowedHomeIds()
+                : [state.homeId].filter(Boolean),
+            retrieval_default: "whole_scope",
+            suggested_prompts: assistantPromptsForView(section, scope),
+          };
 
   mergeAssistantMeta({
     assistant_context: contextSummary,
@@ -1426,7 +1409,6 @@ export async function askAssistant(question) {
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
-  state.assistantModalMessages = [];
 
   if (state.assistantMeta && typeof state.assistantMeta === "object") {
     state.assistantMeta = createAssistantMeta();
@@ -1491,15 +1473,6 @@ export function bindAssistantEvents() {
     const question = els.assistantInput?.value || "";
     if (els.assistantInput) {
       els.assistantInput.value = "";
-    }
-    await askAssistant(question);
-  });
-
-  els.assistantModalForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const question = els.assistantModalInput?.value || "";
-    if (els.assistantModalInput) {
-      els.assistantModalInput.value = "";
     }
     await askAssistant(question);
   });
