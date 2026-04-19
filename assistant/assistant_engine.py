@@ -264,74 +264,11 @@ def _normalise_text(value: Any) -> str:
     return f" {_safe_string(value).lower()} "
 
 
-def _normalise_list_of_strings(value: Any, *, limit: int = 20) -> list[str]:
-    if not isinstance(value, list):
-        return []
-
-    cleaned: list[str] = []
-    seen: set[str] = set()
-
-    for item in value[:limit]:
-        text = _safe_string(item)
-        if not text:
-            continue
-        lowered = text.lower()
-        if lowered in seen:
-            continue
-        seen.add(lowered)
-        cleaned.append(text)
-
-    return cleaned
-
-
-def _normalise_sources(value: Any) -> list[dict[str, Any]]:
-    if not isinstance(value, list):
-        return []
-
-    cleaned: list[dict[str, Any]] = []
-    seen: set[str] = set()
-
-    for item in value:
-        if not isinstance(item, dict):
-            continue
-
-        source = {
-            "type": item.get("type"),
-            "label": item.get("label"),
-            "document_title": item.get("document_title"),
-            "section": item.get("section"),
-            "page_number": item.get("page_number"),
-            "excerpt": item.get("excerpt"),
-            "url": item.get("url"),
-            "record_type": item.get("record_type"),
-            "record_id": item.get("record_id"),
-            "citation_ref": item.get("citation_ref"),
-            "summary": item.get("summary"),
-            "title": item.get("title"),
-            "description": item.get("description"),
-        }
-
-        key = "|".join(
-            str(source.get(k) or "")
-            for k in [
-                "type",
-                "label",
-                "document_title",
-                "section",
-                "page_number",
-                "url",
-                "record_type",
-                "record_id",
-                "citation_ref",
-            ]
-        )
-        if key in seen:
-            continue
-
-        seen.add(key)
-        cleaned.append(source)
-
-    return cleaned
+def _normalise_speed(speed: str | None) -> str:
+    value = _safe_string(speed).lower()
+    if value in {"quick", "balanced", "deep"}:
+        return value
+    return "balanced"
 
 
 def _append_section(base: str, title: str, content: str) -> str:
@@ -345,13 +282,6 @@ def _append_section(base: str, title: str, content: str) -> str:
         f"{title}\n\n"
         f"{content}"
     )
-
-
-def _normalise_speed(speed: str | None) -> str:
-    value = _safe_string(speed).lower()
-    if value in {"quick", "balanced", "deep"}:
-        return value
-    return "balanced"
 
 
 def _history_limit_for_speed(speed: str) -> int:
@@ -418,7 +348,10 @@ def _looks_like_internal_report_context(user_context: dict[str, Any] | None) -> 
     return any(key in user_context for key in REPORT_SIGNAL_KEYS)
 
 
-def _looks_like_internal_report_request(message: str, user_context: dict[str, Any] | None) -> bool:
+def _looks_like_internal_report_request(
+    message: str,
+    user_context: dict[str, Any] | None,
+) -> bool:
     if _looks_like_internal_report_context(user_context):
         return True
 
@@ -437,7 +370,10 @@ def _looks_like_internal_report_request(message: str, user_context: dict[str, An
     return any(term in text for term in report_terms)
 
 
-def _normalise_user_role_profile(role: str, user_context: dict[str, Any] | None = None) -> str:
+def _normalise_user_role_profile(
+    role: str,
+    user_context: dict[str, Any] | None = None,
+) -> str:
     text = " ".join(
         part
         for part in [
@@ -495,11 +431,11 @@ def _derive_task_type(
     if _contains_any(text, QUALITY_CHECK_KEYWORDS) or mode in {"document_review", "manager_review"}:
         return "review"
 
-    if _contains_any(text, DECISION_SUPPORT_KEYWORDS) or mode in {"practical", "support_planning"}:
-        return "decision_support"
-
     if _contains_any(text, PLANNING_KEYWORDS) or mode == "support_planning":
         return "planning"
+
+    if _contains_any(text, DECISION_SUPPORT_KEYWORDS) or mode == "practical":
+        return "decision_support"
 
     if mode in {"supervision", "reflective"}:
         return "reflection"
@@ -553,6 +489,7 @@ def _map_classifier_output_to_runtime(
         "reflective_debrief": "supervision_reflection",
         "professional_rewrite": "structured_record",
         "safeguarding_note": "structured_record",
+        "report": "report",
         "plain_response": _legacy_output_type_from_mode(legacy_mode, task_type, message),
     }
     return mapping.get(
@@ -600,10 +537,16 @@ def _retrieval_level(
     if _contains_guidance_trigger(message):
         return "full" if response_mode == "deep" else "light"
 
-    if task_type in {"planning", "review"}:
+    if task_type in {"planning", "review", "decision_support"}:
         return "full" if response_mode == "deep" else "light"
 
-    if mode in {"factual", "support_planning", "manager_review", "supervision", "general_practice"}:
+    if mode in {
+        "factual",
+        "support_planning",
+        "manager_review",
+        "supervision",
+        "general_practice",
+    }:
         return "full" if response_mode == "deep" else "light"
 
     return "none"
@@ -640,7 +583,7 @@ def _reflection_level(
     if mode in {"manager_review", "document_review", "support_planning", "supervision"}:
         return "light"
 
-    if task_type in {"review", "planning"}:
+    if task_type in {"review", "planning", "decision_support"}:
         return "light"
 
     return "none"
@@ -677,6 +620,56 @@ def _should_use_leadership_lens(
     return False
 
 
+def _normalise_sources(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    cleaned: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+
+        source = {
+            "type": item.get("type"),
+            "label": item.get("label"),
+            "document_title": item.get("document_title"),
+            "section": item.get("section"),
+            "page_number": item.get("page_number"),
+            "excerpt": item.get("excerpt"),
+            "url": item.get("url"),
+            "record_type": item.get("record_type"),
+            "record_id": item.get("record_id"),
+            "citation_ref": item.get("citation_ref"),
+            "summary": item.get("summary"),
+            "title": item.get("title"),
+            "description": item.get("description"),
+        }
+
+        key = "|".join(
+            str(source.get(k) or "")
+            for k in [
+                "type",
+                "label",
+                "document_title",
+                "section",
+                "page_number",
+                "url",
+                "record_type",
+                "record_id",
+                "citation_ref",
+            ]
+        )
+        if key in seen:
+            continue
+
+        seen.add(key)
+        cleaned.append(source)
+
+    return cleaned
+
+
 def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) -> str:
     lines = [
         f"Detected task mode: {runtime.mode}",
@@ -696,7 +689,9 @@ def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) ->
         lines.append(f"Secondary intents: {', '.join(runtime.secondary_intents)}")
 
     if runtime.classification_signals:
-        lines.append(f"Classification signals: {', '.join(runtime.classification_signals[:8])}")
+        lines.append(
+            f"Classification signals: {', '.join(runtime.classification_signals[:8])}"
+        )
 
     lines.append("")
     lines.append(
@@ -707,4 +702,701 @@ def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) ->
 
 
 def _build_role_lens_context(role_profile: str) -> str:
-    if role_profile
+    if role_profile == "provider":
+        return (
+            "PROVIDER / RESPONSIBLE INDIVIDUAL ROLE ADAPTATION:\n"
+            "• Write with stronger attention to governance, oversight, patterns, provider risk, quality assurance, and service-wide implications.\n"
+            "• Distinguish clearly between a one-off issue and a systemic issue.\n"
+            "• Highlight what may require provider-level monitoring, escalation, assurance, or follow-up.\n"
+            "• Keep the response grounded in children’s lived experience, but include leadership and governance implications where relevant."
+        )
+
+    if role_profile == "manager":
+        return (
+            "MANAGER / REGISTERED MANAGER ROLE ADAPTATION:\n"
+            "• Write with stronger attention to safety, defensibility, staff actions, recording quality, care planning quality, consistency of practice, and management follow-up.\n"
+            "• Highlight what should be escalated, reviewed, handed over, monitored, or strengthened.\n"
+            "• Where relevant, show what a strong manager would notice, challenge, or tighten."
+        )
+
+    return (
+        "STAFF ROLE ADAPTATION:\n"
+        "• Prioritise practical, shift-usable, clear guidance.\n"
+        "• Keep outputs actionable, concrete, and easy to use in real residential care work.\n"
+        "• Do not overload the response with management-level analysis unless the task clearly calls for it."
+    )
+
+
+def _build_leadership_lens_context(
+    mode: str,
+    safeguarding_level: str,
+    message: str,
+    role_profile: str,
+    task_type: str,
+) -> str:
+    text = _normalise_text(message)
+
+    emphasise_rm = (
+        role_profile == "manager"
+        or mode in {"manager_review", "support_planning", "supervision", "document_review"}
+        or task_type in {"review", "planning", "report"}
+        or _contains_any(text, RM_KEYWORDS)
+    )
+    emphasise_ofsted = (
+        mode in {"manager_review", "document_review", "factual"}
+        or _contains_any(text, OFSTED_KEYWORDS)
+    )
+    emphasise_ri = (
+        role_profile == "provider"
+        or mode in {"manager_review", "supervision"}
+        or _contains_any(text, RI_KEYWORDS)
+    )
+
+    blocks: list[str] = []
+
+    if emphasise_rm:
+        blocks.append(
+            "REGISTERED MANAGER PRIORITIES:\n"
+            "• Check whether practice is safe, clear, defensible, and actionable.\n"
+            "• Notice what should be escalated, reviewed, followed up, or strengthened.\n"
+            "• Focus on staff consistency, care planning quality, recording quality, and management oversight."
+        )
+
+    if emphasise_ofsted:
+        blocks.append(
+            "OFSTED / INSPECTION PRIORITIES:\n"
+            "• Consider the child’s lived experience, progress, safety, and quality of support.\n"
+            "• Notice weak wording, vague evidence, inconsistencies, drift, or gaps.\n"
+            "• Strengthen clarity, impact, and evidence where relevant."
+        )
+
+    if emphasise_ri:
+        blocks.append(
+            "RESPONSIBLE INDIVIDUAL / PROVIDER OVERSIGHT PRIORITIES:\n"
+            "• Notice provider-level risks, patterns, governance concerns, or systemic weaknesses.\n"
+            "• Identify where stronger monitoring, quality assurance, or oversight may be needed.\n"
+            "• Distinguish between a one-off issue and something that may indicate a wider service concern."
+        )
+
+    if safeguarding_level in {"heightened", "urgent"}:
+        blocks.append(
+            "SAFEGUARDING LEADERSHIP PRIORITY:\n"
+            "• Keep practical safety, escalation, recording quality, and defensibility at the centre."
+        )
+
+    return "\n\n".join(blocks).strip()
+
+
+def _build_suggested_actions_context(
+    mode: str,
+    task_type: str,
+    output_type: str,
+    safeguarding_level: str,
+    urgency: str,
+    role_profile: str,
+    message: str,
+) -> str:
+    text = _normalise_text(message)
+    actions: list[str] = []
+
+    if urgency == "urgent" or safeguarding_level == "urgent":
+        actions.extend(
+            [
+                "Prioritise immediate safety and protective action before documentation detail.",
+                "Consider immediate escalation to manager / on-call / safeguarding lead / emergency services where indicated.",
+                "Record exact times, actions taken, who was informed, and the immediate outcome.",
+            ]
+        )
+    elif safeguarding_level == "heightened":
+        actions.extend(
+            [
+                "Clarify current risk level and whether additional safeguarding discussion or management oversight is needed.",
+                "Record what was observed, what was reported, and what action was taken.",
+            ]
+        )
+
+    if output_type in {
+        "incident_record",
+        "chronology_entry",
+        "daily_note",
+        "structured_record",
+    }:
+        actions.extend(
+            [
+                "Keep wording factual, neutral, and time-anchored.",
+                "Separate observation, action, and outcome clearly.",
+            ]
+        )
+
+    if output_type == "handover_note":
+        actions.append(
+            "Highlight outstanding risks, unfinished actions, and what the next shift needs to know."
+        )
+
+    if task_type == "planning":
+        actions.extend(
+            [
+                "Identify triggers, protective factors, and practical staff responses.",
+                "Consider whether a plan, risk assessment, or support strategy needs updating.",
+            ]
+        )
+
+    if task_type == "review":
+        actions.extend(
+            [
+                "Identify any gaps, weak wording, or missing evidence.",
+                "Show what should be followed up, reviewed, or strengthened.",
+            ]
+        )
+
+    if task_type == "report":
+        actions.extend(
+            [
+                "Balance strengths and progress with concerns and risks.",
+                "Use only the supplied report facts and clearly state where evidence is limited.",
+                "Highlight clear management priorities and recommendations.",
+            ]
+        )
+
+    if role_profile in {"manager", "provider"}:
+        actions.append(
+            "Notice any pattern, consistency issue, drift, or management follow-up requirement."
+        )
+
+    if _contains_any(text, ESCALATION_KEYWORDS):
+        actions.append(
+            "Be explicit about who should be informed, by whom, and on what timescale."
+        )
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in actions:
+        lowered = item.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        deduped.append(item)
+
+    if not deduped:
+        return ""
+
+    return "SUGGESTED ACTIONS TO WEIGH INTO THE RESPONSE:\n" + "\n".join(
+        f"• {a}" for a in deduped
+    )
+
+
+def _build_practice_quality_context(
+    task_type: str,
+    output_type: str,
+    safeguarding_level: str,
+) -> str:
+    checks: list[str] = [
+        "Keep wording factual, specific, and professionally neutral.",
+        "Avoid vague statements, assumptions, or emotional overstatement.",
+        "Where relevant, include observation, action taken, outcome, and next step.",
+    ]
+
+    if output_type in {
+        "incident_record",
+        "chronology_entry",
+        "daily_note",
+        "structured_record",
+        "handover_note",
+    }:
+        checks.extend(
+            [
+                "Use clear sequencing and time-linked language where possible.",
+                "Distinguish what was seen, heard, reported, and done.",
+            ]
+        )
+
+    if task_type in {"review", "document_work"}:
+        checks.extend(
+            [
+                "Identify missing evidence, missing actions, or weak wording clearly.",
+                "Strengthen defensibility and inspection-readiness where relevant.",
+            ]
+        )
+
+    if task_type == "report":
+        checks.extend(
+            [
+                "Keep the report structured, balanced, and evidence-led.",
+                "Do not invent themes, incidents, patterns, or outcomes.",
+                "State clearly where evidence is limited or incomplete.",
+            ]
+        )
+
+    if safeguarding_level in {"heightened", "urgent"}:
+        checks.append(
+            "Do not let polished wording replace clear safeguarding action and escalation logic."
+        )
+
+    return "PRACTICE QUALITY CHECK:\n" + "\n".join(f"• {c}" for c in checks)
+
+
+def _build_escalation_context(
+    urgency: str,
+    safeguarding_level: str,
+    role_profile: str,
+    message: str,
+) -> str:
+    text = _normalise_text(message)
+    blocks: list[str] = []
+
+    if urgency == "urgent" or safeguarding_level == "urgent":
+        blocks.append(
+            "URGENT SAFEGUARDING OVERRIDE:\n"
+            "• Put immediate safety first.\n"
+            "• Lead with urgent actions before reflective or stylistic detail.\n"
+            "• Be explicit about escalation, who needs to be informed, and what should be recorded immediately."
+        )
+    elif safeguarding_level == "heightened":
+        blocks.append(
+            "HEIGHTENED SAFEGUARDING PRIORITY:\n"
+            "• Keep escalation, clarity of concern, and recording quality prominent.\n"
+            "• Make sure the response does not minimise risk or become overly vague."
+        )
+
+    if role_profile in {"manager", "provider"} and _contains_any(
+        text, ESCALATION_KEYWORDS | URGENT_KEYWORDS
+    ):
+        blocks.append(
+            "LEADERSHIP ESCALATION FOCUS:\n"
+            "• Highlight oversight, follow-up, and assurance responsibilities where relevant."
+        )
+
+    return "\n\n".join(blocks).strip()
+
+
+def _build_document_source(document_name: str | None) -> dict[str, Any]:
+    return {
+        "type": "uploaded_document",
+        "label": f"Uploaded document: {_safe_string(document_name) or 'Uploaded document'}",
+        "document_title": _safe_string(document_name) or "Uploaded document",
+        "section": "",
+        "page_number": None,
+        "excerpt": "",
+        "url": None,
+        "record_type": None,
+        "record_id": None,
+        "citation_ref": None,
+        "summary": None,
+        "title": None,
+        "description": None,
+    }
+
+
+def _safe_classify_intent(message: str, history: list[dict[str, Any]], role: str):
+    try:
+        return classify_intent(message=message, history=history, role=role)
+    except Exception:
+        logger.exception("Intent classification failed")
+        return classify_intent(message=message, history=[], role=role)
+
+
+def _safe_assess_safeguarding(message: str, history: list[dict[str, Any]]) -> str:
+    try:
+        return assess_safeguarding_level(message=message, history=history)
+    except TypeError:
+        try:
+            return assess_safeguarding_level(message)
+        except Exception:
+            logger.exception("Safeguarding assessment failed")
+            return "normal"
+    except Exception:
+        logger.exception("Safeguarding assessment failed")
+        return "normal"
+
+
+def _safe_schema_context(mode: str, safeguarding_level: str) -> str:
+    try:
+        schema = get_schema_for_mode(mode, safeguarding_level)
+        return _safe_string(schema_to_prompt_block(schema))
+    except Exception:
+        logger.exception("Schema selection failed")
+        return ""
+
+
+def _safe_memory_context(req: AssistantRequest, mode: str, speed: str) -> str:
+    try:
+        return _safe_string(
+            get_memory_context(
+                session_id=req.session_id,
+                user_context=req.user_context,
+                message=req.message,
+                mode=mode,
+                recent_limit=2 if speed == "balanced" else 3,
+            )
+        )
+    except TypeError:
+        try:
+            return _safe_string(get_memory_context(req.session_id, req.user_context))
+        except Exception:
+            logger.exception("Memory lookup failed")
+            return ""
+    except Exception:
+        logger.exception("Memory lookup failed")
+        return ""
+
+
+def _safe_retrieval_bundle(
+    req: AssistantRequest,
+    mode: str,
+    safeguarding_level: str,
+    speed: str,
+    retrieval_level: str,
+) -> tuple[str, list[dict[str, Any]]]:
+    limit = 1 if retrieval_level == "light" else 2
+    if speed == "deep" and retrieval_level == "full":
+        limit = 3
+
+    try:
+        bundle = retrieve_context_bundle(
+            message=req.message,
+            mode=mode,
+            safeguarding_level=safeguarding_level,
+            document_text=req.document_text,
+            document_name=req.document_name,
+            role=req.role,
+            limit=limit,
+        )
+        context_text = _safe_string(bundle.get("context_text"))
+        sources = bundle.get("sources") if isinstance(bundle, dict) else []
+        return context_text, _normalise_sources(sources)
+    except TypeError:
+        try:
+            bundle = retrieve_context_bundle(req.message, limit=limit)
+            context_text = _safe_string(bundle.get("context_text"))
+            sources = bundle.get("sources") if isinstance(bundle, dict) else []
+            return context_text, _normalise_sources(sources)
+        except Exception:
+            logger.exception("Retrieval failed")
+            return "", []
+    except Exception:
+        logger.exception("Retrieval failed")
+        return "", []
+
+
+def _safe_reflection_context(
+    message: str,
+    mode: str,
+    safeguarding_level: str,
+    history: list[dict[str, Any]],
+) -> str:
+    try:
+        return _safe_string(
+            maybe_build_reflection_context(
+                message=message,
+                mode=mode,
+                safeguarding_level=safeguarding_level,
+                history=history,
+            )
+        )
+    except TypeError:
+        try:
+            return _safe_string(maybe_build_reflection_context(message, mode))
+        except Exception:
+            logger.exception("Reflection context failed")
+            return ""
+    except Exception:
+        logger.exception("Reflection context failed")
+        return ""
+
+
+def _safe_supervision_context(
+    message: str,
+    mode: str,
+    safeguarding_level: str,
+    history: list[dict[str, Any]],
+) -> str:
+    try:
+        return _safe_string(
+            maybe_build_supervision_context(
+                message=message,
+                mode=mode,
+                safeguarding_level=safeguarding_level,
+                history=history,
+            )
+        )
+    except TypeError:
+        try:
+            return _safe_string(maybe_build_supervision_context(message, mode))
+        except Exception:
+            logger.exception("Supervision context failed")
+            return ""
+    except Exception:
+        logger.exception("Supervision context failed")
+        return ""
+
+
+def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPackage:
+    message = _safe_string(req.message)
+    speed = _normalise_speed(req.speed)
+
+    history = _normalise_history(
+        req.history,
+        max_messages=_history_limit_for_speed(speed),
+    )
+
+    runtime = AssistantRuntimeContext()
+
+    classification = _safe_classify_intent(message, history, req.role)
+
+    runtime.mode = _safe_string(getattr(classification, "legacy_mode", "")) or "general_practice"
+    runtime.response_stance = (
+        _safe_string(getattr(classification, "response_stance", "")) or "practice_support"
+    )
+
+    raw_confidence = getattr(classification, "confidence", 0.0)
+    try:
+        runtime.classification_confidence = float(raw_confidence or 0.0)
+    except (TypeError, ValueError):
+        runtime.classification_confidence = 0.0
+
+    matched_signals = getattr(classification, "matched_signals", []) or []
+    runtime.classification_signals = [
+        _safe_string(item) for item in matched_signals if _safe_string(item)
+    ]
+
+    secondary_intents = getattr(classification, "secondary_intents", []) or []
+    runtime.secondary_intents = [
+        _safe_string(item) for item in secondary_intents if _safe_string(item)
+    ]
+
+    runtime.safeguarding_level = _safe_assess_safeguarding(message, history)
+    runtime.user_role_profile = _normalise_user_role_profile(req.role, req.user_context)
+    runtime.task_type = _derive_task_type(
+        message,
+        runtime.mode,
+        req.document_text,
+        req.user_context,
+    )
+
+    runtime.output_type = _map_classifier_output_to_runtime(
+        _safe_string(getattr(classification, "output_format", "")),
+        runtime.mode,
+        runtime.task_type,
+        message,
+    )
+
+    runtime.urgency = _derive_urgency(message, runtime.safeguarding_level)
+    runtime.retrieval_level = _retrieval_level(
+        runtime.mode,
+        runtime.task_type,
+        runtime.safeguarding_level,
+        message,
+        req.document_text,
+        speed,
+        req.user_context,
+    )
+    runtime.reflection_level = _reflection_level(
+        runtime.mode,
+        runtime.task_type,
+        speed,
+        runtime.safeguarding_level,
+    )
+
+    runtime.schema_context = _safe_schema_context(
+        runtime.mode,
+        runtime.safeguarding_level,
+    )
+    runtime.role_lens_context = _build_role_lens_context(runtime.user_role_profile)
+    runtime.suggested_actions_context = _build_suggested_actions_context(
+        runtime.mode,
+        runtime.task_type,
+        runtime.output_type,
+        runtime.safeguarding_level,
+        runtime.urgency,
+        runtime.user_role_profile,
+        message,
+    )
+    runtime.practice_quality_context = _build_practice_quality_context(
+        runtime.task_type,
+        runtime.output_type,
+        runtime.safeguarding_level,
+    )
+    runtime.escalation_context = _build_escalation_context(
+        runtime.urgency,
+        runtime.safeguarding_level,
+        runtime.user_role_profile,
+        message,
+    )
+
+    if speed != "quick":
+        if _should_use_memory(runtime.mode, speed, runtime.task_type):
+            runtime.memory_context = _safe_memory_context(req, runtime.mode, speed)
+
+        if runtime.retrieval_level != "none":
+            runtime.retrieval_context, runtime.sources_used = _safe_retrieval_bundle(
+                req,
+                runtime.mode,
+                runtime.safeguarding_level,
+                speed,
+                runtime.retrieval_level,
+            )
+
+        runtime.sources_used = _normalise_sources(runtime.sources_used)
+
+        if runtime.reflection_level in {"light", "full"}:
+            runtime.reflection_context = _safe_reflection_context(
+                message,
+                runtime.mode,
+                runtime.safeguarding_level,
+                history,
+            )
+
+        if runtime.reflection_level == "full":
+            runtime.supervision_context = _safe_supervision_context(
+                message,
+                runtime.mode,
+                runtime.safeguarding_level,
+                history,
+            )
+
+    if _should_use_leadership_lens(
+        runtime.mode,
+        message,
+        speed,
+        runtime.user_role_profile,
+        runtime.task_type,
+    ):
+        runtime.leadership_lens_context = _build_leadership_lens_context(
+            runtime.mode,
+            runtime.safeguarding_level,
+            message,
+            runtime.user_role_profile,
+            runtime.task_type,
+        )
+
+    if req.document_text:
+        uploaded_source = _build_document_source(req.document_name)
+        if not any(
+            _safe_string(s.get("type")) == "uploaded_document"
+            and _safe_string(s.get("document_title")) == uploaded_source["document_title"]
+            for s in runtime.sources_used
+            if isinstance(s, dict)
+        ):
+            runtime.sources_used.append(uploaded_source)
+
+    system_prompt, user_message = build_chat_prompt(
+        message=message,
+        role=req.role,
+        ld_lens=req.ld_lens,
+        training_mode=req.training_mode,
+        speed=speed,
+    )
+
+    system_prompt = append_ai_boundaries(system_prompt)
+
+    system_prompt = _append_section(
+        system_prompt,
+        "RUNTIME MODE CONTEXT",
+        _build_runtime_mode_context(runtime, speed),
+    )
+
+    system_prompt = _append_section(
+        system_prompt,
+        "RESPONSE STRUCTURE",
+        runtime.schema_context,
+    )
+    system_prompt = _append_section(
+        system_prompt,
+        "ROLE ADAPTATION CONTEXT",
+        runtime.role_lens_context,
+    )
+    system_prompt = _append_section(
+        system_prompt,
+        "LEADERSHIP / INSPECTION LENS CONTEXT",
+        runtime.leadership_lens_context,
+    )
+    system_prompt = _append_section(
+        system_prompt,
+        "SUGGESTED ACTIONS CONTEXT",
+        runtime.suggested_actions_context,
+    )
+    system_prompt = _append_section(
+        system_prompt,
+        "PRACTICE QUALITY CONTEXT",
+        runtime.practice_quality_context,
+    )
+    system_prompt = _append_section(
+        system_prompt,
+        "ESCALATION CONTEXT",
+        runtime.escalation_context,
+    )
+
+    if speed != "quick":
+        system_prompt = _append_section(
+            system_prompt,
+            "MEMORY CONTEXT",
+            runtime.memory_context,
+        )
+        system_prompt = _append_section(
+            system_prompt,
+            "RETRIEVED CONTEXT",
+            runtime.retrieval_context,
+        )
+        system_prompt = _append_section(
+            system_prompt,
+            "REFLECTION CONTEXT",
+            runtime.reflection_context,
+        )
+        system_prompt = _append_section(
+            system_prompt,
+            "SUPERVISION CONTEXT",
+            runtime.supervision_context,
+        )
+
+    if req.document_text:
+        trimmed_document_text = req.document_text[
+            : _document_trim_limit(runtime.mode, speed)
+        ]
+        system_prompt = _append_section(
+            system_prompt,
+            "UPLOADED DOCUMENT CONTEXT",
+            (
+                f"Document name: {req.document_name or 'Uploaded document'}\n\n"
+                "Use this document as working source material where relevant.\n"
+                "Do not invent facts beyond the document and the user's instructions.\n"
+                "Distinguish clearly between source material and inference.\n"
+                "If information is missing, label gaps clearly.\n"
+                "When rewriting, preserve core facts unless the user explicitly asks for adaptation.\n\n"
+                f"Document text:\n{trimmed_document_text}"
+            ),
+        )
+
+    logger.info(
+        (
+            "Assistant prompt package built "
+            "session_id=%s mode=%s task_type=%s output_type=%s "
+            "safeguarding=%s urgency=%s response_mode=%s role_profile=%s "
+            "stance=%s confidence=%s retrieval_level=%s reflection_level=%s "
+            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s sources=%s"
+        ),
+        req.session_id,
+        runtime.mode,
+        runtime.task_type,
+        runtime.output_type,
+        runtime.safeguarding_level,
+        runtime.urgency,
+        speed,
+        runtime.user_role_profile,
+        runtime.response_stance,
+        runtime.classification_confidence,
+        runtime.retrieval_level,
+        runtime.reflection_level,
+        bool(runtime.memory_context),
+        bool(runtime.retrieval_context),
+        bool(runtime.reflection_context),
+        bool(runtime.supervision_context),
+        bool(runtime.leadership_lens_context),
+        bool(runtime.suggested_actions_context),
+        len(runtime.sources_used),
+    )
+
+    return AssistantPromptPackage(
+        system_prompt=system_prompt.strip(),
+        user_message=user_message.strip(),
+        runtime=runtime,
+    )
