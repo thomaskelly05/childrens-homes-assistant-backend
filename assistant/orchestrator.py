@@ -72,24 +72,33 @@ def _normalise_response_mode(response_mode: str | None) -> str:
     return "balanced"
 
 
-def _trim_history(history: list[dict[str, Any]], selected_mode: str) -> list[dict[str, str]]:
+def _trim_history(
+    history: list[dict[str, Any]] | None,
+    selected_mode: str,
+) -> list[dict[str, str]]:
     if not history:
         return []
 
     if selected_mode == "quick":
         limit = 3
+        max_chars = 4000
     elif selected_mode == "deep":
         limit = 8
+        max_chars = 12000
     else:
         limit = 5
+        max_chars = 8000
 
     trimmed = history[-limit:]
 
-    if trimmed and trimmed[-1].get("role") == "user":
+    if trimmed and _safe_string(trimmed[-1].get("role")).lower() == "user":
         trimmed = trimmed[:-1]
 
     cleaned: list[dict[str, str]] = []
     for item in trimmed:
+        if not isinstance(item, dict):
+            continue
+
         role_name = _safe_string(item.get("role")).lower()
         content = _safe_string(item.get("message") or item.get("content"))
 
@@ -101,7 +110,7 @@ def _trim_history(history: list[dict[str, Any]], selected_mode: str) -> list[dic
         cleaned.append(
             {
                 "role": role_name,
-                "content": content[:12000],
+                "content": content[:max_chars],
             }
         )
 
@@ -184,7 +193,11 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
     return cleaned
 
 
-def _normalise_evidence_index(value: Any, *, limit: int = 100) -> list[dict[str, Any]]:
+def _normalise_evidence_index(
+    value: Any,
+    *,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
 
@@ -211,7 +224,14 @@ def _normalise_evidence_index(value: Any, *, limit: int = 100) -> list[dict[str,
 
         key = "|".join(
             str(entry.get(k) or "")
-            for k in ["citation_ref", "record_type", "record_id", "label", "section", "url"]
+            for k in [
+                "citation_ref",
+                "record_type",
+                "record_id",
+                "label",
+                "section",
+                "url",
+            ]
         )
         if key in seen:
             continue
@@ -236,25 +256,77 @@ def _extract_evidence_index(user_context: dict[str, Any] | None) -> list[dict[st
         if isinstance(nested, list):
             return _normalise_evidence_index(nested)
 
+    runtime_block = user_context.get("runtime")
+    if isinstance(runtime_block, dict):
+        nested_runtime = runtime_block.get("evidence_index")
+        if isinstance(nested_runtime, list):
+            return _normalise_evidence_index(nested_runtime)
+
     return []
+
+
+def _extract_sources_from_context(user_context: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(user_context, dict):
+        return []
+
+    direct = user_context.get("sources")
+    if isinstance(direct, list):
+        return _normalise_sources(direct)
+
+    context_block = user_context.get("context")
+    if isinstance(context_block, dict):
+        nested = context_block.get("sources")
+        if isinstance(nested, list):
+            return _normalise_sources(nested)
+
+    runtime_block = user_context.get("runtime")
+    if isinstance(runtime_block, dict):
+        nested_runtime = runtime_block.get("sources")
+        if isinstance(nested_runtime, list):
+            return _normalise_sources(nested_runtime)
+
+    return []
+
+
+def _extract_suggested_actions(runtime: AssistantRuntimeContext | None) -> list[str]:
+    if runtime is None:
+        return []
+
+    raw_actions = getattr(runtime, "suggested_actions_context", "") or ""
+    if not raw_actions:
+        return []
+
+    cleaned: list[str] = []
+    seen: set[str] = set()
+
+    for line in raw_actions.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("•"):
+            line = line.lstrip("•").strip()
+        if not line:
+            continue
+
+        lowered = line.lower()
+        if lowered in seen:
+            continue
+
+        seen.add(lowered)
+        cleaned.append(line)
+
+    return cleaned
 
 
 def _serialise_runtime(
     runtime: AssistantRuntimeContext | None,
+    *,
     regulation_payload: list[dict[str, str]] | None = None,
     evidence_index: list[dict[str, Any]] | None = None,
+    selected_mode: str = "balanced",
 ) -> dict[str, Any]:
     if runtime is None:
         return {}
-
-    suggested_actions: list[str] = []
-    raw_actions = getattr(runtime, "suggested_actions_context", "") or ""
-
-    if raw_actions:
-        for line in raw_actions.splitlines():
-            line = line.strip()
-            if line.startswith("•"):
-                suggested_actions.append(line.lstrip("•").strip())
 
     evidence_index = evidence_index or []
 
@@ -270,8 +342,9 @@ def _serialise_runtime(
         "response_stance": getattr(runtime, "response_stance", None),
         "classification_confidence": getattr(runtime, "classification_confidence", None),
         "secondary_intents": getattr(runtime, "secondary_intents", None),
-        "suggested_actions": suggested_actions,
+        "suggested_actions": _extract_suggested_actions(runtime),
         "regulation_basis": regulation_payload or [],
+        "response_mode": selected_mode,
         "evidence_items_loaded": len(evidence_index),
         "evidence_preview": evidence_index[:10],
     }
@@ -296,7 +369,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         AssistantRequest(
             message=req.message,
             session_id=req.session_id,
-            history=req.history[-8:],
+            history=req.history[-8:] if req.history else [],
             role=req.role,
             document_text=trimmed_document_text,
             document_name=req.document_name,
@@ -352,16 +425,26 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
             f"{regulation_context_block}"
         ).strip()
 
-    sources = _normalise_sources(getattr(runtime, "sources_used", []))
+    runtime_sources = _normalise_sources(getattr(runtime, "sources_used", []))
+    context_sources = _extract_sources_from_context(req.user_context)
+    sources = _normalise_sources(runtime_sources + context_sources)
+
     evidence_index = _extract_evidence_index(req.user_context)
+
     runtime_payload = _serialise_runtime(
         runtime,
         regulation_payload=regulation_payload,
         evidence_index=evidence_index,
+        selected_mode=selected_mode,
     )
 
     if evidence_index:
         runtime_payload["evidence_index"] = evidence_index
+
+    runtime_payload["source_count"] = len(sources)
+    runtime_payload["history_items_loaded"] = len(trimmed_history)
+    runtime_payload["document_attached"] = bool(trimmed_document_text)
+    runtime_payload["regulation_refs_count"] = len(regulation_payload)
 
     messages = _build_messages(
         system_prompt=system_prompt,
