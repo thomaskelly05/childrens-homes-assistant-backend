@@ -177,7 +177,6 @@ export const state = {
   ...createContextState(),
 
   assistantMessages: [],
-  assistantModalMessages: [],
   assistantMeta: createAssistantMeta(),
 
   assistantContext: null,
@@ -262,7 +261,6 @@ function syncSectionAliases(section) {
 
 export function resetAssistantState() {
   state.assistantMessages = [];
-  state.assistantModalMessages = [];
   state.assistantSending = false;
   state.assistantMeta = createAssistantMeta();
 
@@ -465,7 +463,11 @@ export function setReadinessData({
     state.readinessPrep72h = prep72h;
   }
 
-  if (selectedHomeId !== null && selectedHomeId !== undefined && selectedHomeId !== "") {
+  if (
+    selectedHomeId !== null &&
+    selectedHomeId !== undefined &&
+    selectedHomeId !== ""
+  ) {
     setReadinessSelectedHomeId(selectedHomeId);
   }
 
