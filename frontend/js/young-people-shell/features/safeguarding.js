@@ -12,27 +12,48 @@ import {
 
 const SAFE_EMPTY = Object.freeze({ items: [] });
 
-function toArray(value, fallback = []) {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(fallback)) return fallback;
-  return [];
+function getYoungPersonId() {
+  return (
+    state.youngPersonId ||
+    state.selectedYoungPerson?.id ||
+    state.youngPerson?.id ||
+    null
+  );
 }
 
 function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
-function lower(value) {
-  return String(value ?? "").trim().toLowerCase();
-}
-
 function toBool(value) {
   return Boolean(value);
 }
 
-function toNumber(value, fallback = 0) {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : fallback;
+function toArray(value, fallbacks = []) {
+  if (Array.isArray(value)) return value;
+
+  for (const fallback of fallbacks) {
+    if (Array.isArray(fallback)) return fallback;
+  }
+
+  return [];
+}
+
+function toTime(value) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function lower(value) {
+  return String(value ?? "").trim().toLowerCase().replaceAll(" ", "_");
+}
+
+function titleCase(value) {
+  return String(value ?? "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+    .trim();
 }
 
 function formatDate(value, fallback = "No date") {
@@ -59,260 +80,441 @@ function formatDateTime(value, fallback = "No date") {
   });
 }
 
+function isOverdue(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const today = new Date();
+  date.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  return date.getTime() < today.getTime();
+}
+
 function sortNewest(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    return toTime(bValue) - toTime(aValue);
   });
 }
 
-function isOpenStatus(value) {
-  return [
-    "open",
-    "active",
-    "pending",
-    "in_progress",
-    "in progress",
-    "under_review",
-    "under review",
-    "awaiting_review",
-    "awaiting review",
-    "scheduled",
-  ].includes(lower(value));
-}
-
-function isClosedStatus(value) {
-  return [
-    "closed",
-    "resolved",
-    "completed",
-    "cancelled",
-    "inactive",
-    "ended",
-  ].includes(lower(value));
-}
-
-function isHighRisk(value) {
-  return ["high", "critical", "urgent"].includes(lower(value));
-}
-
-function isToday(value) {
-  if (!value) return false;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return false;
-  const now = new Date();
-  return (
-    d.getDate() === now.getDate() &&
-    d.getMonth() === now.getMonth() &&
-    d.getFullYear() === now.getFullYear()
-  );
-}
-
-function isOverdue(value) {
-  if (!value) return false;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return false;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime() < now.getTime();
+function sortSoonest(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    const aTime = aValue ? toTime(aValue) : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? toTime(bValue) : Number.POSITIVE_INFINITY;
+    return aTime - bTime;
+  });
 }
 
 function badgeClass(value) {
   const v = lower(value);
-  if (["critical", "urgent", "high", "open", "active", "overdue"].includes(v)) {
+
+  if (
+    [
+      "critical",
+      "high",
+      "urgent",
+      "open",
+      "overdue",
+      "escalated",
+      "strategy_required",
+      "unsafe",
+      "red",
+      "danger",
+    ].includes(v)
+  ) {
     return "badge badge-danger";
   }
-  if (["medium", "pending", "under_review", "under review", "in_progress"].includes(v)) {
+
+  if (
+    [
+      "medium",
+      "warning",
+      "pending",
+      "in_progress",
+      "review_due",
+      "due_soon",
+      "monitoring",
+      "planned",
+      "amber",
+    ].includes(v)
+  ) {
     return "badge badge-warning";
   }
-  if (["low", "completed", "resolved", "closed", "pass"].includes(v)) {
+
+  if (
+    [
+      "low",
+      "completed",
+      "closed",
+      "resolved",
+      "current",
+      "good",
+      "green",
+      "safe",
+      "archived",
+      "recorded",
+    ].includes(v)
+  ) {
     return "badge badge-success";
   }
+
   return "badge";
 }
 
-/* -------------------------------- normalisers -------------------------------- */
+async function safeGet(path) {
+  try {
+    return (await apiGet(path)) || SAFE_EMPTY;
+  } catch {
+    return SAFE_EMPTY;
+  }
+}
 
-function mapSafeguardingRecord(record = {}) {
+function pickItems(response, candidates = []) {
+  for (const key of candidates) {
+    if (Array.isArray(response?.[key])) return response[key];
+  }
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response)) return response;
+  return [];
+}
+
+function hasUsableData(data = {}) {
+  return Object.values(data).some((value) => Array.isArray(value) && value.length > 0);
+}
+
+/* -------------------------------- mappers -------------------------------- */
+
+function mapConcern(record = {}) {
   return {
-    id: record.id,
-    provider_id: record.provider_id ?? null,
-    young_person_id: record.young_person_id ?? null,
-    incident_id: record.incident_id ?? null,
-    safeguarding_category:
-      record.safeguarding_category || record.category || "Concern",
-    concern_datetime:
-      record.concern_datetime || record.created_at || record.updated_at || null,
-    disclosure_details: record.disclosure_details || "",
-    concern_details: record.concern_details || record.summary || "",
-    immediate_action_taken: record.immediate_action_taken || "",
-    referral_made: toBool(record.referral_made),
-    referral_details: record.referral_details || "",
-    outcome: record.outcome || "",
-    manager_review_status:
-      record.manager_review_status || record.status || "open",
-    closed_at: record.closed_at || null,
-    created_by: record.created_by || null,
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-    is_open: !record.closed_at && !isClosedStatus(record.manager_review_status),
+    id: record.id ?? record.concern_id ?? null,
+    young_person_id: record.young_person_id || null,
+    title:
+      record.title ||
+      record.concern_type ||
+      "Safeguarding concern",
+    concern_type:
+      record.concern_type ||
+      record.category ||
+      record.type ||
+      "",
     severity:
       record.severity ||
-      (toBool(record.referral_made) ? "high" : "medium"),
-    title:
-      record.safeguarding_category ||
-      record.category ||
-      "Safeguarding concern",
+      record.risk_level ||
+      "",
+    status: record.status || "open",
+    reported_at:
+      record.reported_at ||
+      record.concern_date ||
+      record.created_at ||
+      null,
     summary:
+      record.summary ||
       record.concern_details ||
-      record.disclosure_details ||
+      record.description ||
+      "Safeguarding concern recorded.",
+    referrer:
+      record.referrer ||
+      record.reported_by_name ||
+      "",
+    record_type: "safeguarding_concern",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapAction(record = {}) {
+  return {
+    id: record.id ?? record.safeguarding_action_id ?? null,
+    young_person_id: record.young_person_id || null,
+    concern_id: record.concern_id || record.safeguarding_concern_id || null,
+    title:
+      record.title ||
+      record.action_title ||
+      "Safeguarding action",
+    action_description:
+      record.action_description ||
+      record.description ||
+      record.notes ||
+      "",
+    owner_name:
+      record.owner_name ||
+      record.assigned_to_name ||
+      "",
+    priority: record.priority || "",
+    status: record.status || "open",
+    due_date: record.due_date || null,
+    completed_at: record.completed_at || null,
+    summary:
+      record.summary ||
+      record.action_description ||
+      record.notes ||
+      "Safeguarding action recorded.",
+    record_type: "safeguarding_action",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapReferral(record = {}) {
+  return {
+    id: record.id ?? record.referral_id ?? null,
+    young_person_id: record.young_person_id || null,
+    title:
+      record.title ||
+      record.referral_type ||
+      "Safeguarding referral",
+    referral_type:
+      record.referral_type ||
+      record.category ||
+      "",
+    agency:
+      record.agency ||
+      record.team_name ||
+      "",
+    status: record.status || "submitted",
+    referred_at:
+      record.referred_at ||
+      record.created_at ||
+      null,
+    outcome:
       record.outcome ||
-      "No summary recorded.",
-    record_type: "safeguarding_record",
-  };
-}
-
-function mapIncident(record = {}) {
-  return {
-    id: record.id,
-    incident_datetime:
-      record.incident_datetime || record.created_at || record.updated_at || null,
-    incident_type: record.incident_type || "Incident",
-    title: record.incident_type || "Incident",
-    summary: record.description || record.outcome || "No summary recorded.",
-    location: record.location || "",
-    safeguarding_flag: toBool(record.safeguarding_flag),
-    severity: record.severity || "low",
-    manager_review_status: record.manager_review_status || "",
-    requires_notification: toBool(record.requires_notification),
-    police_notified: toBool(record.police_notified || record.police_involved),
-    lado_notified: toBool(record.lado_notified),
-    ofsted_notified: toBool(record.ofsted_notified),
-    workflow_status: record.workflow_status || "",
-    record_type: "incident",
-  };
-}
-
-function mapMissingEpisode(record = {}) {
-  const start = record.start_datetime || record.reported_datetime || null;
-  const end = record.return_datetime || null;
-  return {
-    id: record.id,
-    start_datetime: start,
-    reported_datetime: record.reported_datetime || null,
-    return_datetime: end,
-    police_reference: record.police_reference || "",
-    trigger_factors: record.trigger_factors || "",
-    push_pull_factors: record.push_pull_factors || "",
-    actions_taken: record.actions_taken || "",
-    outcome: record.outcome || "",
-    manager_review_status: record.manager_review_status || "",
-    workflow_status: record.workflow_status || "",
-    child_voice: record.child_voice || "",
-    return_interview_completed: toBool(record.return_interview_completed),
-    return_interview_date: record.return_interview_date || null,
-    contextual_risk_notes: record.contextual_risk_notes || "",
-    duration_minutes: toNumber(record.duration_minutes, null),
-    title: "Missing episode",
+      "",
     summary:
+      record.summary ||
+      record.reason ||
+      record.notes ||
+      "Safeguarding referral recorded.",
+    record_type: "safeguarding_referral",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+function mapStrategyMeeting(record = {}) {
+  return {
+    id: record.id ?? record.strategy_meeting_id ?? null,
+    young_person_id: record.young_person_id || null,
+    title:
+      record.title ||
+      "Strategy meeting",
+    meeting_date:
+      record.meeting_date ||
+      record.scheduled_at ||
+      null,
+    chair_name:
+      record.chair_name ||
+      "",
+    status: record.status || "planned",
+    outcome:
       record.outcome ||
-      record.trigger_factors ||
-      record.push_pull_factors ||
-      "Missing episode recorded.",
-    record_type: "missing_episode",
-    is_open: !record.return_datetime,
-  };
-}
-
-function mapReturnInterview(record = {}) {
-  return {
-    id: record.id,
-    interview_date: record.interview_date || record.created_at || null,
-    interviewer_name: record.interviewer_name || "",
-    interviewer_role: record.interviewer_role || "",
-    independent_person: toBool(record.independent_person),
-    child_wishes_and_feelings: record.child_wishes_and_feelings || "",
-    reasons_for_missing: record.reasons_for_missing || "",
-    experience_while_missing: record.experience_while_missing || "",
-    push_factors: record.push_factors || "",
-    pull_factors: record.pull_factors || "",
-    safeguarding_concerns: record.safeguarding_concerns || "",
-    intelligence_shared: record.intelligence_shared || "",
-    actions_agreed: record.actions_agreed || "",
-    status: record.status || "",
-    missing_episode_id: record.missing_episode_id || null,
-    title: "Return interview",
+      "",
     summary:
-      record.child_wishes_and_feelings ||
-      record.safeguarding_concerns ||
-      record.actions_agreed ||
-      "Return interview completed.",
-    record_type: "return_interview",
+      record.summary ||
+      record.notes ||
+      "Strategy meeting recorded.",
+    record_type: "strategy_meeting",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
   };
 }
 
-function mapAlert(record = {}) {
+function mapNotification(record = {}) {
   return {
-    id: record.id,
-    alert_type: record.alert_type || "Alert",
-    title: record.title || record.alert_type || "Alert",
-    description: record.description || "",
-    severity: record.severity || "medium",
-    is_active: record.is_active !== false,
-    show_globally: toBool(record.show_globally),
-    review_date: record.review_date || null,
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-    record_type: "young_person_alert",
-  };
-}
-
-function mapSafetyPlan(record = {}) {
-  return {
-    id: record.id,
-    plan_type: record.plan_type || "Safety plan",
-    title: record.title || record.plan_type || "Safety plan",
-    warning_signs: record.warning_signs || "",
-    triggers: record.triggers || "",
-    coping_strategies: record.coping_strategies || "",
-    people_to_contact: record.people_to_contact || "",
-    professional_support: record.professional_support || "",
-    environmental_safety_steps: record.environmental_safety_steps || "",
-    child_voice: record.child_voice || "",
-    review_date: record.review_date || null,
-    status: record.status || "active",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
+    id: record.id ?? null,
+    young_person_id: record.young_person_id || null,
+    title: record.title || "Notification",
+    severity: record.severity || "",
+    status: record.status || "open",
+    due_at: record.due_at || null,
     summary:
-      record.coping_strategies ||
-      record.warning_signs ||
-      record.environmental_safety_steps ||
-      "Safety plan in place.",
-    record_type: "safety_plan",
-  };
-}
-
-function mapContextualProfile(record = {}) {
-  return {
-    id: record.id,
-    peer_group_risks: record.peer_group_risks || "",
-    exploitation_risks: record.exploitation_risks || "",
-    online_risks: record.online_risks || "",
-    community_locations_of_concern:
-      record.community_locations_of_concern || "",
-    transport_risks: record.transport_risks || "",
-    protective_relationships: record.protective_relationships || "",
-    disruption_actions: record.disruption_actions || "",
-    reviewed_on: record.reviewed_on || null,
-    status: record.status || "active",
+      record.summary ||
+      record.message ||
+      record.notes ||
+      "Notification recorded.",
+    record_type: "notification",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
 }
 
-/* -------------------------------- render helpers -------------------------------- */
+function mapChronology(record = {}) {
+  return {
+    id: record.id ?? record.event_id ?? null,
+    young_person_id: record.young_person_id || null,
+    title:
+      record.title ||
+      record.event_type ||
+      "Chronology event",
+    event_type:
+      record.event_type ||
+      record.category ||
+      "",
+    status:
+      record.status ||
+      record.severity ||
+      "recorded",
+    occurred_at:
+      record.occurred_at ||
+      record.event_date ||
+      record.created_at ||
+      null,
+    summary:
+      record.summary ||
+      record.description ||
+      record.notes ||
+      "Safeguarding chronology event recorded.",
+    record_type: "safeguarding_event",
+    created_at: record.created_at || null,
+    updated_at: record.updated_at || null,
+  };
+}
+
+/* ------------------------------ fallback data ----------------------------- */
+
+function buildFallbackData(youngPersonId) {
+  const now = new Date();
+
+  const minusDays = (days, hour = 10) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  const plusDays = (days, hour = 10) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  return {
+    concerns: [
+      mapConcern({
+        id: "sgc-1",
+        young_person_id: youngPersonId,
+        title: "Community exploitation concern",
+        concern_type: "contextual_safeguarding",
+        severity: "high",
+        status: "open",
+        reported_at: minusDays(5, 16),
+        summary:
+          "Concerns remain around contact with older peers and possible exploitation risk in the community.",
+        referrer: "Home team",
+      }),
+      mapConcern({
+        id: "sgc-2",
+        young_person_id: youngPersonId,
+        title: "Online safety concern",
+        concern_type: "online_safety",
+        severity: "medium",
+        status: "monitoring",
+        reported_at: minusDays(10, 19),
+        summary:
+          "Worry about contact with unknown adults through social media accounts.",
+        referrer: "Keyworker",
+      }),
+    ],
+
+    actions: [
+      mapAction({
+        id: "sga-1",
+        young_person_id: youngPersonId,
+        concern_id: "sgc-1",
+        title: "Update contextual safeguarding plan",
+        action_description:
+          "Review hotspots, peer mapping and agreed disruption actions with the team.",
+        owner_name: "Registered Manager",
+        priority: "high",
+        status: "open",
+        due_date: plusDays(2),
+      }),
+      mapAction({
+        id: "sga-2",
+        young_person_id: youngPersonId,
+        concern_id: "sgc-2",
+        title: "Complete online safety direct work",
+        action_description:
+          "Undertake focused direct work around contact requests, privacy and safe reporting.",
+        owner_name: "Keyworker",
+        priority: "medium",
+        status: "in_progress",
+        due_date: plusDays(4),
+      }),
+    ],
+
+    referrals: [
+      mapReferral({
+        id: "sgr-1",
+        young_person_id: youngPersonId,
+        title: "Contextual safeguarding referral",
+        referral_type: "multi_agency_referral",
+        agency: "MASH",
+        status: "submitted",
+        referred_at: minusDays(4, 12),
+        outcome: "Awaiting screening outcome",
+        summary:
+          "Referral shared due to escalating concern about peer influence and locations frequented.",
+      }),
+    ],
+
+    strategyMeetings: [
+      mapStrategyMeeting({
+        id: "sgm-1",
+        young_person_id: youngPersonId,
+        meeting_date: plusDays(3, 14),
+        chair_name: "Social Worker",
+        status: "planned",
+        summary:
+          "Strategy discussion planned to review current concern, disruption and information sharing.",
+      }),
+    ],
+
+    notifications: [
+      mapNotification({
+        id: "sgn-1",
+        young_person_id: youngPersonId,
+        title: "Safeguarding action due",
+        severity: "warning",
+        status: "open",
+        due_at: plusDays(2),
+        summary: "Contextual safeguarding plan review is due this week.",
+      }),
+    ],
+
+    chronology: [
+      mapChronology({
+        id: "sge-1",
+        young_person_id: youngPersonId,
+        title: "Phone contact from unknown adult",
+        event_type: "online_safety",
+        status: "warning",
+        occurred_at: minusDays(6, 21),
+        summary:
+          "Young person disclosed contact attempt from an unknown adult account.",
+      }),
+      mapChronology({
+        id: "sge-2",
+        young_person_id: youngPersonId,
+        title: "Returned late from community",
+        event_type: "community_risk",
+        status: "high",
+        occurred_at: minusDays(3, 20),
+        summary:
+          "Returned later than agreed and initially reluctant to share whereabouts.",
+      }),
+    ],
+
+    isFallback: true,
+  };
+}
+
+/* -------------------------------- render -------------------------------- */
 
 function renderEmpty(title, message) {
   return `
@@ -336,168 +538,160 @@ function renderStatCard(label, value, hint = "") {
   `;
 }
 
-function renderSection(title, content, action = "") {
+function renderSection(title, content) {
   return `
     <section class="overview-panel-section">
       <div class="overview-panel-section-head">
         <h3>${safeText(title)}</h3>
-        ${action ? `<div class="overview-panel-section-action">${action}</div>` : ""}
       </div>
       ${content}
     </section>
   `;
 }
 
-function renderMiniList(items = [], emptyTitle = "No items", emptyText = "Nothing to show.") {
-  if (!items.length) return renderEmpty(emptyTitle, emptyText);
+function renderRecordCard(item = {}) {
+  const status =
+    item.status ||
+    item.severity ||
+    item.priority ||
+    "recorded";
+
+  const primaryDate =
+    item.due_date ||
+    item.meeting_date ||
+    item.referred_at ||
+    item.reported_at ||
+    item.occurred_at ||
+    item.created_at;
 
   return `
-    <div class="record-list">
-      ${items
-        .map((item) => {
-          const when =
-            item.concern_datetime ||
-            item.incident_datetime ||
-            item.start_datetime ||
-            item.interview_date ||
-            item.review_date ||
-            item.created_at ||
-            item.updated_at;
-
-          const statusValue =
-            item.manager_review_status ||
-            item.status ||
-            item.severity ||
-            item.alert_type ||
-            "";
-
-          return `
-            <article
-              class="record-row"
-              data-open-record="true"
-              data-record-id="${safeText(item.id || "")}"
-              data-record-type="${safeText(item.record_type || "")}"
-              data-title="${safeText(item.title || "Record")}"
-              role="button"
-              tabindex="0"
-            >
-              <div class="record-row-main">
-                <div class="record-row-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
-                  <div class="record-row-title">${safeText(item.title || "Record")}</div>
-                  ${
-                    statusValue
-                      ? `<span class="${badgeClass(statusValue)}">${safeText(statusValue)}</span>`
-                      : ""
-                  }
-                </div>
-                <div class="record-row-summary">${safeText(item.summary || item.description || "")}</div>
-                <div class="record-row-meta">${safeText(formatDateTime(when, "No date"))}</div>
-              </div>
-            </article>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
-function renderRiskBlock(profile) {
-  if (!profile) {
-    return renderEmpty(
-      "No contextual safeguarding profile",
-      "No contextual safeguarding profile has been recorded yet."
-    );
-  }
-
-  const items = [
-    ["Peer group risks", profile.peer_group_risks],
-    ["Exploitation risks", profile.exploitation_risks],
-    ["Online risks", profile.online_risks],
-    ["Locations of concern", profile.community_locations_of_concern],
-    ["Transport risks", profile.transport_risks],
-    ["Protective relationships", profile.protective_relationships],
-    ["Disruption actions", profile.disruption_actions],
-  ].filter(([, value]) => String(value ?? "").trim());
-
-  if (!items.length) {
-    return renderEmpty(
-      "Profile started",
-      "A contextual safeguarding profile exists but detailed fields have not been completed yet."
-    );
-  }
-
-  return `
-    <div class="details-card">
-      <div class="details-grid">
-        ${items
-          .map(
-            ([label, value]) => `
-              <div class="details-grid-item">
-                <div class="details-grid-label">${safeText(label)}</div>
-                <div class="details-grid-value">${safeText(value)}</div>
-              </div>
-            `
-          )
-          .join("")}
-      </div>
-      <div class="details-card-footer">
-        Last reviewed: ${safeText(formatDate(profile.reviewed_on, "Not recorded"))}
-      </div>
-    </div>
-  `;
-}
-
-function renderSafetyPlan(plan) {
-  if (!plan) {
-    return renderEmpty(
-      "No safety plan",
-      "No active safety plan has been found for this young person."
-    );
-  }
-
-  const fields = [
-    ["Warning signs", plan.warning_signs],
-    ["Triggers", plan.triggers],
-    ["Coping strategies", plan.coping_strategies],
-    ["People to contact", plan.people_to_contact],
-    ["Professional support", plan.professional_support],
-    ["Environmental safety steps", plan.environmental_safety_steps],
-    ["Child voice", plan.child_voice],
-  ].filter(([, value]) => String(value ?? "").trim());
-
-  return `
-    <div class="details-card">
-      <div class="details-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+    <article
+      class="record-card"
+      data-open-record="true"
+      data-record-id="${safeText(item.id || "")}"
+      data-record-type="${safeText(item.record_type || "record")}"
+      data-title="${safeText(item.title || "Record")}"
+      role="button"
+      tabindex="0"
+    >
+      <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
         <div>
-          <div class="eyebrow">${safeText(plan.plan_type || "Safety plan")}</div>
-          <h4 style="margin:0;">${safeText(plan.title || "Safety plan")}</h4>
+          <div class="record-card-title">${safeText(item.title || "Record")}</div>
+          <div class="record-card-meta">${safeText(formatDateTime(primaryDate, "No date"))}</div>
         </div>
-        <span class="${badgeClass(plan.status)}">${safeText(plan.status || "active")}</span>
+        <span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>
       </div>
 
-      <div class="details-grid">
-        ${fields
-          .map(
-            ([label, value]) => `
-              <div class="details-grid-item">
-                <div class="details-grid-label">${safeText(label)}</div>
-                <div class="details-grid-value">${safeText(value)}</div>
+      <div class="record-card-body">
+        <div class="record-card-summary">${safeText(item.summary || "")}</div>
+
+        <div class="details-grid" style="margin-top:12px;">
+          ${
+            item.concern_type
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Concern type</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.concern_type))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.owner_name
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Owner</div>
+                  <div class="details-grid-value">${safeText(item.owner_name)}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.agency
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Agency</div>
+                  <div class="details-grid-value">${safeText(item.agency)}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.due_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Due</div>
+                  <div class="details-grid-value ${isOverdue(item.due_date) ? "text-danger" : ""}">
+                    ${safeText(formatDate(item.due_date))}
+                  </div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.meeting_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Meeting date</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.meeting_date))}</div>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            item.referrer
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Raised by</div>
+                  <div class="details-grid-value">${safeText(item.referrer)}</div>
+                </div>
+              `
+              : ""
+          }
+        </div>
+
+        ${
+          item.action_description
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Action</div>
+                <div>${safeText(item.action_description)}</div>
               </div>
             `
-          )
-          .join("")}
-      </div>
+            : ""
+        }
 
-      <div class="details-card-footer">
-        Review date: ${safeText(formatDate(plan.review_date, "Not set"))}
+        ${
+          item.outcome
+            ? `
+              <div class="record-card-block">
+                <div class="record-card-block-label">Outcome</div>
+                <div>${safeText(item.outcome)}</div>
+              </div>
+            `
+            : ""
+        }
       </div>
-    </div>
+    </article>
   `;
+}
+
+function renderCardList(items = [], emptyTitle, emptyMessage) {
+  if (!items.length) return renderEmpty(emptyTitle, emptyMessage);
+  return `<div class="record-card-list">${items.map(renderRecordCard).join("")}</div>`;
 }
 
 function renderTimeline(items = []) {
   if (!items.length) {
-    return renderEmpty("No chronology", "No safeguarding-related chronology has been found yet.");
+    return renderEmpty(
+      "No recent safeguarding activity",
+      "There is no recent safeguarding activity to display."
+    );
   }
 
   return `
@@ -505,11 +699,17 @@ function renderTimeline(items = []) {
       ${items
         .map((item) => {
           const dateValue =
-            item.concern_datetime ||
-            item.incident_datetime ||
-            item.start_datetime ||
-            item.interview_date ||
+            item.occurred_at ||
+            item.reported_at ||
+            item.referred_at ||
+            item.meeting_date ||
             item.created_at;
+
+          const status =
+            item.status ||
+            item.severity ||
+            item.priority ||
+            "recorded";
 
           return `
             <article class="timeline-item">
@@ -517,15 +717,7 @@ function renderTimeline(items = []) {
               <div class="timeline-item-body">
                 <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
                   <strong>${safeText(item.title || "Record")}</strong>
-                  ${
-                    item.severity || item.status || item.manager_review_status
-                      ? `<span class="${badgeClass(
-                          item.severity || item.status || item.manager_review_status
-                        )}">${safeText(
-                          item.severity || item.status || item.manager_review_status
-                        )}</span>`
-                      : ""
-                  }
+                  <span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>
                 </div>
                 <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
               </div>
@@ -540,15 +732,13 @@ function renderTimeline(items = []) {
 function renderWorkspace(payload) {
   const {
     openConcerns,
-    activeAlerts,
-    openMissing,
-    openIncidents,
+    openActions,
     overdueActions,
-    latestSafetyPlan,
-    contextualProfile,
-    urgentItems,
-    timeline,
-    returnInterviews,
+    referrals,
+    strategyMeetings,
+    notifications,
+    chronology,
+    isFallback,
   } = payload;
 
   return `
@@ -556,77 +746,87 @@ function renderWorkspace(payload) {
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Safeguarding</div>
-          <h2>Safeguarding and protection</h2>
+          <h2>Concerns, referrals, strategy work and live safeguarding actions</h2>
           <p class="overview-panel-subtitle">
-            Current concerns, contextual risks, missing episodes, return interviews and safety planning.
+            A clear view of current safeguarding concerns, live responses, referral activity and multi-agency coordination.
           </p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live safeguarding routes are fully available.</p>`
+              : ""
+          }
         </div>
       </div>
 
       <div class="overview-stats-grid">
         ${renderStatCard("Open concerns", openConcerns.length)}
-        ${renderStatCard("Active alerts", activeAlerts.length)}
-        ${renderStatCard("Open missing", openMissing.length)}
-        ${renderStatCard("Incidents flagged", openIncidents.length)}
+        ${renderStatCard("Open actions", openActions.length)}
         ${renderStatCard("Overdue actions", overdueActions.length)}
+        ${renderStatCard("Referrals", referrals.length)}
+        ${renderStatCard("Strategy meetings", strategyMeetings.length)}
       </div>
 
       <div class="overview-grid">
         <div>
           ${renderSection(
-            "Needs urgent attention",
-            renderMiniList(
-              urgentItems,
-              "No urgent items",
-              "There are no high-priority safeguarding items showing right now."
-            )
-          )}
-
-          ${renderSection(
             "Open safeguarding concerns",
-            renderMiniList(
+            renderCardList(
               openConcerns,
               "No open concerns",
-              "No open safeguarding records are currently listed."
+              "There are no current open safeguarding concerns."
             )
           )}
 
           ${renderSection(
-            "Missing episodes",
-            renderMiniList(
-              openMissing,
-              "No open missing episodes",
-              "No current missing-from-care episodes are open."
+            "Safeguarding actions",
+            renderCardList(
+              openActions,
+              "No open actions",
+              "There are no open safeguarding actions right now."
             )
           )}
 
           ${renderSection(
-            "Recent return interviews",
-            renderMiniList(
-              returnInterviews,
-              "No return interviews",
-              "No return interviews have been recorded yet."
-            )
+            "Safeguarding chronology",
+            renderTimeline(chronology)
           )}
-
-          ${renderSection("Recent chronology", renderTimeline(timeline))}
         </div>
 
         <aside>
           ${renderSection(
-            "Active alerts",
-            renderMiniList(
-              activeAlerts,
-              "No active alerts",
-              "No active safeguarding alerts are recorded."
+            "Overdue or urgent actions",
+            renderCardList(
+              overdueActions,
+              "No overdue actions",
+              "There are no overdue safeguarding actions."
             )
           )}
 
-          ${renderSection("Current safety plan", renderSafetyPlan(latestSafetyPlan))}
+          ${renderSection(
+            "Referrals",
+            renderCardList(
+              referrals,
+              "No referrals",
+              "No safeguarding referrals are currently recorded."
+            )
+          )}
 
           ${renderSection(
-            "Contextual safeguarding profile",
-            renderRiskBlock(contextualProfile)
+            "Strategy meetings",
+            renderCardList(
+              strategyMeetings,
+              "No strategy meetings",
+              "No strategy meetings are currently listed."
+            )
+          )}
+
+          ${renderSection(
+            "Notifications",
+            renderCardList(
+              notifications,
+              "No notifications",
+              "There are no current safeguarding notifications."
+            )
           )}
         </aside>
       </div>
@@ -634,94 +834,69 @@ function renderWorkspace(payload) {
   `;
 }
 
-/* -------------------------------- data -------------------------------- */
-
-function getYoungPersonId() {
-  return (
-    state.youngPersonId ||
-    state.selectedYoungPerson?.id ||
-    state.youngPerson?.id ||
-    null
-  );
-}
-
-async function safeGet(path) {
-  try {
-    return (await apiGet(path)) || SAFE_EMPTY;
-  } catch {
-    return SAFE_EMPTY;
-  }
-}
-
-function pickItems(response, candidates = []) {
-  for (const key of candidates) {
-    if (Array.isArray(response?.[key])) return response[key];
-  }
-  if (Array.isArray(response?.items)) return response.items;
-  if (Array.isArray(response)) return response;
-  return [];
-}
+/* -------------------------------- fetch -------------------------------- */
 
 async function fetchAll(youngPersonId) {
   const [
-    safeguardingRes,
-    incidentsRes,
-    missingRes,
-    returnInterviewRes,
-    alertsRes,
-    safetyPlansRes,
-    contextualRes,
+    concernsRes,
+    actionsRes,
+    referralsRes,
+    meetingsRes,
+    notificationsRes,
+    chronologyRes,
   ] = await Promise.all([
-    safeGet(`/young-people/${youngPersonId}/safeguarding`),
-    safeGet(`/young-people/${youngPersonId}/incidents`),
-    safeGet(`/young-people/${youngPersonId}/missing-episodes`),
-    safeGet(`/young-people/${youngPersonId}/return-interviews`),
-    safeGet(`/young-people/${youngPersonId}/alerts`),
-    safeGet(`/young-people/${youngPersonId}/safety-plans`),
-    safeGet(`/young-people/${youngPersonId}/contextual-safeguarding`),
+    safeGet(`/young-people/${youngPersonId}/safeguarding-concerns`),
+    safeGet(`/young-people/${youngPersonId}/safeguarding-actions`),
+    safeGet(`/young-people/${youngPersonId}/safeguarding-referrals`),
+    safeGet(`/young-people/${youngPersonId}/strategy-meetings`),
+    safeGet(`/young-people/${youngPersonId}/notifications`),
+    safeGet(`/young-people/${youngPersonId}/safeguarding-chronology`),
   ]);
 
+  const data = {
+    concerns: pickItems(concernsRes, [
+      "safeguarding_concerns",
+      "concerns",
+      "items",
+    ]).map(mapConcern),
+
+    actions: pickItems(actionsRes, [
+      "safeguarding_actions",
+      "actions",
+      "items",
+    ]).map(mapAction),
+
+    referrals: pickItems(referralsRes, [
+      "safeguarding_referrals",
+      "referrals",
+      "items",
+    ]).map(mapReferral),
+
+    strategyMeetings: pickItems(meetingsRes, [
+      "strategy_meetings",
+      "meetings",
+      "items",
+    ]).map(mapStrategyMeeting),
+
+    notifications: pickItems(notificationsRes, [
+      "notifications",
+      "items",
+    ]).map(mapNotification),
+
+    chronology: pickItems(chronologyRes, [
+      "safeguarding_chronology",
+      "events",
+      "items",
+    ]).map(mapChronology),
+  };
+
+  if (!hasUsableData(data)) {
+    return buildFallbackData(youngPersonId);
+  }
+
   return {
-    safeguarding: pickItems(safeguardingRes, [
-      "safeguarding_records",
-      "records",
-      "items",
-    ]).map(mapSafeguardingRecord),
-
-    incidents: pickItems(incidentsRes, [
-      "incidents",
-      "items",
-    ]).map(mapIncident),
-
-    missingEpisodes: pickItems(missingRes, [
-      "missing_episodes",
-      "episodes",
-      "items",
-    ]).map(mapMissingEpisode),
-
-    returnInterviews: pickItems(returnInterviewRes, [
-      "return_interviews",
-      "interviews",
-      "items",
-    ]).map(mapReturnInterview),
-
-    alerts: pickItems(alertsRes, [
-      "young_person_alerts",
-      "alerts",
-      "items",
-    ]).map(mapAlert),
-
-    safetyPlans: pickItems(safetyPlansRes, [
-      "safety_plans",
-      "plans",
-      "items",
-    ]).map(mapSafetyPlan),
-
-    contextualProfiles: pickItems(contextualRes, [
-      "contextual_safeguarding_profiles",
-      "profiles",
-      "items",
-    ]).map(mapContextualProfile),
+    ...data,
+    isFallback: false,
   };
 }
 
@@ -729,149 +904,85 @@ async function fetchAll(youngPersonId) {
 
 function buildOpenConcerns(data) {
   return sortNewest(
-    data.safeguarding.filter((item) => item.is_open),
-    ["concern_datetime", "created_at", "updated_at"]
-  );
+    data.concerns.filter((item) => {
+      const status = lower(item.status);
+      return !["closed", "resolved", "archived"].includes(status);
+    }),
+    ["reported_at", "created_at", "updated_at"]
+  ).slice(0, 10);
 }
 
-function buildOpenMissing(data) {
-  return sortNewest(
-    data.missingEpisodes.filter((item) => item.is_open),
-    ["start_datetime", "reported_datetime", "created_at"]
-  );
+function buildOpenActions(data) {
+  return sortSoonest(
+    data.actions.filter((item) => {
+      const status = lower(item.status);
+      return !["completed", "closed", "cancelled", "resolved"].includes(status);
+    }),
+    ["due_date", "created_at", "updated_at"]
+  ).slice(0, 10);
 }
 
-function buildFlaggedIncidents(data) {
-  return sortNewest(
-    data.incidents.filter(
-      (item) =>
-        item.safeguarding_flag ||
-        item.requires_notification ||
-        isHighRisk(item.severity) ||
-        isOpenStatus(item.manager_review_status)
-    ),
-    ["incident_datetime", "created_at", "updated_at"]
-  );
+function buildOverdueActions(data) {
+  return sortSoonest(
+    data.actions.filter((item) => {
+      const status = lower(item.status);
+      return (
+        !["completed", "closed", "cancelled", "resolved"].includes(status) &&
+        (isOverdue(item.due_date) || ["overdue", "urgent", "high"].includes(lower(item.priority)))
+      );
+    }),
+    ["due_date", "created_at", "updated_at"]
+  ).slice(0, 8);
 }
 
-function buildActiveAlerts(data) {
-  return sortNewest(
-    data.alerts.filter((item) => item.is_active),
-    ["created_at", "updated_at", "review_date"]
-  );
-}
-
-function buildLatestSafetyPlan(data) {
-  return sortNewest(
-    data.safetyPlans.filter((item) => !isClosedStatus(item.status)),
-    ["updated_at", "created_at", "review_date"]
-  )[0] || null;
-}
-
-function buildContextualProfile(data) {
-  return sortNewest(
-    data.contextualProfiles.filter((item) => !isClosedStatus(item.status)),
-    ["reviewed_on", "updated_at", "created_at"]
-  )[0] || null;
-}
-
-function buildReturnInterviews(data) {
-  return sortNewest(data.returnInterviews, [
-    "interview_date",
+function buildReferrals(data) {
+  return sortNewest(data.referrals, [
+    "referred_at",
     "created_at",
     "updated_at",
   ]).slice(0, 8);
 }
 
-function buildOverdueActions(data) {
-  const fromAlerts = data.alerts.filter(
-    (item) => item.is_active && item.review_date && isOverdue(item.review_date)
-  );
-
-  const fromSafetyPlans = data.safetyPlans.filter(
-    (item) => !isClosedStatus(item.status) && item.review_date && isOverdue(item.review_date)
-  );
-
-  const fromMissing = data.missingEpisodes.filter(
-    (item) => !item.return_interview_completed && item.return_datetime
-  );
-
-  return [...fromAlerts, ...fromSafetyPlans, ...fromMissing];
+function buildStrategyMeetings(data) {
+  return sortSoonest(data.strategyMeetings, [
+    "meeting_date",
+    "created_at",
+    "updated_at",
+  ]).slice(0, 8);
 }
 
-function buildUrgentItems(data) {
-  const urgentSafeguarding = data.safeguarding.filter(
-    (item) => item.is_open && (isHighRisk(item.severity) || toBool(item.referral_made))
-  );
+function buildNotifications(data) {
+  return sortSoonest(
+    data.notifications.filter((item) => {
+      const status = lower(item.status);
+      return !["resolved", "closed", "dismissed"].includes(status);
+    }),
+    ["due_at", "created_at", "updated_at"]
+  ).slice(0, 8);
+}
 
-  const urgentIncidents = data.incidents.filter(
-    (item) =>
-      item.safeguarding_flag &&
-      (isHighRisk(item.severity) ||
-        item.police_notified ||
-        item.lado_notified ||
-        item.ofsted_notified)
-  );
-
-  const urgentMissing = data.missingEpisodes.filter((item) => item.is_open);
-
-  const urgentAlerts = data.alerts.filter(
-    (item) => item.is_active && isHighRisk(item.severity)
-  );
-
+function buildChronology(data) {
   return sortNewest(
-    [...urgentSafeguarding, ...urgentIncidents, ...urgentMissing, ...urgentAlerts],
     [
-      "concern_datetime",
-      "incident_datetime",
-      "start_datetime",
+      ...data.chronology,
+      ...data.concerns,
+      ...data.referrals,
+      ...data.strategyMeetings,
+    ],
+    [
+      "occurred_at",
+      "reported_at",
+      "referred_at",
+      "meeting_date",
       "created_at",
       "updated_at",
-    ]
-  ).slice(0, 10);
-}
-
-function buildTimeline(data) {
-  const safeguardingItems = data.safeguarding.map((item) => ({
-    ...item,
-    title: item.title || "Safeguarding concern",
-  }));
-
-  const incidentItems = data.incidents
-    .filter((item) => item.safeguarding_flag)
-    .map((item) => ({
-      ...item,
-      title: item.title || "Safeguarding incident",
-      summary: item.summary,
-    }));
-
-  const missingItems = data.missingEpisodes.map((item) => ({
-    ...item,
-    title: item.return_datetime ? "Missing episode returned" : "Missing episode open",
-    summary: item.summary,
-  }));
-
-  const interviewItems = data.returnInterviews.map((item) => ({
-    ...item,
-    title: "Return interview",
-    summary: item.summary,
-  }));
-
-  return sortNewest(
-    [...safeguardingItems, ...incidentItems, ...missingItems, ...interviewItems],
-    [
-      "concern_datetime",
-      "incident_datetime",
-      "start_datetime",
-      "interview_date",
-      "created_at",
     ]
   ).slice(0, 20);
 }
 
-/* -------------------------------- controller -------------------------------- */
+/* -------------------------------- public -------------------------------- */
 
-export async function loadCurrentView() {
+export async function loadSafeguarding() {
   if (!els.viewContent) return;
 
   const youngPersonId = getYoungPersonId();
@@ -879,77 +990,94 @@ export async function loadCurrentView() {
   if (!youngPersonId) {
     els.viewContent.innerHTML = renderEmpty(
       "No young person selected",
-      "Select a young person to view safeguarding information."
+      "Select a child or young person to view safeguarding information."
     );
+
+    updateWorkspaceSummaryStrip({
+      today: "No safeguarding context",
+      nextEvent: "No action due",
+      lastRecord: "No safeguarding data",
+      openActions: "No actions loaded",
+    });
     return;
   }
 
   els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div class="spinner"></div>
-    </div>
+    <section class="overview-panel">
+      <div class="loading-state">
+        <div>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading safeguarding...</p>
+        </div>
+      </div>
+    </section>
   `;
 
   try {
     const data = await fetchAll(youngPersonId);
 
     const openConcerns = buildOpenConcerns(data);
-    const openMissing = buildOpenMissing(data);
-    const openIncidents = buildFlaggedIncidents(data);
-    const activeAlerts = buildActiveAlerts(data);
-    const latestSafetyPlan = buildLatestSafetyPlan(data);
-    const contextualProfile = buildContextualProfile(data);
-    const returnInterviews = buildReturnInterviews(data);
+    const openActions = buildOpenActions(data);
     const overdueActions = buildOverdueActions(data);
-    const urgentItems = buildUrgentItems(data);
-    const timeline = buildTimeline(data);
+    const referrals = buildReferrals(data);
+    const strategyMeetings = buildStrategyMeetings(data);
+    const notifications = buildNotifications(data);
+    const chronology = buildChronology(data);
 
     els.viewContent.innerHTML = renderWorkspace({
       openConcerns,
-      activeAlerts,
-      openMissing,
-      openIncidents,
+      openActions,
       overdueActions,
-      latestSafetyPlan,
-      contextualProfile,
-      urgentItems,
-      timeline,
-      returnInterviews,
+      referrals,
+      strategyMeetings,
+      notifications,
+      chronology,
+      isFallback: Boolean(data.isFallback),
     });
 
+    const nextAction =
+      overdueActions[0]?.due_date ||
+      openActions[0]?.due_date ||
+      strategyMeetings[0]?.meeting_date ||
+      notifications[0]?.due_at ||
+      null;
+
+    const latestRecord =
+      chronology[0]?.occurred_at ||
+      chronology[0]?.reported_at ||
+      chronology[0]?.referred_at ||
+      chronology[0]?.meeting_date ||
+      chronology[0]?.created_at ||
+      null;
+
     updateWorkspaceSummaryStrip({
-      today: `${urgentItems.filter((item) => isToday(
-        item.concern_datetime ||
-          item.incident_datetime ||
-          item.start_datetime ||
-          item.created_at
-      )).length} urgent today`,
-      nextEvent: openMissing[0]
-        ? `Missing since ${formatDateTime(
-            openMissing[0].start_datetime,
-            "Unknown"
-          )}`
-        : "No open missing",
-      lastRecord: timeline[0]
-        ? formatDateTime(
-            timeline[0].concern_datetime ||
-              timeline[0].incident_datetime ||
-              timeline[0].start_datetime ||
-              timeline[0].interview_date ||
-              timeline[0].created_at,
-            "None"
-          )
-        : "None",
-      openActions: `${overdueActions.length} overdue`,
+      today: data.isFallback
+        ? `${openConcerns.length} concerns • preview mode`
+        : `${openConcerns.length} concerns • ${openActions.length} actions`,
+      nextEvent: nextAction
+        ? `Next action ${formatDate(nextAction)}`
+        : "No action due",
+      lastRecord: latestRecord
+        ? `Latest safeguarding activity ${formatDateTime(latestRecord)}`
+        : "No recent safeguarding activity",
+      openActions: `${overdueActions.length} overdue • ${referrals.length} referrals`,
     });
 
     await onAssistantScopeChanged();
     renderAssistantControllerPanels();
   } catch (error) {
-    console.error(error);
+    console.error("[safeguarding] load failed", error);
+
     els.viewContent.innerHTML = renderEmpty(
       "Unable to load safeguarding",
-      "Something went wrong while loading safeguarding information."
+      error?.message || "Something went wrong while loading safeguarding information."
     );
+
+    updateWorkspaceSummaryStrip({
+      today: "Safeguarding unavailable",
+      nextEvent: "No action due",
+      lastRecord: "No safeguarding data",
+      openActions: "Check safeguarding routes",
+    });
   }
 }
