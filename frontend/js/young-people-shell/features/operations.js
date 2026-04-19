@@ -60,16 +60,6 @@ function formatDateTime(value, fallback = "No date") {
   });
 }
 
-function isOverdue(value) {
-  if (!value) return false;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  date.setHours(0, 0, 0, 0);
-  return date.getTime() < today.getTime();
-}
-
 function getHomeId() {
   return (
     state.homeId ||
@@ -134,6 +124,9 @@ function badgeClass(value) {
       "cancelled",
       "problem",
       "failed",
+      "fail",
+      "warning",
+      "red",
     ].includes(v)
   ) {
     return "badge badge-danger";
@@ -151,7 +144,8 @@ function badgeClass(value) {
       "ordered",
       "awaiting_contractor",
       "priority",
-      "warning",
+      "monitoring",
+      "review_due",
     ].includes(v)
   ) {
     return "badge badge-warning";
@@ -171,6 +165,8 @@ function badgeClass(value) {
       "safe",
       "in_stock",
       "in stock",
+      "closed",
+      "current",
     ].includes(v)
   ) {
     return "badge badge-success";
@@ -182,13 +178,34 @@ function badgeClass(value) {
 function getSupportedRecordType(type = "") {
   const normalised = String(type || "").toLowerCase().trim();
 
-  if (["notification", "task"].includes(normalised)) return normalised;
+  if (
+    [
+      "notification",
+      "task",
+      "maintenance_job",
+      "maintenance_request",
+      "environment_check",
+      "visitor_log",
+      "vehicle_check",
+      "vehicle_journey",
+      "purchase_request",
+      "petty_cash_transaction",
+      "allowance_payment",
+      "operational_action",
+      "shift_log",
+      "operations_log",
+    ].includes(normalised)
+  ) {
+    return normalised;
+  }
 
   return "";
 }
 
 function buildCardAttrs(item = {}) {
-  const supportedType = getSupportedRecordType(item.record_type || "");
+  const supportedType = getSupportedRecordType(
+    item.record_type || item.source_type || ""
+  );
   const rowId = item?.id || "";
 
   if (!supportedType || !rowId) {
@@ -204,6 +221,10 @@ function buildCardAttrs(item = {}) {
     role="button"
     tabindex="0"
   `;
+}
+
+function hasUsableData(data = {}) {
+  return Object.values(data).some((value) => Array.isArray(value) && value.length > 0);
 }
 
 /* -------------------------------- mappers -------------------------------- */
@@ -240,7 +261,7 @@ function mapMaintenanceJob(record = {}) {
       record.issue_description ||
       record.notes ||
       "Maintenance logged.",
-    record_type: "maintenance_job",
+    record_type: record.issue_title ? "maintenance_request" : "maintenance_job",
     source_type: record.issue_title ? "maintenance_request" : "maintenance_job",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -274,7 +295,7 @@ function mapEnvironmentCheck(record = {}, sourceType = "environment_check") {
       record.action_note ||
       "Environment check recorded.",
     record_type: "environment_check",
-    source_type: sourceType,
+    source_type,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -308,7 +329,7 @@ function mapVisitor(record = {}, sourceType = "visitor_log") {
       record.notes ||
       "Visitor activity recorded.",
     record_type: "visitor_log",
-    source_type: sourceType,
+    source_type,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -403,7 +424,7 @@ function mapVehicleJourney(record = {}, sourceType = "vehicle_journey") {
       record.destination ||
       "Journey recorded.",
     record_type: "vehicle_journey",
-    source_type: sourceType,
+    source_type,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -432,7 +453,7 @@ function mapInventoryItem(record = {}, sourceType = "inventory_item") {
       record.category ||
       "Inventory record.",
     record_type: "inventory_item",
-    source_type: sourceType,
+    source_type,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -540,7 +561,7 @@ function mapOperationalNotification(record = {}, sourceType = "notification") {
     action_label: record.action_label || "",
     summary: record.message || "Notification recorded.",
     record_type: "notification",
-    source_type: sourceType,
+    source_type,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -621,9 +642,244 @@ function mapShiftLog(record = {}, sourceType = "shift_log") {
       record.staffing_summary ||
       "Shift log recorded.",
     record_type: "shift_log",
-    source_type: sourceType,
+    source_type,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
+  };
+}
+
+/* ------------------------------ fallback data ----------------------------- */
+
+function buildFallbackData(homeId) {
+  const homeName =
+    state.currentUser?.home_name ||
+    state.currentUser?.homeName ||
+    `Home ${homeId}`;
+
+  const now = new Date();
+
+  const minusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  const plusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  return {
+    maintenanceJobs: [
+      mapMaintenanceJob({
+        id: "mj-1",
+        home_id: homeId,
+        title: "Repair bedroom blind",
+        description: "Blind in bedroom 2 not closing properly.",
+        reported_date: minusDays(2),
+        priority: "medium",
+        status: "open",
+        room_name: "Bedroom 2",
+      }),
+      mapMaintenanceJob({
+        id: "mr-1",
+        home_id: homeId,
+        issue_title: "Kitchen tap drip",
+        issue_description: "Tap still dripping after temporary repair.",
+        reported_at: minusDays(1, 11),
+        severity: "high",
+        status: "awaiting_contractor",
+        contractor_name: "Local Plumbing Services",
+        target_completion_date: plusDays(2),
+      }),
+    ],
+
+    environmentChecks: [
+      mapEnvironmentCheck(
+        {
+          id: "ec-1",
+          home_id: homeId,
+          check_date: minusDays(1),
+          check_type: "daily environment",
+          status: "action_required",
+          findings: "Garden gate needs adjustment and lounge lamp requires replacement.",
+          action_required: true,
+          action_notes: "Add premises task and review tomorrow.",
+          next_due_date: plusDays(1),
+        },
+        "environment_check"
+      ),
+    ],
+
+    visitors: [
+      mapVisitor(
+        {
+          id: "vl-1",
+          home_id: homeId,
+          visitor_name: "IRO",
+          organisation_name: "Local Authority",
+          visitor_type: "professional",
+          purpose_of_visit: "Review preparation",
+          arrived_at: minusDays(1, 14),
+          departed_at: minusDays(1, 15),
+          identification_seen: true,
+          escorted: false,
+        },
+        "visitor_log"
+      ),
+    ],
+
+    vehicles: [
+      mapVehicle({
+        id: "veh-1",
+        home_id: homeId,
+        vehicle_name: `${homeName} vehicle`,
+        registration_number: "AB12 CDE",
+        make_model: "Ford Transit",
+        mot_expiry_date: plusDays(45),
+        insurance_expiry_date: plusDays(60),
+        service_due_date: plusDays(12),
+        active: true,
+      }),
+    ],
+
+    vehicleChecks: [
+      mapVehicleCheck({
+        id: "vc-1",
+        home_id: homeId,
+        vehicle_id: "veh-1",
+        check_date: minusDays(1, 8),
+        status: "warning",
+        damage_noted: "Tyre tread to be monitored this week.",
+        notes: "Book tyre inspection if unchanged.",
+      }),
+    ],
+
+    vehicleJourneys: [
+      mapVehicleJourney(
+        {
+          id: "vj-1",
+          home_id: homeId,
+          vehicle_id: "veh-1",
+          journey_date: minusDays(1, 13),
+          purpose: "School transport",
+          destination: "Local Academy",
+        },
+        "vehicle_journey"
+      ),
+    ],
+
+    inventory: [
+      mapInventoryItem(
+        {
+          id: "inv-1",
+          home_id: homeId,
+          item_name: "First aid kit",
+          category: "Safety",
+          status: "current",
+          condition_text: "Checked and restocked.",
+        },
+        "inventory_item"
+      ),
+    ],
+
+    purchaseRequests: [
+      mapPurchaseRequest({
+        id: "pr-1",
+        home_id: homeId,
+        request_title: "Replace lounge lamp",
+        request_description: "Need safer replacement lamp for lounge area.",
+        requested_date: minusDays(1),
+        estimated_cost: 38.5,
+        urgency: "medium",
+        status: "submitted",
+      }),
+    ],
+
+    pettyCash: [
+      mapPettyCash({
+        id: "pc-1",
+        home_id: homeId,
+        transaction_date: minusDays(2),
+        transaction_type: "staff_purchase",
+        amount: 12.99,
+        description: "Milk, bread and fruit for breakfast restock.",
+        running_balance_after: 87.01,
+      }),
+    ],
+
+    allowancePayments: [
+      mapAllowancePayment({
+        id: "ap-1",
+        home_id: homeId,
+        payment_date: minusDays(3),
+        amount: 15,
+        payment_method: "cash",
+        payment_status: "paid",
+        received_confirmed: true,
+      }),
+    ],
+
+    notifications: [
+      mapOperationalNotification(
+        {
+          id: "n-1",
+          home_id: homeId,
+          notification_type: "maintenance",
+          severity: "high",
+          title: "Contractor visit due",
+          message: "Plumber expected tomorrow for kitchen tap repair.",
+          status: "open",
+          due_at: plusDays(1),
+        },
+        "notification"
+      ),
+    ],
+
+    operationsLog: [
+      mapHomeOperationsLog({
+        id: "ol-1",
+        home_id: homeId,
+        log_date: minusDays(1, 17),
+        log_type: "daily_operations",
+        title: "Evening operations summary",
+        summary: "Calm evening overall. One maintenance concern and one professional visit.",
+        severity: "low",
+      }),
+    ],
+
+    operationalActions: [
+      mapOperationalAction({
+        id: "oa-1",
+        home_id: homeId,
+        action_title: "Book plumber follow-up",
+        action_description: "Confirm attendance window and site access.",
+        action_type: "maintenance_follow_up",
+        priority: "high",
+        status: "open",
+        due_date: plusDays(1),
+      }),
+    ],
+
+    shiftLogs: [
+      mapShiftLog(
+        {
+          id: "sl-1",
+          home_id: homeId,
+          shift_date: minusDays(1, 20),
+          shift_type: "evening",
+          staffing_summary: "Fully staffed.",
+          handover_notes: "One maintenance issue to monitor and school transport completed safely.",
+          status: "completed",
+        },
+        "shift_log"
+      ),
+    ],
+
+    isFallback: true,
   };
 }
 
@@ -879,10 +1135,8 @@ function renderTimeline(items = []) {
             item.arrived_at ||
             item.transaction_date ||
             item.payment_date ||
-            item.requested_date ||
             item.log_date ||
             item.shift_date ||
-            item.due_at ||
             item.created_at;
 
           const status =
@@ -921,6 +1175,7 @@ function renderWorkspace(payload) {
     recentFinance,
     recentShiftLogs,
     timeline,
+    isFallback,
   } = payload;
 
   return `
@@ -932,15 +1187,20 @@ function renderWorkspace(payload) {
           <p class="overview-panel-subtitle">
             Daily operational oversight for the home, including issues needing action and recent activity across the running of the service.
           </p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live operations routes are fully available.</p>`
+              : ""
+          }
         </div>
       </div>
 
       <div class="overview-stats-grid">
         ${renderStatCard("Open maintenance", openMaintenance.length)}
         ${renderStatCard("Urgent notifications", urgentNotifications.length)}
-        ${renderStatCard("Open operational actions", openOperationalActions.length)}
+        ${renderStatCard("Open actions", openOperationalActions.length)}
         ${renderStatCard("Environment concerns", failedEnvironmentChecks.length)}
-        ${renderStatCard("Due vehicle checks", dueVehicleChecks.length)}
+        ${renderStatCard("Vehicle checks due", dueVehicleChecks.length)}
       </div>
 
       <div class="overview-grid">
@@ -1087,7 +1347,7 @@ async function fetchAll(homeId) {
     safeGet(`/homes/${homeId}/home-daily-logs`),
   ]);
 
-  return {
+  const data = {
     maintenanceJobs: [
       ...pickItems(maintenanceJobsRes, ["maintenance_jobs", "items"]).map((r) =>
         mapMaintenanceJob(r)
@@ -1201,6 +1461,15 @@ async function fetchAll(homeId) {
       ),
     ],
   };
+
+  if (!hasUsableData(data)) {
+    return buildFallbackData(homeId);
+  }
+
+  return {
+    ...data,
+    isFallback: false,
+  };
 }
 
 /* -------------------------------- builders -------------------------------- */
@@ -1208,7 +1477,7 @@ async function fetchAll(homeId) {
 function buildOpenMaintenance(data) {
   return sortSoonest(
     data.maintenanceJobs.filter(
-      (item) => !["completed", "cancelled", "resolved"].includes(lower(item.status))
+      (item) => !["completed", "cancelled", "resolved", "closed"].includes(lower(item.status))
     ),
     ["target_completion_date", "reported_date", "created_at", "updated_at"]
   ).slice(0, 12);
@@ -1243,7 +1512,7 @@ function buildFailedEnvironmentChecks(data) {
       const status = lower(item.status);
       return (
         item.action_required ||
-        ["action_required", "action required", "urgent_action", "unsafe", "fail"].includes(status)
+        ["action_required", "action required", "urgent_action", "unsafe", "fail", "failed"].includes(status)
       );
     }),
     ["next_due_date", "check_date", "created_at", "updated_at"]
@@ -1258,7 +1527,7 @@ function buildDueVehicleChecks(data) {
   return sortSoonest(
     data.vehicleChecks.filter((item) => {
       const status = lower(item.status);
-      return ["action_required", "unsafe", "open", "warning", "fail"].includes(status);
+      return ["action_required", "unsafe", "open", "warning", "fail", "failed"].includes(status);
     }),
     ["check_date", "created_at", "updated_at"]
   ).slice(0, 8);
@@ -1313,7 +1582,7 @@ function buildTimeline(data) {
 
 /* -------------------------------- public -------------------------------- */
 
-export async function loadCurrentView() {
+export async function loadOperations() {
   if (!els.viewContent) return;
 
   const homeId = getHomeId();
@@ -1323,13 +1592,25 @@ export async function loadCurrentView() {
       "No home selected",
       "Select a home to view operational activity."
     );
+
+    updateWorkspaceSummaryStrip({
+      today: "No home context",
+      nextEvent: "No due action",
+      lastRecord: "No operations data",
+      openActions: "No actions loaded",
+    });
     return;
   }
 
   els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div class="spinner"></div>
-    </div>
+    <section class="overview-panel">
+      <div class="loading-state">
+        <div>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading operations...</p>
+        </div>
+      </div>
+    </section>
   `;
 
   try {
@@ -1348,6 +1629,7 @@ export async function loadCurrentView() {
     const nextOpenAction =
       openOperationalActions.find((item) => item.due_date) ||
       openMaintenance.find((item) => item.target_completion_date) ||
+      urgentNotifications.find((item) => item.due_at) ||
       null;
 
     els.viewContent.innerHTML = renderWorkspace({
@@ -1360,12 +1642,19 @@ export async function loadCurrentView() {
       recentFinance,
       recentShiftLogs,
       timeline,
+      isFallback: Boolean(data.isFallback),
     });
 
     updateWorkspaceSummaryStrip({
-      today: `${openMaintenance.length} maintenance items open`,
+      today: data.isFallback
+        ? `${openMaintenance.length} maintenance items • preview mode`
+        : `${openMaintenance.length} maintenance items open`,
       nextEvent: nextOpenAction
-        ? formatDate(nextOpenAction.due_date || nextOpenAction.target_completion_date)
+        ? formatDate(
+            nextOpenAction.due_date ||
+              nextOpenAction.target_completion_date ||
+              nextOpenAction.due_at
+          )
         : "No due action",
       lastRecord: timeline[0]
         ? formatDate(
@@ -1385,10 +1674,18 @@ export async function loadCurrentView() {
     await onAssistantScopeChanged();
     renderAssistantControllerPanels();
   } catch (error) {
-    console.error(error);
+    console.error("[operations] load failed", error);
+
     els.viewContent.innerHTML = renderEmpty(
       "Unable to load operations",
-      "Something went wrong while loading operational records."
+      error?.message || "Something went wrong while loading operational records."
     );
+
+    updateWorkspaceSummaryStrip({
+      today: "Operations unavailable",
+      nextEvent: "No due action",
+      lastRecord: "No operations data",
+      openActions: "Check operations routes",
+    });
   }
 }
