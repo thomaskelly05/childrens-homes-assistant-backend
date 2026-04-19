@@ -6,11 +6,18 @@ import {
   evaluateRecordSuggestions,
   mergeSuggestionLists,
 } from "../core/rules-client.js";
+import {
+  showSuggestionsPanel,
+  hideSuggestionsPanel,
+} from "./suggestions.js";
 
 /* ------------------------- local helper replacements ------------------------- */
 
 function statusBadgeClass(status = "") {
-  const value = String(status || "").trim().toLowerCase().replaceAll(" ", "_");
+  const value = String(status || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "_");
 
   if (
     [
@@ -65,7 +72,10 @@ function statusBadgeClass(status = "") {
 }
 
 function renderBadges(values = []) {
-  const items = Array.isArray(values) ? values.filter(Boolean) : [values].filter(Boolean);
+  const items = Array.isArray(values)
+    ? values.filter(Boolean)
+    : [values].filter(Boolean);
+
   if (!items.length) return "";
 
   return `
@@ -180,7 +190,9 @@ function renderRecordsTable(items = [], columns = [], emptyMessage = "No records
       <table class="records-table">
         <thead>
           <tr>
-            ${columns.map((col) => `<th>${escapeHtml(String(col.label || ""))}</th>`).join("")}
+            ${columns
+              .map((col) => `<th>${escapeHtml(String(col.label || ""))}</th>`)
+              .join("")}
           </tr>
         </thead>
         <tbody>
@@ -206,11 +218,6 @@ function renderRecordsTable(items = [], columns = [], emptyMessage = "No records
     </div>
   `;
 }
-
-/* -------------------------- local suggestions stub -------------------------- */
-
-function showSuggestionsPanel() {}
-function hideSuggestionsPanel() {}
 
 /* -------------------------------- scope -------------------------------- */
 
@@ -683,7 +690,9 @@ function renderObjectValue(value) {
   }
 
   if (typeof value === "object") {
-    return `<pre class="drawer-code-block">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+    return `<pre class="drawer-code-block">${escapeHtml(
+      JSON.stringify(value, null, 2)
+    )}</pre>`;
   }
 
   return escapeHtml(String(value));
@@ -1074,3 +1083,12 @@ export function bindRecordDrawerEvents({ onEdit, onWorkflowComplete } = {}) {
     await handleWorkflowAction("archive");
   });
 }
+
+export {
+  renderBadges,
+  renderSummaryStat,
+  renderEmptyState,
+  renderSection,
+  renderRowList,
+  renderRecordsTable,
+};
