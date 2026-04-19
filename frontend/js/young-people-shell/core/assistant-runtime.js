@@ -24,7 +24,7 @@ import {
   detectAssistantIntents,
   detectRetrievalMode as detectRetrievalModeFromHelpers,
   detectOutputMode as detectOutputModeFromHelpers,
-} from "./helpers.js";
+} from "../assistant/assistant-shared.js";
 
 const RETRIEVAL_MODE = {
   whole_scope: "whole_scope",
@@ -582,8 +582,8 @@ function filterEvidenceByScope(evidence = [], context = buildAssistantContext())
       raw.service_id ??
       null;
 
-    if (itemHomeId === null || itemHomeId === undefined) return true;
-    return String(itemHomeId) === String(homeId);
+      if (itemHomeId === null || itemHomeId === undefined) return true;
+      return String(itemHomeId) === String(homeId);
   });
 }
 
