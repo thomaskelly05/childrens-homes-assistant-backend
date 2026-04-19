@@ -1725,6 +1725,7 @@ summary:focus-visible {
   display: block;
   padding-right: 2px;
   padding-bottom: 4px;
+  scroll-behavior: smooth;
 }
 
 .assistant-history {
@@ -1738,6 +1739,7 @@ summary:focus-visible {
   border-radius: 16px;
   background: var(--panel-soft);
   border: 1px solid var(--border);
+  position: relative;
 }
 
 .assistant-message + .assistant-message {
@@ -1764,6 +1766,13 @@ summary:focus-visible {
   margin-bottom: 6px;
 }
 
+.assistant-message-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
 .assistant-message-body {
   white-space: normal;
   line-height: 1.68;
@@ -1787,6 +1796,20 @@ summary:focus-visible {
 
 .assistant-message-body li {
   margin: 0 0 6px;
+}
+
+.assistant-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.assistant-message-system[data-status="streaming"],
+.assistant-message--streaming {
+  border-style: dashed;
 }
 
 .assistant-form {
@@ -1826,6 +1849,10 @@ summary:focus-visible {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.assistant-action-chip {
+  cursor: pointer;
 }
 
 .assistant-scope-summary {
@@ -2587,6 +2614,10 @@ summary:focus-visible {
     border-color: rgba(79, 140, 255, 0.18);
   }
 
+  .assistant-message-meta .meta-chip--soft {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
   .workspace-menu-dropdown {
     background: rgba(43, 45, 49, 0.96);
   }
@@ -2845,6 +2876,11 @@ summary:focus-visible {
   .assistant-source-row-top {
     flex-direction: column;
     align-items: start;
+  }
+
+  .assistant-message-meta,
+  .assistant-message-actions {
+    gap: 6px;
   }
 
   .assistant-fab-label {
