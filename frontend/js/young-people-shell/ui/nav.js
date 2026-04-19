@@ -31,30 +31,42 @@ import {
 } from "./assistant-controller.js";
 
 import { loadOverview } from "../features/overview.js";
+import { loadCurrentView as loadAdmission } from "../features/admission.js";
 import { loadProfile } from "../features/profile.js";
 import { loadTimeline } from "../features/timeline.js";
 import { loadHandover } from "../features/handover.js";
-import { loadReports } from "../features/reports.js";
+import { loadCurrentView as loadDailyLife } from "../features/daily-life.js";
 import { loadHealth } from "../features/health.js";
+import { loadCurrentView as loadMedication } from "../features/medication.js";
 import { loadEducation } from "../features/education.js";
 import { loadFamily } from "../features/family.js";
 import { loadCalendar } from "../features/calendar.js";
+import { loadTherapy } from "../features/therapy.js";
+import { loadCurrentView as loadRisk } from "../features/risk.js";
+import { loadCurrentView as loadSafeguarding } from "../features/safeguarding.js";
+import { loadCurrentView as loadMissingFromCare } from "../features/missing.js";
 import { loadReadiness } from "../features/readiness.js";
+import { loadCurrentView as loadReviews } from "../features/reviews.js";
+import { loadReports } from "../features/reports.js";
+import { loadCurrentView as loadTransition } from "../features/transition.js";
+import { loadCurrentView as loadLeavingCare } from "../features/leaving-care.js";
 import { loadManager } from "../features/manager.js";
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
 
 import { loadHomeDashboard } from "../features/home-dashboard.js";
-import { loadQualityDashboard } from "../features/quality.js";
-import { loadCompliance } from "../features/compliance.js";
-import { loadDocuments } from "../features/documents.js";
-import { loadCommunication } from "../features/communication.js";
-import { loadTherapy } from "../features/therapy.js";
+import { loadOperations } from "../features/operations.js";
 import { loadTeam } from "../features/team.js";
-import { loadSupervision } from "../features/supervision.js";
+import { loadRota } from "../features/rota.js";
 import { loadStaffProfile } from "../features/staff-profile.js";
 import { loadOnboarding } from "../features/onboarding.js";
+import { loadSupervision } from "../features/supervision.js";
+import { loadTrainingCentre } from "../features/training-centre.js";
+import { loadCompliance } from "../features/compliance.js";
+import { loadHealthSafety } from "../features/health-safety.js";
 import { loadNotifications } from "../features/notifications.js";
-import { loadRota } from "../features/rota.js";
+import { loadQualityDashboard } from "../features/quality.js";
+import { loadDocuments } from "../features/documents.js";
+import { loadCommunication } from "../features/communication.js";
 
 import { loadProviderOverview } from "../features/provider-overview.js";
 import { loadQualityAudits } from "../features/quality-audits.js";
@@ -276,39 +288,39 @@ async function runPlaceholderLoader(options = {}) {
 const SECTION_LOADERS = {
   workspace: loadWorkspace,
   overview: loadOverview,
-  admission: runPlaceholderLoader,
+  admission: loadAdmission,
   profile: loadProfile,
   timeline: loadTimeline,
   handover: loadHandover,
-  "daily-life": runPlaceholderLoader,
+  "daily-life": loadDailyLife,
   health: loadHealth,
-  medication: runPlaceholderLoader,
+  medication: loadMedication,
   education: loadEducation,
   family: loadFamily,
   calendar: loadCalendar,
   therapy: loadTherapy,
-  risk: runPlaceholderLoader,
-  safeguarding: runPlaceholderLoader,
-  "missing-from-care": runPlaceholderLoader,
+  risk: loadRisk,
+  safeguarding: loadSafeguarding,
+  "missing-from-care": loadMissingFromCare,
   readiness: loadReadiness,
-  reviews: runPlaceholderLoader,
+  reviews: loadReviews,
   reports: loadReports,
-  transition: runPlaceholderLoader,
-  "leaving-care": runPlaceholderLoader,
+  transition: loadTransition,
+  "leaving-care": loadLeavingCare,
   documents: loadDocuments,
   communication: loadCommunication,
   manager: loadManager,
 
   "home-dashboard": loadHomeDashboard,
-  operations: runPlaceholderLoader,
+  operations: loadOperations,
   team: loadTeam,
   rota: loadRota,
   "staff-profile": loadStaffProfile,
   onboarding: loadOnboarding,
   supervision: loadSupervision,
-  "training-centre": runPlaceholderLoader,
+  "training-centre": loadTrainingCentre,
   compliance: loadCompliance,
-  "health-safety": runPlaceholderLoader,
+  "health-safety": loadHealthSafety,
   maintenance: runPlaceholderLoader,
   notifications: loadNotifications,
   quality: loadQualityDashboard,
