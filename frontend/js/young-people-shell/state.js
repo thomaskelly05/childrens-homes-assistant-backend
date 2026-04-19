@@ -32,7 +32,6 @@ function getValidReadinessTab(tab = "overview") {
 
 export function createAssistantMeta() {
   return {
-    // UI / evidence
     sources: [],
     runtime: {},
     explainability: {},
@@ -40,7 +39,6 @@ export function createAssistantMeta() {
     assistant_context: {},
     suggested_actions: [],
 
-    // Intelligence / derived assistant state
     intent: null,
     retrieval_mode: "whole_scope",
     output_mode: "answer",
@@ -51,12 +49,10 @@ export function createAssistantMeta() {
     evidence_sufficiency: {},
     live_summary: null,
 
-    // Scrubber / privacy metadata
     scrubber_enabled: false,
     scrubber_meta: {},
     scrubber_reverse_map: {},
 
-    // Timing
     last_bundle_refresh_at: null,
     last_analysis_at: null,
   };
@@ -165,50 +161,33 @@ function createSectionState(scope = DEFAULT_SCOPE) {
 }
 
 export const state = {
-  // Selected child / workspace
   ...createYoungPersonState(),
-
-  // Current shell section / view
   ...createSectionState(DEFAULT_SCOPE),
 
-  // Role / scope layer
   userRole: DEFAULT_ROLE,
   currentScope: DEFAULT_SCOPE,
 
-  // General UI state
   ...createUiState(),
-
-  // Suggestions / linked follow-up state
   ...createSuggestionState(),
-
-  // Composer state
   ...createComposerState(),
 
-  // Active record / drawer context
   activeRecordType: null,
   activeRecordItem: null,
 
-  // Runtime / context state
   ...createContextState(),
 
-  // Assistant chat state
   assistantMessages: [],
   assistantModalMessages: [],
   assistantMeta: createAssistantMeta(),
 
-  // Legacy compatibility fields
   assistantContext: null,
   assistantSources: [],
   assistantRuntime: null,
   assistantExplainability: null,
 
-  // Whole-scope assistant bundle / live intelligence state
   ...createAssistantBundleState(),
-
-  // Inspection / readiness dashboard state
   ...createReadinessState(),
 
-  // Request optimisation state
   resourceCache: Object.create(null),
   requestCooldowns: Object.create(null),
 };
@@ -252,6 +231,7 @@ export function normaliseUserRole(role) {
   if (raw === "administrator") return "admin";
   if (raw === "super_admin") return "admin";
   if (raw === "superadmin") return "admin";
+  if (raw === "responsible_individual") return "ri";
 
   return raw || DEFAULT_ROLE;
 }
@@ -259,11 +239,13 @@ export function normaliseUserRole(role) {
 export function getDefaultScopeForRole(role = state.userRole) {
   const safeRole = normaliseUserRole(role);
 
-  if (safeRole === "ri") return "quality";
-  if (safeRole === "manager") return "home";
-  if (safeRole === "registered_manager") return "home";
-  if (safeRole === "deputy_manager") return "home";
-  if (safeRole === "admin") return "home";
+  if (["ri", "admin"].includes(safeRole)) return "quality";
+
+  if (
+    ["manager", "registered_manager", "deputy_manager"].includes(safeRole)
+  ) {
+    return "home";
+  }
 
   return DEFAULT_SCOPE;
 }
@@ -356,6 +338,10 @@ export function setCurrentScope(scope, { resetSection = true } = {}) {
   if (resetSection) {
     syncSectionAliases(getScopeDefaultSection(safeScope));
   }
+
+  if (safeScope !== "quality") {
+    state.readinessActiveTab = "overview";
+  }
 }
 
 export function setUserRole(role) {
@@ -400,10 +386,6 @@ export function setAllowedHomeIds(homeIds = []) {
         .filter((item) => Number.isFinite(item))
     : [];
 }
-
-// ========================
-// Readiness / inspection helpers
-// ========================
 
 export function setReadinessSelectedHomeId(homeId = null) {
   const safeHomeId = Number(homeId);
@@ -507,9 +489,18 @@ export function getCurrentReadinessHomeId() {
   return null;
 }
 
-// ========================
-// Assistant bundle / live intelligence helpers
-// ========================
+export function getBestAvailableHomeId() {
+  return (
+    state.readinessSelectedHomeId ||
+    state.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    state.selectedYoungPerson?.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    state.allowedHomeIds?.[0] ||
+    null
+  );
+}
 
 export function setAssistantScopeBundle(bundle = null) {
   state.scopeBundle = bundle || null;
@@ -586,10 +577,6 @@ export function clearAssistantLiveUpdates() {
   state.liveUpdates = [];
 }
 
-// ========================
-// Scope-aware helpers
-// ========================
-
 export function getCurrentScopeEntity() {
   if (state.currentScope === "child") {
     return {
@@ -617,7 +604,7 @@ export function getCurrentScopeEntity() {
   if (state.currentScope === "quality") {
     return {
       type: "quality",
-      id: state.homeId || null,
+      id: getBestAvailableHomeId(),
       name:
         state.currentUser?.home_name ||
         state.currentUser?.homeName ||
