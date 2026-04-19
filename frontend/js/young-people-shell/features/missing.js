@@ -11,6 +11,7 @@ import {
 /* -------------------------------- helpers -------------------------------- */
 
 const SAFE_EMPTY = Object.freeze({ items: [] });
+const RETURN_INTERVIEW_DUE_DAYS = 3;
 
 function toArray(value, fallback = []) {
   if (Array.isArray(value)) return value;
@@ -23,6 +24,7 @@ function toBool(value) {
 }
 
 function toNumber(value, fallback = 0) {
+  if (value === null || value === undefined || value === "") return fallback;
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
 }
@@ -32,7 +34,14 @@ function safeText(value, fallback = "") {
 }
 
 function lower(value) {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "").trim().toLowerCase().replaceAll(" ", "_");
+}
+
+function titleCase(value) {
+  return String(value ?? "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+    .trim();
 }
 
 function formatDate(value, fallback = "No date") {
@@ -69,19 +78,6 @@ function formatDurationMinutes(value) {
   return `${hours} hr ${remainder} min`;
 }
 
-function isOpenStatus(value) {
-  return [
-    "open",
-    "active",
-    "pending",
-    "in_progress",
-    "in progress",
-    "awaiting_review",
-    "awaiting review",
-    "scheduled",
-  ].includes(lower(value));
-}
-
 function isClosedStatus(value) {
   return [
     "closed",
@@ -103,6 +99,14 @@ function isOverdue(value) {
   return d.getTime() < now.getTime();
 }
 
+function addDays(value, days) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
+
 function sortNewest(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
@@ -111,17 +115,57 @@ function sortNewest(items = [], keys = []) {
   });
 }
 
+function sortSoonest(items = [], keys = []) {
+  return [...items].sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+    const aTime = aValue ? new Date(aValue).getTime() : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? new Date(bValue).getTime() : Number.POSITIVE_INFINITY;
+    return aTime - bTime;
+  });
+}
+
 function badgeClass(value) {
   const v = lower(value);
   if (
-    ["critical", "urgent", "high", "open", "active", "overdue", "missing"].includes(v)
+    [
+      "critical",
+      "urgent",
+      "high",
+      "open",
+      "active",
+      "overdue",
+      "missing",
+      "escalated",
+    ].includes(v)
   ) {
     return "badge badge-danger";
   }
-  if (["medium", "pending", "under_review", "awaiting_review", "in_progress"].includes(v)) {
+  if (
+    [
+      "medium",
+      "pending",
+      "under_review",
+      "awaiting_review",
+      "in_progress",
+      "due_soon",
+      "scheduled",
+      "warning",
+      "monitoring",
+    ].includes(v)
+  ) {
     return "badge badge-warning";
   }
-  if (["low", "returned", "completed", "resolved", "closed"].includes(v)) {
+  if (
+    [
+      "low",
+      "returned",
+      "completed",
+      "resolved",
+      "closed",
+      "recorded",
+    ].includes(v)
+  ) {
     return "badge badge-success";
   }
   return "badge";
@@ -133,6 +177,16 @@ function getYoungPersonId() {
     state.selectedYoungPerson?.id ||
     state.youngPerson?.id ||
     null
+  );
+}
+
+function getYoungPersonName() {
+  return (
+    state.selectedYoungPerson?.full_name ||
+    state.selectedYoungPerson?.name ||
+    state.youngPerson?.full_name ||
+    state.youngPerson?.name ||
+    "Young person"
   );
 }
 
@@ -153,13 +207,25 @@ async function safeGet(path) {
   }
 }
 
-/* -------------------------------- normalisers -------------------------------- */
+function hasUsableData(data = {}) {
+  return Object.values(data).some((value) => Array.isArray(value) && value.length > 0);
+}
+
+/* ------------------------------- normalisers ------------------------------ */
 
 function mapMissingEpisode(record = {}) {
-  const isOpen = !record.return_datetime && !isClosedStatus(record.workflow_status);
+  const workflowStatus = record.workflow_status || record.status || "";
+  const hasReturned = Boolean(record.return_datetime);
+  const isOpen = !hasReturned && !isClosedStatus(workflowStatus);
+
+  const interviewDueDate =
+    record.return_interview_due_date ||
+    (!record.return_interview_completed && hasReturned
+      ? addDays(record.return_datetime, RETURN_INTERVIEW_DUE_DAYS)
+      : null);
 
   return {
-    id: record.id,
+    id: record.id ?? null,
     young_person_id: record.young_person_id ?? null,
     start_datetime: record.start_datetime || null,
     reported_datetime: record.reported_datetime || null,
@@ -170,20 +236,24 @@ function mapMissingEpisode(record = {}) {
     actions_taken: record.actions_taken || "",
     outcome: record.outcome || "",
     review_required: toBool(record.review_required),
-    workflow_status: record.workflow_status || "",
+    workflow_status: workflowStatus,
     manager_review_status: record.manager_review_status || "",
     child_voice: record.child_voice || "",
     return_interview_completed: toBool(record.return_interview_completed),
     return_interview_date: record.return_interview_date || null,
+    return_interview_due_date: interviewDueDate,
     return_interview_id: record.return_interview_id || null,
     linked_risk_assessment_id: record.linked_risk_assessment_id || null,
-    duration_minutes: toNumber(record.duration_minutes, null),
+    duration_minutes:
+      record.duration_minutes === null || record.duration_minutes === undefined
+        ? null
+        : toNumber(record.duration_minutes, null),
     contextual_risk_notes: record.contextual_risk_notes || "",
     created_by: record.created_by || null,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
     is_open: isOpen,
-    has_returned: Boolean(record.return_datetime),
+    has_returned: hasReturned,
     title: isOpen ? "Open missing episode" : "Missing episode",
     summary:
       record.outcome ||
@@ -196,7 +266,7 @@ function mapMissingEpisode(record = {}) {
 
 function mapReturnInterview(record = {}) {
   return {
-    id: record.id,
+    id: record.id ?? null,
     young_person_id: record.young_person_id ?? null,
     missing_episode_id: record.missing_episode_id || null,
     home_id: record.home_id || null,
@@ -213,7 +283,7 @@ function mapReturnInterview(record = {}) {
     intelligence_shared: record.intelligence_shared || "",
     actions_agreed: record.actions_agreed || "",
     reviewed_by_user_id: record.reviewed_by_user_id || null,
-    status: record.status || "",
+    status: record.status || "recorded",
     created_by: record.created_by || null,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -224,6 +294,98 @@ function mapReturnInterview(record = {}) {
       record.actions_agreed ||
       "Return interview recorded.",
     record_type: "return_interview",
+  };
+}
+
+/* -------------------------------- fallback -------------------------------- */
+
+function buildFallbackData(youngPersonId) {
+  const now = new Date();
+
+  const minusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  const plusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  return {
+    missingEpisodes: [
+      mapMissingEpisode({
+        id: "me-1",
+        young_person_id: youngPersonId,
+        start_datetime: minusDays(1, 18),
+        reported_datetime: minusDays(1, 18),
+        police_reference: "POL-44281",
+        trigger_factors: "Argument after community boundary discussion.",
+        push_pull_factors: "Pull from peers and reluctance to return to agreed routine.",
+        actions_taken: "Staff welfare calls, police notification and local area checks completed.",
+        workflow_status: "open",
+        manager_review_status: "awaiting_review",
+        contextual_risk_notes: "Known peer group concern in town centre.",
+      }),
+      mapMissingEpisode({
+        id: "me-2",
+        young_person_id: youngPersonId,
+        start_datetime: minusDays(8, 19),
+        reported_datetime: minusDays(8, 19),
+        return_datetime: minusDays(8, 23),
+        duration_minutes: 240,
+        police_reference: "POL-44172",
+        trigger_factors: "Low mood following family contact.",
+        actions_taken: "Police informed and return home coordinated.",
+        outcome: "Returned safely to home.",
+        workflow_status: "returned",
+        manager_review_status: "review_due",
+        return_interview_completed: false,
+      }),
+      mapMissingEpisode({
+        id: "me-3",
+        young_person_id: youngPersonId,
+        start_datetime: minusDays(20, 17),
+        reported_datetime: minusDays(20, 17),
+        return_datetime: minusDays(20, 19),
+        duration_minutes: 120,
+        police_reference: "POL-43803",
+        actions_taken: "Located with known associate and returned.",
+        outcome: "Returned safely.",
+        workflow_status: "closed",
+        manager_review_status: "completed",
+        return_interview_completed: true,
+        return_interview_date: minusDays(18, 14),
+        child_voice: "Young person said they needed space and did not plan to stay out overnight.",
+      }),
+    ],
+
+    returnInterviews: [
+      mapReturnInterview({
+        id: "ri-1",
+        young_person_id: youngPersonId,
+        missing_episode_id: "me-3",
+        interview_date: minusDays(18, 14),
+        interviewer_name: "Independent Advocate",
+        interviewer_role: "Advocate",
+        independent_person: true,
+        child_wishes_and_feelings:
+          "Young person felt overwhelmed and did not want the situation to escalate.",
+        reasons_for_missing:
+          "Wanted time away after feeling upset and misunderstood.",
+        safeguarding_concerns:
+          "No immediate new exploitation concerns disclosed during interview.",
+        actions_agreed:
+          "Review calming plans and offer earlier keyworker time after family contact.",
+        status: "completed",
+      }),
+    ],
+
+    isFallback: true,
   };
 }
 
@@ -266,9 +428,9 @@ function renderSection(title, content, action = "") {
 function renderEpisodeCard(item = {}) {
   const statusText = item.is_open
     ? "open"
-    : item.return_datetime
-      ? "returned"
-      : item.workflow_status || item.manager_review_status || "recorded";
+    : item.has_returned
+    ? "returned"
+    : item.workflow_status || item.manager_review_status || "recorded";
 
   return `
     <article
@@ -287,7 +449,7 @@ function renderEpisodeCard(item = {}) {
             Started: ${safeText(formatDateTime(item.start_datetime, "Not recorded"))}
           </div>
         </div>
-        <span class="${badgeClass(statusText)}">${safeText(statusText)}</span>
+        <span class="${badgeClass(statusText)}">${safeText(titleCase(statusText))}</span>
       </div>
 
       <div class="record-card-body">
@@ -298,26 +460,37 @@ function renderEpisodeCard(item = {}) {
             <div class="details-grid-label">Reported</div>
             <div class="details-grid-value">${safeText(formatDateTime(item.reported_datetime, "Not recorded"))}</div>
           </div>
+
           <div class="details-grid-item">
             <div class="details-grid-label">Returned</div>
-            <div class="details-grid-value">${safeText(formatDateTime(item.return_datetime, item.is_open ? "Still missing" : "Not recorded"))}</div>
+            <div class="details-grid-value">
+              ${safeText(formatDateTime(item.return_datetime, item.is_open ? "Still missing" : "Not recorded"))}
+            </div>
           </div>
+
           <div class="details-grid-item">
             <div class="details-grid-label">Duration</div>
             <div class="details-grid-value">${safeText(formatDurationMinutes(item.duration_minutes))}</div>
           </div>
+
           <div class="details-grid-item">
-            <div class="details-grid-label">Police reference</div>
+            <div class="details-grid-label">Police ref</div>
             <div class="details-grid-value">${safeText(item.police_reference || "Not recorded")}</div>
           </div>
+
           <div class="details-grid-item">
-            <div class="details-grid-label">Return interview</div>
-            <div class="details-grid-value">${safeText(
-              item.return_interview_completed
-                ? formatDate(item.return_interview_date, "Completed")
-                : "Outstanding"
-            )}</div>
+            <div class="details-grid-label">Interview</div>
+            <div class="details-grid-value">
+              ${safeText(
+                item.return_interview_completed
+                  ? formatDate(item.return_interview_date, "Completed")
+                  : item.has_returned
+                  ? "Outstanding"
+                  : "Not due"
+              )}
+            </div>
           </div>
+
           <div class="details-grid-item">
             <div class="details-grid-label">Manager review</div>
             <div class="details-grid-value">${safeText(item.manager_review_status || "Not recorded")}</div>
@@ -397,11 +570,9 @@ function renderReturnInterviewCard(item = {}) {
       <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
         <div>
           <div class="record-card-title">Return interview</div>
-          <div class="record-card-meta">
-            ${safeText(formatDate(item.interview_date, "No date"))}
-          </div>
+          <div class="record-card-meta">${safeText(formatDate(item.interview_date, "No date"))}</div>
         </div>
-        <span class="${badgeClass(item.status || "completed")}">${safeText(item.status || "recorded")}</span>
+        <span class="${badgeClass(item.status || "completed")}">${safeText(titleCase(item.status || "recorded"))}</span>
       </div>
 
       <div class="record-card-body">
@@ -415,7 +586,7 @@ function renderReturnInterviewCard(item = {}) {
             <div class="details-grid-value">${safeText(item.interviewer_role || "Not recorded")}</div>
           </div>
           <div class="details-grid-item">
-            <div class="details-grid-label">Independent person</div>
+            <div class="details-grid-label">Independent</div>
             <div class="details-grid-value">${safeText(item.independent_person ? "Yes" : "No")}</div>
           </div>
         </div>
@@ -517,8 +688,8 @@ function renderTimeline(items = []) {
             item.is_open
               ? "open"
               : item.return_datetime
-                ? "returned"
-                : item.status || item.workflow_status || "recorded";
+              ? "returned"
+              : item.status || item.workflow_status || "recorded";
 
           return `
             <article class="timeline-item">
@@ -526,7 +697,7 @@ function renderTimeline(items = []) {
               <div class="timeline-item-body">
                 <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
                   <strong>${safeText(item.title || "Record")}</strong>
-                  <span class="${badgeClass(statusText)}">${safeText(statusText)}</span>
+                  <span class="${badgeClass(statusText)}">${safeText(titleCase(statusText))}</span>
                 </div>
                 <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
               </div>
@@ -540,13 +711,16 @@ function renderTimeline(items = []) {
 
 function renderWorkspace(payload) {
   const {
+    youngPersonName,
     openEpisodes,
     recentEpisodes,
     outstandingReturnInterviews,
+    overdueReturnInterviews,
     returnInterviews,
     timeline,
     longestEpisode,
     lastReturnInterview,
+    isFallback,
   } = payload;
 
   return `
@@ -554,16 +728,22 @@ function renderWorkspace(payload) {
       <div class="overview-panel-head">
         <div>
           <div class="eyebrow">Missing from care</div>
-          <h2>Missing episodes and return interviews</h2>
+          <h2>${safeText(youngPersonName)} • missing episodes and return interviews</h2>
           <p class="overview-panel-subtitle">
             Live oversight of missing episodes, return activity, patterns and follow-up.
           </p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live missing-from-care routes are fully available.</p>`
+              : ""
+          }
         </div>
       </div>
 
       <div class="overview-stats-grid">
         ${renderStatCard("Open missing", openEpisodes.length)}
         ${renderStatCard("Outstanding interviews", outstandingReturnInterviews.length)}
+        ${renderStatCard("Overdue interviews", overdueReturnInterviews.length)}
         ${renderStatCard("Recent episodes", recentEpisodes.length)}
         ${renderStatCard(
           "Longest recorded",
@@ -634,17 +814,27 @@ async function fetchAll(youngPersonId) {
     safeGet(`/young-people/${youngPersonId}/return-interviews`),
   ]);
 
-  return {
+  const data = {
     missingEpisodes: pickItems(missingRes, [
       "missing_episodes",
       "episodes",
       "items",
     ]).map(mapMissingEpisode),
+
     returnInterviews: pickItems(returnInterviewRes, [
       "return_interviews",
       "interviews",
       "items",
     ]).map(mapReturnInterview),
+  };
+
+  if (!hasUsableData(data)) {
+    return buildFallbackData(youngPersonId);
+  }
+
+  return {
+    ...data,
+    isFallback: false,
   };
 }
 
@@ -654,7 +844,7 @@ function buildOpenEpisodes(data) {
   return sortNewest(
     data.missingEpisodes.filter((item) => item.is_open),
     ["start_datetime", "reported_datetime", "created_at"]
-  );
+  ).slice(0, 8);
 }
 
 function buildRecentEpisodes(data) {
@@ -668,12 +858,22 @@ function buildRecentEpisodes(data) {
 function buildOutstandingReturnInterviews(data) {
   return sortNewest(
     data.missingEpisodes.filter(
+      (item) => item.has_returned && !item.return_interview_completed
+    ),
+    ["return_interview_due_date", "return_datetime", "start_datetime", "created_at"]
+  ).slice(0, 8);
+}
+
+function buildOverdueReturnInterviews(data) {
+  return sortSoonest(
+    data.missingEpisodes.filter(
       (item) =>
         item.has_returned &&
-        !item.return_interview_completed
+        !item.return_interview_completed &&
+        isOverdue(item.return_interview_due_date)
     ),
-    ["return_datetime", "start_datetime", "created_at"]
-  );
+    ["return_interview_due_date", "return_datetime", "created_at"]
+  ).slice(0, 8);
 }
 
 function buildReturnInterviews(data) {
@@ -688,13 +888,11 @@ function buildTimeline(data) {
   const episodes = data.missingEpisodes.map((item) => ({
     ...item,
     title: item.is_open ? "Missing episode open" : "Missing episode",
-    summary: item.summary,
   }));
 
   const interviews = data.returnInterviews.map((item) => ({
     ...item,
     title: "Return interview",
-    summary: item.summary,
   }));
 
   return sortNewest([...episodes, ...interviews], [
@@ -706,19 +904,26 @@ function buildTimeline(data) {
 }
 
 function buildLongestEpisode(data) {
-  return [...data.missingEpisodes]
-    .filter((item) => Number.isFinite(item.duration_minutes))
-    .sort((a, b) => toNumber(b.duration_minutes, 0) - toNumber(a.duration_minutes, 0))[0] || null;
+  return (
+    [...data.missingEpisodes]
+      .filter((item) => Number.isFinite(item.duration_minutes))
+      .sort(
+        (a, b) => toNumber(b.duration_minutes, 0) - toNumber(a.duration_minutes, 0)
+      )[0] || null
+  );
 }
 
 function buildLastReturnInterview(data) {
-  return sortNewest(data.returnInterviews, [
-    "interview_date",
-    "created_at",
-  ])[0] || null;
+  return (
+    sortNewest(data.returnInterviews, ["interview_date", "created_at"])[0] || null
+  );
 }
 
 /* -------------------------------- public loader -------------------------------- */
+
+export async function loadMissing() {
+  return loadCurrentView();
+}
 
 export async function loadCurrentView() {
   if (!els.viewContent) return;
@@ -730,13 +935,25 @@ export async function loadCurrentView() {
       "No young person selected",
       "Select a young person to view missing-from-care information."
     );
+
+    updateWorkspaceSummaryStrip({
+      today: "No missing context",
+      nextEvent: "No action due",
+      lastRecord: "No missing data",
+      openActions: "No actions loaded",
+    });
     return;
   }
 
   els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div class="spinner"></div>
-    </div>
+    <section class="overview-panel">
+      <div class="loading-state">
+        <div>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading missing episodes...</p>
+        </div>
+      </div>
+    </section>
   `;
 
   try {
@@ -745,41 +962,60 @@ export async function loadCurrentView() {
     const openEpisodes = buildOpenEpisodes(data);
     const recentEpisodes = buildRecentEpisodes(data);
     const outstandingReturnInterviews = buildOutstandingReturnInterviews(data);
+    const overdueReturnInterviews = buildOverdueReturnInterviews(data);
     const returnInterviews = buildReturnInterviews(data);
     const timeline = buildTimeline(data);
     const longestEpisode = buildLongestEpisode(data);
     const lastReturnInterview = buildLastReturnInterview(data);
 
     els.viewContent.innerHTML = renderWorkspace({
+      youngPersonName: getYoungPersonName(),
       openEpisodes,
       recentEpisodes,
       outstandingReturnInterviews,
+      overdueReturnInterviews,
       returnInterviews,
       timeline,
       longestEpisode,
       lastReturnInterview,
+      isFallback: Boolean(data.isFallback),
     });
 
+    const nextInterviewDue = outstandingReturnInterviews
+      .map((item) => item.return_interview_due_date)
+      .filter(Boolean)
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+
     updateWorkspaceSummaryStrip({
-      today: `${openEpisodes.length} open missing`,
-      nextEvent: outstandingReturnInterviews.length
-        ? `${outstandingReturnInterviews.length} return interviews outstanding`
+      today: data.isFallback
+        ? `${openEpisodes.length} open missing • preview mode`
+        : `${openEpisodes.length} open missing`,
+      nextEvent: nextInterviewDue
+        ? `Interview due ${formatDate(nextInterviewDue)}`
         : "No interview backlog",
       lastRecord: lastReturnInterview
         ? formatDate(lastReturnInterview.interview_date)
+        : recentEpisodes[0]?.start_datetime
+        ? formatDate(recentEpisodes[0].start_datetime)
         : "None",
-      openActions: `${outstandingReturnInterviews.filter((item) =>
-        item.return_datetime && item.return_interview_date && isOverdue(item.return_interview_date)
-      ).length} overdue`,
+      openActions: `${overdueReturnInterviews.length} overdue • ${outstandingReturnInterviews.length} outstanding`,
     });
 
     await onAssistantScopeChanged();
     renderAssistantControllerPanels();
   } catch (error) {
-    console.error(error);
+    console.error("[missing] load failed", error);
+
     els.viewContent.innerHTML = renderEmpty(
       "Unable to load missing episodes",
-      "Something went wrong while loading missing-from-care records."
+      error?.message || "Something went wrong while loading missing-from-care records."
     );
+
+    updateWorkspaceSummaryStrip({
+      today: "Missing view unavailable",
+      nextEvent: "No action due",
+      lastRecord: "No missing data",
+      openActions: "Check missing routes",
+    });
   }
 }
