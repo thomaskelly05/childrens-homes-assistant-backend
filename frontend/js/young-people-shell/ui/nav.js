@@ -15,7 +15,6 @@ import {
 } from "./selector.js";
 import { bindRecordDrawerEvents } from "./records.js";
 import { closeComposer, saveComposer } from "./composer.js";
-import { bindSuggestionEvents } from "./suggestions.js";
 import { bindActionRouter } from "./action-router.js";
 import {
   updateSectionChrome,
@@ -101,7 +100,6 @@ let youngPersonOpenBound = false;
 let drawerCallbacksBound = false;
 let shellEventsBound = false;
 let actionRouterBound = false;
-let suggestionsBound = false;
 let scopeSwitchBound = false;
 let workspaceMenusBound = false;
 let overlayDismissBound = false;
@@ -1165,11 +1163,6 @@ export function bindNavEvents() {
   bindWorkspaceMenuBehaviour();
   bindWorkspaceMenuLinks();
   bindOverlayDismiss();
-
-  if (!suggestionsBound) {
-    bindSuggestionEvents();
-    suggestionsBound = true;
-  }
 }
 
 export function rerenderNavigationForScope() {
