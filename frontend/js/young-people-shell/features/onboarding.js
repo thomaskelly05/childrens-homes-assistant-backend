@@ -3,6 +3,12 @@ import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
+
+/* -------------------------------- helpers -------------------------------- */
 
 function getHomeId() {
   return (
@@ -73,11 +79,12 @@ function formatDateTime(value) {
   });
 }
 
+function normaliseStatus(value = "") {
+  return String(value || "").toLowerCase().trim().replaceAll(" ", "_");
+}
+
 function getStatusTone(status = "") {
-  const normalised = String(status || "")
-    .toLowerCase()
-    .trim()
-    .replaceAll(" ", "_");
+  const normalised = normaliseStatus(status);
 
   if (
     [
@@ -130,6 +137,7 @@ function getStatusTone(status = "") {
       "on_track",
       "started",
       "hired",
+      "signed_off",
     ].includes(normalised)
   ) {
     return "success";
@@ -146,16 +154,20 @@ function toTime(value) {
 
 function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return toTime(aValue) - toTime(bValue);
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+
+    const aTime = aValue ? toTime(aValue) : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? toTime(bValue) : Number.POSITIVE_INFINITY;
+
+    return aTime - bTime;
   });
 }
 
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
+    const aValue = keys.map((key) => a?.[key]).find(Boolean);
+    const bValue = keys.map((key) => b?.[key]).find(Boolean);
     return toTime(bValue) - toTime(aValue);
   });
 }
@@ -182,6 +194,8 @@ function normaliseSummary(data = {}) {
   return data.summary || data.onboarding_summary || data.dashboard || data || {};
 }
 
+/* ------------------------------- normalisers ------------------------------- */
+
 function normalisePipelineItems(data = {}) {
   return toArray(data.items, [data.pipeline, data.candidates, data.records]).map(
     (item) => ({
@@ -205,7 +219,9 @@ function normalisePipelineItems(data = {}) {
         [
           item.stage || "",
           item.role_applied_for || item.role || "",
-          item.start_target_date ? `Start ${formatShortDate(item.start_target_date)}` : "",
+          item.start_target_date
+            ? `Start ${formatShortDate(item.start_target_date)}`
+            : "",
         ]
           .filter(Boolean)
           .join(" • ") ||
@@ -240,7 +256,9 @@ function normaliseOnboardingItems(data = {}) {
       [
         item.stage || "",
         item.role || "",
-        item.start_target_date ? `Start ${formatShortDate(item.start_target_date)}` : "",
+        item.start_target_date
+          ? `Start ${formatShortDate(item.start_target_date)}`
+          : "",
       ]
         .filter(Boolean)
         .join(" • ") ||
@@ -368,6 +386,8 @@ function normaliseTaskItems(data = {}) {
   }));
 }
 
+/* -------------------------------- builders -------------------------------- */
+
 function buildTopStats({
   pipelineItems = [],
   onboardingItems = [],
@@ -378,25 +398,23 @@ function buildTopStats({
 }) {
   const openPipeline = pipelineItems.filter((item) =>
     !["hired", "withdrawn", "rejected", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
   const onboardingLive = onboardingItems.filter((item) =>
-    !["completed", "closed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    !["completed", "closed"].includes(normaliseStatus(item.status))
   ).length;
 
   const inductionDue = inductionItems.filter((item) =>
     ["due", "due_soon", "review_due", "overdue", "in_progress"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
   const probationDue = probationItems.filter((item) =>
     ["due", "due_soon", "review_due", "overdue", "active"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
@@ -404,7 +422,7 @@ function buildTopStats({
 
   const docGaps = documentItems.filter((item) =>
     ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
@@ -456,7 +474,7 @@ function buildProgressCards({
 }) {
   const clearedPipeline = pipelineItems.filter((item) =>
     ["offered", "conditional_offer", "hired", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
   const pipelinePercent = pipelineItems.length
@@ -465,7 +483,7 @@ function buildProgressCards({
 
   const onboardingReady = onboardingItems.filter((item) =>
     ["on_track", "completed", "active", "started"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
   const onboardingPercent = onboardingItems.length
@@ -474,7 +492,7 @@ function buildProgressCards({
 
   const inductionGood = inductionItems.filter((item) =>
     ["completed", "complete", "on_track", "current"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
   const inductionPercent = inductionItems.length
@@ -483,7 +501,7 @@ function buildProgressCards({
 
   const probationGood = probationItems.filter((item) =>
     ["active", "completed", "current", "good"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
   const probationPercent = probationItems.length
@@ -496,28 +514,44 @@ function buildProgressCards({
       value: `${pipelinePercent}%`,
       percent: pipelinePercent,
       tone:
-        pipelinePercent >= 70 ? "success" : pipelinePercent >= 40 ? "warning" : "danger",
+        pipelinePercent >= 70
+          ? "success"
+          : pipelinePercent >= 40
+          ? "warning"
+          : "danger",
     },
     {
       label: "Onboarding progress",
       value: `${onboardingPercent}%`,
       percent: onboardingPercent,
       tone:
-        onboardingPercent >= 80 ? "success" : onboardingPercent >= 60 ? "warning" : "danger",
+        onboardingPercent >= 80
+          ? "success"
+          : onboardingPercent >= 60
+          ? "warning"
+          : "danger",
     },
     {
       label: "Induction health",
       value: `${inductionPercent}%`,
       percent: inductionPercent,
       tone:
-        inductionPercent >= 80 ? "success" : inductionPercent >= 60 ? "warning" : "danger",
+        inductionPercent >= 80
+          ? "success"
+          : inductionPercent >= 60
+          ? "warning"
+          : "danger",
     },
     {
       label: "Probation health",
       value: `${probationPercent}%`,
       percent: probationPercent,
       tone:
-        probationPercent >= 80 ? "success" : probationPercent >= 60 ? "warning" : "danger",
+        probationPercent >= 80
+          ? "success"
+          : probationPercent >= 60
+          ? "warning"
+          : "danger",
     },
   ];
 }
@@ -534,9 +568,12 @@ function buildPriorityItems({
 
   pipelineItems
     .filter((item) =>
-      ["awaiting_dbs", "awaiting_reference", "awaiting_documents", "conditional_offer"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
+      [
+        "awaiting_dbs",
+        "awaiting_reference",
+        "awaiting_documents",
+        "conditional_offer",
+      ].includes(normaliseStatus(item.status))
     )
     .slice(0, 2)
     .forEach((item) => {
@@ -546,10 +583,24 @@ function buildPriorityItems({
       });
     });
 
+  onboardingItems
+    .filter((item) =>
+      ["awaiting_documents", "pending_checks", "in_progress", "due_soon"].includes(
+        normaliseStatus(item.status)
+      )
+    )
+    .slice(0, 2)
+    .forEach((item) => {
+      items.push({
+        title: item.full_name || "Onboarding item",
+        summary: item.summary || "Onboarding follow-up is needed.",
+      });
+    });
+
   inductionItems
     .filter((item) =>
       ["overdue", "due_soon", "review_due", "in_progress"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseStatus(item.status)
       )
     )
     .slice(0, 2)
@@ -563,7 +614,7 @@ function buildPriorityItems({
   probationItems
     .filter((item) =>
       ["overdue", "due_soon", "review_due"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseStatus(item.status)
       )
     )
     .slice(0, 2)
@@ -577,7 +628,7 @@ function buildPriorityItems({
   documentItems
     .filter((item) =>
       ["missing", "review_due", "due_soon", "overdue", "expired"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseStatus(item.status)
       )
     )
     .slice(0, 1)
@@ -607,6 +658,8 @@ function buildPriorityItems({
 
   return items.slice(0, 8);
 }
+
+/* -------------------------------- rendering -------------------------------- */
 
 function renderStatCards(cards = []) {
   return `
@@ -770,6 +823,7 @@ function renderOnboardingHtml({
   onboardingItems = [],
   inductionItems = [],
   probationItems = [],
+  trainingItems = [],
   documentItems = [],
   taskItems = [],
   isFallback = false,
@@ -816,7 +870,9 @@ function renderOnboardingHtml({
                 [
                   item.role_applied_for || "",
                   item.stage || "",
-                  item.start_target_date ? `Start ${formatDate(item.start_target_date)}` : "",
+                  item.start_target_date
+                    ? `Start ${formatDate(item.start_target_date)}`
+                    : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -885,6 +941,29 @@ function renderOnboardingHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
+              <h3>Training linked to onboarding</h3>
+              <p>Mandatory learning that affects onboarding readiness.</p>
+            </div>
+
+            ${renderRows(trainingItems, {
+              emptyMessage: "No onboarding-linked training issues found.",
+              titleKey: "full_name",
+              summaryKey: "summary",
+              recordType: "training_record",
+              metaBuilder: (item) =>
+                [
+                  item.training_name || "",
+                  item.next_due_date || item.expiry_date
+                    ? `Due ${formatDate(item.next_due_date || item.expiry_date)}`
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • "),
+            })}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
               <h3>Document readiness</h3>
               <p>References, checks, certificates and onboarding evidence.</p>
             </div>
@@ -930,6 +1009,8 @@ function renderOnboardingHtml({
     </section>
   `;
 }
+
+/* -------------------------------- states -------------------------------- */
 
 function renderNoHomeContext() {
   if (!els.viewContent) return;
@@ -998,6 +1079,8 @@ function renderErrorState(message) {
     openActions: "No actions loaded",
   });
 }
+
+/* -------------------------------- fallback -------------------------------- */
 
 function buildFallbackData(homeId) {
   const homeName =
@@ -1119,9 +1202,23 @@ function buildFallbackData(homeId) {
         },
       ],
     },
+    trainingData: {
+      items: [
+        {
+          id: "train-1",
+          full_name: "Holly Kent",
+          training_name: "Medication training",
+          next_due_date: plusDays(6),
+          status: "due_soon",
+          summary: "Medication training needs completion before full rota sign-off.",
+        },
+      ],
+    },
     isFallback: true,
   };
 }
+
+/* -------------------------------- fetching -------------------------------- */
 
 async function fetchDataset(homeId) {
   const safeGet = (url) => apiGet(url).catch(() => null);
@@ -1174,6 +1271,8 @@ async function fetchDataset(homeId) {
     isFallback: false,
   };
 }
+
+/* -------------------------------- public -------------------------------- */
 
 export async function loadOnboarding() {
   if (!els.viewContent) return;
@@ -1231,13 +1330,19 @@ export async function loadOnboarding() {
     const documentItems = sortSoonestFirst(
       normaliseDocumentItems(documentData),
       ["review_date", "updated_at", "created_at"]
+    ).filter((item) =>
+      ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
+        normaliseStatus(item.status)
+      )
     ).slice(0, 6);
 
     const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
       "due_date",
       "updated_at",
       "created_at",
-    ]).filter((item) => !item.completed).slice(0, 6);
+    ])
+      .filter((item) => !item.completed)
+      .slice(0, 6);
 
     const topStats = buildTopStats({
       pipelineItems,
@@ -1279,7 +1384,8 @@ export async function loadOnboarding() {
       pipelineItems,
       onboardingItems,
       inductionItems,
-      probationItems: [...probationItems, ...trainingItems].slice(0, 8),
+      probationItems,
+      trainingItems,
       documentItems,
       taskItems,
       isFallback,
@@ -1290,11 +1396,14 @@ export async function loadOnboarding() {
       onboardingItems[0]?.start_target_date ||
       inductionItems[0]?.review_date ||
       probationItems[0]?.review_date ||
+      trainingItems[0]?.next_due_date ||
       null;
 
     const latestRecord =
       onboardingItems[0]?.updated_at ||
       pipelineItems[0]?.updated_at ||
+      inductionItems[0]?.updated_at ||
+      probationItems[0]?.updated_at ||
       null;
 
     updateWorkspaceSummaryStrip({
@@ -1311,6 +1420,9 @@ export async function loadOnboarding() {
         : "No recent onboarding update",
       openActions: `${taskItems.length} open • ${documentItems.length} document checks`,
     });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
     console.error("[onboarding] load failed", error);
     renderErrorState(error?.message || "The onboarding view could not be loaded.");
