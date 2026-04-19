@@ -23,6 +23,7 @@ function toBool(value) {
 }
 
 function toNumber(value, fallback = 0) {
+  if (value === null || value === undefined || value === "") return fallback;
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
 }
@@ -32,7 +33,14 @@ function safeText(value, fallback = "") {
 }
 
 function lower(value) {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "").trim().toLowerCase().replaceAll(" ", "_");
+}
+
+function titleCase(value) {
+  return String(value ?? "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+    .trim();
 }
 
 function formatDate(value, fallback = "No date") {
@@ -108,17 +116,55 @@ async function safeGet(path) {
 function badgeClass(value) {
   const v = lower(value);
   if (
-    ["critical", "urgent", "unsafe", "high", "open", "overdue", "action_required", "action required"].includes(v)
+    [
+      "critical",
+      "urgent",
+      "unsafe",
+      "high",
+      "open",
+      "overdue",
+      "action_required",
+      "fail",
+      "failed",
+      "danger",
+      "requires_action",
+    ].includes(v)
   ) {
     return "badge badge-danger";
   }
-  if (["medium", "warning", "pending", "in_progress", "in progress", "due"].includes(v)) {
+  if (
+    [
+      "medium",
+      "warning",
+      "pending",
+      "in_progress",
+      "due",
+      "review_due",
+      "planned",
+      "monitoring",
+    ].includes(v)
+  ) {
     return "badge badge-warning";
   }
-  if (["pass", "completed", "resolved", "closed", "good", "low"].includes(v)) {
+  if (
+    [
+      "pass",
+      "completed",
+      "resolved",
+      "closed",
+      "good",
+      "low",
+      "current",
+      "safe",
+    ].includes(v)
+  ) {
     return "badge badge-success";
   }
   return "badge";
+}
+
+function hasUsableData(data = {}) {
+  return Object.values(data).some((value) => Array.isArray(value) && value.length > 0);
 }
 
 /* -------------------------------- mappers -------------------------------- */
@@ -132,16 +178,25 @@ function mapEnvironmentCheck(record = {}) {
     check_date: record.check_date || null,
     check_type: record.check_type || "",
     status: record.status || "",
-    cleanliness_rating: toNumber(record.cleanliness_rating, null),
-    safety_rating: toNumber(record.safety_rating, null),
-    homeliness_rating: toNumber(record.homeliness_rating, null),
+    cleanliness_rating:
+      record.cleanliness_rating === null || record.cleanliness_rating === undefined
+        ? null
+        : toNumber(record.cleanliness_rating, null),
+    safety_rating:
+      record.safety_rating === null || record.safety_rating === undefined
+        ? null
+        : toNumber(record.safety_rating, null),
+    homeliness_rating:
+      record.homeliness_rating === null || record.homeliness_rating === undefined
+        ? null
+        : toNumber(record.homeliness_rating, null),
     findings: record.findings || "",
     action_required: toBool(record.action_required),
     action_notes: record.action_notes || "",
     checked_by_user_id: record.checked_by_user_id || null,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
-    title: record.check_type ? String(record.check_type).replaceAll("_", " ") : "Environment check",
+    title: record.check_type ? titleCase(record.check_type) : "Environment check",
     summary: record.findings || record.action_notes || "Environment check recorded.",
     record_type: "environment_check",
   };
@@ -163,7 +218,7 @@ function mapHealthSafetyCheck(record = {}) {
     completed_by_user_id: record.completed_by_user_id || null,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
-    title: record.check_title || record.check_type || "Health and safety check",
+    title: record.check_title || titleCase(record.check_type || "Health and safety check"),
     summary: record.finding_summary || record.action_note || "Health and safety check recorded.",
     record_type: "health_safety_check",
   };
@@ -186,7 +241,7 @@ function mapSafetyCheck(record = {}) {
     reviewed_at: record.reviewed_at || null,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
-    title: record.check_type || "Safety check",
+    title: titleCase(record.check_type || "Safety check"),
     summary: record.findings || record.action_required || "Safety check recorded.",
     record_type: "safety_check",
   };
@@ -207,8 +262,12 @@ function mapFireSafetyCheck(record = {}) {
     completed_by: record.completed_by || null,
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
-    title: record.check_type || "Fire safety check",
-    summary: record.issues_found || record.actions_required || record.outcome || "Fire safety check recorded.",
+    title: titleCase(record.check_type || "Fire safety check"),
+    summary:
+      record.issues_found ||
+      record.actions_required ||
+      record.outcome ||
+      "Fire safety check recorded.",
     record_type: "fire_safety_check",
   };
 }
@@ -219,7 +278,10 @@ function mapFireDrill(record = {}) {
     home_id: record.home_id || null,
     drill_datetime: record.drill_datetime || null,
     shift_type: record.shift_type || "",
-    evacuation_time_seconds: toNumber(record.evacuation_time_seconds, null),
+    evacuation_time_seconds:
+      record.evacuation_time_seconds === null || record.evacuation_time_seconds === undefined
+        ? null
+        : toNumber(record.evacuation_time_seconds, null),
     issues_identified: record.issues_identified || "",
     learning_points: record.learning_points || "",
     follow_up_actions: record.follow_up_actions || "",
@@ -254,7 +316,10 @@ function mapMaintenanceJob(record = {}) {
     target_completion_date: record.target_completion_date || record.due_date || null,
     completed_date: record.completed_date || record.completed_at || null,
     completion_notes: record.completion_notes || "",
-    cost_amount: record.cost_amount ?? record.cost_estimate ?? null,
+    cost_amount:
+      record.cost_amount === null || record.cost_amount === undefined
+        ? record.cost_estimate ?? null
+        : record.cost_amount,
     notes: record.notes || "",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -289,6 +354,113 @@ function mapVisitorLog(record = {}) {
     title: record.visitor_name || "Visitor log",
     summary: record.purpose_of_visit || record.notes || "Visitor recorded.",
     record_type: "visitor_log",
+  };
+}
+
+/* ------------------------------ fallback data ----------------------------- */
+
+function buildFallbackData(homeId) {
+  const now = new Date();
+
+  const minusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  const plusDays = (days, hour = 9) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  };
+
+  return {
+    environmentChecks: [
+      mapEnvironmentCheck({
+        id: "env-1",
+        home_id: homeId,
+        check_date: minusDays(1),
+        check_type: "daily_environment",
+        status: "action_required",
+        findings: "Loose stair gate fitting identified.",
+        action_required: true,
+        action_notes: "Temporary control in place pending repair.",
+      }),
+    ],
+    healthSafetyChecks: [
+      mapHealthSafetyCheck({
+        id: "hs-1",
+        home_id: homeId,
+        check_date: minusDays(2),
+        check_title: "Weekly kitchen safety check",
+        check_type: "kitchen_safety",
+        status: "warning",
+        finding_summary: "Cleaning cupboard lock needs replacement.",
+        action_required: true,
+        action_note: "Replace lock and confirm secure storage.",
+        next_due_date: plusDays(5),
+      }),
+    ],
+    safetyChecks: [
+      mapSafetyCheck({
+        id: "sc-1",
+        home_id: homeId,
+        check_date: minusDays(3),
+        check_type: "window_restrictor_check",
+        outcome_status: "pass",
+        findings: "All restrictors in place.",
+      }),
+    ],
+    fireSafetyChecks: [
+      mapFireSafetyCheck({
+        id: "fs-1",
+        home_id: homeId,
+        check_date: minusDays(4),
+        check_type: "weekly_fire_alarm_test",
+        outcome: "good",
+        equipment_checked: "Panel and alarms",
+        next_due_date: plusDays(3),
+      }),
+    ],
+    fireDrills: [
+      mapFireDrill({
+        id: "fd-1",
+        home_id: homeId,
+        drill_datetime: minusDays(7, 19),
+        shift_type: "evening",
+        evacuation_time_seconds: 142,
+        learning_points: "Reminder needed about rear assembly point route.",
+      }),
+    ],
+    maintenanceJobs: [
+      mapMaintenanceJob({
+        id: "mj-1",
+        home_id: homeId,
+        job_title: "Replace stair gate fitting",
+        job_description: "Repair required following safety check.",
+        reported_date: minusDays(1),
+        priority: "high",
+        status: "open",
+        target_completion_date: plusDays(2),
+        contractor_name: "SafeHome Repairs",
+      }),
+    ],
+    visitorLog: [
+      mapVisitorLog({
+        id: "vl-1",
+        home_id: homeId,
+        visitor_name: "IRO",
+        organisation_name: "Local Authority",
+        visitor_type: "professional",
+        purpose_of_visit: "Review visit",
+        arrived_at: minusDays(2, 14),
+        departed_at: minusDays(2, 15),
+        identification_seen: true,
+      }),
+    ],
+    isFallback: true,
   };
 }
 
@@ -332,6 +504,7 @@ function renderRecordCard(item = {}) {
   const statusText =
     item.status ||
     item.outcome_status ||
+    item.outcome ||
     item.priority ||
     (item.action_required ? "action required" : "recorded");
 
@@ -362,7 +535,7 @@ function renderRecordCard(item = {}) {
             }
           </div>
         </div>
-        <span class="${badgeClass(statusText)}">${safeText(statusText)}</span>
+        <span class="${badgeClass(statusText)}">${safeText(titleCase(statusText))}</span>
       </div>
 
       <div class="record-card-body">
@@ -375,6 +548,16 @@ function renderRecordCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Next due</div>
                   <div class="details-grid-value">${safeText(formatDate(item.next_due_date))}</div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            item.action_due_date
+              ? `
+                <div class="details-grid-item">
+                  <div class="details-grid-label">Action due</div>
+                  <div class="details-grid-value">${safeText(formatDate(item.action_due_date))}</div>
                 </div>
               `
               : ""
@@ -404,7 +587,7 @@ function renderRecordCard(item = {}) {
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Visitor type</div>
-                  <div class="details-grid-value">${safeText(item.visitor_type)}</div>
+                  <div class="details-grid-value">${safeText(titleCase(item.visitor_type))}</div>
                 </div>
               `
               : ""
@@ -465,11 +648,11 @@ function renderRecordCard(item = {}) {
         }
 
         ${
-          item.action_notes || item.action_note || item.actions_required
+          item.action_notes || item.action_note || item.actions_required || item.action_required
             ? `
               <div class="record-card-block">
                 <div class="record-card-block-label">Actions</div>
-                <div>${safeText(item.action_notes || item.action_note || item.actions_required)}</div>
+                <div>${safeText(item.action_notes || item.action_note || item.actions_required || item.action_required)}</div>
               </div>
             `
             : ""
@@ -533,6 +716,7 @@ function renderTimeline(items = []) {
           const statusText =
             item.status ||
             item.outcome_status ||
+            item.outcome ||
             item.priority ||
             (item.action_required ? "action required" : "recorded");
 
@@ -542,7 +726,7 @@ function renderTimeline(items = []) {
               <div class="timeline-item-body">
                 <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
                   <strong>${safeText(item.title || "Record")}</strong>
-                  <span class="${badgeClass(statusText)}">${safeText(statusText)}</span>
+                  <span class="${badgeClass(statusText)}">${safeText(titleCase(statusText))}</span>
                 </div>
                 <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
               </div>
@@ -563,6 +747,7 @@ function renderWorkspace(payload) {
     recentVisitors,
     timeline,
     nextFireCheckDue,
+    isFallback,
   } = payload;
 
   return `
@@ -574,6 +759,11 @@ function renderWorkspace(payload) {
           <p class="overview-panel-subtitle">
             Daily operational safety, premises oversight, maintenance follow-up and visitor monitoring.
           </p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live health and safety routes are fully available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -665,22 +855,57 @@ async function fetchAll(homeId) {
     safeGet(`/homes/${homeId}/visitor-log`),
   ]);
 
+  const data = {
+    environmentChecks: pickItems(environmentRes, [
+      "environment_checks",
+      "checks",
+      "items",
+    ]).map(mapEnvironmentCheck),
+
+    healthSafetyChecks: pickItems(healthSafetyRes, [
+      "health_safety_checks",
+      "checks",
+      "items",
+    ]).map(mapHealthSafetyCheck),
+
+    safetyChecks: pickItems(safetyRes, [
+      "safety_checks",
+      "checks",
+      "items",
+    ]).map(mapSafetyCheck),
+
+    fireSafetyChecks: pickItems(fireSafetyRes, [
+      "fire_safety_checks",
+      "checks",
+      "items",
+    ]).map(mapFireSafetyCheck),
+
+    fireDrills: pickItems(fireDrillRes, [
+      "fire_drills",
+      "drills",
+      "items",
+    ]).map(mapFireDrill),
+
+    maintenanceJobs: pickItems(maintenanceRes, [
+      "maintenance_jobs",
+      "jobs",
+      "items",
+    ]).map(mapMaintenanceJob),
+
+    visitorLog: pickItems(visitorRes, [
+      "visitor_log",
+      "visitors",
+      "items",
+    ]).map(mapVisitorLog),
+  };
+
+  if (!hasUsableData(data)) {
+    return buildFallbackData(homeId);
+  }
+
   return {
-    environmentChecks: pickItems(environmentRes, ["environment_checks", "checks", "items"]).map(
-      mapEnvironmentCheck
-    ),
-    healthSafetyChecks: pickItems(healthSafetyRes, ["health_safety_checks", "checks", "items"]).map(
-      mapHealthSafetyCheck
-    ),
-    safetyChecks: pickItems(safetyRes, ["safety_checks", "checks", "items"]).map(mapSafetyCheck),
-    fireSafetyChecks: pickItems(fireSafetyRes, ["fire_safety_checks", "checks", "items"]).map(
-      mapFireSafetyCheck
-    ),
-    fireDrills: pickItems(fireDrillRes, ["fire_drills", "drills", "items"]).map(mapFireDrill),
-    maintenanceJobs: pickItems(maintenanceRes, ["maintenance_jobs", "jobs", "items"]).map(
-      mapMaintenanceJob
-    ),
-    visitorLog: pickItems(visitorRes, ["visitor_log", "visitors", "items"]).map(mapVisitorLog),
+    ...data,
+    isFallback: false,
   };
 }
 
@@ -689,20 +914,20 @@ async function fetchAll(homeId) {
 function buildUrgentChecks(data) {
   const urgent = [
     ...data.environmentChecks.filter(
-      (item) => item.action_required || ["urgent_action", "unsafe", "critical"].includes(lower(item.status))
+      (item) => item.action_required || ["urgent_action", "unsafe", "critical", "action_required"].includes(lower(item.status))
     ),
     ...data.healthSafetyChecks.filter(
-      (item) => item.action_required || ["urgent", "unsafe", "critical", "fail"].includes(lower(item.status))
+      (item) => item.action_required || ["urgent", "unsafe", "critical", "fail", "action_required"].includes(lower(item.status))
     ),
     ...data.safetyChecks.filter(
       (item) =>
-        ["overdue", "failed", "unsafe", "critical"].includes(lower(item.outcome_status)) ||
+        ["overdue", "failed", "fail", "unsafe", "critical"].includes(lower(item.outcome_status)) ||
         Boolean(item.action_required)
     ),
     ...data.fireSafetyChecks.filter(
       (item) =>
-        item.issues_found ||
-        item.actions_required ||
+        Boolean(item.issues_found) ||
+        Boolean(item.actions_required) ||
         ["fail", "action_required", "urgent"].includes(lower(item.outcome))
     ),
   ];
@@ -772,7 +997,7 @@ function buildNextFireCheckDue(data) {
 
 /* -------------------------------- public -------------------------------- */
 
-export async function loadCurrentView() {
+export async function loadHealthSafety() {
   if (!els.viewContent) return;
 
   const homeId = getHomeId();
@@ -782,13 +1007,25 @@ export async function loadCurrentView() {
       "No home selected",
       "Select a home to view health and safety information."
     );
+
+    updateWorkspaceSummaryStrip({
+      today: "No home context",
+      nextEvent: "No due check",
+      lastRecord: "No health and safety data",
+      openActions: "No actions loaded",
+    });
     return;
   }
 
   els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div class="spinner"></div>
-    </div>
+    <section class="overview-panel">
+      <div class="loading-state">
+        <div>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading health and safety...</p>
+        </div>
+      </div>
+    </section>
   `;
 
   try {
@@ -810,10 +1047,13 @@ export async function loadCurrentView() {
       recentVisitors,
       timeline,
       nextFireCheckDue,
+      isFallback: Boolean(data.isFallback),
     });
 
     updateWorkspaceSummaryStrip({
-      today: `${urgentChecks.length} urgent items`,
+      today: data.isFallback
+        ? `${urgentChecks.length} urgent items • preview mode`
+        : `${urgentChecks.length} urgent items`,
       nextEvent: nextFireCheckDue ? formatDate(nextFireCheckDue) : "No due check",
       lastRecord: timeline[0]
         ? formatDate(
@@ -830,10 +1070,18 @@ export async function loadCurrentView() {
     await onAssistantScopeChanged();
     renderAssistantControllerPanels();
   } catch (error) {
-    console.error(error);
+    console.error("[health-safety] load failed", error);
+
     els.viewContent.innerHTML = renderEmpty(
       "Unable to load health and safety",
-      "Something went wrong while loading health and safety records."
+      error?.message || "Something went wrong while loading health and safety records."
     );
+
+    updateWorkspaceSummaryStrip({
+      today: "Health and safety unavailable",
+      nextEvent: "No due check",
+      lastRecord: "No health and safety data",
+      openActions: "Check safety routes",
+    });
   }
 }
