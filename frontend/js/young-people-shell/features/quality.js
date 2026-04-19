@@ -114,8 +114,12 @@ function sortNewest(items = [], dateKeys = []) {
 
 function sortSoonest(items = [], dateKey) {
   return [...items].sort((a, b) => {
-    const aDate = a?.[dateKey] ? new Date(a[dateKey]).getTime() : Number.POSITIVE_INFINITY;
-    const bDate = b?.[dateKey] ? new Date(b[dateKey]).getTime() : Number.POSITIVE_INFINITY;
+    const aDate = a?.[dateKey]
+      ? new Date(a[dateKey]).getTime()
+      : Number.POSITIVE_INFINITY;
+    const bDate = b?.[dateKey]
+      ? new Date(b[dateKey]).getTime()
+      : Number.POSITIVE_INFINITY;
     return aDate - bDate;
   });
 }
@@ -280,7 +284,8 @@ function buildFallbackData(homeId) {
         finding_type: "concern",
         priority: "high",
         title: "Review dates not consistently closed",
-        details: "A small number of review-linked items remained open beyond target date.",
+        details:
+          "A small number of review-linked items remained open beyond target date.",
         action_required: true,
         created_at: minusDays(9),
       }),
@@ -291,7 +296,8 @@ function buildFallbackData(homeId) {
         finding_type: "strength",
         priority: "medium",
         title: "Improved recording consistency",
-        details: "Daily records show stronger chronology and clearer professional language.",
+        details:
+          "Daily records show stronger chronology and clearer professional language.",
         action_required: false,
         created_at: minusDays(8),
       }),
@@ -303,7 +309,8 @@ function buildFallbackData(homeId) {
         quality_audit_id: "qa-1",
         home_id: homeId,
         action_title: "Close overdue review items",
-        action_description: "Resolve overdue compliance and document review items.",
+        action_description:
+          "Resolve overdue compliance and document review items.",
         priority: "high",
         due_date: plusDays(2),
         status: "open",
@@ -315,7 +322,8 @@ function buildFallbackData(homeId) {
         quality_audit_id: "qa-1",
         home_id: homeId,
         action_title: "Refresh manager oversight tracker",
-        action_description: "Tighten weekly oversight of open quality actions.",
+        action_description:
+          "Tighten weekly oversight of open quality actions.",
         priority: "medium",
         due_date: plusDays(6),
         status: "in_progress",
@@ -384,7 +392,8 @@ function buildFallbackData(homeId) {
         reg44_finding_id: "r44f-1",
         home_id: homeId,
         action_title: "Evidence completion of Reg 44 actions",
-        action_description: "Upload closure evidence and confirm review of outstanding items.",
+        action_description:
+          "Upload closure evidence and confirm review of outstanding items.",
         due_date: plusDays(3),
         status: "open",
         created_at: minusDays(12),
@@ -413,7 +422,8 @@ function buildFallbackData(homeId) {
         reg45_review_id: "r45-1",
         home_id: homeId,
         action_title: "Complete quarterly action plan review",
-        action_description: "Check progress across all open quality actions and update evidence.",
+        action_description:
+          "Check progress across all open quality actions and update evidence.",
         due_date: plusDays(5),
         priority: "medium",
         status: "open",
@@ -494,7 +504,8 @@ function buildFallbackData(homeId) {
         inspection_score_id: "is-1",
         home_id: homeId,
         priority: "high",
-        line_of_enquiry: "How consistently are improvement actions tracked to completion?",
+        line_of_enquiry:
+          "How consistently are improvement actions tracked to completion?",
         rationale:
           "Recent quality and Reg 44 activity indicates action closure evidence is variable.",
         status: "open",
@@ -615,7 +626,10 @@ function mapQualityAuditAction(record = {}) {
     completion_notes: record.completion_notes || "",
     finding_id: record.finding_id || null,
     title: record.action_title || "Audit action",
-    summary: record.action_description || record.completion_notes || "Quality action recorded.",
+    summary:
+      record.action_description ||
+      record.completion_notes ||
+      "Quality action recorded.",
     record_type: "quality_audit_action",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -656,7 +670,9 @@ function mapReg44Visit(record = {}) {
     overall_summary: record.overall_summary || "",
     recommendations_summary: record.recommendations_summary || "",
     report_document_id: record.report_document_id || null,
-    title: `Reg 44 visit${record.visit_date ? ` - ${formatDate(record.visit_date)}` : ""}`,
+    title: `Reg 44 visit${
+      record.visit_date ? ` - ${formatDate(record.visit_date)}` : ""
+    }`,
     summary:
       record.overall_summary ||
       record.recommendations_summary ||
@@ -696,9 +712,7 @@ function mapReg44Action(record = {}) {
     status: record.status || "",
     completed_at: record.completed_at || null,
     title: record.action_title || "Reg 44 action",
-    summary:
-      record.action_description ||
-      "Reg 44 action recorded.",
+    summary: record.action_description || "Reg 44 action recorded.",
     record_type: "reg44_action",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -927,12 +941,16 @@ function renderStatCard(label, value, hint = "") {
     <article class="overview-stat-card">
       <span class="overview-stat-label">${safeText(label)}</span>
       <strong>${safeText(value)}</strong>
-      ${hint ? `<div class="overview-stat-subtle">${safeText(hint)}</div>` : ""}
+      ${
+        hint
+          ? `<div class="overview-stat-subtle">${safeText(hint)}</div>`
+          : ""
+      }
     </article>
   `;
 }
 
-function renderSection(title, content) {
+function renderPanelSection(title, content) {
   return `
     <section class="overview-panel-section">
       <div class="overview-panel-section-head">
@@ -978,9 +996,17 @@ function renderCard(item = {}) {
       <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
         <div>
           <div class="record-card-title">${safeText(item.title || "Record")}</div>
-          <div class="record-card-meta">${safeText(formatDateTime(primaryDate, "No date"))}</div>
+          <div class="record-card-meta">${safeText(
+            formatDateTime(primaryDate, "No date")
+          )}</div>
         </div>
-        ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+        ${
+          status
+            ? `<span class="${badgeClass(status)}">${safeText(
+                titleCase(status)
+              )}</span>`
+            : ""
+        }
       </div>
 
       <div class="record-card-body">
@@ -992,7 +1018,9 @@ function renderCard(item = {}) {
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Priority</div>
-                  <div class="details-grid-value">${safeText(titleCase(item.priority))}</div>
+                  <div class="details-grid-value">${safeText(
+                    titleCase(item.priority)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1003,7 +1031,9 @@ function renderCard(item = {}) {
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Due date</div>
-                  <div class="details-grid-value">${safeText(formatDate(item.due_date))}</div>
+                  <div class="details-grid-value">${safeText(
+                    formatDate(item.due_date)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1014,7 +1044,9 @@ function renderCard(item = {}) {
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Overall score</div>
-                  <div class="details-grid-value">${safeText(toNumber(item.overall_score).toFixed(1))}</div>
+                  <div class="details-grid-value">${safeText(
+                    toNumber(item.overall_score).toFixed(1)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1025,7 +1057,9 @@ function renderCard(item = {}) {
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Confidence</div>
-                  <div class="details-grid-value">${safeText(toNumber(item.confidence_score).toFixed(1))}</div>
+                  <div class="details-grid-value">${safeText(
+                    toNumber(item.confidence_score).toFixed(1)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1036,7 +1070,9 @@ function renderCard(item = {}) {
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Section</div>
-                  <div class="details-grid-value">${safeText(item.section_name)}</div>
+                  <div class="details-grid-value">${safeText(
+                    item.section_name
+                  )}</div>
                 </div>
               `
               : ""
@@ -1047,7 +1083,9 @@ function renderCard(item = {}) {
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Owner</div>
-                  <div class="details-grid-value">User #${safeText(item.owner_user_id)}</div>
+                  <div class="details-grid-value">User #${safeText(
+                    item.owner_user_id
+                  )}</div>
                 </div>
               `
               : ""
@@ -1210,13 +1248,23 @@ function renderTimeline(items = []) {
 
           return `
             <article class="timeline-item">
-              <div class="timeline-item-date">${safeText(formatDateTime(dateValue, "No date"))}</div>
+              <div class="timeline-item-date">${safeText(
+                formatDateTime(dateValue, "No date")
+              )}</div>
               <div class="timeline-item-body">
                 <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
                   <strong>${safeText(item.title || "Record")}</strong>
-                  ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+                  ${
+                    status
+                      ? `<span class="${badgeClass(status)}">${safeText(
+                          titleCase(status)
+                        )}</span>`
+                      : ""
+                  }
                 </div>
-                <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
+                <div class="timeline-item-summary">${safeText(
+                  item.summary || ""
+                )}</div>
               </div>
             </article>
           `;
@@ -1270,7 +1318,7 @@ function renderWorkspace(payload) {
 
       <div class="overview-grid">
         <div>
-          ${renderSection(
+          ${renderPanelSection(
             "Urgent inspection actions",
             renderCardList(
               urgentInspectionActions,
@@ -1279,7 +1327,7 @@ function renderWorkspace(payload) {
             )
           )}
 
-          ${renderSection(
+          ${renderPanelSection(
             "Open lines of enquiry",
             renderCardList(
               openLinesOfEnquiry,
@@ -1288,7 +1336,7 @@ function renderWorkspace(payload) {
             )
           )}
 
-          ${renderSection(
+          ${renderPanelSection(
             "Overdue compliance items",
             renderCardList(
               overdueCompliance,
@@ -1297,16 +1345,13 @@ function renderWorkspace(payload) {
             )
           )}
 
-          ${renderSection("Quality timeline", renderTimeline(recentTimeline))}
+          ${renderPanelSection("Quality timeline", renderTimeline(recentTimeline))}
         </div>
 
         <aside>
-          ${renderSection(
-            "Needs attention",
-            renderPriorityList(priorityItems)
-          )}
+          ${renderPanelSection("Needs attention", renderPriorityList(priorityItems))}
 
-          ${renderSection(
+          ${renderPanelSection(
             "Open quality audit actions",
             renderCardList(
               openQualityActions,
@@ -1315,7 +1360,7 @@ function renderWorkspace(payload) {
             )
           )}
 
-          ${renderSection(
+          ${renderPanelSection(
             "Reg 44 open actions",
             renderCardList(
               reg44OpenActions,
@@ -1324,7 +1369,7 @@ function renderWorkspace(payload) {
             )
           )}
 
-          ${renderSection(
+          ${renderPanelSection(
             "Reg 45 open actions",
             renderCardList(
               reg45OpenActions,
@@ -1333,7 +1378,7 @@ function renderWorkspace(payload) {
             )
           )}
 
-          ${renderSection(
+          ${renderPanelSection(
             "Manager review queue",
             renderCardList(
               managerReviewItems,
@@ -1342,15 +1387,25 @@ function renderWorkspace(payload) {
             )
           )}
 
-          ${latestAudit.length
-            ? renderSection("Latest quality audit", renderCardList(latestAudit, "", ""))
-            : ""}
+          ${
+            latestAudit.length
+              ? renderPanelSection(
+                  "Latest quality audit",
+                  renderCardList(latestAudit, "", "")
+                )
+              : ""
+          }
 
-          ${latestInspection.length
-            ? renderSection("Latest inspection readiness", renderCardList(latestInspection, "", ""))
-            : ""}
+          ${
+            latestInspection.length
+              ? renderPanelSection(
+                  "Latest inspection readiness",
+                  renderCardList(latestInspection, "", "")
+                )
+              : ""
+          }
 
-          ${renderSection(
+          ${renderPanelSection(
             "Recent findings and concerns",
             renderCardList(
               recentFindings,
@@ -1405,18 +1460,18 @@ async function fetchAll(homeId) {
     qualityAudits: pickItems(qualityAuditsRes, ["quality_audits", "items"]).map(
       mapQualityAudit
     ),
-    qualityAuditFindings: pickItems(
-      qualityAuditFindingsRes,
-      ["quality_audit_findings", "items"]
-    ).map(mapQualityAuditFinding),
-    qualityAuditActions: pickItems(
-      qualityAuditActionsRes,
-      ["quality_audit_actions", "items"]
-    ).map(mapQualityAuditAction),
-    complianceItems: pickItems(
-      complianceItemsRes,
-      ["compliance_items", "items"]
-    ).map(mapComplianceItem),
+    qualityAuditFindings: pickItems(qualityAuditFindingsRes, [
+      "quality_audit_findings",
+      "items",
+    ]).map(mapQualityAuditFinding),
+    qualityAuditActions: pickItems(qualityAuditActionsRes, [
+      "quality_audit_actions",
+      "items",
+    ]).map(mapQualityAuditAction),
+    complianceItems: pickItems(complianceItemsRes, [
+      "compliance_items",
+      "items",
+    ]).map(mapComplianceItem),
     reg44Visits: pickItems(reg44VisitsRes, ["reg44_visits", "items"]).map(
       mapReg44Visit
     ),
@@ -1432,30 +1487,30 @@ async function fetchAll(homeId) {
     reg45Actions: pickItems(reg45ActionsRes, ["reg45_actions", "items"]).map(
       mapReg45Action
     ),
-    inspectionScores: pickItems(
-      inspectionScoresRes,
-      ["inspection_scores", "items"]
-    ).map(mapInspectionScore),
-    inspectionSectionScores: pickItems(
-      inspectionSectionScoresRes,
-      ["inspection_section_scores", "items"]
-    ).map(mapInspectionSectionScore),
-    inspectionReasons: pickItems(
-      inspectionReasonsRes,
-      ["inspection_score_reasons", "items"]
-    ).map(mapInspectionReason),
-    inspectionLines: pickItems(
-      inspectionLinesRes,
-      ["inspection_lines_of_enquiry", "items"]
-    ).map(mapInspectionLineOfEnquiry),
-    inspectionActions: pickItems(
-      inspectionActionsRes,
-      ["inspection_improvement_actions", "items"]
-    ).map(mapInspectionAction),
-    managerReviewQueue: pickItems(
-      managerReviewQueueRes,
-      ["manager_review_queue", "items"]
-    ).map(mapManagerReviewRecord),
+    inspectionScores: pickItems(inspectionScoresRes, [
+      "inspection_scores",
+      "items",
+    ]).map(mapInspectionScore),
+    inspectionSectionScores: pickItems(inspectionSectionScoresRes, [
+      "inspection_section_scores",
+      "items",
+    ]).map(mapInspectionSectionScore),
+    inspectionReasons: pickItems(inspectionReasonsRes, [
+      "inspection_score_reasons",
+      "items",
+    ]).map(mapInspectionReason),
+    inspectionLines: pickItems(inspectionLinesRes, [
+      "inspection_lines_of_enquiry",
+      "items",
+    ]).map(mapInspectionLineOfEnquiry),
+    inspectionActions: pickItems(inspectionActionsRes, [
+      "inspection_improvement_actions",
+      "items",
+    ]).map(mapInspectionAction),
+    managerReviewQueue: pickItems(managerReviewQueueRes, [
+      "manager_review_queue",
+      "items",
+    ]).map(mapManagerReviewRecord),
   };
 }
 
@@ -1528,14 +1583,17 @@ function buildManagerReviewItems(data) {
 }
 
 function buildLatestAudit(data) {
-  return sortNewest(data.qualityAudits, ["audit_date", "created_at", "updated_at"]).slice(0, 1);
+  return sortNewest(data.qualityAudits, ["audit_date", "created_at", "updated_at"]).slice(
+    0,
+    1
+  );
 }
 
 function buildLatestInspection(data) {
-  return sortNewest(
-    data.inspectionScores,
-    ["period_end", "created_at", "updated_at"]
-  ).slice(0, 1);
+  return sortNewest(data.inspectionScores, ["period_end", "created_at", "updated_at"]).slice(
+    0,
+    1
+  );
 }
 
 function buildUrgentInspectionActions(data) {
@@ -1564,11 +1622,7 @@ function buildOpenLinesOfEnquiry(data) {
 
 function buildRecentFindings(data) {
   return sortNewest(
-    [
-      ...data.qualityAuditFindings,
-      ...data.reg44Findings,
-      ...data.inspectionReasons,
-    ],
+    [...data.qualityAuditFindings, ...data.reg44Findings, ...data.inspectionReasons],
     ["created_at", "updated_at"]
   ).slice(0, 10);
 }
@@ -1582,7 +1636,9 @@ function buildPriorityItems(data) {
       items.push({
         title: item.title || "Inspection action",
         summary: item.due_date
-          ? `${item.summary || "Inspection action open."} Due ${formatDate(item.due_date)}`
+          ? `${item.summary || "Inspection action open."} Due ${formatDate(
+              item.due_date
+            )}`
           : item.summary || "Inspection action open.",
       });
     });
@@ -1629,7 +1685,8 @@ function buildPriorityItems(data) {
   if (!items.length) {
     items.push({
       title: "No major quality pressure",
-      summary: "Quality and readiness are not currently surfacing urgent issues.",
+      summary:
+        "Quality and readiness are not currently surfacing urgent issues.",
     });
   }
 
@@ -1653,7 +1710,8 @@ function buildTimeline(data) {
         ...data.inspectionActions,
         ...data.managerReviewQueue,
       ],
-      (item) => `${item.record_type}:${item.id}:${item.title || ""}:${item.created_at || ""}`
+      (item) =>
+        `${item.record_type}:${item.id}:${item.title || ""}:${item.created_at || ""}`
     ),
     [
       "due_date",
@@ -1721,6 +1779,10 @@ function renderErrorState(message) {
 
 /* -------------------------------- public -------------------------------- */
 
+export async function loadQualityDashboard() {
+  return loadCurrentView();
+}
+
 export async function loadQuality() {
   return loadCurrentView();
 }
@@ -1782,7 +1844,9 @@ export async function loadCurrentView() {
       today: data.isFallback
         ? `${overdueCompliance.length} quality issues • preview mode`
         : latestInspectionRecord
-        ? `${safeText(titleCase(latestInspectionRecord.overall_band || "unknown"))} readiness`
+        ? `${safeText(
+            titleCase(latestInspectionRecord.overall_band || "unknown")
+          )} readiness`
         : `${overdueCompliance.length} compliance items overdue`,
       nextEvent: nextPriorityAction?.due_date
         ? `Due ${formatDate(nextPriorityAction.due_date)}`
@@ -1811,7 +1875,8 @@ export async function loadCurrentView() {
   } catch (error) {
     console.error("[quality] load failed", error);
     renderErrorState(
-      error?.message || "Something went wrong while loading quality and readiness records."
+      error?.message ||
+        "Something went wrong while loading quality and readiness records."
     );
   }
 }
