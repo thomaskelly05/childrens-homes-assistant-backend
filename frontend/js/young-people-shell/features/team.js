@@ -3,6 +3,14 @@ import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
+
+/* -------------------------------- helpers -------------------------------- */
+
+const SAFE_EMPTY = Object.freeze({ items: [] });
 
 function getHomeId() {
   return (
@@ -72,6 +80,8 @@ function getStatusTone(status = "") {
       "non_compliant",
       "failed",
       "expired",
+      "inactive",
+      "suspended",
     ].includes(normalised)
   ) {
     return "danger";
@@ -93,6 +103,9 @@ function getStatusTone(status = "") {
       "working_remotely",
       "visiting_professional",
       "due",
+      "scheduled",
+      "booked",
+      "pending",
     ].includes(normalised)
   ) {
     return "warning";
@@ -109,6 +122,9 @@ function getStatusTone(status = "") {
       "complete",
       "completed",
       "up_to_date",
+      "current",
+      "passed",
+      "recorded",
     ].includes(normalised)
   ) {
     return "success";
@@ -145,7 +161,11 @@ function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue || Number.POSITIVE_INFINITY) - toTime(bValue || Number.POSITIVE_INFINITY);
+
+    const aTime = aValue ? toTime(aValue) : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? toTime(bValue) : Number.POSITIVE_INFINITY;
+
+    return aTime - bTime;
   });
 }
 
@@ -153,6 +173,7 @@ function hasUsableData(data) {
   if (!data || typeof data !== "object") return false;
   if (Array.isArray(data.items) && data.items.length > 0) return true;
   if (Array.isArray(data.staff) && data.staff.length > 0) return true;
+  if (Array.isArray(data.team) && data.team.length > 0) return true;
   if (Array.isArray(data.supervisions) && data.supervisions.length > 0) return true;
   if (Array.isArray(data.staff_supervisions) && data.staff_supervisions.length > 0) return true;
   if (Array.isArray(data.staff_supervision_sessions) && data.staff_supervision_sessions.length > 0) return true;
@@ -227,8 +248,6 @@ function renderRecordRows(items = [], options = {}) {
     summaryBuilder = null,
     metaBuilder = null,
     statusBuilder = null,
-    recordType = "",
-    clickable = true,
   } = options;
 
   if (!items.length) {
@@ -253,24 +272,9 @@ function renderRecordRows(items = [], options = {}) {
             : item.status || "recorded";
 
           const tone = getStatusTone(rawStatus);
-          const rowId = item?.id || "";
-          const interactiveAttrs =
-            clickable && rowId && (recordType || item.record_type)
-              ? `
-                data-open-record="true"
-                data-record-id="${safeText(rowId)}"
-                data-record-type="${safeText(recordType || item.record_type || "")}"
-                data-title="${safeText(title)}"
-                role="button"
-                tabindex="0"
-              `
-              : "";
 
           return `
-            <article
-              class="record-row ${clickable ? "" : "record-row--static"}"
-              ${interactiveAttrs}
-            >
+            <article class="record-row record-row--static">
               <div class="record-row-main">
                 <div class="record-row-title">${safeText(title)}</div>
                 <div class="record-row-summary">${safeText(summary)}</div>
@@ -312,32 +316,37 @@ function renderPriorityList(items = []) {
   `;
 }
 
+/* -------------------------------- mappers -------------------------------- */
+
 function normaliseTeamItems(data = {}) {
-  return toArray(data.items, [data.staff, data.team, data.records]).map((item) => ({
-    id: item.id ?? item.staff_id ?? null,
-    full_name:
-      item.full_name ||
-      [item.first_name, item.last_name].filter(Boolean).join(" ") ||
-      item.staff_member ||
-      "Staff member",
-    staff_member:
-      item.full_name ||
-      [item.first_name, item.last_name].filter(Boolean).join(" ") ||
-      item.staff_member ||
-      "Staff member",
-    role: item.role || item.job_role || item.role_title || "Team member",
-    status:
-      item.status ||
-      (item.active === false ? "inactive" : item.active === true ? "active" : "active"),
-    summary:
-      item.summary ||
-      item.notes ||
-      item.employment_status ||
-      `${item.role || item.role_title || "Team member"} profile recorded.`,
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-    record_type: "team",
-  }));
+  return toArray(data.items, [data.staff, data.team, data.records]).map(
+    (item) => ({
+      id: item.id ?? item.staff_id ?? null,
+      full_name:
+        item.full_name ||
+        [item.first_name, item.last_name].filter(Boolean).join(" ") ||
+        item.staff_member ||
+        "Staff member",
+      staff_member:
+        item.full_name ||
+        [item.first_name, item.last_name].filter(Boolean).join(" ") ||
+        item.staff_member ||
+        "Staff member",
+      role: item.role || item.job_role || item.role_title || "Team member",
+      status:
+        item.status ||
+        item.employment_status ||
+        (item.active === false ? "inactive" : item.active === true ? "active" : "active"),
+      summary:
+        item.summary ||
+        item.notes ||
+        item.employment_status ||
+        `${item.role || item.role_title || "Team member"} profile recorded.`,
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+      record_type: "team",
+    })
+  );
 }
 
 function normaliseSupervisionItems(data = {}) {
@@ -417,6 +426,8 @@ function normaliseCommunicationItems(data = {}) {
   }));
 }
 
+/* -------------------------------- models -------------------------------- */
+
 function buildStats(teamItems, supervisionItems, documentItems) {
   return {
     total: teamItems.length,
@@ -432,10 +443,14 @@ function buildStats(teamItems, supervisionItems, documentItems) {
         "agency",
         "working_remotely",
         "visiting_professional",
+        "vacant",
+        "vacancy",
       ].includes(normaliseStatus(item.status))
     ).length,
     supervisionGaps: supervisionItems.filter((item) =>
-      ["due", "due_soon", "overdue", "review_due"].includes(normaliseStatus(item.status))
+      ["due", "due_soon", "overdue", "review_due"].includes(
+        normaliseStatus(item.status)
+      )
     ).length,
     documentGaps: documentItems.filter((item) =>
       ["missing", "review_due", "due_soon", "overdue", "expired", "incomplete"].includes(
@@ -445,12 +460,14 @@ function buildStats(teamItems, supervisionItems, documentItems) {
   };
 }
 
-function buildPriorityItems(supervisionItems, documentItems, teamItems) {
+function buildPriorityItems(teamItems, supervisionItems, documentItems) {
   const items = [];
 
   supervisionItems
     .filter((item) =>
-      ["overdue", "due_soon", "review_due", "due"].includes(normaliseStatus(item.status))
+      ["overdue", "due_soon", "review_due", "due"].includes(
+        normaliseStatus(item.status)
+      )
     )
     .slice(0, 2)
     .forEach((item) => {
@@ -487,6 +504,8 @@ function buildPriorityItems(supervisionItems, documentItems, teamItems) {
       "agency",
       "working_remotely",
       "visiting_professional",
+      "vacant",
+      "vacancy",
     ].includes(normaliseStatus(item.status))
   ).length;
 
@@ -661,6 +680,8 @@ function buildStaticTeamModel(homeId) {
   };
 }
 
+/* -------------------------------- render -------------------------------- */
+
 function renderTeamPage({
   stats,
   teamItems,
@@ -698,8 +719,6 @@ function renderTeamPage({
 
             ${renderRecordRows(teamItems, {
               emptyMessage: "No team records found.",
-              recordType: "team",
-              clickable: false,
               titleBuilder: (item) => item.full_name || item.staff_member || "Staff member",
               summaryBuilder: (item) =>
                 item.summary || `${item.role || "Team member"} status recorded.`,
@@ -717,8 +736,6 @@ function renderTeamPage({
 
             ${renderRecordRows(supervisionItems.slice(0, 8), {
               emptyMessage: "No supervision items found.",
-              recordType: "supervision",
-              clickable: true,
               titleBuilder: (item) => item.staff_member || "Supervision item",
               summaryBuilder: (item) => item.summary || "Supervision record.",
               metaBuilder: (item) =>
@@ -751,8 +768,6 @@ function renderTeamPage({
 
             ${renderRecordRows(documentItems.slice(0, 8), {
               emptyMessage: "No document readiness issues found.",
-              recordType: "document",
-              clickable: true,
               titleBuilder: (item) =>
                 item.title || item.document_type || "Document item",
               summaryBuilder: (item) =>
@@ -776,8 +791,6 @@ function renderTeamPage({
 
             ${renderRecordRows(communicationItems.slice(0, 6), {
               emptyMessage: "No recent communications found.",
-              recordType: "communication",
-              clickable: true,
               titleBuilder: (item) => item.title || "Communication",
               summaryBuilder: (item) => item.summary || "Communication logged.",
               metaBuilder: (item) =>
@@ -792,6 +805,8 @@ function renderTeamPage({
     </section>
   `;
 }
+
+/* ------------------------------- UI states ------------------------------- */
 
 function renderNoHomeContext() {
   if (!els.viewContent) return;
@@ -848,6 +863,8 @@ function renderErrorState(message) {
     openActions: "Check setup",
   });
 }
+
+/* -------------------------------- fetch -------------------------------- */
 
 async function fetchDataset(homeId) {
   const safe = (url) => apiGet(url).catch(() => null);
@@ -914,6 +931,8 @@ async function fetchDataset(homeId) {
   };
 }
 
+/* -------------------------------- public -------------------------------- */
+
 export async function loadTeam() {
   if (!els.viewContent) return;
 
@@ -968,6 +987,9 @@ export async function loadTeam() {
         model.stats.documentGaps
       )} document gaps`,
     });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
     console.error("[team] load failed", error);
     renderErrorState(error?.message || "Failed to load team data.");
