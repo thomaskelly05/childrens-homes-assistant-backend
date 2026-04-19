@@ -194,6 +194,7 @@ function getSupportedRecordType(type = "") {
       "operational_action",
       "shift_log",
       "operations_log",
+      "inventory_item",
     ].includes(normalised)
   ) {
     return normalised;
@@ -532,8 +533,9 @@ function mapAllowancePayment(record = {}) {
     received_confirmed: toBool(record.received_confirmed),
     notes: record.notes || "",
     title: "Allowance payment",
-    summary:
-      `£${toNumber(record.amount, 0).toFixed(2)} ${record.payment_method || ""}`.trim(),
+    summary: `£${toNumber(record.amount, 0).toFixed(2)} ${
+      record.payment_method || ""
+    }`.trim(),
     record_type: "allowance_payment",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
@@ -784,6 +786,18 @@ function buildFallbackData(homeId) {
         },
         "inventory_item"
       ),
+      mapInventoryItem(
+        {
+          id: "inv-2",
+          home_id: homeId,
+          item_name: "Lounge lamp",
+          category: "Furnishings",
+          status: "review_due",
+          condition_text: "Needs replacement due to damage.",
+          replacement_due_date: plusDays(3),
+        },
+        "home_asset"
+      ),
     ],
 
     purchaseRequests: [
@@ -872,7 +886,8 @@ function buildFallbackData(homeId) {
           shift_date: minusDays(1, 20),
           shift_type: "evening",
           staffing_summary: "Fully staffed.",
-          handover_notes: "One maintenance issue to monitor and school transport completed safely.",
+          handover_notes:
+            "One maintenance issue to monitor and school transport completed safely.",
           status: "completed",
         },
         "shift_log"
@@ -946,7 +961,11 @@ function renderCard(item = {}) {
           <div class="record-card-title">${safeText(item.title || "Record")}</div>
           <div class="record-card-meta">${safeText(formatDateTime(primaryDate, "No date"))}</div>
         </div>
-        ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+        ${
+          status
+            ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>`
+            : ""
+        }
       </div>
 
       <div class="record-card-body">
@@ -1009,11 +1028,18 @@ function renderCard(item = {}) {
           }
 
           ${
-            item.target_completion_date || item.due_date || item.next_due_date
+            item.target_completion_date || item.due_date || item.next_due_date || item.replacement_due_date
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Due</div>
-                  <div class="details-grid-value">${safeText(formatDate(item.target_completion_date || item.due_date || item.next_due_date))}</div>
+                  <div class="details-grid-value">${safeText(
+                    formatDate(
+                      item.target_completion_date ||
+                        item.due_date ||
+                        item.next_due_date ||
+                        item.replacement_due_date
+                    )
+                  )}</div>
                 </div>
               `
               : ""
@@ -1024,7 +1050,9 @@ function renderCard(item = {}) {
               ? `
                 <div class="details-grid-item">
                   <div class="details-grid-label">Amount</div>
-                  <div class="details-grid-value">£${safeText(toNumber(item.amount, 0).toFixed(2))}</div>
+                  <div class="details-grid-value">£${safeText(
+                    toNumber(item.amount, 0).toFixed(2)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1148,11 +1176,19 @@ function renderTimeline(items = []) {
 
           return `
             <article class="timeline-item">
-              <div class="timeline-item-date">${safeText(formatDateTime(dateValue, "No date"))}</div>
+              <div class="timeline-item-date">${safeText(
+                formatDateTime(dateValue, "No date")
+              )}</div>
               <div class="timeline-item-body">
                 <div class="timeline-item-title-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
                   <strong>${safeText(item.title || "Record")}</strong>
-                  ${status ? `<span class="${badgeClass(status)}">${safeText(titleCase(status))}</span>` : ""}
+                  ${
+                    status
+                      ? `<span class="${badgeClass(status)}">${safeText(
+                          titleCase(status)
+                        )}</span>`
+                      : ""
+                  }
                 </div>
                 <div class="timeline-item-summary">${safeText(item.summary || "")}</div>
               </div>
@@ -1174,6 +1210,7 @@ function renderWorkspace(payload) {
     dueVehicleChecks,
     recentFinance,
     recentShiftLogs,
+    inventoryItems,
     timeline,
     isFallback,
   } = payload;
@@ -1260,6 +1297,15 @@ function renderWorkspace(payload) {
               dueVehicleChecks,
               "No vehicle checks due",
               "There are no due or open vehicle check concerns."
+            )
+          )}
+
+          ${renderSection(
+            "Inventory and assets",
+            renderCardList(
+              inventoryItems,
+              "No inventory issues",
+              "No inventory or asset records are currently surfacing as a concern."
             )
           )}
 
@@ -1533,6 +1579,16 @@ function buildDueVehicleChecks(data) {
   ).slice(0, 8);
 }
 
+function buildInventoryItems(data) {
+  return sortSoonest(
+    data.inventory.filter((item) => {
+      const status = lower(item.status);
+      return ["review_due", "warning", "overdue", "missing", "incomplete"].includes(status);
+    }),
+    ["replacement_due_date", "updated_at", "created_at"]
+  ).slice(0, 8);
+}
+
 function buildRecentFinance(data) {
   return sortNewest(
     [...data.purchaseRequests, ...data.pettyCash, ...data.allowancePayments],
@@ -1622,6 +1678,7 @@ export async function loadOperations() {
     const failedEnvironmentChecks = buildFailedEnvironmentChecks(data);
     const visitorActivity = buildVisitorActivity(data);
     const dueVehicleChecks = buildDueVehicleChecks(data);
+    const inventoryItems = buildInventoryItems(data);
     const recentFinance = buildRecentFinance(data);
     const recentShiftLogs = buildRecentShiftLogs(data);
     const timeline = buildTimeline(data);
@@ -1639,6 +1696,7 @@ export async function loadOperations() {
       failedEnvironmentChecks,
       visitorActivity,
       dueVehicleChecks,
+      inventoryItems,
       recentFinance,
       recentShiftLogs,
       timeline,
@@ -1688,4 +1746,8 @@ export async function loadOperations() {
       openActions: "Check operations routes",
     });
   }
+}
+
+export async function loadCurrentView() {
+  return loadOperations();
 }
