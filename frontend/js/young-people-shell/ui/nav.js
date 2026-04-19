@@ -57,60 +57,6 @@ import { loadOnboarding } from "../features/onboarding.js";
 import { loadNotifications } from "../features/notifications.js";
 import { loadRota } from "../features/rota.js";
 
-const PLACEHOLDER_LOADER = async () => {
-  const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
-  await renderPlaceholderFeaturePage();
-};
-
-const SECTION_LOADERS = {
-  workspace: loadWorkspace,
-  overview: loadOverview,
-  admission: PLACEHOLDER_LOADER,
-  profile: loadProfile,
-  timeline: loadTimeline,
-  handover: loadHandover,
-  "daily-life": PLACEHOLDER_LOADER,
-  health: loadHealth,
-  medication: PLACEHOLDER_LOADER,
-  education: loadEducation,
-  family: loadFamily,
-  calendar: loadCalendar,
-  therapy: loadTherapy,
-  risk: PLACEHOLDER_LOADER,
-  safeguarding: PLACEHOLDER_LOADER,
-  "missing-from-care": PLACEHOLDER_LOADER,
-  readiness: loadReadiness,
-  reviews: PLACEHOLDER_LOADER,
-  reports: loadReports,
-  transition: PLACEHOLDER_LOADER,
-  "leaving-care": PLACEHOLDER_LOADER,
-  documents: loadDocuments,
-  communication: loadCommunication,
-  manager: loadManager,
-
-  "home-dashboard": loadHomeDashboard,
-  operations: PLACEHOLDER_LOADER,
-  team: loadTeam,
-  rota: loadRota,
-  "staff-profile": loadStaffProfile,
-  onboarding: loadOnboarding,
-  supervision: loadSupervision,
-  "training-centre": PLACEHOLDER_LOADER,
-  compliance: loadCompliance,
-  "health-safety": PLACEHOLDER_LOADER,
-  maintenance: PLACEHOLDER_LOADER,
-  notifications: loadNotifications,
-  quality: loadQualityDashboard,
-  "ofsted-readiness": loadReadiness,
-  policies: PLACEHOLDER_LOADER,
-
-  "provider-overview": PLACEHOLDER_LOADER,
-  "quality-audits": PLACEHOLDER_LOADER,
-  reg44: PLACEHOLDER_LOADER,
-  reg45: PLACEHOLDER_LOADER,
-  "inspection-readiness": loadReadiness,
-};
-
 const ICON_MAP = {
   home: "⌂",
   "layout-dashboard": "◫",
@@ -160,7 +106,9 @@ let scopeSwitchBound = false;
 let workspaceMenusBound = false;
 let overlayDismissBound = false;
 let workspaceMenuLinksBound = false;
-let loadingSectionPromise = null;
+
+let currentLoadToken = 0;
+let currentLoadPromise = null;
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -183,12 +131,25 @@ function getCurrentSection() {
   );
 }
 
-function getSectionLabel(item) {
-  return item?.label || item?.id || "";
+function getSectionConfig(sectionId) {
+  return (NAV_SECTIONS || []).find((item) => item.id === sectionId) || null;
 }
 
-function getSectionDescription(item) {
-  return item?.description || getSectionLabel(item);
+function getSectionLabel(itemOrId) {
+  if (!itemOrId) return "";
+  if (typeof itemOrId === "string") {
+    return getSectionConfig(itemOrId)?.label || itemOrId;
+  }
+  return itemOrId.label || itemOrId.id || "";
+}
+
+function getSectionDescription(itemOrId) {
+  if (!itemOrId) return "";
+  if (typeof itemOrId === "string") {
+    const found = getSectionConfig(itemOrId);
+    return found?.description || found?.label || itemOrId;
+  }
+  return itemOrId.description || itemOrId.label || itemOrId.id || "";
 }
 
 function getGroupTitle(group) {
@@ -228,9 +189,7 @@ function ensureValidCurrentSection() {
   }
 
   const fallback = getDefaultSectionForScope(scope);
-  setCurrentSection(fallback);
-  state.activeSection = fallback;
-  state.currentView = fallback;
+  updateSectionState(fallback);
   return fallback;
 }
 
@@ -254,6 +213,105 @@ function getScopedNavSections() {
 function getMobileBottomSections() {
   const scope = getCurrentScope();
   return MOBILE_BOTTOM_BY_SCOPE[scope] || MOBILE_BOTTOM_BY_SCOPE.child;
+}
+
+async function runPlaceholderLoader(options = {}) {
+  const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
+
+  const section = options.section || getCurrentSection();
+  const config = getSectionConfig(section);
+
+  await renderPlaceholderFeaturePage({
+    title: config?.label || "Coming soon",
+    description:
+      config?.description ||
+      "This area has been scaffolded and is ready for live feature wiring next.",
+    section,
+    scope: getCurrentScope(),
+  });
+}
+
+const SECTION_LOADERS = {
+  workspace: loadWorkspace,
+  overview: loadOverview,
+  admission: runPlaceholderLoader,
+  profile: loadProfile,
+  timeline: loadTimeline,
+  handover: loadHandover,
+  "daily-life": runPlaceholderLoader,
+  health: loadHealth,
+  medication: runPlaceholderLoader,
+  education: loadEducation,
+  family: loadFamily,
+  calendar: loadCalendar,
+  therapy: loadTherapy,
+  risk: runPlaceholderLoader,
+  safeguarding: runPlaceholderLoader,
+  "missing-from-care": runPlaceholderLoader,
+  readiness: loadReadiness,
+  reviews: runPlaceholderLoader,
+  reports: loadReports,
+  transition: runPlaceholderLoader,
+  "leaving-care": runPlaceholderLoader,
+  documents: loadDocuments,
+  communication: loadCommunication,
+  manager: loadManager,
+
+  "home-dashboard": loadHomeDashboard,
+  operations: runPlaceholderLoader,
+  team: loadTeam,
+  rota: loadRota,
+  "staff-profile": loadStaffProfile,
+  onboarding: loadOnboarding,
+  supervision: loadSupervision,
+  "training-centre": runPlaceholderLoader,
+  compliance: loadCompliance,
+  "health-safety": runPlaceholderLoader,
+  maintenance: runPlaceholderLoader,
+  notifications: loadNotifications,
+  quality: loadQualityDashboard,
+  "ofsted-readiness": loadReadiness,
+  policies: runPlaceholderLoader,
+
+  "provider-overview": runPlaceholderLoader,
+  "quality-audits": runPlaceholderLoader,
+  reg44: runPlaceholderLoader,
+  reg45: runPlaceholderLoader,
+  "inspection-readiness": loadReadiness,
+};
+
+function updateAppShellDataset() {
+  const app = document.getElementById("app");
+  if (!app) return;
+
+  const scope = getCurrentScope();
+  const section = getCurrentSection();
+
+  app.dataset.scope = scope;
+  app.dataset.section = section;
+  app.dataset.assistantScopeType =
+    scope === "child"
+      ? "child"
+      : scope === "home"
+      ? "home"
+      : "quality";
+
+  app.dataset.youngPersonId = state.youngPersonId || "";
+  app.dataset.homeId =
+    state.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    "";
+  app.dataset.providerId =
+    state.providerId ||
+    state.currentUser?.provider_id ||
+    state.currentUser?.providerId ||
+    "";
+  app.dataset.userRole = state.userRole || "staff";
+  app.dataset.allowedHomeIds = JSON.stringify(
+    Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
+  );
 }
 
 function renderNavItem(item, { compact = false } = {}) {
@@ -381,6 +439,7 @@ function renderNavigation() {
   }
 
   syncDesktopSidebarChrome();
+  updateAppShellDataset();
 }
 
 function showWorkspaceScreen() {
@@ -462,6 +521,7 @@ function updateSectionState(section) {
   setCurrentSection(section);
   state.activeSection = section;
   state.currentView = section;
+  updateAppShellDataset();
 }
 
 function requireChildContext() {
@@ -705,10 +765,17 @@ async function applyScopeChange(scope) {
       ? scope
       : "child";
 
+  closeAllWorkspaceMenus();
+  closeMobileNav();
+
   setCurrentScope(safeScope);
 
   if (safeScope !== "child" && !state.readinessSelectedHomeId) {
-    state.readinessSelectedHomeId = state.homeId || state.currentUser?.home_id || state.currentUser?.homeId || null;
+    state.readinessSelectedHomeId =
+      state.homeId ||
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      null;
   }
 
   ensureValidCurrentSection();
@@ -730,7 +797,7 @@ async function applyScopeChange(scope) {
   showWorkspaceScreen();
   await runAssistantScopeSync();
   renderAssistantControllerPanels();
-  await loadSection(getCurrentSection());
+  await loadSection(getCurrentSection(), { force: true });
 }
 
 export async function loadSection(section, options = {}) {
@@ -739,8 +806,11 @@ export async function loadSection(section, options = {}) {
     ? section
     : getDefaultSectionForScope(scope);
 
-  if (loadingSectionPromise && safeSection === getCurrentSection()) {
-    return loadingSectionPromise;
+  const force = Boolean(options.force);
+  const loadToken = ++currentLoadToken;
+
+  if (!force && currentLoadPromise && safeSection === getCurrentSection()) {
+    return currentLoadPromise;
   }
 
   if (scope === "child" && !requireChildContext()) {
@@ -751,19 +821,26 @@ export async function loadSection(section, options = {}) {
     return;
   }
 
-  const loader = SECTION_LOADERS[safeSection] || PLACEHOLDER_LOADER;
+  const loader = SECTION_LOADERS[safeSection] || runPlaceholderLoader;
 
   updateSectionState(safeSection);
   showWorkspaceScreen();
   paintNavigationChrome();
   clearStatus();
   resetWorkspaceSummaryStrip();
+  closeAllWorkspaceMenus();
 
-  loadingSectionPromise = (async () => {
+  currentLoadPromise = (async () => {
     try {
-      await loader(options);
+      await loader({
+        ...options,
+        section: safeSection,
+        scope,
+      });
+
+      if (loadToken !== currentLoadToken) return;
+
       closeMobileNav();
-      closeAllWorkspaceMenus();
 
       if (isReadinessSection(safeSection)) {
         state.currentView = safeSection;
@@ -771,19 +848,23 @@ export async function loadSection(section, options = {}) {
 
       renderAssistantControllerPanels();
     } catch (error) {
+      if (loadToken !== currentLoadToken) return;
+
       console.error(`[nav] failed loading section "${safeSection}"`, error);
       showError(error?.message || "Failed to load this section.");
       resetWorkspaceSummaryStrip();
     } finally {
-      loadingSectionPromise = null;
+      if (loadToken === currentLoadToken) {
+        currentLoadPromise = null;
+      }
     }
   })();
 
-  return loadingSectionPromise;
+  return currentLoadPromise;
 }
 
 export async function reloadCurrentSection(options = {}) {
-  await loadSection(ensureValidCurrentSection(), options);
+  await loadSection(ensureValidCurrentSection(), { ...options, force: true });
 }
 
 function bindNavButtons() {
@@ -938,6 +1019,8 @@ function bindSearchControls() {
 
       if (typeof currentLoader === "function") {
         await currentLoader({
+          section: getCurrentSection(),
+          scope: getCurrentScope(),
           search: {
             query,
             record_type: recordType,
@@ -1021,7 +1104,7 @@ function bindYoungPersonOpen() {
       clearStatus();
       resetWorkspaceSummaryStrip();
       await runAssistantScopeSync();
-      await loadSection(getCurrentSection());
+      await loadSection(getCurrentSection(), { force: true });
     } catch (error) {
       console.error("[nav] open young person failed", error);
       showError(error?.message || "Unable to open workspace.");
@@ -1134,7 +1217,7 @@ export async function initialiseShellNavigation() {
   try {
     showWorkspaceScreen();
     await runAssistantScopeSync();
-    await loadSection(getCurrentSection());
+    await loadSection(getCurrentSection(), { force: true });
   } catch (error) {
     console.error("[nav] initial section load failed", error);
     showError(error?.message || "Failed to load this section.");
