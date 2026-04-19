@@ -1,6 +1,8 @@
 import importlib
 import logging
 import os
+import time
+import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -70,7 +72,10 @@ class Settings:
                 f"Missing required environment variables: {', '.join(missing)}"
             )
 
-        app_env = os.getenv("APP_ENV", "production").lower()
+        app_env = os.getenv("APP_ENV", "production").strip().lower()
+        if app_env not in {"development", "test", "staging", "production"}:
+            app_env = "production"
+
         is_production = app_env == "production"
 
         allowed_origins = [
@@ -91,6 +96,20 @@ class Settings:
             if host.strip()
         ]
 
+        try:
+            sentry_traces_sample_rate = float(
+                os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")
+            )
+        except ValueError:
+            sentry_traces_sample_rate = 1.0
+
+        try:
+            sentry_profiles_sample_rate = float(
+                os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "1.0")
+            )
+        except ValueError:
+            sentry_profiles_sample_rate = 1.0
+
         return cls(
             app_env=app_env,
             log_level=os.getenv("LOG_LEVEL", "INFO"),
@@ -98,30 +117,34 @@ class Settings:
             openai_api_key=os.environ["OPENAI_API_KEY"],
             database_url=os.environ["DATABASE_URL"],
             sentry_dsn=os.getenv("SENTRY_DSN"),
-            sentry_traces_sample_rate=float(
-                os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")
-            ),
-            sentry_profiles_sample_rate=float(
-                os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "1.0")
-            ),
+            sentry_traces_sample_rate=sentry_traces_sample_rate,
+            sentry_profiles_sample_rate=sentry_profiles_sample_rate,
             app_revision=os.getenv("APP_REVISION"),
             enable_https_redirect=os.getenv(
                 "ENABLE_HTTPS_REDIRECT",
                 "true" if is_production else "false",
-            ).lower() == "true",
+            ).strip().lower() == "true",
             enable_trusted_hosts=os.getenv(
                 "ENABLE_TRUSTED_HOSTS",
                 "true" if is_production else "false",
-            ).lower() == "true",
+            ).strip().lower() == "true",
             allowed_origins=allowed_origins,
             allowed_hosts=allowed_hosts,
         )
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env == "production"
+
+    @property
+    def is_development_like(self) -> bool:
+        return self.app_env in {"development", "test"}
 
 
 settings = Settings.load()
 
 logging.basicConfig(
-    level=settings.log_level.upper(),
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger("indicare.app")
@@ -134,6 +157,7 @@ ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 
 SESSION_COOKIE_NAME = auth_settings.session_cookie_name
+SESSION_SAMESITE = getattr(auth_settings, "cookie_samesite", "lax")
 
 PUBLIC_PREFIXES = (
     "/login",
@@ -235,14 +259,16 @@ ROUTERS = [
 
 
 def configure_sentry() -> None:
-    if settings.sentry_dsn:
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            traces_sample_rate=settings.sentry_traces_sample_rate,
-            profiles_sample_rate=settings.sentry_profiles_sample_rate,
-            environment=settings.app_env,
-            release=settings.app_revision,
-        )
+    if not settings.sentry_dsn:
+        return
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        profiles_sample_rate=settings.sentry_profiles_sample_rate,
+        environment=settings.app_env,
+        release=settings.app_revision,
+    )
 
 
 @asynccontextmanager
@@ -251,7 +277,7 @@ async def lifespan(_: FastAPI):
     init_legal_acceptance_table()
     init_mfa_tables()
     init_passkeys_table()
-    logger.info("IndiCare API started")
+    logger.info("IndiCare API started | env=%s revision=%s", settings.app_env, settings.app_revision)
     try:
         yield
     finally:
@@ -306,6 +332,66 @@ def get_fully_authenticated_user_id_from_request(request: Request) -> int | None
         return None
 
     return token_user_id
+
+
+def get_request_id(request: Request) -> str:
+    existing = getattr(request.state, "request_id", None)
+    if existing:
+        return existing
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    request.state.request_id = request_id
+    return request_id
+
+
+def build_safe_internal_error_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={
+            "ok": False,
+            "error": "internal_server_error",
+            "detail": "Something went wrong.",
+        },
+    )
+
+
+class RequestContextLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = get_request_id(request)
+        start = time.perf_counter()
+
+        try:
+            response = await call_next(request)
+        except Exception:
+            duration_ms = round((time.perf_counter() - start) * 1000, 2)
+            logger.exception(
+                "Request failed | request_id=%s method=%s path=%s duration_ms=%s",
+                request_id,
+                request.method,
+                request.url.path,
+                duration_ms,
+            )
+            raise
+
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
+        user_id = None
+        try:
+            user_id = get_fully_authenticated_user_id_from_request(request)
+        except Exception:
+            user_id = None
+
+        response.headers["X-Request-ID"] = request_id
+
+        logger.info(
+            "Request complete | request_id=%s method=%s path=%s status=%s user_id=%s duration_ms=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            user_id,
+            duration_ms,
+        )
+        return response
 
 
 class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
@@ -373,6 +459,7 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=403,
                 content={
+                    "ok": False,
                     "detail": "MFA setup is required before using the platform.",
                     "code": "mfa_setup_required",
                 },
@@ -384,6 +471,7 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=403,
                 content={
+                    "ok": False,
                     "detail": "MFA verification is required before using the platform.",
                     "code": "mfa_verification_required",
                 },
@@ -560,11 +648,15 @@ def register_health_routes(app: FastAPI) -> None:
                 cur.execute("SELECT 1")
                 cur.fetchone()
             return {"ok": True, "ready": True}
-        except Exception as exc:
+        except Exception:
             logger.exception("Readiness check failed")
             return JSONResponse(
                 status_code=503,
-                content={"ok": False, "ready": False, "error": str(exc)},
+                content={
+                    "ok": False,
+                    "ready": False,
+                    "error": "service_unavailable",
+                },
             )
         finally:
             release_db_connection(conn)
@@ -573,22 +665,32 @@ def register_health_routes(app: FastAPI) -> None:
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
+        request_id = get_request_id(request)
+
         logger.exception(
-            "Unhandled error on %s %s | type=%s | detail=%s",
+            "Unhandled error | request_id=%s method=%s path=%s type=%s detail=%s",
+            request_id,
             request.method,
             request.url.path,
             exc.__class__.__name__,
             str(exc),
         )
-        return JSONResponse(
-            status_code=500,
-            content={
-                "ok": False,
-                "error": "Internal server error",
-                "exception_type": exc.__class__.__name__,
-                "detail": str(exc),
-            },
-        )
+
+        if settings.is_development_like:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "ok": False,
+                    "error": "internal_server_error",
+                    "detail": str(exc),
+                    "exception_type": exc.__class__.__name__,
+                    "request_id": request_id,
+                },
+            )
+
+        response = build_safe_internal_error_response()
+        response.headers["X-Request-ID"] = request_id
+        return response
 
 
 def create_app() -> FastAPI:
@@ -631,11 +733,13 @@ def create_app() -> FastAPI:
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,
-        same_site="lax",
+        same_site=SESSION_SAMESITE,
         https_only=auth_settings.cookie_secure,
         session_cookie="indicare_server_session",
         max_age=auth_settings.cookie_max_age_short,
     )
+
+    app.add_middleware(RequestContextLoggingMiddleware)
 
     for route in ROUTERS:
         include_router(app, route)
