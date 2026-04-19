@@ -86,7 +86,16 @@ function getAccessLevelForScope(scope = getCurrentScope()) {
   if (scope === "home") return "home";
 
   if (scope === "quality") {
-    return role === "ri" || role === "admin" ? "provider" : "home";
+    return [
+      "ri",
+      "responsible_individual",
+      "admin",
+      "administrator",
+      "super_admin",
+      "superadmin",
+    ].includes(role)
+      ? "provider"
+      : "home";
   }
 
   return "home";
@@ -401,7 +410,7 @@ function addAssistantPlaceholder() {
 }
 
 function updateLastAssistantStreamingText(text) {
-  const safeText =
+  const safeValue =
     typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
 
   const lists = [
@@ -414,7 +423,7 @@ function updateLastAssistantStreamingText(text) {
 
     const last = list[list.length - 1];
     if (last?.role === "assistant" && last?._streaming) {
-      last.content = safeText;
+      last.content = safeValue;
     }
   });
 
@@ -422,7 +431,7 @@ function updateLastAssistantStreamingText(text) {
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  const safeText =
+  const safeValue =
     typeof text === "string"
       ? text
       : extractStreamText(text) || "No assistant reply returned.";
@@ -437,7 +446,7 @@ function replaceLastAssistantPlaceholder(text) {
       list.push(
         cloneMessageEntry({
           role: "assistant",
-          content: safeText,
+          content: safeValue,
         })
       );
       return;
@@ -445,13 +454,13 @@ function replaceLastAssistantPlaceholder(text) {
 
     const last = list[list.length - 1];
     if (last?.role === "assistant" && last?._streaming) {
-      last.content = safeText;
+      last.content = safeValue;
       last._streaming = false;
     } else {
       list.push(
         cloneMessageEntry({
           role: "assistant",
-          content: safeText,
+          content: safeValue,
         })
       );
     }
@@ -808,6 +817,11 @@ function assistantPromptsForView(view, scope = getCurrentScope()) {
       "Summarise therapeutic service activity across the home.",
       "What recommendations need operational follow-up?",
       "What therapeutic themes are emerging?",
+    ],
+    quality: [
+      "Summarise the current quality picture for the home.",
+      "What are the biggest inspection readiness risks?",
+      "What actions should be prioritised before scrutiny?",
     ],
   };
 
@@ -1227,6 +1241,13 @@ function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
   return text;
 }
 
+function getSourcesSafe() {
+  ensureAssistantState();
+  return Array.isArray(state.assistantMeta?.sources)
+    ? state.assistantMeta.sources
+    : [];
+}
+
 function applyAssistantMeta(meta = {}) {
   const nextMeta = { ...meta };
 
@@ -1317,7 +1338,7 @@ export async function askAssistant(question) {
             ...(meta?.explainability || {}),
             reasoning_summary:
               meta?.explainability?.reasoning_summary ||
-              `This answer used a children’s residential home reasoning model with Ofsted, RI, registered manager, RSW and therapeutic lenses.`,
+              "This answer used a children’s residential home reasoning model with Ofsted, RI, registered manager, RSW and therapeutic lenses.",
             ai_scrubber:
               scrubbed.meta?.enabled
                 ? "Client-side AI scrubber applied before outbound request."
@@ -1351,19 +1372,19 @@ export async function askAssistant(question) {
       },
       onProgress: () => {},
       onMessage: (streamedPayload) => {
-        const safeText = extractStreamText(streamedPayload) || "Thinking…";
+        const safeValue = extractStreamText(streamedPayload) || "Thinking…";
         const restored = restoreAssistantReplyTokens(
-          safeText,
+          safeValue,
           scrubbed.reverseMap
         );
         updateLastAssistantStreamingText(restored || "Thinking…");
       },
       onDone: (streamedPayload) => {
-        const safeText =
+        const safeValue =
           extractStreamText(streamedPayload) || "No assistant reply returned.";
 
         const restored = restoreAssistantReplyTokens(
-          safeText.trim(),
+          safeValue.trim(),
           scrubbed.reverseMap
         );
 
@@ -1401,13 +1422,6 @@ export async function askAssistant(question) {
     setAssistantSending(false);
     syncAssistantUi();
   }
-}
-
-function getSourcesSafe() {
-  ensureAssistantState();
-  return Array.isArray(state.assistantMeta?.sources)
-    ? state.assistantMeta.sources
-    : [];
 }
 
 export function clearAssistantMessages() {
@@ -1491,4 +1505,10 @@ export function bindAssistantEvents() {
   });
 
   bindPromptButtons();
+}
+
+export function loadAssistant() {
+  ensureAssistantState();
+  updateAssistantContext();
+  syncAssistantUi();
 }
