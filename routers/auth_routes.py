@@ -36,6 +36,9 @@ LOCKOUT_SECONDS = int(os.getenv("AUTH_LOCKOUT_SECONDS", "900"))
 
 DUMMY_BCRYPT_HASH = b"$2b$12$yAc2mW0pYv4B4xXj3H3oJ.5XQmsx3M3uVJfY0jQnR8iW0VtT1hN3K"
 
+INVALID_CREDENTIALS_MESSAGE = "Invalid email or password"
+LOCKOUT_MESSAGE = "Too many failed sign-in attempts. Please try again later."
+
 
 @dataclass(frozen=True)
 class AuthSettings:
@@ -51,20 +54,27 @@ class AuthSettings:
 
     @classmethod
     def load(cls) -> "AuthSettings":
-        app_env = os.environ.get("APP_ENV", "development").lower()
+        app_env = os.environ.get("APP_ENV", "development").strip().lower()
+        if app_env not in {"development", "test", "staging", "production"}:
+            app_env = "development"
+
         is_production = app_env == "production"
 
         cookie_secure = os.getenv(
             "COOKIE_SECURE",
             "true" if is_production else "false",
-        ).lower() == "true"
+        ).strip().lower() == "true"
 
         cookie_samesite = os.getenv("COOKIE_SAMESITE", "strict").strip().lower()
         if cookie_samesite not in {"lax", "strict", "none"}:
             cookie_samesite = "strict"
 
-        session_cookie_name = "__Host-indicare_session" if cookie_secure else "indicare_session"
-        csrf_cookie_name = "__Host-indicare_csrf" if cookie_secure else "indicare_csrf"
+        session_cookie_name = (
+            "__Host-indicare_session" if cookie_secure else "indicare_session"
+        )
+        csrf_cookie_name = (
+            "__Host-indicare_csrf" if cookie_secure else "indicare_csrf"
+        )
 
         return cls(
             session_cookie_name=session_cookie_name,
@@ -101,6 +111,13 @@ def _normalise_email(email: str) -> str:
 
 def _now() -> float:
     return time.time()
+
+
+def _seconds_remaining(until_timestamp: float | None) -> int | None:
+    if not until_timestamp:
+        return None
+    remaining = int(until_timestamp - _now())
+    return max(0, remaining)
 
 
 def _extract_token(request: Request, authorization: str | None = None) -> str | None:
@@ -206,6 +223,18 @@ def _is_locked(lock_map: dict[str, float], key: str) -> bool:
     return True
 
 
+def _get_lock_until(lock_map: dict[str, float], key: str | None) -> float | None:
+    if not key:
+        return None
+    until = lock_map.get(key)
+    if not until:
+        return None
+    if until <= _now():
+        lock_map.pop(key, None)
+        return None
+    return until
+
+
 def _register_failure(ip: str | None, email: str | None) -> None:
     current = _now()
 
@@ -233,20 +262,28 @@ def _clear_failures(ip: str | None, email: str | None) -> None:
         LOCKED_EMAILS.pop(email, None)
 
 
+def _raise_lockout(until_timestamp: float | None) -> None:
+    detail: dict[str, Any] = {"message": LOCKOUT_MESSAGE}
+    retry_after_seconds = _seconds_remaining(until_timestamp)
+    if retry_after_seconds is not None:
+        detail["retry_after_seconds"] = retry_after_seconds
+
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail=detail,
+    )
+
+
 def _assert_not_locked(request: Request, email: str | None) -> None:
     ip = _client_ip(request)
 
-    if ip and _is_locked(LOCKED_IPS, ip):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many failed sign-in attempts. Please try again later.",
-        )
+    ip_locked_until = _get_lock_until(LOCKED_IPS, ip)
+    if ip_locked_until is not None:
+        _raise_lockout(ip_locked_until)
 
-    if email and _is_locked(LOCKED_EMAILS, email):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many failed sign-in attempts. Please try again later.",
-        )
+    email_locked_until = _get_lock_until(LOCKED_EMAILS, email)
+    if email_locked_until is not None:
+        _raise_lockout(email_locked_until)
 
 
 def _mfa_required_for_role(role: str | None) -> bool:
@@ -333,8 +370,18 @@ def _set_csrf_cookie(response: Response, csrf_token: str, remember: bool = False
 
 
 def _clear_auth_cookies(response: Response) -> None:
-    response.delete_cookie(key=settings.session_cookie_name, path="/")
-    response.delete_cookie(key=settings.csrf_cookie_name, path="/")
+    response.delete_cookie(
+        key=settings.session_cookie_name,
+        path="/",
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+    )
+    response.delete_cookie(
+        key=settings.csrf_cookie_name,
+        path="/",
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+    )
 
 
 def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
@@ -351,7 +398,10 @@ def _get_mfa_safe(user_id: int) -> dict[str, Any] | None:
         return None
 
 
-def _session_user_payload(user: dict[str, Any], billing: dict[str, Any] | None) -> dict[str, Any]:
+def _session_user_payload(
+    user: dict[str, Any],
+    billing: dict[str, Any] | None,
+) -> dict[str, Any]:
     return {
         "id": user["id"],
         "email": user["email"],
@@ -399,11 +449,20 @@ def _full_user_payload(
 
 def _validate_active_user(user: dict[str, Any] | None) -> dict[str, Any]:
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
     if user.get("archived") is True:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is archived")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is archived",
+        )
     if user.get("is_active") is False:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive",
+        )
     return user
 
 
@@ -419,7 +478,10 @@ def _get_session_user_from_request(
 
     if not payload:
         if raise_on_missing:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+            )
         return None, None
 
     raw_user_id = payload.get("sub")
@@ -427,11 +489,56 @@ def _get_session_user_from_request(
         user_id = int(raw_user_id)
     except (TypeError, ValueError):
         if raise_on_missing:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid session",
+            )
         return None, None
 
     user = _get_user_by_id(conn, user_id)
     return user, user_id
+
+
+def _set_authenticated_session_state(
+    request: Request,
+    *,
+    user_id: int,
+    email: str,
+    csrf_token: str,
+    remember: bool,
+) -> None:
+    request.session[SESSION_USER_ID_KEY] = int(user_id)
+    request.session[SESSION_USER_EMAIL_KEY] = email
+    request.session[SESSION_MFA_VERIFIED_KEY] = False
+    request.session["csrf_token"] = csrf_token
+    request.session["remember"] = remember
+    request.session["login_at"] = int(_now())
+    request.session["preauth_pending"] = True
+    request.session["pending_mfa_user_id"] = int(user_id)
+    request.session["pending_mfa_email"] = email
+
+
+def _deny_login(
+    *,
+    request: Request,
+    email: str,
+    user_id: int | None,
+    log_detail: str,
+    event_type: str = "login_failed",
+    status_code_value: int = status.HTTP_401_UNAUTHORIZED,
+) -> None:
+    _register_failure(_client_ip(request), email)
+    _log_auth(
+        request=request,
+        user_id=user_id,
+        email=email,
+        event_type=event_type,
+        detail=log_detail,
+    )
+    raise HTTPException(
+        status_code=status_code_value,
+        detail=INVALID_CREDENTIALS_MESSAGE if status_code_value == status.HTTP_401_UNAUTHORIZED else log_detail,
+    )
 
 
 @router.post("/login")
@@ -457,85 +564,73 @@ def login(
 
     if not user:
         _dummy_bcrypt_check(password)
-        _register_failure(_client_ip(request), email)
-        _log_auth(
+        _deny_login(
             request=request,
-            user_id=None,
             email=email,
-            event_type="login_failed",
-            detail="Invalid credentials",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            user_id=None,
+            log_detail="Invalid credentials",
         )
 
     if user.get("archived") is True:
-        _register_failure(_client_ip(request), email)
-        _log_auth(
+        _deny_login(
             request=request,
+            email=email,
             user_id=user["id"],
-            email=user["email"],
+            log_detail="Archived user",
             event_type="login_blocked",
-            detail="Archived user",
+            status_code_value=status.HTTP_403_FORBIDDEN,
         )
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is archived")
 
     if user.get("is_active") is False:
-        _register_failure(_client_ip(request), email)
-        _log_auth(
+        _deny_login(
             request=request,
+            email=email,
             user_id=user["id"],
-            email=user["email"],
+            log_detail="Inactive user",
             event_type="login_blocked",
-            detail="Inactive user",
+            status_code_value=status.HTTP_403_FORBIDDEN,
         )
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")
 
     password_hash = _ensure_password_hash_bytes(user.get("password_hash"))
     try:
-        password_ok = bool(password_hash) and bcrypt.checkpw(password.encode("utf-8"), password_hash)
+        password_ok = bool(password_hash) and bcrypt.checkpw(
+            password.encode("utf-8"),
+            password_hash,
+        )
     except ValueError:
         password_ok = False
 
     if not password_ok:
-        _register_failure(_client_ip(request), email)
-        _log_auth(
+        _deny_login(
             request=request,
+            email=email,
             user_id=user["id"],
-            email=user["email"],
-            event_type="login_failed",
-            detail="Invalid credentials",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            log_detail="Invalid credentials",
         )
 
-    _clear_failures(_client_ip(request), email)
-
-    token = create_session_token(user["id"])
     csrf_token = secrets.token_urlsafe(32)
-
-    _set_session_cookie(response, token, remember=remember)
-    _set_csrf_cookie(response, csrf_token, remember=remember)
 
     try:
         _safe_session_reset(request)
-        request.session[SESSION_USER_ID_KEY] = int(user["id"])
-        request.session[SESSION_USER_EMAIL_KEY] = user["email"]
-        request.session[SESSION_MFA_VERIFIED_KEY] = False
-        request.session["csrf_token"] = csrf_token
-        request.session["remember"] = remember
-        request.session["login_at"] = int(_now())
-        request.session["preauth_pending"] = True
-        request.session["pending_mfa_user_id"] = int(user["id"])
-        request.session["pending_mfa_email"] = user["email"]
+        _set_authenticated_session_state(
+            request,
+            user_id=int(user["id"]),
+            email=user["email"],
+            csrf_token=csrf_token,
+            remember=remember,
+        )
     except Exception:
+        _safe_session_reset(request)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session could not be created",
         )
+
+    token = create_session_token(user["id"])
+    _set_session_cookie(response, token, remember=remember)
+    _set_csrf_cookie(response, csrf_token, remember=remember)
+
+    _clear_failures(_client_ip(request), email)
 
     mfa_row = _get_mfa_safe(int(user["id"]))
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
@@ -586,7 +681,10 @@ def check_auth(
         try:
             login_at = int(request.session.get("login_at") or 0)
             if login_at > 0:
-                expires_in_seconds = max(0, settings.cookie_max_age_short - int(_now() - login_at))
+                expires_in_seconds = max(
+                    0,
+                    settings.cookie_max_age_short - int(_now() - login_at),
+                )
         except Exception:
             expires_in_seconds = None
 
@@ -648,7 +746,10 @@ def get_me(
     )
 
     if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session",
+        )
 
     user = _validate_active_user(user)
 
