@@ -507,3 +507,56 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         regulation_mapping=regulation_mapping,
         regulation_payload=regulation_payload,
     )
+
+
+def build_assistant_prompt(
+    *,
+    message: str,
+    session_id: str,
+    history: list[dict[str, Any]] | None = None,
+    role: str = "residential care staff",
+    document_text: str | None = None,
+    document_name: str | None = None,
+    ld_lens: bool = False,
+    training_mode: bool = False,
+    speed: str = "balanced",
+    user_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Backwards-compatible shim for older imports that still expect
+    services.assistant_orchestrator.build_assistant_prompt.
+
+    This preserves startup compatibility while the rest of the codebase
+    is moved onto build_orchestrator_result().
+    """
+    result = build_orchestrator_result(
+        OrchestratorRequest(
+            message=message,
+            session_id=session_id,
+            history=history or [],
+            role=role,
+            document_text=document_text,
+            document_name=document_name,
+            ld_lens=ld_lens,
+            training_mode=training_mode,
+            speed=speed,
+            user_context=user_context or {},
+        )
+    )
+
+    return {
+        "system_prompt": result.system_prompt,
+        "user_message": result.user_message,
+        "messages": result.messages,
+        "runtime": result.runtime,
+        "sources": result.sources,
+        "runtime_payload": result.runtime_payload,
+        "selected_mode": result.selected_mode,
+        "trimmed_history": result.trimmed_history,
+        "trimmed_document_text": result.trimmed_document_text,
+        "response_plan": result.response_plan,
+        "guidance_plan": result.guidance_plan,
+        "model_plan": result.model_plan,
+        "regulation_mapping": result.regulation_mapping,
+        "regulation_payload": result.regulation_payload,
+    }
