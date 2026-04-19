@@ -11,7 +11,6 @@ import {
   toDateTimeLocalValue,
 } from "../core/utils.js";
 import * as rulesClient from "../core/rules-client.js";
-import * as suggestionsUi from "./suggestions.js";
 
 function cleanText(value) {
   return String(value || "").trim();
@@ -345,6 +344,20 @@ function getComposerMeta() {
 
 function resetComposerMeta() {
   state.composerMeta = {};
+}
+
+function emitSuggestionsPanelShow(suggestions = [], context = {}) {
+  document.dispatchEvent(
+    new CustomEvent("indicared:suggestions-show", {
+      detail: { suggestions, context },
+    })
+  );
+}
+
+function emitSuggestionsPanelHide() {
+  document.dispatchEvent(
+    new CustomEvent("indicared:suggestions-hide")
+  );
 }
 
 function setComposerMetaFromItem(item = {}) {
@@ -1655,7 +1668,7 @@ function buildManagerActionContent(item = {}) {
         fieldText(
           "related_id",
           "Related ID",
-          item.related_id || item.source_record_id || ""
+          item.related_id || item.source_record_id || null
         ),
         fieldText(
           "inspection_score_id",
@@ -1976,11 +1989,11 @@ async function runSuggestionEngineAfterSave(recordType, savedRecord) {
   }
 
   if (!suggestions.length) {
-    suggestionsUi.hideSuggestionsPanel?.();
+    emitSuggestionsPanelHide();
     return suggestions;
   }
 
-  suggestionsUi.showSuggestionsPanel?.(suggestions, {
+  emitSuggestionsPanelShow(suggestions, {
     source_record_type: metadata.source_record_type,
     source_record_id: metadata.source_record_id,
     scope: metadata.scope,
