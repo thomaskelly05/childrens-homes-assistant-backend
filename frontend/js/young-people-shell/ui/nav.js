@@ -56,6 +56,11 @@ import { loadOnboarding } from "../features/onboarding.js";
 import { loadNotifications } from "../features/notifications.js";
 import { loadRota } from "../features/rota.js";
 
+import { loadProviderOverview } from "../features/provider-overview.js";
+import { loadQualityAudits } from "../features/quality-audits.js";
+import { loadReg44 } from "../features/reg44.js";
+import { loadReg45 } from "../features/reg45.js";
+
 const ICON_MAP = {
   home: "⌂",
   "layout-dashboard": "◫",
@@ -178,6 +183,13 @@ function isSectionAllowed(sectionId, scope = getCurrentScope()) {
   return getAllowedSectionIdsForScope(scope).has(sectionId);
 }
 
+function updateSectionState(section) {
+  setCurrentSection(section);
+  state.activeSection = section;
+  state.currentView = section;
+  updateAppShellDataset();
+}
+
 function ensureValidCurrentSection() {
   const scope = getCurrentScope();
   const current = getCurrentSection();
@@ -271,10 +283,10 @@ const SECTION_LOADERS = {
   "ofsted-readiness": loadReadiness,
   policies: runPlaceholderLoader,
 
-  "provider-overview": runPlaceholderLoader,
-  "quality-audits": runPlaceholderLoader,
-  reg44: runPlaceholderLoader,
-  reg45: runPlaceholderLoader,
+  "provider-overview": loadProviderOverview,
+  "quality-audits": loadQualityAudits,
+  reg44: loadReg44,
+  reg45: loadReg45,
   "inspection-readiness": loadReadiness,
 };
 
@@ -288,11 +300,7 @@ function updateAppShellDataset() {
   app.dataset.scope = scope;
   app.dataset.section = section;
   app.dataset.assistantScopeType =
-    scope === "child"
-      ? "child"
-      : scope === "home"
-      ? "home"
-      : "quality";
+    scope === "child" ? "child" : scope === "home" ? "home" : "quality";
 
   app.dataset.youngPersonId = state.youngPersonId || "";
   app.dataset.homeId =
@@ -513,13 +521,6 @@ function markActiveScopeButtons() {
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
     button.setAttribute("aria-selected", isActive ? "true" : "false");
   });
-}
-
-function updateSectionState(section) {
-  setCurrentSection(section);
-  state.activeSection = section;
-  state.currentView = section;
-  updateAppShellDataset();
 }
 
 function requireChildContext() {
