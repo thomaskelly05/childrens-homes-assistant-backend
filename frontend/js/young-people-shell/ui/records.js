@@ -3,32 +3,214 @@ import { els } from "../dom.js";
 import { apiGet, apiSend } from "../core/api.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
 import {
-  renderRowList,
-  renderRecordsTable,
-  renderBadges,
-  statusBadgeClass,
-  renderSection,
-  renderSummaryStat,
-  renderEmptyState,
-} from "./helpers.js";
-import {
   evaluateRecordSuggestions,
   mergeSuggestionLists,
 } from "../core/rules-client.js";
-import {
-  showSuggestionsPanel,
-  hideSuggestionsPanel,
-} from "./suggestions.js";
 
-export {
-  renderRowList,
-  renderRecordsTable,
-  renderBadges,
-  statusBadgeClass,
-  renderSection,
-  renderSummaryStat,
-  renderEmptyState,
-} from "./helpers.js";
+/* ------------------------- local helper replacements ------------------------- */
+
+function statusBadgeClass(status = "") {
+  const value = String(status || "").trim().toLowerCase().replaceAll(" ", "_");
+
+  if (
+    [
+      "approved",
+      "complete",
+      "completed",
+      "active",
+      "success",
+      "resolved",
+      "closed",
+      "current",
+      "up_to_date",
+      "good",
+      "outstanding",
+    ].includes(value)
+  ) {
+    return "success";
+  }
+
+  if (
+    [
+      "pending",
+      "submitted",
+      "in_progress",
+      "due_soon",
+      "review_due",
+      "warning",
+      "attention",
+      "open",
+    ].includes(value)
+  ) {
+    return "warning";
+  }
+
+  if (
+    [
+      "overdue",
+      "rejected",
+      "returned",
+      "failed",
+      "expired",
+      "missing",
+      "critical",
+      "high",
+      "danger",
+    ].includes(value)
+  ) {
+    return "danger";
+  }
+
+  return "muted";
+}
+
+function renderBadges(values = []) {
+  const items = Array.isArray(values) ? values.filter(Boolean) : [values].filter(Boolean);
+  if (!items.length) return "";
+
+  return `
+    <div class="badge-row">
+      ${items
+        .map(
+          (item) => `
+            <span class="row-pill ${escapeHtml(statusBadgeClass(item))}">
+              ${escapeHtml(String(item))}
+            </span>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderSummaryStat(label, value, note = "") {
+  return `
+    <article class="overview-stat-card">
+      <span class="overview-stat-label">${escapeHtml(String(label || ""))}</span>
+      <strong class="overview-stat-value">${escapeHtml(String(value ?? "—"))}</strong>
+      ${note ? `<span class="overview-stat-note">${escapeHtml(String(note))}</span>` : ""}
+    </article>
+  `;
+}
+
+function renderEmptyState(title = "Nothing to show", message = "No records found.") {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-inner">
+        <div class="empty-state-icon" aria-hidden="true">○</div>
+        <h3>${escapeHtml(String(title))}</h3>
+        <p>${escapeHtml(String(message))}</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderSection(title = "", bodyHtml = "", subtitle = "") {
+  return `
+    <section class="overview-section-card">
+      <div class="overview-section-head">
+        <h3>${escapeHtml(String(title || ""))}</h3>
+        ${subtitle ? `<p>${escapeHtml(String(subtitle))}</p>` : ""}
+      </div>
+      ${bodyHtml || ""}
+    </section>
+  `;
+}
+
+function renderRowList(items = [], options = {}) {
+  const {
+    titleKey = "title",
+    summaryKey = "summary",
+    metaBuilder = null,
+    statusKey = "status",
+    recordTypeKey = "record_type",
+    idKey = "id",
+    emptyTitle = "Nothing to show",
+    emptyMessage = "No records found.",
+  } = options;
+
+  if (!Array.isArray(items) || !items.length) {
+    return renderEmptyState(emptyTitle, emptyMessage);
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .map((item) => {
+          const title = item?.[titleKey] || item?.name || "Record";
+          const summary = item?.[summaryKey] || "";
+          const meta = typeof metaBuilder === "function" ? metaBuilder(item) : "";
+          const status = item?.[statusKey] || "";
+          const recordType = item?.[recordTypeKey] || "";
+          const id = item?.[idKey] ?? "";
+
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${escapeHtml(String(id))}"
+              data-record-type="${escapeHtml(String(recordType))}"
+              data-title="${escapeHtml(String(title))}"
+              tabindex="0"
+              role="button"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${escapeHtml(String(title))}</div>
+                ${summary ? `<div class="record-row-summary">${escapeHtml(String(summary))}</div>` : ""}
+                ${meta ? `<div class="record-row-meta">${escapeHtml(String(meta))}</div>` : ""}
+              </div>
+              <div class="record-row-side">
+                ${status ? `<span class="row-pill ${escapeHtml(statusBadgeClass(status))}">${escapeHtml(String(status))}</span>` : ""}
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderRecordsTable(items = [], columns = [], emptyMessage = "No records found.") {
+  if (!Array.isArray(items) || !items.length) {
+    return renderEmptyState("Nothing to show", emptyMessage);
+  }
+
+  return `
+    <div class="table-wrap">
+      <table class="records-table">
+        <thead>
+          <tr>
+            ${columns.map((col) => `<th>${escapeHtml(String(col.label || ""))}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${items
+            .map((item) => {
+              return `
+                <tr>
+                  ${columns
+                    .map((col) => {
+                      const value =
+                        typeof col.render === "function"
+                          ? col.render(item)
+                          : item?.[col.key] ?? "";
+                      return `<td>${escapeHtml(String(value ?? ""))}</td>`;
+                    })
+                    .join("")}
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* -------------------------- local suggestions stub -------------------------- */
+
+function showSuggestionsPanel() {}
+function hideSuggestionsPanel() {}
 
 /* -------------------------------- scope -------------------------------- */
 
@@ -283,107 +465,77 @@ export function normaliseRecordType(item = {}) {
     plan: "support_plan",
     support_plans: "support_plan",
     support_plan: "support_plan",
-
     daily_notes: "daily_note",
     daily_note: "daily_note",
-
     incidents: "incident",
     incident: "incident",
-
     risk_assessment: "risk",
     risk_assessments: "risk",
     risks: "risk",
     risk: "risk",
-
     health_records: "health_record",
     health_record: "health_record",
-
     education_records: "education_record",
     education_record: "education_record",
-
     family_contact_records: "family_contact",
     family_contact_record: "family_contact",
     family_contact: "family_contact",
     contact: "family_contact",
-
     keywork_sessions: "keywork",
     keywork_session: "keywork",
     keywork: "keywork",
-
     ai_generated_reports: "report",
     reports: "report",
     report: "report",
-
     chronology_events: "chronology_event",
     chronology_event: "chronology_event",
-
     compliance_items: "compliance_item",
     compliance_item: "compliance_item",
-
     young_person_appointments: "appointment",
     appointments: "appointment",
     appointment: "appointment",
-
     safeguarding_records: "safeguarding_record",
     safeguarding_record: "safeguarding_record",
-
     missing_episodes: "missing_episode",
     missing_episode: "missing_episode",
-
     tasks: "task",
     task: "task",
-
     achievement_records: "achievement_record",
     achievement_record: "achievement_record",
-
     medication_profiles: "medication_profile",
     medication_profile: "medication_profile",
-
     medication_records: "medication_record",
     medication_record: "medication_record",
-
     communications: "communication",
     communication: "communication",
-
     documents: "document",
     document: "document",
-
     therapy_records: "therapy",
     therapeutic_services: "therapy",
     therapy_sessions: "therapy",
     therapy: "therapy",
-
     team_items: "team",
     staff: "team",
     team: "team",
-
     supervisions: "supervision",
     supervision_sessions: "supervision",
     supervision: "supervision",
-
     audits: "audit",
     audit: "audit",
-
     compliance: "compliance",
-
     manager_actions: "manager_action",
     manager_action: "manager_action",
-
     onboarding: "onboarding",
     onboarding_programmes: "onboarding",
     onboarding_plans: "onboarding",
-
     notifications: "notification",
     notification: "notification",
     home_notifications: "home_notification",
     operational_notifications: "operational_notification",
-
     shift_logs: "shift_log",
     shift_log: "shift_log",
-
     handover: "handover",
     handovers: "handover",
-
     petty_cash_transactions: "finance",
     purchase_requests: "finance",
     allowance_payments: "finance",
