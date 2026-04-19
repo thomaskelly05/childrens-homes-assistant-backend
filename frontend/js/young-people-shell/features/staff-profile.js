@@ -3,6 +3,12 @@ import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import {
+  onAssistantScopeChanged,
+  renderAssistantControllerPanels,
+} from "../ui/assistant-controller.js";
+
+/* -------------------------------- helpers -------------------------------- */
 
 function getHomeId() {
   return (
@@ -83,6 +89,9 @@ function getStatusTone(status = "") {
       "non_compliant",
       "failed",
       "at_risk",
+      "inactive",
+      "suspended",
+      "rejected",
     ].includes(normalised)
   ) {
     return "danger";
@@ -98,6 +107,11 @@ function getStatusTone(status = "") {
       "pending",
       "expiring",
       "in_progress",
+      "probation",
+      "induction",
+      "due",
+      "booked",
+      "scheduled",
     ].includes(normalised)
   ) {
     return "warning";
@@ -112,10 +126,11 @@ function getStatusTone(status = "") {
       "good",
       "passed",
       "compliant",
-      "booked",
       "up_to_date",
       "current",
       "signed_off",
+      "recorded",
+      "approved",
     ].includes(normalised)
   ) {
     return "success";
@@ -136,7 +151,11 @@ function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue) - toTime(bValue);
+
+    const aTime = aValue ? toTime(aValue) : Number.POSITIVE_INFINITY;
+    const bTime = bValue ? toTime(bValue) : Number.POSITIVE_INFINITY;
+
+    return aTime - bTime;
   });
 }
 
@@ -160,44 +179,42 @@ function normaliseStaffSummary(data = {}) {
   return data.summary || data.staff_summary || data.dashboard || data || {};
 }
 
+/* -------------------------------- normalisers -------------------------------- */
+
 function normaliseStaffItems(data = {}) {
-  return toArray(data.items, [data.staff, data.team, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "staff_profile",
-    full_name:
-      item.full_name ||
-      [item.first_name, item.last_name].filter(Boolean).join(" ") ||
-      item.staff_member ||
-      "Staff member",
-    staff_member:
-      item.staff_member ||
-      item.full_name ||
-      [item.first_name, item.last_name].filter(Boolean).join(" ") ||
-      "Staff member",
-    role: item.role || item.job_title || item.position || "",
-    line_manager:
-      item.line_manager ||
-      item.line_manager_name ||
-      "",
-    employment_status:
-      item.employment_status ||
-      item.status ||
-      "active",
-    start_date:
-      item.start_date ||
-      item.employment_start_date ||
-      item.created_at ||
-      null,
-    status: item.status || item.employment_status || "active",
-    summary:
-      item.summary ||
-      item.notes ||
-      item.role ||
-      "Staff profile available.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+  return toArray(data.items, [data.staff, data.team, data.records]).map(
+    (item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_type: item.record_type || "staff_profile",
+      full_name:
+        item.full_name ||
+        [item.first_name, item.last_name].filter(Boolean).join(" ") ||
+        item.staff_member ||
+        "Staff member",
+      staff_member:
+        item.staff_member ||
+        item.full_name ||
+        [item.first_name, item.last_name].filter(Boolean).join(" ") ||
+        "Staff member",
+      role: item.role || item.job_title || item.position || "",
+      line_manager: item.line_manager || item.line_manager_name || "",
+      employment_status: item.employment_status || item.status || "active",
+      start_date:
+        item.start_date ||
+        item.employment_start_date ||
+        item.created_at ||
+        null,
+      status: item.status || item.employment_status || "active",
+      summary:
+        item.summary ||
+        item.notes ||
+        item.role ||
+        "Staff profile available.",
+      created_at: item.created_at || null,
+      updated_at: item.updated_at || null,
+    })
+  );
 }
 
 function normaliseTrainingItems(data = {}) {
@@ -205,20 +222,13 @@ function normaliseTrainingItems(data = {}) {
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "training",
-    staff_member:
-      item.staff_member ||
-      item.full_name ||
-      "Staff member",
+    staff_member: item.staff_member || item.full_name || "Staff member",
     training_name:
       item.training_name ||
       item.course_name ||
       item.title ||
       "Training",
-    expiry_date:
-      item.expiry_date ||
-      item.expires_on ||
-      item.expires_at ||
-      null,
+    expiry_date: item.expiry_date || item.expires_on || item.expires_at || null,
     status: item.status || "recorded",
     summary:
       item.summary ||
@@ -235,14 +245,8 @@ function normaliseSupervisionItems(data = {}) {
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "supervision",
-    staff_member:
-      item.staff_member ||
-      item.full_name ||
-      "Staff member",
-    supervisor:
-      item.supervisor ||
-      item.supervisor_name ||
-      "",
+    staff_member: item.staff_member || item.full_name || "Staff member",
+    supervisor: item.supervisor || item.supervisor_name || "",
     next_due_date:
       item.next_due_date ||
       item.next_supervision_date ||
@@ -265,18 +269,9 @@ function normaliseDocumentItems(data = {}) {
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "staff_document",
-    staff_member:
-      item.staff_member ||
-      item.full_name ||
-      "Staff member",
-    document_type:
-      item.document_type ||
-      item.title ||
-      "Document",
-    review_date:
-      item.review_date ||
-      item.expiry_date ||
-      null,
+    staff_member: item.staff_member || item.full_name || "Staff member",
+    document_type: item.document_type || item.title || "Document",
+    review_date: item.review_date || item.expiry_date || null,
     status: item.status || "recorded",
     summary:
       item.summary ||
@@ -294,10 +289,7 @@ function normaliseTaskItems(data = {}) {
     record_type: item.record_type || "task",
     title: item.title || item.task || "Task",
     task: item.task || item.title || "Task",
-    staff_member:
-      item.staff_member ||
-      item.full_name ||
-      "",
+    staff_member: item.staff_member || item.full_name || "",
     assigned_role: item.assigned_role || "",
     due_date: item.due_date || null,
     completed: Boolean(item.completed),
@@ -318,10 +310,7 @@ function normaliseNotificationItems(data = {}) {
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "notification",
     title: item.title || "Notification",
-    recipient_name:
-      item.recipient_name ||
-      item.staff_member ||
-      "",
+    recipient_name: item.recipient_name || item.staff_member || "",
     summary:
       item.summary ||
       item.message ||
@@ -334,31 +323,32 @@ function normaliseNotificationItems(data = {}) {
 }
 
 function normaliseOnboardingItems(data = {}) {
-  return toArray(data.items, [data.onboarding, data.checklist, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "onboarding",
-    staff_member:
-      item.staff_member ||
-      item.full_name ||
-      "Staff member",
-    stage: item.stage || item.status || "",
-    next_step: item.next_step || "",
-    next_review_date:
-      item.next_review_date ||
-      item.review_date ||
-      item.target_completion_date ||
-      null,
-    status: item.status || "recorded",
-    summary:
-      item.summary ||
-      item.next_step ||
-      item.notes ||
-      "Onboarding record logged.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
+  return toArray(data.items, [data.onboarding, data.checklist, data.records]).map(
+    (item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_type: item.record_type || "onboarding",
+      staff_member: item.staff_member || item.full_name || "Staff member",
+      stage: item.stage || item.status || "",
+      next_step: item.next_step || "",
+      next_review_date:
+        item.next_review_date ||
+        item.review_date ||
+        item.target_completion_date ||
+        null,
+      status: item.status || "recorded",
+      summary:
+        item.summary ||
+        item.next_step ||
+        item.notes ||
+        "Onboarding record logged.",
+      created_at: item.created_at || null,
+      updated_at: item.updated_at || null,
+    })
+  );
 }
+
+/* -------------------------------- builders -------------------------------- */
 
 function buildTopStats({
   staffItems = [],
@@ -484,10 +474,11 @@ function buildStaffKpis({
   ).length;
 
   const compliantTraining = trainingItems.filter((item) =>
-    ["completed", "up_to_date", "passed"].includes(
+    ["completed", "up_to_date", "passed", "current"].includes(
       normaliseStatus(item.status)
     )
   ).length;
+
   const trainingPercent =
     trainingItems.length > 0
       ? Math.round((compliantTraining / trainingItems.length) * 100)
@@ -498,6 +489,7 @@ function buildStaffKpis({
       normaliseStatus(item.status)
     )
   ).length;
+
   const supervisionPercent =
     supervisionItems.length > 0
       ? Math.round((completedSupervisions / supervisionItems.length) * 100)
@@ -508,6 +500,7 @@ function buildStaffKpis({
       normaliseStatus(item.status)
     )
   ).length;
+
   const onboardingPercent =
     onboardingItems.length > 0
       ? Math.round((completedOnboarding / onboardingItems.length) * 100)
@@ -518,6 +511,7 @@ function buildStaffKpis({
       normaliseStatus(item.status)
     )
   ).length;
+
   const documentPercent =
     documentItems.length > 0
       ? Math.round((compliantDocuments / documentItems.length) * 100)
@@ -585,6 +579,8 @@ function buildStaffKpis({
     },
   ];
 }
+
+/* -------------------------------- rendering -------------------------------- */
 
 function renderStatCards(cards = []) {
   return `
@@ -947,13 +943,17 @@ function renderStaffDashboardHtml({
   `;
 }
 
+/* -------------------------------- fallback -------------------------------- */
+
 function buildFallbackStaffData(homeId) {
   const now = new Date();
+
   const plusDays = (days) => {
     const d = new Date(now);
     d.setDate(d.getDate() + days);
     return d.toISOString();
   };
+
   const minusDays = (days) => {
     const d = new Date(now);
     d.setDate(d.getDate() - days);
@@ -1143,6 +1143,8 @@ function buildFallbackStaffData(homeId) {
   };
 }
 
+/* -------------------------------- fetching -------------------------------- */
+
 async function fetchStaffDataset(homeId) {
   const requests = [
     apiGet(`/homes/${homeId}/staff`).catch(() => null),
@@ -1193,6 +1195,8 @@ async function fetchStaffDataset(homeId) {
     isFallback: false,
   };
 }
+
+/* -------------------------------- states -------------------------------- */
 
 function renderNoHomeContext() {
   if (!els.viewContent) return;
@@ -1262,6 +1266,8 @@ function renderErrorState(message) {
   });
 }
 
+/* -------------------------------- public -------------------------------- */
+
 export async function loadStaffProfile() {
   if (!els.viewContent) return;
 
@@ -1295,11 +1301,10 @@ export async function loadStaffProfile() {
       "start_date",
     ]).slice(0, 8);
 
-    const onboardingItems = sortSoonestFirst(normaliseOnboardingItems(onboardingData), [
-      "next_review_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 8);
+    const onboardingItems = sortSoonestFirst(
+      normaliseOnboardingItems(onboardingData),
+      ["next_review_date", "updated_at", "created_at"]
+    ).slice(0, 8);
 
     const trainingItems = sortSoonestFirst(normaliseTrainingItems(trainingData), [
       "expiry_date",
@@ -1307,17 +1312,15 @@ export async function loadStaffProfile() {
       "created_at",
     ]);
 
-    const supervisionItems = sortSoonestFirst(normaliseSupervisionItems(supervisionData), [
-      "next_due_date",
-      "updated_at",
-      "created_at",
-    ]);
+    const supervisionItems = sortSoonestFirst(
+      normaliseSupervisionItems(supervisionData),
+      ["next_due_date", "updated_at", "created_at"]
+    );
 
-    const documentItems = sortSoonestFirst(normaliseDocumentItems(documentData), [
-      "review_date",
-      "updated_at",
-      "created_at",
-    ]);
+    const documentItems = sortSoonestFirst(
+      normaliseDocumentItems(documentData),
+      ["review_date", "updated_at", "created_at"]
+    );
 
     const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
       "due_date",
@@ -1348,7 +1351,13 @@ export async function loadStaffProfile() {
       )
     );
 
-    const openTasks = taskItems.filter((item) => !item.completed);
+    const openTasks = taskItems.filter(
+      (item) =>
+        !item.completed &&
+        !["completed", "closed", "cancelled"].includes(
+          normaliseStatus(item.status)
+        )
+    );
 
     const topStats = buildTopStats({
       staffItems,
@@ -1413,7 +1422,11 @@ export async function loadStaffProfile() {
         : "No recent staff activity loaded",
       openActions: `${openTasks.length} open • ${documentGaps.length} file gaps`,
     });
+
+    await onAssistantScopeChanged();
+    renderAssistantControllerPanels();
   } catch (error) {
+    console.error("[staff-profile] load failed", error);
     renderErrorState(error?.message || "The workforce view could not be loaded.");
   }
 }
