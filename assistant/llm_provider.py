@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 from dataclasses import dataclass, field
@@ -36,7 +37,7 @@ class ProviderConfig:
 
 
 class LLMProvider(Protocol):
-    async def stream_chat(self, request: ChatStreamRequest) -> AsyncIterator[str]:
+    async def stream_chat(self, request: ChatStreamRequest) -> AsyncIterator[str | dict[str, Any]]:
         ...
 
 
@@ -137,6 +138,77 @@ def _load_provider_config() -> ProviderConfig:
     )
 
 
+def _looks_like_json(text: str) -> bool:
+    value = _safe_string(text)
+    return value.startswith("{") and value.endswith("}")
+
+
+def _safe_json_loads(text: str) -> dict[str, Any] | None:
+    value = _safe_string(text)
+    if not value:
+        return None
+
+    try:
+        parsed = json.loads(value)
+        if isinstance(parsed, dict):
+            return parsed
+        return None
+    except Exception:
+        return None
+
+
+def _build_structured_output_instruction() -> str:
+    return """
+Return the final answer in this exact JSON shape:
+
+{
+  "text": "final answer text for the user",
+  "sources": [],
+  "runtime": {},
+  "explainability": {},
+  "assistant_scope": {},
+  "assistant_context": {},
+  "suggested_actions": [],
+  "evidence_index": []
+}
+
+Rules:
+- "text" must contain the full user-facing answer.
+- If no sources are available, return an empty array.
+- If no evidence_index is available, return an empty array.
+- Do not wrap the JSON in markdown fences.
+- Return valid JSON only.
+""".strip()
+
+
+def _should_request_structured_output(metadata: dict[str, Any]) -> bool:
+    if not isinstance(metadata, dict):
+        return True
+
+    explicit = metadata.get("structured_output")
+    if isinstance(explicit, bool):
+        return explicit
+
+    return True
+
+
+def _merge_structured_instruction(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    if not messages:
+        return messages
+
+    updated = list(messages)
+    instruction = _build_structured_output_instruction()
+
+    if updated[0]["role"] == "system":
+        updated[0] = {
+            "role": "system",
+            "content": f'{updated[0]["content"]}\n\n{"=" * 60}\nSTRUCTURED OUTPUT CONTRACT\n\n{instruction}',
+        }
+        return updated
+
+    return [{"role": "system", "content": instruction}, *updated]
+
+
 class OpenAIProvider:
     def __init__(self, config: ProviderConfig):
         if not config.api_key:
@@ -156,13 +228,12 @@ class OpenAIProvider:
         self._client = AsyncOpenAI(**client_kwargs)
         self._provider_name = "openai"
 
-    async def stream_chat(self, request: ChatStreamRequest) -> AsyncIterator[str]:
-        messages = _normalise_messages(request.messages)
-
-        if not messages:
-            logger.warning("OpenAIProvider.stream_chat called with no valid messages")
-            return
-
+    async def _stream_text_chat(
+        self,
+        *,
+        request: ChatStreamRequest,
+        messages: list[dict[str, str]],
+    ) -> AsyncIterator[str]:
         model = _safe_string(request.model) or "gpt-4o-mini"
         temperature = _normalise_temperature(request.temperature)
         max_tokens = _normalise_max_tokens(request.max_tokens)
@@ -190,31 +261,150 @@ class OpenAIProvider:
             len(messages),
         )
 
-        try:
-            stream = await self._client.chat.completions.create(**params)
+        stream = await self._client.chat.completions.create(**params)
 
-            async for chunk in stream:
-                try:
-                    if not chunk.choices:
-                        continue
-
-                    delta = chunk.choices[0].delta
-                    if not delta:
-                        continue
-
-                    content = getattr(delta, "content", None)
-                    if content:
-                        yield content
-
-                except Exception:
-                    logger.exception("Error while reading streamed OpenAI chunk")
+        async for chunk in stream:
+            try:
+                if not chunk.choices:
                     continue
+
+                delta = chunk.choices[0].delta
+                if not delta:
+                    continue
+
+                content = getattr(delta, "content", None)
+                if content:
+                    yield content
+
+            except Exception:
+                logger.exception("Error while reading streamed OpenAI chunk")
+                continue
+
+    async def _generate_structured_followup(
+        self,
+        *,
+        request: ChatStreamRequest,
+        original_messages: list[dict[str, str]],
+        final_answer_text: str,
+    ) -> dict[str, Any] | None:
+        model = _safe_string(request.model) or "gpt-4o-mini"
+        max_tokens = min(max(_normalise_max_tokens(request.max_tokens), 512), 4096)
+
+        followup_messages = [
+            *original_messages,
+            {"role": "assistant", "content": final_answer_text},
+            {
+                "role": "user",
+                "content": (
+                    "Now convert your final answer into the required JSON structure only. "
+                    "Do not change the meaning of the answer. Return valid JSON only."
+                ),
+            },
+        ]
+        followup_messages = _merge_structured_instruction(followup_messages)
+
+        try:
+            response = await self._client.chat.completions.create(
+                model=model,
+                messages=followup_messages,
+                temperature=0,
+                max_tokens=max_tokens,
+                stream=False,
+            )
+
+            if not response.choices:
+                return None
+
+            message = response.choices[0].message
+            raw_content = getattr(message, "content", None)
+
+            if isinstance(raw_content, list):
+                parts: list[str] = []
+                for part in raw_content:
+                    if isinstance(part, dict):
+                        part_text = _safe_string(part.get("text"))
+                        if part_text:
+                            parts.append(part_text)
+                text = "\n".join(parts).strip()
+            else:
+                text = _safe_string(raw_content)
+
+            if not text:
+                return None
+
+            parsed = _safe_json_loads(text)
+            if parsed is None:
+                logger.warning("Structured follow-up was not valid JSON")
+                return None
+
+            return parsed
+
+        except Exception:
+            logger.exception("Structured follow-up generation failed")
+            return None
+
+    async def stream_chat(self, request: ChatStreamRequest) -> AsyncIterator[str | dict[str, Any]]:
+        messages = _normalise_messages(request.messages)
+
+        if not messages:
+            logger.warning("OpenAIProvider.stream_chat called with no valid messages")
+            return
+
+        structured_output = _should_request_structured_output(request.metadata)
+        streaming_messages = list(messages)
+
+        final_text_parts: list[str] = []
+
+        try:
+            async for token in self._stream_text_chat(
+                request=request,
+                messages=streaming_messages,
+            ):
+                if token:
+                    final_text_parts.append(token)
+                    yield token
+
+            final_answer_text = "".join(final_text_parts).strip()
+
+            if structured_output and final_answer_text:
+                structured = await self._generate_structured_followup(
+                    request=request,
+                    original_messages=messages,
+                    final_answer_text=final_answer_text,
+                )
+
+                if structured:
+                    if not _safe_string(structured.get("text")):
+                        structured["text"] = final_answer_text
+
+                    if not isinstance(structured.get("sources"), list):
+                        structured["sources"] = []
+
+                    if not isinstance(structured.get("runtime"), dict):
+                        structured["runtime"] = {}
+
+                    if not isinstance(structured.get("explainability"), dict):
+                        structured["explainability"] = {}
+
+                    if not isinstance(structured.get("assistant_scope"), dict):
+                        structured["assistant_scope"] = {}
+
+                    if not isinstance(structured.get("assistant_context"), dict):
+                        structured["assistant_context"] = {}
+
+                    if not isinstance(structured.get("suggested_actions"), list):
+                        structured["suggested_actions"] = []
+
+                    if not isinstance(structured.get("evidence_index"), list):
+                        structured["evidence_index"] = []
+
+                    yield structured
 
         except Exception as exc:
             logger.exception(
                 "LLM stream failed provider=%s model=%s error=%r",
                 self._provider_name,
-                model,
+                _safe_string(request.model) or "gpt-4o-mini",
                 exc,
             )
             raise
@@ -223,7 +413,7 @@ class OpenAIProvider:
             logger.info(
                 "LLM stream end provider=%s model=%s",
                 self._provider_name,
-                model,
+                _safe_string(request.model) or "gpt-4o-mini",
             )
 
 
