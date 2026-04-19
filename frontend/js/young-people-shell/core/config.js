@@ -5,25 +5,26 @@ export const ROLE_SCOPE_ACCESS = Object.freeze({
   residential_support_worker: ["child", "home"],
 
   // Management
-  manager: ["child", "home", "quality"],
-  registered_manager: ["child", "home", "quality"],
-  deputy_manager: ["child", "home", "quality"],
+  manager: ["child", "home", "quality", "ofsted"],
+  registered_manager: ["child", "home", "quality", "ofsted"],
+  deputy_manager: ["child", "home", "quality", "ofsted"],
 
   // Responsible individual / oversight
-  ri: ["child", "home", "quality"],
-  responsible_individual: ["child", "home", "quality"],
+  ri: ["child", "home", "quality", "ofsted"],
+  responsible_individual: ["child", "home", "quality", "ofsted"],
 
   // Admin
-  admin: ["child", "home", "quality"],
-  administrator: ["child", "home", "quality"],
-  super_admin: ["child", "home", "quality"],
-  superadmin: ["child", "home", "quality"],
+  admin: ["child", "home", "quality", "ofsted"],
+  administrator: ["child", "home", "quality", "ofsted"],
+  super_admin: ["child", "home", "quality", "ofsted"],
+  superadmin: ["child", "home", "quality", "ofsted"],
 });
 
 export const SCOPE_DEFAULT_SECTION = Object.freeze({
   child: "workspace",
   home: "home-dashboard",
   quality: "provider-overview",
+  ofsted: "ofsted-dashboard",
 });
 
 export const SCOPE_SECTIONS = Object.freeze({
@@ -95,6 +96,28 @@ export const SCOPE_SECTIONS = Object.freeze({
     "documents",
     "communication",
   ],
+  ofsted: [
+    "ofsted-dashboard",
+    "sccif-evidence",
+    "judgement-builder",
+    "inspection-readiness",
+    "quality-audits",
+    "reg44",
+    "reg45",
+    "compliance",
+    "health-safety",
+    "staff-profile",
+    "onboarding",
+    "supervision",
+    "training-centre",
+    "team",
+    "rota",
+    "notifications",
+    "reports",
+    "documents",
+    "policies",
+    "communication",
+  ],
 });
 
 export const SECTION_TITLES = Object.freeze({
@@ -144,6 +167,10 @@ export const SECTION_TITLES = Object.freeze({
   reg44: "Regulation 44",
   reg45: "Regulation 45",
   "inspection-readiness": "Inspection readiness",
+
+  "ofsted-dashboard": "Ofsted dashboard",
+  "sccif-evidence": "SCCIF evidence",
+  "judgement-builder": "Judgement builder",
 });
 
 export const SECTION_SUBTITLES = Object.freeze({
@@ -237,6 +264,13 @@ export const SECTION_SUBTITLES = Object.freeze({
     "Quality of care review planning, evidence, analysis and improvement actions.",
   "inspection-readiness":
     "Portfolio-level inspection evidence, gaps, readiness tracking and regulator-facing preparation.",
+
+  "ofsted-dashboard":
+    "A dedicated inspection-facing view that turns live practice, evidence and oversight into a clear inspection picture.",
+  "sccif-evidence":
+    "Evidence mapped against SCCIF themes, lines of enquiry and likely inspection focus areas.",
+  "judgement-builder":
+    "Build inspection-ready strengths, gaps, impact statements and draft judgement language from the underlying evidence.",
 });
 
 const NAV_GROUPS = [
@@ -792,6 +826,184 @@ const NAV_GROUPS = [
       },
     ],
   },
+  {
+    id: "ofsted_inspection_core",
+    title: "Inspection overview",
+    items: [
+      {
+        id: "ofsted-dashboard",
+        label: "Ofsted dashboard",
+        short_label: "Dashboard",
+        icon: "clipboard-check",
+        description:
+          "Inspection-facing overview of strengths, gaps, readiness and evidence confidence.",
+      },
+      {
+        id: "sccif-evidence",
+        label: "SCCIF evidence",
+        short_label: "SCCIF",
+        icon: "badge-check",
+        description:
+          "Evidence mapped to SCCIF themes, outcomes and likely lines of enquiry.",
+      },
+      {
+        id: "judgement-builder",
+        label: "Judgement builder",
+        short_label: "Judgements",
+        icon: "file-text",
+        description:
+          "Draft strengths, risks, impact statements and inspection-ready narrative.",
+      },
+      {
+        id: "inspection-readiness",
+        label: "Inspection readiness",
+        short_label: "Readiness",
+        icon: "shield-check",
+        description:
+          "Live evidence gaps, missing assurance and readiness tracking.",
+      },
+    ],
+  },
+  {
+    id: "ofsted_evidence_and_governance",
+    title: "Evidence and governance",
+    items: [
+      {
+        id: "quality-audits",
+        label: "Quality audits",
+        short_label: "Audits",
+        icon: "clipboard-check",
+        description:
+          "Audit findings, themes and improvement tracking relevant to inspection.",
+      },
+      {
+        id: "reg44",
+        label: "Regulation 44",
+        short_label: "Reg 44",
+        icon: "file-text",
+        description:
+          "Independent visitor themes, challenge and resulting evidence.",
+      },
+      {
+        id: "reg45",
+        label: "Regulation 45",
+        short_label: "Reg 45",
+        icon: "file-text",
+        description:
+          "Quality of care review evidence, analysis and service improvement actions.",
+      },
+      {
+        id: "reports",
+        label: "Reports and reviews",
+        short_label: "Reports",
+        icon: "file-text",
+        description:
+          "Generated reports, service summaries and inspection-facing outputs.",
+      },
+      {
+        id: "documents",
+        label: "Documents",
+        short_label: "Documents",
+        icon: "folder",
+        description:
+          "Inspection evidence packs, supporting records and key uploaded documents.",
+      },
+      {
+        id: "policies",
+        label: "Policies and guidance",
+        short_label: "Policies",
+        icon: "folder",
+        description:
+          "Policy review dates, guidance and practice standards inspectors may test.",
+      },
+    ],
+  },
+  {
+    id: "ofsted_safety_and_workforce",
+    title: "Safety and workforce evidence",
+    items: [
+      {
+        id: "compliance",
+        label: "Compliance and statutory checks",
+        short_label: "Compliance",
+        icon: "badge-check",
+        description:
+          "Cross-cutting statutory compliance and readiness issues.",
+      },
+      {
+        id: "health-safety",
+        label: "Health and safety",
+        short_label: "H&S",
+        icon: "shield-check",
+        description:
+          "Premises safety, fire checks and environmental readiness evidence.",
+      },
+      {
+        id: "staff-profile",
+        label: "Staff profiles",
+        short_label: "Staff",
+        icon: "users-round",
+        description:
+          "Workforce structure, checks, file readiness and staffing evidence.",
+      },
+      {
+        id: "onboarding",
+        label: "Recruitment and onboarding",
+        short_label: "Onboarding",
+        icon: "clipboard-check",
+        description:
+          "Safer recruitment, induction and probation evidence.",
+      },
+      {
+        id: "supervision",
+        label: "Supervision and development",
+        short_label: "Supervision",
+        icon: "badge-check",
+        description:
+          "Supervision quality, development support and workforce oversight.",
+      },
+      {
+        id: "training-centre",
+        label: "Training and compliance",
+        short_label: "Training",
+        icon: "graduation-cap",
+        description:
+          "Mandatory training completion and workforce learning risk.",
+      },
+      {
+        id: "team",
+        label: "Team and staffing",
+        short_label: "Team",
+        icon: "users-round",
+        description:
+          "Staffing stability, vacancies, deployment and leadership capacity.",
+      },
+      {
+        id: "rota",
+        label: "Rota and cover",
+        short_label: "Rota",
+        icon: "calendar",
+        description:
+          "Operational cover, agency usage, absence patterns and staffing resilience.",
+      },
+      {
+        id: "notifications",
+        label: "Alerts and notifications",
+        short_label: "Alerts",
+        icon: "messages-square",
+        description:
+          "Live reminders, escalations and evidence of responsive oversight.",
+      },
+      {
+        id: "communication",
+        label: "Communication log",
+        short_label: "Comms",
+        icon: "messages-square",
+        description:
+          "Communication that supports inspection lines of enquiry and leadership oversight.",
+      },
+    ],
+  },
 ];
 
 export const NAV_GROUPS_CONFIG = Object.freeze(
@@ -986,6 +1198,15 @@ export const QUICK_ACTIONS = Object.freeze([
     description:
       "Record a health and safety action, check or follow-up.",
   },
+  {
+    id: "ofsted_action",
+    label: "Add inspection action",
+    short_label: "Inspection action",
+    record_type: "task",
+    section_hint: "ofsted-dashboard",
+    description:
+      "Create an inspection-readiness or evidence-gap action linked to SCCIF and Ofsted preparation.",
+  },
 ]);
 
 export const QUICK_ACTION_MAP = Object.freeze(
@@ -1039,6 +1260,10 @@ export const SECTION_DEFAULT_ACTION = Object.freeze({
   reg44: "task",
   reg45: "task",
   "inspection-readiness": "task",
+
+  "ofsted-dashboard": "ofsted_action",
+  "sccif-evidence": "ofsted_action",
+  "judgement-builder": "ofsted_action",
 });
 
 export const PROFILE_ACTIONS = Object.freeze([
@@ -1110,6 +1335,7 @@ export function getDefaultScopeForRole(role = "staff") {
 
   if (allowed.includes("home")) return "home";
   if (allowed.includes("quality")) return "quality";
+  if (allowed.includes("ofsted")) return "ofsted";
   return allowed[0] || "child";
 }
 
@@ -1172,6 +1398,9 @@ export function buildInspectionUiEndpoints(homeId) {
       audits: "",
       syncTasks: "",
       refreshCycle: "",
+      sccifEvidence: "",
+      judgementBuilder: "",
+      ofstedDashboard: "",
     };
   }
 
@@ -1191,5 +1420,8 @@ export function buildInspectionUiEndpoints(homeId) {
     audits: `${base}/audits`,
     syncTasks: `${base}/inspection-tasks/sync`,
     refreshCycle: `${base}/inspection-cycle/refresh`,
+    ofstedDashboard: `${base}/ofsted-dashboard`,
+    sccifEvidence: `${base}/sccif-evidence`,
+    judgementBuilder: `${base}/judgement-builder`,
   };
 }
