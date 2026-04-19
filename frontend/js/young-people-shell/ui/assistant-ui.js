@@ -6,7 +6,6 @@ import { getSectionTitle, getSectionSubtitle } from "../core/config.js";
 let assistantUiBound = false;
 let citationEventsBound = false;
 
-const CITATION_REF_REGEX = /\[([a-z_]+:\w[\w:-]*)\]/gi;
 const RECORD_LINK_REGEX =
   /\b(incident|record|note|task|document|report|chronology|entry)\s+(number\s+)?(#?\d+)\b/gi;
 
@@ -52,10 +51,6 @@ function getCurrentSection() {
 function ensureAssistantArrays() {
   if (!Array.isArray(state.assistantMessages)) {
     state.assistantMessages = [];
-  }
-
-  if (!Array.isArray(state.assistantModalMessages)) {
-    state.assistantModalMessages = [];
   }
 }
 
@@ -439,16 +434,16 @@ function buildIntroMessageHtml() {
             `
             : `<p>Select a child or young person to begin.</p>`
           : scope === "home"
-          ? `
-            <p><strong>Ask about ${escapeHtml(getHomeLabel())}.</strong></p>
-            <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-            ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
-          `
-          : `
-            <p><strong>Ask about quality and oversight.</strong></p>
-            <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
-            ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
-          `
+            ? `
+              <p><strong>Ask about ${escapeHtml(getHomeLabel())}.</strong></p>
+              <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+              ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
+            `
+            : `
+              <p><strong>Ask about quality and oversight.</strong></p>
+              <p>You are in <strong>${escapeHtml(sectionTitle)}</strong>.</p>
+              ${sectionSubtitle ? `<p>${escapeHtml(sectionSubtitle)}</p>` : ""}
+            `
       }
     </div>
   `;
@@ -474,11 +469,6 @@ function renderMessages() {
     getEl(els.assistantMessages, "assistantMessages"),
     state.assistantMessages
   );
-
-  renderMessageList(
-    getEl(els.assistantModalMessages, "assistantModalMessages"),
-    state.assistantModalMessages
-  );
 }
 
 function renderScopeBadges() {
@@ -491,11 +481,6 @@ function renderScopeBadges() {
   const homeBadge = getEl(els.scopeHomeBadge, "scopeHomeBadge");
   const childBadge = getEl(els.scopeChildBadge, "scopeChildBadge");
   const shiftBadge = getEl(els.scopeShiftBadge, "scopeShiftBadge");
-  const modalHomeBadge = getEl(els.modalScopeHomeBadge, "modalScopeHomeBadge");
-  const modalChildBadge = getEl(
-    els.modalScopeChildBadge,
-    "modalScopeChildBadge"
-  );
 
   if (scopeBadge) {
     scopeBadge.textContent = getScopeLabel();
@@ -516,18 +501,6 @@ function renderScopeBadges() {
   if (shiftBadge) {
     shiftBadge.textContent = section;
     shiftBadge.classList.toggle("hidden", !section);
-  }
-
-  if (modalHomeBadge) {
-    const showHome = scope !== "child";
-    modalHomeBadge.textContent = showHome ? homeName : "";
-    modalHomeBadge.classList.toggle("hidden", !showHome);
-  }
-
-  if (modalChildBadge) {
-    const showChild = scope === "child" && Boolean(state.youngPersonId);
-    modalChildBadge.textContent = showChild ? childName : "";
-    modalChildBadge.classList.toggle("hidden", !showChild);
   }
 }
 
@@ -634,15 +607,8 @@ function renderSourcesHtml(sources = []) {
 
 function renderStandaloneSources() {
   const html = renderSourcesHtml(getSources());
-
   const sourcesEl = getEl(els.assistantSources, "assistantSources");
-  const modalSourcesEl = getEl(
-    els.assistantModalSources,
-    "assistantModalSources"
-  );
-
   if (sourcesEl) sourcesEl.innerHTML = html;
-  if (modalSourcesEl) modalSourcesEl.innerHTML = html;
 }
 
 function renderSuggestedActions() {
@@ -694,11 +660,6 @@ function renderSuggestedActions() {
 
 function renderScopeSummary() {
   const host = getEl(els.assistantScopeSummary, "assistantScopeSummary");
-  const modalHost = getEl(
-    els.assistantModalScopeSummary,
-    "assistantModalScopeSummary"
-  );
-
   const meta = getAssistantMeta();
   const runtime = meta.runtime || {};
 
@@ -724,7 +685,6 @@ function renderScopeSummary() {
   `;
 
   if (host) host.innerHTML = html;
-  if (modalHost) modalHost.innerHTML = html;
 }
 
 function renderRuntimeAndExplainability() {
@@ -764,15 +724,17 @@ function syncAssistantVisibility() {
 function syncAssistantSendButtons() {
   const sending = Boolean(state.assistantSending);
 
-  if (els.assistantSendBtn) els.assistantSendBtn.disabled = sending;
-  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = sending;
+  if (els.assistantSendBtn) {
+    els.assistantSendBtn.disabled = sending;
+  }
 }
 
 function syncAssistantInputs() {
   const disabled = Boolean(state.assistantSending);
 
-  if (els.assistantInput) els.assistantInput.disabled = disabled;
-  if (els.assistantModalInput) els.assistantModalInput.disabled = disabled;
+  if (els.assistantInput) {
+    els.assistantInput.disabled = disabled;
+  }
 }
 
 function scrollSourceIntoView(ref = "") {
@@ -885,7 +847,6 @@ export function appendAssistantSystemMessage(text) {
   };
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
   renderAllAssistantUi();
 }
 
@@ -900,13 +861,11 @@ export function appendAssistantUserMessage(text) {
   };
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
   renderAllAssistantUi();
 }
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
-  state.assistantModalMessages = [];
   renderAllAssistantUi();
 }
 
