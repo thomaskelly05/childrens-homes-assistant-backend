@@ -7,14 +7,18 @@ import {
   pushAssistantLiveUpdate,
   clearAssistantLiveUpdates,
 } from "../state.js";
+
 import { els } from "../dom.js";
 import { fetchAssistantScopeBundle } from "../core/api.js";
 import * as aiScrubber from "../core/ai-scrubber.js";
+
 import {
   buildAssistantEvidenceContext,
 } from "../core/assistant-runtime.js";
+
 import { refreshAssistantUi } from "./assistant-ui.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
+
 import {
   buildMorningBrief,
   buildManagerBrief,
@@ -24,473 +28,96 @@ import {
 let assistantControllerBound = false;
 let latestRefreshToken = 0;
 
-const MAX_BRIEF_EVIDENCE = 10;
-const MAX_BRIEF_CHRONOLOGY = 5;
+/* --------------------------------------------------
+   Helpers
+-------------------------------------------------- */
 
-function safeArray(value) {
-  return Array.isArray(value) ? value : [];
+function safeArray(v) {
+  return Array.isArray(v) ? v : [];
 }
 
-function getAllowedHomeIds() {
-  return Array.isArray(state.allowedHomeIds)
-    ? state.allowedHomeIds
-        .map((item) => Number(item))
-        .filter((item) => Number.isFinite(item))
-    : [];
-}
-
-function getAccessLevelForScope(scope = state.currentScope || "child") {
+function getAccessLevel(scope) {
   const role = String(state.userRole || "").toLowerCase();
 
   if (scope === "child") return "child";
   if (scope === "home") return "home";
   if (scope === "quality") {
-    return role === "ri" || role === "admin" ? "provider" : "home";
+    return ["ri", "admin"].includes(role) ? "provider" : "home";
   }
 
   return "home";
 }
 
-function getScopeContext() {
+function buildScopeContext() {
   const scope = state.currentScope || "child";
-  const accessLevel = getAccessLevelForScope(scope);
+  const access = getAccessLevel(scope);
 
   return {
     scope,
-    current_scope: scope,
-    access_level: accessLevel,
-    provider_id:
-      state.providerId ||
-      state.currentUser?.provider_id ||
-      state.currentUser?.providerId ||
-      null,
+    access_level: access,
+    provider_id: state.providerId || null,
     allowed_home_ids:
-      scope === "quality" && accessLevel === "provider"
-        ? getAllowedHomeIds()
-        : [state.homeId || state.selectedYoungPerson?.home_id].filter(Boolean),
+      scope === "quality" && access === "provider"
+        ? safeArray(state.allowedHomeIds)
+        : [state.homeId].filter(Boolean),
     young_person_id: state.youngPersonId || null,
-    home_id: state.homeId || state.selectedYoungPerson?.home_id || null,
+    home_id: state.homeId || null,
     home_name:
       state.currentUser?.home_name ||
-      state.currentUser?.homeName ||
       state.selectedYoungPerson?.home_name ||
-      null,
+      "Home",
     young_person_name:
       state.selectedYoungPerson?.preferred_name ||
-      state.selectedYoungPerson?.full_name ||
       state.selectedYoungPerson?.name ||
-      null,
+      "Young person",
   };
 }
 
-function getBundlePayload() {
-  return state.scopeBundle || {};
+function ensureMeta() {
+  if (!state.assistantMeta) state.assistantMeta = {};
+
+  state.assistantMeta.runtime ||= {};
+  state.assistantMeta.explainability ||= {};
+  state.assistantMeta.assistant_scope ||= {};
+  state.assistantMeta.assistant_context ||= {};
+  state.assistantMeta.sources ||= [];
 }
 
-function ensureAssistantMeta() {
-  if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
-    state.assistantMeta = {};
-  }
+/* --------------------------------------------------
+   Scrubber
+-------------------------------------------------- */
 
-  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
-  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
-  state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
-  state.assistantMeta.assistant_context =
-    state.assistantMeta.assistant_context || {};
-  state.assistantMeta.sources = Array.isArray(state.assistantMeta.sources)
-    ? state.assistantMeta.sources
-    : [];
-  state.assistantMeta.suggested_actions = Array.isArray(
-    state.assistantMeta.suggested_actions
-  )
-    ? state.assistantMeta.suggested_actions
-    : [];
-}
-
-function scrubAssistantBundle(bundle = {}, context = {}) {
+function scrubBundle(bundle, context) {
   try {
-    if (typeof aiScrubber.scrubAssistantPayload === "function") {
-      const result = aiScrubber.scrubAssistantPayload({
-        context,
-        bundle,
-      });
-
+    if (aiScrubber.scrubAssistantPayload) {
+      const res = aiScrubber.scrubAssistantPayload({ bundle, context });
       return {
-        bundle: result?.safePayload?.bundle || result?.safePayload || bundle,
-        meta: {
-          enabled: true,
-          mode: "client_side_bundle",
-        },
+        bundle: res?.safePayload?.bundle || bundle,
+        meta: { enabled: true },
       };
     }
-
-    if (typeof aiScrubber.createScrubber === "function") {
-      const scrubber = aiScrubber.createScrubber();
-      scrubber.registerContext(context || {});
-      scrubber.registerContext(bundle || {});
-      const safeBundle = scrubber.scrubPayload(bundle || {});
-
-      return {
-        bundle: safeBundle || bundle,
-        meta: {
-          enabled: true,
-          mode: "client_side_bundle",
-        },
-      };
-    }
-
-    return {
-      bundle,
-      meta: {
-        enabled: false,
-        reason: "scrubber_not_found",
-      },
-    };
-  } catch (error) {
-    console.error("[assistant-controller] bundle scrub failed", error);
-
-    return {
-      bundle,
-      meta: {
-        enabled: false,
-        reason: "scrubber_error",
-        error: error?.message || "Unknown scrubber error",
-      },
-    };
+  } catch (err) {
+    console.error("Scrubber failed", err);
   }
+
+  return { bundle, meta: { enabled: false } };
 }
 
-function currentAssistantContext() {
-  const scopeContext = getScopeContext();
+/* --------------------------------------------------
+   Core Analysis
+-------------------------------------------------- */
 
-  return {
-    scope: scopeContext.scope,
-    section:
-      state.currentSection || state.activeSection || state.currentView || "workspace",
-    role: state.userRole || "staff",
-    person: {
-      id: scopeContext.young_person_id,
-      name:
-        state.selectedYoungPerson?.preferred_name ||
-        state.selectedYoungPerson?.full_name ||
-        state.selectedYoungPerson?.name ||
-        scopeContext.young_person_name ||
-        "Young person",
-      preferred_name: state.selectedYoungPerson?.preferred_name || "",
-      home_name:
-        state.selectedYoungPerson?.home_name || scopeContext.home_name || "",
-      risk: state.selectedYoungPerson?.summary_risk_level || "",
-      placement_status: state.selectedYoungPerson?.placement_status || "",
-    },
-    home: {
-      home_id: scopeContext.home_id,
-      home_name: scopeContext.home_name || "Home",
-    },
-    active_record_type: state.activeRecordType || null,
-    active_record_item: state.activeRecordItem || null,
-    composer_record_type: state.composerRecordType || null,
-    composer_record_id: state.composerRecordId || null,
-  };
-}
-
-function renderBundleStatus() {
-  if (els.assistantScopeBundleStatus) {
-    if (state.scopeBundleLoading) {
-      els.assistantScopeBundleStatus.textContent = "Loading scoped records…";
-    } else if (state.scopeBundleLoadedAt) {
-      els.assistantScopeBundleStatus.textContent = `Scoped records loaded: ${formatDate(
-        state.scopeBundleLoadedAt
-      )}`;
-    } else {
-      els.assistantScopeBundleStatus.textContent = "No scoped records loaded.";
-    }
-  }
-
-  if (els.assistantScopeBundleError) {
-    els.assistantScopeBundleError.textContent = state.scopeBundleError || "";
-    els.assistantScopeBundleError.classList.toggle(
-      "hidden",
-      !state.scopeBundleError
-    );
-  }
-
-  if (els.assistantLiveStatus) {
-    const summary = state.assistantMeta?.live_summary;
-    if (summary && typeof summary === "object") {
-      els.assistantLiveStatus.textContent = `Live analysis ready • evidence items: ${
-        summary.evidence_count ?? summary.total ?? 0
-      }`;
-    } else if (state.scopeBundleLoading) {
-      els.assistantLiveStatus.textContent = "Analysing scoped records…";
-    } else {
-      els.assistantLiveStatus.textContent = "Assistant ready.";
-    }
-  }
-}
-
-function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
-  if (!host) return;
-
-  if (!brief) {
-    host.innerHTML = `<p>${escapeHtml(emptyText)}</p>`;
-    return;
-  }
-
-  const keyConcerns = safeArray(brief.key_concerns);
-  const evidence = safeArray(brief.evidence).slice(0, MAX_BRIEF_EVIDENCE);
-  const chronology = safeArray(brief.chronology).slice(0, MAX_BRIEF_CHRONOLOGY);
-  const facts = brief.facts || {};
-  const sufficiency = brief.evidence_sufficiency || {};
-
-  host.innerHTML = `
-    <div class="profile-stack">
-      <div class="profile-card">
-        <div class="profile-card-title">${escapeHtml(brief.title || "Brief")}</div>
-        <div class="profile-card-text">
-          Scope: ${escapeHtml(brief.scope || "unknown")} • Section: ${escapeHtml(
-    brief.section || "unknown"
-  )}
-        </div>
-      </div>
-
-      <div class="profile-card">
-        <div class="profile-card-title">Summary</div>
-        <div class="profile-card-text">
-          Evidence items: ${escapeHtml(
-            String(brief.summary?.total ?? evidence.length ?? 0)
-          )}<br />
-          Open tasks: ${escapeHtml(String(brief.summary?.open_tasks ?? 0))}<br />
-          Overdue items: ${escapeHtml(
-            String(brief.summary?.overdue_items ?? 0)
-          )}<br />
-          Confidence: ${escapeHtml(String(sufficiency.confidence || "unknown"))}
-        </div>
-      </div>
-
-      ${
-        keyConcerns.length
-          ? `
-            <div class="profile-card">
-              <div class="profile-card-title">Key concerns</div>
-              <div class="profile-card-text">${keyConcerns
-                .map((item) => escapeHtml(String(item || "")))
-                .join("<br />")}</div>
-            </div>
-          `
-          : ""
-      }
-
-      ${
-        facts.next_appointment ||
-        facts.latest_incident ||
-        facts.latest_missing_episode
-          ? `
-            <div class="profile-card">
-              <div class="profile-card-title">Key dates</div>
-              <div class="profile-card-text">
-                ${
-                  facts.next_appointment
-                    ? `Next appointment: ${escapeHtml(
-                        facts.next_appointment.title || "Appointment"
-                      )} ${
-                        facts.next_appointment.date
-                          ? `(${escapeHtml(String(facts.next_appointment.date))})`
-                          : ""
-                      }<br />`
-                    : ""
-                }
-                ${
-                  facts.latest_incident
-                    ? `Latest incident: ${escapeHtml(
-                        facts.latest_incident.title || "Incident"
-                      )} ${
-                        facts.latest_incident.date
-                          ? `(${escapeHtml(String(facts.latest_incident.date))})`
-                          : ""
-                      }<br />`
-                    : ""
-                }
-                ${
-                  facts.latest_missing_episode
-                    ? `Latest missing episode: ${escapeHtml(
-                        facts.latest_missing_episode.title || "Missing episode"
-                      )} ${
-                        facts.latest_missing_episode.date
-                          ? `(${escapeHtml(
-                              String(facts.latest_missing_episode.date)
-                            )})`
-                          : ""
-                      }`
-                    : ""
-                }
-              </div>
-            </div>
-          `
-          : ""
-      }
-
-      ${
-        chronology.length
-          ? `
-            <div class="profile-card">
-              <div class="profile-card-title">Chronology</div>
-              <div class="profile-card-text">
-                ${chronology
-                  .map((item) =>
-                    escapeHtml(
-                      [item.date, item.title, item.summary]
-                        .filter(Boolean)
-                        .join(" - ")
-                    )
-                  )
-                  .join("<br />")}
-              </div>
-            </div>
-          `
-          : ""
-      }
-    </div>
-  `;
-}
-
-function renderLiveUpdates() {
-  if (!els.liveUpdatesBody) return;
-
-  const updates = Array.isArray(state.liveUpdates) ? state.liveUpdates : [];
-
-  if (!updates.length) {
-    els.liveUpdatesBody.innerHTML = `<p>No live updates yet.</p>`;
-    return;
-  }
-
-  els.liveUpdatesBody.innerHTML = updates
-    .map((update) => {
-      const title = escapeHtml(String(update.title || "Update"));
-      const message = escapeHtml(String(update.message || ""));
-      const timestamp = update.created_at
-        ? escapeHtml(formatDate(update.created_at))
-        : "";
-
-      return `
-        <div class="entity-row">
-          <div class="entity-title">${title}</div>
-          ${timestamp ? `<div class="entity-meta">${timestamp}</div>` : ""}
-          ${
-            message
-              ? `<div class="entity-meta entity-meta-description">${message}</div>`
-              : ""
-          }
-        </div>
-      `;
-    })
-    .join("");
-}
-
-function renderAssistantExtraPanels() {
-  renderBundleStatus();
-
-  renderBriefPanel(
-    els.morningBriefBody,
-    state.latestMorningBrief,
-    "No morning brief available yet."
-  );
-
-  renderBriefPanel(
-    els.managerBriefBody,
-    state.latestManagerBrief,
-    "No manager brief available yet."
-  );
-
-  renderBriefPanel(
-    els.qualityBriefBody,
-    state.latestQualityBrief,
-    "No quality brief available yet."
-  );
-
-  renderLiveUpdates();
-}
-
-function setAssistantContextText() {
-  if (!els.assistantContext) return;
-
-  const context = currentAssistantContext();
-
-  if (context.scope === "child") {
-    els.assistantContext.textContent = `Scoped to ${context.person.name} in ${
-      context.person.home_name || context.home.home_name || "the home"
-    }.`;
-    return;
-  }
-
-  if (context.scope === "home") {
-    els.assistantContext.textContent = `Scoped to home oversight for ${
-      context.home.home_name || "the current home"
-    }.`;
-    return;
-  }
-
-  els.assistantContext.textContent =
-    "Scoped to quality and oversight across authorised homes.";
-}
-
-function renderScopeBadges() {
-  const context = currentAssistantContext();
-
-  if (els.scopeBadge) {
-    els.scopeBadge.textContent =
-      context.scope === "child"
-        ? "Young person assistant"
-        : context.scope === "home"
-        ? "Home assistant"
-        : "Quality assistant";
-  }
-
-  if (els.scopeHomeBadge) {
-    const homeName = context.home?.home_name;
-    els.scopeHomeBadge.textContent = homeName || "";
-    els.scopeHomeBadge.classList.toggle("hidden", !homeName);
-  }
-
-  if (els.scopeChildBadge) {
-    const childName =
-      context.scope === "child" ? context.person?.name || "" : "";
-    els.scopeChildBadge.textContent = childName;
-    els.scopeChildBadge.classList.toggle("hidden", !childName);
-  }
-
-  if (els.scopeShiftBadge) {
-    els.scopeShiftBadge.textContent =
-      state.currentSection || state.activeSection || "workspace";
-  }
-}
-
-function writeBriefsFromBrain() {
-  const bundle = getBundlePayload();
-  const context = currentAssistantContext();
-
-  state.latestMorningBrief = buildMorningBrief("morning brief", bundle, {
-    context,
-  });
-
-  state.latestManagerBrief = buildManagerBrief("manager oversight brief", bundle, {
-    context,
-  });
-
-  state.latestQualityBrief = buildQualityBrief("quality and inspection brief", bundle, {
-    context,
-  });
-}
-
-async function buildDerivedAssistantStateFromBundle(bundle) {
-  const recordsPayload = bundle || {};
-
+async function buildDerivedState(bundle) {
   const runtime = await buildAssistantEvidenceContext({
     message: "summary",
-    records_payload: recordsPayload,
+    records_payload: bundle,
     fetchScopeBundle: false,
   });
 
-  writeBriefsFromBrain();
+  // Build briefs
+  state.latestMorningBrief = buildMorningBrief("Morning Brief", bundle);
+  state.latestManagerBrief = buildManagerBrief("Manager Brief", bundle);
+  state.latestQualityBrief = buildQualityBrief("Quality Brief", bundle);
 
   setAssistantDerivedState({
     chronology: runtime.chronology,
@@ -499,184 +126,175 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
     morning_brief: state.latestMorningBrief,
     manager_brief: state.latestManagerBrief,
     quality_brief: state.latestQualityBrief,
-    live_summary: {
-      ...runtime.summary,
-      evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
-    },
+    live_summary: runtime.summary,
   });
 
-  ensureAssistantMeta();
+  ensureMeta();
 
-  state.assistantMeta.chronology = runtime.chronology || [];
-  state.assistantMeta.facts = runtime.facts || {};
-  state.assistantMeta.care_domains = runtime.care_domains || {};
+  state.assistantMeta.intent = runtime.intent || "summary";
+  state.assistantMeta.retrieval_mode = runtime.retrieval_mode || "whole_scope";
+  state.assistantMeta.output_mode = runtime.output_mode || "answer";
+
   state.assistantMeta.evidence_summary = runtime.summary || {};
   state.assistantMeta.evidence_sufficiency =
     runtime.evidence_sufficiency || {};
-  state.assistantMeta.retrieval_mode =
-    runtime.retrieval_mode || "whole_scope";
-  state.assistantMeta.output_mode = runtime.output_mode || "answer";
-  state.assistantMeta.intent = runtime.intent || "summary";
-  state.assistantMeta.live_summary = {
-    ...runtime.summary,
-    evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
-  };
-  state.assistantMeta.last_bundle_refresh_at = new Date().toISOString();
 
-  renderScopeBadges();
-  setAssistantContextText();
+  state.assistantMeta.last_analysis_at = new Date().toISOString();
 }
+
+/* --------------------------------------------------
+   UI Rendering
+-------------------------------------------------- */
+
+function renderStatus() {
+  if (els.assistantScopeBundleStatus) {
+    if (state.scopeBundleLoading) {
+      els.assistantScopeBundleStatus.textContent = "Loading evidence…";
+    } else if (state.scopeBundleLoadedAt) {
+      els.assistantScopeBundleStatus.textContent =
+        "Updated " + formatDate(state.scopeBundleLoadedAt);
+    }
+  }
+
+  if (els.assistantLiveStatus) {
+    els.assistantLiveStatus.textContent = state.scopeBundleLoading
+      ? "Analysing..."
+      : "Assistant ready";
+  }
+}
+
+function renderBrief(host, brief, empty = "No data") {
+  if (!host) return;
+
+  if (!brief) {
+    host.innerHTML = `<p>${empty}</p>`;
+    return;
+  }
+
+  host.innerHTML = `
+    <div class="profile-card">
+      <strong>${escapeHtml(brief.title || "Brief")}</strong>
+      <div>${escapeHtml(
+        brief.summary?.total
+          ? `${brief.summary.total} records analysed`
+          : "No summary"
+      )}</div>
+    </div>
+  `;
+}
+
+function renderPanels() {
+  renderStatus();
+
+  renderBrief(els.morningBriefBody, state.latestMorningBrief);
+  renderBrief(els.managerBriefBody, state.latestManagerBrief);
+  renderBrief(els.qualityBriefBody, state.latestQualityBrief);
+}
+
+/* --------------------------------------------------
+   Main Refresh Logic
+-------------------------------------------------- */
 
 export async function refreshAssistantScopeData({
   pushUpdate = false,
-  updateTitle = "Assistant scope refreshed",
 } = {}) {
   const token = ++latestRefreshToken;
-  const context = getScopeContext();
+  const context = buildScopeContext();
 
   setAssistantScopeBundleLoading(true);
-  setAssistantScopeBundleError(null);
-  renderAssistantExtraPanels();
 
   try {
     const bundle = await fetchAssistantScopeBundle(context);
 
-    if (token !== latestRefreshToken) return null;
+    if (token !== latestRefreshToken) return;
 
-    const scrubbed = scrubAssistantBundle(bundle, context);
+    const scrubbed = scrubBundle(bundle, context);
 
     setAssistantScopeBundle(scrubbed.bundle);
 
-    ensureAssistantMeta();
-    state.assistantMeta.scrubber_enabled = scrubbed.meta?.enabled ?? false;
-    state.assistantMeta.scrubber_meta = scrubbed.meta || {};
-    state.assistantMeta.scope_access_level = context.access_level;
-    state.assistantMeta.allowed_home_ids = context.allowed_home_ids || [];
-    state.assistantMeta.provider_id = context.provider_id || null;
-    state.assistantMeta.assistant_scope = {
-      ...(state.assistantMeta.assistant_scope || {}),
-      scope: context.scope,
-      current_scope: context.current_scope,
-      access_level: context.access_level,
-      provider_id: context.provider_id || null,
-      allowed_home_ids: context.allowed_home_ids || [],
-      home_id: context.home_id || null,
-      young_person_id: context.young_person_id || null,
-      scrubber_meta: scrubbed.meta || {},
-    };
+    ensureMeta();
+    state.assistantMeta.scrubber_enabled = scrubbed.meta.enabled;
 
-    await buildDerivedAssistantStateFromBundle(scrubbed.bundle);
+    await buildDerivedState(scrubbed.bundle);
 
     if (pushUpdate) {
       pushAssistantLiveUpdate({
-        title: updateTitle,
-        message:
-          context.scope === "child"
-            ? `Scoped records refreshed for ${
-                context.young_person_name || "the selected young person"
-              }.`
-            : context.scope === "quality" && context.access_level === "provider"
-            ? `Scoped records refreshed across ${safeArray(
-                context.allowed_home_ids
-              ).length} allowed home(s).`
-            : `Scoped records refreshed for ${
-                context.home_name || "the selected home"
-              }.`,
+        title: "Scope refreshed",
+        message: `Updated ${context.scope}`,
         created_at: new Date().toISOString(),
       });
     }
 
     refreshAssistantUi();
-    renderAssistantExtraPanels();
-    return scrubbed.bundle;
-  } catch (error) {
-    if (token !== latestRefreshToken) return null;
+    renderPanels();
 
-    setAssistantScopeBundleError(
-      error?.message || "Could not load scoped assistant records."
-    );
-    renderAssistantExtraPanels();
-    return null;
+    return scrubbed.bundle;
+  } catch (err) {
+    setAssistantScopeBundleError(err.message);
   } finally {
-    if (token === latestRefreshToken) {
-      setAssistantScopeBundleLoading(false);
-      renderAssistantExtraPanels();
-    }
+    setAssistantScopeBundleLoading(false);
+    renderPanels();
   }
 }
 
+/* --------------------------------------------------
+   Analysis Only
+-------------------------------------------------- */
+
 export async function refreshAssistantAnalysisOnly() {
-  const bundle = getBundlePayload();
+  if (!state.scopeBundle) return;
 
-  if (!bundle || typeof bundle !== "object") {
-    setAssistantScopeBundleError("No scoped records are loaded yet.");
-    renderAssistantExtraPanels();
-    return;
-  }
-
-  await buildDerivedAssistantStateFromBundle(bundle);
+  await buildDerivedState(state.scopeBundle);
 
   pushAssistantLiveUpdate({
-    title: "Assistant analysis refreshed",
-    message:
-      "Derived summaries, facts, chronology, and brief panels were updated.",
+    title: "Analysis refreshed",
+    message: "Derived insights updated",
     created_at: new Date().toISOString(),
   });
 
   refreshAssistantUi();
-  renderAssistantExtraPanels();
+  renderPanels();
 }
 
+/* --------------------------------------------------
+   Event Hooks
+-------------------------------------------------- */
+
 export async function onAssistantScopeChanged() {
-  await refreshAssistantScopeData({
-    pushUpdate: false,
-  });
+  await refreshAssistantScopeData();
 }
 
 export async function onYoungPersonSelected() {
-  await refreshAssistantScopeData({
-    pushUpdate: true,
-    updateTitle: "Young person context loaded",
-  });
+  await refreshAssistantScopeData({ pushUpdate: true });
 }
 
 export async function onWorkspaceRefreshRequested() {
-  await refreshAssistantScopeData({
-    pushUpdate: true,
-    updateTitle: "Workspace refreshed",
-  });
+  await refreshAssistantScopeData({ pushUpdate: true });
 }
 
-function bindRefreshButtons() {
-  els.assistantRefreshScopeBtn?.addEventListener("click", async () => {
-    await refreshAssistantScopeData({
-      pushUpdate: true,
-      updateTitle: "Assistant scope refreshed",
-    });
-  });
+/* --------------------------------------------------
+   Bindings
+-------------------------------------------------- */
 
-  els.assistantRefreshAnalysisBtn?.addEventListener("click", async () => {
-    await refreshAssistantAnalysisOnly();
-  });
+function bindButtons() {
+  els.assistantRefreshScopeBtn?.addEventListener("click", () =>
+    refreshAssistantScopeData({ pushUpdate: true })
+  );
+
+  els.assistantRefreshAnalysisBtn?.addEventListener("click", () =>
+    refreshAssistantAnalysisOnly()
+  );
 
   els.clearLiveUpdatesBtn?.addEventListener("click", () => {
     clearAssistantLiveUpdates();
-    renderAssistantExtraPanels();
+    renderPanels();
   });
-}
-
-export function renderAssistantControllerPanels() {
-  renderAssistantExtraPanels();
-  renderScopeBadges();
-  setAssistantContextText();
 }
 
 export function bindAssistantController() {
   if (assistantControllerBound) return;
   assistantControllerBound = true;
 
-  bindRefreshButtons();
-  renderAssistantExtraPanels();
-  renderScopeBadges();
-  setAssistantContextText();
+  bindButtons();
+  renderPanels();
 }
