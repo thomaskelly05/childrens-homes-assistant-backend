@@ -59,15 +59,25 @@ function getAllowedScopes() {
 }
 
 function getCurrentSection() {
-  return state.currentSection || state.activeSection || state.currentView || "workspace";
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
 }
 
 function getCurrentHomeLabel() {
   return (
     state.currentUser?.home_name ||
     state.currentUser?.homeName ||
+    state.selectedYoungPerson?.home_name ||
     (state.homeId ? `Home ${state.homeId}` : "Home")
   );
+}
+
+function getCurrentPerson() {
+  return state.selectedYoungPerson || state.youngPerson || null;
 }
 
 function buildPersonMeta(person = {}) {
@@ -90,7 +100,10 @@ function getScopeIdentity() {
       meta: state.homeId
         ? `Operational dashboard for home ${state.homeId}`
         : "Operational dashboard across the home",
-      seed: { first_name: "H" },
+      seed: {
+        first_name: "H",
+        last_name: "",
+      },
     };
   }
 
@@ -98,7 +111,10 @@ function getScopeIdentity() {
     return {
       title: "Quality overview",
       meta: "Quality assurance, compliance and RI oversight",
-      seed: { first_name: "Q" },
+      seed: {
+        first_name: "Q",
+        last_name: "",
+      },
     };
   }
 
@@ -144,7 +160,9 @@ function getWorkspaceEyebrowText() {
 }
 
 function getWorkspaceHomeButtonLabel() {
-  return getCurrentScope() === "child" ? "Children and young people" : "Dashboard";
+  return getCurrentScope() === "child"
+    ? "Children and young people"
+    : "Dashboard";
 }
 
 function renderAvatarHtml(person = {}, imageClass, fallbackClass) {
@@ -157,7 +175,10 @@ function updateWorkspaceContextPill() {
 }
 
 function updateWorkspaceEyebrow() {
-  const eyebrow = qs("workspaceEyebrow") || document.querySelector(".workspace-header-copy .eyebrow");
+  const eyebrow =
+    qs("workspaceEyebrow") ||
+    document.querySelector(".workspace-header-copy .eyebrow");
+
   if (eyebrow) eyebrow.textContent = getWorkspaceEyebrowText();
 }
 
@@ -165,25 +186,34 @@ function updateSnapshotAvatar(person = {}) {
   const wrap = qs("profileSnapshotPhotoWrap");
   if (!wrap) return;
 
-  wrap.innerHTML = renderAvatarHtml(person, "profile-photo", "profile-photo-fallback");
+  wrap.innerHTML = renderAvatarHtml(
+    person,
+    "profile-photo",
+    "profile-photo-fallback"
+  );
 }
 
-function updateSidebarAvatar(person = {}) {
+function updateMobileAvatars(person = {}) {
   const imageUrl = getProfileImage(person);
   const name = getDisplayName(person) || person?.first_name || "Workspace";
   const initials = initialsFromName(name);
 
-  const sidebarAvatar = qs("personAvatar");
-  const mobileAvatar = qs("mobilePersonAvatar");
-  const drawerAvatar = document.querySelector("#mobileNavDrawer .workspace-stage-mobile-avatar");
-
   const html = imageUrl
-    ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" />`
+    ? `<img class="avatar" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(
+        name
+      )}" />`
     : `<div class="avatar avatar-fallback">${escapeHtml(initials)}</div>`;
 
-  if (sidebarAvatar) sidebarAvatar.innerHTML = html;
-  if (mobileAvatar) mobileAvatar.innerHTML = html;
-  if (drawerAvatar) drawerAvatar.innerHTML = html;
+  if (els.mobilePersonAvatar) {
+    els.mobilePersonAvatar.innerHTML = html;
+  }
+
+  const drawerAvatar = document.querySelector(
+    "#mobileNavDrawer .workspace-stage-mobile-avatar"
+  );
+  if (drawerAvatar) {
+    drawerAvatar.innerHTML = html;
+  }
 }
 
 function updateMobileDrawerPerson(person = {}) {
@@ -206,9 +236,6 @@ function updateYoungPersonText(person = {}) {
   const scopeIdentity = getScopeIdentity();
 
   if (scopeIdentity) {
-    setText("personName", scopeIdentity.title, "Workspace");
-    setText("personMeta", scopeIdentity.meta, "Workspace");
-
     setText("mobilePersonName", scopeIdentity.title, "Workspace");
     setText("mobilePersonMeta", scopeIdentity.meta, "Workspace");
 
@@ -216,16 +243,13 @@ function updateYoungPersonText(person = {}) {
     setText("profileSnapshotMeta", scopeIdentity.meta, "Dashboard snapshot");
 
     updateSnapshotAvatar(scopeIdentity.seed);
-    updateSidebarAvatar(scopeIdentity.seed);
+    updateMobileAvatars(scopeIdentity.seed);
     updateMobileDrawerPerson(scopeIdentity.seed);
     return;
   }
 
   const displayName = getDisplayName(person);
   const meta = buildPersonMeta(person) || "Child workspace";
-
-  setText("personName", displayName, "Child");
-  setText("personMeta", meta, "Workspace");
 
   setText("mobilePersonName", displayName, "Child");
   setText("mobilePersonMeta", meta, "Workspace");
@@ -234,7 +258,7 @@ function updateYoungPersonText(person = {}) {
   setText("profileSnapshotMeta", meta, "Current context");
 
   updateSnapshotAvatar(person);
-  updateSidebarAvatar(person);
+  updateMobileAvatars(person);
   updateMobileDrawerPerson(person);
 }
 
@@ -276,7 +300,6 @@ function updateScopeSensitiveActions() {
   const isChildScope = getCurrentScope() === "child";
 
   showEl(els.changePersonBtn, isChildScope, "inline-flex");
-  showEl(els.backToSelectorBtn, isChildScope, "inline-flex");
   showEl(els.profileOpenBtn, isChildScope, "inline-flex");
   showEl(els.profilePhotoUploadBtn, isChildScope, "inline-flex");
 
@@ -301,34 +324,43 @@ function updateHeaderChrome(section = "workspace") {
 }
 
 function updateTopLevelLabels() {
-  const scopeTitle = getScopeTitle();
-
-  const sidebarBrand = document.querySelector(".workspace-sidebar-brand span");
-  if (sidebarBrand) sidebarBrand.textContent = scopeTitle;
-
   const mobileNavHeading = document.querySelector("#mobileNavDrawer h3");
   if (mobileNavHeading) mobileNavHeading.textContent = "Main menu";
 }
 
 function updateSearchPlaceholders() {
   const scope = getCurrentScope();
-  const topbarSearch = qs("topbarSearchInput");
   const recordSearch = qs("recordSearchInput");
+  const mobileRecordSearch = qs("mobileRecordSearchInput");
+  const selectorSearch = qs("selectorSearch");
+  const youngPersonSearchInput = qs("youngPersonSearchInput");
   const filter = qs("recordTypeFilter");
 
-  let placeholder = "Search notes, incidents, plans, documents or communication...";
+  let placeholder =
+    "Search notes, incidents, plans, documents or communication...";
 
   if (scope === "home") {
-    placeholder = "Search staffing, incidents, actions, documents or compliance...";
+    placeholder =
+      "Search staffing, incidents, actions, documents or compliance...";
   } else if (scope === "quality") {
-    placeholder = "Search audits, actions, compliance, reports or evidence...";
+    placeholder =
+      "Search audits, actions, compliance, reports or evidence...";
   }
 
-  if (topbarSearch) topbarSearch.placeholder = placeholder;
   if (recordSearch) recordSearch.placeholder = placeholder;
+  if (mobileRecordSearch) mobileRecordSearch.placeholder = "Search records...";
+  if (selectorSearch)
+    selectorSearch.placeholder = "Search by name, preferred name or home...";
+  if (youngPersonSearchInput) {
+    youngPersonSearchInput.placeholder =
+      "Search by name, preferred name or home...";
+  }
 
   if (filter) {
-    filter.setAttribute("aria-label", scope === "child" ? "Filter child records" : "Filter workspace records");
+    filter.setAttribute(
+      "aria-label",
+      scope === "child" ? "Filter child records" : "Filter workspace records"
+    );
   }
 }
 
@@ -343,36 +375,17 @@ function updateAppDataset() {
       ? String(state.youngPersonId)
       : "";
   els.app.dataset.homeId = state.homeId ? String(state.homeId) : "";
+  els.app.dataset.providerId = state.providerId ? String(state.providerId) : "";
+  els.app.dataset.allowedHomeIds = JSON.stringify(
+    Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
+  );
 }
 
 function updateLayoutChrome() {
-  const scope = getCurrentScope();
   const workspaceInner = qs("workspaceShell");
-  const sidebar = document.querySelector(".workspace-sidebar");
-  const desktopNav = qs("desktopNav");
-  const profileCard = document.querySelector(".workspace-sidebar-profile-card");
+  if (!workspaceInner) return;
 
-  const shouldShowSidebar = scope !== "child";
-
-  if (workspaceInner) {
-    workspaceInner.classList.toggle("has-sidebar", shouldShowSidebar);
-  }
-
-  if (sidebar) {
-    sidebar.classList.toggle("workspace-sidebar--hidden", !shouldShowSidebar);
-    sidebar.classList.toggle("workspace-sidebar--visible", shouldShowSidebar);
-    sidebar.setAttribute("aria-hidden", shouldShowSidebar ? "false" : "true");
-  }
-
-  if (desktopNav) {
-    desktopNav.classList.toggle("workspace-nav--hidden", !shouldShowSidebar);
-    desktopNav.classList.toggle("workspace-nav--visible", shouldShowSidebar);
-    desktopNav.setAttribute("aria-hidden", shouldShowSidebar ? "false" : "true");
-  }
-
-  if (profileCard) {
-    showEl(profileCard, true, "block");
-  }
+  workspaceInner.classList.remove("has-sidebar");
 }
 
 export function updateYoungPersonChrome(person = {}) {
@@ -459,7 +472,6 @@ export function bindShellChrome() {
   qs("closeMobileNavBtn")?.addEventListener("click", closeMobileNav);
   qs("mobileNavBackdrop")?.addEventListener("click", closeMobileNav);
 
-  qs("backToSelectorBtn")?.addEventListener("click", goHomeToSelector);
   qs("mobileHomeBtn")?.addEventListener("click", goHomeToSelector);
   qs("changePersonBtn")?.addEventListener("click", goHomeToSelector);
   qs("logoBtn")?.addEventListener("click", goHomeToSelector);
