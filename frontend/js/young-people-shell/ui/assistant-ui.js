@@ -1,240 +1,33 @@
-import { state, createAssistantMeta } from "../state.js";
+import { state } from "../state.js";
 import { els } from "../dom.js";
-import { escapeHtml, getDisplayName } from "../core/utils.js";
-import { getSectionTitle, getSectionSubtitle } from "../core/config.js";
+import { escapeHtml } from "../core/utils.js";
+import {
+  resolveEl,
+  ensureAssistantState,
+  getAssistantMeta,
+  getCurrentScope,
+  getCurrentSection,
+  getPersonLabel,
+  getHomeLabel,
+  getScopeLabel,
+  getReadableSectionLabel,
+  getReadableSectionSubtitle,
+  extractAssistantContent,
+  sourceCitationRef,
+  sourceSafeDomId,
+  getSources,
+  buildSourceMap,
+  buildRecordLookupMap,
+  RECORD_LINK_REGEX,
+} from "../assistant/helpers.js";
 
 let assistantUiBound = false;
 let citationEventsBound = false;
-
-const RECORD_LINK_REGEX =
-  /\b(incident|record|note|task|document|report|chronology|entry)\s+(number\s+)?(#?\d+)\b/gi;
-
-const MAX_SOURCE_EXCERPT = 220;
-
-function qs(id) {
-  return document.getElementById(id);
-}
-
-function getEl(...candidates) {
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-
-    if (typeof candidate === "string") {
-      const found = qs(candidate);
-      if (found) return found;
-      continue;
-    }
-
-    return candidate;
-  }
-
-  return null;
-}
-
-function getCurrentPerson() {
-  return state.selectedYoungPerson || state.youngPerson || null;
-}
-
-function getCurrentScope() {
-  return state.currentScope || "child";
-}
-
-function getCurrentSection() {
-  return (
-    state.currentSection ||
-    state.activeSection ||
-    state.currentView ||
-    "workspace"
-  );
-}
-
-function ensureAssistantArrays() {
-  if (!Array.isArray(state.assistantMessages)) {
-    state.assistantMessages = [];
-  }
-}
-
-function getAssistantMeta() {
-  if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
-    state.assistantMeta = createAssistantMeta();
-  }
-
-  if (!Array.isArray(state.assistantMeta.sources)) {
-    state.assistantMeta.sources = [];
-  }
-
-  if (!Array.isArray(state.assistantMeta.suggested_actions)) {
-    state.assistantMeta.suggested_actions = [];
-  }
-
-  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
-  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
-  state.assistantMeta.assistant_scope =
-    state.assistantMeta.assistant_scope || {};
-  state.assistantMeta.assistant_context =
-    state.assistantMeta.assistant_context || {};
-
-  return state.assistantMeta;
-}
-
-function extractAssistantContent(message = {}) {
-  if (typeof message === "string") return message;
-  if (!message || typeof message !== "object") return "";
-
-  const directCandidates = [
-    message.content,
-    message.text,
-    message.message,
-    message.response,
-    message.answer,
-    message.output,
-    message.accumulated_text,
-  ];
-
-  for (const candidate of directCandidates) {
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate;
-    }
-  }
-
-  if (message.content && typeof message.content === "object") {
-    const content = message.content;
-    const nestedCandidates = [
-      content.text,
-      content.message,
-      content.response,
-      content.answer,
-      content.output,
-      content.content,
-      content.accumulated_text,
-    ];
-
-    for (const candidate of nestedCandidates) {
-      if (typeof candidate === "string" && candidate.trim()) {
-        return candidate;
-      }
-    }
-
-    if (Array.isArray(content.parts)) {
-      const joined = content.parts
-        .map((part) => {
-          if (typeof part === "string") return part;
-          if (part && typeof part.text === "string") return part.text;
-          if (part && typeof part.content === "string") return part.content;
-          return "";
-        })
-        .filter(Boolean)
-        .join("\n");
-
-      if (joined.trim()) return joined;
-    }
-  }
-
-  if (Array.isArray(message.parts)) {
-    const joined = message.parts
-      .map((part) => {
-        if (typeof part === "string") return part;
-        if (part && typeof part.text === "string") return part.text;
-        if (part && typeof part.content === "string") return part.content;
-        return "";
-      })
-      .filter(Boolean)
-      .join("\n");
-
-    if (joined.trim()) return joined;
-  }
-
-  return "";
-}
 
 function formatRole(role = "") {
   if (role === "user") return "You";
   if (role === "assistant") return "Assistant";
   return "System";
-}
-
-function getPersonLabel() {
-  const person = getCurrentPerson();
-  return getDisplayName(person || {}) || "Child";
-}
-
-function getHomeLabel() {
-  const person = getCurrentPerson() || {};
-  return (
-    person.home_name ||
-    state.currentUser?.home_name ||
-    state.currentUser?.homeName ||
-    (state.homeId ? `Home ${state.homeId}` : "Home")
-  );
-}
-
-function getScopeLabel() {
-  const scope = getCurrentScope();
-
-  if (scope === "home") return "Home assistant";
-  if (scope === "quality") return "Quality assistant";
-  return "Child assistant";
-}
-
-function getReadableSectionLabel() {
-  return getSectionTitle(getCurrentSection()) || "Workspace";
-}
-
-function getReadableSectionSubtitle() {
-  return getSectionSubtitle(getCurrentSection()) || "";
-}
-
-function sourceCitationRef(source = {}, index = 0) {
-  if (source.citation_ref) return String(source.citation_ref);
-  const type = source.record_type || source.type || "record";
-  const id = source.record_id || source.id || `idx_${index + 1}`;
-  return `${type}:${id}`;
-}
-
-function sourceSafeDomId(ref = "") {
-  return `assistant-source-${String(ref).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-}
-
-function getSources() {
-  const meta = getAssistantMeta();
-  return Array.isArray(meta.sources) ? meta.sources : [];
-}
-
-function buildSourceMap() {
-  const map = new Map();
-
-  getSources().forEach((source, index) => {
-    const citationRef = sourceCitationRef(source, index);
-    map.set(citationRef.toLowerCase(), {
-      ...source,
-      citation_ref: citationRef,
-      source_index: index,
-    });
-  });
-
-  return map;
-}
-
-function buildRecordLookupMap() {
-  const map = new Map();
-
-  getSources().forEach((source, index) => {
-    const recordId =
-      source?.record_id ||
-      source?.id ||
-      source?.source_id ||
-      source?.linked_record_id ||
-      null;
-
-    if (!recordId) return;
-
-    map.set(String(recordId), {
-      ...source,
-      citation_ref: sourceCitationRef(source, index),
-    });
-  });
-
-  return map;
 }
 
 function renderInlineText(text = "") {
@@ -248,12 +41,14 @@ function renderCitationChip(ref = "", source = null) {
   const safeRef = escapeHtml(ref);
   const label = source?.label || source?.title || source?.document_title || ref;
   const safeLabel = escapeHtml(String(label || ref));
+  const evidenceKind = escapeHtml(String(source?.evidence_kind || "direct"));
 
   return `
     <button
       class="assistant-citation-chip"
       type="button"
       data-citation-ref="${safeRef}"
+      data-evidence-kind="${evidenceKind}"
       title="${safeLabel}"
       aria-label="View source ${safeLabel}"
     >
@@ -329,7 +124,8 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
         parts.push(renderInlineText(match));
       }
     } else if (citationRef) {
-      const source = sourceMap.get(String(citationRef || "").toLowerCase()) || null;
+      const source =
+        sourceMap.get(String(citationRef || "").toLowerCase()) || null;
       parts.push(renderCitationChip(citationRef, source));
     }
 
@@ -397,6 +193,50 @@ function renderUserRichText(text = "") {
   return `<p>${escapeHtml(String(text || ""))}</p>`;
 }
 
+function renderEvidenceBadge(message = {}) {
+  const citations = Array.isArray(message.citations) ? message.citations : [];
+  const actions = Array.isArray(message.actions) ? message.actions : [];
+  const intent = message.intent ? escapeHtml(String(message.intent)) : "";
+  const parts = [];
+
+  if (intent) {
+    parts.push(`<span class="meta-chip meta-chip--soft">${intent}</span>`);
+  }
+
+  if (citations.length) {
+    parts.push(
+      `<span class="meta-chip meta-chip--soft">${escapeHtml(
+        String(citations.length)
+      )} source${citations.length === 1 ? "" : "s"}</span>`
+    );
+  }
+
+  if (actions.length) {
+    parts.push(
+      `<span class="meta-chip meta-chip--soft">${escapeHtml(
+        String(actions.length)
+      )} action${actions.length === 1 ? "" : "s"}</span>`
+    );
+  }
+
+  if (!parts.length) return "";
+  return `<div class="assistant-message-meta-row">${parts.join("")}</div>`;
+}
+
+function renderStreamingIndicator(message = {}) {
+  const isStreaming =
+    message.status === "streaming" || Boolean(message._streaming);
+
+  if (!isStreaming) return "";
+
+  return `
+    <div class="assistant-message-streaming" aria-live="polite">
+      <span class="assistant-message-streaming-dot"></span>
+      <span>Streaming response…</span>
+    </div>
+  `;
+}
+
 function renderMessage(message = {}) {
   const role = message.role || "assistant";
   const roleClass =
@@ -404,8 +244,13 @@ function renderMessage(message = {}) {
   const content = extractAssistantContent(message);
 
   return `
-    <article class="assistant-message ${escapeHtml(roleClass)}">
+    <article
+      class="assistant-message ${escapeHtml(roleClass)}"
+      data-message-id="${escapeHtml(String(message.id || ""))}"
+      data-message-status="${escapeHtml(String(message.status || "complete"))}"
+    >
       <div class="assistant-message-role">${escapeHtml(formatRole(role))}</div>
+      ${renderEvidenceBadge(message)}
       <div class="assistant-message-body">
         ${
           role === "assistant"
@@ -413,6 +258,7 @@ function renderMessage(message = {}) {
             : renderUserRichText(content)
         }
       </div>
+      ${renderStreamingIndicator(message)}
     </article>
   `;
 }
@@ -449,8 +295,16 @@ function buildIntroMessageHtml() {
   `;
 }
 
+function shouldStickToBottom(host) {
+  if (!host) return false;
+  const threshold = 48;
+  return host.scrollHeight - host.scrollTop - host.clientHeight <= threshold;
+}
+
 function renderMessageList(host, messages = []) {
   if (!host) return;
+
+  const shouldAutoScroll = shouldStickToBottom(host) || state.assistantAutoScroll;
 
   host.innerHTML = `
     ${!messages.length ? buildIntroMessageHtml() : ""}
@@ -459,14 +313,16 @@ function renderMessageList(host, messages = []) {
     </div>
   `;
 
-  host.scrollTop = host.scrollHeight;
+  if (shouldAutoScroll) {
+    host.scrollTop = host.scrollHeight;
+  }
 }
 
 function renderMessages() {
-  ensureAssistantArrays();
+  ensureAssistantState();
 
   renderMessageList(
-    getEl(els.assistantMessages, "assistantMessages"),
+    resolveEl(els.assistantMessages, "assistantMessages"),
     state.assistantMessages
   );
 }
@@ -477,10 +333,10 @@ function renderScopeBadges() {
   const childName = getPersonLabel();
   const section = getReadableSectionLabel();
 
-  const scopeBadge = getEl(els.scopeBadge, "scopeBadge");
-  const homeBadge = getEl(els.scopeHomeBadge, "scopeHomeBadge");
-  const childBadge = getEl(els.scopeChildBadge, "scopeChildBadge");
-  const shiftBadge = getEl(els.scopeShiftBadge, "scopeShiftBadge");
+  const scopeBadge = resolveEl(els.scopeBadge, "scopeBadge");
+  const homeBadge = resolveEl(els.scopeHomeBadge, "scopeHomeBadge");
+  const childBadge = resolveEl(els.scopeChildBadge, "scopeChildBadge");
+  const shiftBadge = resolveEl(els.scopeShiftBadge, "scopeShiftBadge");
 
   if (scopeBadge) {
     scopeBadge.textContent = getScopeLabel();
@@ -507,7 +363,7 @@ function renderScopeBadges() {
 function renderContextText() {
   const scope = getCurrentScope();
   const section = getReadableSectionLabel();
-  const contextEl = getEl(els.assistantContext, "assistantContext");
+  const contextEl = resolveEl(els.assistantContext, "assistantContext");
 
   if (!contextEl) return;
 
@@ -531,6 +387,18 @@ function renderContextText() {
     state.userRole === "ri" || state.userRole === "admin"
       ? `Provider quality view • ${homeIds.length || 1} home(s) • ${section}`
       : `${getHomeLabel()} • quality • ${section}`;
+}
+
+function renderEvidenceKindPill(kind = "direct") {
+  const safeKind = String(kind || "direct").toLowerCase();
+  const label =
+    safeKind === "inference"
+      ? "Pattern"
+      : safeKind === "action"
+        ? "Action"
+        : "Evidence";
+
+  return `<span class="meta-chip meta-chip--soft">${escapeHtml(label)}</span>`;
 }
 
 function renderSourcesHtml(sources = []) {
@@ -565,7 +433,7 @@ function renderSourcesHtml(sources = []) {
           const description = escapeHtml(
             String(
               source?.description || source?.excerpt || source?.summary || ""
-            ).slice(0, MAX_SOURCE_EXCERPT)
+            )
           );
 
           return `
@@ -575,9 +443,7 @@ function renderSourcesHtml(sources = []) {
               type="button"
               data-source-ref="${escapeHtml(citationRef)}"
               data-linked-record-id="${escapeHtml(
-                String(
-                  source?.record_id || source?.id || source?.source_id || ""
-                )
+                String(source?.record_id || source?.id || source?.source_id || "")
               )}"
               data-linked-record-type="${escapeHtml(
                 String(source?.record_type || source?.type || "")
@@ -587,11 +453,14 @@ function renderSourcesHtml(sources = []) {
                 <strong>${title}</strong>
                 <span>${escapeHtml(citationRef)}</span>
               </div>
-              ${
-                meta
-                  ? `<div class="assistant-source-row-meta">${meta}</div>`
-                  : ""
-              }
+              <div class="assistant-source-row-meta-wrap">
+                ${source?.evidence_kind ? renderEvidenceKindPill(source.evidence_kind) : ""}
+                ${
+                  meta
+                    ? `<div class="assistant-source-row-meta">${meta}</div>`
+                    : ""
+                }
+              </div>
               ${
                 description
                   ? `<div class="assistant-source-row-text">${description}</div>`
@@ -607,7 +476,7 @@ function renderSourcesHtml(sources = []) {
 
 function renderStandaloneSources() {
   const html = renderSourcesHtml(getSources());
-  const sourcesEl = getEl(els.assistantSources, "assistantSources");
+  const sourcesEl = resolveEl(els.assistantSources, "assistantSources");
   if (sourcesEl) sourcesEl.innerHTML = html;
 }
 
@@ -616,7 +485,7 @@ function renderSuggestedActions() {
   const actions = Array.isArray(meta.suggested_actions)
     ? meta.suggested_actions
     : [];
-  const host = getEl(els.assistantSuggestions, "assistantSuggestions");
+  const host = resolveEl(els.assistantSuggestions, "assistantSuggestions");
 
   if (!host) return;
 
@@ -659,9 +528,10 @@ function renderSuggestedActions() {
 }
 
 function renderScopeSummary() {
-  const host = getEl(els.assistantScopeSummary, "assistantScopeSummary");
+  const host = resolveEl(els.assistantScopeSummary, "assistantScopeSummary");
   const meta = getAssistantMeta();
   const runtime = meta.runtime || {};
+  const context = meta.assistant_context || {};
 
   const html = `
     <div class="assistant-scope-summary">
@@ -679,7 +549,13 @@ function renderScopeSummary() {
       </div>
       <div class="assistant-scope-summary-row">
         <span>Mode</span>
-        <strong>${escapeHtml(getCurrentScope())}</strong>
+        <strong>${escapeHtml(
+          String(runtime.retrieval_mode || context.requested_scope_mode || getCurrentScope())
+        )}</strong>
+      </div>
+      <div class="assistant-scope-summary-row">
+        <span>Intent</span>
+        <strong>${escapeHtml(String(runtime.assistant_intent || meta.intent || "unknown"))}</strong>
       </div>
     </div>
   `;
@@ -691,11 +567,7 @@ function renderRuntimeAndExplainability() {
   const meta = getAssistantMeta();
 
   if (els.assistantRuntime) {
-    els.assistantRuntime.textContent = JSON.stringify(
-      meta.runtime || {},
-      null,
-      2
-    );
+    els.assistantRuntime.textContent = JSON.stringify(meta.runtime || {}, null, 2);
   }
 
   if (els.assistantExplainability) {
@@ -723,18 +595,137 @@ function syncAssistantVisibility() {
 
 function syncAssistantSendButtons() {
   const sending = Boolean(state.assistantSending);
-
-  if (els.assistantSendBtn) {
-    els.assistantSendBtn.disabled = sending;
-  }
+  if (els.assistantSendBtn) els.assistantSendBtn.disabled = sending;
 }
 
 function syncAssistantInputs() {
   const disabled = Boolean(state.assistantSending);
+  if (els.assistantInput) els.assistantInput.disabled = disabled;
+}
 
-  if (els.assistantInput) {
-    els.assistantInput.disabled = disabled;
+function renderLiveStatus() {
+  const liveStatusEl = resolveEl(els.assistantLiveStatus, "assistantLiveStatus");
+  if (!liveStatusEl) return;
+
+  if (state.assistantSending) {
+    liveStatusEl.textContent = "Assistant is analysing the current scope…";
+    return;
   }
+
+  const meta = getAssistantMeta();
+  const lastAnalysisAt = meta.last_analysis_at;
+
+  liveStatusEl.textContent = lastAnalysisAt
+    ? `Assistant ready. Last analysis ${new Date(lastAnalysisAt).toLocaleString("en-GB")}.`
+    : "Assistant ready.";
+}
+
+function renderBundleStatus() {
+  const bundleStatusEl = resolveEl(
+    els.assistantScopeBundleStatus,
+    "assistantScopeBundleStatus"
+  );
+  const bundleErrorEl = resolveEl(
+    els.assistantScopeBundleError,
+    "assistantScopeBundleError"
+  );
+
+  if (bundleStatusEl) {
+    if (state.scopeBundleLoading) {
+      bundleStatusEl.textContent = "Refreshing scoped records…";
+    } else if (state.scopeBundleLoadedAt) {
+      bundleStatusEl.textContent = `Scoped records loaded ${new Date(
+        state.scopeBundleLoadedAt
+      ).toLocaleString("en-GB")}.`;
+    } else {
+      bundleStatusEl.textContent = "No scoped records loaded.";
+    }
+  }
+
+  if (bundleErrorEl) {
+    const hasError = Boolean(state.scopeBundleError);
+    bundleErrorEl.textContent = hasError ? String(state.scopeBundleError) : "";
+    bundleErrorEl.classList.toggle("hidden", !hasError);
+  }
+}
+
+function renderDerivedBriefs() {
+  if (els.morningBriefBody) {
+    els.morningBriefBody.innerHTML = state.latestMorningBrief
+      ? `<div class="assistant-structured-answer">${renderAssistantRichText(
+          String(state.latestMorningBrief)
+        )}</div>`
+      : `<p>No shift brief available yet.</p>`;
+  }
+
+  if (els.managerBriefBody) {
+    els.managerBriefBody.innerHTML = state.latestManagerBrief
+      ? `<div class="assistant-structured-answer">${renderAssistantRichText(
+          String(state.latestManagerBrief)
+        )}</div>`
+      : `<p>No manager summary available yet.</p>`;
+  }
+
+  if (els.qualityBriefBody) {
+    els.qualityBriefBody.innerHTML = state.latestQualityBrief
+      ? `<div class="assistant-structured-answer">${renderAssistantRichText(
+          String(state.latestQualityBrief)
+        )}</div>`
+      : `<p>No quality summary available yet.</p>`;
+  }
+}
+
+function renderLiveUpdates() {
+  if (!els.liveUpdatesBody) return;
+
+  const updates = Array.isArray(state.liveUpdates) ? state.liveUpdates : [];
+
+  if (!updates.length) {
+    els.liveUpdatesBody.innerHTML = `<p>No live updates yet.</p>`;
+    return;
+  }
+
+  els.liveUpdatesBody.innerHTML = `
+    <div class="assistant-live-update-list">
+      ${updates
+        .map((update) => {
+          const title = escapeHtml(String(update.title || "Update"));
+          const body = escapeHtml(String(update.message || update.summary || ""));
+          const timestamp = update.created_at
+            ? new Date(update.created_at).toLocaleString("en-GB")
+            : "";
+
+          return `
+            <article class="assistant-live-update-item">
+              <strong>${title}</strong>
+              ${timestamp ? `<div class="assistant-live-update-time">${escapeHtml(timestamp)}</div>` : ""}
+              ${body ? `<p>${body}</p>` : ""}
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderAllAssistantUi() {
+  ensureAssistantState();
+  getAssistantMeta();
+
+  syncAssistantVisibility();
+  syncAssistantSendButtons();
+  syncAssistantInputs();
+  renderScopeBadges();
+  renderContextText();
+  renderMessages();
+  renderStandaloneSources();
+  renderSuggestedActions();
+  renderScopeSummary();
+  renderRuntimeAndExplainability();
+  renderLiveStatus();
+  renderBundleStatus();
+  renderDerivedBriefs();
+  renderLiveUpdates();
 }
 
 function scrollSourceIntoView(ref = "") {
@@ -809,26 +800,19 @@ function bindCitationEvents() {
   });
 }
 
-function renderAllAssistantUi() {
-  ensureAssistantArrays();
-  getAssistantMeta();
-
-  syncAssistantVisibility();
-  syncAssistantSendButtons();
-  syncAssistantInputs();
-  renderScopeBadges();
-  renderContextText();
-  renderMessages();
-  renderStandaloneSources();
-  renderSuggestedActions();
-  renderScopeSummary();
-  renderRuntimeAndExplainability();
-}
-
 export function bindAssistantUi() {
   if (assistantUiBound) return;
   assistantUiBound = true;
+
   bindCitationEvents();
+
+  const messagesHost = resolveEl(els.assistantMessages, "assistantMessages");
+  if (messagesHost) {
+    messagesHost.addEventListener("scroll", () => {
+      state.assistantAutoScroll = shouldStickToBottom(messagesHost);
+    });
+  }
+
   renderAllAssistantUi();
 }
 
@@ -836,62 +820,59 @@ export function refreshAssistantUi() {
   renderAllAssistantUi();
 }
 
-export function appendAssistantSystemMessage(text) {
-  ensureAssistantArrays();
+export function appendAssistantSystemMessage(text, extra = {}) {
+  ensureAssistantState();
 
   const entry = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: "assistant",
     content: typeof text === "string" ? text : extractAssistantContent(text),
     created_at: new Date().toISOString(),
+    status: extra.status || "complete",
+    intent: extra.intent || null,
+    citations: Array.isArray(extra.citations) ? extra.citations : [],
+    actions: Array.isArray(extra.actions) ? extra.actions : [],
+    scope_snapshot:
+      extra.scope_snapshot && typeof extra.scope_snapshot === "object"
+        ? extra.scope_snapshot
+        : {
+            scope: getCurrentScope(),
+            section: getCurrentSection(),
+          },
+    _streaming: Boolean(extra._streaming),
   };
 
   state.assistantMessages.push(entry);
-  renderAllAssistantUi();
+  refreshAssistantUi();
 }
 
-export function appendAssistantUserMessage(text) {
-  ensureAssistantArrays();
+export function appendAssistantUserMessage(text, extra = {}) {
+  ensureAssistantState();
 
   const entry = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: "user",
     content: String(text || ""),
     created_at: new Date().toISOString(),
+    status: "complete",
+    intent: extra.intent || null,
+    citations: [],
+    actions: [],
+    scope_snapshot:
+      extra.scope_snapshot && typeof extra.scope_snapshot === "object"
+        ? extra.scope_snapshot
+        : {
+            scope: getCurrentScope(),
+            section: getCurrentSection(),
+          },
+    _streaming: false,
   };
 
   state.assistantMessages.push(entry);
-  renderAllAssistantUi();
+  refreshAssistantUi();
 }
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
-  renderAllAssistantUi();
-}
-
-export function setAssistantSources(sources = []) {
-  const meta = getAssistantMeta();
-  meta.sources = Array.isArray(sources) ? sources : [];
-  renderAllAssistantUi();
-}
-
-export function setAssistantRuntime(runtime = null) {
-  const meta = getAssistantMeta();
-  meta.runtime = runtime || {};
-  renderAllAssistantUi();
-}
-
-export function setAssistantExplainability(explainability = null) {
-  const meta = getAssistantMeta();
-  meta.explainability = explainability || {};
-  renderAllAssistantUi();
-}
-
-export function setAssistantScopeSummary(scopeSummary = null) {
-  const meta = getAssistantMeta();
-  meta.assistant_context = {
-    ...(meta.assistant_context || {}),
-    ...(scopeSummary || {}),
-  };
-  renderAllAssistantUi();
+  refreshAssistantUi();
 }
