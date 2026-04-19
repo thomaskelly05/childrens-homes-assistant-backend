@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -243,6 +244,7 @@ class AssistantRuntimeContext:
     practice_quality_context: str = ""
     escalation_context: str = ""
     sources_used: list[dict[str, Any]] = field(default_factory=list)
+    evidence_index: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -645,6 +647,11 @@ def _normalise_sources(value: Any) -> list[dict[str, Any]]:
             "summary": item.get("summary"),
             "title": item.get("title"),
             "description": item.get("description"),
+            "date": item.get("date"),
+            "scope_type": item.get("scope_type"),
+            "young_person_id": item.get("young_person_id"),
+            "home_id": item.get("home_id"),
+            "deep_link": item.get("deep_link"),
         }
 
         key = "|".join(
@@ -670,6 +677,265 @@ def _normalise_sources(value: Any) -> list[dict[str, Any]]:
     return cleaned
 
 
+def _normalise_evidence_index(value: Any, limit: int = 120) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    cleaned: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for item in value[:limit]:
+        if not isinstance(item, dict):
+            continue
+
+        entry = {
+            "citation_ref": item.get("citation_ref"),
+            "record_type": item.get("record_type"),
+            "record_id": item.get("record_id"),
+            "label": item.get("label"),
+            "title": item.get("title"),
+            "section": item.get("section"),
+            "excerpt": item.get("excerpt"),
+            "description": item.get("description"),
+            "date": item.get("date") or item.get("event_at") or item.get("updated_at"),
+            "event_at": item.get("event_at"),
+            "updated_at": item.get("updated_at"),
+            "url": item.get("url"),
+            "scope_type": item.get("scope_type"),
+            "young_person_id": item.get("young_person_id"),
+            "home_id": item.get("home_id"),
+            "deep_link": item.get("deep_link"),
+        }
+
+        key = "|".join(
+            str(entry.get(k) or "")
+            for k in [
+                "citation_ref",
+                "record_type",
+                "record_id",
+                "label",
+                "section",
+                "url",
+            ]
+        )
+        if key in seen:
+            continue
+
+        seen.add(key)
+        cleaned.append(entry)
+
+    return cleaned
+
+
+def _extract_sources_from_user_context(user_context: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(user_context, dict):
+        return []
+
+    for candidate in (
+        user_context.get("sources"),
+        (user_context.get("context") or {}).get("sources") if isinstance(user_context.get("context"), dict) else None,
+        (user_context.get("runtime") or {}).get("sources") if isinstance(user_context.get("runtime"), dict) else None,
+    ):
+        if isinstance(candidate, list):
+            return _normalise_sources(candidate)
+
+    return []
+
+
+def _extract_evidence_index_from_user_context(user_context: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(user_context, dict):
+        return []
+
+    for candidate in (
+        user_context.get("evidence_index"),
+        (user_context.get("context") or {}).get("evidence_index") if isinstance(user_context.get("context"), dict) else None,
+        (user_context.get("runtime") or {}).get("evidence_index") if isinstance(user_context.get("runtime"), dict) else None,
+    ):
+        if isinstance(candidate, list):
+            return _normalise_evidence_index(candidate)
+
+    return []
+
+
+def _build_evidence_index_prompt_block(evidence_index: list[dict[str, Any]], limit: int = 40) -> str:
+    if not evidence_index:
+        return ""
+
+    trimmed = evidence_index[:limit]
+    return (
+        "Use this structured evidence index as the primary evidence pool where relevant.\n"
+        "Prefer citation_ref values exactly as supplied.\n"
+        "Do not invent citations.\n\n"
+        + json.dumps(trimmed, ensure_ascii=False, indent=2)
+    )
+
+
+def _build_document_source(document_name: str | None) -> dict[str, Any]:
+    return {
+        "type": "uploaded_document",
+        "label": f"Uploaded document: {_safe_string(document_name) or 'Uploaded document'}",
+        "document_title": _safe_string(document_name) or "Uploaded document",
+        "section": "",
+        "page_number": None,
+        "excerpt": "",
+        "url": None,
+        "record_type": None,
+        "record_id": None,
+        "citation_ref": None,
+        "summary": None,
+        "title": None,
+        "description": None,
+        "date": None,
+        "scope_type": None,
+        "young_person_id": None,
+        "home_id": None,
+        "deep_link": None,
+    }
+
+
+def _safe_classify_intent(message: str, history: list[dict[str, Any]], role: str):
+    try:
+        return classify_intent(message=message, history=history, role=role)
+    except Exception:
+        logger.exception("Intent classification failed")
+        return classify_intent(message=message, history=[], role=role)
+
+
+def _safe_assess_safeguarding(message: str, history: list[dict[str, Any]]) -> str:
+    try:
+        return assess_safeguarding_level(message=message, history=history)
+    except TypeError:
+        try:
+            return assess_safeguarding_level(message)
+        except Exception:
+            logger.exception("Safeguarding assessment failed")
+            return "normal"
+    except Exception:
+        logger.exception("Safeguarding assessment failed")
+        return "normal"
+
+
+def _safe_schema_context(mode: str, safeguarding_level: str) -> str:
+    try:
+        schema = get_schema_for_mode(mode, safeguarding_level)
+        return _safe_string(schema_to_prompt_block(schema))
+    except Exception:
+        logger.exception("Schema selection failed")
+        return ""
+
+
+def _safe_memory_context(req: AssistantRequest, mode: str, speed: str) -> str:
+    try:
+        return _safe_string(
+            get_memory_context(
+                session_id=req.session_id,
+                user_context=req.user_context,
+                message=req.message,
+                mode=mode,
+                recent_limit=2 if speed == "balanced" else 3,
+            )
+        )
+    except TypeError:
+        try:
+            return _safe_string(get_memory_context(req.session_id, req.user_context))
+        except Exception:
+            logger.exception("Memory lookup failed")
+            return ""
+    except Exception:
+        logger.exception("Memory lookup failed")
+        return ""
+
+
+def _safe_retrieval_bundle(
+    req: AssistantRequest,
+    mode: str,
+    safeguarding_level: str,
+    speed: str,
+    retrieval_level: str,
+) -> tuple[str, list[dict[str, Any]]]:
+    limit = 1 if retrieval_level == "light" else 2
+    if speed == "deep" and retrieval_level == "full":
+        limit = 3
+
+    try:
+        bundle = retrieve_context_bundle(
+            message=req.message,
+            mode=mode,
+            safeguarding_level=safeguarding_level,
+            document_text=req.document_text,
+            document_name=req.document_name,
+            role=req.role,
+            limit=limit,
+        )
+        context_text = _safe_string(bundle.get("context_text"))
+        sources = bundle.get("sources") if isinstance(bundle, dict) else []
+        return context_text, _normalise_sources(sources)
+    except TypeError:
+        try:
+            bundle = retrieve_context_bundle(req.message, limit=limit)
+            context_text = _safe_string(bundle.get("context_text"))
+            sources = bundle.get("sources") if isinstance(bundle, dict) else []
+            return context_text, _normalise_sources(sources)
+        except Exception:
+            logger.exception("Retrieval failed")
+            return "", []
+    except Exception:
+        logger.exception("Retrieval failed")
+        return "", []
+
+
+def _safe_reflection_context(
+    message: str,
+    mode: str,
+    safeguarding_level: str,
+    history: list[dict[str, Any]],
+) -> str:
+    try:
+        return _safe_string(
+            maybe_build_reflection_context(
+                message=message,
+                mode=mode,
+                safeguarding_level=safeguarding_level,
+                history=history,
+            )
+        )
+    except TypeError:
+        try:
+            return _safe_string(maybe_build_reflection_context(message, mode))
+        except Exception:
+            logger.exception("Reflection context failed")
+            return ""
+    except Exception:
+        logger.exception("Reflection context failed")
+        return ""
+
+
+def _safe_supervision_context(
+    message: str,
+    mode: str,
+    safeguarding_level: str,
+    history: list[dict[str, Any]],
+) -> str:
+    try:
+        return _safe_string(
+            maybe_build_supervision_context(
+                message=message,
+                mode=mode,
+                safeguarding_level=safeguarding_level,
+                history=history,
+            )
+        )
+    except TypeError:
+        try:
+            return _safe_string(maybe_build_supervision_context(message, mode))
+        except Exception:
+            logger.exception("Supervision context failed")
+            return ""
+    except Exception:
+        logger.exception("Supervision context failed")
+        return ""
+
+
 def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) -> str:
     lines = [
         f"Detected task mode: {runtime.mode}",
@@ -683,6 +949,8 @@ def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) ->
         f"Classification confidence: {runtime.classification_confidence}",
         f"Retrieval level: {runtime.retrieval_level}",
         f"Reflection level: {runtime.reflection_level}",
+        f"Structured evidence items: {len(runtime.evidence_index)}",
+        f"Structured sources: {len(runtime.sources_used)}",
     ]
 
     if runtime.secondary_intents:
@@ -969,167 +1237,6 @@ def _build_escalation_context(
     return "\n\n".join(blocks).strip()
 
 
-def _build_document_source(document_name: str | None) -> dict[str, Any]:
-    return {
-        "type": "uploaded_document",
-        "label": f"Uploaded document: {_safe_string(document_name) or 'Uploaded document'}",
-        "document_title": _safe_string(document_name) or "Uploaded document",
-        "section": "",
-        "page_number": None,
-        "excerpt": "",
-        "url": None,
-        "record_type": None,
-        "record_id": None,
-        "citation_ref": None,
-        "summary": None,
-        "title": None,
-        "description": None,
-    }
-
-
-def _safe_classify_intent(message: str, history: list[dict[str, Any]], role: str):
-    try:
-        return classify_intent(message=message, history=history, role=role)
-    except Exception:
-        logger.exception("Intent classification failed")
-        return classify_intent(message=message, history=[], role=role)
-
-
-def _safe_assess_safeguarding(message: str, history: list[dict[str, Any]]) -> str:
-    try:
-        return assess_safeguarding_level(message=message, history=history)
-    except TypeError:
-        try:
-            return assess_safeguarding_level(message)
-        except Exception:
-            logger.exception("Safeguarding assessment failed")
-            return "normal"
-    except Exception:
-        logger.exception("Safeguarding assessment failed")
-        return "normal"
-
-
-def _safe_schema_context(mode: str, safeguarding_level: str) -> str:
-    try:
-        schema = get_schema_for_mode(mode, safeguarding_level)
-        return _safe_string(schema_to_prompt_block(schema))
-    except Exception:
-        logger.exception("Schema selection failed")
-        return ""
-
-
-def _safe_memory_context(req: AssistantRequest, mode: str, speed: str) -> str:
-    try:
-        return _safe_string(
-            get_memory_context(
-                session_id=req.session_id,
-                user_context=req.user_context,
-                message=req.message,
-                mode=mode,
-                recent_limit=2 if speed == "balanced" else 3,
-            )
-        )
-    except TypeError:
-        try:
-            return _safe_string(get_memory_context(req.session_id, req.user_context))
-        except Exception:
-            logger.exception("Memory lookup failed")
-            return ""
-    except Exception:
-        logger.exception("Memory lookup failed")
-        return ""
-
-
-def _safe_retrieval_bundle(
-    req: AssistantRequest,
-    mode: str,
-    safeguarding_level: str,
-    speed: str,
-    retrieval_level: str,
-) -> tuple[str, list[dict[str, Any]]]:
-    limit = 1 if retrieval_level == "light" else 2
-    if speed == "deep" and retrieval_level == "full":
-        limit = 3
-
-    try:
-        bundle = retrieve_context_bundle(
-            message=req.message,
-            mode=mode,
-            safeguarding_level=safeguarding_level,
-            document_text=req.document_text,
-            document_name=req.document_name,
-            role=req.role,
-            limit=limit,
-        )
-        context_text = _safe_string(bundle.get("context_text"))
-        sources = bundle.get("sources") if isinstance(bundle, dict) else []
-        return context_text, _normalise_sources(sources)
-    except TypeError:
-        try:
-            bundle = retrieve_context_bundle(req.message, limit=limit)
-            context_text = _safe_string(bundle.get("context_text"))
-            sources = bundle.get("sources") if isinstance(bundle, dict) else []
-            return context_text, _normalise_sources(sources)
-        except Exception:
-            logger.exception("Retrieval failed")
-            return "", []
-    except Exception:
-        logger.exception("Retrieval failed")
-        return "", []
-
-
-def _safe_reflection_context(
-    message: str,
-    mode: str,
-    safeguarding_level: str,
-    history: list[dict[str, Any]],
-) -> str:
-    try:
-        return _safe_string(
-            maybe_build_reflection_context(
-                message=message,
-                mode=mode,
-                safeguarding_level=safeguarding_level,
-                history=history,
-            )
-        )
-    except TypeError:
-        try:
-            return _safe_string(maybe_build_reflection_context(message, mode))
-        except Exception:
-            logger.exception("Reflection context failed")
-            return ""
-    except Exception:
-        logger.exception("Reflection context failed")
-        return ""
-
-
-def _safe_supervision_context(
-    message: str,
-    mode: str,
-    safeguarding_level: str,
-    history: list[dict[str, Any]],
-) -> str:
-    try:
-        return _safe_string(
-            maybe_build_supervision_context(
-                message=message,
-                mode=mode,
-                safeguarding_level=safeguarding_level,
-                history=history,
-            )
-        )
-    except TypeError:
-        try:
-            return _safe_string(maybe_build_supervision_context(message, mode))
-        except Exception:
-            logger.exception("Supervision context failed")
-            return ""
-    except Exception:
-        logger.exception("Supervision context failed")
-        return ""
-
-
 def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPackage:
     message = _safe_string(req.message)
     speed = _normalise_speed(req.speed)
@@ -1223,18 +1330,25 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         message,
     )
 
+    runtime.evidence_index = _extract_evidence_index_from_user_context(req.user_context)
+    context_sources = _extract_sources_from_user_context(req.user_context)
+    if context_sources:
+        runtime.sources_used.extend(context_sources)
+
     if speed != "quick":
         if _should_use_memory(runtime.mode, speed, runtime.task_type):
             runtime.memory_context = _safe_memory_context(req, runtime.mode, speed)
 
         if runtime.retrieval_level != "none":
-            runtime.retrieval_context, runtime.sources_used = _safe_retrieval_bundle(
+            retrieved_context, retrieved_sources = _safe_retrieval_bundle(
                 req,
                 runtime.mode,
                 runtime.safeguarding_level,
                 speed,
                 runtime.retrieval_level,
             )
+            runtime.retrieval_context = retrieved_context
+            runtime.sources_used.extend(retrieved_sources)
 
         runtime.sources_used = _normalise_sources(runtime.sources_used)
 
@@ -1253,6 +1367,8 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
                 runtime.safeguarding_level,
                 history,
             )
+    else:
+        runtime.sources_used = _normalise_sources(runtime.sources_used)
 
     if _should_use_leadership_lens(
         runtime.mode,
@@ -1325,6 +1441,11 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         "ESCALATION CONTEXT",
         runtime.escalation_context,
     )
+    system_prompt = _append_section(
+        system_prompt,
+        "STRUCTURED EVIDENCE INDEX",
+        _build_evidence_index_prompt_block(runtime.evidence_index),
+    )
 
     if speed != "quick":
         system_prompt = _append_section(
@@ -1372,7 +1493,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             "session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s urgency=%s response_mode=%s role_profile=%s "
             "stance=%s confidence=%s retrieval_level=%s reflection_level=%s "
-            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s sources=%s"
+            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s sources=%s evidence=%s"
         ),
         req.session_id,
         runtime.mode,
@@ -1393,6 +1514,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         bool(runtime.leadership_lens_context),
         bool(runtime.suggested_actions_context),
         len(runtime.sources_used),
+        len(runtime.evidence_index),
     )
 
     return AssistantPromptPackage(
