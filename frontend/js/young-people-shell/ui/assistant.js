@@ -1,7 +1,4 @@
-import {
-  state,
-  createAssistantMeta,
-} from "../state.js";
+import { state, createAssistantMeta } from "../state.js";
 import { els } from "../dom.js";
 import { apiStreamAssistant } from "../core/api.js";
 import * as aiScrubber from "../core/ai-scrubber.js";
@@ -11,15 +8,10 @@ import {
   appendAssistantUserMessage,
 } from "./assistant-ui.js";
 import {
-  refreshAssistantAnalysisOnly,
-} from "./assistant-controller.js";
-import {
   ensureAssistantState,
-  getAssistantMeta,
   mergeAssistantMeta,
   getCurrentScope,
   getCurrentSection,
-  getSelectedYoungPerson,
   getFullYoungPersonName,
   getHomeName,
   getAllowedHomeIds,
@@ -27,253 +19,128 @@ import {
   getAssistantScopeType,
   getAssistantTypeForScope,
   detectAssistantIntent,
-  detectAssistantIntents,
   detectRetrievalMode,
   detectOutputMode,
   detectAssistantResponseMode,
+  extractStreamText,
+  cloneAssistantMessage,
+  trimForOutbound,
+  buildRoleAwareGreeting,
+  buildUnknownIntentPrompt,
+  resolveReg45DateRange,
+  getDefaultReg45DateRange,
   assistantPromptsForView,
 } from "../assistant/helpers.js";
 
 let assistantEventsBound = false;
 let assistantPromptDelegatesBound = false;
 
-const MAX_SAFE_MESSAGE_LENGTH = 3000;
-const MAX_SOURCE_ITEMS = 12;
-const MAX_SOURCE_EXCERPT = 240;
 const MAX_UI_PROMPTS = 8;
 
-function extractStreamText(payload) {
-  if (typeof payload === "string") return payload;
-  if (!payload || typeof payload !== "object") return "";
-
-  const directCandidates = [
-    payload.accumulated_text,
-    payload.text,
-    payload.message,
-    payload.content,
-    payload.answer,
-    payload.output,
-    payload.response,
-  ];
-
-  for (const candidate of directCandidates) {
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate;
-    }
-  }
-
-  if (payload.content && typeof payload.content === "object") {
-    const nested = payload.content;
-    const nestedCandidates = [
-      nested.text,
-      nested.message,
-      nested.content,
-      nested.answer,
-      nested.output,
-      nested.response,
-    ];
-
-    for (const candidate of nestedCandidates) {
-      if (typeof candidate === "string" && candidate.trim()) {
-        return candidate;
-      }
-    }
-
-    if (Array.isArray(nested.parts)) {
-      const joined = nested.parts
-        .map((part) => {
-          if (typeof part === "string") return part;
-          if (part && typeof part.text === "string") return part.text;
-          if (part && typeof part.content === "string") return part.content;
-          return "";
-        })
-        .filter(Boolean)
-        .join("\n");
-
-      if (joined.trim()) return joined;
-    }
-  }
-
-  if (Array.isArray(payload.parts)) {
-    const joined = payload.parts
-      .map((part) => {
-        if (typeof part === "string") return part;
-        if (part && typeof part.text === "string") return part.text;
-        if (part && typeof part.content === "string") return part.content;
-        return "";
-      })
-      .filter(Boolean)
-      .join("\n");
-
-    if (joined.trim()) return joined;
-  }
-
-  return "";
-}
-
-function trimForOutbound(value = "", max = MAX_SAFE_MESSAGE_LENGTH) {
-  return String(value || "").trim().slice(0, max);
-}
-
-function buildCitationRef(source = {}, index = 0) {
-  const recordType = source.record_type || source.type || "record";
-  const recordId = source.record_id || source.id || `idx_${index + 1}`;
-  return `${recordType}:${recordId}`;
-}
-
-function dedupeSources(sources = []) {
-  const seen = new Set();
-  const result = [];
-
-  for (const source of Array.isArray(sources) ? sources : []) {
-    const key = `${source.record_type || source.type || "record"}::${
-      source.record_id || source.id || source.label || ""
-    }`;
-
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(source);
-  }
-
-  return result;
-}
-
-function sanitiseSourcesForUi(sources = []) {
-  return dedupeSources(sources)
-    .slice(0, MAX_SOURCE_ITEMS)
-    .map((source, index) => ({
-      type: source.type || source.record_type || "record",
-      label: String(source.label || source.title || source.document_title || "Record"),
-      title: String(source.title || source.label || source.document_title || "Record"),
-      excerpt: String(source.excerpt || source.summary || source.description || "").slice(
-        0,
-        MAX_SOURCE_EXCERPT
-      ),
-      description: String(
-        source.description || source.excerpt || source.summary || ""
-      ).slice(0, MAX_SOURCE_EXCERPT),
-      section: source.section || "",
-      record_type: source.record_type || source.type || null,
-      record_id: source.record_id || source.id || null,
-      citation_ref: source.citation_ref || buildCitationRef(source, index),
-      evidence_kind: source.evidence_kind || "direct",
-      created_at: source.created_at || source.date || null,
-      url: source.url || null,
-    }));
-}
-
-function getSourcesSafe() {
+function syncAssistantUi() {
   ensureAssistantState();
-  return Array.isArray(state.assistantMeta?.sources)
-    ? state.assistantMeta.sources
-    : [];
-}
-
-function applyAssistantMeta(meta = {}) {
-  const nextMeta = { ...meta };
-
-  if (nextMeta.sources) {
-    nextMeta.sources = sanitiseSourcesForUi(nextMeta.sources);
-  }
-
-  mergeAssistantMeta(nextMeta);
-  refreshAssistantUi();
-}
-
-function setAssistantSending(flag) {
-  state.assistantSending = !!flag;
   refreshAssistantUi();
 }
 
 export function openAssistant() {
   ensureAssistantState();
+  updateAssistantContext();
   state.assistantOpen = true;
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 export function closeAssistant() {
   state.assistantOpen = false;
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
-function addAssistantPlaceholder(extra = {}) {
+export function renderAssistantMessages() {
+  ensureAssistantState();
+  syncAssistantUi();
+}
+
+export function renderAssistantInsights() {
+  ensureAssistantState();
+  syncAssistantUi();
+}
+
+function addAssistantPlaceholder() {
   ensureAssistantState();
 
-  appendAssistantSystemMessage("Thinking…", {
-    status: "streaming",
+  const entry = cloneAssistantMessage({
+    role: "assistant",
+    content: "Thinking…",
     _streaming: true,
-    intent: extra.intent || null,
-    citations: [],
-    actions: [],
-    scope_snapshot: extra.scope_snapshot || null,
   });
+
+  state.assistantMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
+  syncAssistantUi();
 }
 
-function updateLastAssistantStreamingText(text, extra = {}) {
+function updateLastAssistantStreamingText(text) {
   const safeValue =
     typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
 
-  const list = Array.isArray(state.assistantMessages)
-    ? state.assistantMessages
-    : [];
+  const lists = [
+    state.assistantMessages || [],
+    state.assistantModalMessages || [],
+  ];
 
-  if (!list.length) return;
+  lists.forEach((list) => {
+    if (!list.length) return;
 
-  const last = list[list.length - 1];
-  if (!last || last.role !== "assistant" || !last._streaming) return;
+    const last = list[list.length - 1];
+    if (last?.role === "assistant" && last?._streaming) {
+      last.content = safeValue;
+    }
+  });
 
-  last.content = safeValue;
-  last.status = "streaming";
-  if (extra.intent) last.intent = extra.intent;
-  if (Array.isArray(extra.citations)) last.citations = extra.citations;
-  if (Array.isArray(extra.actions)) last.actions = extra.actions;
-
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
-function replaceLastAssistantPlaceholder(text, extra = {}) {
+function replaceLastAssistantPlaceholder(text) {
   const safeValue =
     typeof text === "string"
       ? text
       : extractStreamText(text) || "No assistant reply returned.";
 
-  const list = Array.isArray(state.assistantMessages)
-    ? state.assistantMessages
-    : [];
+  const lists = [
+    state.assistantMessages || [],
+    state.assistantModalMessages || [],
+  ];
 
-  if (!list.length) {
-    appendAssistantSystemMessage(safeValue, {
-      status: "complete",
-      _streaming: false,
-      intent: extra.intent || null,
-      citations: extra.citations || [],
-      actions: extra.actions || [],
-      scope_snapshot: extra.scope_snapshot || null,
-    });
-    return;
-  }
+  lists.forEach((list) => {
+    if (!list.length) {
+      list.push(
+        cloneAssistantMessage({
+          role: "assistant",
+          content: safeValue,
+        })
+      );
+      return;
+    }
 
-  const last = list[list.length - 1];
-
-  if (last?.role === "assistant" && last?._streaming) {
-    last.content = safeValue;
-    last.status = "complete";
-    last._streaming = false;
-    if (extra.intent) last.intent = extra.intent;
-    if (Array.isArray(extra.citations)) last.citations = extra.citations;
-    if (Array.isArray(extra.actions)) last.actions = extra.actions;
-    refreshAssistantUi();
-    return;
-  }
-
-  appendAssistantSystemMessage(safeValue, {
-    status: "complete",
-    _streaming: false,
-    intent: extra.intent || null,
-    citations: extra.citations || [],
-    actions: extra.actions || [],
-    scope_snapshot: extra.scope_snapshot || null,
+    const last = list[list.length - 1];
+    if (last?.role === "assistant" && last?._streaming) {
+      last.content = safeValue;
+      last._streaming = false;
+    } else {
+      list.push(
+        cloneAssistantMessage({
+          role: "assistant",
+          content: safeValue,
+        })
+      );
+    }
   });
+
+  syncAssistantUi();
+}
+
+function setAssistantSending(flag) {
+  state.assistantSending = !!flag;
+  syncAssistantUi();
 }
 
 function isGreeting(text = "") {
@@ -282,139 +149,25 @@ function isGreeting(text = "") {
   );
 }
 
-function buildRoleAwareGreeting() {
-  const scope = getCurrentScope();
-
-  if (scope === "child") {
-    return `Hello. What would you like to know about ${getFullYoungPersonName()}? I can help with a full summary, chronology, dates, risks, appointments, family contact themes, handover thinking, and evidence-led children’s home support.`;
-  }
-
-  if (scope === "home") {
-    return `Hello. What would you like to know about ${getHomeName()}? I can help with a full home summary, chronology, staffing, compliance, inspection readiness, management oversight, or next actions.`;
-  }
-
-  return `Hello. What would you like to know about ${
-    getAccessLevelForScope("quality") === "provider"
-      ? "your homes and provider oversight"
-      : `${getHomeName()} quality and oversight`
-  }? I can help with compliance themes, chronology, inspection readiness, RI summaries, governance patterns and cross-home comparisons where allowed.`;
-}
-
-function buildUnknownIntentPrompt() {
-  const scope = getCurrentScope();
-
-  if (scope === "child") {
-    return [
-      `I’m ready to help with ${getFullYoungPersonName()} across the full children’s residential home record.`,
-      "",
-      "You can ask for:",
-      "• a full summary",
-      "• a chronology",
-      "• important dates",
-      "• last incidents or appointments",
-      "• risks and protective factors",
-      "• family contact themes",
-      "• a handover",
-    ].join("\n");
-  }
-
-  if (scope === "home") {
-    return [
-      `I’m ready to help with ${getHomeName()} across the full home operating record.`,
-      "",
-      "You can ask for:",
-      "• a full home summary",
-      "• chronology and dates",
-      "• staffing pressures",
-      "• overdue compliance",
-      "• management priorities",
-      "• handover-ready updates",
-    ].join("\n");
-  }
-
-  return [
-    `I’m ready to help with ${
-      getAccessLevelForScope("quality") === "provider"
-        ? "all homes you oversee"
-        : `${getHomeName()} quality and oversight`
-    } across the OS evidence set.`,
-    "",
-    "You can ask for:",
-    "• a quality summary",
-    "• chronology and themes",
-    "• audit or RI issues",
-    "• compliance gaps",
-    "• governance concerns",
-    "• cross-home comparisons where permitted",
-  ].join("\n");
-}
-
-function inferAnalysisLens({
-  scope = getCurrentScope(),
-  section = getCurrentSection(),
-  role = state.userRole || "staff",
-  intent = ASSISTANT_INTENT.summary,
-} = {}) {
-  const safeRole = String(role || "staff").toLowerCase();
-  const safeSection = String(section || "").toLowerCase();
-  const safeIntent = String(intent || "summary").toLowerCase();
-
-  if (
-    /safeguarding|risk|missing/.test(safeSection) ||
-    safeIntent === "risk"
-  ) {
-    return "safeguarding";
-  }
-
-  if (
-    scope === "quality" ||
-    safeIntent === "quality" ||
-    safeIntent === "compliance" ||
-    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
-  ) {
-    return safeRole === "ri" || safeRole === "admin" ? "quality" : "inspection";
-  }
-
-  if (
-    safeIntent === "management" ||
-    ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
-    /manager|team|supervision|home-dashboard/.test(safeSection)
-  ) {
-    return "manager";
-  }
-
-  if (safeIntent === "handover" || safeIntent === "morning_brief") {
-    return "shift";
-  }
-
-  if (scope === "child") return "child_centred";
-  if (scope === "home") return "operational";
-  return "general";
-}
-
 function buildAssistantContextPayload(message = "") {
-  const person = getSelectedYoungPerson() || {};
+  const person = state.selectedYoungPerson || state.youngPerson || null;
   const scope = getCurrentScope();
   const section = getCurrentSection();
-
-  const intentMeta = detectAssistantIntents(message);
-  const intent = intentMeta.primary_intent;
-  const secondaryIntents = intentMeta.secondary_intents || [];
+  const intent = detectAssistantIntent(message);
   const retrievalMode = detectRetrievalMode(message, intent);
   const outputMode = detectOutputMode(intent, message);
   const accessLevel = getAccessLevelForScope(scope);
   const assistantType = getAssistantTypeForScope(scope);
-  const analysisLens = inferAnalysisLens({
-    scope,
-    section,
-    role: state.userRole,
-    intent,
-  });
 
   const allowedHomeIds =
     scope === "quality" && accessLevel === "provider"
       ? getAllowedHomeIds()
       : [Number(state.homeId)].filter((item) => Number.isFinite(item));
+
+  const reg45Range =
+    /reg\s*45|regulation\s*45/.test(String(message || "").toLowerCase())
+      ? resolveReg45DateRange(message) || getDefaultReg45DateRange()
+      : null;
 
   return {
     assistant_type: assistantType,
@@ -453,13 +206,13 @@ function buildAssistantContextPayload(message = "") {
     young_person_name: scope === "child" ? getFullYoungPersonName() : null,
     home_id:
       state.homeId ||
-      person.home_id ||
+      person?.home_id ||
       state.currentUser?.home_id ||
       state.currentUser?.homeId ||
       null,
     home_name: getHomeName(),
-    placement_status: person.placement_status || null,
-    summary_risk_level: person.summary_risk_level || null,
+    placement_status: person?.placement_status || null,
+    summary_risk_level: person?.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
     record_type: state.activeRecordType || state.composerRecordType || null,
     record_id:
@@ -472,8 +225,6 @@ function buildAssistantContextPayload(message = "") {
     current_section: section,
     user_role: state.userRole || "staff",
     assistant_intent: intent,
-    secondary_intents: secondaryIntents,
-    analysis_lens: analysisLens,
     retrieval_mode: retrievalMode,
     output_mode: outputMode,
     whole_os_default: true,
@@ -492,6 +243,10 @@ function buildAssistantContextPayload(message = "") {
       0,
       MAX_UI_PROMPTS
     ),
+    reg45_requested: Boolean(reg45Range),
+    reporting_period_start: reg45Range?.startDate?.toISOString?.() || null,
+    reporting_period_end: reg45Range?.endDate?.toISOString?.() || null,
+    reporting_period_inferred: Boolean(reg45Range?.inferred),
   };
 }
 
@@ -537,10 +292,6 @@ function buildSafeAssistantRequestPayload(payload) {
       current_section: context.current_section || null,
       user_role: context.user_role || "staff",
       assistant_intent: context.assistant_intent || "summary",
-      secondary_intents: Array.isArray(context.secondary_intents)
-        ? context.secondary_intents
-        : [],
-      analysis_lens: context.analysis_lens || "general",
       retrieval_mode: context.retrieval_mode || "whole_scope",
       output_mode: context.output_mode || "answer",
       whole_os_default: Boolean(context.whole_os_default),
@@ -554,6 +305,10 @@ function buildSafeAssistantRequestPayload(payload) {
       suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
         ? context.suggested_prompts_ui_only.slice(0, MAX_UI_PROMPTS)
         : [],
+      reg45_requested: Boolean(context.reg45_requested),
+      reporting_period_start: context.reporting_period_start || null,
+      reporting_period_end: context.reporting_period_end || null,
+      reporting_period_inferred: Boolean(context.reporting_period_inferred),
     },
   };
 }
@@ -632,42 +387,106 @@ function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
   return text;
 }
 
-async function answerLocallyForGreeting(question) {
-  const intentMeta = detectAssistantIntents(question);
-  appendAssistantUserMessage(question, {
-    intent: intentMeta.primary_intent,
-    scope_snapshot: {
-      scope: getCurrentScope(),
-      section: getCurrentSection(),
-    },
-  });
+function getSourcesSafe() {
+  ensureAssistantState();
+  return Array.isArray(state.assistantMeta?.sources)
+    ? state.assistantMeta.sources
+    : [];
+}
 
-  appendAssistantSystemMessage(buildRoleAwareGreeting(), {
-    intent: intentMeta.primary_intent,
-    scope_snapshot: {
-      scope: getCurrentScope(),
-      section: getCurrentSection(),
-    },
+function applyAssistantMeta(meta = {}) {
+  mergeAssistantMeta({
+    ...meta,
+    last_analysis_at: meta.last_analysis_at || new Date().toISOString(),
   });
+  syncAssistantUi();
+}
+
+async function answerLocallyForGreeting(question) {
+  appendAssistantUserMessage(question);
+  appendAssistantSystemMessage(buildRoleAwareGreeting());
 }
 
 async function answerLocallyForUnknown(question) {
-  const intentMeta = detectAssistantIntents(question);
-  appendAssistantUserMessage(question, {
-    intent: intentMeta.primary_intent,
-    scope_snapshot: {
-      scope: getCurrentScope(),
-      section: getCurrentSection(),
-    },
+  appendAssistantUserMessage(question);
+  appendAssistantSystemMessage(buildUnknownIntentPrompt());
+}
+
+export function updateAssistantContext() {
+  const scope = getCurrentScope();
+  const section = getCurrentSection();
+  const accessLevel = getAccessLevelForScope(scope);
+
+  ensureAssistantState();
+
+  const sectionLabel = String(section)
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
+
+  const contextSummary =
+    scope === "child"
+      ? state.youngPersonId
+        ? {
+            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • child-only OS scope • section: ${sectionLabel}`,
+            scope_type: "young_person",
+            current_scope: scope,
+            current_section: section,
+            access_level: "child",
+            young_person_name: getFullYoungPersonName(),
+            home_name: getHomeName(),
+            allowed_home_ids: [state.homeId].filter(Boolean),
+            retrieval_default: "whole_scope",
+            suggested_prompts: assistantPromptsForView(section, scope),
+          }
+        : {
+            summary: "No young person selected.",
+            scope_type: "global",
+            current_scope: scope,
+            current_section: section,
+            access_level: "child",
+            young_person_name: null,
+            home_name: getHomeName(),
+            allowed_home_ids: [state.homeId].filter(Boolean),
+            retrieval_default: "whole_scope",
+            suggested_prompts: assistantPromptsForView(section, scope),
+          }
+      : scope === "home"
+      ? {
+          summary: `Home: ${getHomeName()} • home-only OS scope • section: ${sectionLabel}`,
+          scope_type: "home",
+          current_scope: scope,
+          current_section: section,
+          access_level: "home",
+          young_person_name: null,
+          home_name: getHomeName(),
+          allowed_home_ids: [state.homeId].filter(Boolean),
+          retrieval_default: "whole_scope",
+          suggested_prompts: assistantPromptsForView(section, scope),
+        }
+      : {
+          summary:
+            accessLevel === "provider"
+              ? `Quality: provider-wide oversight across allowed homes • section: ${sectionLabel}`
+              : `Quality: ${getHomeName()} only • section: ${sectionLabel}`,
+          scope_type: "quality",
+          current_scope: scope,
+          current_section: section,
+          access_level: accessLevel,
+          young_person_name: null,
+          home_name: getHomeName(),
+          allowed_home_ids:
+            accessLevel === "provider"
+              ? getAllowedHomeIds()
+              : [state.homeId].filter(Boolean),
+          retrieval_default: "whole_scope",
+          suggested_prompts: assistantPromptsForView(section, scope),
+        };
+
+  mergeAssistantMeta({
+    assistant_context: contextSummary,
   });
 
-  appendAssistantSystemMessage(buildUnknownIntentPrompt(), {
-    intent: intentMeta.primary_intent,
-    scope_snapshot: {
-      scope: getCurrentScope(),
-      section: getCurrentSection(),
-    },
-  });
+  syncAssistantUi();
 }
 
 export async function askAssistant(question) {
@@ -684,37 +503,20 @@ export async function askAssistant(question) {
     return;
   }
 
-  const intentMeta = detectAssistantIntents(trimmed);
-  const primaryIntent = intentMeta.primary_intent;
-  const section = getCurrentSection();
-  const scope = getCurrentScope();
-  const analysisLens = inferAnalysisLens({
-    scope,
-    section,
-    role: state.userRole,
-    intent: primaryIntent,
-  });
+  const intent = detectAssistantIntent(trimmed);
 
-  if (isGreeting(trimmed)) {
+  if (intent === "greeting") {
     await answerLocallyForGreeting(trimmed);
     return;
   }
 
-  if (primaryIntent === "unknown" && trimmed.length < 8) {
+  if (intent === "unknown" && trimmed.length < 8) {
     await answerLocallyForUnknown(trimmed);
     return;
   }
 
-  appendAssistantUserMessage(trimmed, {
-    intent: primaryIntent,
-    scope_snapshot: { scope, section },
-  });
-
-  addAssistantPlaceholder({
-    intent: primaryIntent,
-    scope_snapshot: { scope, section },
-  });
-
+  appendAssistantUserMessage(trimmed);
+  addAssistantPlaceholder();
   setAssistantSending(true);
 
   try {
@@ -732,16 +534,6 @@ export async function askAssistant(question) {
       scrubber_reverse_map: scrubbed.reverseMap || {},
       scrubber_enabled: scrubbed.meta?.enabled ?? false,
       scrubber_meta: scrubbed.meta || {},
-      runtime: {
-        ...(getAssistantMeta().runtime || {}),
-        analysis_lens: analysisLens,
-        assistant_intent: primaryIntent,
-        secondary_intents: intentMeta.secondary_intents || [],
-      },
-      assistant_context: {
-        ...(getAssistantMeta().assistant_context || {}),
-        analysis_lens: analysisLens,
-      },
     });
 
     await apiStreamAssistant(scrubbed.payload, {
@@ -751,8 +543,6 @@ export async function askAssistant(question) {
           runtime: {
             ...(meta?.runtime || {}),
             assistant_intent: contextPayload.assistant_intent,
-            secondary_intents: contextPayload.secondary_intents || [],
-            analysis_lens: contextPayload.analysis_lens,
             retrieval_mode: contextPayload.retrieval_mode,
             output_mode: contextPayload.output_mode,
             whole_os_default: true,
@@ -760,12 +550,15 @@ export async function askAssistant(question) {
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
             ai_scrubber_enabled: scrubbed.meta?.enabled ?? false,
+            reporting_period_start: contextPayload.reporting_period_start,
+            reporting_period_end: contextPayload.reporting_period_end,
+            reporting_period_inferred: contextPayload.reporting_period_inferred,
           },
           explainability: {
             ...(meta?.explainability || {}),
             reasoning_summary:
               meta?.explainability?.reasoning_summary ||
-              `This answer used an evidence-led children’s home reasoning approach with a ${contextPayload.analysis_lens} lens.`,
+              "This answer used an evidence-led children’s home reasoning approach.",
             ai_scrubber:
               scrubbed.meta?.enabled
                 ? "Client-side AI scrubber applied before outbound request."
@@ -778,7 +571,9 @@ export async function askAssistant(question) {
             access_level: contextPayload.access_level,
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
-            analysis_lens: contextPayload.analysis_lens,
+            reporting_period_start: contextPayload.reporting_period_start,
+            reporting_period_end: contextPayload.reporting_period_end,
+            reporting_period_inferred: contextPayload.reporting_period_inferred,
           },
           assistant_scope: {
             ...(meta?.assistant_scope || {}),
@@ -786,7 +581,6 @@ export async function askAssistant(question) {
             access_level: contextPayload.access_level,
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
-            analysis_lens: contextPayload.analysis_lens,
           },
           sources: meta?.sources || [],
           suggested_actions: meta?.suggested_actions || [],
@@ -796,22 +590,16 @@ export async function askAssistant(question) {
           last_analysis_at: new Date().toISOString(),
         });
       },
-
       onProgress: () => {},
-
       onMessage: (streamedPayload) => {
         const safeValue = extractStreamText(streamedPayload) || "Thinking…";
         const restored = restoreAssistantReplyTokens(
           safeValue,
           scrubbed.reverseMap
         );
-
-        updateLastAssistantStreamingText(restored || "Thinking…", {
-          intent: primaryIntent,
-        });
+        updateLastAssistantStreamingText(restored || "Thinking…");
       },
-
-      onDone: async (streamedPayload) => {
+      onDone: (streamedPayload) => {
         const safeValue =
           extractStreamText(streamedPayload) || "No assistant reply returned.";
 
@@ -819,13 +607,6 @@ export async function askAssistant(question) {
           safeValue.trim(),
           scrubbed.reverseMap
         );
-
-        const suggestedActions =
-          streamedPayload?.suggested_actions || getAssistantMeta().suggested_actions || [];
-
-        const sourceRefs = Array.isArray(streamedPayload?.sources)
-          ? sanitiseSourcesForUi(streamedPayload.sources).map((s) => s.citation_ref)
-          : getSourcesSafe().map((s) => s.citation_ref);
 
         if (
           streamedPayload &&
@@ -846,43 +627,32 @@ export async function askAssistant(question) {
             suggested_actions: streamedPayload.suggested_actions || [],
             last_analysis_at: new Date().toISOString(),
           });
-        } else {
-          await refreshAssistantAnalysisOnly();
         }
 
         replaceLastAssistantPlaceholder(
-          restored || "No assistant reply returned.",
-          {
-            intent: primaryIntent,
-            citations: sourceRefs,
-            actions: suggestedActions,
-            scope_snapshot: { scope, section },
-          }
+          restored || "No assistant reply returned."
         );
       },
     });
   } catch (error) {
     replaceLastAssistantPlaceholder(
-      error?.message || "The assistant could not answer right now.",
-      {
-        intent: primaryIntent,
-        scope_snapshot: { scope, section },
-      }
+      error?.message || "The assistant could not answer right now."
     );
   } finally {
     setAssistantSending(false);
-    refreshAssistantUi();
+    syncAssistantUi();
   }
 }
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
+  state.assistantModalMessages = [];
 
   if (state.assistantMeta && typeof state.assistantMeta === "object") {
     state.assistantMeta = createAssistantMeta();
   }
 
-  refreshAssistantUi();
+  syncAssistantUi();
 }
 
 function handleQuickAction(actionId = "") {
@@ -905,9 +675,7 @@ function bindPromptButtons() {
     const quickActionButton = event.target.closest("[data-quick-action]");
     if (quickActionButton) {
       const actionId = quickActionButton.dataset.quickAction || "";
-      if (actionId) {
-        handleQuickAction(actionId);
-      }
+      if (actionId) handleQuickAction(actionId);
       return;
     }
 
@@ -939,9 +707,14 @@ export function bindAssistantEvents() {
   els.assistantForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const question = els.assistantInput?.value || "";
-    if (els.assistantInput) {
-      els.assistantInput.value = "";
-    }
+    if (els.assistantInput) els.assistantInput.value = "";
+    await askAssistant(question);
+  });
+
+  els.assistantModalForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = els.assistantModalInput?.value || "";
+    if (els.assistantModalInput) els.assistantModalInput.value = "";
     await askAssistant(question);
   });
 
@@ -950,5 +723,6 @@ export function bindAssistantEvents() {
 
 export function loadAssistant() {
   ensureAssistantState();
-  refreshAssistantUi();
+  updateAssistantContext();
+  syncAssistantUi();
 }
