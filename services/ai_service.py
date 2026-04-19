@@ -178,7 +178,7 @@ async def _maybe_run_guidance_search(
             timeout=SEARCH_TIMEOUT_SECONDS,
         )
         return _safe_string(result)
-    except TimeoutError:
+    except asyncio.TimeoutError:
         logger.warning("Guidance search timed out")
         return ""
     except Exception:
@@ -336,7 +336,10 @@ def _normalise_suggested_actions(value: Any) -> list[Any]:
 
     for item in value:
         if isinstance(item, dict):
-            key = json.dumps(item, sort_keys=True, ensure_ascii=False)
+            try:
+                key = json.dumps(item, sort_keys=True, ensure_ascii=False)
+            except Exception:
+                continue
             if key in seen:
                 continue
             seen.add(key)
@@ -411,6 +414,181 @@ def _extract_text_from_provider_payload(value: Any) -> str:
                 return candidate
 
     return ""
+
+
+def _classify_source_groups(sources: list[dict]) -> dict[str, int]:
+    counts = {
+        "internal_evidence": 0,
+        "live_guidance": 0,
+        "documents": 0,
+        "other": 0,
+    }
+
+    for item in sources:
+        source_type = _safe_string(item.get("type")).lower()
+        url = _safe_string(item.get("url")).lower()
+        record_type = _safe_string(item.get("record_type")).lower()
+
+        if record_type or source_type in {
+            "record",
+            "record_item",
+            "timeline",
+            "incident",
+            "daily_note",
+            "handover",
+            "chronology",
+            "evidence",
+            "internal",
+        }:
+            counts["internal_evidence"] += 1
+        elif source_type in {"guidance", "web", "live_guidance", "official_guidance"} or url.startswith("http"):
+            counts["live_guidance"] += 1
+        elif source_type in {"document", "uploaded_document", "library_document"} or item.get("document_title"):
+            counts["documents"] += 1
+        else:
+            counts["other"] += 1
+
+    return counts
+
+
+def _has_inline_citation_markers(answer_text: str) -> bool:
+    text = _safe_string(answer_text)
+    if not text:
+        return False
+
+    citation_markers = ["[", "cite", "citation", "source", "ref"]
+    lowered = text.lower()
+    return any(marker in lowered for marker in citation_markers)
+
+
+def _estimate_evidence_sufficiency(
+    *,
+    sources: list[dict],
+    evidence_index: list[dict],
+    guidance_used: bool,
+) -> str:
+    evidence_count = len(evidence_index)
+    source_count = len(sources)
+
+    if evidence_count >= 5 or source_count >= 6:
+        return "strong"
+    if evidence_count >= 2 or source_count >= 3:
+        return "moderate"
+    if guidance_used or evidence_count >= 1 or source_count >= 1:
+        return "limited"
+    return "weak"
+
+
+def _estimate_answer_confidence(
+    *,
+    answer_text: str,
+    output_type: str,
+    evidence_sufficiency: str,
+    provider_success: bool,
+) -> str:
+    text = _safe_string(answer_text)
+
+    if not provider_success or not text:
+        return "low"
+
+    if output_type in {"report", "structured_report", "email_report"}:
+        if evidence_sufficiency == "strong" and len(text) >= 800:
+            return "high"
+        if evidence_sufficiency in {"strong", "moderate"} and len(text) >= 400:
+            return "medium"
+        return "low"
+
+    if evidence_sufficiency == "strong" and len(text) >= 200:
+        return "high"
+    if evidence_sufficiency in {"strong", "moderate", "limited"} and len(text) >= 80:
+        return "medium"
+    return "low"
+
+
+def _build_answer_quality_flags(
+    *,
+    answer_text: str,
+    output_type: str,
+    sources: list[dict],
+    evidence_index: list[dict],
+) -> dict[str, Any]:
+    text = _safe_string(answer_text)
+    evidence_available = bool(sources or evidence_index)
+    has_citation_markers = _has_inline_citation_markers(text)
+
+    answer_empty = not bool(text)
+    too_short_for_report = output_type in {"report", "structured_report", "email_report"} and len(text) < 250
+    possible_missing_citations = evidence_available and text and not has_citation_markers
+
+    warnings: list[str] = []
+    if answer_empty:
+        warnings.append("answer_empty")
+    if too_short_for_report:
+        warnings.append("report_answer_short")
+    if possible_missing_citations:
+        warnings.append("possible_missing_citations")
+
+    return {
+        "answer_empty": answer_empty,
+        "too_short_for_report": too_short_for_report,
+        "possible_missing_citations": possible_missing_citations,
+        "warnings": warnings,
+    }
+
+
+def _build_safe_user_fallback_text() -> str:
+    return "Sorry, something went wrong while generating the response. Please try again."
+
+
+def _build_empty_answer_fallback_text(
+    *,
+    output_type: str,
+    guidance_used: bool,
+    source_count: int,
+) -> str:
+    if output_type in {"report", "structured_report", "email_report"}:
+        return (
+            "I couldn’t generate a usable report from the available material. "
+            "Please review the evidence, then try again."
+        )
+
+    if guidance_used or source_count > 0:
+        return (
+            "I couldn’t generate a usable response from the available material. "
+            "Please try again or refine the request."
+        )
+
+    return "I couldn’t generate a usable response. Please try again."
+
+
+def _filter_provider_runtime_overrides(value: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+
+    allowed_keys = {
+        "provider_name",
+        "provider_model",
+        "token_usage",
+        "finish_reason",
+        "citations_used",
+        "tools_used",
+        "answer_style",
+        "reasoning_mode",
+    }
+
+    return {
+        key: value[key]
+        for key in allowed_keys
+        if key in value
+    }
+
+
+def _normalise_assistant_scope(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _normalise_assistant_context(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 async def generate_ai_stream(
@@ -603,7 +781,7 @@ async def generate_ai_stream(
                     if isinstance(structured.get("runtime"), dict):
                         provider_runtime = {
                             **provider_runtime,
-                            **structured.get("runtime", {}),
+                            **_filter_provider_runtime_overrides(structured.get("runtime", {})),
                         }
 
                     if isinstance(structured.get("explainability"), dict):
@@ -612,17 +790,15 @@ async def generate_ai_stream(
                             **structured.get("explainability", {}),
                         }
 
-                    if isinstance(structured.get("assistant_scope"), dict):
-                        provider_assistant_scope = {
-                            **provider_assistant_scope,
-                            **structured.get("assistant_scope", {}),
-                        }
+                    provider_assistant_scope = {
+                        **provider_assistant_scope,
+                        **_normalise_assistant_scope(structured.get("assistant_scope")),
+                    }
 
-                    if isinstance(structured.get("assistant_context"), dict):
-                        provider_assistant_context = {
-                            **provider_assistant_context,
-                            **structured.get("assistant_context", {}),
-                        }
+                    provider_assistant_context = {
+                        **provider_assistant_context,
+                        **_normalise_assistant_context(structured.get("assistant_context")),
+                    }
 
                     if isinstance(structured.get("suggested_actions"), list):
                         provider_suggested_actions = _normalise_suggested_actions(
@@ -646,10 +822,11 @@ async def generate_ai_stream(
                 continue
 
             if _safe_string(content):
-                final_answer_parts.append(str(content))
+                token_text = str(content)
+                final_answer_parts.append(token_text)
                 yield {
                     "type": "token",
-                    "content": str(content),
+                    "content": token_text,
                 }
 
         provider_success = True
@@ -664,45 +841,20 @@ async def generate_ai_stream(
             exc,
         )
 
-        fallback_text = (
-            "Sorry, something went wrong while generating the response. "
-            f"Provider error: {provider_error_message}"
-        )
+        fallback_text = _build_safe_user_fallback_text()
         final_answer_parts.append(fallback_text)
         yield {
             "type": "token",
             "content": fallback_text,
         }
 
-    finally:
-        duration_ms = timer.duration_ms()
-
-        if request_audit_event is not None:
-            log_assistant_request_finished(
-                base_event=request_audit_event,
-                duration_ms=duration_ms,
-                success=provider_success,
-                source_count=len(provider_meta_sources or sources_used),
-                error_code=provider_error_code,
-                error_message=provider_error_message,
-                extra={
-                    "guidance_results_used": bool(trimmed_search_results),
-                    "guidance_search_skipped": skip_guidance_search,
-                    "trimmed_history_count": len(trimmed_history),
-                    "message_count": len(messages),
-                    "evidence_count": len(
-                        provider_evidence_index
-                        or runtime_payload.get("evidence_index")
-                        or []
-                    ),
-                },
-            )
+    final_answer_text = "".join(final_answer_parts).strip()
 
     final_sources = _normalise_sources(provider_meta_sources or sources_used)
 
     final_runtime = {
         **runtime_payload,
-        **provider_runtime,
+        **_filter_provider_runtime_overrides(provider_runtime),
         "guidance_results_used": bool(trimmed_search_results),
         "guidance_search_skipped": skip_guidance_search,
         "response_mode": selected_mode,
@@ -711,20 +863,74 @@ async def generate_ai_stream(
         "safeguarding_level": safeguarding_level,
     }
 
-    final_explainability = {
-        **(explainability_payload or {}),
-        **provider_explainability,
-    }
-
     final_evidence_index = _normalise_evidence_index(
         provider_evidence_index
         or final_runtime.get("evidence_index")
         or []
     )
 
+    source_group_counts = _classify_source_groups(final_sources)
+    evidence_sufficiency = _estimate_evidence_sufficiency(
+        sources=final_sources,
+        evidence_index=final_evidence_index,
+        guidance_used=bool(trimmed_search_results),
+    )
+
+    quality_flags = _build_answer_quality_flags(
+        answer_text=final_answer_text,
+        output_type=output_type,
+        sources=final_sources,
+        evidence_index=final_evidence_index,
+    )
+
+    answer_confidence = _estimate_answer_confidence(
+        answer_text=final_answer_text,
+        output_type=output_type,
+        evidence_sufficiency=evidence_sufficiency,
+        provider_success=provider_success,
+    )
+
+    if quality_flags["answer_empty"]:
+        fallback_text = _build_empty_answer_fallback_text(
+            output_type=output_type,
+            guidance_used=bool(trimmed_search_results),
+            source_count=len(final_sources),
+        )
+        final_answer_text = fallback_text
+        final_answer_parts = [fallback_text]
+        yield {
+            "type": "token",
+            "content": fallback_text,
+        }
+        quality_flags = _build_answer_quality_flags(
+            answer_text=final_answer_text,
+            output_type=output_type,
+            sources=final_sources,
+            evidence_index=final_evidence_index,
+        )
+        answer_confidence = _estimate_answer_confidence(
+            answer_text=final_answer_text,
+            output_type=output_type,
+            evidence_sufficiency=evidence_sufficiency,
+            provider_success=provider_success,
+        )
+
+    final_runtime["source_group_counts"] = source_group_counts
+    final_runtime["evidence_sufficiency"] = evidence_sufficiency
+    final_runtime["answer_confidence"] = answer_confidence
+    final_runtime["answer_quality_flags"] = quality_flags
+
     if final_evidence_index:
         final_runtime["evidence_index"] = final_evidence_index
         final_runtime["evidence_items_loaded"] = len(final_evidence_index)
+
+    final_explainability = {
+        **(explainability_payload or {}),
+        **provider_explainability,
+        "answer_quality_flags": quality_flags,
+        "evidence_sufficiency": evidence_sufficiency,
+        "answer_confidence": answer_confidence,
+    }
 
     meta_payload = {
         "type": "meta",
@@ -745,9 +951,37 @@ async def generate_ai_stream(
     if final_evidence_index:
         meta_payload["evidence_index"] = final_evidence_index
 
+    duration_ms = timer.duration_ms()
+
+    if request_audit_event is not None:
+        log_assistant_request_finished(
+            base_event=request_audit_event,
+            duration_ms=duration_ms,
+            success=provider_success,
+            source_count=len(final_sources),
+            error_code=provider_error_code,
+            error_message=provider_error_message,
+            extra={
+                "guidance_results_used": bool(trimmed_search_results),
+                "guidance_search_skipped": skip_guidance_search,
+                "trimmed_history_count": len(trimmed_history),
+                "message_count": len(messages),
+                "evidence_count": len(final_evidence_index),
+                "evidence_sufficiency": evidence_sufficiency,
+                "answer_confidence": answer_confidence,
+                "answer_quality_warnings": quality_flags.get("warnings", []),
+            },
+        )
+
     yield meta_payload
 
-    logger.info("Completed AI stream session_id=%s", session_id)
+    logger.info(
+        "Completed AI stream session_id=%s success=%s evidence_sufficiency=%s answer_confidence=%s",
+        session_id,
+        provider_success,
+        evidence_sufficiency,
+        answer_confidence,
+    )
 
 
 async def generate_ai_response(
