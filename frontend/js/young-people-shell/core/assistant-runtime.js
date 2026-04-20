@@ -25,6 +25,21 @@ import {
   detectRetrievalMode as detectRetrievalModeFromHelpers,
   detectOutputMode as detectOutputModeFromHelpers,
 } from "../assistant/helpers.js";
+import {
+  inferAssistantAnalysisLens,
+  isProviderWideScope,
+  normaliseScope,
+  normaliseSection,
+} from "./assistant-context.js";
+import {
+  cleanText,
+  arrayify,
+  unique,
+  parseDateValue,
+  daysFromNow,
+  isDueSoon,
+  normaliseToken,
+} from "./helpers.js";
 
 const RETRIEVAL_MODE = {
   whole_scope: "whole_scope",
@@ -60,49 +75,6 @@ const MAX_API_CHRONOLOGY_ITEMS = 30;
 const MAX_API_SUMMARY_EXCERPT = 280;
 const MAX_LOCAL_ACTIONS = 30;
 
-function cleanText(value) {
-  if (value === null || value === undefined) return "";
-  return String(value).trim();
-}
-
-function arrayify(value) {
-  if (Array.isArray(value)) return value;
-  if (value === null || value === undefined || value === "") return [];
-  return [value];
-}
-
-function unique(values = []) {
-  return [...new Set(arrayify(values).filter(Boolean))];
-}
-
-function parseDateValue(value) {
-  const time = Date.parse(value || "");
-  return Number.isNaN(time) ? 0 : time;
-}
-
-function nowTs() {
-  return Date.now();
-}
-
-function daysFromNow(value) {
-  const ts = parseDateValue(value);
-  if (!ts) return null;
-  return Math.round((ts - nowTs()) / (1000 * 60 * 60 * 24));
-}
-
-function isDueSoon(value, withinDays = 7) {
-  const days = daysFromNow(value);
-  return days !== null && days >= 0 && days <= withinDays;
-}
-
-function normaliseToken(value = "") {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
-}
-
 function makeActionId(parts = []) {
   return parts
     .map((item) => normaliseToken(item))
@@ -111,13 +83,11 @@ function makeActionId(parts = []) {
 }
 
 function getScopeLabel(scope) {
-  if (scope === "home") return "home";
-  if (scope === "quality") return "quality";
-  return "child";
+  return normaliseScope(scope, "child");
 }
 
 function getSectionLabel(section) {
-  return section || "workspace";
+  return normaliseSection(section, "workspace");
 }
 
 function getSelectedPersonSummary() {
@@ -159,41 +129,12 @@ function inferAnalysisLens({
   role = state.userRole || "staff",
   intent = ASSISTANT_INTENT.summary,
 } = {}) {
-  const safeRole = String(role || "staff").toLowerCase();
-  const safeSection = String(section || "").toLowerCase();
-  const safeIntent = String(intent || "summary").toLowerCase();
-
-  if (
-    /safeguarding|risk|missing/.test(safeSection) ||
-    safeIntent === ASSISTANT_INTENT.risk
-  ) {
-    return "safeguarding";
-  }
-
-  if (
-    scope === "quality" ||
-    safeIntent === ASSISTANT_INTENT.quality ||
-    safeIntent === ASSISTANT_INTENT.compliance ||
-    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
-  ) {
-    return safeRole === "ri" || safeRole === "admin" ? "quality" : "inspection";
-  }
-
-  if (
-    safeIntent === ASSISTANT_INTENT.management ||
-    ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
-    /manager|team|supervision|home-dashboard/.test(safeSection)
-  ) {
-    return "manager";
-  }
-
-  if (safeIntent === ASSISTANT_INTENT.handover) {
-    return "shift";
-  }
-
-  if (scope === "child") return "child_centred";
-  if (scope === "home") return "operational";
-  return "general";
+  return inferAssistantAnalysisLens({
+    scope,
+    section,
+    role,
+    intent,
+  });
 }
 
 export function buildAssistantContext() {
@@ -579,7 +520,7 @@ function filterEvidenceByScope(evidence = [], context = buildAssistantContext())
     });
   }
 
-  if (scope === "quality" && context.access_level === "provider") {
+  if (isProviderWideScope(scope) && context.access_level === "provider") {
     const allowed = new Set(
       arrayify(context.allowed_home_ids).map((item) => String(item))
     );
@@ -1232,7 +1173,7 @@ function inferSuggestedActions(
     }
   }
 
-  if (context.scope === "quality") {
+  if (isProviderWideScope(context.scope)) {
     actions.push({ type: "draft_summary", label: "Draft quality summary" });
     actions.push({ type: "create_task", label: "Create action list" });
     actions.push({ type: "draft_note", label: "Draft RI summary" });

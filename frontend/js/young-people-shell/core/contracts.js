@@ -1,3 +1,5 @@
+import { normaliseToken } from "./helpers.js";
+
 export const RECORD_TYPES = {
   daily_note: "daily_note",
   incident: "incident",
@@ -69,7 +71,7 @@ export const ASSISTANT_ACTION_TYPE = {
   review_documents: "review_documents",
 };
 
-const WORKFLOW_ALIASES = {
+export const WORKFLOW_ALIASES = {
   draft: WORKFLOW_STATUS.draft,
   open: WORKFLOW_STATUS.active,
   active: WORKFLOW_STATUS.active,
@@ -97,7 +99,7 @@ const WORKFLOW_ALIASES = {
   canceled: WORKFLOW_STATUS.cancelled,
 };
 
-const SEVERITY_ALIASES = {
+export const SEVERITY_ALIASES = {
   low: "low",
   medium: "medium",
   moderate: "medium",
@@ -106,7 +108,7 @@ const SEVERITY_ALIASES = {
   urgent: "critical",
 };
 
-const SIGNIFICANCE_ALIASES = {
+export const SIGNIFICANCE_ALIASES = {
   low: "low",
   medium: "medium",
   moderate: "medium",
@@ -115,7 +117,7 @@ const SIGNIFICANCE_ALIASES = {
   significant: "high",
 };
 
-const ASSISTANT_SCOPE_ALIASES = {
+export const ASSISTANT_SCOPE_ALIASES = {
   child: ASSISTANT_SCOPE.child,
   young_person: ASSISTANT_SCOPE.young_person,
   youngperson: ASSISTANT_SCOPE.young_person,
@@ -124,7 +126,7 @@ const ASSISTANT_SCOPE_ALIASES = {
   global: ASSISTANT_SCOPE.global,
 };
 
-const ASSISTANT_RESPONSE_MODE_ALIASES = {
+export const ASSISTANT_RESPONSE_MODE_ALIASES = {
   concise: ASSISTANT_RESPONSE_MODE.concise,
   short: ASSISTANT_RESPONSE_MODE.concise,
   balanced: ASSISTANT_RESPONSE_MODE.balanced,
@@ -132,14 +134,6 @@ const ASSISTANT_RESPONSE_MODE_ALIASES = {
   deep: ASSISTANT_RESPONSE_MODE.deep,
   detailed: ASSISTANT_RESPONSE_MODE.deep,
 };
-
-function normaliseToken(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
-}
 
 export function normaliseWorkflowStatus(value) {
   const key = normaliseToken(value);

@@ -12,13 +12,13 @@ import {
   assistantPromptsForView,
   buildRoleAwareGreeting,
   buildUnknownIntentPrompt,
+  ASSISTANT_INTENT,
   detectAssistantIntent,
   detectAssistantResponseMode,
   detectOutputMode,
   detectRetrievalMode,
   ensureAssistantState,
   extractStreamText,
-  getAccessLevelForScope,
   getAllowedHomeIds,
   getAssistantTypeForScope,
   getCurrentScope,
@@ -29,24 +29,15 @@ import {
   cloneAssistantMessage,
   mergeAssistantMeta,
 } from "../assistant/helpers.js";
+import {
+  resolveAssistantScopeType,
+  resolveAccessLevelForScope,
+  normaliseScope,
+  isProviderWideScope,
+} from "../core/assistant-context.js";
 
 let assistantEventsBound = false;
 let assistantPromptDelegatesBound = false;
-
-const ASSISTANT_INTENT = {
-  greeting: "greeting",
-  factual_lookup: "factual_lookup",
-  summary: "summary",
-  chronology: "chronology",
-  review: "review",
-  handover: "handover",
-  drafting: "drafting",
-  compliance: "compliance",
-  risk: "risk",
-  quality: "quality",
-  management: "management",
-  unknown: "unknown",
-};
 
 const MAX_UI_PROMPTS = 8;
 
@@ -55,11 +46,10 @@ function getSelectedYoungPerson() {
 }
 
 function getAssistantScopeType() {
-  const scope = getCurrentScope();
-
-  if (scope === "home") return "home";
-  if (scope === "quality") return "quality";
-  return state.youngPersonId ? "young_person" : "global";
+  return resolveAssistantScopeType({
+    scope: getCurrentScope(),
+    youngPersonId: state.youngPersonId,
+  });
 }
 
 function ensureAssistantMetaState() {
@@ -179,11 +169,14 @@ function buildAssistantContextPayload(message = "") {
   const intent = detectAssistantIntent(message);
   const retrievalMode = detectRetrievalMode(message, intent);
   const outputMode = detectOutputMode(intent, message);
-  const accessLevel = getAccessLevelForScope(scope);
+  const accessLevel = resolveAccessLevelForScope({
+    scope,
+    role: state.userRole || "staff",
+  });
   const assistantType = getAssistantTypeForScope(scope);
 
   const allowedHomeIds =
-    scope === "quality" && accessLevel === "provider"
+    isProviderWideScope(scope) && accessLevel === "provider"
       ? getAllowedHomeIds()
       : [Number(state.homeId)].filter((item) => Number.isFinite(item));
 
@@ -259,7 +252,10 @@ function buildAssistantContextPayload(message = "") {
       intent === ASSISTANT_INTENT.review,
     ask_for_review_pack: intent === ASSISTANT_INTENT.review,
     ask_for_compliance_view:
-      intent === ASSISTANT_INTENT.compliance || scope === "quality",
+      intent === ASSISTANT_INTENT.compliance ||
+      scope === "quality" ||
+      scope === "ofsted" ||
+      scope === "reports",
     suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(
       0,
       MAX_UI_PROMPTS
@@ -628,9 +624,12 @@ function bindPromptButtons() {
 export function updateAssistantContext() {
   ensureAssistantMetaState();
 
-  const scope = getCurrentScope();
+  const scope = normaliseScope(getCurrentScope(), "child");
   const section = getCurrentSection();
-  const accessLevel = getAccessLevelForScope(scope);
+  const accessLevel = resolveAccessLevelForScope({
+    scope,
+    role: state.userRole || "staff",
+  });
 
   const sectionLabel = String(section)
     .replaceAll("_", " ")
@@ -663,7 +662,7 @@ export function updateAssistantContext() {
             retrieval_default: "whole_scope",
             suggested_prompts: assistantPromptsForView(section, scope),
           }
-      : scope === "home"
+      : scope === "home" || scope === "staffing"
         ? {
             summary: `Home: ${getHomeName()} • home-only OS scope • section: ${sectionLabel}`,
             scope_type: "home",
