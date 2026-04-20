@@ -204,6 +204,34 @@ REPORT_SIGNAL_KEYS = {
     "positive_indicators",
 }
 
+SCOPED_CONTEXT_SIGNAL_KEYS = {
+    "scope",
+    "scope_type",
+    "assistant_type",
+    "young_person",
+    "identity",
+    "active_work",
+    "recent_records",
+    "links",
+    "scoped_record",
+    "home",
+    "homes",
+    "team",
+    "tasks",
+    "communications",
+    "documents",
+    "reports",
+    "incidents",
+    "inspection_actions",
+    "inspection_lines",
+    "audits",
+    "compliance_items",
+    "young_people",
+    "summary",
+    "evidence_index",
+    "sources",
+}
+
 
 @dataclass
 class AssistantRequest:
@@ -243,6 +271,7 @@ class AssistantRuntimeContext:
     suggested_actions_context: str = ""
     practice_quality_context: str = ""
     escalation_context: str = ""
+    scoped_context_summary: str = ""
     sources_used: list[dict[str, Any]] = field(default_factory=list)
     evidence_index: list[dict[str, Any]] = field(default_factory=list)
 
@@ -260,6 +289,20 @@ def _safe_string(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     return str(value).strip()
+
+
+def _safe_bool(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "y", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
 
 
 def _normalise_text(value: Any) -> str:
@@ -350,6 +393,12 @@ def _looks_like_internal_report_context(user_context: dict[str, Any] | None) -> 
     return any(key in user_context for key in REPORT_SIGNAL_KEYS)
 
 
+def _looks_like_scoped_os_context(user_context: dict[str, Any] | None) -> bool:
+    if not isinstance(user_context, dict) or not user_context:
+        return False
+    return any(key in user_context for key in SCOPED_CONTEXT_SIGNAL_KEYS)
+
+
 def _looks_like_internal_report_request(
     message: str,
     user_context: dict[str, Any] | None,
@@ -363,11 +412,16 @@ def _looks_like_internal_report_request(
         "monthly summary",
         "monthly overview",
         "reg 45",
+        "reg45",
         "regulation 45",
         "annual report",
         "annual overview",
         "yearly report",
         "yearly overview",
+        "inspection overview",
+        "quality overview",
+        "quality review",
+        "service overview",
     }
     return any(term in text for term in report_terms)
 
@@ -382,6 +436,7 @@ def _normalise_user_role_profile(
             _safe_string(role).lower(),
             _safe_string((user_context or {}).get("role")).lower(),
             _safe_string((user_context or {}).get("job_title")).lower(),
+            _safe_string((user_context or {}).get("user_role")).lower(),
         ]
         if part
     )
@@ -396,6 +451,7 @@ def _normalise_user_role_profile(
             "operations manager",
             "service manager",
             "governance",
+            "ri",
         }
     ):
         return "provider"
@@ -480,7 +536,11 @@ def _map_classifier_output_to_runtime(
     legacy_mode: str,
     task_type: str,
     message: str,
+    user_context: dict[str, Any] | None = None,
 ) -> str:
+    if _looks_like_internal_report_request(message, user_context):
+        return "report"
+
     mapping = {
         "handover_note": "handover_note",
         "incident_record": "incident_record",
@@ -522,7 +582,10 @@ def _retrieval_level(
     if document_text:
         return "none"
 
-    if task_type == "report" or _looks_like_internal_report_context(user_context):
+    if _looks_like_internal_report_context(user_context):
+        return "none"
+
+    if _looks_like_scoped_os_context(user_context) and _extract_evidence_index_from_user_context(user_context):
         return "none"
 
     if response_mode == "quick":
@@ -768,6 +831,68 @@ def _build_evidence_index_prompt_block(evidence_index: list[dict[str, Any]], lim
         "Do not invent citations.\n\n"
         + json.dumps(trimmed, ensure_ascii=False, indent=2)
     )
+
+
+def _build_scoped_context_summary(user_context: dict[str, Any] | None) -> str:
+    if not isinstance(user_context, dict) or not user_context:
+        return ""
+
+    scope = _safe_string(user_context.get("scope"))
+    scope_type = _safe_string(user_context.get("scope_type"))
+    assistant_type = _safe_string(user_context.get("assistant_type"))
+    young_person_name = _safe_string(user_context.get("young_person_name"))
+    home_name = _safe_string(user_context.get("home_name"))
+    access_level = _safe_string(user_context.get("access_level"))
+    report_type = _safe_string(user_context.get("report_type"))
+
+    lines: list[str] = []
+
+    if assistant_type:
+        lines.append(f"Assistant type: {assistant_type}")
+    if scope or scope_type:
+        lines.append(f"Scope: {scope or scope_type}")
+    if scope_type:
+        lines.append(f"Scope type: {scope_type}")
+    if access_level:
+        lines.append(f"Access level: {access_level}")
+    if young_person_name:
+        lines.append(f"Young person: {young_person_name}")
+    if home_name:
+        lines.append(f"Home: {home_name}")
+    if report_type:
+        lines.append(f"Report type: {report_type}")
+
+    young_person = user_context.get("young_person")
+    if isinstance(young_person, dict):
+        placement_status = _safe_string(young_person.get("placement_status"))
+        summary_risk_level = _safe_string(young_person.get("summary_risk_level"))
+        if placement_status:
+            lines.append(f"Placement status: {placement_status}")
+        if summary_risk_level:
+            lines.append(f"Summary risk level: {summary_risk_level}")
+
+    summary = user_context.get("summary")
+    if isinstance(summary, dict) and summary:
+        for key, value in summary.items():
+            if value in (None, "", [], {}):
+                continue
+            label = key.replace("_", " ").strip().title()
+            lines.append(f"{label}: {value}")
+
+    if isinstance(user_context.get("allowed_home_ids"), list):
+        lines.append(f"Allowed homes count: {len(user_context.get('allowed_home_ids') or [])}")
+
+    evidence_count = len(_extract_evidence_index_from_user_context(user_context))
+    source_count = len(_extract_sources_from_user_context(user_context))
+    if evidence_count:
+        lines.append(f"Evidence items available: {evidence_count}")
+    if source_count:
+        lines.append(f"Structured sources available: {source_count}")
+
+    if not lines:
+        return ""
+
+    return "\n".join(lines)
 
 
 def _build_document_source(document_name: str | None) -> dict[str, Any]:
@@ -1162,6 +1287,8 @@ def _build_practice_quality_context(
         "Keep wording factual, specific, and professionally neutral.",
         "Avoid vague statements, assumptions, or emotional overstatement.",
         "Where relevant, include observation, action taken, outcome, and next step.",
+        "Where structured evidence exists, use it directly rather than reverting to generic guidance.",
+        "Use citation_ref markers exactly where evidence supports the point.",
     ]
 
     if output_type in {
@@ -1192,6 +1319,7 @@ def _build_practice_quality_context(
                 "Keep the report structured, balanced, and evidence-led.",
                 "Do not invent themes, incidents, patterns, or outcomes.",
                 "State clearly where evidence is limited or incomplete.",
+                "Use the available evidence index and scoped records as the primary source base.",
             ]
         )
 
@@ -1285,6 +1413,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         runtime.mode,
         runtime.task_type,
         message,
+        req.user_context,
     )
 
     runtime.urgency = _derive_urgency(message, runtime.safeguarding_level)
@@ -1329,6 +1458,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         runtime.user_role_profile,
         message,
     )
+    runtime.scoped_context_summary = _build_scoped_context_summary(req.user_context)
 
     runtime.evidence_index = _extract_evidence_index_from_user_context(req.user_context)
     context_sources = _extract_sources_from_user_context(req.user_context)
@@ -1413,6 +1543,12 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     system_prompt = _append_section(
         system_prompt,
+        "SCOPED OPERATIONAL CONTEXT",
+        runtime.scoped_context_summary,
+    )
+
+    system_prompt = _append_section(
+        system_prompt,
         "RESPONSE STRUCTURE",
         runtime.schema_context,
     )
@@ -1493,7 +1629,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             "session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s urgency=%s response_mode=%s role_profile=%s "
             "stance=%s confidence=%s retrieval_level=%s reflection_level=%s "
-            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s sources=%s evidence=%s"
+            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s sources=%s evidence=%s scoped_context=%s"
         ),
         req.session_id,
         runtime.mode,
@@ -1515,6 +1651,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         bool(runtime.suggested_actions_context),
         len(runtime.sources_used),
         len(runtime.evidence_index),
+        bool(runtime.scoped_context_summary),
     )
 
     return AssistantPromptPackage(
