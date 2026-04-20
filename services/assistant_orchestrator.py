@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -71,6 +72,52 @@ def _normalise_response_mode(response_mode: str | None) -> str:
     if value in {"quick", "balanced", "deep"}:
         return value
     return "balanced"
+
+
+def _coerce_bool(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "y", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
+
+
+def _build_fallback_session_id(message: Any = None) -> str:
+    suffix = uuid.uuid4().hex[:12]
+    message_hint = _safe_string(message)[:24].replace(" ", "-")
+    if message_hint:
+        return f"orchestrator-{message_hint}-{suffix}"
+    return f"orchestrator-{suffix}"
+
+
+def _extract_attr(obj: Any, *names: str, default: Any = None) -> Any:
+    for name in names:
+        if obj is None:
+            continue
+
+        if isinstance(obj, dict) and name in obj:
+            value = obj.get(name)
+            if value is not None:
+                return value
+
+        value = getattr(obj, name, None)
+        if value is not None:
+            return value
+
+    return default
+
+
+def _merge_dicts(base: dict[str, Any] | None, overlay: dict[str, Any] | None) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(base or {})
+    for key, value in (overlay or {}).items():
+        merged[key] = value
+    return merged
 
 
 def _trim_history(
@@ -524,6 +571,7 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
     - old positional style: build_assistant_prompt(request_obj, ...)
     - keyword style: build_assistant_prompt(message=..., session_id=..., ...)
     - extra unexpected kwargs from newer callers
+    - missing session_id by generating a fallback
     """
     request_obj = args[0] if args else None
 
@@ -542,37 +590,71 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
 
     if request_obj is not None:
         if message is None:
-            message = getattr(request_obj, "message", None)
+            message = _extract_attr(
+                request_obj,
+                "message",
+                "query",
+                "prompt",
+                "text",
+                default=None,
+            )
+
         if session_id is None:
-            session_id = getattr(request_obj, "session_id", None)
+            session_id = _extract_attr(
+                request_obj,
+                "session_id",
+                "sessionId",
+                "chat_session_id",
+                "conversation_id",
+                "conversationId",
+                "thread_id",
+                "threadId",
+                "id",
+                default=None,
+            )
+
         if history is None:
-            history = getattr(request_obj, "history", None)
+            history = _extract_attr(request_obj, "history", "messages", default=None)
+
         if role == "residential care staff":
-            role = getattr(request_obj, "role", role)
+            role = _extract_attr(request_obj, "role", "user_role", default=role)
+
         if document_text is None:
-            document_text = getattr(request_obj, "document_text", None)
+            document_text = _extract_attr(request_obj, "document_text", "documentText", default=None)
+
         if document_name is None:
-            document_name = getattr(request_obj, "document_name", None)
+            document_name = _extract_attr(request_obj, "document_name", "documentName", default=None)
+
         if ld_lens is False:
-            ld_lens = bool(getattr(request_obj, "ld_lens", ld_lens))
+            ld_lens = _coerce_bool(_extract_attr(request_obj, "ld_lens", "ldLens", default=ld_lens))
+
         if training_mode is False:
-            training_mode = bool(getattr(request_obj, "training_mode", training_mode))
+            training_mode = _coerce_bool(
+                _extract_attr(request_obj, "training_mode", "trainingMode", default=training_mode)
+            )
+
         if speed == "balanced":
-            speed = getattr(request_obj, "speed", speed)
-        request_user_context = getattr(request_obj, "user_context", None)
-        if request_user_context and isinstance(request_user_context, dict):
-            merged = dict(request_user_context)
-            merged.update(user_context)
-            user_context = merged
+            speed = _extract_attr(request_obj, "speed", "response_mode", "responseMode", default=speed)
+
+        request_user_context = _extract_attr(request_obj, "user_context", "context", "runtime", default=None)
+        if isinstance(request_user_context, dict):
+            user_context = _merge_dicts(request_user_context, user_context)
+
         if user_id is None:
-            user_id = getattr(request_obj, "user_id", None)
+            user_id = _extract_attr(request_obj, "user_id", "userId", default=None)
+
         if scope is None:
-            scope = getattr(request_obj, "scope", None)
+            scope = _extract_attr(request_obj, "scope", "scope_type", "scopeType", default=None)
 
     if message is None:
         raise TypeError("build_assistant_prompt() missing required argument: 'message'")
+
     if session_id is None:
-        raise TypeError("build_assistant_prompt() missing required argument: 'session_id'")
+        session_id = _build_fallback_session_id(message)
+        logger.warning(
+            "build_assistant_prompt called without session_id; generated fallback session_id=%s",
+            session_id,
+        )
 
     merged_user_context = dict(user_context)
 
