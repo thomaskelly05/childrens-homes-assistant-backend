@@ -35,12 +35,14 @@ import {
   detectOutputMode,
   assistantPromptsForView,
 } from "../assistant/helpers.js";
+import { inferAssistantAnalysisLens } from "../core/assistant-context.js";
 
 let assistantControllerBound = false;
 let latestRefreshToken = 0;
 
 const MAX_BRIEF_EVIDENCE = 10;
 const MAX_BRIEF_CHRONOLOGY = 5;
+const QUALITY_LEVEL_SCOPES = new Set(["quality", "ofsted", "reports"]);
 
 function safeArray(value) {
   return Array.isArray(value) ? value : [];
@@ -61,7 +63,7 @@ function getScopeContext() {
       state.currentUser?.providerId ||
       null,
     allowed_home_ids:
-      scope === "quality" && accessLevel === "provider"
+      QUALITY_LEVEL_SCOPES.has(scope) && accessLevel === "provider"
         ? getAllowedHomeIds()
         : [state.homeId || youngPerson?.home_id || youngPerson?.homeId].filter(
             Boolean
@@ -82,54 +84,6 @@ function getScopeContext() {
       "Young person",
     assistant_type: getAssistantTypeForScope(scope),
   };
-}
-
-function inferAnalysisLens({
-  scope = getCurrentScope(),
-  section = getCurrentSection(),
-  role = state.userRole || "staff",
-  intent = "summary",
-} = {}) {
-  const safeRole = String(role || "staff").toLowerCase();
-  const safeSection = String(section || "").toLowerCase();
-  const safeIntent = String(intent || "summary").toLowerCase();
-
-  if (
-    /safeguarding|risk|missing/.test(safeSection) ||
-    ["risk"].includes(safeIntent)
-  ) {
-    return "safeguarding";
-  }
-
-  if (
-    scope === "quality" ||
-    ["quality", "compliance"].includes(safeIntent) ||
-    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
-  ) {
-    return safeRole === "ri" || safeRole === "admin" ? "quality" : "inspection";
-  }
-
-  if (
-    ["manager", "management"].includes(safeIntent) ||
-    ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
-    /manager|supervision|team|home-dashboard/.test(safeSection)
-  ) {
-    return "manager";
-  }
-
-  if (safeIntent === "handover") {
-    return "shift";
-  }
-
-  if (scope === "child") {
-    return "child_centred";
-  }
-
-  if (scope === "home") {
-    return "operational";
-  }
-
-  return "general";
 }
 
 function scrubAssistantBundle(bundle = {}, context = {}) {
@@ -195,7 +149,7 @@ function currentAssistantContext() {
   const intentMeta = detectAssistantIntents(
     `${scope} ${section} ${state.userRole || ""}`
   );
-  const analysisLens = inferAnalysisLens({
+  const analysisLens = inferAssistantAnalysisLens({
     scope,
     section,
     role: state.userRole,
@@ -473,7 +427,12 @@ function setAssistantContextText() {
     return;
   }
 
-  els.assistantContext.textContent = `Scoped to quality and oversight across authorised homes • lens: ${context.analysis_lens}.`;
+  if (QUALITY_LEVEL_SCOPES.has(context.scope)) {
+    els.assistantContext.textContent = `Scoped to quality and oversight across authorised homes • lens: ${context.analysis_lens}.`;
+    return;
+  }
+
+  els.assistantContext.textContent = `Scoped to operational oversight • lens: ${context.analysis_lens}.`;
 }
 
 function renderScopeBadges() {
@@ -485,7 +444,9 @@ function renderScopeBadges() {
         ? "Young person assistant"
         : context.scope === "home"
           ? "Home assistant"
-          : "Quality assistant";
+          : QUALITY_LEVEL_SCOPES.has(context.scope)
+            ? "Quality assistant"
+            : "Operations assistant";
   }
 
   if (els.scopeHomeBadge) {
@@ -654,7 +615,8 @@ export async function refreshAssistantScopeData({
             ? `Scoped records refreshed for ${
                 context.young_person_name || "the selected young person"
               }.`
-            : context.scope === "quality" && context.access_level === "provider"
+            : QUALITY_LEVEL_SCOPES.has(context.scope) &&
+                context.access_level === "provider"
               ? `Scoped records refreshed across ${safeArray(
                   context.allowed_home_ids
                 ).length} allowed home(s).`

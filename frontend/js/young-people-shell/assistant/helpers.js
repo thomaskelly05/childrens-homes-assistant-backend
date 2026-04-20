@@ -1,6 +1,13 @@
 import { state, createAssistantMeta } from "../state.js";
 import { getDisplayName } from "../core/utils.js";
 import { getSectionTitle, getSectionSubtitle } from "../core/config.js";
+import {
+  inferAssistantAnalysisLens,
+  isProviderWideScope,
+  resolveAccessLevelForScope,
+  resolveAssistantScopeType,
+  resolveAssistantTypeForScope,
+} from "../core/assistant-context.js";
 
 export const ASSISTANT_INTENT = {
   greeting: "greeting",
@@ -263,48 +270,28 @@ export function getAllowedHomeIds() {
 }
 
 export function getAccessLevelForScope(scope = getCurrentScope()) {
-  const role = String(state.userRole || "").toLowerCase();
-
-  if (scope === "child") return "child";
-  if (scope === "home") return "home";
-  if (scope === "ofsted") return "provider";
-
-  if (scope === "quality") {
-    return [
-      "ri",
-      "responsible_individual",
-      "admin",
-      "administrator",
-      "super_admin",
-      "superadmin",
-    ].includes(role)
-      ? "provider"
-      : "home";
-  }
-
-  return "home";
+  return resolveAccessLevelForScope({
+    scope,
+    role: state.userRole || "staff",
+  });
 }
 
 export function getAssistantScopeType() {
-  const scope = getCurrentScope();
-
-  if (scope === "home") return "home";
-  if (scope === "ofsted") return "quality";
-  if (scope === "quality") return "quality";
-  return state.youngPersonId ? "young_person" : "global";
+  return resolveAssistantScopeType({
+    scope: getCurrentScope(),
+    youngPersonId: state.youngPersonId,
+  });
 }
 
 export function getAssistantTypeForScope(scope = getCurrentScope()) {
-  if (scope === "home") return "home_os";
-  if (scope === "ofsted") return "quality_os";
-  if (scope === "quality") return "quality_os";
-  return "young_people_os";
+  return resolveAssistantTypeForScope(scope);
 }
 
 export function getScopeLabel() {
   const scope = getCurrentScope();
 
   if (scope === "home") return "Home assistant";
+  if (scope === "reports") return "Reporting assistant";
   if (scope === "ofsted") return "Ofsted assistant";
   if (scope === "quality") return "Quality assistant";
   return "Child assistant";
@@ -324,45 +311,12 @@ export function inferAnalysisLens({
   role = state.userRole || "staff",
   intent = ASSISTANT_INTENT.summary,
 } = {}) {
-  const safeScope = String(scope || "child").toLowerCase();
-  const safeSection = String(section || "workspace").toLowerCase();
-  const safeRole = String(role || "staff").toLowerCase();
-  const safeIntent = String(intent || ASSISTANT_INTENT.summary).toLowerCase();
-
-  if (
-    /safeguarding|risk|missing/.test(safeSection) ||
-    safeIntent === ASSISTANT_INTENT.risk
-  ) {
-    return "safeguarding";
-  }
-
-  if (
-    safeScope === "quality" ||
-    safeIntent === ASSISTANT_INTENT.quality ||
-    safeIntent === ASSISTANT_INTENT.compliance ||
-    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
-  ) {
-    return safeRole === "ri" || safeRole === "admin" ? "quality" : "inspection";
-  }
-
-  if (
-    safeIntent === ASSISTANT_INTENT.management ||
-    ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
-    /manager|team|supervision|home-dashboard/.test(safeSection)
-  ) {
-    return "manager";
-  }
-
-  if (
-    safeIntent === ASSISTANT_INTENT.handover ||
-    /handover|workspace/.test(safeSection)
-  ) {
-    return "shift";
-  }
-
-  if (safeScope === "child") return "child_centred";
-  if (safeScope === "home") return "operational";
-  return "general";
+  return inferAssistantAnalysisLens({
+    scope,
+    section,
+    role,
+    intent,
+  });
 }
 
 export function extractAssistantContent(message = {}) {
@@ -943,6 +897,7 @@ export function getSourcesSafe() {
 
 export function buildRoleAwareGreeting() {
   const scope = getCurrentScope();
+  const accessLevel = getAccessLevelForScope(scope);
 
   if (scope === "child") {
     return `Hello. What would you like to know about ${getFullYoungPersonName()}? I can help with a full summary, chronology, dates, risks, appointments, family contact themes, handover thinking, and evidence-led children’s home support.`;
@@ -953,7 +908,7 @@ export function buildRoleAwareGreeting() {
   }
 
   return `Hello. What would you like to know about ${
-    getAccessLevelForScope("quality") === "provider"
+    accessLevel === "provider"
       ? "your homes and provider oversight"
       : `${getHomeName()} quality and oversight`
   }? I can help with compliance themes, chronology, inspection readiness, RI summaries, governance patterns and cross-home comparisons where allowed.`;
@@ -961,6 +916,7 @@ export function buildRoleAwareGreeting() {
 
 export function buildUnknownIntentPrompt() {
   const scope = getCurrentScope();
+  const accessLevel = getAccessLevelForScope(scope);
 
   if (scope === "child") {
     return [
@@ -993,7 +949,7 @@ export function buildUnknownIntentPrompt() {
 
   return [
     `I’m ready to help with ${
-      getAccessLevelForScope("quality") === "provider"
+      accessLevel === "provider"
         ? "all homes you oversee"
         : `${getHomeName()} quality and oversight`
     } across the OS evidence set.`,
@@ -1171,7 +1127,7 @@ export function assistantPromptsForView(view, scope = getCurrentScope()) {
   const map =
     scope === "home"
       ? homeMap
-      : scope === "quality"
+      : isProviderWideScope(scope)
         ? qualityMap
         : childMap;
 

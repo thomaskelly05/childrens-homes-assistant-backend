@@ -1,5 +1,5 @@
 import { state } from "../state.js";
-import { apiGet } from "./api.js";
+import { apiGet } from "../core/api.js";
 
 const ROTA_CONTEXT_TTL_MS = 60 * 1000;
 

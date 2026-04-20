@@ -3,6 +3,21 @@ import {
   normaliseImagePath,
 } from "./utils.js";
 import {
+  pickFirst,
+  arrayify,
+  toBool,
+  cleanText,
+  truncateText,
+  toJsonObject,
+  toJsonArray,
+  unique,
+  compactTextList,
+  parseDateValue,
+  isOverdue,
+  isDueSoon,
+  normaliseToken,
+} from "./helpers.js";
+import {
   RECORD_TYPES,
   WORKFLOW_STATUS,
   COMPLIANCE_STATUS,
@@ -11,104 +26,15 @@ import {
   normaliseSignificance,
 } from "./contracts.js";
 
-function pickFirst(...values) {
-  for (const value of values) {
-    if (value !== null && value !== undefined && value !== "") {
-      return value;
-    }
-  }
-  return null;
-}
-
-function arrayify(value) {
-  if (Array.isArray(value)) return value;
-  if (value === null || value === undefined || value === "") return [];
-  return [value];
-}
-
-function toBool(value) {
-  return Boolean(value);
-}
-
-function cleanText(value) {
-  if (value === null || value === undefined) return "";
-  return String(value).trim();
-}
-
-function truncateText(value, max = 280) {
-  const text = cleanText(value);
-  if (!text) return "";
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
-
-function toJsonObject(value, fallback = {}) {
-  if (!value) return fallback;
-  if (typeof value === "object" && !Array.isArray(value)) return value;
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
-}
-
-function toJsonArray(value, fallback = []) {
-  if (Array.isArray(value)) return value;
-  if (!value) return fallback;
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function unique(values = []) {
-  return [...new Set(arrayify(values).filter(Boolean))];
-}
-
-function compact(values = []) {
-  return arrayify(values).map(cleanText).filter(Boolean);
-}
-
-function parseDateValue(value) {
-  const time = Date.parse(value || "");
-  return Number.isNaN(time) ? 0 : time;
-}
-
-function daysFromNow(value) {
-  const time = parseDateValue(value);
-  if (!time) return null;
-
-  const now = Date.now();
-  const diff = time - now;
-  return Math.round(diff / (1000 * 60 * 60 * 24));
-}
-
-function isOverdue(value) {
-  const days = daysFromNow(value);
-  return days !== null && days < 0;
-}
-
-function isDueSoon(value, thresholdDays = 7) {
-  const days = daysFromNow(value);
-  return days !== null && days >= 0 && days <= thresholdDays;
-}
-
-function normaliseToken(value = "") {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
-}
-
 function joinSignals(parts = []) {
   return parts
     .map((part) => normaliseToken(part))
     .filter(Boolean)
     .join(":");
+}
+
+function compact(values = []) {
+  return compactTextList(values);
 }
 
 function inferUrgencyLevel(record = {}) {
