@@ -48,10 +48,10 @@ import { loadCurrentView as loadMissingFromCare } from "../features/missing.js";
 import { loadReadiness } from "../features/readiness.js";
 import { loadCurrentView as loadReviews } from "../features/reviews.js";
 import { loadReports } from "../features/reports.js";
-import { loadCurrentView as loadTransition } from "../features/transition.js";
 import { loadCurrentView as loadLeavingCare } from "../features/leaving-care.js";
 import { loadManager } from "../features/manager.js";
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
+import { loadTasks } from "../features/tasks.js";
 
 import { loadHomeDashboard } from "../features/home-dashboard.js";
 import { loadOperations } from "../features/operations.js";
@@ -305,7 +305,7 @@ const SECTION_LOADERS = {
   readiness: loadReadiness,
   reviews: loadReviews,
   reports: loadReports,
-  transition: loadTransition,
+  tasks: loadTasks,
   "leaving-care": loadLeavingCare,
   documents: loadDocuments,
   communication: loadCommunication,
