@@ -42,7 +42,7 @@ import { loadEducation } from "../features/education.js";
 import { loadFamily } from "../features/family.js";
 import { loadCalendar } from "../features/calendar.js";
 import { loadTherapy } from "../features/therapy.js";
-import { loadCurrentView as loadRisk } from "../features/risk.js";
+import { loadRisk } from "../features/risk.js";
 import { loadCurrentView as loadSafeguarding } from "../features/safeguarding.js";
 import { loadCurrentView as loadMissingFromCare } from "../features/missing.js";
 import { loadReadiness } from "../features/readiness.js";
