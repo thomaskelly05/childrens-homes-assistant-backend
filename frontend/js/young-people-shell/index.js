@@ -235,7 +235,7 @@ function getAllowedScopesForRole() {
   }
 
   if (role === "admin" || role === "manager" || role === "ri") {
-    return ["child", "home", "quality"];
+    return ["child", "home", "quality", "ofsted"];
   }
 
   return ["child", "home"];
@@ -296,6 +296,7 @@ function syncScopeButtons() {
     { el: els.scopeChildBtn, value: "child" },
     { el: els.scopeHomeBtn, value: "home" },
     { el: els.scopeQualityBtn, value: "quality" },
+    { el: els.scopeOfstedBtn, value: "ofsted" },
   ];
 
   buttons.forEach(({ el, value }) => {
@@ -397,6 +398,15 @@ function bindScopeEvents() {
       await setScope("quality");
     } catch (error) {
       console.error("[index] failed switching to quality scope", error);
+      showError(error?.message || "Failed to switch scope.");
+    }
+  });
+
+  els.scopeOfstedBtn?.addEventListener("click", async () => {
+    try {
+      await setScope("ofsted");
+    } catch (error) {
+      console.error("[index] failed switching to ofsted scope", error);
       showError(error?.message || "Failed to switch scope.");
     }
   });

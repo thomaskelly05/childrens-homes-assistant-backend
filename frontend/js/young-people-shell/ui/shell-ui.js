@@ -342,7 +342,7 @@ function updateSearchPlaceholders() {
   if (scope === "home") {
     placeholder =
       "Search staffing, incidents, actions, documents or compliance...";
-  } else if (scope === "quality") {
+  } else if (scope === "quality" || scope === "ofsted") {
     placeholder =
       "Search audits, actions, compliance, reports or evidence...";
   }

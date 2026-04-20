@@ -229,6 +229,7 @@ ROUTERS = [
     "routers.document_ai_review_routes",
     "routers.document_ai_routes",
     "routers.manager_routes",
+    "routers.home_inspection_compat_routes",
     "routers.young_people_profile_routes",
     "routers.young_people_daily_notes_routes",
     "routers.young_people_incidents_routes",

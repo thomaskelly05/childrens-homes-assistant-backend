@@ -2,7 +2,7 @@ export const DEFAULT_SECTION = "workspace";
 export const DEFAULT_SCOPE = "child";
 export const DEFAULT_ROLE = "staff";
 
-const VALID_SCOPES = new Set(["child", "home", "quality"]);
+const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
 const VALID_READINESS_TABS = new Set([
   "overview",
   "judgements",
@@ -22,6 +22,7 @@ function getScopeDefaultSection(scope = DEFAULT_SCOPE) {
   const safeScope = getValidScope(scope);
   if (safeScope === "home") return "home-dashboard";
   if (safeScope === "quality") return "quality";
+  if (safeScope === "ofsted") return "ofsted-dashboard";
   return DEFAULT_SECTION;
 }
 
@@ -368,7 +369,7 @@ export function setCurrentScope(scope, { resetSection = true } = {}) {
     syncSectionAliases(getScopeDefaultSection(safeScope));
   }
 
-  if (safeScope !== "quality") {
+  if (!["quality", "ofsted"].includes(safeScope)) {
     state.readinessActiveTab = "overview";
   }
 }
@@ -694,6 +695,17 @@ export function getCurrentScopeEntity() {
   if (state.currentScope === "quality") {
     return {
       type: "quality",
+      id: getBestAvailableHomeId(),
+      name:
+        state.currentUser?.home_name ||
+        state.currentUser?.homeName ||
+        null,
+    };
+  }
+
+  if (state.currentScope === "ofsted") {
+    return {
+      type: "ofsted",
       id: getBestAvailableHomeId(),
       name:
         state.currentUser?.home_name ||

@@ -36,6 +36,7 @@ export const els = {
   scopeChildBtn: byId("scopeChildBtn"),
   scopeHomeBtn: byId("scopeHomeBtn"),
   scopeQualityBtn: byId("scopeQualityBtn"),
+  scopeOfstedBtn: byId("scopeOfstedBtn"),
 
   /* --------------------------------
      Selector

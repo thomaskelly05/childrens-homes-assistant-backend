@@ -112,7 +112,7 @@ const COMPOSER_CONFIG = {
       getCurrentScope() === "child"
         ? `/young-people/risks/${id}/submit`
         : `/homes/risks/${id}/submit`,
-    scopes: ["child", "home", "quality"],
+    scopes: ["child", "home", "quality", "ofsted"],
   },
 
   health_record: {
@@ -156,7 +156,7 @@ const COMPOSER_CONFIG = {
         ? `/young-people/appointments/${id}`
         : `/homes/appointments/${id}`,
     updateMethod: "PATCH",
-    scopes: ["child", "home", "quality"],
+    scopes: ["child", "home", "quality", "ofsted"],
   },
 
   achievement_record: {
@@ -193,7 +193,7 @@ const COMPOSER_CONFIG = {
         ? `/young-people/tasks/${id}`
         : `/homes/tasks/${id}`,
     updateMethod: "PATCH",
-    scopes: ["child", "home", "quality"],
+    scopes: ["child", "home", "quality", "ofsted"],
   },
 
   manager_action: {
@@ -204,7 +204,7 @@ const COMPOSER_CONFIG = {
         ? `/young-people/manager-actions/${id}`
         : `/homes/manager-actions/${id}`,
     updateMethod: "PATCH",
-    scopes: ["child", "home", "quality"],
+    scopes: ["child", "home", "quality", "ofsted"],
   },
 
   document: {
@@ -215,7 +215,7 @@ const COMPOSER_CONFIG = {
         ? `/young-people/documents/${id}`
         : `/homes/documents/${id}`,
     updateMethod: "PATCH",
-    scopes: ["child", "home", "quality"],
+    scopes: ["child", "home", "quality", "ofsted"],
   },
 
   communication: {
@@ -226,7 +226,7 @@ const COMPOSER_CONFIG = {
         ? `/young-people/communications/${id}`
         : `/homes/communications/${id}`,
     updateMethod: "PATCH",
-    scopes: ["child", "home", "quality"],
+    scopes: ["child", "home", "quality", "ofsted"],
   },
 
   therapy: {
@@ -234,7 +234,7 @@ const COMPOSER_CONFIG = {
     createUrl: () => buildScopePath("/{scope}/{id}/therapy"),
     updateUrl: (id) => `/homes/therapy/${id}`,
     updateMethod: "PATCH",
-    scopes: ["child", "home", "quality"],
+    scopes: ["child", "home", "quality", "ofsted"],
   },
 
   team: {
@@ -242,7 +242,7 @@ const COMPOSER_CONFIG = {
     createUrl: () => buildScopePath("/{scope}/{id}/team"),
     updateUrl: (id) => `/homes/team/${id}`,
     updateMethod: "PATCH",
-    scopes: ["home", "quality"],
+    scopes: ["home", "quality", "ofsted"],
   },
 
   supervision: {
@@ -250,7 +250,7 @@ const COMPOSER_CONFIG = {
     createUrl: () => buildScopePath("/{scope}/{id}/supervisions"),
     updateUrl: (id) => `/homes/supervisions/${id}`,
     updateMethod: "PATCH",
-    scopes: ["home", "quality"],
+    scopes: ["home", "quality", "ofsted"],
   },
 
   profile_identity: {

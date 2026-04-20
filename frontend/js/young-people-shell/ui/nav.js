@@ -72,6 +72,9 @@ import { loadProviderOverview } from "../features/provider-overview.js";
 import { loadQualityAudits } from "../features/quality-audits.js";
 import { loadReg44 } from "../features/reg44.js";
 import { loadReg45 } from "../features/reg45.js";
+import { loadOfstedDashboard } from "../features/ofsted-dashboard.js";
+import { loadSccifEvidence } from "../features/sccif-evidence.js";
+import { loadJudgementBuilder } from "../features/judgement-builder.js";
 
 const ICON_MAP = {
   home: "⌂",
@@ -104,6 +107,13 @@ const MOBILE_BOTTOM_BY_SCOPE = {
     "compliance",
     "quality-audits",
     "inspection-readiness",
+  ],
+  ofsted: [
+    "ofsted-dashboard",
+    "sccif-evidence",
+    "judgement-builder",
+    "inspection-readiness",
+    "quality-audits",
   ],
 };
 
@@ -205,7 +215,13 @@ function updateAppShellDataset() {
   app.dataset.scope = scope;
   app.dataset.section = section;
   app.dataset.assistantScopeType =
-    scope === "child" ? "child" : scope === "home" ? "home" : "quality";
+    scope === "child"
+      ? "child"
+      : scope === "home"
+        ? "home"
+        : scope === "ofsted"
+          ? "quality"
+          : "quality";
 
   app.dataset.youngPersonId = state.youngPersonId || "";
   app.dataset.homeId =
@@ -332,6 +348,9 @@ const SECTION_LOADERS = {
   reg44: loadReg44,
   reg45: loadReg45,
   "inspection-readiness": loadReadiness,
+  "ofsted-dashboard": loadOfstedDashboard,
+  "sccif-evidence": loadSccifEvidence,
+  "judgement-builder": loadJudgementBuilder,
 };
 
 function renderNavItem(item, { compact = false } = {}) {
@@ -526,6 +545,7 @@ function markActiveScopeButtons() {
     [els.scopeChildBtn, "child"],
     [els.scopeHomeBtn, "home"],
     [els.scopeQualityBtn, "quality"],
+    [els.scopeOfstedBtn, "ofsted"],
   ];
 
   pairs.forEach(([button, value]) => {
@@ -775,7 +795,10 @@ function paintNavigationChrome() {
 
 async function applyScopeChange(scope) {
   const safeScope =
-    scope === "home" || scope === "quality" || scope === "child"
+    scope === "home" ||
+    scope === "quality" ||
+    scope === "ofsted" ||
+    scope === "child"
       ? scope
       : "child";
 
@@ -910,6 +933,10 @@ function bindScopeSwitch() {
 
   els.scopeQualityBtn?.addEventListener("click", async () => {
     await applyScopeChange("quality");
+  });
+
+  els.scopeOfstedBtn?.addEventListener("click", async () => {
+    await applyScopeChange("ofsted");
   });
 }
 
