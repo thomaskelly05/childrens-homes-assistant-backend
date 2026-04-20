@@ -37,6 +37,7 @@ class OrchestratorRequest:
     training_mode: bool = False
     speed: str = "balanced"
     user_context: dict[str, Any] = field(default_factory=dict)
+    user_id: Any | None = None
 
 
 @dataclass
@@ -332,6 +333,7 @@ def _serialise_runtime(
     regulation_payload: list[dict[str, str]] | None = None,
     evidence_index: list[dict[str, Any]] | None = None,
     selected_mode: str = "balanced",
+    user_id: Any | None = None,
 ) -> dict[str, Any]:
     if runtime is None:
         return {}
@@ -355,6 +357,7 @@ def _serialise_runtime(
         "response_mode": selected_mode,
         "evidence_items_loaded": len(evidence_index),
         "evidence_preview": evidence_index[:10],
+        "user_id": user_id,
     }
 
     return {k: v for k, v in payload.items() if v not in (None, "", [])}
@@ -366,11 +369,12 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     trimmed_document_text = _trim_document_text(req.document_text, selected_mode)
 
     logger.info(
-        "Orchestrator starting session_id=%s response_mode=%s history=%s has_document=%s",
+        "Orchestrator starting session_id=%s response_mode=%s history=%s has_document=%s user_id=%s",
         req.session_id,
         selected_mode,
         len(trimmed_history),
         bool(trimmed_document_text),
+        req.user_id,
     )
 
     prompt_package = build_assistant_prompt_package(
@@ -444,6 +448,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         regulation_payload=regulation_payload,
         evidence_index=evidence_index,
         selected_mode=selected_mode,
+        user_id=req.user_id,
     )
 
     if evidence_index:
@@ -466,7 +471,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
             "safeguarding=%s urgency=%s response_mode=%s stance=%s "
             "guidance_enabled=%s guidance_reason=%s model=%s temp=%s max_tokens=%s "
             "memory=%s retrieval=%s reflection=%s supervision=%s leadership=%s "
-            "regulation_refs=%s sources=%s evidence=%s"
+            "regulation_refs=%s sources=%s evidence=%s user_id=%s"
         ),
         req.session_id,
         mode,
@@ -489,6 +494,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         len(regulation_payload),
         len(sources),
         len(evidence_index),
+        req.user_id,
     )
 
     return OrchestratorResult(
@@ -521,6 +527,7 @@ def build_assistant_prompt(
     training_mode: bool = False,
     speed: str = "balanced",
     user_context: dict[str, Any] | None = None,
+    user_id: Any | None = None,
 ) -> dict[str, Any]:
     """
     Backwards-compatible shim for older imports that still expect
@@ -528,6 +535,9 @@ def build_assistant_prompt(
 
     This preserves startup compatibility while the rest of the codebase
     is moved onto build_orchestrator_result().
+
+    user_id is accepted for compatibility with newer callers even though
+    the current orchestrator logic does not require it directly.
     """
     result = build_orchestrator_result(
         OrchestratorRequest(
@@ -541,6 +551,7 @@ def build_assistant_prompt(
             training_mode=training_mode,
             speed=speed,
             user_context=user_context or {},
+            user_id=user_id,
         )
     )
 
