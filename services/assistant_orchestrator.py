@@ -528,17 +528,32 @@ def build_assistant_prompt(
     speed: str = "balanced",
     user_context: dict[str, Any] | None = None,
     user_id: Any | None = None,
+    scope: Any | None = None,
+    **extra_kwargs: Any,
 ) -> dict[str, Any]:
     """
-    Backwards-compatible shim for older imports that still expect
+    Backwards-compatible shim for older and newer callers that still expect
     services.assistant_orchestrator.build_assistant_prompt.
 
-    This preserves startup compatibility while the rest of the codebase
-    is moved onto build_orchestrator_result().
-
-    user_id is accepted for compatibility with newer callers even though
-    the current orchestrator logic does not require it directly.
+    Accepts extra keyword arguments so newer endpoint-specific callers do not
+    crash when this shim has not yet been updated for every new argument.
     """
+    merged_user_context = dict(user_context or {})
+
+    if user_id is not None and "user_id" not in merged_user_context:
+        merged_user_context["user_id"] = user_id
+
+    if scope is not None and "scope" not in merged_user_context:
+        merged_user_context["scope"] = scope
+
+    if extra_kwargs:
+        merged_user_context.setdefault("_orchestrator_extra_kwargs", {})
+        merged_user_context["_orchestrator_extra_kwargs"].update(extra_kwargs)
+
+        for key, value in extra_kwargs.items():
+            if key not in merged_user_context:
+                merged_user_context[key] = value
+
     result = build_orchestrator_result(
         OrchestratorRequest(
             message=message,
@@ -550,7 +565,7 @@ def build_assistant_prompt(
             ld_lens=ld_lens,
             training_mode=training_mode,
             speed=speed,
-            user_context=user_context or {},
+            user_context=merged_user_context,
             user_id=user_id,
         )
     )
