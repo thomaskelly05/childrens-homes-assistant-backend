@@ -6,39 +6,68 @@ import {
   refreshAssistantUi,
   appendAssistantSystemMessage,
   appendAssistantUserMessage,
+  clearAssistantMessages as clearAssistantUiMessages,
 } from "./assistant-ui.js";
 import {
+  assistantPromptsForView,
+  buildRoleAwareGreeting,
+  buildUnknownIntentPrompt,
+  detectAssistantIntent,
+  detectAssistantResponseMode,
+  detectOutputMode,
+  detectRetrievalMode,
   ensureAssistantState,
-  mergeAssistantMeta,
+  extractStreamText,
+  getAccessLevelForScope,
+  getAllowedHomeIds,
+  getAssistantTypeForScope,
   getCurrentScope,
   getCurrentSection,
   getFullYoungPersonName,
   getHomeName,
-  getAllowedHomeIds,
-  getAccessLevelForScope,
-  getAssistantScopeType,
-  getAssistantTypeForScope,
-  detectAssistantIntent,
-  detectRetrievalMode,
-  detectOutputMode,
-  detectAssistantResponseMode,
-  extractStreamText,
-  cloneAssistantMessage,
   trimForOutbound,
-  buildRoleAwareGreeting,
-  buildUnknownIntentPrompt,
-  resolveReg45DateRange,
-  getDefaultReg45DateRange,
-  assistantPromptsForView,
+  cloneAssistantMessage,
+  mergeAssistantMeta,
 } from "../assistant/helpers.js";
 
 let assistantEventsBound = false;
 let assistantPromptDelegatesBound = false;
 
+const ASSISTANT_INTENT = {
+  greeting: "greeting",
+  factual_lookup: "factual_lookup",
+  summary: "summary",
+  chronology: "chronology",
+  review: "review",
+  handover: "handover",
+  drafting: "drafting",
+  compliance: "compliance",
+  risk: "risk",
+  quality: "quality",
+  management: "management",
+  unknown: "unknown",
+};
+
 const MAX_UI_PROMPTS = 8;
 
-function ensureAssistantMessageLists() {
+function getSelectedYoungPerson() {
+  return state.selectedYoungPerson || state.youngPerson || null;
+}
+
+function getAssistantScopeType() {
+  const scope = getCurrentScope();
+
+  if (scope === "home") return "home";
+  if (scope === "quality") return "quality";
+  return state.youngPersonId ? "young_person" : "global";
+}
+
+function ensureAssistantMetaState() {
   ensureAssistantState();
+
+  if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
+    state.assistantMeta = createAssistantMeta();
+  }
 
   if (!Array.isArray(state.assistantMessages)) {
     state.assistantMessages = [];
@@ -50,79 +79,27 @@ function ensureAssistantMessageLists() {
 }
 
 function syncAssistantUi() {
-  ensureAssistantMessageLists();
+  ensureAssistantMetaState();
   refreshAssistantUi();
 }
 
-export function openAssistant() {
-  ensureAssistantMessageLists();
-  updateAssistantContext();
-  state.assistantOpen = true;
-  syncAssistantUi();
-}
-
-export function closeAssistant() {
-  state.assistantOpen = false;
-  syncAssistantUi();
-}
-
-export function renderAssistantMessages() {
-  ensureAssistantMessageLists();
-  syncAssistantUi();
-}
-
-export function renderAssistantInsights() {
-  ensureAssistantMessageLists();
-  syncAssistantUi();
-}
-
-function addAssistantPlaceholder() {
-  ensureAssistantMessageLists();
-
-  const entry = cloneAssistantMessage({
-    role: "assistant",
-    content: "Thinking…",
-    _streaming: true,
-  });
-
-  state.assistantMessages.push(entry);
-  state.assistantModalMessages.push(cloneAssistantMessage(entry));
-  syncAssistantUi();
-}
-
-function updateLastAssistantStreamingText(text) {
-  ensureAssistantMessageLists();
-
-  const safeValue =
-    typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
-
-  const lists = [state.assistantMessages, state.assistantModalMessages];
-
-  lists.forEach((list) => {
-    if (!Array.isArray(list) || !list.length) return;
-
-    const last = list[list.length - 1];
-    if (last?.role === "assistant" && last?._streaming) {
-      last.content = safeValue;
-    }
-  });
-
+function setAssistantSending(flag) {
+  state.assistantSending = !!flag;
   syncAssistantUi();
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  ensureAssistantMessageLists();
-
   const safeValue =
     typeof text === "string"
       ? text
       : extractStreamText(text) || "No assistant reply returned.";
 
-  const lists = [state.assistantMessages, state.assistantModalMessages];
+  const lists = [
+    state.assistantMessages || [],
+    state.assistantModalMessages || [],
+  ];
 
   lists.forEach((list) => {
-    if (!Array.isArray(list)) return;
-
     if (!list.length) {
       list.push(
         cloneAssistantMessage({
@@ -137,6 +114,7 @@ function replaceLastAssistantPlaceholder(text) {
     if (last?.role === "assistant" && last?._streaming) {
       last.content = safeValue;
       last._streaming = false;
+      last.status = "complete";
     } else {
       list.push(
         cloneAssistantMessage({
@@ -150,19 +128,52 @@ function replaceLastAssistantPlaceholder(text) {
   syncAssistantUi();
 }
 
-function setAssistantSending(flag) {
-  state.assistantSending = !!flag;
+function updateLastAssistantStreamingText(text) {
+  const safeValue =
+    typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
+
+  const lists = [
+    state.assistantMessages || [],
+    state.assistantModalMessages || [],
+  ];
+
+  lists.forEach((list) => {
+    if (!list.length) return;
+
+    const last = list[list.length - 1];
+    if (last?.role === "assistant" && last?._streaming) {
+      last.content = safeValue;
+      last.status = "streaming";
+    }
+  });
+
   syncAssistantUi();
 }
 
-function isGreeting(text = "") {
-  return /^(hi|hello|hey|hiya|morning|good morning|afternoon|good afternoon|evening|good evening)\b/i.test(
-    String(text || "").trim()
-  );
+function addAssistantPlaceholder(intent = null) {
+  ensureAssistantMetaState();
+
+  const entry = cloneAssistantMessage({
+    role: "assistant",
+    content: "Thinking…",
+    _streaming: true,
+    status: "streaming",
+    intent,
+    scope_snapshot: {
+      scope: getCurrentScope(),
+      section: getCurrentSection(),
+      young_person_id: state.youngPersonId || null,
+      home_id: state.homeId || null,
+    },
+  });
+
+  state.assistantMessages.push(entry);
+  state.assistantModalMessages.push({ ...entry });
+  syncAssistantUi();
 }
 
 function buildAssistantContextPayload(message = "") {
-  const person = state.selectedYoungPerson || state.youngPerson || null;
+  const person = getSelectedYoungPerson() || {};
   const scope = getCurrentScope();
   const section = getCurrentSection();
   const intent = detectAssistantIntent(message);
@@ -175,11 +186,6 @@ function buildAssistantContextPayload(message = "") {
     scope === "quality" && accessLevel === "provider"
       ? getAllowedHomeIds()
       : [Number(state.homeId)].filter((item) => Number.isFinite(item));
-
-  const reg45Range =
-    /reg\s*45|regulation\s*45/.test(String(message || "").toLowerCase())
-      ? resolveReg45DateRange(message) || getDefaultReg45DateRange()
-      : null;
 
   return {
     assistant_type: assistantType,
@@ -218,13 +224,13 @@ function buildAssistantContextPayload(message = "") {
     young_person_name: scope === "child" ? getFullYoungPersonName() : null,
     home_id:
       state.homeId ||
-      person?.home_id ||
+      person.home_id ||
       state.currentUser?.home_id ||
       state.currentUser?.homeId ||
       null,
     home_name: getHomeName(),
-    placement_status: person?.placement_status || null,
-    summary_risk_level: person?.summary_risk_level || null,
+    placement_status: person.placement_status || null,
+    summary_risk_level: person.summary_risk_level || null,
     composer_record_type: state.composerRecordType || null,
     record_type: state.activeRecordType || state.composerRecordType || null,
     record_id:
@@ -242,19 +248,22 @@ function buildAssistantContextPayload(message = "") {
     whole_os_default: true,
     section_only_requested: retrievalMode === "section_only",
     use_whole_scope_records: retrievalMode !== "section_only",
-    ask_for_dates: intent === "factual_lookup" || intent === "chronology",
-    ask_for_chronology: intent === "chronology" || intent === "review",
-    ask_for_summary: intent === "summary" || intent === "review",
-    ask_for_review_pack: intent === "review",
-    ask_for_compliance_view: intent === "compliance" || scope === "quality",
+    ask_for_dates:
+      intent === ASSISTANT_INTENT.factual_lookup ||
+      intent === ASSISTANT_INTENT.chronology,
+    ask_for_chronology:
+      intent === ASSISTANT_INTENT.chronology ||
+      intent === ASSISTANT_INTENT.review,
+    ask_for_summary:
+      intent === ASSISTANT_INTENT.summary ||
+      intent === ASSISTANT_INTENT.review,
+    ask_for_review_pack: intent === ASSISTANT_INTENT.review,
+    ask_for_compliance_view:
+      intent === ASSISTANT_INTENT.compliance || scope === "quality",
     suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(
       0,
       MAX_UI_PROMPTS
     ),
-    reg45_requested: Boolean(reg45Range),
-    reporting_period_start: reg45Range?.startDate?.toISOString?.() || null,
-    reporting_period_end: reg45Range?.endDate?.toISOString?.() || null,
-    reporting_period_inferred: Boolean(reg45Range?.inferred),
   };
 }
 
@@ -267,18 +276,15 @@ function buildSafeAssistantRequestPayload(payload) {
     context: {
       assistant_type: context.assistant_type || "young_people_os",
       assistant_identity:
-        context.assistant_identity &&
-        typeof context.assistant_identity === "object"
+        context.assistant_identity && typeof context.assistant_identity === "object"
           ? context.assistant_identity
           : null,
       response_contract:
-        context.response_contract &&
-        typeof context.response_contract === "object"
+        context.response_contract && typeof context.response_contract === "object"
           ? context.response_contract
           : null,
       inspection_framework:
-        context.inspection_framework &&
-        typeof context.inspection_framework === "object"
+        context.inspection_framework && typeof context.inspection_framework === "object"
           ? context.inspection_framework
           : null,
       scope: context.scope || null,
@@ -316,10 +322,6 @@ function buildSafeAssistantRequestPayload(payload) {
       suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
         ? context.suggested_prompts_ui_only.slice(0, MAX_UI_PROMPTS)
         : [],
-      reg45_requested: Boolean(context.reg45_requested),
-      reporting_period_start: context.reporting_period_start || null,
-      reporting_period_end: context.reporting_period_end || null,
-      reporting_period_inferred: Boolean(context.reporting_period_inferred),
     },
   };
 }
@@ -349,9 +351,7 @@ function scrubAssistantRequestPayload(payload) {
       return {
         payload: safePayload || safeBasePayload,
         reverseMap:
-          typeof scrubber.reverseMap === "function"
-            ? scrubber.reverseMap()
-            : {},
+          typeof scrubber.reverseMap === "function" ? scrubber.reverseMap() : {},
         meta: {
           enabled: true,
           mode: "client_side",
@@ -398,18 +398,16 @@ function restoreAssistantReplyTokens(text = "", reverseMap = {}) {
   return text;
 }
 
-function getSourcesSafe() {
-  ensureAssistantMessageLists();
-  return Array.isArray(state.assistantMeta?.sources)
-    ? state.assistantMeta.sources
-    : [];
-}
-
 function applyAssistantMeta(meta = {}) {
   mergeAssistantMeta({
     ...meta,
-    last_analysis_at: meta.last_analysis_at || new Date().toISOString(),
+    sources: Array.isArray(meta.sources) ? meta.sources : undefined,
+    suggested_actions: Array.isArray(meta.suggested_actions)
+      ? meta.suggested_actions
+      : undefined,
+    last_analysis_at: new Date().toISOString(),
   });
+
   syncAssistantUi();
 }
 
@@ -423,87 +421,12 @@ async function answerLocallyForUnknown(question) {
   appendAssistantSystemMessage(buildUnknownIntentPrompt());
 }
 
-export function updateAssistantContext() {
-  const scope = getCurrentScope();
-  const section = getCurrentSection();
-  const accessLevel = getAccessLevelForScope(scope);
-
-  ensureAssistantMessageLists();
-
-  const sectionLabel = String(section).replaceAll("_", " ").replaceAll("-", " ");
-
-  const contextSummary =
-    scope === "child"
-      ? state.youngPersonId
-        ? {
-            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • child-only OS scope • section: ${sectionLabel}`,
-            scope_type: "young_person",
-            current_scope: scope,
-            current_section: section,
-            access_level: "child",
-            young_person_name: getFullYoungPersonName(),
-            home_name: getHomeName(),
-            allowed_home_ids: [state.homeId].filter(Boolean),
-            retrieval_default: "whole_scope",
-            suggested_prompts: assistantPromptsForView(section, scope),
-          }
-        : {
-            summary: "No young person selected.",
-            scope_type: "global",
-            current_scope: scope,
-            current_section: section,
-            access_level: "child",
-            young_person_name: null,
-            home_name: getHomeName(),
-            allowed_home_ids: [state.homeId].filter(Boolean),
-            retrieval_default: "whole_scope",
-            suggested_prompts: assistantPromptsForView(section, scope),
-          }
-      : scope === "home"
-      ? {
-          summary: `Home: ${getHomeName()} • home-only OS scope • section: ${sectionLabel}`,
-          scope_type: "home",
-          current_scope: scope,
-          current_section: section,
-          access_level: "home",
-          young_person_name: null,
-          home_name: getHomeName(),
-          allowed_home_ids: [state.homeId].filter(Boolean),
-          retrieval_default: "whole_scope",
-          suggested_prompts: assistantPromptsForView(section, scope),
-        }
-      : {
-          summary:
-            accessLevel === "provider"
-              ? `Quality: provider-wide oversight across allowed homes • section: ${sectionLabel}`
-              : `Quality: ${getHomeName()} only • section: ${sectionLabel}`,
-          scope_type: "quality",
-          current_scope: scope,
-          current_section: section,
-          access_level: accessLevel,
-          young_person_name: null,
-          home_name: getHomeName(),
-          allowed_home_ids:
-            accessLevel === "provider"
-              ? getAllowedHomeIds()
-              : [state.homeId].filter(Boolean),
-          retrieval_default: "whole_scope",
-          suggested_prompts: assistantPromptsForView(section, scope),
-        };
-
-  mergeAssistantMeta({
-    assistant_context: contextSummary,
-  });
-
-  syncAssistantUi();
-}
-
 export async function askAssistant(question) {
   const trimmed = String(question || "").trim();
 
   if (!trimmed || state.assistantSending) return;
 
-  ensureAssistantMessageLists();
+  ensureAssistantMetaState();
 
   if (getCurrentScope() === "child" && !state.youngPersonId) {
     appendAssistantSystemMessage(
@@ -514,18 +437,18 @@ export async function askAssistant(question) {
 
   const intent = detectAssistantIntent(trimmed);
 
-  if (intent === "greeting" || isGreeting(trimmed)) {
+  if (intent === ASSISTANT_INTENT.greeting) {
     await answerLocallyForGreeting(trimmed);
     return;
   }
 
-  if (intent === "unknown" && trimmed.length < 8) {
+  if (intent === ASSISTANT_INTENT.unknown && trimmed.length < 8) {
     await answerLocallyForUnknown(trimmed);
     return;
   }
 
   appendAssistantUserMessage(trimmed);
-  addAssistantPlaceholder();
+  addAssistantPlaceholder(intent);
   setAssistantSending(true);
 
   try {
@@ -559,9 +482,6 @@ export async function askAssistant(question) {
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
             ai_scrubber_enabled: scrubbed.meta?.enabled ?? false,
-            reporting_period_start: contextPayload.reporting_period_start,
-            reporting_period_end: contextPayload.reporting_period_end,
-            reporting_period_inferred: contextPayload.reporting_period_inferred,
           },
           explainability: {
             ...(meta?.explainability || {}),
@@ -580,23 +500,16 @@ export async function askAssistant(question) {
             access_level: contextPayload.access_level,
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
-            reporting_period_start: contextPayload.reporting_period_start,
-            reporting_period_end: contextPayload.reporting_period_end,
-            reporting_period_inferred: contextPayload.reporting_period_inferred,
           },
           assistant_scope: {
             ...(meta?.assistant_scope || {}),
-            scrubber_meta: scrubbed.meta || {},
             access_level: contextPayload.access_level,
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
+            scrubber_meta: scrubbed.meta || {},
           },
           sources: meta?.sources || [],
           suggested_actions: meta?.suggested_actions || [],
-          scrubber_reverse_map: scrubbed.reverseMap || {},
-          scrubber_enabled: scrubbed.meta?.enabled ?? false,
-          scrubber_meta: scrubbed.meta || {},
-          last_analysis_at: new Date().toISOString(),
         });
       },
       onProgress: () => {},
@@ -628,13 +541,12 @@ export async function askAssistant(question) {
             streamedPayload.suggested_actions)
         ) {
           applyAssistantMeta({
-            sources: streamedPayload.sources || getSourcesSafe(),
+            sources: streamedPayload.sources || [],
             runtime: streamedPayload.runtime || {},
             explainability: streamedPayload.explainability || {},
             assistant_scope: streamedPayload.assistant_scope || {},
             assistant_context: streamedPayload.assistant_context || {},
             suggested_actions: streamedPayload.suggested_actions || [],
-            last_analysis_at: new Date().toISOString(),
           });
         }
 
@@ -653,6 +565,18 @@ export async function askAssistant(question) {
   }
 }
 
+export function openAssistant() {
+  ensureAssistantMetaState();
+  updateAssistantContext();
+  state.assistantOpen = true;
+  syncAssistantUi();
+}
+
+export function closeAssistant() {
+  state.assistantOpen = false;
+  syncAssistantUi();
+}
+
 export function clearAssistantMessages() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
@@ -661,6 +585,7 @@ export function clearAssistantMessages() {
     state.assistantMeta = createAssistantMeta();
   }
 
+  clearAssistantUiMessages?.();
   syncAssistantUi();
 }
 
@@ -684,7 +609,9 @@ function bindPromptButtons() {
     const quickActionButton = event.target.closest("[data-quick-action]");
     if (quickActionButton) {
       const actionId = quickActionButton.dataset.quickAction || "";
-      if (actionId) handleQuickAction(actionId);
+      if (actionId) {
+        handleQuickAction(actionId);
+      }
       return;
     }
 
@@ -698,11 +625,97 @@ function bindPromptButtons() {
   });
 }
 
+export function updateAssistantContext() {
+  ensureAssistantMetaState();
+
+  const scope = getCurrentScope();
+  const section = getCurrentSection();
+  const accessLevel = getAccessLevelForScope(scope);
+
+  const sectionLabel = String(section)
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
+
+  const contextSummary =
+    scope === "child"
+      ? state.youngPersonId
+        ? {
+            summary: `Young person: ${getFullYoungPersonName()} • ${getHomeName()} • child-only OS scope • section: ${sectionLabel}`,
+            scope_type: "young_person",
+            current_scope: scope,
+            current_section: section,
+            access_level: "child",
+            young_person_name: getFullYoungPersonName(),
+            home_name: getHomeName(),
+            allowed_home_ids: [state.homeId].filter(Boolean),
+            retrieval_default: "whole_scope",
+            suggested_prompts: assistantPromptsForView(section, scope),
+          }
+        : {
+            summary: "No young person selected.",
+            scope_type: "global",
+            current_scope: scope,
+            current_section: section,
+            access_level: "child",
+            young_person_name: null,
+            home_name: getHomeName(),
+            allowed_home_ids: [state.homeId].filter(Boolean),
+            retrieval_default: "whole_scope",
+            suggested_prompts: assistantPromptsForView(section, scope),
+          }
+      : scope === "home"
+        ? {
+            summary: `Home: ${getHomeName()} • home-only OS scope • section: ${sectionLabel}`,
+            scope_type: "home",
+            current_scope: scope,
+            current_section: section,
+            access_level: "home",
+            young_person_name: null,
+            home_name: getHomeName(),
+            allowed_home_ids: [state.homeId].filter(Boolean),
+            retrieval_default: "whole_scope",
+            suggested_prompts: assistantPromptsForView(section, scope),
+          }
+        : {
+            summary:
+              accessLevel === "provider"
+                ? `Quality: provider-wide oversight across allowed homes • section: ${sectionLabel}`
+                : `Quality: ${getHomeName()} only • section: ${sectionLabel}`,
+            scope_type: "quality",
+            current_scope: scope,
+            current_section: section,
+            access_level: accessLevel,
+            young_person_name: null,
+            home_name: getHomeName(),
+            allowed_home_ids:
+              accessLevel === "provider" ? getAllowedHomeIds() : [state.homeId].filter(Boolean),
+            retrieval_default: "whole_scope",
+            suggested_prompts: assistantPromptsForView(section, scope),
+          };
+
+  mergeAssistantMeta({
+    assistant_context: contextSummary,
+  });
+
+  state.assistantContext = contextSummary.summary;
+  syncAssistantUi();
+}
+
+export function renderAssistantMessages() {
+  ensureAssistantMetaState();
+  syncAssistantUi();
+}
+
+export function renderAssistantInsights() {
+  ensureAssistantMetaState();
+  syncAssistantUi();
+}
+
 export function bindAssistantEvents() {
   if (assistantEventsBound) return;
   assistantEventsBound = true;
 
-  ensureAssistantMessageLists();
+  ensureAssistantMetaState();
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
   els.heroAssistantBtn?.addEventListener("click", openAssistant);
@@ -716,14 +729,18 @@ export function bindAssistantEvents() {
   els.assistantForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const question = els.assistantInput?.value || "";
-    if (els.assistantInput) els.assistantInput.value = "";
+    if (els.assistantInput) {
+      els.assistantInput.value = "";
+    }
     await askAssistant(question);
   });
 
   els.assistantModalForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const question = els.assistantModalInput?.value || "";
-    if (els.assistantModalInput) els.assistantModalInput.value = "";
+    if (els.assistantModalInput) {
+      els.assistantModalInput.value = "";
+    }
     await askAssistant(question);
   });
 
@@ -731,7 +748,7 @@ export function bindAssistantEvents() {
 }
 
 export function loadAssistant() {
-  ensureAssistantMessageLists();
+  ensureAssistantMetaState();
   updateAssistantContext();
   syncAssistantUi();
 }
