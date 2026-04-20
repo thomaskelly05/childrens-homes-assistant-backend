@@ -1981,7 +1981,7 @@ export async function runAssistantMessage(message, options = {}) {
 
   if (useApi && typeof fetch === "function") {
     try {
-      const response = await fetch("/ai/assistant", {
+      const response = await fetch("/assistant/os/young-people/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -2692,7 +2692,7 @@ async function askAssistant(question) {
   setAssistantSending(true);
 
   try {
-    const response = await fetch("/young-people/assistant", {
+    const response = await fetch("/assistant/os/young-people/stream", {
       method: "POST",
       credentials: "include",
       headers: withCsrfHeaders("POST", {
