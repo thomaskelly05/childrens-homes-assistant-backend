@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 from auth.current_user import get_current_user
 from db.connection import get_db
 from services.ai_service import generate_ai_stream
-from services.assistant_orchestrator import build_assistant_prompt
 from services.young_person_service import YoungPersonService
 
 router = APIRouter(tags=["Operational Assistant"])
@@ -271,7 +270,10 @@ def _normalise_response_mode(value: str | None) -> str:
     return "balanced"
 
 
-def _extract_common_context(payload_context: BaseAssistantContext, current_user: dict[str, Any]) -> dict[str, Any]:
+def _extract_common_context(
+    payload_context: BaseAssistantContext,
+    current_user: dict[str, Any],
+) -> dict[str, Any]:
     current_view = payload_context.current_view or payload_context.current_section
     current_section = payload_context.current_section or current_view
     shift_context = payload_context.shift_context or current_view
@@ -465,105 +467,38 @@ def _sse_done() -> str:
     return "event: done\ndata: [DONE]\n\n"
 
 
-def _build_generate_message(prompt_bundle: dict[str, Any]) -> str:
-    messages = prompt_bundle.get("messages") or []
-    if isinstance(messages, list) and messages:
-        return "\n\n".join(
-            str(item.get("content") or "").strip()
-            for item in messages
-            if isinstance(item, dict) and str(item.get("content") or "").strip()
-        ).strip()
-
-    system_prompt = str(prompt_bundle.get("system_prompt") or "").strip()
-    user_message = str(prompt_bundle.get("user_message") or "").strip()
-
-    combined = "\n\n".join(part for part in [system_prompt, user_message] if part).strip()
-    if combined:
-        return combined
-
-    raise ValueError("Assistant prompt bundle did not contain usable prompt content")
-
-
-def _build_generate_context(
-    prompt_bundle: dict[str, Any],
-    fallback_context: dict[str, Any],
-) -> dict[str, Any]:
-    context: dict[str, Any] = {}
-
-    runtime_payload = prompt_bundle.get("runtime_payload")
-    if isinstance(runtime_payload, dict):
-        context.update(runtime_payload)
-
-    raw_runtime = prompt_bundle.get("runtime")
-    if raw_runtime is not None:
-        runtime_dict = {
-            "mode": getattr(raw_runtime, "mode", None),
-            "task_type": getattr(raw_runtime, "task_type", None),
-            "output_type": getattr(raw_runtime, "output_type", None),
-            "urgency": getattr(raw_runtime, "urgency", None),
-            "safeguarding_level": getattr(raw_runtime, "safeguarding_level", None),
-            "user_role_profile": getattr(raw_runtime, "user_role_profile", None),
-            "retrieval_level": getattr(raw_runtime, "retrieval_level", None),
-            "reflection_level": getattr(raw_runtime, "reflection_level", None),
-            "response_stance": getattr(raw_runtime, "response_stance", None),
-            "classification_confidence": getattr(raw_runtime, "classification_confidence", None),
-            "secondary_intents": getattr(raw_runtime, "secondary_intents", None),
-        }
-        context.update({k: v for k, v in runtime_dict.items() if v not in (None, "", [])})
-
-    if isinstance(fallback_context, dict):
-        for key, value in fallback_context.items():
-            if key not in context and value not in (None, "", []):
-                context[key] = value
-
-    sources = prompt_bundle.get("sources")
-    if isinstance(sources, list):
-        context["sources"] = sources
-
-    return context
-
-
 async def _stream_assistant_response(
     *,
-    assistant_prompt_bundle: dict[str, Any],
+    message: str,
     response_mode: str,
     session_id: str,
     conversation_id: str,
     user_id: int,
+    user_context: dict[str, Any],
     meta_payload: dict[str, Any],
 ):
-    ai_text = ""
     sources: list[dict[str, Any]] = []
     runtime: dict[str, Any] = {}
     explainability: dict[str, Any] = {}
     assistant_scope_meta: dict[str, Any] = dict(meta_payload.get("assistant_scope") or {})
-    assistant_context_meta: dict[str, Any] = dict(
-        assistant_prompt_bundle.get("context") or meta_payload.get("assistant_context") or {}
-    )
+    assistant_context_meta: dict[str, Any] = dict(meta_payload.get("assistant_context") or {})
     suggested_actions: list[str] = []
 
     try:
-        generated_message = _build_generate_message(assistant_prompt_bundle)
-        generated_context = _build_generate_context(
-            assistant_prompt_bundle,
-            assistant_context_meta,
-        )
-
         generator = generate_ai_stream(
-            message=generated_message,
+            message=message,
             session_id=session_id,
             history=[],
             document_text=None,
             document_name=None,
             response_mode=response_mode,
-            user_context=generated_context,
+            user_context=user_context,
             user_id=user_id,
             conversation_id=conversation_id,
         )
 
         async for item in generator:
             if isinstance(item, str):
-                ai_text += item
                 yield _sse_message(item)
                 continue
 
@@ -581,7 +516,6 @@ async def _stream_assistant_response(
             if item_type == "token":
                 token = str(item.get("content") or "")
                 if token:
-                    ai_text += token
                     yield _sse_message(token)
                 continue
 
@@ -626,17 +560,11 @@ async def _stream_assistant_response(
             "Sorry, the assistant could not generate that response just now. "
             "Please try again, or ask a shorter question."
         )
-        ai_text += fallback
         yield _sse_message(fallback)
 
     finally:
         final_runtime = dict(runtime)
-        prompt_runtime = assistant_prompt_bundle.get("runtime_payload") or {}
         assistant_context = meta_payload.get("assistant_context") or {}
-
-        for key, value in prompt_runtime.items():
-            if value not in (None, "", []):
-                final_runtime.setdefault(key, value)
 
         for key, value in assistant_context.items():
             if value not in (None, "", []):
@@ -686,6 +614,7 @@ async def ask_young_person_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    _ = conn
     record = _load_and_check_young_person(payload.context.young_person_id, current_user)
 
     try:
@@ -696,15 +625,6 @@ async def ask_young_person_assistant(
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="User could not be identified")
-
-        assistant_prompt_bundle = build_assistant_prompt(
-            message=payload.message,
-            session_id=f"young-person-{payload.context.young_person_id}",
-            history=[],
-            user_context=context,
-            user_id=user_id,
-            scope=scope,
-        )
 
     except HTTPException:
         raise
@@ -720,11 +640,12 @@ async def ask_young_person_assistant(
 
     return StreamingResponse(
         _stream_assistant_response(
-            assistant_prompt_bundle=assistant_prompt_bundle,
+            message=payload.message,
             response_mode=response_mode,
             session_id=f"young-person-{payload.context.young_person_id}",
             conversation_id=f"young-person-{payload.context.young_person_id}",
             user_id=user_id,
+            user_context=context,
             meta_payload={
                 "assistant_type": "young_people_os",
                 "assistant_scope": dict(scope),
@@ -759,6 +680,8 @@ async def ask_home_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    _ = conn
+
     try:
         scope = _normalise_home_scope(payload, current_user)
         context = _normalise_home_context(payload, scope, current_user)
@@ -767,15 +690,6 @@ async def ask_home_assistant(
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="User could not be identified")
-
-        assistant_prompt_bundle = build_assistant_prompt(
-            message=payload.message,
-            session_id=f"home-{scope['home_id']}",
-            history=[],
-            user_context=context,
-            user_id=user_id,
-            scope=scope,
-        )
 
     except HTTPException:
         raise
@@ -791,11 +705,12 @@ async def ask_home_assistant(
 
     return StreamingResponse(
         _stream_assistant_response(
-            assistant_prompt_bundle=assistant_prompt_bundle,
+            message=payload.message,
             response_mode=response_mode,
             session_id=f"home-{scope['home_id']}",
             conversation_id=f"home-{scope['home_id']}",
             user_id=user_id,
+            user_context=context,
             meta_payload={
                 "assistant_type": "home_os",
                 "assistant_scope": dict(scope),
@@ -828,6 +743,8 @@ async def ask_quality_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    _ = conn
+
     try:
         scope = _normalise_quality_scope(payload, current_user)
         context = _normalise_quality_context(payload, scope, current_user)
@@ -836,19 +753,6 @@ async def ask_quality_assistant(
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="User could not be identified")
-
-        assistant_prompt_bundle = build_assistant_prompt(
-            message=payload.message,
-            session_id=(
-                f"quality-provider-{scope.get('provider_id')}"
-                if scope.get("access_level") == "provider"
-                else f"quality-home-{scope.get('home_id')}"
-            ),
-            history=[],
-            user_context=context,
-            user_id=user_id,
-            scope=scope,
-        )
 
     except HTTPException:
         raise
@@ -867,7 +771,7 @@ async def ask_quality_assistant(
 
     return StreamingResponse(
         _stream_assistant_response(
-            assistant_prompt_bundle=assistant_prompt_bundle,
+            message=payload.message,
             response_mode=response_mode,
             session_id=(
                 f"quality-provider-{scope.get('provider_id')}"
@@ -880,6 +784,7 @@ async def ask_quality_assistant(
                 else f"quality-home-{selected_home_id}"
             ),
             user_id=user_id,
+            user_context=context,
             meta_payload={
                 "assistant_type": "quality_os",
                 "assistant_scope": dict(scope),
