@@ -515,30 +515,66 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     )
 
 
-def build_assistant_prompt(
-    *,
-    message: str,
-    session_id: str,
-    history: list[dict[str, Any]] | None = None,
-    role: str = "residential care staff",
-    document_text: str | None = None,
-    document_name: str | None = None,
-    ld_lens: bool = False,
-    training_mode: bool = False,
-    speed: str = "balanced",
-    user_context: dict[str, Any] | None = None,
-    user_id: Any | None = None,
-    scope: Any | None = None,
-    **extra_kwargs: Any,
-) -> dict[str, Any]:
+def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Backwards-compatible shim for older and newer callers that still expect
     services.assistant_orchestrator.build_assistant_prompt.
 
-    Accepts extra keyword arguments so newer endpoint-specific callers do not
-    crash when this shim has not yet been updated for every new argument.
+    Supports:
+    - old positional style: build_assistant_prompt(request_obj, ...)
+    - keyword style: build_assistant_prompt(message=..., session_id=..., ...)
+    - extra unexpected kwargs from newer callers
     """
-    merged_user_context = dict(user_context or {})
+    request_obj = args[0] if args else None
+
+    message = kwargs.pop("message", None)
+    session_id = kwargs.pop("session_id", None)
+    history = kwargs.pop("history", None)
+    role = kwargs.pop("role", "residential care staff")
+    document_text = kwargs.pop("document_text", None)
+    document_name = kwargs.pop("document_name", None)
+    ld_lens = kwargs.pop("ld_lens", False)
+    training_mode = kwargs.pop("training_mode", False)
+    speed = kwargs.pop("speed", "balanced")
+    user_context = kwargs.pop("user_context", None) or {}
+    user_id = kwargs.pop("user_id", None)
+    scope = kwargs.pop("scope", None)
+
+    if request_obj is not None:
+        if message is None:
+            message = getattr(request_obj, "message", None)
+        if session_id is None:
+            session_id = getattr(request_obj, "session_id", None)
+        if history is None:
+            history = getattr(request_obj, "history", None)
+        if role == "residential care staff":
+            role = getattr(request_obj, "role", role)
+        if document_text is None:
+            document_text = getattr(request_obj, "document_text", None)
+        if document_name is None:
+            document_name = getattr(request_obj, "document_name", None)
+        if ld_lens is False:
+            ld_lens = bool(getattr(request_obj, "ld_lens", ld_lens))
+        if training_mode is False:
+            training_mode = bool(getattr(request_obj, "training_mode", training_mode))
+        if speed == "balanced":
+            speed = getattr(request_obj, "speed", speed)
+        request_user_context = getattr(request_obj, "user_context", None)
+        if request_user_context and isinstance(request_user_context, dict):
+            merged = dict(request_user_context)
+            merged.update(user_context)
+            user_context = merged
+        if user_id is None:
+            user_id = getattr(request_obj, "user_id", None)
+        if scope is None:
+            scope = getattr(request_obj, "scope", None)
+
+    if message is None:
+        raise TypeError("build_assistant_prompt() missing required argument: 'message'")
+    if session_id is None:
+        raise TypeError("build_assistant_prompt() missing required argument: 'session_id'")
+
+    merged_user_context = dict(user_context)
 
     if user_id is not None and "user_id" not in merged_user_context:
         merged_user_context["user_id"] = user_id
@@ -546,11 +582,11 @@ def build_assistant_prompt(
     if scope is not None and "scope" not in merged_user_context:
         merged_user_context["scope"] = scope
 
-    if extra_kwargs:
+    if kwargs:
         merged_user_context.setdefault("_orchestrator_extra_kwargs", {})
-        merged_user_context["_orchestrator_extra_kwargs"].update(extra_kwargs)
+        merged_user_context["_orchestrator_extra_kwargs"].update(kwargs)
 
-        for key, value in extra_kwargs.items():
+        for key, value in kwargs.items():
             if key not in merged_user_context:
                 merged_user_context[key] = value
 
