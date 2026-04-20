@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,9 +11,11 @@ from pydantic import BaseModel, Field
 from auth.current_user import get_current_user
 from db.connection import get_db
 from services.ai_service import generate_ai_stream
+from services.assistant_context_service import build_runtime_assistant_context
 from services.young_person_service import YoungPersonService
 
 router = APIRouter(tags=["Operational Assistant"])
+logger = logging.getLogger(__name__)
 
 
 class BaseAssistantContext(BaseModel):
@@ -290,15 +293,12 @@ def _extract_common_context(
         "whole_os_default": _safe_bool(payload_context.whole_os_default),
         "section_only_requested": _safe_bool(payload_context.section_only_requested),
         "use_whole_scope_records": _safe_bool(payload_context.use_whole_scope_records),
-        "ask_for_dates": _safe_bool(payload_context.ask_for_dates),
+        "ask_for_dates": False,
         "ask_for_chronology": _safe_bool(payload_context.ask_for_chronology),
         "ask_for_summary": _safe_bool(payload_context.ask_for_summary),
         "ask_for_review_pack": _safe_bool(payload_context.ask_for_review_pack),
         "ask_for_compliance_view": _safe_bool(payload_context.ask_for_compliance_view),
         "suggested_prompts_ui_only": _safe_str_list(payload_context.suggested_prompts_ui_only),
-        "reporting_period_start": _safe_str(payload_context.reporting_period_start),
-        "reporting_period_end": _safe_str(payload_context.reporting_period_end),
-        "reporting_period_inferred": _safe_bool(payload_context.reporting_period_inferred),
         "reg45_requested": _safe_bool(payload_context.reg45_requested),
         "composer_record_type": payload_context.composer_record_type,
         "record_type": payload_context.record_type,
@@ -321,6 +321,8 @@ def _normalise_young_person_scope(
         "allowed_home_ids": [resolved_home_id] if resolved_home_id is not None else [],
         "provider_id": _user_provider_id(current_user),
         "young_person_id": int(payload.context.young_person_id),
+        "record_type": payload.context.record_type,
+        "record_id": payload.context.record_id,
     }
 
 
@@ -340,6 +342,8 @@ def _normalise_home_scope(
         "home_id": resolved_home_id,
         "allowed_home_ids": [resolved_home_id],
         "provider_id": _user_provider_id(current_user),
+        "record_type": payload.context.record_type,
+        "record_id": payload.context.record_id,
     }
 
 
@@ -368,88 +372,30 @@ def _normalise_quality_scope(
         "home_id": selected_home_id,
         "allowed_home_ids": allowed_home_ids,
         "provider_id": payload.context.provider_id or _user_provider_id(current_user),
+        "record_type": payload.context.record_type,
+        "record_id": payload.context.record_id,
     }
 
 
-def _normalise_young_person_context(
-    payload: YoungPersonAssistantPayload,
-    record: dict[str, Any],
+def _build_ui_context_dict(
+    payload_context: BaseAssistantContext,
     current_user: dict[str, Any],
-    scope: dict[str, Any],
 ) -> dict[str, Any]:
-    full_name = (
-        " ".join([x for x in [record.get("first_name"), record.get("last_name")] if x]).strip()
-        or record.get("preferred_name")
-        or "Young person"
-    )
-
-    common = _extract_common_context(payload.context, current_user)
+    common = _extract_common_context(payload_context, current_user)
 
     return {
         **common,
-        "scope": "child",
-        "scope_type": "young_person",
-        "access_level": scope.get("access_level"),
-        "provider_id": scope.get("provider_id"),
-        "allowed_home_ids": scope.get("allowed_home_ids", []),
-        "home_id": scope.get("home_id"),
-        "young_person_id": int(payload.context.young_person_id),
-        "young_person_name": payload.context.young_person_name or full_name,
-        "placement_status": payload.context.placement_status or record.get("placement_status"),
-        "summary_risk_level": payload.context.summary_risk_level or record.get("summary_risk_level"),
-        "home_name": payload.context.home_name or record.get("home_name"),
-    }
-
-
-def _normalise_home_context(
-    payload: HomeAssistantPayload,
-    scope: dict[str, Any],
-    current_user: dict[str, Any],
-) -> dict[str, Any]:
-    home_name = (
-        payload.context.home_name
-        or current_user.get("home_name")
-        or current_user.get("homeName")
-        or f"Home {scope.get('home_id')}"
-    )
-
-    common = _extract_common_context(payload.context, current_user)
-
-    return {
-        **common,
-        "scope": "home",
-        "scope_type": "home",
-        "access_level": scope.get("access_level"),
-        "provider_id": scope.get("provider_id"),
-        "allowed_home_ids": scope.get("allowed_home_ids", []),
-        "home_id": scope.get("home_id"),
-        "home_name": home_name,
-    }
-
-
-def _normalise_quality_context(
-    payload: QualityAssistantPayload,
-    scope: dict[str, Any],
-    current_user: dict[str, Any],
-) -> dict[str, Any]:
-    home_name = (
-        payload.context.home_name
-        or current_user.get("home_name")
-        or current_user.get("homeName")
-        or (f"Home {scope.get('home_id')}" if scope.get("home_id") is not None else "Quality oversight")
-    )
-
-    common = _extract_common_context(payload.context, current_user)
-
-    return {
-        **common,
-        "scope": "quality",
-        "scope_type": "quality",
-        "access_level": scope.get("access_level"),
-        "provider_id": scope.get("provider_id"),
-        "allowed_home_ids": scope.get("allowed_home_ids", []),
-        "home_id": scope.get("home_id"),
-        "home_name": home_name,
+        "scope": payload_context.scope,
+        "scope_type": payload_context.scope_type,
+        "access_level": payload_context.access_level,
+        "provider_id": payload_context.provider_id,
+        "allowed_home_ids": payload_context.allowed_home_ids or [],
+        "young_person_name": getattr(payload_context, "young_person_name", None),
+        "placement_status": getattr(payload_context, "placement_status", None),
+        "summary_risk_level": getattr(payload_context, "summary_risk_level", None),
+        "home_id": getattr(payload_context, "home_id", None),
+        "home_name": getattr(payload_context, "home_name", None),
+        "young_person_id": getattr(payload_context, "young_person_id", None),
     }
 
 
@@ -555,7 +501,8 @@ async def _stream_assistant_response(
                     ]
                 continue
 
-    except Exception:
+    except Exception as exc:
+        logger.exception("Assistant stream failed: %s", exc)
         fallback = (
             "Sorry, the assistant could not generate that response just now. "
             "Please try again, or ask a shorter question."
@@ -614,17 +561,25 @@ async def ask_young_person_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _ = conn
     record = _load_and_check_young_person(payload.context.young_person_id, current_user)
 
     try:
         scope = _normalise_young_person_scope(payload, current_user, record)
-        context = _normalise_young_person_context(payload, record, current_user, scope)
         response_mode = _normalise_response_mode(payload.response_mode)
         user_id = _user_id(current_user)
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="User could not be identified")
+
+        ui_context = _build_ui_context_dict(payload.context, current_user)
+        context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="young_people_os",
+            scope=scope,
+            ui_context=ui_context,
+            message=payload.message,
+        )
 
     except HTTPException:
         raise
@@ -633,10 +588,28 @@ async def ask_young_person_assistant(
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc))
     except Exception as exc:
+        logger.exception("Failed to prepare young person assistant: %s", exc)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to prepare young person assistant: {str(exc)}",
         )
+
+    resolved_scope = dict(context.get("scope", {}) or scope)
+    top_meta = {
+        "young_person_id": resolved_scope.get("young_person_id") or payload.context.young_person_id,
+        "young_person_name": context.get("young_person_name")
+        or (context.get("young_person") or {}).get("preferred_name")
+        or "Young person",
+        "home_id": resolved_scope.get("home_id"),
+        "home_name": context.get("home_name") or (context.get("young_person") or {}).get("home_name"),
+        "assistant_intent": context.get("assistant_intent"),
+        "retrieval_mode": context.get("retrieval_mode"),
+        "output_mode": context.get("output_mode"),
+        "reg45_requested": context.get("reg45_requested"),
+        "report_type": context.get("report_type"),
+        "evidence_count": len(context.get("evidence_index", [])),
+        "source_count": len(context.get("sources", [])),
+    }
 
     return StreamingResponse(
         _stream_assistant_response(
@@ -648,21 +621,9 @@ async def ask_young_person_assistant(
             user_context=context,
             meta_payload={
                 "assistant_type": "young_people_os",
-                "assistant_scope": dict(scope),
+                "assistant_scope": resolved_scope,
                 "assistant_context": context,
-                "top_level_meta": {
-                    "young_person_id": payload.context.young_person_id,
-                    "young_person_name": context.get("young_person_name"),
-                    "home_id": context.get("home_id"),
-                    "home_name": context.get("home_name"),
-                    "assistant_intent": context.get("assistant_intent"),
-                    "retrieval_mode": context.get("retrieval_mode"),
-                    "output_mode": context.get("output_mode"),
-                    "reporting_period_start": context.get("reporting_period_start"),
-                    "reporting_period_end": context.get("reporting_period_end"),
-                    "reporting_period_inferred": context.get("reporting_period_inferred"),
-                    "reg45_requested": context.get("reg45_requested"),
-                },
+                "top_level_meta": top_meta,
             },
         ),
         media_type="text/event-stream",
@@ -680,16 +641,23 @@ async def ask_home_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _ = conn
-
     try:
         scope = _normalise_home_scope(payload, current_user)
-        context = _normalise_home_context(payload, scope, current_user)
         response_mode = _normalise_response_mode(payload.response_mode)
         user_id = _user_id(current_user)
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="User could not be identified")
+
+        ui_context = _build_ui_context_dict(payload.context, current_user)
+        context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="home_os",
+            scope=scope,
+            ui_context=ui_context,
+            message=payload.message,
+        )
 
     except HTTPException:
         raise
@@ -698,34 +666,38 @@ async def ask_home_assistant(
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc))
     except Exception as exc:
+        logger.exception("Failed to prepare home assistant: %s", exc)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to prepare home assistant: {str(exc)}",
         )
 
+    resolved_scope = dict(context.get("scope", {}) or scope)
+    top_meta = {
+        "home_id": resolved_scope.get("home_id"),
+        "home_name": context.get("home_name") or (context.get("home") or {}).get("home_name"),
+        "assistant_intent": context.get("assistant_intent"),
+        "retrieval_mode": context.get("retrieval_mode"),
+        "output_mode": context.get("output_mode"),
+        "reg45_requested": context.get("reg45_requested"),
+        "report_type": context.get("report_type"),
+        "evidence_count": len(context.get("evidence_index", [])),
+        "source_count": len(context.get("sources", [])),
+    }
+
     return StreamingResponse(
         _stream_assistant_response(
             message=payload.message,
             response_mode=response_mode,
-            session_id=f"home-{scope['home_id']}",
-            conversation_id=f"home-{scope['home_id']}",
+            session_id=f"home-{resolved_scope['home_id']}",
+            conversation_id=f"home-{resolved_scope['home_id']}",
             user_id=user_id,
             user_context=context,
             meta_payload={
                 "assistant_type": "home_os",
-                "assistant_scope": dict(scope),
+                "assistant_scope": resolved_scope,
                 "assistant_context": context,
-                "top_level_meta": {
-                    "home_id": scope.get("home_id"),
-                    "home_name": context.get("home_name"),
-                    "assistant_intent": context.get("assistant_intent"),
-                    "retrieval_mode": context.get("retrieval_mode"),
-                    "output_mode": context.get("output_mode"),
-                    "reporting_period_start": context.get("reporting_period_start"),
-                    "reporting_period_end": context.get("reporting_period_end"),
-                    "reporting_period_inferred": context.get("reporting_period_inferred"),
-                    "reg45_requested": context.get("reg45_requested"),
-                },
+                "top_level_meta": top_meta,
             },
         ),
         media_type="text/event-stream",
@@ -743,16 +715,23 @@ async def ask_quality_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _ = conn
-
     try:
         scope = _normalise_quality_scope(payload, current_user)
-        context = _normalise_quality_context(payload, scope, current_user)
         response_mode = _normalise_response_mode(payload.response_mode)
         user_id = _user_id(current_user)
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="User could not be identified")
+
+        ui_context = _build_ui_context_dict(payload.context, current_user)
+        context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="quality_os",
+            scope=scope,
+            ui_context=ui_context,
+            message=payload.message,
+        )
 
     except HTTPException:
         raise
@@ -761,48 +740,50 @@ async def ask_quality_assistant(
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc))
     except Exception as exc:
+        logger.exception("Failed to prepare quality assistant: %s", exc)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to prepare quality assistant: {str(exc)}",
         )
 
-    selected_home_id = scope.get("home_id")
-    allowed_home_ids = scope.get("allowed_home_ids", [])
+    resolved_scope = dict(context.get("scope", {}) or scope)
+    selected_home_id = resolved_scope.get("home_id")
+    allowed_home_ids = resolved_scope.get("allowed_home_ids", [])
+
+    top_meta = {
+        "home_id": selected_home_id,
+        "home_name": context.get("home_name"),
+        "allowed_home_ids": allowed_home_ids,
+        "access_level": resolved_scope.get("access_level"),
+        "provider_id": resolved_scope.get("provider_id"),
+        "assistant_intent": context.get("assistant_intent"),
+        "retrieval_mode": context.get("retrieval_mode"),
+        "output_mode": context.get("output_mode"),
+        "reg45_requested": context.get("reg45_requested"),
+        "report_type": context.get("report_type"),
+        "evidence_count": len(context.get("evidence_index", [])),
+        "source_count": len(context.get("sources", [])),
+    }
+
+    quality_session_id = (
+        f"quality-provider-{resolved_scope.get('provider_id')}"
+        if resolved_scope.get("access_level") == "provider"
+        else f"quality-home-{selected_home_id}"
+    )
 
     return StreamingResponse(
         _stream_assistant_response(
             message=payload.message,
             response_mode=response_mode,
-            session_id=(
-                f"quality-provider-{scope.get('provider_id')}"
-                if scope.get("access_level") == "provider"
-                else f"quality-home-{selected_home_id}"
-            ),
-            conversation_id=(
-                f"quality-provider-{scope.get('provider_id')}"
-                if scope.get("access_level") == "provider"
-                else f"quality-home-{selected_home_id}"
-            ),
+            session_id=quality_session_id,
+            conversation_id=quality_session_id,
             user_id=user_id,
             user_context=context,
             meta_payload={
                 "assistant_type": "quality_os",
-                "assistant_scope": dict(scope),
+                "assistant_scope": resolved_scope,
                 "assistant_context": context,
-                "top_level_meta": {
-                    "home_id": selected_home_id,
-                    "home_name": context.get("home_name"),
-                    "allowed_home_ids": allowed_home_ids,
-                    "access_level": scope.get("access_level"),
-                    "provider_id": scope.get("provider_id"),
-                    "assistant_intent": context.get("assistant_intent"),
-                    "retrieval_mode": context.get("retrieval_mode"),
-                    "output_mode": context.get("output_mode"),
-                    "reporting_period_start": context.get("reporting_period_start"),
-                    "reporting_period_end": context.get("reporting_period_end"),
-                    "reporting_period_inferred": context.get("reporting_period_inferred"),
-                    "reg45_requested": context.get("reg45_requested"),
-                },
+                "top_level_meta": top_meta,
             },
         ),
         media_type="text/event-stream",
