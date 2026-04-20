@@ -65,6 +65,20 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
+def _safe_bool(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "y", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
+
+
 def _normalise_response_mode(response_mode: str | None) -> str:
     value = _safe_string(response_mode).lower()
     if value in {"quick", "balanced", "deep"}:
@@ -168,6 +182,11 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
             "summary": item.get("summary"),
             "title": item.get("title"),
             "description": item.get("description"),
+            "date": item.get("date"),
+            "scope_type": item.get("scope_type"),
+            "young_person_id": item.get("young_person_id"),
+            "home_id": item.get("home_id"),
+            "deep_link": item.get("deep_link"),
         }
 
         key = "|".join(
@@ -196,7 +215,7 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
 def _normalise_evidence_index(
     value: Any,
     *,
-    limit: int = 100,
+    limit: int = 150,
 ) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
@@ -219,7 +238,12 @@ def _normalise_evidence_index(
             "description": item.get("description"),
             "event_at": item.get("event_at"),
             "updated_at": item.get("updated_at"),
+            "date": item.get("date"),
             "url": item.get("url"),
+            "scope_type": item.get("scope_type"),
+            "young_person_id": item.get("young_person_id"),
+            "home_id": item.get("home_id"),
+            "deep_link": item.get("deep_link"),
         }
 
         key = "|".join(
@@ -318,17 +342,107 @@ def _extract_suggested_actions(runtime: AssistantRuntimeContext | None) -> list[
     return cleaned
 
 
+def _has_internal_evidence(user_context: dict[str, Any] | None) -> bool:
+    if not isinstance(user_context, dict):
+        return False
+
+    if _extract_evidence_index(user_context):
+        return True
+
+    if _extract_sources_from_context(user_context):
+        return True
+
+    keys = {
+        "young_person",
+        "identity",
+        "active_work",
+        "recent_records",
+        "links",
+        "home",
+        "homes",
+        "team",
+        "tasks",
+        "communications",
+        "documents",
+        "reports",
+        "incidents",
+        "inspection_actions",
+        "inspection_lines",
+        "audits",
+        "compliance_items",
+        "children_outcomes",
+        "incident_summary",
+        "safeguarding_summary",
+        "compliance_summary",
+        "staffing_summary",
+        "supervision_summary",
+        "management_summary",
+        "positive_indicators",
+        "report_snapshot",
+    }
+
+    return any(key in user_context for key in keys)
+
+
+def _infer_output_overrides(
+    message: str,
+    user_context: dict[str, Any] | None,
+) -> dict[str, str]:
+    text = _safe_string(message).lower()
+    user_context = user_context or {}
+
+    reg45_requested = _safe_bool(user_context.get("reg45_requested"))
+    report_type = _safe_string(user_context.get("report_type")).lower()
+
+    if reg45_requested or report_type == "reg45":
+        return {
+            "task_type": "report",
+            "output_type": "structured_report",
+            "response_stance": "inspection_ready",
+        }
+
+    report_terms = [
+        "reg 45",
+        "reg45",
+        "overview",
+        "full overview",
+        "chronology",
+        "summary",
+        "report",
+        "review pack",
+        "inspection",
+        "compliance view",
+    ]
+
+    if any(term in text for term in report_terms):
+        return {
+            "task_type": "report" if "report" in text or "reg 45" in text or "reg45" in text else "summary",
+            "output_type": "structured_report" if any(term in text for term in ["reg 45", "reg45", "report", "review pack"]) else "plain_response",
+        }
+
+    return {}
+
+
 def _serialise_runtime(
     runtime: AssistantRuntimeContext | None,
     *,
     regulation_payload: list[dict[str, str]] | None = None,
     evidence_index: list[dict[str, Any]] | None = None,
     selected_mode: str = "balanced",
+    user_context: dict[str, Any] | None = None,
+    sources: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if runtime is None:
         return {}
 
     evidence_index = evidence_index or []
+    sources = sources or []
+    user_context = user_context or {}
+
+    scope = _safe_string(user_context.get("scope"))
+    scope_type = _safe_string(user_context.get("scope_type"))
+    assistant_type = _safe_string(user_context.get("assistant_type"))
+    report_type = _safe_string(user_context.get("report_type"))
 
     payload = {
         "mode": getattr(runtime, "mode", None),
@@ -347,6 +461,25 @@ def _serialise_runtime(
         "response_mode": selected_mode,
         "evidence_items_loaded": len(evidence_index),
         "evidence_preview": evidence_index[:10],
+        "source_count": len(sources),
+        "scope": scope or None,
+        "scope_type": scope_type or None,
+        "assistant_type": assistant_type or None,
+        "report_type": report_type or None,
+        "has_internal_evidence": bool(evidence_index or sources),
+        "reg45_requested": _safe_bool(user_context.get("reg45_requested")),
+        "current_view": user_context.get("current_view"),
+        "current_section": user_context.get("current_section"),
+        "shift_context": user_context.get("shift_context"),
+        "young_person_id": user_context.get("young_person_id"),
+        "young_person_name": user_context.get("young_person_name"),
+        "home_id": user_context.get("home_id"),
+        "home_name": user_context.get("home_name"),
+        "allowed_home_ids": user_context.get("allowed_home_ids"),
+        "access_level": user_context.get("access_level"),
+        "assistant_intent": user_context.get("assistant_intent"),
+        "retrieval_mode": user_context.get("retrieval_mode"),
+        "output_mode": user_context.get("output_mode"),
     }
 
     return {k: v for k, v in payload.items() if v not in (None, "", [])}
@@ -392,6 +525,14 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     user_role_profile = getattr(runtime, "user_role_profile", "staff")
     response_stance = getattr(runtime, "response_stance", "practice_support")
 
+    inferred_overrides = _infer_output_overrides(req.message, req.user_context)
+    if inferred_overrides.get("task_type"):
+        task_type = inferred_overrides["task_type"]
+    if inferred_overrides.get("output_type"):
+        output_type = inferred_overrides["output_type"]
+    if inferred_overrides.get("response_stance"):
+        response_stance = inferred_overrides["response_stance"]
+
     response_plan = build_response_plan(
         message=req.message,
         mode=mode,
@@ -436,15 +577,17 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         regulation_payload=regulation_payload,
         evidence_index=evidence_index,
         selected_mode=selected_mode,
+        user_context=req.user_context,
+        sources=sources,
     )
 
     if evidence_index:
         runtime_payload["evidence_index"] = evidence_index
 
-    runtime_payload["source_count"] = len(sources)
     runtime_payload["history_items_loaded"] = len(trimmed_history)
     runtime_payload["document_attached"] = bool(trimmed_document_text)
     runtime_payload["regulation_refs_count"] = len(regulation_payload)
+    runtime_payload["has_internal_evidence"] = _has_internal_evidence(req.user_context)
 
     messages = _build_messages(
         system_prompt=system_prompt,
@@ -458,7 +601,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
             "safeguarding=%s urgency=%s response_mode=%s stance=%s "
             "guidance_enabled=%s guidance_reason=%s model=%s temp=%s max_tokens=%s "
             "memory=%s retrieval=%s reflection=%s supervision=%s leadership=%s "
-            "regulation_refs=%s sources=%s evidence=%s"
+            "regulation_refs=%s sources=%s evidence=%s internal_evidence=%s"
         ),
         req.session_id,
         mode,
@@ -467,7 +610,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         safeguarding_level,
         urgency,
         response_plan.selected_mode,
-        response_plan.response_stance,
+        response_stance,
         response_plan.guidance_plan.enabled,
         response_plan.guidance_plan.reason,
         response_plan.model_plan.model,
@@ -481,6 +624,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         len(regulation_payload),
         len(sources),
         len(evidence_index),
+        runtime_payload.get("has_internal_evidence"),
     )
 
     return OrchestratorResult(
