@@ -25,7 +25,6 @@ import {
   detectRetrievalMode as detectRetrievalModeFromHelpers,
   detectOutputMode as detectOutputModeFromHelpers,
 } from "../assistant/helpers.js";
-<<<<<<< HEAD
 import {
   inferAssistantAnalysisLens,
   isProviderWideScope,
@@ -41,8 +40,6 @@ import {
   isDueSoon,
   normaliseToken,
 } from "./helpers.js";
-=======
->>>>>>> parent of 3517eec (Update assistant-runtime.js)
 
 const RETRIEVAL_MODE = {
   whole_scope: "whole_scope",
@@ -132,53 +129,12 @@ function inferAnalysisLens({
   role = state.userRole || "staff",
   intent = ASSISTANT_INTENT.summary,
 } = {}) {
-<<<<<<< HEAD
   return inferAssistantAnalysisLens({
     scope,
     section,
     role,
     intent,
   });
-=======
-  const safeRole = String(role || "staff").toLowerCase();
-  const safeSection = String(section || "").toLowerCase();
-  const safeIntent = String(intent || "summary").toLowerCase();
-
-  if (
-    /safeguarding|risk|missing/.test(safeSection) ||
-    safeIntent === ASSISTANT_INTENT.risk
-  ) {
-    return "safeguarding";
-  }
-
-  if (
-    scope === "quality" ||
-    safeIntent === ASSISTANT_INTENT.quality ||
-    safeIntent === ASSISTANT_INTENT.compliance ||
-    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
-  ) {
-    return safeRole === "ri" || safeRole === "admin" ? "quality" : "inspection";
-  }
-
-  if (
-    safeIntent === ASSISTANT_INTENT.management ||
-    ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
-    /manager|team|supervision|home-dashboard/.test(safeSection)
-  ) {
-    return "manager";
-  }
-
-  if (
-    safeIntent === ASSISTANT_INTENT.handover ||
-    safeIntent === ASSISTANT_INTENT.morning_brief
-  ) {
-    return "shift";
-  }
-
-  if (scope === "child") return "child_centred";
-  if (scope === "home") return "operational";
-  return "general";
->>>>>>> parent of 3517eec (Update assistant-runtime.js)
 }
 
 export function buildAssistantContext() {
@@ -276,7 +232,10 @@ function sectionGuidance(section, scope) {
       "Support with audit summaries, RI themes, monthly patterns, triangulation, quality assurance and inspection readiness.",
   };
 
-  return map[section] || `Support with ${scope} children’s residential home operating system tasks.`;
+  return (
+    map[section] ||
+    `Support with ${scope} children’s residential home operating system tasks.`
+  );
 }
 
 function roleGuidance(role = "") {
@@ -286,9 +245,7 @@ function roleGuidance(role = "") {
     return "Prioritise practical, child-centred, shift-relevant support in a children’s residential home.";
   }
 
-  if (
-    ["manager", "registered_manager", "deputy_manager"].includes(value)
-  ) {
+  if (["manager", "registered_manager", "deputy_manager"].includes(value)) {
     return "Prioritise safeguarding oversight, consistency of care, management grip, standards, action completion and inspection readiness.";
   }
 
@@ -369,7 +326,8 @@ function outputModeGuidance(outputMode = OUTPUT_MODE.answer) {
 
 function buildSystemPrompt(context, options = {}) {
   const intent = options.intent || ASSISTANT_INTENT.unknown;
-  const retrievalMode = options.retrieval_mode || RETRIEVAL_MODE.whole_scope;
+  const retrievalMode =
+    options.retrieval_mode || RETRIEVAL_MODE.whole_scope;
   const outputMode = options.output_mode || OUTPUT_MODE.answer;
 
   return [
@@ -513,7 +471,10 @@ async function resolveScopeBundle(options = {}) {
   return null;
 }
 
-function filterEvidenceByScope(evidence = [], context = buildAssistantContext()) {
+function filterEvidenceByScope(
+  evidence = [],
+  context = buildAssistantContext()
+) {
   const scope = context.scope;
 
   if (scope === "child") {
@@ -542,11 +503,7 @@ function filterEvidenceByScope(evidence = [], context = buildAssistantContext())
 
     return evidence.filter((item) => {
       const raw = item.raw || {};
-      const itemHomeId =
-        item.home_id ??
-        raw.home_id ??
-        raw.service_id ??
-        null;
+      const itemHomeId = item.home_id ?? raw.home_id ?? raw.service_id ?? null;
 
       if (itemHomeId === null || itemHomeId === undefined) return true;
       return allowed.has(String(itemHomeId));
@@ -558,14 +515,10 @@ function filterEvidenceByScope(evidence = [], context = buildAssistantContext())
 
   return evidence.filter((item) => {
     const raw = item.raw || {};
-    const itemHomeId =
-      item.home_id ??
-      raw.home_id ??
-      raw.service_id ??
-      null;
+    const itemHomeId = item.home_id ?? raw.home_id ?? raw.service_id ?? null;
 
-      if (itemHomeId === null || itemHomeId === undefined) return true;
-      return String(itemHomeId) === String(homeId);
+    if (itemHomeId === null || itemHomeId === undefined) return true;
+    return String(itemHomeId) === String(homeId);
   });
 }
 
@@ -597,7 +550,13 @@ function filterEvidenceBySection(evidence = [], section = "workspace") {
       "readiness",
       "compliance",
     ],
-    compliance: ["compliance", "documents", "supervision", "team", "readiness"],
+    compliance: [
+      "compliance",
+      "documents",
+      "supervision",
+      "team",
+      "readiness",
+    ],
     team: ["team", "supervision", "manager"],
     supervision: ["supervision", "team", "compliance"],
     quality: [
@@ -628,35 +587,49 @@ function resolveDateRange(message = "", options = {}) {
 
   if (/last 7 days|past 7 days/.test(text)) {
     return {
-      start: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      start: new Date(
+        now.getTime() - 7 * 24 * 60 * 60 * 1000
+      ).toISOString(),
       end: now.toISOString(),
     };
   }
 
   if (/last 30 days|past 30 days/.test(text)) {
     return {
-      start: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      start: new Date(
+        now.getTime() - 30 * 24 * 60 * 60 * 1000
+      ).toISOString(),
       end: now.toISOString(),
     };
   }
 
   if (/last 3 months|past 3 months/.test(text)) {
     return {
-      start: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+      start: new Date(
+        now.getTime() - 90 * 24 * 60 * 60 * 1000
+      ).toISOString(),
       end: now.toISOString(),
     };
   }
 
   if (/last 6 months|past 6 months|6 month|six month|reg 45/.test(text)) {
     return {
-      start: new Date(now.getTime() - 183 * 24 * 60 * 60 * 1000).toISOString(),
+      start: new Date(
+        now.getTime() - 183 * 24 * 60 * 60 * 1000
+      ).toISOString(),
       end: now.toISOString(),
     };
   }
 
-  if (/last 12 months|past 12 months|12 month|twelve month|yearly|annual/.test(text)) {
+  if (
+    /last 12 months|past 12 months|12 month|twelve month|yearly|annual/.test(
+      text
+    )
+  ) {
     return {
-      start: new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+      start: new Date(
+        now.getTime() - 365 * 24 * 60 * 60 * 1000
+      ).toISOString(),
       end: now.toISOString(),
     };
   }
@@ -708,7 +681,11 @@ function buildQueryProfile(message = "", intent = ASSISTANT_INTENT.unknown) {
   };
 }
 
-function scoreEvidence(item = {}, queryProfile = {}, context = buildAssistantContext()) {
+function scoreEvidence(
+  item = {},
+  queryProfile = {},
+  context = buildAssistantContext()
+) {
   let score = 0;
 
   if (item.tags?.includes("safeguarding")) score += 6;
@@ -723,27 +700,73 @@ function scoreEvidence(item = {}, queryProfile = {}, context = buildAssistantCon
   if (item.tags?.includes("workflow:pending_review")) score += 2;
   if (item.summary) score += 1;
   if (item.child_voice) score += 1;
-  if (context.analysis_lens === "safeguarding" && item.tags?.includes("safeguarding")) score += 3;
-  if (context.analysis_lens === "manager" && item.tags?.includes("open_task")) score += 2;
+  if (
+    context.analysis_lens === "safeguarding" &&
+    item.tags?.includes("safeguarding")
+  ) {
+    score += 3;
+  }
+  if (
+    context.analysis_lens === "manager" &&
+    item.tags?.includes("open_task")
+  ) {
+    score += 2;
+  }
   if (
     ["quality", "inspection"].includes(context.analysis_lens) &&
-    (item.record_type === "compliance_item" || item.tags?.includes("status:overdue"))
+    (item.record_type === "compliance_item" ||
+      item.tags?.includes("status:overdue"))
   ) {
     score += 3;
   }
 
   if (queryProfile.focus === "chronology" && item.date) score += 2;
-  if (queryProfile.focus === "compliance" && item.record_type === "compliance_item") score += 5;
-  if (queryProfile.focus === "risk" && (item.record_type === "risk" || item.tags?.includes("safeguarding"))) score += 5;
-  if (queryProfile.focus === "handover" && ["daily_note", "incident", "appointment", "handover_record"].includes(item.record_type)) score += 4;
+  if (
+    queryProfile.focus === "compliance" &&
+    item.record_type === "compliance_item"
+  ) {
+    score += 5;
+  }
+  if (
+    queryProfile.focus === "risk" &&
+    (item.record_type === "risk" || item.tags?.includes("safeguarding"))
+  ) {
+    score += 5;
+  }
+  if (
+    queryProfile.focus === "handover" &&
+    ["daily_note", "incident", "appointment", "handover_record"].includes(
+      item.record_type
+    )
+  ) {
+    score += 4;
+  }
   if (queryProfile.focus === "morning_brief" && item.date) score += 2;
-  if (queryProfile.focus === "quality" && ["compliance_item", "audit", "manager_action", "document"].includes(item.record_type)) score += 4;
-  if (queryProfile.focus === "management" && ["task", "manager_action", "incident", "compliance_item"].includes(item.record_type)) score += 4;
+  if (
+    queryProfile.focus === "quality" &&
+    ["compliance_item", "audit", "manager_action", "document"].includes(
+      item.record_type
+    )
+  ) {
+    score += 4;
+  }
+  if (
+    queryProfile.focus === "management" &&
+    ["task", "manager_action", "incident", "compliance_item"].includes(
+      item.record_type
+    )
+  ) {
+    score += 4;
+  }
 
   return score;
 }
 
-function sortEvidence(evidence = [], queryProfile = {}, context = buildAssistantContext()) {
+function sortEvidence(
+  evidence = [],
+  queryProfile = {},
+  context = buildAssistantContext()
+) {
   return [...evidence].sort((a, b) => {
     const aScore = scoreEvidence(a, queryProfile, context);
     const bScore = scoreEvidence(b, queryProfile, context);
@@ -768,16 +791,27 @@ function summariseEvidence(evidence = []) {
   let appointments = 0;
 
   for (const item of evidence) {
-    counts[item.record_type || "record"] = (counts[item.record_type || "record"] || 0) + 1;
+    counts[item.record_type || "record"] =
+      (counts[item.record_type || "record"] || 0) + 1;
 
     for (const tag of item.tags || []) {
       tags[tag] = (tags[tag] || 0) + 1;
     }
 
-    if ((item.record_type || "") === "task" && item.tags?.includes("open_task")) openTasks += 1;
+    if (
+      (item.record_type || "") === "task" &&
+      item.tags?.includes("open_task")
+    ) {
+      openTasks += 1;
+    }
     if ((item.record_type || "") === "incident") incidents += 1;
     if ((item.record_type || "") === "appointment") appointments += 1;
-    if ((item.record_type || "") === "document" || (item.record_type || "") === "statutory_document") documents += 1;
+    if (
+      (item.record_type || "") === "document" ||
+      (item.record_type || "") === "statutory_document"
+    ) {
+      documents += 1;
+    }
     if ((item.record_type || "") === "compliance_item") compliance += 1;
     if (item.tags?.includes("safeguarding")) safeguarding += 1;
     if (item.tags?.includes("status:overdue")) overdue += 1;
@@ -815,18 +849,24 @@ function buildChronology(evidence = [], limit = 100) {
 }
 
 function latestByType(evidence = [], recordType = "") {
-  return [...evidence]
-    .filter((item) => item.record_type === recordType && item.date)
-    .sort((a, b) => parseDateValue(b.date) - parseDateValue(a.date))[0] || null;
+  return (
+    [...evidence]
+      .filter((item) => item.record_type === recordType && item.date)
+      .sort((a, b) => parseDateValue(b.date) - parseDateValue(a.date))[0] ||
+    null
+  );
 }
 
 function nextUpcomingByType(evidence = [], recordType = "") {
   const now = Date.now();
 
-  return [...evidence]
-    .filter((item) => item.record_type === recordType && item.date)
-    .filter((item) => parseDateValue(item.date) > now)
-    .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date))[0] || null;
+  return (
+    [...evidence]
+      .filter((item) => item.record_type === recordType && item.date)
+      .filter((item) => parseDateValue(item.date) > now)
+      .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date))[0] ||
+    null
+  );
 }
 
 function extractFacts(evidence = []) {
@@ -837,22 +877,42 @@ function extractFacts(evidence = []) {
     latest_health_record: latestByType(evidence, "health_record"),
     latest_education_record: latestByType(evidence, "education_record"),
     next_appointment: nextUpcomingByType(evidence, "appointment"),
-    overdue_items: evidence.filter((x) => x.tags?.includes("status:overdue")).slice(0, 20),
+    overdue_items: evidence
+      .filter((x) => x.tags?.includes("status:overdue"))
+      .slice(0, 20),
     open_tasks: evidence.filter((x) => x.tags?.includes("open_task")).slice(0, 20),
   };
 }
 
 function buildCareDomains(evidence = []) {
   return {
-    presentation: evidence.filter((x) => ["daily_note", "handover_record"].includes(x.record_type)),
-    incidents: evidence.filter((x) => ["incident", "missing_episode"].includes(x.record_type)),
+    presentation: evidence.filter((x) =>
+      ["daily_note", "handover_record"].includes(x.record_type)
+    ),
+    incidents: evidence.filter((x) =>
+      ["incident", "missing_episode"].includes(x.record_type)
+    ),
     safeguarding: evidence.filter((x) => x.tags?.includes("safeguarding")),
     education: evidence.filter((x) => x.record_type === "education_record"),
-    health: evidence.filter((x) => ["health_record", "medication_record", "appointment"].includes(x.record_type)),
+    health: evidence.filter((x) =>
+      ["health_record", "medication_record", "appointment"].includes(
+        x.record_type
+      )
+    ),
     family: evidence.filter((x) => x.record_type === "family_contact"),
-    planning: evidence.filter((x) => ["support_plan", "risk", "task", "manager_action"].includes(x.record_type)),
-    strengths: evidence.filter((x) => ["achievement_record", "daily_note"].includes(x.record_type)),
-    documents: evidence.filter((x) => ["document", "statutory_document", "monthly_review"].includes(x.record_type)),
+    planning: evidence.filter((x) =>
+      ["support_plan", "risk", "task", "manager_action"].includes(
+        x.record_type
+      )
+    ),
+    strengths: evidence.filter((x) =>
+      ["achievement_record", "daily_note"].includes(x.record_type)
+    ),
+    documents: evidence.filter((x) =>
+      ["document", "statutory_document", "monthly_review"].includes(
+        x.record_type
+      )
+    ),
     compliance: evidence.filter((x) => x.record_type === "compliance_item"),
   };
 }
@@ -861,12 +921,15 @@ function buildTriangulationSummary(evidence = []) {
   return {
     incidents: evidence.filter((x) => x.record_type === "incident").length,
     daily_notes: evidence.filter((x) => x.record_type === "daily_note").length,
-    plans: evidence.filter((x) => ["support_plan", "risk"].includes(x.record_type)).length,
+    plans: evidence.filter((x) => ["support_plan", "risk"].includes(x.record_type))
+      .length,
     family: evidence.filter((x) => x.record_type === "family_contact").length,
     health: evidence.filter((x) => x.record_type === "health_record").length,
     education: evidence.filter((x) => x.record_type === "education_record").length,
     compliance: evidence.filter((x) => x.record_type === "compliance_item").length,
-    documents: evidence.filter((x) => ["document", "statutory_document"].includes(x.record_type)).length,
+    documents: evidence.filter((x) =>
+      ["document", "statutory_document"].includes(x.record_type)
+    ).length,
   };
 }
 
@@ -879,10 +942,13 @@ function assessEvidenceSufficiency(evidence = []) {
     has_education: evidence.some((x) => x.record_type === "education_record"),
     has_family: evidence.some((x) => x.record_type === "family_contact"),
     confidence:
-      evidence.length > 30 ? "high" :
-      evidence.length > 10 ? "medium" :
-      evidence.length > 0 ? "low" :
-      "very_low",
+      evidence.length > 30
+        ? "high"
+        : evidence.length > 10
+          ? "medium"
+          : evidence.length > 0
+            ? "low"
+            : "very_low",
   };
 }
 
@@ -938,18 +1004,30 @@ function buildChronologyLines(chronology = [], limit = 8) {
     return `• ${bits.join(" - ")}`;
   });
 
-  return lines.length ? lines : ["• No dated chronology items are currently available."];
+  return lines.length
+    ? lines
+    : ["• No dated chronology items are currently available."];
 }
 
 function getTopConcerns(evidence = []) {
   const concerns = [];
   const sorted = evidence.slice(0, 10);
 
-  if (sorted.some((item) => item.tags?.includes("safeguarding"))) concerns.push("Safeguarding-linked evidence needs attention.");
-  if (sorted.some((item) => item.tags?.includes("status:overdue"))) concerns.push("There are overdue items in the current evidence set.");
-  if (sorted.some((item) => item.tags?.includes("severity:critical"))) concerns.push("Critical severity evidence is present.");
-  if (sorted.some((item) => item.tags?.includes("severity:high"))) concerns.push("High severity evidence is present.");
-  if (sorted.some((item) => item.tags?.includes("open_task"))) concerns.push("There are open tasks requiring follow-up.");
+  if (sorted.some((item) => item.tags?.includes("safeguarding"))) {
+    concerns.push("Safeguarding-linked evidence needs attention.");
+  }
+  if (sorted.some((item) => item.tags?.includes("status:overdue"))) {
+    concerns.push("There are overdue items in the current evidence set.");
+  }
+  if (sorted.some((item) => item.tags?.includes("severity:critical"))) {
+    concerns.push("Critical severity evidence is present.");
+  }
+  if (sorted.some((item) => item.tags?.includes("severity:high"))) {
+    concerns.push("High severity evidence is present.");
+  }
+  if (sorted.some((item) => item.tags?.includes("open_task"))) {
+    concerns.push("There are open tasks requiring follow-up.");
+  }
 
   return unique(concerns).slice(0, 5);
 }
@@ -957,14 +1035,19 @@ function getTopConcerns(evidence = []) {
 function dedupeActions(actions = []) {
   const seen = new Set();
   return actions.filter((item) => {
-    const key = item.action_id || makeActionId([item.category, item.record_type, item.record_id]);
+    const key =
+      item.action_id ||
+      makeActionId([item.category, item.record_type, item.record_id]);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 }
 
-function buildOperationalActions(evidence = [], context = buildAssistantContext()) {
+function buildOperationalActions(
+  evidence = [],
+  context = buildAssistantContext()
+) {
   const actions = [];
 
   for (const item of evidence) {
@@ -1026,10 +1109,13 @@ function buildOperationalActions(evidence = [], context = buildAssistantContext(
     if (item.tags?.includes("safeguarding")) {
       actions.push({
         action_id: makeActionId(["safeguarding_review", recordType, recordId]),
-        priority: item.tags?.includes("severity:critical") ? "critical" : "high",
+        priority: item.tags?.includes("severity:critical")
+          ? "critical"
+          : "high",
         category: "safeguarding_review",
         title: `Safeguarding review: ${item.title || recordType}`,
-        description: item.summary || "Safeguarding-linked evidence requires review.",
+        description:
+          item.summary || "Safeguarding-linked evidence requires review.",
         record_type: recordType,
         record_id: recordId,
         citation_ref: buildCitationRef(item),
@@ -1044,7 +1130,8 @@ function buildOperationalActions(evidence = [], context = buildAssistantContext(
         priority: "medium",
         category: "appointment_prepare",
         title: `Prepare for appointment: ${item.title || "Appointment"}`,
-        description: item.summary || "Upcoming appointment requires preparation.",
+        description:
+          item.summary || "Upcoming appointment requires preparation.",
         record_type: recordType,
         record_id: recordId,
         citation_ref: buildCitationRef(item),
@@ -1055,11 +1142,16 @@ function buildOperationalActions(evidence = [], context = buildAssistantContext(
 
     if (recordType === "incident" && item.tags?.includes("severity:critical")) {
       actions.push({
-        action_id: makeActionId(["critical_incident_follow_up", recordType, recordId]),
+        action_id: makeActionId([
+          "critical_incident_follow_up",
+          recordType,
+          recordId,
+        ]),
         priority: "critical",
         category: "critical_incident_follow_up",
         title: `Critical incident follow-up: ${item.title || "Incident"}`,
-        description: item.summary || "A critical incident requires management review.",
+        description:
+          item.summary || "A critical incident requires management review.",
         record_type: recordType,
         record_id: recordId,
         citation_ref: buildCitationRef(item),
@@ -1074,7 +1166,9 @@ function buildOperationalActions(evidence = [], context = buildAssistantContext(
         priority: "critical",
         category: "missing_episode_review",
         title: "Missing episode review",
-        description: item.summary || "A missing episode requires active review and follow-up.",
+        description:
+          item.summary ||
+          "A missing episode requires active review and follow-up.",
         record_type: recordType,
         record_id: recordId,
         citation_ref: buildCitationRef(item),
@@ -1092,11 +1186,17 @@ function buildOperationalActions(evidence = [], context = buildAssistantContext(
 
   if (recentIncidents.length >= 3) {
     actions.push({
-      action_id: makeActionId(["pattern", "incidents", context.scope, context.person?.id || context.home?.home_id]),
+      action_id: makeActionId([
+        "pattern",
+        "incidents",
+        context.scope,
+        context.person?.id || context.home?.home_id,
+      ]),
       priority: "high",
       category: "pattern",
       title: "Repeated incident pattern",
-      description: "There are repeated incidents in the recent evidence set, suggesting a pattern requiring analysis.",
+      description:
+        "There are repeated incidents in the recent evidence set, suggesting a pattern requiring analysis.",
       record_type: "incident",
       record_id: recentIncidents[0]?.source_id || recentIncidents[0]?.id || null,
       citation_ref: buildCitationRef(recentIncidents[0] || {}),
@@ -1113,11 +1213,17 @@ function buildOperationalActions(evidence = [], context = buildAssistantContext(
 
   if (recentMissing.length >= 2) {
     actions.push({
-      action_id: makeActionId(["pattern", "missing", context.scope, context.person?.id || context.home?.home_id]),
+      action_id: makeActionId([
+        "pattern",
+        "missing",
+        context.scope,
+        context.person?.id || context.home?.home_id,
+      ]),
       priority: "critical",
       category: "pattern",
       title: "Repeated missing pattern",
-      description: "There are repeated missing episodes in the recent evidence set, suggesting increased vulnerability.",
+      description:
+        "There are repeated missing episodes in the recent evidence set, suggesting increased vulnerability.",
       record_type: "missing_episode",
       record_id: recentMissing[0]?.source_id || recentMissing[0]?.id || null,
       citation_ref: buildCitationRef(recentMissing[0] || {}),
@@ -1162,7 +1268,10 @@ function inferSuggestedActions(
     }
 
     if (summary.safeguarding_items > 0 || summary.incident_items > 0) {
-      actions.push({ type: "review_incidents", label: "Review incidents and risks" });
+      actions.push({
+        type: "review_incidents",
+        label: "Review incidents and risks",
+      });
     }
   }
 
@@ -1172,7 +1281,10 @@ function inferSuggestedActions(
     actions.push({ type: "draft_note", label: "Draft management update" });
 
     if (summary.overdue_items > 0) {
-      actions.push({ type: "review_compliance", label: "Review overdue items" });
+      actions.push({
+        type: "review_compliance",
+        label: "Review overdue items",
+      });
     }
   }
 
@@ -1182,16 +1294,28 @@ function inferSuggestedActions(
     actions.push({ type: "draft_note", label: "Draft RI summary" });
 
     if (summary.overdue_items > 0 || summary.compliance_items > 0) {
-      actions.push({ type: "review_compliance", label: "Review compliance gaps" });
+      actions.push({
+        type: "review_compliance",
+        label: "Review compliance gaps",
+      });
     }
   }
 
-  if (intent === ASSISTANT_INTENT.chronology || intent === ASSISTANT_INTENT.review) {
-    actions.unshift({ type: "draft_summary", label: "Draft chronology summary" });
+  if (
+    intent === ASSISTANT_INTENT.chronology ||
+    intent === ASSISTANT_INTENT.review
+  ) {
+    actions.unshift({
+      type: "draft_summary",
+      label: "Draft chronology summary",
+    });
   }
 
   if (operationalActions.some((item) => item.priority === "critical")) {
-    actions.unshift({ type: "review_risk", label: "Review critical actions" });
+    actions.unshift({
+      type: "review_risk",
+      label: "Review critical actions",
+    });
   }
 
   return unique(actions.map((item) => JSON.stringify(item)))
@@ -1208,7 +1332,9 @@ function buildFallbackReply(message, context, runtime = {}) {
   const topConcerns = getTopConcerns(evidence);
   const confidence = runtime.evidence_sufficiency?.confidence || "low";
   const operationalActions = runtime.operational_actions || [];
-  const actionSummary = runtime.operational_action_summary || summariseOperationalActions(operationalActions);
+  const actionSummary =
+    runtime.operational_action_summary ||
+    summariseOperationalActions(operationalActions);
 
   if (/morning brief/.test(text)) {
     return {
@@ -1226,11 +1352,22 @@ function buildFallbackReply(message, context, runtime = {}) {
         "What matters this morning:",
         ...buildEvidenceSummaryLines(evidence, 3),
         ...(facts.next_appointment
-          ? ["", `Next appointment: ${facts.next_appointment.title || "Appointment"} (${facts.next_appointment.date || "date not set"}) [${buildCitationRef(facts.next_appointment)}]`]
+          ? [
+              "",
+              `Next appointment: ${facts.next_appointment.title || "Appointment"} (${facts.next_appointment.date || "date not set"}) [${buildCitationRef(facts.next_appointment)}]`,
+            ]
           : []),
-        ...(topConcerns.length ? ["", "Key concerns:", ...topConcerns.map((item) => `• ${item}`)] : []),
+        ...(topConcerns.length
+          ? ["", "Key concerns:", ...topConcerns.map((item) => `• ${item}`)]
+          : []),
         ...(operationalActions.length
-          ? ["", "Priority actions:", ...operationalActions.slice(0, 5).map((item) => `• ${item.title} [${item.citation_ref || "action"}]`)]
+          ? [
+              "",
+              "Priority actions:",
+              ...operationalActions
+                .slice(0, 5)
+                .map((item) => `• ${item.title} [${item.citation_ref || "action"}]`),
+            ]
           : []),
       ].join("\n"),
       suggested_actions: [
@@ -1255,7 +1392,13 @@ function buildFallbackReply(message, context, runtime = {}) {
         "Recent evidence to consider:",
         ...buildEvidenceSummaryLines(evidence, 4),
         ...(operationalActions.length
-          ? ["", "Practical actions:", ...operationalActions.slice(0, 5).map((item) => `• ${item.title} [${item.citation_ref || "action"}]`)]
+          ? [
+              "",
+              "Practical actions:",
+              ...operationalActions
+                .slice(0, 5)
+                .map((item) => `• ${item.title} [${item.citation_ref || "action"}]`),
+            ]
           : []),
       ].join("\n"),
       suggested_actions: [
@@ -1276,29 +1419,37 @@ function buildFallbackReply(message, context, runtime = {}) {
         `Operational actions: ${actionSummary.total}.`,
         `Confidence: ${confidence}.`,
       ].join("\n"),
-      suggested_actions: [{ type: "draft_summary", label: "Draft chronology summary" }],
+      suggested_actions: [
+        { type: "draft_summary", label: "Draft chronology summary" },
+      ],
     };
   }
 
-  if (
-    /when was|what date|last incident|next appointment|latest/.test(text)
-  ) {
+  if (/when was|what date|last incident|next appointment|latest/.test(text)) {
     const lines = [];
 
     if (facts.latest_incident) {
-      lines.push(`Latest incident: ${facts.latest_incident.title || "Incident"} (${facts.latest_incident.date || "date not set"}) [${buildCitationRef(facts.latest_incident)}]`);
+      lines.push(
+        `Latest incident: ${facts.latest_incident.title || "Incident"} (${facts.latest_incident.date || "date not set"}) [${buildCitationRef(facts.latest_incident)}]`
+      );
     }
 
     if (facts.latest_missing_episode) {
-      lines.push(`Latest missing episode: ${facts.latest_missing_episode.title || "Missing episode"} (${facts.latest_missing_episode.date || "date not set"}) [${buildCitationRef(facts.latest_missing_episode)}]`);
+      lines.push(
+        `Latest missing episode: ${facts.latest_missing_episode.title || "Missing episode"} (${facts.latest_missing_episode.date || "date not set"}) [${buildCitationRef(facts.latest_missing_episode)}]`
+      );
     }
 
     if (facts.next_appointment) {
-      lines.push(`Next appointment: ${facts.next_appointment.title || "Appointment"} (${facts.next_appointment.date || "date not set"}) [${buildCitationRef(facts.next_appointment)}]`);
+      lines.push(
+        `Next appointment: ${facts.next_appointment.title || "Appointment"} (${facts.next_appointment.date || "date not set"}) [${buildCitationRef(facts.next_appointment)}]`
+      );
     }
 
     if (!lines.length) {
-      lines.push("No matching dated record is currently visible in the scoped evidence set.");
+      lines.push(
+        "No matching dated record is currently visible in the scoped evidence set."
+      );
     }
 
     return {
@@ -1320,9 +1471,17 @@ function buildFallbackReply(message, context, runtime = {}) {
         "",
         ...(topConcerns.length
           ? topConcerns.map((item) => `• ${item}`)
-          : ["• No clear high-priority risk theme is visible in the current evidence set."]),
+          : [
+              "• No clear high-priority risk theme is visible in the current evidence set.",
+            ]),
         ...(operationalActions.length
-          ? ["", "Risk-linked actions:", ...operationalActions.slice(0, 6).map((item) => `• ${item.title} [${item.citation_ref || "action"}]`)]
+          ? [
+              "",
+              "Risk-linked actions:",
+              ...operationalActions
+                .slice(0, 6)
+                .map((item) => `• ${item.title} [${item.citation_ref || "action"}]`),
+            ]
           : []),
         "",
         "Use this children’s home risk structure:",
@@ -1335,7 +1494,11 @@ function buildFallbackReply(message, context, runtime = {}) {
         `Evidence reviewed: ${evidenceSummary.total} item(s).`,
       ].join("\n"),
       suggested_actions: [
-        { type: "open_record", record_type: "risk", label: "Open risk assessment" },
+        {
+          type: "open_record",
+          record_type: "risk",
+          label: "Open risk assessment",
+        },
         { type: "review_incidents", label: "Review incidents and risks" },
       ],
     };
@@ -1357,7 +1520,11 @@ function buildFallbackReply(message, context, runtime = {}) {
         `Operational actions: ${actionSummary.total}`,
         "",
         ...buildEvidenceSummaryLines(
-          evidence.filter((item) => item.record_type === "compliance_item" || item.tags?.includes("status:overdue")),
+          evidence.filter(
+            (item) =>
+              item.record_type === "compliance_item" ||
+              item.tags?.includes("status:overdue")
+          ),
           5
         ),
       ].join("\n"),
@@ -1390,7 +1557,7 @@ function buildFallbackReply(message, context, runtime = {}) {
 
   return {
     answer: [
-      `I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality and oversight.`,
+      "I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality and oversight.",
       "",
       "Try asking me to:",
       "• give a full summary",
@@ -1422,7 +1589,9 @@ function createAssistantResponse({
 } = {}) {
   return {
     answer: String(answer || ""),
-    suggested_actions: Array.isArray(suggested_actions) ? suggested_actions : [],
+    suggested_actions: Array.isArray(suggested_actions)
+      ? suggested_actions
+      : [],
     sources: Array.isArray(sources) ? sources : [],
     runtime: {
       mode: runtime.mode || "standard",
@@ -1461,12 +1630,15 @@ function buildAssistantContextMeta(context, runtime = {}) {
   const summary = runtime.summary || summariseEvidence(evidence);
   const chronology = runtime.chronology || [];
   const facts = runtime.facts || {};
-  const sufficiency = runtime.evidence_sufficiency || assessEvidenceSufficiency(evidence);
+  const sufficiency =
+    runtime.evidence_sufficiency || assessEvidenceSufficiency(evidence);
   const careDomains = runtime.care_domains || buildCareDomains(evidence);
-  const triangulation = runtime.triangulation || buildTriangulationSummary(evidence);
+  const triangulation =
+    runtime.triangulation || buildTriangulationSummary(evidence);
   const operationalActions = runtime.operational_actions || [];
   const operationalActionSummary =
-    runtime.operational_action_summary || summariseOperationalActions(operationalActions);
+    runtime.operational_action_summary ||
+    summariseOperationalActions(operationalActions);
 
   return {
     current_scope: context.scope,
@@ -1493,14 +1665,28 @@ function buildAssistantContextMeta(context, runtime = {}) {
     operational_action_summary: operationalActionSummary,
     operational_actions: operationalActions.slice(0, 20),
     recent_records: {
-      incidents: evidence.filter((item) => item.record_type === "incident").slice(0, 5),
+      incidents: evidence
+        .filter((item) => item.record_type === "incident")
+        .slice(0, 5),
       tasks: evidence.filter((item) => item.record_type === "task").slice(0, 5),
-      compliance: evidence.filter((item) => item.record_type === "compliance_item").slice(0, 5),
-      documents: evidence.filter((item) => item.record_type === "document" || item.record_type === "statutory_document").slice(0, 5),
-      appointments: evidence.filter((item) => item.record_type === "appointment").slice(0, 5),
+      compliance: evidence
+        .filter((item) => item.record_type === "compliance_item")
+        .slice(0, 5),
+      documents: evidence
+        .filter(
+          (item) =>
+            item.record_type === "document" ||
+            item.record_type === "statutory_document"
+        )
+        .slice(0, 5),
+      appointments: evidence
+        .filter((item) => item.record_type === "appointment")
+        .slice(0, 5),
     },
     active_work: {
-      tasks: evidence.filter((item) => item.tags?.includes("open_task")).slice(0, 10),
+      tasks: evidence
+        .filter((item) => item.tags?.includes("open_task"))
+        .slice(0, 10),
     },
     care_domains: {
       presentation_count: careDomains.presentation.length,
@@ -1526,7 +1712,10 @@ function sanitiseEvidenceForApi(evidence = []) {
     section: item.section || "",
     tags: Array.isArray(item.tags) ? item.tags.slice(0, 20) : [],
     significance: item.significance || "",
-    child_voice: cleanText(item.child_voice || "").slice(0, MAX_API_SUMMARY_EXCERPT),
+    child_voice: cleanText(item.child_voice || "").slice(
+      0,
+      MAX_API_SUMMARY_EXCERPT
+    ),
     citation_ref: buildCitationRef(item),
   }));
 }
@@ -1605,7 +1794,8 @@ export async function buildAssistantEvidenceContext(options = {}) {
   const triangulation = buildTriangulationSummary(filtered);
   const evidenceSufficiency = assessEvidenceSufficiency(filtered);
   const operationalActions = buildOperationalActions(ranked, context);
-  const operationalActionSummary = summariseOperationalActions(operationalActions);
+  const operationalActionSummary =
+    summariseOperationalActions(operationalActions);
 
   return {
     context,
@@ -1760,8 +1950,10 @@ export async function runAssistantMessage(message, options = {}) {
   state.assistantMeta.evidence_summary = summary;
   state.assistantMeta.evidence_sufficiency = evidence_sufficiency;
   state.assistantMeta.operational_actions = operational_actions;
-  state.assistantMeta.operational_action_summary = operational_action_summary;
-  state.assistantMeta.last_bundle_refresh_at = state.scopeBundleLoadedAt || null;
+  state.assistantMeta.operational_action_summary =
+    operational_action_summary;
+  state.assistantMeta.last_bundle_refresh_at =
+    state.scopeBundleLoadedAt || null;
   state.assistantMeta.last_analysis_at = new Date().toISOString();
 
   setAssistantDerivedState({
@@ -1838,7 +2030,8 @@ export async function runAssistantMessage(message, options = {}) {
             compliance_count: care_domains.compliance.length,
           },
           triangulation,
-          operational_actions: sanitiseOperationalActionsForApi(operational_actions),
+          operational_actions:
+            sanitiseOperationalActionsForApi(operational_actions),
           operational_action_summary,
           evidence_sufficiency,
           summary,
@@ -1853,10 +2046,17 @@ export async function runAssistantMessage(message, options = {}) {
           answer: data.answer || "No answer returned.",
           suggested_actions: Array.isArray(data.suggested_actions)
             ? data.suggested_actions
-            : inferSuggestedActions(context, evidence, intent, operational_actions),
+            : inferSuggestedActions(
+                context,
+                evidence,
+                intent,
+                operational_actions
+              ),
           sources: Array.isArray(data.sources)
             ? data.sources.slice(0, MAX_SOURCE_ITEMS)
-            : evidence.slice(0, MAX_SOURCE_ITEMS).map((item) => makeSource(item, "direct")),
+            : evidence
+                .slice(0, MAX_SOURCE_ITEMS)
+                .map((item) => makeSource(item, "direct")),
           runtime: {
             mode: "api",
             intent,
@@ -1891,7 +2091,8 @@ export async function runAssistantMessage(message, options = {}) {
           assistant_scope:
             data.assistant_scope || buildAssistantScopeMeta(context, runtime),
           assistant_context:
-            data.assistant_context || buildAssistantContextMeta(context, runtime),
+            data.assistant_context ||
+            buildAssistantContextMeta(context, runtime),
         });
       }
     } catch (error) {
@@ -1907,7 +2108,9 @@ export async function runAssistantMessage(message, options = {}) {
       fallback.suggested_actions?.length
         ? fallback.suggested_actions
         : inferSuggestedActions(context, evidence, intent, operational_actions),
-    sources: evidence.slice(0, MAX_SOURCE_ITEMS).map((item) => makeSource(item, "direct")),
+    sources: evidence
+      .slice(0, MAX_SOURCE_ITEMS)
+      .map((item) => makeSource(item, "direct")),
     runtime: {
       mode: "fallback",
       intent,
