@@ -629,6 +629,17 @@ export async function fetchAssistantScopeBundle(context = {}) {
     return fetchQualityAssistantBundle(context);
   }
 
+  if (scope === "ofsted") {
+    return fetchQualityAssistantBundle({
+      ...context,
+      scope: "quality",
+      current_scope: "quality",
+      scope_type: "quality",
+      access_level:
+        String(context.access_level || "").toLowerCase() || "provider",
+    });
+  }
+
   return fetchYoungPersonAssistantBundle(youngPersonId);
 }
 

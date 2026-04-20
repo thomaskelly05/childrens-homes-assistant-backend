@@ -267,6 +267,7 @@ export function getAccessLevelForScope(scope = getCurrentScope()) {
 
   if (scope === "child") return "child";
   if (scope === "home") return "home";
+  if (scope === "ofsted") return "provider";
 
   if (scope === "quality") {
     return [
@@ -288,12 +289,14 @@ export function getAssistantScopeType() {
   const scope = getCurrentScope();
 
   if (scope === "home") return "home";
+  if (scope === "ofsted") return "quality";
   if (scope === "quality") return "quality";
   return state.youngPersonId ? "young_person" : "global";
 }
 
 export function getAssistantTypeForScope(scope = getCurrentScope()) {
   if (scope === "home") return "home_os";
+  if (scope === "ofsted") return "quality_os";
   if (scope === "quality") return "quality_os";
   return "young_people_os";
 }
@@ -302,6 +305,7 @@ export function getScopeLabel() {
   const scope = getCurrentScope();
 
   if (scope === "home") return "Home assistant";
+  if (scope === "ofsted") return "Ofsted assistant";
   if (scope === "quality") return "Quality assistant";
   return "Child assistant";
 }
