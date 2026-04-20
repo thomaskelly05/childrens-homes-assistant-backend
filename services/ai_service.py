@@ -32,6 +32,20 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
+def _safe_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "y", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "n", "off"}:
+            return False
+    return bool(value)
+
+
 def _normalise_response_mode(response_mode: str | None, speed: str | None) -> str:
     value = _safe_string(response_mode or speed or "balanced").lower()
     if value in {"quick", "balanced", "deep"}:
@@ -110,124 +124,6 @@ def _trim_messages_for_mode(
         )
 
     return trimmed
-
-
-def _has_internal_snapshot_context(user_context: dict[str, Any] | None) -> bool:
-    if not isinstance(user_context, dict) or not user_context:
-        return False
-
-    if user_context.get("report_type") in {"monthly", "reg45", "yearly"}:
-        return True
-
-    period = user_context.get("period")
-    if isinstance(period, dict) and (
-        period.get("start_date") or period.get("end_date")
-    ):
-        return True
-
-    keys = {
-        "children_outcomes",
-        "incident_summary",
-        "safeguarding_summary",
-        "compliance_summary",
-        "staffing_summary",
-        "supervision_summary",
-        "management_summary",
-        "positive_indicators",
-    }
-
-    return any(key in user_context for key in keys)
-
-
-def _should_skip_guidance_search(
-    *,
-    task_type: str,
-    output_type: str,
-    user_context: dict[str, Any] | None,
-    has_document_text: bool,
-) -> bool:
-    internal_snapshot_task = _has_internal_snapshot_context(user_context)
-
-    if internal_snapshot_task and not has_document_text:
-        return True
-
-    if task_type in {"report", "summary", "draft"} and internal_snapshot_task:
-        return True
-
-    if output_type in {"report", "structured_report", "email_report"} and internal_snapshot_task:
-        return True
-
-    return False
-
-
-async def _maybe_run_guidance_search(
-    *,
-    enabled: bool,
-    search_query: str,
-) -> str:
-    if not enabled:
-        return ""
-
-    query = _safe_string(search_query)
-    if not query:
-        return ""
-
-    try:
-        result = await asyncio.wait_for(
-            asyncio.to_thread(web_search, query),
-            timeout=SEARCH_TIMEOUT_SECONDS,
-        )
-        return _safe_string(result)
-    except asyncio.TimeoutError:
-        logger.warning("Guidance search timed out")
-        return ""
-    except Exception:
-        logger.exception("Guidance search failed")
-        return ""
-
-
-def _append_live_guidance_context(system_prompt: str, search_results: str) -> str:
-    if not _safe_string(search_results):
-        return system_prompt
-
-    return (
-        f"{system_prompt}\n\n"
-        "============================================================\n"
-        "LIVE GUIDANCE CONTEXT\n\n"
-        "The following trusted guidance excerpts were retrieved for this request.\n"
-        "Where relevant, prioritise Children’s Homes Regulations 2015, the Quality Standards,\n"
-        "the Guide to the Children’s Homes Regulations including the Quality Standards,\n"
-        "SCCIF expectations, safeguarding guidance, and official children’s homes practice frameworks.\n\n"
-        f"{search_results}\n\n"
-        "Use this material only where it genuinely improves accuracy.\n"
-        "Do not overstate what the guidance says.\n"
-        "Do not let guidance replace the specific evidence in the OS record.\n"
-        "If guidance and local evidence differ, say so clearly."
-    ).strip()
-
-
-def _append_service_level_answer_rules(system_prompt: str) -> str:
-    extra = """
-============================================================
-SERVICE-LEVEL ANSWER RULES
-
-Your answer must:
-- stay within the authorised children’s residential care scope
-- be practical, analytical and safeguarding-aware
-- keep children’s lived experience central where relevant
-- distinguish clearly between evidence, concern, inference and missing information
-- avoid generic filler and unsupported statements
-- use inline citations throughout when evidence exists
-- not cluster all citations only at the end
-- not invent citations for unsupported claims
-- match the user’s requested structure exactly where one is given
-- avoid markdown headings if the user asked for plain section labels only
-
-If the request is inspection, RI, manager, home oversight, chronology, Reg 45, compliance or safeguarding related:
-- answer as an experienced children’s homes professional
-- think in line with Ofsted, SCCIF, the Quality Standards, leadership and management expectations, and safe residential practice
-"""
-    return f"{system_prompt}\n\n{extra}".strip()
 
 
 def _normalise_sources(value: Any) -> list[dict]:
@@ -314,7 +210,7 @@ def _merge_sources(*source_lists: list[dict]) -> list[dict]:
     return merged
 
 
-def _normalise_evidence_index(value: Any, *, limit: int = 200) -> list[dict]:
+def _normalise_evidence_index(value: Any, *, limit: int = 300) -> list[dict]:
     if not isinstance(value, list):
         return []
 
@@ -479,6 +375,281 @@ def _extract_text_from_provider_payload(value: Any) -> str:
     return ""
 
 
+def _has_internal_snapshot_context(user_context: dict[str, Any] | None) -> bool:
+    if not isinstance(user_context, dict) or not user_context:
+        return False
+
+    if user_context.get("report_type") in {"monthly", "reg45", "yearly"}:
+        return True
+
+    if user_context.get("report_snapshot"):
+        return True
+
+    keys = {
+        "children_outcomes",
+        "incident_summary",
+        "safeguarding_summary",
+        "compliance_summary",
+        "staffing_summary",
+        "supervision_summary",
+        "management_summary",
+        "positive_indicators",
+        "young_person",
+        "identity",
+        "active_work",
+        "recent_records",
+        "team",
+        "tasks",
+        "communications",
+        "documents",
+        "inspection_actions",
+        "inspection_lines",
+        "homes",
+        "audits",
+    }
+
+    return any(key in user_context for key in keys)
+
+
+def _should_skip_guidance_search(
+    *,
+    task_type: str,
+    output_type: str,
+    user_context: dict[str, Any] | None,
+    has_document_text: bool,
+) -> bool:
+    internal_snapshot_task = _has_internal_snapshot_context(user_context)
+
+    if internal_snapshot_task and not has_document_text:
+        return True
+
+    if task_type in {"report", "summary", "draft"} and internal_snapshot_task:
+        return True
+
+    if output_type in {"report", "structured_report", "email_report"} and internal_snapshot_task:
+        return True
+
+    return False
+
+
+async def _maybe_run_guidance_search(
+    *,
+    enabled: bool,
+    search_query: str,
+) -> str:
+    if not enabled:
+        return ""
+
+    query = _safe_string(search_query)
+    if not query:
+        return ""
+
+    try:
+        result = await asyncio.wait_for(
+            asyncio.to_thread(web_search, query),
+            timeout=SEARCH_TIMEOUT_SECONDS,
+        )
+        return _safe_string(result)
+    except asyncio.TimeoutError:
+        logger.warning("Guidance search timed out")
+        return ""
+    except Exception:
+        logger.exception("Guidance search failed")
+        return ""
+
+
+def _append_live_guidance_context(system_prompt: str, search_results: str) -> str:
+    if not _safe_string(search_results):
+        return system_prompt
+
+    return (
+        f"{system_prompt}\n\n"
+        "============================================================\n"
+        "LIVE GUIDANCE CONTEXT\n\n"
+        "The following trusted guidance excerpts were retrieved for this request.\n"
+        "Where relevant, prioritise Children’s Homes Regulations 2015, the Quality Standards,\n"
+        "the Guide to the Children’s Homes Regulations including the Quality Standards,\n"
+        "SCCIF expectations, safeguarding guidance, and official children’s homes practice frameworks.\n\n"
+        f"{search_results}\n\n"
+        "Use this material only where it genuinely improves accuracy.\n"
+        "Do not overstate what the guidance says.\n"
+        "Do not let guidance replace the specific evidence in the OS record.\n"
+        "If guidance and local evidence differ, say so clearly."
+    ).strip()
+
+
+def _append_service_level_answer_rules(system_prompt: str) -> str:
+    extra = """
+============================================================
+SERVICE-LEVEL ANSWER RULES
+
+Your answer must:
+- stay within the authorised children’s residential care scope
+- be practical, analytical and safeguarding-aware
+- keep children’s lived experience central where relevant
+- distinguish clearly between evidence, concern, inference and missing information
+- avoid generic filler and unsupported statements
+- use inline citations throughout when evidence exists
+- not cluster all citations only at the end
+- not invent citations for unsupported claims
+- match the user’s requested structure exactly where one is given
+- avoid markdown headings if the user asked for plain section labels only
+
+If the request is inspection, RI, manager, home oversight, chronology, Reg 45, compliance or safeguarding related:
+- answer as an experienced children’s homes professional
+- think in line with Ofsted, SCCIF, the Quality Standards, leadership and management expectations, and safe residential practice
+"""
+    return f"{system_prompt}\n\n{extra}".strip()
+
+
+def _build_context_evidence_block(
+    *,
+    evidence_index: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    user_context: dict[str, Any],
+    selected_mode: str,
+) -> str:
+    lines: list[str] = []
+
+    scope_type = _safe_string(user_context.get("scope_type") or (user_context.get("scope") or {}).get("scope_type"))
+    young_person_name = _safe_string(user_context.get("young_person_name") or (user_context.get("young_person") or {}).get("preferred_name"))
+    home_name = _safe_string(user_context.get("home_name") or (user_context.get("home") or {}).get("home_name"))
+
+    lines.append("============================================================")
+    lines.append("OPERATIONAL RECORD CONTEXT")
+    lines.append("")
+    if scope_type:
+        lines.append(f"Scope type: {scope_type}")
+    if young_person_name:
+        lines.append(f"Young person: {young_person_name}")
+    if home_name:
+        lines.append(f"Home: {home_name}")
+
+    child_voice_summary = user_context.get("child_voice_summary")
+    if isinstance(child_voice_summary, dict):
+        themes = child_voice_summary.get("themes") or []
+        voice_entries = child_voice_summary.get("recent_voice_entries") or []
+        if themes:
+            lines.append(f"Child voice themes: {', '.join(str(x) for x in themes[:6])}")
+        if voice_entries:
+            lines.append("Recent child voice extracts:")
+            for entry in voice_entries[:4]:
+                if not isinstance(entry, dict):
+                    continue
+                text = _safe_string(entry.get("text"))
+                source_bucket = _safe_string(entry.get("source_bucket"))
+                record_id = entry.get("record_id")
+                if text:
+                    lines.append(f"- {source_bucket}:{record_id} — {text[:180]}")
+
+    report_snapshot = user_context.get("report_snapshot")
+    if isinstance(report_snapshot, dict):
+        lines.append("")
+        lines.append("Report snapshot available: yes")
+        report_type = _safe_string(report_snapshot.get("report_type"))
+        if report_type:
+            lines.append(f"Report type: {report_type}")
+
+    if not evidence_index and not sources:
+        lines.append("")
+        lines.append("No structured evidence items were attached.")
+        return "\n".join(lines).strip()
+
+    if selected_mode == "quick":
+        evidence_limit = 10
+        source_limit = 8
+    elif selected_mode == "deep":
+        evidence_limit = 28
+        source_limit = 20
+    else:
+        evidence_limit = 18
+        source_limit = 12
+
+    if evidence_index:
+        lines.append("")
+        lines.append("Evidence index:")
+        for item in evidence_index[:evidence_limit]:
+            if not isinstance(item, dict):
+                continue
+            citation_ref = _safe_string(item.get("citation_ref"))
+            label = _safe_string(item.get("label") or item.get("title"))
+            section = _safe_string(item.get("section"))
+            excerpt = _safe_string(item.get("excerpt") or item.get("description"))
+            record_type = _safe_string(item.get("record_type"))
+            lines.append(
+                f"- [{citation_ref}] type={record_type}; section={section}; label={label}; excerpt={excerpt[:220]}"
+            )
+
+    if sources:
+        lines.append("")
+        lines.append("Available sources:")
+        for item in sources[:source_limit]:
+            if not isinstance(item, dict):
+                continue
+            citation_ref = _safe_string(item.get("citation_ref"))
+            record_type = _safe_string(item.get("record_type"))
+            label = _safe_string(item.get("label") or item.get("title"))
+            section = _safe_string(item.get("section"))
+            excerpt = _safe_string(item.get("excerpt"))
+            lines.append(
+                f"- [{citation_ref}] type={record_type}; section={section}; label={label}; excerpt={excerpt[:180]}"
+            )
+
+    lines.append("")
+    lines.append("Use these citation_ref values inline wherever evidence supports the statement.")
+    lines.append("Prefer specific operational evidence before general guidance.")
+    lines.append("If evidence is missing, say this explicitly.")
+
+    return "\n".join(lines).strip()
+
+
+def _append_internal_evidence_context(
+    system_prompt: str,
+    *,
+    evidence_index: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    user_context: dict[str, Any],
+    selected_mode: str,
+) -> str:
+    evidence_block = _build_context_evidence_block(
+        evidence_index=evidence_index,
+        sources=sources,
+        user_context=user_context,
+        selected_mode=selected_mode,
+    )
+    if not evidence_block:
+        return system_prompt
+
+    return f"{system_prompt}\n\n{evidence_block}".strip()
+
+
+def _append_citation_rules(
+    system_prompt: str,
+    *,
+    evidence_index: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+) -> str:
+    if not evidence_index and not sources:
+        return system_prompt
+
+    extra = """
+============================================================
+EVIDENCE AND CITATION RULES
+
+You have access to internal operational evidence with citation_ref values.
+
+Rules:
+- When making evidence-based statements, cite inline using the exact citation_ref in square brackets, for example [incident:123].
+- Prefer direct internal evidence over generic guidance.
+- Do not invent citation_ref values.
+- If multiple items support a sentence, cite more than one when useful.
+- If evidence is partial, say it is partial.
+- If the request asks for an overview, synthesise the evidence but still cite key claims.
+- For Reg 45, overview, chronology, safeguarding, quality or compliance requests, evidence-led analysis is required.
+"""
+    return f"{system_prompt}\n\n{extra}".strip()
+
+
 def _classify_source_groups(sources: list[dict]) -> dict[str, int]:
     counts = {
         "internal_evidence": 0,
@@ -533,9 +704,9 @@ def _estimate_evidence_sufficiency(
     evidence_count = len(evidence_index)
     source_count = len(sources)
 
-    if evidence_count >= 5 or source_count >= 6:
+    if evidence_count >= 8 or source_count >= 8:
         return "strong"
-    if evidence_count >= 2 or source_count >= 3:
+    if evidence_count >= 3 or source_count >= 4:
         return "moderate"
     if guidance_used or evidence_count >= 1 or source_count >= 1:
         return "limited"
@@ -705,7 +876,12 @@ async def generate_ai_stream(
     task_type = getattr(runtime, "task_type", "guidance")
     output_type = getattr(runtime, "output_type", "plain_response")
 
+    if _safe_bool(user_context.get("reg45_requested")) or _safe_string(user_context.get("report_type")).lower() == "reg45":
+        output_type = "structured_report"
+        task_type = "report"
+
     orchestration_sources = _normalise_sources(orchestration.sources)
+    context_sources = _normalise_sources(user_context.get("sources"))
     runtime_payload = dict(orchestration.runtime_payload or {})
     explainability_payload = build_explainability_payload(
         user_message=message,
@@ -715,6 +891,7 @@ async def generate_ai_stream(
     orchestration_evidence_index = _normalise_evidence_index(
         runtime_payload.get("evidence_index") or []
     )
+    context_evidence_index = _normalise_evidence_index(user_context.get("evidence_index") or [])
 
     request_audit_event = log_assistant_request_started(
         session_id=session_id,
@@ -764,7 +941,29 @@ async def generate_ai_stream(
                 "content": sentence,
             }
 
+    merged_pre_provider_sources = _merge_sources(
+        orchestration_sources,
+        context_sources,
+    )
+    merged_pre_provider_evidence = _merge_evidence_indexes(
+        orchestration_evidence_index,
+        context_evidence_index,
+        runtime_payload.get("evidence_index") or [],
+    )
+
     final_system_prompt = _append_live_guidance_context(system_prompt, trimmed_search_results)
+    final_system_prompt = _append_internal_evidence_context(
+        final_system_prompt,
+        evidence_index=merged_pre_provider_evidence,
+        sources=merged_pre_provider_sources,
+        user_context=user_context,
+        selected_mode=selected_mode,
+    )
+    final_system_prompt = _append_citation_rules(
+        final_system_prompt,
+        evidence_index=merged_pre_provider_evidence,
+        sources=merged_pre_provider_sources,
+    )
     final_system_prompt = _append_service_level_answer_rules(final_system_prompt)
 
     messages = [
@@ -777,8 +976,8 @@ async def generate_ai_stream(
         (
             "Starting AI stream session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s response_mode=%s model=%s temperature=%s max_tokens=%s "
-            "history_count=%s has_document=%s sources=%s guidance_enabled=%s guidance_reason=%s "
-            "guidance_skipped=%s evidence=%s"
+            "history_count=%s has_document=%s sources=%s evidence=%s guidance_enabled=%s guidance_reason=%s "
+            "guidance_skipped=%s"
         ),
         session_id,
         mode,
@@ -791,11 +990,11 @@ async def generate_ai_stream(
         model_plan.max_tokens,
         len(messages),
         bool(trimmed_document_text),
-        len(orchestration_sources),
+        len(merged_pre_provider_sources),
+        len(merged_pre_provider_evidence),
         guidance_enabled,
         guidance_plan.reason,
         skip_guidance_search,
-        len(orchestration_evidence_index),
     )
 
     provider = get_llm_provider()
@@ -828,6 +1027,10 @@ async def generate_ai_stream(
                     "response_mode": selected_mode,
                     "conversation_id": _safe_string(conversation_id or session_id),
                     "user_id": _safe_string(user_id),
+                    "scope_type": _safe_string(user_context.get("scope_type") or (user_context.get("scope") or {}).get("scope_type")),
+                    "assistant_type": _safe_string(user_context.get("assistant_type")),
+                    "evidence_count": len(merged_pre_provider_evidence),
+                    "source_count": len(merged_pre_provider_sources),
                 },
             )
         ):
@@ -920,6 +1123,7 @@ async def generate_ai_stream(
 
     final_sources = _merge_sources(
         orchestration_sources,
+        context_sources,
         provider_meta_sources,
     )
 
@@ -936,6 +1140,7 @@ async def generate_ai_stream(
 
     final_evidence_index = _merge_evidence_indexes(
         orchestration_evidence_index,
+        context_evidence_index,
         final_runtime.get("evidence_index") or [],
         provider_evidence_index,
     )
