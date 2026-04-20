@@ -52,6 +52,20 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
+def _safe_bool(value: Any) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"true", "1", "yes", "y", "on"}:
+            return True
+        if lowered in {"false", "0", "no", "n", "off"}:
+            return False
+    return bool(value)
+
+
 def _safe_int_list(value: Any) -> list[int]:
     if not isinstance(value, list):
         return []
@@ -60,6 +74,17 @@ def _safe_int_list(value: Any) -> list[int]:
         safe = _safe_int(item)
         if safe is not None:
             result.append(safe)
+    return result
+
+
+def _safe_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    result: list[str] = []
+    for item in value:
+        text = _safe_string(item)
+        if text:
+            result.append(text)
     return result
 
 
@@ -132,6 +157,7 @@ def _record_title(record_type: str, item: dict[str, Any]) -> str:
             "visitor_name",
             "action_title",
             "line_of_enquiry",
+            "young_person_name",
         ],
     )
     if value not in (None, ""):
@@ -209,8 +235,6 @@ def _record_date(item: dict[str, Any]) -> str | None:
             "report_date",
             "opening_date",
             "closing_date",
-            "period_end",
-            "review_period_end",
             "created_at",
             "updated_at",
         ],
@@ -254,6 +278,10 @@ def _source_section_for_record_type(record_type: str) -> str:
         "vehicle_journey": "transport",
         "staff_wellbeing_checkin": "team",
         "staff_support_plan": "team",
+        "child_review": "reports",
+        "incident_summary": "quality",
+        "safeguarding_summary": "quality",
+        "compliance_summary": "quality",
     }
     return mapping.get(record_type, "workspace")
 
@@ -333,6 +361,32 @@ def _make_evidence_item(
     }
 
 
+def _make_summary_evidence_item(
+    *,
+    scope_type: str,
+    record_type: str,
+    label: str,
+    excerpt: str,
+    section: str,
+    home_id: int | None = None,
+    young_person_id: int | None = None,
+    synthetic_id: str,
+) -> dict[str, Any]:
+    return {
+        "citation_ref": f"{record_type}:{synthetic_id}",
+        "record_type": record_type,
+        "record_id": None,
+        "label": label,
+        "excerpt": excerpt[:280],
+        "date": None,
+        "section": section,
+        "scope_type": scope_type,
+        "young_person_id": young_person_id,
+        "home_id": home_id,
+        "deep_link": None,
+    }
+
+
 def _extend_evidence_index(
     evidence_index: list[dict[str, Any]],
     *,
@@ -378,6 +432,37 @@ def _sort_evidence_index(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return (_safe_string(item.get("date")) or "", _safe_string(item.get("citation_ref")))
 
     return sorted(items, key=sort_key, reverse=True)
+
+
+def _evidence_to_sources(evidence_index: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for item in evidence_index:
+        citation_ref = _safe_string(item.get("citation_ref"))
+        if not citation_ref or citation_ref.lower() in seen:
+            continue
+        seen.add(citation_ref.lower())
+
+        sources.append(
+            {
+                "type": "record",
+                "label": item.get("label"),
+                "title": item.get("label"),
+                "section": item.get("section"),
+                "excerpt": item.get("excerpt"),
+                "record_type": item.get("record_type"),
+                "record_id": item.get("record_id"),
+                "citation_ref": citation_ref,
+                "date": item.get("date"),
+                "scope_type": item.get("scope_type"),
+                "young_person_id": item.get("young_person_id"),
+                "home_id": item.get("home_id"),
+                "deep_link": item.get("deep_link"),
+            }
+        )
+
+    return sources
 
 
 def _get_user_row(conn, user_id: int) -> dict[str, Any] | None:
@@ -1008,6 +1093,75 @@ def _build_scoped_record_context(
     }
 
 
+def _build_child_voice_summary(
+    recent_records: dict[str, Any],
+) -> dict[str, Any]:
+    recent_voice_entries: list[dict[str, Any]] = []
+    themes: list[str] = []
+
+    for bucket_name in [
+        "daily_notes",
+        "keywork_sessions",
+        "family_contact_records",
+        "wellbeing_checks",
+        "therapy_session_notes",
+        "achievements",
+    ]:
+        for item in recent_records.get(bucket_name, [])[:5]:
+            voice = _first_non_empty(
+                item,
+                [
+                    "young_person_voice",
+                    "child_voice",
+                    "summary",
+                    "session_summary",
+                    "outcome",
+                    "presentation",
+                    "notes",
+                ],
+            )
+            if not voice:
+                continue
+
+            text = _safe_string(voice)
+            if not text:
+                continue
+
+            recent_voice_entries.append(
+                {
+                    "source_bucket": bucket_name,
+                    "record_id": _safe_int(item.get("id")),
+                    "text": text[:240],
+                }
+            )
+
+    for entry in recent_voice_entries[:6]:
+        text = entry["text"].lower()
+        if any(word in text for word in ["family", "mum", "dad", "contact"]):
+            themes.append("family relationships")
+        if any(word in text for word in ["school", "college", "education"]):
+            themes.append("education")
+        if any(word in text for word in ["anxious", "angry", "sad", "happy", "mood"]):
+            themes.append("emotional wellbeing")
+        if any(word in text for word in ["home", "staff", "placement"]):
+            themes.append("experience of care")
+        if any(word in text for word in ["friend", "peer", "social"]):
+            themes.append("social relationships")
+
+    deduped_themes: list[str] = []
+    seen: set[str] = set()
+    for theme in themes:
+        if theme in seen:
+            continue
+        seen.add(theme)
+        deduped_themes.append(theme)
+
+    return {
+        "themes": deduped_themes,
+        "recent_voice_entries": recent_voice_entries[:8],
+    }
+
+
 def _build_young_person_evidence_index(
     *,
     young_person_id: int,
@@ -1079,6 +1233,14 @@ def build_young_person_context(
     active_work = _build_active_work_context(conn, young_person_id)
     recent_records = _build_recent_records_context(conn, young_person_id)
 
+    evidence_index = _build_young_person_evidence_index(
+        young_person_id=young_person_id,
+        home_id=young_person_home_id,
+        identity=identity,
+        active_work=active_work,
+        recent_records=recent_records,
+    )
+
     return {
         "scope": {
             "scope_type": "young_person",
@@ -1102,14 +1264,88 @@ def build_young_person_context(
             record_type=scope.get("record_type"),
             record_id=scope.get("record_id"),
         ),
-        "evidence_index": _build_young_person_evidence_index(
-            young_person_id=young_person_id,
-            home_id=young_person_home_id,
-            identity=identity,
-            active_work=active_work,
-            recent_records=recent_records,
-        ),
+        "child_voice_summary": _build_child_voice_summary(recent_records),
+        "evidence_index": evidence_index,
+        "sources": _evidence_to_sources(evidence_index),
     }
+
+
+def _build_child_review_context(
+    conn,
+    *,
+    user_id: int,
+    young_person_id: int,
+    review_type: str = "reg45",
+    scope: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    base = build_young_person_context(
+        conn,
+        user_id=user_id,
+        young_person_id=young_person_id,
+        scope=scope,
+    )
+
+    recent_records = base.get("recent_records", {})
+    active_work = base.get("active_work", {})
+    young_person = base.get("young_person", {}) or {}
+
+    review_summary = {
+        "review_type": review_type,
+        "young_person_name": _safe_string(
+            young_person.get("preferred_name")
+            or f"{_safe_string(young_person.get('first_name'))} {_safe_string(young_person.get('last_name'))}".strip()
+        )
+        or "Young person",
+        "incidents_count": len(recent_records.get("incidents", [])),
+        "missing_episodes_count": len(recent_records.get("missing_episodes", [])),
+        "safeguarding_records_count": len(recent_records.get("safeguarding_records", [])),
+        "education_records_count": len(recent_records.get("education_records", [])),
+        "health_records_count": len(recent_records.get("health_records", [])),
+        "family_contact_records_count": len(recent_records.get("family_contact_records", [])),
+        "keywork_sessions_count": len(recent_records.get("keywork_sessions", [])),
+        "achievements_count": len(recent_records.get("achievements", [])),
+        "open_tasks_count": len(active_work.get("tasks", [])),
+        "appointments_count": len(active_work.get("appointments", [])),
+        "support_plans_count": len(active_work.get("support_plans", [])),
+        "risk_assessments_count": len(active_work.get("risk_assessments", [])),
+    }
+
+    review_evidence = list(base.get("evidence_index", []))
+    review_evidence.insert(
+        0,
+        _make_summary_evidence_item(
+            scope_type="young_person",
+            record_type="child_review",
+            label=f"{review_summary['young_person_name']} {review_type.upper()} overview",
+            excerpt=(
+                f"Incidents: {review_summary['incidents_count']}; "
+                f"Missing episodes: {review_summary['missing_episodes_count']}; "
+                f"Safeguarding: {review_summary['safeguarding_records_count']}; "
+                f"Education records: {review_summary['education_records_count']}; "
+                f"Health records: {review_summary['health_records_count']}; "
+                f"Family contacts: {review_summary['family_contact_records_count']}; "
+                f"Keywork sessions: {review_summary['keywork_sessions_count']}; "
+                f"Achievements: {review_summary['achievements_count']}; "
+                f"Open tasks: {review_summary['open_tasks_count']}."
+            ),
+            section="reports",
+            home_id=base.get("scope", {}).get("home_id"),
+            young_person_id=young_person_id,
+            synthetic_id=f"{review_type}-{young_person_id}",
+        ),
+    )
+
+    review_evidence = _sort_evidence_index(_dedupe_evidence_index(review_evidence))
+
+    merged = dict(base)
+    merged["report_type"] = review_type
+    merged["review_summary"] = review_summary
+    merged["reg45_requested"] = review_type == "reg45"
+    merged["ask_for_summary"] = True
+    merged["output_mode"] = "structured_report"
+    merged["evidence_index"] = review_evidence
+    merged["sources"] = _evidence_to_sources(review_evidence)
+    return merged
 
 
 def _build_home_header(conn, home_id: int) -> dict[str, Any] | None:
@@ -1252,6 +1488,28 @@ def build_home_os_context(
         "home_name": (home or {}).get("home_name") or (home or {}).get("name"),
     }
 
+    evidence_index = _build_home_evidence_index(
+        home_id=home_id,
+        team=team,
+        tasks=tasks,
+        communications=communications,
+        documents=documents,
+        supervision_sessions=supervision_sessions,
+        therapy_session_notes=therapy_session_notes,
+        inspection_actions=inspection_actions,
+        inspection_lines=inspection_lines,
+        reports=reports,
+        training_records=training_records,
+        rota=rota,
+        onboarding=onboarding,
+        incidents=incidents,
+        vacancies=vacancies,
+        visitors=visitors,
+        transport=transport,
+        staff_support_plans=staff_support_plans,
+        wellbeing_checkins=wellbeing_checkins,
+    )
+
     return {
         "scope": {
             "scope_type": "home",
@@ -1286,27 +1544,8 @@ def build_home_os_context(
         "transport": transport,
         "staff_support_plans": staff_support_plans,
         "wellbeing_checkins": wellbeing_checkins,
-        "evidence_index": _build_home_evidence_index(
-            home_id=home_id,
-            team=team,
-            tasks=tasks,
-            communications=communications,
-            documents=documents,
-            supervision_sessions=supervision_sessions,
-            therapy_session_notes=therapy_session_notes,
-            inspection_actions=inspection_actions,
-            inspection_lines=inspection_lines,
-            reports=reports,
-            training_records=training_records,
-            rota=rota,
-            onboarding=onboarding,
-            incidents=incidents,
-            vacancies=vacancies,
-            visitors=visitors,
-            transport=transport,
-            staff_support_plans=staff_support_plans,
-            wellbeing_checkins=wellbeing_checkins,
-        ),
+        "evidence_index": evidence_index,
+        "sources": _evidence_to_sources(evidence_index),
     }
 
 
@@ -1388,6 +1627,7 @@ def build_quality_os_context(
             "inspection_reasons": [],
             "inspection_lines": [],
             "evidence_index": [],
+            "sources": [],
         }
 
     homes = _safe_fetch_all(
@@ -1431,6 +1671,21 @@ def build_quality_os_context(
         "inspection_actions_count": len(inspection_actions),
     }
 
+    evidence_index = _build_quality_evidence_index(
+        selected_home_id=selected_home_id,
+        audits=audits,
+        incidents=incidents,
+        compliance_items=compliance_items,
+        reports=reports,
+        team=team,
+        supervisions=supervisions,
+        documents=documents,
+        inspection_cards=inspection_cards,
+        inspection_actions=inspection_actions,
+        inspection_reasons=inspection_reasons,
+        inspection_lines=inspection_lines,
+    )
+
     return {
         "scope": {
             "scope_type": "quality",
@@ -1456,20 +1711,8 @@ def build_quality_os_context(
         "inspection_actions": inspection_actions,
         "inspection_reasons": inspection_reasons,
         "inspection_lines": inspection_lines,
-        "evidence_index": _build_quality_evidence_index(
-            selected_home_id=selected_home_id,
-            audits=audits,
-            incidents=incidents,
-            compliance_items=compliance_items,
-            reports=reports,
-            team=team,
-            supervisions=supervisions,
-            documents=documents,
-            inspection_cards=inspection_cards,
-            inspection_actions=inspection_actions,
-            inspection_reasons=inspection_reasons,
-            inspection_lines=inspection_lines,
-        ),
+        "evidence_index": evidence_index,
+        "sources": _evidence_to_sources(evidence_index),
     }
 
 
@@ -1503,6 +1746,7 @@ def build_public_context(*, scope: dict[str, Any] | None = None) -> dict[str, An
             "home_data_available": False,
         },
         "evidence_index": [],
+        "sources": [],
     }
 
 
@@ -1559,16 +1803,10 @@ def build_assistant_context(
     raise ValueError("Unsupported assistant_type")
 
 
-# =========================
-# REPORT CONTEXT BUILDERS
-# =========================
-
 def build_monthly_report_context(
     conn,
     *,
     home_id: int | None,
-    start_date,
-    end_date,
     access_level: str | None = None,
     allowed_home_ids: list[int] | None = None,
     provider_id: int | None = None,
@@ -1578,7 +1816,6 @@ def build_monthly_report_context(
     if not home_ids:
         return {
             "report_type": "monthly",
-            "period": {"start_date": str(start_date), "end_date": str(end_date)},
             "home_ids": [],
             "allowed_home_ids": [],
             "access_level": access_level,
@@ -1593,6 +1830,7 @@ def build_monthly_report_context(
             "management_summary": {},
             "positive_indicators": {},
             "evidence_index": [],
+            "sources": [],
         }
 
     homes = _safe_fetch_all(
@@ -1618,53 +1856,37 @@ def build_monthly_report_context(
             (
                 SELECT COUNT(*) FROM education_records er
                 WHERE er.young_person_id = yp.id
-                  AND er.record_date BETWEEN %s AND %s
             ) AS education_records_count,
             (
                 SELECT COUNT(*) FROM health_records hr
                 WHERE hr.young_person_id = yp.id
-                  AND hr.event_datetime BETWEEN %s AND %s
             ) AS health_records_count,
             (
                 SELECT COUNT(*) FROM family_contact_records fcr
                 WHERE fcr.young_person_id = yp.id
-                  AND fcr.contact_datetime BETWEEN %s AND %s
             ) AS family_contact_records_count,
             (
                 SELECT COUNT(*) FROM achievement_records ar
                 WHERE ar.young_person_id = yp.id
-                  AND ar.achievement_date BETWEEN %s AND %s
             ) AS achievement_records_count,
             (
                 SELECT COUNT(*) FROM incidents i
                 WHERE i.young_person_id = yp.id
-                  AND i.incident_datetime BETWEEN %s AND %s
             ) AS incidents_count,
             (
                 SELECT COUNT(*) FROM missing_episodes me
                 WHERE me.young_person_id = yp.id
-                  AND me.start_datetime BETWEEN %s AND %s
             ) AS missing_episodes_count,
             (
                 SELECT COUNT(*) FROM keywork_sessions ks
                 WHERE ks.young_person_id = yp.id
-                  AND ks.session_date BETWEEN %s AND %s
             ) AS keywork_sessions_count
         FROM young_people yp
         WHERE yp.home_id = ANY(%s)
           AND COALESCE(yp.archived, FALSE) = FALSE
         ORDER BY yp.home_id ASC, yp.first_name ASC, yp.last_name ASC, yp.id ASC
         """,
-        (
-            start_date, end_date,
-            start_date, end_date,
-            start_date, end_date,
-            start_date, end_date,
-            start_date, end_date,
-            start_date, end_date,
-            start_date, end_date,
-            home_ids,
-        ),
+        (home_ids,),
     )
 
     incident_summary = _safe_fetch_all(
@@ -1673,11 +1895,10 @@ def build_monthly_report_context(
         SELECT home_id, incident_type, COUNT(*) AS count
         FROM incidents
         WHERE home_id = ANY(%s)
-          AND incident_datetime BETWEEN %s AND %s
         GROUP BY home_id, incident_type
         ORDER BY home_id ASC, count DESC, incident_type ASC
         """,
-        (home_ids, start_date, end_date),
+        (home_ids,),
     )
 
     safeguarding_summary = _safe_fetch_all(
@@ -1686,11 +1907,10 @@ def build_monthly_report_context(
         SELECT home_id, safeguarding_category, status, COUNT(*) AS count
         FROM safeguarding_records
         WHERE home_id = ANY(%s)
-          AND concern_datetime BETWEEN %s AND %s
         GROUP BY home_id, safeguarding_category, status
         ORDER BY home_id ASC, count DESC
         """,
-        (home_ids, start_date, end_date),
+        (home_ids,),
     )
 
     compliance_summary = _safe_fetch_all(
@@ -1700,11 +1920,10 @@ def build_monthly_report_context(
         FROM tasks
         WHERE home_id = ANY(%s)
           AND COALESCE(compliance_generated, FALSE) = TRUE
-          AND updated_at BETWEEN %s AND %s
         GROUP BY home_id, status, priority
         ORDER BY home_id ASC, count DESC
         """,
-        (home_ids, start_date, end_date),
+        (home_ids,),
     )
 
     staffing_summary = {
@@ -1736,11 +1955,10 @@ def build_monthly_report_context(
             SELECT home_id, status, COUNT(*) AS count
             FROM rota
             WHERE home_id = ANY(%s)
-              AND shift_date BETWEEN %s AND %s
             GROUP BY home_id, status
             ORDER BY home_id ASC, count DESC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "staff_shifts": _safe_fetch_all(
             conn,
@@ -1748,11 +1966,10 @@ def build_monthly_report_context(
             SELECT home_id, status, COUNT(*) AS count
             FROM shifts
             WHERE home_id = ANY(%s)
-              AND shift_date BETWEEN %s AND %s
             GROUP BY home_id, status
             ORDER BY home_id ASC, count DESC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "checkins": _safe_fetch_all(
             conn,
@@ -1760,11 +1977,10 @@ def build_monthly_report_context(
             SELECT home_id, COUNT(*) AS count
             FROM staff_wellbeing_checkins
             WHERE home_id = ANY(%s)
-              AND created_at BETWEEN %s AND %s
             GROUP BY home_id
             ORDER BY home_id ASC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
     }
 
@@ -1775,11 +1991,10 @@ def build_monthly_report_context(
             SELECT home_id, COUNT(*) AS count
             FROM supervision_notes
             WHERE home_id = ANY(%s)
-              AND created_at BETWEEN %s AND %s
             GROUP BY home_id
             ORDER BY home_id ASC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "supervision_submissions": _safe_fetch_all(
             conn,
@@ -1787,11 +2002,10 @@ def build_monthly_report_context(
             SELECT home_id, status, COUNT(*) AS count
             FROM supervision_submissions
             WHERE home_id = ANY(%s)
-              AND submitted_at BETWEEN %s AND %s
             GROUP BY home_id, status
             ORDER BY home_id ASC, count DESC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "supervision_summaries": _safe_fetch_all(
             conn,
@@ -1799,11 +2013,10 @@ def build_monthly_report_context(
             SELECT home_id, COUNT(*) AS count
             FROM supervision_sessions
             WHERE home_id = ANY(%s)
-              AND updated_at BETWEEN %s AND %s
             GROUP BY home_id
             ORDER BY home_id ASC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
     }
 
@@ -1814,11 +2027,10 @@ def build_monthly_report_context(
             SELECT home_id, status, COUNT(*) AS count
             FROM tasks
             WHERE home_id = ANY(%s)
-              AND updated_at BETWEEN %s AND %s
             GROUP BY home_id, status
             ORDER BY home_id ASC, count DESC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "manager_actions": _safe_fetch_all(
             conn,
@@ -1826,11 +2038,10 @@ def build_monthly_report_context(
             SELECT home_id, status, COUNT(*) AS count
             FROM transition_actions
             WHERE home_id = ANY(%s)
-              AND updated_at BETWEEN %s AND %s
             GROUP BY home_id, status
             ORDER BY home_id ASC, count DESC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "monthly_reviews": [],
         "review_meetings": [],
@@ -1843,11 +2054,10 @@ def build_monthly_report_context(
             SELECT home_id, COUNT(*) AS count
             FROM achievement_records
             WHERE home_id = ANY(%s)
-              AND achievement_date BETWEEN %s AND %s
             GROUP BY home_id
             ORDER BY home_id ASC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "keywork_counts": _safe_fetch_all(
             conn,
@@ -1855,11 +2065,10 @@ def build_monthly_report_context(
             SELECT home_id, COUNT(*) AS count
             FROM keywork_sessions
             WHERE home_id = ANY(%s)
-              AND session_date BETWEEN %s AND %s
             GROUP BY home_id
             ORDER BY home_id ASC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "family_contact_counts": _safe_fetch_all(
             conn,
@@ -1867,11 +2076,10 @@ def build_monthly_report_context(
             SELECT home_id, COUNT(*) AS count
             FROM family_contact_records
             WHERE home_id = ANY(%s)
-              AND contact_datetime BETWEEN %s AND %s
             GROUP BY home_id
             ORDER BY home_id ASC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
         "daily_notes_counts": _safe_fetch_all(
             conn,
@@ -1879,22 +2087,69 @@ def build_monthly_report_context(
             SELECT home_id, COUNT(*) AS count
             FROM daily_notes
             WHERE home_id = ANY(%s)
-              AND note_date BETWEEN %s AND %s
             GROUP BY home_id
             ORDER BY home_id ASC
             """,
-            (home_ids, start_date, end_date),
+            (home_ids,),
         ),
     }
 
     evidence_index: list[dict[str, Any]] = []
-    _extend_evidence_index(evidence_index, scope_type="quality", record_type="incident_summary", items=incident_summary, home_id=home_id, section="quality")
-    _extend_evidence_index(evidence_index, scope_type="quality", record_type="safeguarding_summary", items=safeguarding_summary, home_id=home_id, section="quality")
-    _extend_evidence_index(evidence_index, scope_type="quality", record_type="compliance_summary", items=compliance_summary, home_id=home_id, section="quality")
+
+    for row in incident_summary:
+        synthetic_id = f"{row.get('home_id')}-{_safe_string(row.get('incident_type'))}"
+        evidence_index.append(
+            _make_summary_evidence_item(
+                scope_type="quality",
+                record_type="incident_summary",
+                label=f"Incident pattern - Home {row.get('home_id')}",
+                excerpt=f"Incident type: {_safe_string(row.get('incident_type'))}; Count: {_safe_string(row.get('count'))}",
+                section="quality",
+                home_id=_safe_int(row.get("home_id")),
+                synthetic_id=synthetic_id,
+            )
+        )
+
+    for row in safeguarding_summary:
+        synthetic_id = f"{row.get('home_id')}-{_safe_string(row.get('safeguarding_category'))}-{_safe_string(row.get('status'))}"
+        evidence_index.append(
+            _make_summary_evidence_item(
+                scope_type="quality",
+                record_type="safeguarding_summary",
+                label=f"Safeguarding pattern - Home {row.get('home_id')}",
+                excerpt=(
+                    f"Category: {_safe_string(row.get('safeguarding_category'))}; "
+                    f"Status: {_safe_string(row.get('status'))}; "
+                    f"Count: {_safe_string(row.get('count'))}"
+                ),
+                section="quality",
+                home_id=_safe_int(row.get("home_id")),
+                synthetic_id=synthetic_id,
+            )
+        )
+
+    for row in compliance_summary:
+        synthetic_id = f"{row.get('home_id')}-{_safe_string(row.get('status'))}-{_safe_string(row.get('severity'))}"
+        evidence_index.append(
+            _make_summary_evidence_item(
+                scope_type="quality",
+                record_type="compliance_summary",
+                label=f"Compliance pattern - Home {row.get('home_id')}",
+                excerpt=(
+                    f"Status: {_safe_string(row.get('status'))}; "
+                    f"Severity: {_safe_string(row.get('severity'))}; "
+                    f"Count: {_safe_string(row.get('count'))}"
+                ),
+                section="quality",
+                home_id=_safe_int(row.get("home_id")),
+                synthetic_id=synthetic_id,
+            )
+        )
+
+    evidence_index = _sort_evidence_index(_dedupe_evidence_index(evidence_index))
 
     return {
         "report_type": "monthly",
-        "period": {"start_date": str(start_date), "end_date": str(end_date)},
         "home_id": home_id,
         "home_ids": home_ids,
         "allowed_home_ids": home_ids,
@@ -1910,7 +2165,8 @@ def build_monthly_report_context(
         "supervision_summary": supervision_summary,
         "management_summary": management_summary,
         "positive_indicators": positive_indicators,
-        "evidence_index": _sort_evidence_index(_dedupe_evidence_index(evidence_index)),
+        "evidence_index": evidence_index,
+        "sources": _evidence_to_sources(evidence_index),
     }
 
 
@@ -1918,8 +2174,6 @@ def build_reg45_context(
     conn,
     *,
     home_id: int | None,
-    start_date,
-    end_date,
     access_level: str | None = None,
     allowed_home_ids: list[int] | None = None,
     provider_id: int | None = None,
@@ -1928,14 +2182,14 @@ def build_reg45_context(
     result = build_monthly_report_context(
         conn,
         home_id=home_id,
-        start_date=start_date,
-        end_date=end_date,
         access_level=access_level,
         allowed_home_ids=allowed_home_ids,
         provider_id=provider_id,
         generated_by=generated_by,
     )
     result["report_type"] = "reg45"
+    result["reg45_requested"] = True
+    result["output_mode"] = "structured_report"
     return result
 
 
@@ -1943,8 +2197,6 @@ def build_yearly_report_context(
     conn,
     *,
     home_id: int | None,
-    start_date,
-    end_date,
     access_level: str | None = None,
     allowed_home_ids: list[int] | None = None,
     provider_id: int | None = None,
@@ -1953,14 +2205,13 @@ def build_yearly_report_context(
     result = build_monthly_report_context(
         conn,
         home_id=home_id,
-        start_date=start_date,
-        end_date=end_date,
         access_level=access_level,
         allowed_home_ids=allowed_home_ids,
         provider_id=provider_id,
         generated_by=generated_by,
     )
     result["report_type"] = "yearly"
+    result["output_mode"] = "structured_report"
     return result
 
 
@@ -1969,8 +2220,6 @@ def preview_report_snapshot(
     *,
     report_type: str,
     home_id: int | None,
-    start_date,
-    end_date,
     access_level: str | None = None,
     allowed_home_ids: list[int] | None = None,
     provider_id: int | None = None,
@@ -1979,8 +2228,6 @@ def preview_report_snapshot(
         return build_reg45_context(
             conn,
             home_id=home_id,
-            start_date=start_date,
-            end_date=end_date,
             access_level=access_level,
             allowed_home_ids=allowed_home_ids,
             provider_id=provider_id,
@@ -1989,8 +2236,6 @@ def preview_report_snapshot(
         return build_yearly_report_context(
             conn,
             home_id=home_id,
-            start_date=start_date,
-            end_date=end_date,
             access_level=access_level,
             allowed_home_ids=allowed_home_ids,
             provider_id=provider_id,
@@ -1998,9 +2243,206 @@ def preview_report_snapshot(
     return build_monthly_report_context(
         conn,
         home_id=home_id,
-        start_date=start_date,
-        end_date=end_date,
         access_level=access_level,
         allowed_home_ids=allowed_home_ids,
         provider_id=provider_id,
     )
+
+
+def build_context_hints_from_message(message: str | None) -> dict[str, Any]:
+    text = _safe_string(message).lower()
+    if not text:
+        return {}
+
+    hints: dict[str, Any] = {
+        "ask_for_summary": any(word in text for word in ["overview", "summary", "full view", "full picture"]),
+        "ask_for_chronology": any(word in text for word in ["chronology", "timeline"]),
+        "ask_for_compliance_view": any(word in text for word in ["compliance", "standards", "quality standard"]),
+        "reg45_requested": any(word in text for word in ["reg 45", "reg45"]),
+        "focus_domains": [],
+    }
+
+    if hints["reg45_requested"]:
+        hints["report_type"] = "reg45"
+        hints["output_mode"] = "structured_report"
+
+    domain_pairs = [
+        ("incidents", ["incident", "incidents", "behaviour"]),
+        ("safeguarding", ["safeguarding", "missing", "risk"]),
+        ("education", ["education", "school", "college"]),
+        ("health", ["health", "medication", "mental health", "wellbeing"]),
+        ("family", ["family", "contact", "mum", "dad"]),
+        ("keywork", ["keywork", "session"]),
+        ("therapy", ["therapy"]),
+        ("documents", ["document", "documents", "statutory"]),
+        ("tasks", ["task", "tasks", "action", "actions"]),
+        ("quality", ["quality", "inspection", "ofsted", "reg 44", "reg44"]),
+        ("reports", ["report", "reports", "review"]),
+        ("team", ["team", "staff", "supervision", "training"]),
+    ]
+
+    focus_domains: list[str] = []
+    for domain, keywords in domain_pairs:
+        if any(keyword in text for keyword in keywords):
+            focus_domains.append(domain)
+
+    hints["focus_domains"] = focus_domains
+    return {k: v for k, v in hints.items() if v not in (None, "", [], {})}
+
+
+def build_runtime_assistant_context(
+    conn,
+    *,
+    user_id: int,
+    assistant_type: AssistantType,
+    scope: dict[str, Any] | None,
+    ui_context: dict[str, Any] | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    safe_scope = _normalise_scope(scope)
+    safe_ui = dict(ui_context or {})
+    message_hints = build_context_hints_from_message(message)
+
+    merged_scope = {
+        **safe_scope,
+        "record_type": _safe_string(safe_ui.get("record_type") or safe_scope.get("record_type")).lower(),
+        "record_id": _safe_int(safe_ui.get("record_id") or safe_scope.get("record_id")),
+    }
+
+    if assistant_type == "young_people_os":
+        young_person_id = _safe_int(merged_scope.get("young_person_id") or safe_ui.get("young_person_id"))
+        if not young_person_id:
+            raise ValueError("young_person_id is required for young people assistant")
+
+        if message_hints.get("report_type") == "reg45":
+            runtime = _build_child_review_context(
+                conn,
+                user_id=user_id,
+                young_person_id=young_person_id,
+                review_type="reg45",
+                scope=merged_scope,
+            )
+        else:
+            runtime = build_young_person_context(
+                conn,
+                user_id=user_id,
+                young_person_id=young_person_id,
+                scope=merged_scope,
+            )
+
+    elif assistant_type == "home_os":
+        runtime = build_home_os_context(
+            conn,
+            user_id=user_id,
+            scope=merged_scope,
+        )
+
+        if message_hints.get("report_type") == "reg45":
+            report_snapshot = build_reg45_context(
+                conn,
+                home_id=runtime.get("scope", {}).get("home_id"),
+                access_level=runtime.get("scope", {}).get("access_level"),
+                allowed_home_ids=runtime.get("scope", {}).get("allowed_home_ids"),
+                provider_id=runtime.get("scope", {}).get("provider_id"),
+                generated_by=user_id,
+            )
+            runtime["report_snapshot"] = report_snapshot
+            runtime["report_type"] = "reg45"
+            runtime["reg45_requested"] = True
+            runtime["output_mode"] = "structured_report"
+
+    elif assistant_type == "quality_os":
+        runtime = build_quality_os_context(
+            conn,
+            user_id=user_id,
+            scope=merged_scope,
+        )
+
+        if message_hints.get("report_type") == "reg45":
+            report_snapshot = build_reg45_context(
+                conn,
+                home_id=runtime.get("scope", {}).get("home_id"),
+                access_level=runtime.get("scope", {}).get("access_level"),
+                allowed_home_ids=runtime.get("scope", {}).get("allowed_home_ids"),
+                provider_id=runtime.get("scope", {}).get("provider_id"),
+                generated_by=user_id,
+            )
+            runtime["report_snapshot"] = report_snapshot
+            runtime["report_type"] = "reg45"
+            runtime["reg45_requested"] = True
+            runtime["output_mode"] = "structured_report"
+
+    else:
+        runtime = build_assistant_context(
+            conn,
+            user_id=user_id,
+            scope=merged_scope,
+            assistant_type=assistant_type,
+        )
+
+    runtime_scope = dict(runtime.get("scope", {}) or {})
+    final_scope = {
+        **runtime_scope,
+        "record_type": runtime_scope.get("record_type") or merged_scope.get("record_type"),
+        "record_id": runtime_scope.get("record_id") or merged_scope.get("record_id"),
+    }
+
+    merged_context: dict[str, Any] = {
+        **runtime,
+        **message_hints,
+        "scope": final_scope,
+        "scope_type": final_scope.get("scope_type"),
+        "access_level": final_scope.get("access_level"),
+        "provider_id": final_scope.get("provider_id"),
+        "allowed_home_ids": final_scope.get("allowed_home_ids", []),
+        "home_id": final_scope.get("home_id"),
+        "young_person_id": final_scope.get("young_person_id"),
+    }
+
+    safe_passthrough_keys = [
+        "assistant_type",
+        "current_view",
+        "current_section",
+        "shift_context",
+        "user_role",
+        "assistant_intent",
+        "retrieval_mode",
+        "output_mode",
+        "whole_os_default",
+        "section_only_requested",
+        "use_whole_scope_records",
+        "ask_for_dates",
+        "ask_for_chronology",
+        "ask_for_summary",
+        "ask_for_review_pack",
+        "ask_for_compliance_view",
+        "suggested_prompts_ui_only",
+        "reg45_requested",
+        "composer_record_type",
+        "record_type",
+        "record_id",
+        "young_person_name",
+        "placement_status",
+        "summary_risk_level",
+        "home_name",
+    ]
+
+    for key in safe_passthrough_keys:
+        value = safe_ui.get(key)
+        if value not in (None, "", [], {}):
+            merged_context[key] = value
+
+    merged_context["assistant_type"] = safe_ui.get("assistant_type") or assistant_type
+    merged_context["record_type"] = final_scope.get("record_type")
+    merged_context["record_id"] = final_scope.get("record_id")
+
+    if merged_context.get("report_type") == "reg45":
+        merged_context["reg45_requested"] = True
+        merged_context["output_mode"] = "structured_report"
+        merged_context["ask_for_summary"] = True
+
+    evidence_index = merged_context.get("evidence_index")
+    if isinstance(evidence_index, list):
+        merged_context["sources"] = _evidence_to_sources(evidence_index)
+
+    return merged_context
