@@ -938,12 +938,12 @@ function resolveAssistantEndpoint(payload = {}) {
     payload?.assistant_type ||
     null;
 
-  if (assistantType === "public") {
-    return "/assistant";
+  if (assistantType === "public" || assistantType === "general") {
+    return "/assistant/general/stream";
   }
 
   if (assistantType === "young_people_os") {
-    return "/young-people/assistant";
+    return "/assistant/os/young-people/stream";
   }
 
   const scope =
@@ -952,11 +952,11 @@ function resolveAssistantEndpoint(payload = {}) {
     payload?.context?.scope_type ||
     "child";
 
-  if (scope === "home") return "/home/assistant";
-  if (scope === "quality") return "/quality/assistant";
-  if (scope === "child" || scope === "young_person") return "/young-people/assistant";
+  if (scope === "home") return "/assistant/os/home/stream";
+  if (scope === "quality") return "/assistant/os/quality/stream";
+  if (scope === "child" || scope === "young_person") return "/assistant/os/young-people/stream";
 
-  return "/assistant";
+  return "/assistant/os/young-people/stream";
 }
 
 function parseAssistantEventPayload(payloadValue = "") {

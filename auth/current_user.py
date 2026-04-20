@@ -10,6 +10,7 @@ from auth.routes import settings as auth_settings
 from auth.tokens import decode_session_token
 from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
+from db.mfa_db import get_user_mfa  # Backwards-compat export for test monkeypatches
 
 logger = logging.getLogger(__name__)
 
