@@ -1,6 +1,5 @@
 import { state, normaliseUserRole } from "../state.js";
 import { els } from "../dom.js";
-import { refreshAssistantUi } from "./assistant-ui.js";
 import {
   getDisplayName,
   getProfileImage,
@@ -184,6 +183,16 @@ function getWorkspaceHomeButtonLabel() {
   if (scope === "quality") return "Quality dashboard";
   if (scope === "ofsted") return "Ofsted dashboard";
   return "Dashboard";
+}
+
+function getAssistantScopeType() {
+  const scope = getCurrentScope();
+
+  if (scope === "child") return "child";
+  if (scope === "home") return "home";
+  if (scope === "quality") return "quality";
+  if (scope === "ofsted") return "quality";
+  return "child";
 }
 
 function renderAvatarHtml(person = {}, imageClass, fallbackClass) {
@@ -371,8 +380,9 @@ function updateSearchPlaceholders() {
 
   if (recordSearch) recordSearch.placeholder = placeholder;
   if (mobileRecordSearch) mobileRecordSearch.placeholder = "Search records...";
-  if (selectorSearch)
+  if (selectorSearch) {
     selectorSearch.placeholder = "Search by name, preferred name or home...";
+  }
   if (youngPersonSearchInput) {
     youngPersonSearchInput.placeholder =
       "Search by name, preferred name or home...";
@@ -391,7 +401,7 @@ function updateAppDataset() {
 
   els.app.dataset.scope = getCurrentScope();
   els.app.dataset.userRole = getCurrentRole();
-  els.app.dataset.assistantScopeType = getCurrentScope();
+  els.app.dataset.assistantScopeType = getAssistantScopeType();
   els.app.dataset.youngPersonId =
     getCurrentScope() === "child" && state.youngPersonId
       ? String(state.youngPersonId)
@@ -404,14 +414,14 @@ function updateAppDataset() {
 }
 
 function updateLayoutChrome() {
-  const workspaceInner = qs("workspaceShell");
-  if (!workspaceInner) return;
-
-  workspaceInner.classList.remove("has-sidebar");
+  // Layout and sidebar state are owned by navigation rendering.
+  // Do not override layout classes here.
 }
 
 export function updateYoungPersonChrome(person = {}) {
-  updateYoungPersonText(person);
+  const safePerson = person || getCurrentPerson() || {};
+
+  updateYoungPersonText(safePerson);
   updateTopLevelLabels();
   updateWorkspaceContextPill();
   updateWorkspaceEyebrow();
@@ -455,18 +465,22 @@ async function goHomeToSelector() {
 
   if (scope !== "child") {
     const { loadSection } = await import("./nav.js");
+
     if (scope === "home") {
       await loadSection("home-dashboard");
       return;
     }
+
     if (scope === "quality") {
       await loadSection("quality");
       return;
     }
+
     if (scope === "ofsted") {
       await loadSection("ofsted-dashboard");
       return;
     }
+
     await loadSection("home-dashboard");
     return;
   }
@@ -522,5 +536,4 @@ export function bindShellChrome() {
 export function refreshShellChrome() {
   updateYoungPersonChrome(state.selectedYoungPerson || {});
   updateSectionChrome(getCurrentSection());
-  refreshAssistantUi();
 }
