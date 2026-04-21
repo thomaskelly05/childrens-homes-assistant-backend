@@ -1,4 +1,9 @@
-import { state, clearSelectedYoungPerson, setSelectedYoungPerson } from "../state.js";
+import {
+  state,
+  clearSelectedYoungPerson,
+  setSelectedYoungPerson,
+  setCurrentScope,
+} from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import {
@@ -77,7 +82,9 @@ function renderYoungPersonCard(item = {}) {
           metaPills.length
             ? `<div class="selector-card-meta">
                 ${metaPills
-                  .map((pill) => `<span class="selector-pill">${escapeHtml(pill)}</span>`)
+                  .map(
+                    (pill) => `<span class="selector-pill">${escapeHtml(pill)}</span>`
+                  )
                   .join("")}
               </div>`
             : ""
@@ -143,7 +150,22 @@ function matchesSearch(item = {}, term = "") {
 }
 
 function getResolvedSection() {
-  return state.currentSection || state.activeSection || state.currentView || "workspace";
+  return (
+    state.currentSection ||
+    state.activeSection ||
+    state.currentView ||
+    "workspace"
+  );
+}
+
+function showSelectorScreen() {
+  els.workspaceScreen?.classList.add("hidden");
+  els.selectorScreen?.classList.remove("hidden");
+}
+
+function showWorkspaceScreen() {
+  els.selectorScreen?.classList.add("hidden");
+  els.workspaceScreen?.classList.remove("hidden");
 }
 
 export function filterSelectorList(term = "") {
@@ -181,9 +203,7 @@ export function goBackToSelector() {
   clearSelectedYoungPerson();
   setYoungPersonIdInUrl(null);
 
-  els.workspaceScreen?.classList.add("hidden");
-  els.selectorScreen?.classList.remove("hidden");
-
+  showSelectorScreen();
   refreshShellChrome();
   refreshAssistantUi();
   renderAssistantControllerPanels();
@@ -216,11 +236,9 @@ export async function openYoungPerson(id, options = {}) {
     }
   }
 
-  state.currentScope = "child";
+  setCurrentScope("child", { resetSection: false });
 
-  els.selectorScreen?.classList.add("hidden");
-  els.workspaceScreen?.classList.remove("hidden");
-
+  showWorkspaceScreen();
   refreshShellChrome();
   refreshAssistantUi();
   renderAssistantControllerPanels();
