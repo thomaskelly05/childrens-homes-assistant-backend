@@ -5,15 +5,30 @@ import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
 function getHomeId() {
-  return (
+  const preferredHomeId = Number(
     state.homeId ||
-    state.selectedHomeId ||
-    state.readinessSelectedHomeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    state.selectedYoungPerson?.home_id ||
-    null
+      state.selectedHomeId ||
+      state.readinessSelectedHomeId ||
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      state.selectedYoungPerson?.home_id ||
+      0
   );
+
+  const allowedHomeIds = Array.isArray(state.allowedHomeIds)
+    ? state.allowedHomeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    : [];
+
+  if (allowedHomeIds.length) {
+    if (Number.isFinite(preferredHomeId) && allowedHomeIds.includes(preferredHomeId)) {
+      return preferredHomeId;
+    }
+    return allowedHomeIds[0];
+  }
+
+  return Number.isFinite(preferredHomeId) && preferredHomeId > 0 ? preferredHomeId : null;
 }
 
 function toArray(value, fallbacks = []) {

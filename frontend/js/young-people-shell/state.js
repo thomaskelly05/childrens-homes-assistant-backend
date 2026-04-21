@@ -536,6 +536,34 @@ export function getBestAvailableHomeId() {
   );
 }
 
+export function resolveAccessibleHomeId(preferredHomeId = null) {
+  const parsedPreferred = Number(
+    preferredHomeId ??
+      state.readinessSelectedHomeId ??
+      state.homeId ??
+      state.selectedYoungPerson?.home_id ??
+      state.selectedYoungPerson?.homeId ??
+      state.currentUser?.home_id ??
+      state.currentUser?.homeId ??
+      null
+  );
+
+  const allowedHomeIds = Array.isArray(state.allowedHomeIds)
+    ? state.allowedHomeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    : [];
+
+  if (allowedHomeIds.length) {
+    if (Number.isFinite(parsedPreferred) && allowedHomeIds.includes(parsedPreferred)) {
+      return parsedPreferred;
+    }
+    return allowedHomeIds[0];
+  }
+
+  return Number.isFinite(parsedPreferred) && parsedPreferred > 0 ? parsedPreferred : null;
+}
+
 export function setAssistantScopeBundle(bundle = null) {
   state.scopeBundle = bundle || null;
   state.scopeBundleLoadedAt = bundle ? new Date().toISOString() : null;

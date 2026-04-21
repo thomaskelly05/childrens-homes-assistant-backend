@@ -280,66 +280,69 @@ function buildAssistantContextPayload(message = "") {
 
 function buildSafeAssistantRequestPayload(payload) {
   const context = payload?.context || {};
+  const scope = String(context.scope || "child").toLowerCase();
+
+  const baseContext = {
+    scope,
+    home_id: context.home_id || null,
+    home_name: context.home_name || null,
+    current_view: context.current_view || null,
+    current_section: context.current_section || null,
+    shift_context: context.shift_context || null,
+    composer_record_type: context.composer_record_type || null,
+    record_type: context.record_type || null,
+    record_id: context.record_id || null,
+    start_date: context.start_date || context.reporting_period_start || null,
+    end_date: context.end_date || context.reporting_period_end || null,
+    reporting_period_start:
+      context.reporting_period_start || context.start_date || null,
+    reporting_period_end:
+      context.reporting_period_end || context.end_date || null,
+    reporting_period_inferred:
+      typeof context.reporting_period_inferred === "boolean"
+        ? context.reporting_period_inferred
+        : null,
+  };
+
+  let scopedContext = {};
+
+  if (scope === "home") {
+    scopedContext = {
+      ...baseContext,
+      scope: "home",
+      access_level: context.access_level || null,
+      allowed_home_ids: Array.isArray(context.allowed_home_ids)
+        ? context.allowed_home_ids
+        : [],
+      provider_id: context.provider_id || null,
+    };
+  } else if (scope === "quality" || scope === "ofsted") {
+    scopedContext = {
+      ...baseContext,
+      scope: "quality",
+      access_level: context.access_level || null,
+      allowed_home_ids: Array.isArray(context.allowed_home_ids)
+        ? context.allowed_home_ids
+        : [],
+      provider_id: context.provider_id || null,
+    };
+  } else {
+    scopedContext = {
+      ...baseContext,
+      scope: "young_person",
+      home_name: context.home_name || null,
+      young_person_id: context.young_person_id || null,
+      young_person_name: context.young_person_name || null,
+      placement_status: context.placement_status || null,
+      summary_risk_level: context.summary_risk_level || null,
+    };
+    delete scopedContext.home_id;
+  }
 
   return {
     message: trimForOutbound(payload?.message || ""),
     response_mode: payload?.response_mode || "balanced",
-    context: {
-      assistant_type: context.assistant_type || "young_people_os",
-      assistant_identity:
-        context.assistant_identity && typeof context.assistant_identity === "object"
-          ? context.assistant_identity
-          : null,
-      response_contract:
-        context.response_contract && typeof context.response_contract === "object"
-          ? context.response_contract
-          : null,
-      inspection_framework:
-        context.inspection_framework && typeof context.inspection_framework === "object"
-          ? context.inspection_framework
-          : null,
-      scope: context.scope || null,
-      scope_type: context.scope_type || null,
-      access_level: context.access_level || null,
-      provider_id: context.provider_id || null,
-      allowed_home_ids: Array.isArray(context.allowed_home_ids)
-        ? context.allowed_home_ids
-        : [],
-      current_view: context.current_view || null,
-      shift_context: context.shift_context || null,
-      young_person_id: context.young_person_id || null,
-      young_person_name: context.young_person_name || null,
-      home_id: context.home_id || null,
-      home_name: context.home_name || null,
-      placement_status: context.placement_status || null,
-      summary_risk_level: context.summary_risk_level || null,
-      composer_record_type: context.composer_record_type || null,
-      record_type: context.record_type || null,
-      record_id: context.record_id || null,
-      current_scope: context.current_scope || null,
-      current_section: context.current_section || null,
-      user_role: context.user_role || "staff",
-      assistant_intent: context.assistant_intent || "summary",
-      retrieval_mode: context.retrieval_mode || "whole_scope",
-      output_mode: context.output_mode || "answer",
-      whole_os_default: Boolean(context.whole_os_default),
-      section_only_requested: Boolean(context.section_only_requested),
-      use_whole_scope_records: Boolean(context.use_whole_scope_records),
-      ask_for_dates: Boolean(context.ask_for_dates),
-      ask_for_chronology: Boolean(context.ask_for_chronology),
-      ask_for_summary: Boolean(context.ask_for_summary),
-      ask_for_review_pack: Boolean(context.ask_for_review_pack),
-      ask_for_compliance_view: Boolean(context.ask_for_compliance_view),
-      reporting_period_start: context.reporting_period_start || null,
-      reporting_period_end: context.reporting_period_end || null,
-      reporting_period_inferred:
-        typeof context.reporting_period_inferred === "boolean"
-          ? context.reporting_period_inferred
-          : null,
-      suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
-        ? context.suggested_prompts_ui_only.slice(0, MAX_UI_PROMPTS)
-        : [],
-    },
+    context: scopedContext,
   };
 }
 

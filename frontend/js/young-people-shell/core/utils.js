@@ -232,6 +232,11 @@ export function normaliseImagePath(value = "") {
   const input = cleanText(value);
   if (!input) return "";
 
+  const lower = input.toLowerCase();
+  if (lower.endsWith("young_person_1.png")) {
+    return "";
+  }
+
   if (
     input.startsWith("http://") ||
     input.startsWith("https://") ||

@@ -7,8 +7,8 @@ import { buildInspectionUiEndpoints } from "../core/config.js";
 
 function getHomeId() {
   const selected =
-    state.homeId ||
     state.readinessSelectedHomeId ||
+    state.homeId ||
     state.selectedHomeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||

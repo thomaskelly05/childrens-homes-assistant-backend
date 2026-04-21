@@ -7,7 +7,9 @@ import { buildInspectionUiEndpoints } from "../core/config.js";
 
 function getHomeId() {
   return (
+    state.readinessSelectedHomeId ||
     state.homeId ||
+    state.selectedHomeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
     null
