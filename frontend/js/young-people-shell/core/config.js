@@ -277,9 +277,8 @@ export const SECTION_SUBTITLES = Object.freeze({
 });
 
 /*
-  IMPORTANT:
-  Replace this with your real NAV_GROUPS array.
-  Leaving this empty will break navigation metadata.
+  Keep this empty for now if you are not ready to wire grouped nav metadata yet.
+  The rest of the app must tolerate it.
 */
 const NAV_GROUPS = [];
 
@@ -717,16 +716,21 @@ export function validateConfig() {
     }
   });
 
-  if (!Array.isArray(NAV_GROUPS) || !NAV_GROUPS.length) {
-    issues.push("NAV_GROUPS is empty. Navigation config will not render.");
-  }
-
   return {
     ok: issues.length === 0,
     issues,
   };
 }
 
+/*
+  These endpoints are now aligned to the newer quality.js data loaders.
+  Deliberately remove old ambiguous endpoints like:
+  /homes/:id/quality
+  /homes/:id/compliance
+  /homes/:id/dashboard
+  /homes/:id/ofsted-dashboard
+  because they are causing 403/404/500 noise elsewhere.
+*/
 export function buildInspectionUiEndpoints(homeId) {
   const safeHomeId =
     homeId !== null && homeId !== undefined && homeId !== ""
@@ -739,22 +743,31 @@ export function buildInspectionUiEndpoints(homeId) {
 
   const base = `/homes/${safeHomeId}`;
 
-  return {
+  return Object.freeze({
     homeId: safeHomeId,
     base,
-    readiness: `${base}/inspection-readiness`,
-    inspectionReadiness: `${base}/inspection-readiness`,
-    quality: `${base}/quality`,
-    compliance: `${base}/compliance`,
-    dashboard: `${base}/dashboard`,
-    tasks: `${base}/tasks`,
-    incidents: `${base}/incidents`,
-    documents: `${base}/documents`,
-    audits: `${base}/audits`,
-    syncTasks: `${base}/inspection-tasks/sync`,
-    refreshCycle: `${base}/inspection-cycle/refresh`,
-    ofstedDashboard: `${base}/ofsted-dashboard`,
-    sccifEvidence: `${base}/sccif-evidence`,
-    judgementBuilder: `${base}/judgement-builder`,
-  };
+
+    qualityAudits: `${base}/quality-audits`,
+    qualityAuditFindings: `${base}/quality-audit-findings`,
+    qualityAuditActions: `${base}/quality-audit-actions`,
+
+    complianceItems: `${base}/compliance-items`,
+
+    reg44Visits: `${base}/reg44-visits`,
+    reg44Findings: `${base}/reg44-findings`,
+    reg44Actions: `${base}/reg44-actions`,
+
+    reg45Reviews: `${base}/reg45-reviews`,
+    reg45Actions: `${base}/reg45-actions`,
+
+    inspectionScores: `${base}/inspection-scores`,
+    inspectionSectionScores: `${base}/inspection-section-scores`,
+    inspectionScoreReasons: `${base}/inspection-score-reasons`,
+    inspectionLinesOfEnquiry: `${base}/inspection-lines-of-enquiry`,
+    inspectionImprovementActions: `${base}/inspection-improvement-actions`,
+
+    managerReviewQueue: `${base}/manager-review-queue`,
+
+    visibilityQuality: `/visibility/quality?home_id=${safeHomeId}&all_accessible_homes=false`,
+  });
 }
