@@ -18,6 +18,9 @@ const PROVIDER_LEVEL_ROLES = new Set([
   "superadmin",
   "head_office",
   "provider",
+  "director",
+  "ceo",
+  "owner",
 ]);
 
 export function normaliseScope(scope = "child", fallback = "child") {
@@ -35,10 +38,21 @@ export function normaliseSection(section = "workspace", fallback = "workspace") 
 export function normaliseRole(role = "staff", fallback = "staff") {
   const value = cleanText(role).toLowerCase();
   if (!value) return fallback;
-  if (value === "administrator") return "admin";
-  if (value === "super_admin") return "admin";
-  if (value === "superadmin") return "admin";
+
+  if (
+    value === "administrator" ||
+    value === "super_admin" ||
+    value === "superadmin" ||
+    value === "admin_user" ||
+    value === "system_admin"
+  ) {
+    return "admin";
+  }
+
   if (value === "responsible_individual") return "ri";
+  if (value === "rm") return "manager";
+  if (value === "residential_support_worker") return "staff";
+
   return value;
 }
 
@@ -46,7 +60,10 @@ export function isProviderLevelRole(role = "staff") {
   return PROVIDER_LEVEL_ROLES.has(normaliseRole(role));
 }
 
-export function resolveAccessLevelForScope({ scope = "child", role = "staff" } = {}) {
+export function resolveAccessLevelForScope({
+  scope = "child",
+  role = "staff",
+} = {}) {
   const safeScope = normaliseScope(scope);
   const safeRole = normaliseRole(role);
 
@@ -56,23 +73,30 @@ export function resolveAccessLevelForScope({ scope = "child", role = "staff" } =
     return "home";
   }
 
-  if (safeScope === "quality" || safeScope === "reports") {
-    return isProviderLevelRole(safeRole) ? "provider" : "home";
-  }
-
-  if (safeScope === "ofsted") {
+  if (
+    safeScope === "quality" ||
+    safeScope === "ofsted" ||
+    safeScope === "reports"
+  ) {
     return isProviderLevelRole(safeRole) ? "provider" : "home";
   }
 
   return "home";
 }
 
-export function resolveAssistantScopeType({ scope = "child", youngPersonId = null } = {}) {
+export function resolveAssistantScopeType({
+  scope = "child",
+  youngPersonId = null,
+} = {}) {
   const safeScope = normaliseScope(scope);
 
   if (safeScope === "home" || safeScope === "staffing") return "home";
 
-  if (safeScope === "quality" || safeScope === "ofsted" || safeScope === "reports") {
+  if (
+    safeScope === "quality" ||
+    safeScope === "ofsted" ||
+    safeScope === "reports"
+  ) {
     return "quality";
   }
 
@@ -83,7 +107,12 @@ export function resolveAssistantTypeForScope(scope = "child") {
   const safeScope = normaliseScope(scope);
 
   if (safeScope === "home" || safeScope === "staffing") return "home_os";
-  if (safeScope === "quality" || safeScope === "ofsted" || safeScope === "reports") {
+
+  if (
+    safeScope === "quality" ||
+    safeScope === "ofsted" ||
+    safeScope === "reports"
+  ) {
     return "quality_os";
   }
 
@@ -92,7 +121,11 @@ export function resolveAssistantTypeForScope(scope = "child") {
 
 export function isProviderWideScope(scope = "child") {
   const safeScope = normaliseScope(scope);
-  return safeScope === "quality" || safeScope === "reports";
+  return (
+    safeScope === "quality" ||
+    safeScope === "ofsted" ||
+    safeScope === "reports"
+  );
 }
 
 export function inferAssistantAnalysisLens({
@@ -116,7 +149,9 @@ export function inferAssistantAnalysisLens({
     safeScope === "reports" ||
     safeIntent === "quality" ||
     safeIntent === "compliance" ||
-    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
+    /quality|compliance|reg44|reg45|ofsted|inspection|audit|sccif/.test(
+      safeSection
+    )
   ) {
     return isProviderLevelRole(safeRole) ? "quality" : "inspection";
   }
@@ -124,7 +159,7 @@ export function inferAssistantAnalysisLens({
   if (
     safeIntent === "management" ||
     ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
-    /manager|team|supervision|home-dashboard/.test(safeSection)
+    /manager|team|supervision|home-dashboard|operations/.test(safeSection)
   ) {
     return "manager";
   }
