@@ -125,6 +125,27 @@ function getHomeId() {
   return preferredHomeId;
 }
 
+function isProviderLevelQualityUser() {
+  const role = String(state.userRole || "").toLowerCase();
+  return [
+    "admin",
+    "ri",
+    "responsible_individual",
+    "super_admin",
+    "superadmin",
+  ].includes(role);
+}
+
+function hasProviderContext() {
+  const providerId = Number(
+    state.providerId ||
+      state.currentUser?.provider_id ||
+      state.currentUser?.providerId ||
+      null
+  );
+  return Number.isFinite(providerId) && providerId > 0;
+}
+
 async function safeGet(path) {
   try {
     return (await apiGet(path)) || SAFE_EMPTY;
@@ -1011,8 +1032,9 @@ function renderPanelSection(title, content) {
 function signalTone(signal = {}) {
   const token = lower(signal.severity || signal.status || "");
   if (["critical", "high", "overdue", "danger"].includes(token)) return "danger";
-  if (["medium", "warning", "due_soon", "amber"].includes(token)) return "warning";
-  if (["low", "good", "success", "current"].includes(token)) return "success";
+  if (["medium", "warning", "due_soon", "planned"].includes(token))
+    return "warning";
+  if (["low", "good", "success"].includes(token)) return "success";
   return "muted";
 }
 
@@ -1085,16 +1107,17 @@ function renderTrendRows(trends = []) {
             direction === "up" && assessment === "declining"
               ? "danger"
               : direction === "down" && assessment === "improving"
-              ? "success"
-              : "muted";
+                ? "success"
+                : "muted";
           return `
             <article class="record-row">
               <div class="record-row-main">
                 <div class="record-row-title">${safeText(item?.label || "Trend")}</div>
                 <div class="record-row-summary">
                   ${safeText(item?.assessment || "stable")} • ${safeText(
-                    item?.current ?? 0
-                  )} now vs ${safeText(item?.previous ?? 0)} before
+            item?.current ?? 0
+          )} now vs
+                  ${safeText(item?.previous ?? 0)} before
                 </div>
               </div>
               <div class="record-row-side">
@@ -1212,8 +1235,8 @@ function renderMissingRows(items = []) {
   `;
 }
 
-function renderInsightBlocks(blocks = []) {
-  if (!Array.isArray(blocks) || !blocks.length) {
+function renderInsightBlocks(items = []) {
+  if (!items.length) {
     return `
       <div class="empty-state">
         <p>No quality insight blocks are available yet.</p>
@@ -1222,53 +1245,45 @@ function renderInsightBlocks(blocks = []) {
   }
 
   return `
-    <div class="record-card-list">
-      ${blocks
+    <div class="record-list">
+      ${items
         .slice(0, 6)
-        .map((block, index) => {
+        .map((item) => {
           const title =
-            block?.title ||
-            block?.heading ||
-            block?.label ||
-            `Insight ${index + 1}`;
+            item?.title ||
+            item?.heading ||
+            item?.label ||
+            "Insight block";
+
           const summary =
-            block?.summary ||
-            block?.body ||
-            block?.text ||
-            block?.description ||
+            item?.summary ||
+            item?.text ||
+            item?.description ||
+            item?.content ||
             "";
-          const status =
-            block?.status || block?.severity || block?.priority || "";
-          const metaBits = [
-            block?.theme,
-            block?.category,
-            block?.owner,
-            block?.due_date ? formatDate(block.due_date) : "",
-          ].filter(Boolean);
+
+          const meta = [
+            item?.category || "",
+            item?.type || "",
+            item?.status || "",
+          ]
+            .filter(Boolean)
+            .join(" • ");
 
           return `
-            <article class="record-card">
-              <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-                <div>
-                  <div class="record-card-title">${safeText(title)}</div>
-                  ${
-                    metaBits.length
-                      ? `<div class="record-card-meta">${safeText(
-                          metaBits.join(" • ")
-                        )}</div>`
-                      : ""
-                  }
-                </div>
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(title)}</div>
                 ${
-                  status
-                    ? `<span class="${badgeClass(status)}">${safeText(
-                        titleCase(status)
-                      )}</span>`
+                  summary
+                    ? `<div class="record-row-summary">${safeText(summary)}</div>`
                     : ""
                 }
-              </div>
-              <div class="record-card-body">
-                <div class="record-card-summary">${safeText(summary || "No additional detail supplied.")}</div>
+                ${
+                  meta
+                    ? `<div class="record-row-meta">${safeText(meta)}</div>`
+                    : ""
+                }
               </div>
             </article>
           `;
@@ -1325,8 +1340,8 @@ function renderCard(item = {}) {
         ${
           status
             ? `<span class="${badgeClass(status)}">${safeText(
-                titleCase(status)
-              )}</span>`
+              titleCase(status)
+            )}</span>`
             : ""
         }
       </div>
@@ -1341,8 +1356,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Priority</div>
                   <div class="details-grid-value">${safeText(
-                    titleCase(item.priority)
-                  )}</div>
+                titleCase(item.priority)
+              )}</div>
                 </div>
               `
               : ""
@@ -1354,8 +1369,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Due date</div>
                   <div class="details-grid-value">${safeText(
-                    formatDate(item.due_date)
-                  )}</div>
+                formatDate(item.due_date)
+              )}</div>
                 </div>
               `
               : ""
@@ -1367,8 +1382,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Overall score</div>
                   <div class="details-grid-value">${safeText(
-                    toNumber(item.overall_score).toFixed(1)
-                  )}</div>
+                toNumber(item.overall_score).toFixed(1)
+              )}</div>
                 </div>
               `
               : ""
@@ -1380,8 +1395,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Confidence</div>
                   <div class="details-grid-value">${safeText(
-                    toNumber(item.confidence_score).toFixed(1)
-                  )}</div>
+                toNumber(item.confidence_score).toFixed(1)
+              )}</div>
                 </div>
               `
               : ""
@@ -1393,8 +1408,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Section</div>
                   <div class="details-grid-value">${safeText(
-                    item.section_name
-                  )}</div>
+                item.section_name
+              )}</div>
                 </div>
               `
               : ""
@@ -1406,8 +1421,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Owner</div>
                   <div class="details-grid-value">User #${safeText(
-                    item.owner_user_id
-                  )}</div>
+                item.owner_user_id
+              )}</div>
                 </div>
               `
               : ""
@@ -1549,7 +1564,8 @@ function renderQualityDriftIndicators(items = []) {
     <div class="record-list">
       ${items
         .slice(0, 4)
-        .map((item) => `
+        .map(
+          (item) => `
           <article class="record-row">
             <div class="record-row-main">
               <div class="record-row-title">${safeText(item?.label || "Drift indicator")}</div>
@@ -1570,7 +1586,8 @@ function renderQualityDriftIndicators(items = []) {
               </span>
             </div>
           </article>
-        `)
+        `
+        )
         .join("")}
     </div>
   `;
@@ -1618,8 +1635,8 @@ function renderTimeline(items = []) {
                   ${
                     status
                       ? `<span class="${badgeClass(status)}">${safeText(
-                          titleCase(status)
-                        )}</span>`
+                        titleCase(status)
+                      )}</span>`
                       : ""
                   }
                 </div>
@@ -1719,30 +1736,22 @@ function renderWorkspace(payload) {
 
         <aside>
           ${renderPanelSection("Story right now", renderInsightStory(insightStory))}
-
           ${renderPanelSection("What is changing", renderTrendRows(changing))}
-
           ${renderPanelSection("Repeating patterns", renderPatternRows(patterns))}
-
           ${renderPanelSection("Decision support", renderDecisionRows(decisionSupport))}
-
           ${renderPanelSection(
             "Quality drift indicators",
             renderQualityDriftIndicators(qualityDriftIndicators)
           )}
-
           ${renderPanelSection(
             "Quality insight blocks",
             renderInsightBlocks(qualityInsightBlocks)
           )}
-
           ${renderPanelSection(
             "Visibility signals",
             renderVisibilitySignals(visibilitySignals)
           )}
-
           ${renderPanelSection("Needs attention", renderPriorityList(priorityItems))}
-
           ${renderPanelSection("What is missing", renderMissingRows(missingItems))}
 
           ${renderPanelSection(
@@ -1784,18 +1793,18 @@ function renderWorkspace(payload) {
           ${
             latestAudit.length
               ? renderPanelSection(
-                  "Latest quality audit",
-                  renderCardList(latestAudit, "", "")
-                )
+                "Latest quality audit",
+                renderCardList(latestAudit, "", "")
+              )
               : ""
           }
 
           ${
             latestInspection.length
               ? renderPanelSection(
-                  "Latest inspection readiness",
-                  renderCardList(latestInspection, "", "")
-                )
+                "Latest inspection readiness",
+                renderCardList(latestInspection, "", "")
+              )
               : ""
           }
 
@@ -1816,6 +1825,26 @@ function renderWorkspace(payload) {
 /* -------------------------------- fetch -------------------------------- */
 
 async function fetchAll(homeId) {
+  if (!homeId) {
+    return {
+      qualityAudits: [],
+      qualityAuditFindings: [],
+      qualityAuditActions: [],
+      complianceItems: [],
+      reg44Visits: [],
+      reg44Findings: [],
+      reg44Actions: [],
+      reg45Reviews: [],
+      reg45Actions: [],
+      inspectionScores: [],
+      inspectionSectionScores: [],
+      inspectionReasons: [],
+      inspectionLines: [],
+      inspectionActions: [],
+      managerReviewQueue: [],
+    };
+  }
+
   const [
     qualityAuditsRes,
     qualityAuditFindingsRes,
@@ -2031,8 +2060,8 @@ function buildPriorityItems(data) {
         title: item.title || "Inspection action",
         summary: item.due_date
           ? `${item.summary || "Inspection action open."} Due ${formatDate(
-              item.due_date
-            )}`
+            item.due_date
+          )}`
           : item.summary || "Inspection action open.",
       });
     });
@@ -2185,9 +2214,17 @@ export async function loadCurrentView() {
   if (!els.viewContent) return;
 
   const homeId = getHomeId();
+  const providerLevel = isProviderLevelQualityUser();
 
-  if (!homeId) {
+  if (!homeId && !providerLevel) {
     renderNoHomeContext();
+    return;
+  }
+
+  if (providerLevel && !homeId && !hasProviderContext()) {
+    renderErrorState(
+      "Quality view could not load because no provider or home context is available for this user."
+    );
     return;
   }
 
@@ -2195,7 +2232,9 @@ export async function loadCurrentView() {
 
   try {
     const [data, visibility] = await Promise.all([
-      fetchDataset(homeId),
+      homeId
+        ? fetchDataset(homeId)
+        : Promise.resolve({ ...buildFallbackData(null), isFallback: true }),
       fetchVisibility(homeId),
     ]);
 
@@ -2214,7 +2253,9 @@ export async function loadCurrentView() {
     const changing = toArray(visibility?.what_is_changing || visibility?.trends);
     const patterns = toArray(visibility?.patterns);
     const decisionSupport = toArray(visibility?.decision_support);
-    const qualityDriftIndicators = toArray(visibility?.quality_drift_indicators);
+    const qualityDriftIndicators = toArray(
+      visibility?.quality_drift_indicators
+    );
     const qualityInsightBlocks = toArray(visibility?.quality_insight_blocks);
     const missingItems = toArray(visibility?.what_is_missing);
 
@@ -2262,12 +2303,12 @@ export async function loadCurrentView() {
         : "No due quality action",
       lastRecord: recentTimeline[0]
         ? `Latest quality activity ${formatDate(
-            recentTimeline[0].audit_date ||
-              recentTimeline[0].visit_date ||
-              recentTimeline[0].review_period_end ||
-              recentTimeline[0].period_end ||
-              recentTimeline[0].created_at
-          )}`
+          recentTimeline[0].audit_date ||
+            recentTimeline[0].visit_date ||
+            recentTimeline[0].review_period_end ||
+            recentTimeline[0].period_end ||
+            recentTimeline[0].created_at
+        )}`
         : data.isFallback
           ? "Preview quality data loaded"
           : "No recent quality activity",
