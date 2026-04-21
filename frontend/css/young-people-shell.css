@@ -1508,6 +1508,44 @@ summary:focus-visible {
   line-height: 1.45;
 }
 
+.insight-story {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+.insight-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.insight-card {
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 6px;
+}
+
+.insight-card strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.insight-card-meta {
+  color: var(--text-faint);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.insight-card-action {
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 /* --------------------------------
    Loading / empty
 --------------------------------- */
