@@ -28,6 +28,7 @@ import {
   trimForOutbound,
   cloneAssistantMessage,
   mergeAssistantMeta,
+  resolveReg45DateRange,
 } from "../assistant/helpers.js";
 import {
   resolveAssistantScopeType,
@@ -174,6 +175,17 @@ function buildAssistantContextPayload(message = "") {
     role: state.userRole || "staff",
   });
   const assistantType = getAssistantTypeForScope(scope);
+  const reg45Range = resolveReg45DateRange(message);
+  const reportingPeriodStart = reg45Range?.startDate
+    ? reg45Range.startDate.toISOString()
+    : null;
+  const reportingPeriodEnd = reg45Range?.endDate
+    ? reg45Range.endDate.toISOString()
+    : null;
+  const reportingPeriodInferred =
+    reg45Range && typeof reg45Range.inferred === "boolean"
+      ? reg45Range.inferred
+      : null;
 
   const allowedHomeIds =
     isProviderWideScope(scope) && accessLevel === "provider"
@@ -256,6 +268,9 @@ function buildAssistantContextPayload(message = "") {
       scope === "quality" ||
       scope === "ofsted" ||
       scope === "reports",
+    reporting_period_start: reportingPeriodStart,
+    reporting_period_end: reportingPeriodEnd,
+    reporting_period_inferred: reportingPeriodInferred,
     suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(
       0,
       MAX_UI_PROMPTS
@@ -315,6 +330,12 @@ function buildSafeAssistantRequestPayload(payload) {
       ask_for_summary: Boolean(context.ask_for_summary),
       ask_for_review_pack: Boolean(context.ask_for_review_pack),
       ask_for_compliance_view: Boolean(context.ask_for_compliance_view),
+      reporting_period_start: context.reporting_period_start || null,
+      reporting_period_end: context.reporting_period_end || null,
+      reporting_period_inferred:
+        typeof context.reporting_period_inferred === "boolean"
+          ? context.reporting_period_inferred
+          : null,
       suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
         ? context.suggested_prompts_ui_only.slice(0, MAX_UI_PROMPTS)
         : [],
