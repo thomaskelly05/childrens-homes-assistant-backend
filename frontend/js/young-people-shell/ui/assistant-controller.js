@@ -29,15 +29,13 @@ import {
   getAllowedHomeIds,
   getAccessLevelForScope,
   getAssistantTypeForScope,
-  detectAssistantIntent,
   detectAssistantIntents,
-  detectRetrievalMode,
-  detectOutputMode,
   assistantPromptsForView,
 } from "../assistant/helpers.js";
 import { inferAssistantAnalysisLens } from "../core/assistant-context.js";
 
 let assistantControllerBound = false;
+let refreshButtonsBound = false;
 let latestRefreshToken = 0;
 
 const MAX_BRIEF_EVIDENCE = 10;
@@ -48,10 +46,29 @@ function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function renderAllAssistantPanels() {
+  renderAssistantExtraPanels();
+  renderScopeBadges();
+  setAssistantContextText();
+}
+
 function getScopeContext() {
   const scope = getCurrentScope();
   const accessLevel = getAccessLevelForScope(scope);
   const youngPerson = getSelectedYoungPerson();
+
+  const resolvedHomeId =
+    state.homeId ||
+    youngPerson?.home_id ||
+    youngPerson?.homeId ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    null;
+
+  const allowedHomeIds =
+    QUALITY_LEVEL_SCOPES.has(scope) && accessLevel === "provider"
+      ? safeArray(getAllowedHomeIds())
+      : [resolvedHomeId].filter(Boolean);
 
   return {
     scope,
@@ -62,20 +79,9 @@ function getScopeContext() {
       state.currentUser?.provider_id ||
       state.currentUser?.providerId ||
       null,
-    allowed_home_ids:
-      QUALITY_LEVEL_SCOPES.has(scope) && accessLevel === "provider"
-        ? getAllowedHomeIds()
-        : [state.homeId || youngPerson?.home_id || youngPerson?.homeId].filter(
-            Boolean
-          ),
+    allowed_home_ids: allowedHomeIds,
     young_person_id: state.youngPersonId || null,
-    home_id:
-      state.homeId ||
-      youngPerson?.home_id ||
-      youngPerson?.homeId ||
-      state.currentUser?.home_id ||
-      state.currentUser?.homeId ||
-      null,
+    home_id: resolvedHomeId,
     home_name: getHomeName(),
     young_person_name:
       youngPerson?.preferred_name ||
@@ -149,6 +155,7 @@ function currentAssistantContext() {
   const intentMeta = detectAssistantIntents(
     `${scope} ${section} ${state.userRole || ""}`
   );
+
   const analysisLens = inferAssistantAnalysisLens({
     scope,
     section,
@@ -163,6 +170,7 @@ function currentAssistantContext() {
     access_level: scopeContext.access_level,
     analysis_lens: analysisLens,
     prompts,
+    intent_meta: intentMeta,
     person: {
       id: scopeContext.young_person_id,
       name:
@@ -354,7 +362,7 @@ function renderBriefPanel(host, brief, emptyText = "No brief available yet.") {
 function renderLiveUpdates() {
   if (!els.liveUpdatesBody) return;
 
-  const updates = Array.isArray(state.liveUpdates) ? state.liveUpdates : [];
+  const updates = safeArray(state.liveUpdates);
 
   if (!updates.length) {
     els.liveUpdatesBody.innerHTML = `<p>No live updates yet.</p>`;
@@ -414,12 +422,16 @@ function setAssistantContextText() {
   const context = currentAssistantContext();
   const meta = getAssistantMeta() || {};
   const assistantContext = meta.assistant_context || {};
+
   const startDate =
     assistantContext.reporting_period_start ||
     assistantContext.start_date ||
     null;
   const endDate =
-    assistantContext.reporting_period_end || assistantContext.end_date || null;
+    assistantContext.reporting_period_end ||
+    assistantContext.end_date ||
+    null;
+
   const periodLabel = (() => {
     if (!startDate && !endDate) return "";
     if (startDate && endDate) {
@@ -486,24 +498,25 @@ function renderScopeBadges() {
   }
 }
 
-function writeBriefsFromBrain(runtime) {
-  const bundle = getBundlePayload();
-  const context = currentAssistantContext();
-
-  state.latestMorningBrief = buildMorningBrief("morning brief", bundle, {
-    context,
-    runtime,
-  });
-
-  state.latestManagerBrief = buildManagerBrief("manager oversight brief", bundle, {
-    context,
-    runtime,
-  });
-
-  state.latestQualityBrief = buildQualityBrief("quality and inspection brief", bundle, {
-    context,
-    runtime,
-  });
+function buildBriefsFromRuntime(runtime, context) {
+  return {
+    morningBrief: buildMorningBrief("morning brief", getBundlePayload(), {
+      context,
+      runtime,
+    }),
+    managerBrief: buildManagerBrief("manager oversight brief", getBundlePayload(), {
+      context,
+      runtime,
+    }),
+    qualityBrief: buildQualityBrief(
+      "quality and inspection brief",
+      getBundlePayload(),
+      {
+        context,
+        runtime,
+      }
+    ),
+  };
 }
 
 async function buildDerivedAssistantStateFromBundle(bundle) {
@@ -522,26 +535,35 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
     },
   });
 
-  writeBriefsFromBrain(runtime);
+  const { morningBrief, managerBrief, qualityBrief } =
+    buildBriefsFromRuntime(runtime, context);
+
+  const intentMeta = context.intent_meta || {};
+  const resolvedIntent =
+    runtime.intent || intentMeta.primary_intent || "summary";
+  const resolvedSecondaryIntents = Array.isArray(runtime.secondary_intents)
+    ? runtime.secondary_intents
+    : safeArray(intentMeta.secondary_intents);
+
+  const resolvedLiveSummary = {
+    ...(runtime.summary || {}),
+    evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
+  };
 
   setAssistantDerivedState({
     chronology: runtime.chronology,
     facts: runtime.facts,
     care_domains: runtime.care_domains,
-    morning_brief: state.latestMorningBrief,
-    manager_brief: state.latestManagerBrief,
-    quality_brief: state.latestQualityBrief,
-    live_summary: {
-      ...runtime.summary,
-      evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
-    },
+    morning_brief: morningBrief,
+    manager_brief: managerBrief,
+    quality_brief: qualityBrief,
+    live_summary: resolvedLiveSummary,
+    assistant_insight_pack: runtime.assistant_insight_pack || null,
   });
 
   mergeAssistantMeta({
-    intent: runtime.intent || "summary",
-    secondary_intents: Array.isArray(runtime.secondary_intents)
-      ? runtime.secondary_intents
-      : [],
+    intent: resolvedIntent,
+    secondary_intents: resolvedSecondaryIntents,
     retrieval_mode: runtime.retrieval_mode || "whole_scope",
     output_mode: runtime.output_mode || "answer",
     chronology: runtime.chronology || [],
@@ -549,14 +571,11 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
     care_domains: runtime.care_domains || {},
     evidence_summary: runtime.summary || {},
     evidence_sufficiency: runtime.evidence_sufficiency || {},
-    live_summary: {
-      ...runtime.summary,
-      evidence_count: runtime.evidence?.length ?? runtime.summary?.total ?? 0,
-    },
+    live_summary: resolvedLiveSummary,
     runtime: {
       ...(runtime.runtime || {}),
       analysis_lens: context.analysis_lens,
-      assistant_intent: runtime.intent || "summary",
+      assistant_intent: resolvedIntent,
       retrieval_mode: runtime.retrieval_mode || "whole_scope",
       output_mode: runtime.output_mode || "answer",
     },
@@ -568,13 +587,15 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
       ...(getAssistantMeta().assistant_context || {}),
       analysis_lens: context.analysis_lens,
       suggested_prompts: context.prompts || [],
+      section: context.section,
+      role: context.role,
     },
     last_bundle_refresh_at: new Date().toISOString(),
     last_analysis_at: new Date().toISOString(),
   });
 
-  renderScopeBadges();
-  setAssistantContextText();
+  refreshAssistantUi();
+  renderAllAssistantPanels();
 }
 
 export async function refreshAssistantScopeData({
@@ -586,7 +607,7 @@ export async function refreshAssistantScopeData({
 
   setAssistantScopeBundleLoading(true);
   setAssistantScopeBundleError(null);
-  renderAssistantExtraPanels();
+  renderAllAssistantPanels();
 
   try {
     const bundle = await fetchAssistantScopeBundle(context);
@@ -646,7 +667,7 @@ export async function refreshAssistantScopeData({
     }
 
     refreshAssistantUi();
-    renderAssistantExtraPanels();
+    renderAllAssistantPanels();
     return scrubbed.bundle;
   } catch (error) {
     if (token !== latestRefreshToken) return null;
@@ -654,12 +675,12 @@ export async function refreshAssistantScopeData({
     setAssistantScopeBundleError(
       error?.message || "Could not load scoped assistant records."
     );
-    renderAssistantExtraPanels();
+    renderAllAssistantPanels();
     return null;
   } finally {
     if (token === latestRefreshToken) {
       setAssistantScopeBundleLoading(false);
-      renderAssistantExtraPanels();
+      renderAllAssistantPanels();
     }
   }
 }
@@ -669,7 +690,7 @@ export async function refreshAssistantAnalysisOnly() {
 
   if (!bundle || typeof bundle !== "object") {
     setAssistantScopeBundleError("No scoped records are loaded yet.");
-    renderAssistantExtraPanels();
+    renderAllAssistantPanels();
     return;
   }
 
@@ -683,7 +704,7 @@ export async function refreshAssistantAnalysisOnly() {
   });
 
   refreshAssistantUi();
-  renderAssistantExtraPanels();
+  renderAllAssistantPanels();
 }
 
 export async function onAssistantScopeChanged() {
@@ -707,6 +728,9 @@ export async function onWorkspaceRefreshRequested() {
 }
 
 function bindRefreshButtons() {
+  if (refreshButtonsBound) return;
+  refreshButtonsBound = true;
+
   els.assistantRefreshScopeBtn?.addEventListener("click", async () => {
     await refreshAssistantScopeData({
       pushUpdate: true,
@@ -720,14 +744,12 @@ function bindRefreshButtons() {
 
   els.clearLiveUpdatesBtn?.addEventListener("click", () => {
     clearAssistantLiveUpdates();
-    renderAssistantExtraPanels();
+    renderAllAssistantPanels();
   });
 }
 
 export function renderAssistantControllerPanels() {
-  renderAssistantExtraPanels();
-  renderScopeBadges();
-  setAssistantContextText();
+  renderAllAssistantPanels();
 }
 
 export function bindAssistantController() {
@@ -736,7 +758,5 @@ export function bindAssistantController() {
 
   ensureAssistantState();
   bindRefreshButtons();
-  renderAssistantExtraPanels();
-  renderScopeBadges();
-  setAssistantContextText();
+  renderAllAssistantPanels();
 }
