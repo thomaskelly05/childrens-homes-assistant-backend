@@ -82,6 +82,12 @@ function makeActionId(parts = []) {
     .join(":");
 }
 
+function buildCitationRef(item = {}) {
+  const recordType = item.record_type || "record";
+  const recordId = item.source_id || item.id || item.record_id || "unknown";
+  return `${recordType}:${recordId}`;
+}
+
 function getScopeLabel(scope) {
   return normaliseScope(scope, "child");
 }
@@ -118,6 +124,7 @@ function getHomeSummary() {
       user.home_id ||
       user.homeId ||
       person.home_id ||
+      person.homeId ||
       null,
     home_name: getHomeName(),
   };
@@ -326,8 +333,7 @@ function outputModeGuidance(outputMode = OUTPUT_MODE.answer) {
 
 function buildSystemPrompt(context, options = {}) {
   const intent = options.intent || ASSISTANT_INTENT.unknown;
-  const retrievalMode =
-    options.retrieval_mode || RETRIEVAL_MODE.whole_scope;
+  const retrievalMode = options.retrieval_mode || RETRIEVAL_MODE.whole_scope;
   const outputMode = options.output_mode || OUTPUT_MODE.answer;
 
   return [
@@ -587,36 +593,28 @@ function resolveDateRange(message = "", options = {}) {
 
   if (/last 7 days|past 7 days/.test(text)) {
     return {
-      start: new Date(
-        now.getTime() - 7 * 24 * 60 * 60 * 1000
-      ).toISOString(),
+      start: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       end: now.toISOString(),
     };
   }
 
   if (/last 30 days|past 30 days/.test(text)) {
     return {
-      start: new Date(
-        now.getTime() - 30 * 24 * 60 * 60 * 1000
-      ).toISOString(),
+      start: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       end: now.toISOString(),
     };
   }
 
   if (/last 3 months|past 3 months/.test(text)) {
     return {
-      start: new Date(
-        now.getTime() - 90 * 24 * 60 * 60 * 1000
-      ).toISOString(),
+      start: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString(),
       end: now.toISOString(),
     };
   }
 
   if (/last 6 months|past 6 months|6 month|six month|reg 45/.test(text)) {
     return {
-      start: new Date(
-        now.getTime() - 183 * 24 * 60 * 60 * 1000
-      ).toISOString(),
+      start: new Date(now.getTime() - 183 * 24 * 60 * 60 * 1000).toISOString(),
       end: now.toISOString(),
     };
   }
@@ -627,9 +625,7 @@ function resolveDateRange(message = "", options = {}) {
     )
   ) {
     return {
-      start: new Date(
-        now.getTime() - 365 * 24 * 60 * 60 * 1000
-      ).toISOString(),
+      start: new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString(),
       end: now.toISOString(),
     };
   }
@@ -671,7 +667,7 @@ function buildQueryProfile(message = "", intent = ASSISTANT_INTENT.unknown) {
                 ? "management"
                 : intent === ASSISTANT_INTENT.handover
                   ? "handover"
-                  : intent === ASSISTANT_INTENT.morning_brief
+                  : /morning brief/.test(text)
                     ? "morning_brief"
                     : "general",
     wants_dates:
@@ -700,18 +696,18 @@ function scoreEvidence(
   if (item.tags?.includes("workflow:pending_review")) score += 2;
   if (item.summary) score += 1;
   if (item.child_voice) score += 1;
+
   if (
     context.analysis_lens === "safeguarding" &&
     item.tags?.includes("safeguarding")
   ) {
     score += 3;
   }
-  if (
-    context.analysis_lens === "manager" &&
-    item.tags?.includes("open_task")
-  ) {
+
+  if (context.analysis_lens === "manager" && item.tags?.includes("open_task")) {
     score += 2;
   }
+
   if (
     ["quality", "inspection"].includes(context.analysis_lens) &&
     (item.record_type === "compliance_item" ||
@@ -721,18 +717,21 @@ function scoreEvidence(
   }
 
   if (queryProfile.focus === "chronology" && item.date) score += 2;
+
   if (
     queryProfile.focus === "compliance" &&
     item.record_type === "compliance_item"
   ) {
     score += 5;
   }
+
   if (
     queryProfile.focus === "risk" &&
     (item.record_type === "risk" || item.tags?.includes("safeguarding"))
   ) {
     score += 5;
   }
+
   if (
     queryProfile.focus === "handover" &&
     ["daily_note", "incident", "appointment", "handover_record"].includes(
@@ -741,7 +740,9 @@ function scoreEvidence(
   ) {
     score += 4;
   }
+
   if (queryProfile.focus === "morning_brief" && item.date) score += 2;
+
   if (
     queryProfile.focus === "quality" &&
     ["compliance_item", "audit", "manager_action", "document"].includes(
@@ -750,6 +751,7 @@ function scoreEvidence(
   ) {
     score += 4;
   }
+
   if (
     queryProfile.focus === "management" &&
     ["task", "manager_action", "incident", "compliance_item"].includes(
@@ -798,20 +800,19 @@ function summariseEvidence(evidence = []) {
       tags[tag] = (tags[tag] || 0) + 1;
     }
 
-    if (
-      (item.record_type || "") === "task" &&
-      item.tags?.includes("open_task")
-    ) {
+    if ((item.record_type || "") === "task" && item.tags?.includes("open_task")) {
       openTasks += 1;
     }
     if ((item.record_type || "") === "incident") incidents += 1;
     if ((item.record_type || "") === "appointment") appointments += 1;
+
     if (
       (item.record_type || "") === "document" ||
       (item.record_type || "") === "statutory_document"
     ) {
       documents += 1;
     }
+
     if ((item.record_type || "") === "compliance_item") compliance += 1;
     if (item.tags?.includes("safeguarding")) safeguarding += 1;
     if (item.tags?.includes("status:overdue")) overdue += 1;
@@ -901,9 +902,7 @@ function buildCareDomains(evidence = []) {
     ),
     family: evidence.filter((x) => x.record_type === "family_contact"),
     planning: evidence.filter((x) =>
-      ["support_plan", "risk", "task", "manager_action"].includes(
-        x.record_type
-      )
+      ["support_plan", "risk", "task", "manager_action"].includes(x.record_type)
     ),
     strengths: evidence.filter((x) =>
       ["achievement_record", "daily_note"].includes(x.record_type)
@@ -921,8 +920,7 @@ function buildTriangulationSummary(evidence = []) {
   return {
     incidents: evidence.filter((x) => x.record_type === "incident").length,
     daily_notes: evidence.filter((x) => x.record_type === "daily_note").length,
-    plans: evidence.filter((x) => ["support_plan", "risk"].includes(x.record_type))
-      .length,
+    plans: evidence.filter((x) => ["support_plan", "risk"].includes(x.record_type)).length,
     family: evidence.filter((x) => x.record_type === "family_contact").length,
     health: evidence.filter((x) => x.record_type === "health_record").length,
     education: evidence.filter((x) => x.record_type === "education_record").length,
@@ -950,12 +948,6 @@ function assessEvidenceSufficiency(evidence = []) {
             ? "low"
             : "very_low",
   };
-}
-
-function buildCitationRef(item = {}) {
-  const recordType = item.record_type || "record";
-  const recordId = item.source_id || item.id || item.record_id || "unknown";
-  return `${recordType}:${recordId}`;
 }
 
 function makeSource(item = {}, evidenceKind = "direct") {
@@ -1665,13 +1657,9 @@ function buildAssistantContextMeta(context, runtime = {}) {
     operational_action_summary: operationalActionSummary,
     operational_actions: operationalActions.slice(0, 20),
     recent_records: {
-      incidents: evidence
-        .filter((item) => item.record_type === "incident")
-        .slice(0, 5),
+      incidents: evidence.filter((item) => item.record_type === "incident").slice(0, 5),
       tasks: evidence.filter((item) => item.record_type === "task").slice(0, 5),
-      compliance: evidence
-        .filter((item) => item.record_type === "compliance_item")
-        .slice(0, 5),
+      compliance: evidence.filter((item) => item.record_type === "compliance_item").slice(0, 5),
       documents: evidence
         .filter(
           (item) =>
@@ -1679,9 +1667,7 @@ function buildAssistantContextMeta(context, runtime = {}) {
             item.record_type === "statutory_document"
         )
         .slice(0, 5),
-      appointments: evidence
-        .filter((item) => item.record_type === "appointment")
-        .slice(0, 5),
+      appointments: evidence.filter((item) => item.record_type === "appointment").slice(0, 5),
     },
     active_work: {
       tasks: evidence
@@ -1835,8 +1821,8 @@ export async function buildMorningBriefContext(options = {}) {
   const runtime = await buildAssistantEvidenceContext({
     ...options,
     message: options.message || "morning brief",
-    intent: ASSISTANT_INTENT.morning_brief,
-    output_mode: OUTPUT_MODE.children_home_handover_template,
+    intent: ASSISTANT_INTENT.handover,
+    output_mode: OUTPUT_MODE.morning_brief,
     analysis_lens: "shift",
   });
 
@@ -2030,8 +2016,9 @@ export async function runAssistantMessage(message, options = {}) {
             compliance_count: care_domains.compliance.length,
           },
           triangulation,
-          operational_actions:
-            sanitiseOperationalActionsForApi(operational_actions),
+          operational_actions: sanitiseOperationalActionsForApi(
+            operational_actions
+          ),
           operational_action_summary,
           evidence_sufficiency,
           summary,
