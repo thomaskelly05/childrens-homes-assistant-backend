@@ -24,7 +24,7 @@ export const SCOPE_DEFAULT_SECTION = Object.freeze({
 });
 
 export const SCOPE_SECTIONS = Object.freeze({
-  child: [
+  child: Object.freeze([
     "workspace",
     "overview",
     "admission",
@@ -50,8 +50,8 @@ export const SCOPE_SECTIONS = Object.freeze({
     "communication",
     "manager",
     "actions",
-  ],
-  home: [
+  ]),
+  home: Object.freeze([
     "home-dashboard",
     "operations",
     "calendar",
@@ -73,8 +73,8 @@ export const SCOPE_SECTIONS = Object.freeze({
     "documents",
     "communication",
     "actions",
-  ],
-  quality: [
+  ]),
+  quality: Object.freeze([
     "provider-overview",
     "quality",
     "quality-audits",
@@ -94,8 +94,8 @@ export const SCOPE_SECTIONS = Object.freeze({
     "documents",
     "communication",
     "actions",
-  ],
-  ofsted: [
+  ]),
+  ofsted: Object.freeze([
     "ofsted-dashboard",
     "sccif-evidence",
     "judgement-builder",
@@ -117,7 +117,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "policies",
     "communication",
     "actions",
-  ],
+  ]),
 });
 
 export const SECTION_TITLES = Object.freeze({
@@ -276,19 +276,29 @@ export const SECTION_SUBTITLES = Object.freeze({
     "Build inspection-ready strengths, gaps, impact statements and draft judgement language from the underlying evidence.",
 });
 
-const NAV_GROUPS = [/* keep your existing NAV_GROUPS array exactly as-is */];
+/*
+  IMPORTANT:
+  Replace this with your real NAV_GROUPS array.
+  Leaving this empty will break navigation metadata.
+*/
+const NAV_GROUPS = [];
+
 export const NAV_GROUPS_CONFIG = Object.freeze(
   NAV_GROUPS.map((group) =>
     Object.freeze({
       ...group,
-      items: Object.freeze(group.items.map((item) => Object.freeze({ ...item }))),
+      items: Object.freeze(
+        Array.isArray(group.items)
+          ? group.items.map((item) => Object.freeze({ ...item }))
+          : []
+      ),
     })
   )
 );
 
 export const NAV_SECTIONS = Object.freeze(
   NAV_GROUPS.flatMap((group) =>
-    group.items.map((item) =>
+    (Array.isArray(group.items) ? group.items : []).map((item) =>
       Object.freeze({
         ...item,
         group_id: group.id,
@@ -593,12 +603,28 @@ export const PROFILE_ACTION_MAP = Object.freeze(
   Object.fromEntries(PROFILE_ACTIONS.map((action) => [action.id, action]))
 );
 
-function normaliseRoleKey(role = "staff") {
+export function normaliseRoleKey(role = "staff") {
   const value = String(role || "staff").trim().toLowerCase();
-  if (value === "administrator") return "admin";
-  if (value === "super_admin") return "admin";
-  if (value === "superadmin") return "admin";
-  if (value === "responsible_individual") return "ri";
+
+  if (
+    value === "administrator" ||
+    value === "super_admin" ||
+    value === "superadmin" ||
+    value === "admin_user" ||
+    value === "system_admin" ||
+    value === "owner"
+  ) {
+    return "admin";
+  }
+
+  if (value === "responsible_individual" || value === "director" || value === "ceo") {
+    return "ri";
+  }
+
+  if (value === "rm") {
+    return "manager";
+  }
+
   return value || "staff";
 }
 
@@ -659,6 +685,46 @@ export function getQuickAction(actionId = "") {
 
 export function getProfileAction(actionId = "") {
   return PROFILE_ACTION_MAP[actionId] || null;
+}
+
+export function validateConfig() {
+  const issues = [];
+
+  Object.entries(SCOPE_DEFAULT_SECTION).forEach(([scope, section]) => {
+    if (!isSectionInScope(section, scope)) {
+      issues.push(
+        `Default section "${section}" is not present in scope "${scope}".`
+      );
+    }
+  });
+
+  Object.entries(SECTION_DEFAULT_ACTION).forEach(([section, actionId]) => {
+    const isQuickAction = Boolean(QUICK_ACTION_MAP[actionId]);
+    const isProfileAction = Boolean(PROFILE_ACTION_MAP[actionId]);
+
+    if (!isQuickAction && !isProfileAction) {
+      issues.push(
+        `Default action "${actionId}" for section "${section}" does not exist.`
+      );
+    }
+  });
+
+  QUICK_ACTIONS.forEach((action) => {
+    if (action.section_hint && !SECTION_TITLES[action.section_hint]) {
+      issues.push(
+        `Quick action "${action.id}" points to unknown section "${action.section_hint}".`
+      );
+    }
+  });
+
+  if (!Array.isArray(NAV_GROUPS) || !NAV_GROUPS.length) {
+    issues.push("NAV_GROUPS is empty. Navigation config will not render.");
+  }
+
+  return {
+    ok: issues.length === 0,
+    issues,
+  };
 }
 
 export function buildInspectionUiEndpoints(homeId) {
