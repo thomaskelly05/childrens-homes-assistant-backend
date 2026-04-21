@@ -42,6 +42,10 @@ let assistantPromptDelegatesBound = false;
 
 const MAX_UI_PROMPTS = 8;
 
+function qs(id) {
+  return document.getElementById(id);
+}
+
 function getSelectedYoungPerson() {
   return state.selectedYoungPerson || state.youngPerson || null;
 }
@@ -75,7 +79,7 @@ function syncAssistantUi() {
 }
 
 function setAssistantSending(flag) {
-  state.assistantSending = !!flag;
+  state.assistantSending = Boolean(flag);
   syncAssistantUi();
 }
 
@@ -159,7 +163,7 @@ function addAssistantPlaceholder(intent = null) {
   });
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
+  state.assistantModalMessages.push(cloneAssistantMessage(entry));
   syncAssistantUi();
 }
 
@@ -170,12 +174,15 @@ function buildAssistantContextPayload(message = "") {
   const intent = detectAssistantIntent(message);
   const retrievalMode = detectRetrievalMode(message, intent);
   const outputMode = detectOutputMode(intent, message);
+
   const accessLevel = resolveAccessLevelForScope({
     scope,
     role: state.userRole || "staff",
   });
+
   const assistantType = getAssistantTypeForScope(scope);
   const reg45Range = resolveReg45DateRange(message);
+
   const reportingPeriodStart = reg45Range?.startDate
     ? reg45Range.startDate.toISOString()
     : null;
@@ -230,6 +237,7 @@ function buildAssistantContextPayload(message = "") {
     home_id:
       state.homeId ||
       person.home_id ||
+      person.homeId ||
       state.currentUser?.home_id ||
       state.currentUser?.homeId ||
       null,
@@ -600,10 +608,7 @@ export function closeAssistant() {
 export function clearAssistantMessages() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
-
-  if (state.assistantMeta && typeof state.assistantMeta === "object") {
-    state.assistantMeta = createAssistantMeta();
-  }
+  state.assistantMeta = createAssistantMeta();
 
   clearAssistantUiMessages?.();
   syncAssistantUi();
@@ -650,6 +655,7 @@ export function updateAssistantContext() {
 
   const scope = normaliseScope(getCurrentScope(), "child");
   const section = getCurrentSection();
+
   const accessLevel = resolveAccessLevelForScope({
     scope,
     role: state.userRole || "staff",
@@ -711,7 +717,9 @@ export function updateAssistantContext() {
             young_person_name: null,
             home_name: getHomeName(),
             allowed_home_ids:
-              accessLevel === "provider" ? getAllowedHomeIds() : [state.homeId].filter(Boolean),
+              accessLevel === "provider"
+                ? getAllowedHomeIds()
+                : [state.homeId].filter(Boolean),
             retrieval_default: "whole_scope",
             suggested_prompts: assistantPromptsForView(section, scope),
           };
@@ -758,11 +766,14 @@ export function bindAssistantEvents() {
     await askAssistant(question);
   });
 
-  els.assistantModalForm?.addEventListener("submit", async (event) => {
+  const modalForm = qs("assistantModalForm");
+  const modalInput = qs("assistantModalInput");
+
+  modalForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const question = els.assistantModalInput?.value || "";
-    if (els.assistantModalInput) {
-      els.assistantModalInput.value = "";
+    const question = modalInput?.value || "";
+    if (modalInput) {
+      modalInput.value = "";
     }
     await askAssistant(question);
   });
