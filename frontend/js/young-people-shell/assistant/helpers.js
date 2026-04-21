@@ -57,6 +57,10 @@ export function ensureAssistantState() {
     state.assistantMessages = [];
   }
 
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
     state.assistantMeta = createAssistantMeta();
   }
@@ -69,15 +73,20 @@ export function ensureAssistantState() {
     state.assistantMeta.suggested_actions = [];
   }
 
+  if (!Array.isArray(state.assistantMeta.secondary_intents)) {
+    state.assistantMeta.secondary_intents = [];
+  }
+
+  if (!Array.isArray(state.assistantMeta.chronology)) {
+    state.assistantMeta.chronology = [];
+  }
+
   state.assistantMeta.runtime = state.assistantMeta.runtime || {};
   state.assistantMeta.explainability = state.assistantMeta.explainability || {};
   state.assistantMeta.assistant_scope =
     state.assistantMeta.assistant_scope || {};
   state.assistantMeta.assistant_context =
     state.assistantMeta.assistant_context || {};
-  state.assistantMeta.chronology = Array.isArray(state.assistantMeta.chronology)
-    ? state.assistantMeta.chronology
-    : [];
   state.assistantMeta.facts = state.assistantMeta.facts || {};
   state.assistantMeta.care_domains = state.assistantMeta.care_domains || {};
   state.assistantMeta.evidence_summary =
@@ -87,15 +96,14 @@ export function ensureAssistantState() {
   state.assistantMeta.scrubber_meta = state.assistantMeta.scrubber_meta || {};
   state.assistantMeta.scrubber_reverse_map =
     state.assistantMeta.scrubber_reverse_map || {};
-  state.assistantMeta.secondary_intents = Array.isArray(
-    state.assistantMeta.secondary_intents
-  )
-    ? state.assistantMeta.secondary_intents
-    : [];
-  state.assistantMeta.live_summary =
-    state.assistantMeta.live_summary !== undefined
-      ? state.assistantMeta.live_summary
-      : null;
+
+  if (!("live_summary" in state.assistantMeta)) {
+    state.assistantMeta.live_summary = null;
+  }
+
+  if (!("assistant_insight_pack" in state.assistantMeta)) {
+    state.assistantMeta.assistant_insight_pack = null;
+  }
 }
 
 export function getAssistantMeta() {
@@ -110,12 +118,17 @@ export function mergeAssistantMeta(nextMeta = {}) {
 
   state.assistantMeta = {
     ...previous,
-    intent: nextMeta.intent || previous.intent || null,
+
+    intent:
+      nextMeta.intent !== undefined ? nextMeta.intent : previous.intent || null,
+
     secondary_intents: Array.isArray(nextMeta.secondary_intents)
       ? nextMeta.secondary_intents
       : previous.secondary_intents || [],
+
     retrieval_mode:
       nextMeta.retrieval_mode || previous.retrieval_mode || "whole_scope",
+
     output_mode: nextMeta.output_mode || previous.output_mode || "answer",
 
     sources: Array.isArray(nextMeta.sources)
@@ -201,7 +214,14 @@ export function mergeAssistantMeta(nextMeta = {}) {
         ? nextMeta.live_summary
         : previous.live_summary || null,
 
-    last_analysis_at: nextMeta.last_analysis_at || previous.last_analysis_at || null,
+    assistant_insight_pack:
+      nextMeta.assistant_insight_pack !== undefined
+        ? nextMeta.assistant_insight_pack
+        : previous.assistant_insight_pack || null,
+
+    last_analysis_at:
+      nextMeta.last_analysis_at || previous.last_analysis_at || null,
+
     last_bundle_refresh_at:
       nextMeta.last_bundle_refresh_at ||
       previous.last_bundle_refresh_at ||
@@ -263,9 +283,11 @@ export function getHomeName() {
 
 export function getAllowedHomeIds() {
   return Array.isArray(state.allowedHomeIds)
-    ? state.allowedHomeIds
-        .map((item) => Number(item))
-        .filter((item) => Number.isFinite(item))
+    ? [...new Set(
+        state.allowedHomeIds
+          .map((item) => Number(item))
+          .filter((item) => Number.isFinite(item) && item > 0)
+      )]
     : [];
 }
 
@@ -477,7 +499,7 @@ export function cloneAssistantMessage(entry = {}) {
       entry.scope_snapshot && typeof entry.scope_snapshot === "object"
         ? entry.scope_snapshot
         : null,
-    _streaming: !!entry._streaming,
+    _streaming: Boolean(entry._streaming),
   };
 }
 
@@ -635,7 +657,10 @@ export function detectAssistantIntents(text = "") {
   };
 }
 
-export function detectRetrievalMode(text = "", intent = ASSISTANT_INTENT.unknown) {
+export function detectRetrievalMode(
+  text = "",
+  intent = ASSISTANT_INTENT.unknown
+) {
   const value = String(text || "").trim().toLowerCase();
 
   if (
@@ -673,7 +698,10 @@ export function detectRetrievalMode(text = "", intent = ASSISTANT_INTENT.unknown
   return "whole_scope";
 }
 
-export function detectOutputMode(intent = ASSISTANT_INTENT.unknown, text = "") {
+export function detectOutputMode(
+  intent = ASSISTANT_INTENT.unknown,
+  text = ""
+) {
   const value = String(text || "").toLowerCase();
 
   if (/reg\s*45|regulation\s*45/.test(value)) {
@@ -688,7 +716,11 @@ export function detectOutputMode(intent = ASSISTANT_INTENT.unknown, text = "") {
     return "children_home_manager_brief_template";
   }
 
-  if (/quality brief|quality summary|inspection readiness|ri summary|scrutiny/.test(value)) {
+  if (
+    /quality brief|quality summary|inspection readiness|ri summary|scrutiny/.test(
+      value
+    )
+  ) {
     return "children_home_quality_brief_template";
   }
 
@@ -740,7 +772,11 @@ export function resolveExplicitDateRange(text = "") {
     if (parts.length !== 3) return null;
 
     let [day, month, year] = parts.map(Number);
-    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) {
+    if (
+      !Number.isFinite(day) ||
+      !Number.isFinite(month) ||
+      !Number.isFinite(year)
+    ) {
       return null;
     }
 
