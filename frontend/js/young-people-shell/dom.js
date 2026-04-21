@@ -2,233 +2,278 @@ function byId(id) {
   return document.getElementById(id);
 }
 
-export const els = {
+const DOM_KEYS = {
   /* --------------------------------
      App shell
   --------------------------------- */
-  app: byId("app"),
-  mainContent: byId("mainContent"),
-  workspaceScreen: byId("workspaceScreen"),
-  workspaceShell: byId("workspaceShell"),
-  selectorScreen: byId("selectorScreen"),
-  viewContent: byId("viewContent"),
-  statusBar: byId("statusBar"),
-  statusMessage: byId("statusMessage"),
+  app: "app",
+  mainContent: "mainContent",
+  workspaceScreen: "workspaceScreen",
+  workspaceShell: "workspaceShell",
+  selectorScreen: "selectorScreen",
+  viewContent: "viewContent",
+  statusBar: "statusBar",
+  statusMessage: "statusMessage",
 
   /* --------------------------------
      Top bar
   --------------------------------- */
-  logoBtn: byId("logoBtn"),
-  mobileNavBtn: byId("mobileNavBtn"),
-  refreshBtn: byId("refreshBtn"),
-  refreshWorkspaceBtn: byId("refreshWorkspaceBtn"),
-  homeBtn: byId("homeBtn"),
-  assistantLauncher: byId("assistantLauncher"),
+  logoBtn: "logoBtn",
+  mobileNavBtn: "mobileNavBtn",
+  refreshBtn: "refreshBtn",
+  refreshWorkspaceBtn: "refreshWorkspaceBtn",
+  homeBtn: "homeBtn",
+  assistantLauncher: "assistantLauncher",
 
-  globalSearchForm: byId("globalSearchForm"),
-  recordSearchInput: byId("recordSearchInput"),
-  recordTypeFilter: byId("recordTypeFilter"),
+  globalSearchForm: "globalSearchForm",
+  recordSearchInput: "recordSearchInput",
+  recordTypeFilter: "recordTypeFilter",
 
   /* --------------------------------
      Scope switch
   --------------------------------- */
-  scopeSwitch: byId("scopeSwitch"),
-  scopeChildBtn: byId("scopeChildBtn"),
-  scopeHomeBtn: byId("scopeHomeBtn"),
-  scopeQualityBtn: byId("scopeQualityBtn"),
-  scopeOfstedBtn: byId("scopeOfstedBtn"),
+  scopeSwitch: "scopeSwitch",
+  scopeChildBtn: "scopeChildBtn",
+  scopeHomeBtn: "scopeHomeBtn",
+  scopeQualityBtn: "scopeQualityBtn",
+  scopeOfstedBtn: "scopeOfstedBtn",
 
   /* --------------------------------
      Selector
   --------------------------------- */
-  selectorList: byId("selectorList"),
-  selectorSearch: byId("selectorSearch"),
-  youngPersonSearchInput: byId("youngPersonSearchInput"),
-  selectorRefreshBtn: byId("selectorRefreshBtn"),
-  backToSelectorBtn: byId("backToSelectorBtn"),
+  selectorList: "selectorList",
+  selectorSearch: "selectorSearch",
+  youngPersonSearchInput: "youngPersonSearchInput",
+  selectorRefreshBtn: "selectorRefreshBtn",
+  backToSelectorBtn: "backToSelectorBtn",
 
   /* --------------------------------
      Workspace person summary
   --------------------------------- */
-  personAvatar: byId("personAvatar"),
-  personName: byId("personName"),
-  personMeta: byId("personMeta"),
+  personAvatar: "personAvatar",
+  personName: "personName",
+  personMeta: "personMeta",
 
-  mobilePersonAvatar: byId("mobilePersonAvatar"),
-  mobilePersonName: byId("mobilePersonName"),
-  mobilePersonMeta: byId("mobilePersonMeta"),
-  mobileHomeBtn: byId("mobileHomeBtn"),
+  mobilePersonAvatar: "mobilePersonAvatar",
+  mobilePersonName: "mobilePersonName",
+  mobilePersonMeta: "mobilePersonMeta",
+  mobileHomeBtn: "mobileHomeBtn",
 
-  mobileDrawerPersonName: byId("mobileDrawerPersonName"),
-  mobileDrawerPersonMeta: byId("mobileDrawerPersonMeta"),
+  mobileDrawerPersonName: "mobileDrawerPersonName",
+  mobileDrawerPersonMeta: "mobileDrawerPersonMeta",
 
   /* --------------------------------
      Navigation
   --------------------------------- */
-  desktopNav: byId("desktopNav"),
-  mobileNavContent: byId("mobileNavContent"),
-  mobileNavDrawer: byId("mobileNavDrawer"),
-  mobileNavBackdrop: byId("mobileNavBackdrop"),
-  closeMobileNavBtn: byId("closeMobileNavBtn"),
-  mobileBottomBar: byId("mobileBottomBar"),
+  desktopNav: "desktopNav",
+  mobileNavContent: "mobileNavContent",
+  mobileNavDrawer: "mobileNavDrawer",
+  mobileNavBackdrop: "mobileNavBackdrop",
+  closeMobileNavBtn: "closeMobileNavBtn",
+  mobileBottomBar: "mobileBottomBar",
 
   /* --------------------------------
      Mobile search
   --------------------------------- */
-  mobileSearchForm: byId("mobileSearchForm"),
-  mobileRecordSearchInput: byId("mobileRecordSearchInput"),
+  mobileSearchForm: "mobileSearchForm",
+  mobileRecordSearchInput: "mobileRecordSearchInput",
 
   /* --------------------------------
      Header / hero
   --------------------------------- */
-  workspaceEyebrow: byId("workspaceEyebrow"),
-  pageTitle: byId("pageTitle"),
-  pageSubtitle: byId("pageSubtitle"),
-  heroAssistantBtn: byId("heroAssistantBtn"),
-  heroQuickActions: byId("heroQuickActions"),
-  quickCreateBar: byId("quickCreateBar"),
-  changePersonBtn: byId("changePersonBtn"),
-  profileOpenBtn: byId("profileOpenBtn"),
-  profilePhotoUploadBtn: byId("profilePhotoUploadBtn"),
+  workspaceEyebrow: "workspaceEyebrow",
+  pageTitle: "pageTitle",
+  pageSubtitle: "pageSubtitle",
+  heroAssistantBtn: "heroAssistantBtn",
+  heroQuickActions: "heroQuickActions",
+  quickCreateBar: "quickCreateBar",
+  changePersonBtn: "changePersonBtn",
+  profileOpenBtn: "profileOpenBtn",
+  profilePhotoUploadBtn: "profilePhotoUploadBtn",
 
   /* --------------------------------
      Workspace summary strip
   --------------------------------- */
-  workspaceSummaryStrip: byId("workspaceSummaryStrip"),
-  summaryToday: byId("summaryToday"),
-  summaryNextEvent: byId("summaryNextEvent"),
-  summaryLastRecord: byId("summaryLastRecord"),
-  summaryOpenActions: byId("summaryOpenActions"),
+  workspaceSummaryStrip: "workspaceSummaryStrip",
+  summaryToday: "summaryToday",
+  summaryNextEvent: "summaryNextEvent",
+  summaryLastRecord: "summaryLastRecord",
+  summaryOpenActions: "summaryOpenActions",
 
   /* --------------------------------
      Profile snapshot
   --------------------------------- */
-  profileSnapshotPhotoWrap: byId("profileSnapshotPhotoWrap"),
-  profileSnapshotName: byId("profileSnapshotName"),
-  profileSnapshotMeta: byId("profileSnapshotMeta"),
+  profileSnapshotPhotoWrap: "profileSnapshotPhotoWrap",
+  profileSnapshotName: "profileSnapshotName",
+  profileSnapshotMeta: "profileSnapshotMeta",
 
   /* --------------------------------
      Search results
   --------------------------------- */
-  searchResultsRegion: byId("searchResultsRegion"),
-  searchResultsTitle: byId("searchResultsTitle"),
-  searchResultsList: byId("searchResultsList"),
-  clearSearchResultsBtn: byId("clearSearchResultsBtn"),
+  searchResultsRegion: "searchResultsRegion",
+  searchResultsTitle: "searchResultsTitle",
+  searchResultsList: "searchResultsList",
+  clearSearchResultsBtn: "clearSearchResultsBtn",
 
   /* --------------------------------
      Assistant
   --------------------------------- */
-  assistantBackdrop: byId("assistantBackdrop"),
-  assistantModal: byId("assistantModal"),
-  closeAssistantBtn: byId("closeAssistantBtn"),
+  assistantBackdrop: "assistantBackdrop",
+  assistantModal: "assistantModal",
+  closeAssistantBtn: "closeAssistantBtn",
 
-  assistantMessages: byId("assistantMessages"),
-  assistantForm: byId("assistantForm"),
-  assistantInput: byId("assistantInput"),
-  assistantSendBtn: byId("assistantSendBtn"),
-  assistantClearBtn: byId("assistantClearBtn"),
+  assistantMessages: "assistantMessages",
+  assistantForm: "assistantForm",
+  assistantInput: "assistantInput",
+  assistantSendBtn: "assistantSendBtn",
+  assistantClearBtn: "assistantClearBtn",
 
-  assistantContext: byId("assistantContext"),
-  assistantSuggestions: byId("assistantSuggestions"),
-  assistantScopeSummary: byId("assistantScopeSummary"),
-  assistantActions: byId("assistantActions"),
-  assistantSources: byId("assistantSources"),
-  assistantRuntime: byId("assistantRuntime"),
-  assistantExplainability: byId("assistantExplainability"),
+  assistantContext: "assistantContext",
+  assistantSuggestions: "assistantSuggestions",
+  assistantScopeSummary: "assistantScopeSummary",
+  assistantActions: "assistantActions",
+  assistantSources: "assistantSources",
+  assistantRuntime: "assistantRuntime",
+  assistantExplainability: "assistantExplainability",
 
   /* --------------------------------
      Assistant badges
   --------------------------------- */
-  scopeBadge: byId("scopeBadge"),
-  scopeHomeBadge: byId("scopeHomeBadge"),
-  scopeChildBadge: byId("scopeChildBadge"),
-  scopeShiftBadge: byId("scopeShiftBadge"),
+  scopeBadge: "scopeBadge",
+  scopeHomeBadge: "scopeHomeBadge",
+  scopeChildBadge: "scopeChildBadge",
+  scopeShiftBadge: "scopeShiftBadge",
 
   /* --------------------------------
      Assistant controller / intelligence panels
   --------------------------------- */
-  assistantScopeBundleStatus: byId("assistantScopeBundleStatus"),
-  assistantScopeBundleError: byId("assistantScopeBundleError"),
-  assistantLiveStatus: byId("assistantLiveStatus"),
-  assistantRefreshScopeBtn: byId("assistantRefreshScopeBtn"),
-  assistantRefreshAnalysisBtn: byId("assistantRefreshAnalysisBtn"),
-  morningBriefBody: byId("morningBriefBody"),
-  managerBriefBody: byId("managerBriefBody"),
-  qualityBriefBody: byId("qualityBriefBody"),
-  liveUpdatesBody: byId("liveUpdatesBody"),
-  clearLiveUpdatesBtn: byId("clearLiveUpdatesBtn"),
+  assistantScopeBundleStatus: "assistantScopeBundleStatus",
+  assistantScopeBundleError: "assistantScopeBundleError",
+  assistantLiveStatus: "assistantLiveStatus",
+  assistantRefreshScopeBtn: "assistantRefreshScopeBtn",
+  assistantRefreshAnalysisBtn: "assistantRefreshAnalysisBtn",
+  morningBriefBody: "morningBriefBody",
+  managerBriefBody: "managerBriefBody",
+  qualityBriefBody: "qualityBriefBody",
+  liveUpdatesBody: "liveUpdatesBody",
+  clearLiveUpdatesBtn: "clearLiveUpdatesBtn",
 
   /* --------------------------------
      Fullscreen panel
   --------------------------------- */
-  fullscreenPanel: byId("fullscreenPanel"),
-  fullscreenPanelTitle: byId("fullscreenPanelTitle"),
-  fullscreenPanelSubtitle: byId("fullscreenPanelSubtitle"),
-  fullscreenPanelActions: byId("fullscreenPanelActions"),
-  closeFullscreenPanelBtn: byId("closeFullscreenPanelBtn"),
-  fullscreenPanelBody: byId("fullscreenPanelBody"),
+  fullscreenPanel: "fullscreenPanel",
+  fullscreenPanelTitle: "fullscreenPanelTitle",
+  fullscreenPanelSubtitle: "fullscreenPanelSubtitle",
+  fullscreenPanelActions: "fullscreenPanelActions",
+  closeFullscreenPanelBtn: "closeFullscreenPanelBtn",
+  fullscreenPanelBody: "fullscreenPanelBody",
 
   /* --------------------------------
      Composer
   --------------------------------- */
-  composerPanel: byId("composerPanel"),
-  composerTitle: byId("composerTitle"),
-  composerSubtitle: byId("composerSubtitle"),
-  composerGuidanceText: byId("composerGuidanceText"),
-  composerPrompts: byId("composerPrompts"),
-  recordComposerForm: byId("recordComposerForm"),
-  recordComposerFields: byId("recordComposerFields"),
-  composerAiFeedback: byId("composerAiFeedback"),
-  composerAutosaveStatus: byId("composerAutosaveStatus"),
-  closeComposerBtn: byId("closeComposerBtn"),
-  composerSaveBtn: byId("composerSaveBtn"),
-  composerSaveDraftBtn: byId("composerSaveDraftBtn"),
-  composerCheckBtn: byId("composerCheckBtn"),
-  composerSubmitBtn: byId("composerSubmitBtn"),
-  composerGrammarBtn: byId("composerGrammarBtn"),
-  composerClarityBtn: byId("composerClarityBtn"),
-  composerSafeguardingBtn: byId("composerSafeguardingBtn"),
-  composerChildVoiceBtn: byId("composerChildVoiceBtn"),
-
-  /* backward-compatible composer aliases */
-  composerForm: byId("recordComposerForm"),
-  composerFields: byId("recordComposerFields"),
+  composerPanel: "composerPanel",
+  composerTitle: "composerTitle",
+  composerSubtitle: "composerSubtitle",
+  composerGuidanceText: "composerGuidanceText",
+  composerPrompts: "composerPrompts",
+  recordComposerForm: "recordComposerForm",
+  recordComposerFields: "recordComposerFields",
+  composerAiFeedback: "composerAiFeedback",
+  composerAutosaveStatus: "composerAutosaveStatus",
+  closeComposerBtn: "closeComposerBtn",
+  composerSaveBtn: "composerSaveBtn",
+  composerSaveDraftBtn: "composerSaveDraftBtn",
+  composerCheckBtn: "composerCheckBtn",
+  composerSubmitBtn: "composerSubmitBtn",
+  composerGrammarBtn: "composerGrammarBtn",
+  composerClarityBtn: "composerClarityBtn",
+  composerSafeguardingBtn: "composerSafeguardingBtn",
+  composerChildVoiceBtn: "composerChildVoiceBtn",
 
   /* --------------------------------
      Record drawer
   --------------------------------- */
-  recordDrawer: byId("recordDrawer"),
-  recordDrawerBackdrop: byId("recordDrawerBackdrop"),
-  recordDrawerTitle: byId("recordDrawerTitle"),
-  recordDrawerSubtitle: byId("recordDrawerSubtitle"),
-  recordDrawerBody: byId("recordDrawerBody"),
-  recordDrawerActions: byId("recordDrawerActions"),
-  closeRecordDrawerBtn: byId("closeRecordDrawerBtn"),
-  drawerEditBtn: byId("drawerEditBtn"),
-  drawerSubmitBtn: byId("drawerSubmitBtn"),
-  drawerApproveBtn: byId("drawerApproveBtn"),
-  drawerReturnBtn: byId("drawerReturnBtn"),
-  drawerArchiveBtn: byId("drawerArchiveBtn"),
-
-  /* backward-compatible drawer aliases */
-  drawer: byId("recordDrawer"),
-  drawerBackdrop: byId("recordDrawerBackdrop"),
-  drawerTitle: byId("recordDrawerTitle"),
-  drawerSubtitle: byId("recordDrawerSubtitle"),
-  drawerBody: byId("recordDrawerBody"),
-  drawerActions: byId("recordDrawerActions"),
-  closeDrawerBtn: byId("closeRecordDrawerBtn"),
+  recordDrawer: "recordDrawer",
+  recordDrawerBackdrop: "recordDrawerBackdrop",
+  recordDrawerTitle: "recordDrawerTitle",
+  recordDrawerSubtitle: "recordDrawerSubtitle",
+  recordDrawerBody: "recordDrawerBody",
+  recordDrawerActions: "recordDrawerActions",
+  closeRecordDrawerBtn: "closeRecordDrawerBtn",
+  drawerEditBtn: "drawerEditBtn",
+  drawerSubmitBtn: "drawerSubmitBtn",
+  drawerApproveBtn: "drawerApproveBtn",
+  drawerReturnBtn: "drawerReturnBtn",
+  drawerArchiveBtn: "drawerArchiveBtn",
 
   /* --------------------------------
      Suggestions
   --------------------------------- */
-  suggestionsPanel: byId("suggestionsPanel"),
-  suggestionsPanelTitle: byId("suggestionsPanelTitle"),
-  suggestionsPanelSubtitle: byId("suggestionsPanelSubtitle"),
-  suggestionsPanelBody: byId("suggestionsPanelBody"),
-  closeSuggestionsPanelBtn: byId("closeSuggestionsPanelBtn"),
+  suggestionsPanel: "suggestionsPanel",
+  suggestionsPanelTitle: "suggestionsPanelTitle",
+  suggestionsPanelSubtitle: "suggestionsPanelSubtitle",
+  suggestionsPanelBody: "suggestionsPanelBody",
+  closeSuggestionsPanelBtn: "closeSuggestionsPanelBtn",
 };
+
+function buildEls() {
+  const resolved = {};
+
+  Object.entries(DOM_KEYS).forEach(([key, id]) => {
+    resolved[key] = byId(id);
+  });
+
+  resolved.composerForm = resolved.recordComposerForm;
+  resolved.composerFields = resolved.recordComposerFields;
+
+  resolved.drawer = resolved.recordDrawer;
+  resolved.drawerBackdrop = resolved.recordDrawerBackdrop;
+  resolved.drawerTitle = resolved.recordDrawerTitle;
+  resolved.drawerSubtitle = resolved.recordDrawerSubtitle;
+  resolved.drawerBody = resolved.recordDrawerBody;
+  resolved.drawerActions = resolved.recordDrawerActions;
+  resolved.closeDrawerBtn = resolved.closeRecordDrawerBtn;
+
+  return resolved;
+}
+
+export let els = buildEls();
+
+export function refreshEls() {
+  els = buildEls();
+  return els;
+}
 
 export function getEl(id) {
   return byId(id);
+}
+
+export function requireEl(id, context = "unknown") {
+  const el = byId(id);
+
+  if (!el) {
+    console.warn(`[dom] missing required element "${id}" in ${context}`);
+  }
+
+  return el;
+}
+
+export function validateCoreDom() {
+  const requiredIds = [
+    "app",
+    "workspaceScreen",
+    "selectorScreen",
+    "viewContent",
+  ];
+
+  const missing = requiredIds.filter((id) => !byId(id));
+
+  if (missing.length) {
+    console.warn("[dom] missing core elements", missing);
+  }
+
+  return {
+    ok: missing.length === 0,
+    missing,
+  };
 }
