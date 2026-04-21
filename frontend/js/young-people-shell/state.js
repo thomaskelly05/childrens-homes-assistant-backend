@@ -31,6 +31,11 @@ function getValidReadinessTab(tab = "overview") {
   return VALID_READINESS_TABS.has(safeTab) ? safeTab : "overview";
 }
 
+function normaliseNumericId(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 export function createAssistantMeta() {
   return {
     sources: [],
@@ -384,8 +389,12 @@ export function setSelectedYoungPerson(person = null) {
   state.youngPerson = safePerson;
   state.youngPersonId = safePerson?.id || safePerson?.young_person_id || null;
 
-  if (!state.homeId && (safePerson?.home_id || safePerson?.homeId)) {
-    state.homeId = safePerson.home_id || safePerson.homeId || null;
+  const personHomeId = normaliseNumericId(
+    safePerson?.home_id ?? safePerson?.homeId ?? null
+  );
+
+  if (personHomeId && !state.homeId) {
+    state.homeId = personHomeId;
   }
 }
 
@@ -396,31 +405,23 @@ export function clearSelectedYoungPerson() {
 }
 
 export function setHomeContext(homeId = null) {
-  state.homeId =
-    homeId === null || homeId === undefined || homeId === ""
-      ? null
-      : homeId;
+  state.homeId = normaliseNumericId(homeId);
 }
 
 export function setProviderContext(providerId = null) {
-  state.providerId =
-    providerId === null || providerId === undefined || providerId === ""
-      ? null
-      : providerId;
+  state.providerId = normaliseNumericId(providerId);
 }
 
 export function setAllowedHomeIds(homeIds = []) {
   state.allowedHomeIds = Array.isArray(homeIds)
     ? homeIds
         .map((item) => Number(item))
-        .filter((item) => Number.isFinite(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
     : [];
 }
 
 export function setReadinessSelectedHomeId(homeId = null) {
-  const safeHomeId = Number(homeId);
-  state.readinessSelectedHomeId =
-    Number.isFinite(safeHomeId) && safeHomeId > 0 ? safeHomeId : null;
+  state.readinessSelectedHomeId = normaliseNumericId(homeId);
 }
 
 export function setReadinessActiveTab(tab = "overview") {
@@ -525,19 +526,19 @@ export function getCurrentReadinessHomeId() {
 
 export function getBestAvailableHomeId() {
   return (
-    state.readinessSelectedHomeId ||
-    state.homeId ||
-    state.selectedYoungPerson?.home_id ||
-    state.selectedYoungPerson?.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    state.allowedHomeIds?.[0] ||
+    normaliseNumericId(state.readinessSelectedHomeId) ||
+    normaliseNumericId(state.homeId) ||
+    normaliseNumericId(state.selectedYoungPerson?.home_id) ||
+    normaliseNumericId(state.selectedYoungPerson?.homeId) ||
+    normaliseNumericId(state.currentUser?.home_id) ||
+    normaliseNumericId(state.currentUser?.homeId) ||
+    normaliseNumericId(state.allowedHomeIds?.[0]) ||
     null
   );
 }
 
 export function resolveAccessibleHomeId(preferredHomeId = null) {
-  const parsedPreferred = Number(
+  const parsedPreferred = normaliseNumericId(
     preferredHomeId ??
       state.readinessSelectedHomeId ??
       state.homeId ??
@@ -555,13 +556,21 @@ export function resolveAccessibleHomeId(preferredHomeId = null) {
     : [];
 
   if (allowedHomeIds.length) {
-    if (Number.isFinite(parsedPreferred) && allowedHomeIds.includes(parsedPreferred)) {
+    if (parsedPreferred && allowedHomeIds.includes(parsedPreferred)) {
       return parsedPreferred;
     }
     return allowedHomeIds[0];
   }
 
-  return Number.isFinite(parsedPreferred) && parsedPreferred > 0 ? parsedPreferred : null;
+  return parsedPreferred;
+}
+
+export function hasResolvedHomeContext() {
+  return Boolean(resolveAccessibleHomeId());
+}
+
+export function hasResolvedProviderContext() {
+  return Boolean(normaliseNumericId(state.providerId));
 }
 
 export function setAssistantScopeBundle(bundle = null) {
@@ -717,7 +726,7 @@ export function getCurrentScopeEntity() {
   if (state.currentScope === "home") {
     return {
       type: "home",
-      id: state.homeId || null,
+      id: resolveAccessibleHomeId(),
       name:
         state.currentUser?.home_name ||
         state.currentUser?.homeName ||
@@ -728,7 +737,7 @@ export function getCurrentScopeEntity() {
   if (state.currentScope === "quality") {
     return {
       type: "quality",
-      id: getBestAvailableHomeId(),
+      id: resolveAccessibleHomeId(),
       name:
         state.currentUser?.home_name ||
         state.currentUser?.homeName ||
@@ -739,7 +748,7 @@ export function getCurrentScopeEntity() {
   if (state.currentScope === "ofsted") {
     return {
       type: "ofsted",
-      id: getBestAvailableHomeId(),
+      id: resolveAccessibleHomeId(),
       name:
         state.currentUser?.home_name ||
         state.currentUser?.homeName ||
