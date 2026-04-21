@@ -123,6 +123,7 @@ function getStatusTone(status = "") {
       "not_ready",
       "inadequate",
       "danger",
+      "requires_improvement",
     ].includes(normalised)
   ) {
     return "danger";
@@ -140,6 +141,9 @@ function getStatusTone(status = "") {
       "awaiting",
       "requires_work",
       "medium",
+      "open",
+      "planned",
+      "draft",
     ].includes(normalised)
   ) {
     return "warning";
@@ -156,6 +160,10 @@ function getStatusTone(status = "") {
       "completed",
       "active",
       "effective",
+      "resolved",
+      "current",
+      "up_to_date",
+      "compliant",
     ].includes(normalised)
   ) {
     return "success";
@@ -190,9 +198,16 @@ function hasUsableData(data) {
   if (Array.isArray(data.sccif_areas) && data.sccif_areas.length > 0) return true;
   if (Array.isArray(data.documents) && data.documents.length > 0) return true;
   if (Array.isArray(data.compliance) && data.compliance.length > 0) return true;
+  if (Array.isArray(data.inspection_reasons) && data.inspection_reasons.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_sections) && data.inspection_sections.length > 0)
+    return true;
   if (data.summary && typeof data.summary === "object") return true;
   if (data.dashboard && typeof data.dashboard === "object") return true;
   if (typeof data.readiness_score !== "undefined") return true;
+  if (typeof data.overall_score !== "undefined") return true;
   return false;
 }
 
@@ -210,24 +225,19 @@ function normaliseEvidenceItems(data = {}) {
       item.area ||
       item.sccif_area ||
       item.judgement_area ||
+      item.section_name ||
       "Uncategorised area",
-    standard:
-      item.standard ||
-      item.quality_standard ||
-      item.sub_area ||
-      "",
+    standard: item.standard || item.quality_standard || item.sub_area || "",
     source_type: item.source_type || item.evidence_source || "",
     linked_record_type: item.linked_record_type || "",
     linked_record_id: item.linked_record_id || null,
-    strength:
-      item.strength ||
-      item.status ||
-      "recorded",
+    strength: item.strength || item.status || "recorded",
     status: item.status || item.strength || "recorded",
     summary:
       item.summary ||
       item.description ||
       item.evidence_note ||
+      item.evidence_excerpt ||
       "Evidence item recorded.",
     owner_user_name: item.owner_user_name || item.owner || "",
     review_date: item.review_date || item.due_date || null,
@@ -246,6 +256,7 @@ function normaliseGapItems(data = {}) {
       item.area ||
       item.sccif_area ||
       item.judgement_area ||
+      item.section_name ||
       "Uncategorised area",
     status: item.status || item.priority || "open",
     priority: item.priority || "",
@@ -253,6 +264,7 @@ function normaliseGapItems(data = {}) {
       item.summary ||
       item.description ||
       item.gap_reason ||
+      item.concerns_text ||
       "Evidence gap recorded.",
     owner_user_name: item.owner_user_name || item.owner || "",
     due_date: item.due_date || null,
@@ -267,20 +279,18 @@ function normaliseActionItems(data = {}) {
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "sccif_action",
     title: item.title || item.action_title || item.task || "Action",
-    area:
-      item.area ||
-      item.sccif_area ||
-      item.judgement_area ||
-      "",
+    area: item.area || item.sccif_area || item.judgement_area || item.section_name || "",
     status: item.status || "open",
     priority: item.priority || "",
     summary:
       item.summary ||
       item.description ||
       item.task ||
+      item.action_description ||
       "Follow-up action recorded.",
-    owner_user_name: item.owner_user_name || item.owner || item.assigned_to || "",
-    due_date: item.due_date || null,
+    owner_user_name:
+      item.owner_user_name || item.owner || item.assigned_to || item.assigned_user_name || "",
+    due_date: item.due_date || item.task_due_date || item.action_due_date || null,
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
   }));
@@ -295,10 +305,7 @@ function normaliseComplianceItems(data = {}) {
     area: item.area || "",
     status: item.status || "recorded",
     due_date: item.due_date || item.review_date || null,
-    summary:
-      item.summary ||
-      item.notes ||
-      "Compliance item recorded.",
+    summary: item.summary || item.notes || "Compliance item recorded.",
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
   }));
@@ -311,10 +318,7 @@ function normaliseDocumentItems(data = {}) {
     record_type: item.record_type || "document",
     title: item.title || item.document_type || "Document",
     document_type: item.document_type || "",
-    area:
-      item.area ||
-      item.sccif_area ||
-      "",
+    area: item.area || item.sccif_area || "",
     status: item.status || "active",
     review_date: item.review_date || item.expiry_date || null,
     summary:
@@ -324,6 +328,139 @@ function normaliseDocumentItems(data = {}) {
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
   }));
+}
+
+function buildEvidenceFromReadiness(readinessData = {}) {
+  const sections = toArray(readinessData?.inspection_sections, [
+    readinessData?.sections,
+    readinessData?.inspection_section_scores,
+    readinessData?.items,
+  ]);
+
+  const reasons = toArray(readinessData?.inspection_reasons, [
+    readinessData?.reasons,
+  ]);
+
+  const sectionEvidence = sections.map((item) => ({
+    id: item.id ?? item.section_score_id ?? item.source_id ?? null,
+    record_type: "sccif_evidence",
+    title: item.section_name || item.title || "Inspection section evidence",
+    area: item.section_name || item.section_code || "Uncategorised area",
+    standard: item.section_code || "",
+    source_type: "inspection_section",
+    linked_record_type: item.record_type || "inspection_section_panel",
+    linked_record_id: item.id ?? item.section_score_id ?? null,
+    strength: item.score_band || item.status || "recorded",
+    status: item.score_band || item.status || "recorded",
+    summary:
+      item.summary_text ||
+      item.strengths_text ||
+      item.concerns_text ||
+      item.summary ||
+      "Inspection section evidence available.",
+    owner_user_name: "",
+    review_date: item.review_date || null,
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+
+  const reasonEvidence = reasons.map((item) => ({
+    id: item.id ?? item.source_id ?? null,
+    record_type: "sccif_evidence",
+    title: item.title || item.line_of_enquiry_name || "Inspection evidence",
+    area: item.section_name || item.section_code || "Uncategorised area",
+    standard: item.reason_type || "",
+    source_type: item.source_table || "inspection_reason",
+    linked_record_type: item.record_type || "inspection_reason",
+    linked_record_id: item.id ?? null,
+    strength: item.reason_type || "recorded",
+    status: item.reason_type || "recorded",
+    summary:
+      item.description ||
+      item.evidence_excerpt ||
+      item.summary ||
+      "Inspection evidence available.",
+    owner_user_name: "",
+    review_date: item.due_date || null,
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+
+  return [...sectionEvidence, ...reasonEvidence];
+}
+
+function buildGapsFromReadiness(readinessData = {}) {
+  const reasons = toArray(readinessData?.inspection_reasons, [
+    readinessData?.reasons,
+  ]);
+
+  return reasons
+    .filter((item) =>
+      ["concern", "gap", "weakness", "risk"].includes(
+        String(item.reason_type || "").toLowerCase().replaceAll(" ", "_")
+      )
+    )
+    .map((item) => ({
+      id: item.id ?? item.source_id ?? null,
+      record_type: "sccif_gap",
+      title: item.title || item.line_of_enquiry_name || "Evidence gap",
+      area: item.section_name || item.section_code || "Uncategorised area",
+      status: item.reason_type || "open",
+      priority: item.priority || "",
+      summary:
+        item.description ||
+        item.evidence_excerpt ||
+        item.summary ||
+        "Evidence gap identified.",
+      owner_user_name: item.owner_user_name || "",
+      due_date: item.due_date || null,
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    }));
+}
+
+function buildActionsFromReadiness(readinessData = {}) {
+  const actions = toArray(readinessData?.inspection_actions, [
+    readinessData?.actions,
+    readinessData?.inspection_tasks,
+    readinessData?.tasks,
+  ]);
+
+  return actions.map((item) => ({
+    id: item.id ?? item.action_id ?? item.task_id ?? item.source_id ?? null,
+    record_type: "sccif_action",
+    title: item.action_title || item.task_title || item.title || "Action",
+    area: item.section_name || item.section_code || item.area || "",
+    status: item.status || (item.completed ? "completed" : "open"),
+    priority: item.priority || "",
+    summary:
+      item.action_description ||
+      item.evidence_required ||
+      item.summary ||
+      "Follow-up action recorded.",
+    owner_user_name:
+      item.owner_user_name ||
+      item.owner_staff_name ||
+      item.assigned_user_name ||
+      "",
+    due_date: item.due_date || item.task_due_date || item.action_due_date || null,
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+}
+
+function buildSummaryFromReadiness(readinessData = {}) {
+  const summary = readinessData?.summary || readinessData || {};
+  return {
+    title: summary.title || summary.home_name || summary.name || "SCCIF evidence",
+    home_name: summary.home_name || "",
+    readiness_score:
+      summary.readiness_score ??
+      summary.overall_score ??
+      summary.evidence_score ??
+      0,
+    overall_band: summary.overall_band || "",
+  };
 }
 
 function buildAreaCards({ evidenceItems = [], gapItems = [], actionItems = [] }) {
@@ -605,7 +742,9 @@ function renderProgressCards(cards = []) {
               </div>
               <div class="analytics-progress-track">
                 <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
+                  class="analytics-progress-bar analytics-progress-bar--${safeText(
+                    card.tone || "muted"
+                  )}"
                   style="width: ${safeText(card.percent || 0)}%;"
                 ></span>
               </div>
@@ -663,7 +802,9 @@ function renderRows(items = [], options = {}) {
               data-title="${safeText(title)}"
               data-record-summary="${safeText(summary)}"
               data-record-status="${safeText(status || "")}"
-              data-record-date="${safeText(item?.due_date || item?.updated_at || item?.created_at || "")}"
+              data-record-date="${safeText(
+                item?.due_date || item?.updated_at || item?.created_at || ""
+              )}"
               data-record-payload="${safeText(recordPayload)}"
               tabindex="0"
               role="button"
@@ -674,7 +815,9 @@ function renderRows(items = [], options = {}) {
                 <div class="record-row-meta">${safeText(meta)}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(status || "Recorded")}</span>
+                <span class="row-pill ${safeText(tone)}">${safeText(
+                  status || "Recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -721,17 +864,23 @@ function renderAreaCards(cards = []) {
   return `
     <div class="overview-stats-grid">
       ${cards
-        .map((card) => `
+        .map(
+          (card) => `
           <article class="overview-stat-card ${
-            card.gaps > 0 ? "overview-stat-card--warning" : "overview-stat-card--success"
+            card.gaps > 0
+              ? "overview-stat-card--warning"
+              : "overview-stat-card--success"
           }">
             <span class="overview-stat-label">${safeText(card.area)}</span>
             <strong class="overview-stat-value">${safeText(card.evidence)}</strong>
             <span class="overview-stat-note">
-              ${safeText(`${card.strong} strong • ${card.gaps} gaps • ${card.actions} actions`)}
+              ${safeText(
+                `${card.strong} strong • ${card.gaps} gaps • ${card.actions} actions`
+              )}
             </span>
           </article>
-        `)
+        `
+        )
         .join("")}
     </div>
   `;
@@ -966,7 +1115,9 @@ function renderErrorState(message) {
         <div class="empty-state-inner">
           <div class="empty-state-icon" aria-hidden="true">!</div>
           <h3>Failed to load SCCIF evidence</h3>
-          <p>${safeText(message || "The SCCIF evidence view could not be loaded.")}</p>
+          <p>${safeText(
+            message || "The SCCIF evidence view could not be loaded."
+          )}</p>
         </div>
       </div>
     </section>
@@ -1052,7 +1203,8 @@ function buildFallbackData(homeId) {
           status: "open",
           owner_user_name: "Sarah Jones",
           due_date: plusDays(3),
-          summary: "Return-home interviews need clearer linkage into chronologies and management review.",
+          summary:
+            "Return-home interviews need clearer linkage into chronologies and management review.",
         },
         {
           id: "gap-2",
@@ -1062,7 +1214,8 @@ function buildFallbackData(homeId) {
           status: "overdue",
           owner_user_name: "Tom Patel",
           due_date: plusDays(1),
-          summary: "Audit follow-through is not always showing clear management challenge and impact.",
+          summary:
+            "Audit follow-through is not always showing clear management challenge and impact.",
         },
       ],
     },
@@ -1075,7 +1228,8 @@ function buildFallbackData(homeId) {
           status: "in_progress",
           owner_user_name: "Sarah Jones",
           due_date: plusDays(4),
-          summary: "Update evidence links between incident, return-home and chronology records.",
+          summary:
+            "Update evidence links between incident, return-home and chronology records.",
         },
         {
           id: "act-2",
@@ -1084,7 +1238,8 @@ function buildFallbackData(homeId) {
           status: "open",
           owner_user_name: "Tom Patel",
           due_date: plusDays(2),
-          summary: "Attach completed evidence and management rationale to closed audit actions.",
+          summary:
+            "Attach completed evidence and management rationale to closed audit actions.",
         },
       ],
     },
@@ -1122,27 +1277,47 @@ async function fetchDataset(homeId) {
   const safeGet = (url) => apiGet(url).catch(() => null);
 
   const requests = [
-    safeGet(endpoints.sccifEvidence),
     safeGet(endpoints.readiness),
+    safeGet(endpoints.quality),
     safeGet(endpoints.compliance),
     safeGet(endpoints.documents),
   ];
 
-  const [evidenceData, readinessData, complianceData, documentData] =
+  const [readinessData, qualityData, complianceData, documentData] =
     await Promise.all(requests);
 
-  const responses = [evidenceData, readinessData, complianceData, documentData];
+  const responses = [readinessData, qualityData, complianceData, documentData];
   const hasLiveSuccess = responses.some(hasUsableData);
 
   if (!hasLiveSuccess) {
     return buildFallbackData(homeId);
   }
 
+  const summaryData =
+    readinessData && hasUsableData(readinessData)
+      ? buildSummaryFromReadiness(readinessData)
+      : normaliseSummary(qualityData || {});
+
+  const liveEvidence =
+    normaliseEvidenceItems(qualityData || {}).length
+      ? normaliseEvidenceItems(qualityData || {})
+      : buildEvidenceFromReadiness(readinessData || {});
+
+  const liveGaps =
+    normaliseGapItems(qualityData || {}).length
+      ? normaliseGapItems(qualityData || {})
+      : buildGapsFromReadiness(readinessData || {});
+
+  const liveActions =
+    normaliseActionItems(qualityData || {}).length
+      ? normaliseActionItems(qualityData || {})
+      : buildActionsFromReadiness(readinessData || {});
+
   return {
-    summaryData: evidenceData || {},
-    evidenceData: evidenceData || { items: [] },
-    gapData: readinessData || { items: [] },
-    actionData: readinessData || { items: [] },
+    summaryData,
+    evidenceData: { items: liveEvidence },
+    gapData: { items: liveGaps },
+    actionData: { items: liveActions },
     complianceData: complianceData || { items: [] },
     documentData: documentData || { items: [] },
     isFallback: false,
@@ -1172,7 +1347,10 @@ export async function loadSccifEvidence() {
       isFallback,
     } = await fetchDataset(homeId);
 
-    const summary = normaliseSummary(summaryData);
+    const summary =
+      typeof summaryData === "object" && !Array.isArray(summaryData)
+        ? summaryData
+        : normaliseSummary(summaryData);
 
     const evidenceItems = sortNewestFirst(normaliseEvidenceItems(evidenceData), [
       "updated_at",
@@ -1191,11 +1369,10 @@ export async function loadSccifEvidence() {
       "created_at",
     ]).slice(0, 8);
 
-    const complianceItems = sortSoonestFirst(normaliseComplianceItems(complianceData), [
-      "due_date",
-      "updated_at",
-      "created_at",
-    ])
+    const complianceItems = sortSoonestFirst(
+      normaliseComplianceItems(complianceData),
+      ["due_date", "updated_at", "created_at"]
+    )
       .filter((item) =>
         ["overdue", "missing", "review_due", "due_soon", "escalated"].includes(
           String(item.status || "")
@@ -1205,11 +1382,10 @@ export async function loadSccifEvidence() {
       )
       .slice(0, 6);
 
-    const documentItems = sortSoonestFirst(normaliseDocumentItems(documentData), [
-      "review_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 6);
+    const documentItems = sortSoonestFirst(
+      normaliseDocumentItems(documentData),
+      ["review_date", "updated_at", "created_at"]
+    ).slice(0, 6);
 
     const areaCards = buildAreaCards({
       evidenceItems,
@@ -1276,6 +1452,8 @@ export async function loadSccifEvidence() {
     });
   } catch (error) {
     console.error("[sccif-evidence] load failed", error);
-    renderErrorState(error?.message || "The SCCIF evidence view could not be loaded.");
+    renderErrorState(
+      error?.message || "The SCCIF evidence view could not be loaded."
+    );
   }
 }
