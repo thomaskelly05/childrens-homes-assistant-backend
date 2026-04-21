@@ -52,7 +52,9 @@ function titleCase(value) {
 
 function qualityVisibilityPath(homeId) {
   if (homeId) {
-    return `/visibility/quality?home_id=${encodeURIComponent(homeId)}&all_accessible_homes=false`;
+    return `/visibility/quality?home_id=${encodeURIComponent(
+      homeId
+    )}&all_accessible_homes=false`;
   }
   return "/visibility/quality?all_accessible_homes=true";
 }
@@ -1007,10 +1009,10 @@ function renderPanelSection(title, content) {
 }
 
 function signalTone(signal = {}) {
-  const token = lower(signal.severity || "");
-  if (["critical", "high"].includes(token)) return "danger";
-  if (token === "medium") return "warning";
-  if (token === "low") return "success";
+  const token = lower(signal.severity || signal.status || "");
+  if (["critical", "high", "overdue", "danger"].includes(token)) return "danger";
+  if (["medium", "warning", "due_soon", "amber"].includes(token)) return "warning";
+  if (["low", "good", "success", "current"].includes(token)) return "success";
   return "muted";
 }
 
@@ -1090,8 +1092,9 @@ function renderTrendRows(trends = []) {
               <div class="record-row-main">
                 <div class="record-row-title">${safeText(item?.label || "Trend")}</div>
                 <div class="record-row-summary">
-                  ${safeText(item?.assessment || "stable")} • ${safeText(item?.current ?? 0)} now vs
-                  ${safeText(item?.previous ?? 0)} before
+                  ${safeText(item?.assessment || "stable")} • ${safeText(
+                    item?.current ?? 0
+                  )} now vs ${safeText(item?.previous ?? 0)} before
                 </div>
               </div>
               <div class="record-row-side">
@@ -1125,11 +1128,18 @@ function renderPatternRows(patterns = []) {
                 <div class="record-row-title">${safeText(item?.title || "Pattern")}</div>
                 <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
                 <div class="record-row-meta">
-                  <span>${safeText(`${toNumber(item?.frequency, 0)} in ${toNumber(item?.period_days, 0)} days`)}</span>
+                  <span>${safeText(
+                    `${toNumber(item?.frequency, 0)} in ${toNumber(
+                      item?.period_days,
+                      0
+                    )} days`
+                  )}</span>
                 </div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(signalTone({ severity: item?.severity || "medium" }))}">
+                <span class="row-pill ${safeText(
+                  signalTone({ severity: item?.severity || "medium" })
+                )}">
                   ${safeText(item?.severity || "medium")}
                 </span>
               </div>
@@ -1163,7 +1173,9 @@ function renderDecisionRows(items = []) {
                 <div class="record-row-meta">${safeText(item?.suggested_action || "")}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(signalTone({ severity: item?.severity || "medium" }))}">
+                <span class="row-pill ${safeText(
+                  signalTone({ severity: item?.severity || "medium" })
+                )}">
                   ${safeText(item?.severity || "medium")}
                 </span>
               </div>
@@ -1195,6 +1207,72 @@ function renderMissingRows(items = []) {
             </article>
           `
         )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderInsightBlocks(blocks = []) {
+  if (!Array.isArray(blocks) || !blocks.length) {
+    return `
+      <div class="empty-state">
+        <p>No quality insight blocks are available yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-card-list">
+      ${blocks
+        .slice(0, 6)
+        .map((block, index) => {
+          const title =
+            block?.title ||
+            block?.heading ||
+            block?.label ||
+            `Insight ${index + 1}`;
+          const summary =
+            block?.summary ||
+            block?.body ||
+            block?.text ||
+            block?.description ||
+            "";
+          const status =
+            block?.status || block?.severity || block?.priority || "";
+          const metaBits = [
+            block?.theme,
+            block?.category,
+            block?.owner,
+            block?.due_date ? formatDate(block.due_date) : "",
+          ].filter(Boolean);
+
+          return `
+            <article class="record-card">
+              <div class="record-card-head" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                <div>
+                  <div class="record-card-title">${safeText(title)}</div>
+                  ${
+                    metaBits.length
+                      ? `<div class="record-card-meta">${safeText(
+                          metaBits.join(" • ")
+                        )}</div>`
+                      : ""
+                  }
+                </div>
+                ${
+                  status
+                    ? `<span class="${badgeClass(status)}">${safeText(
+                        titleCase(status)
+                      )}</span>`
+                    : ""
+                }
+              </div>
+              <div class="record-card-body">
+                <div class="record-card-summary">${safeText(summary || "No additional detail supplied.")}</div>
+              </div>
+            </article>
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -1476,11 +1554,18 @@ function renderQualityDriftIndicators(items = []) {
             <div class="record-row-main">
               <div class="record-row-title">${safeText(item?.label || "Drift indicator")}</div>
               <div class="record-row-summary">
-                ${safeText(`${toNumber(item?.value, 0)}% (healthy ${toNumber(item?.healthy_threshold, 0)}%)`)}
+                ${safeText(
+                  `${toNumber(item?.value, 0)}% (healthy ${toNumber(
+                    item?.healthy_threshold,
+                    0
+                  )}%)`
+                )}
               </div>
             </div>
             <div class="record-row-side">
-              <span class="row-pill ${safeText(signalTone({ severity: item?.status || "medium" }))}">
+              <span class="row-pill ${safeText(
+                signalTone({ severity: item?.status || "medium" })
+              )}">
                 ${safeText(item?.status || "unknown")}
               </span>
             </div>
@@ -2170,10 +2255,8 @@ export async function loadCurrentView() {
       today: data.isFallback
         ? `${overdueCompliance.length} quality issues • preview mode`
         : latestInspectionRecord
-        ? `${safeText(
-            titleCase(latestInspectionRecord.overall_band || "unknown")
-          )} readiness`
-        : `${overdueCompliance.length} compliance items overdue`,
+          ? `${titleCase(latestInspectionRecord.overall_band || "unknown")} readiness`
+          : `${overdueCompliance.length} compliance items overdue`,
       nextEvent: nextPriorityAction?.due_date
         ? `Due ${formatDate(nextPriorityAction.due_date)}`
         : "No due quality action",
@@ -2186,8 +2269,8 @@ export async function loadCurrentView() {
               recentTimeline[0].created_at
           )}`
         : data.isFallback
-        ? "Preview quality data loaded"
-        : "No recent quality activity",
+          ? "Preview quality data loaded"
+          : "No recent quality activity",
       openActions: `${
         openQualityActions.length +
         reg44OpenActions.length +
@@ -2197,8 +2280,8 @@ export async function loadCurrentView() {
       pressure: toArray(visibility?.queues?.urgent).length
         ? `${toArray(visibility?.queues?.urgent).length} escalation alerts`
         : toNumber(visibility?.pressures?.total, 0)
-        ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
-        : "No active alerts",
+          ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
+          : "No active alerts",
     });
 
     await onAssistantScopeChanged();
