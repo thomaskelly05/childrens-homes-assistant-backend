@@ -16,6 +16,14 @@ import {
   mapFamilyContactRecord,
 } from "../core/adapters.js";
 
+const SAFE_VISIBILITY = Object.freeze({
+  signals: [],
+  highlights: [],
+  queues: { urgent: [], due_soon: [], monitor: [] },
+  counts: {},
+  pressures: {},
+});
+
 /* -------------------------------- constants -------------------------------- */
 
 const SEARCHABLE_FIELDS = [
@@ -192,6 +200,57 @@ function dedupeById(items = []) {
   });
 }
 
+async function fetchVisibility(id) {
+  if (!id) return SAFE_VISIBILITY;
+  try {
+    return (await apiGet(`/visibility/young-people/${id}`)) || SAFE_VISIBILITY;
+  } catch {
+    return SAFE_VISIBILITY;
+  }
+}
+
+function getSignalTone(signal = {}) {
+  const token = String(signal.severity || "").toLowerCase();
+  if (["critical", "high"].includes(token)) return "danger";
+  if (token === "medium") return "warning";
+  if (token === "low") return "success";
+  return "muted";
+}
+
+function renderVisibilitySignals(signals = []) {
+  if (!signals.length) {
+    return `
+      <div class="empty-state">
+        <p>No urgent visibility alerts are active for this child right now.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="record-list">
+      ${signals
+        .slice(0, 5)
+        .map(
+          (signal) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(signal.title || "Visibility signal")}</div>
+                <div class="record-row-summary">${toText(
+                  signal.description || "Signal requires follow-through."
+                )}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(getSignalTone(signal))}">
+                  ${toText(signal.count ?? 0)}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 /* -------------------------------- UI bits -------------------------------- */
 
 function renderEmpty(title, message) {
@@ -252,7 +311,14 @@ function renderRows(items = []) {
   `;
 }
 
-function renderWorkspace({ today, recent, upcoming, urgent, searchActive = false }) {
+function renderWorkspace({
+  today,
+  recent,
+  upcoming,
+  urgent,
+  searchActive = false,
+  visibilitySignals = [],
+}) {
   return `
     <section class="overview-panel">
       <div class="overview-panel-head">
@@ -307,6 +373,13 @@ function renderWorkspace({ today, recent, upcoming, urgent, searchActive = false
         </div>
 
         <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Visibility alerts</h3>
+            </div>
+            ${renderVisibilitySignals(visibilitySignals)}
+          </section>
+
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Needs attention</h3>
@@ -559,13 +632,19 @@ export async function loadCurrentView(options = {}) {
   `;
 
   try {
-    const rawData = await fetchAll(id, search);
+    const [rawData, visibility] = await Promise.all([
+      fetchAll(id, search),
+      fetchVisibility(id),
+    ]);
     const filteredData = applySearch(rawData, search);
 
     const today = buildTodayItems(filteredData);
     const recent = buildRecentItems(filteredData);
     const upcoming = buildUpcomingItems(filteredData);
     const urgent = buildUrgentItems(filteredData);
+    const visibilitySignals = makeArray(visibility?.signals || []);
+    const visibilityUrgent = makeArray(visibility?.queues?.urgent || []);
+    const visibilityPressure = Number(visibility?.pressures?.total || 0);
 
     els.viewContent.innerHTML = renderWorkspace({
       today,
@@ -573,6 +652,7 @@ export async function loadCurrentView(options = {}) {
       upcoming,
       urgent,
       searchActive,
+      visibilitySignals,
     });
 
     updateWorkspaceSummaryStrip({
@@ -584,6 +664,11 @@ export async function loadCurrentView(options = {}) {
         ? formatDate(getPrimaryDate(recent[0]))
         : "None",
       openActions: `${urgent.length} urgent`,
+      pressure: visibilityUrgent.length
+        ? `${visibilityUrgent.length} child alerts`
+        : visibilityPressure
+        ? `${visibilityPressure} pressure score`
+        : "No active alerts",
     });
 
     await onAssistantScopeChanged();

@@ -181,6 +181,13 @@ function hasUsableData(data) {
   return false;
 }
 
+function ofstedVisibilityPath(homeId) {
+  if (homeId) {
+    return `/visibility/ofsted?home_id=${encodeURIComponent(homeId)}&all_accessible_homes=false`;
+  }
+  return "/visibility/ofsted?all_accessible_homes=true";
+}
+
 function normaliseSummary(data = {}) {
   return data.summary || data.dashboard || data.ofsted_summary || data || {};
 }
@@ -671,6 +678,43 @@ function renderPriorityList(items = []) {
   `;
 }
 
+function renderVisibilitySignals(signals = []) {
+  if (!signals.length) {
+    return `
+      <div class="empty-state">
+        <p>No urgent inspection visibility alerts are active right now.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${signals
+        .slice(0, 6)
+        .map(
+          (signal) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(
+                  signal.title || "Inspection visibility signal"
+                )}</div>
+                <div class="record-row-summary">${safeText(
+                  signal.description || "Inspection signal requires follow-through."
+                )}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${safeText(getStatusTone(signal.severity || "medium"))}">
+                  ${safeText(signal.count ?? 0)}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderOfstedDashboardHtml({
   title = "Ofsted dashboard",
   topStats = [],
@@ -683,6 +727,7 @@ function renderOfstedDashboardHtml({
   complianceItems = [],
   auditItems = [],
   documentItems = [],
+  visibilitySignals = [],
   isFallback = false,
 }) {
   return `
@@ -810,6 +855,15 @@ function renderOfstedDashboardHtml({
             </div>
 
             ${renderPriorityList(priorityItems)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Inspection visibility alerts</h3>
+              <p>Calm, prioritised signals for evidence gaps and likely inspector concerns.</p>
+            </div>
+
+            ${renderVisibilitySignals(visibilitySignals)}
           </section>
 
           <section class="overview-side-card">
@@ -1198,6 +1252,15 @@ async function fetchDataset(homeId) {
   };
 }
 
+async function fetchVisibility(homeId) {
+  const path = ofstedVisibilityPath(homeId);
+  try {
+    return (await apiGet(path)) || {};
+  } catch {
+    return {};
+  }
+}
+
 export async function loadOfstedDashboard() {
   if (!els.viewContent) return;
 
@@ -1211,17 +1274,20 @@ export async function loadOfstedDashboard() {
   renderLoadingState();
 
   try {
-    const {
-      summaryData,
-      evidenceData,
-      judgementData,
-      gapData,
-      actionData,
-      complianceData,
-      auditData,
-      documentData,
-      isFallback,
-    } = await fetchDataset(homeId);
+    const [
+      {
+        summaryData,
+        evidenceData,
+        judgementData,
+        gapData,
+        actionData,
+        complianceData,
+        auditData,
+        documentData,
+        isFallback,
+      },
+      visibility,
+    ] = await Promise.all([fetchDataset(homeId), fetchVisibility(homeId)]);
 
     const summary = normaliseSummary(summaryData);
 
@@ -1312,6 +1378,7 @@ export async function loadOfstedDashboard() {
       complianceItems,
       auditItems,
       documentItems,
+      visibilitySignals: toArray(visibility?.signals).slice(0, 6),
       isFallback,
     });
 
@@ -1335,6 +1402,11 @@ export async function loadOfstedDashboard() {
         ? "Preview Ofsted data loaded"
         : "No recent inspection signal loaded",
       openActions: `${actionItems.length} actions • ${complianceItems.length} compliance pressure`,
+      pressure: toArray(visibility?.queues?.urgent).length
+        ? `${toArray(visibility?.queues?.urgent).length} inspector alerts`
+        : toNumber(visibility?.pressures?.total, 0)
+        ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
+        : "No active alerts",
     });
   } catch (error) {
     console.error("[ofsted-dashboard] load failed", error);

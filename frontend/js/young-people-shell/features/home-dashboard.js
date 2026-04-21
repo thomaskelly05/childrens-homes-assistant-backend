@@ -934,6 +934,65 @@ function renderMiniChart(title, items = [], key = "value") {
   `;
 }
 
+async function fetchVisibility(homeId) {
+  if (!homeId) {
+    return {
+      signals: [],
+      highlights: [],
+      queues: { urgent: [], due_soon: [], monitor: [] },
+      counts: {},
+      pressures: {},
+    };
+  }
+  try {
+    return (await apiGet(`/visibility/homes/${homeId}`)) || {};
+  } catch {
+    return {
+      signals: [],
+      highlights: [],
+      queues: { urgent: [], due_soon: [], monitor: [] },
+      counts: {},
+      pressures: {},
+    };
+  }
+}
+
+function renderVisibilitySignals(signals = []) {
+  if (!signals.length) {
+    return `
+      <div class="empty-state">
+        <p>No high-priority home alerts are active right now.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${signals
+        .slice(0, 6)
+        .map((signal) => {
+          const tone = getStatusTone(signal.severity || "medium");
+          return `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(
+                  signal.title || "Visibility signal"
+                )}</div>
+                <div class="record-row-summary">${safeText(
+                  signal.description || "Requires management visibility."
+                )}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${tone}">${safeText(signal.count || 0)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function renderInspectionCards(cards = []) {
   if (!cards.length) {
     return `
@@ -992,6 +1051,7 @@ function renderHomeDashboardHtml({
   recentReports = [],
   inspectionCards = [],
   inspectionActions = [],
+  visibilitySignals = [],
   isFallback = false,
 }) {
   return `
@@ -1195,6 +1255,15 @@ function renderHomeDashboardHtml({
         </section>
 
         <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Visibility alerts</h3>
+              <p>Operational pressure surfaced from overdue, repeated and unresolved issues.</p>
+            </div>
+
+            ${renderVisibilitySignals(visibilitySignals)}
+          </section>
+
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Needs attention</h3>
@@ -1641,6 +1710,10 @@ export async function loadHomeDashboard() {
   renderLoadingState();
 
   try {
+    const [dataset, visibility] = await Promise.all([
+      fetchDataset(homeId),
+      fetchVisibility(homeId),
+    ]);
     const {
       summaryData,
       teamData,
@@ -1654,7 +1727,7 @@ export async function loadHomeDashboard() {
       inspectionCardsData,
       inspectionActionsData,
       isFallback,
-    } = await fetchDataset(homeId);
+    } = dataset;
 
     const summary = normaliseHomeSummary(summaryData);
     const youngPeople = normaliseYoungPeople(summaryData);
@@ -1820,6 +1893,7 @@ export async function loadHomeDashboard() {
       recentReports,
       inspectionCards,
       inspectionActions,
+      visibilitySignals: toArray(visibility?.signals).slice(0, 6),
       isFallback,
     });
 
@@ -1844,6 +1918,11 @@ export async function loadHomeDashboard() {
             )}`
           : "No recent home record loaded",
       openActions: `${openTasks.length} open • ${urgentCompliance.length + urgentInspection.length} urgent`,
+      pressure: toArray(visibility?.queues?.urgent).length
+        ? `${toArray(visibility?.queues?.urgent).length} management alerts`
+        : toNumber(visibility?.pressures?.total, 0)
+        ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
+        : "No active alerts",
     });
   } catch (error) {
     console.error("[home-dashboard] load failed", error);
