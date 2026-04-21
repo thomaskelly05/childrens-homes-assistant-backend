@@ -37,6 +37,8 @@ import { inferAssistantAnalysisLens } from "../core/assistant-context.js";
 let assistantControllerBound = false;
 let refreshButtonsBound = false;
 let latestRefreshToken = 0;
+let currentRefreshPromise = null;
+let currentRefreshKey = "";
 
 const MAX_BRIEF_EVIDENCE = 10;
 const MAX_BRIEF_CHRONOLOGY = 5;
@@ -46,41 +48,89 @@ function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function renderAllAssistantPanels() {
-  renderAssistantExtraPanels();
-  renderScopeBadges();
-  setAssistantContextText();
+function safeObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+}
+
+function safeString(value, fallback = "") {
+  if (value === null || value === undefined) return fallback;
+  const text = String(value).trim();
+  return text || fallback;
+}
+
+function toNumericId(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normaliseHomeIds(homeIds = []) {
+  if (!Array.isArray(homeIds)) return [];
+  return [...new Set(
+    homeIds
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item) && item > 0)
+  )];
+}
+
+function hasChildContext() {
+  return Boolean(
+    toNumericId(state.youngPersonId) ||
+      toNumericId(state.selectedYoungPerson?.id) ||
+      toNumericId(state.selectedYoungPerson?.young_person_id)
+  );
+}
+
+function getResolvedHomeId() {
+  return (
+    toNumericId(state.homeId) ||
+    toNumericId(state.selectedYoungPerson?.home_id) ||
+    toNumericId(state.selectedYoungPerson?.homeId) ||
+    toNumericId(state.currentUser?.home_id) ||
+    toNumericId(state.currentUser?.homeId) ||
+    toNumericId(state.readinessSelectedHomeId) ||
+    null
+  );
+}
+
+function getResolvedProviderId() {
+  return (
+    toNumericId(state.providerId) ||
+    toNumericId(state.currentUser?.provider_id) ||
+    toNumericId(state.currentUser?.providerId) ||
+    null
+  );
 }
 
 function getScopeContext() {
   const scope = getCurrentScope();
   const accessLevel = getAccessLevelForScope(scope);
   const youngPerson = getSelectedYoungPerson();
+  const resolvedHomeId = getResolvedHomeId();
+  const resolvedProviderId = getResolvedProviderId();
 
-  const resolvedHomeId =
-    state.homeId ||
-    youngPerson?.home_id ||
-    youngPerson?.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null;
+  const providerAllowedHomeIds =
+    QUALITY_LEVEL_SCOPES.has(scope) && accessLevel === "provider"
+      ? normaliseHomeIds(getAllowedHomeIds())
+      : [];
 
   const allowedHomeIds =
-    QUALITY_LEVEL_SCOPES.has(scope) && accessLevel === "provider"
-      ? safeArray(getAllowedHomeIds())
+    providerAllowedHomeIds.length > 0
+      ? providerAllowedHomeIds
       : [resolvedHomeId].filter(Boolean);
 
   return {
     scope,
     current_scope: scope,
     access_level: accessLevel,
-    provider_id:
-      state.providerId ||
-      state.currentUser?.provider_id ||
-      state.currentUser?.providerId ||
-      null,
+    provider_id: resolvedProviderId,
     allowed_home_ids: allowedHomeIds,
-    young_person_id: state.youngPersonId || null,
+    young_person_id:
+      toNumericId(state.youngPersonId) ||
+      toNumericId(youngPerson?.id) ||
+      toNumericId(youngPerson?.young_person_id) ||
+      null,
     home_id: resolvedHomeId,
     home_name: getHomeName(),
     young_person_name:
@@ -90,6 +140,78 @@ function getScopeContext() {
       "Young person",
     assistant_type: getAssistantTypeForScope(scope),
   };
+}
+
+function canRefreshCurrentScope(context = getScopeContext()) {
+  const scope = safeString(context.scope, "child");
+
+  if (scope === "child") {
+    return Boolean(context.young_person_id);
+  }
+
+  if (scope === "home") {
+    return Boolean(context.home_id);
+  }
+
+  if (QUALITY_LEVEL_SCOPES.has(scope)) {
+    if (context.access_level === "provider") {
+      return Boolean(
+        context.provider_id || safeArray(context.allowed_home_ids).length
+      );
+    }
+    return Boolean(context.home_id);
+  }
+
+  return false;
+}
+
+function getRefreshBlockReason(context = getScopeContext()) {
+  const scope = safeString(context.scope, "child");
+
+  if (scope === "child" && !context.young_person_id) {
+    return "Select a child or young person first.";
+  }
+
+  if (scope === "home" && !context.home_id) {
+    return "No home context is available yet.";
+  }
+
+  if (QUALITY_LEVEL_SCOPES.has(scope)) {
+    if (
+      context.access_level === "provider" &&
+      !context.provider_id &&
+      !safeArray(context.allowed_home_ids).length
+    ) {
+      return "No provider or allowed-home context is available yet.";
+    }
+
+    if (
+      context.access_level !== "provider" &&
+      !context.home_id
+    ) {
+      return "No home context is available for quality oversight yet.";
+    }
+  }
+
+  return "";
+}
+
+function getRefreshKey(context = getScopeContext()) {
+  return JSON.stringify({
+    scope: context.scope || "child",
+    access_level: context.access_level || "",
+    provider_id: context.provider_id || null,
+    home_id: context.home_id || null,
+    young_person_id: context.young_person_id || null,
+    allowed_home_ids: safeArray(context.allowed_home_ids),
+    section: getCurrentSection(),
+  });
+}
+
+function renderAllAssistantPanels() {
+  renderAssistantExtraPanels();
+  renderScopeBadges();
+  setAssistantContextText();
 }
 
 function scrubAssistantBundle(bundle = {}, context = {}) {
@@ -196,7 +318,7 @@ function currentAssistantContext() {
 }
 
 function getBundlePayload() {
-  return state.scopeBundle || {};
+  return safeObject(state.scopeBundle);
 }
 
 function renderBundleStatus() {
@@ -520,7 +642,7 @@ function buildBriefsFromRuntime(runtime, context) {
 }
 
 async function buildDerivedAssistantStateFromBundle(bundle) {
-  const recordsPayload = bundle || {};
+  const recordsPayload = safeObject(bundle);
   const context = currentAssistantContext();
 
   const runtime = await buildAssistantEvidenceContext({
@@ -601,94 +723,116 @@ async function buildDerivedAssistantStateFromBundle(bundle) {
 export async function refreshAssistantScopeData({
   pushUpdate = false,
   updateTitle = "Assistant scope refreshed",
+  force = false,
 } = {}) {
-  const token = ++latestRefreshToken;
   const context = getScopeContext();
+  const refreshKey = getRefreshKey(context);
+
+  if (!canRefreshCurrentScope(context)) {
+    const reason = getRefreshBlockReason(context);
+    setAssistantScopeBundleLoading(false);
+    setAssistantScopeBundleError(reason || "Assistant scope is not ready yet.");
+    renderAllAssistantPanels();
+    return null;
+  }
+
+  if (!force && currentRefreshPromise && currentRefreshKey === refreshKey) {
+    return currentRefreshPromise;
+  }
+
+  const token = ++latestRefreshToken;
+  currentRefreshKey = refreshKey;
 
   setAssistantScopeBundleLoading(true);
   setAssistantScopeBundleError(null);
   renderAllAssistantPanels();
 
-  try {
-    const bundle = await fetchAssistantScopeBundle(context);
+  currentRefreshPromise = (async () => {
+    try {
+      const bundle = await fetchAssistantScopeBundle(context);
 
-    if (token !== latestRefreshToken) return null;
+      if (token !== latestRefreshToken) return null;
 
-    const scrubbed = scrubAssistantBundle(bundle, context);
+      const scrubbed = scrubAssistantBundle(bundle, context);
 
-    setAssistantScopeBundle(scrubbed.bundle);
+      setAssistantScopeBundle(scrubbed.bundle);
 
-    mergeAssistantMeta({
-      scrubber_enabled: scrubbed.meta?.enabled ?? false,
-      scrubber_meta: scrubbed.meta || {},
-      assistant_scope: {
-        ...(getAssistantMeta().assistant_scope || {}),
-        scope: context.scope,
-        current_scope: context.current_scope,
-        access_level: context.access_level,
-        provider_id: context.provider_id || null,
-        allowed_home_ids: context.allowed_home_ids || [],
-        home_id: context.home_id || null,
-        young_person_id: context.young_person_id || null,
-        assistant_type: context.assistant_type,
-      },
-      assistant_context: {
-        ...(getAssistantMeta().assistant_context || {}),
-        scope: context.scope,
-        access_level: context.access_level,
-        provider_id: context.provider_id || null,
-        allowed_home_ids: context.allowed_home_ids || [],
-        home_name: context.home_name || null,
-        young_person_name: context.young_person_name || null,
-        section: getCurrentSection(),
-      },
-    });
-
-    await buildDerivedAssistantStateFromBundle(scrubbed.bundle);
-
-    if (pushUpdate) {
-      pushAssistantLiveUpdate({
-        title: updateTitle,
-        message:
-          context.scope === "child"
-            ? `Scoped records refreshed for ${
-                context.young_person_name || "the selected young person"
-              }.`
-            : QUALITY_LEVEL_SCOPES.has(context.scope) &&
-                context.access_level === "provider"
-              ? `Scoped records refreshed across ${safeArray(
-                  context.allowed_home_ids
-                ).length} allowed home(s).`
-              : `Scoped records refreshed for ${
-                  context.home_name || "the selected home"
-                }.`,
-        created_at: new Date().toISOString(),
+      mergeAssistantMeta({
+        scrubber_enabled: scrubbed.meta?.enabled ?? false,
+        scrubber_meta: scrubbed.meta || {},
+        assistant_scope: {
+          ...(getAssistantMeta().assistant_scope || {}),
+          scope: context.scope,
+          current_scope: context.current_scope,
+          access_level: context.access_level,
+          provider_id: context.provider_id || null,
+          allowed_home_ids: context.allowed_home_ids || [],
+          home_id: context.home_id || null,
+          young_person_id: context.young_person_id || null,
+          assistant_type: context.assistant_type,
+        },
+        assistant_context: {
+          ...(getAssistantMeta().assistant_context || {}),
+          scope: context.scope,
+          access_level: context.access_level,
+          provider_id: context.provider_id || null,
+          allowed_home_ids: context.allowed_home_ids || [],
+          home_name: context.home_name || null,
+          young_person_name: context.young_person_name || null,
+          section: getCurrentSection(),
+        },
       });
-    }
 
-    refreshAssistantUi();
-    renderAllAssistantPanels();
-    return scrubbed.bundle;
-  } catch (error) {
-    if (token !== latestRefreshToken) return null;
+      await buildDerivedAssistantStateFromBundle(scrubbed.bundle);
 
-    setAssistantScopeBundleError(
-      error?.message || "Could not load scoped assistant records."
-    );
-    renderAllAssistantPanels();
-    return null;
-  } finally {
-    if (token === latestRefreshToken) {
-      setAssistantScopeBundleLoading(false);
+      if (pushUpdate) {
+        pushAssistantLiveUpdate({
+          title: updateTitle,
+          message:
+            context.scope === "child"
+              ? `Scoped records refreshed for ${
+                  context.young_person_name || "the selected young person"
+                }.`
+              : QUALITY_LEVEL_SCOPES.has(context.scope) &&
+                  context.access_level === "provider"
+                ? `Scoped records refreshed across ${safeArray(
+                    context.allowed_home_ids
+                  ).length} allowed home(s).`
+                : `Scoped records refreshed for ${
+                    context.home_name || "the selected home"
+                  }.`,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      refreshAssistantUi();
       renderAllAssistantPanels();
+      return scrubbed.bundle;
+    } catch (error) {
+      if (token !== latestRefreshToken) return null;
+
+      setAssistantScopeBundleError(
+        error?.message || "Could not load scoped assistant records."
+      );
+      renderAllAssistantPanels();
+      return null;
+    } finally {
+      if (token === latestRefreshToken) {
+        setAssistantScopeBundleLoading(false);
+        renderAllAssistantPanels();
+        currentRefreshPromise = null;
+        currentRefreshKey = "";
+      }
     }
-  }
+  })();
+
+  return currentRefreshPromise;
 }
 
 export async function refreshAssistantAnalysisOnly() {
   const bundle = getBundlePayload();
 
-  if (!bundle || typeof bundle !== "object") {
+  if (!bundle || typeof bundle !== "object" || !Object.keys(bundle).length) {
     setAssistantScopeBundleError("No scoped records are loaded yet.");
     renderAllAssistantPanels();
     return;
@@ -708,22 +852,55 @@ export async function refreshAssistantAnalysisOnly() {
 }
 
 export async function onAssistantScopeChanged() {
-  await refreshAssistantScopeData({
+  const context = getScopeContext();
+
+  if (!canRefreshCurrentScope(context)) {
+    const reason = getRefreshBlockReason(context);
+    setAssistantScopeBundleLoading(false);
+    setAssistantScopeBundleError(reason || "");
+    renderAllAssistantPanels();
+    return null;
+  }
+
+  return refreshAssistantScopeData({
     pushUpdate: false,
+    force: false,
   });
 }
 
 export async function onYoungPersonSelected() {
-  await refreshAssistantScopeData({
+  const context = getScopeContext();
+
+  if (!canRefreshCurrentScope(context)) {
+    const reason = getRefreshBlockReason(context);
+    setAssistantScopeBundleLoading(false);
+    setAssistantScopeBundleError(reason || "");
+    renderAllAssistantPanels();
+    return null;
+  }
+
+  return refreshAssistantScopeData({
     pushUpdate: true,
     updateTitle: "Young person context loaded",
+    force: true,
   });
 }
 
 export async function onWorkspaceRefreshRequested() {
-  await refreshAssistantScopeData({
+  const context = getScopeContext();
+
+  if (!canRefreshCurrentScope(context)) {
+    const reason = getRefreshBlockReason(context);
+    setAssistantScopeBundleLoading(false);
+    setAssistantScopeBundleError(reason || "");
+    renderAllAssistantPanels();
+    return null;
+  }
+
+  return refreshAssistantScopeData({
     pushUpdate: true,
     updateTitle: "Workspace refreshed",
+    force: true,
   });
 }
 
@@ -735,6 +912,7 @@ function bindRefreshButtons() {
     await refreshAssistantScopeData({
       pushUpdate: true,
       updateTitle: "Assistant scope refreshed",
+      force: true,
     });
   });
 
