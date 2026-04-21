@@ -1086,6 +1086,128 @@ function bindSearchControls() {
   });
 }
 
+function parseRecordPayload(rawValue) {
+  const raw = String(rawValue || "").trim();
+  if (!raw || raw === "true" || raw === "1") return null;
+
+  const attempts = [raw];
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (decoded && decoded !== raw) {
+      attempts.push(decoded);
+    }
+  } catch {
+    // Keep raw-only attempts.
+  }
+
+  for (const attempt of attempts) {
+    try {
+      const parsed = JSON.parse(attempt);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      // Try next candidate.
+    }
+  }
+
+  return null;
+}
+
+function pickRecordText(trigger, selector) {
+  const node = trigger.querySelector(selector);
+  return node?.textContent?.trim() || "";
+}
+
+function buildRecordItemFromTrigger(trigger) {
+  const dataset = trigger?.dataset || {};
+  const payload =
+    parseRecordPayload(dataset.recordPayload) ||
+    parseRecordPayload(dataset.openRecord);
+
+  const idValue =
+    dataset.recordId ||
+    dataset.id ||
+    payload?.record_id ||
+    payload?.source_id ||
+    payload?.id ||
+    null;
+
+  if (!idValue) return null;
+
+  const numericId = Number(idValue);
+  const safeId = Number.isNaN(numericId) ? idValue : numericId;
+
+  const type = String(
+    dataset.recordType || payload?.record_type || payload?.type || ""
+  ).trim();
+
+  const title =
+    dataset.recordTitle ||
+    dataset.title ||
+    payload?.title ||
+    payload?.name ||
+    pickRecordText(trigger, ".record-row-title");
+
+  const summary =
+    dataset.recordSummary ||
+    payload?.summary ||
+    payload?.description ||
+    pickRecordText(trigger, ".record-row-summary");
+
+  const status =
+    dataset.recordStatus ||
+    payload?.workflow_status ||
+    payload?.status ||
+    "";
+
+  const dateValue =
+    dataset.recordDate ||
+    payload?.due_date ||
+    payload?.record_date ||
+    payload?.event_datetime ||
+    payload?.contact_datetime ||
+    payload?.session_date ||
+    payload?.review_date ||
+    payload?.created_at ||
+    payload?.updated_at ||
+    "";
+
+  const item = {
+    ...(payload && typeof payload === "object" ? payload : {}),
+    id: payload?.id ?? safeId,
+    source_id: payload?.source_id ?? safeId,
+    record_id: payload?.record_id ?? safeId,
+    record_type: type || payload?.record_type || "",
+    title: title || "",
+  };
+
+  if (summary && !item.summary) item.summary = summary;
+  if (status && !item.status) item.status = status;
+  if (status && !item.workflow_status) item.workflow_status = status;
+  if (dateValue && !item.record_date) item.record_date = dateValue;
+
+  if (dataset.recordPriority && !item.priority) {
+    item.priority = dataset.recordPriority;
+  }
+
+  if (dataset.recordSeverity && !item.severity) {
+    item.severity = dataset.recordSeverity;
+  }
+
+  if (dataset.recordOwner && !item.owner_name) {
+    item.owner_name = dataset.recordOwner;
+  }
+
+  if (dataset.sourceTable && !item.source_table) {
+    item.source_table = dataset.sourceTable;
+  }
+
+  if (dataset.sourceId && !item.source_id) {
+    item.source_id = dataset.sourceId;
+  }
+
+  return item;
+}
+
 function bindOpenRecordEvents() {
   if (recordEventsBound || !els.viewContent) return;
   recordEventsBound = true;
@@ -1094,23 +1216,12 @@ function bindOpenRecordEvents() {
     const trigger = event.target.closest("[data-record-id], [data-open-record]");
     if (!trigger) return;
 
-    const id = trigger.dataset.recordId || trigger.dataset.id || null;
-    const recordType = trigger.dataset.recordType || trigger.dataset.type || "";
-
-    if (!id) return;
+    const recordItem = buildRecordItemFromTrigger(trigger);
+    if (!recordItem) return;
 
     try {
-      const numericId = Number(id);
-      const safeId = Number.isNaN(numericId) ? id : numericId;
-
-      state.activeRecordType = recordType || null;
-      state.activeRecordItem = {
-        id: safeId,
-        source_id: safeId,
-        record_id: safeId,
-        record_type: recordType,
-        title: trigger.dataset.title || "",
-      };
+      state.activeRecordType = recordItem.record_type || null;
+      state.activeRecordItem = recordItem;
 
       const { openRecordDetail } = await import("./records.js");
       await openRecordDetail(state.activeRecordItem);

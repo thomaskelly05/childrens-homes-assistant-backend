@@ -50,6 +50,14 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function buildRecordPayloadAttr(item = {}) {
+  try {
+    return encodeURIComponent(JSON.stringify(item));
+  } catch {
+    return "";
+  }
+}
+
 function formatDate(value) {
   if (!value) return "No date";
 
@@ -822,6 +830,7 @@ function renderRows(items = [], options = {}) {
           const status = item?.[statusKey] || "";
           const tone = getStatusTone(status);
           const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const recordPayload = buildRecordPayloadAttr(item);
 
           return `
             <article
@@ -830,6 +839,10 @@ function renderRows(items = [], options = {}) {
               data-record-id="${safeText(rowId)}"
               data-record-type="${safeText(recordType || item?.record_type || "")}"
               data-title="${safeText(title)}"
+              data-record-summary="${safeText(summary)}"
+              data-record-status="${safeText(status || "")}"
+              data-record-date="${safeText(item?.due_date || item?.updated_at || item?.created_at || "")}"
+              data-record-payload="${safeText(recordPayload)}"
               tabindex="0"
               role="button"
             >
@@ -1184,8 +1197,22 @@ function renderInspectionCards(cards = []) {
     <div class="record-list">
       ${cards
         .map(
-          (item) => `
-            <article class="record-row">
+          (item) => {
+            const recordPayload = buildRecordPayloadAttr(item);
+            return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${safeText(item.id || item.home_id || "")}"
+              data-record-type="${safeText(item.record_type || "inspection_home_card")}"
+              data-title="${safeText(item.title || "Inspection card")}"
+              data-record-summary="${safeText(item.summary || "")}"
+              data-record-status="${safeText(item.status || "")}"
+              data-record-date="${safeText(item.updated_at || item.created_at || "")}"
+              data-record-payload="${safeText(recordPayload)}"
+              tabindex="0"
+              role="button"
+            >
               <div class="record-row-main">
                 <div class="record-row-title">${safeText(item.title)}</div>
                 <div class="record-row-summary">${safeText(item.summary)}</div>
@@ -1205,7 +1232,8 @@ function renderInspectionCards(cards = []) {
                 </span>
               </div>
             </article>
-          `
+          `;
+          }
         )
         .join("")}
     </div>
