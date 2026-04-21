@@ -1677,6 +1677,99 @@ summary:focus-visible {
   gap: 14px;
 }
 
+.composer-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 980px) {
+  .composer-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.composer-field {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.composer-field.full {
+  grid-column: 1 / -1;
+}
+
+.composer-section {
+  padding: 14px;
+}
+
+.composer-section-head {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.composer-section h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.composer-section p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.composer-section-note {
+  color: #35507d;
+  font-weight: 600;
+}
+
+.composer-section--context {
+  border-color: #d7e3fb;
+  background: #f9fbff;
+}
+
+.composer-section--action {
+  border-color: #d5e9db;
+  background: #f7fcf8;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-required {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.form-helper {
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.checkbox-row input {
+  width: 16px;
+  height: 16px;
+}
+
 .composer-side-card {
   background: var(--panel);
   border-radius: 18px;
@@ -2331,6 +2424,67 @@ summary:focus-visible {
   padding: 18px;
 }
 
+.drawer-content-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 12px;
+}
+
+.drawer-detail-list {
+  display: grid;
+  gap: 12px;
+}
+
+.drawer-detail-group {
+  display: grid;
+  gap: 8px;
+}
+
+.drawer-detail-group h4 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.drawer-detail-row {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.drawer-detail-row:last-child {
+  border-bottom: 0;
+}
+
+.drawer-detail-key {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+.drawer-detail-value {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.drawer-code-block {
+  margin: 0;
+  border: 1px solid var(--border);
+  background: var(--panel-soft);
+  border-radius: 12px;
+  padding: 10px;
+  overflow: auto;
+  font-size: 12px;
+}
+
 /* --------------------------------
    Mobile nav
 --------------------------------- */
@@ -2715,6 +2869,8 @@ summary:focus-visible {
   .textarea-input,
   .composer-prompt,
   .composer-autosave-status,
+  .composer-section--context,
+  .composer-section--action,
   .assistant-context-text,
   .chip,
   .mobile-nav-context,
