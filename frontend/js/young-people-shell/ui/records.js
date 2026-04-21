@@ -260,7 +260,7 @@ function buildScopedDetailUrl(recordType, id) {
     appointment: `${childBase}/appointments/${id}`,
     health_record: `${childBase}/health-records/${id}`,
     education_record: `${childBase}/education-records/${id}`,
-    family_contact: `${childBase}/family-contact-records/${id}`,
+    family_contact: `${childBase}/family/records/${id}`,
     keywork: `${childBase}/keywork/${id}`,
     report: `${childBase}/reports/${id}`,
     chronology_event: `${childBase}/chronology/${id}`,
@@ -624,6 +624,77 @@ function renderRichEmptyState(title, message) {
   `;
 }
 
+const DRAWER_HIDDEN_KEYS = new Set([
+  "id",
+  "young_person_id",
+  "home_id",
+  "created_by",
+  "updated_by",
+  "_local_only",
+]);
+
+const DRAWER_PRIORITY_FIELDS = {
+  daily_note: [
+    "presentation",
+    "activities",
+    "young_person_voice",
+    "behaviour_update",
+    "actions_required",
+    "positives",
+  ],
+  incident: [
+    "description",
+    "antecedent",
+    "presentation",
+    "child_voice",
+    "staff_response",
+    "outcome",
+    "actions_taken",
+  ],
+  health_record: ["summary", "child_voice", "outcome", "professional_name", "next_action_date"],
+  education_record: [
+    "learning_engagement",
+    "behaviour_summary",
+    "child_voice",
+    "achievement_note",
+    "action_taken",
+    "issue_raised",
+  ],
+  family_contact: [
+    "pre_contact_presentation",
+    "post_contact_presentation",
+    "child_voice",
+    "concerns",
+    "follow_up_required",
+  ],
+  keywork: ["purpose", "summary", "child_voice", "reflective_analysis", "actions_agreed"],
+  safeguarding_record: [
+    "concern_details",
+    "disclosure_details",
+    "immediate_action_taken",
+    "referral_details",
+    "outcome",
+  ],
+  missing_episode: [
+    "trigger_factors",
+    "push_pull_factors",
+    "actions_taken",
+    "child_voice",
+    "outcome",
+  ],
+  medication_profile: ["medication_name", "dosage", "route", "frequency", "prn_guidance", "notes"],
+  medication_record: [
+    "medication_name",
+    "dose",
+    "status",
+    "scheduled_time",
+    "administered_time",
+    "refusal_reason",
+    "omission_reason",
+    "error_details",
+  ],
+};
+
 function renderObjectValue(value) {
   if (value === null || value === undefined || value === "") return "—";
 
@@ -643,23 +714,47 @@ function renderObjectValue(value) {
   return escapeHtml(String(value));
 }
 
-function renderDetailRows(detail = {}) {
-  const rows = Object.entries(detail).filter(
+function detailRows(detail = {}) {
+  return Object.entries(detail).filter(
     ([key, value]) =>
-      ![
-        "id",
-        "young_person_id",
-        "home_id",
-        "created_by",
-        "updated_by",
-        "_local_only",
-      ].includes(key) &&
-      value !== null &&
-      value !== "" &&
-      value !== undefined
+      !DRAWER_HIDDEN_KEYS.has(key) && value !== null && value !== "" && value !== undefined
   );
+}
 
-  if (!rows.length) {
+function splitDetailRows(type, detail = {}) {
+  const rows = detailRows(detail);
+  const preferred = DRAWER_PRIORITY_FIELDS[type] || [];
+  if (!preferred.length) {
+    return { primaryRows: rows, supportingRows: [] };
+  }
+
+  const preferredSet = new Set(preferred);
+  const sortedPrimaryRows = preferred
+    .map((field) => rows.find(([key]) => key === field))
+    .filter(Boolean);
+  const supportingRows = rows.filter(([key]) => !preferredSet.has(key));
+  return { primaryRows: sortedPrimaryRows, supportingRows };
+}
+
+function renderRowsBlock(rows = []) {
+  if (!rows.length) return "";
+  return rows
+    .map(
+      ([key, value]) => `
+        <div class="drawer-detail-row">
+          <div class="drawer-detail-key">${escapeHtml(prettifyKey(key))}</div>
+          <div class="drawer-detail-value">${renderObjectValue(value)}</div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderDetailRows(type, detail = {}) {
+  const { primaryRows, supportingRows } = splitDetailRows(type, detail);
+  const combinedRows = [...primaryRows, ...supportingRows];
+
+  if (!combinedRows.length) {
     return `
       <div class="drawer-detail-list">
         <div class="drawer-detail-row">
@@ -672,24 +767,34 @@ function renderDetailRows(detail = {}) {
 
   return `
     <div class="drawer-detail-list">
-      ${rows
-        .map(
-          ([key, value]) => `
-            <div class="drawer-detail-row">
-              <div class="drawer-detail-key">${escapeHtml(prettifyKey(key))}</div>
-              <div class="drawer-detail-value">${renderObjectValue(value)}</div>
-            </div>
-          `
-        )
-        .join("")}
+      ${
+        primaryRows.length
+          ? `
+        <section class="drawer-detail-group drawer-detail-group--primary">
+          <h4>Key details</h4>
+          ${renderRowsBlock(primaryRows)}
+        </section>
+      `
+          : ""
+      }
+      ${
+        supportingRows.length
+          ? `
+        <section class="drawer-detail-group">
+          <h4>Additional detail</h4>
+          ${renderRowsBlock(supportingRows)}
+        </section>
+      `
+          : ""
+      }
     </div>
   `;
 }
 
-function renderDrawerSection(detail = {}) {
+function renderDrawerSection(type, detail = {}) {
   return `
     <section class="drawer-content-card">
-      ${renderDetailRows(detail)}
+      ${renderDetailRows(type, detail)}
     </section>
   `;
 }
@@ -879,7 +984,7 @@ export async function openRecordDetail(item) {
       }
 
       if (els.drawerBody) {
-        els.drawerBody.innerHTML = renderDrawerSection(fallbackDetail);
+        els.drawerBody.innerHTML = renderDrawerSection(type, fallbackDetail);
       }
 
       hideSuggestionsPanelSafe();
@@ -907,7 +1012,7 @@ export async function openRecordDetail(item) {
     }
 
     if (els.drawerBody) {
-      els.drawerBody.innerHTML = renderDrawerSection(detail);
+      els.drawerBody.innerHTML = renderDrawerSection(type, detail);
     }
 
     if (shouldShowSuggestionsForType(type)) {

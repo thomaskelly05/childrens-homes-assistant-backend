@@ -133,8 +133,8 @@ const COMPOSER_CONFIG = {
 
   family_contact: {
     label: "Family contact",
-    createUrl: () => buildScopePath("/{scope}/{id}/family-contact-records"),
-    updateUrl: (id) => `/young-people/family-contact-records/${id}`,
+    createUrl: () => buildScopePath("/{scope}/{id}/family/records"),
+    updateUrl: (id) => `/young-people/family/records/${id}`,
     updateMethod: "PATCH",
     scopes: ["child"],
   },
@@ -163,6 +163,22 @@ const COMPOSER_CONFIG = {
     label: "Achievement",
     createUrl: () => buildScopePath("/{scope}/{id}/achievements"),
     updateUrl: (id) => `/young-people/achievements/${id}`,
+    updateMethod: "PATCH",
+    scopes: ["child"],
+  },
+
+  medication_profile: {
+    label: "Medication profile",
+    createUrl: () => buildScopePath("/{scope}/{id}/medication-profiles"),
+    updateUrl: (id) => `/young-people/medication-profiles/${id}`,
+    updateMethod: "PATCH",
+    scopes: ["child"],
+  },
+
+  medication_record: {
+    label: "Medication administration",
+    createUrl: () => buildScopePath("/{scope}/{id}/medication-records"),
+    updateUrl: (id) => `/young-people/medication-records/${id}`,
     updateMethod: "PATCH",
     scopes: ["child"],
   },
@@ -453,29 +469,48 @@ export function closeComposer(reset = true) {
 }
 
 function buildField(field) {
+  const helper = field.hint
+    ? `<div class="form-helper">${escapeHtml(field.hint)}</div>`
+    : "";
+  const required = field.required
+    ? '<span class="form-required" aria-hidden="true">*</span>'
+    : "";
+  const requiredAttribute = field.required ? "required" : "";
   const label = field.label
-    ? `<label class="form-label" for="${escapeHtml(field.name)}">${escapeHtml(field.label)}</label>`
+    ? `<label class="form-label" for="${escapeHtml(field.name)}">${escapeHtml(
+        field.label
+      )}${required}</label>`
+    : "";
+  const placeholder = field.placeholder
+    ? `placeholder="${escapeHtml(field.placeholder)}"`
     : "";
 
   if (field.type === "textarea") {
     return `
-      <div class="composer-field ${field.full ? "full" : ""}">
+      <div class="composer-field composer-field--textarea ${
+        field.full ? "full" : ""
+      }">
         ${label}
         <textarea
           id="${escapeHtml(field.name)}"
           name="${escapeHtml(field.name)}"
           class="textarea-input"
           rows="${field.rows || 5}"
+          ${requiredAttribute}
+          ${placeholder}
         >${escapeHtml(field.value || "")}</textarea>
+        ${helper}
       </div>
     `;
   }
 
   if (field.type === "select") {
     return `
-      <div class="composer-field ${field.full ? "full" : ""}">
+      <div class="composer-field composer-field--select ${
+        field.full ? "full" : ""
+      }">
         ${label}
-        <select id="${escapeHtml(field.name)}" name="${escapeHtml(field.name)}" class="select-input">
+        <select id="${escapeHtml(field.name)}" name="${escapeHtml(field.name)}" class="select-input" ${requiredAttribute}>
           ${(field.options || [])
             .map(
               (option) => `
@@ -490,13 +525,16 @@ function buildField(field) {
             )
             .join("")}
         </select>
+        ${helper}
       </div>
     `;
   }
 
   if (field.type === "checkbox") {
     return `
-      <div class="composer-field ${field.full ? "full" : ""}">
+      <div class="composer-field composer-field--checkbox ${
+        field.full ? "full" : ""
+      }">
         <label class="checkbox-row" for="${escapeHtml(field.name)}">
           <input
             id="${escapeHtml(field.name)}"
@@ -506,12 +544,13 @@ function buildField(field) {
           />
           <span>${escapeHtml(field.label || field.name)}</span>
         </label>
+        ${helper}
       </div>
     `;
   }
 
   return `
-    <div class="composer-field ${field.full ? "full" : ""}">
+    <div class="composer-field composer-field--input ${field.full ? "full" : ""}">
       ${label}
       <input
         id="${escapeHtml(field.name)}"
@@ -519,7 +558,10 @@ function buildField(field) {
         type="${escapeHtml(field.type || "text")}"
         class="text-input"
         value="${escapeHtml(field.value || "")}"
+        ${requiredAttribute}
+        ${placeholder}
       />
+      ${helper}
     </div>
   `;
 }
@@ -528,9 +570,12 @@ function renderSections(sections = []) {
   return sections
     .map(
       (section) => `
-        <section class="composer-section">
-          <h3>${escapeHtml(section.title || "")}</h3>
-          ${section.subtitle ? `<p>${escapeHtml(section.subtitle)}</p>` : ""}
+        <section class="composer-section ${escapeHtml(section.tone || "")}">
+          <header class="composer-section-head">
+            <h3>${escapeHtml(section.title || "")}</h3>
+            ${section.subtitle ? `<p>${escapeHtml(section.subtitle)}</p>` : ""}
+            ${section.note ? `<p class="composer-section-note">${escapeHtml(section.note)}</p>` : ""}
+          </header>
           <div class="composer-grid">
             ${(section.fields || []).map(buildField).join("")}
           </div>
@@ -540,32 +585,79 @@ function renderSections(sections = []) {
     .join("");
 }
 
-function buildSection(title, fields, subtitle = "") {
-  return { title, subtitle, fields };
+function buildSection(title, fields, subtitle = "", note = "", tone = "") {
+  return { title, subtitle, fields, note, tone };
 }
 
-function fieldText(name, label, value = "", full = false) {
-  return { name, label, type: "text", value, full };
+function fieldText(
+  name,
+  label,
+  value = "",
+  full = false,
+  hint = "",
+  placeholder = "",
+  required = false
+) {
+  return { name, label, type: "text", value, full, hint, placeholder, required };
 }
 
 function fieldDate(name, label, value = "") {
-  return { name, label, type: "date", value };
+  return {
+    name,
+    label,
+    type: "date",
+    value,
+    hint: "Use the exact date of the event or entry.",
+  };
 }
 
 function fieldDateTime(name, label, value = "") {
-  return { name, label, type: "datetime-local", value };
+  return {
+    name,
+    label,
+    type: "datetime-local",
+    value,
+    hint: "Record as close to the actual time as possible.",
+  };
 }
 
-function fieldTextArea(name, label, value = "", full = true, rows = 5) {
-  return { name, label, type: "textarea", value, full, rows };
+function fieldTextArea(
+  name,
+  label,
+  value = "",
+  full = true,
+  rows = 5,
+  hint = "",
+  placeholder = "",
+  required = false
+) {
+  return {
+    name,
+    label,
+    type: "textarea",
+    value,
+    full,
+    rows,
+    hint,
+    placeholder,
+    required,
+  };
 }
 
-function fieldCheckbox(name, label, value = false) {
-  return { name, label, type: "checkbox", value };
+function fieldCheckbox(name, label, value = false, hint = "") {
+  return { name, label, type: "checkbox", value, hint };
 }
 
-function fieldSelect(name, label, value = "", options = [], full = false) {
-  return { name, label, type: "select", value, options, full };
+function fieldSelect(
+  name,
+  label,
+  value = "",
+  options = [],
+  full = false,
+  hint = "",
+  required = false
+) {
+  return { name, label, type: "select", value, options, full, hint, required };
 }
 
 function severityOptions() {
@@ -588,6 +680,16 @@ function workflowOptions() {
     { value: "approved", label: "Approved" },
     { value: "returned", label: "Returned" },
     { value: "completed", label: "Completed" },
+  ];
+}
+
+function keyworkStatusOptions() {
+  return [
+    { value: "draft", label: "Draft" },
+    { value: "submitted", label: "Submitted" },
+    { value: "approved", label: "Approved" },
+    { value: "returned", label: "Returned" },
+    { value: "archived", label: "Archived" },
   ];
 }
 
@@ -670,54 +772,158 @@ function buildDailyNoteContent(item = {}) {
 
   return {
     title: item?.id ? "Edit daily note" : "New daily note",
-    subtitle: "Capture the day clearly, warmly and accurately.",
+    subtitle: "Fast daily record with child-centred context and clear follow-up.",
     guidance:
-      "Write factually and child-centred. Separate what happened, how the young person presented, and what needs to happen next.",
+      "Keep this concise and practical for shift reality. Record what happened, what the young person may have been communicating, what support was offered, and what needs to happen next.",
     prompts: [
-      "How did the young person present today?",
-      "What happened during the shift?",
-      "What positives stood out?",
-      "What needs follow-up?",
+      "What happened, in plain time order?",
+      "What might the child or young person have been communicating through behaviour, mood or tone?",
+      "What support helped, and what did not help?",
+      "What follow-up is needed before the next shift?",
     ],
     sections: [
-      buildSection("Shift details", [
-        fieldDate("note_date", "Date", item.note_date || item.record_date || today),
-        fieldText("shift_type", "Shift type", item.shift_type || ""),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || "draft",
-          workflowOptions()
-        ),
-        fieldSelect(
-          "significance",
-          "Significance",
-          item.significance || "",
-          severityOptions()
-        ),
-      ]),
-      buildSection("Daily record", [
-        fieldTextArea("presentation", "Presentation", item.presentation || ""),
-        fieldTextArea("activities", "Activities", item.activities || ""),
-        fieldTextArea("education_update", "Education update", item.education_update || ""),
-        fieldTextArea("health_update", "Health update", item.health_update || ""),
-        fieldTextArea("family_update", "Family update", item.family_update || ""),
-        fieldTextArea("behaviour_update", "Behaviour update", item.behaviour_update || ""),
-      ]),
-      buildSection("Voice and follow-up", [
-        fieldTextArea(
-          "young_person_voice",
-          "Young person voice",
-          item.young_person_voice || item.child_voice || ""
-        ),
-        fieldTextArea("positives", "Positives", item.positives || ""),
-        fieldTextArea("actions_required", "Actions required", item.actions_required || ""),
-        fieldTextArea(
-          "manager_review_comment",
-          "Manager review comment",
-          item.manager_review_comment || ""
-        ),
-      ]),
+      buildSection(
+        "Essentials",
+        [
+          fieldDate("note_date", "Date", item.note_date || item.record_date || today),
+          fieldText(
+            "shift_type",
+            "Shift",
+            item.shift_type || "",
+            false,
+            "Use a quick, recognisable shift label (for example: Day, Late, Waking Night).",
+            "Day / Late / Night",
+            true
+          ),
+          fieldSelect(
+            "significance",
+            "Significance",
+            item.significance || "",
+            severityOptions(),
+            false,
+            "Only mark high/critical when this day materially changed risk or care planning."
+          ),
+          fieldSelect(
+            "workflow_status",
+            "Workflow status",
+            item.workflow_status || "draft",
+            workflowOptions(),
+            false,
+            "Use draft during shift; submit when complete."
+          ),
+        ],
+        "Quick context first so teams can immediately orient themselves."
+      ),
+      buildSection(
+        "What happened and child context",
+        [
+          fieldTextArea(
+            "presentation",
+            "How they presented",
+            item.presentation || "",
+            true,
+            4,
+            "Describe observed presentation and regulation, not assumptions.",
+            "Calm/anxious/withdrawn; energy, engagement, sleep, appetite, body language.",
+            true
+          ),
+          fieldTextArea(
+            "activities",
+            "What happened in the shift",
+            item.activities || "",
+            true,
+            5,
+            "Short factual timeline is best under pressure.",
+            "Key events in order: routines, appointments, interactions, incidents, positives.",
+            true
+          ),
+          fieldTextArea(
+            "behaviour_update",
+            "Behaviour and communication",
+            item.behaviour_update || "",
+            true,
+            4,
+            "Frame behaviour as communication where possible.",
+            "What was the behaviour saying? What triggers or unmet needs were visible?"
+          ),
+          fieldTextArea(
+            "young_person_voice",
+            "Child voice",
+            item.young_person_voice || item.child_voice || "",
+            true,
+            4,
+            "Capture direct words where possible.",
+            "Quotes, wishes, worries, reflections, what mattered to them today."
+          ),
+        ],
+        "Use clear language a new staff member can understand in under a minute.",
+        "Aim for clear, neutral phrasing with the young person held in mind.",
+        "composer-section--context"
+      ),
+      buildSection(
+        "Support and outcomes",
+        [
+          fieldTextArea(
+            "education_update",
+            "Education update",
+            item.education_update || "",
+            true,
+            3,
+            "Include engagement, support offered, and any next-day implications."
+          ),
+          fieldTextArea(
+            "health_update",
+            "Health update",
+            item.health_update || "",
+            true,
+            3,
+            "Include any symptoms, treatment, appointments, medication or wellbeing concerns."
+          ),
+          fieldTextArea(
+            "family_update",
+            "Family/contact update",
+            item.family_update || "",
+            true,
+            3,
+            "Include impact before/after contact and any safeguards."
+          ),
+          fieldTextArea(
+            "positives",
+            "What went well",
+            item.positives || "",
+            true,
+            3,
+            "Name strengths, progress and protective factors."
+          ),
+        ],
+        "Balanced records should include strengths as well as concerns."
+      ),
+      buildSection(
+        "Follow-up and oversight",
+        [
+          fieldTextArea(
+            "actions_required",
+            "What needs to happen next",
+            item.actions_required || "",
+            true,
+            4,
+            "Be specific: what, who, and by when.",
+            "e.g. Update risk plan before school transport tomorrow; manager to review by 09:00.",
+            true
+          ),
+          fieldTextArea(
+            "manager_review_comment",
+            "Manager review note",
+            item.manager_review_comment || "",
+            true,
+            3,
+            "For management quality assurance, challenge, and decision trail."
+          ),
+        ],
+        "Strong follow-up makes records operational, not just descriptive.",
+        "",
+        "composer-section--action"
+      ),
     ],
   };
 }
@@ -727,65 +933,166 @@ function buildIncidentContent(item = {}) {
 
   return {
     title: item?.id ? "Edit important event" : "New important event",
-    subtitle: "Record a significant event clearly, safely and factually.",
+    subtitle: "Record a clear event account with context, response and follow-up.",
     guidance:
-      "Be factual, specific and clear. Include antecedent, response, outcome and follow-up. Avoid vague language.",
+      "Be concise, factual and child-centred. Separate what happened, what may have been communicated, how adults responded, and what must happen next.",
     prompts: [
-      "What happened?",
-      "What led up to it?",
-      "How did staff respond?",
-      "What happened next and what follow-up is needed?",
+      "What happened and in what order?",
+      "What was happening immediately before the event?",
+      "What support was offered and how did the young person respond?",
+      "What are the required actions now?",
     ],
     sections: [
-      buildSection("Incident details", [
-        fieldDateTime(
-          "incident_datetime",
-          "Incident date and time",
-          toDateTimeLocalValue(item.incident_datetime) || now
-        ),
-        fieldText("incident_type", "Incident type", item.incident_type || ""),
-        fieldText("location", "Location", item.location || ""),
-        fieldSelect("severity", "Severity", item.severity || "", severityOptions()),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || item.manager_review_status || "draft",
-          workflowOptions()
-        ),
-      ]),
-      buildSection("Event narrative", [
-        fieldTextArea("description", "Description", item.description || ""),
-        fieldTextArea("antecedent", "Antecedent", item.antecedent || ""),
-        fieldTextArea("staff_response", "Staff response", item.staff_response || ""),
-        fieldTextArea("child_response", "Child response", item.child_response || ""),
-        fieldTextArea("outcome", "Outcome", item.outcome || ""),
-      ]),
-      buildSection("Analysis and follow-up", [
-        fieldTextArea("presentation", "Presentation", item.presentation || ""),
-        fieldTextArea(
-          "trauma_informed_formulation",
-          "Trauma-informed formulation",
-          item.trauma_informed_formulation || ""
-        ),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldTextArea(
-          "restorative_follow_up",
-          "Restorative follow-up",
-          item.restorative_follow_up || ""
-        ),
-        fieldTextArea("actions_taken", "Actions taken", item.actions_taken || ""),
-        fieldCheckbox("injury_flag", "Injury", Boolean(item.injury_flag)),
-        fieldCheckbox(
-          "property_damage_flag",
-          "Property damage",
-          Boolean(item.property_damage_flag)
-        ),
-        fieldCheckbox("police_involved", "Police involved", Boolean(item.police_involved)),
-        fieldCheckbox("safeguarding_flag", "Safeguarding flag", Boolean(item.safeguarding_flag)),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-        fieldCheckbox("ofsted_notified", "Ofsted notified", Boolean(item.ofsted_notified)),
-        fieldCheckbox("requires_reg40", "Requires Reg 40", Boolean(item.requires_reg40)),
-      ]),
+      buildSection(
+        "Essentials",
+        [
+          fieldDateTime(
+            "incident_datetime",
+            "Incident date and time",
+            toDateTimeLocalValue(item.incident_datetime) || now
+          ),
+          fieldText(
+            "incident_type",
+            "Incident type",
+            item.incident_type || "",
+            false,
+            "Use a short category that makes later audit and reporting easier.",
+            "e.g. Physical aggression, Missing from home, Property damage",
+            true
+          ),
+          fieldText("location", "Location", item.location || "", false, "Where did this happen?"),
+          fieldSelect(
+            "severity",
+            "Severity",
+            item.severity || "",
+            severityOptions(),
+            false,
+            "Use severity consistently so patterns are reliable in quality review."
+          ),
+          fieldSelect(
+            "workflow_status",
+            "Workflow status",
+            item.workflow_status || item.manager_review_status || "draft",
+            workflowOptions(),
+            false,
+            "Draft while writing; submit once complete for review."
+          ),
+        ],
+        "Capture key metadata first for safe handover and oversight."
+      ),
+      buildSection(
+        "What happened and context",
+        [
+          fieldTextArea(
+            "description",
+            "What happened",
+            item.description || "",
+            true,
+            5,
+            "Use neutral, factual language and sequence events clearly.",
+            "Describe only what was observed and done, in time order.",
+            true
+          ),
+          fieldTextArea(
+            "antecedent",
+            "What happened before",
+            item.antecedent || "",
+            true,
+            4,
+            "Include known triggers, interactions, transitions or stressors."
+          ),
+          fieldTextArea(
+            "presentation",
+            "How they were presenting",
+            item.presentation || "",
+            true,
+            4,
+            "Describe regulation, affect and communication style."
+          ),
+          fieldTextArea(
+            "child_voice",
+            "Child voice",
+            item.child_voice || "",
+            true,
+            4,
+            "Capture exact words where possible and what they were trying to communicate."
+          ),
+          fieldTextArea(
+            "trauma_informed_formulation",
+            "Therapeutic meaning",
+            item.trauma_informed_formulation || "",
+            true,
+            4,
+            "What might this have meant for them in context, and what should adults hold in mind?"
+          ),
+        ],
+        "Keep this section readable for staff under pressure.",
+        "",
+        "composer-section--context"
+      ),
+      buildSection(
+        "Support, response and outcomes",
+        [
+          fieldTextArea(
+            "staff_response",
+            "Support offered",
+            item.staff_response || "",
+            true,
+            4,
+            "State clearly what adults said and did to de-escalate and support."
+          ),
+          fieldTextArea(
+            "restorative_follow_up",
+            "Restorative follow-up",
+            item.restorative_follow_up || "",
+            true,
+            4,
+            "Capture repair work, reflection or relationship support completed/planned."
+          ),
+          fieldTextArea(
+            "actions_taken",
+            "Actions taken",
+            item.actions_taken || "",
+            true,
+            4,
+            "List practical actions already completed."
+          ),
+          fieldTextArea(
+            "outcome",
+            "Outcome",
+            item.outcome || "",
+            true,
+            4,
+            "What changed by the end of this event? Include current safety position.",
+            "",
+            true
+          ),
+          fieldCheckbox(
+            "follow_up_required",
+            "Follow-up required",
+            Boolean(item.follow_up_required),
+            "Tick when a follow-up action, review or meeting is still needed."
+          ),
+        ]
+      ),
+      buildSection(
+        "Safeguarding and notifications",
+        [
+          fieldCheckbox("injury_flag", "Injury", Boolean(item.injury_flag)),
+          fieldCheckbox(
+            "property_damage_flag",
+            "Property damage",
+            Boolean(item.property_damage_flag)
+          ),
+          fieldCheckbox("police_involved", "Police involved", Boolean(item.police_involved)),
+          fieldCheckbox("safeguarding_flag", "Safeguarding concern", Boolean(item.safeguarding_flag)),
+          fieldCheckbox("ofsted_notified", "Ofsted notified", Boolean(item.ofsted_notified)),
+          fieldCheckbox("requires_reg40", "Requires Reg 40", Boolean(item.requires_reg40)),
+        ],
+        "Complete these flags carefully to maintain safeguarding and compliance traceability.",
+        "",
+        "composer-section--action"
+      ),
     ],
   };
 }
@@ -887,40 +1194,89 @@ function buildHealthRecordContent(item = {}) {
 
   return {
     title: item?.id ? "Edit health record" : "New health record",
-    subtitle: "Record health events, professionals, outcomes and follow-up.",
+    subtitle: "Quick health recording with clear context, action and follow-up.",
     guidance:
-      "Make the health event easy to understand later. Include professional involvement, outcome and next action.",
+      "Make this easy for the next staff member to act on. Record what happened, who was involved, what it meant for the young person, and what happens next.",
     prompts: [
-      "What happened?",
-      "Who was involved?",
-      "What was the outcome?",
-      "Is follow-up needed?",
+      "What health event happened?",
+      "What support or professional input was provided?",
+      "How did the young person experience this?",
+      "Any immediate follow-up actions?",
     ],
     sections: [
-      buildSection("Health event", [
-        fieldText("title", "Title", item.title || ""),
-        fieldText("record_type", "Record type", item.record_type || ""),
+      buildSection("Essentials", [
+        fieldText(
+          "title",
+          "Title",
+          item.title || "",
+          false,
+          "Short and specific title so this is searchable in chronology.",
+          "e.g. GP appointment - medication review",
+          true
+        ),
+        fieldText(
+          "record_type",
+          "Record type",
+          item.record_type || "",
+          false,
+          "Type of health entry (GP, dentist, CAMHS, illness, injury, medication).",
+          "",
+          true
+        ),
         fieldDateTime(
           "event_datetime",
           "Date and time",
           toDateTimeLocalValue(item.event_datetime) || now
         ),
-        fieldText("professional_name", "Professional name", item.professional_name || ""),
-        fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || "draft",
-          workflowOptions()
-        ),
+        fieldText("professional_name", "Professional involved", item.professional_name || ""),
       ]),
-      buildSection("Health summary", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("outcome", "Outcome", item.outcome || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-        fieldDate("next_action_date", "Next action date", item.next_action_date || ""),
-      ]),
+      buildSection(
+        "What happened and response",
+        [
+          fieldTextArea(
+            "summary",
+            "What happened",
+            item.summary || "",
+            true,
+            4,
+            "Include presenting issue, assessment and any treatment/advice given.",
+            "",
+            true
+          ),
+          fieldTextArea(
+            "child_voice",
+            "Child voice",
+            item.child_voice || "",
+            true,
+            4,
+            "How did the young person describe symptoms, worries, preferences or decisions?"
+          ),
+          fieldTextArea(
+            "outcome",
+            "Outcome",
+            item.outcome || "",
+            true,
+            4,
+            "Current health status and immediate implications for care."
+          ),
+        ],
+        "Keep this practical so staff can act quickly and safely."
+      ),
+      buildSection(
+        "Follow-up",
+        [
+          fieldCheckbox(
+            "follow_up_required",
+            "Follow-up required",
+            Boolean(item.follow_up_required),
+            "Tick if any appointment, monitoring, referral or update is still required."
+          ),
+          fieldDate("next_action_date", "Next action date", item.next_action_date || ""),
+        ],
+        "Follow-up drives tasks, chronology clarity and management oversight.",
+        "",
+        "composer-section--action"
+      ),
     ],
   };
 }
@@ -930,38 +1286,105 @@ function buildEducationRecordContent(item = {}) {
 
   return {
     title: item?.id ? "Edit education record" : "New education record",
-    subtitle: "Record attendance, engagement, support and concerns.",
+    subtitle: "Daily education recording focused on engagement, support and progress.",
     guidance:
-      "Keep the record practical. Show what happened, how the young person engaged, and what needs to happen next.",
+      "Keep it practical and strengths-based. Record participation, barriers, support offered, and what needs follow-up.",
     prompts: [
-      "How did the young person engage?",
-      "Were there concerns or positives?",
-      "What action was taken?",
-      "Is further follow-up needed?",
+      "How did the day in education go?",
+      "What helped engagement, and what got in the way?",
+      "What does this tell us about needs and progress?",
+      "What should happen next?",
     ],
     sections: [
-      buildSection("Education record", [
+      buildSection("Essentials", [
         fieldDate("record_date", "Date", item.record_date || today),
-        fieldText("provision_name", "Provision name", item.provision_name || ""),
-        fieldText("attendance_status", "Attendance status", item.attendance_status || ""),
-        fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || "draft",
-          workflowOptions()
+        fieldText(
+          "provision_name",
+          "Education provision",
+          item.provision_name || "",
+          false,
+          "School/college/provision attended.",
+          "",
+          true
+        ),
+        fieldText(
+          "attendance_status",
+          "Attendance",
+          item.attendance_status || "",
+          false,
+          "Present, absent, part-attended, late, educated on-site, etc."
         ),
       ]),
-      buildSection("Education summary", [
-        fieldTextArea("learning_engagement", "Learning engagement", item.learning_engagement || ""),
-        fieldTextArea("behaviour_summary", "Behaviour summary", item.behaviour_summary || ""),
-        fieldTextArea("issue_raised", "Issue raised", item.issue_raised || ""),
-        fieldTextArea("action_taken", "Action taken", item.action_taken || ""),
-        fieldTextArea("professional_involved", "Professional involved", item.professional_involved || ""),
-        fieldTextArea("achievement_note", "Achievement note", item.achievement_note || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-      ]),
+      buildSection(
+        "Learning and wellbeing in education",
+        [
+          fieldTextArea(
+            "learning_engagement",
+            "Learning engagement",
+            item.learning_engagement || "",
+            true,
+            4,
+            "What learning did they engage with and for how long?"
+          ),
+          fieldTextArea(
+            "behaviour_summary",
+            "Behaviour and regulation",
+            item.behaviour_summary || "",
+            true,
+            4,
+            "Describe observable behaviour and self-regulation in education context."
+          ),
+          fieldTextArea(
+            "child_voice",
+            "Child voice",
+            item.child_voice || "",
+            true,
+            4,
+            "How did they describe school, peers, staff, pressure or success?"
+          ),
+          fieldTextArea(
+            "achievement_note",
+            "Achievements and progress",
+            item.achievement_note || "",
+            true,
+            3,
+            "Capture even small progress to strengthen a balanced narrative."
+          ),
+        ],
+        "This section should help staff, managers and inspectors see progress over time.",
+        "",
+        "composer-section--context"
+      ),
+      buildSection(
+        "Concerns and follow-up",
+        [
+          fieldTextArea("issue_raised", "Concerns raised", item.issue_raised || "", true, 4),
+          fieldTextArea(
+            "action_taken",
+            "Action taken",
+            item.action_taken || "",
+            true,
+            4,
+            "What action has already happened and by whom?"
+          ),
+          fieldTextArea(
+            "professional_involved",
+            "Professional involvement",
+            item.professional_involved || "",
+            true,
+            3
+          ),
+          fieldCheckbox(
+            "follow_up_required",
+            "Follow-up required",
+            Boolean(item.follow_up_required),
+            "Tick if further school liaison, meeting or support action is needed."
+          ),
+        ],
+        "Clear follow-up supports attendance, attainment and safeguarding.",
+        "",
+        "composer-section--action"
+      ),
     ],
   };
 }
@@ -971,9 +1394,9 @@ function buildFamilyContactContent(item = {}) {
 
   return {
     title: item?.id ? "Edit family contact" : "New family contact",
-    subtitle: "Record family contact, presentation, concerns and next steps.",
+    subtitle: "Family contact record with child impact and follow-up.",
     guidance:
-      "Make the impact of contact clear. Include how the young person presented before and after, and what adults need to hold in mind.",
+      "Focus on relational impact and safety. Make clear what happened, how the young person presented before/after, and what support is now needed.",
     prompts: [
       "Who was involved?",
       "How did the young person present before and after?",
@@ -981,39 +1404,89 @@ function buildFamilyContactContent(item = {}) {
       "What follow-up is needed?",
     ],
     sections: [
-      buildSection("Contact details", [
+      buildSection("Essentials", [
         fieldDateTime(
           "contact_datetime",
           "Date and time",
           toDateTimeLocalValue(item.contact_datetime) || now
         ),
-        fieldText("contact_type", "Contact type", item.contact_type || ""),
-        fieldText("contact_person", "Contact person", item.contact_person || ""),
+        fieldText(
+          "contact_type",
+          "Contact type",
+          item.contact_type || "",
+          false,
+          "Call, visit, supervised contact, unsupervised contact, etc.",
+          "",
+          true
+        ),
+        fieldText(
+          "contact_person",
+          "Who with",
+          item.contact_person || "",
+          false,
+          "Name or role of main contact person.",
+          "",
+          true
+        ),
         fieldText("supervision_level", "Supervision level", item.supervision_level || ""),
         fieldText("location", "Location", item.location || ""),
-        fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || "draft",
-          workflowOptions()
-        ),
       ]),
-      buildSection("Contact summary", [
-        fieldTextArea(
-          "pre_contact_presentation",
-          "Pre-contact presentation",
-          item.pre_contact_presentation || ""
-        ),
-        fieldTextArea(
-          "post_contact_presentation",
-          "Post-contact presentation",
-          item.post_contact_presentation || ""
-        ),
-        fieldTextArea("concerns", "Concerns", item.concerns || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-      ]),
+      buildSection(
+        "Before and after contact",
+        [
+          fieldTextArea(
+            "pre_contact_presentation",
+            "Before contact",
+            item.pre_contact_presentation || "",
+            true,
+            4,
+            "How they were presenting, regulating and communicating before contact."
+          ),
+          fieldTextArea(
+            "post_contact_presentation",
+            "After contact",
+            item.post_contact_presentation || "",
+            true,
+            4,
+            "How they presented after contact and any immediate support required."
+          ),
+          fieldTextArea(
+            "child_voice",
+            "Child voice",
+            item.child_voice || "",
+            true,
+            4,
+            "Capture direct words and emotional themes."
+          ),
+        ],
+        "This helps teams and managers understand relational impact over time.",
+        "",
+        "composer-section--context"
+      ),
+      buildSection(
+        "Concerns and follow-up",
+        [
+          fieldTextArea(
+            "concerns",
+            "Concerns",
+            item.concerns || "",
+            true,
+            4,
+            "Include any safeguarding, emotional or practical concerns.",
+            "",
+            true
+          ),
+          fieldCheckbox(
+            "follow_up_required",
+            "Follow-up required",
+            Boolean(item.follow_up_required),
+            "Tick if there is any action needed by keyworker/manager/social worker."
+          ),
+        ],
+        "Explicit follow-up keeps this operational and audit-ready.",
+        "",
+        "composer-section--action"
+      ),
     ],
   };
 }
@@ -1023,9 +1496,9 @@ function buildKeyworkContent(item = {}) {
 
   return {
     title: item?.id ? "Edit keywork session" : "New keywork session",
-    subtitle: "Record direct work, reflection and agreed next steps.",
+    subtitle: "Direct work record focused on meaning, relationship and next steps.",
     guidance:
-      "Show the topic, purpose, the young person’s contribution, your reflection, and what was agreed.",
+      "Keep this reflective but practical. Record what was explored, what the young person communicated, what helped, and what actions were agreed.",
     prompts: [
       "What was the topic?",
       "What was discussed?",
@@ -1033,29 +1506,208 @@ function buildKeyworkContent(item = {}) {
       "What was agreed next?",
     ],
     sections: [
-      buildSection("Keywork details", [
+      buildSection("Essentials", [
         fieldDate("session_date", "Session date", item.session_date || today),
-        fieldText("topic", "Topic", item.topic || ""),
-        fieldTextArea("purpose", "Purpose", item.purpose || ""),
-        fieldText("status", "Status", item.status || ""),
-        fieldText("workflow_status", "Workflow status", item.workflow_status || item.status || "draft"),
-      ]),
-      buildSection("Session content", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldTextArea(
-          "reflective_analysis",
-          "Reflective analysis",
-          item.reflective_analysis || ""
+        fieldText(
+          "topic",
+          "Topic",
+          item.topic || "",
+          false,
+          "Use a clear topic so trends can be reviewed over time.",
+          "",
+          true
         ),
-        fieldTextArea("actions_agreed", "Actions agreed", item.actions_agreed || ""),
-        fieldDate("next_session_date", "Next session date", item.next_session_date || ""),
-        fieldTextArea(
-          "manager_review_comment",
-          "Manager review comment",
-          item.manager_review_comment || ""
+        fieldSelect(
+          "status",
+          "Status",
+          item.status || "draft",
+          keyworkStatusOptions(),
+          false,
+          "Use submitted/approved for reviewed records."
         ),
       ]),
+      buildSection(
+        "Purpose and what happened",
+        [
+          fieldTextArea(
+            "purpose",
+            "Purpose",
+            item.purpose || "",
+            true,
+            4,
+            "What was this keywork trying to support or explore?"
+          ),
+          fieldTextArea(
+            "summary",
+            "Session summary",
+            item.summary || "",
+            true,
+            5,
+            "What was covered, in clear sequence, and what felt important?",
+            "",
+            true
+          ),
+        ]
+      ),
+      buildSection(
+        "Voice, reflection and next steps",
+        [
+          fieldTextArea(
+            "child_voice",
+            "Child voice",
+            item.child_voice || "",
+            true,
+            4,
+            "Use direct quotes where possible."
+          ),
+          fieldTextArea(
+            "reflective_analysis",
+            "Reflective analysis",
+            item.reflective_analysis || "",
+            true,
+            4,
+            "What meaning might sit underneath what was discussed or shown?"
+          ),
+          fieldTextArea(
+            "actions_agreed",
+            "Actions agreed",
+            item.actions_agreed || "",
+            true,
+            4,
+            "Be specific about who is doing what and by when.",
+            "",
+            true
+          ),
+          fieldDate("next_session_date", "Next session date", item.next_session_date || ""),
+          fieldTextArea(
+            "manager_review_comment",
+            "Manager review comment",
+            item.manager_review_comment || "",
+            true,
+            3
+          ),
+        ],
+        "Strong action detail improves continuity and quality review.",
+        "",
+        "composer-section--action"
+      ),
+    ],
+  };
+}
+
+function buildMedicationProfileContent(item = {}) {
+  const today = getToday();
+
+  return {
+    title: item?.id ? "Edit medication profile" : "New medication profile",
+    subtitle: "Medication profile for safe administration and continuity.",
+    guidance:
+      "Keep this clinically accurate and practical. Staff should be able to administer safely from this information.",
+    prompts: [
+      "What is the medication and current dosage?",
+      "How and when should it be given?",
+      "What PRN guidance applies?",
+      "Any key safety notes or review points?",
+    ],
+    sections: [
+      buildSection("Essentials", [
+        fieldText(
+          "medication_name",
+          "Medication name",
+          item.medication_name || "",
+          false,
+          "Use full medication name as prescribed.",
+          "",
+          true
+        ),
+        fieldText("dosage", "Dosage", item.dosage || "", false, "e.g. 5mg"),
+        fieldText("route", "Route", item.route || "", false, "e.g. oral, topical"),
+        fieldText("frequency", "Frequency", item.frequency || "", false, "e.g. twice daily"),
+      ]),
+      buildSection("Safety and prescribing context", [
+        fieldText("prescribed_by", "Prescribed by", item.prescribed_by || ""),
+        fieldDate("start_date", "Start date", item.start_date || today),
+        fieldDate("end_date", "End date", item.end_date || ""),
+        fieldCheckbox("is_active", "Active medication", item.is_active !== false),
+        fieldTextArea(
+          "prn_guidance",
+          "PRN guidance",
+          item.prn_guidance || "",
+          true,
+          4,
+          "Include clear triggers, maximum dose and spacing instructions."
+        ),
+        fieldTextArea("notes", "Additional notes", item.notes || "", true, 4),
+      ]),
+    ],
+  };
+}
+
+function buildMedicationRecordContent(item = {}) {
+  const now = getNowLocal();
+
+  return {
+    title: item?.id ? "Edit medication administration" : "New medication administration",
+    subtitle: "Medication administration record with outcome and safety checks.",
+    guidance:
+      "Document administration clearly and immediately. This supports safety, accountability and audit readiness.",
+    prompts: [
+      "Was medication administered as planned?",
+      "What was the exact dose and route?",
+      "Were there refusals, omissions or errors?",
+      "Any manager follow-up needed?",
+    ],
+    sections: [
+      buildSection("Essentials", [
+        fieldText(
+          "medication_name",
+          "Medication name",
+          item.medication_name || "",
+          false,
+          "Match medication profile naming.",
+          "",
+          true
+        ),
+        fieldText("dose", "Dose given", item.dose || "", false, "Record actual administered dose."),
+        fieldText("route", "Route", item.route || ""),
+        fieldText(
+          "medication_profile_id",
+          "Medication profile ID",
+          item.medication_profile_id || "",
+          false,
+          "Link to the active medication profile where available."
+        ),
+        fieldDateTime(
+          "scheduled_time",
+          "Scheduled time",
+          toDateTimeLocalValue(item.scheduled_time) || now
+        ),
+        fieldDateTime(
+          "administered_time",
+          "Administered time",
+          toDateTimeLocalValue(item.administered_time) || now
+        ),
+        fieldText("status", "Status", item.status || "", false, "e.g. administered/refused/omitted"),
+      ]),
+      buildSection(
+        "Outcome and safety",
+        [
+          fieldTextArea("refusal_reason", "Refusal reason", item.refusal_reason || "", true, 3),
+          fieldTextArea("omission_reason", "Omission reason", item.omission_reason || "", true, 3),
+          fieldCheckbox(
+            "error_flag",
+            "Medication error",
+            Boolean(item.error_flag),
+            "Tick if any administration or recording error occurred."
+          ),
+          fieldTextArea("error_details", "Error details", item.error_details || "", true, 4),
+          fieldText("manager_review_status", "Manager review status", item.manager_review_status || ""),
+          fieldText("administered_by", "Administered by user ID", item.administered_by || ""),
+        ],
+        "Complete this section fully if medication was refused, omitted, or involved an error.",
+        "",
+        "composer-section--action"
+      ),
     ],
   };
 }
@@ -1706,6 +2358,8 @@ function getComposerContent(recordType, item = {}) {
     education_record: buildEducationRecordContent,
     family_contact: buildFamilyContactContent,
     keywork: buildKeyworkContent,
+    medication_profile: buildMedicationProfileContent,
+    medication_record: buildMedicationRecordContent,
     appointment: buildAppointmentContent,
     achievement_record: buildAchievementContent,
     safeguarding_record: buildSafeguardingContent,

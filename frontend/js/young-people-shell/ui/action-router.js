@@ -296,6 +296,8 @@ function inferSectionForRecordType(recordType = "", scope = getCurrentScope()) {
     keywork: "daily-life",
     appointment: "calendar",
     achievement_record: "education",
+    medication_profile: "health",
+    medication_record: "health",
     safeguarding_record: "safeguarding",
     missing_episode: "missing-from-care",
     task:
