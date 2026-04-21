@@ -14,6 +14,34 @@ function getHomeId() {
   );
 }
 
+function getAllowedHomeIds() {
+  const rawIds = Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : [];
+  return rawIds
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0);
+}
+
+function resolveAccessibleHomeId() {
+  const candidate = Number(getHomeId());
+  const allowed = getAllowedHomeIds();
+  const role = String(state.userRole || "").toLowerCase();
+  const providerLikeRole =
+    role.includes("ri") ||
+    role.includes("responsible") ||
+    role.includes("admin") ||
+    role.includes("manager");
+
+  if (!allowed.length) {
+    return Number.isFinite(candidate) && candidate > 0 ? candidate : null;
+  }
+
+  if (Number.isFinite(candidate) && allowed.includes(candidate)) {
+    return candidate;
+  }
+
+  return providerLikeRole ? allowed[0] : null;
+}
+
 function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
@@ -1109,7 +1137,7 @@ async function fetchDataset(homeId) {
 export async function loadSccifEvidence() {
   if (!els.viewContent) return;
 
-  const homeId = getHomeId();
+  const homeId = resolveAccessibleHomeId();
 
   if (!homeId) {
     renderNoHomeContext();
