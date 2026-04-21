@@ -15,6 +15,7 @@ function normaliseSummary(summary = {}) {
     nextEvent: summary.nextEvent || "No upcoming appointments",
     lastRecord: summary.lastRecord || "No recent records",
     openActions: summary.openActions || "No open actions",
+    pressure: summary.pressure || "No active alerts",
   };
 }
 
@@ -33,6 +34,7 @@ function buildSummaryHtml(summary) {
     ${buildSummaryItem("Next event", summary.nextEvent)}
     ${buildSummaryItem("Last record", summary.lastRecord)}
     ${buildSummaryItem("Open actions", summary.openActions)}
+    ${buildSummaryItem("Visibility alerts", summary.pressure)}
   `;
 }
 
@@ -55,6 +57,7 @@ export function resetWorkspaceSummaryStrip() {
       nextEvent: "No event loaded",
       lastRecord: "No record loaded",
       openActions: "No actions loaded",
+      pressure: "No active alerts",
     })
   );
 

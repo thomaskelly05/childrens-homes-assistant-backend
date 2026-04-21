@@ -31,6 +31,7 @@ const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/tasks$/, "/tasks?young_person_id=$1"],
   [/\/young-people\/(\d+)\/actions$/, "/actions?young_person_id=$1&scope=child"],
+  [/\/young-people\/(\d+)\/visibility$/, "/visibility/young-people/$1"],
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
   [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
 
@@ -64,6 +65,7 @@ const API_ROUTE_ALIASES = [
 
   [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
   [/\/homes\/(\d+)\/actions$/, "/actions?home_id=$1&scope=home"],
+  [/\/homes\/(\d+)\/visibility$/, "/visibility/homes/$1"],
   [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
   [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
 

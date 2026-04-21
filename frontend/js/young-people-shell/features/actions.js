@@ -91,6 +91,9 @@ function getScopeConfig() {
             youngPersonId
           )}&include_completed=true&limit=250`
         : null,
+      visibilityEndpoint: youngPersonId
+        ? `/visibility/young-people/${encodeURIComponent(youngPersonId)}`
+        : null,
       canCreate: Boolean(youngPersonId),
       createPrefill: {
         scope: "child",
@@ -112,6 +115,9 @@ function getScopeConfig() {
             homeId
           )}&include_completed=true&limit=300`
         : null,
+      visibilityEndpoint: homeId
+        ? `/visibility/homes/${encodeURIComponent(homeId)}`
+        : null,
       canCreate: Boolean(homeId),
       createPrefill: {
         scope: "home",
@@ -132,6 +138,11 @@ function getScopeConfig() {
             homeId
           )}&include_completed=true&include_inspection_actions=true&limit=350`
         : `/actions?scope=quality&include_completed=true&include_inspection_actions=true&limit=350`,
+      visibilityEndpoint: homeId
+        ? `/visibility/quality?home_id=${encodeURIComponent(
+            homeId
+          )}&all_accessible_homes=false`
+        : "/visibility/quality?all_accessible_homes=true",
       canCreate: Boolean(homeId),
       createPrefill: {
         scope: "quality",
@@ -152,6 +163,11 @@ function getScopeConfig() {
           homeId
         )}&include_completed=true&include_inspection_actions=true&limit=350`
       : `/actions?scope=ofsted&include_completed=true&include_inspection_actions=true&limit=350`,
+    visibilityEndpoint: homeId
+      ? `/visibility/ofsted?home_id=${encodeURIComponent(
+          homeId
+        )}&all_accessible_homes=false`
+      : "/visibility/ofsted?all_accessible_homes=true",
     canCreate: Boolean(homeId),
     createPrefill: {
       scope: "ofsted",
@@ -368,11 +384,66 @@ function renderActionRows(actions = []) {
   return `<div class="action-row-list">${actions.map(renderActionRow).join("")}</div>`;
 }
 
-function renderPanel(config, counts, actions) {
+function visibilitySignalTone(signal = {}) {
+  const severity = normaliseToken(signal.severity);
+  if (severity === "critical" || severity === "high") return "danger";
+  if (severity === "medium") return "warning";
+  if (severity === "low") return "success";
+  return "muted";
+}
+
+function renderVisibilitySignals(signals = []) {
+  if (!signals.length) {
+    return `
+      <div class="empty-state">
+        <div class="empty-state-inner">
+          <div class="empty-state-icon">○</div>
+          <h3>No major alerts</h3>
+          <p>Current actions are not surfacing any urgent escalation signals.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${signals
+        .slice(0, 6)
+        .map(
+          (signal) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(
+                  signal.title || "Visibility signal"
+                )}</div>
+                <div class="record-row-summary">${safeText(
+                  signal.description || "Signal requires follow-through."
+                )}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${safeText(visibilitySignalTone(signal))}">
+                  ${safeText(signal.count ?? 0)}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderPanel(config, counts, actions, visibility = {}) {
   const nextDue = actions.find((item) => OPEN_STATUSES.has(normaliseToken(item.status)));
   const headline = counts.overdue
     ? `${counts.overdue} overdue actions need review`
     : `${counts.open + counts.inProgress} live actions in flow`;
+  const visibilitySignals = Array.isArray(visibility?.signals)
+    ? visibility.signals
+    : [];
+  const queueUrgent = Array.isArray(visibility?.queues?.urgent)
+    ? visibility.queues.urgent
+    : [];
 
   return `
     <section class="overview-panel action-hub">
@@ -416,6 +487,20 @@ function renderPanel(config, counts, actions) {
             <p>Track ownership, due dates, status and updates in one place.</p>
           </div>
           ${renderActionRows(actions)}
+        </section>
+        <section class="action-hub-section">
+          <div class="overview-section-head">
+            <h3>Operational visibility</h3>
+            <p>Escalation-aware signals to keep follow-through visible but calm.</p>
+          </div>
+          ${renderVisibilitySignals(visibilitySignals)}
+          ${
+            queueUrgent.length
+              ? `<p class="overview-helper-text">${safeText(
+                  `${queueUrgent.length} urgent escalation items are currently in scope.`
+                )}</p>`
+              : ""
+          }
         </section>
       </div>
     </section>
@@ -562,11 +647,14 @@ export async function loadActions() {
     </div>
   `;
 
-  const response = await safeGet(config.endpoint);
+  const [response, visibility] = await Promise.all([
+    safeGet(config.endpoint),
+    safeGet(config.visibilityEndpoint),
+  ]);
   const actions = sortActions(getActionRows(response));
   const counts = buildCounts(actions);
 
-  els.viewContent.innerHTML = renderPanel(config, counts, actions);
+  els.viewContent.innerHTML = renderPanel(config, counts, actions, visibility);
   bindInlineActions(config);
 
   const nextDue = actions.find((item) => OPEN_STATUSES.has(normaliseToken(item.status)));
@@ -587,6 +675,12 @@ export async function loadActions() {
     openActions: counts.overdue
       ? `${counts.overdue} overdue`
       : `${counts.escalated} escalated`,
+    pressure: Array.isArray(visibility?.queues?.urgent) &&
+      visibility.queues.urgent.length
+      ? `${visibility.queues.urgent.length} escalation alerts`
+      : Number(visibility?.pressures?.total || 0)
+      ? `${Number(visibility.pressures.total)} pressure score`
+      : "No active alerts",
   });
 
   await onAssistantScopeChanged();

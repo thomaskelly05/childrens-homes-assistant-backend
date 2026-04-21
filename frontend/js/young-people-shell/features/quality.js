@@ -42,6 +42,13 @@ function titleCase(value) {
     .trim();
 }
 
+function qualityVisibilityPath(homeId) {
+  if (homeId) {
+    return `/visibility/quality?home_id=${encodeURIComponent(homeId)}&all_accessible_homes=false`;
+  }
+  return "/visibility/quality?all_accessible_homes=true";
+}
+
 function formatDate(value, fallback = "No date") {
   if (!value) return fallback;
   const date = new Date(value);
@@ -109,6 +116,15 @@ function getHomeId() {
 }
 
 async function safeGet(path) {
+  try {
+    return (await apiGet(path)) || SAFE_EMPTY;
+  } catch {
+    return SAFE_EMPTY;
+  }
+}
+
+async function fetchVisibility(homeId) {
+  const path = qualityVisibilityPath(homeId);
   try {
     return (await apiGet(path)) || SAFE_EMPTY;
   } catch {
@@ -982,6 +998,49 @@ function renderPanelSection(title, content) {
   `;
 }
 
+function signalTone(signal = {}) {
+  const token = lower(signal.severity || "");
+  if (["critical", "high"].includes(token)) return "danger";
+  if (token === "medium") return "warning";
+  if (token === "low") return "success";
+  return "muted";
+}
+
+function renderVisibilitySignals(signals = []) {
+  if (!signals.length) {
+    return `
+      <div class="empty-state">
+        <p>No active quality escalation signals are currently showing.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${signals
+        .slice(0, 6)
+        .map(
+          (signal) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(signal.title || "Quality signal")}</div>
+                <div class="record-row-summary">${safeText(
+                  signal.description || "Quality signal needs attention."
+                )}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${safeText(signalTone(signal))}">
+                  ${safeText(signal.count ?? 0)}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderCard(item = {}) {
   const status =
     item.status ||
@@ -1309,6 +1368,7 @@ function renderWorkspace(payload) {
     recentTimeline,
     recentFindings,
     priorityItems,
+    visibilitySignals,
     isFallback,
   } = payload;
 
@@ -1370,6 +1430,11 @@ function renderWorkspace(payload) {
         </div>
 
         <aside>
+          ${renderPanelSection(
+            "Visibility signals",
+            renderVisibilitySignals(visibilitySignals)
+          )}
+
           ${renderPanelSection("Needs attention", renderPriorityList(priorityItems))}
 
           ${renderPanelSection(
@@ -1821,7 +1886,10 @@ export async function loadCurrentView() {
   renderLoadingState();
 
   try {
-    const data = await fetchDataset(homeId);
+    const [data, visibility] = await Promise.all([
+      fetchDataset(homeId),
+      fetchVisibility(homeId),
+    ]);
 
     const overdueCompliance = buildOverdueCompliance(data);
     const openQualityActions = buildOpenQualityActions(data);
@@ -1849,6 +1917,7 @@ export async function loadCurrentView() {
       recentTimeline,
       recentFindings,
       priorityItems,
+      visibilitySignals: toArray(visibility?.signals).slice(0, 6),
       isFallback: data.isFallback,
     });
 
@@ -1889,6 +1958,11 @@ export async function loadCurrentView() {
         reg45OpenActions.length +
         urgentInspectionActions.length
       } quality actions open`,
+      pressure: toArray(visibility?.queues?.urgent).length
+        ? `${toArray(visibility?.queues?.urgent).length} escalation alerts`
+        : toNumber(visibility?.pressures?.total, 0)
+        ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
+        : "No active alerts",
     });
 
     await onAssistantScopeChanged();

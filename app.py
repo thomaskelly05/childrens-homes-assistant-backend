@@ -227,6 +227,7 @@ ROUTERS = [
     "routers.supervision_routes",
     "routers.tasks_routes",
     "routers.actions_routes",
+    "routers.visibility_routes",
     "routers.document_rules_routes",
     "routers.document_ai_review_routes",
     "routers.document_ai_routes",
