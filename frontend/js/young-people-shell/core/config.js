@@ -23,7 +23,7 @@ export const ROLE_SCOPE_ACCESS = Object.freeze({
 export const SCOPE_DEFAULT_SECTION = Object.freeze({
   child: "workspace",
   home: "home-dashboard",
-  quality: "provider-overview",
+  quality: "quality",
   ofsted: "ofsted-dashboard",
 });
 
