@@ -1,0 +1,222 @@
+:root {
+  --os-bg: #f4f7fb;
+  --os-panel: #ffffff;
+  --os-panel-soft: #f8fafc;
+  --os-border: #d9e1ea;
+  --os-border-strong: #c8d3df;
+  --os-text: #16202a;
+  --os-text-soft: #5e6a79;
+  --os-primary: #2563eb;
+  --os-primary-strong: #1d4ed8;
+  --os-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --os-topbar-h: 72px;
+}
+
+.os-unified-page {
+  margin: 0;
+  background: var(--os-bg);
+  color: var(--os-text);
+  font-family: var(--os-font);
+}
+
+.os-unified-page .os-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  min-height: var(--os-topbar-h);
+  padding: 10px 18px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid var(--os-border);
+  backdrop-filter: blur(16px);
+}
+
+.os-unified-page .os-brand-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  min-width: 0;
+  color: inherit;
+}
+
+.os-unified-page .os-brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, var(--os-primary), var(--os-primary-strong));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  flex: 0 0 38px;
+}
+
+.os-unified-page .os-brand-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.os-unified-page .os-brand-copy strong {
+  font-size: 14px;
+  line-height: 1.08;
+  font-weight: 800;
+}
+
+.os-unified-page .os-brand-copy small {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--os-text-soft);
+}
+
+.os-unified-page .os-topbar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.os-unified-page .os-topbar-link {
+  min-height: 34px;
+  padding: 7px 11px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--os-text-soft);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.os-unified-page .os-topbar-link:hover {
+  background: var(--os-panel-soft);
+  border-color: var(--os-border);
+  color: var(--os-text);
+}
+
+.os-unified-page .os-topbar-link.active {
+  background: #eef4ff;
+  border-color: #cfdbef;
+  color: var(--os-primary-strong);
+}
+
+.os-unified-page .os-topbar-context {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--os-border);
+  background: var(--os-panel);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--os-text-soft);
+  white-space: nowrap;
+}
+
+.os-unified-page .app-shell {
+  min-height: calc(100vh - var(--os-topbar-h));
+}
+
+.os-unified-page.os-fixed-shell-page .app-shell {
+  height: calc(100vh - var(--os-topbar-h));
+  min-height: calc(100vh - var(--os-topbar-h));
+}
+
+.os-unified-page .sidebar,
+.os-unified-page .context-panel,
+.os-unified-page .staff-sidebar,
+.os-unified-page .manager-sidebar,
+.os-unified-page .surface-card,
+.os-unified-page .context-card,
+.os-unified-page .editor-card,
+.os-unified-page .summary-card,
+.os-unified-page .card,
+.os-unified-page .rota-board-wrap {
+  border-color: var(--os-border);
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.os-unified-page .topbar,
+.os-unified-page .page-header,
+.os-unified-page .rostering-topbar {
+  background: var(--os-panel);
+  border-color: var(--os-border);
+}
+
+.os-unified-page .btn,
+.os-unified-page .btn-secondary,
+.os-unified-page .btn-ghost,
+.os-unified-page .secondary-btn,
+.os-unified-page .ghost-btn,
+.os-unified-page .tab-btn,
+.os-unified-page .toggle-btn,
+.os-unified-page .prompt-btn,
+.os-unified-page #loadWeekBtn,
+.os-unified-page #buildWeekBtn,
+.os-unified-page #payrollBtn,
+.os-unified-page #evidenceBtn {
+  border: 1px solid var(--os-border);
+  background: var(--os-panel);
+  color: var(--os-text);
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.os-unified-page .btn-primary,
+.os-unified-page .btn.primary,
+.os-unified-page button.primary,
+.os-unified-page .primary-btn,
+.os-unified-page .primary-action,
+.os-unified-page #publishWeekBtn {
+  border: 0;
+  background: linear-gradient(180deg, var(--os-primary), var(--os-primary-strong));
+  color: #fff;
+}
+
+.os-unified-page .summary-label,
+.os-unified-page .section-label,
+.os-unified-page .eyebrow {
+  color: #7a8697;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+@media (max-width: 1024px) {
+  .os-unified-page .os-topbar {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 8px;
+  }
+
+  .os-unified-page .os-topbar-nav {
+    justify-content: flex-start;
+  }
+
+  .os-unified-page .os-topbar-context {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .os-unified-page .os-topbar {
+    padding: 10px 12px;
+  }
+
+  .os-unified-page .os-brand-copy small,
+  .os-unified-page .os-topbar-context {
+    display: none;
+  }
+}
