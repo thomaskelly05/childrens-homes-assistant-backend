@@ -36,6 +36,14 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function buildRecordPayloadAttr(item = {}) {
+  try {
+    return encodeURIComponent(JSON.stringify(item));
+  } catch {
+    return "";
+  }
+}
+
 function toArray(value, fallbacks = []) {
   if (Array.isArray(value)) return value;
 
@@ -626,6 +634,7 @@ function renderRows(items = [], options = {}) {
           const status = item?.[statusKey] || "";
           const tone = getStatusTone(status);
           const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const recordPayload = buildRecordPayloadAttr(item);
 
           return `
             <article
@@ -634,6 +643,10 @@ function renderRows(items = [], options = {}) {
               data-record-id="${safeText(rowId)}"
               data-record-type="${safeText(recordType || item?.record_type || "")}"
               data-title="${safeText(title)}"
+              data-record-summary="${safeText(summary)}"
+              data-record-status="${safeText(status || "")}"
+              data-record-date="${safeText(item?.due_date || item?.updated_at || item?.created_at || "")}"
+              data-record-payload="${safeText(recordPayload)}"
               tabindex="0"
               role="button"
             >

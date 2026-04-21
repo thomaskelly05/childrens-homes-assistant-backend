@@ -65,6 +65,14 @@ const WORKSPACE_RECORD_TYPE_MAP = Object.freeze({
 const toText = (value, fallback = "") =>
   escapeHtml(String(value ?? fallback ?? ""));
 
+function buildRecordPayloadAttr(item = {}) {
+  try {
+    return encodeURIComponent(JSON.stringify(item));
+  } catch {
+    return "";
+  }
+}
+
 function normaliseText(value = "") {
   return String(value || "").trim().toLowerCase();
 }
@@ -453,6 +461,7 @@ function renderRows(items = []) {
           const title = getRecordTitle(item);
           const summary = getRecordSummary(item);
           const dateLabel = formatDate(getPrimaryDate(item));
+          const recordPayload = buildRecordPayloadAttr(item);
 
           return `
             <article
@@ -461,6 +470,10 @@ function renderRows(items = []) {
               data-record-id="${toText(id)}"
               data-record-type="${toText(recordType)}"
               data-title="${toText(title)}"
+              data-record-summary="${toText(summary)}"
+              data-record-status="${toText(item.status || item.workflow_status || "")}"
+              data-record-date="${toText(getPrimaryDate(item) || "")}"
+              data-record-payload="${toText(recordPayload)}"
               role="button"
               tabindex="0"
               aria-label="${toText(title)}"
