@@ -34,7 +34,12 @@ export function normaliseSection(section = "workspace", fallback = "workspace") 
 
 export function normaliseRole(role = "staff", fallback = "staff") {
   const value = cleanText(role).toLowerCase();
-  return value || fallback;
+  if (!value) return fallback;
+  if (value === "administrator") return "admin";
+  if (value === "super_admin") return "admin";
+  if (value === "superadmin") return "admin";
+  if (value === "responsible_individual") return "ri";
+  return value;
 }
 
 export function isProviderLevelRole(role = "staff") {
@@ -43,37 +48,51 @@ export function isProviderLevelRole(role = "staff") {
 
 export function resolveAccessLevelForScope({ scope = "child", role = "staff" } = {}) {
   const safeScope = normaliseScope(scope);
+  const safeRole = normaliseRole(role);
+
   if (safeScope === "child") return "child";
-  if (safeScope === "home" || safeScope === "staffing") return "home";
-  if (safeScope === "quality" || safeScope === "ofsted" || safeScope === "reports") {
-    return isProviderLevelRole(role) || safeScope === "ofsted" || safeScope === "reports"
-      ? "provider"
-      : "home";
+
+  if (safeScope === "home" || safeScope === "staffing") {
+    return "home";
   }
+
+  if (safeScope === "quality" || safeScope === "reports") {
+    return isProviderLevelRole(safeRole) ? "provider" : "home";
+  }
+
+  if (safeScope === "ofsted") {
+    return isProviderLevelRole(safeRole) ? "provider" : "home";
+  }
+
   return "home";
 }
 
 export function resolveAssistantScopeType({ scope = "child", youngPersonId = null } = {}) {
   const safeScope = normaliseScope(scope);
+
   if (safeScope === "home" || safeScope === "staffing") return "home";
+
   if (safeScope === "quality" || safeScope === "ofsted" || safeScope === "reports") {
     return "quality";
   }
+
   return youngPersonId ? "young_person" : "global";
 }
 
 export function resolveAssistantTypeForScope(scope = "child") {
   const safeScope = normaliseScope(scope);
+
   if (safeScope === "home" || safeScope === "staffing") return "home_os";
   if (safeScope === "quality" || safeScope === "ofsted" || safeScope === "reports") {
     return "quality_os";
   }
+
   return "young_people_os";
 }
 
 export function isProviderWideScope(scope = "child") {
   const safeScope = normaliseScope(scope);
-  return safeScope === "quality" || safeScope === "ofsted" || safeScope === "reports";
+  return safeScope === "quality" || safeScope === "reports";
 }
 
 export function inferAssistantAnalysisLens({
