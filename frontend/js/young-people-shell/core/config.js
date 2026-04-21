@@ -49,6 +49,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "documents",
     "communication",
     "manager",
+    "actions",
   ],
   home: [
     "home-dashboard",
@@ -71,6 +72,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "policies",
     "documents",
     "communication",
+    "actions",
   ],
   quality: [
     "provider-overview",
@@ -91,6 +93,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "policies",
     "documents",
     "communication",
+    "actions",
   ],
   ofsted: [
     "ofsted-dashboard",
@@ -113,6 +116,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "documents",
     "policies",
     "communication",
+    "actions",
   ],
 });
 
@@ -141,6 +145,7 @@ export const SECTION_TITLES = Object.freeze({
   documents: "Documents",
   communication: "Communication log",
   manager: "Manager review",
+  actions: "Actions and follow-through",
 
   "home-dashboard": "Home dashboard",
   operations: "Daily operations",
@@ -218,6 +223,8 @@ export const SECTION_SUBTITLES = Object.freeze({
     "Track communication with professionals, families and partner agencies.",
   manager:
     "Oversight, management review, decision-making and quality assurance.",
+  actions:
+    "A single action board for ownership, due dates, escalation, updates and closure.",
 
   "home-dashboard":
     "A whole-home operational view for managers and senior staff.",
@@ -502,6 +509,7 @@ export const SECTION_DEFAULT_ACTION = Object.freeze({
   documents: "upload_document",
   communication: "professional_message",
   manager: "task",
+  actions: "task",
 
   "home-dashboard": "task",
   operations: "task",

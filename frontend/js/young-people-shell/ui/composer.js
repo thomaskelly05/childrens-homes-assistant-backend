@@ -2,6 +2,7 @@ import {
   state,
   resetComposerState,
   getCurrentReadinessHomeId,
+  resolveAccessibleHomeId,
 } from "../state.js";
 import { els } from "../dom.js";
 import { apiSend, unwrapCreateResponse } from "../core/api.js";
@@ -21,12 +22,12 @@ function getCurrentScope() {
 }
 
 function getCurrentHomeId() {
-  return (
+  return resolveAccessibleHomeId(
     state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    getCurrentReadinessHomeId() ||
-    null
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      getCurrentReadinessHomeId() ||
+      null
   );
 }
 
@@ -203,11 +204,8 @@ const COMPOSER_CONFIG = {
 
   task: {
     label: "Task",
-    createUrl: () => buildScopePath("/{scope}/{id}/tasks"),
-    updateUrl: (id) =>
-      getCurrentScope() === "child"
-        ? `/young-people/tasks/${id}`
-        : `/homes/tasks/${id}`,
+    createUrl: () => "/actions",
+    updateUrl: (id) => `/actions/${id}`,
     updateMethod: "PATCH",
     scopes: ["child", "home", "quality", "ofsted"],
   },
@@ -697,11 +695,22 @@ function taskTypeOptions() {
   return [
     { value: "", label: "Select..." },
     { value: "general", label: "General" },
+    { value: "follow_up", label: "Follow-up" },
+    { value: "management", label: "Management oversight" },
     { value: "inspection_improvement", label: "Inspection improvement" },
     { value: "handover", label: "Handover" },
     { value: "compliance", label: "Compliance" },
     { value: "safeguarding", label: "Safeguarding" },
     { value: "quality_improvement", label: "Quality improvement" },
+  ];
+}
+
+function actionStatusOptions() {
+  return [
+    { value: "open", label: "Open" },
+    { value: "in_progress", label: "In progress" },
+    { value: "completed", label: "Completed" },
+    { value: "overdue", label: "Overdue" },
   ];
 }
 
@@ -1902,8 +1911,32 @@ function buildTaskContent(item = {}) {
         fieldText("assigned_to_user_id", "Assigned to user ID", item.assigned_to_user_id || ""),
         fieldDate("task_date", "Task date", item.task_date || today),
         fieldDate("due_date", "Due date", item.due_date || ""),
+        fieldSelect(
+          "status",
+          "Status",
+          item.status || (item.completed ? "completed" : "open"),
+          actionStatusOptions()
+        ),
         fieldCheckbox("completed", "Completed", Boolean(item.completed)),
         fieldCheckbox("compliance_generated", "Compliance generated", Boolean(item.compliance_generated)),
+      ]),
+      buildSection("Progress and closure", [
+        fieldTextArea(
+          "update_note",
+          "Progress update",
+          item.update_note || "",
+          true,
+          4,
+          "Use this to capture what has happened since the action was created."
+        ),
+        fieldTextArea(
+          "closure_note",
+          "Closure outcome",
+          item.closure_note || "",
+          true,
+          4,
+          "If completing the action, record outcome and impact for audit trail."
+        ),
       ]),
       buildSection("Linking and context", [
         fieldText(
@@ -2712,7 +2745,8 @@ export function openComposerFor(recordType, mode = "create", item = null) {
 
   state.composerMode = mode;
   state.composerRecordType = recordType;
-  state.composerRecordId = item?.id || item?.record_id || item?.source_id || null;
+  state.composerRecordId =
+    item?.id || item?.record_id || item?.source_id || null;
   state.composerEditItem = item || {};
   state.composerOpen = true;
 
@@ -3050,7 +3084,12 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
           : null,
       task: payload.task || "",
       task_date: payload.task_date || null,
-      completed: Boolean(payload.completed),
+      status: payload.status || (payload.completed ? "completed" : "open"),
+      completed:
+        payload.completed === true ||
+        String(payload.status || "")
+          .trim()
+          .toLowerCase() === "completed",
       assigned_role: payload.assigned_role || "",
       title: payload.title || "",
       assigned_to_user_id: payload.assigned_to_user_id || null,
@@ -3059,7 +3098,15 @@ function normaliseSavedRecordForSchema(recordType, payload = {}) {
       task_type: payload.task_type || "",
       due_date: payload.due_date || null,
       compliance_generated: Boolean(payload.compliance_generated),
-      completed_at: payload.completed ? nowIso() : null,
+      update_note: payload.update_note || "",
+      closure_note: payload.closure_note || "",
+      completed_at:
+        payload.completed ||
+        String(payload.status || "")
+          .trim()
+          .toLowerCase() === "completed"
+          ? nowIso()
+          : null,
       inspection_score_id: payload.inspection_score_id || meta.inspection_score_id || null,
       line_of_enquiry_id: payload.line_of_enquiry_id || meta.line_of_enquiry_id || null,
       projected_section_band:
@@ -3262,6 +3309,10 @@ async function safeComposerSend(url, method, payload, recordType) {
   try {
     return await apiSend(url, method, payload);
   } catch (error) {
+    if (recordType === "task") {
+      throw error;
+    }
+
     if (getCurrentScope() !== "child" && isNotFoundError(error)) {
       console.warn("[composer] endpoint missing, using local fallback", {
         scope: getCurrentScope(),

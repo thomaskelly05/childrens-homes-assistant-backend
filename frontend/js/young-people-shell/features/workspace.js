@@ -342,6 +342,7 @@ async function fetchAll(id, search = {}) {
     !recordTypeBucket || recordTypeBucket === "appointments";
   const shouldFetchChronology =
     !recordTypeBucket || recordTypeBucket === "chronology";
+  const shouldFetchTasks = !recordTypeBucket || recordTypeBucket === "chronology";
   const shouldFetchHealth = !recordTypeBucket || recordTypeBucket === "health";
   const shouldFetchEducation =
     !recordTypeBucket || recordTypeBucket === "education";
@@ -351,6 +352,7 @@ async function fetchAll(id, search = {}) {
     plans,
     appointments,
     chronology,
+    tasks,
     health,
     education,
     family,
@@ -358,6 +360,7 @@ async function fetchAll(id, search = {}) {
     shouldFetchPlans ? safe(`/young-people/${id}/plans`) : Promise.resolve({ items: [] }),
     shouldFetchAppointments ? safe(`/young-people/${id}/appointments`) : Promise.resolve({ items: [] }),
     shouldFetchChronology ? safe(`/young-people/${id}/timeline`) : Promise.resolve({ items: [] }),
+    shouldFetchTasks ? safe(`/young-people/${id}/tasks`) : Promise.resolve({ items: [] }),
     shouldFetchHealth ? safe(`/young-people/${id}/health`) : Promise.resolve({ items: [] }),
     shouldFetchEducation ? safe(`/young-people/${id}/education`) : Promise.resolve({ items: [] }),
     shouldFetchFamily ? safe(`/young-people/${id}/family`) : Promise.resolve({ items: [] }),
@@ -382,6 +385,25 @@ async function fetchAll(id, search = {}) {
         chronology.chronology_events ||
         []
     ).map(mapChronologyEvent),
+
+    tasks: makeArray(tasks.items || tasks.actions || tasks.records || []).map((item) => ({
+      ...item,
+      record_type: item.record_type || "task",
+      summary: item.summary || item.task || item.description || "",
+      event_datetime:
+        item.due_date ||
+        item.updated_at ||
+        item.created_at ||
+        item.task_date ||
+        null,
+      severity:
+        String(item.priority || "").toLowerCase() === "critical" ||
+        String(item.status || "").toLowerCase() === "overdue"
+          ? "critical"
+          : item.priority || item.severity || "",
+      status: item.status || (item.completed ? "completed" : "open"),
+      title: item.title || item.task || "Action",
+    })),
 
     health: makeArray(
       health.items || health.health_records || []
@@ -415,6 +437,7 @@ function applySearch(data, search = {}) {
     plans: filterCollection(data.plans, search),
     appointments: filterCollection(data.appointments, search),
     chronology: filterCollection(data.chronology, search),
+    tasks: filterCollection(data.tasks, search),
     health: filterCollection(data.health, search),
     education: filterCollection(data.education, search),
     family: filterCollection(data.family, search),
@@ -426,6 +449,14 @@ function applySearch(data, search = {}) {
 function buildTodayItems(data) {
   return dedupeById([
     ...data.appointments.filter((item) => isToday(item.start_datetime)),
+    ...data.tasks.filter((item) =>
+      isToday(
+        item.due_date ||
+          item.event_datetime ||
+          item.updated_at ||
+          item.created_at
+      )
+    ),
     ...data.health.filter((item) => isToday(item.event_datetime || item.record_date)),
     ...data.education.filter((item) => isToday(item.record_date)),
     ...data.family.filter((item) => isToday(item.contact_datetime)),
@@ -437,6 +468,7 @@ function buildRecentItems(data) {
     sortNewestFirst(
       [
         ...data.chronology,
+        ...data.tasks,
         ...data.health,
         ...data.education,
         ...data.family,
@@ -456,13 +488,20 @@ function buildRecentItems(data) {
 
 function buildUpcomingItems(data) {
   return dedupeById(
-    data.appointments
-      .filter((item) => isFuture(item.start_datetime))
-      .sort(
-        (a, b) =>
-          new Date(a.start_datetime).getTime() -
-          new Date(b.start_datetime).getTime()
-      )
+    [
+      ...data.appointments.filter((item) => isFuture(item.start_datetime)),
+      ...data.tasks.filter((item) => {
+        const status = normaliseText(item.status);
+        return (
+          !["completed", "closed", "done"].includes(status) &&
+          isFuture(item.due_date || item.event_datetime)
+        );
+      }),
+    ].sort((a, b) => {
+      const aValue = a.start_datetime || a.due_date || a.event_datetime || "";
+      const bValue = b.start_datetime || b.due_date || b.event_datetime || "";
+      return new Date(aValue).getTime() - new Date(bValue).getTime();
+    })
   ).slice(0, 10);
 }
 
@@ -475,7 +514,19 @@ function buildUrgentItems(data) {
     ["high", "critical"].includes(getSeverity(item))
   );
 
-  return dedupeById([...urgentPlans, ...urgentChronology]).slice(0, 10);
+  const urgentTasks = data.tasks.filter((item) => {
+    const status = normaliseText(item.status);
+    const severity = getSeverity(item);
+    return (
+      status === "overdue" ||
+      ["high", "critical"].includes(severity)
+    );
+  });
+
+  return dedupeById([...urgentPlans, ...urgentChronology, ...urgentTasks]).slice(
+    0,
+    10
+  );
 }
 
 /* -------------------------------- controller -------------------------------- */

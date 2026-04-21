@@ -1,4 +1,8 @@
-import { state, getCurrentReadinessHomeId } from "../state.js";
+import {
+  state,
+  getCurrentReadinessHomeId,
+  resolveAccessibleHomeId,
+} from "../state.js";
 import { openComposerFor } from "./composer.js";
 import {
   QUICK_ACTIONS as CONFIG_QUICK_ACTIONS,
@@ -40,12 +44,7 @@ function getCurrentSection() {
 }
 
 function getCurrentHomeId() {
-  return (
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null
-  );
+  return resolveAccessibleHomeId();
 }
 
 function hasChildContext() {
@@ -260,6 +259,7 @@ function isActionAllowedInScope(actionId, scope = getCurrentScope()) {
     missing_episode: false,
     task: true,
     manager_action: true,
+    actions: true,
     document: allowedSections.includes("documents"),
     communication: allowedSections.includes("communication"),
     therapy: allowedSections.includes("therapy"),
@@ -306,6 +306,7 @@ function inferSectionForRecordType(recordType = "", scope = getCurrentScope()) {
         : scope === "quality"
         ? "quality-audits"
         : "readiness",
+    actions: "actions",
     manager_action: "manager",
     document: "documents",
     communication: "communication",

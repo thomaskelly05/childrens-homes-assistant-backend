@@ -52,6 +52,7 @@ import { loadCurrentView as loadLeavingCare } from "../features/leaving-care.js"
 import { loadManager } from "../features/manager.js";
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
 import { loadTasks } from "../features/tasks.js";
+import { loadActions } from "../features/actions.js";
 
 import { loadHomeDashboard } from "../features/home-dashboard.js";
 import { loadOperations } from "../features/operations.js";
@@ -99,21 +100,21 @@ const ICON_MAP = {
 };
 
 const MOBILE_BOTTOM_BY_SCOPE = {
-  child: ["workspace", "timeline", "health", "risk", "reviews"],
-  home: ["home-dashboard", "rota", "compliance", "quality", "ofsted-readiness"],
+  child: ["workspace", "timeline", "actions", "risk", "reviews"],
+  home: ["home-dashboard", "actions", "compliance", "quality", "ofsted-readiness"],
   quality: [
     "provider-overview",
+    "actions",
     "quality",
     "compliance",
-    "quality-audits",
-    "inspection-readiness",
+    "inspection-readiness"
   ],
   ofsted: [
     "ofsted-dashboard",
+    "actions",
     "sccif-evidence",
     "judgement-builder",
-    "inspection-readiness",
-    "quality-audits",
+    "inspection-readiness"
   ],
 };
 
@@ -322,6 +323,7 @@ const SECTION_LOADERS = {
   reviews: loadReviews,
   reports: loadReports,
   tasks: loadTasks,
+  actions: loadActions,
   "leaving-care": loadLeavingCare,
   documents: loadDocuments,
   communication: loadCommunication,
