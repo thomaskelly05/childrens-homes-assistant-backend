@@ -25,7 +25,11 @@ function getHomeId() {
     return Number.isFinite(selectedNum) && selectedNum > 0 ? selectedNum : null;
   }
 
-  if (Number.isFinite(selectedNum) && selectedNum > 0 && allowed.includes(selectedNum)) {
+  if (
+    Number.isFinite(selectedNum) &&
+    selectedNum > 0 &&
+    allowed.includes(selectedNum)
+  ) {
     return selectedNum;
   }
 
@@ -113,6 +117,8 @@ function getStatusTone(status = "") {
       "weak",
       "unavailable",
       "blocked",
+      "incomplete",
+      "requires_improvement",
     ].includes(normalised)
   ) {
     return "danger";
@@ -124,12 +130,14 @@ function getStatusTone(status = "") {
       "due_soon",
       "pending",
       "attention",
-      "requires_improvement",
       "review_due",
       "in_progress",
       "partial",
       "developing",
       "awaiting",
+      "draft",
+      "open",
+      "planned",
     ].includes(normalised)
   ) {
     return "warning";
@@ -147,6 +155,9 @@ function getStatusTone(status = "") {
       "available",
       "stable",
       "effective",
+      "current",
+      "up_to_date",
+      "compliant",
     ].includes(normalised)
   ) {
     return "success";
@@ -186,12 +197,15 @@ function hasUsableData(data) {
   if (data.dashboard && typeof data.dashboard === "object") return true;
   if (typeof data.readiness_score !== "undefined") return true;
   if (typeof data.evidence_score !== "undefined") return true;
+  if (typeof data.overall_score !== "undefined") return true;
   return false;
 }
 
 function ofstedVisibilityPath(homeId) {
   if (homeId) {
-    return `/visibility/ofsted?home_id=${encodeURIComponent(homeId)}&all_accessible_homes=false`;
+    return `/visibility/ofsted?home_id=${encodeURIComponent(
+      homeId
+    )}&all_accessible_homes=false`;
   }
   return "/visibility/ofsted?all_accessible_homes=true";
 }
@@ -212,6 +226,7 @@ function normaliseJudgementItems(data = {}) {
       item.strength_summary ||
       item.strengths ||
       item.summary ||
+      item.narrative_summary ||
       "Evidence summary available.",
     evidence_count: toNumber(item.evidence_count, 0),
     gap_count: toNumber(item.gap_count, 0),
@@ -226,12 +241,14 @@ function normaliseEvidenceItems(data = {}) {
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "inspection_evidence",
     title: item.title || item.evidence_title || item.area || "Evidence item",
-    area: item.area || item.sccif_area || "",
+    area: item.area || item.sccif_area || item.section_name || "",
     status: item.status || "recorded",
     summary:
       item.summary ||
       item.description ||
       item.evidence_note ||
+      item.concerns_text ||
+      item.strengths_text ||
       "Evidence item recorded.",
     source_type: item.source_type || item.evidence_source || "",
     updated_at: item.updated_at || item.created_at || null,
@@ -245,7 +262,7 @@ function normaliseGapItems(data = {}) {
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "inspection_gap",
     title: item.title || item.gap_title || item.area || "Evidence gap",
-    area: item.area || item.sccif_area || "",
+    area: item.area || item.sccif_area || item.section_name || "",
     status: item.status || item.priority || "open",
     priority: item.priority || "",
     due_date: item.due_date || null,
@@ -254,6 +271,7 @@ function normaliseGapItems(data = {}) {
       item.summary ||
       item.description ||
       item.gap_reason ||
+      item.concerns_text ||
       "Inspection gap recorded.",
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
@@ -268,12 +286,14 @@ function normaliseActionItems(data = {}) {
     title: item.title || item.action_title || item.task || "Inspection action",
     status: item.status || "open",
     priority: item.priority || "",
-    due_date: item.due_date || null,
-    owner_user_name: item.owner_user_name || item.assigned_to || item.owner || "",
+    due_date: item.due_date || item.task_due_date || null,
+    owner_user_name:
+      item.owner_user_name || item.assigned_to || item.owner || item.assigned_user_name || "",
     summary:
       item.summary ||
       item.description ||
       item.task ||
+      item.action_description ||
       "Inspection action recorded.",
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
@@ -289,10 +309,7 @@ function normaliseComplianceItems(data = {}) {
     area: item.area || "",
     status: item.status || "recorded",
     due_date: item.due_date || item.review_date || null,
-    summary:
-      item.summary ||
-      item.notes ||
-      "Compliance item recorded.",
+    summary: item.summary || item.notes || "Compliance item recorded.",
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
   }));
@@ -311,6 +328,7 @@ function normaliseAuditItems(data = {}) {
       item.summary ||
       item.finding ||
       item.notes ||
+      item.outcome ||
       "Audit record available.",
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
@@ -335,6 +353,151 @@ function normaliseDocumentItems(data = {}) {
   }));
 }
 
+function buildJudgementsFromReadiness(readinessData = {}) {
+  const summary = readinessData?.summary || readinessData || {};
+  const sections = toArray(readinessData?.items, [
+    readinessData?.inspection_section_scores,
+    readinessData?.sections,
+    readinessData?.inspection_sections,
+    readinessData?.records,
+  ]);
+
+  if (!sections.length) return [];
+
+  return sections.map((item) => ({
+    id: item.id ?? item.section_score_id ?? item.source_id ?? null,
+    record_type: "ofsted_judgement",
+    title: item.title || item.section_name || item.section_code || "Judgement area",
+    area: item.section_name || item.section_code || item.title || "Area",
+    status: item.score_band || item.status || summary.overall_band || "recorded",
+    strength_summary:
+      item.summary_text ||
+      item.strengths_text ||
+      item.concerns_text ||
+      item.summary ||
+      "Inspection section evidence available.",
+    evidence_count: toNumber(item.evidence_count, 0),
+    gap_count: toNumber(item.gap_count, 0),
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+}
+
+function buildEvidenceFromReadiness(readinessData = {}) {
+  const reasons = toArray(readinessData?.inspection_reasons, [
+    readinessData?.reasons,
+    readinessData?.items,
+  ]);
+
+  return reasons.map((item) => ({
+    id: item.id ?? item.source_id ?? null,
+    record_type: "inspection_evidence",
+    title: item.title || item.line_of_enquiry_name || "Evidence item",
+    area: item.section_name || item.section_code || "",
+    status: item.reason_type || "recorded",
+    summary:
+      item.description ||
+      item.evidence_excerpt ||
+      item.summary ||
+      "Inspection evidence available.",
+    source_type: item.source_table || "",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+}
+
+function buildGapsFromReadiness(readinessData = {}) {
+  const reasons = toArray(readinessData?.inspection_reasons, [
+    readinessData?.reasons,
+    readinessData?.items,
+  ]);
+
+  return reasons
+    .filter((item) =>
+      ["concern", "gap", "weakness", "risk"].includes(
+        String(item.reason_type || "").toLowerCase().replaceAll(" ", "_")
+      )
+    )
+    .map((item) => ({
+      id: item.id ?? item.source_id ?? null,
+      record_type: "inspection_gap",
+      title: item.title || item.line_of_enquiry_name || "Evidence gap",
+      area: item.section_name || item.section_code || "",
+      status: item.reason_type || "open",
+      priority: item.priority || "",
+      due_date: item.due_date || null,
+      owner_user_name: item.owner_user_name || "",
+      summary:
+        item.description ||
+        item.evidence_excerpt ||
+        item.summary ||
+        "Inspection gap identified.",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    }));
+}
+
+function buildActionsFromReadiness(readinessData = {}) {
+  const actions = toArray(readinessData?.inspection_actions, [
+    readinessData?.actions,
+    readinessData?.inspection_tasks,
+    readinessData?.tasks,
+  ]);
+
+  return actions.map((item) => ({
+    id: item.id ?? item.action_id ?? item.task_id ?? item.source_id ?? null,
+    record_type: "inspection_action",
+    title:
+      item.action_title ||
+      item.task_title ||
+      item.title ||
+      "Inspection action",
+    status: item.status || (item.completed ? "completed" : "open"),
+    priority: item.priority || "",
+    due_date: item.due_date || item.task_due_date || item.action_due_date || null,
+    owner_user_name:
+      item.owner_user_name ||
+      item.owner_staff_name ||
+      item.assigned_user_name ||
+      "",
+    summary:
+      item.action_description ||
+      item.evidence_required ||
+      item.summary ||
+      "Inspection action recorded.",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+}
+
+function buildSummaryFromReadiness(readinessData = {}) {
+  const summary = readinessData?.summary || readinessData || {};
+  return {
+    title:
+      summary.title ||
+      summary.home_name ||
+      summary.name ||
+      "Ofsted dashboard",
+    home_name: summary.home_name || "",
+    readiness_score:
+      summary.readiness_score ??
+      summary.overall_score ??
+      summary.evidence_score ??
+      0,
+    evidence_score:
+      summary.evidence_score ??
+      summary.confidence_score ??
+      summary.readiness_score ??
+      0,
+    overall_band: summary.overall_band || "",
+    narrative_summary:
+      summary.narrative_summary ||
+      summary.summary_text ||
+      summary.concerns_summary ||
+      "",
+  };
+}
+
 function buildTopStats({
   summary = {},
   gaps = [],
@@ -350,7 +513,9 @@ function buildTopStats({
 
   const criticalGaps = gaps.filter((item) =>
     ["critical", "high", "overdue", "escalated", "missing"].includes(
-      String(item.priority || item.status || "").toLowerCase().replaceAll(" ", "_")
+      String(item.priority || item.status || "")
+        .toLowerCase()
+        .replaceAll(" ", "_")
     )
   ).length;
 
@@ -493,7 +658,9 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
   gaps
     .filter((item) =>
       ["critical", "high", "overdue", "escalated", "missing"].includes(
-        String(item.priority || item.status || "").toLowerCase().replaceAll(" ", "_")
+        String(item.priority || item.status || "")
+          .toLowerCase()
+          .replaceAll(" ", "_")
       )
     )
     .slice(0, 3)
@@ -502,7 +669,9 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
         title: item.title || "Evidence gap",
         summary:
           item.summary ||
-          (item.due_date ? `Due ${formatDate(item.due_date)}` : "Needs inspection attention."),
+          (item.due_date
+            ? `Due ${formatDate(item.due_date)}`
+            : "Needs inspection attention."),
       });
     });
 
@@ -518,7 +687,9 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
         title: item.title || "Inspection action",
         summary:
           item.summary ||
-          (item.due_date ? `Due ${formatDate(item.due_date)}` : "Outstanding action."),
+          (item.due_date
+            ? `Due ${formatDate(item.due_date)}`
+            : "Outstanding action."),
       });
     });
 
@@ -534,14 +705,17 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
         title: item.title || "Compliance issue",
         summary:
           item.summary ||
-          (item.due_date ? `Due ${formatDate(item.due_date)}` : "Compliance pressure recorded."),
+          (item.due_date
+            ? `Due ${formatDate(item.due_date)}`
+            : "Compliance pressure recorded."),
       });
     });
 
   if (!items.length) {
     items.push({
       title: "No major inspection pressure",
-      summary: "The dashboard is not currently surfacing urgent inspection-facing gaps.",
+      summary:
+        "The dashboard is not currently surfacing urgent inspection-facing gaps.",
     });
   }
 
@@ -587,7 +761,9 @@ function renderProgressCards(cards = []) {
               </div>
               <div class="analytics-progress-track">
                 <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(card.tone || "muted")}"
+                  class="analytics-progress-bar analytics-progress-bar--${safeText(
+                    card.tone || "muted"
+                  )}"
                   style="width: ${safeText(card.percent || 0)}%;"
                 ></span>
               </div>
@@ -645,7 +821,9 @@ function renderRows(items = [], options = {}) {
               data-title="${safeText(title)}"
               data-record-summary="${safeText(summary)}"
               data-record-status="${safeText(status || "")}"
-              data-record-date="${safeText(item?.due_date || item?.updated_at || item?.created_at || "")}"
+              data-record-date="${safeText(
+                item?.due_date || item?.updated_at || item?.created_at || ""
+              )}"
               data-record-payload="${safeText(recordPayload)}"
               tabindex="0"
               role="button"
@@ -656,7 +834,9 @@ function renderRows(items = [], options = {}) {
                 <div class="record-row-meta">${safeText(meta)}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(status || "Recorded")}</span>
+                <span class="row-pill ${safeText(tone)}">${safeText(
+                  status || "Recorded"
+                )}</span>
               </div>
             </article>
           `;
@@ -712,11 +892,14 @@ function renderVisibilitySignals(signals = []) {
                   signal.title || "Inspection visibility signal"
                 )}</div>
                 <div class="record-row-summary">${safeText(
-                  signal.description || "Inspection signal requires follow-through."
+                  signal.description ||
+                    "Inspection signal requires follow-through."
                 )}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(getStatusTone(signal.severity || "medium"))}">
+                <span class="row-pill ${safeText(
+                  getStatusTone(signal.severity || "medium")
+                )}">
                   ${safeText(signal.count ?? 0)}
                 </span>
               </div>
@@ -765,14 +948,20 @@ function renderTrendRows(trends = []) {
           return `
             <article class="record-row">
               <div class="record-row-main">
-                <div class="record-row-title">${safeText(item?.label || "Trend")}</div>
+                <div class="record-row-title">${safeText(
+                  item?.label || "Trend"
+                )}</div>
                 <div class="record-row-summary">
-                  ${safeText(item?.assessment || "stable")} • ${safeText(item?.current ?? 0)} now vs
+                  ${safeText(item?.assessment || "stable")} • ${safeText(
+                    item?.current ?? 0
+                  )} now vs
                   ${safeText(item?.previous ?? 0)} before
                 </div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${tone}">${safeText(`${sign}${delta}`)}</span>
+                <span class="row-pill ${tone}">${safeText(
+                  `${sign}${delta}`
+                )}</span>
               </div>
             </article>
           `;
@@ -795,22 +984,35 @@ function renderPatternRows(patterns = []) {
     <div class="record-list">
       ${patterns
         .slice(0, 5)
-        .map((item) => `
+        .map(
+          (item) => `
           <article class="record-row">
             <div class="record-row-main">
-              <div class="record-row-title">${safeText(item?.title || "Pattern")}</div>
-              <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
+              <div class="record-row-title">${safeText(
+                item?.title || "Pattern"
+              )}</div>
+              <div class="record-row-summary">${safeText(
+                item?.evidence || ""
+              )}</div>
               <div class="record-row-meta">
-                <span>${safeText(`${toNumber(item?.frequency, 0)} in ${toNumber(item?.period_days, 0)} days`)}</span>
+                <span>${safeText(
+                  `${toNumber(item?.frequency, 0)} in ${toNumber(
+                    item?.period_days,
+                    0
+                  )} days`
+                )}</span>
               </div>
             </div>
             <div class="record-row-side">
-              <span class="row-pill ${safeText(getStatusTone(item?.severity || "medium"))}">
+              <span class="row-pill ${safeText(
+                getStatusTone(item?.severity || "medium")
+              )}">
                 ${safeText(item?.severity || "medium")}
               </span>
             </div>
           </article>
-        `)
+        `
+        )
         .join("")}
     </div>
   `;
@@ -829,20 +1031,30 @@ function renderDecisionRows(items = []) {
     <div class="record-list">
       ${items
         .slice(0, 3)
-        .map((item) => `
+        .map(
+          (item) => `
           <article class="record-row">
             <div class="record-row-main">
-              <div class="record-row-title">${safeText(item?.question || "Decision prompt")}</div>
-              <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
-              <div class="record-row-meta">${safeText(item?.suggested_action || "")}</div>
+              <div class="record-row-title">${safeText(
+                item?.question || "Decision prompt"
+              )}</div>
+              <div class="record-row-summary">${safeText(
+                item?.evidence || ""
+              )}</div>
+              <div class="record-row-meta">${safeText(
+                item?.suggested_action || ""
+              )}</div>
             </div>
             <div class="record-row-side">
-              <span class="row-pill ${safeText(getStatusTone(item?.severity || "medium"))}">
+              <span class="row-pill ${safeText(
+                getStatusTone(item?.severity || "medium")
+              )}">
                 ${safeText(item?.severity || "medium")}
               </span>
             </div>
           </article>
-        `)
+        `
+        )
         .join("")}
     </div>
   `;
@@ -861,20 +1073,30 @@ function renderJudgementSupportRows(items = []) {
     <div class="record-list">
       ${items
         .slice(0, 3)
-        .map((item) => `
+        .map(
+          (item) => `
           <article class="record-row">
             <div class="record-row-main">
-              <div class="record-row-title">${safeText(item?.title || "Judgement support")}</div>
-              <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
-              <div class="record-row-meta">${safeText(item?.suggested_action || "")}</div>
+              <div class="record-row-title">${safeText(
+                item?.title || "Judgement support"
+              )}</div>
+              <div class="record-row-summary">${safeText(
+                item?.evidence || ""
+              )}</div>
+              <div class="record-row-meta">${safeText(
+                item?.suggested_action || ""
+              )}</div>
             </div>
             <div class="record-row-side">
-              <span class="row-pill ${safeText(getStatusTone(item?.severity || "medium"))}">
+              <span class="row-pill ${safeText(
+                getStatusTone(item?.severity || "medium")
+              )}">
                 ${safeText(item?.severity || "medium")}
               </span>
             </div>
           </article>
-        `)
+        `
+        )
         .join("")}
     </div>
   `;
@@ -1017,7 +1239,6 @@ function renderOfstedDashboardHtml({
                   .filter(Boolean)
                   .join(" • "),
             })}
-
           </div>
 
           <div class="overview-section-card">
@@ -1238,7 +1459,9 @@ function renderErrorState(message) {
         <div class="empty-state-inner">
           <div class="empty-state-icon" aria-hidden="true">!</div>
           <h3>Failed to load Ofsted dashboard</h3>
-          <p>${safeText(message || "The Ofsted dashboard could not be loaded.")}</p>
+          <p>${safeText(
+            message || "The Ofsted dashboard could not be loaded."
+          )}</p>
         </div>
       </div>
     </section>
@@ -1287,7 +1510,8 @@ function buildFallbackData(homeId) {
           id: "judge-1",
           area: "Overall experiences and progress of children",
           status: "good",
-          strength_summary: "Good day-to-day care evidence, strong routines and consistent relationship-based practice.",
+          strength_summary:
+            "Good day-to-day care evidence, strong routines and consistent relationship-based practice.",
           evidence_count: 18,
           gap_count: 2,
           updated_at: minusDays(1),
@@ -1296,7 +1520,8 @@ function buildFallbackData(homeId) {
           id: "judge-2",
           area: "How well children are helped and protected",
           status: "warning",
-          strength_summary: "Safeguarding systems are sound, but return-home and chronologies need tightening.",
+          strength_summary:
+            "Safeguarding systems are sound, but return-home and chronologies need tightening.",
           evidence_count: 13,
           gap_count: 4,
           updated_at: minusDays(1),
@@ -1305,7 +1530,8 @@ function buildFallbackData(homeId) {
           id: "judge-3",
           area: "The effectiveness of leaders and managers",
           status: "requires_improvement",
-          strength_summary: "Good grip in places, but audit follow-through and action closure need to be more consistent.",
+          strength_summary:
+            "Good grip in places, but audit follow-through and action closure need to be more consistent.",
           evidence_count: 11,
           gap_count: 5,
           updated_at: minusDays(2),
@@ -1320,7 +1546,8 @@ function buildFallbackData(homeId) {
           area: "Leadership and management",
           source_type: "report",
           status: "available",
-          summary: "Latest monthly review links incidents, staffing and audit themes clearly.",
+          summary:
+            "Latest monthly review links incidents, staffing and audit themes clearly.",
           updated_at: minusDays(2),
         },
         {
@@ -1329,7 +1556,8 @@ function buildFallbackData(homeId) {
           area: "Experiences and progress",
           source_type: "child records",
           status: "good",
-          summary: "Examples show meaningful keywork, child voice and progress capture.",
+          summary:
+            "Examples show meaningful keywork, child voice and progress capture.",
           updated_at: minusDays(1),
         },
         {
@@ -1338,7 +1566,8 @@ function buildFallbackData(homeId) {
           area: "Help and protection",
           source_type: "chronology",
           status: "review_due",
-          summary: "Good chronology exists but cross-referencing could be stronger.",
+          summary:
+            "Good chronology exists but cross-referencing could be stronger.",
           updated_at: minusDays(1),
         },
       ],
@@ -1353,7 +1582,8 @@ function buildFallbackData(homeId) {
           status: "open",
           due_date: plusDays(3),
           owner_user_name: "Sarah Jones",
-          summary: "Recent missing episodes need stronger return-home evidence and management analysis.",
+          summary:
+            "Recent missing episodes need stronger return-home evidence and management analysis.",
         },
         {
           id: "gap-2",
@@ -1363,7 +1593,8 @@ function buildFallbackData(homeId) {
           status: "overdue",
           due_date: plusDays(1),
           owner_user_name: "Sarah Jones",
-          summary: "Some completed actions still lack uploaded evidence and closure rationale.",
+          summary:
+            "Some completed actions still lack uploaded evidence and closure rationale.",
         },
       ],
     },
@@ -1375,7 +1606,8 @@ function buildFallbackData(homeId) {
           status: "open",
           due_date: plusDays(2),
           owner_user_name: "Sarah Jones",
-          summary: "Finish outstanding evidence tracker entries across SCCIF themes.",
+          summary:
+            "Finish outstanding evidence tracker entries across SCCIF themes.",
         },
         {
           id: "act-2",
@@ -1383,7 +1615,8 @@ function buildFallbackData(homeId) {
           status: "in_progress",
           due_date: plusDays(4),
           owner_user_name: "Tom Patel",
-          summary: "Strengthen narrative around management oversight, review and challenge.",
+          summary:
+            "Strengthen narrative around management oversight, review and challenge.",
         },
       ],
     },
@@ -1414,14 +1647,16 @@ function buildFallbackData(homeId) {
           audit_name: "File audit",
           status: "completed",
           audit_date: minusDays(6),
-          summary: "Overall standard good, but management signatures were inconsistent.",
+          summary:
+            "Overall standard good, but management signatures were inconsistent.",
         },
         {
           id: "audit-2",
           audit_name: "Missing-from-care audit",
           status: "review_due",
           audit_date: plusDays(2),
-          summary: "Sample shows good immediate response but weak return-home linkage.",
+          summary:
+            "Sample shows good immediate response but weak return-home linkage.",
         },
       ],
     },
@@ -1454,49 +1689,67 @@ async function fetchDataset(homeId) {
   const safeGet = (url) => apiGet(url).catch(() => null);
 
   const requests = [
-    safeGet(endpoints.ofstedDashboard || endpoints.dashboard),
-    safeGet(endpoints.sccifEvidence),
-    safeGet(endpoints.judgementBuilder),
     safeGet(endpoints.readiness),
+    safeGet(endpoints.quality),
     safeGet(endpoints.compliance),
-    safeGet(endpoints.audits),
     safeGet(endpoints.documents),
+    safeGet(endpoints.audits),
+    safeGet(endpoints.dashboard),
   ];
 
   const [
-    summaryData,
-    evidenceData,
-    judgementData,
     readinessData,
+    qualityData,
     complianceData,
-    auditData,
     documentData,
+    auditData,
+    dashboardData,
   ] = await Promise.all(requests);
 
-  const responses = [
-    summaryData,
-    evidenceData,
-    judgementData,
+  const hasLiveSuccess = [
     readinessData,
+    qualityData,
     complianceData,
-    auditData,
     documentData,
-  ];
-
-  const hasLiveSuccess = responses.some(hasUsableData);
+    auditData,
+    dashboardData,
+  ].some(hasUsableData);
 
   if (!hasLiveSuccess) {
     return buildFallbackData(homeId);
   }
 
+  const summaryData =
+    readinessData && hasUsableData(readinessData)
+      ? buildSummaryFromReadiness(readinessData)
+      : normaliseSummary(qualityData || dashboardData || {});
+
+  const judgementItems =
+    normaliseJudgementItems(qualityData || {}).length
+      ? normaliseJudgementItems(qualityData || {})
+      : buildJudgementsFromReadiness(readinessData || {});
+
+  const evidenceItems =
+    normaliseEvidenceItems(qualityData || {}).length
+      ? normaliseEvidenceItems(qualityData || {})
+      : buildEvidenceFromReadiness(readinessData || {});
+
+  const gapItems =
+    normaliseGapItems(qualityData || {}).length
+      ? normaliseGapItems(qualityData || {})
+      : buildGapsFromReadiness(readinessData || {});
+
+  const actionItems =
+    normaliseActionItems(qualityData || {}).length
+      ? normaliseActionItems(qualityData || {})
+      : buildActionsFromReadiness(readinessData || {});
+
   return {
-    summaryData: summaryData || {},
-    evidenceData: evidenceData || { items: [] },
-    judgementData: judgementData || { items: [] },
-    gapData:
-      readinessData?.gaps || readinessData?.records || readinessData || { items: [] },
-    actionData:
-      readinessData?.actions || readinessData?.tasks || readinessData || { items: [] },
+    summaryData,
+    judgementData: { items: judgementItems },
+    evidenceData: { items: evidenceItems },
+    gapData: { items: gapItems },
+    actionData: { items: actionItems },
     complianceData: complianceData || { items: [] },
     auditData: auditData || { items: [] },
     documentData: documentData || { items: [] },
@@ -1541,17 +1794,20 @@ export async function loadOfstedDashboard() {
       visibility,
     ] = await Promise.all([fetchDataset(homeId), fetchVisibility(homeId)]);
 
-    const summary = normaliseSummary(summaryData);
+    const summary =
+      typeof summaryData === "object" && !Array.isArray(summaryData)
+        ? summaryData
+        : normaliseSummary(summaryData);
 
-    const judgementItems = sortNewestFirst(normaliseJudgementItems(judgementData), [
-      "updated_at",
-      "created_at",
-    ]).slice(0, 8);
+    const judgementItems = sortNewestFirst(
+      normaliseJudgementItems(judgementData),
+      ["updated_at", "created_at"]
+    ).slice(0, 8);
 
-    const evidenceItems = sortNewestFirst(normaliseEvidenceItems(evidenceData), [
-      "updated_at",
-      "created_at",
-    ]).slice(0, 8);
+    const evidenceItems = sortNewestFirst(
+      normaliseEvidenceItems(evidenceData),
+      ["updated_at", "created_at"]
+    ).slice(0, 8);
 
     const gapItems = sortSoonestFirst(normaliseGapItems(gapData), [
       "due_date",
@@ -1565,11 +1821,10 @@ export async function loadOfstedDashboard() {
       "created_at",
     ]).slice(0, 8);
 
-    const complianceItems = sortSoonestFirst(normaliseComplianceItems(complianceData), [
-      "due_date",
-      "updated_at",
-      "created_at",
-    ])
+    const complianceItems = sortSoonestFirst(
+      normaliseComplianceItems(complianceData),
+      ["due_date", "updated_at", "created_at"]
+    )
       .filter((item) =>
         ["overdue", "missing", "review_due", "due_soon", "escalated"].includes(
           String(item.status || "").toLowerCase().replaceAll(" ", "_")
@@ -1583,11 +1838,10 @@ export async function loadOfstedDashboard() {
       "created_at",
     ]).slice(0, 6);
 
-    const documentItems = sortSoonestFirst(normaliseDocumentItems(documentData), [
-      "review_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 6);
+    const documentItems = sortSoonestFirst(
+      normaliseDocumentItems(documentData),
+      ["review_date", "updated_at", "created_at"]
+    ).slice(0, 6);
 
     const topStats = buildTopStats({
       summary,
@@ -1610,13 +1864,16 @@ export async function loadOfstedDashboard() {
       actions: actionItems,
       compliance: complianceItems,
     });
-    const changing = toArray(visibility?.what_is_changing || visibility?.trends).slice(
-      0,
-      4
-    );
+
+    const changing = toArray(
+      visibility?.what_is_changing || visibility?.trends
+    ).slice(0, 4);
     const patterns = toArray(visibility?.patterns).slice(0, 6);
     const decisionSupport = toArray(visibility?.decision_support).slice(0, 4);
-    const judgementSupport = toArray(visibility?.ofsted_judgement_support).slice(0, 3);
+    const judgementSupport = toArray(visibility?.ofsted_judgement_support).slice(
+      0,
+      3
+    );
     const missingItems = toArray(visibility?.what_is_missing).slice(0, 6);
 
     const title =
@@ -1639,7 +1896,8 @@ export async function loadOfstedDashboard() {
       auditItems,
       documentItems,
       visibilitySignals: toArray(visibility?.signals).slice(0, 6),
-      insightStory: visibility?.insight_story || "",
+      insightStory:
+        visibility?.insight_story || summary.narrative_summary || "",
       changing,
       patterns,
       decisionSupport,
@@ -1676,6 +1934,8 @@ export async function loadOfstedDashboard() {
     });
   } catch (error) {
     console.error("[ofsted-dashboard] load failed", error);
-    renderErrorState(error?.message || "The Ofsted dashboard could not be loaded.");
+    renderErrorState(
+      error?.message || "The Ofsted dashboard could not be loaded."
+    );
   }
 }
