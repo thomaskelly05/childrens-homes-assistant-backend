@@ -1,16 +1,10 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { escapeHtml, getDisplayName } from "../core/utils.js";
-import {
-  getSectionTitle,
-  getSectionSubtitle,
-} from "../core/config.js";
+import { escapeHtml } from "../core/utils.js";
 import {
   ensureAssistantState,
   getAssistantMeta,
-  getCurrentPerson,
   getCurrentScope,
-  getCurrentSection,
   getPersonLabel,
   getHomeLabel,
   getScopeLabel,
@@ -48,12 +42,14 @@ function getEl(...candidates) {
   return null;
 }
 
-function normaliseAssistantMessages() {
+function getAssistantHistory() {
   ensureAssistantState();
 
-  state.assistantMessages = Array.isArray(state.assistantMessages)
-    ? state.assistantMessages.map((entry) => cloneAssistantMessage(entry))
+  const main = Array.isArray(state.assistantMessages)
+    ? state.assistantMessages
     : [];
+
+  return main.map((entry) => cloneAssistantMessage(entry));
 }
 
 function renderInlineText(text = "") {
@@ -374,11 +370,10 @@ function renderMessageList(host, messages = []) {
 }
 
 function renderMessages() {
-  normaliseAssistantMessages();
-
+  const messages = getAssistantHistory();
   renderMessageList(
     getEl(els.assistantMessages, "assistantMessages"),
-    state.assistantMessages
+    messages
   );
 }
 
@@ -516,7 +511,8 @@ function renderSourcesHtml(sources = []) {
 }
 
 function renderStandaloneSources() {
-  const html = renderSourcesHtml(getAssistantMeta().sources || []);
+  const meta = getAssistantMeta();
+  const html = renderSourcesHtml(meta.sources || []);
   const sourcesEl = getEl(els.assistantSources, "assistantSources");
   if (sourcesEl) sourcesEl.innerHTML = html;
 }
@@ -590,15 +586,21 @@ function renderScopeSummary() {
       </div>
       <div class="assistant-scope-summary-row">
         <span>Evidence</span>
-        <strong>${escapeHtml(String(runtime.evidence_count || context?.evidence_summary?.total || 0))}</strong>
+        <strong>${escapeHtml(
+          String(runtime.evidence_count || context?.evidence_summary?.total || 0)
+        )}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Mode</span>
-        <strong>${escapeHtml(String(runtime.output_mode || meta.output_mode || getCurrentScope()))}</strong>
+        <strong>${escapeHtml(
+          String(runtime.output_mode || meta.output_mode || getCurrentScope())
+        )}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Lens</span>
-        <strong>${escapeHtml(String(runtime.analysis_lens || context.analysis_lens || "general"))}</strong>
+        <strong>${escapeHtml(
+          String(runtime.analysis_lens || context.analysis_lens || "general")
+        )}</strong>
       </div>
     </div>
   `;
@@ -643,13 +645,27 @@ function syncAssistantVisibility() {
 function syncAssistantSendButtons() {
   const sending = Boolean(state.assistantSending);
 
-  if (els.assistantSendBtn) els.assistantSendBtn.disabled = sending;
+  if (els.assistantSendBtn) {
+    els.assistantSendBtn.disabled = sending;
+  }
+
+  const modalSendBtn = qs("assistantModalSendBtn");
+  if (modalSendBtn) {
+    modalSendBtn.disabled = sending;
+  }
 }
 
 function syncAssistantInputs() {
   const disabled = Boolean(state.assistantSending);
 
-  if (els.assistantInput) els.assistantInput.disabled = disabled;
+  if (els.assistantInput) {
+    els.assistantInput.disabled = disabled;
+  }
+
+  const modalInput = qs("assistantModalInput");
+  if (modalInput) {
+    modalInput.disabled = disabled;
+  }
 }
 
 function scrollSourceIntoView(ref = "") {
@@ -769,7 +785,15 @@ export function appendAssistantSystemMessage(text, extra = {}) {
     _streaming: Boolean(extra._streaming),
   });
 
+  if (!Array.isArray(state.assistantMessages)) {
+    state.assistantMessages = [];
+  }
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+
   state.assistantMessages.push(entry);
+  state.assistantModalMessages.push(cloneAssistantMessage(entry));
   renderAllAssistantUi();
 }
 
@@ -791,11 +815,20 @@ export function appendAssistantUserMessage(text, extra = {}) {
         : null,
   });
 
+  if (!Array.isArray(state.assistantMessages)) {
+    state.assistantMessages = [];
+  }
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+
   state.assistantMessages.push(entry);
+  state.assistantModalMessages.push(cloneAssistantMessage(entry));
   renderAllAssistantUi();
 }
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
+  state.assistantModalMessages = [];
   renderAllAssistantUi();
 }
