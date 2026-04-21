@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from auth.current_user import get_current_user
 from db.connection import get_db
 from services.ai_service import generate_ai_stream
+from services.assistant_context_service import build_runtime_assistant_context
 from services.assistant_orchestrator import build_assistant_prompt
 from services.report_scheduler import preview_report_snapshot, send_scheduled_report_now
 from services.young_person_service import YoungPersonService
@@ -59,6 +60,9 @@ class YoungPersonAssistantContext(BaseModel):
     record_id: int | None = None
     start_date: str | None = None
     end_date: str | None = None
+    reporting_period_start: str | None = None
+    reporting_period_end: str | None = None
+    reporting_period_inferred: bool | None = None
 
 
 class YoungPersonAssistantPayload(BaseModel):
@@ -87,6 +91,9 @@ class HomeAssistantContext(BaseModel):
     provider_id: int | None = None
     start_date: str | None = None
     end_date: str | None = None
+    reporting_period_start: str | None = None
+    reporting_period_end: str | None = None
+    reporting_period_inferred: bool | None = None
 
 
 class HomeAssistantPayload(BaseModel):
@@ -115,6 +122,9 @@ class QualityAssistantContext(BaseModel):
     provider_id: int | None = None
     start_date: str | None = None
     end_date: str | None = None
+    reporting_period_start: str | None = None
+    reporting_period_end: str | None = None
+    reporting_period_inferred: bool | None = None
 
 
 class QualityAssistantPayload(BaseModel):
@@ -411,6 +421,8 @@ def _normalise_young_person_context(
         "home_id": _safe_int(record.get("home_id")),
         "start_date": payload.context.start_date,
         "end_date": payload.context.end_date,
+        "reporting_period_start": payload.context.start_date,
+        "reporting_period_end": payload.context.end_date,
     }
 
 
@@ -441,6 +453,8 @@ def _normalise_home_context(
         "provider_id": scope.get("provider_id"),
         "start_date": payload.context.start_date,
         "end_date": payload.context.end_date,
+        "reporting_period_start": payload.context.start_date,
+        "reporting_period_end": payload.context.end_date,
     }
 
 
@@ -471,6 +485,8 @@ def _normalise_quality_context(
         "provider_id": scope.get("provider_id"),
         "start_date": payload.context.start_date,
         "end_date": payload.context.end_date,
+        "reporting_period_start": payload.context.start_date,
+        "reporting_period_end": payload.context.end_date,
     }
 
 
@@ -726,13 +742,22 @@ async def ask_young_person_assistant(
         history = _normalise_history(payload.history)
         user_id = _safe_user_id(current_user)
 
+        runtime_context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="young_people_os",
+            scope=scope,
+            ui_context=context,
+            message=payload.message,
+        )
+
         assistant_prompt_bundle = build_assistant_prompt(
             conn,
             user_id=user_id,
             message=payload.message,
             scope=scope,
             history=history,
-            context=context,
+            user_context=runtime_context,
             assistant_type="young_people_os",
         )
 
@@ -756,10 +781,15 @@ async def ask_young_person_assistant(
             meta_payload={
                 "assistant_type": "young_people_os",
                 "assistant_scope": dict(scope),
-                "assistant_context": assistant_prompt_bundle.get("context") or context,
+                "assistant_context": assistant_prompt_bundle.get("context") or runtime_context,
                 "top_level_meta": {
                     "young_person_id": payload.context.young_person_id,
-                    "young_person_name": context.get("young_person_name"),
+                    "young_person_name": runtime_context.get("young_person_name") or context.get("young_person_name"),
+                    "home_id": runtime_context.get("home_id"),
+                    "reporting_period_start": runtime_context.get("reporting_period_start"),
+                    "reporting_period_end": runtime_context.get("reporting_period_end"),
+                    "reporting_period_inferred": runtime_context.get("reporting_period_inferred"),
+                    "evidence_count": len(runtime_context.get("evidence_index", []) or []),
                 },
             },
         ),
@@ -785,13 +815,22 @@ async def ask_home_assistant(
         history = _normalise_history(payload.history)
         user_id = _safe_user_id(current_user)
 
+        runtime_context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="home_os",
+            scope=scope,
+            ui_context=context,
+            message=payload.message,
+        )
+
         assistant_prompt_bundle = build_assistant_prompt(
             conn,
             user_id=user_id,
             message=payload.message,
             scope=scope,
             history=history,
-            context=context,
+            user_context=runtime_context,
             assistant_type="home_os",
         )
 
@@ -815,10 +854,14 @@ async def ask_home_assistant(
             meta_payload={
                 "assistant_type": "home_os",
                 "assistant_scope": dict(scope),
-                "assistant_context": assistant_prompt_bundle.get("context") or context,
+                "assistant_context": assistant_prompt_bundle.get("context") or runtime_context,
                 "top_level_meta": {
                     "home_id": scope.get("home_id"),
-                    "home_name": context.get("home_name"),
+                    "home_name": runtime_context.get("home_name") or context.get("home_name"),
+                    "reporting_period_start": runtime_context.get("reporting_period_start"),
+                    "reporting_period_end": runtime_context.get("reporting_period_end"),
+                    "reporting_period_inferred": runtime_context.get("reporting_period_inferred"),
+                    "evidence_count": len(runtime_context.get("evidence_index", []) or []),
                 },
             },
         ),
@@ -844,13 +887,22 @@ async def ask_quality_assistant(
         history = _normalise_history(payload.history)
         user_id = _safe_user_id(current_user)
 
+        runtime_context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="quality_os",
+            scope=scope,
+            ui_context=context,
+            message=payload.message,
+        )
+
         assistant_prompt_bundle = build_assistant_prompt(
             conn,
             user_id=user_id,
             message=payload.message,
             scope=scope,
             history=history,
-            context=context,
+            user_context=runtime_context,
             assistant_type="quality_os",
         )
 
@@ -882,13 +934,17 @@ async def ask_quality_assistant(
             meta_payload={
                 "assistant_type": "quality_os",
                 "assistant_scope": dict(scope),
-                "assistant_context": assistant_prompt_bundle.get("context") or context,
+                "assistant_context": assistant_prompt_bundle.get("context") or runtime_context,
                 "top_level_meta": {
                     "home_id": scope.get("home_id"),
-                    "home_name": context.get("home_name"),
+                    "home_name": runtime_context.get("home_name") or context.get("home_name"),
                     "allowed_home_ids": scope.get("allowed_home_ids", []),
                     "access_level": scope.get("access_level"),
                     "provider_id": scope.get("provider_id"),
+                    "reporting_period_start": runtime_context.get("reporting_period_start"),
+                    "reporting_period_end": runtime_context.get("reporting_period_end"),
+                    "reporting_period_inferred": runtime_context.get("reporting_period_inferred"),
+                    "evidence_count": len(runtime_context.get("evidence_index", []) or []),
                 },
             },
         ),

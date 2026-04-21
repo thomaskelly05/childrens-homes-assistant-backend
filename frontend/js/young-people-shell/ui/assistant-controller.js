@@ -412,27 +412,45 @@ function setAssistantContextText() {
   if (!els.assistantContext) return;
 
   const context = currentAssistantContext();
+  const meta = getAssistantMeta() || {};
+  const assistantContext = meta.assistant_context || {};
+  const startDate =
+    assistantContext.reporting_period_start ||
+    assistantContext.start_date ||
+    null;
+  const endDate =
+    assistantContext.reporting_period_end || assistantContext.end_date || null;
+  const periodLabel = (() => {
+    if (!startDate && !endDate) return "";
+    if (startDate && endDate) {
+      return ` • period: ${formatDate(startDate)} to ${formatDate(endDate)}`;
+    }
+    if (startDate) {
+      return ` • from: ${formatDate(startDate)}`;
+    }
+    return ` • to: ${formatDate(endDate)}`;
+  })();
 
   if (context.scope === "child") {
     els.assistantContext.textContent = `Scoped to ${context.person.name} in ${
       context.person.home_name || context.home.home_name || "the home"
-    } • lens: ${context.analysis_lens}.`;
+    } • lens: ${context.analysis_lens}${periodLabel}.`;
     return;
   }
 
   if (context.scope === "home") {
     els.assistantContext.textContent = `Scoped to home oversight for ${
       context.home.home_name || "the current home"
-    } • lens: ${context.analysis_lens}.`;
+    } • lens: ${context.analysis_lens}${periodLabel}.`;
     return;
   }
 
   if (QUALITY_LEVEL_SCOPES.has(context.scope)) {
-    els.assistantContext.textContent = `Scoped to quality and oversight across authorised homes • lens: ${context.analysis_lens}.`;
+    els.assistantContext.textContent = `Scoped to quality and oversight across authorised homes • lens: ${context.analysis_lens}${periodLabel}.`;
     return;
   }
 
-  els.assistantContext.textContent = `Scoped to operational oversight • lens: ${context.analysis_lens}.`;
+  els.assistantContext.textContent = `Scoped to operational oversight • lens: ${context.analysis_lens}${periodLabel}.`;
 }
 
 function renderScopeBadges() {

@@ -688,13 +688,22 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
         )
     )
 
+    # Keep a legacy-compatible envelope while exposing richer orchestration output.
+    # Legacy assistant routers still expect:
+    # - prompt: user message text
+    # - context: full scoped context payload
+    # - runtime: plain dict
     return {
+        "prompt": message,
+        "context": merged_user_context,
+        "session_id": session_id,
         "system_prompt": result.system_prompt,
         "user_message": result.user_message,
         "messages": result.messages,
-        "runtime": result.runtime,
-        "sources": result.sources,
+        "runtime": result.runtime_payload,
         "runtime_payload": result.runtime_payload,
+        "runtime_model": result.runtime,
+        "sources": result.sources,
         "selected_mode": result.selected_mode,
         "trimmed_history": result.trimmed_history,
         "trimmed_document_text": result.trimmed_document_text,

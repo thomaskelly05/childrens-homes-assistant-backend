@@ -565,6 +565,7 @@ export function setAssistantDerivedState({
   manager_brief = null,
   quality_brief = null,
   live_summary = null,
+  assistant_insight_pack = null,
 } = {}) {
   ensureAssistantMeta();
 
@@ -597,6 +598,10 @@ export function setAssistantDerivedState({
 
   if (live_summary !== null) {
     state.assistantMeta.live_summary = live_summary;
+  }
+
+  if (assistant_insight_pack && typeof assistant_insight_pack === "object") {
+    state.assistantMeta.assistant_insight_pack = assistant_insight_pack;
   }
 
   state.assistantMeta.last_analysis_at = new Date().toISOString();

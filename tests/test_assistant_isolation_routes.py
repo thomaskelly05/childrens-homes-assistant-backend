@@ -79,7 +79,12 @@ def test_os_quality_stream_allowed_for_manager_role(client, fake_state, monkeypa
     fully_authenticate(client, fake_state, role="manager")
 
     def fake_build_assistant_prompt(*_args, **_kwargs):
-        return {"prompt": "Stub prompt", "context": {}, "runtime": {}}
+        return {
+            "prompt": "Stub prompt",
+            "context": {"assistant_type": "quality_os"},
+            "runtime": {"assistant_type": "quality_os", "selected_mode": "balanced"},
+            "runtime_payload": {"assistant_type": "quality_os", "selected_mode": "balanced"},
+        }
 
     def fake_stream_assistant_response(**_kwargs):
         async def _gen():
