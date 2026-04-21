@@ -6,12 +6,24 @@ import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import { buildInspectionUiEndpoints } from "../core/config.js";
 
 function getHomeId() {
-  return (
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null
+  const preferredHomeId = Number(
+    state.homeId || state.currentUser?.home_id || state.currentUser?.homeId || 0
   );
+
+  const allowedHomeIds = Array.isArray(state.allowedHomeIds)
+    ? state.allowedHomeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    : [];
+
+  if (allowedHomeIds.length) {
+    if (Number.isFinite(preferredHomeId) && allowedHomeIds.includes(preferredHomeId)) {
+      return preferredHomeId;
+    }
+    return allowedHomeIds[0];
+  }
+
+  return Number.isFinite(preferredHomeId) && preferredHomeId > 0 ? preferredHomeId : null;
 }
 
 function safeText(value, fallback = "") {
