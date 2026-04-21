@@ -36,6 +36,15 @@ function normaliseNumericId(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function normaliseHomeIds(homeIds = []) {
+  if (!Array.isArray(homeIds)) return [];
+  return [...new Set(
+    homeIds
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item) && item > 0)
+  )];
+}
+
 export function createAssistantMeta() {
   return {
     sources: [],
@@ -56,6 +65,7 @@ export function createAssistantMeta() {
     evidence_summary: {},
     evidence_sufficiency: {},
     live_summary: null,
+    assistant_insight_pack: null,
 
     scrubber_enabled: false,
     scrubber_meta: {},
@@ -233,11 +243,23 @@ function ensureAssistantMeta() {
   )
     ? state.assistantMeta.suggested_actions
     : [];
+  state.assistantMeta.secondary_intents = Array.isArray(
+    state.assistantMeta.secondary_intents
+  )
+    ? state.assistantMeta.secondary_intents
+    : [];
   state.assistantMeta.chronology = Array.isArray(state.assistantMeta.chronology)
     ? state.assistantMeta.chronology
     : [];
-  state.assistantMeta.facts = state.assistantMeta.facts || {};
-  state.assistantMeta.care_domains = state.assistantMeta.care_domains || {};
+  state.assistantMeta.facts =
+    state.assistantMeta.facts && typeof state.assistantMeta.facts === "object"
+      ? state.assistantMeta.facts
+      : {};
+  state.assistantMeta.care_domains =
+    state.assistantMeta.care_domains &&
+    typeof state.assistantMeta.care_domains === "object"
+      ? state.assistantMeta.care_domains
+      : {};
   state.assistantMeta.evidence_summary =
     state.assistantMeta.evidence_summary || {};
   state.assistantMeta.evidence_sufficiency =
@@ -245,11 +267,26 @@ function ensureAssistantMeta() {
   state.assistantMeta.scrubber_meta = state.assistantMeta.scrubber_meta || {};
   state.assistantMeta.scrubber_reverse_map =
     state.assistantMeta.scrubber_reverse_map || {};
-  state.assistantMeta.secondary_intents = Array.isArray(
-    state.assistantMeta.secondary_intents
-  )
-    ? state.assistantMeta.secondary_intents
-    : [];
+
+  if (!("live_summary" in state.assistantMeta)) {
+    state.assistantMeta.live_summary = null;
+  }
+
+  if (!("assistant_insight_pack" in state.assistantMeta)) {
+    state.assistantMeta.assistant_insight_pack = null;
+  }
+
+  if (!("intent" in state.assistantMeta)) {
+    state.assistantMeta.intent = null;
+  }
+
+  if (!("retrieval_mode" in state.assistantMeta)) {
+    state.assistantMeta.retrieval_mode = "whole_scope";
+  }
+
+  if (!("output_mode" in state.assistantMeta)) {
+    state.assistantMeta.output_mode = "answer";
+  }
 }
 
 function ensureAssistantMessages() {
@@ -259,6 +296,39 @@ function ensureAssistantMessages() {
 
   if (!Array.isArray(state.assistantModalMessages)) {
     state.assistantModalMessages = [];
+  }
+}
+
+export function initialiseStateGuards() {
+  ensureAssistantMeta();
+  ensureAssistantMessages();
+
+  if (!Array.isArray(state.allowedHomeIds)) {
+    state.allowedHomeIds = [];
+  }
+
+  if (!Array.isArray(state.youngPeople)) {
+    state.youngPeople = [];
+  }
+
+  if (!Array.isArray(state.currentSuggestions)) {
+    state.currentSuggestions = [];
+  }
+
+  if (!Array.isArray(state.suggestions)) {
+    state.suggestions = [];
+  }
+
+  if (!Array.isArray(state.liveUpdates)) {
+    state.liveUpdates = [];
+  }
+
+  if (!state.resourceCache || typeof state.resourceCache !== "object") {
+    state.resourceCache = Object.create(null);
+  }
+
+  if (!state.requestCooldowns || typeof state.requestCooldowns !== "object") {
+    state.requestCooldowns = Object.create(null);
   }
 }
 
@@ -354,6 +424,8 @@ export function resetWorkspaceState() {
   resetComposerState();
   resetAssistantState();
   resetReadinessState();
+  clearRequestOptimisationState();
+  initialiseStateGuards();
 }
 
 export function clearRequestOptimisationState() {
@@ -362,7 +434,11 @@ export function clearRequestOptimisationState() {
 }
 
 export function setCurrentSection(section) {
-  const safeSection = section || getScopeDefaultSection(state.currentScope);
+  const safeSection =
+    typeof section === "string" && section.trim()
+      ? section.trim()
+      : getScopeDefaultSection(state.currentScope);
+
   syncSectionAliases(safeSection);
 }
 
@@ -385,6 +461,7 @@ export function setUserRole(role) {
 
 export function setSelectedYoungPerson(person = null) {
   const safePerson = person || null;
+
   state.selectedYoungPerson = safePerson;
   state.youngPerson = safePerson;
   state.youngPersonId = safePerson?.id || safePerson?.young_person_id || null;
@@ -393,7 +470,7 @@ export function setSelectedYoungPerson(person = null) {
     safePerson?.home_id ?? safePerson?.homeId ?? null
   );
 
-  if (personHomeId && !state.homeId) {
+  if (personHomeId) {
     state.homeId = personHomeId;
   }
 }
@@ -413,11 +490,7 @@ export function setProviderContext(providerId = null) {
 }
 
 export function setAllowedHomeIds(homeIds = []) {
-  state.allowedHomeIds = Array.isArray(homeIds)
-    ? homeIds
-        .map((item) => Number(item))
-        .filter((item) => Number.isFinite(item) && item > 0)
-    : [];
+  state.allowedHomeIds = normaliseHomeIds(homeIds);
 }
 
 export function setReadinessSelectedHomeId(homeId = null) {
@@ -549,11 +622,7 @@ export function resolveAccessibleHomeId(preferredHomeId = null) {
       null
   );
 
-  const allowedHomeIds = Array.isArray(state.allowedHomeIds)
-    ? state.allowedHomeIds
-        .map((item) => Number(item))
-        .filter((item) => Number.isFinite(item) && item > 0)
-    : [];
+  const allowedHomeIds = normaliseHomeIds(state.allowedHomeIds);
 
   if (allowedHomeIds.length) {
     if (parsedPreferred && allowedHomeIds.includes(parsedPreferred)) {
@@ -737,8 +806,10 @@ export function getCurrentScopeEntity() {
   if (state.currentScope === "quality") {
     return {
       type: "quality",
-      id: resolveAccessibleHomeId(),
+      id: normaliseNumericId(state.providerId) || resolveAccessibleHomeId(),
       name:
+        state.currentUser?.provider_name ||
+        state.currentUser?.providerName ||
         state.currentUser?.home_name ||
         state.currentUser?.homeName ||
         null,
@@ -752,6 +823,8 @@ export function getCurrentScopeEntity() {
       name:
         state.currentUser?.home_name ||
         state.currentUser?.homeName ||
+        state.currentUser?.provider_name ||
+        state.currentUser?.providerName ||
         null,
     };
   }
