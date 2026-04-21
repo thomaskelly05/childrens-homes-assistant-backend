@@ -7,7 +7,13 @@ import { buildInspectionUiEndpoints } from "../core/config.js";
 
 function getHomeId() {
   const preferredHomeId = Number(
-    state.homeId || state.currentUser?.home_id || state.currentUser?.homeId || 0
+    state.readinessSelectedHomeId ||
+      state.homeId ||
+      state.selectedHomeId ||
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      state.selectedYoungPerson?.home_id ||
+      0
   );
 
   const allowedHomeIds = Array.isArray(state.allowedHomeIds)

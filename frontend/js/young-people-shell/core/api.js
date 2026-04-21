@@ -29,6 +29,7 @@ function buildErrorMessage(response, data) {
 
 const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/tasks$/, "/tasks?young_person_id=$1"],
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
   [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
 
@@ -82,11 +83,13 @@ export function resolveApiUrl(url, method = "GET") {
   if (!shouldResolveAlias(method)) return url;
 
   const [pathname, queryString = ""] = url.split("?");
-  const suffix = queryString ? `?${queryString}` : "";
 
   for (const [pattern, replacement] of API_ROUTE_ALIASES) {
     if (pattern.test(pathname)) {
-      return pathname.replace(pattern, replacement) + suffix;
+      const rewritten = pathname.replace(pattern, replacement);
+      if (!queryString) return rewritten;
+      if (rewritten.includes("?")) return `${rewritten}&${queryString}`;
+      return `${rewritten}?${queryString}`;
     }
   }
 
@@ -954,6 +957,7 @@ function resolveAssistantEndpoint(payload = {}) {
 
   if (scope === "home") return "/assistant/os/home/stream";
   if (scope === "quality") return "/assistant/os/quality/stream";
+  if (scope === "ofsted") return "/assistant/os/quality/stream";
   if (scope === "child" || scope === "young_person") return "/assistant/os/young-people/stream";
 
   return "/assistant/os/young-people/stream";

@@ -24,14 +24,34 @@ function getCurrentScope() {
 }
 
 function getHomeId() {
-  return (
+  const toSafeHomeId = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  const preferredHomeId = toSafeHomeId(
     state.readinessSelectedHomeId ||
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    state.selectedYoungPerson?.home_id ||
-    null
+      state.homeId ||
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      state.selectedYoungPerson?.home_id ||
+      null
   );
+
+  const allowedHomeIds = Array.isArray(state.allowedHomeIds)
+    ? state.allowedHomeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    : [];
+
+  if (allowedHomeIds.length) {
+    if (preferredHomeId && allowedHomeIds.includes(preferredHomeId)) {
+      return preferredHomeId;
+    }
+    return allowedHomeIds[0];
+  }
+
+  return preferredHomeId;
 }
 
 function getScopeEntityId() {
