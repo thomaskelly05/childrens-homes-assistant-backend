@@ -1,4 +1,15 @@
-import { state } from "./state.js";
+import {
+  state,
+  setCurrentScope,
+  setCurrentSection,
+  setSelectedYoungPerson,
+  clearSelectedYoungPerson,
+  setHomeContext,
+  setProviderContext,
+  setAllowedHomeIds,
+  setUserRole,
+  initialiseStateGuards,
+} from "./state.js";
 import { els } from "./dom.js";
 import {
   getYoungPersonIdFromUrl,
@@ -87,6 +98,21 @@ function normaliseRole(role) {
   return "staff";
 }
 
+function normaliseNumericId(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : null;
+}
+
+function toIdArray(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(
+    value
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item) && item > 0)
+  )];
+}
+
 function readSessionUser() {
   try {
     const raw = sessionStorage.getItem("current_user");
@@ -97,19 +123,6 @@ function readSessionUser() {
   }
 }
 
-function toNumberOrNull(value) {
-  if (value === null || value === undefined || value === "") return null;
-  const num = Number(value);
-  return Number.isFinite(num) ? num : value;
-}
-
-function toIdArray(value) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item));
-}
-
 function hydrateRuntimeContextFromDom() {
   if (!els.app) return;
 
@@ -117,39 +130,34 @@ function hydrateRuntimeContextFromDom() {
   const datasetScope = String(els.app.dataset.scope || "")
     .trim()
     .toLowerCase();
-  const datasetHomeId = els.app.dataset.homeId || "";
-  const datasetYoungPersonId = els.app.dataset.youngPersonId || "";
-  const datasetProviderId = els.app.dataset.providerId || "";
+  const datasetHomeId = normaliseNumericId(els.app.dataset.homeId);
+  const datasetYoungPersonId = normaliseNumericId(els.app.dataset.youngPersonId);
+  const datasetProviderId = normaliseNumericId(els.app.dataset.providerId);
   const datasetAllowedHomeIds = els.app.dataset.allowedHomeIds || "";
 
-  if (datasetRole) {
-    state.userRole = datasetRole;
+  setUserRole(datasetRole);
+
+  if (["child", "home", "quality", "ofsted"].includes(datasetScope)) {
+    setCurrentScope(datasetScope, { resetSection: false });
   }
 
-  if (datasetScope) {
-    state.currentScope = datasetScope;
-  }
-
-  if (datasetHomeId) {
-    state.homeId = toNumberOrNull(datasetHomeId);
-  }
+  setHomeContext(datasetHomeId);
+  setProviderContext(datasetProviderId);
 
   if (datasetYoungPersonId && !state.youngPersonId) {
-    state.youngPersonId = toNumberOrNull(datasetYoungPersonId);
-  }
-
-  if (datasetProviderId) {
-    state.providerId = toNumberOrNull(datasetProviderId);
+    state.youngPersonId = datasetYoungPersonId;
   }
 
   if (datasetAllowedHomeIds) {
     try {
-      state.allowedHomeIds = toIdArray(JSON.parse(datasetAllowedHomeIds));
+      setAllowedHomeIds(toIdArray(JSON.parse(datasetAllowedHomeIds)));
     } catch {
-      state.allowedHomeIds = datasetAllowedHomeIds
-        .split(",")
-        .map((item) => Number(item.trim()))
-        .filter((item) => Number.isFinite(item));
+      setAllowedHomeIds(
+        datasetAllowedHomeIds
+          .split(",")
+          .map((item) => Number(item.trim()))
+          .filter((item) => Number.isFinite(item) && item > 0)
+      );
     }
   }
 }
@@ -167,13 +175,9 @@ function hydrateRuntimeContextFromSession() {
       currentUser.role_name
   );
 
-  if (sessionRole) {
-    state.userRole = sessionRole;
-  }
+  setUserRole(sessionRole);
 
-  if (currentUser.home_id || currentUser.homeId) {
-    state.homeId = currentUser.home_id || currentUser.homeId;
-  }
+  setHomeContext(currentUser.home_id || currentUser.homeId || null);
 
   if (currentUser.user_id || currentUser.id) {
     state.userId = currentUser.user_id || currentUser.id;
@@ -183,9 +187,7 @@ function hydrateRuntimeContextFromSession() {
     state.staffId = currentUser.staff_id;
   }
 
-  if (currentUser.provider_id || currentUser.providerId) {
-    state.providerId = currentUser.provider_id || currentUser.providerId;
-  }
+  setProviderContext(currentUser.provider_id || currentUser.providerId || null);
 
   const allowedHomes =
     currentUser.allowed_home_ids ||
@@ -197,14 +199,16 @@ function hydrateRuntimeContextFromSession() {
   const safeAllowedHomes = toIdArray(allowedHomes);
 
   if (safeAllowedHomes.length) {
-    state.allowedHomeIds = safeAllowedHomes;
+    setAllowedHomeIds(safeAllowedHomes);
   } else if (currentUser.home_id || currentUser.homeId) {
-    const singleHomeId = Number(currentUser.home_id || currentUser.homeId);
-    state.allowedHomeIds = Number.isFinite(singleHomeId) ? [singleHomeId] : [];
+    const singleHomeId = normaliseNumericId(
+      currentUser.home_id || currentUser.homeId
+    );
+    setAllowedHomeIds(singleHomeId ? [singleHomeId] : []);
   }
 
   if (!state.homeId && state.allowedHomeIds?.length === 1) {
-    state.homeId = state.allowedHomeIds[0];
+    setHomeContext(state.allowedHomeIds[0]);
   }
 }
 
@@ -269,7 +273,7 @@ function ensureValidScopeForRole() {
   const currentScope = state.currentScope || "child";
 
   if (!allowedScopes.includes(currentScope)) {
-    state.currentScope = getDefaultScopeForRole();
+    setCurrentScope(getDefaultScopeForRole(), { resetSection: false });
   }
 }
 
@@ -283,9 +287,7 @@ function ensureInitialSectionForScope() {
     ? currentSection
     : expectedDefault;
 
-  state.currentSection = safeSection;
-  state.activeSection = safeSection;
-  state.currentView = safeSection;
+  setCurrentSection(safeSection);
 }
 
 function syncScopeButtons() {
@@ -325,10 +327,26 @@ function syncScopeButtons() {
   }
 }
 
+function syncVisibleScreen() {
+  const scope = state.currentScope || "child";
+
+  if (scope === "child") {
+    if (state.youngPersonId) {
+      showWorkspace();
+    } else {
+      showSelector();
+    }
+    return;
+  }
+
+  showWorkspace();
+}
+
 function refreshAllChrome() {
   ensureValidScopeForRole();
   ensureInitialSectionForScope();
   syncDomDatasetFromState();
+  syncVisibleScreen();
   refreshShellChrome();
   refreshAssistantUi();
   updateAssistantContext();
@@ -343,31 +361,22 @@ async function setScope(scope) {
   if (state.currentScope === scope) return;
   if (!canAccessScope(scope)) return;
 
-  state.currentScope = scope;
-
-  const nextSection = getDefaultSectionForScope(scope);
-  state.currentSection = nextSection;
-  state.activeSection = nextSection;
-  state.currentView = nextSection;
-
+  setCurrentScope(scope, { resetSection: true });
   syncDomDatasetFromState();
-  refreshAllChrome();
   rerenderNavigationForScope();
+  refreshAllChrome();
 
   if (scope === "child") {
     if (state.youngPersonId) {
-      showWorkspace();
-      await loadSection(nextSection);
+      await loadSection(state.currentSection);
     } else {
-      showSelector();
       await loadYoungPersonSelector();
       refreshWorkspaceSummary();
     }
     return;
   }
 
-  showWorkspace();
-  await loadSection(nextSection);
+  await loadSection(state.currentSection);
   refreshWorkspaceSummary();
 }
 
@@ -413,12 +422,10 @@ function bindScopeEvents() {
 }
 
 async function restoreSelectedYoungPerson() {
-  const idFromUrl = getYoungPersonIdFromUrl();
+  const idFromUrl = normaliseNumericId(getYoungPersonIdFromUrl());
 
   if (!idFromUrl) {
-    state.youngPersonId = null;
-    state.selectedYoungPerson = null;
-    state.youngPerson = null;
+    clearSelectedYoungPerson();
     syncDomDatasetFromState();
     return false;
   }
@@ -434,9 +441,7 @@ async function restoreSelectedYoungPerson() {
     return true;
   } catch (error) {
     console.error("[index] failed to restore young person", error);
-    state.youngPersonId = null;
-    state.selectedYoungPerson = null;
-    state.youngPerson = null;
+    clearSelectedYoungPerson();
     setYoungPersonIdInUrl(null);
     syncDomDatasetFromState();
     refreshWorkspaceSummary();
@@ -458,21 +463,6 @@ async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
     console.error("[index] selector load failed", error);
     showError(error?.message || "Failed to load young people.");
   }
-}
-
-function syncVisibleScreen() {
-  const scope = state.currentScope || "child";
-
-  if (scope === "child") {
-    if (state.youngPersonId) {
-      showWorkspace();
-    } else {
-      showSelector();
-    }
-    return;
-  }
-
-  showWorkspace();
 }
 
 function bindGlobalSearchMirrors() {
@@ -576,6 +566,8 @@ async function bootstrap() {
   bootstrapped = true;
 
   try {
+    initialiseStateGuards();
+
     hydrateRuntimeContextFromDom();
     hydrateRuntimeContextFromSession();
 
@@ -601,24 +593,11 @@ async function bootstrap() {
     bindGlobalSearchMirrors();
     bindGlobalRefreshShortcuts();
 
-    refreshAllChrome();
-
     const restoredYoungPerson = await restoreSelectedYoungPerson();
-
-    if (state.currentScope === "child") {
-      if (restoredYoungPerson) {
-        showWorkspace();
-      } else {
-        showSelector();
-      }
-    } else {
-      showWorkspace();
-    }
-
-    syncVisibleScreen();
 
     await bootstrapSelectorIfNeeded(restoredYoungPerson);
     await initialiseShellNavigation();
+
     refreshAllChrome();
     refreshWorkspaceSummary();
   } catch (error) {
