@@ -106,11 +106,13 @@ function normaliseNumericId(value) {
 
 function toIdArray(value) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(
-    value
-      .map((item) => Number(item))
-      .filter((item) => Number.isFinite(item) && item > 0)
-  )];
+  return [
+    ...new Set(
+      value
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    ),
+  ];
 }
 
 function readSessionUser() {
@@ -288,6 +290,38 @@ function ensureInitialSectionForScope() {
     : expectedDefault;
 
   setCurrentSection(safeSection);
+}
+
+function applyRoleDefaultScopeIfNeeded() {
+  const role = getCurrentRole();
+  const defaultScope = getDefaultScopeForRole();
+  const currentScope = state.currentScope || "child";
+  const datasetScope = String(els.app?.dataset?.scope || "")
+    .trim()
+    .toLowerCase();
+
+  const hasExplicitScopeFromDom = ["child", "home", "quality", "ofsted"].includes(
+    datasetScope
+  );
+
+  const currentScopeAccessible = canAccessScope(currentScope);
+
+  if (!currentScopeAccessible) {
+    setCurrentScope(defaultScope, { resetSection: true });
+    setCurrentSection(getDefaultSectionForScope(defaultScope));
+    return;
+  }
+
+  const roleWantsElevatedDefault = ["admin", "ri"].includes(role);
+
+  if (
+    roleWantsElevatedDefault &&
+    !hasExplicitScopeFromDom &&
+    currentScope === "child"
+  ) {
+    setCurrentScope(defaultScope, { resetSection: true });
+    setCurrentSection(getDefaultSectionForScope(defaultScope));
+  }
 }
 
 function syncScopeButtons() {
@@ -572,6 +606,7 @@ async function bootstrap() {
     hydrateRuntimeContextFromSession();
 
     ensureValidScopeForRole();
+    applyRoleDefaultScopeIfNeeded();
     ensureInitialSectionForScope();
     syncDomDatasetFromState();
 
