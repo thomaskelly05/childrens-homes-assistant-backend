@@ -185,7 +185,11 @@ function buildFetchConfig(method, options, headers) {
   return config;
 }
 
-function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Request timed out") {
+function createTimeoutSignal(
+  timeoutMs,
+  externalSignal,
+  timeoutMessage = "Request timed out"
+) {
   if (!timeoutMs && !externalSignal) {
     return { signal: undefined, cleanup: () => {} };
   }
@@ -271,7 +275,10 @@ function invalidateCacheByPrefixes(prefixes = []) {
     return;
   }
 
-  const safePrefixes = prefixes.filter(Boolean);
+  const safePrefixes = prefixes
+    .filter(Boolean)
+    .map((prefix) => resolveApiUrl(prefix, "GET"));
+
   if (!safePrefixes.length) {
     clearApiCache();
     return;
@@ -329,9 +336,11 @@ function toArray(value) {
 
 function toIdArray(value) {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item));
+  return [...new Set(
+    value
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item) && item > 0)
+  )];
 }
 
 async function apiGetSettled(urls = []) {
@@ -400,75 +409,80 @@ function mergeAssistantBundle(responses = []) {
     homes: [],
   };
 
+  const mappings = [
+    ["daily_notes", "daily_notes"],
+    ["incidents", "incidents"],
+    ["home_incidents", "home_incidents"],
+    ["tasks", "tasks"],
+    ["health_records", "health_records"],
+    ["education_records", "education_records"],
+    ["family_contact_records", "family_contact_records"],
+    ["appointments", "appointments"],
+    ["monthly_reviews", "monthly_reviews"],
+    ["timeline", "chronology_events"],
+    ["chronology_events", "chronology_events"],
+    ["risk_assessments", "risk_assessments"],
+    ["risks", "risk_assessments"],
+    ["support_plans", "support_plans"],
+    ["compliance_items", "compliance_items"],
+    ["documents", "documents"],
+    ["statutory_documents", "statutory_documents"],
+    ["communications", "communications"],
+    ["therapy", "therapy"],
+    ["therapy_records", "therapy_records"],
+    ["team", "team"],
+    ["staff", "team"],
+    ["supervisions", "supervisions"],
+    ["reports", "reports"],
+    ["rota", "rota"],
+    ["onboarding", "onboarding"],
+    ["training", "training"],
+    ["probations", "probations"],
+    ["vacancies", "vacancies"],
+    ["pipeline", "pipeline"],
+    ["pipeline_candidates", "pipeline_candidates"],
+    ["shifts", "shifts"],
+    ["absences", "absences"],
+    ["maintenance", "maintenance"],
+    ["finance", "finance"],
+    ["medication", "medication"],
+    ["admissions", "admissions"],
+    ["discharges", "discharges"],
+    ["visitors", "visitors"],
+    ["staff_files", "staff_files"],
+    ["audits", "audits"],
+    ["manager_actions", "manager_actions"],
+    ["reg40", "reg40"],
+    ["reg44", "reg44"],
+    ["reg45", "reg45"],
+    ["keywork", "keywork"],
+    ["transport", "transport"],
+    ["young_people", "young_people"],
+    ["alerts", "alerts"],
+  ];
+
   for (const response of responses) {
-    if (!response?.ok || !response.data || typeof response.data !== "object") continue;
+    if (!response?.ok || !response.data || typeof response.data !== "object") {
+      continue;
+    }
+
     const data = response.data;
 
     if (Array.isArray(data.items)) {
       pushUniqueByKey(bundle.items, data.items, recordKey);
     }
 
-    const mappings = [
-      ["daily_notes", bundle.daily_notes],
-      ["incidents", bundle.incidents],
-      ["home_incidents", bundle.home_incidents],
-      ["tasks", bundle.tasks],
-      ["health_records", bundle.health_records],
-      ["education_records", bundle.education_records],
-      ["family_contact_records", bundle.family_contact_records],
-      ["appointments", bundle.appointments],
-      ["monthly_reviews", bundle.monthly_reviews],
-      ["timeline", bundle.chronology_events],
-      ["chronology_events", bundle.chronology_events],
-      ["risk_assessments", bundle.risk_assessments],
-      ["risks", bundle.risk_assessments],
-      ["support_plans", bundle.support_plans],
-      ["compliance_items", bundle.compliance_items],
-      ["documents", bundle.documents],
-      ["statutory_documents", bundle.statutory_documents],
-      ["communications", bundle.communications],
-      ["therapy", bundle.therapy],
-      ["therapy_records", bundle.therapy_records],
-      ["team", bundle.team],
-      ["staff", bundle.team],
-      ["supervisions", bundle.supervisions],
-      ["reports", bundle.reports],
-      ["rota", bundle.rota],
-      ["onboarding", bundle.onboarding],
-      ["training", bundle.training],
-      ["probations", bundle.probations],
-      ["vacancies", bundle.vacancies],
-      ["pipeline", bundle.pipeline],
-      ["pipeline_candidates", bundle.pipeline_candidates],
-      ["shifts", bundle.shifts],
-      ["absences", bundle.absences],
-      ["maintenance", bundle.maintenance],
-      ["finance", bundle.finance],
-      ["medication", bundle.medication],
-      ["admissions", bundle.admissions],
-      ["discharges", bundle.discharges],
-      ["visitors", bundle.visitors],
-      ["staff_files", bundle.staff_files],
-      ["audits", bundle.audits],
-      ["manager_actions", bundle.manager_actions],
-      ["reg40", bundle.reg40],
-      ["reg44", bundle.reg44],
-      ["reg45", bundle.reg45],
-      ["keywork", bundle.keywork],
-      ["transport", bundle.transport],
-      ["young_people", bundle.young_people],
-      ["alerts", bundle.alerts],
-    ];
-
-    for (const [sourceKey, target] of mappings) {
+    for (const [sourceKey, targetKey] of mappings) {
       const items = toArray(data[sourceKey]);
       if (items.length) {
-        pushUniqueByKey(target, items, recordKey);
+        pushUniqueByKey(bundle[targetKey], items, recordKey);
       }
     }
 
     if (data.staffing) {
-      const staffingArray = Array.isArray(data.staffing) ? data.staffing : [data.staffing];
+      const staffingArray = Array.isArray(data.staffing)
+        ? data.staffing
+        : [data.staffing];
       pushUniqueByKey(bundle.staffing, staffingArray, recordKey);
     }
 
@@ -476,11 +490,15 @@ function mergeAssistantBundle(responses = []) {
       if (!bundle.home) {
         bundle.home = data.home;
       }
-      pushUniqueByKey(bundle.homes, [data.home], (item) => String(item?.id ?? ""));
+      pushUniqueByKey(bundle.homes, [data.home], (item) =>
+        String(item?.id ?? "")
+      );
     }
 
     if (Array.isArray(data.homes)) {
-      pushUniqueByKey(bundle.homes, data.homes, (item) => String(item?.id ?? ""));
+      pushUniqueByKey(bundle.homes, data.homes, (item) =>
+        String(item?.id ?? "")
+      );
     }
 
     if (data.summary && typeof data.summary === "object") {
@@ -524,7 +542,10 @@ async function fetchHomeWideBundle(homeId) {
 
 function resolveAccessibleHomeIds(context = {}) {
   const accessLevel = String(context.access_level || "").toLowerCase();
-  const scope = String(context.scope || context.current_scope || "child").toLowerCase();
+  const scope = String(
+    context.scope || context.current_scope || "child"
+  ).toLowerCase();
+
   const homeId = Number(context.home_id);
   const allowedHomeIds = toIdArray(
     context.allowed_home_ids || context.allowedHomeIds || []
@@ -534,7 +555,7 @@ function resolveAccessibleHomeIds(context = {}) {
     return allowedHomeIds;
   }
 
-  if (Number.isFinite(homeId)) {
+  if (Number.isFinite(homeId) && homeId > 0) {
     return [homeId];
   }
 
@@ -578,7 +599,9 @@ export async function fetchHomeAssistantBundle(context = {}) {
     return mergeAssistantBundle([]);
   }
 
-  const settledGroups = await Promise.all(homeIds.map((homeId) => fetchHomeWideBundle(homeId)));
+  const settledGroups = await Promise.all(
+    homeIds.map((homeId) => fetchHomeWideBundle(homeId))
+  );
   const merged = mergeAssistantBundle(settledGroups.flat());
 
   merged.scope_meta = {
@@ -598,7 +621,9 @@ export async function fetchQualityAssistantBundle(context = {}) {
     return mergeAssistantBundle([]);
   }
 
-  const settledGroups = await Promise.all(homeIds.map((homeId) => fetchHomeWideBundle(homeId)));
+  const settledGroups = await Promise.all(
+    homeIds.map((homeId) => fetchHomeWideBundle(homeId))
+  );
   const merged = mergeAssistantBundle(settledGroups.flat());
 
   merged.scope_meta = {
@@ -747,7 +772,10 @@ export async function apiSend(url, method = "POST", body = null, options = {}) {
     ...options,
   });
 
-  if (Array.isArray(options.invalidatePrefixes) && options.invalidatePrefixes.length) {
+  if (
+    Array.isArray(options.invalidatePrefixes) &&
+    options.invalidatePrefixes.length
+  ) {
     invalidateCacheByPrefixes(options.invalidatePrefixes);
   } else {
     clearApiCache();
@@ -962,7 +990,9 @@ function resolveAssistantEndpoint(payload = {}) {
   if (scope === "home") return "/assistant/os/home/stream";
   if (scope === "quality") return "/assistant/os/quality/stream";
   if (scope === "ofsted") return "/assistant/os/quality/stream";
-  if (scope === "child" || scope === "young_person") return "/assistant/os/young-people/stream";
+  if (scope === "child" || scope === "young_person") {
+    return "/assistant/os/young-people/stream";
+  }
 
   return "/assistant/os/young-people/stream";
 }
@@ -1005,7 +1035,11 @@ function parseAssistantEventPayload(payloadValue = "") {
 
 export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
   const endpoint = resolveAssistantEndpoint(payload);
-  const { request, cleanup, signal } = buildSseContextFetch(endpoint, payload, options);
+  const { request, cleanup, signal } = buildSseContextFetch(
+    endpoint,
+    payload,
+    options
+  );
 
   let response;
 
@@ -1109,6 +1143,7 @@ export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
       buffer = consumeSseBuffer(buffer, handleEvent);
     }
 
+    buffer += decoder.decode();
     if (buffer.trim()) {
       consumeSseBuffer(`${buffer}\n\n`, handleEvent);
     }
