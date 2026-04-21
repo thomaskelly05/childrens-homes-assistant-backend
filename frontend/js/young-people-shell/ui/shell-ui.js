@@ -109,10 +109,21 @@ function getScopeIdentity() {
 
   if (scope === "quality") {
     return {
-      title: "Quality overview",
-      meta: "Quality assurance, compliance and RI oversight",
+      title: "Quality and RI oversight",
+      meta: "Audit, assurance, drift and governance view for this home",
       seed: {
         first_name: "Q",
+        last_name: "",
+      },
+    };
+  }
+
+  if (scope === "ofsted") {
+    return {
+      title: "Ofsted readiness",
+      meta: "Inspection preparation and evidence testing for this home",
+      seed: {
+        first_name: "O",
         last_name: "",
       },
     };
@@ -126,6 +137,7 @@ function getWorkspaceContextValue() {
 
   if (scope === "home") return "Home workspace";
   if (scope === "quality") return "Quality workspace";
+  if (scope === "ofsted") return "Ofsted workspace";
   return "Child workspace";
 }
 
@@ -134,6 +146,7 @@ function getScopeTitle() {
 
   if (scope === "home") return "Residential care home workspace";
   if (scope === "quality") return "Quality and oversight workspace";
+  if (scope === "ofsted") return "Ofsted inspection-readiness workspace";
   return "Residential child workspace";
 }
 
@@ -148,6 +161,10 @@ function getScopeSubtitle() {
     return "Quality assurance, audits, compliance, trends and regulator-facing oversight.";
   }
 
+  if (scope === "ofsted") {
+    return "Inspection preparation view for this home with evidence strengths, gaps, and likely lines of enquiry.";
+  }
+
   return "A calm, child-centred workspace for recording, reflection, continuity, safeguarding and thoughtful next steps.";
 }
 
@@ -156,13 +173,17 @@ function getWorkspaceEyebrowText() {
 
   if (scope === "home") return "Home workspace";
   if (scope === "quality") return "Quality workspace";
+  if (scope === "ofsted") return "Ofsted workspace";
   return "Child workspace";
 }
 
 function getWorkspaceHomeButtonLabel() {
-  return getCurrentScope() === "child"
-    ? "Children and young people"
-    : "Dashboard";
+  const scope = getCurrentScope();
+  if (scope === "child") return "Children and young people";
+  if (scope === "home") return "Home dashboard";
+  if (scope === "quality") return "Quality dashboard";
+  if (scope === "ofsted") return "Ofsted dashboard";
+  return "Dashboard";
 }
 
 function renderAvatarHtml(person = {}, imageClass, fallbackClass) {
@@ -270,6 +291,7 @@ function updateScopeButtons() {
     { el: els.scopeChildBtn, value: "child" },
     { el: els.scopeHomeBtn, value: "home" },
     { el: els.scopeQualityBtn, value: "quality" },
+    { el: els.scopeOfstedBtn, value: "ofsted" },
   ];
 
   buttons.forEach(({ el, value }) => {
@@ -433,7 +455,19 @@ async function goHomeToSelector() {
 
   if (scope !== "child") {
     const { loadSection } = await import("./nav.js");
-    await loadSection(scope === "home" ? "home-dashboard" : "quality");
+    if (scope === "home") {
+      await loadSection("home-dashboard");
+      return;
+    }
+    if (scope === "quality") {
+      await loadSection("quality");
+      return;
+    }
+    if (scope === "ofsted") {
+      await loadSection("ofsted-dashboard");
+      return;
+    }
+    await loadSection("home-dashboard");
     return;
   }
 
