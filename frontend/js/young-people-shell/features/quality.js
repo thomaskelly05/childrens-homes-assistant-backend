@@ -1041,6 +1041,157 @@ function renderVisibilitySignals(signals = []) {
   `;
 }
 
+function renderInsightStory(story = "") {
+  const text = String(story || "").trim();
+  if (!text) {
+    return `
+      <div class="empty-state">
+        <p>No quality narrative is available yet.</p>
+      </div>
+    `;
+  }
+  return `<p class="record-row-summary">${safeText(text)}</p>`;
+}
+
+function renderTrendRows(trends = []) {
+  if (!trends.length) {
+    return `
+      <div class="empty-state">
+        <p>No trend movement is available yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${trends
+        .slice(0, 4)
+        .map((item) => {
+          const delta = toNumber(item?.delta, 0);
+          const sign = delta > 0 ? "+" : "";
+          const direction = lower(item?.direction || "flat");
+          const assessment = lower(item?.assessment || "stable");
+          const tone =
+            direction === "up" && assessment === "declining"
+              ? "danger"
+              : direction === "down" && assessment === "improving"
+              ? "success"
+              : "muted";
+          return `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(item?.label || "Trend")}</div>
+                <div class="record-row-summary">
+                  ${safeText(item?.assessment || "stable")} • ${safeText(item?.current ?? 0)} now vs
+                  ${safeText(item?.previous ?? 0)} before
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${tone}">${safeText(`${sign}${delta}`)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderPatternRows(patterns = []) {
+  if (!patterns.length) {
+    return `
+      <div class="empty-state">
+        <p>No repeated quality pattern has crossed threshold yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${patterns
+        .slice(0, 5)
+        .map(
+          (item) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(item?.title || "Pattern")}</div>
+                <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
+                <div class="record-row-meta">
+                  <span>${safeText(`${toNumber(item?.frequency, 0)} in ${toNumber(item?.period_days, 0)} days`)}</span>
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${safeText(signalTone({ severity: item?.severity || "medium" }))}">
+                  ${safeText(item?.severity || "medium")}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderDecisionRows(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No decision-support prompts are available yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .slice(0, 4)
+        .map(
+          (item) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(item?.question || "Decision prompt")}</div>
+                <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
+                <div class="record-row-meta">${safeText(item?.suggested_action || "")}</div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${safeText(signalTone({ severity: item?.severity || "medium" }))}">
+                  ${safeText(item?.severity || "medium")}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderMissingRows(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No missing quality follow-through gaps are currently highlighted.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="priority-list">
+      ${items
+        .slice(0, 5)
+        .map(
+          (text) => `
+            <article class="priority-item">
+              <p>${safeText(text)}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderCard(item = {}) {
   const status =
     item.status ||
@@ -1369,6 +1520,11 @@ function renderWorkspace(payload) {
     recentFindings,
     priorityItems,
     visibilitySignals,
+    insightStory,
+    changing,
+    patterns,
+    decisionSupport,
+    missingItems,
     isFallback,
   } = payload;
 
@@ -1430,12 +1586,22 @@ function renderWorkspace(payload) {
         </div>
 
         <aside>
+          ${renderPanelSection("Story right now", renderInsightStory(insightStory))}
+
+          ${renderPanelSection("What is changing", renderTrendRows(changing))}
+
+          ${renderPanelSection("Repeating patterns", renderPatternRows(patterns))}
+
+          ${renderPanelSection("Decision support", renderDecisionRows(decisionSupport))}
+
           ${renderPanelSection(
             "Visibility signals",
             renderVisibilitySignals(visibilitySignals)
           )}
 
           ${renderPanelSection("Needs attention", renderPriorityList(priorityItems))}
+
+          ${renderPanelSection("What is missing", renderMissingRows(missingItems))}
 
           ${renderPanelSection(
             "Open quality audit actions",
@@ -1903,6 +2069,10 @@ export async function loadCurrentView() {
     const recentFindings = buildRecentFindings(data);
     const recentTimeline = buildTimeline(data);
     const priorityItems = buildPriorityItems(data);
+    const changing = toArray(visibility?.what_is_changing || visibility?.trends);
+    const patterns = toArray(visibility?.patterns);
+    const decisionSupport = toArray(visibility?.decision_support);
+    const missingItems = toArray(visibility?.what_is_missing);
 
     els.viewContent.innerHTML = renderWorkspace({
       overdueCompliance,
@@ -1918,6 +2088,11 @@ export async function loadCurrentView() {
       recentFindings,
       priorityItems,
       visibilitySignals: toArray(visibility?.signals).slice(0, 6),
+      insightStory: visibility?.insight_story || "",
+      changing,
+      patterns,
+      decisionSupport,
+      missingItems,
       isFallback: data.isFallback,
     });
 

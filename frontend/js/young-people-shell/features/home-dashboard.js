@@ -993,6 +993,152 @@ function renderVisibilitySignals(signals = []) {
   `;
 }
 
+function renderInsightStory(story = "") {
+  const text = String(story || "").trim();
+  if (!text) {
+    return `
+      <div class="empty-state">
+        <p>No home narrative is available yet.</p>
+      </div>
+    `;
+  }
+  return `<p class="record-row-summary">${safeText(text)}</p>`;
+}
+
+function renderTrendRows(trends = []) {
+  if (!trends.length) {
+    return `
+      <div class="empty-state">
+        <p>No trend movement is available yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${trends
+        .slice(0, 4)
+        .map((item) => {
+          const delta = toNumber(item?.delta, 0);
+          const direction = String(item?.direction || "flat");
+          const sign = delta > 0 ? "+" : "";
+          const tone =
+            direction === "up" && String(item?.assessment || "") === "declining"
+              ? "danger"
+              : direction === "down" && String(item?.assessment || "") === "improving"
+              ? "success"
+              : "muted";
+          return `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${safeText(item?.label || "Trend")}</div>
+                <div class="record-row-summary">
+                  ${safeText(item?.assessment || "stable")} • ${safeText(item?.current ?? 0)} now vs
+                  ${safeText(item?.previous ?? 0)} before
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${tone}">${safeText(`${sign}${delta}`)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderPatternRows(patterns = []) {
+  if (!patterns.length) {
+    return `
+      <div class="empty-state">
+        <p>No repeated home patterns have crossed threshold yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${patterns
+        .slice(0, 4)
+        .map((item) => `
+          <article class="record-row">
+            <div class="record-row-main">
+              <div class="record-row-title">${safeText(item?.title || "Pattern")}</div>
+              <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
+              <div class="record-row-meta">
+                <span>${safeText(`${toNumber(item?.frequency, 0)} in ${toNumber(item?.period_days, 0)} days`)}</span>
+              </div>
+            </div>
+            <div class="record-row-side">
+              <span class="row-pill ${safeText(getStatusTone(item?.severity || "medium"))}">
+                ${safeText(item?.severity || "medium")}
+              </span>
+            </div>
+          </article>
+        `)
+        .join("")}
+    </div>
+  `;
+}
+
+function renderDecisionRows(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No decision-support prompts are available yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .slice(0, 3)
+        .map((item) => `
+          <article class="record-row">
+            <div class="record-row-main">
+              <div class="record-row-title">${safeText(item?.question || "Decision prompt")}</div>
+              <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
+              <div class="record-row-meta">${safeText(item?.suggested_action || "")}</div>
+            </div>
+            <div class="record-row-side">
+              <span class="row-pill ${safeText(getStatusTone(item?.severity || "medium"))}">
+                ${safeText(item?.severity || "medium")}
+              </span>
+            </div>
+          </article>
+        `)
+        .join("")}
+    </div>
+  `;
+}
+
+function renderMissingRows(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No missing follow-through gaps are currently highlighted.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="priority-list">
+      ${items
+        .slice(0, 5)
+        .map(
+          (text) => `
+            <article class="priority-item">
+              <p>${safeText(text)}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderInspectionCards(cards = []) {
   if (!cards.length) {
     return `
@@ -1052,6 +1198,11 @@ function renderHomeDashboardHtml({
   inspectionCards = [],
   inspectionActions = [],
   visibilitySignals = [],
+  insightStory = "",
+  changing = [],
+  patterns = [],
+  decisionSupport = [],
+  missingItems = [],
   isFallback = false,
 }) {
   return `
@@ -1266,11 +1417,56 @@ function renderHomeDashboardHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
+              <h3>Story right now</h3>
+              <p>Current home narrative from trends and patterns.</p>
+            </div>
+
+            ${renderInsightStory(insightStory)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>What is changing</h3>
+              <p>Recent direction of key operational indicators.</p>
+            </div>
+
+            ${renderTrendRows(changing)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Repeating patterns</h3>
+              <p>Patterns detected from home records and follow-through.</p>
+            </div>
+
+            ${renderPatternRows(patterns)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Decision support</h3>
+              <p>Evidence-backed prompts for management action.</p>
+            </div>
+
+            ${renderDecisionRows(decisionSupport)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
               <h3>Needs attention</h3>
               <p>The most urgent management issues across the home.</p>
             </div>
 
             ${renderPriorityList(priorityItems)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>What is missing</h3>
+              <p>Follow-through or evidence gaps that need closing.</p>
+            </div>
+
+            ${renderMissingRows(missingItems)}
           </section>
 
           ${renderMiniChart("Management activity", miniMetrics, "value")}
@@ -1894,6 +2090,11 @@ export async function loadHomeDashboard() {
       inspectionCards,
       inspectionActions,
       visibilitySignals: toArray(visibility?.signals).slice(0, 6),
+      insightStory: visibility?.insight_story || "",
+      changing: toArray(visibility?.what_is_changing || visibility?.trends).slice(0, 4),
+      patterns: toArray(visibility?.patterns).slice(0, 4),
+      decisionSupport: toArray(visibility?.decision_support).slice(0, 3),
+      missingItems: toArray(visibility?.what_is_missing).slice(0, 5),
       isFallback,
     });
 

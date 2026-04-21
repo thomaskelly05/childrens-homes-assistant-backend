@@ -251,6 +251,153 @@ function renderVisibilitySignals(signals = []) {
   `;
 }
 
+function renderInsightStory(story = "") {
+  const text = String(story || "").trim();
+  if (!text) {
+    return `
+      <div class="empty-state">
+        <p>No insight story is available for this child yet.</p>
+      </div>
+    `;
+  }
+  return `
+    <article class="insight-story">
+      <p>${toText(text)}</p>
+    </article>
+  `;
+}
+
+function renderTrendCards(trends = []) {
+  if (!trends.length) {
+    return `
+      <div class="empty-state">
+        <p>No trend movement is available yet.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="insight-trend-grid">
+      ${trends
+        .slice(0, 4)
+        .map((trend) => {
+          const assessment = String(trend.assessment || "stable").toLowerCase();
+          const tone =
+            assessment === "declining"
+              ? "danger"
+              : assessment === "improving"
+              ? "success"
+              : "muted";
+          const delta = Number(trend.delta || 0);
+          const arrow = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
+          return `
+            <article class="insight-card">
+              <div class="insight-card-head">
+                <strong>${toText(trend.label || "Trend")}</strong>
+                <span class="row-pill ${toText(tone)}">${toText(assessment)}</span>
+              </div>
+              <div class="insight-card-meta">
+                <span>${toText(`Now ${trend.current ?? 0}`)}</span>
+                <span>${toText(`Prev ${trend.previous ?? 0}`)}</span>
+              </div>
+              <div class="insight-card-summary">
+                ${toText(`${arrow} ${Math.abs(delta)} (${trend.pct_change ?? 0}%)`)}
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderPatternCards(patterns = []) {
+  if (!patterns.length) {
+    return `
+      <div class="empty-state">
+        <p>No repeating pattern has crossed threshold yet.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="record-list">
+      ${patterns
+        .slice(0, 4)
+        .map(
+          (pattern) => `
+            <article class="record-row">
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(pattern.title || "Pattern")}</div>
+                <div class="record-row-summary">${toText(pattern.evidence || "")}</div>
+                <div class="record-row-meta">
+                  <span>${toText(
+                    `${pattern.frequency ?? 0} in ${pattern.period_days ?? 0} days`
+                  )}</span>
+                </div>
+              </div>
+              <div class="record-row-side">
+                <span class="row-pill ${toText(getSignalTone(pattern))}">
+                  ${toText(pattern.severity || "medium")}
+                </span>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderDecisionSupport(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No decision-support prompts are available yet.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="priority-list">
+      ${items
+        .slice(0, 3)
+        .map(
+          (item) => `
+            <article class="priority-item">
+              <strong>${toText(item.question || "Decision support")}</strong>
+              <p>${toText(item.evidence || "")}</p>
+              <p>${toText(item.interpretation || "")}</p>
+              <p><strong>Suggested:</strong> ${toText(item.suggested_action || "")}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderMissingItems(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No missing follow-through gaps are currently flagged.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="priority-list">
+      ${items
+        .slice(0, 4)
+        .map(
+          (item) => `
+            <article class="priority-item">
+              <p>${toText(item)}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 /* -------------------------------- UI bits -------------------------------- */
 
 function renderEmpty(title, message) {
@@ -318,6 +465,11 @@ function renderWorkspace({
   urgent,
   searchActive = false,
   visibilitySignals = [],
+  insightStory = "",
+  changing = [],
+  patterns = [],
+  decisionSupport = [],
+  missingItems = [],
 }) {
   return `
     <section class="overview-panel">
@@ -370,9 +522,30 @@ function renderWorkspace({
             </div>
             ${renderRows(recent)}
           </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>What is changing</h3>
+            </div>
+            ${renderTrendCards(changing)}
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head">
+              <h3>Patterns</h3>
+            </div>
+            ${renderPatternCards(patterns)}
+          </section>
         </div>
 
         <aside class="overview-side">
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Story right now</h3>
+            </div>
+            ${renderInsightStory(insightStory)}
+          </section>
+
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Visibility alerts</h3>
@@ -382,9 +555,23 @@ function renderWorkspace({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
+              <h3>Decision support</h3>
+            </div>
+            ${renderDecisionSupport(decisionSupport)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
               <h3>Needs attention</h3>
             </div>
             ${renderRows(urgent)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>What is missing</h3>
+            </div>
+            ${renderMissingItems(missingItems)}
           </section>
 
           <section class="overview-side-card">
@@ -645,6 +832,10 @@ export async function loadCurrentView(options = {}) {
     const visibilitySignals = makeArray(visibility?.signals || []);
     const visibilityUrgent = makeArray(visibility?.queues?.urgent || []);
     const visibilityPressure = Number(visibility?.pressures?.total || 0);
+    const changing = makeArray(visibility?.what_is_changing || visibility?.trends || []);
+    const patterns = makeArray(visibility?.patterns || []);
+    const decisionSupport = makeArray(visibility?.decision_support || []);
+    const missingItems = makeArray(visibility?.what_is_missing || []);
 
     els.viewContent.innerHTML = renderWorkspace({
       today,
@@ -653,6 +844,11 @@ export async function loadCurrentView(options = {}) {
       urgent,
       searchActive,
       visibilitySignals,
+      insightStory: visibility?.insight_story || "",
+      changing,
+      patterns,
+      decisionSupport,
+      missingItems,
     });
 
     updateWorkspaceSummaryStrip({
