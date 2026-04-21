@@ -107,14 +107,14 @@ const MOBILE_BOTTOM_BY_SCOPE = {
     "actions",
     "quality",
     "compliance",
-    "inspection-readiness"
+    "inspection-readiness",
   ],
   ofsted: [
     "ofsted-dashboard",
     "actions",
     "sccif-evidence",
     "judgement-builder",
-    "inspection-readiness"
+    "inspection-readiness",
   ],
 };
 
@@ -132,9 +132,11 @@ let scopeSwitchBound = false;
 let workspaceMenusBound = false;
 let overlayDismissBound = false;
 let workspaceMenuLinksBound = false;
+let assistantControllerBound = false;
 
 let currentLoadToken = 0;
 let currentLoadPromise = null;
+let currentLoadKey = "";
 
 function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
@@ -216,13 +218,7 @@ function updateAppShellDataset() {
   app.dataset.scope = scope;
   app.dataset.section = section;
   app.dataset.assistantScopeType =
-    scope === "child"
-      ? "child"
-      : scope === "home"
-        ? "home"
-        : scope === "ofsted"
-          ? "quality"
-          : "quality";
+    scope === "child" ? "child" : scope === "home" ? "home" : "quality";
 
   app.dataset.youngPersonId = state.youngPersonId || "";
   app.dataset.homeId =
@@ -302,7 +298,7 @@ async function runPlaceholderLoader(options = {}) {
   });
 }
 
-const SECTION_LOADERS = {
+const CHILD_SECTION_LOADERS = Object.freeze({
   workspace: loadWorkspace,
   overview: loadOverview,
   admission: loadAdmission,
@@ -322,15 +318,17 @@ const SECTION_LOADERS = {
   readiness: loadReadiness,
   reviews: loadReviews,
   reports: loadReports,
-  tasks: loadTasks,
-  actions: loadActions,
   "leaving-care": loadLeavingCare,
   documents: loadDocuments,
   communication: loadCommunication,
   manager: loadManager,
+  actions: loadActions,
+});
 
+const HOME_SECTION_LOADERS = Object.freeze({
   "home-dashboard": loadHomeDashboard,
   operations: loadOperations,
+  calendar: loadCalendar,
   team: loadTeam,
   rota: loadRota,
   "staff-profile": loadStaffProfile,
@@ -341,19 +339,73 @@ const SECTION_LOADERS = {
   "health-safety": loadHealthSafety,
   maintenance: runPlaceholderLoader,
   notifications: loadNotifications,
+  manager: loadManager,
   quality: loadQualityDashboard,
+  reports: loadReports,
   "ofsted-readiness": loadReadiness,
   policies: runPlaceholderLoader,
+  documents: loadDocuments,
+  communication: loadCommunication,
+  actions: loadActions,
+});
 
+const QUALITY_SECTION_LOADERS = Object.freeze({
   "provider-overview": loadProviderOverview,
+  quality: loadQualityDashboard,
   "quality-audits": loadQualityAudits,
+  compliance: loadCompliance,
   reg44: loadReg44,
   reg45: loadReg45,
   "inspection-readiness": loadReadiness,
+  "staff-profile": loadStaffProfile,
+  onboarding: loadOnboarding,
+  supervision: loadSupervision,
+  "training-centre": loadTrainingCentre,
+  team: loadTeam,
+  rota: loadRota,
+  notifications: loadNotifications,
+  reports: loadReports,
+  policies: runPlaceholderLoader,
+  documents: loadDocuments,
+  communication: loadCommunication,
+  actions: loadActions,
+});
+
+const OFSTED_SECTION_LOADERS = Object.freeze({
   "ofsted-dashboard": loadOfstedDashboard,
   "sccif-evidence": loadSccifEvidence,
   "judgement-builder": loadJudgementBuilder,
-};
+  "inspection-readiness": loadReadiness,
+  "quality-audits": loadQualityAudits,
+  reg44: loadReg44,
+  reg45: loadReg45,
+  compliance: loadCompliance,
+  "health-safety": loadHealthSafety,
+  "staff-profile": loadStaffProfile,
+  onboarding: loadOnboarding,
+  supervision: loadSupervision,
+  "training-centre": loadTrainingCentre,
+  team: loadTeam,
+  rota: loadRota,
+  notifications: loadNotifications,
+  reports: loadReports,
+  documents: loadDocuments,
+  policies: runPlaceholderLoader,
+  communication: loadCommunication,
+  actions: loadActions,
+});
+
+function getLoaderMapForScope(scope = getCurrentScope()) {
+  if (scope === "home") return HOME_SECTION_LOADERS;
+  if (scope === "quality") return QUALITY_SECTION_LOADERS;
+  if (scope === "ofsted") return OFSTED_SECTION_LOADERS;
+  return CHILD_SECTION_LOADERS;
+}
+
+function getLoaderForSection(scope, section) {
+  const scopeLoaders = getLoaderMapForScope(scope);
+  return scopeLoaders[section] || null;
+}
 
 function renderNavItem(item, { compact = false } = {}) {
   const isActive = item.id === getCurrentSection();
@@ -846,11 +898,8 @@ export async function loadSection(section, options = {}) {
     : getDefaultSectionForScope(scope);
 
   const force = Boolean(options.force);
+  const loadKey = `${scope}:${safeSection}`;
   const loadToken = ++currentLoadToken;
-
-  if (!force && currentLoadPromise && safeSection === getCurrentSection()) {
-    return currentLoadPromise;
-  }
 
   if (scope === "child" && !requireChildContext()) {
     showError("Select a child or young person first.");
@@ -860,7 +909,18 @@ export async function loadSection(section, options = {}) {
     return;
   }
 
-  const loader = SECTION_LOADERS[safeSection] || runPlaceholderLoader;
+  if (!force && currentLoadPromise && currentLoadKey === loadKey) {
+    return currentLoadPromise;
+  }
+
+  const loader =
+    getLoaderForSection(scope, safeSection) ||
+    (options.allowPlaceholder ? runPlaceholderLoader : null);
+
+  if (typeof loader !== "function") {
+    showError(`No loader is configured for "${safeSection}" in ${scope} scope.`);
+    return;
+  }
 
   updateSectionState(safeSection);
   showWorkspaceScreen();
@@ -868,6 +928,8 @@ export async function loadSection(section, options = {}) {
   clearStatus();
   resetWorkspaceSummaryStrip();
   closeAllWorkspaceMenus();
+
+  currentLoadKey = loadKey;
 
   currentLoadPromise = (async () => {
     try {
@@ -895,6 +957,7 @@ export async function loadSection(section, options = {}) {
     } finally {
       if (loadToken === currentLoadToken) {
         currentLoadPromise = null;
+        currentLoadKey = "";
       }
     }
   })();
@@ -1063,7 +1126,7 @@ function bindSearchControls() {
     }
 
     try {
-      const currentLoader = SECTION_LOADERS[getCurrentSection()];
+      const currentLoader = getLoaderForSection(getCurrentScope(), getCurrentSection());
 
       if (typeof currentLoader === "function") {
         await currentLoader({
@@ -1097,7 +1160,7 @@ function parseRecordPayload(rawValue) {
       attempts.push(decoded);
     }
   } catch {
-    // Keep raw-only attempts.
+    // noop
   }
 
   for (const attempt of attempts) {
@@ -1105,7 +1168,7 @@ function parseRecordPayload(rawValue) {
       const parsed = JSON.parse(attempt);
       if (parsed && typeof parsed === "object") return parsed;
     } catch {
-      // Try next candidate.
+      // noop
     }
   }
 
@@ -1307,11 +1370,17 @@ function bindQuickActionRouter() {
   });
 }
 
+function ensureAssistantControllerBound() {
+  if (assistantControllerBound) return;
+  assistantControllerBound = true;
+  bindAssistantController();
+}
+
 export function bindNavEvents() {
   if (shellEventsBound) return;
   shellEventsBound = true;
 
-  bindAssistantController();
+  ensureAssistantControllerBound();
   bindSelectorControls();
   bindComposerControls();
   bindRefreshControls();
@@ -1333,6 +1402,8 @@ export function rerenderNavigationForScope() {
 }
 
 export async function initialiseShellNavigation() {
+  ensureAssistantControllerBound();
+
   if (!state.currentSection) {
     setCurrentSection(getDefaultSectionForScope());
   }
@@ -1344,7 +1415,6 @@ export async function initialiseShellNavigation() {
   state.currentView = state.currentSection;
   ensureValidCurrentSection();
 
-  bindAssistantController();
   renderNavigation();
   bindNavButtons();
   bindNavEvents();
