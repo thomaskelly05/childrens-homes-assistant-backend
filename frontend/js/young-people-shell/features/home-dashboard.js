@@ -1114,6 +1114,38 @@ function renderDecisionRows(items = []) {
   `;
 }
 
+function renderManagementAttentionRows(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No management attention hotspots are currently flagged.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .slice(0, 4)
+        .map((item) => `
+          <article class="record-row">
+            <div class="record-row-main">
+              <div class="record-row-title">${safeText(item?.title || "Management attention")}</div>
+              <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
+              <div class="record-row-meta">${safeText(item?.suggested_action || "")}</div>
+            </div>
+            <div class="record-row-side">
+              <span class="row-pill ${safeText(getStatusTone(item?.level || "medium"))}">
+                ${safeText(`${toNumber(item?.score, 0)} score`)}
+              </span>
+            </div>
+          </article>
+        `)
+        .join("")}
+    </div>
+  `;
+}
+
 function renderMissingRows(items = []) {
   if (!items.length) {
     return `
@@ -1202,6 +1234,7 @@ function renderHomeDashboardHtml({
   changing = [],
   patterns = [],
   decisionSupport = [],
+  managementAttention = [],
   missingItems = [],
   isFallback = false,
 }) {
@@ -1449,6 +1482,15 @@ function renderHomeDashboardHtml({
             </div>
 
             ${renderDecisionRows(decisionSupport)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Management attention map</h3>
+              <p>Scored hotspots showing where management grip is most needed now.</p>
+            </div>
+
+            ${renderManagementAttentionRows(managementAttention)}
           </section>
 
           <section class="overview-side-card">
@@ -2094,6 +2136,7 @@ export async function loadHomeDashboard() {
       changing: toArray(visibility?.what_is_changing || visibility?.trends).slice(0, 4),
       patterns: toArray(visibility?.patterns).slice(0, 4),
       decisionSupport: toArray(visibility?.decision_support).slice(0, 3),
+      managementAttention: toArray(visibility?.home_management_attention).slice(0, 4),
       missingItems: toArray(visibility?.what_is_missing).slice(0, 5),
       isFallback,
     });

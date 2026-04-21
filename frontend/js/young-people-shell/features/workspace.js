@@ -374,6 +374,33 @@ function renderDecisionSupport(items = []) {
   `;
 }
 
+function renderChildStoryBlocks(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No child story blocks are available yet.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="priority-list">
+      ${items
+        .slice(0, 3)
+        .map(
+          (item) => `
+            <article class="priority-item">
+              <strong>${toText(item.title || "Child story")}</strong>
+              <p>${toText(item.evidence || "")}</p>
+              <p>${toText(item.interpretation || "")}</p>
+              <p><strong>Suggested:</strong> ${toText(item.suggested_action || "")}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderMissingItems(items = []) {
   if (!items.length) {
     return `
@@ -469,6 +496,7 @@ function renderWorkspace({
   changing = [],
   patterns = [],
   decisionSupport = [],
+  childStoryBlocks = [],
   missingItems = [],
 }) {
   return `
@@ -558,6 +586,13 @@ function renderWorkspace({
               <h3>Decision support</h3>
             </div>
             ${renderDecisionSupport(decisionSupport)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Child story blocks</h3>
+            </div>
+            ${renderChildStoryBlocks(childStoryBlocks)}
           </section>
 
           <section class="overview-side-card">
@@ -835,6 +870,7 @@ export async function loadCurrentView(options = {}) {
     const changing = makeArray(visibility?.what_is_changing || visibility?.trends || []);
     const patterns = makeArray(visibility?.patterns || []);
     const decisionSupport = makeArray(visibility?.decision_support || []);
+    const childStoryBlocks = makeArray(visibility?.child_story_blocks || []);
     const missingItems = makeArray(visibility?.what_is_missing || []);
 
     els.viewContent.innerHTML = renderWorkspace({
@@ -848,6 +884,7 @@ export async function loadCurrentView(options = {}) {
       changing,
       patterns,
       decisionSupport,
+      childStoryBlocks,
       missingItems,
     });
 

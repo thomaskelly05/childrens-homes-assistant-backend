@@ -835,6 +835,38 @@ function renderDecisionRows(items = []) {
   `;
 }
 
+function renderJudgementSupportRows(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No generated judgement support is available yet.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .slice(0, 3)
+        .map((item) => `
+          <article class="record-row">
+            <div class="record-row-main">
+              <div class="record-row-title">${safeText(item?.title || "Judgement support")}</div>
+              <div class="record-row-summary">${safeText(item?.evidence || "")}</div>
+              <div class="record-row-meta">${safeText(item?.suggested_action || "")}</div>
+            </div>
+            <div class="record-row-side">
+              <span class="row-pill ${safeText(getStatusTone(item?.severity || "medium"))}">
+                ${safeText(item?.severity || "medium")}
+              </span>
+            </div>
+          </article>
+        `)
+        .join("")}
+    </div>
+  `;
+}
+
 function renderMissingRows(items = []) {
   if (!items.length) {
     return `
@@ -877,6 +909,7 @@ function renderOfstedDashboardHtml({
   changing = [],
   patterns = [],
   decisionSupport = [],
+  judgementSupport = [],
   missingItems = [],
   isFallback = false,
 }) {
@@ -1032,6 +1065,15 @@ function renderOfstedDashboardHtml({
             </div>
 
             ${renderDecisionRows(decisionSupport)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
+              <h3>Generated judgement support</h3>
+              <p>Auto-generated, evidence-linked support points for likely judgement lines.</p>
+            </div>
+
+            ${renderJudgementSupportRows(judgementSupport)}
           </section>
 
           <section class="overview-side-card">
@@ -1561,6 +1603,7 @@ export async function loadOfstedDashboard() {
     );
     const patterns = toArray(visibility?.patterns).slice(0, 6);
     const decisionSupport = toArray(visibility?.decision_support).slice(0, 4);
+    const judgementSupport = toArray(visibility?.ofsted_judgement_support).slice(0, 3);
     const missingItems = toArray(visibility?.what_is_missing).slice(0, 6);
 
     const title =
@@ -1587,6 +1630,7 @@ export async function loadOfstedDashboard() {
       changing,
       patterns,
       decisionSupport,
+      judgementSupport,
       missingItems,
       isFallback,
     });

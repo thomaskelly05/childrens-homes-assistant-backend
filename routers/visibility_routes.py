@@ -259,6 +259,42 @@ def _count_rows_in_windows(
     return current_count, previous_count
 
 
+def _count_homes_over_incident_threshold(
+    incidents: list[dict[str, Any]],
+    *,
+    threshold: int = 4,
+    current_days: int = 30,
+    previous_days: int = 30,
+) -> tuple[int, int]:
+    now = datetime.now(timezone.utc)
+    current_start = now - timedelta(days=current_days)
+    previous_start = current_start - timedelta(days=previous_days)
+
+    current_by_home: defaultdict[int, int] = defaultdict(int)
+    previous_by_home: defaultdict[int, int] = defaultdict(int)
+    for row in incidents:
+        home_id = _safe_int(row.get("home_id"))
+        if home_id is None:
+            continue
+        row_dt = _parse_datetime(
+            row.get("incident_datetime")
+            or row.get("event_datetime")
+            or row.get("created_at")
+            or row.get("updated_at")
+        )
+        if not row_dt:
+            continue
+        if row_dt >= current_start:
+            current_by_home[home_id] += 1
+            continue
+        if row_dt >= previous_start:
+            previous_by_home[home_id] += 1
+
+    current = sum(1 for count in current_by_home.values() if count >= threshold)
+    previous = sum(1 for count in previous_by_home.values() if count >= threshold)
+    return current, previous
+
+
 def _completion_rate(rows: list[dict[str, Any]]) -> float:
     if not rows:
         return 0.0
@@ -303,6 +339,71 @@ def _decision_support_entry(
     return {
         "code": code,
         "question": question,
+        "evidence": evidence,
+        "interpretation": interpretation,
+        "suggested_action": suggested_action,
+        "severity": _normalise_token(severity) or "medium",
+    }
+
+
+def _attention_entry(
+    *,
+    code: str,
+    title: str,
+    score: int,
+    evidence: str,
+    suggested_action: str,
+) -> dict[str, Any]:
+    level = "low"
+    if score >= 8:
+        level = "high"
+    elif score >= 4:
+        level = "medium"
+    return {
+        "code": code,
+        "title": title,
+        "score": max(int(score), 0),
+        "level": level,
+        "evidence": evidence,
+        "suggested_action": suggested_action,
+    }
+
+
+def _drift_indicator_entry(
+    *,
+    code: str,
+    label: str,
+    value: float,
+    healthy_threshold: float,
+    warning_threshold: float,
+) -> dict[str, Any]:
+    status = "healthy"
+    if value < warning_threshold:
+        status = "critical"
+    elif value < healthy_threshold:
+        status = "warning"
+    return {
+        "code": code,
+        "label": label,
+        "value": round(float(value), 1),
+        "status": status,
+        "healthy_threshold": healthy_threshold,
+        "warning_threshold": warning_threshold,
+    }
+
+
+def _insight_block_entry(
+    *,
+    code: str,
+    title: str,
+    evidence: str,
+    interpretation: str,
+    suggested_action: str,
+    severity: str = "medium",
+) -> dict[str, Any]:
+    return {
+        "code": code,
+        "title": title,
         "evidence": evidence,
         "interpretation": interpretation,
         "suggested_action": suggested_action,
@@ -398,6 +499,13 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
 
     incidents = _safe_items(recent_records.get("incidents")) + _safe_items(recent_records.get("missing_episodes"))
     safeguarding_records = _safe_items(recent_records.get("safeguarding_records"))
+    education_records = _safe_items(recent_records.get("education_records"))
+    health_records = _safe_items(recent_records.get("health_records"))
+    family_contacts = _safe_items(recent_records.get("family_contact_records"))
+    keywork_sessions = _safe_items(recent_records.get("keywork_sessions"))
+    achievements = _safe_items(recent_records.get("achievements"))
+    wellbeing_checks = _safe_items(recent_records.get("wellbeing_checks"))
+    therapy_notes = _safe_items(recent_records.get("therapy_session_notes"))
     active_alerts = _safe_items(identity.get("active_alerts"))
 
     overdue_actions = [
@@ -636,7 +744,6 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
 
     queue_split = _split_queue(queue)
     sorted_queue = _sort_queue(queue)
-
     incident_current, incident_previous = _count_rows_in_windows(
         recent_incidents,
         date_resolver=lambda row: _parse_datetime(
@@ -661,6 +768,25 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
     safeguarding_current, safeguarding_previous = _count_rows_in_windows(
         safeguarding_records,
         date_resolver=lambda row: _parse_datetime(row.get("updated_at") or row.get("created_at")),
+    )
+    achievement_current, achievement_previous = _count_rows_in_windows(
+        achievements,
+        date_resolver=lambda row: _parse_datetime(row.get("created_at") or row.get("recorded_at") or row.get("updated_at")),
+        current_days=30,
+        previous_days=30,
+    )
+    engagement_rows = keywork_sessions + family_contacts + wellbeing_checks + therapy_notes
+    engagement_current, engagement_previous = _count_rows_in_windows(
+        engagement_rows,
+        date_resolver=lambda row: _parse_datetime(
+            row.get("session_datetime")
+            or row.get("contact_datetime")
+            or row.get("recorded_at")
+            or row.get("created_at")
+            or row.get("updated_at")
+        ),
+        current_days=30,
+        previous_days=30,
     )
     trends = [
         _trend_metric(
@@ -690,6 +816,20 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
             current=safeguarding_current,
             previous=safeguarding_previous,
             better_when="down",
+        ),
+        _trend_metric(
+            code="child_achievement_progress",
+            label="Achievements captured (30-day)",
+            current=achievement_current,
+            previous=achievement_previous,
+            better_when="up",
+        ),
+        _trend_metric(
+            code="child_engagement_touchpoints",
+            label="Engagement touchpoints (30-day)",
+            current=engagement_current,
+            previous=engagement_previous,
+            better_when="up",
         ),
     ]
 
@@ -787,6 +927,64 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         ),
     ]
     changing = _top_changing_trends(trends, limit=3)
+    child_story_blocks = [
+        _insight_block_entry(
+            code="child_risk_story",
+            title="Risk and safety picture",
+            evidence=(
+                f"{len(open_safeguarding) + len(safeguarding_alerts)} open safeguarding concerns, "
+                f"{incident_current} incidents in last 14 days."
+            ),
+            interpretation=(
+                "Risk pressure is elevated and needs active safeguarding oversight."
+                if (open_safeguarding or safeguarding_alerts or incident_current >= 3)
+                else "No acute safeguarding surge is indicated in this snapshot."
+            ),
+            suggested_action=(
+                "Review chronology with manager and confirm immediate follow-through actions."
+                if (open_safeguarding or safeguarding_alerts or incident_current >= 3)
+                else "Continue planned safeguarding reviews."
+            ),
+            severity="high" if (open_safeguarding or safeguarding_alerts) else "medium",
+        ),
+        _insight_block_entry(
+            code="child_progress_story",
+            title="Progress and protective factors",
+            evidence=(
+                f"{achievement_current} achievements this month, "
+                f"{len(education_records)} education records, {len(health_records)} health records."
+            ),
+            interpretation=(
+                "Progress signals are strengthening."
+                if achievement_current >= achievement_previous
+                else "Progress signals look weaker than the previous period."
+            ),
+            suggested_action=(
+                "Capture protective factors and reinforce what is working in plans and keywork."
+                if achievement_current >= achievement_previous
+                else "Review support planning focus and increase targeted progress work."
+            ),
+            severity="low" if achievement_current >= achievement_previous else "medium",
+        ),
+        _insight_block_entry(
+            code="child_engagement_story",
+            title="Child voice and engagement",
+            evidence=(
+                f"{engagement_current} keywork/family/wellbeing/therapy touchpoints in last 30 days."
+            ),
+            interpretation=(
+                "Engagement touchpoints are increasing."
+                if engagement_current >= engagement_previous
+                else "Engagement touchpoints have reduced and may hide emerging needs."
+            ),
+            suggested_action=(
+                "Ensure child voice is reflected in next actions and reviews."
+                if engagement_current >= engagement_previous
+                else "Increase direct-work cadence and capture child voice explicitly."
+            ),
+            severity="low" if engagement_current >= engagement_previous else "medium",
+        ),
+    ]
     what_is_missing = []
     if missing_follow_up_after_incident:
         what_is_missing.append("Incident follow-up is missing on recent events.")
@@ -817,6 +1015,7 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         "trends": trends,
         "patterns": patterns[:6],
         "decision_support": decision_support[:6],
+        "child_story_blocks": child_story_blocks,
         "what_is_changing": changing,
         "what_needs_attention": queue_split.get("urgent", [])[:5],
         "what_is_missing": what_is_missing,
@@ -1257,6 +1456,45 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
         ),
     ]
     changing = _top_changing_trends(trends, limit=3)
+    home_management_attention = [
+        _attention_entry(
+            code="home_action_governance",
+            title="Action governance pressure",
+            score=len(overdue_home_actions) + len(unowned_actions) + len(stuck_in_progress),
+            evidence=(
+                f"{len(overdue_home_actions)} overdue, {len(unowned_actions)} unowned, "
+                f"{len(stuck_in_progress)} stuck actions."
+            ),
+            suggested_action="Run action governance huddle with owners, due dates, and closure evidence checks.",
+        ),
+        _attention_entry(
+            code="home_safety_pressure",
+            title="Safety and safeguarding pressure",
+            score=len(safeguarding_incidents) + len(missing_follow_up_after_incidents),
+            evidence=(
+                f"{len(safeguarding_incidents)} safeguarding incidents and "
+                f"{len(missing_follow_up_after_incidents)} incidents missing follow-up."
+            ),
+            suggested_action="Review incident chronology, confirm risk controls, and verify follow-up completion.",
+        ),
+        _attention_entry(
+            code="home_staffing_pressure",
+            title="Staffing and continuity pressure",
+            score=staffing_shortfalls,
+            evidence=f"{staffing_shortfalls} active vacancy/absence indicators.",
+            suggested_action="Confirm rota resilience and contingency cover for high-risk periods.",
+        ),
+        _attention_entry(
+            code="home_inspection_pressure",
+            title="Inspection-facing pressure",
+            score=len(open_inspection_risks) + len(overdue_compliance),
+            evidence=(
+                f"{len(open_inspection_risks)} open inspection risks and "
+                f"{len(overdue_compliance)} overdue compliance items."
+            ),
+            suggested_action="Track high-priority readiness actions and evidence completion in management oversight.",
+        ),
+    ]
     what_is_missing = []
     if unowned_actions:
         what_is_missing.append("Some home actions do not have a named owner.")
@@ -1290,6 +1528,7 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
         "trends": trends,
         "patterns": patterns[:7],
         "decision_support": decision_support[:6],
+        "home_management_attention": home_management_attention,
         "what_is_changing": changing,
         "what_needs_attention": queue_split.get("urgent", [])[:6],
         "what_is_missing": what_is_missing,
@@ -1486,6 +1725,12 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
 
     queue_split = _split_queue(queue)
     sorted_queue = _sort_queue(queue)
+    quality_home_pressure_current, quality_home_pressure_previous = _count_homes_over_incident_threshold(
+        incidents,
+        threshold=4,
+        current_days=30,
+        previous_days=30,
+    )
     quality_issue_current, quality_issue_previous = _count_rows_in_windows(
         inspection_reasons,
         date_resolver=lambda row: _parse_datetime(row.get("updated_at") or row.get("created_at")),
@@ -1516,8 +1761,8 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
         _trend_metric(
             code="quality_home_pressure",
             label="Homes with incident pressure",
-            current=len(homes_needing_escalation),
-            previous=max(len(homes_needing_escalation) - 1, 0),
+            current=quality_home_pressure_current,
+            previous=quality_home_pressure_previous,
             better_when="down",
         ),
         _trend_metric(
@@ -1621,6 +1866,60 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
         ),
     ]
     changing = _top_changing_trends(trends, limit=3)
+    quality_drift_indicators = [
+        _drift_indicator_entry(
+            code="quality_follow_through_completion_rate",
+            label="Action follow-through completion",
+            value=_completion_rate(inspection_actions),
+            healthy_threshold=80.0,
+            warning_threshold=60.0,
+        ),
+        _drift_indicator_entry(
+            code="quality_compliance_completion_rate",
+            label="Compliance closure rate",
+            value=_completion_rate(compliance_items),
+            healthy_threshold=85.0,
+            warning_threshold=65.0,
+        ),
+        _drift_indicator_entry(
+            code="quality_document_review_health",
+            label="Document review health",
+            value=(0.0 if not documents else round(((len(documents) - len(weak_records)) / len(documents)) * 100, 1)),
+            healthy_threshold=85.0,
+            warning_threshold=70.0,
+        ),
+    ]
+    quality_insight_blocks = [
+        _insight_block_entry(
+            code="quality_ri_oversight_story",
+            title="RI and provider oversight picture",
+            evidence=(
+                f"{len(overdue_audit_actions)} overdue audit actions, "
+                f"{len(recurring_issues)} recurring themes, {len(homes_needing_escalation)} homes in pressure."
+            ),
+            interpretation=(
+                "Provider oversight pressure is elevated and may require immediate escalation."
+                if (overdue_audit_actions or recurring_issues or homes_needing_escalation)
+                else "RI/provider oversight signals are currently stable."
+            ),
+            suggested_action="Prioritise RI/provider oversight review on overdue actions and recurring themes.",
+            severity="high" if (overdue_audit_actions or recurring_issues or homes_needing_escalation) else "low",
+        ),
+        _insight_block_entry(
+            code="quality_audit_drift_story",
+            title="Audit and quality drift picture",
+            evidence=(
+                f"{len(overdue_compliance)} overdue compliance items, {len(weak_records)} weak record indicators."
+            ),
+            interpretation=(
+                "Compliance and recording drift are increasing assurance risk."
+                if (overdue_compliance or weak_records)
+                else "No major compliance or recording drift is signalled."
+            ),
+            suggested_action="Assign accountable owners for drift indicators and track closure evidence.",
+            severity="high" if (overdue_compliance or weak_records) else "medium",
+        ),
+    ]
     what_is_missing = []
     if overdue_audit_actions:
         what_is_missing.append("Some audit actions are overdue without closure evidence.")
@@ -1653,6 +1952,8 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
         "trends": trends,
         "patterns": patterns[:8],
         "decision_support": decision_support[:6],
+        "quality_drift_indicators": quality_drift_indicators,
+        "quality_insight_blocks": quality_insight_blocks,
         "what_is_changing": changing,
         "what_needs_attention": queue_split.get("urgent", [])[:6],
         "what_is_missing": what_is_missing,
@@ -1947,6 +2248,53 @@ def _build_ofsted_snapshot(quality_ctx: dict[str, Any]) -> dict[str, Any]:
         ),
     ]
     changing = _top_changing_trends(trends, limit=3)
+    ofsted_judgement_support = [
+        _insight_block_entry(
+            code="ofsted_judgement_experiences",
+            title="Experiences and progress judgement support",
+            evidence=(
+                f"{len(weak_judgement_areas)} weak judgement signals and "
+                f"{len(weak_or_missing_records)} weak/missing records."
+            ),
+            interpretation=(
+                "Evidence consistency for experiences/progress may be vulnerable."
+                if (weak_judgement_areas or weak_or_missing_records)
+                else "Current evidence base appears stable for experiences/progress."
+            ),
+            suggested_action="Strengthen child progress evidence mapping and closure commentary by judgement area.",
+            severity="high" if (weak_judgement_areas or weak_or_missing_records) else "low",
+        ),
+        _insight_block_entry(
+            code="ofsted_judgement_protection",
+            title="Help and protection judgement support",
+            evidence=(
+                f"{len(likely_inspector_concerns)} likely inspector concern lines and "
+                f"{len(evidence_gaps)} evidence gaps."
+            ),
+            interpretation=(
+                "Protection narrative may be challenged without tighter incident/safeguarding closure evidence."
+                if (likely_inspector_concerns or evidence_gaps)
+                else "Protection evidence appears more secure at this point."
+            ),
+            suggested_action="Link lines of enquiry to safeguarding chronology and explicit management actions.",
+            severity="high" if (likely_inspector_concerns or evidence_gaps) else "medium",
+        ),
+        _insight_block_entry(
+            code="ofsted_judgement_leadership",
+            title="Leadership and management judgement support",
+            evidence=(
+                f"{len(overdue_prep_actions)} overdue prep actions, "
+                f"{len(evidence_gaps)} open evidence gaps."
+            ),
+            interpretation=(
+                "Leadership grip can look weaker where action closure and evidence governance are inconsistent."
+                if (overdue_prep_actions or evidence_gaps)
+                else "Leadership oversight indicators are currently more stable."
+            ),
+            suggested_action="Use leadership review to close high-priority evidence gaps with named ownership.",
+            severity="high" if (overdue_prep_actions or evidence_gaps) else "medium",
+        ),
+    ]
     what_is_missing = []
     if evidence_gaps:
         what_is_missing.append("Inspection evidence gaps remain open.")
@@ -1973,6 +2321,7 @@ def _build_ofsted_snapshot(quality_ctx: dict[str, Any]) -> dict[str, Any]:
         "trends": trends,
         "patterns": patterns[:8],
         "decision_support": decision_support[:6],
+        "ofsted_judgement_support": ofsted_judgement_support,
         "what_is_changing": changing,
         "what_needs_attention": queue_split.get("urgent", [])[:7],
         "what_is_missing": what_is_missing,

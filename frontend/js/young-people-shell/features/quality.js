@@ -1446,6 +1446,38 @@ function renderPriorityList(items = []) {
   `;
 }
 
+function renderQualityDriftIndicators(items = []) {
+  if (!items.length) {
+    return `
+      <div class="empty-state">
+        <p>No drift indicators are available yet.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="record-list">
+      ${items
+        .slice(0, 4)
+        .map((item) => `
+          <article class="record-row">
+            <div class="record-row-main">
+              <div class="record-row-title">${safeText(item?.label || "Drift indicator")}</div>
+              <div class="record-row-summary">
+                ${safeText(`${toNumber(item?.value, 0)}% (healthy ${toNumber(item?.healthy_threshold, 0)}%)`)}
+              </div>
+            </div>
+            <div class="record-row-side">
+              <span class="row-pill ${safeText(signalTone({ severity: item?.status || "medium" }))}">
+                ${safeText(item?.status || "unknown")}
+              </span>
+            </div>
+          </article>
+        `)
+        .join("")}
+    </div>
+  `;
+}
+
 function renderTimeline(items = []) {
   if (!items.length) {
     return renderEmpty(
@@ -1524,6 +1556,8 @@ function renderWorkspace(payload) {
     changing,
     patterns,
     decisionSupport,
+    qualityDriftIndicators,
+    qualityInsightBlocks,
     missingItems,
     isFallback,
   } = payload;
@@ -1593,6 +1627,16 @@ function renderWorkspace(payload) {
           ${renderPanelSection("Repeating patterns", renderPatternRows(patterns))}
 
           ${renderPanelSection("Decision support", renderDecisionRows(decisionSupport))}
+
+          ${renderPanelSection(
+            "Quality drift indicators",
+            renderQualityDriftIndicators(qualityDriftIndicators)
+          )}
+
+          ${renderPanelSection(
+            "Quality insight blocks",
+            renderInsightBlocks(qualityInsightBlocks)
+          )}
 
           ${renderPanelSection(
             "Visibility signals",
@@ -2072,6 +2116,8 @@ export async function loadCurrentView() {
     const changing = toArray(visibility?.what_is_changing || visibility?.trends);
     const patterns = toArray(visibility?.patterns);
     const decisionSupport = toArray(visibility?.decision_support);
+    const qualityDriftIndicators = toArray(visibility?.quality_drift_indicators);
+    const qualityInsightBlocks = toArray(visibility?.quality_insight_blocks);
     const missingItems = toArray(visibility?.what_is_missing);
 
     els.viewContent.innerHTML = renderWorkspace({
@@ -2092,6 +2138,8 @@ export async function loadCurrentView() {
       changing,
       patterns,
       decisionSupport,
+      qualityDriftIndicators,
+      qualityInsightBlocks,
       missingItems,
       isFallback: data.isFallback,
     });
