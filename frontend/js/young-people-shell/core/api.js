@@ -77,16 +77,83 @@ const API_ROUTE_ALIASES = [
   [/\/homes\/(\d+)\/child-compliance$/, "/homes/$1/compliance"],
 ];
 
+const KNOWN_TOP_LEVEL_PATHS = new Set([
+  "actions",
+  "assistant",
+  "audits",
+  "auth",
+  "communications",
+  "compliance",
+  "documents",
+  "homes",
+  "incidents",
+  "notifications",
+  "plans",
+  "quality",
+  "reports",
+  "rota",
+  "staff-files",
+  "supervisions",
+  "tasks",
+  "teams",
+  "transport",
+  "visibility",
+  "young-people",
+]);
+
 function shouldResolveAlias(method = "GET") {
   const upper = String(method || "GET").toUpperCase();
   return upper === "GET" || upper === "HEAD";
 }
 
-export function resolveApiUrl(url, method = "GET") {
-  if (!url || typeof url !== "string") return url;
-  if (!shouldResolveAlias(method)) return url;
+function normaliseApiPath(url) {
+  if (!url || typeof url !== "string") return "";
 
-  const [pathname, queryString = ""] = url.split("?");
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      return "";
+    }
+  }
+
+  if (trimmed.startsWith("//")) return "";
+  if (trimmed === "/" || trimmed === "#") return "";
+
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.replace(/\/{2,}/g, "/");
+}
+
+function looksLikeMalformedApiPath(pathname = "") {
+  const cleanPath = String(pathname || "").split("?")[0].trim();
+  if (!cleanPath || cleanPath === "/") return true;
+
+  const segments = cleanPath.split("/").filter(Boolean);
+  if (!segments.length) return true;
+
+  if (segments.length === 1) {
+    const only = segments[0];
+    if (/^\d+$/.test(only)) return true;
+
+    if (!KNOWN_TOP_LEVEL_PATHS.has(only)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function resolveApiUrl(url, method = "GET") {
+  const normalised = normaliseApiPath(url);
+  if (!normalised) return "";
+
+  if (!shouldResolveAlias(method)) return normalised;
+
+  const [pathname, queryString = ""] = normalised.split("?");
 
   for (const [pattern, replacement] of API_ROUTE_ALIASES) {
     if (pattern.test(pathname)) {
@@ -97,7 +164,7 @@ export function resolveApiUrl(url, method = "GET") {
     }
   }
 
-  return url;
+  return normalised;
 }
 
 function getCookie(name) {
@@ -264,6 +331,8 @@ export function clearApiCache(url = null) {
   }
 
   const resolvedUrl = resolveApiUrl(url, "GET");
+  if (!resolvedUrl) return;
+
   const cacheKey = makeCacheKey("GET", resolvedUrl);
   getResponseCache.delete(cacheKey);
   inflightGetRequests.delete(cacheKey);
@@ -277,7 +346,8 @@ function invalidateCacheByPrefixes(prefixes = []) {
 
   const safePrefixes = prefixes
     .filter(Boolean)
-    .map((prefix) => resolveApiUrl(prefix, "GET"));
+    .map((prefix) => resolveApiUrl(prefix, "GET"))
+    .filter(Boolean);
 
   if (!safePrefixes.length) {
     clearApiCache();
@@ -344,9 +414,14 @@ function toIdArray(value) {
 }
 
 async function apiGetSettled(urls = []) {
-  const settled = await Promise.allSettled(urls.map((url) => apiGet(url)));
+  const safeUrls = urls
+    .map((url) => resolveApiUrl(url, "GET"))
+    .filter((url) => url && !looksLikeMalformedApiPath(url));
+
+  const settled = await Promise.allSettled(safeUrls.map((url) => apiGet(url)));
+
   return settled.map((result, index) => ({
-    url: urls[index],
+    url: safeUrls[index],
     ok: result.status === "fulfilled",
     data: result.status === "fulfilled" ? result.value : null,
     error: result.status === "rejected" ? result.reason : null,
@@ -526,15 +601,8 @@ async function fetchHomeWideBundle(homeId) {
     `/homes/${homeId}/dashboard`,
     `/homes/${homeId}/team`,
     `/homes/${homeId}/tasks`,
-    `/homes/${homeId}/communications`,
     `/homes/${homeId}/documents`,
-    `/homes/${homeId}/supervisions`,
-    `/homes/${homeId}/reports`,
-    `/homes/${homeId}/therapy`,
     `/homes/${homeId}/compliance`,
-    `/homes/${homeId}/quality`,
-    `/homes/${homeId}/audits`,
-    `/homes/${homeId}/incidents`,
   ];
 
   return apiGetSettled(urls);
@@ -678,6 +746,15 @@ export async function fetchAssistantScopeBundle(context = {}) {
 export async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const resolvedUrl = resolveApiUrl(url, method);
+
+  if (!resolvedUrl) {
+    throw new Error("Invalid API path.");
+  }
+
+  if (looksLikeMalformedApiPath(resolvedUrl)) {
+    throw new Error(`Blocked malformed API path: ${resolvedUrl}`);
+  }
+
   const isFormData = options.body instanceof FormData;
   const useCache = shouldCacheRequest(method, options);
   const cacheKey = makeCacheKey(method, resolvedUrl);
