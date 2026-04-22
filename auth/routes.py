@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import re
 import secrets
@@ -56,13 +58,16 @@ class AuthSettings:
 
     @classmethod
     def load(cls) -> "AuthSettings":
-        app_env = os.environ.get("APP_ENV", "development").lower()
+        app_env = os.environ.get("APP_ENV", "development").strip().lower()
+        if app_env not in {"development", "test", "staging", "production"}:
+            app_env = "development"
+
         is_production = app_env == "production"
 
         cookie_secure = os.getenv(
             "COOKIE_SECURE",
             "true" if is_production else "false",
-        ).lower() == "true"
+        ).strip().lower() == "true"
 
         cookie_samesite = os.getenv("COOKIE_SAMESITE", "strict").strip().lower()
         if cookie_samesite not in {"lax", "strict", "none"}:
@@ -199,6 +204,13 @@ def _is_locked(lock_map: dict[str, float], key: str) -> bool:
     return True
 
 
+def _seconds_remaining(until_timestamp: float | None) -> int | None:
+    if not until_timestamp:
+        return None
+    remaining = int(until_timestamp - _now())
+    return max(0, remaining)
+
+
 def _register_failure(ip: str | None, email: str | None) -> None:
     current = _now()
 
@@ -229,16 +241,24 @@ def _clear_failures(ip: str | None, email: str | None) -> None:
 def _assert_not_locked(request: Request, email: str | None) -> None:
     ip = _client_ip(request)
 
+    ip_locked_until = LOCKED_IPS.get(ip) if ip else None
     if ip and _is_locked(LOCKED_IPS, ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many failed sign-in attempts. Please try again later.",
+            detail={
+                "message": "Too many failed sign-in attempts. Please try again later.",
+                "retry_after_seconds": _seconds_remaining(ip_locked_until),
+            },
         )
 
+    email_locked_until = LOCKED_EMAILS.get(email) if email else None
     if email and _is_locked(LOCKED_EMAILS, email):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many failed sign-in attempts. Please try again later.",
+            detail={
+                "message": "Too many failed sign-in attempts. Please try again later.",
+                "retry_after_seconds": _seconds_remaining(email_locked_until),
+            },
         )
 
 
@@ -248,6 +268,10 @@ def _mfa_required_for_role(role: str | None) -> bool:
         "admin",
         "provider_admin",
         "manager",
+        "registered_manager",
+        "deputy_manager",
+        "ri",
+        "responsible_individual",
     }
 
 
@@ -260,6 +284,7 @@ def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
                 email,
                 role,
                 home_id,
+                provider_id,
                 first_name,
                 last_name,
                 is_active,
@@ -286,6 +311,7 @@ def _get_user_by_email(conn: Any, email: str) -> dict[str, Any] | None:
                 password_hash,
                 role,
                 home_id,
+                provider_id,
                 first_name,
                 last_name,
                 is_active,
@@ -297,6 +323,41 @@ def _get_user_by_email(conn: Any, email: str) -> dict[str, Any] | None:
             (email,),
         )
         return cur.fetchone()
+
+
+def _get_allowed_home_ids(conn: Any, user: dict[str, Any]) -> list[int]:
+    role = str(user.get("role") or "").strip().lower()
+    provider_id = user.get("provider_id")
+    home_id = user.get("home_id")
+
+    with conn.cursor() as cur:
+        if provider_id and role in {
+            "admin",
+            "administrator",
+            "super_admin",
+            "superadmin",
+            "ri",
+            "responsible_individual",
+            "provider_admin",
+        }:
+            cur.execute(
+                """
+                SELECT id
+                FROM homes
+                WHERE provider_id = %s
+                ORDER BY id ASC
+                """,
+                (provider_id,),
+            )
+            return [int(row[0]) for row in cur.fetchall() if row and row[0] is not None]
+
+    if home_id:
+        try:
+            return [int(home_id)]
+        except (TypeError, ValueError):
+            return []
+
+    return []
 
 
 def _set_session_cookie(response: Response, token: str, remember: bool = False) -> None:
@@ -326,8 +387,18 @@ def _set_csrf_cookie(response: Response, csrf_token: str, remember: bool = False
 
 
 def _clear_auth_cookies(response: Response) -> None:
-    response.delete_cookie(key=settings.session_cookie_name, path="/")
-    response.delete_cookie(key=settings.csrf_cookie_name, path="/")
+    response.delete_cookie(
+        key=settings.session_cookie_name,
+        path="/",
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+    )
+    response.delete_cookie(
+        key=settings.csrf_cookie_name,
+        path="/",
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+    )
 
 
 def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
@@ -344,12 +415,15 @@ def _get_mfa_safe(user_id: int) -> dict[str, Any] | None:
         return None
 
 
-def _session_user_payload(user: dict[str, Any], billing: dict[str, Any] | None) -> dict[str, Any]:
+def _session_user_payload(user: dict[str, Any], billing: dict[str, Any] | None, allowed_home_ids: list[int]) -> dict[str, Any]:
     return {
         "id": user["id"],
+        "user_id": user["id"],
         "email": user["email"],
         "role": user["role"],
         "home_id": user.get("home_id"),
+        "provider_id": user.get("provider_id"),
+        "allowed_home_ids": allowed_home_ids,
         "first_name": user.get("first_name"),
         "last_name": user.get("last_name"),
         "is_active": bool(user.get("is_active")),
@@ -365,12 +439,16 @@ def _full_user_payload(
     *,
     mfa_enabled: bool,
     mfa_verified: bool,
+    allowed_home_ids: list[int],
 ) -> dict[str, Any]:
     return {
         "id": user["id"],
+        "user_id": user["id"],
         "email": user["email"],
         "role": user["role"],
         "home_id": user.get("home_id"),
+        "provider_id": user.get("provider_id"),
+        "allowed_home_ids": allowed_home_ids,
         "first_name": user.get("first_name"),
         "last_name": user.get("last_name"),
         "archived": user.get("archived"),
@@ -535,6 +613,7 @@ def login(
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     billing = _get_billing_safe(conn, user["id"])
     force_mfa = _mfa_required_for_role(user.get("role"))
+    allowed_home_ids = _get_allowed_home_ids(conn, user)
 
     _log_auth(
         request=request,
@@ -570,7 +649,7 @@ def login(
             "mfa_enabled": True,
             "mfa_mandatory": force_mfa,
             "mfa_pending": True,
-            "user": _session_user_payload(user, billing),
+            "user": _session_user_payload(user, billing, allowed_home_ids),
         }
 
     token = create_session_token(user["id"])
@@ -609,7 +688,7 @@ def login(
         "mfa_enabled": False,
         "mfa_mandatory": force_mfa,
         "mfa_pending": False,
-        "user": _session_user_payload(user, billing),
+        "user": _session_user_payload(user, billing, allowed_home_ids),
     }
 
 
@@ -635,10 +714,50 @@ def check_auth(
         except Exception:
             expires_in = 0
 
+        pending_user_id = request.session.get(PREAUTH_USER_ID_KEY)
+        pending_email = request.session.get(PREAUTH_EMAIL_KEY)
+
+        pending_user = None
+        allowed_home_ids: list[int] = []
+        billing = None
+        mfa_enabled = True
+        role = None
+        home_id = None
+        provider_id = None
+        is_active = False
+
+        try:
+            if pending_user_id is not None:
+                pending_user = _get_user_by_id(conn, int(pending_user_id))
+                if pending_user:
+                    billing = _get_billing_safe(conn, int(pending_user_id))
+                    mfa_row = _get_mfa_safe(int(pending_user_id))
+                    mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+                    allowed_home_ids = _get_allowed_home_ids(conn, pending_user)
+                    role = pending_user.get("role")
+                    home_id = pending_user.get("home_id")
+                    provider_id = pending_user.get("provider_id")
+                    is_active = bool(pending_user.get("is_active"))
+        except Exception:
+            pass
+
         return {
             "authenticated": False,
             "mfa_pending": True,
             "expires_in_seconds": expires_in,
+            "user_id": pending_user_id,
+            "email": pending_email,
+            "role": role,
+            "home_id": home_id,
+            "provider_id": provider_id,
+            "allowed_home_ids": allowed_home_ids,
+            "is_active": is_active,
+            "subscription_active": bool(billing and billing.get("subscription_active")),
+            "subscription_status": billing.get("subscription_status") if billing else "inactive",
+            "plan_name": billing.get("plan_name") if billing else None,
+            "mfa_enabled": mfa_enabled,
+            "mfa_verified": False,
+            "mfa_mandatory": _mfa_required_for_role(role),
         }
 
     user, user_id = _get_session_user_from_request(
@@ -649,21 +768,25 @@ def check_auth(
     )
 
     if not user or user_id is None:
-        return {"authenticated": False}
+        return {"authenticated": False, "mfa_pending": False}
 
     if user.get("archived") is True or user.get("is_active") is False:
-        return {"authenticated": False}
+        return {"authenticated": False, "mfa_pending": False}
 
     billing = _get_billing_safe(conn, user_id)
     mfa_row = _get_mfa_safe(user_id)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+    allowed_home_ids = _get_allowed_home_ids(conn, user)
 
     return {
         "authenticated": True,
         "user_id": user["id"],
+        "id": user["id"],
         "email": user["email"],
         "role": user["role"],
         "home_id": user.get("home_id"),
+        "provider_id": user.get("provider_id"),
+        "allowed_home_ids": allowed_home_ids,
         "is_active": bool(user.get("is_active")),
         "subscription_active": bool(billing and billing.get("subscription_active")),
         "subscription_status": billing.get("subscription_status") if billing else "inactive",
@@ -696,6 +819,7 @@ def get_me(
     billing = _get_billing_safe(conn, user_id)
     mfa_row = _get_mfa_safe(user_id)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+    allowed_home_ids = _get_allowed_home_ids(conn, user)
 
     return {
         "ok": True,
@@ -704,6 +828,7 @@ def get_me(
             billing,
             mfa_enabled=mfa_enabled,
             mfa_verified=True,
+            allowed_home_ids=allowed_home_ids,
         ),
         "mfa_mandatory": _mfa_required_for_role(user.get("role")),
     }
