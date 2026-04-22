@@ -16,13 +16,15 @@
         <small>Children's residential operating system</small>
       </span>
     </a>
+
     <nav class="os-topbar-nav" aria-label="Platform areas">
       <a href="/young-people-shell.html" class="os-topbar-link">Shell</a>
       <a href="/young-people.html" class="os-topbar-link">Gateway</a>
       <a href="/ai-note.html" class="os-topbar-link">I-Notes</a>
       <a href="/assistant" class="os-topbar-link">Assistant</a>
-      <a href="/rostering.html" class="os-topbar-link active">Rostering</a>
+      <a href="/rostering.html" class="os-topbar-link active" aria-current="page">Rostering</a>
     </nav>
+
     <div class="os-topbar-context">Rota, cover and staffing safety</div>
   </header>
 
@@ -37,6 +39,7 @@
             absences, safer staffing gaps, and day-to-day cover decisions.
           </p>
         </div>
+
         <div class="roster-header-actions">
           <button id="buildWeekBtn" class="secondary-btn" type="button">Build week template</button>
           <button id="publishWeekBtn" class="primary-btn" type="button">Publish week</button>
@@ -46,7 +49,7 @@
       <div class="roster-control-grid">
         <label class="control-field">
           <span>Home ID</span>
-          <input id="homeIdInput" type="number" min="1" value="1" />
+          <input id="homeIdInput" type="number" min="1" step="1" value="1" />
         </label>
 
         <label class="control-field">
@@ -62,21 +65,22 @@
         <div class="control-field control-field--wide">
           <span>View</span>
           <div class="view-toggle" role="tablist" aria-label="Rota view">
-            <button type="button" class="view-btn active" data-view="today">Today</button>
-            <button type="button" class="view-btn" data-view="day">Day</button>
-            <button type="button" class="view-btn" data-view="week">Week</button>
-            <button type="button" class="view-btn" data-view="month">Month</button>
+            <button type="button" class="view-btn active" data-view="today" role="tab" aria-selected="true">Today</button>
+            <button type="button" class="view-btn" data-view="day" role="tab" aria-selected="false">Day</button>
+            <button type="button" class="view-btn" data-view="week" role="tab" aria-selected="false">Week</button>
+            <button type="button" class="view-btn" data-view="month" role="tab" aria-selected="false">Month</button>
           </div>
         </div>
       </div>
 
       <div class="roster-toolbar">
         <div class="toolbar-left">
-          <button id="prevWeekBtn" class="secondary-btn" type="button">Previous week</button>
+          <button id="prevWeekBtn" class="secondary-btn" type="button">Previous</button>
           <button id="todayBtn" class="secondary-btn" type="button">Today</button>
-          <button id="nextWeekBtn" class="secondary-btn" type="button">Next week</button>
+          <button id="nextWeekBtn" class="secondary-btn" type="button">Next</button>
           <button id="loadRosterBtn" class="secondary-btn" type="button">Refresh</button>
         </div>
+
         <div class="toolbar-right">
           <button id="payrollBtn" class="ghost-btn" type="button">Payroll CSV</button>
           <button id="evidenceBtn" class="ghost-btn" type="button">Evidence pack</button>
@@ -84,27 +88,32 @@
       </div>
     </section>
 
-    <section class="summary-strip">
+    <section class="summary-strip" aria-label="Roster summary">
       <article class="summary-card">
         <span class="summary-label">Publication</span>
         <strong id="summaryPublication">Draft</strong>
       </article>
+
       <article class="summary-card">
         <span class="summary-label">Coverage</span>
         <strong id="summaryCoverage">0%</strong>
       </article>
+
       <article class="summary-card danger-card">
         <span class="summary-label">Gaps</span>
         <strong id="summaryGaps">0</strong>
       </article>
+
       <article class="summary-card">
         <span class="summary-label">Agency / bank</span>
         <strong id="summaryAgency">0</strong>
       </article>
+
       <article class="summary-card">
         <span class="summary-label">On shift now</span>
         <strong id="summaryOnShift">0</strong>
       </article>
+
       <article class="summary-card danger-card">
         <span class="summary-label">Safety alerts</span>
         <strong id="summaryWarnings">0</strong>
@@ -126,14 +135,16 @@
           <input id="staffSearchInput" type="search" placeholder="Name, role, qualification..." />
         </label>
 
-        <div id="staffList" class="staff-list"></div>
+        <div id="staffList" class="staff-list" aria-live="polite"></div>
 
         <section class="inline-form-card">
           <h3>Record leave or absence</h3>
+
           <label class="control-field">
             <span>Staff member</span>
             <select id="leaveStaffSelect"></select>
           </label>
+
           <label class="control-field">
             <span>Type</span>
             <select id="leaveTypeSelect">
@@ -144,20 +155,24 @@
               <option value="other">Other</option>
             </select>
           </label>
+
           <div class="inline-grid">
             <label class="control-field">
               <span>Start</span>
               <input id="leaveStartInput" type="date" />
             </label>
+
             <label class="control-field">
               <span>End</span>
               <input id="leaveEndInput" type="date" />
             </label>
           </div>
+
           <label class="control-field">
             <span>Notes</span>
             <textarea id="leaveNotesInput" rows="2" placeholder="Context for rota and handover..."></textarea>
           </label>
+
           <button id="createLeaveBtn" class="secondary-btn" type="button">Save leave</button>
         </section>
       </aside>
@@ -173,13 +188,14 @@
         <div class="board-filters">
           <label><input id="filterGapsOnly" type="checkbox" /> Gaps only</label>
           <label><input id="filterAgencyOnly" type="checkbox" /> Agency / bank only</label>
+
           <label class="control-field control-field--wide">
             <span>Search shifts</span>
             <input id="shiftSearchInput" type="search" placeholder="Shift type, role, staff..." />
           </label>
         </div>
 
-        <div id="coverageBanner" class="coverage-banner"></div>
+        <div id="coverageBanner" class="coverage-banner" aria-live="polite"></div>
         <div id="rotaBoard" class="rota-board" aria-live="polite"></div>
       </section>
 
@@ -231,6 +247,7 @@
               <p>Jump into connected home operations workflows.</p>
             </div>
           </header>
+
           <nav class="os-link-list" aria-label="Linked operating areas">
             <a href="/young-people-shell.html">Home dashboard</a>
             <a href="/young-people-shell.html">Staff profiles</a>
@@ -244,13 +261,22 @@
   </main>
 
   <div id="shiftDrawerBackdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>
-  <aside id="shiftDrawer" class="shift-drawer hidden" aria-hidden="true" aria-labelledby="shiftDrawerTitle">
+
+  <aside
+    id="shiftDrawer"
+    class="shift-drawer hidden"
+    aria-hidden="true"
+    aria-labelledby="shiftDrawerTitle"
+    role="dialog"
+    aria-modal="true"
+  >
     <header class="shift-drawer-head">
       <div>
         <div class="eyebrow">Shift detail</div>
         <h2 id="shiftDrawerTitle">Shift</h2>
         <p id="shiftDrawerMeta">No shift selected.</p>
       </div>
+
       <button id="closeShiftDrawerBtn" class="secondary-btn" type="button">Close</button>
     </header>
 
