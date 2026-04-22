@@ -44,6 +44,34 @@ let bootstrapped = false;
 let globalSearchMirrorsBound = false;
 let globalRefreshShortcutsBound = false;
 
+const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
+const ADMIN_LIKE_ROLES = new Set([
+  "administrator",
+  "admin",
+  "super_admin",
+  "superadmin",
+  "admin_user",
+  "system_admin",
+  "owner",
+]);
+const MANAGER_LIKE_ROLES = new Set([
+  "manager",
+  "registered_manager",
+  "deputy_manager",
+  "rm",
+]);
+const RI_LIKE_ROLES = new Set([
+  "ri",
+  "responsible_individual",
+  "director",
+  "ceo",
+]);
+const STAFF_LIKE_ROLES = new Set([
+  "rsw",
+  "residential_support_worker",
+  "staff",
+]);
+
 function showWorkspace() {
   els.selectorScreen?.classList.add("hidden");
   els.workspaceScreen?.classList.remove("hidden");
@@ -57,43 +85,10 @@ function showSelector() {
 function normaliseRole(role) {
   const rawRole = String(role || "staff").toLowerCase().trim();
 
-  if (
-    rawRole === "administrator" ||
-    rawRole === "admin" ||
-    rawRole === "super_admin" ||
-    rawRole === "superadmin" ||
-    rawRole === "admin_user" ||
-    rawRole === "system_admin" ||
-    rawRole === "owner"
-  ) {
-    return "admin";
-  }
-
-  if (
-    rawRole === "manager" ||
-    rawRole === "registered_manager" ||
-    rawRole === "deputy_manager" ||
-    rawRole === "rm"
-  ) {
-    return "manager";
-  }
-
-  if (
-    rawRole === "ri" ||
-    rawRole === "responsible_individual" ||
-    rawRole === "director" ||
-    rawRole === "ceo"
-  ) {
-    return "ri";
-  }
-
-  if (
-    rawRole === "rsw" ||
-    rawRole === "residential_support_worker" ||
-    rawRole === "staff"
-  ) {
-    return "staff";
-  }
+  if (ADMIN_LIKE_ROLES.has(rawRole)) return "admin";
+  if (MANAGER_LIKE_ROLES.has(rawRole)) return "manager";
+  if (RI_LIKE_ROLES.has(rawRole)) return "ri";
+  if (STAFF_LIKE_ROLES.has(rawRole)) return "staff";
 
   return "staff";
 }
@@ -118,8 +113,7 @@ function toIdArray(value) {
 function readSessionUser() {
   try {
     const raw = sessionStorage.getItem("current_user");
-    if (!raw) return null;
-    return JSON.parse(raw);
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
@@ -132,16 +126,35 @@ function writeSessionUser(user) {
       return;
     }
     sessionStorage.setItem("current_user", JSON.stringify(user));
-  } catch {}
+  } catch {
+    // Intentionally ignore storage failures.
+  }
+}
+
+function parseAllowedHomeIds(rawValue) {
+  if (!rawValue) return [];
+
+  try {
+    return toIdArray(JSON.parse(rawValue));
+  } catch {
+    return rawValue
+      .split(",")
+      .map((item) => Number(item.trim()))
+      .filter((item) => Number.isFinite(item) && item > 0);
+  }
+}
+
+function syncSingleHomeFallback() {
+  if (!state.homeId && Array.isArray(state.allowedHomeIds) && state.allowedHomeIds.length === 1) {
+    setHomeContext(state.allowedHomeIds[0]);
+  }
 }
 
 function hydrateRuntimeContextFromDom() {
   if (!els.app) return;
 
   const datasetRole = normaliseRole(els.app.dataset.userRole || "");
-  const datasetScope = String(els.app.dataset.scope || "")
-    .trim()
-    .toLowerCase();
+  const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
   const datasetHomeId = normaliseNumericId(els.app.dataset.homeId);
   const datasetYoungPersonId = normaliseNumericId(els.app.dataset.youngPersonId);
   const datasetProviderId = normaliseNumericId(els.app.dataset.providerId);
@@ -149,7 +162,7 @@ function hydrateRuntimeContextFromDom() {
 
   setUserRole(datasetRole);
 
-  if (["child", "home", "quality", "ofsted"].includes(datasetScope)) {
+  if (VALID_SCOPES.has(datasetScope)) {
     setCurrentScope(datasetScope, { resetSection: false });
   }
 
@@ -160,18 +173,8 @@ function hydrateRuntimeContextFromDom() {
     state.youngPersonId = datasetYoungPersonId;
   }
 
-  if (datasetAllowedHomeIds) {
-    try {
-      setAllowedHomeIds(toIdArray(JSON.parse(datasetAllowedHomeIds)));
-    } catch {
-      setAllowedHomeIds(
-        datasetAllowedHomeIds
-          .split(",")
-          .map((item) => Number(item.trim()))
-          .filter((item) => Number.isFinite(item) && item > 0)
-      );
-    }
-  }
+  setAllowedHomeIds(parseAllowedHomeIds(datasetAllowedHomeIds));
+  syncSingleHomeFallback();
 }
 
 function hydrateRuntimeContextFromSession() {
@@ -186,13 +189,23 @@ function hydrateRuntimeContextFromSession() {
       currentUser.account_type ||
       currentUser.role_name
   );
-
-  setUserRole(sessionRole);
-
   const sessionHomeId = normaliseNumericId(
     currentUser.home_id || currentUser.homeId || null
   );
+  const sessionProviderId = normaliseNumericId(
+    currentUser.provider_id || currentUser.providerId || null
+  );
+  const allowedHomes = toIdArray(
+    currentUser.allowed_home_ids ||
+      currentUser.allowedHomeIds ||
+      currentUser.home_ids ||
+      currentUser.homeIds ||
+      []
+  );
+
+  setUserRole(sessionRole);
   setHomeContext(sessionHomeId);
+  setProviderContext(sessionProviderId);
 
   if (currentUser.user_id || currentUser.id) {
     state.userId = currentUser.user_id || currentUser.id;
@@ -202,28 +215,13 @@ function hydrateRuntimeContextFromSession() {
     state.staffId = currentUser.staff_id;
   }
 
-  setProviderContext(
-    normaliseNumericId(currentUser.provider_id || currentUser.providerId || null)
-  );
-
-  const allowedHomes =
-    currentUser.allowed_home_ids ||
-    currentUser.allowedHomeIds ||
-    currentUser.home_ids ||
-    currentUser.homeIds ||
-    [];
-
-  const safeAllowedHomes = toIdArray(allowedHomes);
-
-  if (safeAllowedHomes.length) {
-    setAllowedHomeIds(safeAllowedHomes);
+  if (allowedHomes.length) {
+    setAllowedHomeIds(allowedHomes);
   } else if (sessionHomeId) {
     setAllowedHomeIds([sessionHomeId]);
   }
 
-  if (!state.homeId && state.allowedHomeIds?.length === 1) {
-    setHomeContext(state.allowedHomeIds[0]);
-  }
+  syncSingleHomeFallback();
 }
 
 async function hydrateRuntimeContextFromAuthCheck() {
@@ -247,16 +245,10 @@ async function hydrateRuntimeContextFromAuthCheck() {
     }
 
     const role = normaliseRole(auth.role || auth.user_role || auth.role_name);
-    setUserRole(role);
-
     const authHomeId = normaliseNumericId(auth.home_id || auth.homeId || null);
     const authProviderId = normaliseNumericId(
       auth.provider_id || auth.providerId || null
     );
-
-    setHomeContext(authHomeId);
-    setProviderContext(authProviderId);
-
     const allowedHomes = toIdArray(
       auth.allowed_home_ids ||
         auth.allowedHomeIds ||
@@ -265,15 +257,17 @@ async function hydrateRuntimeContextFromAuthCheck() {
         []
     );
 
+    setUserRole(role);
+    setHomeContext(authHomeId);
+    setProviderContext(authProviderId);
+
     if (allowedHomes.length) {
       setAllowedHomeIds(allowedHomes);
     } else if (authHomeId) {
       setAllowedHomeIds([authHomeId]);
     }
 
-    if (!state.homeId && state.allowedHomeIds?.length === 1) {
-      setHomeContext(state.allowedHomeIds[0]);
-    }
+    syncSingleHomeFallback();
   } catch (error) {
     console.error("[index] auth context hydration failed", error);
   }
@@ -364,11 +358,7 @@ function applyRoleDefaultScopeIfNeeded() {
   const datasetScope = String(els.app?.dataset?.scope || "")
     .trim()
     .toLowerCase();
-
-  const hasExplicitScopeFromDom = ["child", "home", "quality", "ofsted"].includes(
-    datasetScope
-  );
-
+  const hasExplicitScopeFromDom = VALID_SCOPES.has(datasetScope);
   const currentScopeAccessible = canAccessScope(currentScope);
 
   if (!currentScopeAccessible) {
@@ -377,7 +367,7 @@ function applyRoleDefaultScopeIfNeeded() {
     return;
   }
 
-  const roleWantsElevatedDefault = ["admin", "ri"].includes(role);
+  const roleWantsElevatedDefault = role === "admin" || role === "ri";
 
   if (
     roleWantsElevatedDefault &&
@@ -400,8 +390,8 @@ function syncScopeButtons() {
     { el: els.scopeOfstedBtn, value: "ofsted" },
   ];
 
-  buttons.forEach(({ el, value }) => {
-    if (!el) return;
+  for (const { el, value } of buttons) {
+    if (!el) continue;
 
     const visible = allowedScopes.includes(value);
     const active = scope === value;
@@ -417,7 +407,7 @@ function syncScopeButtons() {
     } else {
       el.removeAttribute("tabindex");
     }
-  });
+  }
 
   if (els.scopeSwitch) {
     const showSwitch = allowedScopes.length > 1;
@@ -456,9 +446,7 @@ function refreshAllChrome() {
 }
 
 async function setScope(scope) {
-  if (!scope) return;
-  if (state.currentScope === scope) return;
-  if (!canAccessScope(scope)) return;
+  if (!scope || state.currentScope === scope || !canAccessScope(scope)) return;
 
   setCurrentScope(scope, { resetSection: true });
   syncDomDatasetFromState();
@@ -483,41 +471,23 @@ function bindScopeEvents() {
   if (scopeEventsBound) return;
   scopeEventsBound = true;
 
-  els.scopeChildBtn?.addEventListener("click", async () => {
-    try {
-      await setScope("child");
-    } catch (error) {
-      console.error("[index] failed switching to child scope", error);
-      showError(error?.message || "Failed to switch scope.");
-    }
-  });
+  const bindings = [
+    { el: els.scopeChildBtn, scope: "child" },
+    { el: els.scopeHomeBtn, scope: "home" },
+    { el: els.scopeQualityBtn, scope: "quality" },
+    { el: els.scopeOfstedBtn, scope: "ofsted" },
+  ];
 
-  els.scopeHomeBtn?.addEventListener("click", async () => {
-    try {
-      await setScope("home");
-    } catch (error) {
-      console.error("[index] failed switching to home scope", error);
-      showError(error?.message || "Failed to switch scope.");
-    }
-  });
-
-  els.scopeQualityBtn?.addEventListener("click", async () => {
-    try {
-      await setScope("quality");
-    } catch (error) {
-      console.error("[index] failed switching to quality scope", error);
-      showError(error?.message || "Failed to switch scope.");
-    }
-  });
-
-  els.scopeOfstedBtn?.addEventListener("click", async () => {
-    try {
-      await setScope("ofsted");
-    } catch (error) {
-      console.error("[index] failed switching to ofsted scope", error);
-      showError(error?.message || "Failed to switch scope.");
-    }
-  });
+  for (const { el, scope } of bindings) {
+    el?.addEventListener("click", async () => {
+      try {
+        await setScope(scope);
+      } catch (error) {
+        console.error(`[index] failed switching to ${scope} scope`, error);
+        showError(error?.message || "Failed to switch scope.");
+      }
+    });
+  }
 }
 
 async function restoreSelectedYoungPerson() {
@@ -552,8 +522,7 @@ async function restoreSelectedYoungPerson() {
 async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
   const scope = state.currentScope || "child";
 
-  if (scope !== "child") return;
-  if (restoredYoungPerson) return;
+  if (scope !== "child" || restoredYoungPerson) return;
 
   try {
     await loadYoungPersonSelector();
@@ -578,8 +547,7 @@ function bindGlobalSearchMirrors() {
   let lastPayload = "";
 
   const syncSearchValues = (source, target) => {
-    if (!source || !target) return;
-    if (target.value === source.value) return;
+    if (!source || !target || target.value === source.value) return;
     target.value = source.value;
   };
 
