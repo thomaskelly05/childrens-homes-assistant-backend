@@ -27,7 +27,16 @@ function buildErrorMessage(response, data) {
   return `Request failed (${response.status})`;
 }
 
+/*
+  Route aliases keep old UI loaders working while the backend/frontend
+  move toward the newer inspection + quality endpoint families.
+
+  Key rule:
+  - old section-style URLs should resolve to a real endpoint
+  - newer direct URLs should pass through untouched
+*/
 const API_ROUTE_ALIASES = [
+  // Young people
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/tasks$/, "/tasks?young_person_id=$1"],
   [/\/young-people\/(\d+)\/actions$/, "/actions?young_person_id=$1&scope=child"],
@@ -63,97 +72,61 @@ const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/therapy$/, "/young-people/$1/health"],
   [/\/young-people\/(\d+)\/keywork$/, "/young-people/$1/keywork"],
 
+  // Homes - legacy operational routes
   [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
   [/\/homes\/(\d+)\/actions$/, "/actions?home_id=$1&scope=home"],
   [/\/homes\/(\d+)\/visibility$/, "/visibility/homes/$1"],
-  [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
-  [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
 
   [/\/homes\/(\d+)\/staff$/, "/homes/$1/team"],
   [/\/homes\/(\d+)\/staff-documents$/, "/homes/$1/staff-files"],
   [/\/homes\/(\d+)\/notifications$/, "/homes/$1/communications"],
-  [/\/homes\/(\d+)\/inspection-readiness$/, "/homes/$1/quality"],
-  [/\/homes\/(\d+)\/safeguarding$/, "/homes/$1/quality"],
-  [/\/homes\/(\d+)\/child-compliance$/, "/homes/$1/compliance"],
-];
+  [/\/homes\/(\d+)\/safeguarding$/, "/homes/$1/safeguarding"],
+  [/\/homes\/(\d+)\/child-compliance$/, "/homes/$1/child-compliance"],
 
-const KNOWN_TOP_LEVEL_PATHS = new Set([
-  "actions",
-  "assistant",
-  "audits",
-  "auth",
-  "communications",
-  "compliance",
-  "documents",
-  "homes",
-  "incidents",
-  "notifications",
-  "plans",
-  "quality",
-  "reports",
-  "rota",
-  "staff-files",
-  "supervisions",
-  "tasks",
-  "teams",
-  "transport",
-  "visibility",
-  "young-people",
-]);
+  // Homes - older quality/ofsted/readiness URLs mapped to newer families
+  [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance-items"],
+  [/\/homes\/(\d+)\/inspection-readiness$/, "/homes/$1/inspection-improvement-actions"],
+  [/\/homes\/(\d+)\/quality$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/compliance$/, "/homes/$1/compliance-items"],
+  [/\/homes\/(\d+)\/dashboard$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/ofsted-dashboard$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/sccif-evidence$/, "/homes/$1/inspection-section-scores"],
+  [/\/homes\/(\d+)\/judgement-builder$/, "/homes/$1/inspection-lines-of-enquiry"],
+
+  // New inspection / quality families
+  [/\/homes\/(\d+)\/quality-audits$/, "/homes/$1/quality-audits"],
+  [/\/homes\/(\d+)\/quality-audit-findings$/, "/homes/$1/quality-audit-findings"],
+  [/\/homes\/(\d+)\/quality-audit-actions$/, "/homes/$1/quality-audit-actions"],
+
+  [/\/homes\/(\d+)\/compliance-items$/, "/homes/$1/compliance-items"],
+
+  [/\/homes\/(\d+)\/reg44-visits$/, "/homes/$1/reg44-visits"],
+  [/\/homes\/(\d+)\/reg44-findings$/, "/homes/$1/reg44-findings"],
+  [/\/homes\/(\d+)\/reg44-actions$/, "/homes/$1/reg44-actions"],
+
+  [/\/homes\/(\d+)\/reg45-reviews$/, "/homes/$1/reg45-reviews"],
+  [/\/homes\/(\d+)\/reg45-actions$/, "/homes/$1/reg45-actions"],
+
+  [/\/homes\/(\d+)\/inspection-scores$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/inspection-section-scores$/, "/homes/$1/inspection-section-scores"],
+  [/\/homes\/(\d+)\/inspection-score-reasons$/, "/homes/$1/inspection-score-reasons"],
+  [/\/homes\/(\d+)\/inspection-lines-of-enquiry$/, "/homes/$1/inspection-lines-of-enquiry"],
+  [/\/homes\/(\d+)\/inspection-improvement-actions$/, "/homes/$1/inspection-improvement-actions"],
+
+  [/\/homes\/(\d+)\/manager-review-queue$/, "/homes/$1/manager-review-queue"],
+];
 
 function shouldResolveAlias(method = "GET") {
   const upper = String(method || "GET").toUpperCase();
   return upper === "GET" || upper === "HEAD";
 }
 
-function normaliseApiPath(url) {
-  if (!url || typeof url !== "string") return "";
-
-  const trimmed = url.trim();
-  if (!trimmed) return "";
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    try {
-      const parsed = new URL(trimmed);
-      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-    } catch {
-      return "";
-    }
-  }
-
-  if (trimmed.startsWith("//")) return "";
-  if (trimmed === "/" || trimmed === "#") return "";
-
-  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return withLeadingSlash.replace(/\/{2,}/g, "/");
-}
-
-function looksLikeMalformedApiPath(pathname = "") {
-  const cleanPath = String(pathname || "").split("?")[0].trim();
-  if (!cleanPath || cleanPath === "/") return true;
-
-  const segments = cleanPath.split("/").filter(Boolean);
-  if (!segments.length) return true;
-
-  if (segments.length === 1) {
-    const only = segments[0];
-    if (/^\d+$/.test(only)) return true;
-
-    if (!KNOWN_TOP_LEVEL_PATHS.has(only)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 export function resolveApiUrl(url, method = "GET") {
-  const normalised = normaliseApiPath(url);
-  if (!normalised) return "";
+  if (!url || typeof url !== "string") return url;
+  if (!shouldResolveAlias(method)) return url;
 
-  if (!shouldResolveAlias(method)) return normalised;
-
-  const [pathname, queryString = ""] = normalised.split("?");
+  const [pathname, queryString = ""] = url.split("?");
 
   for (const [pattern, replacement] of API_ROUTE_ALIASES) {
     if (pattern.test(pathname)) {
@@ -164,7 +137,7 @@ export function resolveApiUrl(url, method = "GET") {
     }
   }
 
-  return normalised;
+  return url;
 }
 
 function getCookie(name) {
@@ -331,8 +304,6 @@ export function clearApiCache(url = null) {
   }
 
   const resolvedUrl = resolveApiUrl(url, "GET");
-  if (!resolvedUrl) return;
-
   const cacheKey = makeCacheKey("GET", resolvedUrl);
   getResponseCache.delete(cacheKey);
   inflightGetRequests.delete(cacheKey);
@@ -346,8 +317,7 @@ function invalidateCacheByPrefixes(prefixes = []) {
 
   const safePrefixes = prefixes
     .filter(Boolean)
-    .map((prefix) => resolveApiUrl(prefix, "GET"))
-    .filter(Boolean);
+    .map((prefix) => resolveApiUrl(prefix, "GET"));
 
   if (!safePrefixes.length) {
     clearApiCache();
@@ -414,14 +384,9 @@ function toIdArray(value) {
 }
 
 async function apiGetSettled(urls = []) {
-  const safeUrls = urls
-    .map((url) => resolveApiUrl(url, "GET"))
-    .filter((url) => url && !looksLikeMalformedApiPath(url));
-
-  const settled = await Promise.allSettled(safeUrls.map((url) => apiGet(url)));
-
+  const settled = await Promise.allSettled(urls.map((url) => apiGet(url)));
   return settled.map((result, index) => ({
-    url: safeUrls[index],
+    url: urls[index],
     ok: result.status === "fulfilled",
     data: result.status === "fulfilled" ? result.value : null,
     error: result.status === "rejected" ? result.reason : null,
@@ -598,11 +563,18 @@ async function fetchHomeWideBundle(homeId) {
   if (!homeId) return [];
 
   const urls = [
-    `/homes/${homeId}/dashboard`,
+    `/homes/${homeId}/inspection-scores`,
     `/homes/${homeId}/team`,
     `/homes/${homeId}/tasks`,
+    `/homes/${homeId}/communications`,
     `/homes/${homeId}/documents`,
-    `/homes/${homeId}/compliance`,
+    `/homes/${homeId}/supervisions`,
+    `/homes/${homeId}/reports`,
+    `/homes/${homeId}/safeguarding`,
+    `/homes/${homeId}/compliance-items`,
+    `/homes/${homeId}/quality-audits`,
+    `/homes/${homeId}/inspection-improvement-actions`,
+    `/homes/${homeId}/incidents`,
   ];
 
   return apiGetSettled(urls);
@@ -746,15 +718,6 @@ export async function fetchAssistantScopeBundle(context = {}) {
 export async function apiRequest(url, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const resolvedUrl = resolveApiUrl(url, method);
-
-  if (!resolvedUrl) {
-    throw new Error("Invalid API path.");
-  }
-
-  if (looksLikeMalformedApiPath(resolvedUrl)) {
-    throw new Error(`Blocked malformed API path: ${resolvedUrl}`);
-  }
-
   const isFormData = options.body instanceof FormData;
   const useCache = shouldCacheRequest(method, options);
   const cacheKey = makeCacheKey(method, resolvedUrl);
@@ -861,111 +824,12 @@ export async function apiSend(url, method = "POST", body = null, options = {}) {
   return response;
 }
 
-export async function syncInspectionTasks(homeId, payload = {}) {
-  if (!homeId) {
-    throw new Error("A homeId is required to sync inspection tasks.");
-  }
-
-  return apiSend(
-    `/homes/${homeId}/inspection-tasks/sync`,
-    "POST",
-    payload,
-    {
-      invalidatePrefixes: [
-        `/homes/${homeId}/quality`,
-        `/homes/${homeId}/compliance`,
-        `/homes/${homeId}/tasks`,
-        `/homes/${homeId}/dashboard`,
-        `/homes/${homeId}/inspection-readiness`,
-      ],
-    }
-  );
-}
-
-export async function refreshInspectionCycle(homeId, payload = {}) {
-  if (!homeId) {
-    throw new Error("A homeId is required to refresh the inspection cycle.");
-  }
-
-  return apiSend(
-    `/homes/${homeId}/inspection-cycle/refresh`,
-    "POST",
-    payload,
-    {
-      invalidatePrefixes: [
-        `/homes/${homeId}/quality`,
-        `/homes/${homeId}/compliance`,
-        `/homes/${homeId}/tasks`,
-        `/homes/${homeId}/dashboard`,
-        `/homes/${homeId}/inspection-readiness`,
-      ],
-    }
-  );
-}
-
 export function unwrapCreateResponse(recordType, response) {
   if (!response || typeof response !== "object") return response;
 
   const directKeys = ["item", "record", "data", recordType];
 
   for (const key of directKeys) {
-    if (response[key] && typeof response[key] === "object") {
-      return response[key];
-    }
-  }
-
-  const commonByType = {
-    daily_note: ["daily_note"],
-    incident: ["incident"],
-    support_plan: ["support_plan", "plan"],
-    risk: ["risk", "risk_assessment"],
-    health_record: ["health_record"],
-    education_record: ["education_record"],
-    family_contact: ["family_contact_record", "contact"],
-    keywork: ["keywork", "keywork_session"],
-    appointment: ["appointment", "young_person_appointment"],
-    achievement_record: ["achievement_record", "achievement"],
-    safeguarding_record: ["safeguarding_record"],
-    missing_episode: ["missing_episode"],
-    task: ["task"],
-    profile_identity: ["identity_profile", "young_person_identity_profile"],
-    profile_communication: ["communication_profile", "young_person_communication_profile"],
-    profile_education: ["education_profile", "young_person_education_profile"],
-    profile_health: ["health_profile", "young_person_health_profile"],
-    profile_legal: ["legal_status", "young_person_legal_status"],
-    profile_formulation: ["formulation", "young_person_formulation", "young_person_formulations"],
-    communication: ["communication"],
-    document: ["document"],
-    therapy: ["therapy"],
-    team: ["team"],
-    supervision: ["supervision"],
-    compliance: ["compliance", "compliance_item"],
-    audit: ["audit"],
-    rota: ["rota_shift", "rota"],
-    staffing: ["staffing", "staffing_snapshot"],
-    onboarding: ["onboarding"],
-    training: ["training_record", "training"],
-    probation: ["probation"],
-    vacancy: ["vacancy"],
-    pipeline: ["pipeline_candidate", "pipeline"],
-    shift: ["shift"],
-    absence: ["absence"],
-    maintenance: ["maintenance_item"],
-    finance: ["finance_item"],
-    medication: ["medication_item"],
-    admission: ["admission"],
-    discharge: ["discharge"],
-    visitor: ["visitor_log"],
-    staff_file: ["staff_file"],
-    manager_action: ["manager_action"],
-    reg40: ["reg40_item"],
-    reg44: ["reg44_item"],
-    reg45: ["reg45_item"],
-    transport: ["transport_log"],
-  };
-
-  const keys = commonByType[recordType] || [];
-  for (const key of keys) {
     if (response[key] && typeof response[key] === "object") {
       return response[key];
     }
