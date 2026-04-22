@@ -20,9 +20,11 @@ const DOM_KEYS = {
   --------------------------------- */
   logoBtn: "logoBtn",
   mobileNavBtn: "mobileNavBtn",
+  mobileNavToggle: "mobileNavToggle",
   refreshBtn: "refreshBtn",
   refreshWorkspaceBtn: "refreshWorkspaceBtn",
   homeBtn: "homeBtn",
+  goHomeBtn: "goHomeBtn",
   assistantLauncher: "assistantLauncher",
 
   globalSearchForm: "globalSearchForm",
@@ -53,6 +55,7 @@ const DOM_KEYS = {
   personAvatar: "personAvatar",
   personName: "personName",
   personMeta: "personMeta",
+  personSummaryChips: "personSummaryChips",
 
   mobilePersonAvatar: "mobilePersonAvatar",
   mobilePersonName: "mobilePersonName",
@@ -68,9 +71,11 @@ const DOM_KEYS = {
   desktopNav: "desktopNav",
   mobileNavContent: "mobileNavContent",
   mobileNavDrawer: "mobileNavDrawer",
+  mobileNavPanel: "mobileNavPanel",
   mobileNavBackdrop: "mobileNavBackdrop",
   closeMobileNavBtn: "closeMobileNavBtn",
   mobileBottomBar: "mobileBottomBar",
+  mobileBottomNav: "mobileBottomNav",
 
   /* --------------------------------
      Mobile search
@@ -172,6 +177,7 @@ const DOM_KEYS = {
      Composer
   --------------------------------- */
   composerPanel: "composerPanel",
+  recordComposerPage: "recordComposerPage",
   composerTitle: "composerTitle",
   composerSubtitle: "composerSubtitle",
   composerGuidanceText: "composerGuidanceText",
@@ -180,6 +186,8 @@ const DOM_KEYS = {
   recordComposerFields: "recordComposerFields",
   composerAiFeedback: "composerAiFeedback",
   composerAutosaveStatus: "composerAutosaveStatus",
+  autosaveStatus: "autosaveStatus",
+  autosaveTime: "autosaveTime",
   closeComposerBtn: "closeComposerBtn",
   composerSaveBtn: "composerSaveBtn",
   composerSaveDraftBtn: "composerSaveDraftBtn",
@@ -216,12 +224,83 @@ const DOM_KEYS = {
   closeSuggestionsPanelBtn: "closeSuggestionsPanelBtn",
 };
 
+function firstDefinedElement(...candidates) {
+  for (const candidate of candidates) {
+    if (candidate) return candidate;
+  }
+  return null;
+}
+
 function buildEls() {
   const resolved = {};
 
   Object.entries(DOM_KEYS).forEach(([key, id]) => {
     resolved[key] = byId(id);
   });
+
+  /* --------------------------------
+     Compatibility aliases
+  --------------------------------- */
+
+  resolved.selectorPanel = firstDefinedElement(
+    resolved.selectorScreen,
+    byId("selectorPanel")
+  );
+
+  resolved.workspacePanel = firstDefinedElement(
+    resolved.workspaceScreen,
+    byId("workspacePanel")
+  );
+
+  resolved.mobileNavBtn = firstDefinedElement(
+    resolved.mobileNavBtn,
+    resolved.mobileNavToggle
+  );
+
+  resolved.mobileNavToggle = firstDefinedElement(
+    resolved.mobileNavToggle,
+    resolved.mobileNavBtn
+  );
+
+  resolved.mobileNavDrawer = firstDefinedElement(
+    resolved.mobileNavDrawer,
+    resolved.mobileNavPanel
+  );
+
+  resolved.mobileNavPanel = firstDefinedElement(
+    resolved.mobileNavPanel,
+    resolved.mobileNavDrawer
+  );
+
+  resolved.mobileBottomBar = firstDefinedElement(
+    resolved.mobileBottomBar,
+    resolved.mobileBottomNav
+  );
+
+  resolved.mobileBottomNav = firstDefinedElement(
+    resolved.mobileBottomNav,
+    resolved.mobileBottomBar
+  );
+
+  resolved.homeBtn = firstDefinedElement(
+    resolved.homeBtn,
+    resolved.goHomeBtn
+  );
+
+  resolved.goHomeBtn = firstDefinedElement(
+    resolved.goHomeBtn,
+    resolved.homeBtn
+  );
+
+  resolved.composerPanel = firstDefinedElement(
+    resolved.composerPanel,
+    resolved.recordComposerPage
+  );
+
+  resolved.recordComposerPage = firstDefinedElement(
+    resolved.recordComposerPage,
+    resolved.composerPanel
+  );
 
   resolved.composerForm = resolved.recordComposerForm;
   resolved.composerFields = resolved.recordComposerFields;
