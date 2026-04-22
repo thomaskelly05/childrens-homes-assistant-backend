@@ -105,6 +105,9 @@ function getStatusTone(status = "") {
       "weak",
       "danger",
       "escalated",
+      "concern",
+      "gap",
+      "risk",
     ].includes(normalised)
   ) {
     return "danger";
@@ -146,6 +149,8 @@ function getStatusTone(status = "") {
       "current",
       "compliant",
       "outstanding",
+      "strength",
+      "success",
     ].includes(normalised)
   ) {
     return "success";
@@ -183,10 +188,28 @@ function hasUsableData(data) {
   if (Array.isArray(data.reports) && data.reports.length > 0) return true;
   if (Array.isArray(data.inspection_sections) && data.inspection_sections.length > 0)
     return true;
+  if (Array.isArray(data.inspection_section_scores) && data.inspection_section_scores.length > 0)
+    return true;
   if (Array.isArray(data.inspection_reasons) && data.inspection_reasons.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_score_reasons) && data.inspection_score_reasons.length > 0)
     return true;
   if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0)
     return true;
+  if (Array.isArray(data.inspection_improvement_actions) && data.inspection_improvement_actions.length > 0)
+    return true;
+  if (Array.isArray(data.quality_audits) && data.quality_audits.length > 0) return true;
+  if (Array.isArray(data.quality_audit_findings) && data.quality_audit_findings.length > 0)
+    return true;
+  if (Array.isArray(data.quality_audit_actions) && data.quality_audit_actions.length > 0)
+    return true;
+  if (Array.isArray(data.reg44_visits) && data.reg44_visits.length > 0) return true;
+  if (Array.isArray(data.reg44_findings) && data.reg44_findings.length > 0) return true;
+  if (Array.isArray(data.reg44_actions) && data.reg44_actions.length > 0) return true;
+  if (Array.isArray(data.reg45_reviews) && data.reg45_reviews.length > 0) return true;
+  if (Array.isArray(data.reg45_actions) && data.reg45_actions.length > 0) return true;
+  if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
+  if (Array.isArray(data.inspection_scores) && data.inspection_scores.length > 0) return true;
   if (data.summary && typeof data.summary === "object") return true;
   return false;
 }
@@ -209,6 +232,7 @@ const JUDGEMENTS = Object.freeze([
       "progress",
       "wishes and feelings",
       "experience",
+      "keywork",
     ],
   },
   {
@@ -249,6 +273,7 @@ const JUDGEMENTS = Object.freeze([
       "notifications",
       "oversight",
       "manager",
+      "quality audit",
     ],
   },
 ]);
@@ -390,17 +415,18 @@ function normaliseReportItems(data = {}) {
 }
 
 function buildEvidenceFromInspectionReadiness(readinessData = {}) {
-  const sections = toArray(readinessData?.inspection_sections, [
+  const scores = toArray(readinessData?.inspection_section_scores, [
+    readinessData?.inspection_sections,
     readinessData?.sections,
-    readinessData?.inspection_section_scores,
     readinessData?.items,
   ]);
 
-  const reasons = toArray(readinessData?.inspection_reasons, [
+  const reasons = toArray(readinessData?.inspection_score_reasons, [
+    readinessData?.inspection_reasons,
     readinessData?.reasons,
   ]);
 
-  const sectionEvidence = sections.map((item) => ({
+  const sectionEvidence = scores.map((item) => ({
     id: item.id ?? item.section_score_id ?? item.source_id ?? null,
     record_type: "sccif_evidence",
     title: item.section_name || item.title || "Inspection section evidence",
@@ -439,7 +465,8 @@ function buildEvidenceFromInspectionReadiness(readinessData = {}) {
 }
 
 function buildGapsFromInspectionReadiness(readinessData = {}) {
-  const reasons = toArray(readinessData?.inspection_reasons, [
+  const reasons = toArray(readinessData?.inspection_score_reasons, [
+    readinessData?.inspection_reasons,
     readinessData?.reasons,
   ]);
 
@@ -469,7 +496,8 @@ function buildGapsFromInspectionReadiness(readinessData = {}) {
 }
 
 function buildActionsFromInspectionReadiness(readinessData = {}) {
-  const actions = toArray(readinessData?.inspection_actions, [
+  const actions = toArray(readinessData?.inspection_improvement_actions, [
+    readinessData?.inspection_actions,
     readinessData?.actions,
     readinessData?.inspection_tasks,
     readinessData?.tasks,
@@ -546,7 +574,8 @@ function matchJudgement(item = {}) {
       text.includes("audit") ||
       text.includes("training") ||
       text.includes("reg 44") ||
-      text.includes("reg 45")
+      text.includes("reg 45") ||
+      text.includes("quality")
     ) {
       return JUDGEMENTS[2];
     }
@@ -590,7 +619,7 @@ function groupJudgementData({
 function pickStrengths(group) {
   return group.evidence
     .filter((item) =>
-      ["good", "strong", "effective", "ready", "reviewed", "secure", "available"].includes(
+      ["good", "strong", "effective", "ready", "reviewed", "secure", "available", "success"].includes(
         String(item.status || "")
           .toLowerCase()
           .replaceAll(" ", "_")
@@ -1143,67 +1172,6 @@ function buildFallbackData(homeId) {
   };
 }
 
-async function fetchDataset(homeId) {
-  const endpoints = buildInspectionUiEndpoints(homeId);
-  const safeGet = (url) => apiGet(url).catch(() => null);
-
-  const requests = [
-    safeGet(endpoints.readiness),
-    safeGet(endpoints.quality),
-    safeGet(endpoints.incidents),
-    safeGet(`${endpoints.base}/safeguarding`),
-    safeGet(`${endpoints.base}/reports`),
-  ];
-
-  const [readinessData, qualityData, incidentData, safeguardingData, reportData] =
-    await Promise.all(requests);
-
-  const responses = [
-    readinessData,
-    qualityData,
-    incidentData,
-    safeguardingData,
-    reportData,
-  ];
-  const hasLiveSuccess = responses.some(hasUsableData);
-
-  if (!hasLiveSuccess) {
-    return buildFallbackData(homeId);
-  }
-
-  const inspectionEvidence = buildEvidenceFromInspectionReadiness(
-    readinessData || {}
-  );
-  const inspectionGaps = buildGapsFromInspectionReadiness(readinessData || {});
-  const inspectionActions = buildActionsFromInspectionReadiness(
-    readinessData || {}
-  );
-
-  const qualityEvidence = normaliseEvidenceItems(qualityData || {});
-  const qualityGaps = normaliseGapItems(qualityData || {});
-  const qualityActions = normaliseActionItems(qualityData || {});
-
-  return {
-    summaryData:
-      buildSummaryFromInspectionReadiness(readinessData || {}).title
-        ? buildSummaryFromInspectionReadiness(readinessData || {})
-        : normaliseSummary(qualityData || {}),
-    evidenceData: {
-      items: qualityEvidence.length ? qualityEvidence : inspectionEvidence,
-    },
-    gapData: {
-      items: qualityGaps.length ? qualityGaps : inspectionGaps,
-    },
-    actionData: {
-      items: qualityActions.length ? qualityActions : inspectionActions,
-    },
-    incidentData: incidentData || { items: [] },
-    safeguardingData: safeguardingData || { items: [] },
-    reportData: reportData || { items: [] },
-    isFallback: false,
-  };
-}
-
 function buildSummaryFromInspectionReadiness(readinessData = {}) {
   const summary = readinessData?.summary || readinessData || {};
   return {
@@ -1219,6 +1187,255 @@ function buildSummaryFromInspectionReadiness(readinessData = {}) {
       summary.evidence_score ??
       0,
     overall_band: summary.overall_band || "",
+  };
+}
+
+async function fetchDataset(homeId) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+  const safeGet = (url) => apiGet(url).catch(() => null);
+
+  const requests = [
+    safeGet(endpoints.inspectionScores),
+    safeGet(endpoints.inspectionSectionScores),
+    safeGet(endpoints.inspectionScoreReasons),
+    safeGet(endpoints.inspectionImprovementActions),
+    safeGet(endpoints.qualityAudits),
+    safeGet(endpoints.qualityAuditFindings),
+    safeGet(endpoints.qualityAuditActions),
+    safeGet(endpoints.reg44Visits),
+    safeGet(endpoints.reg44Findings),
+    safeGet(endpoints.reg44Actions),
+    safeGet(endpoints.reg45Reviews),
+    safeGet(endpoints.reg45Actions),
+    safeGet(endpoints.complianceItems),
+  ];
+
+  const [
+    inspectionScoresData,
+    inspectionSectionScoresData,
+    inspectionReasonsData,
+    inspectionActionsData,
+    qualityAuditsData,
+    qualityAuditFindingsData,
+    qualityAuditActionsData,
+    reg44VisitsData,
+    reg44FindingsData,
+    reg44ActionsData,
+    reg45ReviewsData,
+    reg45ActionsData,
+    complianceItemsData,
+  ] = await Promise.all(requests);
+
+  const responses = [
+    inspectionScoresData,
+    inspectionSectionScoresData,
+    inspectionReasonsData,
+    inspectionActionsData,
+    qualityAuditsData,
+    qualityAuditFindingsData,
+    qualityAuditActionsData,
+    reg44VisitsData,
+    reg44FindingsData,
+    reg44ActionsData,
+    reg45ReviewsData,
+    reg45ActionsData,
+    complianceItemsData,
+  ];
+
+  const hasLiveSuccess = responses.some(hasUsableData);
+
+  if (!hasLiveSuccess) {
+    return buildFallbackData(homeId);
+  }
+
+  const readinessData = {
+    summary:
+      normaliseSummary(inspectionScoresData).summary ||
+      normaliseSummary(inspectionScoresData),
+    inspection_section_scores: toArray(
+      inspectionSectionScoresData?.inspection_section_scores,
+      [inspectionSectionScoresData?.items, inspectionSectionScoresData?.records]
+    ),
+    inspection_score_reasons: toArray(
+      inspectionReasonsData?.inspection_score_reasons,
+      [inspectionReasonsData?.items, inspectionReasonsData?.records]
+    ),
+    inspection_improvement_actions: toArray(
+      inspectionActionsData?.inspection_improvement_actions,
+      [inspectionActionsData?.items, inspectionActionsData?.records]
+    ),
+  };
+
+  const inspectionEvidence = buildEvidenceFromInspectionReadiness(readinessData);
+  const inspectionGaps = buildGapsFromInspectionReadiness(readinessData);
+  const inspectionActions = buildActionsFromInspectionReadiness(readinessData);
+
+  const reportItems = [
+    ...toArray(qualityAuditsData?.quality_audits, [qualityAuditsData?.items, qualityAuditsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      title: item.audit_title || item.title || "Quality audit",
+      report_type: "quality_audit",
+      status: item.status || item.overall_outcome || "completed",
+      summary:
+        item.summary ||
+        item.concerns ||
+        item.recommendations ||
+        "Quality audit recorded.",
+      created_at: item.audit_date || item.created_at || item.updated_at || null,
+      updated_at: item.updated_at || null,
+    })),
+    ...toArray(reg44VisitsData?.reg44_visits, [reg44VisitsData?.items, reg44VisitsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      title: "Reg 44 visit",
+      report_type: "reg44_visit",
+      status: "completed",
+      summary:
+        item.overall_summary ||
+        item.recommendations_summary ||
+        "Reg 44 visit recorded.",
+      created_at: item.visit_date || item.created_at || item.updated_at || null,
+      updated_at: item.updated_at || null,
+    })),
+    ...toArray(reg45ReviewsData?.reg45_reviews, [reg45ReviewsData?.items, reg45ReviewsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      title: "Reg 45 review",
+      report_type: "reg45_review",
+      status: item.review_status || "completed",
+      summary:
+        item.overall_quality_summary ||
+        item.action_plan_summary ||
+        "Reg 45 review recorded.",
+      created_at:
+        item.review_period_end || item.created_at || item.updated_at || null,
+      updated_at: item.updated_at || null,
+    })),
+  ];
+
+  const safeguardingItems = [
+    ...toArray(reg44FindingsData?.reg44_findings, [reg44FindingsData?.items, reg44FindingsData?.records])
+      .filter((item) =>
+        String(item.judgement_area || "")
+          .toLowerCase()
+          .replaceAll(" ", "_")
+          .includes("protected")
+      )
+      .map((item) => ({
+        id: item.id ?? null,
+        title: item.title || "Reg 44 safeguarding-related finding",
+        safeguarding_category: item.judgement_area || "Safeguarding",
+        status: item.requires_action ? "open" : "reviewed",
+        summary: item.finding_text || "Finding recorded.",
+        concern_datetime: item.created_at || null,
+      })),
+  ];
+
+  const incidentItems = [
+    ...inspectionGaps
+      .filter((item) => {
+        const area = String(item.area || "").toLowerCase();
+        return area.includes("helped") || area.includes("protected");
+      })
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        incident_type: item.area || "Inspection-linked risk",
+        severity: item.priority || item.status || "medium",
+        status: item.status || "recorded",
+        summary: item.summary,
+        occurred_at: item.updated_at || item.created_at || null,
+      })),
+  ];
+
+  const qualityEvidence = [
+    ...inspectionEvidence,
+    ...toArray(qualityAuditFindingsData?.quality_audit_findings, [qualityAuditFindingsData?.items, qualityAuditFindingsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      record_type: "sccif_evidence",
+      title: item.title || "Quality audit finding",
+      area: item.finding_type || "Leadership and management",
+      standard: "",
+      source_type: "quality_audit_finding",
+      status: item.priority || (item.action_required ? "warning" : "good"),
+      summary: item.details || "Audit finding recorded.",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+  ];
+
+  const qualityGaps = [
+    ...inspectionGaps,
+    ...toArray(reg44FindingsData?.reg44_findings, [reg44FindingsData?.items, reg44FindingsData?.records])
+      .filter((item) => item.requires_action)
+      .map((item) => ({
+        id: item.id ?? null,
+        record_type: "sccif_gap",
+        title: item.title || "Reg 44 finding",
+        area: item.judgement_area || "Leadership and management",
+        priority: item.priority || "medium",
+        status: item.finding_type || "open",
+        summary: item.finding_text || "Reg 44 finding recorded.",
+        due_date: null,
+        owner_user_name: "",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+  ];
+
+  const qualityActions = [
+    ...inspectionActions,
+    ...toArray(qualityAuditActionsData?.quality_audit_actions, [qualityAuditActionsData?.items, qualityAuditActionsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      record_type: "sccif_action",
+      title: item.action_title || "Quality audit action",
+      area: "Leadership and management",
+      priority: item.priority || "",
+      status: item.status || "open",
+      summary:
+        item.action_description ||
+        item.completion_notes ||
+        "Quality audit action recorded.",
+      due_date: item.due_date || null,
+      owner_user_name: "",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+    ...toArray(reg44ActionsData?.reg44_actions, [reg44ActionsData?.items, reg44ActionsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      record_type: "sccif_action",
+      title: item.action_title || "Reg 44 action",
+      area: "Leadership and management",
+      priority: "",
+      status: item.status || "open",
+      summary: item.action_description || "Reg 44 action recorded.",
+      due_date: item.due_date || null,
+      owner_user_name: "",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+    ...toArray(reg45ActionsData?.reg45_actions, [reg45ActionsData?.items, reg45ActionsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      record_type: "sccif_action",
+      title: item.action_title || "Reg 45 action",
+      area: "Leadership and management",
+      priority: item.priority || "",
+      status: item.status || "open",
+      summary: item.action_description || "Reg 45 action recorded.",
+      due_date: item.due_date || null,
+      owner_user_name: "",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+  ];
+
+  return {
+    summaryData: buildSummaryFromInspectionReadiness(readinessData),
+    evidenceData: { items: qualityEvidence },
+    gapData: { items: qualityGaps },
+    actionData: { items: qualityActions },
+    incidentData: { items: incidentItems },
+    safeguardingData: { items: safeguardingItems },
+    reportData: { items: reportItems },
+    isFallback: false,
   };
 }
 
