@@ -2,7 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "indicare_rostering_v5";
-  const CURRENT_USER_ID = "s2"; // change this when you wire in auth
+  const CURRENT_USER_ID = "s2"; // replace with real logged-in user later
 
   const els = {};
 
@@ -15,6 +15,14 @@
   }
 
   function cacheEls() {
+    els.staffProfileName = document.getElementById("staffProfileName");
+    els.staffProfileMeta = document.getElementById("staffProfileMeta");
+
+    els.staffSummaryAssigned = document.getElementById("staffSummaryAssigned");
+    els.staffSummaryOpen = document.getElementById("staffSummaryOpen");
+    els.staffSummaryAcks = document.getElementById("staffSummaryAcks");
+    els.staffSummaryPending = document.getElementById("staffSummaryPending");
+
     els.myShifts = document.getElementById("myShifts");
     els.openShifts = document.getElementById("openShifts");
     els.myNotifications = document.getElementById("myNotifications");
@@ -58,6 +66,8 @@
   }
 
   function renderAll() {
+    renderProfile();
+    renderSummary();
     renderMyShifts();
     renderOpenShifts();
     renderNotifications();
@@ -132,6 +142,57 @@
         item.kind === kind &&
         item.status === "pending"
     ) || null;
+  }
+
+  function renderProfile() {
+    const state = loadState();
+    const staff = getCurrentStaff(state);
+
+    if (!staff) {
+      if (els.staffProfileName) els.staffProfileName.textContent = "Staff member not found";
+      if (els.staffProfileMeta) els.staffProfileMeta.textContent = "Please connect this portal to your logged-in account.";
+      return;
+    }
+
+    if (els.staffProfileName) {
+      els.staffProfileName.textContent = staff.name;
+    }
+
+    if (els.staffProfileMeta) {
+      const bits = [
+        staff.role || "No role",
+        staff.employmentType || "core",
+        staff.leadQualified ? "Lead qualified" : "Not lead qualified",
+        staff.medicationTrained ? "Medication trained" : "No medication status",
+      ];
+      els.staffProfileMeta.textContent = bits.join(" · ");
+    }
+  }
+
+  function renderSummary() {
+    const state = loadState();
+    const assignedShifts = getAllShifts(state).filter(
+      (shift) => Array.isArray(shift.assignedStaffIds) && shift.assignedStaffIds.includes(CURRENT_USER_ID)
+    );
+
+    const openShifts = getAllShifts(state).filter(
+      (shift) =>
+        shift.isOpenShift &&
+        (!Array.isArray(shift.assignedStaffIds) || !shift.assignedStaffIds.includes(CURRENT_USER_ID))
+    );
+
+    const needingAck = (state.notifications || []).filter(
+      (item) => item.staffId === CURRENT_USER_ID && item.requiresAck && !item.acknowledgedAt
+    );
+
+    const pendingRequests = (state.approvals || []).filter(
+      (item) => item.requestedByStaffId === CURRENT_USER_ID && item.status === "pending"
+    );
+
+    if (els.staffSummaryAssigned) els.staffSummaryAssigned.textContent = String(assignedShifts.length);
+    if (els.staffSummaryOpen) els.staffSummaryOpen.textContent = String(openShifts.length);
+    if (els.staffSummaryAcks) els.staffSummaryAcks.textContent = String(needingAck.length);
+    if (els.staffSummaryPending) els.staffSummaryPending.textContent = String(pendingRequests.length);
   }
 
   function renderMyShifts() {
@@ -263,9 +324,7 @@
           <article class="${className}">
             <h4>${escapeHtml(humaniseNotificationType(item.type || "notice"))}</h4>
             <p>${escapeHtml(item.message || "")}</p>
-            <div class="item-meta">
-              ${escapeHtml(buildNotificationMeta(item))}
-            </div>
+            <div class="item-meta">${escapeHtml(buildNotificationMeta(item))}</div>
             ${
               needsAck
                 ? `
