@@ -146,6 +146,7 @@ export function inferSectionFromRecordType(recordType = "", raw = {}) {
     [RECORD_TYPES.task]: "readiness",
     [RECORD_TYPES.medication_profile]: "health",
     [RECORD_TYPES.medication_record]: "health",
+
     inspection_pack_job: "reports",
     review_meeting: "reports",
     statutory_document: "documents",
@@ -185,6 +186,19 @@ export function inferSectionFromRecordType(recordType = "", raw = {}) {
     inspection_briefing: "inspection-readiness",
     inspection_prep_72_hour: "inspection-readiness",
     inspection_home_card: "inspection-readiness",
+
+    quality_audit: "quality",
+    quality_audit_action: "quality",
+    quality_audit_finding: "quality",
+    reg44_action: "reg44",
+    reg44_finding: "reg44",
+    reg44_visit: "reg44",
+    reg45_action: "reg45",
+    reg45_review: "reg45",
+    inspection_score: "inspection-readiness",
+    inspection_section_score: "inspection-readiness",
+    inspection_line_of_enquiry: "inspection-readiness",
+    manager_review_queue: "manager",
   };
 
   if (map[recordType]) return map[recordType];
@@ -192,6 +206,9 @@ export function inferSectionFromRecordType(recordType = "", raw = {}) {
   const sourceTable = cleanText(safeObject(raw).source_table || "").toLowerCase();
 
   if (sourceTable.includes("inspection")) return "inspection-readiness";
+  if (sourceTable.includes("quality_audit")) return "quality";
+  if (sourceTable.includes("reg44")) return "reg44";
+  if (sourceTable.includes("reg45")) return "reg45";
   if (sourceTable.includes("document")) return "documents";
   if (sourceTable.includes("communication")) return "communication";
   if (sourceTable.includes("therapy")) return "therapy";
@@ -207,13 +224,11 @@ export function inferSectionFromRecordType(recordType = "", raw = {}) {
   if (sourceTable.includes("staffing")) return "team";
   if (sourceTable.includes("visitor")) return "communication";
   if (sourceTable.includes("audit")) return "quality";
-  if (sourceTable.includes("reg44")) return "quality";
-  if (sourceTable.includes("reg45")) return "reports";
-  if (sourceTable.includes("reg40")) return "quality";
   if (sourceTable.includes("transport")) return "calendar";
   if (sourceTable.includes("maintenance")) return "home-dashboard";
   if (sourceTable.includes("finance")) return "manager";
   if (sourceTable.includes("incident")) return "timeline";
+  if (sourceTable.includes("manager_review")) return "manager";
 
   return "workspace";
 }
@@ -669,6 +684,93 @@ function buildAssistantSummary(record = {}) {
         cleanText(safeRecord.overall_band),
         "Inspection home card available."
       ),
+
+    quality_audit: () =>
+      pickFirst(
+        cleanText(safeRecord.summary),
+        cleanText(safeRecord.concerns),
+        cleanText(safeRecord.recommendations),
+        "Quality audit available."
+      ),
+
+    quality_audit_action: () =>
+      pickFirst(
+        cleanText(safeRecord.action_description),
+        cleanText(safeRecord.completion_notes),
+        "Quality audit action available."
+      ),
+
+    quality_audit_finding: () =>
+      pickFirst(
+        cleanText(safeRecord.details),
+        cleanText(safeRecord.summary),
+        "Quality audit finding available."
+      ),
+
+    reg44_action: () =>
+      pickFirst(
+        cleanText(safeRecord.action_description),
+        cleanText(safeRecord.summary),
+        "Reg 44 action available."
+      ),
+
+    reg44_finding: () =>
+      pickFirst(
+        cleanText(safeRecord.finding_text),
+        cleanText(safeRecord.summary),
+        "Reg 44 finding available."
+      ),
+
+    reg44_visit: () =>
+      pickFirst(
+        cleanText(safeRecord.overall_summary),
+        cleanText(safeRecord.recommendations_summary),
+        "Reg 44 visit available."
+      ),
+
+    reg45_action: () =>
+      pickFirst(
+        cleanText(safeRecord.action_description),
+        cleanText(safeRecord.summary),
+        "Reg 45 action available."
+      ),
+
+    reg45_review: () =>
+      pickFirst(
+        cleanText(safeRecord.overall_quality_summary),
+        cleanText(safeRecord.action_plan_summary),
+        "Reg 45 review available."
+      ),
+
+    inspection_score: () =>
+      pickFirst(
+        cleanText(safeRecord.narrative_summary),
+        cleanText(safeRecord.concerns_summary),
+        cleanText(safeRecord.strengths_summary),
+        "Inspection score available."
+      ),
+
+    inspection_section_score: () =>
+      pickFirst(
+        cleanText(safeRecord.summary_text),
+        cleanText(safeRecord.concerns_text),
+        cleanText(safeRecord.strengths_text),
+        "Inspection section score available."
+      ),
+
+    inspection_line_of_enquiry: () =>
+      pickFirst(
+        cleanText(safeRecord.rationale),
+        cleanText(safeRecord.line_of_enquiry),
+        "Inspection line of enquiry available."
+      ),
+
+    manager_review_queue: () =>
+      pickFirst(
+        cleanText(safeRecord.review_reason),
+        cleanText(safeRecord.summary),
+        "Manager review queue item available."
+      ),
   };
 
   if (map[recordType]) return map[recordType]();
@@ -781,6 +883,17 @@ function buildRegulatorySignals(record = {}) {
     type === "audit" ||
     type === "reg44_item" ||
     type === "reg45_item" ||
+    type === "reg44_action" ||
+    type === "reg44_finding" ||
+    type === "reg44_visit" ||
+    type === "reg45_action" ||
+    type === "reg45_review" ||
+    type === "quality_audit" ||
+    type === "quality_audit_action" ||
+    type === "quality_audit_finding" ||
+    type === "inspection_score" ||
+    type === "inspection_section_score" ||
+    type === "inspection_line_of_enquiry" ||
     type.startsWith("inspection_") ||
     text.includes("reg 44") ||
     text.includes("reg44") ||
@@ -2140,7 +2253,7 @@ export function mapTrainingRecord(raw = {}) {
     title: cleanText(safeRaw.staff_member) || "Training record",
     summary: pickFirst(
       cleanText(safeRaw.status),
-      cleanText(safeRaw.training_compliance_percent),
+      cleanText(safeRaw.summary),
       "Training record available."
     ),
     home_id: safeRaw.home_id ?? null,
@@ -2648,7 +2761,7 @@ export function mapInspectionHeader(raw = {}) {
     ),
     home_id: safeRaw.home_id ?? null,
     provider_id: safeRaw.provider_id ?? null,
-    inspection_score_id: safeRaw.inspection_score_id ?? safeRaw.id ?? null,
+    inspection_score_id: safeRaw.inspection_score_id ?? null,
     home_name: cleanText(safeRaw.home_name),
     overall_band: cleanText(safeRaw.overall_band),
     overall_score: safeRaw.overall_score ?? null,
@@ -2852,6 +2965,258 @@ export function mapInspectionPrep72Hour(raw = {}) {
   });
 }
 
+/* Quality / provider-level generic mappings */
+
+export function mapQualityAudit(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "quality_audit",
+    source_table: safeRaw.source_table || "quality_audits",
+    title: cleanText(safeRaw.audit_title || safeRaw.title) || "Quality audit",
+    summary: pickFirst(
+      cleanText(safeRaw.summary),
+      cleanText(safeRaw.concerns),
+      cleanText(safeRaw.recommendations),
+      "Quality audit available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    provider_id: safeRaw.provider_id ?? null,
+    audit_date: safeRaw.audit_date || null,
+    status: cleanText(safeRaw.status),
+    overall_outcome: cleanText(safeRaw.overall_outcome),
+    concerns: cleanText(safeRaw.concerns),
+    recommendations: cleanText(safeRaw.recommendations),
+  });
+}
+
+export function mapQualityAuditAction(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "quality_audit_action",
+    source_table: safeRaw.source_table || "quality_audit_actions",
+    title: cleanText(safeRaw.action_title || safeRaw.title) || "Quality audit action",
+    summary: pickFirst(
+      cleanText(safeRaw.action_description),
+      cleanText(safeRaw.completion_notes),
+      "Quality audit action available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    provider_id: safeRaw.provider_id ?? null,
+    due_date: safeRaw.due_date || null,
+    status: cleanText(safeRaw.status),
+    priority: cleanText(safeRaw.priority),
+    action_description: cleanText(safeRaw.action_description),
+    completion_notes: cleanText(safeRaw.completion_notes),
+    owner_user_id: safeRaw.owner_user_id ?? null,
+  });
+}
+
+export function mapQualityAuditFinding(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "quality_audit_finding",
+    source_table: safeRaw.source_table || "quality_audit_findings",
+    title: cleanText(safeRaw.title) || "Quality audit finding",
+    summary: pickFirst(
+      cleanText(safeRaw.details),
+      cleanText(safeRaw.summary),
+      "Quality audit finding available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    provider_id: safeRaw.provider_id ?? null,
+    finding_type: cleanText(safeRaw.finding_type),
+    priority: cleanText(safeRaw.priority),
+    details: cleanText(safeRaw.details),
+    action_required: toBool(safeRaw.action_required),
+  });
+}
+
+export function mapReg44Action(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "reg44_action",
+    source_table: safeRaw.source_table || "reg44_actions",
+    title: cleanText(safeRaw.action_title || safeRaw.title) || "Reg 44 action",
+    summary: pickFirst(
+      cleanText(safeRaw.action_description),
+      cleanText(safeRaw.summary),
+      "Reg 44 action available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    due_date: safeRaw.due_date || null,
+    status: cleanText(safeRaw.status),
+    action_description: cleanText(safeRaw.action_description),
+  });
+}
+
+export function mapReg44Finding(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "reg44_finding",
+    source_table: safeRaw.source_table || "reg44_findings",
+    title: cleanText(safeRaw.title || safeRaw.finding_type) || "Reg 44 finding",
+    summary: pickFirst(
+      cleanText(safeRaw.finding_text),
+      cleanText(safeRaw.summary),
+      "Reg 44 finding available."
+    ),
+    priority: cleanText(safeRaw.priority),
+    finding_type: cleanText(safeRaw.finding_type),
+    finding_text: cleanText(safeRaw.finding_text),
+  });
+}
+
+export function mapReg44Visit(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "reg44_visit",
+    source_table: safeRaw.source_table || "reg44_visits",
+    title: cleanText(safeRaw.title) || "Reg 44 visit",
+    summary: pickFirst(
+      cleanText(safeRaw.overall_summary),
+      cleanText(safeRaw.recommendations_summary),
+      "Reg 44 visit available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    visit_date: safeRaw.visit_date || null,
+    independent_person_name: cleanText(safeRaw.independent_person_name),
+    overall_summary: cleanText(safeRaw.overall_summary),
+    recommendations_summary: cleanText(safeRaw.recommendations_summary),
+  });
+}
+
+export function mapReg45Action(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "reg45_action",
+    source_table: safeRaw.source_table || "reg45_actions",
+    title: cleanText(safeRaw.action_title || safeRaw.title) || "Reg 45 action",
+    summary: pickFirst(
+      cleanText(safeRaw.action_description),
+      cleanText(safeRaw.summary),
+      "Reg 45 action available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    due_date: safeRaw.due_date || null,
+    status: cleanText(safeRaw.status),
+    priority: cleanText(safeRaw.priority),
+    action_description: cleanText(safeRaw.action_description),
+  });
+}
+
+export function mapReg45Review(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "reg45_review",
+    source_table: safeRaw.source_table || "reg45_reviews",
+    title: cleanText(safeRaw.title) || "Reg 45 review",
+    summary: pickFirst(
+      cleanText(safeRaw.overall_quality_summary),
+      cleanText(safeRaw.action_plan_summary),
+      "Reg 45 review available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    review_period_start: safeRaw.review_period_start || null,
+    review_period_end: safeRaw.review_period_end || null,
+    review_status: cleanText(safeRaw.review_status),
+    overall_quality_summary: cleanText(safeRaw.overall_quality_summary),
+    action_plan_summary: cleanText(safeRaw.action_plan_summary),
+  });
+}
+
+export function mapInspectionScore(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "inspection_score",
+    source_table: safeRaw.source_table || "inspection_scores",
+    title: cleanText(safeRaw.title) || "Inspection readiness",
+    summary: pickFirst(
+      cleanText(safeRaw.narrative_summary),
+      cleanText(safeRaw.concerns_summary),
+      cleanText(safeRaw.strengths_summary),
+      "Inspection score available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    provider_id: safeRaw.provider_id ?? null,
+    period_start: safeRaw.period_start || null,
+    period_end: safeRaw.period_end || null,
+    overall_band: cleanText(safeRaw.overall_band),
+    overall_score: safeRaw.overall_score ?? null,
+    confidence_score: safeRaw.confidence_score ?? null,
+    narrative_summary: cleanText(safeRaw.narrative_summary),
+    strengths_summary: cleanText(safeRaw.strengths_summary),
+    concerns_summary: cleanText(safeRaw.concerns_summary),
+  });
+}
+
+export function mapInspectionSectionScore(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "inspection_section_score",
+    source_table: safeRaw.source_table || "inspection_section_scores",
+    title: cleanText(safeRaw.section_name || safeRaw.section_code) || "Inspection section score",
+    summary: pickFirst(
+      cleanText(safeRaw.summary_text),
+      cleanText(safeRaw.concerns_text),
+      cleanText(safeRaw.strengths_text),
+      "Inspection section score available."
+    ),
+    inspection_score_id: safeRaw.inspection_score_id ?? null,
+    section_code: cleanText(safeRaw.section_code),
+    section_name: cleanText(safeRaw.section_name),
+    score_value: safeRaw.score_value ?? null,
+    score_band: cleanText(safeRaw.score_band),
+    confidence_score: safeRaw.confidence_score ?? null,
+    summary_text: cleanText(safeRaw.summary_text),
+    strengths_text: cleanText(safeRaw.strengths_text),
+    concerns_text: cleanText(safeRaw.concerns_text),
+  });
+}
+
+export function mapInspectionLineOfEnquiry(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "inspection_line_of_enquiry",
+    source_table: safeRaw.source_table || "inspection_lines_of_enquiry",
+    title: cleanText(safeRaw.line_of_enquiry || safeRaw.title) || "Line of enquiry",
+    summary: pickFirst(
+      cleanText(safeRaw.rationale),
+      cleanText(safeRaw.line_of_enquiry),
+      "Inspection line of enquiry available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    provider_id: safeRaw.provider_id ?? null,
+    priority: cleanText(safeRaw.priority),
+    line_of_enquiry: cleanText(safeRaw.line_of_enquiry),
+    rationale: cleanText(safeRaw.rationale),
+    due_date: safeRaw.due_date || null,
+    status: cleanText(safeRaw.status),
+  });
+}
+
+export function mapManagerReviewQueue(raw = {}) {
+  const safeRaw = safeObject(raw);
+  return buildBaseRecord(safeRaw, {
+    record_type: "manager_review_queue",
+    source_table: safeRaw.source_table || "manager_review_queue",
+    title: cleanText(safeRaw.title || safeRaw.record_type) || "Manager review item",
+    summary: pickFirst(
+      cleanText(safeRaw.review_reason),
+      cleanText(safeRaw.summary),
+      "Manager review queue item available."
+    ),
+    home_id: safeRaw.home_id ?? null,
+    provider_id: safeRaw.provider_id ?? null,
+    young_person_id: safeRaw.young_person_id ?? null,
+    workflow_status: cleanText(safeRaw.workflow_status),
+    priority: cleanText(safeRaw.priority),
+    due_date: safeRaw.due_date || null,
+    review_reason: cleanText(safeRaw.review_reason),
+    source_id: safeRaw.source_id ?? safeRaw.id ?? null,
+    source_table_name: cleanText(safeRaw.source_table),
+  });
+}
+
 export function mapBundle(raw = {}) {
   const safeRaw = safeObject(raw);
 
@@ -2963,6 +3328,7 @@ export function mapRecordByType(recordType, raw = {}) {
       return mapMedicationProfile(raw);
     case RECORD_TYPES.medication_record:
       return mapMedicationRecord(raw);
+
     case "inspection_pack_job":
       return mapInspectionPackJob(raw);
     case "review_meeting":
@@ -3024,6 +3390,31 @@ export function mapRecordByType(recordType, raw = {}) {
     case "home_incident":
       return mapHomeIncident(raw);
 
+    case "quality_audit":
+      return mapQualityAudit(raw);
+    case "quality_audit_action":
+      return mapQualityAuditAction(raw);
+    case "quality_audit_finding":
+      return mapQualityAuditFinding(raw);
+    case "reg44_action":
+      return mapReg44Action(raw);
+    case "reg44_finding":
+      return mapReg44Finding(raw);
+    case "reg44_visit":
+      return mapReg44Visit(raw);
+    case "reg45_action":
+      return mapReg45Action(raw);
+    case "reg45_review":
+      return mapReg45Review(raw);
+    case "inspection_score":
+      return mapInspectionScore(raw);
+    case "inspection_section_score":
+      return mapInspectionSectionScore(raw);
+    case "inspection_line_of_enquiry":
+      return mapInspectionLineOfEnquiry(raw);
+    case "manager_review_queue":
+      return mapManagerReviewQueue(raw);
+
     case "inspection_home_card":
       return mapInspectionHomeCard(raw);
     case "inspection_home_header":
@@ -3036,7 +3427,7 @@ export function mapRecordByType(recordType, raw = {}) {
       return mapInspectionAction(raw);
     case "inspection_task":
       return mapInspectionTask(raw);
-      case "inspection_briefing":
+    case "inspection_briefing":
       return mapInspectionBriefing(raw);
     case "inspection_prep_72_hour":
       return mapInspectionPrep72Hour(raw);
@@ -3045,7 +3436,10 @@ export function mapRecordByType(recordType, raw = {}) {
       return buildBaseRecord(raw, {
         record_type: recordType || safeObject(raw).record_type || "record",
         title: cleanText(safeObject(raw).title) || "Record",
-        summary: cleanText(safeObject(raw).summary) || "",
+        summary:
+          cleanText(safeObject(raw).summary) ||
+          cleanText(safeObject(raw).description) ||
+          "",
       });
   }
 }
@@ -3136,6 +3530,19 @@ export function buildAssistantEvidenceSet(payload = {}) {
   addMapped(safePayload.transport, mapTransportRecord);
   addMapped(safePayload.rota, mapRotaShift);
   addMapped(safePayload.staffing, mapStaffingSnapshot);
+
+  addMapped(safePayload.quality_audits, mapQualityAudit);
+  addMapped(safePayload.quality_audit_actions, mapQualityAuditAction);
+  addMapped(safePayload.quality_audit_findings, mapQualityAuditFinding);
+  addMapped(safePayload.reg44_actions, mapReg44Action);
+  addMapped(safePayload.reg44_findings, mapReg44Finding);
+  addMapped(safePayload.reg44_visits, mapReg44Visit);
+  addMapped(safePayload.reg45_actions, mapReg45Action);
+  addMapped(safePayload.reg45_reviews, mapReg45Review);
+  addMapped(safePayload.inspection_scores, mapInspectionScore);
+  addMapped(safePayload.inspection_section_scores, mapInspectionSectionScore);
+  addMapped(safePayload.inspection_lines || safePayload.inspection_lines_of_enquiry, mapInspectionLineOfEnquiry);
+  addMapped(safePayload.manager_review_queue, mapManagerReviewQueue);
 
   addMapped(safePayload.inspection_home_cards, mapInspectionHomeCard);
   addMapped(safePayload.inspection_headers, mapInspectionHeader);
