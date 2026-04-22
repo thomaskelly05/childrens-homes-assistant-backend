@@ -1,7 +1,8 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "indicare_rostering_v3";
+  const STORAGE_KEY = "indicare_rostering_v4";
+  const MIN_REST_HOURS = 11;
 
   const SHIFT_TEMPLATES = [
     {
@@ -197,6 +198,7 @@
       "summaryGaps",
       "summaryAgency",
       "summaryOpenShifts",
+      "summaryApprovals",
       "summaryWarnings",
       "staffCountBadge",
       "staffSearchInput",
@@ -207,6 +209,11 @@
       "leaveEndInput",
       "leaveNotesInput",
       "createLeaveBtn",
+      "availabilityStaffSelect",
+      "availabilityStartInput",
+      "availabilityEndInput",
+      "availabilityReasonInput",
+      "saveAvailabilityBtn",
       "filterGapsOnly",
       "filterAgencyOnly",
       "filterOpenOnly",
@@ -215,6 +222,7 @@
       "rotaBoard",
       "todayLivePanel",
       "warningPanel",
+      "approvalPanel",
       "openShiftPanel",
       "notificationPanel",
       "absencePanel",
@@ -232,9 +240,11 @@
       "assignStaffBtn",
       "markOpenShiftBtn",
       "notifyEligibleStaffBtn",
-      "sendChangeNoticeBtn",
+      "createMockClaimBtn",
       "createSwapRequestBtn",
+      "sendChangeNoticeBtn",
       "shiftOpenState",
+      "shiftClaimState",
       "shiftChangeState",
       "shiftWarnings",
     ];
@@ -256,14 +266,16 @@
     els.payrollBtn.addEventListener("click", exportPayrollCsv);
     els.evidenceBtn.addEventListener("click", exportEvidencePack);
     els.createLeaveBtn.addEventListener("click", handleCreateLeave);
+    els.saveAvailabilityBtn.addEventListener("click", handleSaveAvailability);
     els.assignStaffBtn.addEventListener("click", handleAssignFromDrawer);
     els.closeShiftDrawerBtn.addEventListener("click", closeDrawer);
     els.shiftDrawerBackdrop.addEventListener("click", closeDrawer);
 
     els.markOpenShiftBtn.addEventListener("click", handleMarkOpenShift);
     els.notifyEligibleStaffBtn.addEventListener("click", handleNotifyEligibleStaff);
-    els.sendChangeNoticeBtn.addEventListener("click", handleSendChangeNotice);
+    els.createMockClaimBtn.addEventListener("click", handleCreateMockClaim);
     els.createSwapRequestBtn.addEventListener("click", handleCreateSwapRequest);
+    els.sendChangeNoticeBtn.addEventListener("click", handleSendChangeNotice);
 
     els.homeIdInput.addEventListener("change", handleHomeChange);
     els.weekStartInput.addEventListener("change", handleWeekChange);
@@ -376,7 +388,12 @@
     });
 
     getVisibleShiftsForSummary().forEach((shift) => {
-      createNotificationForShift(shift, "rota_published", `Rota published for ${shift.title} on ${formatShortDate(shift.date)}.`, false);
+      createNotificationForShift(
+        shift,
+        "rota_published",
+        `Rota published for ${shift.title} on ${formatShortDate(shift.date)}.`,
+        false
+      );
     });
 
     saveAndRender();
@@ -426,6 +443,52 @@
     els.leaveStartInput.value = "";
     els.leaveEndInput.value = "";
     els.leaveNotesInput.value = "";
+
+    saveAndRender();
+  }
+
+  function handleSaveAvailability() {
+    const staffId = els.availabilityStaffSelect.value;
+    const start = els.availabilityStartInput.value;
+    const end = els.availabilityEndInput.value;
+    const reason = (els.availabilityReasonInput.value || "").trim();
+
+    if (!staffId || !start || !end) {
+      window.alert("Please select a staff member and both availability dates.");
+      return;
+    }
+
+    if (start > end) {
+      window.alert("Availability end date must be the same as or after the start date.");
+      return;
+    }
+
+    state.data.availabilityBlocks.push({
+      id: makeId("availability"),
+      homeId: state.homeId,
+      staffId,
+      start,
+      end,
+      reason,
+      createdAt: new Date().toISOString(),
+    });
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "availability",
+      message: `${getStaffName(staffId)} marked unavailable from ${formatShortDate(start)} to ${formatShortDate(end)}.`,
+    });
+
+    createNotification(staffId, {
+      type: "availability_recorded",
+      message: `Your unavailability has been recorded from ${formatShortDate(start)} to ${formatShortDate(end)}.`,
+      requiresAck: false,
+      shiftId: null,
+    });
+
+    els.availabilityStartInput.value = "";
+    els.availabilityEndInput.value = "";
+    els.availabilityReasonInput.value = "";
 
     saveAndRender();
   }
@@ -489,6 +552,97 @@
     openDrawer(shift.id);
   }
 
+  function handleCreateMockClaim() {
+    const shift = getSelectedShift();
+    if (!shift) return;
+
+    const eligible = getAvailableStaffForShift(shift)
+      .sort((a, b) => scoreStaffForShift(b, shift) - scoreStaffForShift(a, shift));
+
+    if (!eligible.length) {
+      window.alert("No suitable staff are available to simulate a claim.");
+      return;
+    }
+
+    const claimant = eligible[0];
+
+    state.data.approvals.unshift({
+      id: makeId("approval"),
+      homeId: state.homeId,
+      kind: "open_shift_claim",
+      status: "pending",
+      shiftId: shift.id,
+      requestedByStaffId: claimant.id,
+      createdAt: new Date().toISOString(),
+      note: `Claim submitted by ${claimant.name}.`,
+    });
+
+    createNotification(claimant.id, {
+      type: "claim_submitted",
+      message: `Your claim for ${shift.title} on ${formatShortDate(shift.date)} has been sent for approval.`,
+      requiresAck: false,
+      shiftId: shift.id,
+    });
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "claim",
+      message: `${claimant.name} submitted a claim for ${shift.title} on ${formatShortDate(shift.date)}.`,
+    });
+
+    saveAndRender();
+    openDrawer(shift.id);
+  }
+
+  function handleCreateSwapRequest() {
+    const shift = getSelectedShift();
+    if (!shift) return;
+
+    if (!shift.assignedStaffIds.length) {
+      window.alert("Assign at least one staff member before creating a swap request.");
+      return;
+    }
+
+    const ownerId = shift.assignedStaffIds[0];
+
+    state.data.approvals.unshift({
+      id: makeId("approval"),
+      homeId: state.homeId,
+      kind: "swap_request",
+      status: "pending",
+      shiftId: shift.id,
+      requestedByStaffId: ownerId,
+      createdAt: new Date().toISOString(),
+      note: `Swap request created by ${getStaffName(ownerId)}.`,
+    });
+
+    createNotification(ownerId, {
+      type: "swap_created",
+      message: `Swap request created for ${shift.title} on ${formatShortDate(shift.date)}.`,
+      requiresAck: false,
+      shiftId: shift.id,
+    });
+
+    const eligible = getAvailableStaffForShift(shift).slice(0, 6);
+    eligible.forEach((person) => {
+      createNotification(person.id, {
+        type: "swap_offer",
+        message: `Swap available: ${shift.title} on ${formatShortDate(shift.date)} ${shift.start}-${shift.end}.`,
+        requiresAck: false,
+        shiftId: shift.id,
+      });
+    });
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "swap_request",
+      message: `Swap request created for ${shift.title} on ${formatShortDate(shift.date)}.`,
+    });
+
+    saveAndRender();
+    openDrawer(shift.id);
+  }
+
   function handleSendChangeNotice() {
     const shift = getSelectedShift();
     if (!shift) return;
@@ -514,53 +668,6 @@
       homeId: state.homeId,
       type: "change_notice",
       message: `Shift change notice sent to ${assignedStaff.length} assigned staff for ${shift.title} on ${formatShortDate(shift.date)}.`,
-    });
-
-    saveAndRender();
-    openDrawer(shift.id);
-  }
-
-  function handleCreateSwapRequest() {
-    const shift = getSelectedShift();
-    if (!shift) return;
-
-    if (!shift.assignedStaffIds.length) {
-      window.alert("Assign at least one staff member before creating a swap request.");
-      return;
-    }
-
-    const ownerId = shift.assignedStaffIds[0];
-    const swap = {
-      id: makeId("swap"),
-      homeId: state.homeId,
-      shiftId: shift.id,
-      requestedByStaffId: ownerId,
-      status: "open",
-      createdAt: new Date().toISOString(),
-    };
-    state.data.swapRequests.push(swap);
-
-    createNotification(ownerId, {
-      type: "swap_created",
-      message: `Swap request created for ${shift.title} on ${formatShortDate(shift.date)}.`,
-      requiresAck: false,
-      shiftId: shift.id,
-    });
-
-    const eligible = getAvailableStaffForShift(shift).slice(0, 6);
-    eligible.forEach((person) => {
-      createNotification(person.id, {
-        type: "swap_offer",
-        message: `Swap available: ${shift.title} on ${formatShortDate(shift.date)} ${shift.start}-${shift.end}.`,
-        requiresAck: false,
-        shiftId: shift.id,
-      });
-    });
-
-    addPublishLog({
-      homeId: state.homeId,
-      type: "swap_request",
-      message: `Swap request created for ${shift.title} on ${formatShortDate(shift.date)}.`,
     });
 
     saveAndRender();
@@ -630,12 +737,12 @@
     if (!Array.isArray(state.data.staff) || !state.data.staff.length) {
       state.data.staff = clone(DEFAULT_STAFF);
     }
-
     if (!Array.isArray(state.data.rosters)) state.data.rosters = [];
     if (!Array.isArray(state.data.leaves)) state.data.leaves = [];
+    if (!Array.isArray(state.data.availabilityBlocks)) state.data.availabilityBlocks = [];
     if (!Array.isArray(state.data.publishLog)) state.data.publishLog = [];
     if (!Array.isArray(state.data.notifications)) state.data.notifications = [];
-    if (!Array.isArray(state.data.swapRequests)) state.data.swapRequests = [];
+    if (!Array.isArray(state.data.approvals)) state.data.approvals = [];
     if (!state.data.meta || typeof state.data.meta !== "object") state.data.meta = {};
 
     if (!getRosterForWeek()) {
@@ -699,7 +806,7 @@
   }
 
   function buildSeedAssignments(homeId, date, template) {
-    const staff = getHomeStaff(homeId).filter((person) => !isStaffAbsentOnDate(person.id, date));
+    const staff = getHomeStaff(homeId).filter((person) => isStaffSelectableForDate(person.id, date));
 
     if (template.type === "day") {
       const picks = [];
@@ -746,11 +853,13 @@
   function renderAll() {
     renderSummary();
     renderLeaveStaffSelect();
+    renderAvailabilityStaffSelect();
     renderStaffList();
     renderCoverageBanner();
     renderBoard();
     renderTodayLivePanel();
     renderWarningPanel();
+    renderApprovalPanel();
     renderOpenShiftPanel();
     renderNotificationPanel();
     renderAbsencePanel();
@@ -774,6 +883,10 @@
     ).length;
 
     const openShiftCount = shifts.filter((shift) => shift.isOpenShift).length;
+    const approvalCount = state.data.approvals.filter(
+      (item) => item.homeId === state.homeId && item.status === "pending"
+    ).length;
+
     const primaryRoster = getRosterForWeek();
 
     text(els.summaryPublication, primaryRoster?.publicationStatus || "Draft");
@@ -781,14 +894,23 @@
     text(els.summaryGaps, String(gaps));
     text(els.summaryAgency, String(agencyCount));
     text(els.summaryOpenShifts, String(openShiftCount));
+    text(els.summaryApprovals, String(approvalCount));
     text(els.summaryWarnings, String(warnings.length));
     text(els.staffCountBadge, `${getHomeStaff().length} staff`);
   }
 
   function renderLeaveStaffSelect() {
-    els.leaveStaffSelect.innerHTML = getHomeStaff()
+    const options = getHomeStaff()
       .map((staff) => `<option value="${escapeHtml(staff.id)}">${escapeHtml(staff.name)} (${escapeHtml(staff.role)})</option>`)
       .join("");
+    els.leaveStaffSelect.innerHTML = options;
+  }
+
+  function renderAvailabilityStaffSelect() {
+    const options = getHomeStaff()
+      .map((staff) => `<option value="${escapeHtml(staff.id)}">${escapeHtml(staff.name)} (${escapeHtml(staff.role)})</option>`)
+      .join("");
+    els.availabilityStaffSelect.innerHTML = options;
   }
 
   function renderStaffList() {
@@ -815,6 +937,7 @@
       .sort((a, b) => b.familiarityScore - a.familiarityScore)
       .map((person) => {
         const absent = isStaffAbsentOnDate(person.id, day);
+        const unavailable = isStaffUnavailableOnDate(person.id, day);
         const assignedHours = getAssignedHoursForWeek(person.id, state.weekStart);
         const qualificationBadges = (person.qualifications || [])
           .slice(0, 3)
@@ -823,11 +946,11 @@
 
         return `
           <article
-            class="staff-card ${absent ? "staff-card--absence" : ""}"
-            draggable="${absent ? "false" : "true"}"
+            class="staff-card ${absent ? "staff-card--absence" : ""} ${!absent && unavailable ? "staff-card--unavailable" : ""}"
+            draggable="${absent || unavailable ? "false" : "true"}"
             data-staff-id="${escapeHtml(person.id)}"
             tabindex="0"
-            title="${absent ? "Unavailable on selected day" : "Drag onto a shift or open the shift drawer to assign"}"
+            title="${absent || unavailable ? "Unavailable on selected day" : "Drag onto a shift or open the shift drawer to assign"}"
           >
             <div class="staff-card-top">
               <strong>${escapeHtml(person.name)}</strong>
@@ -847,13 +970,13 @@
             </div>
 
             ${absent ? `<div class="meta-pill">Absent on ${escapeHtml(formatShortDate(day))}</div>` : ""}
+            ${!absent && unavailable ? `<div class="meta-pill">Unavailable on ${escapeHtml(formatShortDate(day))}</div>` : ""}
           </article>
         `;
       })
       .join("");
 
-    const draggableCards = Array.from(els.staffList.querySelectorAll(".staff-card[draggable='true']"));
-    draggableCards.forEach((card) => {
+    Array.from(els.staffList.querySelectorAll(".staff-card[draggable='true']")).forEach((card) => {
       card.addEventListener("dragstart", (event) => {
         state.dragStaffId = card.dataset.staffId || null;
         event.dataTransfer.effectAllowed = "move";
@@ -890,7 +1013,7 @@
     els.coverageBanner.innerHTML = `
       <strong>${coverage}% covered</strong>.
       ${stats.gapShifts > 0 ? `${stats.gapShifts} shift(s) currently have staffing gaps.` : `No visible uncovered shifts.`}
-      ${stats.warningShifts > 0 ? ` ${stats.warningShifts} shift(s) also need leadership, medication, continuity or suitability review.` : ""}
+      ${stats.warningShifts > 0 ? ` ${stats.warningShifts} shift(s) also need leadership, medication, continuity, rest-rule or suitability review.` : ""}
       ${stats.openShifts > 0 ? ` ${stats.openShifts} shift(s) are marked as open.` : ""}
     `;
   }
@@ -917,7 +1040,7 @@
 
     els.rotaBoard.className = boardClass;
 
-    const columnsHtml = dates
+    els.rotaBoard.innerHTML = dates
       .map((date) => {
         const shifts = filterShifts(getShiftsForDate(date));
         return `
@@ -938,7 +1061,6 @@
       })
       .join("");
 
-    els.rotaBoard.innerHTML = columnsHtml || `<div class="empty-state">No rota is available.</div>`;
     bindBoardInteractions();
   }
 
@@ -1006,17 +1128,15 @@
     const label = shift.isOpenShift ? "Open shift" : result.label;
 
     const assigneeMarkup = shift.assignedStaffIds.length
-      ? shift.assignedStaffIds
-          .map((staffId) => {
-            const person = getStaffById(staffId);
-            if (!person) return "";
-            return `
-              <span class="assignee-pill ${isAgencyOrBank(person) ? "is-agency" : ""} ${person.leadQualified ? "is-lead" : ""}">
-                ${escapeHtml(person.name)}
-              </span>
-            `;
-          })
-          .join("")
+      ? shift.assignedStaffIds.map((staffId) => {
+          const person = getStaffById(staffId);
+          if (!person) return "";
+          return `
+            <span class="assignee-pill ${isAgencyOrBank(person) ? "is-agency" : ""} ${person.leadQualified ? "is-lead" : ""}">
+              ${escapeHtml(person.name)}
+            </span>
+          `;
+        }).join("")
       : `<span class="drop-hint">Drag staff here or open shift</span>`;
 
     return `
@@ -1038,7 +1158,6 @@
       const shiftId = node.dataset.shiftId;
 
       node.addEventListener("click", () => openDrawer(shiftId));
-
       node.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -1094,6 +1213,45 @@
     renderSideList(els.warningPanel, warnings, "No staffing warnings at present.");
   }
 
+  function renderApprovalPanel() {
+    const items = state.data.approvals
+      .filter((item) => item.homeId === state.homeId && item.status === "pending")
+      .slice(0, 12)
+      .map((item) => ({
+        title: `${humaniseApprovalKind(item.kind)} · ${getStaffName(item.requestedByStaffId)}`,
+        body: `${findShiftById(item.shiftId)?.title || "Shift"} · ${formatShortDate(findShiftById(item.shiftId)?.date || state.selectedDate)}`,
+        meta: `Pending approval · ${formatDateTime(item.createdAt)}`,
+        variant: "notice",
+        actionId: item.id,
+      }));
+
+    if (!items.length) {
+      els.approvalPanel.innerHTML = `<div class="empty-state">No pending approvals.</div>`;
+      return;
+    }
+
+    els.approvalPanel.innerHTML = items.map((item) => `
+      <article class="side-item notice-item" data-approval-id="${escapeHtml(item.actionId)}">
+        <h4>${escapeHtml(item.title)}</h4>
+        <p>${escapeHtml(item.body)}</p>
+        <div class="item-meta">${escapeHtml(item.meta)}</div>
+        <div class="drawer-row-actions" style="margin-top:6px;">
+          <button class="mini-btn" type="button" data-approval-action="approve" data-approval-id="${escapeHtml(item.actionId)}">Approve</button>
+          <button class="remove-btn" type="button" data-approval-action="decline" data-approval-id="${escapeHtml(item.actionId)}">Decline</button>
+        </div>
+      </article>
+    `).join("");
+
+    Array.from(els.approvalPanel.querySelectorAll("[data-approval-action]")).forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const action = btn.dataset.approvalAction;
+        const approvalId = btn.dataset.approvalId;
+        if (action === "approve") approveRequest(approvalId);
+        if (action === "decline") declineRequest(approvalId);
+      });
+    });
+  }
+
   function renderOpenShiftPanel() {
     const items = getVisibleShiftsForSummary()
       .filter((shift) => shift.isOpenShift || computeShiftCoverage(shift).gapCount > 0)
@@ -1130,19 +1288,31 @@
     const minDate = visibleDates[0];
     const maxDate = visibleDates[visibleDates.length - 1];
 
-    const items = state.data.leaves
+    const leaveItems = state.data.leaves
       .filter((leave) => leave.homeId === state.homeId && rangesOverlap(leave.start, leave.end, minDate, maxDate))
-      .sort((a, b) => a.start.localeCompare(b.start))
-      .map((leave) => {
-        const affected = countAffectedAssignedShifts(leave.staffId, leave.start, leave.end);
-        return {
-          title: `${getStaffName(leave.staffId)} · ${humaniseLeaveType(leave.type)}`,
-          body: `${formatShortDate(leave.start)} to ${formatShortDate(leave.end)}${leave.notes ? ` · ${leave.notes}` : ""}`,
-          meta: affected ? `${affected} assigned shift(s) affected` : "No assigned shifts currently impacted",
-        };
-      });
+      .map((leave) => ({
+        title: `${getStaffName(leave.staffId)} · ${humaniseLeaveType(leave.type)}`,
+        body: `${formatShortDate(leave.start)} to ${formatShortDate(leave.end)}${leave.notes ? ` · ${leave.notes}` : ""}`,
+        meta: countAffectedAssignedShifts(leave.staffId, leave.start, leave.end)
+          ? `${countAffectedAssignedShifts(leave.staffId, leave.start, leave.end)} assigned shift(s) affected`
+          : "No assigned shifts currently impacted",
+      }));
 
-    renderSideList(els.absencePanel, items, "No absence records for the visible period.");
+    const availabilityItems = state.data.availabilityBlocks
+      .filter((item) => item.homeId === state.homeId && rangesOverlap(item.start, item.end, minDate, maxDate))
+      .map((item) => ({
+        title: `${getStaffName(item.staffId)} · Unavailable`,
+        body: `${formatShortDate(item.start)} to ${formatShortDate(item.end)}${item.reason ? ` · ${item.reason}` : ""}`,
+        meta: countAffectedAssignedShifts(item.staffId, item.start, item.end)
+          ? `${countAffectedAssignedShifts(item.staffId, item.start, item.end)} assigned shift(s) affected`
+          : "No assigned shifts currently impacted",
+      }));
+
+    renderSideList(
+      els.absencePanel,
+      [...leaveItems, ...availabilityItems],
+      "No absence or availability blocks for the visible period."
+    );
   }
 
   function renderPublishLogPanel() {
@@ -1166,23 +1336,21 @@
       return;
     }
 
-    container.innerHTML = items
-      .map((item) => {
-        let className = "side-item";
-        if (item.severity === "high") className += " warning-item high";
-        else if (item.severity === "medium") className += " warning-item";
-        if (item.variant === "notice") className += " notice-item";
-        if (item.variant === "success") className += " success-item";
+    container.innerHTML = items.map((item) => {
+      let className = "side-item";
+      if (item.severity === "high") className += " warning-item high";
+      else if (item.severity === "medium") className += " warning-item";
+      if (item.variant === "notice") className += " notice-item";
+      if (item.variant === "success") className += " success-item";
 
-        return `
-          <article class="${className}">
-            <h4>${escapeHtml(item.title || "")}</h4>
-            ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ""}
-            ${item.meta ? `<div class="item-meta">${escapeHtml(item.meta)}</div>` : ""}
-          </article>
-        `;
-      })
-      .join("");
+      return `
+        <article class="${className}">
+          <h4>${escapeHtml(item.title || "")}</h4>
+          ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ""}
+          ${item.meta ? `<div class="item-meta">${escapeHtml(item.meta)}</div>` : ""}
+        </article>
+      `;
+    }).join("");
   }
 
   function openDrawer(shiftId) {
@@ -1232,6 +1400,18 @@
         ? `This shift is marked as open. ${shift.lastOpenNotificationAt ? `Last offer sent ${formatDateTime(shift.lastOpenNotificationAt)}.` : ""}`
         : "This shift is not currently marked as open."
     );
+
+    const pendingClaims = state.data.approvals.filter(
+      (item) => item.homeId === state.homeId && item.shiftId === shift.id && item.status === "pending"
+    ).length;
+
+    text(
+      els.shiftClaimState,
+      pendingClaims
+        ? `${pendingClaims} pending claim/swap approval(s) exist for this shift.`
+        : "No pending claims or swap requests for this shift."
+    );
+
     text(
       els.shiftChangeState,
       shift.lastChangeNoticeAt
@@ -1240,38 +1420,33 @@
     );
 
     els.shiftAssignmentList.innerHTML = shift.assignedStaffIds.length
-      ? shift.assignedStaffIds
-          .map((staffId) => {
-            const person = getStaffById(staffId);
-            if (!person) return "";
-            return `
-              <div class="drawer-row">
-                <div class="drawer-row-main">
-                  <strong>${escapeHtml(person.name)}</strong>
-                  <span>${escapeHtml(person.role)} · ${escapeHtml(person.employmentType)} · Familiarity ${escapeHtml(String(person.familiarityScore || 0))}</span>
-                </div>
-                <div class="drawer-row-actions">
-                  <button class="mini-btn" type="button" data-action="highlight" data-staff-id="${escapeHtml(person.id)}">View</button>
-                  <button class="mini-btn" type="button" data-action="ack" data-staff-id="${escapeHtml(person.id)}">Ack</button>
-                  <button class="remove-btn" type="button" data-action="remove" data-staff-id="${escapeHtml(person.id)}">Remove</button>
-                </div>
+      ? shift.assignedStaffIds.map((staffId) => {
+          const person = getStaffById(staffId);
+          if (!person) return "";
+          return `
+            <div class="drawer-row">
+              <div class="drawer-row-main">
+                <strong>${escapeHtml(person.name)}</strong>
+                <span>${escapeHtml(person.role)} · ${escapeHtml(person.employmentType)} · Familiarity ${escapeHtml(String(person.familiarityScore || 0))}</span>
               </div>
-            `;
-          })
-          .join("")
+              <div class="drawer-row-actions">
+                <button class="mini-btn" type="button" data-action="highlight" data-staff-id="${escapeHtml(person.id)}">View</button>
+                <button class="mini-btn" type="button" data-action="ack" data-staff-id="${escapeHtml(person.id)}">Ack</button>
+                <button class="remove-btn" type="button" data-action="remove" data-staff-id="${escapeHtml(person.id)}">Remove</button>
+              </div>
+            </div>
+          `;
+        }).join("")
       : `<div class="empty-state">Nobody is assigned yet.</div>`;
 
     Array.from(els.shiftAssignmentList.querySelectorAll("button")).forEach((btn) => {
-      btn.addEventListener("click", (event) => {
-        const target = event.currentTarget;
-        const action = target.dataset.action;
-        const staffId = target.dataset.staffId;
+      btn.addEventListener("click", () => {
+        const action = btn.dataset.action;
+        const staffId = btn.dataset.staffId;
 
-        if (action === "remove") {
-          removeStaffFromShift(shift.id, staffId);
-        } else if (action === "highlight") {
-          focusStaffCard(staffId);
-        } else if (action === "ack") {
+        if (action === "remove") removeStaffFromShift(shift.id, staffId);
+        if (action === "highlight") focusStaffCard(staffId);
+        if (action === "ack") {
           acknowledgeShiftNotifications(shift.id, staffId);
           saveAndRender();
           openDrawer(shift.id);
@@ -1282,25 +1457,19 @@
     els.shiftAssignStaffSelect.innerHTML = availableStaff.length
       ? availableStaff
           .sort((a, b) => scoreStaffForShift(b, shift) - scoreStaffForShift(a, shift))
-          .map((person) => {
-            return `<option value="${escapeHtml(person.id)}">${escapeHtml(person.name)} (${escapeHtml(person.role)} · score ${scoreStaffForShift(person, shift)})</option>`;
-          })
+          .map((person) => `<option value="${escapeHtml(person.id)}">${escapeHtml(person.name)} (${escapeHtml(person.role)} · score ${scoreStaffForShift(person, shift)})</option>`)
           .join("")
       : `<option value="">No suitable staff available</option>`;
 
     els.shiftWarnings.innerHTML = warnings.length
-      ? warnings
-          .map((warning) => {
-            return `
-              <div class="drawer-row">
-                <div class="drawer-row-main">
-                  <strong>${escapeHtml(warning.title)}</strong>
-                  <span>${escapeHtml(warning.body)}</span>
-                </div>
-              </div>
-            `;
-          })
-          .join("")
+      ? warnings.map((warning) => `
+          <div class="drawer-row">
+            <div class="drawer-row-main">
+              <strong>${escapeHtml(warning.title)}</strong>
+              <span>${escapeHtml(warning.body)}</span>
+            </div>
+          </div>
+        `).join("")
       : `<div class="empty-state">No shift-specific warnings.</div>`;
   }
 
@@ -1309,32 +1478,29 @@
     const person = getStaffById(staffId);
 
     if (!shift || !person) return;
-
     if (shift.assignedStaffIds.includes(staffId)) {
       window.alert(`${person.name} is already assigned to this shift.`);
       return;
     }
-
-    if (isStaffAbsentOnDate(staffId, shift.date)) {
-      window.alert(`${person.name} is marked absent on this date.`);
+    if (!isStaffSelectableForDate(staffId, shift.date)) {
+      window.alert(`${person.name} is not available on this date.`);
       return;
     }
-
     if (hasStaffTimeConflict(staffId, shift)) {
       window.alert(`${person.name} is already assigned to an overlapping shift.`);
       return;
     }
-
+    if (breaksRestRule(staffId, shift)) {
+      window.alert(`${person.name} would breach the ${MIN_REST_HOURS}-hour rest rule with another shift.`);
+      return;
+    }
     if (shift.type === "sleep_in" && !person.canSleepIn) {
       const proceed = window.confirm(`${person.name} is not marked as suitable for sleep-in. Assign anyway?`);
       if (!proceed) return;
     }
 
     shift.assignedStaffIds.push(staffId);
-
-    if (shift.assignedStaffIds.length >= shift.requiredCount) {
-      shift.isOpenShift = false;
-    }
+    if (shift.assignedStaffIds.length >= shift.requiredCount) shift.isOpenShift = false;
 
     addPublishLog({
       homeId: state.homeId,
@@ -1343,7 +1509,7 @@
     });
 
     if (notify) {
-      createNotification(person.id, {
+      createNotification(staffId, {
         type: "shift_assigned",
         message: `You have been assigned to ${shift.title} on ${formatShortDate(shift.date)} ${shift.start}-${shift.end}.`,
         requiresAck: true,
@@ -1378,6 +1544,66 @@
     openDrawer(shift.id);
   }
 
+  function approveRequest(approvalId) {
+    const request = state.data.approvals.find((item) => item.id === approvalId);
+    if (!request || request.status !== "pending") return;
+
+    const shift = findShiftById(request.shiftId);
+    if (!shift) return;
+
+    request.status = "approved";
+    request.decidedAt = new Date().toISOString();
+
+    if (request.kind === "open_shift_claim") {
+      assignStaffToShift(request.shiftId, request.requestedByStaffId, false);
+      createNotification(request.requestedByStaffId, {
+        type: "claim_approved",
+        message: `Your claim for ${shift.title} on ${formatShortDate(shift.date)} has been approved.`,
+        requiresAck: true,
+        shiftId: shift.id,
+      });
+    } else if (request.kind === "swap_request") {
+      createNotification(request.requestedByStaffId, {
+        type: "swap_approved",
+        message: `Your swap request for ${shift.title} on ${formatShortDate(shift.date)} has been approved.`,
+        requiresAck: false,
+        shiftId: shift.id,
+      });
+    }
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "approval",
+      message: `${humaniseApprovalKind(request.kind)} approved for ${getStaffName(request.requestedByStaffId)}.`,
+    });
+
+    saveAndRender();
+  }
+
+  function declineRequest(approvalId) {
+    const request = state.data.approvals.find((item) => item.id === approvalId);
+    if (!request || request.status !== "pending") return;
+
+    request.status = "declined";
+    request.decidedAt = new Date().toISOString();
+
+    const shift = findShiftById(request.shiftId);
+    createNotification(request.requestedByStaffId, {
+      type: "request_declined",
+      message: `${humaniseApprovalKind(request.kind)} for ${shift?.title || "shift"} has been declined.`,
+      requiresAck: false,
+      shiftId: request.shiftId,
+    });
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "approval",
+      message: `${humaniseApprovalKind(request.kind)} declined for ${getStaffName(request.requestedByStaffId)}.`,
+    });
+
+    saveAndRender();
+  }
+
   function buildWarnings() {
     const shifts = getVisibleShiftsForSummary();
     const warnings = [];
@@ -1405,7 +1631,7 @@
         warnings.push({
           severity: "medium",
           title: `${shift.title} is open for cover`,
-          body: `The shift is still flagged as open and should be monitored for response.`,
+          body: "The shift is still flagged as open and should be monitored for response.",
           meta: `${formatShortDate(shift.date)} · ${shift.start}–${shift.end}`,
         });
       }
@@ -1424,20 +1650,16 @@
       });
     }
 
-    const visibleDates = state.view === "month" ? getMonthGridDays(state.selectedDate) : getVisibleDatesForBoard();
-    const minDate = visibleDates[0];
-    const maxDate = visibleDates[visibleDates.length - 1];
-
-    const leavePressure = state.data.leaves.filter(
-      (leave) => leave.homeId === state.homeId && rangesOverlap(leave.start, leave.end, minDate, maxDate)
+    const pendingApprovals = state.data.approvals.filter(
+      (item) => item.homeId === state.homeId && item.status === "pending"
     ).length;
 
-    if (leavePressure >= 3) {
+    if (pendingApprovals > 0) {
       warnings.push({
         severity: "medium",
-        title: "Elevated absence pressure",
-        body: `${leavePressure} absence records affect the visible period.`,
-        meta: "Consider contingency cover and leadership review.",
+        title: "Pending approvals",
+        body: `${pendingApprovals} claim or swap approval(s) still need manager action.`,
+        meta: "Review approval queue.",
       });
     }
 
@@ -1449,31 +1671,16 @@
     const warnings = [];
 
     if (result.gapCount > 0) {
-      warnings.push({
-        title: "Coverage gap",
-        body: `${result.gapCount} required slot(s) remain unfilled.`,
-      });
+      warnings.push({ title: "Coverage gap", body: `${result.gapCount} required slot(s) remain unfilled.` });
     }
-
     if (shift.needsLead && !hasLeadOnShift(shift)) {
-      warnings.push({
-        title: "No lead-qualified cover",
-        body: "At least one lead-qualified person should be assigned to this shift.",
-      });
+      warnings.push({ title: "No lead-qualified cover", body: "At least one lead-qualified person should be assigned." });
     }
-
     if (shift.requiresMedication && !hasMedicationOnShift(shift)) {
-      warnings.push({
-        title: "Medication cover risk",
-        body: "This shift requires medication-trained cover and none is currently assigned.",
-      });
+      warnings.push({ title: "Medication cover risk", body: "This shift requires medication-trained cover and none is assigned." });
     }
-
     if (shift.requiresDriver && !hasDriverOnShift(shift)) {
-      warnings.push({
-        title: "Driver cover risk",
-        body: "This shift requires a driver and none is currently assigned.",
-      });
+      warnings.push({ title: "Driver cover risk", body: "This shift requires a driver and none is assigned." });
     }
 
     const agencyCount = shift.assignedStaffIds.filter((staffId) => {
@@ -1496,18 +1703,12 @@
       });
     }
 
-    if (shift.type === "sleep_in") {
-      const unsuitable = shift.assignedStaffIds.some((staffId) => {
-        const person = getStaffById(staffId);
-        return person && !person.canSleepIn;
+    const restRisk = shift.assignedStaffIds.some((staffId) => breaksRestRule(staffId, shift, true));
+    if (restRisk) {
+      warnings.push({
+        title: "Rest-rule pressure",
+        body: `One or more assigned staff are close to or breach the ${MIN_REST_HOURS}-hour rest expectation.`,
       });
-
-      if (unsuitable) {
-        warnings.push({
-          title: "Sleep-in suitability check",
-          body: "One or more assigned staff are not marked as sleep-in suitable.",
-        });
-      }
     }
 
     const pendingAck = state.data.notifications.filter(
@@ -1541,6 +1742,7 @@
     }).length;
 
     const lowContinuity = getAverageFamiliarity(shift) > 0 && getAverageFamiliarity(shift) < 60;
+    const restPressure = shift.assignedStaffIds.some((staffId) => breaksRestRule(staffId, shift, true));
 
     let label = `${assignedCount}/${shift.requiredCount} filled`;
     let detail = `${assignedCount} assigned for ${shift.requiredCount} required.`;
@@ -1551,29 +1753,28 @@
       detail += ` ${gapCount} gap(s) remain.`;
       warning = true;
     }
-
     if (leadMissing) {
       detail += ` No lead-qualified cover is assigned.`;
       warning = true;
     }
-
     if (medicationMissing) {
       detail += ` No medication-trained staff assigned.`;
       warning = true;
     }
-
     if (driverMissing) {
       detail += ` No driver assigned.`;
       warning = true;
     }
-
     if (agencyCount > 0) {
       detail += ` ${agencyCount} agency/bank staff on shift.`;
       warning = true;
     }
-
     if (lowContinuity) {
       detail += ` Low continuity/familiarity for the home.`;
+      warning = true;
+    }
+    if (restPressure) {
+      detail += ` Rest-rule pressure identified.`;
       warning = true;
     }
 
@@ -1584,16 +1785,11 @@
       driverMissing,
       agencyCount,
       lowContinuity,
+      restPressure,
       warning,
       label,
       detail,
     };
-  }
-
-  function renderDrawerIfShiftStillSelected() {
-    if (!state.selectedShiftId) return;
-    const shift = findShiftById(state.selectedShiftId);
-    if (shift) renderDrawer(shift);
   }
 
   function getVisibleDatesForBoard() {
@@ -1671,24 +1867,15 @@
   }
 
   function hasLeadOnShift(shift) {
-    return shift.assignedStaffIds.some((staffId) => {
-      const person = getStaffById(staffId);
-      return person && person.leadQualified;
-    });
+    return shift.assignedStaffIds.some((staffId) => getStaffById(staffId)?.leadQualified);
   }
 
   function hasMedicationOnShift(shift) {
-    return shift.assignedStaffIds.some((staffId) => {
-      const person = getStaffById(staffId);
-      return person && person.medicationTrained;
-    });
+    return shift.assignedStaffIds.some((staffId) => getStaffById(staffId)?.medicationTrained);
   }
 
   function hasDriverOnShift(shift) {
-    return shift.assignedStaffIds.some((staffId) => {
-      const person = getStaffById(staffId);
-      return person && person.driver;
-    });
+    return shift.assignedStaffIds.some((staffId) => getStaffById(staffId)?.driver);
   }
 
   function getAverageFamiliarity(shift) {
@@ -1701,15 +1888,15 @@
   function getAvailableStaffForShift(shift) {
     return getHomeStaff().filter((person) => {
       if (shift.assignedStaffIds.includes(person.id)) return false;
-      if (isStaffAbsentOnDate(person.id, shift.date)) return false;
+      if (!isStaffSelectableForDate(person.id, shift.date)) return false;
       if (hasStaffTimeConflict(person.id, shift)) return false;
+      if (breaksRestRule(person.id, shift)) return false;
       return true;
     });
   }
 
   function scoreStaffForShift(person, shift) {
     let score = Number(person.familiarityScore || 0);
-
     if (shift.needsLead && person.leadQualified) score += 30;
     if (shift.requiresMedication && person.medicationTrained) score += 20;
     if (shift.requiresDriver && person.driver) score += 10;
@@ -1717,13 +1904,12 @@
     if (person.employmentType === "core") score += 12;
     if (person.employmentType === "bank") score += 4;
     if (person.employmentType === "agency") score -= 8;
-
+    if (breaksRestRule(person.id, shift)) score -= 100;
     return score;
   }
 
   function getEligibleStaffCountLabel(shift) {
-    const count = getAvailableStaffForShift(shift).length;
-    return `${count} eligible staff available`;
+    return `${getAvailableStaffForShift(shift).length} eligible staff available`;
   }
 
   function hasStaffTimeConflict(staffId, targetShift) {
@@ -1737,6 +1923,28 @@
       });
   }
 
+  function breaksRestRule(staffId, targetShift, softMode = false) {
+    const targetStart = toDateTime(targetShift.date, targetShift.start);
+    const targetEnd = resolveShiftEnd(targetShift.date, targetShift.start, targetShift.end);
+
+    const nearbyAssigned = state.data.rosters
+      .filter((roster) => roster.homeId === state.homeId)
+      .flatMap((roster) => roster.shifts)
+      .filter((shift) => shift.id !== targetShift.id && shift.assignedStaffIds.includes(staffId));
+
+    return nearbyAssigned.some((shift) => {
+      const otherStart = toDateTime(shift.date, shift.start);
+      const otherEnd = resolveShiftEnd(shift.date, shift.start, shift.end);
+
+      const hoursAfter = Math.abs((targetStart - otherEnd) / 36e5);
+      const hoursBefore = Math.abs((otherStart - targetEnd) / 36e5);
+
+      if (shiftsOverlap(shift, targetShift)) return true;
+      if (softMode) return hoursAfter < MIN_REST_HOURS || hoursBefore < MIN_REST_HOURS;
+      return hoursAfter < MIN_REST_HOURS || hoursBefore < MIN_REST_HOURS;
+    });
+  }
+
   function shiftsOverlap(a, b) {
     const aStart = toDateTime(a.date, a.start);
     const aEnd = resolveShiftEnd(a.date, a.start, a.end);
@@ -1747,7 +1955,6 @@
 
   function getCurrentlyOnShift() {
     const now = new Date();
-
     return state.data.rosters
       .filter((roster) => roster.homeId === state.homeId)
       .flatMap((roster) => roster.shifts)
@@ -1761,7 +1968,6 @@
   function getNextShiftsToday() {
     const now = new Date();
     const today = toISODate(now);
-
     return getShiftsForDate(today)
       .filter((shift) => toDateTime(shift.date, shift.start) > now)
       .sort((a, b) => a.start.localeCompare(b.start));
@@ -1794,12 +2000,7 @@
 
   function createNotificationForShift(shift, type, message, requiresAck) {
     shift.assignedStaffIds.forEach((staffId) => {
-      createNotification(staffId, {
-        type,
-        message,
-        requiresAck,
-        shiftId: shift.id,
-      });
+      createNotification(staffId, { type, message, requiresAck, shiftId: shift.id });
     });
   }
 
@@ -1839,7 +2040,7 @@
   }
 
   function buildNotificationMeta(item) {
-    const parts = [
+    return [
       item.channel || "push",
       item.requiresAck
         ? item.acknowledgedAt
@@ -1847,12 +2048,17 @@
           : "awaiting acknowledgement"
         : "no acknowledgement needed",
       formatDateTime(item.createdAt),
-    ];
-    return parts.join(" · ");
+    ].join(" · ");
   }
 
   function humaniseNotificationType(type) {
     return String(type || "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (match) => match.toUpperCase());
+  }
+
+  function humaniseApprovalKind(kind) {
+    return String(kind || "")
       .replace(/_/g, " ")
       .replace(/\b\w/g, (match) => match.toUpperCase());
   }
@@ -1892,7 +2098,6 @@
       shift.assignedStaffIds.forEach((staffId) => {
         const person = getStaffById(staffId);
         if (!person) return;
-
         rows.push([
           person.name,
           person.role,
@@ -1926,8 +2131,9 @@
       visibleShifts: getVisibleShiftsForSummary(),
       visibleWarnings: buildWarnings(),
       notifications: state.data.notifications.filter((item) => item.homeId === state.homeId),
-      swapRequests: state.data.swapRequests.filter((item) => item.homeId === state.homeId),
+      approvals: state.data.approvals.filter((item) => item.homeId === state.homeId),
       leaves: state.data.leaves.filter((item) => item.homeId === state.homeId),
+      availabilityBlocks: state.data.availabilityBlocks.filter((item) => item.homeId === state.homeId),
       publishLog: state.data.publishLog.filter((item) => item.homeId === state.homeId || !item.homeId),
     };
 
@@ -1951,9 +2157,19 @@
   }
 
   function isStaffAbsentOnDate(staffId, date) {
-    return state.data.leaves.some((leave) => {
-      return leave.homeId === state.homeId && leave.staffId === staffId && date >= leave.start && date <= leave.end;
-    });
+    return state.data.leaves.some((leave) =>
+      leave.homeId === state.homeId && leave.staffId === staffId && date >= leave.start && date <= leave.end
+    );
+  }
+
+  function isStaffUnavailableOnDate(staffId, date) {
+    return state.data.availabilityBlocks.some((item) =>
+      item.homeId === state.homeId && item.staffId === staffId && date >= item.start && date <= item.end
+    );
+  }
+
+  function isStaffSelectableForDate(staffId, date) {
+    return !isStaffAbsentOnDate(staffId, date) && !isStaffUnavailableOnDate(staffId, date);
   }
 
   function isAgencyOrBank(person) {
@@ -1964,10 +2180,8 @@
     const selector = `[data-staff-id="${cssEscape(staffId)}"]`;
     const card = els.staffList.querySelector(selector);
     if (!card) return;
-
     card.scrollIntoView({ behavior: "smooth", block: "center" });
     card.focus();
-
     const originalBoxShadow = card.style.boxShadow;
     card.style.boxShadow = "0 0 0 2px #2563eb inset";
     window.setTimeout(() => {
@@ -1983,9 +2197,10 @@
           staff: clone(DEFAULT_STAFF),
           rosters: [],
           leaves: [],
+          availabilityBlocks: [],
           publishLog: [],
           notifications: [],
-          swapRequests: [],
+          approvals: [],
           meta: {},
         };
       }
@@ -1995,9 +2210,10 @@
         staff: Array.isArray(parsed.staff) && parsed.staff.length ? parsed.staff : clone(DEFAULT_STAFF),
         rosters: Array.isArray(parsed.rosters) ? parsed.rosters : [],
         leaves: Array.isArray(parsed.leaves) ? parsed.leaves : [],
+        availabilityBlocks: Array.isArray(parsed.availabilityBlocks) ? parsed.availabilityBlocks : [],
         publishLog: Array.isArray(parsed.publishLog) ? parsed.publishLog : [],
         notifications: Array.isArray(parsed.notifications) ? parsed.notifications : [],
-        swapRequests: Array.isArray(parsed.swapRequests) ? parsed.swapRequests : [],
+        approvals: Array.isArray(parsed.approvals) ? parsed.approvals : [],
         meta: parsed.meta && typeof parsed.meta === "object" ? parsed.meta : {},
       };
     } catch (error) {
@@ -2006,9 +2222,10 @@
         staff: clone(DEFAULT_STAFF),
         rosters: [],
         leaves: [],
+        availabilityBlocks: [],
         publishLog: [],
         notifications: [],
-        swapRequests: [],
+        approvals: [],
         meta: {},
       };
     }
@@ -2158,9 +2375,7 @@
   function resolveShiftEnd(date, start, end) {
     const startDate = toDateTime(date, start);
     const endDate = toDateTime(date, end);
-    if (endDate <= startDate) {
-      endDate.setDate(endDate.getDate() + 1);
-    }
+    if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
     return endDate;
   }
 
