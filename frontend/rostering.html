@@ -26,19 +26,19 @@
       <a href="/staff-portal.html" class="os-topbar-link">Staff portal</a>
     </nav>
 
-    <div class="os-topbar-context">Rota, cover and staffing safety</div>
+    <div class="os-topbar-context">Rota, cover, approvals and safer staffing</div>
   </header>
 
   <main class="roster-shell">
     <section class="roster-header-panel">
       <div class="roster-header-main">
         <div class="roster-header-copy">
-          <div class="eyebrow">Residential staffing</div>
+          <div class="eyebrow">Residential staffing operations</div>
           <h1>Home rostering and safer staffing</h1>
           <p>
-            Live rota management for children's homes covering safer staffing,
-            open shifts, approvals, swaps, acknowledgements, attendance,
-            notifications, and day-to-day cover decisions.
+            Plan, publish and manage staffing for children's homes with clearer coverage,
+            safer staffing checks, open shifts, approvals, notifications, swaps,
+            attendance and day-to-day cover decisions.
           </p>
         </div>
 
@@ -132,14 +132,14 @@
         <header class="panel-head">
           <div>
             <h2>Staff available</h2>
-            <p>Drag to assign, search suitability, manage leave and availability.</p>
+            <p>Search, review suitability, manage leave and assign people into cover.</p>
           </div>
           <span class="pill" id="staffCountBadge">0 staff</span>
         </header>
 
         <label class="control-field">
           <span>Search staff</span>
-          <input id="staffSearchInput" type="search" placeholder="Name, role, qualification..." />
+          <input id="staffSearchInput" type="search" placeholder="Name, role, qualification, familiarity..." />
         </label>
 
         <div id="staffList" class="staff-list" aria-live="polite"></div>
@@ -203,7 +203,7 @@
 
           <label class="control-field">
             <span>Reason</span>
-            <input id="availabilityReasonInput" type="text" placeholder="Unavailable, college, personal, study..." />
+            <input id="availabilityReasonInput" type="text" placeholder="Unavailable, college, study, personal..." />
           </label>
 
           <button id="saveAvailabilityBtn" class="secondary-btn" type="button">Save availability block</button>
@@ -214,7 +214,7 @@
         <header class="panel-head">
           <div>
             <h2>Rota board</h2>
-            <p>Daily, weekly and monthly shift coverage with safer staffing checks.</p>
+            <p>Review daily, weekly and monthly cover with safer staffing and operational context.</p>
           </div>
         </header>
 
@@ -225,7 +225,7 @@
 
           <label class="control-field control-field--wide">
             <span>Search shifts</span>
-            <input id="shiftSearchInput" type="search" placeholder="Shift type, role, staff..." />
+            <input id="shiftSearchInput" type="search" placeholder="Shift type, role, staff, notes..." />
           </label>
         </div>
 
@@ -238,7 +238,7 @@
           <header class="panel-head">
             <div>
               <h2>Live today</h2>
-              <p>Current and next staffing picture.</p>
+              <p>Current and next staffing picture for the home.</p>
             </div>
           </header>
           <div id="todayLivePanel" class="side-list"></div>
@@ -248,7 +248,7 @@
           <header class="panel-head">
             <div>
               <h2>Safety and coverage alerts</h2>
-              <p>Safer staffing, leadership and attendance concerns.</p>
+              <p>Safer staffing, leadership, continuity and attendance concerns.</p>
             </div>
           </header>
           <div id="warningPanel" class="side-list"></div>
@@ -258,7 +258,7 @@
           <header class="panel-head">
             <div>
               <h2>Approval queue</h2>
-              <p>Open shift claims, swaps, and pending manager actions.</p>
+              <p>Open shift claims, swaps and manager actions awaiting decisions.</p>
             </div>
           </header>
           <div id="approvalPanel" class="side-list"></div>
@@ -268,7 +268,7 @@
           <header class="panel-head">
             <div>
               <h2>Open shifts and offers</h2>
-              <p>Available cover, urgent gaps, and claimable shifts.</p>
+              <p>Visible cover opportunities, urgent gaps and offer activity.</p>
             </div>
           </header>
           <div id="openShiftPanel" class="side-list"></div>
@@ -278,7 +278,7 @@
           <header class="panel-head">
             <div>
               <h2>Notifications</h2>
-              <p>Shift changes, acknowledgements, and delivery status.</p>
+              <p>Shift changes, acknowledgements and delivery status.</p>
             </div>
           </header>
           <div id="notificationPanel" class="side-list"></div>
@@ -288,7 +288,7 @@
           <header class="panel-head">
             <div>
               <h2>Absence impact</h2>
-              <p>Where sickness, leave, or unavailability pressures cover.</p>
+              <p>Where sickness, leave or unavailability are affecting cover.</p>
             </div>
           </header>
           <div id="absencePanel" class="side-list"></div>
@@ -298,7 +298,7 @@
           <header class="panel-head">
             <div>
               <h2>Publish and contact log</h2>
-              <p>Publication evidence and notifications sent.</p>
+              <p>Publication history, contact activity and key rota actions.</p>
             </div>
           </header>
           <div id="publishLogPanel" class="side-list"></div>
@@ -308,7 +308,7 @@
           <header class="panel-head">
             <div>
               <h2>Linked OS areas</h2>
-              <p>Jump into connected home operations workflows.</p>
+              <p>Move into connected operating system workflows.</p>
             </div>
           </header>
 
