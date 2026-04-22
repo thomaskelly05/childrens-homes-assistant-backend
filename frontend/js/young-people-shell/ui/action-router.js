@@ -11,10 +11,7 @@ import {
   SCOPE_SECTIONS,
   getSafeSectionForScope,
 } from "../core/config.js";
-import {
-  refreshInspectionCycle,
-  syncInspectionTasks,
-} from "../core/api.js";
+import { apiSend } from "../core/api.js";
 
 let actionRouterBound = false;
 
@@ -487,6 +484,21 @@ async function navigateToSection(section = "") {
   return false;
 }
 
+async function postInspectionAction(homeId, actionType) {
+  const safeHomeId = Number(homeId);
+  if (!Number.isFinite(safeHomeId) || safeHomeId <= 0) {
+    return false;
+  }
+
+  const route =
+    actionType === "refresh"
+      ? `/inspection/ui/homes/${safeHomeId}/refresh-cycle`
+      : `/inspection/ui/homes/${safeHomeId}/sync-tasks`;
+
+  await apiSend(route, "POST", {}, { skipCache: true });
+  return true;
+}
+
 function buildQuickActionMap() {
   const actions = {};
 
@@ -517,7 +529,7 @@ function buildQuickActionMap() {
     run: async () => {
       const homeId = getCurrentReadinessHomeId() || getCurrentHomeId();
       if (!homeId) return false;
-      await refreshInspectionCycle(homeId, {});
+      await postInspectionAction(homeId, "refresh");
       await navigateToSection(inferSectionForRecordType("inspection_refresh"));
       return true;
     },
@@ -533,7 +545,7 @@ function buildQuickActionMap() {
     run: async () => {
       const homeId = getCurrentReadinessHomeId() || getCurrentHomeId();
       if (!homeId) return false;
-      await syncInspectionTasks(homeId, {});
+      await postInspectionAction(homeId, "sync");
       await navigateToSection(inferSectionForRecordType("inspection_sync"));
       return true;
     },
@@ -835,7 +847,8 @@ async function runInspectionRefreshSuggestion(suggestion = {}) {
 
   if (!homeId) return false;
 
-  await refreshInspectionCycle(homeId, {});
+  await postInspectionAction(homeId, "refresh");
+
   return navigateToSection(
     cleanText(suggestion.target_section) ||
       inferSectionForRecordType("inspection_refresh")
@@ -854,7 +867,8 @@ async function runInspectionSyncSuggestion(suggestion = {}) {
 
   if (!homeId) return false;
 
-  await syncInspectionTasks(homeId, {});
+  await postInspectionAction(homeId, "sync");
+
   return navigateToSection(
     cleanText(suggestion.target_section) ||
       inferSectionForRecordType("inspection_sync")
