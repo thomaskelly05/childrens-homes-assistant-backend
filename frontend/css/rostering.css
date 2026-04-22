@@ -154,7 +154,7 @@ body {
 
 .summary-strip {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -254,6 +254,11 @@ body {
   border-left: 4px solid var(--roster-danger);
   background: #fff7f7;
   cursor: not-allowed;
+}
+
+.staff-card--unavailable {
+  border-left: 4px solid var(--roster-warning);
+  background: #fff9ef;
 }
 
 .staff-card-top {
@@ -581,7 +586,7 @@ body {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(540px, 100vw);
+  width: min(560px, 100vw);
   background: #fff;
   border-left: 1px solid var(--roster-border);
   z-index: 260;
