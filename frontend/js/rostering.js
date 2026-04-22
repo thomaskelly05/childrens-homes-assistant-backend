@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "indicare_rostering_v2";
+  const STORAGE_KEY = "indicare_rostering_v3";
 
   const SHIFT_TEMPLATES = [
     {
@@ -12,6 +12,8 @@
       requiredCount: 3,
       requiredRoles: ["Residential Support Worker", "Residential Support Worker", "Shift Lead"],
       needsLead: true,
+      requiresMedication: true,
+      requiresDriver: false,
       notes: "Core day cover including school, appointments, routines, activities and safeguarding oversight.",
     },
     {
@@ -22,6 +24,8 @@
       requiredCount: 2,
       requiredRoles: ["Residential Support Worker", "Shift Lead"],
       needsLead: true,
+      requiresMedication: false,
+      requiresDriver: false,
       notes: "Night cover including welfare checks, incident response and morning handover readiness.",
     },
     {
@@ -32,6 +36,8 @@
       requiredCount: 1,
       requiredRoles: ["Sleep-in"],
       needsLead: false,
+      requiresMedication: false,
+      requiresDriver: false,
       notes: "Sleep-in cover for escalation support and continuity overnight.",
     },
   ];
@@ -43,9 +49,12 @@
       role: "Shift Lead",
       leadQualified: true,
       canSleepIn: false,
+      medicationTrained: true,
+      driver: true,
       employmentType: "core",
       weeklyHours: 37.5,
       homeId: 1,
+      familiarityScore: 95,
       qualifications: ["Medication", "Safeguarding", "Team Teach"],
     },
     {
@@ -54,9 +63,12 @@
       role: "Residential Support Worker",
       leadQualified: false,
       canSleepIn: true,
+      medicationTrained: true,
+      driver: true,
       employmentType: "core",
       weeklyHours: 37.5,
       homeId: 1,
+      familiarityScore: 90,
       qualifications: ["Medication", "Team Teach"],
     },
     {
@@ -65,9 +77,12 @@
       role: "Residential Support Worker",
       leadQualified: false,
       canSleepIn: true,
+      medicationTrained: false,
+      driver: false,
       employmentType: "core",
       weeklyHours: 30,
       homeId: 1,
+      familiarityScore: 86,
       qualifications: ["Team Teach"],
     },
     {
@@ -76,9 +91,12 @@
       role: "Senior Residential Support Worker",
       leadQualified: true,
       canSleepIn: true,
+      medicationTrained: true,
+      driver: true,
       employmentType: "core",
       weeklyHours: 40,
       homeId: 1,
+      familiarityScore: 88,
       qualifications: ["Medication", "Safeguarding"],
     },
     {
@@ -87,9 +105,12 @@
       role: "Bank Worker",
       leadQualified: false,
       canSleepIn: true,
+      medicationTrained: false,
+      driver: false,
       employmentType: "bank",
       weeklyHours: 0,
       homeId: 1,
+      familiarityScore: 52,
       qualifications: ["Team Teach"],
     },
     {
@@ -98,9 +119,12 @@
       role: "Agency Worker",
       leadQualified: false,
       canSleepIn: false,
+      medicationTrained: true,
+      driver: false,
       employmentType: "agency",
       weeklyHours: 0,
       homeId: 1,
+      familiarityScore: 34,
       qualifications: ["Medication"],
     },
     {
@@ -109,9 +133,12 @@
       role: "Residential Support Worker",
       leadQualified: false,
       canSleepIn: true,
+      medicationTrained: true,
+      driver: true,
       employmentType: "core",
       weeklyHours: 24,
       homeId: 1,
+      familiarityScore: 84,
       qualifications: ["Medication", "Team Teach"],
     },
     {
@@ -120,9 +147,12 @@
       role: "Residential Support Worker",
       leadQualified: false,
       canSleepIn: true,
+      medicationTrained: false,
+      driver: true,
       employmentType: "core",
       weeklyHours: 20,
       homeId: 1,
+      familiarityScore: 79,
       qualifications: ["Team Teach"],
     },
   ];
@@ -166,7 +196,7 @@
       "summaryCoverage",
       "summaryGaps",
       "summaryAgency",
-      "summaryOnShift",
+      "summaryOpenShifts",
       "summaryWarnings",
       "staffCountBadge",
       "staffSearchInput",
@@ -179,11 +209,14 @@
       "createLeaveBtn",
       "filterGapsOnly",
       "filterAgencyOnly",
+      "filterOpenOnly",
       "shiftSearchInput",
       "coverageBanner",
       "rotaBoard",
       "todayLivePanel",
       "warningPanel",
+      "openShiftPanel",
+      "notificationPanel",
       "absencePanel",
       "publishLogPanel",
       "shiftDrawerBackdrop",
@@ -197,6 +230,12 @@
       "shiftAssignmentList",
       "shiftAssignStaffSelect",
       "assignStaffBtn",
+      "markOpenShiftBtn",
+      "notifyEligibleStaffBtn",
+      "sendChangeNoticeBtn",
+      "createSwapRequestBtn",
+      "shiftOpenState",
+      "shiftChangeState",
       "shiftWarnings",
     ];
 
@@ -221,6 +260,11 @@
     els.closeShiftDrawerBtn.addEventListener("click", closeDrawer);
     els.shiftDrawerBackdrop.addEventListener("click", closeDrawer);
 
+    els.markOpenShiftBtn.addEventListener("click", handleMarkOpenShift);
+    els.notifyEligibleStaffBtn.addEventListener("click", handleNotifyEligibleStaff);
+    els.sendChangeNoticeBtn.addEventListener("click", handleSendChangeNotice);
+    els.createSwapRequestBtn.addEventListener("click", handleCreateSwapRequest);
+
     els.homeIdInput.addEventListener("change", handleHomeChange);
     els.weekStartInput.addEventListener("change", handleWeekChange);
     els.selectedDateInput.addEventListener("change", handleSelectedDateChange);
@@ -228,6 +272,7 @@
     els.staffSearchInput.addEventListener("input", renderStaffList);
     els.filterGapsOnly.addEventListener("change", renderBoardOnly);
     els.filterAgencyOnly.addEventListener("change", renderBoardOnly);
+    els.filterOpenOnly.addEventListener("change", renderBoardOnly);
     els.shiftSearchInput.addEventListener("input", renderBoardOnly);
 
     els.viewButtons.forEach((btn) => {
@@ -308,13 +353,11 @@
 
   function handleBuildWeek() {
     upsertRoster(buildWeekRoster(state.homeId, state.weekStart), true);
-
     addPublishLog({
       homeId: state.homeId,
       type: "template",
       message: `Week template rebuilt for week commencing ${formatShortDate(state.weekStart)}.`,
     });
-
     saveAndRender();
   }
 
@@ -330,6 +373,10 @@
       homeId: state.homeId,
       type: "publish",
       message: `Roster published for week commencing ${formatShortDate(state.weekStart)}.`,
+    });
+
+    getVisibleShiftsForSummary().forEach((shift) => {
+      createNotificationForShift(shift, "rota_published", `Rota published for ${shift.title} on ${formatShortDate(shift.date)}.`, false);
     });
 
     saveAndRender();
@@ -369,6 +416,13 @@
       message: `${getStaffName(staffId)} recorded as ${humaniseLeaveType(type)} from ${formatShortDate(start)} to ${formatShortDate(end)}.`,
     });
 
+    createNotification(staffId, {
+      type: "leave_recorded",
+      message: `Your ${humaniseLeaveType(type).toLowerCase()} has been recorded from ${formatShortDate(start)} to ${formatShortDate(end)}.`,
+      requiresAck: false,
+      shiftId: null,
+    });
+
     els.leaveStartInput.value = "";
     els.leaveEndInput.value = "";
     els.leaveNotesInput.value = "";
@@ -383,7 +437,134 @@
       window.alert("Please select an available staff member.");
       return;
     }
-    assignStaffToShift(state.selectedShiftId, staffId);
+    assignStaffToShift(state.selectedShiftId, staffId, true);
+  }
+
+  function handleMarkOpenShift() {
+    const shift = getSelectedShift();
+    if (!shift) return;
+
+    shift.isOpenShift = !shift.isOpenShift;
+    addPublishLog({
+      homeId: state.homeId,
+      type: "open_shift",
+      message: shift.isOpenShift
+        ? `${shift.title} on ${formatShortDate(shift.date)} marked as an open shift.`
+        : `${shift.title} on ${formatShortDate(shift.date)} removed from open shift status.`,
+    });
+
+    saveAndRender();
+    openDrawer(shift.id);
+  }
+
+  function handleNotifyEligibleStaff() {
+    const shift = getSelectedShift();
+    if (!shift) return;
+
+    const eligible = getAvailableStaffForShift(shift).slice(0, 8);
+    if (!eligible.length) {
+      window.alert("No suitable eligible staff were found for this shift.");
+      return;
+    }
+
+    eligible.forEach((person) => {
+      createNotification(person.id, {
+        type: "open_shift_offer",
+        message: `Open shift available: ${shift.title} on ${formatShortDate(shift.date)} ${shift.start}-${shift.end}.`,
+        requiresAck: false,
+        shiftId: shift.id,
+      });
+    });
+
+    shift.isOpenShift = true;
+    shift.lastOpenNotificationAt = new Date().toISOString();
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "offer_notice",
+      message: `Open shift notice sent to ${eligible.length} eligible staff for ${shift.title} on ${formatShortDate(shift.date)}.`,
+    });
+
+    saveAndRender();
+    openDrawer(shift.id);
+  }
+
+  function handleSendChangeNotice() {
+    const shift = getSelectedShift();
+    if (!shift) return;
+
+    const assignedStaff = shift.assignedStaffIds.map(getStaffById).filter(Boolean);
+    if (!assignedStaff.length) {
+      window.alert("No assigned staff are available to notify for this shift.");
+      return;
+    }
+
+    assignedStaff.forEach((person) => {
+      createNotification(person.id, {
+        type: "shift_change",
+        message: `Shift update for ${shift.title} on ${formatShortDate(shift.date)}. Please review and acknowledge.`,
+        requiresAck: true,
+        shiftId: shift.id,
+      });
+    });
+
+    shift.lastChangeNoticeAt = new Date().toISOString();
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "change_notice",
+      message: `Shift change notice sent to ${assignedStaff.length} assigned staff for ${shift.title} on ${formatShortDate(shift.date)}.`,
+    });
+
+    saveAndRender();
+    openDrawer(shift.id);
+  }
+
+  function handleCreateSwapRequest() {
+    const shift = getSelectedShift();
+    if (!shift) return;
+
+    if (!shift.assignedStaffIds.length) {
+      window.alert("Assign at least one staff member before creating a swap request.");
+      return;
+    }
+
+    const ownerId = shift.assignedStaffIds[0];
+    const swap = {
+      id: makeId("swap"),
+      homeId: state.homeId,
+      shiftId: shift.id,
+      requestedByStaffId: ownerId,
+      status: "open",
+      createdAt: new Date().toISOString(),
+    };
+    state.data.swapRequests.push(swap);
+
+    createNotification(ownerId, {
+      type: "swap_created",
+      message: `Swap request created for ${shift.title} on ${formatShortDate(shift.date)}.`,
+      requiresAck: false,
+      shiftId: shift.id,
+    });
+
+    const eligible = getAvailableStaffForShift(shift).slice(0, 6);
+    eligible.forEach((person) => {
+      createNotification(person.id, {
+        type: "swap_offer",
+        message: `Swap available: ${shift.title} on ${formatShortDate(shift.date)} ${shift.start}-${shift.end}.`,
+        requiresAck: false,
+        shiftId: shift.id,
+      });
+    });
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "swap_request",
+      message: `Swap request created for ${shift.title} on ${formatShortDate(shift.date)}.`,
+    });
+
+    saveAndRender();
+    openDrawer(shift.id);
   }
 
   function setView(view) {
@@ -453,6 +634,8 @@
     if (!Array.isArray(state.data.rosters)) state.data.rosters = [];
     if (!Array.isArray(state.data.leaves)) state.data.leaves = [];
     if (!Array.isArray(state.data.publishLog)) state.data.publishLog = [];
+    if (!Array.isArray(state.data.notifications)) state.data.notifications = [];
+    if (!Array.isArray(state.data.swapRequests)) state.data.swapRequests = [];
     if (!state.data.meta || typeof state.data.meta !== "object") state.data.meta = {};
 
     if (!getRosterForWeek()) {
@@ -492,8 +675,13 @@
           requiredCount: template.requiredCount,
           requiredRoles: [...template.requiredRoles],
           needsLead: !!template.needsLead,
-          assignedStaffIds: buildSeedAssignments(homeId, date, template),
+          requiresMedication: !!template.requiresMedication,
+          requiresDriver: !!template.requiresDriver,
           notes: template.notes,
+          assignedStaffIds: buildSeedAssignments(homeId, date, template),
+          isOpenShift: false,
+          lastOpenNotificationAt: null,
+          lastChangeNoticeAt: null,
         });
       });
     });
@@ -514,13 +702,16 @@
     const staff = getHomeStaff(homeId).filter((person) => !isStaffAbsentOnDate(person.id, date));
 
     if (template.type === "day") {
-      const assignments = [];
+      const picks = [];
       const lead = staff.find((person) => person.leadQualified);
-      if (lead) assignments.push(lead.id);
+      if (lead) picks.push(lead.id);
 
-      const workers = staff.filter((person) => person.id !== lead?.id && !isAgencyOrBank(person)).slice(0, 1);
-      workers.forEach((person) => assignments.push(person.id));
-      return assignments;
+      staff
+        .filter((person) => person.id !== lead?.id && !isAgencyOrBank(person))
+        .slice(0, 1)
+        .forEach((person) => picks.push(person.id));
+
+      return picks;
     }
 
     if (template.type === "waking_night") {
@@ -560,6 +751,8 @@
     renderBoard();
     renderTodayLivePanel();
     renderWarningPanel();
+    renderOpenShiftPanel();
+    renderNotificationPanel();
     renderAbsencePanel();
     renderPublishLogPanel();
     renderDrawerFromState();
@@ -572,6 +765,7 @@
     const assigned = shifts.reduce((sum, shift) => sum + Math.min(shift.assignedStaffIds.length, shift.requiredCount), 0);
     const coverage = required ? Math.round((assigned / required) * 100) : 0;
     const gaps = shifts.filter((shift) => computeShiftCoverage(shift).gapCount > 0).length;
+
     const agencyCount = unique(
       shifts.flatMap((shift) => shift.assignedStaffIds).filter((staffId) => {
         const person = getStaffById(staffId);
@@ -579,14 +773,14 @@
       })
     ).length;
 
-    const nowCount = getCurrentlyOnShift().flatMap((shift) => shift.assignedStaffIds).length;
+    const openShiftCount = shifts.filter((shift) => shift.isOpenShift).length;
     const primaryRoster = getRosterForWeek();
 
     text(els.summaryPublication, primaryRoster?.publicationStatus || "Draft");
     text(els.summaryCoverage, `${coverage}%`);
     text(els.summaryGaps, String(gaps));
     text(els.summaryAgency, String(agencyCount));
-    text(els.summaryOnShift, String(nowCount));
+    text(els.summaryOpenShifts, String(openShiftCount));
     text(els.summaryWarnings, String(warnings.length));
     text(els.staffCountBadge, `${getHomeStaff().length} staff`);
   }
@@ -601,9 +795,14 @@
     const query = (els.staffSearchInput.value || "").trim().toLowerCase();
     const day = state.selectedDate;
     const staff = getHomeStaff().filter((person) => {
-      const haystack = [person.name, person.role, person.employmentType, ...(person.qualifications || [])]
-        .join(" ")
-        .toLowerCase();
+      const haystack = [
+        person.name,
+        person.role,
+        person.employmentType,
+        ...(person.qualifications || []),
+        person.medicationTrained ? "medication" : "",
+        person.driver ? "driver" : "",
+      ].join(" ").toLowerCase();
       return !query || haystack.includes(query);
     });
 
@@ -613,6 +812,7 @@
     }
 
     els.staffList.innerHTML = staff
+      .sort((a, b) => b.familiarityScore - a.familiarityScore)
       .map((person) => {
         const absent = isStaffAbsentOnDate(person.id, day);
         const assignedHours = getAssignedHoursForWeek(person.id, state.weekStart);
@@ -637,8 +837,11 @@
             <div class="staff-meta">
               <span class="meta-pill">${escapeHtml(String(person.weeklyHours || 0))}h contract</span>
               <span class="meta-pill">${escapeHtml(String(assignedHours))}h assigned</span>
-              <span class="meta-pill">${person.canSleepIn ? "Sleep-in" : "No sleep-in"}</span>
+              <span class="meta-pill">Familiarity ${escapeHtml(String(person.familiarityScore || 0))}</span>
+              ${person.canSleepIn ? `<span class="meta-pill">Sleep-in</span>` : ""}
               ${person.leadQualified ? `<span class="meta-pill">Lead qualified</span>` : ""}
+              ${person.medicationTrained ? `<span class="meta-pill">Medication</span>` : ""}
+              ${person.driver ? `<span class="meta-pill">Driver</span>` : ""}
               ${isAgencyOrBank(person) ? `<span class="meta-pill agency">${escapeHtml(person.employmentType)}</span>` : ""}
               ${qualificationBadges}
             </div>
@@ -671,22 +874,24 @@
         acc.assigned += Math.min(shift.assignedStaffIds.length, shift.requiredCount);
         if (result.gapCount > 0) acc.gapShifts += 1;
         if (result.warning) acc.warningShifts += 1;
+        if (shift.isOpenShift) acc.openShifts += 1;
         return acc;
       },
-      { required: 0, assigned: 0, gapShifts: 0, warningShifts: 0 }
+      { required: 0, assigned: 0, gapShifts: 0, warningShifts: 0, openShifts: 0 }
     );
 
     const coverage = stats.required ? Math.round((stats.assigned / stats.required) * 100) : 0;
 
     let className = "coverage-banner";
     if (stats.gapShifts > 0) className += " is-danger";
-    else if (stats.warningShifts > 0) className += " is-warning";
+    else if (stats.warningShifts > 0 || stats.openShifts > 0) className += " is-warning";
 
     els.coverageBanner.className = className;
     els.coverageBanner.innerHTML = `
       <strong>${coverage}% covered</strong>.
       ${stats.gapShifts > 0 ? `${stats.gapShifts} shift(s) currently have staffing gaps.` : `No visible uncovered shifts.`}
-      ${stats.warningShifts > 0 ? ` ${stats.warningShifts} shift(s) also need suitability or leadership review.` : ""}
+      ${stats.warningShifts > 0 ? ` ${stats.warningShifts} shift(s) also need leadership, medication, continuity or suitability review.` : ""}
+      ${stats.openShifts > 0 ? ` ${stats.openShifts} shift(s) are marked as open.` : ""}
     `;
   }
 
@@ -703,7 +908,13 @@
     }
 
     const dates = getVisibleDatesForBoard();
-    const boardClass = state.view === "week" ? "rota-board week-view" : state.view === "day" ? "rota-board day-view" : "rota-board today-view";
+    const boardClass =
+      state.view === "week"
+        ? "rota-board week-view"
+        : state.view === "day"
+          ? "rota-board day-view"
+          : "rota-board today-view";
+
     els.rotaBoard.className = boardClass;
 
     const columnsHtml = dates
@@ -765,9 +976,13 @@
             ? shifts.map((shift) => {
                 const result = computeShiftCoverage(shift);
                 return `
-                  <button type="button" class="month-mini-shift ${result.gapCount > 0 ? "is-gap" : ""}" data-shift-id="${escapeHtml(shift.id)}">
+                  <button
+                    type="button"
+                    class="month-mini-shift ${result.gapCount > 0 ? "is-gap" : ""} ${shift.isOpenShift ? "is-open" : ""}"
+                    data-shift-id="${escapeHtml(shift.id)}"
+                  >
                     <h4>${escapeHtml(shift.title)}</h4>
-                    <p>${escapeHtml(shift.start)}–${escapeHtml(shift.end)} · ${escapeHtml(result.label)}</p>
+                    <p>${escapeHtml(shift.start)}–${escapeHtml(shift.end)} · ${escapeHtml(shift.isOpenShift ? "Open shift" : result.label)}</p>
                   </button>
                 `;
               }).join("")
@@ -779,6 +994,17 @@
 
   function renderShiftCard(shift) {
     const result = computeShiftCoverage(shift);
+
+    const chipClass = shift.isOpenShift
+      ? "coverage-chip is-open"
+      : result.gapCount > 0
+        ? "coverage-chip is-danger"
+        : result.warning
+          ? "coverage-chip is-warning"
+          : "coverage-chip";
+
+    const label = shift.isOpenShift ? "Open shift" : result.label;
+
     const assigneeMarkup = shift.assignedStaffIds.length
       ? shift.assignedStaffIds
           .map((staffId) => {
@@ -794,15 +1020,13 @@
       : `<span class="drop-hint">Drag staff here or open shift</span>`;
 
     return `
-      <article class="shift-card ${result.gapCount > 0 ? "is-gap" : ""}" data-shift-id="${escapeHtml(shift.id)}" tabindex="0">
+      <article class="shift-card ${result.gapCount > 0 ? "is-gap" : ""} ${shift.isOpenShift ? "is-open" : ""}" data-shift-id="${escapeHtml(shift.id)}" tabindex="0">
         <div class="shift-card-head">
           <div>
             <h4 class="shift-title">${escapeHtml(shift.title)}</h4>
             <p class="shift-meta">${escapeHtml(shift.start)}–${escapeHtml(shift.end)} · ${escapeHtml(shift.type)}</p>
           </div>
-          <span class="coverage-chip ${result.gapCount > 0 ? "is-danger" : result.warning ? "is-warning" : ""}">
-            ${escapeHtml(result.label)}
-          </span>
+          <span class="${chipClass}">${escapeHtml(label)}</span>
         </div>
         <div class="shift-assignees">${assigneeMarkup}</div>
       </article>
@@ -812,6 +1036,7 @@
   function bindBoardInteractions() {
     Array.from(els.rotaBoard.querySelectorAll("[data-shift-id]")).forEach((node) => {
       const shiftId = node.dataset.shiftId;
+
       node.addEventListener("click", () => openDrawer(shiftId));
 
       node.addEventListener("keydown", (event) => {
@@ -831,7 +1056,7 @@
           event.preventDefault();
           const staffId = event.dataTransfer.getData("text/plain") || state.dragStaffId;
           if (!staffId) return;
-          assignStaffToShift(shiftId, staffId);
+          assignStaffToShift(shiftId, staffId, true);
         });
       }
     });
@@ -845,12 +1070,13 @@
       ...current.map((shift) => ({
         title: `${shift.title} live now`,
         body: `${shift.start}–${shift.end} · ${getAssignedStaffLabel(shift)}`,
-        meta: computeShiftCoverage(shift).label,
+        meta: shift.isOpenShift ? "Open shift" : computeShiftCoverage(shift).label,
+        variant: "notice",
       })),
       ...next.map((shift) => ({
         title: `Next: ${shift.title}`,
         body: `${shift.start}–${shift.end} · ${getAssignedStaffLabel(shift)}`,
-        meta: computeShiftCoverage(shift).label,
+        meta: shift.isOpenShift ? "Open shift" : computeShiftCoverage(shift).label,
       })),
     ];
 
@@ -866,6 +1092,37 @@
     }));
 
     renderSideList(els.warningPanel, warnings, "No staffing warnings at present.");
+  }
+
+  function renderOpenShiftPanel() {
+    const items = getVisibleShiftsForSummary()
+      .filter((shift) => shift.isOpenShift || computeShiftCoverage(shift).gapCount > 0)
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.start).localeCompare(String(b.start)))
+      .slice(0, 12)
+      .map((shift) => ({
+        title: shift.isOpenShift ? `${shift.title} open for cover` : `${shift.title} needs cover`,
+        body: `${formatShortDate(shift.date)} · ${shift.start}-${shift.end}`,
+        meta: getEligibleStaffCountLabel(shift),
+        variant: "notice",
+      }));
+
+    renderSideList(els.openShiftPanel, items, "No open or uncovered shifts are visible.");
+  }
+
+  function renderNotificationPanel() {
+    const items = state.data.notifications
+      .filter((item) => item.homeId === state.homeId)
+      .slice()
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+      .slice(0, 12)
+      .map((item) => ({
+        title: `${getStaffName(item.staffId)} · ${humaniseNotificationType(item.type)}`,
+        body: item.message,
+        meta: buildNotificationMeta(item),
+        variant: item.requiresAck && item.acknowledgedAt ? "success" : item.requiresAck ? "warning" : "notice",
+      }));
+
+    renderSideList(els.notificationPanel, items, "No recent notifications.");
   }
 
   function renderAbsencePanel() {
@@ -900,7 +1157,7 @@
         meta: formatDateTime(log.at),
       }));
 
-    renderSideList(els.publishLogPanel, items, "No publication or cover activity has been logged yet.");
+    renderSideList(els.publishLogPanel, items, "No publication or contact activity has been logged yet.");
   }
 
   function renderSideList(container, items, emptyText) {
@@ -911,12 +1168,11 @@
 
     container.innerHTML = items
       .map((item) => {
-        const className =
-          item.severity === "high"
-            ? "side-item warning-item high"
-            : item.severity === "medium"
-              ? "side-item warning-item"
-              : "side-item";
+        let className = "side-item";
+        if (item.severity === "high") className += " warning-item high";
+        else if (item.severity === "medium") className += " warning-item";
+        if (item.variant === "notice") className += " notice-item";
+        if (item.variant === "success") className += " success-item";
 
         return `
           <article class="${className}">
@@ -967,9 +1223,21 @@
 
     text(els.shiftDrawerTitle, shift.title);
     text(els.shiftDrawerMeta, `${formatFullDate(shift.date)} · ${shift.start}–${shift.end}`);
-    text(els.shiftDrawerCoverage, `${result.label}. ${result.detail}`);
+    text(els.shiftDrawerCoverage, `${shift.isOpenShift ? "Open shift. " : ""}${result.label}. ${result.detail}`);
     text(els.shiftRequiredRoles, `Required roles: ${shift.requiredRoles.join(", ")}.`);
     text(els.shiftDrawerNotes, shift.notes || "No shift notes recorded.");
+    text(
+      els.shiftOpenState,
+      shift.isOpenShift
+        ? `This shift is marked as open. ${shift.lastOpenNotificationAt ? `Last offer sent ${formatDateTime(shift.lastOpenNotificationAt)}.` : ""}`
+        : "This shift is not currently marked as open."
+    );
+    text(
+      els.shiftChangeState,
+      shift.lastChangeNoticeAt
+        ? `Last change notice sent ${formatDateTime(shift.lastChangeNoticeAt)}.`
+        : "No change notice has been sent yet."
+    );
 
     els.shiftAssignmentList.innerHTML = shift.assignedStaffIds.length
       ? shift.assignedStaffIds
@@ -980,10 +1248,11 @@
               <div class="drawer-row">
                 <div class="drawer-row-main">
                   <strong>${escapeHtml(person.name)}</strong>
-                  <span>${escapeHtml(person.role)} · ${escapeHtml(person.employmentType)}</span>
+                  <span>${escapeHtml(person.role)} · ${escapeHtml(person.employmentType)} · Familiarity ${escapeHtml(String(person.familiarityScore || 0))}</span>
                 </div>
                 <div class="drawer-row-actions">
                   <button class="mini-btn" type="button" data-action="highlight" data-staff-id="${escapeHtml(person.id)}">View</button>
+                  <button class="mini-btn" type="button" data-action="ack" data-staff-id="${escapeHtml(person.id)}">Ack</button>
                   <button class="remove-btn" type="button" data-action="remove" data-staff-id="${escapeHtml(person.id)}">Remove</button>
                 </div>
               </div>
@@ -1000,17 +1269,22 @@
 
         if (action === "remove") {
           removeStaffFromShift(shift.id, staffId);
-        }
-
-        if (action === "highlight") {
+        } else if (action === "highlight") {
           focusStaffCard(staffId);
+        } else if (action === "ack") {
+          acknowledgeShiftNotifications(shift.id, staffId);
+          saveAndRender();
+          openDrawer(shift.id);
         }
       });
     });
 
     els.shiftAssignStaffSelect.innerHTML = availableStaff.length
       ? availableStaff
-          .map((person) => `<option value="${escapeHtml(person.id)}">${escapeHtml(person.name)} (${escapeHtml(person.role)})</option>`)
+          .sort((a, b) => scoreStaffForShift(b, shift) - scoreStaffForShift(a, shift))
+          .map((person) => {
+            return `<option value="${escapeHtml(person.id)}">${escapeHtml(person.name)} (${escapeHtml(person.role)} · score ${scoreStaffForShift(person, shift)})</option>`;
+          })
           .join("")
       : `<option value="">No suitable staff available</option>`;
 
@@ -1030,7 +1304,7 @@
       : `<div class="empty-state">No shift-specific warnings.</div>`;
   }
 
-  function assignStaffToShift(shiftId, staffId) {
+  function assignStaffToShift(shiftId, staffId, notify = false) {
     const shift = findShiftById(shiftId);
     const person = getStaffById(staffId);
 
@@ -1058,14 +1332,27 @@
 
     shift.assignedStaffIds.push(staffId);
 
+    if (shift.assignedStaffIds.length >= shift.requiredCount) {
+      shift.isOpenShift = false;
+    }
+
     addPublishLog({
       homeId: state.homeId,
       type: "assignment",
       message: `${person.name} assigned to ${shift.title} on ${formatShortDate(shift.date)}.`,
     });
 
+    if (notify) {
+      createNotification(person.id, {
+        type: "shift_assigned",
+        message: `You have been assigned to ${shift.title} on ${formatShortDate(shift.date)} ${shift.start}-${shift.end}.`,
+        requiresAck: true,
+        shiftId: shift.id,
+      });
+    }
+
     saveAndRender();
-    openDrawer(shiftId);
+    openDrawer(shift.id);
   }
 
   function removeStaffFromShift(shiftId, staffId) {
@@ -1080,8 +1367,15 @@
       message: `${getStaffName(staffId)} removed from ${shift.title} on ${formatShortDate(shift.date)}.`,
     });
 
+    createNotification(staffId, {
+      type: "shift_removed",
+      message: `You have been removed from ${shift.title} on ${formatShortDate(shift.date)}.`,
+      requiresAck: false,
+      shiftId: shift.id,
+    });
+
     saveAndRender();
-    openDrawer(shiftId);
+    openDrawer(shift.id);
   }
 
   function buildWarnings() {
@@ -1106,7 +1400,29 @@
           meta: `${formatShortDate(shift.date)} · ${shift.start}–${shift.end}`,
         });
       }
+
+      if (shift.isOpenShift) {
+        warnings.push({
+          severity: "medium",
+          title: `${shift.title} is open for cover`,
+          body: `The shift is still flagged as open and should be monitored for response.`,
+          meta: `${formatShortDate(shift.date)} · ${shift.start}–${shift.end}`,
+        });
+      }
     });
+
+    const pendingAckCount = state.data.notifications.filter(
+      (item) => item.homeId === state.homeId && item.requiresAck && !item.acknowledgedAt
+    ).length;
+
+    if (pendingAckCount > 0) {
+      warnings.push({
+        severity: "medium",
+        title: "Outstanding acknowledgements",
+        body: `${pendingAckCount} shift change or assignment notification(s) still need acknowledgement.`,
+        meta: "Review staff confirmations.",
+      });
+    }
 
     const visibleDates = state.view === "month" ? getMonthGridDays(state.selectedDate) : getVisibleDatesForBoard();
     const minDate = visibleDates[0];
@@ -1146,6 +1462,20 @@
       });
     }
 
+    if (shift.requiresMedication && !hasMedicationOnShift(shift)) {
+      warnings.push({
+        title: "Medication cover risk",
+        body: "This shift requires medication-trained cover and none is currently assigned.",
+      });
+    }
+
+    if (shift.requiresDriver && !hasDriverOnShift(shift)) {
+      warnings.push({
+        title: "Driver cover risk",
+        body: "This shift requires a driver and none is currently assigned.",
+      });
+    }
+
     const agencyCount = shift.assignedStaffIds.filter((staffId) => {
       const person = getStaffById(staffId);
       return person && isAgencyOrBank(person);
@@ -1155,6 +1485,14 @@
       warnings.push({
         title: "Agency or bank in use",
         body: `${agencyCount} agency/bank staff assigned. Check induction, familiarity and handover quality.`,
+      });
+    }
+
+    const averageFamiliarity = getAverageFamiliarity(shift);
+    if (averageFamiliarity > 0 && averageFamiliarity < 60) {
+      warnings.push({
+        title: "Low familiarity score",
+        body: `Average familiarity for this shift is ${averageFamiliarity}. Continuity of care may be reduced.`,
       });
     }
 
@@ -1172,6 +1510,21 @@
       }
     }
 
+    const pendingAck = state.data.notifications.filter(
+      (item) =>
+        item.homeId === state.homeId &&
+        item.shiftId === shift.id &&
+        item.requiresAck &&
+        !item.acknowledgedAt
+    ).length;
+
+    if (pendingAck > 0) {
+      warnings.push({
+        title: "Pending acknowledgements",
+        body: `${pendingAck} change/assignment notification(s) for this shift still need acknowledgement.`,
+      });
+    }
+
     return warnings;
   }
 
@@ -1179,10 +1532,15 @@
     const assignedCount = shift.assignedStaffIds.length;
     const gapCount = Math.max(shift.requiredCount - assignedCount, 0);
     const leadMissing = shift.needsLead && !hasLeadOnShift(shift);
+    const medicationMissing = shift.requiresMedication && !hasMedicationOnShift(shift);
+    const driverMissing = shift.requiresDriver && !hasDriverOnShift(shift);
+
     const agencyCount = shift.assignedStaffIds.filter((staffId) => {
       const person = getStaffById(staffId);
       return person && isAgencyOrBank(person);
     }).length;
+
+    const lowContinuity = getAverageFamiliarity(shift) > 0 && getAverageFamiliarity(shift) < 60;
 
     let label = `${assignedCount}/${shift.requiredCount} filled`;
     let detail = `${assignedCount} assigned for ${shift.requiredCount} required.`;
@@ -1199,12 +1557,37 @@
       warning = true;
     }
 
+    if (medicationMissing) {
+      detail += ` No medication-trained staff assigned.`;
+      warning = true;
+    }
+
+    if (driverMissing) {
+      detail += ` No driver assigned.`;
+      warning = true;
+    }
+
     if (agencyCount > 0) {
       detail += ` ${agencyCount} agency/bank staff on shift.`;
       warning = true;
     }
 
-    return { gapCount, leadMissing, agencyCount, warning, label, detail };
+    if (lowContinuity) {
+      detail += ` Low continuity/familiarity for the home.`;
+      warning = true;
+    }
+
+    return {
+      gapCount,
+      leadMissing,
+      medicationMissing,
+      driverMissing,
+      agencyCount,
+      lowContinuity,
+      warning,
+      label,
+      detail,
+    };
   }
 
   function renderDrawerIfShiftStillSelected() {
@@ -1223,7 +1606,6 @@
     if (state.view === "month") {
       return getMonthGridDays(state.selectedDate).flatMap((date) => getShiftsForDate(date));
     }
-
     return getVisibleDatesForBoard().flatMap((date) => getShiftsForDate(date));
   }
 
@@ -1238,12 +1620,14 @@
   function filterShifts(shifts) {
     const gapsOnly = !!els.filterGapsOnly.checked;
     const agencyOnly = !!els.filterAgencyOnly.checked;
+    const openOnly = !!els.filterOpenOnly.checked;
     const query = (els.shiftSearchInput.value || "").trim().toLowerCase();
 
     return shifts.filter((shift) => {
       const result = computeShiftCoverage(shift);
 
       if (gapsOnly && result.gapCount === 0) return false;
+      if (openOnly && !shift.isOpenShift) return false;
 
       if (agencyOnly) {
         const hasAgency = shift.assignedStaffIds.some((staffId) => {
@@ -1255,7 +1639,15 @@
 
       if (query) {
         const people = shift.assignedStaffIds.map(getStaffName).join(" ");
-        const haystack = [shift.title, shift.type, shift.notes, shift.start, shift.end, people].join(" ").toLowerCase();
+        const haystack = [
+          shift.title,
+          shift.type,
+          shift.notes,
+          shift.start,
+          shift.end,
+          people,
+          shift.isOpenShift ? "open shift" : "",
+        ].join(" ").toLowerCase();
         if (!haystack.includes(query)) return false;
       }
 
@@ -1274,11 +1666,36 @@
       .find((shift) => shift.id === shiftId) || null;
   }
 
+  function getSelectedShift() {
+    return state.selectedShiftId ? findShiftById(state.selectedShiftId) : null;
+  }
+
   function hasLeadOnShift(shift) {
     return shift.assignedStaffIds.some((staffId) => {
       const person = getStaffById(staffId);
       return person && person.leadQualified;
     });
+  }
+
+  function hasMedicationOnShift(shift) {
+    return shift.assignedStaffIds.some((staffId) => {
+      const person = getStaffById(staffId);
+      return person && person.medicationTrained;
+    });
+  }
+
+  function hasDriverOnShift(shift) {
+    return shift.assignedStaffIds.some((staffId) => {
+      const person = getStaffById(staffId);
+      return person && person.driver;
+    });
+  }
+
+  function getAverageFamiliarity(shift) {
+    const people = shift.assignedStaffIds.map(getStaffById).filter(Boolean);
+    if (!people.length) return 0;
+    const total = people.reduce((sum, person) => sum + Number(person.familiarityScore || 0), 0);
+    return Math.round(total / people.length);
   }
 
   function getAvailableStaffForShift(shift) {
@@ -1288,6 +1705,25 @@
       if (hasStaffTimeConflict(person.id, shift)) return false;
       return true;
     });
+  }
+
+  function scoreStaffForShift(person, shift) {
+    let score = Number(person.familiarityScore || 0);
+
+    if (shift.needsLead && person.leadQualified) score += 30;
+    if (shift.requiresMedication && person.medicationTrained) score += 20;
+    if (shift.requiresDriver && person.driver) score += 10;
+    if (shift.type === "sleep_in" && person.canSleepIn) score += 15;
+    if (person.employmentType === "core") score += 12;
+    if (person.employmentType === "bank") score += 4;
+    if (person.employmentType === "agency") score -= 8;
+
+    return score;
+  }
+
+  function getEligibleStaffCountLabel(shift) {
+    const count = getAvailableStaffForShift(shift).length;
+    return `${count} eligible staff available`;
   }
 
   function hasStaffTimeConflict(staffId, targetShift) {
@@ -1356,6 +1792,71 @@
       .length;
   }
 
+  function createNotificationForShift(shift, type, message, requiresAck) {
+    shift.assignedStaffIds.forEach((staffId) => {
+      createNotification(staffId, {
+        type,
+        message,
+        requiresAck,
+        shiftId: shift.id,
+      });
+    });
+  }
+
+  function createNotification(staffId, payload) {
+    state.data.notifications.unshift({
+      id: makeId("notification"),
+      homeId: state.homeId,
+      staffId,
+      shiftId: payload.shiftId || null,
+      type: payload.type || "notice",
+      message: payload.message || "",
+      requiresAck: !!payload.requiresAck,
+      acknowledgedAt: null,
+      channel: payload.requiresAck ? "push+sms" : "push",
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  function acknowledgeShiftNotifications(shiftId, staffId) {
+    state.data.notifications.forEach((item) => {
+      if (
+        item.homeId === state.homeId &&
+        item.shiftId === shiftId &&
+        item.staffId === staffId &&
+        item.requiresAck &&
+        !item.acknowledgedAt
+      ) {
+        item.acknowledgedAt = new Date().toISOString();
+      }
+    });
+
+    addPublishLog({
+      homeId: state.homeId,
+      type: "acknowledgement",
+      message: `${getStaffName(staffId)} acknowledged shift updates for ${findShiftById(shiftId)?.title || "shift"}.`,
+    });
+  }
+
+  function buildNotificationMeta(item) {
+    const parts = [
+      item.channel || "push",
+      item.requiresAck
+        ? item.acknowledgedAt
+          ? `acknowledged ${formatDateTime(item.acknowledgedAt)}`
+          : "awaiting acknowledgement"
+        : "no acknowledgement needed",
+      formatDateTime(item.createdAt),
+    ];
+    return parts.join(" · ");
+  }
+
+  function humaniseNotificationType(type) {
+    return String(type || "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (match) => match.toUpperCase());
+  }
+
   function addPublishLog(entry) {
     state.data.publishLog.unshift({
       id: makeId("log"),
@@ -1373,7 +1874,19 @@
       return;
     }
 
-    const rows = [["Staff name", "Role", "Date", "Shift", "Start", "End", "Hours", "Employment type"]];
+    const rows = [[
+      "Staff name",
+      "Role",
+      "Date",
+      "Shift",
+      "Start",
+      "End",
+      "Hours",
+      "Employment type",
+      "Lead qualified",
+      "Medication trained",
+      "Driver"
+    ]];
 
     shifts.forEach((shift) => {
       shift.assignedStaffIds.forEach((staffId) => {
@@ -1389,6 +1902,9 @@
           shift.end,
           String((getShiftDurationMinutes(shift.start, shift.end) / 60).toFixed(2)),
           person.employmentType,
+          person.leadQualified ? "Yes" : "No",
+          person.medicationTrained ? "Yes" : "No",
+          person.driver ? "Yes" : "No",
         ]);
       });
     });
@@ -1409,6 +1925,8 @@
       weekStart: state.weekStart,
       visibleShifts: getVisibleShiftsForSummary(),
       visibleWarnings: buildWarnings(),
+      notifications: state.data.notifications.filter((item) => item.homeId === state.homeId),
+      swapRequests: state.data.swapRequests.filter((item) => item.homeId === state.homeId),
       leaves: state.data.leaves.filter((item) => item.homeId === state.homeId),
       publishLog: state.data.publishLog.filter((item) => item.homeId === state.homeId || !item.homeId),
     };
@@ -1466,6 +1984,8 @@
           rosters: [],
           leaves: [],
           publishLog: [],
+          notifications: [],
+          swapRequests: [],
           meta: {},
         };
       }
@@ -1476,6 +1996,8 @@
         rosters: Array.isArray(parsed.rosters) ? parsed.rosters : [],
         leaves: Array.isArray(parsed.leaves) ? parsed.leaves : [],
         publishLog: Array.isArray(parsed.publishLog) ? parsed.publishLog : [],
+        notifications: Array.isArray(parsed.notifications) ? parsed.notifications : [],
+        swapRequests: Array.isArray(parsed.swapRequests) ? parsed.swapRequests : [],
         meta: parsed.meta && typeof parsed.meta === "object" ? parsed.meta : {},
       };
     } catch (error) {
@@ -1485,6 +2007,8 @@
         rosters: [],
         leaves: [],
         publishLog: [],
+        notifications: [],
+        swapRequests: [],
         meta: {},
       };
     }
