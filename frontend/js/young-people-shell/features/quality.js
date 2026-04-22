@@ -7,6 +7,7 @@ import {
   onAssistantScopeChanged,
   renderAssistantControllerPanels,
 } from "../ui/assistant-controller.js";
+import { buildInspectionUiEndpoints } from "../core/config.js";
 
 /* -------------------------------- helpers -------------------------------- */
 
@@ -294,6 +295,7 @@ function badgeClass(value) {
       "up_to_date",
       "current",
       "compliant",
+      "strong",
     ].includes(v)
   ) {
     return "badge badge-success";
@@ -503,7 +505,7 @@ function buildFallbackData(homeId) {
       mapInspectionScore({
         id: "is-1",
         run_id: "run-1",
-        framework_id: "sccif",
+        framework_id: 1,
         provider_id: 1,
         home_id: homeId,
         period_start: minusDays(30),
@@ -520,7 +522,7 @@ function buildFallbackData(homeId) {
           "Safer routines, stronger chronology, improved leadership grip.",
         concerns_summary:
           "Some evidence freshness and action completion gaps remain.",
-        generated_by: "demo",
+        generated_by: "system",
         created_at: minusDays(1),
         updated_at: minusDays(1),
       }),
@@ -530,7 +532,7 @@ function buildFallbackData(homeId) {
       mapInspectionSectionScore({
         id: "iss-1",
         inspection_score_id: "is-1",
-        section_id: "sec-1",
+        section_id: "leadership_management",
         section_code: "leadership_management",
         section_name: "Leadership and management",
         score_value: 71.2,
@@ -544,7 +546,7 @@ function buildFallbackData(homeId) {
       mapInspectionSectionScore({
         id: "iss-2",
         inspection_score_id: "is-1",
-        section_id: "sec-2",
+        section_id: "helped_protected",
         section_code: "helped_protected",
         section_name: "Helped and protected",
         score_value: 75.8,
@@ -562,12 +564,15 @@ function buildFallbackData(homeId) {
         id: "ir-1",
         inspection_score_id: "is-1",
         section_score_id: "iss-1",
+        descriptor_id: "desc-1",
         reason_type: "concern",
         priority: 1,
         title: "Action closure evidence is inconsistent",
         description:
           "A small number of actions remain live without clear closure evidence.",
         impact_weight: 8.4,
+        source_table: "quality_audit_actions",
+        source_record_id: "qaa-1",
         created_at: minusDays(1),
       }),
     ],
@@ -576,7 +581,9 @@ function buildFallbackData(homeId) {
       mapInspectionLineOfEnquiry({
         id: "ile-1",
         inspection_score_id: "is-1",
+        section_score_id: "iss-1",
         home_id: homeId,
+        provider_id: 1,
         priority: "high",
         line_of_enquiry:
           "How consistently are improvement actions tracked to completion?",
@@ -594,6 +601,7 @@ function buildFallbackData(homeId) {
         inspection_score_id: "is-1",
         line_of_enquiry_id: "ile-1",
         home_id: homeId,
+        provider_id: 1,
         action_title: "Evidence action completion in quality tracker",
         action_description:
           "Update quality tracker with closure notes and linked evidence.",
@@ -609,6 +617,7 @@ function buildFallbackData(homeId) {
         inspection_score_id: "is-1",
         line_of_enquiry_id: "ile-1",
         home_id: homeId,
+        provider_id: 1,
         action_title: "Refresh readiness evidence pack",
         action_description:
           "Bring freshness of evidence pack up to date for current cycle.",
@@ -693,6 +702,7 @@ function mapQualityAuditAction(record = {}) {
     action_description: record.action_description || "",
     priority: record.priority || "",
     owner_user_id: record.owner_user_id || null,
+    owner_user_name: record.owner_user_name || "",
     due_date: record.due_date || null,
     status: record.status || "",
     completed_at: record.completed_at || null,
@@ -782,6 +792,7 @@ function mapReg44Action(record = {}) {
     action_title: record.action_title || "Reg 44 action",
     action_description: record.action_description || "",
     owner_user_id: record.owner_user_id || null,
+    owner_user_name: record.owner_user_name || "",
     due_date: record.due_date || null,
     status: record.status || "",
     completed_at: record.completed_at || null,
@@ -825,6 +836,7 @@ function mapReg45Action(record = {}) {
     action_title: record.action_title || "Reg 45 action",
     action_description: record.action_description || "",
     owner_user_id: record.owner_user_id || null,
+    owner_user_name: record.owner_user_name || "",
     due_date: record.due_date || null,
     priority: record.priority || "",
     status: record.status || "",
@@ -953,6 +965,7 @@ function mapInspectionAction(record = {}) {
     priority: record.priority || "",
     owner_user_id: record.owner_user_id || null,
     owner_staff_id: record.owner_staff_id || null,
+    owner_user_name: record.owner_user_name || "",
     due_date: record.due_date || null,
     started_at: record.started_at || null,
     completed_at: record.completed_at || null,
@@ -1038,9 +1051,9 @@ function renderPanelSection(title, content) {
 function signalTone(signal = {}) {
   const token = lower(signal.severity || signal.status || "");
   if (["critical", "high", "overdue", "danger"].includes(token)) return "danger";
-  if (["medium", "warning", "due_soon", "planned"].includes(token))
+  if (["medium", "warning", "due_soon", "planned", "good"].includes(token))
     return "warning";
-  if (["low", "good", "success"].includes(token)) return "success";
+  if (["low", "success", "strong"].includes(token)) return "success";
   return "muted";
 }
 
@@ -1113,8 +1126,8 @@ function renderTrendRows(trends = []) {
             direction === "up" && assessment === "declining"
               ? "danger"
               : direction === "down" && assessment === "improving"
-                ? "success"
-                : "muted";
+              ? "success"
+              : "muted";
           return `
             <article class="record-row">
               <div class="record-row-main">
@@ -1268,11 +1281,7 @@ function renderInsightBlocks(items = []) {
             item?.content ||
             "";
 
-          const meta = [
-            item?.category || "",
-            item?.type || "",
-            item?.status || "",
-          ]
+          const meta = [item?.category || "", item?.type || "", item?.status || ""]
             .filter(Boolean)
             .join(" • ");
 
@@ -1758,6 +1767,7 @@ function renderWorkspace(payload) {
             renderVisibilitySignals(visibilitySignals)
           )}
           ${renderPanelSection("Needs attention", renderPriorityList(priorityItems))}
+
           ${renderPanelSection("What is missing", renderMissingRows(missingItems))}
 
           ${renderPanelSection(
@@ -1831,7 +1841,9 @@ function renderWorkspace(payload) {
 /* -------------------------------- fetch -------------------------------- */
 
 async function fetchAll(homeId) {
-  if (!homeId) {
+  const endpoints = buildInspectionUiEndpoints(homeId);
+
+  if (!endpoints) {
     return {
       qualityAudits: [],
       qualityAuditFindings: [],
@@ -1868,21 +1880,21 @@ async function fetchAll(homeId) {
     inspectionActionsRes,
     managerReviewQueueRes,
   ] = await Promise.all([
-    safeGet(`/homes/${homeId}/quality-audits`),
-    safeGet(`/homes/${homeId}/quality-audit-findings`),
-    safeGet(`/homes/${homeId}/quality-audit-actions`),
-    safeGet(`/homes/${homeId}/compliance-items`),
-    safeGet(`/homes/${homeId}/reg44-visits`),
-    safeGet(`/homes/${homeId}/reg44-findings`),
-    safeGet(`/homes/${homeId}/reg44-actions`),
-    safeGet(`/homes/${homeId}/reg45-reviews`),
-    safeGet(`/homes/${homeId}/reg45-actions`),
-    safeGet(`/homes/${homeId}/inspection-scores`),
-    safeGet(`/homes/${homeId}/inspection-section-scores`),
-    safeGet(`/homes/${homeId}/inspection-score-reasons`),
-    safeGet(`/homes/${homeId}/inspection-lines-of-enquiry`),
-    safeGet(`/homes/${homeId}/inspection-improvement-actions`),
-    safeGet(`/homes/${homeId}/manager-review-queue`),
+    safeGet(endpoints.qualityAudits),
+    safeGet(endpoints.qualityAuditFindings),
+    safeGet(endpoints.qualityAuditActions),
+    safeGet(endpoints.complianceItems),
+    safeGet(endpoints.reg44Visits),
+    safeGet(endpoints.reg44Findings),
+    safeGet(endpoints.reg44Actions),
+    safeGet(endpoints.reg45Reviews),
+    safeGet(endpoints.reg45Actions),
+    safeGet(endpoints.inspectionScores),
+    safeGet(endpoints.inspectionSectionScores),
+    safeGet(endpoints.inspectionScoreReasons),
+    safeGet(endpoints.inspectionLinesOfEnquiry),
+    safeGet(endpoints.inspectionImprovementActions),
+    safeGet(endpoints.managerReviewQueue),
   ]);
 
   return {
@@ -1926,6 +1938,7 @@ async function fetchAll(homeId) {
     ]).map(mapInspectionSectionScore),
     inspectionReasons: pickItems(inspectionReasonsRes, [
       "inspection_score_reasons",
+      "inspection_reasons",
       "items",
     ]).map(mapInspectionReason),
     inspectionLines: pickItems(inspectionLinesRes, [
@@ -1934,6 +1947,7 @@ async function fetchAll(homeId) {
     ]).map(mapInspectionLineOfEnquiry),
     inspectionActions: pickItems(inspectionActionsRes, [
       "inspection_improvement_actions",
+      "inspection_actions",
       "items",
     ]).map(mapInspectionAction),
     managerReviewQueue: pickItems(managerReviewQueueRes, [
@@ -2302,8 +2316,8 @@ export async function loadCurrentView() {
       today: data.isFallback
         ? `${overdueCompliance.length} quality issues • preview mode`
         : latestInspectionRecord
-          ? `${titleCase(latestInspectionRecord.overall_band || "unknown")} readiness`
-          : `${overdueCompliance.length} compliance items overdue`,
+        ? `${titleCase(latestInspectionRecord.overall_band || "unknown")} readiness`
+        : `${overdueCompliance.length} compliance items overdue`,
       nextEvent: nextPriorityAction?.due_date
         ? `Due ${formatDate(nextPriorityAction.due_date)}`
         : "No due quality action",
@@ -2316,8 +2330,8 @@ export async function loadCurrentView() {
               recentTimeline[0].created_at
           )}`
         : data.isFallback
-          ? "Preview quality data loaded"
-          : "No recent quality activity",
+        ? "Preview quality data loaded"
+        : "No recent quality activity",
       openActions: `${
         openQualityActions.length +
         reg44OpenActions.length +
@@ -2327,8 +2341,8 @@ export async function loadCurrentView() {
       pressure: toArray(visibility?.queues?.urgent).length
         ? `${toArray(visibility?.queues?.urgent).length} escalation alerts`
         : toNumber(visibility?.pressures?.total, 0)
-          ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
-          : "No active alerts",
+        ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
+        : "No active alerts",
     });
 
     await onAssistantScopeChanged();
