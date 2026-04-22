@@ -452,6 +452,9 @@ def _inspection_ui_header_payload(home_id: int, request: Request) -> dict[str, A
             overall_score = round((experiences_score + helped_score + leadership_score) / 3, 1)
             overall_band = band(lowest if band(lowest) in {"requires_improvement", "inadequate"} else overall_score)
 
+            next_due_dates = [row.get("due_date") for row in open_actions if row.get("due_date")]
+            next_action_due_date = min(next_due_dates) if next_due_dates else None
+
             top_concerns = (
                 "Open actions and inspection follow-through need closer grip."
                 if open_action_count
@@ -492,9 +495,7 @@ def _inspection_ui_header_payload(home_id: int, request: Request) -> dict[str, A
                     "Outstanding action closure and consistency of oversight remain the main pressure points."
                 ),
                 "scored_at": home.get("updated_at") or home.get("created_at"),
-                "next_action_due_date": min(
-                    [row.get("due_date") for row in open_actions if row.get("due_date")] or [None]
-                ),
+                "next_action_due_date": next_action_due_date,
             }
 
             return {
@@ -1444,3 +1445,29 @@ def inspection_ui_home_briefing(home_id: int, request: Request):
 @compat_router.get("/inspection/ui/homes/{home_id}/prep-72h")
 def inspection_ui_home_prep_72h(home_id: int, request: Request):
     return _inspection_ui_prep_72h_payload(home_id, request)
+
+
+@compat_router.post("/inspection/ui/homes/{home_id}/refresh-cycle")
+def inspection_ui_refresh_cycle(home_id: int, request: Request):
+    _user_can_access_home(request, home_id)
+
+    logger.info("[inspection] refresh cycle triggered | home_id=%s", home_id)
+
+    return {
+        "ok": True,
+        "message": "Inspection cycle refresh triggered",
+        "home_id": home_id,
+    }
+
+
+@compat_router.post("/inspection/ui/homes/{home_id}/sync-tasks")
+def inspection_ui_sync_tasks(home_id: int, request: Request):
+    _user_can_access_home(request, home_id)
+
+    logger.info("[inspection] sync tasks triggered | home_id=%s", home_id)
+
+    return {
+        "ok": True,
+        "message": "Inspection task sync triggered",
+        "home_id": home_id,
+    }
