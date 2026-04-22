@@ -138,6 +138,7 @@ function getStatusTone(status = "") {
       "draft",
       "open",
       "planned",
+      "good",
     ].includes(normalised)
   ) {
     return "warning";
@@ -145,7 +146,6 @@ function getStatusTone(status = "") {
 
   if (
     [
-      "good",
       "strong",
       "ready",
       "complete",
@@ -158,6 +158,7 @@ function getStatusTone(status = "") {
       "current",
       "up_to_date",
       "compliant",
+      "outstanding",
     ].includes(normalised)
   ) {
     return "success";
@@ -193,6 +194,19 @@ function hasUsableData(data) {
   if (Array.isArray(data.compliance) && data.compliance.length > 0) return true;
   if (Array.isArray(data.audits) && data.audits.length > 0) return true;
   if (Array.isArray(data.documents) && data.documents.length > 0) return true;
+  if (Array.isArray(data.inspection_scores) && data.inspection_scores.length > 0)
+    return true;
+  if (
+    Array.isArray(data.inspection_section_scores) &&
+    data.inspection_section_scores.length > 0
+  )
+    return true;
+  if (Array.isArray(data.inspection_reasons) && data.inspection_reasons.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_tasks) && data.inspection_tasks.length > 0)
+    return true;
   if (data.summary && typeof data.summary === "object") return true;
   if (data.dashboard && typeof data.dashboard === "object") return true;
   if (typeof data.readiness_score !== "undefined") return true;
@@ -288,7 +302,11 @@ function normaliseActionItems(data = {}) {
     priority: item.priority || "",
     due_date: item.due_date || item.task_due_date || null,
     owner_user_name:
-      item.owner_user_name || item.assigned_to || item.owner || item.assigned_user_name || "",
+      item.owner_user_name ||
+      item.assigned_to ||
+      item.owner ||
+      item.assigned_user_name ||
+      "",
     summary:
       item.summary ||
       item.description ||
@@ -532,7 +550,7 @@ function buildTopStats({
   ).length;
 
   const strongJudgements = judgements.filter((item) =>
-    ["good", "strong", "ready", "effective"].includes(
+    ["good", "strong", "ready", "effective", "outstanding"].includes(
       String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
@@ -585,7 +603,7 @@ function buildProgressCards({
   judgements = [],
 }) {
   const strongEvidence = evidence.filter((item) =>
-    ["good", "strong", "ready", "reviewed", "available"].includes(
+    ["good", "strong", "ready", "reviewed", "available", "effective"].includes(
       String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
@@ -612,7 +630,7 @@ function buildProgressCards({
     : 100;
 
   const positiveJudgements = judgements.filter((item) =>
-    ["good", "strong", "ready", "effective"].includes(
+    ["good", "strong", "ready", "effective", "outstanding"].includes(
       String(item.status || "").toLowerCase().replaceAll(" ", "_")
     )
   ).length;
@@ -1502,6 +1520,9 @@ function buildFallbackData(homeId) {
         home_name: homeName,
         readiness_score: 78,
         evidence_score: 78,
+        overall_band: "good",
+        narrative_summary:
+          "Good day-to-day practice is visible, but action closure and evidence freshness still need tightening.",
       },
     },
     judgementData: {
@@ -1686,73 +1707,379 @@ function buildFallbackData(homeId) {
 
 async function fetchDataset(homeId) {
   const endpoints = buildInspectionUiEndpoints(homeId);
-  const safeGet = (url) => apiGet(url).catch(() => null);
+  if (!endpoints) {
+    return buildFallbackData(homeId);
+  }
+
+  const safeGet = (url) => {
+    if (!url) return Promise.resolve(null);
+    return apiGet(url).catch(() => null);
+  };
 
   const requests = [
-    safeGet(endpoints.readiness),
-    safeGet(endpoints.quality),
-    safeGet(endpoints.compliance),
-    safeGet(endpoints.documents),
-    safeGet(endpoints.audits),
-    safeGet(endpoints.dashboard),
+    safeGet(endpoints.inspectionScores),
+    safeGet(endpoints.inspectionSectionScores),
+    safeGet(endpoints.inspectionScoreReasons),
+    safeGet(endpoints.inspectionLinesOfEnquiry),
+    safeGet(endpoints.inspectionImprovementActions),
+    safeGet(endpoints.complianceItems),
+    safeGet(endpoints.qualityAudits),
+    safeGet(endpoints.qualityAuditFindings),
+    safeGet(endpoints.qualityAuditActions),
+    safeGet(endpoints.reg44Visits),
+    safeGet(endpoints.reg44Findings),
+    safeGet(endpoints.reg44Actions),
+    safeGet(endpoints.reg45Reviews),
+    safeGet(endpoints.reg45Actions),
   ];
 
   const [
-    readinessData,
-    qualityData,
+    inspectionScoresData,
+    inspectionSectionScoresData,
+    inspectionReasonsData,
+    inspectionLinesData,
+    inspectionActionsData,
     complianceData,
-    documentData,
-    auditData,
-    dashboardData,
+    qualityAuditsData,
+    qualityAuditFindingsData,
+    qualityAuditActionsData,
+    reg44VisitsData,
+    reg44FindingsData,
+    reg44ActionsData,
+    reg45ReviewsData,
+    reg45ActionsData,
   ] = await Promise.all(requests);
 
   const hasLiveSuccess = [
-    readinessData,
-    qualityData,
+    inspectionScoresData,
+    inspectionSectionScoresData,
+    inspectionReasonsData,
+    inspectionLinesData,
+    inspectionActionsData,
     complianceData,
-    documentData,
-    auditData,
-    dashboardData,
+    qualityAuditsData,
+    qualityAuditFindingsData,
+    qualityAuditActionsData,
+    reg44VisitsData,
+    reg44FindingsData,
+    reg44ActionsData,
+    reg45ReviewsData,
+    reg45ActionsData,
   ].some(hasUsableData);
 
   if (!hasLiveSuccess) {
     return buildFallbackData(homeId);
   }
 
-  const summaryData =
-    readinessData && hasUsableData(readinessData)
-      ? buildSummaryFromReadiness(readinessData)
-      : normaliseSummary(qualityData || dashboardData || {});
+  const scoreSummary =
+    normaliseSummary(inspectionScoresData || {}).summary ||
+    normaliseSummary(inspectionScoresData || {});
 
-  const judgementItems =
-    normaliseJudgementItems(qualityData || {}).length
-      ? normaliseJudgementItems(qualityData || {})
-      : buildJudgementsFromReadiness(readinessData || {});
+  const inspectionScores = toArray(inspectionScoresData?.items, [
+    inspectionScoresData?.inspection_scores,
+    inspectionScoresData?.records,
+  ]);
 
-  const evidenceItems =
-    normaliseEvidenceItems(qualityData || {}).length
-      ? normaliseEvidenceItems(qualityData || {})
-      : buildEvidenceFromReadiness(readinessData || {});
+  const inspectionSections = toArray(inspectionSectionScoresData?.items, [
+    inspectionSectionScoresData?.inspection_section_scores,
+    inspectionSectionScoresData?.records,
+  ]);
 
-  const gapItems =
-    normaliseGapItems(qualityData || {}).length
-      ? normaliseGapItems(qualityData || {})
-      : buildGapsFromReadiness(readinessData || {});
+  const inspectionReasons = toArray(inspectionReasonsData?.items, [
+    inspectionReasonsData?.inspection_score_reasons,
+    inspectionReasonsData?.inspection_reasons,
+    inspectionReasonsData?.records,
+  ]);
 
-  const actionItems =
-    normaliseActionItems(qualityData || {}).length
-      ? normaliseActionItems(qualityData || {})
-      : buildActionsFromReadiness(readinessData || {});
+  const inspectionActions = toArray(inspectionActionsData?.items, [
+    inspectionActionsData?.inspection_improvement_actions,
+    inspectionActionsData?.inspection_actions,
+    inspectionActionsData?.records,
+  ]);
+
+  const qualityFindings = toArray(qualityAuditFindingsData?.items, [
+    qualityAuditFindingsData?.quality_audit_findings,
+    qualityAuditFindingsData?.records,
+  ]);
+
+  const qualityActions = toArray(qualityAuditActionsData?.items, [
+    qualityAuditActionsData?.quality_audit_actions,
+    qualityAuditActionsData?.records,
+  ]);
+
+  const reg44Findings = toArray(reg44FindingsData?.items, [
+    reg44FindingsData?.reg44_findings,
+    reg44FindingsData?.records,
+  ]);
+
+  const reg44Actions = toArray(reg44ActionsData?.items, [
+    reg44ActionsData?.reg44_actions,
+    reg44ActionsData?.records,
+  ]);
+
+  const reg45Actions = toArray(reg45ActionsData?.items, [
+    reg45ActionsData?.reg45_actions,
+    reg45ActionsData?.records,
+  ]);
+
+  const summaryData = {
+    summary: {
+      title:
+        scoreSummary.title ||
+        scoreSummary.home_name ||
+        `Home ${homeId} Ofsted dashboard`,
+      home_name: scoreSummary.home_name || "",
+      readiness_score:
+        scoreSummary.readiness_score ??
+        scoreSummary.overall_score ??
+        scoreSummary.confidence_score ??
+        0,
+      evidence_score:
+        scoreSummary.evidence_score ??
+        scoreSummary.confidence_score ??
+        scoreSummary.readiness_score ??
+        0,
+      overall_band: scoreSummary.overall_band || "",
+      narrative_summary:
+        scoreSummary.narrative_summary ||
+        scoreSummary.concerns_summary ||
+        scoreSummary.strengths_summary ||
+        "",
+    },
+  };
+
+  const judgementData = {
+    items: inspectionSections.map((item) => ({
+      id: item.id ?? item.section_score_id ?? item.source_id ?? null,
+      record_type: "ofsted_judgement",
+      title: item.section_name || item.section_code || "Judgement area",
+      area: item.section_name || item.section_code || "Area",
+      status: item.score_band || item.status || scoreSummary.overall_band || "recorded",
+      strength_summary:
+        item.summary_text ||
+        item.strengths_text ||
+        item.concerns_text ||
+        "Inspection section evidence available.",
+      evidence_count: toNumber(item.evidence_count, 0),
+      gap_count: toNumber(item.gap_count, 0),
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+  };
+
+  const evidenceData = {
+    items: [
+      ...inspectionReasons.map((item) => ({
+        id: item.id ?? item.source_id ?? null,
+        record_type: "inspection_evidence",
+        title: item.title || item.line_of_enquiry_name || "Inspection reason",
+        area: item.section_name || item.section_code || "",
+        status: item.reason_type || "recorded",
+        summary:
+          item.description ||
+          item.evidence_excerpt ||
+          item.summary ||
+          "Inspection evidence available.",
+        source_type: item.source_table || "inspection_reason",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+      ...qualityFindings.map((item) => ({
+        id: item.id ?? item.source_id ?? null,
+        record_type: "inspection_evidence",
+        title: item.title || "Quality finding",
+        area: item.judgement_area || "Quality",
+        status: item.finding_type || "recorded",
+        summary: item.details || item.summary || "Quality finding recorded.",
+        source_type: "quality_audit_finding",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+      ...reg44Findings.map((item) => ({
+        id: item.id ?? item.source_id ?? null,
+        record_type: "inspection_evidence",
+        title: item.title || "Reg 44 finding",
+        area: item.judgement_area || "Regulation 44",
+        status: item.finding_type || "recorded",
+        summary:
+          item.finding_text || item.summary || "Regulation 44 finding recorded.",
+        source_type: "reg44_finding",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+    ],
+  };
+
+  const gapData = {
+    items: [
+      ...inspectionReasons
+        .filter((item) =>
+          ["concern", "gap", "weakness", "risk"].includes(
+            String(item.reason_type || "").toLowerCase().replaceAll(" ", "_")
+          )
+        )
+        .map((item) => ({
+          id: item.id ?? item.source_id ?? null,
+          record_type: "inspection_gap",
+          title: item.title || item.line_of_enquiry_name || "Evidence gap",
+          area: item.section_name || item.section_code || "",
+          status: item.reason_type || "open",
+          priority: item.priority || "",
+          due_date: item.due_date || null,
+          owner_user_name: item.owner_user_name || "",
+          summary:
+            item.description ||
+            item.evidence_excerpt ||
+            item.summary ||
+            "Inspection gap identified.",
+          updated_at: item.updated_at || item.created_at || null,
+          created_at: item.created_at || null,
+        })),
+      ...qualityFindings
+        .filter((item) => toNumber(item.action_required ? 1 : 0, 0) > 0)
+        .map((item) => ({
+          id: `quality-gap-${item.id}`,
+          record_type: "inspection_gap",
+          title: item.title || "Quality gap",
+          area: item.judgement_area || "Quality",
+          status: "open",
+          priority: item.priority || "",
+          due_date: null,
+          owner_user_name: "",
+          summary: item.details || item.summary || "Quality gap identified.",
+          updated_at: item.updated_at || item.created_at || null,
+          created_at: item.created_at || null,
+        })),
+      ...reg44Findings
+        .filter((item) => toBool(item.requires_action))
+        .map((item) => ({
+          id: `reg44-gap-${item.id}`,
+          record_type: "inspection_gap",
+          title: item.title || "Reg 44 gap",
+          area: item.judgement_area || "Regulation 44",
+          status: "open",
+          priority: item.priority || "",
+          due_date: null,
+          owner_user_name: "",
+          summary:
+            item.finding_text || item.summary || "Regulation 44 gap identified.",
+          updated_at: item.updated_at || item.created_at || null,
+          created_at: item.created_at || null,
+        })),
+    ],
+  };
+
+  const actionData = {
+    items: [
+      ...inspectionActions.map((item) => ({
+        id: item.id ?? item.action_id ?? item.task_id ?? item.source_id ?? null,
+        record_type: "inspection_action",
+        title:
+          item.action_title || item.task_title || item.title || "Inspection action",
+        status: item.status || (item.completed ? "completed" : "open"),
+        priority: item.priority || "",
+        due_date:
+          item.due_date || item.task_due_date || item.action_due_date || null,
+        owner_user_name:
+          item.owner_user_name ||
+          item.owner_staff_name ||
+          item.assigned_user_name ||
+          "",
+        summary:
+          item.action_description ||
+          item.evidence_required ||
+          item.summary ||
+          "Inspection action recorded.",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+      ...qualityActions.map((item) => ({
+        id: `quality-action-${item.id}`,
+        record_type: "inspection_action",
+        title: item.action_title || "Quality action",
+        status: item.status || "open",
+        priority: item.priority || "",
+        due_date: item.due_date || null,
+        owner_user_name: item.owner_user_name || "",
+        summary:
+          item.action_description ||
+          item.completion_notes ||
+          "Quality action recorded.",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+      ...reg44Actions.map((item) => ({
+        id: `reg44-action-${item.id}`,
+        record_type: "inspection_action",
+        title: item.action_title || "Reg 44 action",
+        status: item.status || "open",
+        priority: item.priority || "",
+        due_date: item.due_date || null,
+        owner_user_name: item.owner_user_name || "",
+        summary: item.action_description || item.summary || "Reg 44 action recorded.",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+      ...reg45Actions.map((item) => ({
+        id: `reg45-action-${item.id}`,
+        record_type: "inspection_action",
+        title: item.action_title || "Reg 45 action",
+        status: item.status || "open",
+        priority: item.priority || "",
+        due_date: item.due_date || null,
+        owner_user_name: item.owner_user_name || "",
+        summary: item.action_description || item.summary || "Reg 45 action recorded.",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+    ],
+  };
 
   return {
     summaryData,
-    judgementData: { items: judgementItems },
-    evidenceData: { items: evidenceItems },
-    gapData: { items: gapItems },
-    actionData: { items: actionItems },
+    judgementData,
+    evidenceData,
+    gapData,
+    actionData,
     complianceData: complianceData || { items: [] },
-    auditData: auditData || { items: [] },
-    documentData: documentData || { items: [] },
+    auditData: {
+      items: [
+        ...toArray(qualityAuditsData?.items, [
+          qualityAuditsData?.quality_audits,
+          qualityAuditsData?.audits,
+          qualityAuditsData?.records,
+        ]),
+        ...toArray(reg44VisitsData?.items, [
+          reg44VisitsData?.reg44_visits,
+          reg44VisitsData?.records,
+        ]).map((item) => ({
+          ...item,
+          title:
+            item.title ||
+            `Reg 44 visit${item.visit_date ? ` - ${formatDate(item.visit_date)}` : ""}`,
+          audit_name: item.audit_name || "Reg 44 visit",
+          audit_date: item.visit_date || item.created_at || null,
+          summary:
+            item.overall_summary ||
+            item.recommendations_summary ||
+            "Regulation 44 visit available.",
+        })),
+        ...toArray(reg45ReviewsData?.items, [
+          reg45ReviewsData?.reg45_reviews,
+          reg45ReviewsData?.records,
+        ]).map((item) => ({
+          ...item,
+          title: item.title || "Reg 45 review",
+          audit_name: item.audit_name || "Reg 45 review",
+          audit_date: item.review_period_end || item.created_at || null,
+          summary:
+            item.overall_quality_summary ||
+            item.action_plan_summary ||
+            "Regulation 45 review available.",
+        })),
+      ],
+    },
+    documentData: { items: [] },
     isFallback: false,
   };
 }
@@ -1796,7 +2123,7 @@ export async function loadOfstedDashboard() {
 
     const summary =
       typeof summaryData === "object" && !Array.isArray(summaryData)
-        ? summaryData
+        ? normaliseSummary(summaryData)
         : normaliseSummary(summaryData);
 
     const judgementItems = sortNewestFirst(
@@ -1870,10 +2197,9 @@ export async function loadOfstedDashboard() {
     ).slice(0, 4);
     const patterns = toArray(visibility?.patterns).slice(0, 6);
     const decisionSupport = toArray(visibility?.decision_support).slice(0, 4);
-    const judgementSupport = toArray(visibility?.ofsted_judgement_support).slice(
-      0,
-      3
-    );
+    const judgementSupport = toArray(
+      visibility?.ofsted_judgement_support
+    ).slice(0, 3);
     const missingItems = toArray(visibility?.what_is_missing).slice(0, 6);
 
     const title =
