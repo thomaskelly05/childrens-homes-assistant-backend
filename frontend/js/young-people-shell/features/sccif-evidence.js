@@ -124,6 +124,9 @@ function getStatusTone(status = "") {
       "inadequate",
       "danger",
       "requires_improvement",
+      "concern",
+      "gap",
+      "risk",
     ].includes(normalised)
   ) {
     return "danger";
@@ -164,6 +167,7 @@ function getStatusTone(status = "") {
       "current",
       "up_to_date",
       "compliant",
+      "strength",
     ].includes(normalised)
   ) {
     return "success";
@@ -203,6 +207,10 @@ function hasUsableData(data) {
   if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0)
     return true;
   if (Array.isArray(data.inspection_sections) && data.inspection_sections.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_section_scores) && data.inspection_section_scores.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_scores) && data.inspection_scores.length > 0)
     return true;
   if (data.summary && typeof data.summary === "object") return true;
   if (data.dashboard && typeof data.dashboard === "object") return true;
@@ -279,7 +287,8 @@ function normaliseActionItems(data = {}) {
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "sccif_action",
     title: item.title || item.action_title || item.task || "Action",
-    area: item.area || item.sccif_area || item.judgement_area || item.section_name || "",
+    area:
+      item.area || item.sccif_area || item.judgement_area || item.section_name || "",
     status: item.status || "open",
     priority: item.priority || "",
     summary:
@@ -289,7 +298,11 @@ function normaliseActionItems(data = {}) {
       item.action_description ||
       "Follow-up action recorded.",
     owner_user_name:
-      item.owner_user_name || item.owner || item.assigned_to || item.assigned_user_name || "",
+      item.owner_user_name ||
+      item.owner ||
+      item.assigned_to ||
+      item.assigned_user_name ||
+      "",
     due_date: item.due_date || item.task_due_date || item.action_due_date || null,
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
@@ -331,9 +344,9 @@ function normaliseDocumentItems(data = {}) {
 }
 
 function buildEvidenceFromReadiness(readinessData = {}) {
-  const sections = toArray(readinessData?.inspection_sections, [
+  const sections = toArray(readinessData?.inspection_section_scores, [
+    readinessData?.inspection_sections,
     readinessData?.sections,
-    readinessData?.inspection_section_scores,
     readinessData?.items,
   ]);
 
@@ -348,7 +361,7 @@ function buildEvidenceFromReadiness(readinessData = {}) {
     area: item.section_name || item.section_code || "Uncategorised area",
     standard: item.section_code || "",
     source_type: "inspection_section",
-    linked_record_type: item.record_type || "inspection_section_panel",
+    linked_record_type: item.record_type || "inspection_section_score",
     linked_record_id: item.id ?? item.section_score_id ?? null,
     strength: item.score_band || item.status || "recorded",
     status: item.score_band || item.status || "recorded",
@@ -1277,49 +1290,59 @@ async function fetchDataset(homeId) {
   const safeGet = (url) => apiGet(url).catch(() => null);
 
   const requests = [
-    safeGet(endpoints.readiness),
-    safeGet(endpoints.quality),
-    safeGet(endpoints.compliance),
-    safeGet(endpoints.documents),
+    safeGet(endpoints.inspectionScores),
+    safeGet(endpoints.inspectionSectionScores),
+    safeGet(endpoints.inspectionScoreReasons),
+    safeGet(endpoints.inspectionImprovementActions),
+    safeGet(endpoints.complianceItems),
   ];
 
-  const [readinessData, qualityData, complianceData, documentData] =
-    await Promise.all(requests);
+  const [
+    inspectionScoresData,
+    inspectionSectionScoresData,
+    inspectionReasonsData,
+    inspectionActionsData,
+    complianceData,
+  ] = await Promise.all(requests);
 
-  const responses = [readinessData, qualityData, complianceData, documentData];
-  const hasLiveSuccess = responses.some(hasUsableData);
+  const hasLiveSuccess = [
+    inspectionScoresData,
+    inspectionSectionScoresData,
+    inspectionReasonsData,
+    inspectionActionsData,
+    complianceData,
+  ].some(hasUsableData);
 
   if (!hasLiveSuccess) {
     return buildFallbackData(homeId);
   }
 
-  const summaryData =
-    readinessData && hasUsableData(readinessData)
-      ? buildSummaryFromReadiness(readinessData)
-      : normaliseSummary(qualityData || {});
-
-  const liveEvidence =
-    normaliseEvidenceItems(qualityData || {}).length
-      ? normaliseEvidenceItems(qualityData || {})
-      : buildEvidenceFromReadiness(readinessData || {});
-
-  const liveGaps =
-    normaliseGapItems(qualityData || {}).length
-      ? normaliseGapItems(qualityData || {})
-      : buildGapsFromReadiness(readinessData || {});
-
-  const liveActions =
-    normaliseActionItems(qualityData || {}).length
-      ? normaliseActionItems(qualityData || {})
-      : buildActionsFromReadiness(readinessData || {});
+  const readinessData = {
+    summary:
+      normaliseSummary(inspectionScoresData).summary ||
+      normaliseSummary(inspectionScoresData),
+    inspection_section_scores: toArray(inspectionSectionScoresData?.inspection_section_scores, [
+      inspectionSectionScoresData?.items,
+      inspectionSectionScoresData?.records,
+    ]),
+    inspection_reasons: toArray(inspectionReasonsData?.inspection_score_reasons, [
+      inspectionReasonsData?.inspection_reasons,
+      inspectionReasonsData?.items,
+      inspectionReasonsData?.records,
+    ]),
+    inspection_actions: toArray(
+      inspectionActionsData?.inspection_improvement_actions,
+      [inspectionActionsData?.inspection_actions, inspectionActionsData?.items, inspectionActionsData?.records]
+    ),
+  };
 
   return {
-    summaryData,
-    evidenceData: { items: liveEvidence },
-    gapData: { items: liveGaps },
-    actionData: { items: liveActions },
+    summaryData: buildSummaryFromReadiness(readinessData),
+    evidenceData: { items: buildEvidenceFromReadiness(readinessData) },
+    gapData: { items: buildGapsFromReadiness(readinessData) },
+    actionData: { items: buildActionsFromReadiness(readinessData) },
     complianceData: complianceData || { items: [] },
-    documentData: documentData || { items: [] },
+    documentData: { items: [] },
     isFallback: false,
   };
 }
