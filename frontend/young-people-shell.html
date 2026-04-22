@@ -161,11 +161,11 @@
         </div>
 
         <button
-          id="mobileNavBtn"
+          id="mobileNavToggle"
           class="secondary-btn mobile-only"
           type="button"
           aria-label="Open navigation"
-          aria-controls="mobileNavDrawer"
+          aria-controls="mobileNavPanel"
           aria-expanded="false"
         >
           Menu
@@ -191,7 +191,7 @@
         </button>
 
         <button
-          id="homeBtn"
+          id="goHomeBtn"
           class="ghost-btn desktop-only"
           type="button"
         >
@@ -207,7 +207,7 @@
 
     <main class="shell-main" id="mainContent">
       <section
-        id="selectorScreen"
+        id="selectorPanel"
         class="selector-screen hidden"
         aria-labelledby="selectorHeading"
       >
@@ -266,7 +266,7 @@
       </section>
 
       <section
-        id="workspaceScreen"
+        id="workspacePanel"
         class="workspace-screen"
         aria-labelledby="pageTitle"
       >
@@ -324,7 +324,7 @@
                       id="profileOpenBtn"
                       class="secondary-btn"
                       type="button"
-                      data-nav-section="profile"
+                      data-view="profile"
                     >
                       View profile
                     </button>
@@ -351,22 +351,21 @@
                 <div class="workspace-header-context workspace-header-context--compact">
                   <div class="workspace-person-card">
                     <div
-                      id="profileSnapshotPhotoWrap"
                       class="profile-snapshot-photo-wrap"
                       aria-label="Workspace avatar"
                     >
-                      <div class="profile-photo-fallback" aria-hidden="true">YP</div>
+                      <div id="personAvatar" class="profile-photo-fallback" aria-hidden="true">YP</div>
                     </div>
 
                     <div class="workspace-person-copy">
-                      <h3 id="profileSnapshotName">Young person</h3>
-                      <p id="profileSnapshotMeta">
+                      <h3 id="personName">Young person</h3>
+                      <p id="personMeta">
                         Child-centred overview and current context
                       </p>
                     </div>
                   </div>
 
-                  <div class="workspace-header-meta">
+                  <div class="workspace-header-meta" id="personSummaryChips">
                     <span class="meta-chip">Live</span>
                     <span class="meta-chip meta-chip--soft">Current area</span>
                     <span class="meta-chip meta-chip--soft">Ready to use</span>
@@ -397,6 +396,11 @@
                       <span class="workspace-summary-label">Actions</span>
                       <strong id="summaryOpenActions" class="workspace-summary-value">Nothing loaded</strong>
                     </div>
+
+                    <div class="workspace-summary-item">
+                      <span class="workspace-summary-label">Status</span>
+                      <strong class="workspace-summary-value">Ready</strong>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -423,39 +427,39 @@
                   role="navigation"
                   aria-label="Main workspace menu"
                 >
-                  <details class="workspace-menu" data-workspace-menu open>
+                  <details class="workspace-menu nav-group" data-workspace-menu open>
                     <summary class="workspace-menu-trigger">Child journey</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="workspace">Today at a glance</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="home">Today at a glance</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="admission">Admission and planning</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="daily-life">Daily life in placement</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="health">Health overview</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="health">Health overview</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="medication">Medication and treatment</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="education">Education overview</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="family">Family and relationships</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="education">Education overview</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="family">Family and relationships</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="reviews">Reviews and outcomes</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="transition">Transition planning</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="leaving-care">Leaving placement</button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu" data-workspace-menu>
+                  <details class="workspace-menu nav-group" data-workspace-menu>
                     <summary class="workspace-menu-trigger">Safeguarding and risk</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="timeline">Timeline and recent events</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="risk">Risk assessment</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="timeline">Timeline and recent events</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="risk">Risk assessment</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="safeguarding">Safeguarding</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="missing-from-care">Missing from care</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="manager">Manager review</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="manager">Manager review</button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu" data-workspace-menu>
+                  <details class="workspace-menu nav-group" data-workspace-menu>
                     <summary class="workspace-menu-trigger">Home operations</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="home-dashboard">Home dashboard</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="operations">Daily operations</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="calendar">Calendar and appointments</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="appointments">Calendar and appointments</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="rota">Rota and cover</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="team">Team and staffing</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="health-safety">Health and safety</button>
@@ -464,7 +468,7 @@
                     </div>
                   </details>
 
-                  <details class="workspace-menu" data-workspace-menu>
+                  <details class="workspace-menu nav-group" data-workspace-menu>
                     <summary class="workspace-menu-trigger">Workforce</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="staff-profile">Staff profiles</button>
@@ -475,28 +479,28 @@
                     </div>
                   </details>
 
-                  <details class="workspace-menu" data-workspace-menu>
+                  <details class="workspace-menu nav-group" data-workspace-menu>
                     <summary class="workspace-menu-trigger">Quality and inspection</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="quality">Quality dashboard</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="actions">Actions and follow-through</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="compliance">Compliance and statutory checks</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="compliance">Compliance and statutory checks</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="ofsted-readiness">Ofsted readiness</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="provider-overview">Provider overview</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="quality-audits">Quality audits</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="reg44">Regulation 44</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="reg45">Regulation 45</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="inspection-readiness">Inspection readiness</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="evidence">Inspection readiness</button>
                     </div>
                   </details>
 
-                  <details class="workspace-menu" data-workspace-menu>
+                  <details class="workspace-menu nav-group" data-workspace-menu>
                     <summary class="workspace-menu-trigger">Create and record</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-action-router="new-daily-note">Add daily note</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-incident">Add incident or important event</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-support-plan">Add care or support plan</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-risk">Add risk assessment</button>
+                      <button class="workspace-menu-link" type="button" data-action="daily-note">Add daily note</button>
+                      <button class="workspace-menu-link" type="button" data-action="incident">Add incident or important event</button>
+                      <button class="workspace-menu-link" type="button" data-action="plan">Add care or support plan</button>
+                      <button class="workspace-menu-link" type="button" data-action="risk">Add risk assessment</button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-health-record">Add health record</button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-education-record">Add education update</button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">Add family contact</button>
@@ -579,7 +583,7 @@
     ></div>
 
     <aside
-      id="mobileNavDrawer"
+      id="mobileNavPanel"
       class="mobile-nav-drawer hidden"
       aria-hidden="true"
       aria-label="Mobile navigation"
@@ -627,7 +631,7 @@
     </aside>
 
     <nav
-      id="mobileBottomBar"
+      id="mobileBottomNav"
       class="mobile-bottom-bar mobile-only"
       aria-label="Quick navigation"
     ></nav>
@@ -671,7 +675,7 @@
     </section>
 
     <section
-      id="composerPanel"
+      id="recordComposerPage"
       class="composer-panel hidden"
       aria-hidden="true"
       aria-labelledby="composerTitle"
@@ -687,8 +691,9 @@
           </div>
 
           <div class="composer-header-actions">
-            <div id="composerAutosaveStatus" class="composer-autosave-status">
-              Autosave ready
+            <div id="autosaveStatus" class="composer-autosave-status">
+              <span>Autosave ready</span>
+              <span id="autosaveTime" class="hidden"></span>
             </div>
 
             <button id="closeComposerBtn" class="secondary-btn" type="button">
