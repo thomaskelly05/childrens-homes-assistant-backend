@@ -237,6 +237,12 @@ function sectionGuidance(section, scope) {
       "Support with supervision oversight, workforce development, training and practice accountability.",
     quality:
       "Support with audit summaries, RI themes, monthly patterns, triangulation, quality assurance and inspection readiness.",
+    "inspection-readiness":
+      "Support with inspection scorecards, lines of enquiry, action recovery, evidence quality and Ofsted preparation.",
+    reg44:
+      "Support with Reg 44 findings, recommendations, provider challenge and evidence of follow-through.",
+    reg45:
+      "Support with Reg 45 quality of care review, themes, impact, actions and service learning.",
   };
 
   return (
@@ -573,7 +579,19 @@ function filterEvidenceBySection(evidence = [], section = "workspace") {
       "team",
       "supervision",
       "documents",
+      "inspection-readiness",
+      "reg44",
+      "reg45",
     ],
+    "inspection-readiness": [
+      "inspection-readiness",
+      "quality",
+      "compliance",
+      "manager",
+      "reports",
+    ],
+    reg44: ["reg44", "quality", "inspection-readiness", "manager"],
+    reg45: ["reg45", "quality", "reports", "inspection-readiness"],
   };
 
   const allowed = new Set(sectionGroups[section] || [section]);
@@ -711,7 +729,8 @@ function scoreEvidence(
   if (
     ["quality", "inspection"].includes(context.analysis_lens) &&
     (item.record_type === "compliance_item" ||
-      item.tags?.includes("status:overdue"))
+      item.tags?.includes("status:overdue") ||
+      item.tags?.includes("inspection_relevant"))
   ) {
     score += 3;
   }
@@ -720,7 +739,8 @@ function scoreEvidence(
 
   if (
     queryProfile.focus === "compliance" &&
-    item.record_type === "compliance_item"
+    (item.record_type === "compliance_item" ||
+      item.tags?.includes("regulatory"))
   ) {
     score += 5;
   }
@@ -745,18 +765,47 @@ function scoreEvidence(
 
   if (
     queryProfile.focus === "quality" &&
-    ["compliance_item", "audit", "manager_action", "document"].includes(
-      item.record_type
-    )
+    [
+      "compliance_item",
+      "audit",
+      "manager_action",
+      "document",
+      "quality_audit",
+      "quality_audit_action",
+      "quality_audit_finding",
+      "reg44_item",
+      "reg44_action",
+      "reg44_finding",
+      "reg44_visit",
+      "reg45_item",
+      "reg45_action",
+      "reg45_review",
+      "inspection_home_header",
+      "inspection_section_panel",
+      "inspection_reason",
+      "inspection_action",
+      "inspection_task",
+      "inspection_briefing",
+      "inspection_prep_72_hour",
+      "inspection_score",
+      "inspection_section_score",
+      "inspection_line_of_enquiry",
+    ].includes(item.record_type)
   ) {
     score += 4;
   }
 
   if (
     queryProfile.focus === "management" &&
-    ["task", "manager_action", "incident", "compliance_item"].includes(
-      item.record_type
-    )
+    [
+      "task",
+      "manager_action",
+      "incident",
+      "compliance_item",
+      "manager_review_queue",
+      "inspection_action",
+      "inspection_task",
+    ].includes(item.record_type)
   ) {
     score += 4;
   }
@@ -902,17 +951,48 @@ function buildCareDomains(evidence = []) {
     ),
     family: evidence.filter((x) => x.record_type === "family_contact"),
     planning: evidence.filter((x) =>
-      ["support_plan", "risk", "task", "manager_action"].includes(x.record_type)
+      [
+        "support_plan",
+        "risk",
+        "task",
+        "manager_action",
+        "inspection_action",
+        "inspection_task",
+      ].includes(x.record_type)
     ),
     strengths: evidence.filter((x) =>
       ["achievement_record", "daily_note"].includes(x.record_type)
     ),
     documents: evidence.filter((x) =>
-      ["document", "statutory_document", "monthly_review"].includes(
+      ["document", "statutory_document", "monthly_review", "reg45_review"].includes(
         x.record_type
       )
     ),
-    compliance: evidence.filter((x) => x.record_type === "compliance_item"),
+    compliance: evidence.filter((x) =>
+      [
+        "compliance_item",
+        "quality_audit",
+        "quality_audit_action",
+        "quality_audit_finding",
+        "reg44_item",
+        "reg44_action",
+        "reg44_finding",
+        "reg44_visit",
+        "reg45_item",
+        "reg45_action",
+        "reg45_review",
+        "inspection_home_header",
+        "inspection_section_panel",
+        "inspection_reason",
+        "inspection_action",
+        "inspection_task",
+        "inspection_briefing",
+        "inspection_prep_72_hour",
+        "inspection_score",
+        "inspection_section_score",
+        "inspection_line_of_enquiry",
+      ].includes(x.record_type)
+    ),
   };
 }
 
@@ -928,6 +1008,14 @@ function buildTriangulationSummary(evidence = []) {
     documents: evidence.filter((x) =>
       ["document", "statutory_document"].includes(x.record_type)
     ).length,
+    quality_audits: evidence.filter((x) => x.record_type === "quality_audit").length,
+    reg44_items: evidence.filter((x) =>
+      ["reg44_item", "reg44_action", "reg44_finding", "reg44_visit"].includes(x.record_type)
+    ).length,
+    reg45_items: evidence.filter((x) =>
+      ["reg45_item", "reg45_action", "reg45_review"].includes(x.record_type)
+    ).length,
+    inspection_items: evidence.filter((x) => String(x.record_type || "").startsWith("inspection_")).length,
   };
 }
 
@@ -1019,6 +1107,9 @@ function getTopConcerns(evidence = []) {
   }
   if (sorted.some((item) => item.tags?.includes("open_task"))) {
     concerns.push("There are open tasks requiring follow-up.");
+  }
+  if (sorted.some((item) => item.tags?.includes("inspection_relevant"))) {
+    concerns.push("Inspection-relevant evidence suggests readiness or scrutiny issues need attention.");
   }
 
   return unique(concerns).slice(0, 5);
@@ -1161,6 +1252,34 @@ function buildOperationalActions(
         description:
           item.summary ||
           "A missing episode requires active review and follow-up.",
+        record_type: recordType,
+        record_id: recordId,
+        citation_ref: buildCitationRef(item),
+        due_date: dueDate,
+        assigned_role: "manager",
+      });
+    }
+
+    if (
+      [
+        "inspection_action",
+        "quality_audit_action",
+        "reg44_action",
+        "reg45_action",
+      ].includes(recordType)
+    ) {
+      actions.push({
+        action_id: makeActionId(["inspection_follow_up", recordType, recordId]),
+        priority:
+          item.tags?.includes("priority:critical") || item.tags?.includes("urgency:critical")
+            ? "critical"
+            : item.tags?.includes("priority:high") || item.tags?.includes("urgency:high")
+              ? "high"
+              : "medium",
+        category: "inspection_follow_up",
+        title: item.title || "Inspection-linked action",
+        description:
+          item.summary || "Inspection-linked improvement action requires follow-up.",
         record_type: recordType,
         record_id: recordId,
         citation_ref: buildCitationRef(item),
@@ -1496,7 +1615,7 @@ function buildFallbackReply(message, context, runtime = {}) {
     };
   }
 
-  if (/compliance|ofsted|audit/.test(text)) {
+  if (/compliance|ofsted|audit|inspection|reg 44|reg44|reg 45|reg45/.test(text)) {
     return {
       answer: [
         "Compliance and inspection-readiness view:",
@@ -1505,6 +1624,7 @@ function buildFallbackReply(message, context, runtime = {}) {
         "2. Child or service file compliance",
         "3. Home document compliance",
         "4. Governance compliance",
+        "5. Inspection evidence and action tracking",
         "",
         `Current scoped evidence: ${evidenceSummary.total} item(s)`,
         `Overdue items visible: ${evidenceSummary.overdue_items}`,
@@ -1515,7 +1635,8 @@ function buildFallbackReply(message, context, runtime = {}) {
           evidence.filter(
             (item) =>
               item.record_type === "compliance_item" ||
-              item.tags?.includes("status:overdue")
+              item.tags?.includes("status:overdue") ||
+              item.tags?.includes("inspection_relevant")
           ),
           5
         ),
@@ -1549,7 +1670,7 @@ function buildFallbackReply(message, context, runtime = {}) {
 
   return {
     answer: [
-      "I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality and oversight.",
+      "I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality, inspection readiness and oversight.",
       "",
       "Try asking me to:",
       "• give a full summary",
@@ -1558,6 +1679,7 @@ function buildFallbackReply(message, context, runtime = {}) {
       "• identify risks, gaps or follow-up",
       "• create a morning brief",
       "• draft a handover or summary",
+      "• review quality, Reg 44, Reg 45 or inspection actions",
       "",
       `Scoped evidence count: ${evidenceSummary.total}`,
       `Operational actions: ${actionSummary.total}`,
@@ -1668,6 +1790,32 @@ function buildAssistantContextMeta(context, runtime = {}) {
         )
         .slice(0, 5),
       appointments: evidence.filter((item) => item.record_type === "appointment").slice(0, 5),
+      quality: evidence
+        .filter((item) =>
+          [
+            "quality_audit",
+            "quality_audit_action",
+            "quality_audit_finding",
+            "reg44_item",
+            "reg44_action",
+            "reg44_finding",
+            "reg44_visit",
+            "reg45_item",
+            "reg45_action",
+            "reg45_review",
+            "inspection_home_header",
+            "inspection_section_panel",
+            "inspection_reason",
+            "inspection_action",
+            "inspection_task",
+            "inspection_briefing",
+            "inspection_prep_72_hour",
+            "inspection_score",
+            "inspection_section_score",
+            "inspection_line_of_enquiry",
+          ].includes(item.record_type)
+        )
+        .slice(0, 10),
     },
     active_work: {
       tasks: evidence
