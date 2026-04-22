@@ -10,6 +10,7 @@
   --roster-warning: #b45309;
   --roster-success: #15803d;
   --roster-radius: 14px;
+  --roster-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
 body {
@@ -34,6 +35,7 @@ body {
   background: var(--roster-panel);
   border: 1px solid var(--roster-border);
   border-radius: var(--roster-radius);
+  box-shadow: var(--roster-shadow);
 }
 
 .roster-header-panel {
@@ -57,11 +59,13 @@ body {
 .roster-header-copy p {
   margin: 0;
   color: var(--roster-text-soft);
+  max-width: 72ch;
 }
 
 .roster-header-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .roster-control-grid {
@@ -95,6 +99,12 @@ body {
   padding: 8px 10px;
   font-size: 0.9rem;
   background: #fff;
+  color: var(--roster-text);
+  min-width: 0;
+}
+
+.control-field textarea {
+  resize: vertical;
 }
 
 .view-toggle {
@@ -104,6 +114,7 @@ body {
   border: 1px solid var(--roster-border);
   border-radius: 10px;
   padding: 5px;
+  flex-wrap: wrap;
 }
 
 .view-btn {
@@ -114,6 +125,12 @@ body {
   font-weight: 600;
   padding: 6px 10px;
   cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.view-btn:hover {
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--roster-text);
 }
 
 .view-btn.active {
@@ -205,6 +222,7 @@ body {
   color: #1d4ed8;
   border: 1px solid #bfdbfe;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .staff-list,
@@ -214,6 +232,7 @@ body {
   max-height: 360px;
   overflow: auto;
   padding-right: 2px;
+  scrollbar-width: thin;
 }
 
 .staff-card {
@@ -224,11 +243,18 @@ body {
   display: grid;
   gap: 6px;
   cursor: grab;
+  transition: 0.18s ease;
+}
+
+.staff-card:hover {
+  border-color: #b7c8da;
+  transform: translateY(-1px);
 }
 
 .staff-card--absence {
   border-left: 4px solid var(--roster-danger);
   background: #fff7f7;
+  cursor: not-allowed;
 }
 
 .staff-card-top {
@@ -295,7 +321,7 @@ body {
 .board-filters {
   display: flex;
   gap: 10px;
-  align-items: center;
+  align-items: end;
   flex-wrap: wrap;
 }
 
@@ -332,6 +358,12 @@ body {
   gap: 10px;
 }
 
+.rota-board.week-view,
+.rota-board.day-view,
+.rota-board.today-view {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
 .day-column {
   border: 1px solid var(--roster-border);
   border-radius: 12px;
@@ -339,6 +371,7 @@ body {
   background: #fff;
   display: grid;
   gap: 8px;
+  align-content: start;
 }
 
 .day-column-head {
@@ -370,10 +403,12 @@ body {
   display: grid;
   gap: 6px;
   cursor: pointer;
+  transition: 0.18s ease;
 }
 
 .shift-card:hover {
   border-color: #b7c8da;
+  transform: translateY(-1px);
 }
 
 .shift-card.is-gap {
@@ -455,6 +490,7 @@ body {
   font-size: 0.72rem;
   color: var(--roster-text-soft);
   background: #fbfdff;
+  width: 100%;
 }
 
 .side-item {
@@ -519,6 +555,7 @@ body {
   inset: 0;
   background: rgba(9, 16, 26, 0.45);
   z-index: 250;
+  backdrop-filter: blur(2px);
 }
 
 .shift-drawer {
@@ -532,6 +569,7 @@ body {
   z-index: 260;
   display: grid;
   grid-template-rows: auto 1fr;
+  box-shadow: -8px 0 30px rgba(15, 23, 42, 0.12);
 }
 
 .hidden {
@@ -562,6 +600,7 @@ body {
   padding: 12px;
   display: grid;
   gap: 10px;
+  scrollbar-width: thin;
 }
 
 .drawer-block {
@@ -616,6 +655,7 @@ body {
 .drawer-row-actions {
   display: flex;
   gap: 5px;
+  flex-wrap: wrap;
 }
 
 .mini-btn,
@@ -627,6 +667,7 @@ body {
   padding: 4px 8px;
   font-size: 0.72rem;
   cursor: pointer;
+  transition: 0.18s ease;
 }
 
 .remove-btn {
@@ -642,6 +683,94 @@ body {
   color: var(--roster-text-soft);
   font-size: 0.82rem;
   background: #fbfdff;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.month-weekday {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--roster-text-soft);
+  padding: 0 2px;
+}
+
+.month-cell {
+  min-height: 160px;
+  border: 1px solid var(--roster-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.month-cell.is-outside {
+  background: #f8fafc;
+  opacity: 0.75;
+}
+
+.month-cell.is-today {
+  border-color: #93c5fd;
+  box-shadow: inset 0 0 0 1px #bfdbfe;
+}
+
+.month-cell-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.month-cell-head strong {
+  font-size: 0.82rem;
+}
+
+.month-mini-list {
+  display: grid;
+  gap: 6px;
+}
+
+.month-mini-shift {
+  border: 1px solid var(--roster-border);
+  border-radius: 8px;
+  padding: 6px;
+  background: #fbfdff;
+  cursor: pointer;
+}
+
+.month-mini-shift.is-gap {
+  border-color: #efc0c0;
+  background: #fff7f7;
+}
+
+.month-mini-shift h4 {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.month-mini-shift p {
+  margin: 2px 0 0;
+  color: var(--roster-text-soft);
+  font-size: 0.68rem;
+}
+
+.shift-card:focus,
+.staff-card:focus,
+.view-btn:focus,
+.mini-btn:focus,
+.remove-btn:focus,
+.primary-btn:focus,
+.secondary-btn:focus,
+.ghost-btn:focus,
+.month-mini-shift:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 @media (max-width: 1400px) {
@@ -670,5 +799,34 @@ body {
   .roster-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .month-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .roster-header-main {
+    flex-direction: column;
+  }
+
+  .roster-header-actions {
+    width: 100%;
+  }
+
+  .roster-control-grid,
+  .summary-strip,
+  .inline-grid,
+  .month-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .control-field--wide {
+    grid-column: span 1;
+  }
+
+  .shift-drawer {
+    width: 100vw;
   }
 }
