@@ -272,6 +272,7 @@ function badgeClass(value) {
       "review_due",
       "awaiting_approval",
       "requires_improvement",
+      "good",
     ].includes(v)
   ) {
     return "badge badge-warning";
@@ -282,7 +283,6 @@ function badgeClass(value) {
       "completed",
       "approved",
       "resolved",
-      "good",
       "outstanding",
       "pass",
       "closed",
@@ -502,6 +502,9 @@ function buildFallbackData(homeId) {
     inspectionScores: [
       mapInspectionScore({
         id: "is-1",
+        run_id: "run-1",
+        framework_id: "sccif",
+        provider_id: 1,
         home_id: homeId,
         period_start: minusDays(30),
         period_end: minusDays(1),
@@ -517,6 +520,7 @@ function buildFallbackData(homeId) {
           "Safer routines, stronger chronology, improved leadership grip.",
         concerns_summary:
           "Some evidence freshness and action completion gaps remain.",
+        generated_by: "demo",
         created_at: minusDays(1),
         updated_at: minusDays(1),
       }),
@@ -526,6 +530,7 @@ function buildFallbackData(homeId) {
       mapInspectionSectionScore({
         id: "iss-1",
         inspection_score_id: "is-1",
+        section_id: "sec-1",
         section_code: "leadership_management",
         section_name: "Leadership and management",
         score_value: 71.2,
@@ -539,6 +544,7 @@ function buildFallbackData(homeId) {
       mapInspectionSectionScore({
         id: "iss-2",
         inspection_score_id: "is-1",
+        section_id: "sec-2",
         section_code: "helped_protected",
         section_name: "Helped and protected",
         score_value: 75.8,
@@ -1340,8 +1346,8 @@ function renderCard(item = {}) {
         ${
           status
             ? `<span class="${badgeClass(status)}">${safeText(
-              titleCase(status)
-            )}</span>`
+                titleCase(status)
+              )}</span>`
             : ""
         }
       </div>
@@ -1356,8 +1362,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Priority</div>
                   <div class="details-grid-value">${safeText(
-                titleCase(item.priority)
-              )}</div>
+                    titleCase(item.priority)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1369,8 +1375,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Due date</div>
                   <div class="details-grid-value">${safeText(
-                formatDate(item.due_date)
-              )}</div>
+                    formatDate(item.due_date)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1382,8 +1388,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Overall score</div>
                   <div class="details-grid-value">${safeText(
-                toNumber(item.overall_score).toFixed(1)
-              )}</div>
+                    toNumber(item.overall_score).toFixed(1)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1395,8 +1401,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Confidence</div>
                   <div class="details-grid-value">${safeText(
-                toNumber(item.confidence_score).toFixed(1)
-              )}</div>
+                    toNumber(item.confidence_score).toFixed(1)
+                  )}</div>
                 </div>
               `
               : ""
@@ -1408,8 +1414,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Section</div>
                   <div class="details-grid-value">${safeText(
-                item.section_name
-              )}</div>
+                    item.section_name
+                  )}</div>
                 </div>
               `
               : ""
@@ -1421,8 +1427,8 @@ function renderCard(item = {}) {
                 <div class="details-grid-item">
                   <div class="details-grid-label">Owner</div>
                   <div class="details-grid-value">User #${safeText(
-                item.owner_user_id
-              )}</div>
+                    item.owner_user_id
+                  )}</div>
                 </div>
               `
               : ""
@@ -1635,8 +1641,8 @@ function renderTimeline(items = []) {
                   ${
                     status
                       ? `<span class="${badgeClass(status)}">${safeText(
-                        titleCase(status)
-                      )}</span>`
+                          titleCase(status)
+                        )}</span>`
                       : ""
                   }
                 </div>
@@ -1793,18 +1799,18 @@ function renderWorkspace(payload) {
           ${
             latestAudit.length
               ? renderPanelSection(
-                "Latest quality audit",
-                renderCardList(latestAudit, "", "")
-              )
+                  "Latest quality audit",
+                  renderCardList(latestAudit, "", "")
+                )
               : ""
           }
 
           ${
             latestInspection.length
               ? renderPanelSection(
-                "Latest inspection readiness",
-                renderCardList(latestInspection, "", "")
-              )
+                  "Latest inspection readiness",
+                  renderCardList(latestInspection, "", "")
+                )
               : ""
           }
 
@@ -2060,8 +2066,8 @@ function buildPriorityItems(data) {
         title: item.title || "Inspection action",
         summary: item.due_date
           ? `${item.summary || "Inspection action open."} Due ${formatDate(
-            item.due_date
-          )}`
+              item.due_date
+            )}`
           : item.summary || "Inspection action open.",
       });
     });
@@ -2303,12 +2309,12 @@ export async function loadCurrentView() {
         : "No due quality action",
       lastRecord: recentTimeline[0]
         ? `Latest quality activity ${formatDate(
-          recentTimeline[0].audit_date ||
-            recentTimeline[0].visit_date ||
-            recentTimeline[0].review_period_end ||
-            recentTimeline[0].period_end ||
-            recentTimeline[0].created_at
-        )}`
+            recentTimeline[0].audit_date ||
+              recentTimeline[0].visit_date ||
+              recentTimeline[0].review_period_end ||
+              recentTimeline[0].period_end ||
+              recentTimeline[0].created_at
+          )}`
         : data.isFallback
           ? "Preview quality data loaded"
           : "No recent quality activity",
