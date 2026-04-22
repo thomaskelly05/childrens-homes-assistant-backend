@@ -35,8 +35,8 @@
           <div class="eyebrow">Residential staffing</div>
           <h1>Home rostering and safer staffing</h1>
           <p>
-            A live operational rota for children's homes covering shifts, leadership,
-            absences, safer staffing gaps, and day-to-day cover decisions.
+            Live rota management for children's homes covering safer staffing, leadership,
+            absences, open shifts, change acknowledgements, and staff notifications.
           </p>
         </div>
 
@@ -110,8 +110,8 @@
       </article>
 
       <article class="summary-card">
-        <span class="summary-label">On shift now</span>
-        <strong id="summaryOnShift">0</strong>
+        <span class="summary-label">Open shifts</span>
+        <strong id="summaryOpenShifts">0</strong>
       </article>
 
       <article class="summary-card danger-card">
@@ -125,7 +125,7 @@
         <header class="panel-head">
           <div>
             <h2>Staff available</h2>
-            <p>Drag to assign or open profile context.</p>
+            <p>Drag to assign, search suitability, and manage leave.</p>
           </div>
           <span class="pill" id="staffCountBadge">0 staff</span>
         </header>
@@ -181,13 +181,14 @@
         <header class="panel-head">
           <div>
             <h2>Rota board</h2>
-            <p>Daily, weekly and monthly shift coverage with role and lead checks.</p>
+            <p>Daily, weekly and monthly shift coverage with safer staffing checks.</p>
           </div>
         </header>
 
         <div class="board-filters">
           <label><input id="filterGapsOnly" type="checkbox" /> Gaps only</label>
           <label><input id="filterAgencyOnly" type="checkbox" /> Agency / bank only</label>
+          <label><input id="filterOpenOnly" type="checkbox" /> Open shifts only</label>
 
           <label class="control-field control-field--wide">
             <span>Search shifts</span>
@@ -218,6 +219,26 @@
             </div>
           </header>
           <div id="warningPanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Open shifts and offers</h2>
+              <p>Available cover, urgent gaps, and claimable shifts.</p>
+            </div>
+          </header>
+          <div id="openShiftPanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Notifications</h2>
+              <p>Shift changes, acknowledgements, and delivery status.</p>
+            </div>
+          </header>
+          <div id="notificationPanel" class="side-list"></div>
         </section>
 
         <section>
@@ -276,7 +297,6 @@
         <h2 id="shiftDrawerTitle">Shift</h2>
         <p id="shiftDrawerMeta">No shift selected.</p>
       </div>
-
       <button id="closeShiftDrawerBtn" class="secondary-btn" type="button">Close</button>
     </header>
 
@@ -300,6 +320,24 @@
           <select id="shiftAssignStaffSelect"></select>
         </label>
         <button id="assignStaffBtn" class="primary-btn" type="button">Assign to shift</button>
+      </section>
+
+      <section class="drawer-block">
+        <h3>Open shift and cover</h3>
+        <div class="drawer-row-actions">
+          <button id="markOpenShiftBtn" class="secondary-btn" type="button">Mark as open shift</button>
+          <button id="notifyEligibleStaffBtn" class="ghost-btn" type="button">Notify eligible staff</button>
+        </div>
+        <p id="shiftOpenState"></p>
+      </section>
+
+      <section class="drawer-block">
+        <h3>Shift changes and swaps</h3>
+        <div class="drawer-row-actions">
+          <button id="sendChangeNoticeBtn" class="secondary-btn" type="button">Send change notice</button>
+          <button id="createSwapRequestBtn" class="ghost-btn" type="button">Create swap request</button>
+        </div>
+        <p id="shiftChangeState"></p>
       </section>
 
       <section class="drawer-block">
