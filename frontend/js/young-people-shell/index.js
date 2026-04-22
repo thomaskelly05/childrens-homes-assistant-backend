@@ -125,6 +125,16 @@ function readSessionUser() {
   }
 }
 
+function writeSessionUser(user) {
+  try {
+    if (!user) {
+      sessionStorage.removeItem("current_user");
+      return;
+    }
+    sessionStorage.setItem("current_user", JSON.stringify(user));
+  } catch {}
+}
+
 function hydrateRuntimeContextFromDom() {
   if (!els.app) return;
 
@@ -179,7 +189,10 @@ function hydrateRuntimeContextFromSession() {
 
   setUserRole(sessionRole);
 
-  setHomeContext(currentUser.home_id || currentUser.homeId || null);
+  const sessionHomeId = normaliseNumericId(
+    currentUser.home_id || currentUser.homeId || null
+  );
+  setHomeContext(sessionHomeId);
 
   if (currentUser.user_id || currentUser.id) {
     state.userId = currentUser.user_id || currentUser.id;
@@ -189,7 +202,9 @@ function hydrateRuntimeContextFromSession() {
     state.staffId = currentUser.staff_id;
   }
 
-  setProviderContext(currentUser.provider_id || currentUser.providerId || null);
+  setProviderContext(
+    normaliseNumericId(currentUser.provider_id || currentUser.providerId || null)
+  );
 
   const allowedHomes =
     currentUser.allowed_home_ids ||
@@ -202,15 +217,65 @@ function hydrateRuntimeContextFromSession() {
 
   if (safeAllowedHomes.length) {
     setAllowedHomeIds(safeAllowedHomes);
-  } else if (currentUser.home_id || currentUser.homeId) {
-    const singleHomeId = normaliseNumericId(
-      currentUser.home_id || currentUser.homeId
-    );
-    setAllowedHomeIds(singleHomeId ? [singleHomeId] : []);
+  } else if (sessionHomeId) {
+    setAllowedHomeIds([sessionHomeId]);
   }
 
   if (!state.homeId && state.allowedHomeIds?.length === 1) {
     setHomeContext(state.allowedHomeIds[0]);
+  }
+}
+
+async function hydrateRuntimeContextFromAuthCheck() {
+  try {
+    const response = await fetch("/auth/check", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return;
+
+    const auth = await response.json();
+    if (!auth || auth.authenticated !== true) return;
+
+    state.currentUser = auth;
+    writeSessionUser(auth);
+
+    if (auth.user_id || auth.id) {
+      state.userId = auth.user_id || auth.id;
+    }
+
+    const role = normaliseRole(auth.role || auth.user_role || auth.role_name);
+    setUserRole(role);
+
+    const authHomeId = normaliseNumericId(auth.home_id || auth.homeId || null);
+    const authProviderId = normaliseNumericId(
+      auth.provider_id || auth.providerId || null
+    );
+
+    setHomeContext(authHomeId);
+    setProviderContext(authProviderId);
+
+    const allowedHomes = toIdArray(
+      auth.allowed_home_ids ||
+        auth.allowedHomeIds ||
+        auth.home_ids ||
+        auth.homeIds ||
+        []
+    );
+
+    if (allowedHomes.length) {
+      setAllowedHomeIds(allowedHomes);
+    } else if (authHomeId) {
+      setAllowedHomeIds([authHomeId]);
+    }
+
+    if (!state.homeId && state.allowedHomeIds?.length === 1) {
+      setHomeContext(state.allowedHomeIds[0]);
+    }
+  } catch (error) {
+    console.error("[index] auth context hydration failed", error);
   }
 }
 
@@ -604,6 +669,7 @@ async function bootstrap() {
 
     hydrateRuntimeContextFromDom();
     hydrateRuntimeContextFromSession();
+    await hydrateRuntimeContextFromAuthCheck();
 
     ensureValidScopeForRole();
     applyRoleDefaultScopeIfNeeded();
