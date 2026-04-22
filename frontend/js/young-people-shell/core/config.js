@@ -723,13 +723,27 @@ export function validateConfig() {
 }
 
 /*
-  These endpoints are now aligned to the newer quality.js data loaders.
-  Deliberately remove old ambiguous endpoints like:
-  /homes/:id/quality
-  /homes/:id/compliance
-  /homes/:id/dashboard
-  /homes/:id/ofsted-dashboard
-  because they are causing 403/404/500 noise elsewhere.
+  Canonical inspection / quality endpoints plus compatibility aliases for
+  existing loaders already in the frontend.
+
+  Canonical newer families:
+  - quality audits / findings / actions
+  - compliance items
+  - reg44 visits / findings / actions
+  - reg45 reviews / actions
+  - inspection scores / sections / reasons / lines of enquiry / actions
+  - manager review queue
+
+  Compatibility aliases preserved for existing loaders:
+  - ofstedDashboard
+  - dashboard
+  - sccifEvidence
+  - judgementBuilder
+  - readiness
+  - compliance
+  - audits
+  - documents
+  - incidents
 */
 export function buildInspectionUiEndpoints(homeId) {
   const safeHomeId =
@@ -743,10 +757,11 @@ export function buildInspectionUiEndpoints(homeId) {
 
   const base = `/homes/${safeHomeId}`;
 
-  return Object.freeze({
+  const endpoints = {
     homeId: safeHomeId,
     base,
 
+    // Canonical quality / governance
     qualityAudits: `${base}/quality-audits`,
     qualityAuditFindings: `${base}/quality-audit-findings`,
     qualityAuditActions: `${base}/quality-audit-actions`,
@@ -769,5 +784,29 @@ export function buildInspectionUiEndpoints(homeId) {
     managerReviewQueue: `${base}/manager-review-queue`,
 
     visibilityQuality: `/visibility/quality?home_id=${safeHomeId}&all_accessible_homes=false`,
-  });
+    visibilityOfsted: `/visibility/ofsted?home_id=${safeHomeId}&all_accessible_homes=false`,
+
+    // Home-level operational sources still used by compliance / builder pages
+    team: `${base}/team`,
+    training: `${base}/training`,
+    supervisions: `${base}/supervisions`,
+    probations: `${base}/probations`,
+    inductions: `${base}/inductions`,
+    childCompliance: `${base}/child-compliance`,
+    documents: `${base}/documents`,
+    incidents: `${base}/incidents`,
+    safeguarding: `${base}/safeguarding`,
+    reports: `${base}/reports`,
+
+    // Compatibility aliases for existing UI loaders
+    dashboard: `${base}/inspection-scores`,
+    ofstedDashboard: `${base}/inspection-scores`,
+    sccifEvidence: `${base}/inspection-section-scores`,
+    judgementBuilder: `${base}/inspection-lines-of-enquiry`,
+    readiness: `${base}/inspection-improvement-actions`,
+    compliance: `${base}/compliance-items`,
+    audits: `${base}/quality-audits`,
+  };
+
+  return Object.freeze(endpoints);
 }
