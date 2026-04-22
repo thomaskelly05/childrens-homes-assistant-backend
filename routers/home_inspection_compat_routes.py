@@ -452,9 +452,6 @@ def _inspection_ui_header_payload(home_id: int, request: Request) -> dict[str, A
             overall_score = round((experiences_score + helped_score + leadership_score) / 3, 1)
             overall_band = band(lowest if band(lowest) in {"requires_improvement", "inadequate"} else overall_score)
 
-            next_due_dates = [row.get("due_date") for row in open_actions if row.get("due_date")]
-            next_action_due_date = min(next_due_dates) if next_due_dates else None
-
             top_concerns = (
                 "Open actions and inspection follow-through need closer grip."
                 if open_action_count
@@ -495,7 +492,9 @@ def _inspection_ui_header_payload(home_id: int, request: Request) -> dict[str, A
                     "Outstanding action closure and consistency of oversight remain the main pressure points."
                 ),
                 "scored_at": home.get("updated_at") or home.get("created_at"),
-                "next_action_due_date": next_action_due_date,
+                "next_action_due_date": min(
+                    [row.get("due_date") for row in open_actions if row.get("due_date")] or [None]
+                ),
             }
 
             return {
@@ -791,7 +790,7 @@ def _inspection_ui_briefing_payload(home_id: int, request: Request) -> dict[str,
         "record_type": "inspection_briefing",
         "headline_summary": header.get("narrative_summary")
         or "The home appears broadly stable, with inspection pressure sitting mainly in follow-through and evidence freshness.",
-        "overall_position_statement": "The current inspection picture is serviceable, but greater confidence would come from tighter action closure and clearer management commentary.",
+        "overall_position_statement": "The current inspection picture is serviceable, but greater confidence would come from tighter action closure and clearer management narrative.",
         "likely_inspector_focus": header.get("top_concerns")
         or "Likely focus will sit around safeguarding follow-through, evidence freshness and closure discipline.",
         "immediate_priority_actions": "Close overdue actions, refresh stale evidence and ensure management oversight is explicit.",
@@ -983,6 +982,58 @@ def home_team(home_id: int, request: Request):
     return _team_payload(home_id, request)
 
 
+@router.get("/homes/{home_id}/tasks")
+def home_tasks(home_id: int, request: Request):
+    return _generic_home_table_payload(
+        home_id,
+        request,
+        "tasks",
+        "task",
+        aliases=["tasks"],
+        title_keys=["title", "task", "task_title"],
+        summary_keys=["summary", "description", "notes"],
+    )
+
+
+@router.get("/homes/{home_id}/actions")
+def home_actions(home_id: int, request: Request):
+    return _generic_home_table_payload(
+        home_id,
+        request,
+        "tasks",
+        "task",
+        aliases=["actions"],
+        title_keys=["title", "task", "task_title"],
+        summary_keys=["summary", "description", "notes"],
+    )
+
+
+@router.get("/homes/{home_id}/communications")
+def home_communications(home_id: int, request: Request):
+    return _generic_home_table_payload(
+        home_id,
+        request,
+        "communications",
+        "communication",
+        aliases=["communications"],
+        title_keys=["title", "subject", "contact_type"],
+        summary_keys=["summary", "notes", "description", "outcome"],
+    )
+
+
+@router.get("/homes/{home_id}/therapy")
+def home_therapy(home_id: int, request: Request):
+    return _generic_home_table_payload(
+        home_id,
+        request,
+        "therapy",
+        "therapy",
+        aliases=["therapy"],
+        title_keys=["title", "therapist_name", "professional_name"],
+        summary_keys=["summary", "notes", "recommendations", "outcome"],
+    )
+
+
 @router.get("/homes/{home_id}/training")
 def home_training(home_id: int, request: Request):
     return _generic_home_table_payload(
@@ -1089,16 +1140,15 @@ def home_incidents(home_id: int, request: Request):
 
 @router.get("/homes/{home_id}/safeguarding")
 def home_safeguarding(home_id: int, request: Request):
-    if _user_can_access_home(request, home_id):
-        return _generic_home_table_payload(
-            home_id,
-            request,
-            "incidents",
-            "incident",
-            aliases=["safeguarding", "incidents"],
-            title_keys=["title", "incident_type", "name"],
-            summary_keys=["summary", "description", "notes"],
-        )
+    return _generic_home_table_payload(
+        home_id,
+        request,
+        "incidents",
+        "incident",
+        aliases=["safeguarding", "incidents"],
+        title_keys=["title", "incident_type", "name"],
+        summary_keys=["summary", "description", "notes"],
+    )
 
 
 @router.get("/homes/{home_id}/inspection-readiness")
@@ -1445,29 +1495,3 @@ def inspection_ui_home_briefing(home_id: int, request: Request):
 @compat_router.get("/inspection/ui/homes/{home_id}/prep-72h")
 def inspection_ui_home_prep_72h(home_id: int, request: Request):
     return _inspection_ui_prep_72h_payload(home_id, request)
-
-
-@compat_router.post("/inspection/ui/homes/{home_id}/refresh-cycle")
-def inspection_ui_refresh_cycle(home_id: int, request: Request):
-    _user_can_access_home(request, home_id)
-
-    logger.info("[inspection] refresh cycle triggered | home_id=%s", home_id)
-
-    return {
-        "ok": True,
-        "message": "Inspection cycle refresh triggered",
-        "home_id": home_id,
-    }
-
-
-@compat_router.post("/inspection/ui/homes/{home_id}/sync-tasks")
-def inspection_ui_sync_tasks(home_id: int, request: Request):
-    _user_can_access_home(request, home_id)
-
-    logger.info("[inspection] sync tasks triggered | home_id=%s", home_id)
-
-    return {
-        "ok": True,
-        "message": "Inspection task sync triggered",
-        "home_id": home_id,
-    }
