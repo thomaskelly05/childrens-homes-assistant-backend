@@ -32,17 +32,28 @@ function getValidReadinessTab(tab = "overview") {
 }
 
 function normaliseNumericId(value) {
+  if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function normaliseHomeIds(homeIds = []) {
   if (!Array.isArray(homeIds)) return [];
-  return [...new Set(
-    homeIds
-      .map((item) => Number(item))
-      .filter((item) => Number.isFinite(item) && item > 0)
-  )];
+  return [
+    ...new Set(
+      homeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    ),
+  ];
+}
+
+function ensureArray(value, fallback = []) {
+  return Array.isArray(value) ? value : fallback;
+}
+
+function ensureObject(value, fallback = {}) {
+  return value && typeof value === "object" ? value : fallback;
 }
 
 export function createAssistantMeta() {
@@ -230,43 +241,40 @@ function ensureAssistantMeta() {
     return;
   }
 
-  state.assistantMeta.sources = Array.isArray(state.assistantMeta.sources)
-    ? state.assistantMeta.sources
-    : [];
-  state.assistantMeta.runtime = state.assistantMeta.runtime || {};
-  state.assistantMeta.explainability = state.assistantMeta.explainability || {};
-  state.assistantMeta.assistant_scope = state.assistantMeta.assistant_scope || {};
-  state.assistantMeta.assistant_context =
-    state.assistantMeta.assistant_context || {};
-  state.assistantMeta.suggested_actions = Array.isArray(
+  state.assistantMeta.sources = ensureArray(state.assistantMeta.sources);
+  state.assistantMeta.runtime = ensureObject(state.assistantMeta.runtime);
+  state.assistantMeta.explainability = ensureObject(
+    state.assistantMeta.explainability
+  );
+  state.assistantMeta.assistant_scope = ensureObject(
+    state.assistantMeta.assistant_scope
+  );
+  state.assistantMeta.assistant_context = ensureObject(
+    state.assistantMeta.assistant_context
+  );
+  state.assistantMeta.suggested_actions = ensureArray(
     state.assistantMeta.suggested_actions
-  )
-    ? state.assistantMeta.suggested_actions
-    : [];
-  state.assistantMeta.secondary_intents = Array.isArray(
+  );
+  state.assistantMeta.secondary_intents = ensureArray(
     state.assistantMeta.secondary_intents
-  )
-    ? state.assistantMeta.secondary_intents
-    : [];
-  state.assistantMeta.chronology = Array.isArray(state.assistantMeta.chronology)
-    ? state.assistantMeta.chronology
-    : [];
-  state.assistantMeta.facts =
-    state.assistantMeta.facts && typeof state.assistantMeta.facts === "object"
-      ? state.assistantMeta.facts
-      : {};
-  state.assistantMeta.care_domains =
-    state.assistantMeta.care_domains &&
-    typeof state.assistantMeta.care_domains === "object"
-      ? state.assistantMeta.care_domains
-      : {};
-  state.assistantMeta.evidence_summary =
-    state.assistantMeta.evidence_summary || {};
-  state.assistantMeta.evidence_sufficiency =
-    state.assistantMeta.evidence_sufficiency || {};
-  state.assistantMeta.scrubber_meta = state.assistantMeta.scrubber_meta || {};
-  state.assistantMeta.scrubber_reverse_map =
-    state.assistantMeta.scrubber_reverse_map || {};
+  );
+  state.assistantMeta.chronology = ensureArray(state.assistantMeta.chronology);
+  state.assistantMeta.facts = ensureObject(state.assistantMeta.facts);
+  state.assistantMeta.care_domains = ensureObject(
+    state.assistantMeta.care_domains
+  );
+  state.assistantMeta.evidence_summary = ensureObject(
+    state.assistantMeta.evidence_summary
+  );
+  state.assistantMeta.evidence_sufficiency = ensureObject(
+    state.assistantMeta.evidence_sufficiency
+  );
+  state.assistantMeta.scrubber_meta = ensureObject(
+    state.assistantMeta.scrubber_meta
+  );
+  state.assistantMeta.scrubber_reverse_map = ensureObject(
+    state.assistantMeta.scrubber_reverse_map
+  );
 
   if (!("live_summary" in state.assistantMeta)) {
     state.assistantMeta.live_summary = null;
@@ -290,38 +298,19 @@ function ensureAssistantMeta() {
 }
 
 function ensureAssistantMessages() {
-  if (!Array.isArray(state.assistantMessages)) {
-    state.assistantMessages = [];
-  }
-
-  if (!Array.isArray(state.assistantModalMessages)) {
-    state.assistantModalMessages = [];
-  }
+  state.assistantMessages = ensureArray(state.assistantMessages);
+  state.assistantModalMessages = ensureArray(state.assistantModalMessages);
 }
 
 export function initialiseStateGuards() {
   ensureAssistantMeta();
   ensureAssistantMessages();
 
-  if (!Array.isArray(state.allowedHomeIds)) {
-    state.allowedHomeIds = [];
-  }
-
-  if (!Array.isArray(state.youngPeople)) {
-    state.youngPeople = [];
-  }
-
-  if (!Array.isArray(state.currentSuggestions)) {
-    state.currentSuggestions = [];
-  }
-
-  if (!Array.isArray(state.suggestions)) {
-    state.suggestions = [];
-  }
-
-  if (!Array.isArray(state.liveUpdates)) {
-    state.liveUpdates = [];
-  }
+  state.allowedHomeIds = ensureArray(state.allowedHomeIds);
+  state.youngPeople = ensureArray(state.youngPeople);
+  state.currentSuggestions = ensureArray(state.currentSuggestions);
+  state.suggestions = ensureArray(state.suggestions);
+  state.liveUpdates = ensureArray(state.liveUpdates);
 
   if (!state.resourceCache || typeof state.resourceCache !== "object") {
     state.resourceCache = Object.create(null);
@@ -346,9 +335,11 @@ export function normaliseUserRole(role) {
 export function getDefaultScopeForRole(role = state.userRole) {
   const safeRole = normaliseUserRole(role);
 
-  if (["ri", "admin"].includes(safeRole)) return "quality";
+  if (safeRole === "ri" || safeRole === "admin") return "quality";
 
-  if (["manager", "registered_manager", "deputy_manager"].includes(safeRole)) {
+  if (
+    ["manager", "registered_manager", "deputy_manager"].includes(safeRole)
+  ) {
     return "home";
   }
 
