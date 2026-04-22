@@ -7,7 +7,6 @@ const state = {
   activeRecordType: null,
 
   assistantMessages: [],
-  assistantModalMessages: [],
   assistantSending: false,
   assistantMeta: {
     sources: [],
@@ -41,11 +40,9 @@ const AUTOSAVE_DELAY_MS = 2000;
 const els = {
   app: document.getElementById("app"),
 
-  nav: document.getElementById("sidebarNav"),
   mobileNavPanel: document.getElementById("mobileNavPanel"),
   mobileNavToggle: document.getElementById("mobileNavToggle"),
   mobileBottomNav: document.getElementById("mobileBottomNav"),
-  mobileQuickAdd: document.getElementById("mobileQuickAdd"),
 
   content: document.getElementById("viewContent"),
   pageTitle: document.getElementById("pageTitle"),
@@ -53,9 +50,6 @@ const els = {
   statusBar: document.getElementById("statusBar"),
   refreshBtn: document.getElementById("refreshBtn"),
   goHomeBtn: document.getElementById("goHomeBtn"),
-  quickProfileBtn: document.getElementById("quickProfileBtn"),
-  quickTimelineBtn: document.getElementById("quickTimelineBtn"),
-  quickAssistantBtn: document.getElementById("quickAssistantBtn"),
 
   personName: document.getElementById("personName"),
   personMeta: document.getElementById("personMeta"),
@@ -69,7 +63,6 @@ const els = {
   selectorRefreshBtn: document.getElementById("selectorRefreshBtn"),
 
   workspacePanel: document.getElementById("workspacePanel"),
-  quickActions: document.getElementById("quickActions"),
 
   drawer: document.getElementById("recordDrawer"),
   drawerBackdrop: document.getElementById("recordDrawerBackdrop"),
@@ -104,10 +97,10 @@ const els = {
   autosaveTime: document.getElementById("autosaveTime"),
 
   assistantLauncher: document.getElementById("assistantLauncher"),
-  assistantExpandBtn: document.getElementById("assistantExpandBtn"),
   assistantBackdrop: document.getElementById("assistantBackdrop"),
   assistantModal: document.getElementById("assistantModal"),
   closeAssistantBtn: document.getElementById("closeAssistantBtn"),
+  heroAssistantBtn: document.getElementById("heroAssistantBtn"),
 
   assistantContext: document.getElementById("assistantContext"),
   assistantSuggestions: document.getElementById("assistantSuggestions"),
@@ -117,18 +110,10 @@ const els = {
   assistantSendBtn: document.getElementById("assistantSendBtn"),
   assistantClearBtn: document.getElementById("assistantClearBtn"),
 
-  assistantModalMessages: document.getElementById("assistantModalMessages"),
-  assistantModalForm: document.getElementById("assistantModalForm"),
-  assistantModalInput: document.getElementById("assistantModalInput"),
-  assistantModalSendBtn: document.getElementById("assistantModalSendBtn"),
-
   scopeBadge: document.getElementById("scopeBadge"),
   scopeHomeBadge: document.getElementById("scopeHomeBadge"),
   scopeChildBadge: document.getElementById("scopeChildBadge"),
   scopeShiftBadge: document.getElementById("scopeShiftBadge"),
-
-  modalScopeHomeBadge: document.getElementById("modalScopeHomeBadge"),
-  modalScopeChildBadge: document.getElementById("modalScopeChildBadge"),
 
   assistantScopeSummary: document.getElementById("assistantScopeSummary"),
   assistantActions: document.getElementById("assistantActions"),
@@ -136,8 +121,11 @@ const els = {
   assistantRuntime: document.getElementById("assistantRuntime"),
   assistantExplainability: document.getElementById("assistantExplainability"),
 
-  assistantModalScopeSummary: document.getElementById("assistantModalScopeSummary"),
-  assistantModalSources: document.getElementById("assistantModalSources"),
+  mobileNavBackdrop: document.getElementById("mobileNavBackdrop"),
+  closeMobileNavBtn: document.getElementById("closeMobileNavBtn"),
+  mobileNavContent: document.getElementById("mobileNavContent"),
+  mobileDrawerPersonName: document.getElementById("mobileDrawerPersonName"),
+  mobileDrawerPersonMeta: document.getElementById("mobileDrawerPersonMeta"),
 };
 
 const VIEW_CONFIG = {
@@ -689,11 +677,13 @@ function openAssistant() {
   updateAssistantContext();
   els.assistantModal?.classList.remove("hidden");
   els.assistantBackdrop?.classList.remove("hidden");
+  els.assistantModal?.setAttribute("aria-hidden", "false");
 }
 
 function closeAssistant() {
   els.assistantModal?.classList.add("hidden");
   els.assistantBackdrop?.classList.add("hidden");
+  els.assistantModal?.setAttribute("aria-hidden", "true");
 }
 
 function toggleAssistantLauncher() {
@@ -703,6 +693,23 @@ function toggleAssistantLauncher() {
   } else {
     els.assistantLauncher.classList.add("hidden");
   }
+}
+
+function openMobileNav() {
+  state.mobileNavOpen = true;
+  els.mobileNavPanel?.classList.remove("hidden");
+  els.mobileNavBackdrop?.classList.remove("hidden");
+  els.mobileNavPanel?.setAttribute("aria-hidden", "false");
+  els.mobileNavToggle?.setAttribute("aria-expanded", "true");
+  renderMobileNav();
+}
+
+function closeMobileNav() {
+  state.mobileNavOpen = false;
+  els.mobileNavPanel?.classList.add("hidden");
+  els.mobileNavBackdrop?.classList.add("hidden");
+  els.mobileNavPanel?.setAttribute("aria-hidden", "true");
+  els.mobileNavToggle?.setAttribute("aria-expanded", "false");
 }
 
 function getFullYoungPersonName() {
@@ -760,26 +767,6 @@ function renderAssistantScopeBadges() {
       els.scopeShiftBadge.classList.add("hidden");
     }
   }
-
-  if (els.modalScopeHomeBadge) {
-    if (homeText) {
-      els.modalScopeHomeBadge.textContent = homeText;
-      els.modalScopeHomeBadge.classList.remove("hidden");
-    } else {
-      els.modalScopeHomeBadge.textContent = "";
-      els.modalScopeHomeBadge.classList.add("hidden");
-    }
-  }
-
-  if (els.modalScopeChildBadge) {
-    if (childText) {
-      els.modalScopeChildBadge.textContent = childText;
-      els.modalScopeChildBadge.classList.remove("hidden");
-    } else {
-      els.modalScopeChildBadge.textContent = "";
-      els.modalScopeChildBadge.classList.add("hidden");
-    }
-  }
 }
 
 function renderSelectorList(items) {
@@ -794,35 +781,42 @@ function renderSelectorList(items) {
     return;
   }
 
-  els.selectorList.innerHTML = items
-    .map((item) => {
-      const fullName =
-        [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
-        item.preferred_name ||
-        "Young Person";
+  els.selectorList.innerHTML = `
+    <div class="selector-grid">
+      ${items
+        .map((item) => {
+          const fullName =
+            [item.first_name, item.last_name].filter(Boolean).join(" ").trim() ||
+            item.preferred_name ||
+            "Young Person";
 
-      const meta = [
-        item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
-        item.placement_status || null,
-        item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
-      ]
-        .filter(Boolean)
-        .join(" • ");
+          const chips = [
+            item.preferred_name ? `Preferred: ${item.preferred_name}` : null,
+            item.placement_status || null,
+            item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : null,
+          ].filter(Boolean);
 
-      return `
-        <article class="selector-card">
-          <div class="selector-card-left">
-            <div class="selector-card-avatar">${escapeHtml(initialsFromName(fullName))}</div>
-            <div>
-              <h4>${escapeHtml(fullName)}</h4>
-              <p>${escapeHtml(meta || "Young person record")}</p>
-            </div>
-          </div>
-          <button class="primary-btn" type="button" data-open-young-person="${item.id}">Open</button>
-        </article>
-      `;
-    })
-    .join("");
+          return `
+            <article class="selector-card selector-card--photo">
+              <div class="selector-card-media">
+                <div class="selector-card-photo-fallback">${escapeHtml(initialsFromName(fullName))}</div>
+              </div>
+              <div class="selector-card-body">
+                <h3>${escapeHtml(fullName)}</h3>
+                <p>${escapeHtml(item.home_name || "Young person record")}</p>
+                <div class="selector-card-meta">
+                  ${chips.map((chip) => `<span class="selector-pill">${escapeHtml(chip)}</span>`).join("")}
+                </div>
+              </div>
+              <div class="selector-card-actions">
+                <button class="primary-btn" type="button" data-open-young-person="${item.id}">Open</button>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 function filterSelectorList() {
@@ -840,6 +834,7 @@ function filterSelectorList() {
       item.preferred_name,
       item.placement_status,
       item.summary_risk_level,
+      item.home_name,
     ]
       .filter(Boolean)
       .join(" ")
@@ -892,7 +887,7 @@ function renderPersonSummaryChips() {
   ].filter(Boolean);
 
   els.personSummaryChips.innerHTML = chips
-    .map((chip) => `<span class="scope-chip">${escapeHtml(chip)}</span>`)
+    .map((chip) => `<span class="meta-chip">${escapeHtml(chip)}</span>`)
     .join("");
 }
 
@@ -918,12 +913,16 @@ async function loadYoungPerson() {
   if (els.personMeta) els.personMeta.textContent = meta || "Young person record";
   if (els.personAvatar) els.personAvatar.textContent = initialsFromName(fullName);
 
+  if (els.mobileDrawerPersonName) els.mobileDrawerPersonName.textContent = fullName;
+  if (els.mobileDrawerPersonMeta) els.mobileDrawerPersonMeta.textContent = meta || "Young person record";
+
   renderPersonSummaryChips();
   updateAssistantScopeDataset();
   updateAssistantContext();
   renderAssistantScopeBadges();
   renderAssistantInsights();
   toggleAssistantLauncher();
+  renderMobileNav();
 }
 
 function renderSimpleSection(title, subtitle, bodyHtml) {
@@ -2058,7 +2057,12 @@ function getAutosaveStorageKey() {
 
 function updateAutosaveStatus(text) {
   if (els.autosaveStatus) {
-    els.autosaveStatus.textContent = text || "Autosave off";
+    const labelNode = els.autosaveStatus.querySelector("span");
+    if (labelNode) {
+      labelNode.textContent = text || "Autosave off";
+    } else {
+      els.autosaveStatus.textContent = text || "Autosave off";
+    }
   }
 }
 
@@ -2066,13 +2070,16 @@ function updateAutosaveTime(text = null) {
   if (!els.autosaveTime) return;
   if (text !== null) {
     els.autosaveTime.textContent = text;
+    els.autosaveTime.classList.toggle("hidden", !text);
     return;
   }
   if (!state.autosaveLastSavedAt) {
     els.autosaveTime.textContent = "Not saved yet";
+    els.autosaveTime.classList.remove("hidden");
     return;
   }
   els.autosaveTime.textContent = `Last saved ${formatDate(state.autosaveLastSavedAt)}`;
+  els.autosaveTime.classList.remove("hidden");
 }
 
 function serialiseValue(key, value) {
@@ -2435,51 +2442,45 @@ function renderAssistantMessageList(host, messages) {
 
 function renderAssistantMessages() {
   renderAssistantMessageList(els.assistantMessages, state.assistantMessages);
-  renderAssistantMessageList(els.assistantModalMessages, state.assistantModalMessages);
 }
 
 function pushAssistantMessage(role, content) {
   const entry = { role, content };
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push(entry);
   renderAssistantMessages();
 }
 
 function addAssistantPlaceholder() {
   state.assistantMessages.push({ role: "assistant", content: "Thinking...", _streaming: true });
-  state.assistantModalMessages.push({ role: "assistant", content: "Thinking...", _streaming: true });
   renderAssistantMessages();
 }
 
 function replaceLastAssistantPlaceholder(text) {
-  const lists = [state.assistantMessages, state.assistantModalMessages];
-  lists.forEach((list) => {
-    if (!list.length) return;
+  const list = state.assistantMessages;
+  if (list.length) {
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
       last._streaming = false;
     }
-  });
+  }
   renderAssistantMessages();
 }
 
 function updateLastAssistantStreamingText(text) {
-  const lists = [state.assistantMessages, state.assistantModalMessages];
-  lists.forEach((list) => {
-    if (!list.length) return;
+  const list = state.assistantMessages;
+  if (list.length) {
     const last = list[list.length - 1];
     if (last.role === "assistant" && last._streaming) {
       last.content = text;
     }
-  });
+  }
   renderAssistantMessages();
 }
 
 function setAssistantSending(flag) {
   state.assistantSending = !!flag;
   if (els.assistantSendBtn) els.assistantSendBtn.disabled = flag;
-  if (els.assistantModalSendBtn) els.assistantModalSendBtn.disabled = flag;
 }
 
 function prettyJson(value) {
@@ -2616,16 +2617,6 @@ function renderAssistantInsights() {
 
   if (els.assistantExplainability) {
     els.assistantExplainability.textContent = prettyJson(explainability);
-  }
-
-  if (els.assistantModalScopeSummary) {
-    els.assistantModalScopeSummary.innerHTML = els.assistantScopeSummary
-      ? els.assistantScopeSummary.innerHTML
-      : `<p>No scoped context loaded.</p>`;
-  }
-
-  if (els.assistantModalSources) {
-    els.assistantModalSources.innerHTML = renderAssistantSourcesHtml(sources);
   }
 }
 
@@ -2838,6 +2829,50 @@ function goToPlatformHome() {
   window.location.href = next;
 }
 
+function renderMobileNav() {
+  if (!els.mobileNavContent) return;
+
+  const groups = [
+    {
+      title: "Workspace",
+      items: [
+        { label: "Profile", view: "profile" },
+        { label: "Overview", view: "home" },
+        { label: "Timeline", view: "timeline" },
+        { label: "Risk", view: "risk" },
+        { label: "Health", view: "health" },
+        { label: "Education", view: "education" },
+        { label: "Family", view: "family" },
+        { label: "Compliance", view: "compliance" },
+        { label: "Manager", view: "manager" },
+      ],
+    },
+  ];
+
+  els.mobileNavContent.innerHTML = groups
+    .map(
+      (group) => `
+        <section class="nav-section">
+          <div class="nav-section-title">${escapeHtml(group.title)}</div>
+          <div class="nav-section-items">
+            ${group.items
+              .map(
+                (item) => `
+                  <button class="nav-btn mobile-nav-btn ${state.currentView === item.view ? "active" : ""}" type="button" data-view="${escapeHtml(item.view)}">
+                    <span class="nav-btn-copy">
+                      <span class="nav-btn-label">${escapeHtml(item.label)}</span>
+                    </span>
+                  </button>
+                `
+              )
+              .join("")}
+          </div>
+        </section>
+      `
+    )
+    .join("");
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
     const navBtn = event.target.closest(".nav-btn, .mobile-nav-btn, .mobile-tab");
@@ -2850,6 +2885,8 @@ function bindEvents() {
       closeAllNavGroups();
       updateAssistantContext();
       renderAssistantScopeBadges();
+      renderMobileNav();
+      closeMobileNav();
       loadCurrentView();
       return;
     }
@@ -2875,7 +2912,6 @@ function bindEvents() {
     if (assistantChip) {
       const text = assistantChip.dataset.assistantChip || "";
       if (els.assistantInput) els.assistantInput.value = text;
-      if (els.assistantModalInput) els.assistantModalInput.value = text;
       return;
     }
 
@@ -2925,34 +2961,20 @@ function bindEvents() {
 
   els.goHomeBtn?.addEventListener("click", goToPlatformHome);
 
-  els.quickProfileBtn?.addEventListener("click", async () => {
-    if (!state.youngPersonId) return;
-    state.currentView = "profile";
-    await loadCurrentView();
-  });
-
-  els.quickTimelineBtn?.addEventListener("click", async () => {
-    if (!state.youngPersonId) return;
-    state.currentView = "timeline";
-    await loadCurrentView();
-  });
-
-  els.quickAssistantBtn?.addEventListener("click", () => {
+  els.heroAssistantBtn?.addEventListener("click", () => {
     if (!state.youngPersonId) return;
     openAssistant();
   });
 
-  els.mobileQuickAdd?.addEventListener("click", () => {
-    if (!state.youngPersonId) return;
-    openComposerFor("daily_note", "create");
-  });
+  els.mobileNavToggle?.addEventListener("click", openMobileNav);
+  els.closeMobileNavBtn?.addEventListener("click", closeMobileNav);
+  els.mobileNavBackdrop?.addEventListener("click", closeMobileNav);
 
   els.changePersonBtn?.addEventListener("click", async () => {
     state.youngPersonId = null;
     state.youngPerson = null;
     state.currentView = "profile";
     state.assistantMessages = [];
-    state.assistantModalMessages = [];
     state.assistantMeta = {
       sources: [],
       runtime: {},
@@ -2965,6 +2987,7 @@ function bindEvents() {
     closeDrawer();
     closeComposer();
     closeAssistant();
+    closeMobileNav();
 
     const url = new URL(window.location.href);
     url.searchParams.delete("id");
@@ -3035,13 +3058,11 @@ function bindEvents() {
   });
 
   els.assistantLauncher?.addEventListener("click", openAssistant);
-  els.assistantExpandBtn?.addEventListener("click", openAssistant);
   els.closeAssistantBtn?.addEventListener("click", closeAssistant);
   els.assistantBackdrop?.addEventListener("click", closeAssistant);
 
   els.assistantClearBtn?.addEventListener("click", () => {
     state.assistantMessages = [];
-    state.assistantModalMessages = [];
     renderAssistantMessages();
   });
 
@@ -3049,13 +3070,6 @@ function bindEvents() {
     event.preventDefault();
     const question = els.assistantInput?.value || "";
     if (els.assistantInput) els.assistantInput.value = "";
-    await askAssistant(question);
-  });
-
-  els.assistantModalForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const question = els.assistantModalInput?.value || "";
-    if (els.assistantModalInput) els.assistantModalInput.value = "";
     await askAssistant(question);
   });
 
@@ -3069,6 +3083,7 @@ function bindEvents() {
     if (event.key === "Escape") {
       closeDrawer();
       closeAssistant();
+      closeMobileNav();
       if (state.composerOpen) closeComposer();
       closeAllNavGroups();
     }
@@ -3085,6 +3100,7 @@ async function init() {
   renderAssistantScopeBadges();
   updateAssistantContext();
   toggleAssistantLauncher();
+  renderMobileNav();
 
   if (!state.youngPersonId) {
     await loadYoungPersonSelector();
