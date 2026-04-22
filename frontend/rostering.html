@@ -35,8 +35,8 @@
           <div class="eyebrow">Residential staffing</div>
           <h1>Home rostering and safer staffing</h1>
           <p>
-            Live rota management for children’s homes covering safer staffing,
-            absences, open shifts, notifications, acknowledgements, swaps and cover decisions.
+            Live rota management for children's homes covering safer staffing,
+            open shifts, approvals, swaps, acknowledgements, and staff notifications.
           </p>
         </div>
 
@@ -114,9 +114,14 @@
         <strong id="summaryOpenShifts">0</strong>
       </article>
 
+      <article class="summary-card">
+        <span class="summary-label">Approvals</span>
+        <strong id="summaryApprovals">0</strong>
+      </article>
+
       <article class="summary-card danger-card">
-        <span class="summary-label">Pending acknowledgements</span>
-        <strong id="summaryPendingAcks">0</strong>
+        <span class="summary-label">Safety alerts</span>
+        <strong id="summaryWarnings">0</strong>
       </article>
     </section>
 
@@ -125,7 +130,7 @@
         <header class="panel-head">
           <div>
             <h2>Staff available</h2>
-            <p>Drag to assign, search suitability, and manage leave or availability.</p>
+            <p>Drag to assign, search suitability, manage leave and availability.</p>
           </div>
           <span class="pill" id="staffCountBadge">0 staff</span>
         </header>
@@ -152,7 +157,6 @@
               <option value="sickness">Sickness</option>
               <option value="compassionate_leave">Compassionate leave</option>
               <option value="training">Training day</option>
-              <option value="unavailable">Unavailable</option>
               <option value="other">Other</option>
             </select>
           </label>
@@ -175,6 +179,33 @@
           </label>
 
           <button id="createLeaveBtn" class="secondary-btn" type="button">Save leave</button>
+        </section>
+
+        <section class="inline-form-card">
+          <h3>Record unavailable dates</h3>
+
+          <label class="control-field">
+            <span>Staff member</span>
+            <select id="availabilityStaffSelect"></select>
+          </label>
+
+          <div class="inline-grid">
+            <label class="control-field">
+              <span>Start</span>
+              <input id="availabilityStartInput" type="date" />
+            </label>
+            <label class="control-field">
+              <span>End</span>
+              <input id="availabilityEndInput" type="date" />
+            </label>
+          </div>
+
+          <label class="control-field">
+            <span>Reason</span>
+            <input id="availabilityReasonInput" type="text" placeholder="Unavailable, college, personal, study..." />
+          </label>
+
+          <button id="saveAvailabilityBtn" class="secondary-btn" type="button">Save availability block</button>
         </section>
       </aside>
 
@@ -225,18 +256,8 @@
         <section>
           <header class="panel-head">
             <div>
-              <h2>Open shifts and claims</h2>
-              <p>Available cover, urgent gaps and staff claims.</p>
-            </div>
-          </header>
-          <div id="openShiftPanel" class="side-list"></div>
-        </section>
-
-        <section>
-          <header class="panel-head">
-            <div>
-              <h2>Pending approvals</h2>
-              <p>Open shift claims and swaps awaiting manager action.</p>
+              <h2>Approval queue</h2>
+              <p>Open shift claims, swaps, and pending manager actions.</p>
             </div>
           </header>
           <div id="approvalPanel" class="side-list"></div>
@@ -245,8 +266,18 @@
         <section>
           <header class="panel-head">
             <div>
+              <h2>Open shifts and offers</h2>
+              <p>Available cover, urgent gaps, and claimable shifts.</p>
+            </div>
+          </header>
+          <div id="openShiftPanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
               <h2>Notifications</h2>
-              <p>Shift changes, acknowledgements and delivery status.</p>
+              <p>Shift changes, acknowledgements, and delivery status.</p>
             </div>
           </header>
           <div id="notificationPanel" class="side-list"></div>
@@ -255,18 +286,8 @@
         <section>
           <header class="panel-head">
             <div>
-              <h2>Acknowledgements</h2>
-              <p>Who still needs to confirm changes or assignments.</p>
-            </div>
-          </header>
-          <div id="ackPanel" class="side-list"></div>
-        </section>
-
-        <section>
-          <header class="panel-head">
-            <div>
               <h2>Absence impact</h2>
-              <p>Where sickness, leave or unavailability pressures cover.</p>
+              <p>Where sickness, leave, or unavailability pressures cover.</p>
             </div>
           </header>
           <div id="absencePanel" class="side-list"></div>
@@ -348,28 +369,25 @@
         <div class="drawer-row-actions">
           <button id="markOpenShiftBtn" class="secondary-btn" type="button">Mark as open shift</button>
           <button id="notifyEligibleStaffBtn" class="ghost-btn" type="button">Notify eligible staff</button>
-          <button id="simulateClaimBtn" class="ghost-btn" type="button">Simulate staff claim</button>
         </div>
         <p id="shiftOpenState"></p>
       </section>
 
       <section class="drawer-block">
-        <h3>Shift changes and swaps</h3>
+        <h3>Claims and swaps</h3>
         <div class="drawer-row-actions">
-          <button id="sendChangeNoticeBtn" class="secondary-btn" type="button">Send change notice</button>
+          <button id="createMockClaimBtn" class="secondary-btn" type="button">Simulate claim</button>
           <button id="createSwapRequestBtn" class="ghost-btn" type="button">Create swap request</button>
         </div>
-        <p id="shiftChangeState"></p>
+        <p id="shiftClaimState"></p>
       </section>
 
       <section class="drawer-block">
-        <h3>Approvals</h3>
+        <h3>Shift changes</h3>
         <div class="drawer-row-actions">
-          <button id="approveTopClaimBtn" class="primary-btn" type="button">Approve first claim</button>
-          <button id="declineTopClaimBtn" class="ghost-btn" type="button">Decline first claim</button>
-          <button id="approveTopSwapBtn" class="secondary-btn" type="button">Approve first swap</button>
+          <button id="sendChangeNoticeBtn" class="secondary-btn" type="button">Send change notice</button>
         </div>
-        <p id="shiftApprovalState"></p>
+        <p id="shiftChangeState"></p>
       </section>
 
       <section class="drawer-block">
