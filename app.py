@@ -151,6 +151,7 @@ logger = logging.getLogger("indicare.app")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 CSS_DIR = os.path.join(FRONTEND_DIR, "css")
 JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
@@ -185,8 +186,6 @@ PUBLIC_PREFIXES = (
     "/redoc",
     "/openapi",
     "/health",
-    "/academy.css",
-    "/academy.js",
 )
 
 PUBLIC_EXACT_PATHS = {
@@ -283,7 +282,11 @@ async def lifespan(_: FastAPI):
     init_legal_acceptance_table()
     init_mfa_tables()
     init_passkeys_table()
-    logger.info("IndiCare API started | env=%s revision=%s", settings.app_env, settings.app_revision)
+    logger.info(
+        "IndiCare API started | env=%s revision=%s",
+        settings.app_env,
+        settings.app_revision,
+    )
     try:
         yield
     finally:
@@ -517,6 +520,16 @@ def serve_page(file_name: str):
     return FileResponse(path)
 
 
+def serve_academy_page(file_name: str):
+    path = os.path.join(ACADEMY_DIR, file_name)
+    if not os.path.exists(path):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Academy page not found"},
+        )
+    return FileResponse(path)
+
+
 def serve_component(file_name: str):
     path = os.path.join(COMPONENTS_DIR, file_name)
     if not os.path.exists(path):
@@ -533,6 +546,16 @@ def register_page_route(app: FastAPI, route_path: str, file_name: str) -> None:
 
     endpoint.__name__ = (
         f"page_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    )
+    app.get(route_path)(endpoint)
+
+
+def register_academy_page_route(app: FastAPI, route_path: str, file_name: str) -> None:
+    def endpoint():
+        return serve_academy_page(file_name)
+
+    endpoint.__name__ = (
+        f"academy_page_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
     )
     app.get(route_path)(endpoint)
 
@@ -626,12 +649,23 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/childrens-home-os.html": "young-people-shell.html",
         "/rostering": "rostering.html",
         "/rostering.html": "rostering.html",
+    }
+
+    academy_page_routes = {
+        "/academy": "academy.html",
+        "/academy.html": "academy.html",
         "/academy-ui": "academy.html",
         "/academy-ui.html": "academy.html",
+        "/academy/module-detail.html": "module-detail.html",
+        "/academy/workbook-detail.html": "workbook-detail.html",
+        "/academy/qualification-detail.html": "qualification-detail.html",
     }
 
     for route_path, file_name in page_routes.items():
         register_page_route(app, route_path, file_name)
+
+    for route_path, file_name in academy_page_routes.items():
+        register_academy_page_route(app, route_path, file_name)
 
     @app.get("/ai-notes.css")
     def serve_ai_notes_css():
@@ -640,14 +674,6 @@ def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/ai-notes.js")
     def serve_ai_notes_js():
         return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
-
-    @app.get("/academy.css")
-    def serve_academy_css():
-        return FileResponse(os.path.join(FRONTEND_DIR, "academy.css"))
-
-    @app.get("/academy.js")
-    def serve_academy_js():
-        return FileResponse(os.path.join(FRONTEND_DIR, "academy.js"))
 
 
 def register_health_routes(app: FastAPI) -> None:
