@@ -651,7 +651,7 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/rostering.html": "rostering.html",
     }
 
-    academy_page_routes = {
+        academy_page_routes = {
         "/academy": "academy.html",
         "/academy.html": "academy.html",
         "/academy-ui": "academy.html",
@@ -659,6 +659,9 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/academy/module-detail.html": "module-detail.html",
         "/academy/workbook-detail.html": "workbook-detail.html",
         "/academy/qualification-detail.html": "qualification-detail.html",
+        "/academy/module-list.html": "module-list.html",
+        "/academy/qualification-list.html": "qualification-list.html",
+        "/academy/manager-compliance.html": "manager-compliance.html",
     }
 
     for route_path, file_name in page_routes.items():
