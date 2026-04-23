@@ -662,6 +662,7 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/academy/module-list.html": "module-list.html",
         "/academy/qualification-list.html": "qualification-list.html",
         "/academy/manager-compliance.html": "manager-compliance.html",
+        "/academy/evidence-portfolio.html": "evidence-portfolio.html",
     }
 
     for route_path, file_name in page_routes.items():
