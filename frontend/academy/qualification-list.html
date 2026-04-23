@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy • Qualifications</title>
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+
+  <body class="academy-page">
+    <div class="academy-layout">
+      <header class="academy-page-header">
+        <div class="academy-page-header__inner">
+          <div>
+            <div class="academy-page-header__eyebrow">IndiCare Academy</div>
+            <h1>Qualifications</h1>
+            <p class="academy-page-header__subtitle">
+              Browse qualifications, pathways and enrolment options for residential childcare staff.
+            </p>
+          </div>
+
+          <div class="academy-page-header__actions">
+            <a class="academy-button academy-button--ghost" href="/academy">
+              Back to Academy
+            </a>
+            <button
+              id="academyQualificationRefreshBtn"
+              type="button"
+              class="academy-button academy-button--secondary"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="academy-page-main">
+        <div id="academyQualificationError"></div>
+
+        <!-- Filters -->
+        <section class="academy-panel">
+          <div class="academy-panel__body">
+            <div class="academy-form-grid academy-grid academy-grid--two">
+              <div class="academy-form-row">
+                <label for="academyQualificationSearchInput">Search</label>
+                <input
+                  id="academyQualificationSearchInput"
+                  class="academy-input"
+                  type="text"
+                  placeholder="Search by title or awarding body"
+                />
+              </div>
+
+              <div class="academy-form-row">
+                <label for="academyQualificationLevelFilter">Level</label>
+                <select id="academyQualificationLevelFilter" class="academy-select">
+                  <option value="">All levels</option>
+                  <option value="2">Level 2</option>
+                  <option value="3">Level 3</option>
+                  <option value="4">Level 4</option>
+                  <option value="5">Level 5</option>
+                </select>
+              </div>
+
+              <div class="academy-form-row">
+                <label for="academyQualificationTypeFilter">Type</label>
+                <select id="academyQualificationTypeFilter" class="academy-select">
+                  <option value="">All types</option>
+                  <option value="diploma">Diploma</option>
+                  <option value="certificate">Certificate</option>
+                  <option value="award">Award</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="academy-toolbar" style="margin-top: 16px;">
+              <button
+                id="academyQualificationApplyBtn"
+                type="button"
+                class="academy-button"
+              >
+                Apply filters
+              </button>
+
+              <button
+                id="academyQualificationClearBtn"
+                type="button"
+                class="academy-button academy-button--ghost"
+              >
+                Clear filters
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- List -->
+        <section class="academy-section" style="margin-top: 28px;">
+          <div class="academy-section__header">
+            <h2>Available qualifications</h2>
+            <p id="academyQualificationCountText">
+              Loading qualifications…
+            </p>
+          </div>
+
+          <div id="academyQualificationList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Loading qualifications…</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-qualification-list.js"></script>
+  </body>
+</html>
