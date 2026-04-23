@@ -521,13 +521,19 @@ def serve_page(file_name: str):
 
 
 def serve_academy_page(file_name: str):
-    path = os.path.join(ACADEMY_DIR, file_name)
-    if not os.path.exists(path):
-        return JSONResponse(
-            status_code=404,
-            content={"error": "Academy page not found"},
-        )
-    return FileResponse(path)
+    candidate_paths = [
+        os.path.join(ACADEMY_DIR, file_name),
+        os.path.join(FRONTEND_DIR, file_name),
+    ]
+
+    for path in candidate_paths:
+        if os.path.exists(path):
+            return FileResponse(path)
+
+    return JSONResponse(
+        status_code=404,
+        content={"error": "Academy page not found"},
+    )
 
 
 def serve_component(file_name: str):
@@ -651,7 +657,7 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/rostering.html": "rostering.html",
     }
 
-        academy_page_routes = {
+    academy_page_routes = {
         "/academy": "academy.html",
         "/academy.html": "academy.html",
         "/academy-ui": "academy.html",
@@ -663,6 +669,7 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/academy/qualification-list.html": "qualification-list.html",
         "/academy/manager-compliance.html": "manager-compliance.html",
         "/academy/evidence-portfolio.html": "evidence-portfolio.html",
+        "/academy/certificates.html": "certificates.html",
     }
 
     for route_path, file_name in page_routes.items():
