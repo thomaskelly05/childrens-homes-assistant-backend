@@ -185,6 +185,8 @@ PUBLIC_PREFIXES = (
     "/redoc",
     "/openapi",
     "/health",
+    "/academy.css",
+    "/academy.js",
 )
 
 PUBLIC_EXACT_PATHS = {
@@ -258,6 +260,7 @@ ROUTERS = [
     "routers.qa_routes",
     "routers.exports_routes",
     "routers.rostering_routes",
+    "routers.academy_routes",
 ]
 
 
@@ -623,6 +626,8 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/childrens-home-os.html": "young-people-shell.html",
         "/rostering": "rostering.html",
         "/rostering.html": "rostering.html",
+        "/academy-ui": "academy.html",
+        "/academy-ui.html": "academy.html",
     }
 
     for route_path, file_name in page_routes.items():
@@ -635,6 +640,14 @@ def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/ai-notes.js")
     def serve_ai_notes_js():
         return FileResponse(os.path.join(FRONTEND_DIR, "ai-notes.js"))
+
+    @app.get("/academy.css")
+    def serve_academy_css():
+        return FileResponse(os.path.join(FRONTEND_DIR, "academy.css"))
+
+    @app.get("/academy.js")
+    def serve_academy_js():
+        return FileResponse(os.path.join(FRONTEND_DIR, "academy.js"))
 
 
 def register_health_routes(app: FastAPI) -> None:
