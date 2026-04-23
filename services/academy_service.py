@@ -17,20 +17,6 @@ from schemas.academy import (
 
 
 class AcademyService:
-    """
-    Core academy orchestration service.
-
-    This service is intentionally focused on:
-    - dashboard assembly
-    - module retrieval
-    - qualification retrieval
-    - compliance rollups
-    - learner profile summaries
-
-    Workbook editing / review flows should live in academy_workbook_service.py
-    Qualification workflow logic should live in academy_qualification_service.py
-    """
-
     # =========================================================
     # Modules
     # =========================================================
@@ -39,16 +25,16 @@ class AcademyService:
         self,
         *,
         category_id: int | None = None,
-        sccif_domain_code: str | None = None,
         learning_type: str | None = None,
         difficulty_level: str | None = None,
+        module_family: str | None = None,
         active: bool | None = True,
     ) -> list[dict[str, Any]]:
         return academy_db.list_modules(
             category_id=category_id,
-            sccif_domain_code=sccif_domain_code,
             learning_type=learning_type,
             difficulty_level=difficulty_level,
+            module_family=module_family,
             active=active,
         )
 
@@ -59,6 +45,12 @@ class AcademyService:
 
         lessons = academy_db.list_module_lessons(module_id)
         quiz = academy_db.get_module_quiz(module_id)
+        quiz_questions: list[dict[str, Any]] = []
+        if quiz:
+            quiz_questions = academy_db.list_quiz_questions(int(quiz["id"]))
+
+        scenarios = academy_db.list_module_scenarios(module_id)
+        reflections = academy_db.list_module_reflections(module_id)
         mappings = academy_db.list_module_mappings(module_id)
         workbooks = academy_db.list_workbooks(module_id=module_id, active=True)
 
@@ -70,10 +62,16 @@ class AcademyService:
             **module,
             "lessons": lessons,
             "quiz": quiz,
+            "quiz_questions": quiz_questions,
+            "scenarios": scenarios,
+            "reflections": reflections,
             "mappings": mappings,
             "workbooks": workbooks,
             "progress_status": (progress_row or {}).get("status"),
             "progress_percent": (progress_row or {}).get("progress_percent"),
+            "started_at": (progress_row or {}).get("started_at"),
+            "completed_at": (progress_row or {}).get("completed_at"),
+            "expires_at": (progress_row or {}).get("expires_at"),
         }
         return payload
 
@@ -124,6 +122,21 @@ class AcademyService:
 
         units = academy_db.list_qualification_units(qualification_id)
 
+        enriched_units: list[dict[str, Any]] = []
+        for unit in units:
+            workbook_rows = academy_db.list_workbooks(
+                qualification_unit_id=int(unit["id"]),
+                active=True,
+            )
+            mappings = academy_db.list_qualification_unit_mappings(int(unit["id"]))
+            enriched_units.append(
+                {
+                    **unit,
+                    "workbooks": workbook_rows,
+                    "mappings": mappings,
+                }
+            )
+
         enrolment: dict[str, Any] | None = None
         progress: dict[str, Any] | None = None
         if user_id is not None:
@@ -133,9 +146,11 @@ class AcademyService:
 
         payload = {
             **qualification,
-            "units": units,
+            "units": enriched_units,
+            "enrolment": enrolment,
+            "progress": progress,
             "enrolment_status": (enrolment or {}).get("status"),
-            "completion_percent": (progress or {}).get("completion_percent"),
+            "completion_percent": (progress or {}).get("completion_percent", 0),
             "completed_units": (progress or {}).get("completed_units", 0),
             "total_units": (progress or {}).get("total_units", len(units)),
         }
@@ -237,7 +252,7 @@ class AcademyService:
             1 for row in qualification_rows if row.get("status") in ("enrolled", "in_progress", "on_hold")
         )
 
-        payload = AcademyDashboardPayload(
+        return AcademyDashboardPayload(
             user=AcademyUserSummary(
                 id=user_id,
                 first_name=first_name,
@@ -259,7 +274,6 @@ class AcademyService:
             my_qualifications=my_qualifications,
             review_queue=[],
         )
-        return payload
 
     # =========================================================
     # Review queue
