@@ -3,6 +3,19 @@ import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 
+const TRAINING_CENTRE_STYLE_ID = "academy-training-centre-styles";
+const TRAINING_CENTRE_STYLE_HREF = "/js/features/training-centre.css";
+
+function ensureTrainingCentreStyles() {
+  if (document.getElementById(TRAINING_CENTRE_STYLE_ID)) return;
+
+  const link = document.createElement("link");
+  link.id = TRAINING_CENTRE_STYLE_ID;
+  link.rel = "stylesheet";
+  link.href = TRAINING_CENTRE_STYLE_HREF;
+  document.head.appendChild(link);
+}
+
 function getMount() {
   return (
     els.trainingCentre ||
@@ -26,11 +39,7 @@ function getCurrentUserName() {
 
 function getCurrentUserRole() {
   const user = state.currentUser || {};
-  return String(
-    user.role ||
-      user.job_title ||
-      "staff"
-  )
+  return String(user.role || user.job_title || "staff")
     .trim()
     .toLowerCase();
 }
@@ -155,9 +164,6 @@ function renderDashboard(payload) {
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <span class="academy-badge academy-badge--primary">${escapeHtml(toTitleCase(role))}</span>
-            <button class="academy-button academy-button--ghost" id="academyOpenStandaloneBtn" type="button">
-              Open full Academy
-            </button>
             <button class="academy-button academy-button--secondary" id="academyRefreshInlineBtn" type="button">
               Refresh
             </button>
@@ -299,16 +305,11 @@ function bindEvents(mount) {
       loadTrainingCentre();
     });
   }
-
-  const openStandaloneBtn = mount.querySelector("#academyOpenStandaloneBtn");
-  if (openStandaloneBtn) {
-    openStandaloneBtn.addEventListener("click", () => {
-      window.location.href = "/frontend/academy.html";
-    });
-  }
 }
 
 export async function loadTrainingCentre() {
+  ensureTrainingCentreStyles();
+
   const mount = getMount();
   if (!mount) return;
 
