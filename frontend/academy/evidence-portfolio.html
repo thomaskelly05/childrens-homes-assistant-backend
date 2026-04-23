@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy • Evidence Portfolio</title>
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+
+  <body class="academy-page">
+    <div class="academy-layout">
+      <header class="academy-page-header">
+        <div class="academy-page-header__inner">
+          <div>
+            <div class="academy-page-header__eyebrow">IndiCare Academy</div>
+            <h1>Evidence Portfolio</h1>
+            <p class="academy-page-header__subtitle">
+              View uploaded evidence, linked practice evidence and items supporting workbooks and qualifications.
+            </p>
+          </div>
+
+          <div class="academy-page-header__actions">
+            <a class="academy-button academy-button--ghost" href="/academy">
+              Back to Academy
+            </a>
+            <button
+              id="academyEvidenceRefreshBtn"
+              type="button"
+              class="academy-button academy-button--secondary"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="academy-page-main">
+        <div id="academyEvidenceError"></div>
+
+        <section class="academy-panel">
+          <div class="academy-panel__body">
+            <div class="academy-form-grid academy-grid academy-grid--two">
+              <div class="academy-form-row">
+                <label for="academyEvidenceSearchInput">Search evidence</label>
+                <input
+                  id="academyEvidenceSearchInput"
+                  class="academy-input"
+                  type="text"
+                  placeholder="Search by title, description or reference"
+                />
+              </div>
+
+              <div class="academy-form-row">
+                <label for="academyEvidenceTypeFilter">Evidence type</label>
+                <select id="academyEvidenceTypeFilter" class="academy-select">
+                  <option value="">All evidence types</option>
+                  <option value="observation">Observation</option>
+                  <option value="professional_discussion">Professional discussion</option>
+                  <option value="work_product">Work product</option>
+                  <option value="certificate">Certificate</option>
+                  <option value="reflective_account">Reflective account</option>
+                  <option value="witness_statement">Witness statement</option>
+                  <option value="document_upload">Document upload</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="academy-toolbar" style="margin-top: 16px;">
+              <button
+                id="academyEvidenceApplyBtn"
+                type="button"
+                class="academy-button"
+              >
+                Apply filters
+              </button>
+
+              <button
+                id="academyEvidenceClearBtn"
+                type="button"
+                class="academy-button academy-button--ghost"
+              >
+                Clear filters
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 28px;">
+          <div class="academy-section__header">
+            <h2>My evidence</h2>
+            <p id="academyEvidenceCountText">
+              Loading evidence…
+            </p>
+          </div>
+
+          <div id="academyEvidenceList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Loading evidence portfolio…</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-evidence-portfolio.js"></script>
+  </body>
+</html>
