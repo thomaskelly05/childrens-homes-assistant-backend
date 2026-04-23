@@ -9,7 +9,9 @@
     statWorkbooks: document.getElementById("academyStatWorkbooks"),
     statQualifications: document.getElementById("academyStatQualifications"),
 
+    myLearningList: document.getElementById("academyMyLearningList"),
     myWorkbooksList: document.getElementById("academyMyWorkbooksList"),
+    myQualificationsList: document.getElementById("academyMyQualificationsList"),
     reviewQueueList: document.getElementById("academyReviewQueueList"),
   };
 
@@ -72,13 +74,13 @@
   function getBadgeTone(status) {
     const safe = String(status || "").trim().toLowerCase();
 
-    if (["completed", "accepted", "passed", "competent"].includes(safe)) {
+    if (["completed", "accepted", "passed", "competent", "achieved"].includes(safe)) {
       return "success";
     }
     if (["overdue", "needs_amendment", "refer", "expired", "withdrawn"].includes(safe)) {
       return "danger";
     }
-    if (["submitted", "under_review", "in_progress", "draft", "enrolled", "on_hold"].includes(safe)) {
+    if (["submitted", "under_review", "in_progress", "draft", "enrolled", "on_hold", "not_started"].includes(safe)) {
       return "warning";
     }
     return "neutral";
@@ -214,11 +216,27 @@
       els.statQualifications.textContent = String(stats.qualifications_active || 0);
     }
 
+    if (els.myLearningList) {
+      els.myLearningList.innerHTML = renderCardList(
+        payload.my_learning || [],
+        "No learning items to show.",
+        "Open module"
+      );
+    }
+
     if (els.myWorkbooksList) {
       els.myWorkbooksList.innerHTML = renderCardList(
         payload.my_workbooks || [],
         "No workbook activity to show.",
         "Open workbook"
+      );
+    }
+
+    if (els.myQualificationsList) {
+      els.myQualificationsList.innerHTML = renderCardList(
+        payload.my_qualifications || [],
+        "No qualifications to show.",
+        "Open qualification"
       );
     }
 
@@ -254,9 +272,19 @@
         els.currentUserRole.textContent = "Unavailable";
       }
 
+      if (els.myLearningList) {
+        els.myLearningList.innerHTML =
+          '<div class="academy-empty-state">Failed to load learning activity.</div>';
+      }
+
       if (els.myWorkbooksList) {
         els.myWorkbooksList.innerHTML =
           '<div class="academy-empty-state">Failed to load workbook activity.</div>';
+      }
+
+      if (els.myQualificationsList) {
+        els.myQualificationsList.innerHTML =
+          '<div class="academy-empty-state">Failed to load qualifications.</div>';
       }
 
       if (els.reviewQueueList) {
