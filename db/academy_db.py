@@ -56,6 +56,110 @@ def _build_where(filters: list[str]) -> str:
 
 
 # =========================================================
+# Categories / Frameworks
+# =========================================================
+
+
+def list_categories(active: bool | None = True) -> list[dict[str, Any]]:
+    filters: list[str] = []
+    params: list[Any] = []
+
+    if active is not None:
+        filters.append("c.active = %s")
+        params.append(active)
+
+    query = f"""
+        SELECT
+            c.id,
+            c.code,
+            c.name,
+            c.description,
+            c.audience_scope,
+            c.sort_order,
+            c.active,
+            c.created_at
+        FROM academy_categories c
+        {_build_where(filters)}
+        ORDER BY c.sort_order ASC, c.name ASC
+    """
+    return _fetch_all(query, tuple(params))
+
+
+def list_frameworks(active: bool | None = True) -> list[dict[str, Any]]:
+    filters: list[str] = []
+    params: list[Any] = []
+
+    if active is not None:
+        filters.append("f.active = %s")
+        params.append(active)
+
+    query = f"""
+        SELECT
+            f.id,
+            f.framework_code,
+            f.framework_name,
+            f.framework_type,
+            f.description,
+            f.active,
+            f.sort_order,
+            f.created_at
+        FROM academy_frameworks f
+        {_build_where(filters)}
+        ORDER BY f.sort_order ASC, f.framework_name ASC
+    """
+    return _fetch_all(query, tuple(params))
+
+
+def list_framework_items(
+    *,
+    framework_code: str | None = None,
+    framework_id: int | None = None,
+    active: bool | None = True,
+) -> list[dict[str, Any]]:
+    filters: list[str] = []
+    params: list[Any] = []
+
+    if framework_code:
+        filters.append("f.framework_code = %s")
+        params.append(framework_code)
+
+    if framework_id is not None:
+        filters.append("fi.framework_id = %s")
+        params.append(framework_id)
+
+    if active is not None:
+        filters.append("fi.active = %s")
+        params.append(active)
+
+    query = f"""
+        SELECT
+            fi.id,
+            fi.framework_id,
+            f.framework_code,
+            f.framework_name,
+            f.framework_type,
+            fi.item_code,
+            fi.item_name,
+            fi.item_short_label,
+            fi.item_description,
+            fi.external_reference,
+            fi.parent_item_id,
+            fi.sort_order,
+            fi.active,
+            fi.created_at
+        FROM academy_framework_items fi
+        INNER JOIN academy_frameworks f
+            ON f.id = fi.framework_id
+        {_build_where(filters)}
+        ORDER BY
+            f.sort_order ASC,
+            fi.sort_order ASC,
+            fi.item_name ASC
+    """
+    return _fetch_all(query, tuple(params))
+
+
+# =========================================================
 # Modules
 # =========================================================
 
@@ -63,9 +167,9 @@ def _build_where(filters: list[str]) -> str:
 def list_modules(
     *,
     category_id: int | None = None,
-    sccif_domain_code: str | None = None,
     learning_type: str | None = None,
     difficulty_level: str | None = None,
+    module_family: str | None = None,
     active: bool | None = True,
 ) -> list[dict[str, Any]]:
     filters: list[str] = []
@@ -75,10 +179,6 @@ def list_modules(
         filters.append("m.category_id = %s")
         params.append(category_id)
 
-    if sccif_domain_code:
-        filters.append("m.sccif_domain_code = %s")
-        params.append(sccif_domain_code)
-
     if learning_type:
         filters.append("m.learning_type = %s")
         params.append(learning_type)
@@ -86,6 +186,10 @@ def list_modules(
     if difficulty_level:
         filters.append("m.difficulty_level = %s")
         params.append(difficulty_level)
+
+    if module_family:
+        filters.append("m.module_family = %s")
+        params.append(module_family)
 
     if active is not None:
         filters.append("m.active = %s")
@@ -95,26 +199,28 @@ def list_modules(
         SELECT
             m.id,
             m.category_id,
+            c.code AS category_code,
             c.name AS category_name,
             m.code,
             m.title,
             m.summary,
             m.description,
-            m.sccif_domain_code,
+            m.module_family,
             m.learning_type,
             m.difficulty_level,
+            m.delivery_mode,
             m.estimated_minutes,
-            m.active,
-            m.version,
             m.requires_quiz,
             m.requires_workbook,
             m.requires_assessor_review,
             m.requires_manager_signoff,
             m.certificate_on_completion,
             m.renewal_months,
+            m.active,
+            m.version,
             m.created_at,
             m.updated_at
-        FROM modules m
+        FROM academy_modules m
         LEFT JOIN academy_categories c
             ON c.id = m.category_id
         {_build_where(filters)}
@@ -128,26 +234,28 @@ def get_module_by_id(module_id: int) -> dict[str, Any] | None:
         SELECT
             m.id,
             m.category_id,
+            c.code AS category_code,
             c.name AS category_name,
             m.code,
             m.title,
             m.summary,
             m.description,
-            m.sccif_domain_code,
+            m.module_family,
             m.learning_type,
             m.difficulty_level,
+            m.delivery_mode,
             m.estimated_minutes,
-            m.active,
-            m.version,
             m.requires_quiz,
             m.requires_workbook,
             m.requires_assessor_review,
             m.requires_manager_signoff,
             m.certificate_on_completion,
             m.renewal_months,
+            m.active,
+            m.version,
             m.created_at,
             m.updated_at
-        FROM modules m
+        FROM academy_modules m
         LEFT JOIN academy_categories c
             ON c.id = m.category_id
         WHERE m.id = %s
@@ -156,26 +264,62 @@ def get_module_by_id(module_id: int) -> dict[str, Any] | None:
     return _fetch_one(query, (module_id,))
 
 
+def get_module_by_code(code: str) -> dict[str, Any] | None:
+    query = """
+        SELECT
+            m.id,
+            m.category_id,
+            c.code AS category_code,
+            c.name AS category_name,
+            m.code,
+            m.title,
+            m.summary,
+            m.description,
+            m.module_family,
+            m.learning_type,
+            m.difficulty_level,
+            m.delivery_mode,
+            m.estimated_minutes,
+            m.requires_quiz,
+            m.requires_workbook,
+            m.requires_assessor_review,
+            m.requires_manager_signoff,
+            m.certificate_on_completion,
+            m.renewal_months,
+            m.active,
+            m.version,
+            m.created_at,
+            m.updated_at
+        FROM academy_modules m
+        LEFT JOIN academy_categories c
+            ON c.id = m.category_id
+        WHERE m.code = %s
+        LIMIT 1
+    """
+    return _fetch_one(query, (code,))
+
+
 def create_module(payload: dict[str, Any]) -> dict[str, Any] | None:
     query = """
-        INSERT INTO modules (
+        INSERT INTO academy_modules (
             category_id,
             code,
             title,
             summary,
             description,
-            sccif_domain_code,
+            module_family,
             learning_type,
             difficulty_level,
+            delivery_mode,
             estimated_minutes,
-            active,
-            version,
             requires_quiz,
             requires_workbook,
             requires_assessor_review,
             requires_manager_signoff,
             certificate_on_completion,
-            renewal_months
+            renewal_months,
+            active,
+            version
         )
         VALUES (
             %(category_id)s,
@@ -183,18 +327,19 @@ def create_module(payload: dict[str, Any]) -> dict[str, Any] | None:
             %(title)s,
             %(summary)s,
             %(description)s,
-            %(sccif_domain_code)s,
+            %(module_family)s,
             %(learning_type)s,
             %(difficulty_level)s,
+            %(delivery_mode)s,
             %(estimated_minutes)s,
-            %(active)s,
-            %(version)s,
             %(requires_quiz)s,
             %(requires_workbook)s,
             %(requires_assessor_review)s,
             %(requires_manager_signoff)s,
             %(certificate_on_completion)s,
-            %(renewal_months)s
+            %(renewal_months)s,
+            %(active)s,
+            %(version)s
         )
         RETURNING *
     """
@@ -213,18 +358,19 @@ def update_module(module_id: int, updates: dict[str, Any]) -> dict[str, Any] | N
         "title",
         "summary",
         "description",
-        "sccif_domain_code",
+        "module_family",
         "learning_type",
         "difficulty_level",
+        "delivery_mode",
         "estimated_minutes",
-        "active",
-        "version",
         "requires_quiz",
         "requires_workbook",
         "requires_assessor_review",
         "requires_manager_signoff",
         "certificate_on_completion",
         "renewal_months",
+        "active",
+        "version",
     }
 
     set_clauses: list[str] = []
@@ -243,7 +389,7 @@ def update_module(module_id: int, updates: dict[str, Any]) -> dict[str, Any] | N
     params.append(module_id)
 
     query = f"""
-        UPDATE modules
+        UPDATE academy_modules
         SET {", ".join(set_clauses)}
         WHERE id = %s
         RETURNING *
@@ -266,7 +412,7 @@ def list_module_lessons(module_id: int) -> list[dict[str, Any]]:
             version,
             created_at,
             updated_at
-        FROM lessons
+        FROM academy_lessons
         WHERE module_id = %s
         ORDER BY sort_order ASC, id ASC
     """
@@ -284,12 +430,81 @@ def get_module_quiz(module_id: int) -> dict[str, Any] | None:
             randomise_questions,
             version,
             created_at
-        FROM quizzes
+        FROM academy_quizzes
         WHERE module_id = %s
         ORDER BY id ASC
         LIMIT 1
     """
     return _fetch_one(query, (module_id,))
+
+
+def list_quiz_questions(quiz_id: int) -> list[dict[str, Any]]:
+    query = """
+        SELECT
+            q.id,
+            q.quiz_id,
+            q.question_text,
+            q.question_type,
+            q.explanation,
+            q.sort_order,
+            COALESCE(
+                json_agg(
+                    json_build_object(
+                        'id', a.id,
+                        'answer_text', a.answer_text,
+                        'is_correct', a.is_correct,
+                        'sort_order', a.sort_order
+                    )
+                    ORDER BY a.sort_order ASC, a.id ASC
+                ) FILTER (WHERE a.id IS NOT NULL),
+                '[]'::json
+            ) AS answers
+        FROM academy_quiz_questions q
+        LEFT JOIN academy_quiz_answers a
+            ON a.question_id = q.id
+        WHERE q.quiz_id = %s
+        GROUP BY
+            q.id,
+            q.quiz_id,
+            q.question_text,
+            q.question_type,
+            q.explanation,
+            q.sort_order
+        ORDER BY q.sort_order ASC, q.id ASC
+    """
+    return _fetch_all(query, (quiz_id,))
+
+
+def list_module_scenarios(module_id: int) -> list[dict[str, Any]]:
+    query = """
+        SELECT
+            id,
+            module_id,
+            title,
+            scenario_text,
+            expected_response_guidance,
+            scoring_rubric,
+            created_at
+        FROM academy_scenarios
+        WHERE module_id = %s
+        ORDER BY id ASC
+    """
+    return _fetch_all(query, (module_id,))
+
+
+def list_module_reflections(module_id: int) -> list[dict[str, Any]]:
+    query = """
+        SELECT
+            id,
+            module_id,
+            prompt_text,
+            guidance_text,
+            created_at
+        FROM academy_reflections
+        WHERE module_id = %s
+        ORDER BY id ASC
+    """
+    return _fetch_all(query, (module_id,))
 
 
 def list_module_mappings(module_id: int) -> list[dict[str, Any]]:
@@ -298,25 +513,25 @@ def list_module_mappings(module_id: int) -> list[dict[str, Any]]:
             mm.id,
             mm.module_id,
             mm.mapping_note,
-            qs.id AS quality_standard_id,
-            qs.code AS quality_standard_code,
-            qs.name AS quality_standard_name,
-            qs.regulation_number AS quality_standard_regulation_number,
-            rr.id AS regulation_ref_id,
-            rr.regulation_number,
-            rr.title AS regulation_title,
-            ot.id AS ofsted_theme_id,
-            ot.code AS ofsted_theme_code,
-            ot.name AS ofsted_theme_name
-        FROM module_mappings mm
-        LEFT JOIN quality_standards qs
-            ON qs.id = mm.quality_standard_id
-        LEFT JOIN regulation_refs rr
-            ON rr.id = mm.regulation_ref_id
-        LEFT JOIN ofsted_themes ot
-            ON ot.id = mm.ofsted_theme_id
+            fi.id AS framework_item_id,
+            fi.item_code AS framework_item_code,
+            fi.item_name AS framework_item_name,
+            fi.item_short_label,
+            fi.external_reference,
+            f.id AS framework_id,
+            f.framework_code,
+            f.framework_name,
+            f.framework_type
+        FROM academy_module_mappings mm
+        INNER JOIN academy_framework_items fi
+            ON fi.id = mm.framework_item_id
+        INNER JOIN academy_frameworks f
+            ON f.id = fi.framework_id
         WHERE mm.module_id = %s
-        ORDER BY mm.id ASC
+        ORDER BY
+            f.sort_order ASC,
+            fi.sort_order ASC,
+            fi.item_name ASC
     """
     return _fetch_all(query, (module_id,))
 
@@ -367,7 +582,7 @@ def list_workbooks(
             w.active,
             w.created_at,
             w.updated_at
-        FROM workbooks w
+        FROM academy_workbooks w
         {_build_where(filters)}
         ORDER BY w.title ASC
     """
@@ -390,11 +605,34 @@ def get_workbook_by_id(workbook_id: int) -> dict[str, Any] | None:
             w.active,
             w.created_at,
             w.updated_at
-        FROM workbooks w
+        FROM academy_workbooks w
         WHERE w.id = %s
         LIMIT 1
     """
     return _fetch_one(query, (workbook_id,))
+
+
+def get_workbook_by_code(code: str) -> dict[str, Any] | None:
+    query = """
+        SELECT
+            w.id,
+            w.qualification_unit_id,
+            w.module_id,
+            w.code,
+            w.title,
+            w.workbook_type,
+            w.version,
+            w.is_assessable,
+            w.requires_assessor_review,
+            w.requires_manager_confirmation,
+            w.active,
+            w.created_at,
+            w.updated_at
+        FROM academy_workbooks w
+        WHERE w.code = %s
+        LIMIT 1
+    """
+    return _fetch_one(query, (code,))
 
 
 def list_workbook_sections(workbook_id: int) -> list[dict[str, Any]]:
@@ -407,7 +645,7 @@ def list_workbook_sections(workbook_id: int) -> list[dict[str, Any]]:
             section_type,
             sort_order,
             required
-        FROM workbook_sections
+        FROM academy_workbook_sections
         WHERE workbook_id = %s
         ORDER BY sort_order ASC, id ASC
     """
@@ -419,6 +657,8 @@ def list_workbook_questions(workbook_id: int) -> list[dict[str, Any]]:
         SELECT
             q.id,
             q.section_id,
+            s.title AS section_title,
+            s.section_type,
             q.prompt_text,
             q.response_type,
             q.guidance_text,
@@ -426,8 +666,8 @@ def list_workbook_questions(workbook_id: int) -> list[dict[str, Any]]:
             q.max_words,
             q.required,
             q.sort_order
-        FROM workbook_questions q
-        INNER JOIN workbook_sections s
+        FROM academy_workbook_questions q
+        INNER JOIN academy_workbook_sections s
             ON s.id = q.section_id
         WHERE s.workbook_id = %s
         ORDER BY s.sort_order ASC, q.sort_order ASC, q.id ASC
@@ -445,7 +685,7 @@ def create_workbook_submission(
     due_date: date | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO workbook_submissions (
+        INSERT INTO academy_workbook_submissions (
             workbook_id,
             user_id,
             qualification_enrolment_id,
@@ -494,7 +734,7 @@ def get_workbook_submission_by_id(submission_id: int) -> dict[str, Any] | None:
             ws.locked_at,
             ws.created_at,
             ws.updated_at
-        FROM workbook_submissions ws
+        FROM academy_workbook_submissions ws
         WHERE ws.id = %s
         LIMIT 1
     """
@@ -523,7 +763,7 @@ def get_latest_workbook_submission(workbook_id: int, user_id: int) -> dict[str, 
             ws.locked_at,
             ws.created_at,
             ws.updated_at
-        FROM workbook_submissions ws
+        FROM academy_workbook_submissions ws
         WHERE ws.workbook_id = %s
           AND ws.user_id = %s
         ORDER BY ws.attempt_number DESC, ws.created_at DESC
@@ -570,8 +810,8 @@ def list_user_workbook_submissions(
                 THEN TRUE
                 ELSE FALSE
             END AS is_overdue
-        FROM workbook_submissions ws
-        INNER JOIN workbooks w
+        FROM academy_workbook_submissions ws
+        INNER JOIN academy_workbooks w
             ON w.id = ws.workbook_id
         {_build_where(filters)}
         ORDER BY ws.updated_at DESC, ws.id DESC
@@ -587,7 +827,7 @@ def upsert_workbook_answer(
     answer_json: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO workbook_answers (
+        INSERT INTO academy_workbook_answers (
             submission_id,
             question_id,
             answer_text,
@@ -618,7 +858,7 @@ def list_workbook_answers(submission_id: int) -> list[dict[str, Any]]:
             answer_text,
             answer_json,
             saved_at
-        FROM workbook_answers
+        FROM academy_workbook_answers
         WHERE submission_id = %s
         ORDER BY question_id ASC
     """
@@ -627,7 +867,7 @@ def list_workbook_answers(submission_id: int) -> list[dict[str, Any]]:
 
 def mark_workbook_submission_submitted(submission_id: int) -> dict[str, Any] | None:
     query = """
-        UPDATE workbook_submissions
+        UPDATE academy_workbook_submissions
         SET
             status = 'submitted',
             submitted_at = NOW(),
@@ -647,7 +887,7 @@ def update_workbook_submission_review(
     assessor_user_id: int,
 ) -> dict[str, Any] | None:
     query = """
-        UPDATE workbook_submissions
+        UPDATE academy_workbook_submissions
         SET
             status = %s,
             assessor_decision = %s,
@@ -673,7 +913,7 @@ def update_workbook_submission_review(
 
 def complete_workbook_submission(submission_id: int) -> dict[str, Any] | None:
     query = """
-        UPDATE workbook_submissions
+        UPDATE academy_workbook_submissions
         SET
             status = 'completed',
             completed_at = NOW(),
@@ -692,7 +932,7 @@ def add_workbook_feedback(
     feedback_text: str,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO workbook_feedback (
+        INSERT INTO academy_workbook_feedback (
             submission_id,
             feedback_by_user_id,
             feedback_type,
@@ -717,7 +957,7 @@ def list_workbook_feedback(submission_id: int) -> list[dict[str, Any]]:
             feedback_type,
             feedback_text,
             created_at
-        FROM workbook_feedback
+        FROM academy_workbook_feedback
         WHERE submission_id = %s
         ORDER BY created_at ASC, id ASC
     """
@@ -741,7 +981,7 @@ def create_workbook_resubmission(
     next_attempt = int(previous.get("attempt_number") or 1) + 1
 
     query = """
-        INSERT INTO workbook_submissions (
+        INSERT INTO academy_workbook_submissions (
             workbook_id,
             user_id,
             qualification_enrolment_id,
@@ -771,7 +1011,7 @@ def create_workbook_resubmission(
         return None
 
     link_query = """
-        INSERT INTO workbook_resubmissions (
+        INSERT INTO academy_workbook_resubmissions (
             previous_submission_id,
             new_submission_id
         )
@@ -804,7 +1044,7 @@ def list_user_evidence(user_id: int) -> list[dict[str, Any]]:
             evidence_date,
             created_by_user_id,
             created_at
-        FROM evidence_items
+        FROM academy_evidence_items
         WHERE user_id = %s
         ORDER BY created_at DESC, id DESC
     """
@@ -824,7 +1064,7 @@ def get_evidence_by_id(evidence_id: int) -> dict[str, Any] | None:
             evidence_date,
             created_by_user_id,
             created_at
-        FROM evidence_items
+        FROM academy_evidence_items
         WHERE id = %s
         LIMIT 1
     """
@@ -843,7 +1083,7 @@ def create_evidence(
     evidence_date: date | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO evidence_items (
+        INSERT INTO academy_evidence_items (
             user_id,
             evidence_type,
             title,
@@ -896,7 +1136,7 @@ def update_evidence(evidence_id: int, updates: dict[str, Any]) -> dict[str, Any]
     params.append(evidence_id)
 
     query = f"""
-        UPDATE evidence_items
+        UPDATE academy_evidence_items
         SET {", ".join(set_clauses)}
         WHERE id = %s
         RETURNING *
@@ -913,7 +1153,7 @@ def link_evidence(
     competency_id: int | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO evidence_links (
+        INSERT INTO academy_evidence_links (
             evidence_item_id,
             workbook_submission_id,
             qualification_unit_id,
@@ -944,7 +1184,7 @@ def review_evidence(
     comments: str | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO evidence_reviews (
+        INSERT INTO academy_evidence_reviews (
             evidence_item_id,
             reviewed_by_user_id,
             decision,
@@ -981,13 +1221,16 @@ def list_qualifications(active: bool | None = True) -> list[dict[str, Any]]:
             q.level,
             q.awarding_body,
             q.qualification_type,
+            q.qualification_family,
             q.description,
             q.total_credits,
+            q.mandatory_unit_count,
+            q.optional_unit_count,
             q.active,
             q.version,
             q.created_at,
             q.updated_at
-        FROM qualifications q
+        FROM academy_qualifications q
         {_build_where(filters)}
         ORDER BY q.level ASC, q.title ASC
     """
@@ -1003,17 +1246,45 @@ def get_qualification_by_id(qualification_id: int) -> dict[str, Any] | None:
             level,
             awarding_body,
             qualification_type,
+            qualification_family,
             description,
             total_credits,
+            mandatory_unit_count,
+            optional_unit_count,
             active,
             version,
             created_at,
             updated_at
-        FROM qualifications
+        FROM academy_qualifications
         WHERE id = %s
         LIMIT 1
     """
     return _fetch_one(query, (qualification_id,))
+
+
+def get_qualification_by_code(code: str) -> dict[str, Any] | None:
+    query = """
+        SELECT
+            id,
+            code,
+            title,
+            level,
+            awarding_body,
+            qualification_type,
+            qualification_family,
+            description,
+            total_credits,
+            mandatory_unit_count,
+            optional_unit_count,
+            active,
+            version,
+            created_at,
+            updated_at
+        FROM academy_qualifications
+        WHERE code = %s
+        LIMIT 1
+    """
+    return _fetch_one(query, (code,))
 
 
 def list_qualification_units(qualification_id: int) -> list[dict[str, Any]]:
@@ -1023,6 +1294,7 @@ def list_qualification_units(qualification_id: int) -> list[dict[str, Any]]:
             qualification_id,
             unit_code,
             title,
+            unit_group,
             credit_value,
             guided_learning_hours,
             mandatory,
@@ -1034,7 +1306,7 @@ def list_qualification_units(qualification_id: int) -> list[dict[str, Any]]:
             active,
             created_at,
             updated_at
-        FROM qualification_units
+        FROM academy_qualification_units
         WHERE qualification_id = %s
           AND active = TRUE
         ORDER BY sort_order ASC, id ASC
@@ -1049,6 +1321,7 @@ def get_qualification_unit_by_id(unit_id: int) -> dict[str, Any] | None:
             qualification_id,
             unit_code,
             title,
+            unit_group,
             credit_value,
             guided_learning_hours,
             mandatory,
@@ -1060,11 +1333,45 @@ def get_qualification_unit_by_id(unit_id: int) -> dict[str, Any] | None:
             active,
             created_at,
             updated_at
-        FROM qualification_units
+        FROM academy_qualification_units
         WHERE id = %s
         LIMIT 1
     """
     return _fetch_one(query, (unit_id,))
+
+
+def list_qualification_unit_mappings(unit_id: int) -> list[dict[str, Any]]:
+    query = """
+        SELECT
+            qum.id,
+            qum.qualification_unit_id,
+            qum.module_id,
+            m.code AS module_code,
+            m.title AS module_title,
+            qum.mapping_note,
+            fi.id AS framework_item_id,
+            fi.item_code AS framework_item_code,
+            fi.item_name AS framework_item_name,
+            fi.item_short_label,
+            fi.external_reference,
+            f.id AS framework_id,
+            f.framework_code,
+            f.framework_name,
+            f.framework_type
+        FROM academy_qualification_unit_mappings qum
+        LEFT JOIN academy_modules m
+            ON m.id = qum.module_id
+        LEFT JOIN academy_framework_items fi
+            ON fi.id = qum.framework_item_id
+        LEFT JOIN academy_frameworks f
+            ON f.id = fi.framework_id
+        WHERE qum.qualification_unit_id = %s
+        ORDER BY
+            f.sort_order ASC NULLS LAST,
+            fi.sort_order ASC NULLS LAST,
+            m.title ASC NULLS LAST
+    """
+    return _fetch_all(query, (unit_id,))
 
 
 def enrol_user_on_qualification(
@@ -1078,7 +1385,7 @@ def enrol_user_on_qualification(
     target_end_date: date | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO user_qualification_enrolments (
+        INSERT INTO academy_user_qualification_enrolments (
             user_id,
             qualification_id,
             enrolled_by_user_id,
@@ -1126,7 +1433,7 @@ def get_user_qualification_enrolment(
             notes,
             created_at,
             updated_at
-        FROM user_qualification_enrolments
+        FROM academy_user_qualification_enrolments
         WHERE user_id = %s
           AND qualification_id = %s
         LIMIT 1
@@ -1151,7 +1458,7 @@ def get_qualification_enrolment_by_id(enrolment_id: int) -> dict[str, Any] | Non
             notes,
             created_at,
             updated_at
-        FROM user_qualification_enrolments
+        FROM academy_user_qualification_enrolments
         WHERE id = %s
         LIMIT 1
     """
@@ -1188,7 +1495,7 @@ def update_qualification_enrolment(
     params.append(enrolment_id)
 
     query = f"""
-        UPDATE user_qualification_enrolments
+        UPDATE academy_user_qualification_enrolments
         SET {", ".join(set_clauses)}
         WHERE id = %s
         RETURNING *
@@ -1216,8 +1523,8 @@ def list_user_qualification_enrolments(user_id: int) -> list[dict[str, Any]]:
             uqe.notes,
             uqe.created_at,
             uqe.updated_at
-        FROM user_qualification_enrolments uqe
-        INNER JOIN qualifications q
+        FROM academy_user_qualification_enrolments uqe
+        INNER JOIN academy_qualifications q
             ON q.id = uqe.qualification_id
         WHERE uqe.user_id = %s
         ORDER BY q.level ASC, q.title ASC
@@ -1255,13 +1562,13 @@ def get_user_qualification_progress(enrolment_id: int) -> dict[str, Any] | None:
                     2
                 )
             END AS completion_percent
-        FROM user_qualification_enrolments uqe
-        INNER JOIN qualifications q
+        FROM academy_user_qualification_enrolments uqe
+        INNER JOIN academy_qualifications q
             ON q.id = uqe.qualification_id
-        LEFT JOIN qualification_units qu
+        LEFT JOIN academy_qualification_units qu
             ON qu.qualification_id = q.id
            AND qu.active = TRUE
-        LEFT JOIN user_unit_progress uup
+        LEFT JOIN academy_user_unit_progress uup
             ON uup.enrolment_id = uqe.id
            AND uup.qualification_unit_id = qu.id
         WHERE uqe.id = %s
@@ -1298,7 +1605,7 @@ def assign_module_to_user(
     assigned_reason: str | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO learning_assignments (
+        INSERT INTO academy_learning_assignments (
             module_id,
             assigned_to_user_id,
             assigned_by_user_id,
@@ -1308,6 +1615,7 @@ def assign_module_to_user(
             assigned_reason
         )
         VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT DO NOTHING
         RETURNING *
     """
     return _execute(
@@ -1333,9 +1641,10 @@ def list_user_module_status(user_id: int) -> list[dict[str, Any]]:
             m.code AS module_code,
             m.title AS module_title,
             m.summary,
-            m.sccif_domain_code,
+            m.module_family,
             m.learning_type,
             m.difficulty_level,
+            m.delivery_mode,
             m.estimated_minutes,
             m.requires_quiz,
             m.requires_workbook,
@@ -1353,7 +1662,7 @@ def list_user_module_status(user_id: int) -> list[dict[str, Any]]:
             CASE
                 WHEN la.id IS NOT NULL
                  AND la.due_date IS NOT NULL
-                 AND ump.completed_at IS NULL
+                 AND (ump.completed_at IS NULL)
                  AND la.due_date < CURRENT_DATE
                 THEN TRUE
                 ELSE FALSE
@@ -1365,15 +1674,14 @@ def list_user_module_status(user_id: int) -> list[dict[str, Any]]:
                 ELSE FALSE
             END AS is_expired
         FROM users u
-        CROSS JOIN modules m
-        LEFT JOIN learning_assignments la
+        CROSS JOIN academy_modules m
+        LEFT JOIN academy_learning_assignments la
             ON la.module_id = m.id
            AND la.assigned_to_user_id = u.id
-        LEFT JOIN user_module_progress ump
+        LEFT JOIN academy_user_module_progress ump
             ON ump.user_id = u.id
            AND ump.module_id = m.id
         WHERE u.id = %s
-          AND u.active = TRUE
           AND m.active = TRUE
         ORDER BY
             COALESCE(la.due_date, DATE '2999-12-31') ASC,
@@ -1396,7 +1704,7 @@ def get_user_module_progress(user_id: int, module_id: int) -> dict[str, Any] | N
             last_accessed_at,
             current_lesson_id,
             total_time_seconds
-        FROM user_module_progress
+        FROM academy_user_module_progress
         WHERE user_id = %s
           AND module_id = %s
         LIMIT 1
@@ -1414,7 +1722,7 @@ def upsert_user_module_progress(
     total_time_seconds: int = 0,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO user_module_progress (
+        INSERT INTO academy_user_module_progress (
             user_id,
             module_id,
             status,
@@ -1468,7 +1776,7 @@ def mark_module_completed(
     expires_at: datetime | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO user_module_progress (
+        INSERT INTO academy_user_module_progress (
             user_id,
             module_id,
             status,
@@ -1504,7 +1812,7 @@ def record_quiz_attempt(
     answers_json: dict[str, Any] | list[dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO user_quiz_attempts (
+        INSERT INTO academy_user_quiz_attempts (
             user_id,
             quiz_id,
             score_percent,
@@ -1519,6 +1827,62 @@ def record_quiz_attempt(
         (user_id, quiz_id, score_percent, passed, answers_json),
         fetchone=True,
     )
+
+
+def record_scenario_submission(
+    *,
+    user_id: int,
+    scenario_id: int,
+    submission_text: str | None = None,
+    score: float | None = None,
+    feedback_text: str | None = None,
+    reviewed_by_user_id: int | None = None,
+    reviewed_at: datetime | None = None,
+) -> dict[str, Any] | None:
+    query = """
+        INSERT INTO academy_user_scenario_submissions (
+            user_id,
+            scenario_id,
+            submission_text,
+            score,
+            feedback_text,
+            reviewed_by_user_id,
+            reviewed_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        RETURNING *
+    """
+    return _execute(
+        query,
+        (
+            user_id,
+            scenario_id,
+            submission_text,
+            score,
+            feedback_text,
+            reviewed_by_user_id,
+            reviewed_at,
+        ),
+        fetchone=True,
+    )
+
+
+def record_reflection_response(
+    *,
+    user_id: int,
+    reflection_id: int,
+    response_text: str,
+) -> dict[str, Any] | None:
+    query = """
+        INSERT INTO academy_user_reflection_responses (
+            user_id,
+            reflection_id,
+            response_text
+        )
+        VALUES (%s, %s, %s)
+        RETURNING *
+    """
+    return _execute(query, (user_id, reflection_id, response_text), fetchone=True)
 
 
 # =========================================================
@@ -1537,7 +1901,7 @@ def create_observation_record(
     outcome: str | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO observation_records (
+        INSERT INTO academy_observation_records (
             user_id,
             observer_user_id,
             workbook_submission_id,
@@ -1575,7 +1939,7 @@ def create_professional_discussion(
     outcome: str | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO professional_discussions (
+        INSERT INTO academy_professional_discussions (
             user_id,
             assessor_user_id,
             workbook_submission_id,
@@ -1635,7 +1999,7 @@ def list_competencies(
             c.required_for_completion,
             c.active,
             c.created_at
-        FROM competencies c
+        FROM academy_competencies c
         {_build_where(filters)}
         ORDER BY c.title ASC
     """
@@ -1652,7 +2016,7 @@ def sign_off_competency(
     expires_at: datetime | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO competency_signoffs (
+        INSERT INTO academy_competency_signoffs (
             competency_id,
             user_id,
             signed_off_by_user_id,
@@ -1698,8 +2062,8 @@ def list_user_competency_signoffs(user_id: int) -> list[dict[str, Any]]:
             cs.expires_at,
             c.code AS competency_code,
             c.title AS competency_title
-        FROM competency_signoffs cs
-        INNER JOIN competencies c
+        FROM academy_competency_signoffs cs
+        INNER JOIN academy_competencies c
             ON c.id = cs.competency_id
         WHERE cs.user_id = %s
         ORDER BY cs.signed_off_at DESC, cs.id DESC
@@ -1723,7 +2087,7 @@ def create_certificate(
     file_url: str | None = None,
 ) -> dict[str, Any] | None:
     query = """
-        INSERT INTO certificates (
+        INSERT INTO academy_certificates (
             user_id,
             module_id,
             qualification_id,
@@ -1762,7 +2126,7 @@ def list_user_certificates(user_id: int) -> list[dict[str, Any]]:
             issued_at,
             expires_at,
             file_url
-        FROM certificates
+        FROM academy_certificates
         WHERE user_id = %s
         ORDER BY issued_at DESC, id DESC
     """
@@ -1777,16 +2141,62 @@ def list_user_certificates(user_id: int) -> list[dict[str, Any]]:
 def get_home_training_compliance(home_id: int) -> dict[str, Any] | None:
     query = """
         SELECT
-            home_id,
-            provider_id,
-            home_name,
-            active_staff,
-            mandatory_module_assignments,
-            completed_mandatory_module_assignments,
-            overdue_mandatory_module_assignments,
-            compliance_percent
-        FROM v_home_training_compliance
-        WHERE home_id = %s
+            h.id AS home_id,
+            h.provider_id,
+            h.name AS home_name,
+            COUNT(DISTINCT u.id) FILTER (
+                WHERE u.home_id = h.id
+            ) AS active_staff,
+            COUNT(DISTINCT la.id) FILTER (
+                WHERE la.home_id = h.id
+                  AND la.mandatory = TRUE
+                  AND la.module_id IS NOT NULL
+            ) AS mandatory_module_assignments,
+            COUNT(DISTINCT la.id) FILTER (
+                WHERE la.home_id = h.id
+                  AND la.mandatory = TRUE
+                  AND ump.status = 'completed'
+            ) AS completed_mandatory_module_assignments,
+            COUNT(DISTINCT la.id) FILTER (
+                WHERE la.home_id = h.id
+                  AND la.mandatory = TRUE
+                  AND la.due_date IS NOT NULL
+                  AND la.due_date < CURRENT_DATE
+                  AND COALESCE(ump.status, '') <> 'completed'
+            ) AS overdue_mandatory_module_assignments,
+            CASE
+                WHEN COUNT(DISTINCT la.id) FILTER (
+                    WHERE la.home_id = h.id
+                      AND la.mandatory = TRUE
+                      AND la.module_id IS NOT NULL
+                ) = 0 THEN 0
+                ELSE ROUND(
+                    (
+                        COUNT(DISTINCT la.id) FILTER (
+                            WHERE la.home_id = h.id
+                              AND la.mandatory = TRUE
+                              AND ump.status = 'completed'
+                        )::numeric
+                        /
+                        COUNT(DISTINCT la.id) FILTER (
+                            WHERE la.home_id = h.id
+                              AND la.mandatory = TRUE
+                              AND la.module_id IS NOT NULL
+                        )::numeric
+                    ) * 100,
+                    2
+                )
+            END AS compliance_percent
+        FROM homes h
+        LEFT JOIN users u
+            ON u.home_id = h.id
+        LEFT JOIN academy_learning_assignments la
+            ON la.home_id = h.id
+        LEFT JOIN academy_user_module_progress ump
+            ON ump.user_id = la.assigned_to_user_id
+           AND ump.module_id = la.module_id
+        WHERE h.id = %s
+        GROUP BY h.id, h.provider_id, h.name
         LIMIT 1
     """
     return _fetch_one(query, (home_id,))
@@ -1795,16 +2205,31 @@ def get_home_training_compliance(home_id: int) -> dict[str, Any] | None:
 def get_home_workbook_compliance(home_id: int) -> dict[str, Any] | None:
     query = """
         SELECT
-            home_id,
-            provider_id,
-            home_name,
-            total_workbook_submissions,
-            completed_workbooks,
-            in_review_workbooks,
-            workbooks_needing_amendment,
-            overdue_workbooks
-        FROM v_home_workbook_compliance
-        WHERE home_id = %s
+            h.id AS home_id,
+            h.provider_id,
+            h.name AS home_name,
+            COUNT(DISTINCT ws.id) AS total_workbook_submissions,
+            COUNT(DISTINCT ws.id) FILTER (
+                WHERE ws.status = 'completed'
+            ) AS completed_workbooks,
+            COUNT(DISTINCT ws.id) FILTER (
+                WHERE ws.status IN ('submitted', 'under_review')
+            ) AS in_review_workbooks,
+            COUNT(DISTINCT ws.id) FILTER (
+                WHERE ws.status = 'needs_amendment'
+            ) AS workbooks_needing_amendment,
+            COUNT(DISTINCT ws.id) FILTER (
+                WHERE ws.due_date IS NOT NULL
+                  AND ws.due_date < CURRENT_DATE
+                  AND ws.status NOT IN ('completed', 'accepted', 'locked')
+            ) AS overdue_workbooks
+        FROM homes h
+        LEFT JOIN users u
+            ON u.home_id = h.id
+        LEFT JOIN academy_workbook_submissions ws
+            ON ws.user_id = u.id
+        WHERE h.id = %s
+        GROUP BY h.id, h.provider_id, h.name
         LIMIT 1
     """
     return _fetch_one(query, (home_id,))
@@ -1813,17 +2238,52 @@ def get_home_workbook_compliance(home_id: int) -> dict[str, Any] | None:
 def get_home_qualification_summary(home_id: int) -> dict[str, Any] | None:
     query = """
         SELECT
-            home_id,
-            provider_id,
-            home_name,
-            total_enrolments,
-            level_3_enrolments,
-            level_5_enrolments,
-            completed_qualifications,
-            active_qualifications,
-            average_completion_percent
-        FROM v_home_qualification_summary
-        WHERE home_id = %s
+            h.id AS home_id,
+            h.provider_id,
+            h.name AS home_name,
+            COUNT(DISTINCT e.id) AS total_enrolments,
+            COUNT(DISTINCT e.id) FILTER (
+                WHERE q.level = 3
+            ) AS level_3_enrolments,
+            COUNT(DISTINCT e.id) FILTER (
+                WHERE q.level = 5
+            ) AS level_5_enrolments,
+            COUNT(DISTINCT e.id) FILTER (
+                WHERE e.status = 'completed'
+            ) AS completed_qualifications,
+            COUNT(DISTINCT e.id) FILTER (
+                WHERE e.status IN ('enrolled', 'in_progress', 'on_hold')
+            ) AS active_qualifications,
+            COALESCE(ROUND(AVG(unit_progress.completion_percent), 2), 0) AS average_completion_percent
+        FROM homes h
+        LEFT JOIN users u
+            ON u.home_id = h.id
+        LEFT JOIN academy_user_qualification_enrolments e
+            ON e.user_id = u.id
+        LEFT JOIN academy_qualifications q
+            ON q.id = e.qualification_id
+        LEFT JOIN (
+            SELECT
+                e2.id AS enrolment_id,
+                CASE
+                    WHEN COUNT(qu.id) = 0 THEN 0
+                    ELSE (
+                        COUNT(*) FILTER (WHERE uup.status = 'completed')::numeric
+                        / COUNT(qu.id)::numeric
+                    ) * 100
+                END AS completion_percent
+            FROM academy_user_qualification_enrolments e2
+            LEFT JOIN academy_qualification_units qu
+                ON qu.qualification_id = e2.qualification_id
+               AND qu.active = TRUE
+            LEFT JOIN academy_user_unit_progress uup
+                ON uup.enrolment_id = e2.id
+               AND uup.qualification_unit_id = qu.id
+            GROUP BY e2.id
+        ) AS unit_progress
+            ON unit_progress.enrolment_id = e.id
+        WHERE h.id = %s
+        GROUP BY h.id, h.provider_id, h.name
         LIMIT 1
     """
     return _fetch_one(query, (home_id,))
@@ -1832,22 +2292,84 @@ def get_home_qualification_summary(home_id: int) -> dict[str, Any] | None:
 def get_provider_compliance_summary(provider_id: int) -> dict[str, Any] | None:
     query = """
         SELECT
-            provider_id,
-            provider_name,
-            total_homes,
-            active_staff,
-            mandatory_module_assignments,
-            completed_mandatory_module_assignments,
-            overdue_mandatory_module_assignments,
-            average_home_compliance_percent,
-            total_workbook_submissions,
-            completed_workbooks,
-            overdue_workbooks,
-            total_qualification_enrolments,
-            total_level_3_enrolments,
-            total_level_5_enrolments
-        FROM v_provider_compliance_summary
-        WHERE provider_id = %s
+            p.id AS provider_id,
+            p.name AS provider_name,
+            COUNT(DISTINCT h.id) AS total_homes,
+            COUNT(DISTINCT u.id) AS active_staff,
+            COUNT(DISTINCT la.id) FILTER (
+                WHERE la.mandatory = TRUE
+            ) AS mandatory_module_assignments,
+            COUNT(DISTINCT la.id) FILTER (
+                WHERE la.mandatory = TRUE
+                  AND ump.status = 'completed'
+            ) AS completed_mandatory_module_assignments,
+            COUNT(DISTINCT la.id) FILTER (
+                WHERE la.mandatory = TRUE
+                  AND la.due_date IS NOT NULL
+                  AND la.due_date < CURRENT_DATE
+                  AND COALESCE(ump.status, '') <> 'completed'
+            ) AS overdue_mandatory_module_assignments,
+            COALESCE(
+                ROUND(
+                    AVG(
+                        CASE
+                            WHEN home_totals.total_mandatory = 0 THEN 0
+                            ELSE (home_totals.completed_mandatory::numeric / home_totals.total_mandatory::numeric) * 100
+                        END
+                    ),
+                    2
+                ),
+                0
+            ) AS average_home_compliance_percent,
+            COUNT(DISTINCT ws.id) AS total_workbook_submissions,
+            COUNT(DISTINCT ws.id) FILTER (
+                WHERE ws.status = 'completed'
+            ) AS completed_workbooks,
+            COUNT(DISTINCT ws.id) FILTER (
+                WHERE ws.due_date IS NOT NULL
+                  AND ws.due_date < CURRENT_DATE
+                  AND ws.status NOT IN ('completed', 'accepted', 'locked')
+            ) AS overdue_workbooks,
+            COUNT(DISTINCT e.id) AS total_qualification_enrolments,
+            COUNT(DISTINCT e.id) FILTER (
+                WHERE q.level = 3
+            ) AS total_level_3_enrolments,
+            COUNT(DISTINCT e.id) FILTER (
+                WHERE q.level = 5
+            ) AS total_level_5_enrolments
+        FROM providers p
+        LEFT JOIN homes h
+            ON h.provider_id = p.id
+        LEFT JOIN users u
+            ON u.home_id = h.id
+        LEFT JOIN academy_learning_assignments la
+            ON la.home_id = h.id
+        LEFT JOIN academy_user_module_progress ump
+            ON ump.user_id = la.assigned_to_user_id
+           AND ump.module_id = la.module_id
+        LEFT JOIN academy_workbook_submissions ws
+            ON ws.user_id = u.id
+        LEFT JOIN academy_user_qualification_enrolments e
+            ON e.user_id = u.id
+        LEFT JOIN academy_qualifications q
+            ON q.id = e.qualification_id
+        LEFT JOIN (
+            SELECT
+                la2.home_id,
+                COUNT(*) FILTER (WHERE la2.mandatory = TRUE) AS total_mandatory,
+                COUNT(*) FILTER (
+                    WHERE la2.mandatory = TRUE
+                      AND ump2.status = 'completed'
+                ) AS completed_mandatory
+            FROM academy_learning_assignments la2
+            LEFT JOIN academy_user_module_progress ump2
+                ON ump2.user_id = la2.assigned_to_user_id
+               AND ump2.module_id = la2.module_id
+            GROUP BY la2.home_id
+        ) AS home_totals
+            ON home_totals.home_id = h.id
+        WHERE p.id = %s
+        GROUP BY p.id, p.name
         LIMIT 1
     """
     return _fetch_one(query, (provider_id,))
@@ -1855,40 +2377,114 @@ def get_provider_compliance_summary(provider_id: int) -> dict[str, Any] | None:
 
 def list_home_quality_standard_evidence(home_id: int) -> list[dict[str, Any]]:
     query = """
+        WITH quality_items AS (
+            SELECT
+                fi.id,
+                fi.item_code,
+                fi.item_name,
+                fi.external_reference,
+                COALESCE(
+                    NULLIF(regexp_replace(fi.external_reference, '[^0-9]', '', 'g'), ''),
+                    '0'
+                )::int AS regulation_number
+            FROM academy_framework_items fi
+            INNER JOIN academy_frameworks f
+                ON f.id = fi.framework_id
+            WHERE f.framework_code = 'QUALITY_STANDARDS'
+        )
         SELECT
-            home_id,
-            provider_id,
-            home_name,
-            quality_standard_id,
-            regulation_number,
-            quality_standard_code,
-            quality_standard_name,
-            linked_modules,
-            linked_qualification_units,
-            accepted_workbook_submissions,
-            evidence_items
-        FROM v_home_quality_standard_evidence
-        WHERE home_id = %s
-        ORDER BY regulation_number ASC
+            h.id AS home_id,
+            h.provider_id,
+            h.name AS home_name,
+            qi.id AS quality_standard_id,
+            qi.regulation_number,
+            qi.item_code AS quality_standard_code,
+            qi.item_name AS quality_standard_name,
+            COUNT(DISTINCT amm.module_id) AS linked_modules,
+            COUNT(DISTINCT aqum.qualification_unit_id) AS linked_qualification_units,
+            COUNT(DISTINCT aws.id) FILTER (
+                WHERE aws.status IN ('accepted', 'completed')
+            ) AS accepted_workbook_submissions,
+            COUNT(DISTINCT aei.id) AS evidence_items
+        FROM homes h
+        CROSS JOIN quality_items qi
+        LEFT JOIN academy_module_mappings amm
+            ON amm.framework_item_id = qi.id
+        LEFT JOIN academy_modules am
+            ON am.id = amm.module_id
+        LEFT JOIN academy_qualification_unit_mappings aqum
+            ON aqum.framework_item_id = qi.id
+        LEFT JOIN users u
+            ON u.home_id = h.id
+        LEFT JOIN academy_workbook_submissions aws
+            ON aws.user_id = u.id
+        LEFT JOIN academy_workbooks aw
+            ON aw.id = aws.workbook_id
+        LEFT JOIN academy_evidence_items aei
+            ON aei.user_id = u.id
+        WHERE h.id = %s
+        GROUP BY
+            h.id,
+            h.provider_id,
+            h.name,
+            qi.id,
+            qi.regulation_number,
+            qi.item_code,
+            qi.item_name
+        ORDER BY qi.regulation_number ASC, qi.item_code ASC
     """
     return _fetch_all(query, (home_id,))
 
 
 def list_home_sccif_domain_summary(home_id: int) -> list[dict[str, Any]]:
     query = """
+        WITH sccif_items AS (
+            SELECT
+                fi.id,
+                fi.item_code,
+                fi.item_name
+            FROM academy_framework_items fi
+            INNER JOIN academy_frameworks f
+                ON f.id = fi.framework_id
+            WHERE f.framework_code = 'SCCIF'
+        )
         SELECT
-            home_id,
-            provider_id,
-            home_name,
-            sccif_domain_code,
-            sccif_domain_name,
-            linked_modules,
-            completed_module_records,
-            accepted_workbooks,
-            competency_signoffs
-        FROM v_home_sccif_domain_summary
-        WHERE home_id = %s
-        ORDER BY sccif_domain_code ASC
+            h.id AS home_id,
+            h.provider_id,
+            h.name AS home_name,
+            si.item_code AS sccif_domain_code,
+            si.item_name AS sccif_domain_name,
+            COUNT(DISTINCT amm.module_id) AS linked_modules,
+            COUNT(DISTINCT ump.id) FILTER (
+                WHERE ump.status = 'completed'
+            ) AS completed_module_records,
+            COUNT(DISTINCT aws.id) FILTER (
+                WHERE aws.status IN ('accepted', 'completed')
+            ) AS accepted_workbooks,
+            COUNT(DISTINCT acs.id) AS competency_signoffs
+        FROM homes h
+        CROSS JOIN sccif_items si
+        LEFT JOIN academy_module_mappings amm
+            ON amm.framework_item_id = si.id
+        LEFT JOIN academy_modules am
+            ON am.id = amm.module_id
+        LEFT JOIN users u
+            ON u.home_id = h.id
+        LEFT JOIN academy_user_module_progress ump
+            ON ump.user_id = u.id
+           AND ump.module_id = am.id
+        LEFT JOIN academy_workbook_submissions aws
+            ON aws.user_id = u.id
+        LEFT JOIN academy_competency_signoffs acs
+            ON acs.user_id = u.id
+        WHERE h.id = %s
+        GROUP BY
+            h.id,
+            h.provider_id,
+            h.name,
+            si.item_code,
+            si.item_name
+        ORDER BY si.item_code ASC
     """
     return _fetch_all(query, (home_id,))
 
@@ -1896,24 +2492,60 @@ def list_home_sccif_domain_summary(home_id: int) -> list[dict[str, Any]]:
 def get_user_academy_profile_summary(user_id: int) -> dict[str, Any] | None:
     query = """
         SELECT
-            user_id,
-            first_name,
-            last_name,
-            email,
-            role,
-            home_id,
-            home_name,
-            completed_modules,
-            mandatory_modules_assigned,
-            mandatory_modules_completed,
-            accepted_workbooks,
-            workbooks_needing_amendment,
-            qualifications_enrolled,
-            qualifications_completed,
-            competencies_signed_off,
-            certificates_held
-        FROM v_user_academy_profile_summary
-        WHERE user_id = %s
+            u.id AS user_id,
+            u.first_name,
+            u.last_name,
+            u.email,
+            u.role,
+            u.home_id,
+            h.name AS home_name,
+            COUNT(DISTINCT ump.id) FILTER (
+                WHERE ump.status = 'completed'
+            ) AS completed_modules,
+            COUNT(DISTINCT la.id) FILTER (
+                WHERE la.mandatory = TRUE
+            ) AS mandatory_modules_assigned,
+            COUNT(DISTINCT la.id) FILTER (
+                WHERE la.mandatory = TRUE
+                  AND ump.status = 'completed'
+            ) AS mandatory_modules_completed,
+            COUNT(DISTINCT aws.id) FILTER (
+                WHERE aws.status IN ('accepted', 'completed')
+            ) AS accepted_workbooks,
+            COUNT(DISTINCT aws.id) FILTER (
+                WHERE aws.status = 'needs_amendment'
+            ) AS workbooks_needing_amendment,
+            COUNT(DISTINCT aqe.id) AS qualifications_enrolled,
+            COUNT(DISTINCT aqe.id) FILTER (
+                WHERE aqe.status = 'completed'
+            ) AS qualifications_completed,
+            COUNT(DISTINCT acs.id) AS competencies_signed_off,
+            COUNT(DISTINCT ac.id) AS certificates_held
+        FROM users u
+        LEFT JOIN homes h
+            ON h.id = u.home_id
+        LEFT JOIN academy_learning_assignments la
+            ON la.assigned_to_user_id = u.id
+        LEFT JOIN academy_user_module_progress ump
+            ON ump.user_id = u.id
+           AND ump.module_id = la.module_id
+        LEFT JOIN academy_workbook_submissions aws
+            ON aws.user_id = u.id
+        LEFT JOIN academy_user_qualification_enrolments aqe
+            ON aqe.user_id = u.id
+        LEFT JOIN academy_competency_signoffs acs
+            ON acs.user_id = u.id
+        LEFT JOIN academy_certificates ac
+            ON ac.user_id = u.id
+        WHERE u.id = %s
+        GROUP BY
+            u.id,
+            u.first_name,
+            u.last_name,
+            u.email,
+            u.role,
+            u.home_id,
+            h.name
         LIMIT 1
     """
     return _fetch_one(query, (user_id,))
@@ -1930,49 +2562,88 @@ def list_workbook_review_queue(
     params: list[Any] = []
 
     if assessor_user_id is not None:
-        filters.append("assessor_user_id = %s")
+        filters.append("aws.assessor_user_id = %s")
         params.append(assessor_user_id)
 
     if home_id is not None:
-        filters.append("home_id = %s")
+        filters.append("u.home_id = %s")
         params.append(home_id)
 
     if queue_status:
-        filters.append("queue_status = %s")
-        params.append(queue_status)
+        if queue_status == "review":
+            filters.append("aws.status IN ('submitted', 'under_review')")
+        elif queue_status == "amendment":
+            filters.append("aws.status = 'needs_amendment'")
+        elif queue_status == "completed":
+            filters.append("aws.status IN ('accepted', 'completed')")
+        else:
+            filters.append("aws.status = %s")
+            params.append(queue_status)
 
     if overdue_only:
-        filters.append("is_overdue = TRUE")
+        filters.append(
+            """(
+                aws.due_date IS NOT NULL
+                AND aws.due_date < CURRENT_DATE
+                AND aws.status NOT IN ('accepted', 'completed', 'locked')
+            )"""
+        )
 
     query = f"""
         SELECT
-            submission_id,
-            workbook_id,
-            workbook_code,
-            workbook_title,
-            workbook_type,
-            user_id,
-            learner_first_name,
-            learner_last_name,
-            learner_email,
-            learner_role,
-            home_id,
-            home_name,
-            assessor_user_id,
-            assessor_first_name,
-            assessor_last_name,
-            status,
-            due_date,
-            submitted_at,
-            reviewed_at,
-            attempt_number,
-            queue_status,
-            is_overdue
-        FROM v_workbook_review_queue
+            aws.id AS submission_id,
+            aws.workbook_id,
+            aw.code AS workbook_code,
+            aw.title AS workbook_title,
+            aw.workbook_type,
+            aws.user_id,
+            u.first_name AS learner_first_name,
+            u.last_name AS learner_last_name,
+            u.email AS learner_email,
+            u.role AS learner_role,
+            u.home_id,
+            h.name AS home_name,
+            aws.assessor_user_id,
+            assessor.first_name AS assessor_first_name,
+            assessor.last_name AS assessor_last_name,
+            aws.status,
+            aws.due_date,
+            aws.submitted_at,
+            aws.reviewed_at,
+            aws.attempt_number,
+            CASE
+                WHEN aws.status IN ('submitted', 'under_review') THEN 'review'
+                WHEN aws.status = 'needs_amendment' THEN 'amendment'
+                WHEN aws.status IN ('accepted', 'completed') THEN 'completed'
+                ELSE aws.status
+            END AS queue_status,
+            CASE
+                WHEN aws.due_date IS NOT NULL
+                 AND aws.due_date < CURRENT_DATE
+                 AND aws.status NOT IN ('accepted', 'completed', 'locked')
+                THEN TRUE
+                ELSE FALSE
+            END AS is_overdue
+        FROM academy_workbook_submissions aws
+        INNER JOIN academy_workbooks aw
+            ON aw.id = aws.workbook_id
+        INNER JOIN users u
+            ON u.id = aws.user_id
+        LEFT JOIN homes h
+            ON h.id = u.home_id
+        LEFT JOIN users assessor
+            ON assessor.id = aws.assessor_user_id
         {_build_where(filters)}
         ORDER BY
-            is_overdue DESC,
-            due_date ASC NULLS LAST,
-            submitted_at ASC NULLS LAST
+            CASE
+                WHEN aws.due_date IS NOT NULL
+                 AND aws.due_date < CURRENT_DATE
+                 AND aws.status NOT IN ('accepted', 'completed', 'locked')
+                THEN 0
+                ELSE 1
+            END ASC,
+            aws.due_date ASC NULLS LAST,
+            aws.submitted_at ASC NULLS LAST,
+            aws.id DESC
     """
     return _fetch_all(query, tuple(params))
