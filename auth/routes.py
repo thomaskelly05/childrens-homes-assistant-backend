@@ -349,7 +349,13 @@ def _get_allowed_home_ids(conn: Any, user: dict[str, Any]) -> list[int]:
                 """,
                 (provider_id,),
             )
-            return [int(row[0]) for row in cur.fetchall() if row and row[0] is not None]
+            home_ids: list[int] = []
+            for row in cur.fetchall() or []:
+                raw_home_id = row.get("id") if isinstance(row, dict) else row[0]
+                if raw_home_id is None:
+                    continue
+                home_ids.append(int(raw_home_id))
+            return home_ids
 
     if home_id:
         try:
