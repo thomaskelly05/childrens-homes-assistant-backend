@@ -94,6 +94,19 @@
     return `<span class="academy-badge academy-badge--${tone}">${escapeHtml(label)}</span>`;
   }
 
+  function getDefaultLink(item, linkLabel) {
+    if (item && item.link) return item.link;
+
+    const label = String(linkLabel || "").toLowerCase();
+
+    if (label.includes("module")) return "/academy-ui";
+    if (label.includes("workbook")) return "/academy-ui";
+    if (label.includes("qualification")) return "/academy-ui";
+    if (label.includes("review")) return "/academy-ui";
+
+    return "/academy-ui";
+  }
+
   function renderCardList(items, emptyMessage, linkLabel) {
     if (!Array.isArray(items) || !items.length) {
       return `<div class="academy-empty-state">${escapeHtml(emptyMessage)}</div>`;
@@ -105,7 +118,7 @@
         const subtitle = item.subtitle || "";
         const status = item.status || "";
         const dueDate = item.due_date ? formatDate(item.due_date) : "";
-        const link = item.link || "#";
+        const link = getDefaultLink(item, linkLabel);
 
         return `
           <article class="academy-row-card">
