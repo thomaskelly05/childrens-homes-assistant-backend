@@ -74,6 +74,8 @@ def _is_privileged(current_user: dict) -> bool:
         "responsible_individual",
         "registered_manager",
         "deputy_manager",
+        "manager",
+        "admin",
         "trainer",
         "assessor",
         "iqa",
@@ -118,6 +120,8 @@ def academy_profile_user(user_id: int, current_user: dict = Depends(get_current_
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
             "iqa",
@@ -139,6 +143,8 @@ def academy_home_compliance(home_id: int, current_user: dict = Depends(get_curre
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "auditor",
         },
     )
@@ -155,6 +161,7 @@ def academy_provider_compliance(provider_id: int, current_user: dict = Depends(g
             "super_admin",
             "provider_admin",
             "responsible_individual",
+            "admin",
             "auditor",
         },
     )
@@ -173,6 +180,8 @@ def academy_home_quality_standards(home_id: int, current_user: dict = Depends(ge
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "auditor",
         },
     )
@@ -191,6 +200,8 @@ def academy_home_sccif_domains(home_id: int, current_user: dict = Depends(get_cu
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "auditor",
         },
     )
@@ -207,9 +218,9 @@ def academy_home_sccif_domains(home_id: int, current_user: dict = Depends(get_cu
 @router.get("/modules")
 def academy_list_modules(
     category_id: int | None = Query(default=None),
-    sccif_domain_code: str | None = Query(default=None),
     learning_type: str | None = Query(default=None),
     difficulty_level: str | None = Query(default=None),
+    module_family: str | None = Query(default=None),
     active: bool | None = Query(default=True),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
@@ -217,9 +228,9 @@ def academy_list_modules(
     service = AcademyService()
     rows = service.list_modules(
         category_id=category_id,
-        sccif_domain_code=sccif_domain_code,
         learning_type=learning_type,
         difficulty_level=difficulty_level,
+        module_family=module_family,
         active=active,
     )
     return {"ok": True, "data": rows}
@@ -239,7 +250,7 @@ def academy_create_module(
     request: AcademyModuleCreate,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    _ensure_roles(current_user, {"super_admin", "provider_admin"})
+    _ensure_roles(current_user, {"super_admin", "provider_admin", "admin"})
     from db import academy_db
 
     row = academy_db.create_module(request.model_dump())
@@ -252,7 +263,7 @@ def academy_update_module(
     request: AcademyModuleUpdate,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    _ensure_roles(current_user, {"super_admin", "provider_admin"})
+    _ensure_roles(current_user, {"super_admin", "provider_admin", "admin"})
     from db import academy_db
 
     row = academy_db.update_module(
@@ -276,6 +287,8 @@ def academy_assign_module(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
         },
     )
 
@@ -441,6 +454,8 @@ def academy_review_workbook(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
             "iqa",
@@ -470,6 +485,8 @@ def academy_manager_confirm_workbook(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
         },
     )
     service = AcademyWorkbookService()
@@ -512,6 +529,8 @@ def academy_review_queue(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
             "iqa",
@@ -603,6 +622,8 @@ def academy_review_evidence(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
             "iqa",
@@ -669,6 +690,8 @@ def academy_enrol_qualification(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
         },
@@ -701,6 +724,8 @@ def academy_update_enrolment(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
             "iqa",
@@ -733,6 +758,8 @@ def academy_create_observation(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
             "iqa",
@@ -765,6 +792,8 @@ def academy_create_professional_discussion(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
             "iqa",
@@ -798,6 +827,8 @@ def academy_signoff_competency(
             "responsible_individual",
             "registered_manager",
             "deputy_manager",
+            "manager",
+            "admin",
             "trainer",
             "assessor",
             "iqa",
