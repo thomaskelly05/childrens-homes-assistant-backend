@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 
 from auth.current_user import get_current_user
 from schemas.academy import (
@@ -25,6 +28,17 @@ from services.academy_workbook_service import AcademyWorkbookService
 router = APIRouter(prefix="/academy", tags=["academy"])
 
 
+class AcademyModuleAssignRequest(BaseModel):
+    assigned_to_user_ids: list[int] = Field(default_factory=list)
+    mandatory: bool = True
+    due_date: date | None = None
+    assigned_reason: str | None = None
+
+
+class AcademyWorkbookResubmitRequest(BaseModel):
+    due_date: date | None = None
+
+
 def _current_user_id(current_user: dict) -> int:
     user_id = current_user.get("id")
     if not user_id:
@@ -42,11 +56,6 @@ def _current_user_role(current_user: dict) -> str:
 def _current_user_home_id(current_user: dict) -> int | None:
     home_id = current_user.get("home_id") or current_user.get("primary_home_id")
     return int(home_id) if home_id else None
-
-
-def _current_user_provider_id(current_user: dict) -> int | None:
-    provider_id = current_user.get("provider_id")
-    return int(provider_id) if provider_id else None
 
 
 def _ensure_roles(current_user: dict, allowed_roles: set[str]) -> None:
@@ -256,10 +265,7 @@ def academy_update_module(
 @router.post("/modules/{module_id}/assign")
 def academy_assign_module(
     module_id: int,
-    assigned_to_user_ids: list[int],
-    mandatory: bool = True,
-    due_date: str | None = None,
-    assigned_reason: str | None = None,
+    request: AcademyModuleAssignRequest,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
     _ensure_roles(
@@ -272,15 +278,22 @@ def academy_assign_module(
             "deputy_manager",
         },
     )
+
+    if not request.assigned_to_user_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="assigned_to_user_ids is required.",
+        )
+
     service = AcademyService()
     rows = service.assign_module_to_users(
         module_id=module_id,
-        assigned_to_user_ids=assigned_to_user_ids,
+        assigned_to_user_ids=request.assigned_to_user_ids,
         assigned_by_user_id=_current_user_id(current_user),
         home_id=_current_user_home_id(current_user),
-        mandatory=mandatory,
-        due_date=due_date,
-        assigned_reason=assigned_reason,
+        mandatory=request.mandatory,
+        due_date=request.due_date,
+        assigned_reason=request.assigned_reason,
     )
     return {"ok": True, "data": rows}
 
@@ -470,7 +483,7 @@ def academy_manager_confirm_workbook(
 @router.post("/workbook-submissions/{submission_id}/resubmit")
 def academy_resubmit_workbook(
     submission_id: int,
-    due_date: str | None = None,
+    request: AcademyWorkbookResubmitRequest,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
     service = AcademyWorkbookService()
@@ -478,7 +491,7 @@ def academy_resubmit_workbook(
         previous_submission_id=submission_id,
         actor_user_id=_current_user_id(current_user),
         privileged=_is_privileged(current_user),
-        due_date=due_date,
+        due_date=request.due_date,
     )
     return {"ok": True, "data": payload}
 
