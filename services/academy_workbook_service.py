@@ -6,24 +6,6 @@ from db import academy_db
 
 
 class AcademyWorkbookService:
-    """
-    Handles workbook lifecycle logic:
-    - load workbook detail for a learner/reviewer
-    - create submission
-    - save answers
-    - validate required answers
-    - submit
-    - review
-    - resubmit
-
-    This service is intentionally strict because workbook completion
-    is the core evidence flow of the Academy.
-    """
-
-    # =========================================================
-    # Load workbook detail
-    # =========================================================
-
     def get_workbook_detail(
         self,
         *,
@@ -86,10 +68,6 @@ class AcademyWorkbookService:
             "feedback": feedback,
         }
 
-    # =========================================================
-    # Submission creation
-    # =========================================================
-
     def create_submission(
         self,
         *,
@@ -117,10 +95,6 @@ class AcademyWorkbookService:
             due_date=due_date,
         )
 
-    # =========================================================
-    # Ownership / access helpers
-    # =========================================================
-
     def get_submission_for_actor(
         self,
         *,
@@ -136,10 +110,6 @@ class AcademyWorkbookService:
             raise PermissionError("You do not have access to this workbook submission.")
 
         return submission
-
-    # =========================================================
-    # Save answers
-    # =========================================================
 
     def save_answers(
         self,
@@ -181,10 +151,6 @@ class AcademyWorkbookService:
             "saved_answers": saved_count,
             "status": submission.get("status"),
         }
-
-    # =========================================================
-    # Validation
-    # =========================================================
 
     def validate_submission(self, submission_id: int) -> dict[str, Any]:
         submission = academy_db.get_workbook_submission_by_id(submission_id)
@@ -239,10 +205,6 @@ class AcademyWorkbookService:
             "missing_required_evidence_question_ids": missing_required_evidence_question_ids,
         }
 
-    # =========================================================
-    # Submit
-    # =========================================================
-
     def submit(
         self,
         *,
@@ -274,10 +236,6 @@ class AcademyWorkbookService:
             "status": updated.get("status"),
             "submitted_at": updated.get("submitted_at"),
         }
-
-    # =========================================================
-    # Review
-    # =========================================================
 
     def review(
         self,
@@ -322,10 +280,6 @@ class AcademyWorkbookService:
             "reviewed_at": updated.get("reviewed_at"),
         }
 
-    # =========================================================
-    # Manager confirmation
-    # =========================================================
-
     def manager_confirm(
         self,
         *,
@@ -346,22 +300,6 @@ class AcademyWorkbookService:
         if submission.get("status") not in {"accepted", "completed"}:
             raise ValueError("Only accepted or completed workbooks can be manager confirmed.")
 
-        query_updates = {
-            "status": "completed" if submission.get("status") != "completed" else submission.get("status"),
-            "manager_confirmed_by_user_id": actor_user_id,
-        }
-
-        # No dedicated db helper yet, so we reuse the review update pattern carefully
-        updated = academy_db.update_workbook_submission_review(
-            submission_id=submission_id,
-            status=query_updates["status"],
-            assessor_decision=submission.get("assessor_decision"),
-            assessor_summary=submission.get("assessor_summary"),
-            assessor_user_id=submission.get("assessor_user_id") or actor_user_id,
-        )
-        if not updated:
-            raise ValueError("Failed to update workbook during manager confirmation.")
-
         academy_db.add_workbook_feedback(
             submission_id=submission_id,
             feedback_by_user_id=actor_user_id,
@@ -371,13 +309,9 @@ class AcademyWorkbookService:
 
         return {
             "submission_id": submission_id,
-            "status": query_updates["status"],
+            "status": submission.get("status"),
             "manager_confirmed_by_user_id": actor_user_id,
         }
-
-    # =========================================================
-    # Resubmission
-    # =========================================================
 
     def create_resubmission(
         self,
@@ -415,10 +349,6 @@ class AcademyWorkbookService:
             "attempt_number": new_submission.get("attempt_number"),
         }
 
-    # =========================================================
-    # Evidence helpers
-    # =========================================================
-
     def link_evidence_to_submission(
         self,
         *,
@@ -443,10 +373,6 @@ class AcademyWorkbookService:
             evidence_item_id=evidence_item_id,
             workbook_submission_id=int(submission["id"]),
         ) or {}
-
-    # =========================================================
-    # Internal helpers
-    # =========================================================
 
     def _map_assessment_decision(self, decision: str) -> str:
         mapping = {
