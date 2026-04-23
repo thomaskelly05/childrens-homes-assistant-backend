@@ -20,6 +20,14 @@ VALID_RELATIONSHIP_TYPES = {
 }
 
 
+def _read_row_value(row, *, key: str, index: int):
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row.get(key)
+    return row[index]
+
+
 def _normalise_relationship_type(value: str) -> str:
     cleaned = (value or "").strip().lower()
     if cleaned not in VALID_RELATIONSHIP_TYPES:
@@ -69,7 +77,7 @@ class RecordLinkService:
                 )
                 existing = cur.fetchone()
                 if existing:
-                    return int(existing[0])
+                    return int(_read_row_value(existing, key="id", index=0))
 
                 cur.execute(
                     """
@@ -99,7 +107,7 @@ class RecordLinkService:
                 row = cur.fetchone()
 
             conn.commit()
-            return int(row[0])
+            return int(_read_row_value(row, key="id", index=0))
         except Exception:
             if conn:
                 conn.rollback()
@@ -249,15 +257,15 @@ class RecordLinkService:
 
             return [
                 {
-                    "id": row[0],
-                    "young_person_id": row[1],
-                    "from_table": row[2],
-                    "from_id": row[3],
-                    "to_table": row[4],
-                    "to_id": row[5],
-                    "relationship_type": row[6],
-                    "created_by": row[7],
-                    "created_at": row[8],
+                    "id": _read_row_value(row, key="id", index=0),
+                    "young_person_id": _read_row_value(row, key="young_person_id", index=1),
+                    "from_table": _read_row_value(row, key="from_table", index=2),
+                    "from_id": _read_row_value(row, key="from_id", index=3),
+                    "to_table": _read_row_value(row, key="to_table", index=4),
+                    "to_id": _read_row_value(row, key="to_id", index=5),
+                    "relationship_type": _read_row_value(row, key="relationship_type", index=6),
+                    "created_by": _read_row_value(row, key="created_by", index=7),
+                    "created_at": _read_row_value(row, key="created_at", index=8),
                 }
                 for row in rows
             ]
