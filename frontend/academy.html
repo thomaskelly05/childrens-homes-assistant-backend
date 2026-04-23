@@ -23,9 +23,11 @@
         <nav class="academy-nav" id="academyNav">
           <a href="/academy" class="academy-nav__item is-active">Dashboard</a>
           <a href="/academy/module-list.html" class="academy-nav__item" data-nav="my-learning">Learning Catalogue</a>
+          <a href="#academyMyLearningSection" class="academy-nav__item" data-nav="assigned-learning">My Learning</a>
           <a href="#academyWorkbooksSection" class="academy-nav__item" data-nav="my-workbooks">My Workbooks</a>
           <a href="/academy/qualification-list.html" class="academy-nav__item" data-nav="my-qualifications">Qualification Catalogue</a>
-          <a href="#academyEvidenceSection" class="academy-nav__item" data-nav="evidence">Evidence Portfolio</a>
+          <a href="#academyMyQualificationsSection" class="academy-nav__item" data-nav="my-qualification-progress">My Qualifications</a>
+          <a href="/academy/evidence-portfolio.html" class="academy-nav__item" data-nav="evidence">Evidence Portfolio</a>
           <a href="#academyCertificatesSection" class="academy-nav__item" data-nav="certificates">Certificates</a>
           <a href="#academyReviewQueueSection" class="academy-nav__item" data-nav="review-queue">Assessment Queue</a>
           <a href="/academy/manager-compliance.html" class="academy-nav__item" data-nav="home-compliance">Manager Compliance</a>
@@ -120,6 +122,22 @@
         </section>
 
         <section
+          id="academyMyLearningSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>My learning</h2>
+            <p>
+              Assigned modules needing completion or review.
+            </p>
+          </div>
+          <div id="academyMyLearningList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Learning activity loads from the dashboard view.</div>
+          </div>
+        </section>
+
+        <section
           id="academyQualificationsSection"
           class="academy-section"
           style="margin-top: 28px;"
@@ -132,6 +150,22 @@
           </div>
           <div id="academyQualificationsList" class="academy-grid academy-grid--two">
             <div class="academy-empty-state">Loading qualifications…</div>
+          </div>
+        </section>
+
+        <section
+          id="academyMyQualificationsSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>My qualifications</h2>
+            <p>
+              Current qualification pathways and unit progress.
+            </p>
+          </div>
+          <div id="academyMyQualificationsList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Qualification activity loads from the dashboard view.</div>
           </div>
         </section>
 
@@ -162,8 +196,8 @@
               Evidence items, linked submissions and professional proof of practice.
             </p>
           </div>
-          <div class="academy-empty-state">
-            Evidence portfolio UI can be added next using the live Academy evidence routes.
+          <div class="academy-callout">
+            Open the dedicated Evidence Portfolio page from the sidebar to view and filter your evidence.
           </div>
         </section>
 
