@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy • Learning Catalogue</title>
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+
+  <body class="academy-page">
+    <div class="academy-layout">
+      <header class="academy-page-header">
+        <div class="academy-page-header__inner">
+          <div>
+            <div class="academy-page-header__eyebrow">IndiCare Academy</div>
+            <h1>Learning Catalogue</h1>
+            <p class="academy-page-header__subtitle">
+              Browse training modules linked to residential childcare practice, standards and evidence.
+            </p>
+          </div>
+
+          <div class="academy-page-header__actions">
+            <a class="academy-button academy-button--ghost" href="/academy">
+              Back to Academy
+            </a>
+            <button
+              id="academyModuleCatalogueRefreshBtn"
+              type="button"
+              class="academy-button academy-button--secondary"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="academy-page-main">
+        <div id="academyModuleCatalogueError"></div>
+
+        <section class="academy-panel">
+          <div class="academy-panel__body">
+            <div class="academy-form-grid academy-grid academy-grid--two">
+              <div class="academy-form-row">
+                <label for="academyModuleSearchInput">Search modules</label>
+                <input
+                  id="academyModuleSearchInput"
+                  class="academy-input"
+                  type="text"
+                  placeholder="Search by title, summary or code"
+                />
+              </div>
+
+              <div class="academy-form-row">
+                <label for="academyModuleTypeFilter">Learning type</label>
+                <select id="academyModuleTypeFilter" class="academy-select">
+                  <option value="">All learning types</option>
+                  <option value="mandatory">Mandatory</option>
+                  <option value="core_practice">Core practice</option>
+                  <option value="qualification_support">Qualification support</option>
+                  <option value="leadership">Leadership</option>
+                  <option value="compliance">Compliance</option>
+                </select>
+              </div>
+
+              <div class="academy-form-row">
+                <label for="academyModuleDifficultyFilter">Difficulty</label>
+                <select id="academyModuleDifficultyFilter" class="academy-select">
+                  <option value="">All difficulty levels</option>
+                  <option value="introductory">Introductory</option>
+                  <option value="core">Core</option>
+                  <option value="advanced">Advanced</option>
+                  <option value="leadership">Leadership</option>
+                </select>
+              </div>
+
+              <div class="academy-form-row">
+                <label for="academyModuleFamilyFilter">Module family</label>
+                <select id="academyModuleFamilyFilter" class="academy-select">
+                  <option value="">All module families</option>
+                  <option value="induction">Induction</option>
+                  <option value="safeguarding">Safeguarding</option>
+                  <option value="recording">Recording</option>
+                  <option value="trauma_informed">Trauma informed</option>
+                  <option value="behaviour_support">Behaviour support</option>
+                  <option value="health">Health</option>
+                  <option value="education">Education</option>
+                  <option value="leadership_management">Leadership and management</option>
+                  <option value="compliance_quality">Compliance and quality</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="academy-toolbar" style="margin-top: 16px;">
+              <button
+                id="academyModuleCatalogueApplyBtn"
+                type="button"
+                class="academy-button"
+              >
+                Apply filters
+              </button>
+
+              <button
+                id="academyModuleCatalogueClearBtn"
+                type="button"
+                class="academy-button academy-button--ghost"
+              >
+                Clear filters
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 28px; margin-bottom: 40px;">
+          <div class="academy-section__header">
+            <h2>Available modules</h2>
+            <p id="academyModuleCatalogueCountText">
+              Loading modules…
+            </p>
+          </div>
+
+          <div id="academyModuleCatalogueList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Loading learning catalogue…</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-module-list.js"></script>
+  </body>
+</html>
