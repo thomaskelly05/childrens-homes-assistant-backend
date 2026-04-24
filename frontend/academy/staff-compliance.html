@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Staff Compliance</title>
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+
+  <body class="academy-page">
+    <div class="academy-app">
+
+      <!-- Sidebar -->
+      <aside class="academy-sidebar">
+        <div class="academy-brand">
+          <div class="academy-brand__logo">IA</div>
+          <div class="academy-brand__text">
+            <div class="academy-brand__title">IndiCare Academy</div>
+            <div class="academy-brand__subtitle">
+              Compliance & training oversight
+            </div>
+          </div>
+        </div>
+
+        <nav class="academy-nav" id="academyNav">
+          <a href="/academy" class="academy-nav__item">Dashboard</a>
+          <a href="/academy/module-list.html" class="academy-nav__item">Learning</a>
+          <a href="/academy/qualification-list.html" class="academy-nav__item">Qualifications</a>
+          <a href="/academy/evidence-portfolio.html" class="academy-nav__item">Evidence</a>
+          <a href="/academy/certificates.html" class="academy-nav__item">Certificates</a>
+          <a href="/academy/manager-compliance.html" class="academy-nav__item is-active">Staff Compliance</a>
+        </nav>
+      </aside>
+
+      <!-- Main -->
+      <main class="academy-main">
+        <div class="academy-page-main">
+
+          <header class="academy-topbar">
+            <div>
+              <h1 class="academy-page-title">Staff Compliance</h1>
+              <p class="academy-page-subtitle">
+                View training, workbooks and qualification compliance across your team.
+              </p>
+            </div>
+
+            <button id="refreshBtn" class="academy-button academy-button--secondary">
+              Refresh
+            </button>
+          </header>
+
+          <div id="errorBox"></div>
+
+          <div id="staffList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Loading staff compliance…</div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+
+    <script src="/js/academy-nav.js"></script>
+    <script src="/js/academy-staff-compliance.js"></script>
+  </body>
+</html>
