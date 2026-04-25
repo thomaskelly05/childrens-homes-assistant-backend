@@ -43,6 +43,7 @@ let bootstrapped = false;
 let globalSearchMirrorsBound = false;
 let globalRefreshShortcutsBound = false;
 let changePersonFallbackBound = false;
+let restrictedSectionGuardBound = false;
 
 const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
 
@@ -349,6 +350,94 @@ function isSectionAllowedInScope(
   return getAllowedSectionsForScope(scope).includes(section);
 }
 
+function getRequiredScopeForSection(section = "") {
+  const value = String(section || "").trim().toLowerCase();
+
+  const qualitySections = new Set([
+    "quality",
+    "actions",
+    "provider-overview",
+    "quality-audits",
+    "reg44",
+    "reg45",
+  ]);
+
+  const ofstedSections = new Set([
+    "ofsted",
+    "ofsted-dashboard",
+    "ofsted-readiness",
+    "inspection-readiness",
+    "evidence",
+  ]);
+
+  const homeSections = new Set([
+    "home-dashboard",
+    "operations",
+    "rota",
+    "team",
+    "staff-profile",
+    "onboarding",
+    "supervision",
+    "training-centre",
+    "notifications",
+    "health-safety",
+    "maintenance",
+    "policies",
+  ]);
+
+  if (ofstedSections.has(value)) return "ofsted";
+  if (qualitySections.has(value)) return "quality";
+  if (homeSections.has(value)) return "home";
+
+  return "child";
+}
+
+function bindRestrictedSectionGuard() {
+  if (restrictedSectionGuardBound) return;
+  restrictedSectionGuardBound = true;
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      const button = event.target.closest("[data-nav-section]");
+      if (!button) return;
+
+      const section = button.dataset.navSection || "";
+      const requiredScope = getRequiredScopeForSection(section);
+
+      if (canAccessScope(requiredScope)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      showError(
+        `Your current role does not have access to the ${requiredScope} area.`
+      );
+    },
+    true
+  );
+}
+
+function syncRestrictedNavigationVisibility() {
+  document.querySelectorAll("[data-nav-section]").forEach((button) => {
+    const section = button.dataset.navSection || "";
+    const requiredScope = getRequiredScopeForSection(section);
+    const allowed = canAccessScope(requiredScope);
+
+    button.classList.toggle("hidden", !allowed);
+    button.setAttribute("aria-hidden", allowed ? "false" : "true");
+
+    if (allowed) {
+      button.removeAttribute("tabindex");
+      button.disabled = false;
+    } else {
+      button.setAttribute("tabindex", "-1");
+      button.disabled = true;
+    }
+  });
+}
+
 function ensureValidScopeForRole() {
   const allowedScopes = getAllowedScopesForRole();
   const currentScope = state.currentScope || "child";
@@ -388,9 +477,6 @@ function applyRoleDefaultScopeIfNeeded() {
     return;
   }
 
-  // Important:
-  // Do not force admin/RI away from child scope when the page explicitly
-  // boots as child. This was causing child workspace selection problems.
   if (!hasExplicitScopeFromDom && !currentScope) {
     setCurrentScope(defaultScope, { resetSection: true });
     setCurrentSection(getDefaultSectionForScope(defaultScope));
@@ -460,6 +546,7 @@ function refreshAllChrome() {
   renderAssistantMessages();
   renderAssistantInsights();
   syncScopeButtons();
+  syncRestrictedNavigationVisibility();
   refreshWorkspaceSummary();
 }
 
@@ -778,6 +865,7 @@ async function bootstrap() {
     bindChangePersonFallback();
     bindGlobalSearchMirrors();
     bindGlobalRefreshShortcuts();
+    bindRestrictedSectionGuard();
 
     const restoredYoungPerson = await restoreSelectedYoungPerson();
 
