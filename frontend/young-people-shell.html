@@ -2,85 +2,44 @@
 <html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
-  <title>IndiCare OS • Residential Care Workspace</title>
-  <meta
-    name="description"
-    content="IndiCare OS residential care workspace for child-centred recording, safeguarding, home operations, staffing, planning, compliance and quality oversight."
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>IndiCare OS | Residential Care Workspace</title>
+  <meta name="description" content="IndiCare OS residential care workspace for child-centred recording, safeguarding, home operations, staffing, planning, compliance and quality oversight." />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f3f6fb" />
   <meta name="application-name" content="IndiCare OS" />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="preload" href="/css/young-people-shell.css" as="style" />
   <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <link rel="stylesheet" href="/css/young-people-shell-premium.css" />
 </head>
 <body>
   <a class="sr-only sr-only-focusable" href="#mainContent">Skip to main content</a>
   <a class="sr-only sr-only-focusable" href="#assistantModal">Skip to assistant</a>
 
   <noscript>
-    <div
-      style="padding:12px 16px;background:#fff4e5;color:#7a4b00;border-bottom:1px solid #f0d6a8;font:600 14px/1.5 Inter,system-ui,sans-serif;"
-      role="alert"
-    >
+    <div class="noscript-banner" role="alert">
       IndiCare OS works best with JavaScript enabled.
     </div>
   </noscript>
 
-  <div
-    id="app"
-    class="app-shell theme-system"
-    data-assistant-scope-type="child"
-    data-young-person-id=""
-    data-home-id=""
-    data-provider-id=""
-    data-allowed-home-ids="[]"
-    data-workspace="young-people-shell"
-    data-scope="child"
-    data-user-role="admin"
-  >
+  <div id="app" class="app-shell theme-system" data-assistant-scope-type="child" data-young-person-id="" data-home-id="" data-provider-id="" data-allowed-home-ids="[]" data-workspace="young-people-shell" data-scope="child" data-user-role="admin">
     <header class="shell-topbar" role="banner">
       <div class="shell-topbar-left">
-        <button
-          id="logoBtn"
-          class="brand-button"
-          type="button"
-          aria-label="Go to workspace home"
-        >
+        <button id="logoBtn" class="brand-button" type="button" aria-label="Go to workspace home">
           <span class="brand-mark" aria-hidden="true">IC</span>
-          <span class="brand-copy">
-            <strong>IndiCare OS</strong>
-            <small>Residential care made clearer</small>
-          </span>
+          <span class="brand-copy"><strong>IndiCare OS</strong><small>Residential care made clearer</small></span>
         </button>
-
-        <div
-          class="workspace-context-pill desktop-only"
-          aria-label="Current workspace"
-        >
+        <div class="workspace-context-pill desktop-only" aria-label="Current workspace">
           <span class="workspace-context-pill-label">Current area</span>
           <span class="workspace-context-pill-value">Residential care workspace</span>
         </div>
       </div>
 
       <div class="shell-topbar-centre desktop-only">
-        <form
-          id="globalSearchForm"
-          class="topbar-search-wrap"
-          role="search"
-          aria-label="Search records"
-        >
+        <form id="globalSearchForm" class="topbar-search-wrap" role="search" aria-label="Search records">
           <label class="sr-only" for="recordSearchInput">Search records</label>
-          <input
-            id="recordSearchInput"
-            class="search-input topbar-search-input"
-            type="search"
-            placeholder="Search notes, incidents, plans, documents, communication, risks or reports..."
-            autocomplete="off"
-            enterkeyhint="search"
-          />
+          <input id="recordSearchInput" class="search-input topbar-search-input" type="search" placeholder="Search notes, incidents, plans, documents, communication, risks or reports..." autocomplete="off" enterkeyhint="search" />
 
           <label class="sr-only" for="recordTypeFilter">Filter by record type</label>
           <select id="recordTypeFilter" class="select-input topbar-search-filter">
@@ -105,99 +64,17 @@
       </div>
 
       <div class="shell-topbar-right">
-        <div
-          id="scopeSwitch"
-          class="scope-switch desktop-only"
-          role="tablist"
-          aria-label="Switch workspace area"
-        >
-          <button
-            id="scopeChildBtn"
-            class="scope-switch-btn active"
-            type="button"
-            data-scope="child"
-            role="tab"
-            aria-selected="true"
-            aria-pressed="true"
-          >
-            Child
-          </button>
-
-          <button
-            id="scopeHomeBtn"
-            class="scope-switch-btn"
-            type="button"
-            data-scope="home"
-            role="tab"
-            aria-selected="false"
-            aria-pressed="false"
-          >
-            Home
-          </button>
-
-          <button
-            id="scopeQualityBtn"
-            class="scope-switch-btn"
-            type="button"
-            data-scope="quality"
-            role="tab"
-            aria-selected="false"
-            aria-pressed="false"
-          >
-            Quality
-          </button>
-
-          <button
-            id="scopeOfstedBtn"
-            class="scope-switch-btn"
-            type="button"
-            data-scope="ofsted"
-            role="tab"
-            aria-selected="false"
-            aria-pressed="false"
-          >
-            Ofsted
-          </button>
+        <div id="scopeSwitch" class="scope-switch desktop-only" role="tablist" aria-label="Switch workspace area">
+          <button id="scopeChildBtn" class="scope-switch-btn active" type="button" data-scope="child" role="tab" aria-selected="true" aria-pressed="true">Child</button>
+          <button id="scopeHomeBtn" class="scope-switch-btn" type="button" data-scope="home" role="tab" aria-selected="false" aria-pressed="false">Home</button>
+          <button id="scopeQualityBtn" class="scope-switch-btn" type="button" data-scope="quality" role="tab" aria-selected="false" aria-pressed="false">Quality</button>
+          <button id="scopeOfstedBtn" class="scope-switch-btn" type="button" data-scope="ofsted" role="tab" aria-selected="false" aria-pressed="false">Ofsted</button>
         </div>
 
-        <button
-          id="mobileNavToggle"
-          class="secondary-btn mobile-only"
-          type="button"
-          aria-label="Open navigation"
-          aria-controls="mobileNavPanel"
-          aria-expanded="false"
-        >
-          Menu
-        </button>
-
-        <button
-          id="refreshBtn"
-          class="secondary-btn"
-          type="button"
-          aria-label="Refresh workspace"
-        >
-          Refresh
-        </button>
-
-        <button
-          id="refreshWorkspaceBtn"
-          class="secondary-btn hidden"
-          type="button"
-          aria-hidden="true"
-          tabindex="-1"
-        >
-          Refresh area
-        </button>
-
-        <button
-          id="goHomeBtn"
-          class="ghost-btn desktop-only"
-          type="button"
-        >
-          Dashboard
-        </button>
-
+        <button id="mobileNavToggle" class="secondary-btn mobile-only" type="button" aria-label="Open navigation" aria-controls="mobileNavPanel" aria-expanded="false">Menu</button>
+        <button id="refreshBtn" class="secondary-btn" type="button" aria-label="Refresh workspace">Refresh</button>
+        <button id="refreshWorkspaceBtn" class="secondary-btn hidden" type="button" aria-hidden="true" tabindex="-1">Refresh area</button>
+        <button id="goHomeBtn" class="ghost-btn desktop-only" type="button">Dashboard</button>
         <a class="ghost-btn desktop-only" href="/young-people.html">Gateway</a>
         <a class="ghost-btn desktop-only" href="/ai-note.html">I-Notes</a>
         <a class="ghost-btn desktop-only" href="/assistant">Assistant</a>
@@ -206,51 +83,23 @@
     </header>
 
     <main class="shell-main" id="mainContent">
-      <section
-        id="selectorPanel"
-        class="selector-screen hidden"
-        aria-labelledby="selectorHeading"
-      >
+      <section id="selectorPanel" class="selector-screen hidden" aria-labelledby="selectorHeading">
         <div class="selector-screen-inner">
           <div class="selector-page-head">
             <div>
               <div class="eyebrow">Children and young people</div>
               <h1 id="selectorHeading">Choose a child or young person</h1>
-              <p>
-                Open one clear workspace for daily recording, safeguarding,
-                planning, chronology, health, education, relationships,
-                transition and review.
-              </p>
+              <p>Open one clear workspace for daily recording, safeguarding, planning, chronology, health, education, relationships, transition and review.</p>
             </div>
 
             <div class="selector-tools">
               <label class="sr-only" for="selectorSearch">Search young people</label>
-              <input
-                id="selectorSearch"
-                class="search-input"
-                type="search"
-                placeholder="Search by name, preferred name or home..."
-                autocomplete="off"
-              />
+              <input id="selectorSearch" class="search-input" type="search" placeholder="Search by name, preferred name or home..." autocomplete="off" />
 
               <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
-              <input
-                id="youngPersonSearchInput"
-                class="search-input hidden"
-                type="search"
-                placeholder="Search by name, preferred name or home..."
-                autocomplete="off"
-                aria-hidden="true"
-                tabindex="-1"
-              />
+              <input id="youngPersonSearchInput" class="search-input hidden" type="search" placeholder="Search by name, preferred name or home..." autocomplete="off" aria-hidden="true" tabindex="-1" />
 
-              <button
-                id="selectorRefreshBtn"
-                class="secondary-btn"
-                type="button"
-              >
-                Refresh list
-              </button>
+              <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh list</button>
             </div>
           </div>
 
@@ -265,103 +114,44 @@
         </div>
       </section>
 
-      <section
-        id="workspacePanel"
-        class="workspace-screen"
-        aria-labelledby="pageTitle"
-      >
-        <section
-          id="workspaceShell"
-          class="workspace-screen-inner workspace-screen-inner--topnav"
-        >
+      <section id="workspacePanel" class="workspace-screen" aria-labelledby="pageTitle">
+        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--topnav">
           <section class="workspace-stage workspace-stage--full">
             <div class="workspace-stage-top">
               <section class="workspace-stage-mobile-person mobile-only">
-                <div
-                  class="workspace-stage-mobile-avatar"
-                  id="mobilePersonAvatar"
-                  aria-hidden="true"
-                >
-                  YP
-                </div>
-
+                <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar" aria-hidden="true">YP</div>
                 <div class="workspace-stage-mobile-copy">
                   <h2 id="mobilePersonName">Young person</h2>
                   <p id="mobilePersonMeta">Current child workspace</p>
                 </div>
-
-                <button id="mobileHomeBtn" class="ghost-btn" type="button">
-                  Dashboard
-                </button>
+                <button id="mobileHomeBtn" class="ghost-btn" type="button">Dashboard</button>
               </section>
 
-              <section
-                class="workspace-header-band workspace-header-band--premium"
-                aria-labelledby="pageTitle"
-              >
+              <section class="workspace-header-band workspace-header-band--premium" aria-labelledby="pageTitle">
                 <div class="workspace-header-main">
                   <div class="workspace-header-copy">
-                    <div
-                      id="workspaceEyebrow"
-                      class="eyebrow hidden"
-                      aria-hidden="true"
-                    >
-                      Child workspace
-                    </div>
+                    <div id="workspaceEyebrow" class="eyebrow hidden" aria-hidden="true">Child workspace</div>
                     <h1 id="pageTitle">Today at a glance</h1>
-                    <p id="pageSubtitle">
-                      A calm, practical workspace for recording, safeguarding,
-                      daily care, planning, continuity and clear next steps.
-                    </p>
+                    <p id="pageSubtitle">A calm, practical workspace for recording, safeguarding, daily care, planning, continuity and clear next steps.</p>
                   </div>
 
                   <div class="workspace-header-actions">
-                    <button id="heroAssistantBtn" class="primary-btn" type="button">
-                      Ask assistant
-                    </button>
-
-                    <button
-                      id="profileOpenBtn"
-                      class="secondary-btn"
-                      type="button"
-                      data-view="profile"
-                    >
-                      View profile
-                    </button>
-
-                    <button
-                      id="profilePhotoUploadBtn"
-                      class="ghost-btn"
-                      type="button"
-                      data-action-router="edit-profile-identity"
-                    >
-                      Edit profile
-                    </button>
-
-                    <button
-                      id="changePersonBtn"
-                      class="ghost-btn desktop-only"
-                      type="button"
-                    >
-                      Change child
-                    </button>
+                    <button id="heroAssistantBtn" class="primary-btn" type="button">Ask assistant</button>
+                    <button id="profileOpenBtn" class="secondary-btn" type="button" data-view="profile">View profile</button>
+                    <button id="profilePhotoUploadBtn" class="ghost-btn" type="button" data-action-router="edit-profile-identity">Edit profile</button>
+                    <button id="changePersonBtn" class="ghost-btn desktop-only" type="button">Change child</button>
                   </div>
                 </div>
 
                 <div class="workspace-header-context workspace-header-context--compact">
                   <div class="workspace-person-card">
-                    <div
-                      class="profile-snapshot-photo-wrap"
-                      aria-label="Workspace avatar"
-                    >
+                    <div class="profile-snapshot-photo-wrap" aria-label="Workspace avatar">
                       <div id="personAvatar" class="profile-photo-fallback" aria-hidden="true">YP</div>
                     </div>
 
                     <div class="workspace-person-copy">
                       <h3 id="personName">Young person</h3>
-                      <p id="personMeta">
-                        Child-centred overview and current context
-                      </p>
+                      <p id="personMeta">Child-centred overview and current context</p>
                     </div>
                   </div>
 
@@ -371,62 +161,26 @@
                     <span class="meta-chip meta-chip--soft">Ready to use</span>
                   </div>
 
-                  <div
-                    id="workspaceSummaryStrip"
-                    class="workspace-summary-strip"
-                    data-workspace-summary-strip
-                    aria-label="Current summary"
-                  >
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Today</span>
-                      <strong id="summaryToday" class="workspace-summary-value">No summary yet</strong>
-                    </div>
-
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Next item</span>
-                      <strong id="summaryNextEvent" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Last update</span>
-                      <strong id="summaryLastRecord" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Actions</span>
-                      <strong id="summaryOpenActions" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Status</span>
-                      <strong class="workspace-summary-value">Ready</strong>
-                    </div>
+                  <div id="workspaceSummaryStrip" class="workspace-summary-strip" data-workspace-summary-strip aria-label="Current summary">
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Today</span><strong id="summaryToday" class="workspace-summary-value">No summary yet</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Next item</span><strong id="summaryNextEvent" class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Last update</span><strong id="summaryLastRecord" class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Actions</span><strong id="summaryOpenActions" class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Status</span><strong class="workspace-summary-value">Ready</strong></div>
                   </div>
                 </div>
               </section>
 
-              <section
-                id="quickCreateBar"
-                class="quick-actions-panel quick-actions-panel--osmenu"
-                aria-label="Workspace menu"
-              >
+              <section id="quickCreateBar" class="quick-actions-panel quick-actions-panel--osmenu" aria-label="Workspace menu">
                 <div class="quick-actions-panel-head quick-actions-panel-head--compact">
                   <div>
                     <div class="eyebrow">Main menu</div>
                     <h2>Choose an area or start work</h2>
                   </div>
-                  <p>
-                    A simpler operating menu built around child journey, home operations,
-                    workforce and quality.
-                  </p>
+                  <p>A simpler operating menu built around child journey, home operations, workforce and quality.</p>
                 </div>
 
-                <nav
-                  id="heroQuickActions"
-                  class="workspace-menubar workspace-menubar--grouped"
-                  role="navigation"
-                  aria-label="Main workspace menu"
-                >
+                <nav id="heroQuickActions" class="workspace-menubar workspace-menubar--grouped" role="navigation" aria-label="Main workspace menu">
                   <details class="workspace-menu nav-group" data-workspace-menu open>
                     <summary class="workspace-menu-trigger">Child journey</summary>
                     <div class="workspace-menu-dropdown">
@@ -511,41 +265,19 @@
                 </nav>
               </section>
 
-              <section
-                id="statusBar"
-                class="status-bar hidden"
-                role="status"
-                aria-live="polite"
-              ></section>
-
-              <section
-                id="statusMessage"
-                class="status-bar hidden"
-                role="status"
-                aria-live="polite"
-              ></section>
+              <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite"></section>
+              <section id="statusMessage" class="status-bar hidden" role="status" aria-live="polite"></section>
             </div>
 
             <div class="workspace-content-wrap workspace-content-wrap--single">
               <section class="workspace-content">
-                <div
-                  id="searchResultsRegion"
-                  class="search-results-region hidden"
-                  aria-live="polite"
-                  aria-hidden="true"
-                >
+                <div id="searchResultsRegion" class="search-results-region hidden" aria-live="polite" aria-hidden="true">
                   <div class="search-results-head">
                     <div>
                       <div class="eyebrow">Search results</div>
                       <h2 id="searchResultsTitle">Results</h2>
                     </div>
-                    <button
-                      id="clearSearchResultsBtn"
-                      class="ghost-btn"
-                      type="button"
-                    >
-                      Clear search
-                    </button>
+                    <button id="clearSearchResultsBtn" class="ghost-btn" type="button">Clear search</button>
                   </div>
 
                   <div id="searchResultsList" class="record-list">
@@ -576,32 +308,15 @@
       </section>
     </main>
 
-    <div
-      id="mobileNavBackdrop"
-      class="mobile-nav-backdrop hidden"
-      aria-hidden="true"
-    ></div>
+    <div id="mobileNavBackdrop" class="mobile-nav-backdrop hidden" aria-hidden="true"></div>
 
-    <aside
-      id="mobileNavPanel"
-      class="mobile-nav-drawer hidden"
-      aria-hidden="true"
-      aria-label="Mobile navigation"
-    >
+    <aside id="mobileNavPanel" class="mobile-nav-drawer hidden" aria-hidden="true" aria-label="Mobile navigation">
       <div class="mobile-nav-head">
         <div>
           <div class="eyebrow">Navigation</div>
           <h3>Main menu</h3>
         </div>
-
-        <button
-          id="closeMobileNavBtn"
-          class="secondary-btn icon-btn"
-          type="button"
-          aria-label="Close navigation"
-        >
-          ✕
-        </button>
+        <button id="closeMobileNavBtn" class="secondary-btn icon-btn" type="button" aria-label="Close navigation">✕</button>
       </div>
 
       <div class="mobile-nav-context">
@@ -616,13 +331,7 @@
         <div class="mobile-nav-search">
           <form id="mobileSearchForm" role="search" aria-label="Search records">
             <label class="sr-only" for="mobileRecordSearchInput">Search records</label>
-            <input
-              id="mobileRecordSearchInput"
-              class="search-input"
-              type="search"
-              placeholder="Search records..."
-              autocomplete="off"
-            />
+            <input id="mobileRecordSearchInput" class="search-input" type="search" placeholder="Search records..." autocomplete="off" />
           </form>
         </div>
       </div>
@@ -630,18 +339,9 @@
       <div id="mobileNavContent" class="mobile-nav-content"></div>
     </aside>
 
-    <nav
-      id="mobileBottomNav"
-      class="mobile-bottom-bar mobile-only"
-      aria-label="Quick navigation"
-    ></nav>
+    <nav id="mobileBottomNav" class="mobile-bottom-bar mobile-only" aria-label="Quick navigation"></nav>
 
-    <section
-      id="fullscreenPanel"
-      class="fullscreen-panel hidden"
-      aria-hidden="true"
-      aria-labelledby="fullscreenPanelTitle"
-    >
+    <section id="fullscreenPanel" class="fullscreen-panel hidden" aria-hidden="true" aria-labelledby="fullscreenPanelTitle">
       <div class="fullscreen-panel-shell">
         <header class="fullscreen-panel-head">
           <div>
@@ -649,16 +349,9 @@
             <h2 id="fullscreenPanelTitle">Details</h2>
             <p id="fullscreenPanelSubtitle">Open an item to view more.</p>
           </div>
-
           <div class="fullscreen-panel-head-actions">
             <div id="fullscreenPanelActions" class="fullscreen-panel-actions"></div>
-            <button
-              id="closeFullscreenPanelBtn"
-              class="secondary-btn"
-              type="button"
-            >
-              Close
-            </button>
+            <button id="closeFullscreenPanelBtn" class="secondary-btn" type="button">Close</button>
           </div>
         </header>
 
@@ -674,20 +367,13 @@
       </div>
     </section>
 
-    <section
-      id="recordComposerPage"
-      class="composer-panel hidden"
-      aria-hidden="true"
-      aria-labelledby="composerTitle"
-    >
+    <section id="recordComposerPage" class="composer-panel hidden" aria-hidden="true" aria-labelledby="composerTitle">
       <div class="composer-shell">
         <header class="composer-header">
           <div class="composer-header-left">
             <div class="eyebrow">Create or edit</div>
             <h2 id="composerTitle">New record</h2>
-            <p id="composerSubtitle">
-              Record clearly, kindly and professionally with the child at the centre.
-            </p>
+            <p id="composerSubtitle">Record clearly, kindly and professionally with the child at the centre.</p>
           </div>
 
           <div class="composer-header-actions">
@@ -695,36 +381,11 @@
               <span>Autosave ready</span>
               <span id="autosaveTime" class="hidden"></span>
             </div>
-
-            <button id="closeComposerBtn" class="secondary-btn" type="button">
-              Close
-            </button>
-
-            <button
-              id="composerSaveBtn"
-              class="secondary-btn hidden"
-              type="button"
-              aria-hidden="true"
-              tabindex="-1"
-            >
-              Save
-            </button>
-
-            <button
-              id="composerSaveDraftBtn"
-              class="secondary-btn"
-              type="button"
-            >
-              Save draft
-            </button>
-
-            <button id="composerCheckBtn" class="secondary-btn" type="button">
-              Review writing
-            </button>
-
-            <button id="composerSubmitBtn" class="primary-btn" type="button">
-              Send for review
-            </button>
+            <button id="closeComposerBtn" class="secondary-btn" type="button">Close</button>
+            <button id="composerSaveBtn" class="secondary-btn hidden" type="button" aria-hidden="true" tabindex="-1">Save</button>
+            <button id="composerSaveDraftBtn" class="secondary-btn" type="button">Save draft</button>
+            <button id="composerCheckBtn" class="secondary-btn" type="button">Review writing</button>
+            <button id="composerSubmitBtn" class="primary-btn" type="button">Send for review</button>
           </div>
         </header>
 
@@ -738,11 +399,7 @@
           <aside class="composer-side">
             <section class="composer-side-card">
               <h3>Writing help</h3>
-              <div id="composerGuidanceText" class="composer-side-body">
-                Keep the child at the centre. Be clear, calm and factual.
-                Record what happened, what may have been going on for them,
-                what helped, and what adults need to do next.
-              </div>
+              <div id="composerGuidanceText" class="composer-side-body">Keep the child at the centre. Be clear, calm and factual. Record what happened, what may have been going on for them, what helped, and what adults need to do next.</div>
             </section>
 
             <section class="composer-side-card">
@@ -757,56 +414,28 @@
             <section class="composer-side-card">
               <h3>AI writing review</h3>
               <div class="composer-ai-actions">
-                <button id="composerGrammarBtn" class="secondary-btn" type="button">
-                  Check tone and clarity
-                </button>
-                <button id="composerClarityBtn" class="secondary-btn" type="button">
-                  Make clearer
-                </button>
-                <button id="composerSafeguardingBtn" class="secondary-btn" type="button">
-                  Safeguarding review
-                </button>
-                <button id="composerChildVoiceBtn" class="secondary-btn" type="button">
-                  Strengthen child voice
-                </button>
+                <button id="composerGrammarBtn" class="secondary-btn" type="button">Check tone and clarity</button>
+                <button id="composerClarityBtn" class="secondary-btn" type="button">Make clearer</button>
+                <button id="composerSafeguardingBtn" class="secondary-btn" type="button">Safeguarding review</button>
+                <button id="composerChildVoiceBtn" class="secondary-btn" type="button">Strengthen child voice</button>
               </div>
-
-              <div
-                id="composerAiFeedback"
-                class="composer-side-body composer-ai-feedback"
-              >
-                No AI review has been run yet.
-              </div>
+              <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">No AI review has been run yet.</div>
             </section>
           </aside>
         </div>
       </div>
     </section>
 
-    <section
-      id="suggestionsPanel"
-      class="fullscreen-panel hidden"
-      aria-hidden="true"
-      aria-labelledby="suggestionsPanelTitle"
-    >
+    <section id="suggestionsPanel" class="fullscreen-panel hidden" aria-hidden="true" aria-labelledby="suggestionsPanelTitle">
       <div class="fullscreen-panel-shell">
         <header class="fullscreen-panel-head">
           <div>
             <div class="eyebrow">Suggestions</div>
             <h2 id="suggestionsPanelTitle">Helpful next steps</h2>
-            <p id="suggestionsPanelSubtitle">
-              Linked records and actions that may help next.
-            </p>
+            <p id="suggestionsPanelSubtitle">Linked records and actions that may help next.</p>
           </div>
-
           <div class="fullscreen-panel-head-actions">
-            <button
-              id="closeSuggestionsPanelBtn"
-              class="secondary-btn"
-              type="button"
-            >
-              Close
-            </button>
+            <button id="closeSuggestionsPanelBtn" class="secondary-btn" type="button">Close</button>
           </div>
         </header>
 
@@ -822,36 +451,16 @@
       </div>
     </section>
 
-    <div
-      id="assistantBackdrop"
-      class="assistant-backdrop hidden"
-      aria-hidden="true"
-    ></div>
+    <div id="assistantBackdrop" class="assistant-backdrop hidden" aria-hidden="true"></div>
 
-    <section
-      id="assistantModal"
-      class="assistant-modal hidden"
-      aria-hidden="true"
-      aria-label="Workspace assistant"
-    >
+    <section id="assistantModal" class="assistant-modal hidden" aria-hidden="true" aria-label="Workspace assistant">
       <div class="assistant-shell assistant-shell--large">
         <div class="assistant-header">
           <div>
             <h3>Assistant</h3>
-            <p>
-              Ask questions, draft records and get support with child-centred care,
-              safeguarding, management oversight, quality and next steps.
-            </p>
+            <p>Ask questions, draft records and get support with child-centred care, safeguarding, management oversight, quality and next steps.</p>
           </div>
-
-          <button
-            id="closeAssistantBtn"
-            class="secondary-btn icon-btn"
-            type="button"
-            aria-label="Close assistant"
-          >
-            ✕
-          </button>
+          <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close assistant">✕</button>
         </div>
 
         <div class="assistant-modal-layout assistant-modal-layout--split">
@@ -863,166 +472,57 @@
               <span id="scopeShiftBadge" class="meta-chip meta-chip--soft"></span>
             </div>
 
-            <div id="assistantContext" class="assistant-context-text">
-              No context loaded.
-            </div>
+            <div id="assistantContext" class="assistant-context-text">No context loaded.</div>
 
-            <div
-              id="assistantMessages"
-              class="assistant-messages assistant-messages--modal"
-              role="log"
-              aria-live="polite"
-              aria-relevant="additions text"
-            ></div>
+            <div id="assistantMessages" class="assistant-messages assistant-messages--modal" role="log" aria-live="polite" aria-relevant="additions text"></div>
 
             <form id="assistantForm" class="assistant-form assistant-form--sticky">
               <label class="sr-only" for="assistantInput">Ask the assistant</label>
-              <input
-                id="assistantInput"
-                class="text-input"
-                type="text"
-                placeholder="Ask about this workspace..."
-                autocomplete="off"
-              />
-              <button id="assistantSendBtn" class="primary-btn" type="submit">
-                Send
-              </button>
+              <input id="assistantInput" class="text-input" type="text" placeholder="Ask about this workspace..." autocomplete="off" />
+              <button id="assistantSendBtn" class="primary-btn" type="submit">Send</button>
             </form>
           </div>
 
           <aside class="assistant-modal-side">
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Current context</h3>
-                <p>What the assistant is looking at right now.</p>
-              </div>
-              <div id="assistantScopeSummary"></div>
-            </section>
+            <section class="assistant-side-card"><div class="overview-section-head"><h3>Current context</h3><p>What the assistant is looking at right now.</p></div><div id="assistantScopeSummary"></div></section>
+            <section class="assistant-side-card"><div class="overview-section-head"><h3>Sources</h3><p>Evidence and information used by the assistant.</p></div><div id="assistantSources"></div></section>
+            <section class="assistant-side-card"><div class="overview-section-head"><h3>Helpful actions</h3><p>Quick next steps and suggested actions.</p></div><div id="assistantSuggestions" class="assistant-chip-row"></div><div id="assistantActions" class="hidden" aria-hidden="true"></div></section>
 
             <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Sources</h3>
-                <p>Evidence and information used by the assistant.</p>
-              </div>
-              <div id="assistantSources"></div>
-            </section>
-
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Helpful actions</h3>
-                <p>Quick next steps and suggested actions.</p>
-              </div>
-              <div id="assistantSuggestions" class="assistant-chip-row"></div>
-              <div id="assistantActions" class="hidden" aria-hidden="true"></div>
-            </section>
-
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Live scope</h3>
-                <p>Current records bundle and refresh status.</p>
-              </div>
-
+              <div class="overview-section-head"><h3>Live scope</h3><p>Current records bundle and refresh status.</p></div>
               <div class="assistant-context-row">
-                <button id="assistantRefreshScopeBtn" class="secondary-btn" type="button">
-                  Refresh scope
-                </button>
-                <button id="assistantRefreshAnalysisBtn" class="secondary-btn" type="button">
-                  Refresh analysis
-                </button>
+                <button id="assistantRefreshScopeBtn" class="secondary-btn" type="button">Refresh scope</button>
+                <button id="assistantRefreshAnalysisBtn" class="secondary-btn" type="button">Refresh analysis</button>
               </div>
-
-              <div id="assistantScopeBundleStatus" class="assistant-inline-status">
-                No scoped records loaded.
-              </div>
-
-              <div
-                id="assistantScopeBundleError"
-                class="assistant-inline-status assistant-inline-status--error hidden"
-                aria-live="polite"
-              ></div>
-
-              <div id="assistantLiveStatus" class="assistant-inline-status">
-                Assistant ready.
-              </div>
+              <div id="assistantScopeBundleStatus" class="assistant-inline-status">No scoped records loaded.</div>
+              <div id="assistantScopeBundleError" class="assistant-inline-status assistant-inline-status--error hidden" aria-live="polite"></div>
+              <div id="assistantLiveStatus" class="assistant-inline-status">Assistant ready.</div>
             </section>
+
+            <section class="assistant-side-card"><div class="overview-section-head"><h3>Shift brief</h3><p>A practical summary for staff on duty.</p></div><div id="morningBriefBody"><p>No shift brief available yet.</p></div></section>
+            <section class="assistant-side-card"><div class="overview-section-head"><h3>Manager view</h3><p>Leadership, risk, compliance and oversight themes.</p></div><div id="managerBriefBody"><p>No manager summary available yet.</p></div></section>
+            <section class="assistant-side-card"><div class="overview-section-head"><h3>Quality view</h3><p>Audit, regulation and improvement themes.</p></div><div id="qualityBriefBody"><p>No quality summary available yet.</p></div></section>
 
             <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Shift brief</h3>
-                <p>A practical summary for staff on duty.</p>
-              </div>
-              <div id="morningBriefBody">
-                <p>No shift brief available yet.</p>
-              </div>
+              <div class="overview-section-head"><h3>Recent updates</h3><p>Refreshes and assistant updates.</p></div>
+              <div class="assistant-context-row"><button id="clearLiveUpdatesBtn" class="ghost-btn" type="button">Clear updates</button></div>
+              <div id="liveUpdatesBody"><p>No live updates yet.</p></div>
             </section>
 
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Manager view</h3>
-                <p>Leadership, risk, compliance and oversight themes.</p>
-              </div>
-              <div id="managerBriefBody">
-                <p>No manager summary available yet.</p>
-              </div>
-            </section>
-
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Quality view</h3>
-                <p>Audit, regulation and improvement themes.</p>
-              </div>
-              <div id="qualityBriefBody">
-                <p>No quality summary available yet.</p>
-              </div>
-            </section>
-
-            <section class="assistant-side-card">
-              <div class="overview-section-head">
-                <h3>Recent updates</h3>
-                <p>Refreshes and assistant updates.</p>
-              </div>
-
-              <div class="assistant-context-row">
-                <button id="clearLiveUpdatesBtn" class="ghost-btn" type="button">
-                  Clear updates
-                </button>
-              </div>
-
-              <div id="liveUpdatesBody">
-                <p>No live updates yet.</p>
-              </div>
-            </section>
-
-            <section class="assistant-side-card hidden">
-              <pre id="assistantRuntime"></pre>
-            </section>
-
-            <section class="assistant-side-card hidden">
-              <pre id="assistantExplainability"></pre>
-            </section>
+            <section class="assistant-side-card hidden"><pre id="assistantRuntime"></pre></section>
+            <section class="assistant-side-card hidden"><pre id="assistantExplainability"></pre></section>
           </aside>
         </div>
 
         <div class="assistant-footer">
-          <button id="assistantClearBtn" class="secondary-btn" type="button">
-            Clear chat
-          </button>
+          <button id="assistantClearBtn" class="secondary-btn" type="button">Clear chat</button>
         </div>
       </div>
     </section>
 
-    <div
-      id="recordDrawerBackdrop"
-      class="record-drawer-backdrop hidden"
-      aria-hidden="true"
-    ></div>
+    <div id="recordDrawerBackdrop" class="record-drawer-backdrop hidden" aria-hidden="true"></div>
 
-    <section
-      id="recordDrawer"
-      class="record-drawer hidden"
-      aria-hidden="true"
-      aria-labelledby="recordDrawerTitle"
-    >
+    <section id="recordDrawer" class="record-drawer hidden" aria-hidden="true" aria-labelledby="recordDrawerTitle">
       <div class="record-drawer-panel">
         <header class="record-drawer-head">
           <div>
@@ -1030,10 +530,7 @@
             <h2 id="recordDrawerTitle">Record detail</h2>
             <p id="recordDrawerSubtitle">Open a record to view details.</p>
           </div>
-
-          <button id="closeRecordDrawerBtn" class="secondary-btn" type="button">
-            Close
-          </button>
+          <button id="closeRecordDrawerBtn" class="secondary-btn" type="button">Close</button>
         </header>
 
         <div id="recordDrawerActions" class="record-drawer-actions">
@@ -1058,31 +555,20 @@
 
     <footer class="app-footer" role="contentinfo">
       <div class="app-footer-inner">
-        <div class="app-footer-brand">
-          <strong>IndiCare OS</strong>
-          <span>Residential care made clearer</span>
-        </div>
-
-        <div class="app-footer-copy">
-          <span>© 2026 IndiCare OS. All rights reserved.</span>
-        </div>
+        <div class="app-footer-brand"><strong>IndiCare OS</strong><span>Residential care made clearer</span></div>
+        <div class="app-footer-copy"><span>© 2026 IndiCare OS. All rights reserved.</span></div>
       </div>
     </footer>
 
-    <button
-      id="assistantLauncher"
-      class="assistant-fab"
-      type="button"
-      aria-label="Open assistant"
-      title="Open assistant"
-    >
+    <button id="assistantLauncher" class="assistant-fab" type="button" aria-label="Open assistant" title="Open assistant">
       <span class="assistant-fab-icon" aria-hidden="true">✦</span>
       <span class="assistant-fab-label">Assistant</span>
     </button>
   </div>
 
   <script src="/js/api.js"></script>
-<script src="/js/auth.js"></script>
-<script type="module" src="/js/young-people-shell/index.js"></script>
+  <script src="/js/auth.js"></script>
+  <script type="module" src="/js/young-people-shell/index.js"></script>
+  <script type="module" src="/js/young-people-shell/premium-hardening.js"></script>
 </body>
 </html>
