@@ -9,7 +9,7 @@ import {
   setUserRole,
   initialiseStateGuards,
 } from "./state.js";
-import { els } from "./dom.js";
+import { els, refreshEls } from "./dom.js";
 import {
   getYoungPersonIdFromUrl,
   setYoungPersonIdInUrl,
@@ -78,12 +78,18 @@ const STAFF_LIKE_ROLES = new Set([
 ]);
 
 function showWorkspace() {
+  els.selectorPanel?.classList.add("hidden");
   els.selectorScreen?.classList.add("hidden");
+
+  els.workspacePanel?.classList.remove("hidden");
   els.workspaceScreen?.classList.remove("hidden");
 }
 
 function showSelector() {
+  els.workspacePanel?.classList.add("hidden");
   els.workspaceScreen?.classList.add("hidden");
+
+  els.selectorPanel?.classList.remove("hidden");
   els.selectorScreen?.classList.remove("hidden");
 }
 
@@ -262,6 +268,10 @@ async function hydrateRuntimeContextFromAuthCheck() {
       state.userId = auth.user_id || auth.id;
     }
 
+    if (auth.staff_id) {
+      state.staffId = auth.staff_id;
+    }
+
     const role = normaliseRole(auth.role || auth.user_role || auth.role_name);
 
     const authHomeId = normaliseNumericId(auth.home_id || auth.homeId || null);
@@ -435,6 +445,16 @@ function syncRestrictedNavigationVisibility() {
       button.setAttribute("tabindex", "-1");
       button.disabled = true;
     }
+  });
+
+  document.querySelectorAll("[data-workspace-menu]").forEach((menu) => {
+    const visibleLinks = menu.querySelectorAll(
+      ".workspace-menu-link:not(.hidden)"
+    );
+    const hasVisibleLinks = visibleLinks.length > 0;
+
+    menu.classList.toggle("hidden", !hasVisibleLinks);
+    menu.setAttribute("aria-hidden", hasVisibleLinks ? "false" : "true");
   });
 }
 
@@ -767,6 +787,12 @@ function bindGlobalSearchMirrors() {
     lastPayload = payloadKey;
 
     document.dispatchEvent(
+      new CustomEvent("indicare:record-search-changed", {
+        detail: payload,
+      })
+    );
+
+    document.dispatchEvent(
       new CustomEvent("indicared:record-search-changed", {
         detail: payload,
       })
@@ -835,6 +861,7 @@ async function bootstrap() {
   bootstrapped = true;
 
   try {
+    refreshEls();
     initialiseStateGuards();
 
     hydrateRuntimeContextFromDom();
