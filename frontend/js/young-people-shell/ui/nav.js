@@ -209,13 +209,8 @@ function getCurrentRole() {
 function getAllowedScopesForCurrentRole() {
   const role = getCurrentRole();
 
-  if (ROLE_SCOPE_ACCESS?.[role]) {
-    return ROLE_SCOPE_ACCESS[role];
-  }
-
-  if (["admin", "manager", "ri"].includes(role)) {
-    return ["child", "home", "quality", "ofsted"];
-  }
+  if (ROLE_SCOPE_ACCESS?.[role]) return ROLE_SCOPE_ACCESS[role];
+  if (["admin", "manager", "ri"].includes(role)) return ["child", "home", "quality", "ofsted"];
 
   return ["child", "home"];
 }
@@ -240,12 +235,7 @@ function getDefaultSectionForScope(scope = getCurrentScope()) {
 }
 
 function getCurrentSection() {
-  return (
-    state.currentSection ||
-    state.activeSection ||
-    state.currentView ||
-    getDefaultSectionForScope()
-  );
+  return state.currentSection || state.activeSection || state.currentView || getDefaultSectionForScope();
 }
 
 function getSectionConfig(sectionId) {
@@ -254,9 +244,7 @@ function getSectionConfig(sectionId) {
 
 function getSectionLabel(itemOrId) {
   if (!itemOrId) return "";
-  if (typeof itemOrId === "string") {
-    return getSectionConfig(itemOrId)?.label || itemOrId;
-  }
+  if (typeof itemOrId === "string") return getSectionConfig(itemOrId)?.label || itemOrId;
   return itemOrId.label || itemOrId.id || "";
 }
 
@@ -278,146 +266,21 @@ function shouldShowDesktopSidebar() {
 }
 
 function isReadinessSection(sectionId) {
-  return ["readiness", "ofsted-readiness", "inspection-readiness"].includes(
-    String(sectionId || "")
-  );
+  return ["readiness", "ofsted-readiness", "inspection-readiness"].includes(String(sectionId || ""));
 }
 
 function getRequiredScopeForSection(sectionId) {
   return SECTION_SCOPE_MAP[String(sectionId || "").trim().toLowerCase()] || getCurrentScope();
 }
 
-function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
-  const allowedByConfig = new Set(
-    SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]
-  );
-
-  const loaders = getLoaderMapForScope(scope);
-  return new Set(
-    Array.from(allowedByConfig).filter((sectionId) => typeof loaders[sectionId] === "function")
-  );
-}
-
-function isSectionAllowed(sectionId, scope = getCurrentScope()) {
-  if (!sectionId) return false;
-  if (!roleCanAccessScope(scope)) return false;
-  return getAllowedSectionIdsForScope(scope).has(sectionId);
-}
-
-function findBestScopeForSection(sectionId) {
-  const wantedScope = getRequiredScopeForSection(sectionId);
-
-  if (
-    roleCanAccessScope(wantedScope) &&
-    getAllowedSectionIdsForScope(wantedScope).has(sectionId)
-  ) {
-    return wantedScope;
-  }
-
-  return null;
-}
-
-function updateAppShellDataset() {
-  const app = document.getElementById("app");
-  if (!app) return;
-
-  const scope = getCurrentScope();
-  const section = getCurrentSection();
-
-  app.dataset.scope = scope;
-  app.dataset.section = section;
-  app.dataset.assistantScopeType =
-    scope === "child" ? "child" : scope === "home" ? "home" : "quality";
-
-  app.dataset.youngPersonId = state.youngPersonId || "";
-  app.dataset.homeId =
-    state.homeId ||
-    state.selectedYoungPerson?.home_id ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    "";
-  app.dataset.providerId =
-    state.providerId ||
-    state.currentUser?.provider_id ||
-    state.currentUser?.providerId ||
-    "";
-  app.dataset.userRole = getCurrentRole();
-  app.dataset.allowedHomeIds = JSON.stringify(
-    Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
-  );
-}
-
-function updateSectionState(section) {
-  setCurrentSection(section);
-  state.activeSection = section;
-  state.currentView = section;
-  updateAppShellDataset();
-}
-
-function ensureValidCurrentScope() {
-  const scope = getCurrentScope();
-
-  if (roleCanAccessScope(scope)) return scope;
-
-  const fallback = getAllowedScopesForCurrentRole()[0] || "child";
-  setCurrentScope(fallback);
-  return fallback;
-}
-
-function ensureValidCurrentSection() {
-  const scope = ensureValidCurrentScope();
-  const current = getCurrentSection();
-
-  if (isSectionAllowed(current, scope)) {
-    return current;
-  }
-
-  const fallback = getDefaultSectionForScope(scope);
-  const allowed = getAllowedSectionIdsForScope(scope);
-  const safeFallback = allowed.has(fallback)
-    ? fallback
-    : Array.from(allowed)[0] || "workspace";
-
-  updateSectionState(safeFallback);
-  return safeFallback;
-}
-
-function getScopedNavGroups() {
-  const scope = getCurrentScope();
-  const allowed = getAllowedSectionIdsForScope(scope);
-
-  return (NAV_GROUPS_CONFIG || [])
-    .map((group) => ({
-      ...group,
-      items: (group.items || []).filter((item) => allowed.has(item.id)),
-    }))
-    .filter((group) => group.items.length > 0);
-}
-
-function getScopedNavSections() {
-  const scope = getCurrentScope();
-  const allowed = getAllowedSectionIdsForScope(scope);
-  return (NAV_SECTIONS || []).filter((item) => allowed.has(item.id));
-}
-
-function getMobileBottomSections() {
-  const scope = getCurrentScope();
-  return MOBILE_BOTTOM_BY_SCOPE[scope] || MOBILE_BOTTOM_BY_SCOPE.child;
-}
-
 async function runPlaceholderLoader(options = {}) {
-  const { renderPlaceholderFeaturePage } = await import(
-    "../features/placeholder.js"
-  );
-
+  const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
   const section = options.section || getCurrentSection();
   const config = getSectionConfig(section);
 
   await renderPlaceholderFeaturePage({
     title: config?.label || "Coming soon",
-    description:
-      config?.description ||
-      "This area has been scaffolded and is ready for live feature wiring next.",
+    description: config?.description || "This area has been scaffolded and is ready for live feature wiring next.",
     section,
     scope: getCurrentScope(),
   });
@@ -497,17 +360,113 @@ function getLoaderMapForScope(scope = getCurrentScope()) {
 }
 
 function getLoaderForSection(scope, section) {
-  const scopeLoaders = getLoaderMapForScope(scope);
-  return scopeLoaders[section] || null;
+  return getLoaderMapForScope(scope)[section] || null;
+}
+
+function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
+  const allowedByConfig = new Set(SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]);
+  const loaders = getLoaderMapForScope(scope);
+
+  return new Set(Array.from(allowedByConfig).filter((sectionId) => typeof loaders[sectionId] === "function"));
+}
+
+function isSectionAllowed(sectionId, scope = getCurrentScope()) {
+  if (!sectionId) return false;
+  if (!roleCanAccessScope(scope)) return false;
+  return getAllowedSectionIdsForScope(scope).has(sectionId);
+}
+
+function findBestScopeForSection(sectionId) {
+  const wantedScope = getRequiredScopeForSection(sectionId);
+
+  if (roleCanAccessScope(wantedScope) && getAllowedSectionIdsForScope(wantedScope).has(sectionId)) {
+    return wantedScope;
+  }
+
+  return null;
+}
+
+function updateAppShellDataset() {
+  const app = document.getElementById("app");
+  if (!app) return;
+
+  const scope = getCurrentScope();
+  const section = getCurrentSection();
+
+  app.dataset.scope = scope;
+  app.dataset.section = section;
+  app.dataset.assistantScopeType = scope === "child" ? "child" : scope === "home" ? "home" : "quality";
+  app.dataset.youngPersonId = state.youngPersonId || "";
+  app.dataset.homeId =
+    state.homeId ||
+    state.selectedYoungPerson?.home_id ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    "";
+  app.dataset.providerId = state.providerId || state.currentUser?.provider_id || state.currentUser?.providerId || "";
+  app.dataset.userRole = getCurrentRole();
+  app.dataset.allowedHomeIds = JSON.stringify(Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []);
+}
+
+function updateSectionState(section) {
+  setCurrentSection(section);
+  state.activeSection = section;
+  state.currentView = section;
+  updateAppShellDataset();
+}
+
+function ensureValidCurrentScope() {
+  const scope = getCurrentScope();
+
+  if (roleCanAccessScope(scope)) return scope;
+
+  const fallback = getAllowedScopesForCurrentRole()[0] || "child";
+  setCurrentScope(fallback);
+  return fallback;
+}
+
+function ensureValidCurrentSection() {
+  const scope = ensureValidCurrentScope();
+  const current = getCurrentSection();
+
+  if (isSectionAllowed(current, scope)) return current;
+
+  const fallback = getDefaultSectionForScope(scope);
+  const allowed = getAllowedSectionIdsForScope(scope);
+  const safeFallback = allowed.has(fallback) ? fallback : Array.from(allowed)[0] || "workspace";
+
+  updateSectionState(safeFallback);
+  return safeFallback;
+}
+
+function getScopedNavGroups() {
+  const scope = getCurrentScope();
+  const allowed = getAllowedSectionIdsForScope(scope);
+
+  return (NAV_GROUPS_CONFIG || [])
+    .map((group) => ({
+      ...group,
+      items: (group.items || []).filter((item) => allowed.has(item.id)),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+function getScopedNavSections() {
+  const scope = getCurrentScope();
+  const allowed = getAllowedSectionIdsForScope(scope);
+  return (NAV_SECTIONS || []).filter((item) => allowed.has(item.id));
+}
+
+function getMobileBottomSections() {
+  const scope = getCurrentScope();
+  return MOBILE_BOTTOM_BY_SCOPE[scope] || MOBILE_BOTTOM_BY_SCOPE.child;
 }
 
 function renderNavItem(item, { compact = false } = {}) {
   const isActive = item.id === getCurrentSection();
   const label = getSectionLabel(item);
   const description = getSectionDescription(item);
-  const meta = compact
-    ? ""
-    : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
+  const meta = compact ? "" : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
 
   return `
     <button
@@ -519,9 +478,7 @@ function renderNavItem(item, { compact = false } = {}) {
       aria-pressed="${isActive ? "true" : "false"}"
       title="${escapeHtml(description)}"
     >
-      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(
-        getNavIcon(item.icon)
-      )}</span>
+      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
       <span class="nav-btn-copy">
         <span class="nav-btn-label">${escapeHtml(label)}</span>
         ${meta}
@@ -531,9 +488,7 @@ function renderNavItem(item, { compact = false } = {}) {
 }
 
 function buildDesktopNavHtml() {
-  return getScopedNavSections()
-    .map((item) => renderNavItem(item))
-    .join("");
+  return getScopedNavSections().map((item) => renderNavItem(item)).join("");
 }
 
 function buildMobileDrawerNavHtml() {
@@ -571,13 +526,9 @@ function buildMobileBottomBarHtml() {
           aria-pressed="${isActive ? "true" : "false"}"
           title="${escapeHtml(getSectionLabel(item))}"
         >
-          <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(
-            getNavIcon(item.icon)
-          )}</span>
+          <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
           <span class="nav-btn-copy">
-            <span class="nav-btn-label">${escapeHtml(
-              item.short_label || getSectionLabel(item)
-            )}</span>
+            <span class="nav-btn-label">${escapeHtml(item.short_label || getSectionLabel(item))}</span>
           </span>
         </button>
       `;
@@ -586,16 +537,12 @@ function buildMobileBottomBarHtml() {
 }
 
 function syncDesktopSidebarChrome() {
-  const workspaceShell =
-    els.workspaceShell || document.getElementById("workspaceShell");
+  const workspaceShell = els.workspaceShell || document.getElementById("workspaceShell");
   const sidebar = document.querySelector(".workspace-sidebar");
   const desktopNav = els.desktopNav || document.getElementById("desktopNav");
-
   const showSidebar = shouldShowDesktopSidebar();
 
-  if (workspaceShell) {
-    workspaceShell.classList.toggle("has-sidebar", showSidebar);
-  }
+  workspaceShell?.classList.toggle("has-sidebar", showSidebar);
 
   if (sidebar) {
     sidebar.classList.toggle("workspace-sidebar--hidden", !showSidebar);
@@ -613,29 +560,25 @@ function syncDesktopSidebarChrome() {
 function renderNavigation() {
   ensureValidCurrentSection();
 
-  if (els.desktopNav) {
-    els.desktopNav.innerHTML = buildDesktopNavHtml();
-  }
-
-  if (els.mobileNavContent) {
-    els.mobileNavContent.innerHTML = buildMobileDrawerNavHtml();
-  }
-
-  if (els.mobileBottomBar) {
-    els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
-  }
+  if (els.desktopNav) els.desktopNav.innerHTML = buildDesktopNavHtml();
+  if (els.mobileNavContent) els.mobileNavContent.innerHTML = buildMobileDrawerNavHtml();
+  if (els.mobileBottomBar) els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
 
   syncDesktopSidebarChrome();
   updateAppShellDataset();
 }
 
 function showWorkspaceScreen() {
+  els.selectorPanel?.classList.add("hidden");
   els.selectorScreen?.classList.add("hidden");
+  els.workspacePanel?.classList.remove("hidden");
   els.workspaceScreen?.classList.remove("hidden");
 }
 
 function showSelectorScreen() {
+  els.workspacePanel?.classList.add("hidden");
   els.workspaceScreen?.classList.add("hidden");
+  els.selectorPanel?.classList.remove("hidden");
   els.selectorScreen?.classList.remove("hidden");
 }
 
@@ -648,9 +591,7 @@ export function showError(message) {
     els.statusMessage.classList.remove("hidden");
   }
 
-  if (els.statusBar) {
-    els.statusBar.classList.remove("hidden");
-  }
+  els.statusBar?.classList.remove("hidden");
 }
 
 export function showMessage(message) {
@@ -662,9 +603,7 @@ export function showMessage(message) {
     els.statusMessage.classList.remove("hidden");
   }
 
-  if (els.statusBar) {
-    els.statusBar.classList.remove("hidden");
-  }
+  els.statusBar?.classList.remove("hidden");
 }
 
 export function clearStatus() {
@@ -673,9 +612,7 @@ export function clearStatus() {
     els.statusMessage.classList.add("hidden");
   }
 
-  if (els.statusBar) {
-    els.statusBar.classList.add("hidden");
-  }
+  els.statusBar?.classList.add("hidden");
 }
 
 function markActiveNav(section) {
@@ -745,70 +682,22 @@ function bindWorkspaceMenuBehaviour() {
   );
 
   document.addEventListener("click", (event) => {
-    const insideMenubar = event.target.closest(".workspace-menubar");
-    if (!insideMenubar) {
+    if (!event.target.closest(".workspace-menubar")) {
       closeAllWorkspaceMenus();
     }
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeAllWorkspaceMenus();
-    }
-  });
-}
-
-function bindWorkspaceMenuLinks() {
-  if (workspaceMenuLinksBound) return;
-  workspaceMenuLinksBound = true;
-
-  document.addEventListener("click", async (event) => {
-    const button = event.target.closest(".workspace-menu-link");
-    if (!button) return;
-
-    const actionRouter = button.dataset.actionRouter;
-    const navSection = button.dataset.navSection;
-
-    if (actionRouter) {
-      const target = document.querySelector(
-        `[data-action-router="${actionRouter}"]`
-      );
-
-      if (target && target !== button && typeof target.click === "function") {
-        target.click();
-        closeAllWorkspaceMenus();
-        return;
-      }
-    }
-
-    if (!navSection) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const targetScope = findBestScopeForSection(navSection);
-
-    if (!targetScope) {
-      showError(`This area is not available for your current role or is not wired yet.`);
-      closeAllWorkspaceMenus();
-      return;
-    }
-
-    if (targetScope !== getCurrentScope()) {
-      await applyScopeChange(targetScope, { preferredSection: navSection });
-      closeAllWorkspaceMenus();
-      return;
-    }
-
-    await loadSection(navSection);
-    closeAllWorkspaceMenus();
+    if (event.key === "Escape") closeAllWorkspaceMenus();
   });
 }
 
 function closeAssistantOverlay() {
   state.assistantOpen = false;
+
   const assistantModal = document.getElementById("assistantModal");
   const assistantBackdrop = document.getElementById("assistantBackdrop");
+
   assistantModal?.classList.add("hidden");
   assistantBackdrop?.classList.add("hidden");
   assistantModal?.setAttribute("aria-hidden", "true");
@@ -817,6 +706,7 @@ function closeAssistantOverlay() {
 
 function closeFullscreenOverlay() {
   state.fullscreenPanelOpen = false;
+
   const fullscreenPanel = document.getElementById("fullscreenPanel");
   fullscreenPanel?.classList.add("hidden");
   fullscreenPanel?.setAttribute("aria-hidden", "true");
@@ -830,100 +720,14 @@ function closeSuggestionsOverlay() {
 
 function closeRecordDrawerOverlay() {
   state.recordDrawerOpen = false;
+
   const recordDrawer = document.getElementById("recordDrawer");
   const recordDrawerBackdrop = document.getElementById("recordDrawerBackdrop");
+
   recordDrawer?.classList.add("hidden");
   recordDrawerBackdrop?.classList.add("hidden");
   recordDrawer?.setAttribute("aria-hidden", "true");
   recordDrawerBackdrop?.setAttribute("aria-hidden", "true");
-}
-
-function bindOverlayDismiss() {
-  if (overlayDismissBound) return;
-  overlayDismissBound = true;
-
-  document.addEventListener("click", (event) => {
-    const assistantModal = document.getElementById("assistantModal");
-    if (
-      assistantModal &&
-      !assistantModal.classList.contains("hidden") &&
-      !event.target.closest(".assistant-shell")
-    ) {
-      if (
-        event.target === assistantModal ||
-        event.target.id === "assistantBackdrop"
-      ) {
-        closeAssistantOverlay();
-      }
-    }
-
-    const composerPanel =
-      document.getElementById("composerPanel") ||
-      document.getElementById("recordComposerPage");
-
-    if (
-      composerPanel &&
-      !composerPanel.classList.contains("hidden") &&
-      !event.target.closest(".composer-shell")
-    ) {
-      if (event.target === composerPanel) {
-        closeComposer(true);
-      }
-    }
-
-    const fullscreenPanel = document.getElementById("fullscreenPanel");
-    if (
-      fullscreenPanel &&
-      !fullscreenPanel.classList.contains("hidden") &&
-      !event.target.closest(".fullscreen-panel-shell")
-    ) {
-      if (event.target === fullscreenPanel) {
-        closeFullscreenOverlay();
-      }
-    }
-
-    const suggestionsPanel = document.getElementById("suggestionsPanel");
-    if (
-      suggestionsPanel &&
-      !suggestionsPanel.classList.contains("hidden") &&
-      !event.target.closest(".fullscreen-panel-shell")
-    ) {
-      if (event.target === suggestionsPanel) {
-        closeSuggestionsOverlay();
-      }
-    }
-
-    const recordDrawer = document.getElementById("recordDrawer");
-    const recordDrawerBackdrop = document.getElementById("recordDrawerBackdrop");
-    if (event.target === recordDrawerBackdrop) {
-      closeRecordDrawerOverlay();
-    }
-
-    if (
-      recordDrawer &&
-      !recordDrawer.classList.contains("hidden") &&
-      event.target === recordDrawer
-    ) {
-      closeRecordDrawerOverlay();
-    }
-
-    const mobileNavBackdrop = document.getElementById("mobileNavBackdrop");
-    if (event.target === mobileNavBackdrop) {
-      closeMobileNav();
-    }
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-
-    closeAllWorkspaceMenus();
-    closeAssistantOverlay();
-    closeFullscreenOverlay();
-    closeSuggestionsOverlay();
-    closeRecordDrawerOverlay();
-    closeMobileNav();
-    closeComposer(true);
-  });
 }
 
 async function runAssistantScopeSync() {
@@ -943,9 +747,7 @@ function paintNavigationChrome() {
 }
 
 async function applyScopeChange(scope, options = {}) {
-  const safeScope = ["child", "home", "quality", "ofsted"].includes(scope)
-    ? scope
-    : "child";
+  const safeScope = ["child", "home", "quality", "ofsted"].includes(scope) ? scope : "child";
 
   if (!roleCanAccessScope(safeScope)) {
     showError(`Your current role does not have access to the ${safeScope} area.`);
@@ -958,14 +760,11 @@ async function applyScopeChange(scope, options = {}) {
   setCurrentScope(safeScope);
 
   if (safeScope !== "child" && !state.readinessSelectedHomeId) {
-    state.readinessSelectedHomeId =
-      state.homeId ||
-      state.currentUser?.home_id ||
-      state.currentUser?.homeId ||
-      null;
+    state.readinessSelectedHomeId = state.homeId || state.currentUser?.home_id || state.currentUser?.homeId || null;
   }
 
   const preferredSection = options.preferredSection;
+
   if (preferredSection && isSectionAllowed(preferredSection, safeScope)) {
     updateSectionState(preferredSection);
   } else {
@@ -993,6 +792,120 @@ async function applyScopeChange(scope, options = {}) {
   await loadSection(getCurrentSection(), { force: true });
 }
 
+function bindWorkspaceMenuLinks() {
+  if (workspaceMenuLinksBound) return;
+  workspaceMenuLinksBound = true;
+
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest(".workspace-menu-link");
+    if (!button) return;
+
+    const actionRouter = button.dataset.actionRouter;
+    const navSection = button.dataset.navSection;
+
+    if (actionRouter) {
+      const target = document.querySelector(`[data-action-router="${actionRouter}"]`);
+
+      if (target && target !== button && typeof target.click === "function") {
+        target.click();
+        closeAllWorkspaceMenus();
+        return;
+      }
+    }
+
+    if (!navSection) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const targetScope = findBestScopeForSection(navSection);
+
+    if (!targetScope) {
+      showError("This area is not available for your current role or is not wired yet.");
+      closeAllWorkspaceMenus();
+      return;
+    }
+
+    if (targetScope !== getCurrentScope()) {
+      await applyScopeChange(targetScope, { preferredSection: navSection });
+      closeAllWorkspaceMenus();
+      return;
+    }
+
+    await loadSection(navSection);
+    closeAllWorkspaceMenus();
+  });
+}
+
+function bindOverlayDismiss() {
+  if (overlayDismissBound) return;
+  overlayDismissBound = true;
+
+  document.addEventListener("click", (event) => {
+    const assistantModal = document.getElementById("assistantModal");
+    if (
+      assistantModal &&
+      !assistantModal.classList.contains("hidden") &&
+      !event.target.closest(".assistant-shell")
+    ) {
+      if (event.target === assistantModal || event.target.id === "assistantBackdrop") {
+        closeAssistantOverlay();
+      }
+    }
+
+    const composerPanel = document.getElementById("composerPanel") || document.getElementById("recordComposerPage");
+    if (
+      composerPanel &&
+      !composerPanel.classList.contains("hidden") &&
+      !event.target.closest(".composer-shell")
+    ) {
+      if (event.target === composerPanel) closeComposer(true);
+    }
+
+    const fullscreenPanel = document.getElementById("fullscreenPanel");
+    if (
+      fullscreenPanel &&
+      !fullscreenPanel.classList.contains("hidden") &&
+      !event.target.closest(".fullscreen-panel-shell")
+    ) {
+      if (event.target === fullscreenPanel) closeFullscreenOverlay();
+    }
+
+    const suggestionsPanel = document.getElementById("suggestionsPanel");
+    if (
+      suggestionsPanel &&
+      !suggestionsPanel.classList.contains("hidden") &&
+      !event.target.closest(".fullscreen-panel-shell")
+    ) {
+      if (event.target === suggestionsPanel) closeSuggestionsOverlay();
+    }
+
+    const recordDrawer = document.getElementById("recordDrawer");
+    const recordDrawerBackdrop = document.getElementById("recordDrawerBackdrop");
+
+    if (event.target === recordDrawerBackdrop) closeRecordDrawerOverlay();
+
+    if (recordDrawer && !recordDrawer.classList.contains("hidden") && event.target === recordDrawer) {
+      closeRecordDrawerOverlay();
+    }
+
+    const mobileNavBackdrop = document.getElementById("mobileNavBackdrop");
+    if (event.target === mobileNavBackdrop) closeMobileNav();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+
+    closeAllWorkspaceMenus();
+    closeAssistantOverlay();
+    closeFullscreenOverlay();
+    closeSuggestionsOverlay();
+    closeRecordDrawerOverlay();
+    closeMobileNav();
+    closeComposer(true);
+  });
+}
+
 export async function loadSection(section, options = {}) {
   const requestedSection = String(section || "").trim();
   let scope = getCurrentScope();
@@ -1007,9 +920,7 @@ export async function loadSection(section, options = {}) {
     const betterScope = findBestScopeForSection(safeSection);
 
     if (betterScope && betterScope !== scope) {
-      await applyScopeChange(betterScope, {
-        preferredSection: safeSection,
-      });
+      await applyScopeChange(betterScope, { preferredSection: safeSection });
       return;
     }
 
@@ -1098,7 +1009,6 @@ function bindNavButtons() {
   document.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-nav-section]");
     if (!button) return;
-
     if (button.classList.contains("workspace-menu-link")) return;
 
     const section = button.dataset.navSection;
@@ -1113,43 +1023,28 @@ function bindScopeSwitch() {
   if (scopeSwitchBound) return;
   scopeSwitchBound = true;
 
-  els.scopeChildBtn?.addEventListener("click", async () => {
-    await applyScopeChange("child");
-  });
-
-  els.scopeHomeBtn?.addEventListener("click", async () => {
-    await applyScopeChange("home");
-  });
-
-  els.scopeQualityBtn?.addEventListener("click", async () => {
-    await applyScopeChange("quality");
-  });
-
-  els.scopeOfstedBtn?.addEventListener("click", async () => {
-    await applyScopeChange("ofsted");
-  });
+  els.scopeChildBtn?.addEventListener("click", async () => applyScopeChange("child"));
+  els.scopeHomeBtn?.addEventListener("click", async () => applyScopeChange("home"));
+  els.scopeQualityBtn?.addEventListener("click", async () => applyScopeChange("quality"));
+  els.scopeOfstedBtn?.addEventListener("click", async () => applyScopeChange("ofsted"));
 }
 
 function bindSelectorControls() {
   if (selectorControlsBound) return;
   selectorControlsBound = true;
 
-  [els.youngPersonSearchInput, els.selectorSearch]
-    .filter(Boolean)
-    .forEach((input) => {
-      input.addEventListener("input", (event) => {
-        filterSelectorList?.(event.target.value || "");
-      });
+  [els.youngPersonSearchInput, els.selectorSearch].filter(Boolean).forEach((input) => {
+    input.addEventListener("input", (event) => {
+      filterSelectorList?.(event.target.value || "");
     });
+  });
 
   els.selectorRefreshBtn?.addEventListener("click", async () => {
     try {
       await loadYoungPersonSelector();
       clearStatus();
     } catch (error) {
-      showError(
-        error?.message || "Failed to refresh children and young people."
-      );
+      showError(error?.message || "Failed to refresh children and young people.");
     }
   });
 }
@@ -1158,9 +1053,7 @@ function bindComposerControls() {
   if (composerControlsBound) return;
   composerControlsBound = true;
 
-  els.closeComposerBtn?.addEventListener("click", () => {
-    closeComposer(true);
-  });
+  els.closeComposerBtn?.addEventListener("click", () => closeComposer(true));
 
   const handleSaveThenRefresh = async (mode, successMessage) => {
     try {
@@ -1175,17 +1068,9 @@ function bindComposerControls() {
     }
   };
 
-  els.composerSaveBtn?.addEventListener("click", async () => {
-    await handleSaveThenRefresh("draft", "Draft saved.");
-  });
-
-  els.composerSaveDraftBtn?.addEventListener("click", async () => {
-    await handleSaveThenRefresh("draft", "Draft saved.");
-  });
-
-  els.composerSubmitBtn?.addEventListener("click", async () => {
-    await handleSaveThenRefresh("submit", "Record sent for review.");
-  });
+  els.composerSaveBtn?.addEventListener("click", async () => handleSaveThenRefresh("draft", "Draft saved."));
+  els.composerSaveDraftBtn?.addEventListener("click", async () => handleSaveThenRefresh("draft", "Draft saved."));
+  els.composerSubmitBtn?.addEventListener("click", async () => handleSaveThenRefresh("submit", "Record sent for review."));
 }
 
 function bindRefreshControls() {
@@ -1214,28 +1099,20 @@ function bindSearchControls() {
   let activeSearchRequest = 0;
 
   const clearSearchState = async () => {
-    const query =
-      document.getElementById("recordSearchInput")?.value ||
-      document.getElementById("mobileRecordSearchInput")?.value ||
-      "";
-    const recordType =
-      document.getElementById("recordTypeFilter")?.value || "";
+    const query = document.getElementById("recordSearchInput")?.value || document.getElementById("mobileRecordSearchInput")?.value || "";
+    const recordType = document.getElementById("recordTypeFilter")?.value || "";
 
     if (String(query).trim() || String(recordType).trim()) return;
 
     try {
       await reloadCurrentSection();
     } catch (error) {
-      console.error(
-        "[nav] failed reloading section after clearing search",
-        error
-      );
+      console.error("[nav] failed reloading section after clearing search", error);
     }
   };
 
-  document.addEventListener("indicared:record-search-changed", async (event) => {
+  const handler = async (event) => {
     const requestId = ++activeSearchRequest;
-
     const detail = event?.detail || {};
     const query = String(detail.query || "").trim();
     const recordType = String(detail.recordType || "").trim();
@@ -1251,10 +1128,7 @@ function bindSearchControls() {
     }
 
     try {
-      const currentLoader = getLoaderForSection(
-        getCurrentScope(),
-        getCurrentSection()
-      );
+      const currentLoader = getLoaderForSection(getCurrentScope(), getCurrentSection());
 
       if (typeof currentLoader === "function") {
         await currentLoader({
@@ -1274,7 +1148,10 @@ function bindSearchControls() {
       console.error("[nav] search event handling failed", error);
       showError(error?.message || "Search failed.");
     }
-  });
+  };
+
+  document.addEventListener("indicared:record-search-changed", handler);
+  document.addEventListener("indicare:record-search-changed", handler);
 }
 
 function parseRecordPayload(rawValue) {
@@ -1282,11 +1159,10 @@ function parseRecordPayload(rawValue) {
   if (!raw || raw === "true" || raw === "1") return null;
 
   const attempts = [raw];
+
   try {
     const decoded = decodeURIComponent(raw);
-    if (decoded && decoded !== raw) {
-      attempts.push(decoded);
-    }
+    if (decoded && decoded !== raw) attempts.push(decoded);
   } catch {
     // noop
   }
@@ -1310,26 +1186,15 @@ function pickRecordText(trigger, selector) {
 
 function buildRecordItemFromTrigger(trigger) {
   const dataset = trigger?.dataset || {};
-  const payload =
-    parseRecordPayload(dataset.recordPayload) ||
-    parseRecordPayload(dataset.openRecord);
+  const payload = parseRecordPayload(dataset.recordPayload) || parseRecordPayload(dataset.openRecord);
 
-  const idValue =
-    dataset.recordId ||
-    dataset.id ||
-    payload?.record_id ||
-    payload?.source_id ||
-    payload?.id ||
-    null;
-
+  const idValue = dataset.recordId || dataset.id || payload?.record_id || payload?.source_id || payload?.id || null;
   if (!idValue) return null;
 
   const numericId = Number(idValue);
   const safeId = Number.isNaN(numericId) ? idValue : numericId;
 
-  const type = String(
-    dataset.recordType || payload?.record_type || payload?.type || ""
-  ).trim();
+  const type = String(dataset.recordType || payload?.record_type || payload?.type || "").trim();
 
   const title =
     dataset.recordTitle ||
@@ -1344,11 +1209,7 @@ function buildRecordItemFromTrigger(trigger) {
     payload?.description ||
     pickRecordText(trigger, ".record-row-summary");
 
-  const status =
-    dataset.recordStatus ||
-    payload?.workflow_status ||
-    payload?.status ||
-    "";
+  const status = dataset.recordStatus || payload?.workflow_status || payload?.status || "";
 
   const dateValue =
     dataset.recordDate ||
@@ -1376,25 +1237,11 @@ function buildRecordItemFromTrigger(trigger) {
   if (status && !item.workflow_status) item.workflow_status = status;
   if (dateValue && !item.record_date) item.record_date = dateValue;
 
-  if (dataset.recordPriority && !item.priority) {
-    item.priority = dataset.recordPriority;
-  }
-
-  if (dataset.recordSeverity && !item.severity) {
-    item.severity = dataset.recordSeverity;
-  }
-
-  if (dataset.recordOwner && !item.owner_name) {
-    item.owner_name = dataset.recordOwner;
-  }
-
-  if (dataset.sourceTable && !item.source_table) {
-    item.source_table = dataset.sourceTable;
-  }
-
-  if (dataset.sourceId && !item.source_id) {
-    item.source_id = dataset.sourceId;
-  }
+  if (dataset.recordPriority && !item.priority) item.priority = dataset.recordPriority;
+  if (dataset.recordSeverity && !item.severity) item.severity = dataset.recordSeverity;
+  if (dataset.recordOwner && !item.owner_name) item.owner_name = dataset.recordOwner;
+  if (dataset.sourceTable && !item.source_table) item.source_table = dataset.sourceTable;
+  if (dataset.sourceId && !item.source_id) item.source_id = dataset.sourceId;
 
   return item;
 }
@@ -1447,6 +1294,7 @@ function bindYoungPersonOpen() {
     try {
       setCurrentScope("child");
       updateSectionState(getDefaultSectionForScope("child"));
+
       await openYoungPerson(id);
 
       showWorkspaceScreen();
@@ -1489,12 +1337,8 @@ function bindQuickActionRouter() {
   actionRouterBound = true;
 
   bindActionRouter({
-    onMissingYoungPerson: () => {
-      showError("Select a child or young person first.");
-    },
-    onMissingHomeContext: () => {
-      showError("Load a home context first.");
-    },
+    onMissingYoungPerson: () => showError("Select a child or young person first."),
+    onMissingHomeContext: () => showError("Load a home context first."),
   });
 }
 
@@ -1531,7 +1375,6 @@ export function rerenderNavigationForScope() {
 
 export async function initialiseShellNavigation() {
   ensureAssistantControllerBound();
-
   ensureValidCurrentScope();
 
   if (!state.currentSection) {
