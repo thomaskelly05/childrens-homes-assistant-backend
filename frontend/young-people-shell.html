@@ -9,10 +9,10 @@
     name="description"
     content="IndiCare OS residential care workspace for child-centred recording, safeguarding, home operations, staffing, planning, compliance and quality oversight."
   />
-  <meta name="application-name" content="IndiCare OS" />
-  <meta name="robots" content="noindex,nofollow,noarchive" />
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f3f6fb" />
+  <meta name="application-name" content="IndiCare OS" />
+  <meta name="robots" content="noindex,nofollow" />
 
   <link rel="preload" href="/css/young-people-shell.css" as="style" />
   <link rel="stylesheet" href="/css/young-people-shell.css" />
@@ -31,13 +31,13 @@
   <div
     id="app"
     class="app-shell theme-system"
-    data-workspace="young-people-shell"
-    data-scope="child"
     data-assistant-scope-type="child"
     data-young-person-id=""
     data-home-id=""
     data-provider-id=""
     data-allowed-home-ids="[]"
+    data-workspace="young-people-shell"
+    data-scope="child"
     data-user-role="admin"
   >
     <header class="shell-topbar" role="banner">
@@ -63,7 +63,7 @@
             id="recordSearchInput"
             class="search-input topbar-search-input"
             type="search"
-            placeholder="Search notes, incidents, plans, documents, risks or reports..."
+            placeholder="Search notes, incidents, plans, documents, communication, risks or reports..."
             autocomplete="off"
             enterkeyhint="search"
           />
@@ -110,39 +110,22 @@
       </div>
     </header>
 
-    <main class="shell-main" id="mainContent" tabindex="-1">
-      <section id="selectorScreen" class="selector-screen hidden" aria-labelledby="selectorHeading">
+    <main class="shell-main" id="mainContent">
+      <section id="selectorPanel" class="selector-screen hidden" aria-labelledby="selectorHeading">
         <div class="selector-screen-inner">
           <div class="selector-page-head">
             <div>
               <div class="eyebrow">Children and young people</div>
               <h1 id="selectorHeading">Choose a child or young person</h1>
-              <p>
-                Open one clear workspace for daily recording, safeguarding, planning,
-                chronology, health, education, relationships, transition and review.
-              </p>
+              <p>Open one clear workspace for daily recording, safeguarding, planning, chronology, health, education, relationships, transition and review.</p>
             </div>
 
             <div class="selector-tools">
               <label class="sr-only" for="selectorSearch">Search young people</label>
-              <input
-                id="selectorSearch"
-                class="search-input"
-                type="search"
-                placeholder="Search by name, preferred name or home..."
-                autocomplete="off"
-              />
+              <input id="selectorSearch" class="search-input" type="search" placeholder="Search by name, preferred name or home..." autocomplete="off" />
 
               <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
-              <input
-                id="youngPersonSearchInput"
-                class="search-input hidden"
-                type="search"
-                placeholder="Search by name, preferred name or home..."
-                autocomplete="off"
-                aria-hidden="true"
-                tabindex="-1"
-              />
+              <input id="youngPersonSearchInput" class="search-input hidden" type="search" placeholder="Search by name, preferred name or home..." autocomplete="off" aria-hidden="true" tabindex="-1" />
 
               <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh list</button>
             </div>
@@ -159,7 +142,7 @@
         </div>
       </section>
 
-      <section id="workspaceScreen" class="workspace-screen" aria-labelledby="pageTitle">
+      <section id="workspacePanel" class="workspace-screen" aria-labelledby="pageTitle">
         <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--topnav">
           <section class="workspace-stage workspace-stage--full">
             <div class="workspace-stage-top">
@@ -177,15 +160,12 @@
                   <div class="workspace-header-copy">
                     <div id="workspaceEyebrow" class="eyebrow hidden" aria-hidden="true">Child workspace</div>
                     <h1 id="pageTitle">Today at a glance</h1>
-                    <p id="pageSubtitle">
-                      A calm, practical workspace for recording, safeguarding,
-                      daily care, planning, continuity and clear next steps.
-                    </p>
+                    <p id="pageSubtitle">A calm, practical workspace for recording, safeguarding, daily care, planning, continuity and clear next steps.</p>
                   </div>
 
                   <div class="workspace-header-actions">
                     <button id="heroAssistantBtn" class="primary-btn" type="button">Ask assistant</button>
-                    <button id="profileOpenBtn" class="secondary-btn nav-btn" type="button" data-view="profile">View profile</button>
+                    <button id="profileOpenBtn" class="secondary-btn" type="button" data-view="profile">View profile</button>
                     <button id="profilePhotoUploadBtn" class="ghost-btn" type="button" data-action-router="edit-profile-identity">Edit profile</button>
                     <button id="changePersonBtn" class="ghost-btn desktop-only" type="button">Change child</button>
                   </div>
@@ -210,26 +190,11 @@
                   </div>
 
                   <div id="workspaceSummaryStrip" class="workspace-summary-strip" data-workspace-summary-strip aria-label="Current summary">
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Today</span>
-                      <strong id="summaryToday" class="workspace-summary-value">No summary yet</strong>
-                    </div>
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Next item</span>
-                      <strong id="summaryNextEvent" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Last record</span>
-                      <strong id="summaryLastRecord" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Open actions</span>
-                      <strong id="summaryOpenActions" class="workspace-summary-value">Nothing loaded</strong>
-                    </div>
-                    <div class="workspace-summary-item">
-                      <span class="workspace-summary-label">Status</span>
-                      <strong class="workspace-summary-value">Ready</strong>
-                    </div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Today</span><strong id="summaryToday" class="workspace-summary-value">No summary yet</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Next event</span><strong id="summaryNextEvent" class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Last record</span><strong id="summaryLastRecord" class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Open actions</span><strong id="summaryOpenActions" class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Visibility alerts</span><strong class="workspace-summary-value">No active alerts</strong></div>
                   </div>
                 </div>
               </section>
@@ -391,10 +356,12 @@
           </div>
         </div>
 
-        <form id="mobileSearchForm" class="mobile-nav-search" role="search" aria-label="Search records">
-          <label class="sr-only" for="mobileRecordSearchInput">Search records</label>
-          <input id="mobileRecordSearchInput" class="search-input" type="search" placeholder="Search records..." autocomplete="off" />
-        </form>
+        <div class="mobile-nav-search">
+          <form id="mobileSearchForm" role="search" aria-label="Search records">
+            <label class="sr-only" for="mobileRecordSearchInput">Search records</label>
+            <input id="mobileRecordSearchInput" class="search-input" type="search" placeholder="Search records..." autocomplete="off" />
+          </form>
+        </div>
       </div>
 
       <div id="mobileNavContent" class="mobile-nav-content"></div>
@@ -438,10 +405,11 @@
           </div>
 
           <div class="composer-header-actions">
-            <div id="autosaveStatus" class="composer-autosave-status" aria-live="polite">
+            <div id="autosaveStatus" class="composer-autosave-status">
               <span>Autosave ready</span>
               <span id="autosaveTime" class="hidden"></span>
             </div>
+
             <button id="closeComposerBtn" class="secondary-btn" type="button">Close</button>
             <button id="composerSaveBtn" class="secondary-btn hidden" type="button" aria-hidden="true" tabindex="-1">Save</button>
             <button id="composerSaveDraftBtn" class="secondary-btn" type="button">Save draft</button>
@@ -461,7 +429,7 @@
             <section class="composer-side-card">
               <h3>Writing help</h3>
               <div id="composerGuidanceText" class="composer-side-body">
-                Keep the child at the centre. Be clear, calm and factual.
+                Keep the child at the centre. Be clear, calm and factual. Record what happened, what may have been going on for them, what helped, and what adults need to do next.
               </div>
             </section>
 
@@ -521,7 +489,7 @@
         <div class="assistant-header">
           <div>
             <h3>Assistant</h3>
-            <p>Ask questions, draft records and get support with care, safeguarding, quality and next steps.</p>
+            <p>Ask questions, draft records and get support with child-centred care, safeguarding, management oversight, quality and next steps.</p>
           </div>
           <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close assistant">✕</button>
         </div>
@@ -573,13 +541,26 @@
               <div id="assistantLiveStatus" class="assistant-inline-status">Assistant ready.</div>
             </section>
 
-            <section class="assistant-side-card"><div class="overview-section-head"><h3>Shift brief</h3><p>A practical summary for staff on duty.</p></div><div id="morningBriefBody"><p>No shift brief available yet.</p></div></section>
-            <section class="assistant-side-card"><div class="overview-section-head"><h3>Manager view</h3><p>Leadership, risk, compliance and oversight themes.</p></div><div id="managerBriefBody"><p>No manager summary available yet.</p></div></section>
-            <section class="assistant-side-card"><div class="overview-section-head"><h3>Quality view</h3><p>Audit, regulation and improvement themes.</p></div><div id="qualityBriefBody"><p>No quality summary available yet.</p></div></section>
+            <section class="assistant-side-card">
+              <div class="overview-section-head"><h3>Shift brief</h3><p>A practical summary for staff on duty.</p></div>
+              <div id="morningBriefBody"><p>No shift brief available yet.</p></div>
+            </section>
+
+            <section class="assistant-side-card">
+              <div class="overview-section-head"><h3>Manager view</h3><p>Leadership, risk, compliance and oversight themes.</p></div>
+              <div id="managerBriefBody"><p>No manager summary available yet.</p></div>
+            </section>
+
+            <section class="assistant-side-card">
+              <div class="overview-section-head"><h3>Quality view</h3><p>Audit, regulation and improvement themes.</p></div>
+              <div id="qualityBriefBody"><p>No quality summary available yet.</p></div>
+            </section>
 
             <section class="assistant-side-card">
               <div class="overview-section-head"><h3>Recent updates</h3><p>Refreshes and assistant updates.</p></div>
-              <div class="assistant-context-row"><button id="clearLiveUpdatesBtn" class="ghost-btn" type="button">Clear updates</button></div>
+              <div class="assistant-context-row">
+                <button id="clearLiveUpdatesBtn" class="ghost-btn" type="button">Clear updates</button>
+              </div>
               <div id="liveUpdatesBody"><p>No live updates yet.</p></div>
             </section>
 
@@ -647,6 +628,6 @@
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
-  <script type="module" src="/js/young-people-shell/index.js"></script>
+  <script type="module" src="/js/young-people-shell.js"></script>
 </body>
 </html>
