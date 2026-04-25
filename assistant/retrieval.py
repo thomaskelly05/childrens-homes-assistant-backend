@@ -142,6 +142,7 @@ def _cleanup_embedding_cache() -> None:
         for key, (expires_at, _embedding) in _embedding_cache.items()
         if expires_at <= now
     ]
+
     for key in expired_keys:
         _embedding_cache.pop(key, None)
 
@@ -217,8 +218,10 @@ def _build_query_text(
 def embed_query(text: str) -> list[float]:
     safe_text = _trim_text(text, MAX_EMBED_TEXT_CHARS)
 
-if client is None:
-    raise RuntimeError("OPENAI_API_KEY is missing; knowledge retrieval cannot create embeddings.")
+    if client is None:
+        raise RuntimeError(
+            "OPENAI_API_KEY is missing; knowledge retrieval cannot create embeddings."
+        )
 
     cached = _get_cached_embedding(safe_text)
     if cached is not None:
@@ -408,10 +411,10 @@ RETRIEVED INTERNAL KNOWLEDGE
 Use this knowledge only where it genuinely improves the answer.
 
 Important:
-• These are knowledge/framework sources, not young-person record sources.
-• Do not use these as evidence that something happened to a child.
-• For child/home record evidence, use the scoped record context and cite [record_type:record_id].
-• Do not invent citations, page numbers, document titles, or record IDs.
+- These are knowledge/framework sources, not young-person record sources.
+- Do not use these as evidence that something happened to a child.
+- For child/home record evidence, use the scoped record context and cite [record_type:record_id].
+- Do not invent citations, page numbers, document titles, or record IDs.
 
 Knowledge excerpts:
 {excerpts}
