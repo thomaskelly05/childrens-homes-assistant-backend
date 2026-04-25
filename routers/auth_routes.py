@@ -211,18 +211,6 @@ def _prune_attempts(bag: dict[str, list[float]], key: str) -> list[float]:
     return values
 
 
-def _is_locked(lock_map: dict[str, float], key: str) -> bool:
-    if not key:
-        return False
-    until = lock_map.get(key)
-    if not until:
-        return False
-    if until <= _now():
-        lock_map.pop(key, None)
-        return False
-    return True
-
-
 def _get_lock_until(lock_map: dict[str, float], key: str | None) -> float | None:
     if not key:
         return None
@@ -300,19 +288,21 @@ def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
         cur.execute(
             """
             SELECT
-                id,
-                email,
-                role,
-                home_id,
-                first_name,
-                last_name,
-                is_active,
-                archived,
-                password_hash,
-                updated_at,
-                created_at
-            FROM users
-            WHERE id = %s
+                u.id,
+                u.email,
+                u.role,
+                u.home_id,
+                COALESCE(u.provider_id, h.provider_id) AS provider_id,
+                u.first_name,
+                u.last_name,
+                u.is_active,
+                u.archived,
+                u.password_hash,
+                u.updated_at,
+                u.created_at
+            FROM users u
+            LEFT JOIN homes h ON h.id = u.home_id
+            WHERE u.id = %s
             LIMIT 1
             """,
             (user_id,),
@@ -325,17 +315,19 @@ def _get_user_by_email(conn: Any, email: str) -> dict[str, Any] | None:
         cur.execute(
             """
             SELECT
-                id,
-                email,
-                password_hash,
-                role,
-                home_id,
-                first_name,
-                last_name,
-                is_active,
-                archived
-            FROM users
-            WHERE lower(email) = %s
+                u.id,
+                u.email,
+                u.password_hash,
+                u.role,
+                u.home_id,
+                COALESCE(u.provider_id, h.provider_id) AS provider_id,
+                u.first_name,
+                u.last_name,
+                u.is_active,
+                u.archived
+            FROM users u
+            LEFT JOIN homes h ON h.id = u.home_id
+            WHERE lower(u.email) = %s
             LIMIT 1
             """,
             (email,),
@@ -407,6 +399,7 @@ def _session_user_payload(
         "email": user["email"],
         "role": user["role"],
         "home_id": user.get("home_id"),
+        "provider_id": user.get("provider_id"),
         "first_name": user.get("first_name"),
         "last_name": user.get("last_name"),
         "is_active": bool(user.get("is_active")),
@@ -429,6 +422,7 @@ def _full_user_payload(
         "email": user["email"],
         "role": user["role"],
         "home_id": user.get("home_id"),
+        "provider_id": user.get("provider_id"),
         "first_name": user.get("first_name"),
         "last_name": user.get("last_name"),
         "archived": user.get("archived"),
@@ -513,9 +507,13 @@ def _set_authenticated_session_state(
     request.session["csrf_token"] = csrf_token
     request.session["remember"] = remember
     request.session["login_at"] = int(_now())
+
     request.session["preauth_pending"] = True
+    request.session["mfa_pending"] = True
     request.session["pending_mfa_user_id"] = int(user_id)
     request.session["pending_mfa_email"] = email
+    request.session["mfa_user_id"] = int(user_id)
+    request.session["mfa_email"] = email
 
 
 def _deny_login(
@@ -537,7 +535,9 @@ def _deny_login(
     )
     raise HTTPException(
         status_code=status_code_value,
-        detail=INVALID_CREDENTIALS_MESSAGE if status_code_value == status.HTTP_401_UNAUTHORIZED else log_detail,
+        detail=INVALID_CREDENTIALS_MESSAGE
+        if status_code_value == status.HTTP_401_UNAUTHORIZED
+        else log_detail,
     )
 
 
@@ -721,6 +721,7 @@ def check_auth(
         "email": user["email"],
         "role": user["role"],
         "home_id": user.get("home_id"),
+        "provider_id": user.get("provider_id"),
         "is_active": bool(user.get("is_active")),
         "subscription_active": bool(billing and billing.get("subscription_active")),
         "subscription_status": billing.get("subscription_status") if billing else "inactive",
