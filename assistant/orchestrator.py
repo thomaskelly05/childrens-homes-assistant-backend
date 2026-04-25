@@ -203,6 +203,7 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
                 "citation_ref",
             ]
         )
+
         if key in seen:
             continue
 
@@ -257,6 +258,7 @@ def _normalise_evidence_index(
                 "url",
             ]
         )
+
         if key in seen:
             continue
 
@@ -327,8 +329,16 @@ def _extract_suggested_actions(runtime: AssistantRuntimeContext | None) -> list[
         line = line.strip()
         if not line:
             continue
+
+        if line.startswith("-"):
+            line = line.lstrip("-").strip()
+
+        if line.startswith("*"):
+            line = line.lstrip("*").strip()
+
         if line.startswith("•"):
             line = line.lstrip("•").strip()
+
         if not line:
             continue
 
@@ -415,9 +425,20 @@ def _infer_output_overrides(
     ]
 
     if any(term in text for term in report_terms):
+        task_type = "summary"
+        output_type = "plain_response"
+
+        if "report" in text or "reg 45" in text or "reg45" in text:
+            task_type = "report"
+            output_type = "structured_report"
+
+        if "review pack" in text:
+            task_type = "report"
+            output_type = "structured_report"
+
         return {
-            "task_type": "report" if "report" in text or "reg 45" in text or "reg45" in text else "summary",
-            "output_type": "structured_report" if any(term in text for term in ["reg 45", "reg45", "report", "review pack"]) else "plain_response",
+            "task_type": task_type,
+            "output_type": output_type,
         }
 
     return {}
@@ -526,10 +547,13 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     response_stance = getattr(runtime, "response_stance", "practice_support")
 
     inferred_overrides = _infer_output_overrides(req.message, req.user_context)
+
     if inferred_overrides.get("task_type"):
         task_type = inferred_overrides["task_type"]
+
     if inferred_overrides.get("output_type"):
         output_type = inferred_overrides["output_type"]
+
     if inferred_overrides.get("response_stance"):
         response_stance = inferred_overrides["response_stance"]
 
@@ -555,6 +579,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         user_role_profile=user_role_profile,
         response_stance=response_stance,
     )
+
     regulation_payload = serialise_regulation_mapping(regulation_mapping)
     regulation_context_block = build_regulation_context_block(regulation_mapping)
 
