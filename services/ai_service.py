@@ -16,7 +16,7 @@ from assistant.explainability import (
     build_loading_updates,
 )
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
-from assistant.orchestrator import OrchestratorRequest, build_orchestrator_result
+from services.assistant_orchestrator import OrchestratorRequest, build_orchestrator_result
 from assistant.web_search import web_search
 
 logger = logging.getLogger("indicare.ai_service")
@@ -642,9 +642,13 @@ Rules:
 - When making evidence-based statements, cite inline using the exact citation_ref in square brackets, for example [incident:123].
 - Prefer direct internal evidence over generic guidance.
 - Do not invent citation_ref values.
+- Never write broken citations such as [daily_note:] or [incident:] without an ID.
+- If no ID is visible, say "record ID not visible" rather than creating a broken citation.
 - If multiple items support a sentence, cite more than one when useful.
 - If evidence is partial, say it is partial.
 - If the request asks for an overview, synthesise the evidence but still cite key claims.
+- If the user asks for "whole scoped record", "across all records", "full summary", or similar, use the evidence index as the source boundary.
+- If the evidence index is small or missing, say clearly that only limited evidence is visible.
 - For Reg 45, overview, chronology, safeguarding, quality or compliance requests, evidence-led analysis is required.
 """
     return f"{system_prompt}\n\n{extra}".strip()
