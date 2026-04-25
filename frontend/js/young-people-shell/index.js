@@ -2,7 +2,6 @@ import {
   state,
   setCurrentScope,
   setCurrentSection,
-  setSelectedYoungPerson,
   clearSelectedYoungPerson,
   setHomeContext,
   setProviderContext,
@@ -43,8 +42,10 @@ let scopeEventsBound = false;
 let bootstrapped = false;
 let globalSearchMirrorsBound = false;
 let globalRefreshShortcutsBound = false;
+let changePersonFallbackBound = false;
 
 const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
+
 const ADMIN_LIKE_ROLES = new Set([
   "administrator",
   "admin",
@@ -54,18 +55,21 @@ const ADMIN_LIKE_ROLES = new Set([
   "system_admin",
   "owner",
 ]);
+
 const MANAGER_LIKE_ROLES = new Set([
   "manager",
   "registered_manager",
   "deputy_manager",
   "rm",
 ]);
+
 const RI_LIKE_ROLES = new Set([
   "ri",
   "responsible_individual",
   "director",
   "ceo",
 ]);
+
 const STAFF_LIKE_ROLES = new Set([
   "rsw",
   "residential_support_worker",
@@ -101,6 +105,7 @@ function normaliseNumericId(value) {
 
 function toIdArray(value) {
   if (!Array.isArray(value)) return [];
+
   return [
     ...new Set(
       value
@@ -112,7 +117,9 @@ function toIdArray(value) {
 
 function readSessionUser() {
   try {
-    const raw = sessionStorage.getItem("current_user");
+    const raw =
+      sessionStorage.getItem("current_user") ||
+      localStorage.getItem("current_user");
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -125,9 +132,10 @@ function writeSessionUser(user) {
       sessionStorage.removeItem("current_user");
       return;
     }
+
     sessionStorage.setItem("current_user", JSON.stringify(user));
   } catch {
-    // Intentionally ignore storage failures.
+    // Ignore storage failures.
   }
 }
 
@@ -145,7 +153,11 @@ function parseAllowedHomeIds(rawValue) {
 }
 
 function syncSingleHomeFallback() {
-  if (!state.homeId && Array.isArray(state.allowedHomeIds) && state.allowedHomeIds.length === 1) {
+  if (
+    !state.homeId &&
+    Array.isArray(state.allowedHomeIds) &&
+    state.allowedHomeIds.length === 1
+  ) {
     setHomeContext(state.allowedHomeIds[0]);
   }
 }
@@ -156,7 +168,9 @@ function hydrateRuntimeContextFromDom() {
   const datasetRole = normaliseRole(els.app.dataset.userRole || "");
   const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
   const datasetHomeId = normaliseNumericId(els.app.dataset.homeId);
-  const datasetYoungPersonId = normaliseNumericId(els.app.dataset.youngPersonId);
+  const datasetYoungPersonId = normaliseNumericId(
+    els.app.dataset.youngPersonId
+  );
   const datasetProviderId = normaliseNumericId(els.app.dataset.providerId);
   const datasetAllowedHomeIds = els.app.dataset.allowedHomeIds || "";
 
@@ -189,12 +203,15 @@ function hydrateRuntimeContextFromSession() {
       currentUser.account_type ||
       currentUser.role_name
   );
+
   const sessionHomeId = normaliseNumericId(
     currentUser.home_id || currentUser.homeId || null
   );
+
   const sessionProviderId = normaliseNumericId(
     currentUser.provider_id || currentUser.providerId || null
   );
+
   const allowedHomes = toIdArray(
     currentUser.allowed_home_ids ||
       currentUser.allowedHomeIds ||
@@ -245,10 +262,13 @@ async function hydrateRuntimeContextFromAuthCheck() {
     }
 
     const role = normaliseRole(auth.role || auth.user_role || auth.role_name);
+
     const authHomeId = normaliseNumericId(auth.home_id || auth.homeId || null);
+
     const authProviderId = normaliseNumericId(
       auth.provider_id || auth.providerId || null
     );
+
     const allowedHomes = toIdArray(
       auth.allowed_home_ids ||
         auth.allowedHomeIds ||
@@ -352,12 +372,13 @@ function ensureInitialSectionForScope() {
 }
 
 function applyRoleDefaultScopeIfNeeded() {
-  const role = getCurrentRole();
   const defaultScope = getDefaultScopeForRole();
   const currentScope = state.currentScope || "child";
+
   const datasetScope = String(els.app?.dataset?.scope || "")
     .trim()
     .toLowerCase();
+
   const hasExplicitScopeFromDom = VALID_SCOPES.has(datasetScope);
   const currentScopeAccessible = canAccessScope(currentScope);
 
@@ -367,13 +388,10 @@ function applyRoleDefaultScopeIfNeeded() {
     return;
   }
 
-  const roleWantsElevatedDefault = role === "admin" || role === "ri";
-
-  if (
-    roleWantsElevatedDefault &&
-    !hasExplicitScopeFromDom &&
-    currentScope === "child"
-  ) {
+  // Important:
+  // Do not force admin/RI away from child scope when the page explicitly
+  // boots as child. This was causing child workspace selection problems.
+  if (!hasExplicitScopeFromDom && !currentScope) {
     setCurrentScope(defaultScope, { resetSection: true });
     setCurrentSection(getDefaultSectionForScope(defaultScope));
   }
@@ -457,9 +475,10 @@ async function setScope(scope) {
     if (state.youngPersonId) {
       await loadSection(state.currentSection);
     } else {
-      await loadYoungPersonSelector();
-      refreshWorkspaceSummary();
+      await restoreOrAutoOpenYoungPerson();
     }
+
+    refreshWorkspaceSummary();
     return;
   }
 
@@ -490,46 +509,142 @@ function bindScopeEvents() {
   }
 }
 
-async function restoreSelectedYoungPerson() {
-  const idFromUrl = normaliseNumericId(getYoungPersonIdFromUrl());
+async function fetchFirstYoungPersonId() {
+  try {
+    const response = await fetch("/young-people", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
 
-  if (!idFromUrl) {
-    clearSelectedYoungPerson();
-    syncDomDatasetFromState();
-    return false;
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const rows = Array.isArray(data?.young_people)
+      ? data.young_people
+      : Array.isArray(data?.items)
+        ? data.items
+        : [];
+
+    const first = rows.find((item) => normaliseNumericId(item?.id));
+    return normaliseNumericId(first?.id);
+  } catch (error) {
+    console.error("[index] failed fetching first young person", error);
+    return null;
   }
+}
 
-  state.youngPersonId = idFromUrl;
-  setYoungPersonIdInUrl(idFromUrl);
+async function openYoungPersonSafely(id, options = {}) {
+  const safeId = normaliseNumericId(id);
+  if (!safeId) return false;
+
+  state.youngPersonId = safeId;
+  setYoungPersonIdInUrl(safeId);
   syncDomDatasetFromState();
 
   try {
-    await openYoungPerson(idFromUrl, { skipInitialSectionLoad: true });
+    await openYoungPerson(safeId, {
+      skipInitialSectionLoad: true,
+      ...options,
+    });
+
+    state.youngPersonId = safeId;
     syncDomDatasetFromState();
+    showWorkspace();
     refreshWorkspaceSummary();
+
     return true;
   } catch (error) {
-    console.error("[index] failed to restore young person", error);
+    console.error("[index] failed to open young person", error);
     clearSelectedYoungPerson();
     setYoungPersonIdInUrl(null);
     syncDomDatasetFromState();
+    showSelector();
     refreshWorkspaceSummary();
     showError(error?.message || "Failed to open selected young person.");
     return false;
   }
 }
 
+async function restoreOrAutoOpenYoungPerson() {
+  if ((state.currentScope || "child") !== "child") return false;
+
+  const idFromUrl = normaliseNumericId(getYoungPersonIdFromUrl());
+  if (idFromUrl) {
+    return openYoungPersonSafely(idFromUrl);
+  }
+
+  const existingStateId = normaliseNumericId(state.youngPersonId);
+  if (existingStateId) {
+    return openYoungPersonSafely(existingStateId);
+  }
+
+  const datasetId = normaliseNumericId(els.app?.dataset?.youngPersonId);
+  if (datasetId) {
+    return openYoungPersonSafely(datasetId);
+  }
+
+  const firstId = await fetchFirstYoungPersonId();
+  if (firstId) {
+    return openYoungPersonSafely(firstId);
+  }
+
+  showSelector();
+  await loadYoungPersonSelector();
+  refreshWorkspaceSummary();
+  return false;
+}
+
+async function restoreSelectedYoungPerson() {
+  return restoreOrAutoOpenYoungPerson();
+}
+
 async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
   const scope = state.currentScope || "child";
 
-  if (scope !== "child" || restoredYoungPerson) return;
+  if (scope !== "child") return;
+
+  if (restoredYoungPerson || state.youngPersonId) {
+    showWorkspace();
+    return;
+  }
 
   try {
     await loadYoungPersonSelector();
+    showSelector();
     refreshWorkspaceSummary();
   } catch (error) {
     console.error("[index] selector load failed", error);
     showError(error?.message || "Failed to load young people.");
+  }
+}
+
+function bindChangePersonFallback() {
+  if (changePersonFallbackBound) return;
+  changePersonFallbackBound = true;
+
+  const buttons = [
+    document.getElementById("changePersonBtn"),
+    document.getElementById("mobileHomeBtn"),
+  ].filter(Boolean);
+
+  for (const button of buttons) {
+    button.addEventListener("click", async () => {
+      if ((state.currentScope || "child") !== "child") return;
+
+      clearSelectedYoungPerson();
+      state.youngPersonId = null;
+      setYoungPersonIdInUrl(null);
+      syncDomDatasetFromState();
+      showSelector();
+
+      try {
+        await loadYoungPersonSelector();
+      } catch (error) {
+        console.error("[index] failed loading selector from change button", error);
+        showError(error?.message || "Failed to load young people.");
+      }
+    });
   }
 }
 
@@ -652,6 +767,7 @@ async function bootstrap() {
       providerId: state.providerId,
       homeId: state.homeId,
       allowedHomeIds: state.allowedHomeIds,
+      youngPersonId: state.youngPersonId,
       currentUser: state.currentUser,
     });
 
@@ -659,6 +775,7 @@ async function bootstrap() {
     bindAssistantUi();
     bindAssistantEvents();
     bindScopeEvents();
+    bindChangePersonFallback();
     bindGlobalSearchMirrors();
     bindGlobalRefreshShortcuts();
 
@@ -668,6 +785,15 @@ async function bootstrap() {
     await initialiseShellNavigation();
 
     refreshAllChrome();
+
+    if (
+      (state.currentScope || "child") === "child" &&
+      state.youngPersonId &&
+      state.currentSection
+    ) {
+      await loadSection(state.currentSection);
+    }
+
     refreshWorkspaceSummary();
   } catch (error) {
     console.error("[index] bootstrap failed", error);
