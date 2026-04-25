@@ -13,7 +13,8 @@ from db.connection import get_db_connection, release_db_connection
 
 logger = logging.getLogger("indicare.retrieval")
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
 EMBEDDING_CACHE_TTL_SECONDS = int(os.environ.get("EMBEDDING_CACHE_TTL_SECONDS", "900"))
@@ -215,6 +216,9 @@ def _build_query_text(
 
 def embed_query(text: str) -> list[float]:
     safe_text = _trim_text(text, MAX_EMBED_TEXT_CHARS)
+
+if client is None:
+    raise RuntimeError("OPENAI_API_KEY is missing; knowledge retrieval cannot create embeddings.")
 
     cached = _get_cached_embedding(safe_text)
     if cached is not None:
