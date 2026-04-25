@@ -2253,3 +2253,482 @@ a {
   }
 }
 ```
+
+/* =========================================================
+   Ofsted command centre presentation
+========================================================= */
+
+.ofsted-dashboard-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.ofsted-hero-card,
+.ofsted-section-card,
+.ofsted-metric-card,
+.ofsted-record-card,
+.ofsted-priority-item,
+.ofsted-narrative-card {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+}
+
+.ofsted-hero-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(37, 99, 235, 0.14), transparent 32%),
+    linear-gradient(135deg, #ffffff, #f8fbff);
+}
+
+.ofsted-hero-copy h2 {
+  margin: 6px 0 8px;
+  font-size: clamp(2rem, 3vw, 3.2rem);
+  letter-spacing: -0.055em;
+}
+
+.ofsted-hero-copy p {
+  max-width: 780px;
+  margin: 0;
+  color: #475569;
+  line-height: 1.55;
+  font-weight: 650;
+}
+
+.ofsted-hero-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.ofsted-kicker {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ofsted-preview-banner,
+.ofsted-live-banner {
+  width: fit-content;
+  margin-top: 14px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.ofsted-preview-banner {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+}
+
+.ofsted-live-banner {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+}
+
+.ofsted-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ofsted-metric-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 16px;
+}
+
+.ofsted-metric-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: #94a3b8;
+}
+
+.ofsted-metric-card--success::before {
+  background: #10b981;
+}
+
+.ofsted-metric-card--warning::before {
+  background: #f59e0b;
+}
+
+.ofsted-metric-card--danger::before {
+  background: #ef4444;
+}
+
+.ofsted-metric-label,
+.ofsted-metric-note,
+.ofsted-metric-status {
+  display: block;
+}
+
+.ofsted-metric-label {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ofsted-metric-value {
+  display: block;
+  margin-top: 7px;
+  font-size: 1.7rem;
+  letter-spacing: -0.05em;
+}
+
+.ofsted-metric-note {
+  margin-top: 4px;
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.ofsted-metric-status {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #64748b;
+}
+
+.ofsted-section-card {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.ofsted-section-card--sticky {
+  position: sticky;
+  top: calc(var(--topbar-height) + 16px);
+}
+
+.ofsted-section-head {
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(14, 165, 233, 0.06));
+}
+
+.ofsted-section-head h3 {
+  margin: 4px 0 4px;
+  font-size: 1.1rem;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.ofsted-section-head p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.ofsted-command-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.8fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.ofsted-command-main,
+.ofsted-command-side {
+  display: grid;
+  gap: 20px;
+}
+
+.ofsted-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+}
+
+.ofsted-progress-card {
+  border-radius: 18px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.ofsted-progress-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 900;
+}
+
+.ofsted-progress-top span {
+  color: #475569;
+  font-size: 0.84rem;
+}
+
+.ofsted-progress-track {
+  height: 10px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.24);
+  overflow: hidden;
+}
+
+.ofsted-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #94a3b8;
+}
+
+.ofsted-progress-fill--success {
+  background: #10b981;
+}
+
+.ofsted-progress-fill--warning {
+  background: #f59e0b;
+}
+
+.ofsted-progress-fill--danger {
+  background: #ef4444;
+}
+
+.ofsted-card-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.ofsted-record-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 18px;
+  padding: 15px 16px;
+  border-left: 5px solid #94a3b8;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ofsted-record-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+}
+
+.ofsted-record-card--success {
+  border-left-color: #10b981;
+}
+
+.ofsted-record-card--warning {
+  border-left-color: #f59e0b;
+}
+
+.ofsted-record-card--danger {
+  border-left-color: #ef4444;
+}
+
+.ofsted-record-main {
+  min-width: 0;
+}
+
+.ofsted-record-title {
+  font-weight: 950;
+  letter-spacing: -0.025em;
+}
+
+.ofsted-record-summary {
+  margin-top: 5px;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.ofsted-record-meta {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.ofsted-record-side {
+  flex: 0 0 auto;
+}
+
+.ofsted-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+  font-weight: 950;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: #f8fafc;
+  color: #475569;
+}
+
+.ofsted-pill--success {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.ofsted-pill--warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.ofsted-pill--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #991b1b;
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.ofsted-priority-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.ofsted-priority-item {
+  border-radius: 18px;
+  padding: 14px 15px;
+  border-left: 5px solid #94a3b8;
+}
+
+.ofsted-priority-item--success {
+  border-left-color: #10b981;
+}
+
+.ofsted-priority-item--warning {
+  border-left-color: #f59e0b;
+}
+
+.ofsted-priority-item--danger {
+  border-left-color: #ef4444;
+}
+
+.ofsted-priority-item strong {
+  display: block;
+  font-weight: 950;
+}
+
+.ofsted-priority-item p {
+  margin: 5px 0 0;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.ofsted-narrative-card {
+  margin: 16px;
+  border-radius: 18px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.12), transparent 38%),
+    #ffffff;
+}
+
+.ofsted-narrative-card p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.6;
+  font-weight: 700;
+}
+
+.ofsted-empty {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.ofsted-empty-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 8px;
+  border-radius: 14px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+  font-weight: 950;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ofsted-hero-card,
+  .ofsted-section-card,
+  .ofsted-metric-card,
+  .ofsted-record-card,
+  .ofsted-priority-item,
+  .ofsted-narrative-card,
+  .ofsted-progress-card {
+    background: rgba(15, 23, 42, 0.78);
+    color: #f8fafc;
+  }
+
+  .ofsted-hero-card {
+    background:
+      radial-gradient(circle at 90% 10%, rgba(37, 99, 235, 0.2), transparent 32%),
+      linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.82));
+  }
+
+  .ofsted-hero-copy p,
+  .ofsted-section-head p,
+  .ofsted-record-summary,
+  .ofsted-record-meta,
+  .ofsted-priority-item p,
+  .ofsted-narrative-card p {
+    color: #cbd5e1;
+  }
+
+  .ofsted-progress-card {
+    background: rgba(2, 6, 23, 0.42);
+  }
+}
+
+@media (max-width: 1180px) {
+  .ofsted-metric-grid,
+  .ofsted-progress-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ofsted-command-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ofsted-section-card--sticky {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .ofsted-hero-card {
+    display: grid;
+    padding: 18px;
+  }
+
+  .ofsted-hero-actions {
+    display: grid;
+  }
+
+  .ofsted-metric-grid,
+  .ofsted-progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ofsted-record-card {
+    display: grid;
+  }
+
+  .ofsted-record-side {
+    justify-self: start;
+  }
+}
