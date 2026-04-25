@@ -90,5 +90,3 @@ def build_boundary_flags(
         "must_not_invent_citations": True,
         "must_label_missing_evidence": True,
     }
-
-Next file: assistant/audit_logger.py.
