@@ -1,5 +1,3 @@
-Replace services/assistant_orchestrator.py with this production-ready version:
-
 from __future__ import annotations
 import logging
 import uuid
