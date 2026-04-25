@@ -647,6 +647,8 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/supervision.html": "supervision.html",
         "/ai-notes": "ai-note.html",
         "/ai-note.html": "ai-note.html",
+        "/young-people": "young-people.html",
+        "/young-people.html": "young-people.html",
         "/young-people-page": "young-people.html",
         "/young-people-page.html": "young-people.html",
         "/young-people-shell": "young-people-shell.html",
