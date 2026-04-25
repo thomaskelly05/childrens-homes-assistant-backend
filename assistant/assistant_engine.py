@@ -272,6 +272,7 @@ class AssistantRuntimeContext:
     practice_quality_context: str = ""
     escalation_context: str = ""
     scoped_context_summary: str = ""
+    evidence_safety_context: str = ""
     sources_used: list[dict[str, Any]] = field(default_factory=list)
     evidence_index: list[dict[str, Any]] = field(default_factory=list)
 
@@ -289,20 +290,6 @@ def _safe_string(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     return str(value).strip()
-
-
-def _safe_bool(value: Any, default: bool = False) -> bool:
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return default
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in {"1", "true", "yes", "y", "on"}:
-            return True
-        if lowered in {"0", "false", "no", "n", "off"}:
-            return False
-    return bool(value)
 
 
 def _normalise_text(value: Any) -> str:
@@ -486,7 +473,10 @@ def _derive_task_type(
     if document_text:
         return "document_work"
 
-    if _contains_any(text, QUALITY_CHECK_KEYWORDS) or mode in {"document_review", "manager_review"}:
+    if _contains_any(text, QUALITY_CHECK_KEYWORDS) or mode in {
+        "document_review",
+        "manager_review",
+    }:
         return "review"
 
     if _contains_any(text, PLANNING_KEYWORDS) or mode == "support_planning":
@@ -554,6 +544,7 @@ def _map_classifier_output_to_runtime(
         "report": "report",
         "plain_response": _legacy_output_type_from_mode(legacy_mode, task_type, message),
     }
+
     return mapping.get(
         classification_output_format,
         _legacy_output_type_from_mode(legacy_mode, task_type, message),
@@ -696,31 +687,42 @@ def _normalise_sources(value: Any) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
 
+        record_type = item.get("record_type") or item.get("type")
+        record_id = item.get("record_id") or item.get("id")
+
         source = {
             "type": item.get("type"),
+            "source_type": item.get("source_type"),
             "label": item.get("label"),
             "document_title": item.get("document_title"),
             "section": item.get("section"),
             "page_number": item.get("page_number"),
             "excerpt": item.get("excerpt"),
             "url": item.get("url"),
-            "record_type": item.get("record_type"),
-            "record_id": item.get("record_id"),
-            "citation_ref": item.get("citation_ref"),
+            "record_type": record_type,
+            "record_id": record_id,
+            "citation_ref": item.get("citation_ref") or item.get("citation_format"),
             "summary": item.get("summary"),
             "title": item.get("title"),
             "description": item.get("description"),
             "date": item.get("date"),
+            "event_at": item.get("event_at"),
+            "updated_at": item.get("updated_at"),
             "scope_type": item.get("scope_type"),
             "young_person_id": item.get("young_person_id"),
             "home_id": item.get("home_id"),
             "deep_link": item.get("deep_link"),
+            "is_record_source": bool(item.get("is_record_source")),
         }
+
+        if source["record_type"] and source["record_id"] and not source["citation_ref"]:
+            source["citation_ref"] = f"[{source['record_type']}:{source['record_id']}]"
 
         key = "|".join(
             str(source.get(k) or "")
             for k in [
                 "type",
+                "source_type",
                 "label",
                 "document_title",
                 "section",
@@ -731,6 +733,7 @@ def _normalise_sources(value: Any) -> list[dict[str, Any]]:
                 "citation_ref",
             ]
         )
+
         if key in seen:
             continue
 
@@ -751,14 +754,22 @@ def _normalise_evidence_index(value: Any, limit: int = 120) -> list[dict[str, An
         if not isinstance(item, dict):
             continue
 
+        record_type = item.get("record_type") or item.get("type")
+        record_id = item.get("record_id") or item.get("id")
+        citation_ref = item.get("citation_ref") or item.get("citation_format")
+
+        if not citation_ref and record_type and record_id:
+            citation_ref = f"[{record_type}:{record_id}]"
+
         entry = {
-            "citation_ref": item.get("citation_ref"),
-            "record_type": item.get("record_type"),
-            "record_id": item.get("record_id"),
+            "citation_ref": citation_ref,
+            "record_type": record_type,
+            "record_id": record_id,
             "label": item.get("label"),
             "title": item.get("title"),
             "section": item.get("section"),
             "excerpt": item.get("excerpt"),
+            "summary": item.get("summary"),
             "description": item.get("description"),
             "date": item.get("date") or item.get("event_at") or item.get("updated_at"),
             "event_at": item.get("event_at"),
@@ -781,6 +792,7 @@ def _normalise_evidence_index(value: Any, limit: int = 120) -> list[dict[str, An
                 "url",
             ]
         )
+
         if key in seen:
             continue
 
@@ -794,11 +806,17 @@ def _extract_sources_from_user_context(user_context: dict[str, Any] | None) -> l
     if not isinstance(user_context, dict):
         return []
 
-    for candidate in (
+    candidates = (
         user_context.get("sources"),
-        (user_context.get("context") or {}).get("sources") if isinstance(user_context.get("context"), dict) else None,
-        (user_context.get("runtime") or {}).get("sources") if isinstance(user_context.get("runtime"), dict) else None,
-    ):
+        (user_context.get("context") or {}).get("sources")
+        if isinstance(user_context.get("context"), dict)
+        else None,
+        (user_context.get("runtime") or {}).get("sources")
+        if isinstance(user_context.get("runtime"), dict)
+        else None,
+    )
+
+    for candidate in candidates:
         if isinstance(candidate, list):
             return _normalise_sources(candidate)
 
@@ -809,11 +827,17 @@ def _extract_evidence_index_from_user_context(user_context: dict[str, Any] | Non
     if not isinstance(user_context, dict):
         return []
 
-    for candidate in (
+    candidates = (
         user_context.get("evidence_index"),
-        (user_context.get("context") or {}).get("evidence_index") if isinstance(user_context.get("context"), dict) else None,
-        (user_context.get("runtime") or {}).get("evidence_index") if isinstance(user_context.get("runtime"), dict) else None,
-    ):
+        (user_context.get("context") or {}).get("evidence_index")
+        if isinstance(user_context.get("context"), dict)
+        else None,
+        (user_context.get("runtime") or {}).get("evidence_index")
+        if isinstance(user_context.get("runtime"), dict)
+        else None,
+    )
+
+    for candidate in candidates:
         if isinstance(candidate, list):
             return _normalise_evidence_index(candidate)
 
@@ -825,12 +849,45 @@ def _build_evidence_index_prompt_block(evidence_index: list[dict[str, Any]], lim
         return ""
 
     trimmed = evidence_index[:limit]
+
     return (
         "Use this structured evidence index as the primary evidence pool where relevant.\n"
         "Prefer citation_ref values exactly as supplied.\n"
-        "Do not invent citations.\n\n"
+        "Do not invent citations.\n"
+        "Do not cite any record that is not listed here or visible elsewhere in the scoped context.\n"
+        "If a point is not supported by this evidence, say it is not visible.\n\n"
         + json.dumps(trimmed, ensure_ascii=False, indent=2)
     )
+
+
+def _build_evidence_safety_context(runtime: AssistantRuntimeContext) -> str:
+    lines = [
+        "EVIDENCE SAFETY OVERRIDE:",
+        "• Use visible scoped records, structured sources, uploaded documents, or retrieved knowledge only as supplied.",
+        "• Do not invent record IDs, dates, incidents, risks, outcomes, actions, or names.",
+        "• Cite young person/home record evidence using the exact citation_ref where supplied.",
+        "• If no citation_ref is supplied but record_type and record_id are visible, use [record_type:record_id].",
+        "• Do not treat internal knowledge or statutory guidance as evidence that something happened to a child.",
+        "• Separate facts, patterns, concerns, and recommendations.",
+        "• Include what is not visible / missing evidence when answering record summaries, reviews, reports, or risk questions.",
+        "• Frame recommendations as staff or manager review points, not final decisions.",
+    ]
+
+    if runtime.evidence_index:
+        lines.append(f"• Structured evidence items available: {len(runtime.evidence_index)}.")
+    else:
+        lines.append("• No structured evidence index is visible. Do not pretend one is available.")
+
+    record_sources = [
+        source
+        for source in runtime.sources_used
+        if source.get("record_type") or source.get("record_id") or source.get("citation_ref")
+    ]
+
+    if record_sources:
+        lines.append(f"• Structured record/source items available: {len(record_sources)}.")
+
+    return "\n".join(lines)
 
 
 def _build_scoped_context_summary(user_context: dict[str, Any] | None) -> str:
@@ -884,13 +941,11 @@ def _build_scoped_context_summary(user_context: dict[str, Any] | None) -> str:
 
     evidence_count = len(_extract_evidence_index_from_user_context(user_context))
     source_count = len(_extract_sources_from_user_context(user_context))
+
     if evidence_count:
         lines.append(f"Evidence items available: {evidence_count}")
     if source_count:
         lines.append(f"Structured sources available: {source_count}")
-
-    if not lines:
-        return ""
 
     return "\n".join(lines)
 
@@ -898,6 +953,7 @@ def _build_scoped_context_summary(user_context: dict[str, Any] | None) -> str:
 def _build_document_source(document_name: str | None) -> dict[str, Any]:
     return {
         "type": "uploaded_document",
+        "source_type": "uploaded_document",
         "label": f"Uploaded document: {_safe_string(document_name) or 'Uploaded document'}",
         "document_title": _safe_string(document_name) or "Uploaded document",
         "section": "",
@@ -911,10 +967,13 @@ def _build_document_source(document_name: str | None) -> dict[str, Any]:
         "title": None,
         "description": None,
         "date": None,
+        "event_at": None,
+        "updated_at": None,
         "scope_type": None,
         "young_person_id": None,
         "home_id": None,
         "deep_link": None,
+        "is_record_source": False,
     }
 
 
@@ -922,22 +981,40 @@ def _safe_classify_intent(message: str, history: list[dict[str, Any]], role: str
     try:
         return classify_intent(message=message, history=history, role=role)
     except Exception:
-        logger.exception("Intent classification failed")
-        return classify_intent(message=message, history=[], role=role)
+        logger.exception("Intent classification failed; retrying without history")
+        try:
+            return classify_intent(message=message, history=[], role=role)
+        except Exception:
+            logger.exception("Intent classification fallback failed")
+
+            class FallbackClassification:
+                legacy_mode = "general_practice"
+                response_stance = "practice_support"
+                confidence = 0.0
+                matched_signals: list[str] = []
+                secondary_intents: list[str] = []
+                output_format = "plain_response"
+
+            return FallbackClassification()
 
 
 def _safe_assess_safeguarding(message: str, history: list[dict[str, Any]]) -> str:
     try:
-        return assess_safeguarding_level(message=message, history=history)
+        level = assess_safeguarding_level(message=message, history=history)
     except TypeError:
         try:
-            return assess_safeguarding_level(message)
+            level = assess_safeguarding_level(message)
         except Exception:
             logger.exception("Safeguarding assessment failed")
             return "normal"
     except Exception:
         logger.exception("Safeguarding assessment failed")
         return "normal"
+
+    safe_level = _safe_string(level).lower()
+    if safe_level in {"normal", "watchful", "heightened", "urgent"}:
+        return safe_level
+    return "normal"
 
 
 def _safe_schema_context(mode: str, safeguarding_level: str) -> str:
@@ -992,9 +1069,11 @@ def _safe_retrieval_bundle(
             role=req.role,
             limit=limit,
         )
+
         context_text = _safe_string(bundle.get("context_text"))
         sources = bundle.get("sources") if isinstance(bundle, dict) else []
         return context_text, _normalise_sources(sources)
+
     except TypeError:
         try:
             bundle = retrieve_context_bundle(req.message, limit=limit)
@@ -1263,6 +1342,7 @@ def _build_suggested_actions_context(
 
     deduped: list[str] = []
     seen: set[str] = set()
+
     for item in actions:
         lowered = item.lower()
         if lowered in seen:
@@ -1274,7 +1354,7 @@ def _build_suggested_actions_context(
         return ""
 
     return "SUGGESTED ACTIONS TO WEIGH INTO THE RESPONSE:\n" + "\n".join(
-        f"• {a}" for a in deduped
+        f"• {action}" for action in deduped
     )
 
 
@@ -1289,6 +1369,7 @@ def _build_practice_quality_context(
         "Where relevant, include observation, action taken, outcome, and next step.",
         "Where structured evidence exists, use it directly rather than reverting to generic guidance.",
         "Use citation_ref markers exactly where evidence supports the point.",
+        "Do not invent citations where evidence is missing.",
     ]
 
     if output_type in {
@@ -1328,7 +1409,7 @@ def _build_practice_quality_context(
             "Do not let polished wording replace clear safeguarding action and escalation logic."
         )
 
-    return "PRACTICE QUALITY CHECK:\n" + "\n".join(f"• {c}" for c in checks)
+    return "PRACTICE QUALITY CHECK:\n" + "\n".join(f"• {check}" for check in checks)
 
 
 def _build_escalation_context(
@@ -1401,6 +1482,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     runtime.safeguarding_level = _safe_assess_safeguarding(message, history)
     runtime.user_role_profile = _normalise_user_role_profile(req.role, req.user_context)
+
     runtime.task_type = _derive_task_type(
         message,
         runtime.mode,
@@ -1417,6 +1499,13 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
     )
 
     runtime.urgency = _derive_urgency(message, runtime.safeguarding_level)
+
+    runtime.evidence_index = _extract_evidence_index_from_user_context(req.user_context)
+
+    context_sources = _extract_sources_from_user_context(req.user_context)
+    if context_sources:
+        runtime.sources_used.extend(context_sources)
+
     runtime.retrieval_level = _retrieval_level(
         runtime.mode,
         runtime.task_type,
@@ -1426,6 +1515,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         speed,
         req.user_context,
     )
+
     runtime.reflection_level = _reflection_level(
         runtime.mode,
         runtime.task_type,
@@ -1437,7 +1527,9 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         runtime.mode,
         runtime.safeguarding_level,
     )
+
     runtime.role_lens_context = _build_role_lens_context(runtime.user_role_profile)
+
     runtime.suggested_actions_context = _build_suggested_actions_context(
         runtime.mode,
         runtime.task_type,
@@ -1447,23 +1539,21 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         runtime.user_role_profile,
         message,
     )
+
     runtime.practice_quality_context = _build_practice_quality_context(
         runtime.task_type,
         runtime.output_type,
         runtime.safeguarding_level,
     )
+
     runtime.escalation_context = _build_escalation_context(
         runtime.urgency,
         runtime.safeguarding_level,
         runtime.user_role_profile,
         message,
     )
-    runtime.scoped_context_summary = _build_scoped_context_summary(req.user_context)
 
-    runtime.evidence_index = _extract_evidence_index_from_user_context(req.user_context)
-    context_sources = _extract_sources_from_user_context(req.user_context)
-    if context_sources:
-        runtime.sources_used.extend(context_sources)
+    runtime.scoped_context_summary = _build_scoped_context_summary(req.user_context)
 
     if speed != "quick":
         if _should_use_memory(runtime.mode, speed, runtime.task_type):
@@ -1518,12 +1608,15 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
     if req.document_text:
         uploaded_source = _build_document_source(req.document_name)
         if not any(
-            _safe_string(s.get("type")) == "uploaded_document"
-            and _safe_string(s.get("document_title")) == uploaded_source["document_title"]
-            for s in runtime.sources_used
-            if isinstance(s, dict)
+            _safe_string(source.get("type")) == "uploaded_document"
+            and _safe_string(source.get("document_title")) == uploaded_source["document_title"]
+            for source in runtime.sources_used
+            if isinstance(source, dict)
         ):
             runtime.sources_used.append(uploaded_source)
+
+    runtime.sources_used = _normalise_sources(runtime.sources_used)
+    runtime.evidence_safety_context = _build_evidence_safety_context(runtime)
 
     system_prompt, user_message = build_chat_prompt(
         message=message,
@@ -1543,6 +1636,12 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     system_prompt = _append_section(
         system_prompt,
+        "EVIDENCE SAFETY CONTEXT",
+        runtime.evidence_safety_context,
+    )
+
+    system_prompt = _append_section(
+        system_prompt,
         "SCOPED OPERATIONAL CONTEXT",
         runtime.scoped_context_summary,
     )
@@ -1552,31 +1651,37 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         "RESPONSE STRUCTURE",
         runtime.schema_context,
     )
+
     system_prompt = _append_section(
         system_prompt,
         "ROLE ADAPTATION CONTEXT",
         runtime.role_lens_context,
     )
+
     system_prompt = _append_section(
         system_prompt,
         "LEADERSHIP / INSPECTION LENS CONTEXT",
         runtime.leadership_lens_context,
     )
+
     system_prompt = _append_section(
         system_prompt,
         "SUGGESTED ACTIONS CONTEXT",
         runtime.suggested_actions_context,
     )
+
     system_prompt = _append_section(
         system_prompt,
         "PRACTICE QUALITY CONTEXT",
         runtime.practice_quality_context,
     )
+
     system_prompt = _append_section(
         system_prompt,
         "ESCALATION CONTEXT",
         runtime.escalation_context,
     )
+
     system_prompt = _append_section(
         system_prompt,
         "STRUCTURED EVIDENCE INDEX",
@@ -1589,16 +1694,19 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             "MEMORY CONTEXT",
             runtime.memory_context,
         )
+
         system_prompt = _append_section(
             system_prompt,
             "RETRIEVED CONTEXT",
             runtime.retrieval_context,
         )
+
         system_prompt = _append_section(
             system_prompt,
             "REFLECTION CONTEXT",
             runtime.reflection_context,
         )
+
         system_prompt = _append_section(
             system_prompt,
             "SUPERVISION CONTEXT",
@@ -1609,6 +1717,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         trimmed_document_text = req.document_text[
             : _document_trim_limit(runtime.mode, speed)
         ]
+
         system_prompt = _append_section(
             system_prompt,
             "UPLOADED DOCUMENT CONTEXT",
@@ -1629,7 +1738,8 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             "session_id=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s urgency=%s response_mode=%s role_profile=%s "
             "stance=%s confidence=%s retrieval_level=%s reflection_level=%s "
-            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s suggested_actions=%s sources=%s evidence=%s scoped_context=%s"
+            "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s "
+            "suggested_actions=%s sources=%s evidence=%s scoped_context=%s"
         ),
         req.session_id,
         runtime.mode,
