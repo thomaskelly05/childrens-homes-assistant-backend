@@ -92,6 +92,7 @@ def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
                 email,
                 role,
                 home_id,
+                provider_id,
                 first_name,
                 last_name,
                 is_active,
@@ -193,6 +194,7 @@ def _extract_billing_state(
                 request_path,
             )
             raise
+
         logger.warning(
             "Best-effort billing lookup failed for exempt request path=%s user_id=%s",
             request_path,
@@ -229,12 +231,28 @@ def get_current_user(
     if not is_exempt and not subscription_active:
         raise _forbidden("Subscription required")
 
+    home_id = user.get("home_id")
+    provider_id = user.get("provider_id")
+
+    allowed_home_ids = []
+    if home_id is not None:
+        try:
+            allowed_home_ids = [int(home_id)]
+        except (TypeError, ValueError):
+            allowed_home_ids = []
+
     return {
         **user,
+        "id": user["id"],
         "user_id": user["id"],
         "email": user.get("email"),
         "role": role,
-        "home_id": user.get("home_id"),
+        "home_id": home_id,
+        "homeId": home_id,
+        "provider_id": provider_id,
+        "providerId": provider_id,
+        "allowed_home_ids": allowed_home_ids,
+        "allowedHomeIds": allowed_home_ids,
         "subscription_active": subscription_active,
         "subscription_status": subscription_status,
         "plan_name": plan_name,
