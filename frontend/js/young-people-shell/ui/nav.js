@@ -5,6 +5,8 @@ import {
   NAV_GROUPS_CONFIG,
   SCOPE_SECTIONS,
   SCOPE_DEFAULT_SECTION,
+  ROLE_SCOPE_ACCESS,
+  canRoleAccessScope,
 } from "../core/config.js";
 import { escapeHtml } from "../core/utils.js";
 
@@ -51,7 +53,6 @@ import { loadReports } from "../features/reports.js";
 import { loadCurrentView as loadLeavingCare } from "../features/leaving-care.js";
 import { loadManager } from "../features/manager.js";
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
-import { loadTasks } from "../features/tasks.js";
 import { loadActions } from "../features/actions.js";
 
 import { loadHomeDashboard } from "../features/home-dashboard.js";
@@ -101,21 +102,62 @@ const ICON_MAP = {
 
 const MOBILE_BOTTOM_BY_SCOPE = {
   child: ["workspace", "timeline", "actions", "risk", "reviews"],
-  home: ["home-dashboard", "actions", "compliance", "quality", "ofsted-readiness"],
-  quality: [
-    "provider-overview",
-    "actions",
-    "quality",
-    "compliance",
-    "inspection-readiness",
-  ],
-  ofsted: [
-    "ofsted-dashboard",
-    "actions",
-    "sccif-evidence",
-    "judgement-builder",
-    "inspection-readiness",
-  ],
+  home: ["home-dashboard", "actions", "compliance", "team", "rota"],
+  quality: ["provider-overview", "actions", "quality", "compliance", "quality-audits"],
+  ofsted: ["ofsted-dashboard", "actions", "sccif-evidence", "judgement-builder", "inspection-readiness"],
+};
+
+const SECTION_SCOPE_MAP = {
+  workspace: "child",
+  overview: "child",
+  admission: "child",
+  profile: "child",
+  timeline: "child",
+  handover: "child",
+  "daily-life": "child",
+  health: "child",
+  medication: "child",
+  education: "child",
+  family: "child",
+  calendar: "child",
+  therapy: "child",
+  risk: "child",
+  safeguarding: "child",
+  "missing-from-care": "child",
+  readiness: "child",
+  reviews: "child",
+  reports: "child",
+  "leaving-care": "child",
+  manager: "child",
+  documents: "child",
+  communication: "child",
+  actions: "child",
+
+  "home-dashboard": "home",
+  operations: "home",
+  team: "home",
+  rota: "home",
+  "staff-profile": "home",
+  onboarding: "home",
+  supervision: "home",
+  "training-centre": "home",
+  compliance: "home",
+  "health-safety": "home",
+  maintenance: "home",
+  notifications: "home",
+  policies: "home",
+
+  "provider-overview": "quality",
+  quality: "quality",
+  "quality-audits": "quality",
+  reg44: "quality",
+  reg45: "quality",
+
+  "ofsted-dashboard": "ofsted",
+  "ofsted-readiness": "ofsted",
+  "inspection-readiness": "ofsted",
+  "sccif-evidence": "ofsted",
+  "judgement-builder": "ofsted",
 };
 
 let navButtonsBound = false;
@@ -142,8 +184,55 @@ function getNavIcon(icon) {
   return ICON_MAP[icon] || "•";
 }
 
+function normaliseRole(role) {
+  const raw = String(role || "staff").trim().toLowerCase();
+
+  if (["admin", "administrator", "super_admin", "superadmin", "owner"].includes(raw)) {
+    return "admin";
+  }
+
+  if (["manager", "registered_manager", "deputy_manager", "rm"].includes(raw)) {
+    return "manager";
+  }
+
+  if (["ri", "responsible_individual", "director", "ceo"].includes(raw)) {
+    return "ri";
+  }
+
+  return "staff";
+}
+
+function getCurrentRole() {
+  return normaliseRole(state.userRole || state.currentUser?.role || "staff");
+}
+
+function getAllowedScopesForCurrentRole() {
+  const role = getCurrentRole();
+
+  if (ROLE_SCOPE_ACCESS?.[role]) {
+    return ROLE_SCOPE_ACCESS[role];
+  }
+
+  if (["admin", "manager", "ri"].includes(role)) {
+    return ["child", "home", "quality", "ofsted"];
+  }
+
+  return ["child", "home"];
+}
+
+function roleCanAccessScope(scope) {
+  const safeScope = String(scope || "child").trim().toLowerCase();
+
+  if (typeof canRoleAccessScope === "function") {
+    return canRoleAccessScope(getCurrentRole(), safeScope);
+  }
+
+  return getAllowedScopesForCurrentRole().includes(safeScope);
+}
+
 function getCurrentScope() {
-  return state.currentScope || "child";
+  const raw = String(state.currentScope || "child").trim().toLowerCase();
+  return ["child", "home", "quality", "ofsted"].includes(raw) ? raw : "child";
 }
 
 function getDefaultSectionForScope(scope = getCurrentScope()) {
@@ -180,10 +269,6 @@ function getSectionDescription(itemOrId) {
   return itemOrId.description || itemOrId.label || itemOrId.id || "";
 }
 
-function getGroupTitle(group) {
-  return group?.title || "";
-}
-
 function isChildScope() {
   return getCurrentScope() === "child";
 }
@@ -198,14 +283,38 @@ function isReadinessSection(sectionId) {
   );
 }
 
+function getRequiredScopeForSection(sectionId) {
+  return SECTION_SCOPE_MAP[String(sectionId || "").trim().toLowerCase()] || getCurrentScope();
+}
+
 function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
-  return new Set(
+  const allowedByConfig = new Set(
     SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]
+  );
+
+  const loaders = getLoaderMapForScope(scope);
+  return new Set(
+    Array.from(allowedByConfig).filter((sectionId) => typeof loaders[sectionId] === "function")
   );
 }
 
 function isSectionAllowed(sectionId, scope = getCurrentScope()) {
+  if (!sectionId) return false;
+  if (!roleCanAccessScope(scope)) return false;
   return getAllowedSectionIdsForScope(scope).has(sectionId);
+}
+
+function findBestScopeForSection(sectionId) {
+  const wantedScope = getRequiredScopeForSection(sectionId);
+
+  if (
+    roleCanAccessScope(wantedScope) &&
+    getAllowedSectionIdsForScope(wantedScope).has(sectionId)
+  ) {
+    return wantedScope;
+  }
+
+  return null;
 }
 
 function updateAppShellDataset() {
@@ -232,7 +341,7 @@ function updateAppShellDataset() {
     state.currentUser?.provider_id ||
     state.currentUser?.providerId ||
     "";
-  app.dataset.userRole = state.userRole || "staff";
+  app.dataset.userRole = getCurrentRole();
   app.dataset.allowedHomeIds = JSON.stringify(
     Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
   );
@@ -245,8 +354,18 @@ function updateSectionState(section) {
   updateAppShellDataset();
 }
 
-function ensureValidCurrentSection() {
+function ensureValidCurrentScope() {
   const scope = getCurrentScope();
+
+  if (roleCanAccessScope(scope)) return scope;
+
+  const fallback = getAllowedScopesForCurrentRole()[0] || "child";
+  setCurrentScope(fallback);
+  return fallback;
+}
+
+function ensureValidCurrentSection() {
+  const scope = ensureValidCurrentScope();
   const current = getCurrentSection();
 
   if (isSectionAllowed(current, scope)) {
@@ -254,24 +373,30 @@ function ensureValidCurrentSection() {
   }
 
   const fallback = getDefaultSectionForScope(scope);
-  updateSectionState(fallback);
-  return fallback;
+  const allowed = getAllowedSectionIdsForScope(scope);
+  const safeFallback = allowed.has(fallback)
+    ? fallback
+    : Array.from(allowed)[0] || "workspace";
+
+  updateSectionState(safeFallback);
+  return safeFallback;
 }
 
 function getScopedNavGroups() {
-  const allowed = getAllowedSectionIdsForScope();
+  const scope = getCurrentScope();
+  const allowed = getAllowedSectionIdsForScope(scope);
 
   return (NAV_GROUPS_CONFIG || [])
     .map((group) => ({
       ...group,
-      title: getGroupTitle(group),
       items: (group.items || []).filter((item) => allowed.has(item.id)),
     }))
     .filter((group) => group.items.length > 0);
 }
 
 function getScopedNavSections() {
-  const allowed = getAllowedSectionIdsForScope();
+  const scope = getCurrentScope();
+  const allowed = getAllowedSectionIdsForScope(scope);
   return (NAV_SECTIONS || []).filter((item) => allowed.has(item.id));
 }
 
@@ -339,13 +464,7 @@ const HOME_SECTION_LOADERS = Object.freeze({
   "health-safety": loadHealthSafety,
   maintenance: runPlaceholderLoader,
   notifications: loadNotifications,
-  manager: loadManager,
-  quality: loadQualityDashboard,
-  reports: loadReports,
-  "ofsted-readiness": loadReadiness,
   policies: runPlaceholderLoader,
-  documents: loadDocuments,
-  communication: loadCommunication,
   actions: loadActions,
 });
 
@@ -357,17 +476,7 @@ const QUALITY_SECTION_LOADERS = Object.freeze({
   reg44: loadReg44,
   reg45: loadReg45,
   "inspection-readiness": loadReadiness,
-  "staff-profile": loadStaffProfile,
-  onboarding: loadOnboarding,
-  supervision: loadSupervision,
-  "training-centre": loadTrainingCentre,
-  team: loadTeam,
-  rota: loadRota,
-  notifications: loadNotifications,
   reports: loadReports,
-  policies: runPlaceholderLoader,
-  documents: loadDocuments,
-  communication: loadCommunication,
   actions: loadActions,
 });
 
@@ -376,22 +485,7 @@ const OFSTED_SECTION_LOADERS = Object.freeze({
   "sccif-evidence": loadSccifEvidence,
   "judgement-builder": loadJudgementBuilder,
   "inspection-readiness": loadReadiness,
-  "quality-audits": loadQualityAudits,
-  reg44: loadReg44,
-  reg45: loadReg45,
   compliance: loadCompliance,
-  "health-safety": loadHealthSafety,
-  "staff-profile": loadStaffProfile,
-  onboarding: loadOnboarding,
-  supervision: loadSupervision,
-  "training-centre": loadTrainingCentre,
-  team: loadTeam,
-  rota: loadRota,
-  notifications: loadNotifications,
-  reports: loadReports,
-  documents: loadDocuments,
-  policies: runPlaceholderLoader,
-  communication: loadCommunication,
   actions: loadActions,
 });
 
@@ -446,7 +540,7 @@ function buildMobileDrawerNavHtml() {
   return getScopedNavGroups()
     .map(
       (group) => `
-        <section class="nav-section" data-nav-group="${escapeHtml(group.id)}">
+        <section class="nav-section" data-nav-group="${escapeHtml(group.id || "")}">
           <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
           <div class="nav-section-items">
             ${(group.items || []).map((item) => renderNavItem(item)).join("")}
@@ -594,6 +688,7 @@ function markActiveNav(section) {
 
 function markActiveScopeButtons() {
   const scope = getCurrentScope();
+  const allowedScopes = getAllowedScopesForCurrentRole();
 
   const pairs = [
     [els.scopeChildBtn, "child"],
@@ -604,10 +699,16 @@ function markActiveScopeButtons() {
 
   pairs.forEach(([button, value]) => {
     if (!button) return;
+
+    const visible = allowedScopes.includes(value);
     const isActive = scope === value;
-    button.classList.toggle("active", isActive);
-    button.setAttribute("aria-pressed", isActive ? "true" : "false");
-    button.setAttribute("aria-selected", isActive ? "true" : "false");
+
+    button.classList.toggle("hidden", !visible);
+    button.classList.toggle("active", visible && isActive);
+    button.setAttribute("aria-hidden", visible ? "false" : "true");
+    button.setAttribute("aria-pressed", visible && isActive ? "true" : "false");
+    button.setAttribute("aria-selected", visible && isActive ? "true" : "false");
+    button.disabled = !visible;
   });
 }
 
@@ -657,18 +758,6 @@ function bindWorkspaceMenuBehaviour() {
   });
 }
 
-function findNavTarget(navSection) {
-  if (!navSection) return null;
-
-  return (
-    document.querySelector(`[data-nav-section="${navSection}"]`) ||
-    document.querySelector(`[data-nav-key="${navSection}"]`) ||
-    document.querySelector(`[data-view-key="${navSection}"]`) ||
-    document.querySelector(`[data-view="${navSection}"]`) ||
-    null
-  );
-}
-
 function bindWorkspaceMenuLinks() {
   if (workspaceMenuLinksBound) return;
   workspaceMenuLinksBound = true;
@@ -692,24 +781,27 @@ function bindWorkspaceMenuLinks() {
       }
     }
 
-    if (navSection) {
-      if (isSectionAllowed(navSection, getCurrentScope())) {
-        await loadSection(navSection);
-        closeAllWorkspaceMenus();
-        return;
-      }
+    if (!navSection) return;
 
-      const navTarget = findNavTarget(navSection);
-      if (
-        navTarget &&
-        navTarget !== button &&
-        typeof navTarget.click === "function"
-      ) {
-        navTarget.click();
-      }
+    event.preventDefault();
+    event.stopPropagation();
 
+    const targetScope = findBestScopeForSection(navSection);
+
+    if (!targetScope) {
+      showError(`This area is not available for your current role or is not wired yet.`);
       closeAllWorkspaceMenus();
+      return;
     }
+
+    if (targetScope !== getCurrentScope()) {
+      await applyScopeChange(targetScope, { preferredSection: navSection });
+      closeAllWorkspaceMenus();
+      return;
+    }
+
+    await loadSection(navSection);
+    closeAllWorkspaceMenus();
   });
 }
 
@@ -765,7 +857,10 @@ function bindOverlayDismiss() {
       }
     }
 
-    const composerPanel = document.getElementById("composerPanel");
+    const composerPanel =
+      document.getElementById("composerPanel") ||
+      document.getElementById("recordComposerPage");
+
     if (
       composerPanel &&
       !composerPanel.classList.contains("hidden") &&
@@ -847,14 +942,15 @@ function paintNavigationChrome() {
   updateYoungPersonChrome(state.selectedYoungPerson || {});
 }
 
-async function applyScopeChange(scope) {
-  const safeScope =
-    scope === "home" ||
-    scope === "quality" ||
-    scope === "ofsted" ||
-    scope === "child"
-      ? scope
-      : "child";
+async function applyScopeChange(scope, options = {}) {
+  const safeScope = ["child", "home", "quality", "ofsted"].includes(scope)
+    ? scope
+    : "child";
+
+  if (!roleCanAccessScope(safeScope)) {
+    showError(`Your current role does not have access to the ${safeScope} area.`);
+    return;
+  }
 
   closeAllWorkspaceMenus();
   closeMobileNav();
@@ -869,7 +965,13 @@ async function applyScopeChange(scope) {
       null;
   }
 
-  ensureValidCurrentSection();
+  const preferredSection = options.preferredSection;
+  if (preferredSection && isSectionAllowed(preferredSection, safeScope)) {
+    updateSectionState(preferredSection);
+  } else {
+    ensureValidCurrentSection();
+  }
+
   paintNavigationChrome();
   clearStatus();
   resetWorkspaceSummaryStrip();
@@ -892,10 +994,32 @@ async function applyScopeChange(scope) {
 }
 
 export async function loadSection(section, options = {}) {
-  const scope = getCurrentScope();
-  const safeSection = isSectionAllowed(section, scope)
-    ? section
-    : getDefaultSectionForScope(scope);
+  const requestedSection = String(section || "").trim();
+  let scope = getCurrentScope();
+
+  if (!roleCanAccessScope(scope)) {
+    scope = ensureValidCurrentScope();
+  }
+
+  let safeSection = requestedSection;
+
+  if (!isSectionAllowed(safeSection, scope)) {
+    const betterScope = findBestScopeForSection(safeSection);
+
+    if (betterScope && betterScope !== scope) {
+      await applyScopeChange(betterScope, {
+        preferredSection: safeSection,
+      });
+      return;
+    }
+
+    safeSection = ensureValidCurrentSection();
+  }
+
+  if (!isSectionAllowed(safeSection, scope)) {
+    showError(`This area is not available yet: ${safeSection || "unknown"}.`);
+    return;
+  }
 
   const force = Boolean(options.force);
   const loadKey = `${scope}:${safeSection}`;
@@ -913,9 +1037,7 @@ export async function loadSection(section, options = {}) {
     return currentLoadPromise;
   }
 
-  const loader =
-    getLoaderForSection(scope, safeSection) ||
-    (options.allowPlaceholder ? runPlaceholderLoader : null);
+  const loader = getLoaderForSection(scope, safeSection);
 
   if (typeof loader !== "function") {
     showError(`No loader is configured for "${safeSection}" in ${scope} scope.`);
@@ -977,9 +1099,12 @@ function bindNavButtons() {
     const button = event.target.closest("[data-nav-section]");
     if (!button) return;
 
+    if (button.classList.contains("workspace-menu-link")) return;
+
     const section = button.dataset.navSection;
     if (!section) return;
 
+    event.preventDefault();
     await loadSection(section);
   });
 }
@@ -1126,7 +1251,10 @@ function bindSearchControls() {
     }
 
     try {
-      const currentLoader = getLoaderForSection(getCurrentScope(), getCurrentSection());
+      const currentLoader = getLoaderForSection(
+        getCurrentScope(),
+        getCurrentSection()
+      );
 
       if (typeof currentLoader === "function") {
         await currentLoader({
@@ -1404,6 +1532,8 @@ export function rerenderNavigationForScope() {
 export async function initialiseShellNavigation() {
   ensureAssistantControllerBound();
 
+  ensureValidCurrentScope();
+
   if (!state.currentSection) {
     setCurrentSection(getDefaultSectionForScope());
   }
@@ -1438,13 +1568,6 @@ export async function initialiseShellNavigation() {
     return;
   }
 
-  try {
-    showWorkspaceScreen();
-    await runAssistantScopeSync();
-    await loadSection(getCurrentSection(), { force: true });
-  } catch (error) {
-    console.error("[nav] initial section load failed", error);
-    showError(error?.message || "Failed to load this section.");
-    resetWorkspaceSummaryStrip();
-  }
+  showWorkspaceScreen();
+  await runAssistantScopeSync();
 }
