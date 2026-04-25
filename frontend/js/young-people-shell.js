@@ -1,11 +1,21 @@
-const HARDENING_STATE = {
+/* frontend/js/young-people-shell.js */
+/* Production bridge + premium hardening for IndiCare young people shell */
+
+const SHELL_BOOT_STATE = {
+  appImported: false,
+  hardeningStarted: false,
   lastFocusedElement: null,
   assistantMutationBound: false,
   composerMutationBound: false,
+  tableObserverBound: false,
 };
 
 function getById(id) {
   return document.getElementById(id);
+}
+
+function isVisible(el) {
+  return !!el && !el.classList.contains("hidden") && el.getAttribute("aria-hidden") !== "true";
 }
 
 function setExpanded(button, expanded) {
@@ -51,7 +61,10 @@ function trapFocus(container, event) {
   if (event.shiftKey && document.activeElement === first) {
     event.preventDefault();
     last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
+    return;
+  }
+
+  if (!event.shiftKey && document.activeElement === last) {
     event.preventDefault();
     first.focus();
   }
@@ -63,41 +76,40 @@ function focusFirstInteractive(container) {
 }
 
 function markModalOpen(container) {
-  HARDENING_STATE.lastFocusedElement = document.activeElement;
+  if (!container) return;
+
+  SHELL_BOOT_STATE.lastFocusedElement = document.activeElement;
   document.body.dataset.modalOpen = "true";
+
   requestAnimationFrame(() => focusFirstInteractive(container));
 }
 
 function markModalClosed() {
   document.body.dataset.modalOpen = "false";
 
-  const target = HARDENING_STATE.lastFocusedElement;
+  const target = SHELL_BOOT_STATE.lastFocusedElement;
   if (target && typeof target.focus === "function") {
     requestAnimationFrame(() => target.focus({ preventScroll: true }));
   }
 
-  HARDENING_STATE.lastFocusedElement = null;
-}
-
-function isVisible(el) {
-  return !!el && !el.classList.contains("hidden") && el.getAttribute("aria-hidden") !== "true";
+  SHELL_BOOT_STATE.lastFocusedElement = null;
 }
 
 function bindDialogFocusManagement() {
-  const assistantModal = getById("assistantModal");
-  const composerPage = getById("recordComposerPage");
-  const recordDrawer = getById("recordDrawer");
-  const fullscreenPanel = getById("fullscreenPanel");
-  const suggestionsPanel = getById("suggestionsPanel");
-  const mobileNavPanel = getById("mobileNavPanel");
+  const panels = [
+    getById("assistantModal"),
+    getById("recordComposerPage"),
+    getById("recordDrawer"),
+    getById("fullscreenPanel"),
+    getById("suggestionsPanel"),
+    getById("mobileNavPanel"),
+  ].filter(Boolean);
+
+  if (!panels.length) return;
 
   document.addEventListener("keydown", (event) => {
-    const activeDialog =
-      [assistantModal, composerPage, recordDrawer, fullscreenPanel, suggestionsPanel, mobileNavPanel].find(isVisible);
-
-    if (activeDialog) {
-      trapFocus(activeDialog, event);
-    }
+    const activeDialog = panels.find(isVisible);
+    if (activeDialog) trapFocus(activeDialog, event);
   });
 
   const observer = new MutationObserver((mutations) => {
@@ -105,9 +117,9 @@ function bindDialogFocusManagement() {
       if (mutation.type !== "attributes") continue;
 
       const target = mutation.target;
-      const nowVisible = isVisible(target);
+      if (!panels.includes(target)) continue;
 
-      if (nowVisible) {
+      if (isVisible(target)) {
         markModalOpen(target);
       } else {
         markModalClosed();
@@ -115,14 +127,12 @@ function bindDialogFocusManagement() {
     }
   });
 
-  [assistantModal, composerPage, recordDrawer, fullscreenPanel, suggestionsPanel, mobileNavPanel]
-    .filter(Boolean)
-    .forEach((panel) => {
-      observer.observe(panel, {
-        attributes: true,
-        attributeFilter: ["class", "aria-hidden"],
-      });
+  panels.forEach((panel) => {
+    observer.observe(panel, {
+      attributes: true,
+      attributeFilter: ["class", "aria-hidden"],
     });
+  });
 }
 
 function enhanceMobileNavigationState() {
@@ -158,20 +168,22 @@ function addTableResponsiveLabels() {
 
     table.querySelectorAll("tbody tr").forEach((row) => {
       Array.from(row.children).forEach((cell, index) => {
-        if (headers[index]) {
-          cell.dataset.label = headers[index];
-        }
+        if (headers[index]) cell.dataset.label = headers[index];
       });
     });
   });
 }
 
 function observeDynamicTables() {
+  if (SHELL_BOOT_STATE.tableObserverBound) return;
+  SHELL_BOOT_STATE.tableObserverBound = true;
+
   const content = getById("viewContent");
   if (!content) return;
 
   const observer = new MutationObserver(() => {
     addTableResponsiveLabels();
+    enhanceWorkspaceContentPresentation();
   });
 
   observer.observe(content, {
@@ -184,9 +196,9 @@ function observeDynamicTables() {
 
 function normaliseAssistantMessageText() {
   const host = getById("assistantMessages");
-  if (!host || HARDENING_STATE.assistantMutationBound) return;
+  if (!host || SHELL_BOOT_STATE.assistantMutationBound) return;
 
-  HARDENING_STATE.assistantMutationBound = true;
+  SHELL_BOOT_STATE.assistantMutationBound = true;
 
   const observer = new MutationObserver(() => {
     host.querySelectorAll(".assistant-message-body").forEach((body) => {
@@ -205,11 +217,11 @@ function normaliseAssistantMessageText() {
 
 function improveComposerControls() {
   const composer = getById("recordComposerPage");
-  if (!composer || HARDENING_STATE.composerMutationBound) return;
+  if (!composer || SHELL_BOOT_STATE.composerMutationBound) return;
 
-  HARDENING_STATE.composerMutationBound = true;
+  SHELL_BOOT_STATE.composerMutationBound = true;
 
-  const observer = new MutationObserver(() => {
+  const enhance = () => {
     composer.querySelectorAll("textarea").forEach((textarea) => {
       textarea.setAttribute("rows", textarea.getAttribute("rows") || "5");
       textarea.setAttribute("spellcheck", "true");
@@ -229,19 +241,20 @@ function improveComposerControls() {
         field.closest(".composer-field")?.classList.remove("field-has-error");
       });
     });
-  });
+  };
+
+  const observer = new MutationObserver(enhance);
 
   observer.observe(composer, {
     childList: true,
     subtree: true,
   });
+
+  enhance();
 }
 
 function improveStatusAnnouncements() {
-  const statusBar = getById("statusBar");
-  const statusMessage = getById("statusMessage");
-
-  [statusBar, statusMessage].filter(Boolean).forEach((status) => {
+  [getById("statusBar"), getById("statusMessage")].filter(Boolean).forEach((status) => {
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
     status.setAttribute("aria-atomic", "true");
@@ -252,8 +265,9 @@ function addGlobalSearchShortcut() {
   const search = getById("recordSearchInput");
 
   document.addEventListener("keydown", (event) => {
-    const isTyping =
-      ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName || "");
+    const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(
+      document.activeElement?.tagName || ""
+    );
 
     if (isTyping) return;
 
@@ -279,7 +293,9 @@ function addSafeExternalLinkHandling() {
 
       link.setAttribute("target", "_blank");
       link.setAttribute("rel", "noopener noreferrer");
-    } catch (_) {}
+    } catch (_) {
+      // Ignore malformed href values.
+    }
   });
 }
 
@@ -314,7 +330,116 @@ function addPremiumReadyClass() {
   });
 }
 
+function classifyText(text = "") {
+  const value = String(text).toLowerCase();
+
+  if (
+    value.includes("urgent") ||
+    value.includes("overdue") ||
+    value.includes("high") ||
+    value.includes("critical") ||
+    value.includes("safeguarding") ||
+    value.includes("risk")
+  ) {
+    return "danger";
+  }
+
+  if (
+    value.includes("due") ||
+    value.includes("pending") ||
+    value.includes("review") ||
+    value.includes("returned") ||
+    value.includes("medium")
+  ) {
+    return "warning";
+  }
+
+  if (
+    value.includes("complete") ||
+    value.includes("completed") ||
+    value.includes("approved") ||
+    value.includes("good") ||
+    value.includes("positive") ||
+    value.includes("no active")
+  ) {
+    return "success";
+  }
+
+  return "";
+}
+
+function enhanceWorkspaceSummaryCards() {
+  document.querySelectorAll(".workspace-summary-item").forEach((item) => {
+    if (item.dataset.presentationEnhanced === "true") return;
+
+    const text = item.textContent || "";
+    const tone = classifyText(text);
+
+    item.dataset.presentationEnhanced = "true";
+    item.dataset.tone = tone || "neutral";
+  });
+}
+
+function enhanceRecordsAndBlocks() {
+  const content = getById("viewContent");
+  if (!content) return;
+
+  content.querySelectorAll(".record-list > article, .record-list > div:not(.empty-state), .entity-row, .timeline-item, .record-card, .insight-card").forEach((card, index) => {
+    if (card.dataset.presentationEnhanced === "true") return;
+
+    card.dataset.presentationEnhanced = "true";
+    card.dataset.cardIndex = String((index % 5) + 1);
+
+    const tone = classifyText(card.textContent || "");
+    if (tone) card.dataset.tone = tone;
+  });
+
+  content.querySelectorAll(".panel, .overview-panel, .record-table-shell, .detail-section").forEach((section, index) => {
+    if (section.dataset.sectionTone) return;
+    section.dataset.sectionTone = String((index % 6) + 1);
+  });
+}
+
+function enhanceWorkspaceContentPresentation() {
+  enhanceWorkspaceSummaryCards();
+  enhanceRecordsAndBlocks();
+}
+
+function bindMenuBehaviour() {
+  document.addEventListener("click", (event) => {
+    const currentMenu = event.target.closest("[data-workspace-menu]");
+
+    document.querySelectorAll("[data-workspace-menu][open]").forEach((menu) => {
+      if (menu !== currentMenu) menu.removeAttribute("open");
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+
+    document.querySelectorAll("[data-workspace-menu][open]").forEach((menu) => {
+      menu.removeAttribute("open");
+    });
+  });
+}
+
+function addConnectionStatus() {
+  const app = getById("app");
+  if (!app) return;
+
+  const sync = () => {
+    app.dataset.connection = navigator.onLine ? "online" : "offline";
+  };
+
+  window.addEventListener("online", sync);
+  window.addEventListener("offline", sync);
+  sync();
+}
+
 function initPremiumHardening() {
+  if (SHELL_BOOT_STATE.hardeningStarted) return;
+  SHELL_BOOT_STATE.hardeningStarted = true;
+
   bindDialogFocusManagement();
   enhanceMobileNavigationState();
   observeDynamicTables();
@@ -324,11 +449,39 @@ function initPremiumHardening() {
   addGlobalSearchShortcut();
   addSafeExternalLinkHandling();
   addLiveClockToShell();
+  bindMenuBehaviour();
+  addConnectionStatus();
+  enhanceWorkspaceContentPresentation();
   addPremiumReadyClass();
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initPremiumHardening, { once: true });
-} else {
+async function importShellApp() {
+  if (SHELL_BOOT_STATE.appImported) return;
+  SHELL_BOOT_STATE.appImported = true;
+
+  try {
+    await import("./young-people-shell/index.js");
+  } catch (error) {
+    console.error("[young-people-shell] Failed to import modular shell", error);
+
+    const status =
+      getById("statusBar") ||
+      getById("statusMessage");
+
+    if (status) {
+      status.classList.remove("hidden");
+      status.textContent = "The workspace could not start. Please refresh or check the console.";
+    }
+  }
+}
+
+async function bootYoungPeopleShell() {
+  await importShellApp();
   initPremiumHardening();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootYoungPeopleShell, { once: true });
+} else {
+  bootYoungPeopleShell();
 }
