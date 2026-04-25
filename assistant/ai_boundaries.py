@@ -1,5 +1,3 @@
-Replace assistant/ai_boundaries.py with this:
-
 from __future__ import annotations
 from typing import Any
 AI_BOUNDARIES = [
