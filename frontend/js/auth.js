@@ -61,6 +61,10 @@ function normaliseUserPatch(user = {}) {
     subscription_active: !!user.subscription_active,
     subscription_status: user.subscription_status || "inactive",
     plan_name: user.plan_name || null,
+    provider_id: user.provider_id || user.providerId || null,
+    providerId: user.providerId || user.provider_id || null,
+    home_id: user.home_id || user.homeId || null,
+    homeId: user.homeId || user.home_id || null,
     mfa_enabled: !!user.mfa_enabled,
     mfa_verified: !!user.mfa_verified,
     mfa_pending: !!user.mfa_pending,
@@ -128,22 +132,34 @@ async function login(credentialsArg = null) {
       throw new Error("Login failed");
     }
 
+    const user = data.user || {};
+
+    const mfaPending =
+      !!data.mfa_pending ||
+      !!data.mfa_required ||
+      !!data.mfa_mandatory ||
+      !!user.mfa_pending;
+
     if (data.user) {
       setStoredUser(
         normaliseUserPatch({
-          ...data.user,
-          authenticated: !!data.authenticated,
-          mfa_enabled: !!data.mfa_enabled,
-          mfa_verified: !!data.authenticated,
-          mfa_pending: !!data.mfa_pending || !!data.mfa_required,
-          has_passkeys: !!data.user?.has_passkeys,
+          ...user,
+          authenticated: !!data.authenticated && !mfaPending,
+          mfa_enabled:
+            !!user.mfa_enabled ||
+            !!data.mfa_enabled ||
+            !!data.mfa_mandatory ||
+            mfaPending,
+          mfa_verified: !!data.authenticated && !mfaPending,
+          mfa_pending: mfaPending,
+          has_passkeys: !!user.has_passkeys,
         }),
         remember
       );
     }
 
     if (loginStatus) {
-      if (data.mfa_pending || data.mfa_required) {
+      if (mfaPending) {
         loginStatus.textContent =
           "Password accepted. Continuing to multi-factor verification...";
       } else {
@@ -182,13 +198,31 @@ function logout() {
 
 async function validateSession() {
   try {
-    const data = await apiFetchJson("/auth/check", { method: "GET" });
+    const data = await apiFetchJson("/auth/me", { method: "GET" });
+    const user = data.user || {};
+    const authenticated = data.ok === true && !!(user.id || user.user_id);
 
-    if (!data || data.authenticated !== true) {
+    const mfaEnabled =
+      !!user.mfa_enabled ||
+      !!data.mfa_enabled ||
+      !!data.mfa_mandatory;
+
+    const backendMfaVerified =
+      !!user.mfa_verified ||
+      !!data.mfa_verified;
+
+    const mfaPending =
+      !!data.mfa_pending ||
+      !!data.mfa_required ||
+      !!data.mfa_mandatory ||
+      !!user.mfa_pending ||
+      (mfaEnabled && !backendMfaVerified);
+
+    if (!authenticated) {
       const existing = getStoredUser() || {};
       const remember = shouldRememberUser();
 
-      if (data?.mfa_pending) {
+      if (mfaPending) {
         const merged = normaliseUserPatch({
           ...existing,
           authenticated: false,
@@ -196,8 +230,11 @@ async function validateSession() {
           mfa_verified: false,
           mfa_pending: true,
         });
+
         setStoredUser(merged, remember);
+
         return {
+          ...merged,
           authenticated: false,
           subscription_active: false,
           mfa_enabled: true,
@@ -211,6 +248,7 @@ async function validateSession() {
       }
 
       clearStoredUser();
+
       return {
         authenticated: false,
         subscription_active: false,
@@ -228,42 +266,52 @@ async function validateSession() {
 
     const merged = normaliseUserPatch({
       ...existing,
+      ...user,
       authenticated: true,
-      id: data.user_id,
-      user_id: data.user_id,
-      email: data.email,
-      role: data.role,
-      home_id: data.home_id,
-      is_active: data.is_active,
-      subscription_active: !!data.subscription_active,
-      subscription_status: data.subscription_status || "inactive",
-      plan_name: data.plan_name || null,
-      mfa_enabled: !!data.mfa_enabled,
-      mfa_verified: !!data.mfa_verified,
-      mfa_pending: false,
+      id: user.id || user.user_id,
+      user_id: user.user_id || user.id,
+      email: user.email,
+      role: user.role,
+      home_id: user.home_id || user.homeId || null,
+      homeId: user.homeId || user.home_id || null,
+      provider_id: user.provider_id || user.providerId || null,
+      providerId: user.providerId || user.provider_id || null,
+      is_active: user.is_active,
+      subscription_active: !!user.subscription_active,
+      subscription_status: user.subscription_status || "inactive",
+      plan_name: user.plan_name || null,
+      mfa_enabled: mfaEnabled,
+      mfa_verified: !mfaPending,
+      mfa_pending: mfaPending,
+      has_passkeys: !!user.has_passkeys,
     });
 
     setStoredUser(merged, remember);
 
     return {
+      ...merged,
       authenticated: true,
-      user_id: data.user_id,
-      email: data.email,
-      role: data.role,
-      home_id: data.home_id,
-      is_active: data.is_active,
-      subscription_active: !!data.subscription_active,
-      subscription_status: data.subscription_status || "inactive",
-      plan_name: data.plan_name || null,
-      mfa_enabled: !!data.mfa_enabled,
-      mfa_verified: !!data.mfa_verified,
-      mfa_pending: false,
-      mfaEnabled: !!data.mfa_enabled,
-      mfaVerified: !!data.mfa_verified,
-      mfaPending: false,
+      user_id: merged.user_id,
+      email: merged.email,
+      role: merged.role,
+      home_id: merged.home_id,
+      homeId: merged.homeId,
+      provider_id: merged.provider_id,
+      providerId: merged.providerId,
+      is_active: merged.is_active,
+      subscription_active: !!merged.subscription_active,
+      subscription_status: merged.subscription_status || "inactive",
+      plan_name: merged.plan_name || null,
+      mfa_enabled: mfaEnabled,
+      mfa_verified: !mfaPending,
+      mfa_pending: mfaPending,
+      mfaEnabled: mfaEnabled,
+      mfaVerified: !mfaPending,
+      mfaPending: mfaPending,
     };
   } catch (_) {
     clearStoredUser();
+
     return {
       authenticated: false,
       subscription_active: false,
@@ -326,6 +374,7 @@ async function verifyMfaCode(code) {
     mfa_verified: true,
     mfa_pending: false,
     has_passkeys: !!data.has_passkeys,
+    ...(data.user || {}),
   });
 
   return data;
@@ -347,6 +396,7 @@ async function verifyRecoveryCode(recoveryCode) {
     mfa_verified: true,
     mfa_pending: false,
     has_passkeys: !!data.has_passkeys,
+    ...(data.user || {}),
   });
 
   return data;
@@ -376,6 +426,7 @@ async function completeMfaSetup(code) {
     mfa_verified: true,
     mfa_pending: false,
     has_passkeys: !!data.has_passkeys,
+    ...(data.user || {}),
   });
 
   if (Array.isArray(data.recovery_codes) && data.recovery_codes.length) {
@@ -408,6 +459,7 @@ async function beginPasskeyLogin(email) {
   }
 
   const cleanedEmail = String(email || "").trim().toLowerCase();
+
   if (!cleanedEmail) {
     throw new Error("Enter your work email address to use passkey sign-in.");
   }
@@ -424,9 +476,7 @@ async function beginPasskeyLogin(email) {
   const jsonOptions =
     typeof data.options === "string" ? JSON.parse(data.options) : data.options;
 
-  if (
-    typeof PublicKeyCredential.parseRequestOptionsFromJSON !== "function"
-  ) {
+  if (typeof PublicKeyCredential.parseRequestOptionsFromJSON !== "function") {
     throw new Error("This browser does not support JSON passkey options.");
   }
 
@@ -478,9 +528,7 @@ async function registerPasskey(nickname = "") {
   const jsonOptions =
     typeof data.options === "string" ? JSON.parse(data.options) : data.options;
 
-  if (
-    typeof PublicKeyCredential.parseCreationOptionsFromJSON !== "function"
-  ) {
+  if (typeof PublicKeyCredential.parseCreationOptionsFromJSON !== "function") {
     throw new Error("This browser does not support JSON passkey options.");
   }
 
@@ -526,6 +574,7 @@ async function getPasskeyPromptStatus() {
 
 document.addEventListener("DOMContentLoaded", () => {
   const logoutButton = document.getElementById("logoutBtn");
+
   if (logoutButton) {
     logoutButton.addEventListener("click", logout);
   }
