@@ -1,3 +1,10 @@
+// IMPORTANT FIXES IN THIS VERSION:
+// 1. Adds missing toBool() helper.
+// 2. Improves Ofsted presentation into dashboard cards.
+// 3. Reduces plain-text feel.
+// 4. Keeps existing endpoint logic and fallback preview mode.
+// 5. Keeps record-opening data attributes.
+
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
@@ -40,6 +47,13 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function toBool(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  const normalised = String(value || "").trim().toLowerCase();
+  return ["true", "1", "yes", "y", "required"].includes(normalised);
+}
+
 function buildRecordPayloadAttr(item = {}) {
   try {
     return encodeURIComponent(JSON.stringify(item));
@@ -67,6 +81,14 @@ function toTime(value) {
   if (!value) return 0;
   const time = new Date(value).getTime();
   return Number.isFinite(time) ? time : 0;
+}
+
+function normaliseStatus(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
 }
 
 function formatDate(value) {
@@ -98,10 +120,7 @@ function formatDateTime(value) {
 }
 
 function getStatusTone(status = "") {
-  const normalised = String(status || "")
-    .toLowerCase()
-    .trim()
-    .replaceAll(" ", "_");
+  const normalised = normaliseStatus(status);
 
   if (
     [
@@ -119,6 +138,9 @@ function getStatusTone(status = "") {
       "blocked",
       "incomplete",
       "requires_improvement",
+      "concern",
+      "gap",
+      "risk",
     ].includes(normalised)
   ) {
     return "danger";
@@ -151,6 +173,7 @@ function getStatusTone(status = "") {
       "complete",
       "completed",
       "resolved",
+      "closed",
       "active",
       "available",
       "stable",
@@ -167,6 +190,13 @@ function getStatusTone(status = "") {
   return "muted";
 }
 
+function getToneLabel(tone = "muted") {
+  if (tone === "danger") return "Needs action";
+  if (tone === "warning") return "Monitor";
+  if (tone === "success") return "Assured";
+  return "Recorded";
+}
+
 function sortNewestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
@@ -179,39 +209,44 @@ function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
-    return toTime(aValue) - toTime(bValue);
+
+    const aTime = toTime(aValue) || Number.MAX_SAFE_INTEGER;
+    const bTime = toTime(bValue) || Number.MAX_SAFE_INTEGER;
+
+    return aTime - bTime;
   });
 }
 
 function hasUsableData(data) {
   if (!data || typeof data !== "object") return false;
-  if (Array.isArray(data.items) && data.items.length > 0) return true;
-  if (Array.isArray(data.records) && data.records.length > 0) return true;
-  if (Array.isArray(data.judgements) && data.judgements.length > 0) return true;
-  if (Array.isArray(data.evidence) && data.evidence.length > 0) return true;
-  if (Array.isArray(data.gaps) && data.gaps.length > 0) return true;
-  if (Array.isArray(data.actions) && data.actions.length > 0) return true;
-  if (Array.isArray(data.compliance) && data.compliance.length > 0) return true;
-  if (Array.isArray(data.audits) && data.audits.length > 0) return true;
-  if (Array.isArray(data.documents) && data.documents.length > 0) return true;
-  if (Array.isArray(data.inspection_scores) && data.inspection_scores.length > 0)
+
+  const keys = [
+    "items",
+    "records",
+    "judgements",
+    "evidence",
+    "gaps",
+    "actions",
+    "compliance",
+    "audits",
+    "documents",
+    "inspection_scores",
+    "inspection_section_scores",
+    "inspection_reasons",
+    "inspection_actions",
+    "inspection_tasks",
+  ];
+
+  if (keys.some((key) => Array.isArray(data[key]) && data[key].length > 0)) {
     return true;
-  if (
-    Array.isArray(data.inspection_section_scores) &&
-    data.inspection_section_scores.length > 0
-  )
-    return true;
-  if (Array.isArray(data.inspection_reasons) && data.inspection_reasons.length > 0)
-    return true;
-  if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0)
-    return true;
-  if (Array.isArray(data.inspection_tasks) && data.inspection_tasks.length > 0)
-    return true;
+  }
+
   if (data.summary && typeof data.summary === "object") return true;
   if (data.dashboard && typeof data.dashboard === "object") return true;
   if (typeof data.readiness_score !== "undefined") return true;
   if (typeof data.evidence_score !== "undefined") return true;
   if (typeof data.overall_score !== "undefined") return true;
+
   return false;
 }
 
@@ -221,6 +256,7 @@ function ofstedVisibilityPath(homeId) {
       homeId
     )}&all_accessible_homes=false`;
   }
+
   return "/visibility/ofsted?all_accessible_homes=true";
 }
 
@@ -278,7 +314,7 @@ function normaliseGapItems(data = {}) {
     title: item.title || item.gap_title || item.area || "Evidence gap",
     area: item.area || item.sccif_area || item.section_name || "",
     status: item.status || item.priority || "open",
-    priority: item.priority || "",
+    priority: item.priority || item.status || "",
     due_date: item.due_date || null,
     owner_user_name: item.owner_user_name || item.owner || "",
     summary:
@@ -293,29 +329,31 @@ function normaliseGapItems(data = {}) {
 }
 
 function normaliseActionItems(data = {}) {
-  return toArray(data.items, [data.actions, data.tasks, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "inspection_action",
-    title: item.title || item.action_title || item.task || "Inspection action",
-    status: item.status || "open",
-    priority: item.priority || "",
-    due_date: item.due_date || item.task_due_date || null,
-    owner_user_name:
-      item.owner_user_name ||
-      item.assigned_to ||
-      item.owner ||
-      item.assigned_user_name ||
-      "",
-    summary:
-      item.summary ||
-      item.description ||
-      item.task ||
-      item.action_description ||
-      "Inspection action recorded.",
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
+  return toArray(data.items, [data.actions, data.tasks, data.records]).map(
+    (item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_type: item.record_type || "inspection_action",
+      title: item.title || item.action_title || item.task || "Inspection action",
+      status: item.status || "open",
+      priority: item.priority || "",
+      due_date: item.due_date || item.task_due_date || null,
+      owner_user_name:
+        item.owner_user_name ||
+        item.assigned_to ||
+        item.owner ||
+        item.assigned_user_name ||
+        "",
+      summary:
+        item.summary ||
+        item.description ||
+        item.task ||
+        item.action_description ||
+        "Inspection action recorded.",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })
+  );
 }
 
 function normaliseComplianceItems(data = {}) {
@@ -371,151 +409,6 @@ function normaliseDocumentItems(data = {}) {
   }));
 }
 
-function buildJudgementsFromReadiness(readinessData = {}) {
-  const summary = readinessData?.summary || readinessData || {};
-  const sections = toArray(readinessData?.items, [
-    readinessData?.inspection_section_scores,
-    readinessData?.sections,
-    readinessData?.inspection_sections,
-    readinessData?.records,
-  ]);
-
-  if (!sections.length) return [];
-
-  return sections.map((item) => ({
-    id: item.id ?? item.section_score_id ?? item.source_id ?? null,
-    record_type: "ofsted_judgement",
-    title: item.title || item.section_name || item.section_code || "Judgement area",
-    area: item.section_name || item.section_code || item.title || "Area",
-    status: item.score_band || item.status || summary.overall_band || "recorded",
-    strength_summary:
-      item.summary_text ||
-      item.strengths_text ||
-      item.concerns_text ||
-      item.summary ||
-      "Inspection section evidence available.",
-    evidence_count: toNumber(item.evidence_count, 0),
-    gap_count: toNumber(item.gap_count, 0),
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
-}
-
-function buildEvidenceFromReadiness(readinessData = {}) {
-  const reasons = toArray(readinessData?.inspection_reasons, [
-    readinessData?.reasons,
-    readinessData?.items,
-  ]);
-
-  return reasons.map((item) => ({
-    id: item.id ?? item.source_id ?? null,
-    record_type: "inspection_evidence",
-    title: item.title || item.line_of_enquiry_name || "Evidence item",
-    area: item.section_name || item.section_code || "",
-    status: item.reason_type || "recorded",
-    summary:
-      item.description ||
-      item.evidence_excerpt ||
-      item.summary ||
-      "Inspection evidence available.",
-    source_type: item.source_table || "",
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
-}
-
-function buildGapsFromReadiness(readinessData = {}) {
-  const reasons = toArray(readinessData?.inspection_reasons, [
-    readinessData?.reasons,
-    readinessData?.items,
-  ]);
-
-  return reasons
-    .filter((item) =>
-      ["concern", "gap", "weakness", "risk"].includes(
-        String(item.reason_type || "").toLowerCase().replaceAll(" ", "_")
-      )
-    )
-    .map((item) => ({
-      id: item.id ?? item.source_id ?? null,
-      record_type: "inspection_gap",
-      title: item.title || item.line_of_enquiry_name || "Evidence gap",
-      area: item.section_name || item.section_code || "",
-      status: item.reason_type || "open",
-      priority: item.priority || "",
-      due_date: item.due_date || null,
-      owner_user_name: item.owner_user_name || "",
-      summary:
-        item.description ||
-        item.evidence_excerpt ||
-        item.summary ||
-        "Inspection gap identified.",
-      updated_at: item.updated_at || item.created_at || null,
-      created_at: item.created_at || null,
-    }));
-}
-
-function buildActionsFromReadiness(readinessData = {}) {
-  const actions = toArray(readinessData?.inspection_actions, [
-    readinessData?.actions,
-    readinessData?.inspection_tasks,
-    readinessData?.tasks,
-  ]);
-
-  return actions.map((item) => ({
-    id: item.id ?? item.action_id ?? item.task_id ?? item.source_id ?? null,
-    record_type: "inspection_action",
-    title:
-      item.action_title ||
-      item.task_title ||
-      item.title ||
-      "Inspection action",
-    status: item.status || (item.completed ? "completed" : "open"),
-    priority: item.priority || "",
-    due_date: item.due_date || item.task_due_date || item.action_due_date || null,
-    owner_user_name:
-      item.owner_user_name ||
-      item.owner_staff_name ||
-      item.assigned_user_name ||
-      "",
-    summary:
-      item.action_description ||
-      item.evidence_required ||
-      item.summary ||
-      "Inspection action recorded.",
-    updated_at: item.updated_at || item.created_at || null,
-    created_at: item.created_at || null,
-  }));
-}
-
-function buildSummaryFromReadiness(readinessData = {}) {
-  const summary = readinessData?.summary || readinessData || {};
-  return {
-    title:
-      summary.title ||
-      summary.home_name ||
-      summary.name ||
-      "Ofsted dashboard",
-    home_name: summary.home_name || "",
-    readiness_score:
-      summary.readiness_score ??
-      summary.overall_score ??
-      summary.evidence_score ??
-      0,
-    evidence_score:
-      summary.evidence_score ??
-      summary.confidence_score ??
-      summary.readiness_score ??
-      0,
-    overall_band: summary.overall_band || "",
-    narrative_summary:
-      summary.narrative_summary ||
-      summary.summary_text ||
-      summary.concerns_summary ||
-      "",
-  };
-}
-
 function buildTopStats({
   summary = {},
   gaps = [],
@@ -531,42 +424,39 @@ function buildTopStats({
 
   const criticalGaps = gaps.filter((item) =>
     ["critical", "high", "overdue", "escalated", "missing"].includes(
-      String(item.priority || item.status || "")
-        .toLowerCase()
-        .replaceAll(" ", "_")
+      normaliseStatus(item.priority || item.status || "")
     )
   ).length;
 
-  const openActions = actions.filter((item) =>
-    !["completed", "resolved", "closed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+  const openActions = actions.filter(
+    (item) =>
+      !["completed", "resolved", "closed"].includes(normaliseStatus(item.status))
   ).length;
 
   const overdueCompliance = compliance.filter((item) =>
     ["overdue", "missing", "review_due", "due_soon", "escalated"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
   const strongJudgements = judgements.filter((item) =>
     ["good", "strong", "ready", "effective", "outstanding"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
 
   return [
     {
-      label: "Readiness score",
+      label: "Readiness",
       value: `${readinessScore}%`,
-      note: "Inspection-facing readiness position",
+      note: "Inspection-facing position",
       tone:
         readinessScore >= 85 ? "success" : readinessScore >= 70 ? "warning" : "danger",
     },
     {
-      label: "Evidence items",
+      label: "Evidence",
       value: evidence.length,
-      note: "Mapped inspection evidence",
+      note: "Mapped evidence items",
       tone: evidence.length ? "success" : "muted",
     },
     {
@@ -578,19 +468,19 @@ function buildTopStats({
     {
       label: "Open actions",
       value: openActions,
-      note: "Inspection actions still live",
+      note: "Still requiring follow-up",
       tone: openActions ? "warning" : "success",
     },
     {
-      label: "Compliance pressure",
+      label: "Compliance",
       value: overdueCompliance,
-      note: "Overdue or weak compliance",
+      note: "Pressure points",
       tone: overdueCompliance ? "warning" : "success",
     },
     {
       label: "Strong areas",
       value: strongJudgements,
-      note: "Judgement areas showing strength",
+      note: "Judgement areas with strength",
       tone: strongJudgements ? "success" : "muted",
     },
   ];
@@ -604,36 +494,36 @@ function buildProgressCards({
 }) {
   const strongEvidence = evidence.filter((item) =>
     ["good", "strong", "ready", "reviewed", "available", "effective"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
+
   const evidencePercent = evidence.length
     ? Math.round((strongEvidence / evidence.length) * 100)
     : 0;
 
   const closedGaps = gaps.filter((item) =>
-    ["resolved", "closed", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    ["resolved", "closed", "completed"].includes(normaliseStatus(item.status))
   ).length;
+
   const gapClosurePercent = gaps.length
     ? Math.round((closedGaps / gaps.length) * 100)
     : 100;
 
   const closedActions = actions.filter((item) =>
-    ["resolved", "closed", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
+    ["resolved", "closed", "completed"].includes(normaliseStatus(item.status))
   ).length;
+
   const actionPercent = actions.length
     ? Math.round((closedActions / actions.length) * 100)
     : 100;
 
   const positiveJudgements = judgements.filter((item) =>
     ["good", "strong", "ready", "effective", "outstanding"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
+      normaliseStatus(item.status)
     )
   ).length;
+
   const judgementPercent = judgements.length
     ? Math.round((positiveJudgements / judgements.length) * 100)
     : 0;
@@ -676,14 +566,13 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
   gaps
     .filter((item) =>
       ["critical", "high", "overdue", "escalated", "missing"].includes(
-        String(item.priority || item.status || "")
-          .toLowerCase()
-          .replaceAll(" ", "_")
+        normaliseStatus(item.priority || item.status || "")
       )
     )
     .slice(0, 3)
     .forEach((item) => {
       items.push({
+        tone: getStatusTone(item.priority || item.status),
         title: item.title || "Evidence gap",
         summary:
           item.summary ||
@@ -694,14 +583,16 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
     });
 
   actions
-    .filter((item) =>
-      !["completed", "resolved", "closed"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
-      )
+    .filter(
+      (item) =>
+        !["completed", "resolved", "closed"].includes(
+          normaliseStatus(item.status)
+        )
     )
     .slice(0, 3)
     .forEach((item) => {
       items.push({
+        tone: getStatusTone(item.status || item.priority),
         title: item.title || "Inspection action",
         summary:
           item.summary ||
@@ -714,12 +605,13 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
   compliance
     .filter((item) =>
       ["overdue", "missing", "review_due", "due_soon", "escalated"].includes(
-        String(item.status || "").toLowerCase().replaceAll(" ", "_")
+        normaliseStatus(item.status)
       )
     )
     .slice(0, 2)
     .forEach((item) => {
       items.push({
+        tone: getStatusTone(item.status),
         title: item.title || "Compliance issue",
         summary:
           item.summary ||
@@ -731,6 +623,7 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
 
   if (!items.length) {
     items.push({
+      tone: "success",
       title: "No major inspection pressure",
       summary:
         "The dashboard is not currently surfacing urgent inspection-facing gaps.",
@@ -740,24 +633,42 @@ function buildPriorityItems({ gaps = [], actions = [], compliance = [] }) {
   return items.slice(0, 8);
 }
 
+function renderStatusPill(status = "", fallback = "Recorded") {
+  const label = status || fallback;
+  const tone = getStatusTone(label);
+
+  return `<span class="ofsted-pill ofsted-pill--${safeText(tone)}">${safeText(
+    label
+  )}</span>`;
+}
+
+function renderSectionHeader(kicker, title, description) {
+  return `
+    <div class="ofsted-section-head">
+      <div>
+        ${kicker ? `<span class="ofsted-kicker">${safeText(kicker)}</span>` : ""}
+        <h3>${safeText(title)}</h3>
+        ${description ? `<p>${safeText(description)}</p>` : ""}
+      </div>
+    </div>
+  `;
+}
+
 function renderStatCards(cards = []) {
   return `
-    <div class="overview-stats-grid overview-stats-grid--six">
+    <div class="ofsted-metric-grid">
       ${cards
         .map(
           (card) => `
-            <article class="overview-stat-card ${
-              card.tone === "danger"
-                ? "overview-stat-card--danger"
-                : card.tone === "warning"
-                ? "overview-stat-card--warning"
-                : card.tone === "success"
-                ? "overview-stat-card--success"
-                : ""
-            }">
-              <span class="overview-stat-label">${safeText(card.label)}</span>
-              <strong class="overview-stat-value">${safeText(card.value)}</strong>
-              <span class="overview-stat-note">${safeText(card.note)}</span>
+            <article class="ofsted-metric-card ofsted-metric-card--${safeText(
+              card.tone || "muted"
+            )}">
+              <span class="ofsted-metric-label">${safeText(card.label)}</span>
+              <strong class="ofsted-metric-value">${safeText(card.value)}</strong>
+              <span class="ofsted-metric-note">${safeText(card.note)}</span>
+              <span class="ofsted-metric-status">${safeText(
+                getToneLabel(card.tone)
+              )}</span>
             </article>
           `
         )
@@ -768,27 +679,36 @@ function renderStatCards(cards = []) {
 
 function renderProgressCards(cards = []) {
   return `
-    <div class="analytics-progress-grid">
+    <div class="ofsted-progress-grid">
       ${cards
         .map(
           (card) => `
-            <article class="analytics-progress-card">
-              <div class="analytics-progress-head">
-                <span class="analytics-progress-label">${safeText(card.label)}</span>
-                <strong class="analytics-progress-value">${safeText(card.value)}</strong>
+            <article class="ofsted-progress-card">
+              <div class="ofsted-progress-top">
+                <span>${safeText(card.label)}</span>
+                <strong>${safeText(card.value)}</strong>
               </div>
-              <div class="analytics-progress-track">
+              <div class="ofsted-progress-track">
                 <span
-                  class="analytics-progress-bar analytics-progress-bar--${safeText(
+                  class="ofsted-progress-fill ofsted-progress-fill--${safeText(
                     card.tone || "muted"
                   )}"
-                  style="width: ${safeText(card.percent || 0)}%;"
+                  style="width:${safeText(card.percent || 0)}%;"
                 ></span>
               </div>
             </article>
           `
         )
         .join("")}
+    </div>
+  `;
+}
+
+function renderEmptyState(message = "Nothing to show right now.") {
+  return `
+    <div class="ofsted-empty">
+      <div class="ofsted-empty-icon" aria-hidden="true">○</div>
+      <p>${safeText(message)}</p>
     </div>
   `;
 }
@@ -801,38 +721,30 @@ function renderRows(items = [], options = {}) {
     metaBuilder = null,
     statusKey = "status",
     recordType = "",
+    variant = "standard",
   } = options;
 
-  if (!items.length) {
-    return `
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">○</div>
-          <h3>Nothing to show</h3>
-          <p>${safeText(emptyMessage)}</p>
-        </div>
-      </div>
-    `;
-  }
+  if (!items.length) return renderEmptyState(emptyMessage);
 
   return `
-    <div class="record-list">
+    <div class="ofsted-card-list ofsted-card-list--${safeText(variant)}">
       ${items
         .map((item) => {
           const title = item?.[titleKey] || item?.title || "Record";
-          const summary = item?.[summaryKey] || item?.summary || "No summary available.";
+          const summary =
+            item?.[summaryKey] || item?.summary || "No summary available.";
           const meta = metaBuilder
             ? metaBuilder(item)
             : item?.updated_at || item?.created_at || "";
 
-          const status = item?.[statusKey] || "";
+          const status = item?.[statusKey] || item?.status || "";
           const tone = getStatusTone(status);
           const rowId = item?.id || item?.record_id || item?.source_id || "";
           const recordPayload = buildRecordPayloadAttr(item);
 
           return `
             <article
-              class="record-row"
+              class="ofsted-record-card ofsted-record-card--${safeText(tone)}"
               data-open-record="true"
               data-record-id="${safeText(rowId)}"
               data-record-type="${safeText(recordType || item?.record_type || "")}"
@@ -846,15 +758,13 @@ function renderRows(items = [], options = {}) {
               tabindex="0"
               role="button"
             >
-              <div class="record-row-main">
-                <div class="record-row-title">${safeText(title)}</div>
-                <div class="record-row-summary">${safeText(summary)}</div>
-                <div class="record-row-meta">${safeText(meta)}</div>
+              <div class="ofsted-record-main">
+                <div class="ofsted-record-title">${safeText(title)}</div>
+                <div class="ofsted-record-summary">${safeText(summary)}</div>
+                ${meta ? `<div class="ofsted-record-meta">${safeText(meta)}</div>` : ""}
               </div>
-              <div class="record-row-side">
-                <span class="row-pill ${safeText(tone)}">${safeText(
-                  status || "Recorded"
-                )}</span>
+              <div class="ofsted-record-side">
+                ${renderStatusPill(status || "Recorded")}
               </div>
             </article>
           `;
@@ -866,19 +776,17 @@ function renderRows(items = [], options = {}) {
 
 function renderPriorityList(items = []) {
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No urgent inspection issues are showing right now.</p>
-      </div>
-    `;
+    return renderEmptyState("No urgent inspection issues are showing right now.");
   }
 
   return `
-    <div class="priority-list">
+    <div class="ofsted-priority-list">
       ${items
         .map(
           (item) => `
-            <article class="priority-item">
+            <article class="ofsted-priority-item ofsted-priority-item--${safeText(
+              item.tone || "muted"
+            )}">
               <strong>${safeText(item.title)}</strong>
               <p>${safeText(item.summary)}</p>
             </article>
@@ -891,39 +799,37 @@ function renderPriorityList(items = []) {
 
 function renderVisibilitySignals(signals = []) {
   if (!signals.length) {
-    return `
-      <div class="empty-state">
-        <p>No urgent inspection visibility alerts are active right now.</p>
-      </div>
-    `;
+    return renderEmptyState(
+      "No urgent inspection visibility alerts are active right now."
+    );
   }
 
   return `
-    <div class="record-list">
+    <div class="ofsted-card-list">
       ${signals
         .slice(0, 6)
-        .map(
-          (signal) => `
-            <article class="record-row">
-              <div class="record-row-main">
-                <div class="record-row-title">${safeText(
+        .map((signal) => {
+          const tone = getStatusTone(signal.severity || "medium");
+
+          return `
+            <article class="ofsted-record-card ofsted-record-card--${safeText(tone)}">
+              <div class="ofsted-record-main">
+                <div class="ofsted-record-title">${safeText(
                   signal.title || "Inspection visibility signal"
                 )}</div>
-                <div class="record-row-summary">${safeText(
+                <div class="ofsted-record-summary">${safeText(
                   signal.description ||
                     "Inspection signal requires follow-through."
                 )}</div>
               </div>
-              <div class="record-row-side">
-                <span class="row-pill ${safeText(
-                  getStatusTone(signal.severity || "medium")
-                )}">
-                  ${safeText(signal.count ?? 0)}
+              <div class="ofsted-record-side">
+                <span class="ofsted-pill ofsted-pill--${safeText(tone)}">
+                  ${safeText(signal.count ?? signal.severity ?? 0)}
                 </span>
               </div>
             </article>
-          `
-        )
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -931,27 +837,25 @@ function renderVisibilitySignals(signals = []) {
 
 function renderInsightStory(story = "") {
   const text = String(story || "").trim();
+
   if (!text) {
-    return `
-      <div class="empty-state">
-        <p>No inspection narrative is available yet.</p>
-      </div>
-    `;
+    return renderEmptyState("No inspection narrative is available yet.");
   }
-  return `<p class="record-row-summary">${safeText(text)}</p>`;
+
+  return `
+    <div class="ofsted-narrative-card">
+      <p>${safeText(text)}</p>
+    </div>
+  `;
 }
 
 function renderTrendRows(trends = []) {
   if (!trends.length) {
-    return `
-      <div class="empty-state">
-        <p>No inspection trend movement is available yet.</p>
-      </div>
-    `;
+    return renderEmptyState("No inspection trend movement is available yet.");
   }
 
   return `
-    <div class="record-list">
+    <div class="ofsted-card-list">
       ${trends
         .slice(0, 4)
         .map((item) => {
@@ -963,21 +867,23 @@ function renderTrendRows(trends = []) {
               : String(item?.assessment || "") === "improving"
               ? "success"
               : "muted";
+
           return `
-            <article class="record-row">
-              <div class="record-row-main">
-                <div class="record-row-title">${safeText(
+            <article class="ofsted-record-card ofsted-record-card--${safeText(
+              tone
+            )}">
+              <div class="ofsted-record-main">
+                <div class="ofsted-record-title">${safeText(
                   item?.label || "Trend"
                 )}</div>
-                <div class="record-row-summary">
+                <div class="ofsted-record-summary">
                   ${safeText(item?.assessment || "stable")} • ${safeText(
                     item?.current ?? 0
-                  )} now vs
-                  ${safeText(item?.previous ?? 0)} before
+                  )} now vs ${safeText(item?.previous ?? 0)} before
                 </div>
               </div>
-              <div class="record-row-side">
-                <span class="row-pill ${tone}">${safeText(
+              <div class="ofsted-record-side">
+                <span class="ofsted-pill ofsted-pill--${safeText(tone)}">${safeText(
                   `${sign}${delta}`
                 )}</span>
               </div>
@@ -991,46 +897,44 @@ function renderTrendRows(trends = []) {
 
 function renderPatternRows(patterns = []) {
   if (!patterns.length) {
-    return `
-      <div class="empty-state">
-        <p>No repeated inspection-risk patterns have crossed threshold yet.</p>
-      </div>
-    `;
+    return renderEmptyState(
+      "No repeated inspection-risk patterns have crossed threshold yet."
+    );
   }
 
   return `
-    <div class="record-list">
+    <div class="ofsted-card-list">
       ${patterns
         .slice(0, 5)
-        .map(
-          (item) => `
-          <article class="record-row">
-            <div class="record-row-main">
-              <div class="record-row-title">${safeText(
-                item?.title || "Pattern"
-              )}</div>
-              <div class="record-row-summary">${safeText(
-                item?.evidence || ""
-              )}</div>
-              <div class="record-row-meta">
-                <span>${safeText(
-                  `${toNumber(item?.frequency, 0)} in ${toNumber(
-                    item?.period_days,
-                    0
-                  )} days`
-                )}</span>
+        .map((item) => {
+          const tone = getStatusTone(item?.severity || "medium");
+
+          return `
+            <article class="ofsted-record-card ofsted-record-card--${safeText(tone)}">
+              <div class="ofsted-record-main">
+                <div class="ofsted-record-title">${safeText(
+                  item?.title || "Pattern"
+                )}</div>
+                <div class="ofsted-record-summary">${safeText(
+                  item?.evidence || ""
+                )}</div>
+                <div class="ofsted-record-meta">
+                  ${safeText(
+                    `${toNumber(item?.frequency, 0)} in ${toNumber(
+                      item?.period_days,
+                      0
+                    )} days`
+                  )}
+                </div>
               </div>
-            </div>
-            <div class="record-row-side">
-              <span class="row-pill ${safeText(
-                getStatusTone(item?.severity || "medium")
-              )}">
-                ${safeText(item?.severity || "medium")}
-              </span>
-            </div>
-          </article>
-        `
-        )
+              <div class="ofsted-record-side">
+                <span class="ofsted-pill ofsted-pill--${safeText(tone)}">
+                  ${safeText(item?.severity || "medium")}
+                </span>
+              </div>
+            </article>
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -1038,41 +942,37 @@ function renderPatternRows(patterns = []) {
 
 function renderDecisionRows(items = []) {
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No decision-support prompts are available yet.</p>
-      </div>
-    `;
+    return renderEmptyState("No decision-support prompts are available yet.");
   }
 
   return `
-    <div class="record-list">
+    <div class="ofsted-card-list">
       ${items
         .slice(0, 3)
-        .map(
-          (item) => `
-          <article class="record-row">
-            <div class="record-row-main">
-              <div class="record-row-title">${safeText(
-                item?.question || "Decision prompt"
-              )}</div>
-              <div class="record-row-summary">${safeText(
-                item?.evidence || ""
-              )}</div>
-              <div class="record-row-meta">${safeText(
-                item?.suggested_action || ""
-              )}</div>
-            </div>
-            <div class="record-row-side">
-              <span class="row-pill ${safeText(
-                getStatusTone(item?.severity || "medium")
-              )}">
-                ${safeText(item?.severity || "medium")}
-              </span>
-            </div>
-          </article>
-        `
-        )
+        .map((item) => {
+          const tone = getStatusTone(item?.severity || "medium");
+
+          return `
+            <article class="ofsted-record-card ofsted-record-card--${safeText(tone)}">
+              <div class="ofsted-record-main">
+                <div class="ofsted-record-title">${safeText(
+                  item?.question || "Decision prompt"
+                )}</div>
+                <div class="ofsted-record-summary">${safeText(
+                  item?.evidence || ""
+                )}</div>
+                <div class="ofsted-record-meta">${safeText(
+                  item?.suggested_action || ""
+                )}</div>
+              </div>
+              <div class="ofsted-record-side">
+                <span class="ofsted-pill ofsted-pill--${safeText(tone)}">
+                  ${safeText(item?.severity || "medium")}
+                </span>
+              </div>
+            </article>
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -1080,41 +980,37 @@ function renderDecisionRows(items = []) {
 
 function renderJudgementSupportRows(items = []) {
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No generated judgement support is available yet.</p>
-      </div>
-    `;
+    return renderEmptyState("No generated judgement support is available yet.");
   }
 
   return `
-    <div class="record-list">
+    <div class="ofsted-card-list">
       ${items
         .slice(0, 3)
-        .map(
-          (item) => `
-          <article class="record-row">
-            <div class="record-row-main">
-              <div class="record-row-title">${safeText(
-                item?.title || "Judgement support"
-              )}</div>
-              <div class="record-row-summary">${safeText(
-                item?.evidence || ""
-              )}</div>
-              <div class="record-row-meta">${safeText(
-                item?.suggested_action || ""
-              )}</div>
-            </div>
-            <div class="record-row-side">
-              <span class="row-pill ${safeText(
-                getStatusTone(item?.severity || "medium")
-              )}">
-                ${safeText(item?.severity || "medium")}
-              </span>
-            </div>
-          </article>
-        `
-        )
+        .map((item) => {
+          const tone = getStatusTone(item?.severity || "medium");
+
+          return `
+            <article class="ofsted-record-card ofsted-record-card--${safeText(tone)}">
+              <div class="ofsted-record-main">
+                <div class="ofsted-record-title">${safeText(
+                  item?.title || "Judgement support"
+                )}</div>
+                <div class="ofsted-record-summary">${safeText(
+                  item?.evidence || ""
+                )}</div>
+                <div class="ofsted-record-meta">${safeText(
+                  item?.suggested_action || ""
+                )}</div>
+              </div>
+              <div class="ofsted-record-side">
+                <span class="ofsted-pill ofsted-pill--${safeText(tone)}">
+                  ${safeText(item?.severity || "medium")}
+                </span>
+              </div>
+            </article>
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -1122,20 +1018,19 @@ function renderJudgementSupportRows(items = []) {
 
 function renderMissingRows(items = []) {
   if (!items.length) {
-    return `
-      <div class="empty-state">
-        <p>No missing inspection evidence warnings are currently highlighted.</p>
-      </div>
-    `;
+    return renderEmptyState(
+      "No missing inspection evidence warnings are currently highlighted."
+    );
   }
 
   return `
-    <div class="priority-list">
+    <div class="ofsted-priority-list">
       ${items
         .slice(0, 5)
         .map(
           (text) => `
-            <article class="priority-item">
+            <article class="ofsted-priority-item ofsted-priority-item--warning">
+              <strong>Missing evidence</strong>
               <p>${safeText(text)}</p>
             </article>
           `
@@ -1167,43 +1062,57 @@ function renderOfstedDashboardHtml({
   isFallback = false,
 }) {
   return `
-    <section class="overview-panel manager-dashboard manager-dashboard--ofsted">
-      <div class="overview-panel-head">
-        <div>
-          <div class="eyebrow">Ofsted</div>
+    <section class="ofsted-dashboard-shell">
+      <section class="ofsted-hero-card">
+        <div class="ofsted-hero-copy">
+          <span class="ofsted-kicker">Ofsted command centre</span>
           <h2>${safeText(title)}</h2>
-          <p>A dedicated inspection-facing dashboard across judgement areas, evidence confidence, gaps, actions and inspection readiness.</p>
+          <p>
+            Inspection-facing grip across SCCIF judgement areas, evidence confidence,
+            gaps, actions, compliance pressure and leadership readiness.
+          </p>
           ${
             isFallback
-              ? `<p class="overview-helper-text">Showing seeded preview data until live Ofsted endpoints are available.</p>`
-              : ""
+              ? `<div class="ofsted-preview-banner">Preview data is showing because live Ofsted endpoints are not yet returning usable records.</div>`
+              : `<div class="ofsted-live-banner">Live inspection data loaded for the current home.</div>`
           }
         </div>
-      </div>
+
+        <div class="ofsted-hero-actions">
+          <button class="primary-btn" type="button" data-action-router="inspection_refresh">
+            Refresh inspection cycle
+          </button>
+          <button class="secondary-btn" type="button" data-action-router="inspection_sync">
+            Sync actions
+          </button>
+        </div>
+      </section>
 
       ${renderStatCards(topStats)}
 
-      <div class="overview-section-card">
-        <div class="overview-section-head">
-          <h3>Inspection snapshot</h3>
-          <p>A quick visual read across evidence confidence, gap closure, action completion and judgement strength.</p>
-        </div>
+      <section class="ofsted-section-card ofsted-section-card--snapshot">
+        ${renderSectionHeader(
+          "Snapshot",
+          "Inspection readiness picture",
+          "A quick visual read across evidence confidence, gap closure, action completion and judgement strength."
+        )}
         ${renderProgressCards(progressCards)}
-      </div>
+      </section>
 
-      <div class="overview-grid">
-        <section class="overview-main">
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Judgement areas</h3>
-              <p>Inspection-facing judgement themes and how strong the evidence currently looks.</p>
-            </div>
-
+      <section class="ofsted-command-grid">
+        <section class="ofsted-command-main">
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "SCCIF",
+              "Judgement areas",
+              "Inspection-facing judgement themes and how strong the evidence currently looks."
+            )}
             ${renderRows(judgementItems, {
               emptyMessage: "No judgement areas found.",
               titleKey: "area",
               summaryKey: "strength_summary",
               recordType: "ofsted_judgement",
+              variant: "judgements",
               metaBuilder: (item) =>
                 [
                   `${toNumber(item.evidence_count)} evidence`,
@@ -1213,19 +1122,21 @@ function renderOfstedDashboardHtml({
                   .filter(Boolean)
                   .join(" • "),
             })}
-          </div>
+          </section>
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Evidence gaps</h3>
-              <p>Gaps likely to matter most during inspection preparation or live inspection activity.</p>
-            </div>
-
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Risk",
+              "Evidence gaps",
+              "Gaps most likely to weaken inspection confidence if left unresolved."
+            )}
             ${renderRows(gapItems, {
               emptyMessage: "No inspection gaps found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "inspection_gap",
+              statusKey: "priority",
+              variant: "gaps",
               metaBuilder: (item) =>
                 [
                   item.area || "",
@@ -1234,21 +1145,21 @@ function renderOfstedDashboardHtml({
                 ]
                   .filter(Boolean)
                   .join(" • "),
-              statusKey: "priority",
             })}
-          </div>
+          </section>
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Open inspection actions</h3>
-              <p>Leadership and service actions linked to evidence strength and readiness.</p>
-            </div>
-
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Follow-through",
+              "Open inspection actions",
+              "Leadership and service actions linked to evidence strength and readiness."
+            )}
             ${renderRows(actionItems, {
               emptyMessage: "No inspection actions found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "inspection_action",
+              variant: "actions",
               metaBuilder: (item) =>
                 [
                   item.owner_user_name || "",
@@ -1257,19 +1168,20 @@ function renderOfstedDashboardHtml({
                   .filter(Boolean)
                   .join(" • "),
             })}
-          </div>
+          </section>
 
-          <div class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Evidence library</h3>
-              <p>Recent evidence items mapped to inspection themes and areas.</p>
-            </div>
-
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Evidence",
+              "Evidence library",
+              "Recent evidence items mapped to inspection themes and areas."
+            )}
             ${renderRows(evidenceItems, {
               emptyMessage: "No inspection evidence found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "inspection_evidence",
+              variant: "evidence",
               metaBuilder: (item) =>
                 [
                   item.area || "",
@@ -1279,93 +1191,94 @@ function renderOfstedDashboardHtml({
                   .filter(Boolean)
                   .join(" • "),
             })}
-          </div>
+          </section>
         </section>
 
-        <aside class="overview-side">
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Story right now</h3>
-              <p>Current inspection narrative from trends and repeated themes.</p>
-            </div>
-
-            ${renderInsightStory(insightStory)}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>What is changing</h3>
-              <p>Direction of key inspection readiness indicators.</p>
-            </div>
-
-            ${renderTrendRows(changing)}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Repeating patterns</h3>
-              <p>Explainable recurring issues from evidence and action data.</p>
-            </div>
-
-            ${renderPatternRows(patterns)}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Decision support</h3>
-              <p>Evidence-backed prompts for inspection preparation decisions.</p>
-            </div>
-
-            ${renderDecisionRows(decisionSupport)}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Generated judgement support</h3>
-              <p>Auto-generated, evidence-linked support points for likely judgement lines.</p>
-            </div>
-
-            ${renderJudgementSupportRows(judgementSupport)}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Needs attention</h3>
-              <p>The most urgent inspection-facing issues across the service.</p>
-            </div>
-
+        <aside class="ofsted-command-side">
+          <section class="ofsted-section-card ofsted-section-card--sticky">
+            ${renderSectionHeader(
+              "Priority",
+              "Needs attention",
+              "The most urgent inspection-facing issues across the service."
+            )}
             ${renderPriorityList(priorityItems)}
           </section>
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Inspection visibility alerts</h3>
-              <p>Calm, prioritised signals for evidence gaps and likely inspector concerns.</p>
-            </div>
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Narrative",
+              "Story right now",
+              "Current inspection narrative from trends and repeated themes."
+            )}
+            ${renderInsightStory(insightStory)}
+          </section>
 
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Movement",
+              "What is changing",
+              "Direction of key inspection readiness indicators."
+            )}
+            ${renderTrendRows(changing)}
+          </section>
+
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Patterns",
+              "Repeating patterns",
+              "Explainable recurring issues from evidence and action data."
+            )}
+            ${renderPatternRows(patterns)}
+          </section>
+
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Decision support",
+              "Inspection prompts",
+              "Evidence-backed prompts for preparation decisions."
+            )}
+            ${renderDecisionRows(decisionSupport)}
+          </section>
+
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Judgement support",
+              "Generated support",
+              "Auto-generated, evidence-linked support points for likely judgement lines."
+            )}
+            ${renderJudgementSupportRows(judgementSupport)}
+          </section>
+
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Alerts",
+              "Inspection visibility alerts",
+              "Prioritised signals for evidence gaps and likely inspector concerns."
+            )}
             ${renderVisibilitySignals(visibilitySignals)}
           </section>
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>What is missing</h3>
-              <p>Gaps likely to weaken readiness if left open.</p>
-            </div>
-
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Missing",
+              "What is missing",
+              "Gaps likely to weaken readiness if left open."
+            )}
             ${renderMissingRows(missingItems)}
           </section>
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Compliance pressure</h3>
-              <p>Compliance items that could weaken inspection confidence.</p>
-            </div>
-
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Compliance",
+              "Compliance pressure",
+              "Compliance items that could weaken inspection confidence."
+            )}
             ${renderRows(complianceItems, {
               emptyMessage: "No inspection-linked compliance issues found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "compliance",
+              variant: "compact",
               metaBuilder: (item) =>
                 [
                   item.area || "",
@@ -1376,17 +1289,18 @@ function renderOfstedDashboardHtml({
             })}
           </section>
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Audit signals</h3>
-              <p>Recent audit findings that support or weaken inspection readiness.</p>
-            </div>
-
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Audit",
+              "Audit signals",
+              "Recent audit findings that support or weaken readiness."
+            )}
             ${renderRows(auditItems, {
               emptyMessage: "No audit records found.",
               titleKey: "audit_name",
               summaryKey: "summary",
               recordType: "audit",
+              variant: "compact",
               metaBuilder: (item) =>
                 [
                   item.audit_date ? formatDate(item.audit_date) : "",
@@ -1397,17 +1311,18 @@ function renderOfstedDashboardHtml({
             })}
           </section>
 
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Key documents</h3>
-              <p>Documents likely to be relied on during evidence collation or inspection discussion.</p>
-            </div>
-
+          <section class="ofsted-section-card">
+            ${renderSectionHeader(
+              "Documents",
+              "Key documents",
+              "Documents likely to be relied on during evidence collation or inspection discussion."
+            )}
             ${renderRows(documentItems, {
               emptyMessage: "No inspection-linked documents found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "document",
+              variant: "compact",
               metaBuilder: (item) =>
                 [
                   item.document_type || "",
@@ -1418,7 +1333,7 @@ function renderOfstedDashboardHtml({
             })}
           </section>
         </aside>
-      </div>
+      </section>
     </section>
   `;
 }
@@ -1427,14 +1342,10 @@ function renderNoHomeContext() {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">▣</div>
-          <h3>No home context available</h3>
-          <p>A home ID is needed before the Ofsted dashboard can load.</p>
-        </div>
-      </div>
+    <section class="ofsted-dashboard-shell">
+      <section class="ofsted-section-card">
+        ${renderEmptyState("A home ID is needed before the Ofsted dashboard can load.")}
+      </section>
     </section>
   `;
 
@@ -1450,13 +1361,15 @@ function renderLoadingState() {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="loading-state">
-        <div>
-          <div class="spinner" aria-hidden="true"></div>
-          <p>Loading Ofsted dashboard…</p>
+    <section class="ofsted-dashboard-shell">
+      <section class="ofsted-section-card">
+        <div class="loading-state">
+          <div>
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Loading Ofsted dashboard…</p>
+          </div>
         </div>
-      </div>
+      </section>
     </section>
   `;
 
@@ -1472,16 +1385,14 @@ function renderErrorState(message) {
   if (!els.viewContent) return;
 
   els.viewContent.innerHTML = `
-    <section class="overview-panel">
-      <div class="empty-state">
-        <div class="empty-state-inner">
-          <div class="empty-state-icon" aria-hidden="true">!</div>
+    <section class="ofsted-dashboard-shell">
+      <section class="ofsted-section-card">
+        <div class="ofsted-empty">
+          <div class="ofsted-empty-icon" aria-hidden="true">!</div>
           <h3>Failed to load Ofsted dashboard</h3>
-          <p>${safeText(
-            message || "The Ofsted dashboard could not be loaded."
-          )}</p>
+          <p>${safeText(message || "The Ofsted dashboard could not be loaded.")}</p>
         </div>
-      </div>
+      </section>
     </section>
   `;
 
@@ -1500,12 +1411,14 @@ function buildFallbackData(homeId) {
     `Home ${homeId}`;
 
   const now = new Date();
+
   const plusDays = (days, hour = 9, minute = 0) => {
     const d = new Date(now);
     d.setDate(d.getDate() + days);
     d.setHours(hour, minute, 0, 0);
     return d.toISOString();
   };
+
   const minusDays = (days, hour = 9, minute = 0) => {
     const d = new Date(now);
     d.setDate(d.getDate() - days);
@@ -1707,6 +1620,7 @@ function buildFallbackData(homeId) {
 
 async function fetchDataset(homeId) {
   const endpoints = buildInspectionUiEndpoints(homeId);
+
   if (!endpoints) {
     return buildFallbackData(homeId);
   }
@@ -1774,11 +1688,6 @@ async function fetchDataset(homeId) {
   const scoreSummary =
     normaliseSummary(inspectionScoresData || {}).summary ||
     normaliseSummary(inspectionScoresData || {});
-
-  const inspectionScores = toArray(inspectionScoresData?.items, [
-    inspectionScoresData?.inspection_scores,
-    inspectionScoresData?.records,
-  ]);
 
   const inspectionSections = toArray(inspectionSectionScoresData?.items, [
     inspectionSectionScoresData?.inspection_section_scores,
@@ -1915,7 +1824,7 @@ async function fetchDataset(homeId) {
       ...inspectionReasons
         .filter((item) =>
           ["concern", "gap", "weakness", "risk"].includes(
-            String(item.reason_type || "").toLowerCase().replaceAll(" ", "_")
+            normaliseStatus(item.reason_type)
           )
         )
         .map((item) => ({
@@ -1924,7 +1833,7 @@ async function fetchDataset(homeId) {
           title: item.title || item.line_of_enquiry_name || "Evidence gap",
           area: item.section_name || item.section_code || "",
           status: item.reason_type || "open",
-          priority: item.priority || "",
+          priority: item.priority || item.reason_type || "",
           due_date: item.due_date || null,
           owner_user_name: item.owner_user_name || "",
           summary:
@@ -1936,7 +1845,7 @@ async function fetchDataset(homeId) {
           created_at: item.created_at || null,
         })),
       ...qualityFindings
-        .filter((item) => toNumber(item.action_required ? 1 : 0, 0) > 0)
+        .filter((item) => toBool(item.action_required))
         .map((item) => ({
           id: `quality-gap-${item.id}`,
           record_type: "inspection_gap",
@@ -2086,6 +1995,7 @@ async function fetchDataset(homeId) {
 
 async function fetchVisibility(homeId) {
   const path = ofstedVisibilityPath(homeId);
+
   try {
     return (await apiGet(path)) || {};
   } catch {
@@ -2121,10 +2031,7 @@ export async function loadOfstedDashboard() {
       visibility,
     ] = await Promise.all([fetchDataset(homeId), fetchVisibility(homeId)]);
 
-    const summary =
-      typeof summaryData === "object" && !Array.isArray(summaryData)
-        ? normaliseSummary(summaryData)
-        : normaliseSummary(summaryData);
+    const summary = normaliseSummary(summaryData);
 
     const judgementItems = sortNewestFirst(
       normaliseJudgementItems(judgementData),
@@ -2154,7 +2061,7 @@ export async function loadOfstedDashboard() {
     )
       .filter((item) =>
         ["overdue", "missing", "review_due", "due_soon", "escalated"].includes(
-          String(item.status || "").toLowerCase().replaceAll(" ", "_")
+          normaliseStatus(item.status)
         )
       )
       .slice(0, 6);
@@ -2195,11 +2102,14 @@ export async function loadOfstedDashboard() {
     const changing = toArray(
       visibility?.what_is_changing || visibility?.trends
     ).slice(0, 4);
+
     const patterns = toArray(visibility?.patterns).slice(0, 6);
     const decisionSupport = toArray(visibility?.decision_support).slice(0, 4);
+
     const judgementSupport = toArray(
       visibility?.ofsted_judgement_support
     ).slice(0, 3);
+
     const missingItems = toArray(visibility?.what_is_missing).slice(0, 6);
 
     const title =
@@ -2233,6 +2143,7 @@ export async function loadOfstedDashboard() {
     });
 
     const nextGap = gapItems[0];
+
     const latestSignal =
       evidenceItems[0]?.updated_at ||
       judgementItems[0]?.updated_at ||
