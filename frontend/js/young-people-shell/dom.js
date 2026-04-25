@@ -8,9 +8,9 @@ const DOM_KEYS = {
   --------------------------------- */
   app: "app",
   mainContent: "mainContent",
-  workspaceScreen: "workspaceScreen",
+  workspaceScreen: "workspacePanel",
   workspaceShell: "workspaceShell",
-  selectorScreen: "selectorScreen",
+  selectorScreen: "selectorPanel",
   viewContent: "viewContent",
   statusBar: "statusBar",
   statusMessage: "statusMessage",
@@ -228,6 +228,7 @@ function firstDefinedElement(...candidates) {
   for (const candidate of candidates) {
     if (candidate) return candidate;
   }
+
   return null;
 }
 
@@ -244,12 +245,26 @@ function buildEls() {
 
   resolved.selectorPanel = firstDefinedElement(
     resolved.selectorScreen,
-    byId("selectorPanel")
+    byId("selectorPanel"),
+    byId("selectorScreen")
+  );
+
+  resolved.selectorScreen = firstDefinedElement(
+    resolved.selectorScreen,
+    resolved.selectorPanel,
+    byId("selectorScreen")
   );
 
   resolved.workspacePanel = firstDefinedElement(
     resolved.workspaceScreen,
-    byId("workspacePanel")
+    byId("workspacePanel"),
+    byId("workspaceScreen")
+  );
+
+  resolved.workspaceScreen = firstDefinedElement(
+    resolved.workspaceScreen,
+    resolved.workspacePanel,
+    byId("workspaceScreen")
   );
 
   resolved.mobileNavBtn = firstDefinedElement(
@@ -340,8 +355,8 @@ export function requireEl(id, context = "unknown") {
 export function validateCoreDom() {
   const requiredIds = [
     "app",
-    "workspaceScreen",
-    "selectorScreen",
+    "workspacePanel",
+    "selectorPanel",
     "viewContent",
   ];
 
