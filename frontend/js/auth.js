@@ -105,9 +105,7 @@ async function login(credentialsArg = null) {
       : !!(rememberInput && rememberInput.checked);
 
   if (!email || !password) {
-    if (loginStatus) {
-      loginStatus.textContent = "Please enter your email and password.";
-    }
+    if (loginStatus) loginStatus.textContent = "Please enter your email and password.";
     throw new Error("Please enter your email and password");
   }
 
@@ -116,9 +114,7 @@ async function login(credentialsArg = null) {
     loginButton.textContent = "Signing in...";
   }
 
-  if (loginStatus) {
-    loginStatus.textContent = "Checking your details...";
-  }
+  if (loginStatus) loginStatus.textContent = "Checking your details...";
 
   clearRecoveryCodes();
 
@@ -128,16 +124,13 @@ async function login(credentialsArg = null) {
       body: JSON.stringify({ email, password, remember }),
     });
 
-    if (!data || !data.ok) {
-      throw new Error("Login failed");
-    }
+    if (!data || !data.ok) throw new Error("Login failed");
 
     const user = data.user || {};
 
     const mfaPending =
       !!data.mfa_pending ||
       !!data.mfa_required ||
-      !!data.mfa_mandatory ||
       !!user.mfa_pending;
 
     if (data.user) {
@@ -145,11 +138,7 @@ async function login(credentialsArg = null) {
         normaliseUserPatch({
           ...user,
           authenticated: !!data.authenticated && !mfaPending,
-          mfa_enabled:
-            !!user.mfa_enabled ||
-            !!data.mfa_enabled ||
-            !!data.mfa_mandatory ||
-            mfaPending,
+          mfa_enabled: !!user.mfa_enabled || !!data.mfa_enabled || mfaPending,
           mfa_verified: !!data.authenticated && !mfaPending,
           mfa_pending: mfaPending,
           has_passkeys: !!user.has_passkeys,
@@ -159,21 +148,15 @@ async function login(credentialsArg = null) {
     }
 
     if (loginStatus) {
-      if (mfaPending) {
-        loginStatus.textContent =
-          "Password accepted. Continuing to multi-factor verification...";
-      } else {
-        loginStatus.textContent = "Sign-in successful. Redirecting...";
-      }
+      loginStatus.textContent = mfaPending
+        ? "Password accepted. Continuing to multi-factor verification..."
+        : "Sign-in successful. Redirecting...";
     }
 
     return data;
   } catch (error) {
     clearStoredUser();
-    const message = error?.message || "Login failed";
-    if (loginStatus) {
-      loginStatus.textContent = message;
-    }
+    if (loginStatus) loginStatus.textContent = error?.message || "Login failed";
     throw error;
   } finally {
     if (loginButton) {
@@ -198,55 +181,40 @@ function logout() {
 
 async function validateSession() {
   try {
-    const data = await apiFetchJson("/auth/me", { method: "GET" });
-    const user = data.user || {};
-    const authenticated = data.ok === true && !!(user.id || user.user_id);
+    const data = await apiFetchJson("/auth/check", { method: "GET" });
 
-    const mfaEnabled =
-      !!user.mfa_enabled ||
-      !!data.mfa_enabled ||
-      !!data.mfa_mandatory;
-
-    const backendMfaVerified =
-      !!user.mfa_verified ||
-      !!data.mfa_verified;
-
-    const mfaPending =
-      !!data.mfa_pending ||
-      !!data.mfa_required ||
-      !!data.mfa_mandatory ||
-      !!user.mfa_pending ||
-      (mfaEnabled && !backendMfaVerified);
-
-    if (!authenticated) {
+    if (data?.mfa_pending) {
       const existing = getStoredUser() || {};
       const remember = shouldRememberUser();
 
-      if (mfaPending) {
-        const merged = normaliseUserPatch({
-          ...existing,
-          authenticated: false,
-          mfa_enabled: true,
-          mfa_verified: false,
-          mfa_pending: true,
-        });
+      const merged = normaliseUserPatch({
+        ...existing,
+        authenticated: false,
+        user_id: data.user_id || existing.user_id || existing.id || null,
+        id: data.user_id || existing.id || null,
+        subscription_active: false,
+        mfa_enabled: true,
+        mfa_verified: false,
+        mfa_pending: true,
+      });
 
-        setStoredUser(merged, remember);
+      setStoredUser(merged, remember);
 
-        return {
-          ...merged,
-          authenticated: false,
-          subscription_active: false,
-          mfa_enabled: true,
-          mfa_verified: false,
-          mfa_pending: true,
-          mfaEnabled: true,
-          mfaVerified: false,
-          mfaPending: true,
-          expires_in_seconds: data.expires_in_seconds ?? null,
-        };
-      }
+      return {
+        ...merged,
+        authenticated: false,
+        subscription_active: false,
+        mfa_enabled: true,
+        mfa_verified: false,
+        mfa_pending: true,
+        mfaEnabled: true,
+        mfaVerified: false,
+        mfaPending: true,
+        expires_in_seconds: data.expires_in_seconds ?? null,
+      };
+    }
 
+    if (!data || data.authenticated !== true) {
       clearStoredUser();
 
       return {
@@ -266,24 +234,22 @@ async function validateSession() {
 
     const merged = normaliseUserPatch({
       ...existing,
-      ...user,
       authenticated: true,
-      id: user.id || user.user_id,
-      user_id: user.user_id || user.id,
-      email: user.email,
-      role: user.role,
-      home_id: user.home_id || user.homeId || null,
-      homeId: user.homeId || user.home_id || null,
-      provider_id: user.provider_id || user.providerId || null,
-      providerId: user.providerId || user.provider_id || null,
-      is_active: user.is_active,
-      subscription_active: !!user.subscription_active,
-      subscription_status: user.subscription_status || "inactive",
-      plan_name: user.plan_name || null,
-      mfa_enabled: mfaEnabled,
-      mfa_verified: !mfaPending,
-      mfa_pending: mfaPending,
-      has_passkeys: !!user.has_passkeys,
+      id: data.user_id,
+      user_id: data.user_id,
+      email: data.email,
+      role: data.role,
+      home_id: data.home_id,
+      homeId: data.home_id,
+      provider_id: data.provider_id || existing.provider_id || null,
+      providerId: data.provider_id || existing.providerId || null,
+      is_active: data.is_active,
+      subscription_active: !!data.subscription_active,
+      subscription_status: data.subscription_status || "inactive",
+      plan_name: data.plan_name || null,
+      mfa_enabled: !!data.mfa_enabled,
+      mfa_verified: !!data.mfa_verified,
+      mfa_pending: false,
     });
 
     setStoredUser(merged, remember);
@@ -291,23 +257,8 @@ async function validateSession() {
     return {
       ...merged,
       authenticated: true,
-      user_id: merged.user_id,
-      email: merged.email,
-      role: merged.role,
-      home_id: merged.home_id,
-      homeId: merged.homeId,
-      provider_id: merged.provider_id,
-      providerId: merged.providerId,
-      is_active: merged.is_active,
-      subscription_active: !!merged.subscription_active,
-      subscription_status: merged.subscription_status || "inactive",
-      plan_name: merged.plan_name || null,
-      mfa_enabled: mfaEnabled,
-      mfa_verified: !mfaPending,
-      mfa_pending: mfaPending,
-      mfaEnabled: mfaEnabled,
-      mfaVerified: !mfaPending,
-      mfaPending: mfaPending,
+      mfa_pending: false,
+      mfaPending: false,
     };
   } catch (_) {
     clearStoredUser();
@@ -364,9 +315,7 @@ async function verifyMfaCode(code) {
     body: JSON.stringify({ code }),
   });
 
-  if (!data?.ok) {
-    throw new Error("Verification failed");
-  }
+  if (!data?.ok) throw new Error("Verification failed");
 
   updateStoredUser({
     authenticated: true,
@@ -386,9 +335,7 @@ async function verifyRecoveryCode(recoveryCode) {
     body: JSON.stringify({ code: recoveryCode }),
   });
 
-  if (!data?.ok) {
-    throw new Error("Recovery verification failed");
-  }
+  if (!data?.ok) throw new Error("Recovery verification failed");
 
   updateStoredUser({
     authenticated: true,
@@ -416,9 +363,7 @@ async function completeMfaSetup(code) {
     body: JSON.stringify({ code }),
   });
 
-  if (!data?.ok) {
-    throw new Error("MFA setup failed");
-  }
+  if (!data?.ok) throw new Error("MFA setup failed");
 
   updateStoredUser({
     authenticated: true,
@@ -442,9 +387,7 @@ async function regenerateRecoveryCodes(code) {
     body: JSON.stringify({ code }),
   });
 
-  if (!data?.ok) {
-    throw new Error("Could not regenerate recovery codes");
-  }
+  if (!data?.ok) throw new Error("Could not regenerate recovery codes");
 
   if (Array.isArray(data.recovery_codes) && data.recovery_codes.length) {
     saveRecoveryCodes(data.recovery_codes);
@@ -459,7 +402,6 @@ async function beginPasskeyLogin(email) {
   }
 
   const cleanedEmail = String(email || "").trim().toLowerCase();
-
   if (!cleanedEmail) {
     throw new Error("Enter your work email address to use passkey sign-in.");
   }
@@ -480,25 +422,19 @@ async function beginPasskeyLogin(email) {
     throw new Error("This browser does not support JSON passkey options.");
   }
 
-  const publicKey =
-    PublicKeyCredential.parseRequestOptionsFromJSON(jsonOptions);
-
+  const publicKey = PublicKeyCredential.parseRequestOptionsFromJSON(jsonOptions);
   const credential = await navigator.credentials.get({ publicKey });
 
   if (!credential || typeof credential.toJSON !== "function") {
     throw new Error("Passkey sign-in was cancelled.");
   }
 
-  const credentialJson = credential.toJSON();
-
   const verified = await apiFetchJson("/auth/passkeys/authenticate/verify", {
     method: "POST",
-    body: JSON.stringify({ credential: credentialJson }),
+    body: JSON.stringify({ credential: credential.toJSON() }),
   });
 
-  if (!verified?.ok) {
-    throw new Error("Passkey sign-in failed");
-  }
+  if (!verified?.ok) throw new Error("Passkey sign-in failed");
 
   updateStoredUser({
     authenticated: true,
@@ -532,28 +468,22 @@ async function registerPasskey(nickname = "") {
     throw new Error("This browser does not support JSON passkey options.");
   }
 
-  const publicKey =
-    PublicKeyCredential.parseCreationOptionsFromJSON(jsonOptions);
-
+  const publicKey = PublicKeyCredential.parseCreationOptionsFromJSON(jsonOptions);
   const credential = await navigator.credentials.create({ publicKey });
 
   if (!credential || typeof credential.toJSON !== "function") {
     throw new Error("Passkey registration was cancelled.");
   }
 
-  const credentialJson = credential.toJSON();
-
   const result = await apiFetchJson("/auth/passkeys/register/verify", {
     method: "POST",
     body: JSON.stringify({
-      credential: credentialJson,
+      credential: credential.toJSON(),
       nickname,
     }),
   });
 
-  updateStoredUser({
-    has_passkeys: true,
-  });
+  updateStoredUser({ has_passkeys: true });
 
   return result;
 }
@@ -574,10 +504,7 @@ async function getPasskeyPromptStatus() {
 
 document.addEventListener("DOMContentLoaded", () => {
   const logoutButton = document.getElementById("logoutBtn");
-
-  if (logoutButton) {
-    logoutButton.addEventListener("click", logout);
-  }
+  if (logoutButton) logoutButton.addEventListener("click", logout);
 });
 
 window.auth = {
