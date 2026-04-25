@@ -1,6 +1,4 @@
-Yes — prompts.py is the next right file.
-
-Paste this full replacement in.
+from __future__ import annotations
 
 from assistant.knowledge_loader import (
     load_templates,
