@@ -1,13 +1,8 @@
-from __future__ import annotations
+Replace assistant/safeguarding.py with this:
 
+from __future__ import annotations
 import re
 from typing import Any
-
-
-# ---------------------------------------------------------
-# Real-time safeguarding triage
-# ---------------------------------------------------------
-
 URGENT_KEYWORDS = [
     "not breathing",
     "unconscious",
@@ -20,7 +15,6 @@ URGENT_KEYWORDS = [
     "trying to kill herself",
     "severe bleeding",
     "bleeding heavily",
-    "bleeding a lot",
     "ambulance",
     "life threatening",
     "life-threatening",
@@ -31,16 +25,10 @@ URGENT_KEYWORDS = [
     "hanging",
     "attempted hanging",
 ]
-
 HEIGHTENED_KEYWORDS = [
     "self harm",
     "self-harm",
     "cutting",
-    "cut herself",
-    "cut himself",
-    "cut themselves",
-    "burned themselves",
-    "burnt themselves",
     "suicidal",
     "suicide note",
     "wants to die",
@@ -51,7 +39,6 @@ HEIGHTENED_KEYWORDS = [
     "kill themselves",
     "missing from home",
     "gone missing",
-    "abscond",
     "absconded",
     "ran away",
     "sexual exploitation",
@@ -62,9 +49,6 @@ HEIGHTENED_KEYWORDS = [
     "allegation against staff",
     "staff allegation",
     "staff hurt them",
-    "staff hurt him",
-    "staff hurt her",
-    "said staff hurt",
     "physical assault",
     "assaulted",
     "serious injury",
@@ -77,8 +61,10 @@ HEIGHTENED_KEYWORDS = [
     "police attended",
     "disclosure",
     "disclosed",
+    "exploitation",
+    "child protection",
+    "lado",
 ]
-
 WATCHFUL_KEYWORDS = [
     "bruise",
     "mark",
@@ -104,16 +90,13 @@ WATCHFUL_KEYWORDS = [
     "shutdown",
     "meltdown",
 ]
-
 DISCLOSURE_PATTERNS = [
     r"\bsaid staff hurt (him|her|them)\b",
     r"\bsaid a staff member hurt (him|her|them)\b",
     r"\bdisclosed.*staff\b",
     r"\ballegation against staff\b",
-    r"\bstaff member hit\b",
-    r"\bstaff member hurt\b",
+    r"\bstaff member (hit|hurt|assaulted)\b",
 ]
-
 URGENT_PATTERNS = [
     r"\btrying to kill (himself|herself|themselves)\b",
     r"\bnot breathing\b",
@@ -121,8 +104,9 @@ URGENT_PATTERNS = [
     r"\bbleeding heavily\b",
     r"\blife[\s-]?threatening\b",
     r"\bmedical emergency\b",
+    r"\boverdose\b",
+    r"\bstrangl(ed|ation)\b",
 ]
-
 HEIGHTENED_PATTERNS = [
     r"\bmissing from home\b",
     r"\bgone missing\b",
@@ -134,87 +118,64 @@ HEIGHTENED_PATTERNS = [
     r"\bsuicid(al|e note)\b",
     r"\brestraint concern\b",
     r"\brestrictive practice\b",
+    r"\bcounty lines\b",
+    r"\b(cse|cce)\b",
 ]
-
-
 def _safe_string(value: Any) -> str:
     if value is None:
         return ""
     if isinstance(value, str):
         return value.strip()
     return str(value).strip()
-
-
-def _normalise_text(message: str, history: list[dict[str, Any]] | None = None, limit: int = 6) -> str:
+def _normalise_text(
+    message: str,
+    history: list[dict[str, Any]] | None = None,
+    limit: int = 6,
+) -> str:
     parts = [_safe_string(message).lower()]
-
     if history:
         for item in history[-limit:]:
-            content = _safe_string(item.get("message")).lower()
+            if not isinstance(item, dict):
+                continue
+            content = _safe_string(item.get("message") or item.get("content")).lower()
             if content:
                 parts.append(content)
-
     return " ".join(part for part in parts if part).strip()
-
-
 def _contains_phrase(text: str, phrase: str) -> bool:
     phrase = phrase.lower().strip()
     if not phrase:
         return False
-
     if " " in phrase or "-" in phrase:
         return phrase in text
-
     pattern = rf"\b{re.escape(phrase)}\b"
     return re.search(pattern, text) is not None
-
-
 def _contains_any(text: str, keywords: list[str]) -> bool:
     return any(_contains_phrase(text, keyword) for keyword in keywords)
-
-
 def _matches_any_pattern(text: str, patterns: list[str]) -> bool:
-    return any(re.search(pattern, text) for pattern in patterns)
-
-
-def assess_safeguarding_level(message: str, history: list[dict[str, Any]] | None = None) -> str:
+    return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns)
+def assess_safeguarding_level(
+    message: str,
+    history: list[dict[str, Any]] | None = None,
+) -> str:
     """
-    Assess immediate safeguarding concern level for live assistant routing.
-
-    Returns one of:
+    Returns:
     - normal
     - watchful
     - heightened
     - urgent
     """
-
     text = _normalise_text(message, history)
-
     if not text:
         return "normal"
-
-    # 1. Urgent: immediate life / acute medical / severe self-harm risk
     if _matches_any_pattern(text, URGENT_PATTERNS) or _contains_any(text, URGENT_KEYWORDS):
         return "urgent"
-
-    # 2. Heightened: major safeguarding concerns and allegations/disclosures
     if _matches_any_pattern(text, DISCLOSURE_PATTERNS):
         return "heightened"
-
     if _matches_any_pattern(text, HEIGHTENED_PATTERNS) or _contains_any(text, HEIGHTENED_KEYWORDS):
         return "heightened"
-
-    # 3. Watchful: lower-level indicators that may still need recording / escalation
     if _contains_any(text, WATCHFUL_KEYWORDS):
         return "watchful"
-
     return "normal"
-
-
-# ---------------------------------------------------------
-# Pattern detection for reflection / supervision / review
-# ---------------------------------------------------------
-
 PATTERN_KEYWORDS = {
     "aggression": [
         "hit",
@@ -291,48 +252,31 @@ PATTERN_KEYWORDS = {
         "allegation",
     ],
 }
-
-
 def _count_matches(text: str, phrase: str) -> int:
     phrase = phrase.lower().strip()
     if not phrase:
         return 0
-
     if " " in phrase or "-" in phrase:
         return text.count(phrase)
-
     pattern = rf"\b{re.escape(phrase)}\b"
     return len(re.findall(pattern, text))
-
-
 def detect_safeguarding_patterns(reflections: list[str]) -> list[dict[str, Any]]:
-    """
-    Detect recurring themes across multiple reflections, notes, or summaries.
-    Useful for supervision, management review, and learning patterns.
-    """
-
     text = " ".join(_safe_string(item) for item in reflections).lower().strip()
     results: list[dict[str, Any]] = []
-
     if not text:
         return results
-
     for theme, words in PATTERN_KEYWORDS.items():
-        count = 0
-
-        for word in words:
-            count += _count_matches(text, word)
-
+        count = sum(_count_matches(text, word) for word in words)
         if count > 0:
-            results.append({
-                "theme": theme,
-                "count": count
-            })
-
+            results.append(
+                {
+                    "theme": theme,
+                    "count": count,
+                }
+            )
     results.sort(key=lambda item: item["count"], reverse=True)
     return results
-
-
-# backwards compatibility with your old function name
 def detect_patterns(reflections: list[str]) -> list[dict[str, Any]]:
     return detect_safeguarding_patterns(reflections)
+
+Next file: assistant/classification.py.
