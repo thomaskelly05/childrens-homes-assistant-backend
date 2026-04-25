@@ -1,487 +1,383 @@
-/* frontend/js/young-people-shell.js */
-/* Production bridge + premium hardening for IndiCare young people shell */
+(() => {
+  "use strict";
 
-const SHELL_BOOT_STATE = {
-  appImported: false,
-  hardeningStarted: false,
-  lastFocusedElement: null,
-  assistantMutationBound: false,
-  composerMutationBound: false,
-  tableObserverBound: false,
-};
+  const SHELL_MODULE = "/js/young-people-shell/index.js";
 
-function getById(id) {
-  return document.getElementById(id);
-}
-
-function isVisible(el) {
-  return !!el && !el.classList.contains("hidden") && el.getAttribute("aria-hidden") !== "true";
-}
-
-function setExpanded(button, expanded) {
-  if (!button) return;
-  button.setAttribute("aria-expanded", expanded ? "true" : "false");
-}
-
-function setHidden(panel, hidden) {
-  if (!panel) return;
-  panel.classList.toggle("hidden", hidden);
-  panel.setAttribute("aria-hidden", hidden ? "true" : "false");
-}
-
-function getFocusableElements(container) {
-  if (!container) return [];
-
-  return Array.from(
-    container.querySelectorAll(
-      [
-        "a[href]",
-        "button:not([disabled])",
-        "textarea:not([disabled])",
-        "input:not([disabled])",
-        "select:not([disabled])",
-        "[tabindex]:not([tabindex='-1'])",
-      ].join(",")
-    )
-  ).filter((el) => {
-    const style = window.getComputedStyle(el);
-    return style.display !== "none" && style.visibility !== "hidden";
-  });
-}
-
-function trapFocus(container, event) {
-  if (!container || event.key !== "Tab") return;
-
-  const focusable = getFocusableElements(container);
-  if (!focusable.length) return;
-
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-    return;
+  function log(...args) {
+    console.log("[young-people-shell]", ...args);
   }
 
-  if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
-function focusFirstInteractive(container) {
-  const first = getFocusableElements(container)[0];
-  if (first) first.focus({ preventScroll: true });
-}
-
-function markModalOpen(container) {
-  if (!container) return;
-
-  SHELL_BOOT_STATE.lastFocusedElement = document.activeElement;
-  document.body.dataset.modalOpen = "true";
-
-  requestAnimationFrame(() => focusFirstInteractive(container));
-}
-
-function markModalClosed() {
-  document.body.dataset.modalOpen = "false";
-
-  const target = SHELL_BOOT_STATE.lastFocusedElement;
-  if (target && typeof target.focus === "function") {
-    requestAnimationFrame(() => target.focus({ preventScroll: true }));
+  function warn(...args) {
+    console.warn("[young-people-shell]", ...args);
   }
 
-  SHELL_BOOT_STATE.lastFocusedElement = null;
-}
+  function byId(id) {
+    return document.getElementById(id);
+  }
 
-function bindDialogFocusManagement() {
-  const panels = [
-    getById("assistantModal"),
-    getById("recordComposerPage"),
-    getById("recordDrawer"),
-    getById("fullscreenPanel"),
-    getById("suggestionsPanel"),
-    getById("mobileNavPanel"),
-  ].filter(Boolean);
+  function isVisible(el) {
+    return !!el && !el.classList.contains("hidden") && el.getAttribute("aria-hidden") !== "true";
+  }
 
-  if (!panels.length) return;
+  function setHidden(el, hidden) {
+    if (!el) return;
+    el.classList.toggle("hidden", hidden);
+    el.setAttribute("aria-hidden", hidden ? "true" : "false");
+  }
 
-  document.addEventListener("keydown", (event) => {
-    const activeDialog = panels.find(isVisible);
-    if (activeDialog) trapFocus(activeDialog, event);
-  });
+  function setExpanded(el, expanded) {
+    if (!el) return;
+    el.setAttribute("aria-expanded", expanded ? "true" : "false");
+  }
 
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type !== "attributes") continue;
+  function ensureRequiredDomAliases() {
+    const selectorPanel = byId("selectorPanel");
+    const workspacePanel = byId("workspacePanel");
 
-      const target = mutation.target;
-      if (!panels.includes(target)) continue;
+    if (selectorPanel && !byId("selectorScreen")) {
+      selectorPanel.id = "selectorScreen";
+      selectorPanel.dataset.originalId = "selectorPanel";
+    }
 
-      if (isVisible(target)) {
-        markModalOpen(target);
-      } else {
-        markModalClosed();
+    if (workspacePanel && !byId("workspaceScreen")) {
+      workspacePanel.id = "workspaceScreen";
+      workspacePanel.dataset.originalId = "workspacePanel";
+    }
+  }
+
+  function restoreHtmlCompatibilityIds() {
+    const selectorScreen = byId("selectorScreen");
+    const workspaceScreen = byId("workspaceScreen");
+
+    if (selectorScreen && selectorScreen.dataset.originalId === "selectorPanel") {
+      selectorScreen.id = "selectorPanel";
+    }
+
+    if (workspaceScreen && workspaceScreen.dataset.originalId === "workspacePanel") {
+      workspaceScreen.id = "workspacePanel";
+    }
+  }
+
+  function normaliseDataset() {
+    const app = byId("app");
+    if (!app) return;
+
+    app.dataset.workspace = app.dataset.workspace || "young-people-shell";
+    app.dataset.scope = app.dataset.scope || "child";
+    app.dataset.userRole = app.dataset.userRole || "admin";
+    app.dataset.allowedHomeIds = app.dataset.allowedHomeIds || "[]";
+    app.dataset.assistantScopeType = app.dataset.assistantScopeType || "child";
+  }
+
+  function enhanceMobileNavigation() {
+    const toggle = byId("mobileNavToggle");
+    const panel = byId("mobileNavPanel");
+    const backdrop = byId("mobileNavBackdrop");
+    const closeBtn = byId("closeMobileNavBtn");
+
+    if (!toggle || !panel) return;
+
+    const sync = () => {
+      const open = isVisible(panel);
+      setExpanded(toggle, open);
+      setHidden(backdrop, !open);
+    };
+
+    toggle.addEventListener("click", () => requestAnimationFrame(sync));
+    closeBtn?.addEventListener("click", () => requestAnimationFrame(sync));
+    backdrop?.addEventListener("click", () => requestAnimationFrame(sync));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") requestAnimationFrame(sync);
+    });
+
+    sync();
+  }
+
+  function addTableResponsiveLabels() {
+    document.querySelectorAll(".record-table").forEach((table) => {
+      const headers = Array.from(table.querySelectorAll("thead th")).map((th) =>
+        th.textContent.trim()
+      );
+
+      table.querySelectorAll("tbody tr").forEach((row) => {
+        Array.from(row.children).forEach((cell, index) => {
+          if (headers[index]) cell.dataset.label = headers[index];
+        });
+      });
+    });
+  }
+
+  function observeWorkspaceContent() {
+    const content = byId("viewContent");
+    if (!content) return;
+
+    const observer = new MutationObserver(() => {
+      addTableResponsiveLabels();
+      improvePlainWorkspaceBlocks();
+    });
+
+    observer.observe(content, {
+      childList: true,
+      subtree: true,
+    });
+
+    addTableResponsiveLabels();
+    improvePlainWorkspaceBlocks();
+  }
+
+  function improvePlainWorkspaceBlocks() {
+    const content = byId("viewContent");
+    if (!content) return;
+
+    content.querySelectorAll(".panel").forEach((panel, index) => {
+      panel.dataset.panelTone = String((index % 6) + 1);
+    });
+
+    content.querySelectorAll(".record-table-shell").forEach((table, index) => {
+      table.dataset.tableTone = String((index % 6) + 1);
+    });
+
+    content.querySelectorAll(".empty-state").forEach((empty) => {
+      if (!empty.querySelector(".empty-state-icon")) {
+        const icon = document.createElement("div");
+        icon.className = "empty-state-icon";
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = "○";
+        empty.prepend(icon);
+      }
+    });
+  }
+
+  function getFocusableElements(container) {
+    if (!container) return [];
+
+    return Array.from(
+      container.querySelectorAll(
+        [
+          "a[href]",
+          "button:not([disabled])",
+          "textarea:not([disabled])",
+          "input:not([disabled])",
+          "select:not([disabled])",
+          "[tabindex]:not([tabindex='-1'])",
+        ].join(",")
+      )
+    ).filter((el) => {
+      const style = window.getComputedStyle(el);
+      return style.display !== "none" && style.visibility !== "hidden";
+    });
+  }
+
+  function trapFocus(container, event) {
+    if (!container || event.key !== "Tab") return;
+
+    const focusable = getFocusableElements(container);
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    }
+
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function bindDialogFocusManagement() {
+    const dialogs = [
+      byId("assistantModal"),
+      byId("recordComposerPage"),
+      byId("recordDrawer"),
+      byId("fullscreenPanel"),
+      byId("suggestionsPanel"),
+      byId("mobileNavPanel"),
+    ].filter(Boolean);
+
+    document.addEventListener("keydown", (event) => {
+      const activeDialog = dialogs.find(isVisible);
+      if (activeDialog) trapFocus(activeDialog, event);
+    });
+  }
+
+  function improveComposerControls() {
+    const composer = byId("recordComposerPage");
+    if (!composer) return;
+
+    const observer = new MutationObserver(() => {
+      composer.querySelectorAll("textarea").forEach((textarea) => {
+        textarea.setAttribute("rows", textarea.getAttribute("rows") || "5");
+        textarea.setAttribute("spellcheck", "true");
+        textarea.setAttribute("autocomplete", "off");
+      });
+
+      composer.querySelectorAll("input, textarea, select").forEach((field) => {
+        if (!field.id || field.dataset.premiumEnhanced === "true") return;
+
+        field.dataset.premiumEnhanced = "true";
+
+        field.addEventListener("invalid", () => {
+          field.closest(".composer-field")?.classList.add("field-has-error");
+        });
+
+        field.addEventListener("input", () => {
+          field.closest(".composer-field")?.classList.remove("field-has-error");
+        });
+      });
+    });
+
+    observer.observe(composer, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  function improveAssistantText() {
+    const host = byId("assistantMessages");
+    if (!host) return;
+
+    const observer = new MutationObserver(() => {
+      host.querySelectorAll(".assistant-message-body").forEach((body) => {
+        body.innerHTML = body.innerHTML
+          .replaceAll("&amp;bull;", "•")
+          .replaceAll("&amp;nbsp;", " ")
+          .replaceAll("Thinking...", "Thinking…");
+      });
+    });
+
+    observer.observe(host, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  function improveStatusAnnouncements() {
+    ["statusBar", "statusMessage"].forEach((id) => {
+      const status = byId(id);
+      if (!status) return;
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      status.setAttribute("aria-atomic", "true");
+    });
+  }
+
+  function addGlobalSearchShortcut() {
+    const search = byId("recordSearchInput");
+
+    document.addEventListener("keydown", (event) => {
+      const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(
+        document.activeElement?.tagName || ""
+      );
+
+      if (isTyping) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        if (!search) return;
+        event.preventDefault();
+        search.focus();
+      }
+    });
+  }
+
+  function addSafeExternalLinkHandling() {
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest("a[href]");
+      if (!link) return;
+
+      const href = link.getAttribute("href") || "";
+      if (!href.startsWith("http")) return;
+
+      try {
+        const url = new URL(href);
+        if (url.origin === window.location.origin) return;
+
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+      } catch {
+        // Ignore invalid URLs.
+      }
+    });
+  }
+
+  function addLiveClockToShell() {
+    const host = document.querySelector(".workspace-context-pill-value");
+    if (!host || host.dataset.clockBound === "true") return;
+
+    host.dataset.clockBound = "true";
+    const original = host.textContent.trim() || "Residential care workspace";
+
+    const tick = () => {
+      const now = new Date();
+      const time = now.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      host.textContent = `${original} • ${time}`;
+    };
+
+    tick();
+    window.setInterval(tick, 30000);
+  }
+
+  function addProductionReadyClass() {
+    const app = byId("app");
+    if (!app) return;
+
+    requestAnimationFrame(() => {
+      app.classList.add("premium-ready");
+      document.body.classList.add("indicare-shell-ready");
+    });
+  }
+
+  async function loadModularShell() {
+    try {
+      ensureRequiredDomAliases();
+      normaliseDataset();
+
+      await import(SHELL_MODULE);
+
+      restoreHtmlCompatibilityIds();
+      log("modular shell loaded");
+    } catch (error) {
+      restoreHtmlCompatibilityIds();
+      console.error("[young-people-shell] failed to load modular shell", error);
+
+      const status = byId("statusBar") || byId("statusMessage");
+      if (status) {
+        status.classList.remove("hidden");
+        status.textContent =
+          "The workspace could not start. Check that /js/young-people-shell/index.js is available.";
       }
     }
-  });
-
-  panels.forEach((panel) => {
-    observer.observe(panel, {
-      attributes: true,
-      attributeFilter: ["class", "aria-hidden"],
-    });
-  });
-}
-
-function enhanceMobileNavigationState() {
-  const toggle = getById("mobileNavToggle");
-  const panel = getById("mobileNavPanel");
-  const backdrop = getById("mobileNavBackdrop");
-  const closeBtn = getById("closeMobileNavBtn");
-
-  if (!toggle || !panel) return;
-
-  const sync = () => {
-    const open = isVisible(panel);
-    setExpanded(toggle, open);
-    setHidden(backdrop, !open);
-  };
-
-  toggle.addEventListener("click", () => requestAnimationFrame(sync));
-  closeBtn?.addEventListener("click", () => requestAnimationFrame(sync));
-  backdrop?.addEventListener("click", () => requestAnimationFrame(sync));
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") requestAnimationFrame(sync);
-  });
-
-  sync();
-}
-
-function addTableResponsiveLabels() {
-  document.querySelectorAll(".record-table").forEach((table) => {
-    const headers = Array.from(table.querySelectorAll("thead th")).map((th) =>
-      th.textContent.trim()
-    );
-
-    table.querySelectorAll("tbody tr").forEach((row) => {
-      Array.from(row.children).forEach((cell, index) => {
-        if (headers[index]) cell.dataset.label = headers[index];
-      });
-    });
-  });
-}
-
-function observeDynamicTables() {
-  if (SHELL_BOOT_STATE.tableObserverBound) return;
-  SHELL_BOOT_STATE.tableObserverBound = true;
-
-  const content = getById("viewContent");
-  if (!content) return;
-
-  const observer = new MutationObserver(() => {
-    addTableResponsiveLabels();
-    enhanceWorkspaceContentPresentation();
-  });
-
-  observer.observe(content, {
-    childList: true,
-    subtree: true,
-  });
-
-  addTableResponsiveLabels();
-}
-
-function normaliseAssistantMessageText() {
-  const host = getById("assistantMessages");
-  if (!host || SHELL_BOOT_STATE.assistantMutationBound) return;
-
-  SHELL_BOOT_STATE.assistantMutationBound = true;
-
-  const observer = new MutationObserver(() => {
-    host.querySelectorAll(".assistant-message-body").forEach((body) => {
-      body.innerHTML = body.innerHTML
-        .replaceAll("&amp;bull;", "•")
-        .replaceAll("&amp;nbsp;", " ")
-        .replaceAll("Thinking...", "Thinking…");
-    });
-  });
-
-  observer.observe(host, {
-    childList: true,
-    subtree: true,
-  });
-}
-
-function improveComposerControls() {
-  const composer = getById("recordComposerPage");
-  if (!composer || SHELL_BOOT_STATE.composerMutationBound) return;
-
-  SHELL_BOOT_STATE.composerMutationBound = true;
-
-  const enhance = () => {
-    composer.querySelectorAll("textarea").forEach((textarea) => {
-      textarea.setAttribute("rows", textarea.getAttribute("rows") || "5");
-      textarea.setAttribute("spellcheck", "true");
-      textarea.setAttribute("autocomplete", "off");
-    });
-
-    composer.querySelectorAll("input, textarea, select").forEach((field) => {
-      if (!field.id || field.dataset.premiumEnhanced === "true") return;
-
-      field.dataset.premiumEnhanced = "true";
-
-      field.addEventListener("invalid", () => {
-        field.closest(".composer-field")?.classList.add("field-has-error");
-      });
-
-      field.addEventListener("input", () => {
-        field.closest(".composer-field")?.classList.remove("field-has-error");
-      });
-    });
-  };
-
-  const observer = new MutationObserver(enhance);
-
-  observer.observe(composer, {
-    childList: true,
-    subtree: true,
-  });
-
-  enhance();
-}
-
-function improveStatusAnnouncements() {
-  [getById("statusBar"), getById("statusMessage")].filter(Boolean).forEach((status) => {
-    status.setAttribute("role", "status");
-    status.setAttribute("aria-live", "polite");
-    status.setAttribute("aria-atomic", "true");
-  });
-}
-
-function addGlobalSearchShortcut() {
-  const search = getById("recordSearchInput");
-
-  document.addEventListener("keydown", (event) => {
-    const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(
-      document.activeElement?.tagName || ""
-    );
-
-    if (isTyping) return;
-
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-      if (!search) return;
-      event.preventDefault();
-      search.focus();
-    }
-  });
-}
-
-function addSafeExternalLinkHandling() {
-  document.addEventListener("click", (event) => {
-    const link = event.target.closest("a[href]");
-    if (!link) return;
-
-    const href = link.getAttribute("href") || "";
-    if (!href.startsWith("http")) return;
-
-    try {
-      const url = new URL(href);
-      if (url.origin === window.location.origin) return;
-
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noopener noreferrer");
-    } catch (_) {
-      // Ignore malformed href values.
-    }
-  });
-}
-
-function addLiveClockToShell() {
-  const host = document.querySelector(".workspace-context-pill-value");
-  if (!host || host.dataset.clockBound === "true") return;
-
-  host.dataset.clockBound = "true";
-
-  const original = host.textContent.trim() || "Residential care workspace";
-
-  const tick = () => {
-    const now = new Date();
-    const time = now.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    host.textContent = `${original} • ${time}`;
-  };
-
-  tick();
-  window.setInterval(tick, 30_000);
-}
-
-function addPremiumReadyClass() {
-  const app = getById("app");
-  if (!app) return;
-
-  requestAnimationFrame(() => {
-    app.classList.add("premium-ready");
-  });
-}
-
-function classifyText(text = "") {
-  const value = String(text).toLowerCase();
-
-  if (
-    value.includes("urgent") ||
-    value.includes("overdue") ||
-    value.includes("high") ||
-    value.includes("critical") ||
-    value.includes("safeguarding") ||
-    value.includes("risk")
-  ) {
-    return "danger";
   }
 
-  if (
-    value.includes("due") ||
-    value.includes("pending") ||
-    value.includes("review") ||
-    value.includes("returned") ||
-    value.includes("medium")
-  ) {
-    return "warning";
+  function initEnhancements() {
+    enhanceMobileNavigation();
+    observeWorkspaceContent();
+    bindDialogFocusManagement();
+    improveComposerControls();
+    improveAssistantText();
+    improveStatusAnnouncements();
+    addGlobalSearchShortcut();
+    addSafeExternalLinkHandling();
+    addLiveClockToShell();
+    addProductionReadyClass();
   }
 
-  if (
-    value.includes("complete") ||
-    value.includes("completed") ||
-    value.includes("approved") ||
-    value.includes("good") ||
-    value.includes("positive") ||
-    value.includes("no active")
-  ) {
-    return "success";
+  async function init() {
+    await loadModularShell();
+    initEnhancements();
   }
 
-  return "";
-}
-
-function enhanceWorkspaceSummaryCards() {
-  document.querySelectorAll(".workspace-summary-item").forEach((item) => {
-    if (item.dataset.presentationEnhanced === "true") return;
-
-    const text = item.textContent || "";
-    const tone = classifyText(text);
-
-    item.dataset.presentationEnhanced = "true";
-    item.dataset.tone = tone || "neutral";
-  });
-}
-
-function enhanceRecordsAndBlocks() {
-  const content = getById("viewContent");
-  if (!content) return;
-
-  content.querySelectorAll(".record-list > article, .record-list > div:not(.empty-state), .entity-row, .timeline-item, .record-card, .insight-card").forEach((card, index) => {
-    if (card.dataset.presentationEnhanced === "true") return;
-
-    card.dataset.presentationEnhanced = "true";
-    card.dataset.cardIndex = String((index % 5) + 1);
-
-    const tone = classifyText(card.textContent || "");
-    if (tone) card.dataset.tone = tone;
-  });
-
-  content.querySelectorAll(".panel, .overview-panel, .record-table-shell, .detail-section").forEach((section, index) => {
-    if (section.dataset.sectionTone) return;
-    section.dataset.sectionTone = String((index % 6) + 1);
-  });
-}
-
-function enhanceWorkspaceContentPresentation() {
-  enhanceWorkspaceSummaryCards();
-  enhanceRecordsAndBlocks();
-}
-
-function bindMenuBehaviour() {
-  document.addEventListener("click", (event) => {
-    const currentMenu = event.target.closest("[data-workspace-menu]");
-
-    document.querySelectorAll("[data-workspace-menu][open]").forEach((menu) => {
-      if (menu !== currentMenu) menu.removeAttribute("open");
-    });
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-
-    document.querySelectorAll("[data-workspace-menu][open]").forEach((menu) => {
-      menu.removeAttribute("open");
-    });
-  });
-}
-
-function addConnectionStatus() {
-  const app = getById("app");
-  if (!app) return;
-
-  const sync = () => {
-    app.dataset.connection = navigator.onLine ? "online" : "offline";
-  };
-
-  window.addEventListener("online", sync);
-  window.addEventListener("offline", sync);
-  sync();
-}
-
-function initPremiumHardening() {
-  if (SHELL_BOOT_STATE.hardeningStarted) return;
-  SHELL_BOOT_STATE.hardeningStarted = true;
-
-  bindDialogFocusManagement();
-  enhanceMobileNavigationState();
-  observeDynamicTables();
-  normaliseAssistantMessageText();
-  improveComposerControls();
-  improveStatusAnnouncements();
-  addGlobalSearchShortcut();
-  addSafeExternalLinkHandling();
-  addLiveClockToShell();
-  bindMenuBehaviour();
-  addConnectionStatus();
-  enhanceWorkspaceContentPresentation();
-  addPremiumReadyClass();
-}
-
-async function importShellApp() {
-  if (SHELL_BOOT_STATE.appImported) return;
-  SHELL_BOOT_STATE.appImported = true;
-
-  try {
-    await import("./young-people-shell/index.js");
-  } catch (error) {
-    console.error("[young-people-shell] Failed to import modular shell", error);
-
-    const status =
-      getById("statusBar") ||
-      getById("statusMessage");
-
-    if (status) {
-      status.classList.remove("hidden");
-      status.textContent = "The workspace could not start. Please refresh or check the console.";
-    }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
   }
-}
-
-async function bootYoungPeopleShell() {
-  await importShellApp();
-  initPremiumHardening();
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", bootYoungPeopleShell, { once: true });
-} else {
-  bootYoungPeopleShell();
-}
+})();
