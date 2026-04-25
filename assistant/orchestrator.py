@@ -668,3 +668,86 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         regulation_mapping=regulation_mapping,
         regulation_payload=regulation_payload,
     )
+
+
+def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """
+    Backwards-compatible shim for older callers that expect
+    build_assistant_prompt(...) to return a dict.
+    """
+
+    request_obj = args[0] if args else None
+
+    message = kwargs.pop("message", None)
+    session_id = kwargs.pop("session_id", None)
+    history = kwargs.pop("history", None) or []
+    role = kwargs.pop("role", "residential care staff")
+    document_text = kwargs.pop("document_text", None)
+    document_name = kwargs.pop("document_name", None)
+    ld_lens = kwargs.pop("ld_lens", False)
+    training_mode = kwargs.pop("training_mode", False)
+    speed = kwargs.pop("speed", kwargs.pop("response_mode", "balanced"))
+    user_context = kwargs.pop("user_context", None) or {}
+    user_id = kwargs.pop("user_id", None)
+    scope = kwargs.pop("scope", None)
+
+    if message is None and request_obj is not None:
+        message = getattr(request_obj, "message", None)
+
+    if not message:
+        raise TypeError("build_assistant_prompt() missing required argument: 'message'")
+
+    if session_id is None:
+        session_id = f"orchestrator-{abs(hash(message))}"
+
+    merged_context = dict(user_context)
+
+    if user_id is not None:
+        merged_context.setdefault("user_id", user_id)
+
+    if scope is not None:
+        merged_context.setdefault("scope", scope)
+
+        if isinstance(scope, dict):
+            for key, value in scope.items():
+                merged_context.setdefault(key, value)
+
+    if kwargs:
+        merged_context.setdefault("_orchestrator_extra_kwargs", {})
+        merged_context["_orchestrator_extra_kwargs"].update(kwargs)
+
+    result = build_orchestrator_result(
+        OrchestratorRequest(
+            message=message,
+            session_id=session_id,
+            history=history,
+            role=role,
+            document_text=document_text,
+            document_name=document_name,
+            ld_lens=ld_lens,
+            training_mode=training_mode,
+            speed=speed,
+            user_context=merged_context,
+        )
+    )
+
+    return {
+        "prompt": result.user_message,
+        "context": merged_context,
+        "session_id": session_id,
+        "system_prompt": result.system_prompt,
+        "user_message": result.user_message,
+        "messages": result.messages,
+        "runtime": result.runtime_payload,
+        "runtime_payload": result.runtime_payload,
+        "runtime_model": result.runtime,
+        "sources": result.sources,
+        "selected_mode": result.selected_mode,
+        "trimmed_history": result.trimmed_history,
+        "trimmed_document_text": result.trimmed_document_text,
+        "response_plan": result.response_plan,
+        "guidance_plan": result.guidance_plan,
+        "model_plan": result.model_plan,
+        "regulation_mapping": result.regulation_mapping,
+        "regulation_payload": result.regulation_payload,
+    }
