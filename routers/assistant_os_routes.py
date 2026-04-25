@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
-from fastapi import HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from auth.current_user import get_current_user
 from db.connection import get_db
@@ -18,24 +17,117 @@ from routers.assistant_routes import (
     preview_report as _legacy_preview_report,
     send_report_now as _legacy_send_report_now,
 )
-from services.assistant_security import contains_prompt_injection_attempt, role_can_access_scope, safe_string
+from services.assistant_security import (
+    contains_prompt_injection_attempt,
+    role_can_access_scope,
+    safe_string,
+)
 
 router = APIRouter(prefix="/assistant/os", tags=["OS Assistant"])
+
+MAX_ASSISTANT_MESSAGE_CHARS = 6000
 
 
 def _normalise_role(current_user: dict[str, Any]) -> str:
     return safe_string(current_user.get("role")).lower()
 
 
+def _safe_user_id(current_user: dict[str, Any]) -> int | None:
+    raw_user_id = (
+        current_user.get("id")
+        or current_user.get("user_id")
+        or current_user.get("sub")
+    )
+
+    try:
+        return int(raw_user_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def _safe_home_id(current_user: dict[str, Any]) -> int | None:
+    raw_home_id = (
+        current_user.get("home_id")
+        or current_user.get("selected_home_id")
+        or current_user.get("default_home_id")
+    )
+
+    try:
+        return int(raw_home_id)
+    except (TypeError, ValueError):
+        return None
+
+
 def _assert_scope_access(current_user: dict[str, Any], scope: str) -> None:
     role = _normalise_role(current_user)
+
     if not role_can_access_scope(role, scope):
-        raise HTTPException(status_code=403, detail="Role does not have access to requested scope.")
+        raise HTTPException(
+            status_code=403,
+            detail="Role does not have access to requested scope.",
+        )
+
+
+def _assert_authenticated_user(current_user: dict[str, Any]) -> None:
+    if not isinstance(current_user, dict) or not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    if _safe_user_id(current_user) is None:
+        raise HTTPException(status_code=401, detail="Valid authenticated user required.")
 
 
 def _assert_safe_message(message: str) -> None:
-    if contains_prompt_injection_attempt(message):
-        raise HTTPException(status_code=400, detail="Prompt injection attempt detected.")
+    clean_message = safe_string(message)
+
+    if not clean_message:
+        raise HTTPException(status_code=400, detail="Message is required.")
+
+    if len(clean_message) > MAX_ASSISTANT_MESSAGE_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Message is too long. Maximum length is {MAX_ASSISTANT_MESSAGE_CHARS} characters.",
+        )
+
+    if contains_prompt_injection_attempt(clean_message):
+        raise HTTPException(
+            status_code=400,
+            detail="Prompt injection attempt detected.",
+        )
+
+
+def _assert_home_context_for_scope(
+    current_user: dict[str, Any],
+    scope: str,
+) -> None:
+    """
+    Basic guard to stop OS assistant calls being made without a usable user/home context.
+
+    Detailed child/home/provider permission checks should still remain inside the legacy route
+    and underlying context builders, because they know the exact payload shape and selected
+    young person/home/provider identifiers.
+    """
+    role = _normalise_role(current_user)
+
+    if role in {"super_admin", "superadmin", "admin", "administrator"}:
+        return
+
+    if scope in {"child", "home"} and _safe_home_id(current_user) is None:
+        raise HTTPException(
+            status_code=403,
+            detail="No home context is available for this assistant scope.",
+        )
+
+
+def _preflight_assistant_request(
+    *,
+    current_user: dict[str, Any],
+    scope: str,
+    message: str,
+) -> None:
+    _assert_authenticated_user(current_user)
+    _assert_scope_access(current_user, scope)
+    _assert_home_context_for_scope(current_user, scope)
+    _assert_safe_message(message)
 
 
 @router.post("/young-people/stream")
@@ -44,8 +136,12 @@ async def ask_young_person_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _assert_scope_access(current_user, "child")
-    _assert_safe_message(payload.message)
+    _preflight_assistant_request(
+        current_user=current_user,
+        scope="child",
+        message=payload.message,
+    )
+
     return await _legacy_ask_young_person_assistant(
         payload=payload,
         conn=conn,
@@ -59,8 +155,12 @@ async def ask_home_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _assert_scope_access(current_user, "home")
-    _assert_safe_message(payload.message)
+    _preflight_assistant_request(
+        current_user=current_user,
+        scope="home",
+        message=payload.message,
+    )
+
     return await _legacy_ask_home_assistant(
         payload=payload,
         conn=conn,
@@ -74,8 +174,12 @@ async def ask_quality_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _assert_scope_access(current_user, "quality")
-    _assert_safe_message(payload.message)
+    _preflight_assistant_request(
+        current_user=current_user,
+        scope="quality",
+        message=payload.message,
+    )
+
     return await _legacy_ask_quality_assistant(
         payload=payload,
         conn=conn,
@@ -89,6 +193,12 @@ async def preview_report(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    _preflight_assistant_request(
+        current_user=current_user,
+        scope="home",
+        message=payload.message,
+    )
+
     return await _legacy_preview_report(
         payload=payload,
         conn=conn,
@@ -102,6 +212,10 @@ async def send_report_now(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    _assert_authenticated_user(current_user)
+    _assert_scope_access(current_user, "home")
+    _assert_home_context_for_scope(current_user, "home")
+
     return await _legacy_send_report_now(
         payload=payload,
         conn=conn,
