@@ -360,7 +360,7 @@ def _build_assistant_insight_pack(
             "status": _safe_string(item.get("status") or item.get("task_status") or "open"),
             "due_date": _normalise_period_iso(due_dt),
             "record_type": _safe_string(item.get("record_type")) or "task",
-            "citation_ref": f"task:{_safe_int(item.get('id'))}" if _safe_int(item.get("id")) is not None else None,
+            "citation_ref": f"[task:{_safe_int(item.get('id'))}]" if _safe_int(item.get("id")) is not None else None,
         }
         open_actions.append(action_entry)
 
@@ -660,7 +660,7 @@ def _make_evidence_item(
         return None
 
     resolved_section = section or _source_section_for_record_type(record_type)
-    citation_ref = f"{record_type}:{record_id}"
+    citation_ref = f"[{record_type}:{record_id}]"
 
     return {
         "citation_ref": citation_ref,
@@ -696,7 +696,7 @@ def _make_summary_evidence_item(
     synthetic_id: str,
 ) -> dict[str, Any]:
     return {
-        "citation_ref": f"{record_type}:{synthetic_id}",
+        "citation_ref": f"[{record_type}:{synthetic_id}]",
         "record_type": record_type,
         "record_id": None,
         "label": label,
