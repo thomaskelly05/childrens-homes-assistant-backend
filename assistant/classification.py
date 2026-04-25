@@ -5,10 +5,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-# ---------------------------------------------------------
-# Intent signals
-# ---------------------------------------------------------
-
 FACTUAL_KEYWORDS = {
     "how often",
     "timescale",
@@ -95,6 +91,10 @@ MANAGER_REVIEW_KEYWORDS = {
     "what would ofsted think",
     "inspection ready",
     "is this defensible",
+    "whole scoped record",
+    "across the whole record",
+    "full child-centred summary",
+    "full summary",
 }
 
 REWRITE_KEYWORDS = {
@@ -178,10 +178,6 @@ LEADERSHIP_KEYWORDS = {
 }
 
 
-# ---------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------
-
 @dataclass
 class IntentClassification:
     primary_intent: str = "guidance"
@@ -193,10 +189,6 @@ class IntentClassification:
     legacy_mode: str = "practical"
 
 
-# ---------------------------------------------------------
-# Safe helpers
-# ---------------------------------------------------------
-
 def _safe_string(value: Any) -> str:
     if value is None:
         return ""
@@ -205,7 +197,11 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
-def _normalise_text(message: str, history: list[dict[str, Any]] | None = None, max_history: int = 4) -> str:
+def _normalise_text(
+    message: str,
+    history: list[dict[str, Any]] | None = None,
+    max_history: int = 4,
+) -> str:
     parts: list[str] = []
 
     current = _safe_string(message).lower()
@@ -213,10 +209,12 @@ def _normalise_text(message: str, history: list[dict[str, Any]] | None = None, m
         parts.append(current)
 
     for item in (history or [])[-max_history:]:
+        if not isinstance(item, dict):
+            continue
+
         role = _safe_string(item.get("role")).lower()
         content = _safe_string(item.get("message") or item.get("content")).lower()
 
-        # Prefer user context, not assistant self-repetition
         if role == "user" and content:
             parts.append(content)
 
@@ -228,7 +226,7 @@ def _contains_phrase(text: str, phrase: str) -> bool:
     if not phrase:
         return False
 
-    if " " in phrase or "-" in phrase:
+    if " " in phrase or "-" in phrase or "'" in phrase:
         return phrase in text
 
     pattern = rf"\b{re.escape(phrase)}\b"
@@ -257,10 +255,6 @@ def _dedupe(items: list[str]) -> list[str]:
 
     return result
 
-
-# ---------------------------------------------------------
-# Legacy mode support
-# ---------------------------------------------------------
 
 def _resolve_legacy_mode(
     primary_intent: str,
@@ -300,9 +294,30 @@ def _resolve_legacy_mode(
     return "practical"
 
 
-# ---------------------------------------------------------
-# Main classifier
-# ---------------------------------------------------------
+def _make_result(
+    *,
+    primary_intent: str,
+    secondary_intents: list[str] | None = None,
+    output_format: str,
+    response_stance: str,
+    confidence: float,
+    matched_signals: list[str],
+) -> IntentClassification:
+    result = IntentClassification(
+        primary_intent=primary_intent,
+        secondary_intents=_dedupe(secondary_intents or []),
+        output_format=output_format,
+        response_stance=response_stance,
+        confidence=confidence,
+        matched_signals=_dedupe(matched_signals),
+    )
+    result.legacy_mode = _resolve_legacy_mode(
+        result.primary_intent,
+        result.output_format,
+        result.response_stance,
+    )
+    return result
+
 
 def classify_intent(
     message: str,
@@ -339,65 +354,64 @@ def classify_intent(
     }
 
     matched_signals: list[str] = []
-    for _, (_, matches) in signals.items():
+    for _, matches in signals.values():
         matched_signals.extend(matches)
     matched_signals = _dedupe(matched_signals)
 
-    # -----------------------------------------------------
-    # Strong direct pattern resolution
-    # -----------------------------------------------------
-
     if re.search(r"\b(write|draft)\b.*\bhandover\b", text):
-        result = IntentClassification(
+        return _make_result(
             primary_intent="documentation",
-            secondary_intents=[],
             output_format="handover_note",
             response_stance="documentation",
             confidence=0.95,
-            matched_signals=_dedupe(matched_signals + ["write_handover_pattern"]),
+            matched_signals=matched_signals + ["write_handover_pattern"],
         )
-        result.legacy_mode = _resolve_legacy_mode(result.primary_intent, result.output_format, result.response_stance)
-        return result
 
     if re.search(r"\b(write|draft)\b.*\b(incident|incident report|incident summary)\b", text):
-        result = IntentClassification(
+        return _make_result(
             primary_intent="documentation",
-            secondary_intents=[],
             output_format="incident_record",
             response_stance="documentation",
             confidence=0.95,
-            matched_signals=_dedupe(matched_signals + ["write_incident_pattern"]),
+            matched_signals=matched_signals + ["write_incident_pattern"],
         )
-        result.legacy_mode = _resolve_legacy_mode(result.primary_intent, result.output_format, result.response_stance)
-        return result
 
     if re.search(r"\b(write|draft|create)\b.*\b(chronology|timeline)\b", text):
-        result = IntentClassification(
+        return _make_result(
             primary_intent="documentation",
-            secondary_intents=[],
             output_format="chronology_entry",
             response_stance="documentation",
             confidence=0.95,
-            matched_signals=_dedupe(matched_signals + ["write_chronology_pattern"]),
+            matched_signals=matched_signals + ["write_chronology_pattern"],
         )
-        result.legacy_mode = _resolve_legacy_mode(result.primary_intent, result.output_format, result.response_stance)
-        return result
 
     if re.search(r"\b(rewrite|reword|improve)\b", text):
-        result = IntentClassification(
+        return _make_result(
             primary_intent="documentation",
-            secondary_intents=[],
             output_format="professional_rewrite",
             response_stance="documentation",
             confidence=0.9,
-            matched_signals=_dedupe(matched_signals + ["rewrite_pattern"]),
+            matched_signals=matched_signals + ["rewrite_pattern"],
         )
-        result.legacy_mode = _resolve_legacy_mode(result.primary_intent, result.output_format, result.response_stance)
-        return result
 
-    # -----------------------------------------------------
-    # Intent resolution
-    # -----------------------------------------------------
+    if any(
+        phrase in text
+        for phrase in {
+            "full child-centred summary",
+            "whole scoped record",
+            "across the whole scoped record",
+            "across the whole record",
+            "not just this page",
+        }
+    ):
+        return _make_result(
+            primary_intent="review",
+            secondary_intents=["whole_scope_summary", "evidence_review"],
+            output_format="manager_update",
+            response_stance="management",
+            confidence=0.92,
+            matched_signals=matched_signals + ["whole_scope_summary_pattern"],
+        )
 
     primary_intent = "guidance"
     secondary_intents: list[str] = []
@@ -464,15 +478,10 @@ def classify_intent(
         if primary_intent in {"guidance", "review", "planning"}:
             secondary_intents.append("manager_role")
 
-    # Safeguarding keywords should influence output form where nothing more specific exists
     if signals["safeguarding_review"][0] > 0 and output_format == "plain_response":
         output_format = "safeguarding_note"
 
     secondary_intents = _dedupe(secondary_intents)
-
-    # -----------------------------------------------------
-    # Confidence
-    # -----------------------------------------------------
 
     total_signal_count = sum(score for score, _ in signals.values())
 
@@ -486,7 +495,7 @@ def classify_intent(
     if re.search(r"\b(write|draft|rewrite|reword|improve)\b", text):
         confidence = max(confidence, 0.9)
 
-    result = IntentClassification(
+    return _make_result(
         primary_intent=primary_intent,
         secondary_intents=secondary_intents,
         output_format=output_format,
@@ -494,17 +503,7 @@ def classify_intent(
         confidence=confidence,
         matched_signals=matched_signals,
     )
-    result.legacy_mode = _resolve_legacy_mode(
-        result.primary_intent,
-        result.output_format,
-        result.response_stance,
-    )
-    return result
 
-
-# ---------------------------------------------------------
-# Compatibility helper
-# ---------------------------------------------------------
 
 def detect_legacy_mode(
     message: str,
