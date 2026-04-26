@@ -27,20 +27,18 @@ function buildErrorMessage(response, data) {
   return `Request failed (${response.status})`;
 }
 
-/*
-  Route aliases keep old UI loaders working while the backend/frontend
-  move toward the newer inspection + quality endpoint families.
-
-  Key rule:
-  - old section-style URLs should resolve to a real endpoint
-  - newer direct URLs should pass through untouched
-*/
 const API_ROUTE_ALIASES = [
   // Young people
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
   [/\/young-people\/(\d+)\/tasks$/, "/tasks?young_person_id=$1"],
   [/\/young-people\/(\d+)\/actions$/, "/actions?young_person_id=$1&scope=child"],
   [/\/young-people\/(\d+)\/visibility$/, "/visibility/young-people/$1"],
+
+  [/\/young-people\/(\d+)\/daily-notes$/, "/young-people/$1/daily-notes"],
+  [/\/young-people\/(\d+)\/daily-life$/, "/young-people/$1/daily-notes"],
+  [/\/young-people\/(\d+)\/profile$/, "/young-people/$1/profile"],
+  [/\/young-people\/(\d+)\/chronology$/, "/young-people/$1/timeline"],
+
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
   [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
 
@@ -53,9 +51,9 @@ const API_ROUTE_ALIASES = [
 
   [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
 
-  [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/safeguarding"],
+  [/\/young-people\/(\d+)\/safeguarding$/, "/young-people/$1/safeguarding"],
   [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
-  [/\/young-people\/(\d+)\/safeguarding$/, "/young-people/$1/incidents"],
 
   [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
@@ -75,6 +73,7 @@ const API_ROUTE_ALIASES = [
   // Homes - legacy operational routes
   [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
   [/\/homes\/(\d+)\/actions$/, "/actions?home_id=$1&scope=home"],
+  [/\/homes\/(\d+)\/tasks$/, "/tasks?home_id=$1&scope=home"],
   [/\/homes\/(\d+)\/visibility$/, "/visibility/homes/$1"],
 
   [/\/homes\/(\d+)\/staff$/, "/homes/$1/team"],
@@ -240,9 +239,7 @@ function createTimeoutSignal(
   const abortFromExternal = () => {
     try {
       controller.abort(externalSignal?.reason);
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   if (externalSignal) {
@@ -260,9 +257,7 @@ function createTimeoutSignal(
       } catch {
         try {
           controller.abort();
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
     }, timeoutMs);
   }
@@ -274,9 +269,7 @@ function createTimeoutSignal(
       if (externalSignal) {
         try {
           externalSignal.removeEventListener("abort", abortFromExternal);
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
     },
   };
@@ -285,13 +278,8 @@ function createTimeoutSignal(
 function buildAbortMessage(signal, fallback = "Request timed out") {
   const reason = signal?.reason;
 
-  if (reason instanceof Error && reason.message) {
-    return reason.message;
-  }
-
-  if (typeof reason === "string" && reason.trim()) {
-    return reason.trim();
-  }
+  if (reason instanceof Error && reason.message) return reason.message;
+  if (typeof reason === "string" && reason.trim()) return reason.trim();
 
   return fallback;
 }
@@ -376,11 +364,13 @@ function toArray(value) {
 
 function toIdArray(value) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(
-    value
-      .map((item) => Number(item))
-      .filter((item) => Number.isFinite(item) && item > 0)
-  )];
+  return [
+    ...new Set(
+      value
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    ),
+  ];
 }
 
 async function apiGetSettled(urls = []) {
@@ -397,13 +387,19 @@ function mergeAssistantBundle(responses = []) {
   const bundle = {
     items: [],
     daily_notes: [],
+    daily_life: [],
     incidents: [],
+    safeguarding_records: [],
     tasks: [],
     health_records: [],
     education_records: [],
     family_contact_records: [],
+    family_contacts: [],
     appointments: [],
+    young_person_appointments: [],
     monthly_reviews: [],
+    handover_records: [],
+    handovers: [],
     chronology_events: [],
     risk_assessments: [],
     support_plans: [],
@@ -420,6 +416,7 @@ function mergeAssistantBundle(responses = []) {
     staffing: [],
     onboarding: [],
     training: [],
+    staff_training_records: [],
     probations: [],
     vacancies: [],
     pipeline: [],
@@ -451,14 +448,21 @@ function mergeAssistantBundle(responses = []) {
 
   const mappings = [
     ["daily_notes", "daily_notes"],
+    ["daily_life", "daily_notes"],
     ["incidents", "incidents"],
     ["home_incidents", "home_incidents"],
+    ["safeguarding_records", "safeguarding_records"],
+    ["safeguarding", "safeguarding_records"],
     ["tasks", "tasks"],
     ["health_records", "health_records"],
     ["education_records", "education_records"],
     ["family_contact_records", "family_contact_records"],
+    ["family_contacts", "family_contact_records"],
     ["appointments", "appointments"],
+    ["young_person_appointments", "appointments"],
     ["monthly_reviews", "monthly_reviews"],
+    ["handover_records", "handover_records"],
+    ["handovers", "handover_records"],
     ["timeline", "chronology_events"],
     ["chronology_events", "chronology_events"],
     ["risk_assessments", "risk_assessments"],
@@ -477,6 +481,7 @@ function mergeAssistantBundle(responses = []) {
     ["rota", "rota"],
     ["onboarding", "onboarding"],
     ["training", "training"],
+    ["staff_training_records", "training"],
     ["probations", "probations"],
     ["vacancies", "vacancies"],
     ["pipeline", "pipeline"],
@@ -527,18 +532,12 @@ function mergeAssistantBundle(responses = []) {
     }
 
     if (data.home && typeof data.home === "object") {
-      if (!bundle.home) {
-        bundle.home = data.home;
-      }
-      pushUniqueByKey(bundle.homes, [data.home], (item) =>
-        String(item?.id ?? "")
-      );
+      if (!bundle.home) bundle.home = data.home;
+      pushUniqueByKey(bundle.homes, [data.home], (item) => String(item?.id ?? ""));
     }
 
     if (Array.isArray(data.homes)) {
-      pushUniqueByKey(bundle.homes, data.homes, (item) =>
-        String(item?.id ?? "")
-      );
+      pushUniqueByKey(bundle.homes, data.homes, (item) => String(item?.id ?? ""));
     }
 
     if (data.summary && typeof data.summary === "object") {
@@ -582,9 +581,7 @@ async function fetchHomeWideBundle(homeId) {
 
 function resolveAccessibleHomeIds(context = {}) {
   const accessLevel = String(context.access_level || "").toLowerCase();
-  const scope = String(
-    context.scope || context.current_scope || "child"
-  ).toLowerCase();
+  const scope = String(context.scope || context.current_scope || "child").toLowerCase();
 
   const homeId = Number(context.home_id);
   const allowedHomeIds = toIdArray(
@@ -595,13 +592,8 @@ function resolveAccessibleHomeIds(context = {}) {
     return allowedHomeIds;
   }
 
-  if (Number.isFinite(homeId) && homeId > 0) {
-    return [homeId];
-  }
-
-  if (allowedHomeIds.length) {
-    return [allowedHomeIds[0]];
-  }
+  if (Number.isFinite(homeId) && homeId > 0) return [homeId];
+  if (allowedHomeIds.length) return [allowedHomeIds[0]];
 
   return [];
 }
@@ -612,7 +604,9 @@ export async function fetchYoungPersonAssistantBundle(youngPersonId) {
   }
 
   const urls = [
+    `/young-people/${youngPersonId}/daily-notes`,
     `/young-people/${youngPersonId}/incidents`,
+    `/young-people/${youngPersonId}/safeguarding`,
     `/young-people/${youngPersonId}/tasks`,
     `/young-people/${youngPersonId}/health`,
     `/young-people/${youngPersonId}/education`,
@@ -682,24 +676,11 @@ export async function fetchQualityAssistantBundle(context = {}) {
 }
 
 export async function fetchAssistantScopeBundle(context = {}) {
-  const scope =
-    context.scope ||
-    context.current_scope ||
-    context.scope_type ||
-    "child";
+  const scope = context.scope || context.current_scope || context.scope_type || "child";
+  const youngPersonId = context.young_person_id || context.person_id || null;
 
-  const youngPersonId =
-    context.young_person_id ||
-    context.person_id ||
-    null;
-
-  if (scope === "home") {
-    return fetchHomeAssistantBundle(context);
-  }
-
-  if (scope === "quality") {
-    return fetchQualityAssistantBundle(context);
-  }
+  if (scope === "home") return fetchHomeAssistantBundle(context);
+  if (scope === "quality") return fetchQualityAssistantBundle(context);
 
   if (scope === "ofsted") {
     return fetchQualityAssistantBundle({
@@ -707,8 +688,7 @@ export async function fetchAssistantScopeBundle(context = {}) {
       scope: "quality",
       current_scope: "quality",
       scope_type: "quality",
-      access_level:
-        String(context.access_level || "").toLowerCase() || "provider",
+      access_level: String(context.access_level || "").toLowerCase() || "provider",
     });
   }
 
@@ -910,9 +890,7 @@ function consumeSseBuffer(buffer, onEvent) {
 
 function resolveAssistantEndpoint(payload = {}) {
   const assistantType =
-    payload?.context?.assistant_type ||
-    payload?.assistant_type ||
-    null;
+    payload?.context?.assistant_type || payload?.assistant_type || null;
 
   if (assistantType === "public" || assistantType === "general") {
     return "/assistant/general/stream";
@@ -1098,8 +1076,6 @@ export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
     cleanup();
     try {
       reader.releaseLock();
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 }
