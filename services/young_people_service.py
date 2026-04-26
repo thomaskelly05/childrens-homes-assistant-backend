@@ -8,12 +8,31 @@ from psycopg2.extras import RealDictCursor
 logger = logging.getLogger("indicare.young_people_service")
 
 
-def _safe_string(value: Any) -> str:
+VALID_PLACEMENT_STATUSES = {
+    "active",
+    "planned",
+    "discharged",
+    "transition",
+    "emergency",
+    "archived",
+}
+
+VALID_RISK_LEVELS = {"low", "medium", "high", "critical"}
+VALID_ALERT_SEVERITIES = {"low", "medium", "high", "critical"}
+
+
+def _clean_text(value: Any, *, default: str | None = None) -> str | None:
     if value is None:
-        return ""
-    if isinstance(value, str):
-        return value.strip()
-    return str(value).strip()
+        return default
+    cleaned = str(value).strip()
+    return cleaned or default
+
+
+def _required_text(value: Any, *, field_name: str, default: str | None = None) -> str:
+    cleaned = _clean_text(value, default=default)
+    if not cleaned:
+        raise ValueError(f"{field_name} is required")
+    return cleaned
 
 
 def _normalise_bool(value: Any, default: bool = False) -> bool:
@@ -27,12 +46,30 @@ def _normalise_bool(value: Any, default: bool = False) -> bool:
 
 
 def _normalise_int(value: Any) -> int | None:
-    if value in (None, "", "null"):
+    if value in (None, "", "null", "None"):
         return None
     try:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _normalise_status(value: Any, *, default: str = "active") -> str:
+    cleaned = str(value or default).strip().lower()
+    return cleaned if cleaned in VALID_PLACEMENT_STATUSES else default
+
+
+def _normalise_risk_level(value: Any) -> str | None:
+    cleaned = _clean_text(value)
+    if not cleaned:
+        return None
+    cleaned = cleaned.lower()
+    return cleaned if cleaned in VALID_RISK_LEVELS else None
+
+
+def _normalise_alert_severity(value: Any) -> str:
+    cleaned = str(value or "medium").strip().lower()
+    return cleaned if cleaned in VALID_ALERT_SEVERITIES else "medium"
 
 
 def _fetchone_dict(cur) -> dict[str, Any] | None:
@@ -45,44 +82,124 @@ def _fetchall_dicts(cur) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+def _table_exists(conn, table_name: str) -> bool:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("SELECT to_regclass(%s) AS table_name", (f"public.{table_name}",))
+        row = cur.fetchone()
+        return bool(row and row.get("table_name"))
+
+
+def _get_home_provider_id(conn, home_id: int) -> int | None:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT provider_id
+            FROM homes
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (home_id,),
+        )
+        row = cur.fetchone()
+        return _normalise_int(row.get("provider_id")) if row else None
+
+
+def _get_young_person_provider_id(conn, young_person_id: int) -> int | None:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT provider_id
+            FROM young_people
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (young_person_id,),
+        )
+        row = cur.fetchone()
+        return _normalise_int(row.get("provider_id")) if row else None
+
+
+def _get_young_person_home_and_provider(conn, young_person_id: int) -> dict[str, Any] | None:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, home_id, provider_id
+            FROM young_people
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (young_person_id,),
+        )
+        return _fetchone_dict(cur)
+
+
 def list_young_people(
     conn,
     *,
     home_id: int | None = None,
+    provider_id: int | None = None,
     include_archived: bool = False,
     search: str = "",
+    sort_by: str = "last_name",
+    sort_dir: str = "asc",
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[dict[str, Any]]:
-    where_clauses: list[str] = []
+    allowed_sort_fields = {
+        "first_name": "yp.first_name",
+        "last_name": "yp.last_name",
+        "preferred_name": "yp.preferred_name",
+        "placement_status": "yp.placement_status",
+        "summary_risk_level": "yp.summary_risk_level",
+        "created_at": "yp.created_at",
+        "updated_at": "yp.updated_at",
+        "admission_date": "yp.admission_date",
+    }
+
+    sort_column = allowed_sort_fields.get(str(sort_by or "").strip(), "yp.last_name")
+    sort_direction = "DESC" if str(sort_dir or "").lower() == "desc" else "ASC"
+
+    safe_limit = max(1, min(int(limit or 100), 500))
+    safe_offset = max(0, int(offset or 0))
+
+    where_clauses = ["1=1"]
     params: list[Any] = []
 
     if home_id is not None:
         where_clauses.append("yp.home_id = %s")
         params.append(home_id)
 
+    if provider_id is not None:
+        where_clauses.append("yp.provider_id = %s")
+        params.append(provider_id)
+
     if not include_archived:
         where_clauses.append("COALESCE(yp.archived, FALSE) = FALSE")
 
-    clean_search = _safe_string(search)
+    clean_search = _clean_text(search)
     if clean_search:
+        like = f"%{clean_search}%"
         where_clauses.append(
             """
             (
-                yp.first_name ILIKE %s
-                OR yp.last_name ILIKE %s
+                COALESCE(yp.first_name, '') ILIKE %s
+                OR COALESCE(yp.last_name, '') ILIKE %s
                 OR COALESCE(yp.preferred_name, '') ILIKE %s
+                OR COALESCE(yp.local_id_number, '') ILIKE %s
+                OR COALESCE(yp.provider_reference, '') ILIKE %s
             )
             """
         )
-        like = f"%{clean_search}%"
-        params.extend([like, like, like])
+        params.extend([like, like, like, like, like])
 
-    where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    params.extend([safe_limit, safe_offset])
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             f"""
             SELECT
                 yp.id,
+                yp.provider_id,
                 yp.home_id,
                 yp.first_name,
                 yp.last_name,
@@ -98,23 +215,19 @@ def list_young_people(
                 yp.primary_keyworker_id,
                 yp.summary_risk_level,
                 yp.photo_url,
+                yp.profile_photo_path,
+                yp.profile_photo_updated_at,
                 yp.archived,
                 yp.created_at,
                 yp.updated_at,
                 h.name AS home_name,
-                CONCAT(
-                    COALESCE(u.first_name, ''),
-                    CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN ' ' ELSE '' END,
-                    COALESCE(u.last_name, '')
-                ) AS primary_keyworker_name
+                CONCAT_WS(' ', NULLIF(u.first_name, ''), NULLIF(u.last_name, '')) AS primary_keyworker_name
             FROM young_people yp
             LEFT JOIN homes h ON h.id = yp.home_id
             LEFT JOIN users u ON u.id = yp.primary_keyworker_id
-            {where_sql}
-            ORDER BY
-                COALESCE(NULLIF(yp.preferred_name, ''), yp.first_name) ASC,
-                yp.last_name ASC,
-                yp.id DESC
+            WHERE {" AND ".join(where_clauses)}
+            ORDER BY {sort_column} {sort_direction}, yp.id DESC
+            LIMIT %s OFFSET %s
             """,
             tuple(params),
         )
@@ -128,11 +241,7 @@ def get_young_person_by_id(conn, young_person_id: int) -> dict[str, Any] | None:
             SELECT
                 yp.*,
                 h.name AS home_name,
-                CONCAT(
-                    COALESCE(u.first_name, ''),
-                    CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN ' ' ELSE '' END,
-                    COALESCE(u.last_name, '')
-                ) AS primary_keyworker_name
+                CONCAT_WS(' ', NULLIF(u.first_name, ''), NULLIF(u.last_name, '')) AS primary_keyworker_name
             FROM young_people yp
             LEFT JOIN homes h ON h.id = yp.home_id
             LEFT JOIN users u ON u.id = yp.primary_keyworker_id
@@ -158,16 +267,34 @@ def create_young_person(
     local_id_number: str = "",
     admission_date: Any = None,
     discharge_date: Any = None,
-    placement_status: str = "",
+    placement_status: str = "active",
     primary_keyworker_id: int | None = None,
     summary_risk_level: str = "",
     photo_url: str = "",
     archived: bool = False,
+    provider_id: int | None = None,
+    **extra: Any,
 ) -> dict[str, Any]:
+    safe_home_id = _normalise_int(home_id)
+    if not safe_home_id:
+        raise ValueError("home_id is required")
+
+    resolved_provider_id = _normalise_int(provider_id) or _get_home_provider_id(conn, safe_home_id)
+
+    clean_first_name = _required_text(first_name, field_name="first_name")
+    clean_last_name = _required_text(last_name, field_name="last_name", default="Unknown")
+
+    if not date_of_birth:
+        raise ValueError("date_of_birth is required")
+
+    if not admission_date:
+        raise ValueError("admission_date is required")
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             INSERT INTO young_people (
+                provider_id,
                 home_id,
                 first_name,
                 last_name,
@@ -186,33 +313,31 @@ def create_young_person(
                 archived
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             RETURNING *
             """,
             (
-                home_id,
-                _safe_string(first_name),
-                _safe_string(last_name),
-                _safe_string(preferred_name),
+                resolved_provider_id,
+                safe_home_id,
+                clean_first_name,
+                clean_last_name,
+                _clean_text(preferred_name),
                 date_of_birth,
-                _safe_string(gender),
-                _safe_string(ethnicity),
-                _safe_string(nhs_number),
-                _safe_string(local_id_number),
+                _clean_text(gender),
+                _clean_text(ethnicity),
+                _clean_text(nhs_number),
+                _clean_text(local_id_number),
                 admission_date,
                 discharge_date,
-                _safe_string(placement_status),
-                primary_keyworker_id,
-                _safe_string(summary_risk_level),
-                _safe_string(photo_url),
-                archived,
+                _normalise_status(placement_status),
+                _normalise_int(primary_keyworker_id),
+                _normalise_risk_level(summary_risk_level),
+                _clean_text(photo_url),
+                _normalise_bool(archived),
             ),
         )
-        row = _fetchone_dict(cur)
-
-    conn.commit()
-    return row or {}
+        return _fetchone_dict(cur) or {}
 
 
 def update_young_person(
@@ -237,31 +362,43 @@ def update_young_person(
         "summary_risk_level",
         "photo_url",
         "archived",
+        "provider_id",
+    }
+
+    text_fields = {
+        "first_name",
+        "last_name",
+        "preferred_name",
+        "gender",
+        "ethnicity",
+        "nhs_number",
+        "local_id_number",
+        "photo_url",
     }
 
     updates: list[str] = []
     params: list[Any] = []
 
-    for key, value in payload.items():
-        if key not in allowed_fields:
-            continue
+    clean_payload = {key: value for key, value in dict(payload or {}).items() if key in allowed_fields}
 
-        if key in {
-            "first_name",
-            "last_name",
-            "preferred_name",
-            "gender",
-            "ethnicity",
-            "nhs_number",
-            "local_id_number",
-            "placement_status",
-            "summary_risk_level",
-            "photo_url",
-        }:
-            value = _safe_string(value)
+    if "home_id" in clean_payload:
+        new_home_id = _normalise_int(clean_payload.get("home_id"))
+        clean_payload["home_id"] = new_home_id
+        if new_home_id and "provider_id" not in clean_payload:
+            clean_payload["provider_id"] = _get_home_provider_id(conn, new_home_id)
 
-        if key in {"home_id", "primary_keyworker_id"}:
+    for key, value in clean_payload.items():
+        if key in text_fields:
+            value = _clean_text(value)
+
+        if key in {"home_id", "primary_keyworker_id", "provider_id"}:
             value = _normalise_int(value)
+
+        if key == "placement_status":
+            value = _normalise_status(value)
+
+        if key == "summary_risk_level":
+            value = _normalise_risk_level(value)
 
         if key == "archived":
             value = _normalise_bool(value)
@@ -285,10 +422,37 @@ def update_young_person(
             """,
             tuple(params),
         )
-        row = _fetchone_dict(cur)
+        return _fetchone_dict(cur)
 
-    conn.commit()
-    return row
+
+def get_section(conn, young_person_id: int, table_name: str) -> dict[str, Any] | None:
+    allowed_tables = {
+        "young_person_communication_profile",
+        "young_person_education_profile",
+        "young_person_health_profile",
+        "young_person_identity_profile",
+        "young_person_legal_status",
+        "young_person_formulations",
+    }
+
+    if table_name not in allowed_tables:
+        raise ValueError("Unsupported young person section")
+
+    if not _table_exists(conn, table_name):
+        return None
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            f"""
+            SELECT *
+            FROM {table_name}
+            WHERE young_person_id = %s
+            ORDER BY updated_at DESC NULLS LAST, id DESC
+            LIMIT 1
+            """,
+            (young_person_id,),
+        )
+        return _fetchone_dict(cur)
 
 
 def get_young_person_overview(conn, young_person_id: int) -> dict[str, Any]:
@@ -298,134 +462,106 @@ def get_young_person_overview(conn, young_person_id: int) -> dict[str, Any]:
 
     overview: dict[str, Any] = {"young_person": person}
 
+    section_tables = {
+        "communication_profile": "young_person_communication_profile",
+        "education_profile": "young_person_education_profile",
+        "health_profile": "young_person_health_profile",
+        "identity_profile": "young_person_identity_profile",
+        "legal_status": "young_person_legal_status",
+        "formulation": "young_person_formulations",
+    }
+
+    for key, table_name in section_tables.items():
+        overview[key] = get_section(conn, young_person_id, table_name)
+
+    overview["contacts"] = list_contacts(conn, young_person_id)
+    overview["alerts"] = list_alerts(conn, young_person_id)
+
+    count_tables = {
+        "daily_note_count": "daily_notes",
+        "incident_count": "incidents",
+        "active_risk_count": "risk_assessments",
+        "active_support_plan_count": "support_plans",
+    }
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT *
-            FROM young_person_communication_profile
-            WHERE young_person_id = %s
-            ORDER BY updated_at DESC NULLS LAST, id DESC
-            LIMIT 1
-            """,
-            (young_person_id,),
-        )
-        overview["communication_profile"] = _fetchone_dict(cur)
+        for output_key, table_name in count_tables.items():
+            if not _table_exists(conn, table_name):
+                overview[output_key] = 0
+                continue
 
-        cur.execute(
-            """
-            SELECT *
-            FROM young_person_education_profile
-            WHERE young_person_id = %s
-            ORDER BY updated_at DESC NULLS LAST, id DESC
-            LIMIT 1
-            """,
-            (young_person_id,),
-        )
-        overview["education_profile"] = _fetchone_dict(cur)
+            archived_filter = ""
+            if table_name in {"risk_assessments", "support_plans"}:
+                archived_filter = "AND COALESCE(archived, FALSE) = FALSE"
 
-        cur.execute(
-            """
-            SELECT *
-            FROM young_person_health_profile
-            WHERE young_person_id = %s
-            ORDER BY updated_at DESC NULLS LAST, id DESC
-            LIMIT 1
-            """,
-            (young_person_id,),
-        )
-        overview["health_profile"] = _fetchone_dict(cur)
-
-        cur.execute(
-            """
-            SELECT *
-            FROM young_person_identity_profile
-            WHERE young_person_id = %s
-            ORDER BY updated_at DESC NULLS LAST, id DESC
-            LIMIT 1
-            """,
-            (young_person_id,),
-        )
-        overview["identity_profile"] = _fetchone_dict(cur)
-
-        cur.execute(
-            """
-            SELECT *
-            FROM young_person_legal_status
-            WHERE young_person_id = %s
-            ORDER BY is_current DESC, effective_from DESC NULLS LAST, id DESC
-            LIMIT 1
-            """,
-            (young_person_id,),
-        )
-        overview["legal_status"] = _fetchone_dict(cur)
-
-        cur.execute(
-            """
-            SELECT *
-            FROM young_person_contacts
-            WHERE young_person_id = %s
-            ORDER BY is_parental_responsibility_holder DESC, is_approved_contact DESC, full_name ASC
-            """,
-            (young_person_id,),
-        )
-        overview["contacts"] = _fetchall_dicts(cur)
-
-        cur.execute(
-            """
-            SELECT *
-            FROM young_person_alerts
-            WHERE young_person_id = %s
-            ORDER BY is_active DESC, severity DESC, created_at DESC
-            """,
-            (young_person_id,),
-        )
-        overview["alerts"] = _fetchall_dicts(cur)
-
-        cur.execute(
-            """
-            SELECT COUNT(*)::int AS count
-            FROM daily_notes
-            WHERE young_person_id = %s
-            """,
-            (young_person_id,),
-        )
-        row = _fetchone_dict(cur)
-        overview["daily_note_count"] = (row or {}).get("count", 0)
-
-        cur.execute(
-            """
-            SELECT COUNT(*)::int AS count
-            FROM incidents
-            WHERE young_person_id = %s
-            """,
-            (young_person_id,),
-        )
-        row = _fetchone_dict(cur)
-        overview["incident_count"] = (row or {}).get("count", 0)
-
-        cur.execute(
-            """
-            SELECT COUNT(*)::int AS count
-            FROM risk_assessments
-            WHERE young_person_id = %s AND COALESCE(archived, FALSE) = FALSE
-            """,
-            (young_person_id,),
-        )
-        row = _fetchone_dict(cur)
-        overview["active_risk_count"] = (row or {}).get("count", 0)
-
-        cur.execute(
-            """
-            SELECT COUNT(*)::int AS count
-            FROM support_plans
-            WHERE young_person_id = %s AND COALESCE(archived, FALSE) = FALSE
-            """,
-            (young_person_id,),
-        )
-        row = _fetchone_dict(cur)
-        overview["active_support_plan_count"] = (row or {}).get("count", 0)
+            cur.execute(
+                f"""
+                SELECT COUNT(*)::int AS count
+                FROM {table_name}
+                WHERE young_person_id = %s
+                {archived_filter}
+                """,
+                (young_person_id,),
+            )
+            row = _fetchone_dict(cur)
+            overview[output_key] = int((row or {}).get("count") or 0)
 
     return overview
+
+
+def _upsert_single_section(
+    conn,
+    *,
+    table_name: str,
+    young_person_id: int,
+    provider_id: int | None,
+    payload: dict[str, Any],
+    fields: list[str],
+) -> dict[str, Any]:
+    if not _table_exists(conn, table_name):
+        raise ValueError(f"Missing table: {table_name}")
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            f"""
+            SELECT id
+            FROM {table_name}
+            WHERE young_person_id = %s
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (young_person_id,),
+        )
+        existing = _fetchone_dict(cur)
+
+        values = [_clean_text(payload.get(field)) for field in fields]
+
+        if existing:
+            set_sql = ", ".join([f"{field} = %s" for field in fields])
+            cur.execute(
+                f"""
+                UPDATE {table_name}
+                SET {set_sql},
+                    provider_id = COALESCE(%s, provider_id),
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (*values, provider_id, existing["id"]),
+            )
+        else:
+            insert_columns = ["provider_id", "young_person_id", *fields]
+            placeholders = ", ".join(["%s"] * len(insert_columns))
+            cur.execute(
+                f"""
+                INSERT INTO {table_name} ({", ".join(insert_columns)})
+                VALUES ({placeholders})
+                RETURNING *
+                """,
+                (provider_id, young_person_id, *values),
+            )
+
+        return _fetchone_dict(cur) or {}
 
 
 def upsert_communication_profile(
@@ -434,82 +570,25 @@ def upsert_communication_profile(
     young_person_id: int,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            "SELECT id FROM young_person_communication_profile WHERE young_person_id = %s LIMIT 1",
-            (young_person_id,),
-        )
-        existing = _fetchone_dict(cur)
-
-        values = (
-            young_person_id,
-            _safe_string(payload.get("neurodiversity_summary")),
-            _safe_string(payload.get("communication_style")),
-            _safe_string(payload.get("sensory_profile")),
-            _safe_string(payload.get("processing_needs")),
-            _safe_string(payload.get("signs_of_distress")),
-            _safe_string(payload.get("what_helps")),
-            _safe_string(payload.get("what_to_avoid")),
-            _safe_string(payload.get("routines_and_predictability")),
-            _safe_string(payload.get("visual_support_needs")),
-        )
-
-        if existing:
-            cur.execute(
-                """
-                UPDATE young_person_communication_profile
-                SET
-                    neurodiversity_summary = %s,
-                    communication_style = %s,
-                    sensory_profile = %s,
-                    processing_needs = %s,
-                    signs_of_distress = %s,
-                    what_helps = %s,
-                    what_to_avoid = %s,
-                    routines_and_predictability = %s,
-                    visual_support_needs = %s,
-                    updated_at = NOW()
-                WHERE young_person_id = %s
-                RETURNING *
-                """,
-                (
-                    values[1],
-                    values[2],
-                    values[3],
-                    values[4],
-                    values[5],
-                    values[6],
-                    values[7],
-                    values[8],
-                    values[9],
-                    young_person_id,
-                ),
-            )
-        else:
-            cur.execute(
-                """
-                INSERT INTO young_person_communication_profile (
-                    young_person_id,
-                    neurodiversity_summary,
-                    communication_style,
-                    sensory_profile,
-                    processing_needs,
-                    signs_of_distress,
-                    what_helps,
-                    what_to_avoid,
-                    routines_and_predictability,
-                    visual_support_needs
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-                """,
-                values,
-            )
-
-        row = _fetchone_dict(cur)
-
-    conn.commit()
-    return row or {}
+    provider_id = _get_young_person_provider_id(conn, young_person_id)
+    return _upsert_single_section(
+        conn,
+        table_name="young_person_communication_profile",
+        young_person_id=young_person_id,
+        provider_id=provider_id,
+        payload=payload,
+        fields=[
+            "neurodiversity_summary",
+            "communication_style",
+            "sensory_profile",
+            "processing_needs",
+            "signs_of_distress",
+            "what_helps",
+            "what_to_avoid",
+            "routines_and_predictability",
+            "visual_support_needs",
+        ],
+    )
 
 
 def upsert_education_profile(
@@ -518,16 +597,39 @@ def upsert_education_profile(
     young_person_id: int,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
+    provider_id = _get_young_person_provider_id(conn, young_person_id)
+
+    if not _table_exists(conn, "young_person_education_profile"):
+        raise ValueError("Missing table: young_person_education_profile")
+
+    attendance_baseline = payload.get("attendance_baseline")
+    if attendance_baseline in ("", None):
+        attendance_baseline = None
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            "SELECT id FROM young_person_education_profile WHERE young_person_id = %s LIMIT 1",
+            """
+            SELECT id
+            FROM young_person_education_profile
+            WHERE young_person_id = %s
+            ORDER BY id DESC
+            LIMIT 1
+            """,
             (young_person_id,),
         )
         existing = _fetchone_dict(cur)
 
-        attendance_baseline = payload.get("attendance_baseline")
-        if attendance_baseline in ("", None):
-            attendance_baseline = None
+        values = (
+            _clean_text(payload.get("school_name")),
+            _clean_text(payload.get("year_group")),
+            _clean_text(payload.get("education_status")),
+            _clean_text(payload.get("sen_status")),
+            _clean_text(payload.get("ehcp_details")),
+            _clean_text(payload.get("designated_teacher")),
+            attendance_baseline,
+            _clean_text(payload.get("pep_status")),
+            _clean_text(payload.get("support_summary")),
+        )
 
         if existing:
             cur.execute(
@@ -543,27 +645,18 @@ def upsert_education_profile(
                     attendance_baseline = %s,
                     pep_status = %s,
                     support_summary = %s,
+                    provider_id = COALESCE(%s, provider_id),
                     updated_at = NOW()
-                WHERE young_person_id = %s
+                WHERE id = %s
                 RETURNING *
                 """,
-                (
-                    _safe_string(payload.get("school_name")),
-                    _safe_string(payload.get("year_group")),
-                    _safe_string(payload.get("education_status")),
-                    _safe_string(payload.get("sen_status")),
-                    _safe_string(payload.get("ehcp_details")),
-                    _safe_string(payload.get("designated_teacher")),
-                    attendance_baseline,
-                    _safe_string(payload.get("pep_status")),
-                    _safe_string(payload.get("support_summary")),
-                    young_person_id,
-                ),
+                (*values, provider_id, existing["id"]),
             )
         else:
             cur.execute(
                 """
                 INSERT INTO young_person_education_profile (
+                    provider_id,
                     young_person_id,
                     school_name,
                     year_group,
@@ -575,27 +668,13 @@ def upsert_education_profile(
                     pep_status,
                     support_summary
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
                 """,
-                (
-                    young_person_id,
-                    _safe_string(payload.get("school_name")),
-                    _safe_string(payload.get("year_group")),
-                    _safe_string(payload.get("education_status")),
-                    _safe_string(payload.get("sen_status")),
-                    _safe_string(payload.get("ehcp_details")),
-                    _safe_string(payload.get("designated_teacher")),
-                    attendance_baseline,
-                    _safe_string(payload.get("pep_status")),
-                    _safe_string(payload.get("support_summary")),
-                ),
+                (provider_id, young_person_id, *values),
             )
 
-        row = _fetchone_dict(cur)
-
-    conn.commit()
-    return row or {}
+        return _fetchone_dict(cur) or {}
 
 
 def upsert_health_profile(
@@ -604,76 +683,27 @@ def upsert_health_profile(
     young_person_id: int,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            "SELECT id FROM young_person_health_profile WHERE young_person_id = %s LIMIT 1",
-            (young_person_id,),
-        )
-        existing = _fetchone_dict(cur)
-
-        sql_values = (
-            _safe_string(payload.get("gp_name")),
-            _safe_string(payload.get("gp_contact")),
-            _safe_string(payload.get("dentist_name")),
-            _safe_string(payload.get("dentist_contact")),
-            _safe_string(payload.get("optician_name")),
-            _safe_string(payload.get("optician_contact")),
-            _safe_string(payload.get("allergies")),
-            _safe_string(payload.get("diagnoses")),
-            _safe_string(payload.get("mental_health_summary")),
-            _safe_string(payload.get("medication_summary")),
-            _safe_string(payload.get("consent_notes")),
-        )
-
-        if existing:
-            cur.execute(
-                """
-                UPDATE young_person_health_profile
-                SET
-                    gp_name = %s,
-                    gp_contact = %s,
-                    dentist_name = %s,
-                    dentist_contact = %s,
-                    optician_name = %s,
-                    optician_contact = %s,
-                    allergies = %s,
-                    diagnoses = %s,
-                    mental_health_summary = %s,
-                    medication_summary = %s,
-                    consent_notes = %s,
-                    updated_at = NOW()
-                WHERE young_person_id = %s
-                RETURNING *
-                """,
-                (*sql_values, young_person_id),
-            )
-        else:
-            cur.execute(
-                """
-                INSERT INTO young_person_health_profile (
-                    young_person_id,
-                    gp_name,
-                    gp_contact,
-                    dentist_name,
-                    dentist_contact,
-                    optician_name,
-                    optician_contact,
-                    allergies,
-                    diagnoses,
-                    mental_health_summary,
-                    medication_summary,
-                    consent_notes
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-                """,
-                (young_person_id, *sql_values),
-            )
-
-        row = _fetchone_dict(cur)
-
-    conn.commit()
-    return row or {}
+    provider_id = _get_young_person_provider_id(conn, young_person_id)
+    return _upsert_single_section(
+        conn,
+        table_name="young_person_health_profile",
+        young_person_id=young_person_id,
+        provider_id=provider_id,
+        payload=payload,
+        fields=[
+            "gp_name",
+            "gp_contact",
+            "dentist_name",
+            "dentist_contact",
+            "optician_name",
+            "optician_contact",
+            "allergies",
+            "diagnoses",
+            "mental_health_summary",
+            "medication_summary",
+            "consent_notes",
+        ],
+    )
 
 
 def upsert_identity_profile(
@@ -682,67 +712,24 @@ def upsert_identity_profile(
     young_person_id: int,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            "SELECT id FROM young_person_identity_profile WHERE young_person_id = %s LIMIT 1",
-            (young_person_id,),
-        )
-        existing = _fetchone_dict(cur)
-
-        sql_values = (
-            _safe_string(payload.get("religion_or_faith")),
-            _safe_string(payload.get("cultural_identity")),
-            _safe_string(payload.get("first_language")),
-            _safe_string(payload.get("dietary_needs")),
-            _safe_string(payload.get("interests")),
-            _safe_string(payload.get("strengths_summary")),
-            _safe_string(payload.get("what_matters_to_me")),
-            _safe_string(payload.get("important_dates")),
-        )
-
-        if existing:
-            cur.execute(
-                """
-                UPDATE young_person_identity_profile
-                SET
-                    religion_or_faith = %s,
-                    cultural_identity = %s,
-                    first_language = %s,
-                    dietary_needs = %s,
-                    interests = %s,
-                    strengths_summary = %s,
-                    what_matters_to_me = %s,
-                    important_dates = %s,
-                    updated_at = NOW()
-                WHERE young_person_id = %s
-                RETURNING *
-                """,
-                (*sql_values, young_person_id),
-            )
-        else:
-            cur.execute(
-                """
-                INSERT INTO young_person_identity_profile (
-                    young_person_id,
-                    religion_or_faith,
-                    cultural_identity,
-                    first_language,
-                    dietary_needs,
-                    interests,
-                    strengths_summary,
-                    what_matters_to_me,
-                    important_dates
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-                """,
-                (young_person_id, *sql_values),
-            )
-
-        row = _fetchone_dict(cur)
-
-    conn.commit()
-    return row or {}
+    provider_id = _get_young_person_provider_id(conn, young_person_id)
+    return _upsert_single_section(
+        conn,
+        table_name="young_person_identity_profile",
+        young_person_id=young_person_id,
+        provider_id=provider_id,
+        payload=payload,
+        fields=[
+            "religion_or_faith",
+            "cultural_identity",
+            "first_language",
+            "dietary_needs",
+            "interests",
+            "strengths_summary",
+            "what_matters_to_me",
+            "important_dates",
+        ],
+    )
 
 
 def upsert_legal_status(
@@ -752,7 +739,17 @@ def upsert_legal_status(
     created_by: int | None = None,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
+    provider_id = _get_young_person_provider_id(conn, young_person_id)
+
+    legal_status = _required_text(
+        payload.get("legal_status"),
+        field_name="legal_status",
+        default="Looked after child",
+    )
     effective_from = payload.get("effective_from")
+    if not effective_from:
+        raise ValueError("effective_from is required")
+
     effective_to = payload.get("effective_to")
     is_current = _normalise_bool(payload.get("is_current"), True)
 
@@ -761,8 +758,7 @@ def upsert_legal_status(
             cur.execute(
                 """
                 UPDATE young_person_legal_status
-                SET
-                    is_current = FALSE,
+                SET is_current = FALSE,
                     updated_at = NOW()
                 WHERE young_person_id = %s
                   AND COALESCE(is_current, FALSE) = TRUE
@@ -775,33 +771,32 @@ def upsert_legal_status(
             SELECT id
             FROM young_person_legal_status
             WHERE young_person_id = %s
-              AND (
-                    (effective_from IS NOT DISTINCT FROM %s)
-                AND (order_type IS NOT DISTINCT FROM %s)
-                AND (legal_status IS NOT DISTINCT FROM %s)
-              )
+              AND effective_from IS NOT DISTINCT FROM %s
+              AND order_type IS NOT DISTINCT FROM %s
+              AND legal_status IS NOT DISTINCT FROM %s
             ORDER BY id DESC
             LIMIT 1
             """,
             (
                 young_person_id,
                 effective_from,
-                _safe_string(payload.get("order_type")),
-                _safe_string(payload.get("legal_status")),
+                _clean_text(payload.get("order_type")),
+                legal_status,
             ),
         )
         existing = _fetchone_dict(cur)
 
         values = (
-            _safe_string(payload.get("legal_status")),
-            _safe_string(payload.get("order_type")),
-            _safe_string(payload.get("order_details")),
-            _safe_string(payload.get("delegated_authority_details")),
-            _safe_string(payload.get("restrictions_text")),
-            _safe_string(payload.get("consent_arrangements")),
+            legal_status,
+            _clean_text(payload.get("order_type")),
+            _clean_text(payload.get("order_details")),
+            _clean_text(payload.get("delegated_authority_details")),
+            _clean_text(payload.get("restrictions_text")),
+            _clean_text(payload.get("consent_arrangements")),
             effective_from,
             effective_to,
             is_current,
+            provider_id,
         )
 
         if existing:
@@ -818,6 +813,7 @@ def upsert_legal_status(
                     effective_from = %s,
                     effective_to = %s,
                     is_current = %s,
+                    provider_id = COALESCE(%s, provider_id),
                     updated_at = NOW()
                 WHERE id = %s
                 RETURNING *
@@ -828,6 +824,7 @@ def upsert_legal_status(
             cur.execute(
                 """
                 INSERT INTO young_person_legal_status (
+                    provider_id,
                     young_person_id,
                     legal_status,
                     order_type,
@@ -840,20 +837,26 @@ def upsert_legal_status(
                     is_current,
                     created_by
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
                 """,
                 (
+                    provider_id,
                     young_person_id,
-                    *values,
-                    created_by,
+                    legal_status,
+                    _clean_text(payload.get("order_type")),
+                    _clean_text(payload.get("order_details")),
+                    _clean_text(payload.get("delegated_authority_details")),
+                    _clean_text(payload.get("restrictions_text")),
+                    _clean_text(payload.get("consent_arrangements")),
+                    effective_from,
+                    effective_to,
+                    is_current,
+                    _normalise_int(created_by),
                 ),
             )
 
-        row = _fetchone_dict(cur)
-
-    conn.commit()
-    return row or {}
+        return _fetchone_dict(cur) or {}
 
 
 def upsert_formulation(
@@ -863,6 +866,7 @@ def upsert_formulation(
     created_by: int | None = None,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
+    provider_id = _get_young_person_provider_id(conn, young_person_id)
     review_date = payload.get("review_date")
     is_current = _normalise_bool(payload.get("is_current"), True)
 
@@ -871,8 +875,7 @@ def upsert_formulation(
             cur.execute(
                 """
                 UPDATE young_person_formulations
-                SET
-                    is_current = FALSE,
+                SET is_current = FALSE,
                     updated_at = NOW()
                 WHERE young_person_id = %s
                   AND COALESCE(is_current, FALSE) = TRUE
@@ -893,21 +896,22 @@ def upsert_formulation(
         existing = _fetchone_dict(cur)
 
         values = (
-            _safe_string(payload.get("presenting_needs")),
-            _safe_string(payload.get("developmental_context")),
-            _safe_string(payload.get("trauma_context")),
-            _safe_string(payload.get("neurodevelopmental_context")),
-            _safe_string(payload.get("relational_context")),
-            _safe_string(payload.get("meaning_of_behaviour")),
-            _safe_string(payload.get("known_triggers")),
-            _safe_string(payload.get("early_signs_of_distress")),
-            _safe_string(payload.get("protective_factors")),
-            _safe_string(payload.get("what_helps")),
-            _safe_string(payload.get("what_adults_should_avoid")),
-            _safe_string(payload.get("regulation_strategies")),
-            _safe_string(payload.get("child_voice_summary")),
+            _clean_text(payload.get("presenting_needs")),
+            _clean_text(payload.get("developmental_context")),
+            _clean_text(payload.get("trauma_context")),
+            _clean_text(payload.get("neurodevelopmental_context")),
+            _clean_text(payload.get("relational_context")),
+            _clean_text(payload.get("meaning_of_behaviour")),
+            _clean_text(payload.get("known_triggers")),
+            _clean_text(payload.get("early_signs_of_distress")),
+            _clean_text(payload.get("protective_factors")),
+            _clean_text(payload.get("what_helps")),
+            _clean_text(payload.get("what_adults_should_avoid")),
+            _clean_text(payload.get("regulation_strategies")),
+            _clean_text(payload.get("child_voice_summary")),
             review_date,
             is_current,
+            provider_id,
         )
 
         if existing:
@@ -930,6 +934,7 @@ def upsert_formulation(
                     child_voice_summary = %s,
                     review_date = %s,
                     is_current = %s,
+                    provider_id = COALESCE(%s, provider_id),
                     updated_at = NOW()
                 WHERE id = %s
                 RETURNING *
@@ -940,6 +945,7 @@ def upsert_formulation(
             cur.execute(
                 """
                 INSERT INTO young_person_formulations (
+                    provider_id,
                     young_person_id,
                     presenting_needs,
                     developmental_context,
@@ -958,22 +964,53 @@ def upsert_formulation(
                     is_current,
                     created_by
                 )
-                VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
                 """,
                 (
+                    provider_id,
                     young_person_id,
-                    *values,
-                    created_by,
+                    values[0],
+                    values[1],
+                    values[2],
+                    values[3],
+                    values[4],
+                    values[5],
+                    values[6],
+                    values[7],
+                    values[8],
+                    values[9],
+                    values[10],
+                    values[11],
+                    values[12],
+                    review_date,
+                    is_current,
+                    _normalise_int(created_by),
                 ),
             )
 
-        row = _fetchone_dict(cur)
+        return _fetchone_dict(cur) or {}
 
-    conn.commit()
-    return row or {}
+
+def list_contacts(conn, young_person_id: int) -> list[dict[str, Any]]:
+    if not _table_exists(conn, "young_person_contacts"):
+        return []
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT *
+            FROM young_person_contacts
+            WHERE young_person_id = %s
+            ORDER BY
+                COALESCE(is_parental_responsibility_holder, FALSE) DESC,
+                COALESCE(is_approved_contact, FALSE) DESC,
+                full_name ASC,
+                id DESC
+            """,
+            (young_person_id,),
+        )
+        return _fetchall_dicts(cur)
 
 
 def add_contact(
@@ -982,45 +1019,144 @@ def add_contact(
     young_person_id: int,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
+    person = _get_young_person_home_and_provider(conn, young_person_id)
+    if not person:
+        raise ValueError("Young person not found")
+
+    provider_id = _normalise_int(person.get("provider_id"))
+
+    contact_type = _required_text(payload.get("contact_type"), field_name="contact_type", default="family")
+    full_name = _required_text(payload.get("full_name"), field_name="full_name")
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             INSERT INTO young_person_contacts (
+                provider_id,
                 young_person_id,
                 contact_type,
                 full_name,
                 relationship_to_young_person,
+                relationship_to_child,
                 phone,
+                phone_number,
                 email,
                 address,
                 is_parental_responsibility_holder,
                 is_approved_contact,
                 is_restricted_contact,
                 supervision_level,
-                notes
+                notes,
+                contact_notes
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
+                provider_id,
                 young_person_id,
-                _safe_string(payload.get("contact_type")),
-                _safe_string(payload.get("full_name")),
-                _safe_string(payload.get("relationship_to_young_person")),
-                _safe_string(payload.get("phone")),
-                _safe_string(payload.get("email")),
-                _safe_string(payload.get("address")),
+                contact_type,
+                full_name,
+                _clean_text(payload.get("relationship_to_young_person")),
+                _clean_text(payload.get("relationship_to_young_person")),
+                _clean_text(payload.get("phone")),
+                _clean_text(payload.get("phone")),
+                _clean_text(payload.get("email")),
+                _clean_text(payload.get("address")),
                 _normalise_bool(payload.get("is_parental_responsibility_holder")),
                 _normalise_bool(payload.get("is_approved_contact")),
                 _normalise_bool(payload.get("is_restricted_contact")),
-                _safe_string(payload.get("supervision_level")),
-                _safe_string(payload.get("notes")),
+                _clean_text(payload.get("supervision_level")),
+                _clean_text(payload.get("notes")),
+                _clean_text(payload.get("notes")),
             ),
         )
-        row = _fetchone_dict(cur)
+        return _fetchone_dict(cur) or {}
 
-    conn.commit()
-    return row or {}
+
+def update_contact(conn, contact_id: int, payload: dict[str, Any]) -> dict[str, Any] | None:
+    allowed_fields = {
+        "contact_type",
+        "full_name",
+        "relationship_to_young_person",
+        "phone",
+        "email",
+        "address",
+        "is_parental_responsibility_holder",
+        "is_approved_contact",
+        "is_restricted_contact",
+        "supervision_level",
+        "notes",
+    }
+
+    alias_fields = {
+        "relationship_to_young_person": "relationship_to_child",
+        "phone": "phone_number",
+        "notes": "contact_notes",
+    }
+
+    updates: list[str] = []
+    params: list[Any] = []
+
+    for key, value in dict(payload or {}).items():
+        if key not in allowed_fields:
+            continue
+
+        if key in {
+            "is_parental_responsibility_holder",
+            "is_approved_contact",
+            "is_restricted_contact",
+        }:
+            value = _normalise_bool(value)
+        else:
+            value = _clean_text(value)
+
+        updates.append(f"{key} = %s")
+        params.append(value)
+
+        alias = alias_fields.get(key)
+        if alias:
+            updates.append(f"{alias} = %s")
+            params.append(value)
+
+    if not updates:
+        return None
+
+    updates.append("updated_at = NOW()")
+    params.append(contact_id)
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            f"""
+            UPDATE young_person_contacts
+            SET {", ".join(updates)}
+            WHERE id = %s
+            RETURNING *
+            """,
+            tuple(params),
+        )
+        return _fetchone_dict(cur)
+
+
+def list_alerts(conn, young_person_id: int) -> list[dict[str, Any]]:
+    if not _table_exists(conn, "young_person_alerts"):
+        return []
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT *
+            FROM young_person_alerts
+            WHERE young_person_id = %s
+            ORDER BY
+                COALESCE(is_active, TRUE) DESC,
+                COALESCE(review_date, CURRENT_DATE) ASC,
+                created_at DESC,
+                id DESC
+            """,
+            (young_person_id,),
+        )
+        return _fetchall_dicts(cur)
 
 
 def add_alert(
@@ -1030,10 +1166,20 @@ def add_alert(
     created_by: int | None,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
+    person = _get_young_person_home_and_provider(conn, young_person_id)
+    if not person:
+        raise ValueError("Young person not found")
+
+    provider_id = _normalise_int(person.get("provider_id"))
+
+    title = _required_text(payload.get("title"), field_name="title")
+    alert_type = _required_text(payload.get("alert_type"), field_name="alert_type", default="general")
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             INSERT INTO young_person_alerts (
+                provider_id,
                 young_person_id,
                 alert_type,
                 title,
@@ -1044,22 +1190,20 @@ def add_alert(
                 review_date,
                 created_by
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
+                provider_id,
                 young_person_id,
-                _safe_string(payload.get("alert_type")),
-                _safe_string(payload.get("title")),
-                _safe_string(payload.get("description")),
-                _safe_string(payload.get("severity")),
+                alert_type,
+                title,
+                _clean_text(payload.get("description")),
+                _normalise_alert_severity(payload.get("severity")),
                 _normalise_bool(payload.get("is_active"), True),
-                _normalise_bool(payload.get("show_globally")),
+                _normalise_bool(payload.get("show_globally"), True),
                 payload.get("review_date"),
-                created_by,
+                _normalise_int(created_by),
             ),
         )
-        row = _fetchone_dict(cur)
-
-    conn.commit()
-    return row or {}
+        return _fetchone_dict(cur) or {}
