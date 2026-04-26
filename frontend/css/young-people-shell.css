@@ -2059,3 +2059,78 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   FULL WIDTH OS FIX
+   Keeps IndiCare full screen at all zoom levels
+========================================================= */
+
+.shell-main,
+.app-footer-inner {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.shell-main {
+  margin: 0 !important;
+  padding: 18px 24px 0 !important;
+}
+
+.workspace-screen,
+.workspace-screen-inner,
+.workspace-stage,
+.workspace-stage-top {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.workspace-header-band,
+.quick-actions-panel,
+.workspace-content {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.workspace-header-band--premium {
+  border-radius: 0 !important;
+}
+
+.workspace-stage {
+  display: grid !important;
+  gap: 18px !important;
+}
+
+.workspace-content {
+  min-height: calc(100vh - 360px) !important;
+}
+
+/* Make the main workspace use the available width */
+.overview-grid {
+  grid-template-columns: minmax(0, 1.6fr) minmax(360px, 0.7fr) !important;
+}
+
+/* Wider cards across large screens */
+@media (min-width: 1200px) {
+  .workspace-header-context--compact {
+    grid-template-columns: minmax(320px, auto) auto minmax(520px, 1fr) !important;
+  }
+
+  .overview-stats-grid {
+    grid-template-columns: repeat(4, minmax(180px, 1fr)) !important;
+  }
+}
+
+/* Keep sensible padding on smaller screens */
+@media (max-width: 860px) {
+  .shell-main {
+    padding: 12px !important;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .workspace-header-band--premium {
+    border-radius: 22px !important;
+  }
+}
