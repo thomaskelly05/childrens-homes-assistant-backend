@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from auth.current_user import get_current_user
 from db.connection import get_db
@@ -12,41 +12,84 @@ from services.young_person_service import YoungPersonService
 router = APIRouter(prefix="/young-people", tags=["Young People Profile"])
 
 
+PROVIDER_ROLES = {
+    "admin",
+    "administrator",
+    "super_admin",
+    "superadmin",
+    "provider_admin",
+    "ri",
+    "responsible_individual",
+}
+
+HOME_ROLES = {
+    "manager",
+    "registered_manager",
+    "deputy_manager",
+    "staff",
+    "rsw",
+    "residential_support_worker",
+}
+
+
+EDIT_ROLES = PROVIDER_ROLES | HOME_ROLES
+
+
 def _safe_int(value: Any) -> int | None:
     try:
-        if value is None or value == "":
+        if value in (None, "", "null", "None"):
             return None
         return int(value)
     except Exception:
         return None
 
 
-def _user_home_id(current_user: dict[str, Any]) -> int | None:
-    return _safe_int(current_user.get("home_id"))
-
-
 def _user_role(current_user: dict[str, Any]) -> str:
     return str(current_user.get("role") or "").strip().lower()
 
 
-def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
-    role = _user_role(current_user)
-    user_home_id = _user_home_id(current_user)
+def _user_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("user_id") or current_user.get("id"))
 
-    if role in {"admin", "provider_admin"}:
+
+def _user_home_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("home_id") or current_user.get("homeId"))
+
+
+def _user_provider_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("provider_id") or current_user.get("providerId"))
+
+
+def _is_provider_role(current_user: dict[str, Any]) -> bool:
+    return _user_role(current_user) in PROVIDER_ROLES
+
+
+def _assert_can_edit(current_user: dict[str, Any]) -> None:
+    if _user_role(current_user) not in EDIT_ROLES:
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this record")
+
+
+def _assert_young_person_access(
+    current_user: dict[str, Any],
+    record: dict[str, Any],
+) -> None:
+    if _is_provider_role(current_user):
+        user_provider_id = _user_provider_id(current_user)
+        record_provider_id = _safe_int(record.get("provider_id"))
+
+        if user_provider_id and record_provider_id and user_provider_id != record_provider_id:
+            raise HTTPException(status_code=403, detail="You do not have access to this provider record")
+
         return
 
-    if record_home_id is None:
+    user_home_id = _user_home_id(current_user)
+    record_home_id = _safe_int(record.get("home_id"))
+
+    if not user_home_id or not record_home_id:
         raise HTTPException(status_code=403, detail="Home access could not be verified")
 
     if user_home_id != record_home_id:
         raise HTTPException(status_code=403, detail="You do not have access to this young person")
-
-
-def _assert_can_edit(current_user: dict[str, Any]) -> None:
-    role = _user_role(current_user)
-    if role not in {"admin", "provider_admin", "manager", "staff"}:
-        raise HTTPException(status_code=403, detail="You do not have permission to edit this record")
 
 
 def _load_and_check_young_person(
@@ -57,28 +100,35 @@ def _load_and_check_young_person(
     if not record:
         raise HTTPException(status_code=404, detail="Young person not found")
 
-    _assert_home_access(current_user, _safe_int(record.get("home_id")))
+    _assert_young_person_access(current_user, record)
     return record
+
+
+def _scoped_list_filters(current_user: dict[str, Any]) -> tuple[int | None, int | None]:
+    if _is_provider_role(current_user):
+        return None, _user_provider_id(current_user)
+
+    return _user_home_id(current_user), None
 
 
 class YoungPersonCreatePayload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    home_id: int
-    first_name: str
-    last_name: str | None = ""
-    preferred_name: str | None = ""
-    date_of_birth: str | None = None
-    gender: str | None = ""
-    ethnicity: str | None = ""
-    nhs_number: str | None = ""
-    local_id_number: str | None = ""
-    admission_date: str | None = None
+    home_id: int = Field(..., gt=0)
+    first_name: str = Field(..., min_length=1)
+    last_name: str = Field(default="Unknown")
+    preferred_name: str | None = None
+    date_of_birth: str
+    gender: str | None = None
+    ethnicity: str | None = None
+    nhs_number: str | None = None
+    local_id_number: str | None = None
+    admission_date: str
     discharge_date: str | None = None
-    placement_status: str | None = ""
+    placement_status: str | None = "active"
     primary_keyworker_id: int | None = None
-    summary_risk_level: str | None = ""
-    photo_url: str | None = ""
+    summary_risk_level: str | None = None
+    photo_url: str | None = None
     archived: bool | None = False
 
 
@@ -169,10 +219,9 @@ class LegalStatusPayload(BaseModel):
     restrictions_text: str | None = None
     delegated_authority_details: str | None = None
     consent_arrangements: str | None = None
-    effective_from: str | None = None
+    effective_from: str
     effective_to: str | None = None
     is_current: bool | None = True
-    created_by: int | None = None
 
 
 class FormulationPayload(BaseModel):
@@ -193,14 +242,13 @@ class FormulationPayload(BaseModel):
     child_voice_summary: str | None = None
     review_date: str | None = None
     is_current: bool | None = True
-    created_by: int | None = None
 
 
 class ContactCreatePayload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    contact_type: str | None = None
-    full_name: str
+    contact_type: str | None = "family"
+    full_name: str = Field(..., min_length=1)
     relationship_to_young_person: str | None = None
     phone: str | None = None
     email: str | None = None
@@ -231,13 +279,13 @@ class ContactUpdatePayload(BaseModel):
 class AlertCreatePayload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    alert_type: str | None = None
-    title: str
+    alert_type: str | None = "general"
+    title: str = Field(..., min_length=1)
     description: str | None = None
     severity: str | None = "medium"
     review_date: str | None = None
     is_active: bool | None = True
-    created_by: int | None = None
+    show_globally: bool | None = True
 
 
 @router.get("")
@@ -250,12 +298,12 @@ def list_young_people(
     offset: int = Query(default=0, ge=0),
     current_user=Depends(get_current_user),
 ):
-    role = _user_role(current_user)
-    home_id = None if role in {"admin", "provider_admin"} else _user_home_id(current_user)
+    home_id, provider_id = _scoped_list_filters(current_user)
 
     try:
         rows = YoungPersonService.list_young_people(
             home_id=home_id,
+            provider_id=provider_id,
             include_archived=include_archived,
             search=search or "",
             sort_by=sort_by,
@@ -263,11 +311,7 @@ def list_young_people(
             limit=limit,
             offset=offset,
         )
-        return {
-            "young_people": rows,
-            "items": rows,
-            "count": len(rows),
-        }
+        return {"ok": True, "young_people": rows, "items": rows, "count": len(rows)}
     except HTTPException:
         raise
     except Exception as e:
@@ -282,18 +326,22 @@ def create_young_person(
     _assert_can_edit(current_user)
 
     requested_home_id = _safe_int(payload.home_id)
-    user_home_id = _user_home_id(current_user)
-    role = _user_role(current_user)
 
-    if role not in {"admin", "provider_admin"} and requested_home_id != user_home_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to create a young person in this home")
+    if not _is_provider_role(current_user):
+        user_home_id = _user_home_id(current_user)
+        if requested_home_id != user_home_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to create a young person in this home",
+            )
+
+    data = payload.model_dump(exclude_none=True)
+    if _is_provider_role(current_user):
+        data["provider_id"] = _user_provider_id(current_user)
 
     try:
-        row = YoungPersonService.create_young_person(payload.model_dump(exclude_none=True))
-        return {
-            "ok": True,
-            "young_person": row,
-        }
+        row = YoungPersonService.create_young_person(data)
+        return {"ok": True, "young_person": row}
     except HTTPException:
         raise
     except Exception as e:
@@ -309,17 +357,10 @@ def get_young_person(
         record = _load_and_check_young_person(young_person_id, current_user)
         bundle = YoungPersonService.get_full_profile_bundle(young_person_id)
 
-        if not bundle:
-            return {
-                "ok": True,
-                "young_person": record,
-                "bundle": {"young_person": record},
-            }
-
         return {
             "ok": True,
-            "young_person": bundle.get("young_person") or record,
-            "bundle": bundle,
+            "young_person": (bundle or {}).get("young_person") or record,
+            "bundle": bundle or {"young_person": record},
         }
     except HTTPException:
         raise
@@ -337,26 +378,24 @@ def update_young_person(
     _assert_can_edit(current_user)
     existing = _load_and_check_young_person(young_person_id, current_user)
 
-    update_data = payload.model_dump(exclude_unset=True)
-
-    if "home_id" in update_data:
-        requested_home_id = _safe_int(update_data.get("home_id"))
-        role = _user_role(current_user)
-        if role not in {"admin", "provider_admin"} and requested_home_id != _safe_int(existing.get("home_id")):
-            raise HTTPException(status_code=403, detail="You do not have permission to move this young person to another home")
-
+    update_data = payload.model_dump(exclude_unset=True, exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
+
+    if "home_id" in update_data and not _is_provider_role(current_user):
+        requested_home_id = _safe_int(update_data.get("home_id"))
+        if requested_home_id != _safe_int(existing.get("home_id")):
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to move this young person to another home",
+            )
 
     try:
         row = YoungPersonService.update_young_person(young_person_id, update_data)
         if not row:
             raise HTTPException(status_code=404, detail="Young person not found")
 
-        return {
-            "ok": True,
-            "young_person": row,
-        }
+        return {"ok": True, "young_person": row}
     except HTTPException:
         raise
     except Exception as e:
@@ -370,16 +409,12 @@ def get_young_person_overview(
 ):
     try:
         record = _load_and_check_young_person(young_person_id, current_user)
-        alerts = YoungPersonService.get_active_alerts(young_person_id)
-        dashboard_counts = YoungPersonService.get_dashboard_counts(young_person_id)
-        recent_activity = YoungPersonService.get_recent_activity(young_person_id, limit=12)
-
         return {
             "ok": True,
             "young_person": record,
-            "dashboard_counts": dashboard_counts,
-            "alerts": alerts,
-            "recent_activity": recent_activity,
+            "dashboard_counts": YoungPersonService.get_dashboard_counts(young_person_id),
+            "alerts": YoungPersonService.get_active_alerts(young_person_id),
+            "recent_activity": YoungPersonService.get_recent_activity(young_person_id, limit=12),
         }
     except HTTPException:
         raise
@@ -395,10 +430,7 @@ def list_young_person_contacts(
     try:
         _load_and_check_young_person(young_person_id, current_user)
         rows = YoungPersonService.list_contacts(young_person_id)
-        return {
-            "items": rows,
-            "count": len(rows),
-        }
+        return {"ok": True, "items": rows, "contacts": rows, "count": len(rows)}
     except HTTPException:
         raise
     except Exception as e:
@@ -419,10 +451,7 @@ def create_young_person_contact(
             young_person_id,
             payload.model_dump(exclude_none=True),
         )
-        return {
-            "ok": True,
-            "contact": row,
-        }
+        return {"ok": True, "contact": row}
     except HTTPException:
         raise
     except Exception as e:
@@ -445,7 +474,8 @@ def update_young_person_contact(
                 """
                 SELECT
                     c.*,
-                    yp.home_id
+                    yp.home_id,
+                    yp.provider_id
                 FROM young_person_contacts c
                 JOIN young_people yp ON yp.id = c.young_person_id
                 WHERE c.id = %s
@@ -458,9 +488,9 @@ def update_young_person_contact(
         if not row:
             raise HTTPException(status_code=404, detail="Contact not found")
 
-        _assert_home_access(current_user, _safe_int(row.get("home_id")))
+        _assert_young_person_access(current_user, dict(row))
 
-        update_data = payload.model_dump(exclude_unset=True)
+        update_data = payload.model_dump(exclude_unset=True, exclude_none=True)
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields provided for update")
 
@@ -468,10 +498,7 @@ def update_young_person_contact(
         if not updated:
             raise HTTPException(status_code=404, detail="Contact not found")
 
-        return {
-            "ok": True,
-            "contact": updated,
-        }
+        return {"ok": True, "contact": updated}
     except HTTPException:
         raise
     except Exception as e:
@@ -488,38 +515,53 @@ def create_young_person_alert(
     _load_and_check_young_person(young_person_id, current_user)
 
     try:
-        actor_user_id = _safe_int(current_user.get("user_id"))
-        alert_data = payload.model_dump(exclude_none=True)
-        if not alert_data.get("created_by"):
-            alert_data["created_by"] = actor_user_id
+        data = payload.model_dump(exclude_none=True)
+        data["created_by"] = _user_id(current_user)
 
-        row = YoungPersonService.create_alert(young_person_id, alert_data)
-        return {
-            "ok": True,
-            "alert": row,
-        }
+        row = YoungPersonService.create_alert(young_person_id, data)
+        return {"ok": True, "alert": row}
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create alert: {str(e)}")
 
 
-@router.get("/{young_person_id}/communication-profile")
-def get_communication_profile_route(
+def _get_section_response(
     young_person_id: int,
-    current_user=Depends(get_current_user),
+    current_user: dict[str, Any],
+    section: str,
+    response_key: str,
 ):
-    try:
-        _load_and_check_young_person(young_person_id, current_user)
-        row = YoungPersonService.get_section(young_person_id, "communication_profile")
-        return {
-            "ok": True,
-            "communication_profile": row or {},
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load communication profile: {str(e)}")
+    _load_and_check_young_person(young_person_id, current_user)
+    row = YoungPersonService.get_section(young_person_id, section)
+    return {"ok": True, response_key: row or {}}
+
+
+def _upsert_section_response(
+    young_person_id: int,
+    current_user: dict[str, Any],
+    section: str,
+    response_key: str,
+    payload: BaseModel,
+):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(young_person_id, current_user)
+
+    data = payload.model_dump(exclude_none=True)
+    if section in {"legal_status", "formulation"}:
+        data["created_by"] = _user_id(current_user)
+
+    row = YoungPersonService.upsert_section(
+        young_person_id=young_person_id,
+        section=section,
+        data=data,
+    )
+    return {"ok": True, response_key: row}
+
+
+@router.get("/{young_person_id}/communication-profile")
+def get_communication_profile_route(young_person_id: int, current_user=Depends(get_current_user)):
+    return _get_section_response(young_person_id, current_user, "communication_profile", "communication_profile")
 
 
 @router.put("/{young_person_id}/communication-profile")
@@ -528,41 +570,12 @@ def upsert_communication_profile_route(
     payload: CommunicationProfilePayload,
     current_user=Depends(get_current_user),
 ):
-    _assert_can_edit(current_user)
-    _load_and_check_young_person(young_person_id, current_user)
-
-    try:
-        row = YoungPersonService.upsert_section(
-            young_person_id=young_person_id,
-            section="communication_profile",
-            data=payload.model_dump(exclude_none=True),
-        )
-        return {
-            "ok": True,
-            "communication_profile": row,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save communication profile: {str(e)}")
+    return _upsert_section_response(young_person_id, current_user, "communication_profile", "communication_profile", payload)
 
 
 @router.get("/{young_person_id}/identity-profile")
-def get_identity_profile_route(
-    young_person_id: int,
-    current_user=Depends(get_current_user),
-):
-    try:
-        _load_and_check_young_person(young_person_id, current_user)
-        row = YoungPersonService.get_section(young_person_id, "identity_profile")
-        return {
-            "ok": True,
-            "identity_profile": row or {},
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load identity profile: {str(e)}")
+def get_identity_profile_route(young_person_id: int, current_user=Depends(get_current_user)):
+    return _get_section_response(young_person_id, current_user, "identity_profile", "identity_profile")
 
 
 @router.put("/{young_person_id}/identity-profile")
@@ -571,41 +584,12 @@ def upsert_identity_profile_route(
     payload: IdentityProfilePayload,
     current_user=Depends(get_current_user),
 ):
-    _assert_can_edit(current_user)
-    _load_and_check_young_person(young_person_id, current_user)
-
-    try:
-        row = YoungPersonService.upsert_section(
-            young_person_id=young_person_id,
-            section="identity_profile",
-            data=payload.model_dump(exclude_none=True),
-        )
-        return {
-            "ok": True,
-            "identity_profile": row,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save identity profile: {str(e)}")
+    return _upsert_section_response(young_person_id, current_user, "identity_profile", "identity_profile", payload)
 
 
 @router.get("/{young_person_id}/education-profile")
-def get_education_profile_route(
-    young_person_id: int,
-    current_user=Depends(get_current_user),
-):
-    try:
-        _load_and_check_young_person(young_person_id, current_user)
-        row = YoungPersonService.get_section(young_person_id, "education_profile")
-        return {
-            "ok": True,
-            "education_profile": row or {},
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load education profile: {str(e)}")
+def get_education_profile_route(young_person_id: int, current_user=Depends(get_current_user)):
+    return _get_section_response(young_person_id, current_user, "education_profile", "education_profile")
 
 
 @router.put("/{young_person_id}/education-profile")
@@ -614,41 +598,12 @@ def upsert_education_profile_route(
     payload: EducationProfilePayload,
     current_user=Depends(get_current_user),
 ):
-    _assert_can_edit(current_user)
-    _load_and_check_young_person(young_person_id, current_user)
-
-    try:
-        row = YoungPersonService.upsert_section(
-            young_person_id=young_person_id,
-            section="education_profile",
-            data=payload.model_dump(exclude_none=True),
-        )
-        return {
-            "ok": True,
-            "education_profile": row,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save education profile: {str(e)}")
+    return _upsert_section_response(young_person_id, current_user, "education_profile", "education_profile", payload)
 
 
 @router.get("/{young_person_id}/health-profile")
-def get_health_profile_route(
-    young_person_id: int,
-    current_user=Depends(get_current_user),
-):
-    try:
-        _load_and_check_young_person(young_person_id, current_user)
-        row = YoungPersonService.get_section(young_person_id, "health_profile")
-        return {
-            "ok": True,
-            "health_profile": row or {},
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load health profile: {str(e)}")
+def get_health_profile_route(young_person_id: int, current_user=Depends(get_current_user)):
+    return _get_section_response(young_person_id, current_user, "health_profile", "health_profile")
 
 
 @router.put("/{young_person_id}/health-profile")
@@ -657,41 +612,12 @@ def upsert_health_profile_route(
     payload: HealthProfilePayload,
     current_user=Depends(get_current_user),
 ):
-    _assert_can_edit(current_user)
-    _load_and_check_young_person(young_person_id, current_user)
-
-    try:
-        row = YoungPersonService.upsert_section(
-            young_person_id=young_person_id,
-            section="health_profile",
-            data=payload.model_dump(exclude_none=True),
-        )
-        return {
-            "ok": True,
-            "health_profile": row,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save health profile: {str(e)}")
+    return _upsert_section_response(young_person_id, current_user, "health_profile", "health_profile", payload)
 
 
 @router.get("/{young_person_id}/legal-status")
-def get_legal_status_route(
-    young_person_id: int,
-    current_user=Depends(get_current_user),
-):
-    try:
-        _load_and_check_young_person(young_person_id, current_user)
-        row = YoungPersonService.get_section(young_person_id, "legal_status")
-        return {
-            "ok": True,
-            "legal_status": row or {},
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load legal status: {str(e)}")
+def get_legal_status_route(young_person_id: int, current_user=Depends(get_current_user)):
+    return _get_section_response(young_person_id, current_user, "legal_status", "legal_status")
 
 
 @router.put("/{young_person_id}/legal-status")
@@ -700,46 +626,12 @@ def upsert_legal_status_route(
     payload: LegalStatusPayload,
     current_user=Depends(get_current_user),
 ):
-    _assert_can_edit(current_user)
-    _load_and_check_young_person(young_person_id, current_user)
-
-    try:
-        actor_user_id = _safe_int(current_user.get("user_id"))
-        data = payload.model_dump(exclude_none=True)
-        if not data.get("created_by"):
-            data["created_by"] = actor_user_id
-
-        row = YoungPersonService.upsert_section(
-            young_person_id=young_person_id,
-            section="legal_status",
-            data=data,
-        )
-        return {
-            "ok": True,
-            "legal_status": row,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save legal status: {str(e)}")
+    return _upsert_section_response(young_person_id, current_user, "legal_status", "legal_status", payload)
 
 
 @router.get("/{young_person_id}/formulations")
-def get_formulation_route(
-    young_person_id: int,
-    current_user=Depends(get_current_user),
-):
-    try:
-        _load_and_check_young_person(young_person_id, current_user)
-        row = YoungPersonService.get_section(young_person_id, "formulation")
-        return {
-            "ok": True,
-            "formulation": row or {},
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load formulation: {str(e)}")
+def get_formulation_route(young_person_id: int, current_user=Depends(get_current_user)):
+    return _get_section_response(young_person_id, current_user, "formulation", "formulation")
 
 
 @router.put("/{young_person_id}/formulations")
@@ -748,25 +640,4 @@ def upsert_formulation_route(
     payload: FormulationPayload,
     current_user=Depends(get_current_user),
 ):
-    _assert_can_edit(current_user)
-    _load_and_check_young_person(young_person_id, current_user)
-
-    try:
-        actor_user_id = _safe_int(current_user.get("user_id"))
-        data = payload.model_dump(exclude_none=True)
-        if not data.get("created_by"):
-            data["created_by"] = actor_user_id
-
-        row = YoungPersonService.upsert_section(
-            young_person_id=young_person_id,
-            section="formulation",
-            data=data,
-        )
-        return {
-            "ok": True,
-            "formulation": row,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save formulation: {str(e)}")
+    return _upsert_section_response(young_person_id, current_user, "formulation", "formulation", payload)
