@@ -8,6 +8,7 @@ import {
   renderAssistantControllerPanels,
 } from "../ui/assistant-controller.js";
 import {
+  mapDailyNote,
   mapSupportPlan,
   mapAppointment,
   mapChronologyEvent,
@@ -131,6 +132,7 @@ function getPrimaryDate(item = {}) {
     item.event_datetime ||
     item.contact_datetime ||
     item.review_date ||
+    item.date ||
     item.created_at ||
     item.updated_at ||
     null
@@ -651,6 +653,8 @@ async function fetchAll(id, search = {}) {
   const shouldFetchChronology =
     !recordTypeBucket || recordTypeBucket === "chronology";
   const shouldFetchTasks = !recordTypeBucket || recordTypeBucket === "chronology";
+  const shouldFetchDailyNotes =
+    !recordTypeBucket || recordTypeBucket === "chronology";
   const shouldFetchHealth = !recordTypeBucket || recordTypeBucket === "health";
   const shouldFetchEducation =
     !recordTypeBucket || recordTypeBucket === "education";
@@ -661,17 +665,35 @@ async function fetchAll(id, search = {}) {
     appointments,
     chronology,
     tasks,
+    dailyNotes,
     health,
     education,
     family,
   ] = await Promise.all([
-    shouldFetchPlans ? safe(`/young-people/${id}/plans`) : Promise.resolve({ items: [] }),
-    shouldFetchAppointments ? safe(`/young-people/${id}/appointments`) : Promise.resolve({ items: [] }),
-    shouldFetchChronology ? safe(`/young-people/${id}/timeline`) : Promise.resolve({ items: [] }),
-    shouldFetchTasks ? safe(`/young-people/${id}/tasks`) : Promise.resolve({ items: [] }),
-    shouldFetchHealth ? safe(`/young-people/${id}/health`) : Promise.resolve({ items: [] }),
-    shouldFetchEducation ? safe(`/young-people/${id}/education`) : Promise.resolve({ items: [] }),
-    shouldFetchFamily ? safe(`/young-people/${id}/family`) : Promise.resolve({ items: [] }),
+    shouldFetchPlans
+      ? safe(`/young-people/${id}/plans`)
+      : Promise.resolve({ items: [] }),
+    shouldFetchAppointments
+      ? safe(`/young-people/${id}/appointments`)
+      : Promise.resolve({ items: [] }),
+    shouldFetchChronology
+      ? safe(`/young-people/${id}/timeline`)
+      : Promise.resolve({ items: [] }),
+    shouldFetchTasks
+      ? safe(`/young-people/${id}/tasks`)
+      : Promise.resolve({ items: [] }),
+    shouldFetchDailyNotes
+      ? safe(`/young-people/${id}/daily-notes`)
+      : Promise.resolve({ items: [] }),
+    shouldFetchHealth
+      ? safe(`/young-people/${id}/health`)
+      : Promise.resolve({ items: [] }),
+    shouldFetchEducation
+      ? safe(`/young-people/${id}/education`)
+      : Promise.resolve({ items: [] }),
+    shouldFetchFamily
+      ? safe(`/young-people/${id}/family`)
+      : Promise.resolve({ items: [] }),
   ]);
 
   return {
@@ -713,6 +735,10 @@ async function fetchAll(id, search = {}) {
       title: item.title || item.task || "Action",
     })),
 
+    daily_notes: makeArray(
+      dailyNotes.items || dailyNotes.daily_notes || dailyNotes.records || []
+    ).map(mapDailyNote),
+
     health: makeArray(
       health.items || health.health_records || []
     ).map(mapHealthRecord),
@@ -746,6 +772,7 @@ function applySearch(data, search = {}) {
     appointments: filterCollection(data.appointments, search),
     chronology: filterCollection(data.chronology, search),
     tasks: filterCollection(data.tasks, search),
+    daily_notes: filterCollection(data.daily_notes, search),
     health: filterCollection(data.health, search),
     education: filterCollection(data.education, search),
     family: filterCollection(data.family, search),
@@ -765,6 +792,9 @@ function buildTodayItems(data) {
           item.created_at
       )
     ),
+    ...data.daily_notes.filter((item) =>
+      isToday(item.record_date || item.date || item.created_at)
+    ),
     ...data.health.filter((item) => isToday(item.event_datetime || item.record_date)),
     ...data.education.filter((item) => isToday(item.record_date)),
     ...data.family.filter((item) => isToday(item.contact_datetime)),
@@ -775,6 +805,7 @@ function buildRecentItems(data) {
   return dedupeById(
     sortNewestFirst(
       [
+        ...data.daily_notes,
         ...data.chronology,
         ...data.tasks,
         ...data.health,
@@ -785,6 +816,7 @@ function buildRecentItems(data) {
       [
         "event_datetime",
         "record_date",
+        "date",
         "contact_datetime",
         "review_date",
         "created_at",
@@ -825,10 +857,7 @@ function buildUrgentItems(data) {
   const urgentTasks = data.tasks.filter((item) => {
     const status = normaliseText(item.status);
     const severity = getSeverity(item);
-    return (
-      status === "overdue" ||
-      ["high", "critical"].includes(severity)
-    );
+    return status === "overdue" || ["high", "critical"].includes(severity);
   });
 
   return dedupeById([...urgentPlans, ...urgentChronology, ...urgentTasks]).slice(
