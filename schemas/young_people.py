@@ -1,9 +1,3 @@
-This young_people.py schema is mostly okay, but I’d harden it before we move on.
-
-Main issue: it trusts raw strings too much and does not protect key fields like placement_status, summary_risk_level, names, NHS number, etc.
-
-Use this as the improved version:
-
 from datetime import date, datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -149,5 +143,3 @@ class YoungPersonRead(YoungPersonBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
-
-Next send staff_journal.py.
