@@ -164,7 +164,12 @@ export function inferAssistantAnalysisLens({
     return "manager";
   }
 
-  if (safeIntent === "handover" || /handover|workspace/.test(safeSection)) {
+  if (
+    safeIntent === "handover" ||
+    /handover|workspace|daily-notes|daily-life|keywork|family|education|health|timeline|chronology/.test(
+      safeSection
+    )
+  ) {
     return "shift";
   }
 
