@@ -1,16 +1,11 @@
-/* =========================================
-   INDICARE COMPOSER — BEST IN CLASS VERSION
-   SCCIF • OFSTED • SAFEGUARDING READY
-   ========================================= /
-
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiSend } from "../core/api.js";
-import { escapeHtml, toDateInputValue, toDateTimeLocalValue } from "../core/utils.js";
-
-/ =========================================
-   CORE HELPERS
-   ========================================= /
+import {
+  escapeHtml,
+  toDateInputValue,
+  toDateTimeLocalValue,
+} from "../core/utils.js";
 
 function today() {
   return toDateInputValue(new Date());
@@ -20,123 +15,231 @@ function now() {
   return toDateTimeLocalValue(new Date());
 }
 
-/ =========================================
-   FIELD BUILDER (EXPLANATIONS ABOVE)
-   ========================================= /
-
 function field(f) {
-  return     <div class="field ${f.full ? "full" : ""}">       <div class="label">${escapeHtml(f.label)}</div>       <div class="description">${escapeHtml(f.desc || "")}</div>              ${         f.type === "textarea"           ?<textarea name="${f.name}" rows="${f.rows || 4}">${escapeHtml(f.value || "")}</textarea>          : f.type === "select"           ?<select name="${f.name}">
-              ${f.options
-                .map(
-                  (o) =>
-                    <option value="${o.value}" ${o.value === f.value ? "selected" : ""}>${o.label}</option>
-                )
-                .join("")}
-            </select>          : f.type === "checkbox"           ?<input type="checkbox" name="${f.name}" ${f.value ? "checked" : ""}/>          :<input type="${f.type || "text"}" name="${f.name}" value="${escapeHtml(f.value || "")}" />      }     </div>  ;
+  const fullClass = f.full ? "full" : "";
+  const description = f.desc
+    ? `<div class="description">${escapeHtml(f.desc)}</div>`
+    : "";
+
+  let control = "";
+
+  if (f.type === "textarea") {
+    control = `<textarea name="${escapeHtml(f.name)}" rows="${f.rows || 4}">${escapeHtml(
+      f.value || ""
+    )}</textarea>`;
+  } else if (f.type === "select") {
+    control = `
+      <select name="${escapeHtml(f.name)}">
+        ${(f.options || [])
+          .map(
+            (o) =>
+              `<option value="${escapeHtml(o.value)}" ${
+                o.value === f.value ? "selected" : ""
+              }>${escapeHtml(o.label)}</option>`
+          )
+          .join("")}
+      </select>
+    `;
+  } else if (f.type === "checkbox") {
+    control = `<input type="checkbox" name="${escapeHtml(f.name)}" ${
+      f.value ? "checked" : ""
+    } />`;
+  } else {
+    control = `<input type="${escapeHtml(f.type || "text")}" name="${escapeHtml(
+      f.name
+    )}" value="${escapeHtml(f.value || "")}" />`;
+  }
+
+  return `
+    <div class="field ${fullClass}">
+      <div class="label">${escapeHtml(f.label)}</div>
+      ${description}
+      ${control}
+    </div>
+  `;
 }
 
 function section(title, desc, fields) {
-  return     <section class="section">       <h3>${escapeHtml(title)}</h3>       <p class="section-desc">${escapeHtml(desc)}</p>       ${fields.map(field).join("")}     </section>  ;
+  return `
+    <section class="section">
+      <h3>${escapeHtml(title)}</h3>
+      <p class="section-desc">${escapeHtml(desc)}</p>
+      ${fields.map(field).join("")}
+    </section>
+  `;
 }
 
-/ =========================================
-   DAILY RECORD (OUTSTANDING LEVEL)
-   ========================================= /
-
-function dailyRecord(item = {}) {
+function dailyRecord() {
   return {
     title: "Daily Record",
-    intro: "This record should clearly explain the day, the young person’s experience, and what must happen next. It must be clear, factual, and defensible.",
+    intro:
+      "This record should clearly explain the day, the young person’s experience, and what must happen next.",
+    html: `
+      ${section("Basic Info", "Core shift details", [
+        { name: "date", label: "Date", type: "date", value: today(), desc: "Date of this record" },
+        { name: "shift", label: "Shift", desc: "Day / Late / Night" },
+      ])}
 
-    html:       ${section("Basic Info","Core shift details",[         {name:"date",label:"Date",type:"date",value:today(),desc:"Date of this record"},         {name:"shift",label:"Shift",desc:"Day / Late / Night"}       ])}        ${section("What happened (FACT)","Write a clear timeline. No opinion.",[         {name:"chronology",label:"Chronology",type:"textarea",rows:5,desc:"Step-by-step account of events",full:true}       ])}        ${section("Child experience (MEANING)","What this meant for the young person",[         {name:"presentation",label:"Presentation",type:"textarea",desc:"Mood, behaviour, regulation",full:true},         {name:"voice",label:"Child Voice",type:"textarea",desc:"Exact words or communication",full:true},         {name:"analysis",label:"What this may mean",type:"textarea",desc:"What is the behaviour communicating?",full:true}       ])}        ${section("Staff response (ACTION)","What staff did and why",[         {name:"response",label:"Staff Response",type:"textarea",desc:"Explain decisions and actions",full:true}       ])}        ${section("Impact & Risk","What changed and current risk",[         {name:"impact",label:"Impact on child",type:"textarea",desc:"What changed for them?",full:true},         {name:"risk",label:"Risk update",type:"textarea",desc:"Risk increased, decreased or same?",full:true}       ])}        ${section("Next steps (ACCOUNTABILITY)","Clear follow-up",[         {name:"actions",label:"Actions Required",type:"textarea",desc:"Who does what and when",full:true},         {name:"manager",label:"Manager Oversight",type:"textarea",desc:"Management review / challenge",full:true}       ])}    
+      ${section("What happened", "Write a clear timeline. No opinion.", [
+        { name: "chronology", label: "Chronology", type: "textarea", rows: 5, desc: "Step-by-step account of events", full: true },
+      ])}
+
+      ${section("Child experience", "What this meant for the young person", [
+        { name: "presentation", label: "Presentation", type: "textarea", desc: "Mood, behaviour, regulation", full: true },
+        { name: "voice", label: "Child Voice", type: "textarea", desc: "Exact words or communication", full: true },
+        { name: "analysis", label: "What this may mean", type: "textarea", desc: "What is the behaviour communicating?", full: true },
+      ])}
+
+      ${section("Staff response", "What staff did and why", [
+        { name: "response", label: "Staff Response", type: "textarea", desc: "Explain decisions and actions", full: true },
+      ])}
+
+      ${section("Impact & Risk", "What changed and current risk", [
+        { name: "impact", label: "Impact on child", type: "textarea", full: true },
+        { name: "risk", label: "Risk update", type: "textarea", full: true },
+      ])}
+
+      ${section("Next steps", "Clear follow-up", [
+        { name: "actions", label: "Actions Required", type: "textarea", full: true },
+        { name: "manager", label: "Manager Oversight", type: "textarea", full: true },
+      ])}
+    `,
   };
 }
 
-/ =========================================
-   INCIDENT (SAFEGUARDING GRADE)
-   ========================================= /
-
-function incidentForm(item = {}) {
+function incidentForm() {
   return {
     title: "Incident Record",
-    intro: "This must clearly show what happened, how risk was managed, and why decisions were made.",
+    intro:
+      "This must clearly show what happened, how risk was managed, and why decisions were made.",
+    html: `
+      ${section("Incident Details", "Basic info", [
+        { name: "datetime", label: "Date & Time", type: "datetime-local", value: now() },
+        { name: "type", label: "Incident Type" },
+      ])}
 
-    html:       ${section("Incident Details","Basic info",[         {name:"datetime",label:"Date & Time",type:"datetime-local",value:now(),desc:"Exact time"},         {name:"type",label:"Incident Type",desc:"Short category"}       ])}        ${section("Factual Account","Clear, neutral, chronological",[         {name:"description",label:"What happened",type:"textarea",rows:5,desc:"Facts only",full:true}       ])}        ${section("Context","What led to incident",[         {name:"antecedent",label:"Before incident",type:"textarea",desc:"Triggers/events",full:true}       ])}        ${section("Child Experience","Their perspective",[         {name:"presentation",label:"Presentation",type:"textarea",desc:"Behaviour/emotion",full:true},         {name:"voice",label:"Child Voice",type:"textarea",desc:"What they said",full:true}       ])}        ${section("Response","What staff did",[         {name:"response",label:"Staff Response",type:"textarea",desc:"Actions taken",full:true}       ])}        ${section("Outcome","End result",[         {name:"outcome",label:"Outcome",type:"textarea",desc:"Final position",full:true}       ])}        ${section("Safeguarding","Compliance flags",[         {name:"police",label:"Police involved",type:"checkbox",desc:"Tick if yes"},         {name:"ofsted",label:"Ofsted notified",type:"checkbox",desc:"Tick if required"}       ])}    
+      ${section("Factual Account", "Clear, neutral, chronological", [
+        { name: "description", label: "What happened", type: "textarea", rows: 5, full: true },
+      ])}
+
+      ${section("Context", "What led to incident", [
+        { name: "antecedent", label: "Before incident", type: "textarea", full: true },
+      ])}
+
+      ${section("Child Experience", "Their perspective", [
+        { name: "presentation", label: "Presentation", type: "textarea", full: true },
+        { name: "voice", label: "Child Voice", type: "textarea", full: true },
+      ])}
+
+      ${section("Response", "What staff did", [
+        { name: "response", label: "Staff Response", type: "textarea", full: true },
+      ])}
+
+      ${section("Outcome", "End result", [
+        { name: "outcome", label: "Outcome", type: "textarea", full: true },
+      ])}
+
+      ${section("Safeguarding", "Compliance flags", [
+        { name: "police", label: "Police involved", type: "checkbox" },
+        { name: "ofsted", label: "Ofsted notified", type: "checkbox" },
+      ])}
+    `,
   };
 }
 
-/ =========================================
-   KEYWORK (THERAPEUTIC QUALITY)
-   ========================================= /
-
-function keyworkForm(item = {}) {
+function keyworkForm() {
   return {
     title: "Keywork Session",
     intro: "This should show meaningful work, reflection, and agreed change.",
+    html: `
+      ${section("Session Info", "Basic details", [
+        { name: "date", label: "Date", type: "date", value: today() },
+        { name: "topic", label: "Topic" },
+      ])}
 
-    html:       ${section("Session Info","Basic details",[         {name:"date",label:"Date",type:"date",value:today(),desc:"Session date"},         {name:"topic",label:"Topic",desc:"Focus of session"}       ])}        ${section("Discussion","What happened",[         {name:"discussion",label:"Discussion",type:"textarea",desc:"What was explored",full:true}       ])}        ${section("Child Voice","Young person perspective",[         {name:"voice",label:"Child Voice",type:"textarea",desc:"Direct voice",full:true}       ])}        ${section("Reflection","Meaning",[         {name:"reflection",label:"Analysis",type:"textarea",desc:"What this means",full:true}       ])}        ${section("Outcome","Next steps",[         {name:"actions",label:"Actions Agreed",type:"textarea",desc:"Clear plan",full:true}       ])}    
+      ${section("Discussion", "What happened", [
+        { name: "discussion", label: "Discussion", type: "textarea", full: true },
+      ])}
+
+      ${section("Child Voice", "Young person perspective", [
+        { name: "voice", label: "Child Voice", type: "textarea", full: true },
+      ])}
+
+      ${section("Reflection", "Meaning", [
+        { name: "reflection", label: "Analysis", type: "textarea", full: true },
+      ])}
+
+      ${section("Outcome", "Next steps", [
+        { name: "actions", label: "Actions Agreed", type: "textarea", full: true },
+      ])}
+    `,
   };
 }
 
-/ =========================================
-   FORM ROUTER
-   ========================================= /
+function getForm(type) {
+  if (type === "daily_note") return dailyRecord();
+  if (type === "incident") return incidentForm();
+  if (type === "keywork") return keyworkForm();
 
-function getForm(type, item) {
-  if (type === "daily_note") return dailyRecord(item);
-  if (type === "incident") return incidentForm(item);
-  if (type === "keywork") return keyworkForm(item);
-
-  return { title:"Record", intro:"Complete form", html:"" };
+  return { title: "Record", intro: "Complete form", html: "" };
 }
-
-/ =========================================
-   OPEN
-   ========================================= /
 
 export function openComposer(type, item = {}) {
   const form = getForm(type, item);
 
-  els.composerTitle.textContent = form.title;
-  els.composerIntro.textContent = form.intro;
-  els.composerFields.innerHTML = form.html;
+  if (els.composerTitle) els.composerTitle.textContent = form.title;
+  if (els.composerIntro) els.composerIntro.textContent = form.intro;
+  if (els.composerFields) els.composerFields.innerHTML = form.html;
 
-  els.composerPanel.classList.remove("hidden");
+  els.composerPanel?.classList.remove("hidden");
 }
-
-/ =========================================
-   SAVE (WITH QUALITY CHECK)
-   ========================================= */
 
 function qualityCheck(data) {
   const issues = [];
 
-  if (!data.chronology && !data.description)
+  if (!data.chronology && !data.description) {
     issues.push("Missing factual account");
+  }
 
-  if (!data.voice)
+  if (!data.voice) {
     issues.push("Missing child voice");
+  }
 
-  if (!data.actions)
+  if (!data.actions) {
     issues.push("Missing actions");
+  }
 
   return issues;
 }
 
+function getEndpointForType(type) {
+  const youngPersonId = state.youngPersonId;
+
+  if (type === "daily_note") return `/young-people/${youngPersonId}/daily-notes`;
+  if (type === "incident") return `/young-people/${youngPersonId}/incidents`;
+  if (type === "keywork") return `/young-people/${youngPersonId}/keywork`;
+
+  return `/api/${type}`;
+}
+
 export async function saveComposer(type) {
   const form = els.composerForm;
+
+  if (!form) {
+    throw new Error("Composer form is not available.");
+  }
+
   const data = Object.fromEntries(new FormData(form));
 
   const issues = qualityCheck(data);
-
   if (issues.length) {
     console.warn("Quality issues:", issues);
   }
 
-  await apiSend(/api/${type}, "POST", {
+  await apiSend(getEndpointForType(type), "POST", {
     ...data,
     young_person_id: state.youngPersonId,
   });
 
-  els.composerPanel.classList.add("hidden");
+  els.composerPanel?.classList.add("hidden");
 }
