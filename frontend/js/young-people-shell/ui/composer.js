@@ -193,8 +193,19 @@ export function openComposer(type, item = {}) {
 
   els.composerPanel?.classList.remove("hidden");
 }
+
 export function openComposerFor(type, item = {}) {
   return openComposer(type, item);
+}
+
+export function closeComposer() {
+  els.composerPanel?.classList.add("hidden");
+}
+
+export function resetComposer() {
+  if (els.composerForm) els.composerForm.reset();
+  if (els.composerFields) els.composerFields.innerHTML = "";
+  closeComposer();
 }
 
 function qualityCheck(data) {
@@ -244,5 +255,5 @@ export async function saveComposer(type) {
     young_person_id: state.youngPersonId,
   });
 
-  els.composerPanel?.classList.add("hidden");
+  closeComposer();
 }
