@@ -176,26 +176,32 @@ function keyworkForm() {
   };
 }
 
-function getForm(type) {
-  if (type === "daily_note") return dailyRecord();
-  if (type === "incident") return incidentForm();
-  if (type === "keywork") return keyworkForm();
+function getForm(type, item = {}) {
+  if (type === "daily_note") return dailyRecord(item);
+  if (type === "incident") return incidentForm(item);
+  if (type === "keywork") return keyworkForm(item);
 
   return { title: "Record", intro: "Complete form", html: "" };
 }
 
 export function openComposer(type, item = {}) {
+  state.composerRecordType = type;
+  state.composerEditItem = item || null;
+  state.composerMode = item?.id ? "edit" : "create";
+
   const form = getForm(type, item);
 
   if (els.composerTitle) els.composerTitle.textContent = form.title;
-  if (els.composerIntro) els.composerIntro.textContent = form.intro;
+  if (els.composerGuidanceText) els.composerGuidanceText.textContent = form.intro;
   if (els.composerFields) els.composerFields.innerHTML = form.html;
 
   els.composerPanel?.classList.remove("hidden");
 }
 
-export function openComposerFor(type, item = {}) {
-  return openComposer(type, item);
+export function openComposerFor(type, mode = "create", item = {}) {
+  openComposer(type, item);
+  state.composerMode = mode;
+  return state.composerEditItem;
 }
 
 export function closeComposer() {
@@ -232,27 +238,43 @@ function getEndpointForType(type) {
   if (type === "daily_note") return `/young-people/${youngPersonId}/daily-notes`;
   if (type === "incident") return `/young-people/${youngPersonId}/incidents`;
   if (type === "keywork") return `/young-people/${youngPersonId}/keywork`;
+  if (type === "risk") return `/young-people/${youngPersonId}/risk`;
+  if (type === "safeguarding_record" || type === "safeguarding") return `/young-people/${youngPersonId}/safeguarding`;
+  if (type === "health_record") return `/young-people/${youngPersonId}/health`;
+  if (type === "education_record") return `/young-people/${youngPersonId}/education`;
+  if (type === "family_contact") return `/young-people/${youngPersonId}/family`;
 
-  return `/api/${type}`;
+  return `/young-people/${youngPersonId}/records/${type}`;
 }
 
-export async function saveComposer(type) {
+export async function saveComposer(mode = "draft") {
   const form = els.composerForm;
 
   if (!form) {
     throw new Error("Composer form is not available.");
   }
 
+  const type = state.composerRecordType;
+
+  if (!type) {
+    throw new Error("No record type selected.");
+  }
+
+  if (!state.youngPersonId) {
+    throw new Error("Select a child or young person first.");
+  }
+
   const data = Object.fromEntries(new FormData(form));
 
   const issues = qualityCheck(data);
-  if (issues.length) {
-    console.warn("Quality issues:", issues);
+  if (issues.length && mode === "submit") {
+    throw new Error(`Please complete: ${issues.join(", ")}`);
   }
 
   await apiSend(getEndpointForType(type), "POST", {
     ...data,
     young_person_id: state.youngPersonId,
+    workflow_status: mode === "submit" ? "submitted" : "draft",
   });
 
   closeComposer();
