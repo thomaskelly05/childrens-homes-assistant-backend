@@ -42,6 +42,19 @@ function renderEmptyState({
 function renderPhoto(item = {}) {
   const name = getDisplayName(item);
   const initials = initialsFromName(name);
+  const photoUrl = item.photo_url || item.profile_photo_url || "";
+
+  if (photoUrl) {
+    return `
+      <img
+        class="selector-card-photo"
+        src="${escapeHtml(photoUrl)}"
+        alt=""
+        loading="lazy"
+      />
+    `;
+  }
+
   return `<div class="selector-card-photo-fallback">${escapeHtml(initials)}</div>`;
 }
 
@@ -159,12 +172,16 @@ function getResolvedSection() {
 }
 
 function showSelectorScreen() {
+  els.workspacePanel?.classList.add("hidden");
   els.workspaceScreen?.classList.add("hidden");
+  els.selectorPanel?.classList.remove("hidden");
   els.selectorScreen?.classList.remove("hidden");
 }
 
 function showWorkspaceScreen() {
+  els.selectorPanel?.classList.add("hidden");
   els.selectorScreen?.classList.add("hidden");
+  els.workspacePanel?.classList.remove("hidden");
   els.workspaceScreen?.classList.remove("hidden");
 }
 
