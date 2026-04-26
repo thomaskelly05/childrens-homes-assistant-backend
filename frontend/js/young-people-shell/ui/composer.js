@@ -193,6 +193,9 @@ export function openComposer(type, item = {}) {
 
   els.composerPanel?.classList.remove("hidden");
 }
+export function openComposerFor(type, item = {}) {
+  return openComposer(type, item);
+}
 
 function qualityCheck(data) {
   const issues = [];
