@@ -811,9 +811,47 @@ export function buildAssistantEvidencePayload(payload = {}) {
   };
 }
 
+export function mapList(items = [], mapper = (x) => x) {
+  return safeArray(items).map((item) => mapper(safeObject(item)));
+}
+
+export function mapRecordsToEvidence(items = [], mapper = (x) => x) {
+  return mapList(items, mapper).map((item) => ({
+    ...item,
+    evidence_id: item.id || item.record_id || item.source_id || null,
+    evidence_type: item.record_type || item.type || "record",
+  }));
+}
+
+export function mapReadinessEvidence(raw = {}) {
+  const safe = safeObject(raw);
+
+  return [
+    ...mapList(safe.compliance_items || safe.items || [], mapComplianceItem),
+    ...mapList(safe.statutory_documents || safe.documents || [], mapDocumentRecord),
+    ...mapList(safe.tasks || safe.actions || [], mapTaskRecord),
+  ];
+}
+
+export function mapManagerReviewEvidence(raw = {}) {
+  const safe = safeObject(raw);
+
+  return [
+    ...mapList(safe.manager_actions || [], mapTaskRecord),
+    ...mapList(safe.compliance_items || [], mapComplianceItem),
+    ...mapList(safe.incidents || [], mapIncidentRecord),
+    ...mapList(safe.risk_assessments || safe.risks || [], mapRiskAssessment),
+    ...mapList(safe.tasks || [], mapTaskRecord),
+  ];
+}
+
 export default {
   inferSectionFromRecordType,
   mapRecordByType,
+  mapList,
+  mapRecordsToEvidence,
+  mapReadinessEvidence,
+  mapManagerReviewEvidence,
   buildAssistantEvidenceSet,
   buildAssistantEvidencePayload,
   summariseEvidenceSet,
