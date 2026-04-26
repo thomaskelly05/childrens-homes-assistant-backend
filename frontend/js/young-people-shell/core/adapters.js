@@ -845,6 +845,10 @@ export function mapManagerReviewEvidence(raw = {}) {
   ];
 }
 
+export function toAssistantEvidence(payload = {}) {
+  return buildAssistantEvidencePayload(payload);
+}
+
 export default {
   inferSectionFromRecordType,
   mapRecordByType,
@@ -852,6 +856,7 @@ export default {
   mapRecordsToEvidence,
   mapReadinessEvidence,
   mapManagerReviewEvidence,
+  toAssistantEvidence,
   buildAssistantEvidenceSet,
   buildAssistantEvidencePayload,
   summariseEvidenceSet,
