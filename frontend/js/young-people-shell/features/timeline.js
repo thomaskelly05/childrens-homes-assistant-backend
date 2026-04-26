@@ -868,3 +868,4 @@ export async function loadTimeline() {
     });
   }
 }
+export const loadCurrentView = loadTimeline;
