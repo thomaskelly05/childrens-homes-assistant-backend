@@ -2,7 +2,37 @@ export const DEFAULT_SECTION = "workspace";
 export const DEFAULT_SCOPE = "child";
 export const DEFAULT_ROLE = "staff";
 
-const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
+export const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
+
+export const CANONICAL_RECORD_TYPES = Object.freeze({
+  daily_note: "daily_note",
+  incident: "incident",
+  safeguarding: "safeguarding",
+  risk: "risk",
+  keywork: "keywork",
+  education: "education",
+  health: "health",
+  family: "family",
+  document: "document",
+  task: "task",
+  chronology: "chronology",
+});
+
+export const WORKSPACE_RECORD_TYPES = Object.freeze({
+  workspace: null,
+  "daily-notes": CANONICAL_RECORD_TYPES.daily_note,
+  incidents: CANONICAL_RECORD_TYPES.incident,
+  safeguarding: CANONICAL_RECORD_TYPES.safeguarding,
+  risk: CANONICAL_RECORD_TYPES.risk,
+  keywork: CANONICAL_RECORD_TYPES.keywork,
+  education: CANONICAL_RECORD_TYPES.education,
+  health: CANONICAL_RECORD_TYPES.health,
+  family: CANONICAL_RECORD_TYPES.family,
+  documents: CANONICAL_RECORD_TYPES.document,
+  tasks: CANONICAL_RECORD_TYPES.task,
+  timeline: CANONICAL_RECORD_TYPES.chronology,
+});
+
 const VALID_READINESS_TABS = new Set([
   "overview",
   "judgements",
@@ -12,6 +42,12 @@ const VALID_READINESS_TABS = new Set([
   "briefing",
   "prep",
 ]);
+
+export function normaliseNumericId(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
 
 function getValidScope(scope) {
   const safeScope = String(scope || DEFAULT_SCOPE).trim().toLowerCase();
@@ -31,12 +67,6 @@ function getValidReadinessTab(tab = "overview") {
   return VALID_READINESS_TABS.has(safeTab) ? safeTab : "overview";
 }
 
-function normaliseNumericId(value) {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
 function normaliseHomeIds(homeIds = []) {
   if (!Array.isArray(homeIds)) return [];
   return [
@@ -53,7 +83,9 @@ function ensureArray(value, fallback = []) {
 }
 
 function ensureObject(value, fallback = {}) {
-  return value && typeof value === "object" ? value : fallback;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : fallback;
 }
 
 export function createAssistantMeta() {
@@ -178,6 +210,8 @@ function createContextState() {
     homeId: null,
     providerId: null,
     allowedHomeIds: [],
+    homes: [],
+    provider: null,
     currentUser: null,
     userId: null,
     staffId: null,
@@ -260,18 +294,14 @@ function ensureAssistantMeta() {
   );
   state.assistantMeta.chronology = ensureArray(state.assistantMeta.chronology);
   state.assistantMeta.facts = ensureObject(state.assistantMeta.facts);
-  state.assistantMeta.care_domains = ensureObject(
-    state.assistantMeta.care_domains
-  );
+  state.assistantMeta.care_domains = ensureObject(state.assistantMeta.care_domains);
   state.assistantMeta.evidence_summary = ensureObject(
     state.assistantMeta.evidence_summary
   );
   state.assistantMeta.evidence_sufficiency = ensureObject(
     state.assistantMeta.evidence_sufficiency
   );
-  state.assistantMeta.scrubber_meta = ensureObject(
-    state.assistantMeta.scrubber_meta
-  );
+  state.assistantMeta.scrubber_meta = ensureObject(state.assistantMeta.scrubber_meta);
   state.assistantMeta.scrubber_reverse_map = ensureObject(
     state.assistantMeta.scrubber_reverse_map
   );
@@ -306,7 +336,8 @@ export function initialiseStateGuards() {
   ensureAssistantMeta();
   ensureAssistantMessages();
 
-  state.allowedHomeIds = ensureArray(state.allowedHomeIds);
+  state.allowedHomeIds = normaliseHomeIds(state.allowedHomeIds);
+  state.homes = ensureArray(state.homes);
   state.youngPeople = ensureArray(state.youngPeople);
   state.currentSuggestions = ensureArray(state.currentSuggestions);
   state.suggestions = ensureArray(state.suggestions);
@@ -337,9 +368,7 @@ export function getDefaultScopeForRole(role = state.userRole) {
 
   if (safeRole === "ri" || safeRole === "admin") return "quality";
 
-  if (
-    ["manager", "registered_manager", "deputy_manager"].includes(safeRole)
-  ) {
+  if (["manager", "registered_manager", "deputy_manager"].includes(safeRole)) {
     return "home";
   }
 
@@ -354,6 +383,7 @@ function syncSectionAliases(section) {
   state.currentSection = section;
   state.activeSection = section;
   state.currentView = section;
+  state.activeRecordType = WORKSPACE_RECORD_TYPES[section] || null;
 }
 
 export function resetAssistantState() {
@@ -383,7 +413,7 @@ export function resetSuggestionState() {
 }
 
 export function resetActiveRecordState() {
-  state.activeRecordType = null;
+  state.activeRecordType = WORKSPACE_RECORD_TYPES[state.currentSection] || null;
   state.activeRecordItem = null;
   state.recordDrawerOpen = false;
 }
@@ -450,12 +480,81 @@ export function setUserRole(role) {
   state.userRole = normaliseUserRole(role);
 }
 
+export function setCurrentUserContext(user = null) {
+  const safeUser = user && typeof user === "object" ? user : null;
+
+  state.currentUser = safeUser;
+
+  state.userId = normaliseNumericId(
+    safeUser?.id ?? safeUser?.user_id ?? safeUser?.userId ?? null
+  );
+
+  state.staffId = normaliseNumericId(
+    safeUser?.staff_id ?? safeUser?.staffId ?? null
+  );
+
+  state.providerId = normaliseNumericId(
+    safeUser?.provider_id ?? safeUser?.providerId ?? state.providerId
+  );
+
+  const userHomeId = normaliseNumericId(
+    safeUser?.home_id ?? safeUser?.homeId ?? state.homeId
+  );
+
+  if (userHomeId) {
+    state.homeId = userHomeId;
+  }
+
+  const explicitAllowedHomes =
+    safeUser?.allowed_home_ids ||
+    safeUser?.allowedHomeIds ||
+    safeUser?.home_ids ||
+    safeUser?.homeIds ||
+    [];
+
+  const allowedHomeIds = normaliseHomeIds([
+    ...ensureArray(explicitAllowedHomes),
+    userHomeId,
+  ]);
+
+  if (allowedHomeIds.length) {
+    state.allowedHomeIds = allowedHomeIds;
+  }
+
+  if (Array.isArray(safeUser?.homes)) {
+    state.homes = safeUser.homes;
+    const idsFromHomes = normaliseHomeIds(
+      safeUser.homes.map((home) => home?.id ?? home?.home_id)
+    );
+    if (idsFromHomes.length) {
+      state.allowedHomeIds = normaliseHomeIds([
+        ...state.allowedHomeIds,
+        ...idsFromHomes,
+      ]);
+    }
+  }
+
+  if (safeUser?.provider && typeof safeUser.provider === "object") {
+    state.provider = safeUser.provider;
+  }
+
+  setUserRole(safeUser?.role || safeUser?.user_role || state.userRole);
+
+  if (!state.currentScope || state.currentScope === DEFAULT_SCOPE) {
+    setCurrentScope(getDefaultScopeForRole(state.userRole));
+  }
+
+  initialiseStateGuards();
+}
+
 export function setSelectedYoungPerson(person = null) {
   const safePerson = person || null;
 
   state.selectedYoungPerson = safePerson;
   state.youngPerson = safePerson;
-  state.youngPersonId = safePerson?.id || safePerson?.young_person_id || null;
+  state.youngPersonId = normaliseNumericId(
+    safePerson?.id ?? safePerson?.young_person_id ?? safePerson?.youngPersonId
+  );
 
   const personHomeId = normaliseNumericId(
     safePerson?.home_id ?? safePerson?.homeId ?? null
@@ -464,12 +563,33 @@ export function setSelectedYoungPerson(person = null) {
   if (personHomeId) {
     state.homeId = personHomeId;
   }
+
+  resetActiveRecordState();
+  resetSuggestionState();
+  clearAssistantLiveUpdates();
+}
+
+export function setYoungPeople(people = []) {
+  state.youngPeople = ensureArray(people);
 }
 
 export function clearSelectedYoungPerson() {
   state.youngPersonId = null;
   state.selectedYoungPerson = null;
   state.youngPerson = null;
+
+  resetActiveRecordState();
+  resetSuggestionState();
+}
+
+export function getSelectedYoungPersonId() {
+  return normaliseNumericId(
+    state.youngPersonId ||
+      state.selectedYoungPerson?.id ||
+      state.selectedYoungPerson?.young_person_id ||
+      state.youngPerson?.id ||
+      state.youngPerson?.young_person_id
+  );
 }
 
 export function setHomeContext(homeId = null) {
@@ -484,6 +604,16 @@ export function setAllowedHomeIds(homeIds = []) {
   state.allowedHomeIds = normaliseHomeIds(homeIds);
 }
 
+export function canAccessHomeId(homeId = null) {
+  const parsedHomeId = normaliseNumericId(homeId);
+  if (!parsedHomeId) return false;
+
+  const allowedHomeIds = normaliseHomeIds(state.allowedHomeIds);
+  if (!allowedHomeIds.length) return true;
+
+  return allowedHomeIds.includes(parsedHomeId);
+}
+
 export function setReadinessSelectedHomeId(homeId = null) {
   state.readinessSelectedHomeId = normaliseNumericId(homeId);
 }
@@ -494,23 +624,17 @@ export function setReadinessActiveTab(tab = "overview") {
 
 export function setReadinessLoading(isLoading = false) {
   state.readinessLoading = Boolean(isLoading);
-  if (isLoading) {
-    state.readinessError = null;
-  }
+  if (isLoading) state.readinessError = null;
 }
 
 export function setReadinessRefreshing(isRefreshing = false) {
   state.readinessRefreshing = Boolean(isRefreshing);
-  if (isRefreshing) {
-    state.readinessError = null;
-  }
+  if (isRefreshing) state.readinessError = null;
 }
 
 export function setReadinessSyncing(isSyncing = false) {
   state.readinessSyncing = Boolean(isSyncing);
-  if (isSyncing) {
-    state.readinessError = null;
-  }
+  if (isSyncing) state.readinessError = null;
 }
 
 export function setReadinessError(error = null) {
@@ -528,43 +652,16 @@ export function setReadinessData({
   prep72h = null,
   selectedHomeId = null,
 } = {}) {
-  if (Array.isArray(homeCards)) {
-    state.readinessHomeCards = homeCards;
-  }
+  if (Array.isArray(homeCards)) state.readinessHomeCards = homeCards;
+  if (header !== null) state.readinessHeader = header;
+  if (Array.isArray(sections)) state.readinessSections = sections;
+  if (Array.isArray(reasons)) state.readinessReasons = reasons;
+  if (Array.isArray(actions)) state.readinessActions = actions;
+  if (Array.isArray(tasks)) state.readinessTasks = tasks;
+  if (briefing !== null) state.readinessBriefing = briefing;
+  if (prep72h !== null) state.readinessPrep72h = prep72h;
 
-  if (header !== null) {
-    state.readinessHeader = header;
-  }
-
-  if (Array.isArray(sections)) {
-    state.readinessSections = sections;
-  }
-
-  if (Array.isArray(reasons)) {
-    state.readinessReasons = reasons;
-  }
-
-  if (Array.isArray(actions)) {
-    state.readinessActions = actions;
-  }
-
-  if (Array.isArray(tasks)) {
-    state.readinessTasks = tasks;
-  }
-
-  if (briefing !== null) {
-    state.readinessBriefing = briefing;
-  }
-
-  if (prep72h !== null) {
-    state.readinessPrep72h = prep72h;
-  }
-
-  if (
-    selectedHomeId !== null &&
-    selectedHomeId !== undefined &&
-    selectedHomeId !== ""
-  ) {
+  if (selectedHomeId !== null && selectedHomeId !== undefined && selectedHomeId !== "") {
     setReadinessSelectedHomeId(selectedHomeId);
   }
 
@@ -573,19 +670,12 @@ export function setReadinessData({
 }
 
 export function getCurrentReadinessHomeId() {
-  if (state.readinessSelectedHomeId) {
-    return state.readinessSelectedHomeId;
-  }
-
-  if (state.homeId) {
-    return state.homeId;
-  }
-
-  if (state.allowedHomeIds?.length) {
-    return state.allowedHomeIds[0];
-  }
-
-  return null;
+  return (
+    normaliseNumericId(state.readinessSelectedHomeId) ||
+    normaliseNumericId(state.homeId) ||
+    normaliseNumericId(state.allowedHomeIds?.[0]) ||
+    null
+  );
 }
 
 export function getBestAvailableHomeId() {
@@ -619,6 +709,7 @@ export function resolveAccessibleHomeId(preferredHomeId = null) {
     if (parsedPreferred && allowedHomeIds.includes(parsedPreferred)) {
       return parsedPreferred;
     }
+
     return allowedHomeIds[0];
   }
 
@@ -644,10 +735,7 @@ export function setAssistantScopeBundle(bundle = null) {
 
 export function setAssistantScopeBundleLoading(isLoading = false) {
   state.scopeBundleLoading = Boolean(isLoading);
-
-  if (isLoading) {
-    state.scopeBundleError = null;
-  }
+  if (isLoading) state.scopeBundleError = null;
 }
 
 export function setAssistantScopeBundleError(error = null) {
@@ -681,21 +769,10 @@ export function setAssistantDerivedState({
     state.assistantMeta.care_domains = care_domains;
   }
 
-  if (morning_brief !== null) {
-    state.latestMorningBrief = morning_brief;
-  }
-
-  if (manager_brief !== null) {
-    state.latestManagerBrief = manager_brief;
-  }
-
-  if (quality_brief !== null) {
-    state.latestQualityBrief = quality_brief;
-  }
-
-  if (live_summary !== null) {
-    state.assistantMeta.live_summary = live_summary;
-  }
+  if (morning_brief !== null) state.latestMorningBrief = morning_brief;
+  if (manager_brief !== null) state.latestManagerBrief = manager_brief;
+  if (quality_brief !== null) state.latestQualityBrief = quality_brief;
+  if (live_summary !== null) state.assistantMeta.live_summary = live_summary;
 
   if (assistant_insight_pack && typeof assistant_insight_pack === "object") {
     state.assistantMeta.assistant_insight_pack = assistant_insight_pack;
@@ -731,7 +808,6 @@ export function replaceLastAssistantMessage(message = {}) {
 
 export function updateLastAssistantMessage(updater) {
   ensureAssistantMessages();
-
   if (!state.assistantMessages.length) return;
 
   const lastIndex = state.assistantMessages.length - 1;
@@ -754,13 +830,11 @@ export function replaceLastAssistantModalMessage(message = {}) {
     return;
   }
 
-  state.assistantModalMessages[state.assistantModalMessages.length - 1] =
-    message;
+  state.assistantModalMessages[state.assistantModalMessages.length - 1] = message;
 }
 
 export function updateLastAssistantModalMessage(updater) {
   ensureAssistantMessages();
-
   if (!state.assistantModalMessages.length) return;
 
   const lastIndex = state.assistantModalMessages.length - 1;
@@ -774,7 +848,7 @@ export function getCurrentScopeEntity() {
   if (state.currentScope === "child") {
     return {
       type: "child",
-      id: state.youngPersonId || null,
+      id: getSelectedYoungPersonId(),
       name:
         state.selectedYoungPerson?.preferred_name ||
         state.selectedYoungPerson?.full_name ||
@@ -787,10 +861,7 @@ export function getCurrentScopeEntity() {
     return {
       type: "home",
       id: resolveAccessibleHomeId(),
-      name:
-        state.currentUser?.home_name ||
-        state.currentUser?.homeName ||
-        null,
+      name: state.currentUser?.home_name || state.currentUser?.homeName || null,
     };
   }
 
