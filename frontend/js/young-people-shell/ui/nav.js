@@ -118,6 +118,7 @@ const SECTION_SCOPE_MAP = {
   timeline: "child",
   handover: "child",
   "daily-life": "child",
+  "daily-notes": "child",
   health: "child",
   medication: "child",
   education: "child",
@@ -296,6 +297,7 @@ const CHILD_SECTION_LOADERS = Object.freeze({
   timeline: loadTimeline,
   handover: loadHandover,
   "daily-life": loadDailyLife,
+  "daily-notes": loadDailyLife,
   health: loadHealth,
   medication: loadMedication,
   education: loadEducation,
@@ -1133,7 +1135,6 @@ function bindSearchControls() {
     }
   };
 
-  document.addEventListener("indicared:record-search-changed", handler);
   document.addEventListener("indicare:record-search-changed", handler);
 }
 
