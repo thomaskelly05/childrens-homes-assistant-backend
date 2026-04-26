@@ -15,6 +15,10 @@ const DOM_KEYS = {
   statusBar: "statusBar",
   statusMessage: "statusMessage",
 
+  workspaceTitle: "workspaceTitle",
+  workspaceSubtitle: "workspaceSubtitle",
+  workspaceBody: "workspaceBody",
+
   /* --------------------------------
      Top bar
   --------------------------------- */
@@ -125,6 +129,8 @@ const DOM_KEYS = {
   --------------------------------- */
   assistantBackdrop: "assistantBackdrop",
   assistantModal: "assistantModal",
+  assistantPanel: "assistantPanel",
+  assistantBody: "assistantBody",
   closeAssistantBtn: "closeAssistantBtn",
 
   assistantMessages: "assistantMessages",
@@ -180,6 +186,9 @@ const DOM_KEYS = {
   recordComposerPage: "recordComposerPage",
   composerTitle: "composerTitle",
   composerSubtitle: "composerSubtitle",
+  composerBody: "composerBody",
+  composerFooter: "composerFooter",
+  composerError: "composerError",
   composerGuidanceText: "composerGuidanceText",
   composerPrompts: "composerPrompts",
   recordComposerForm: "recordComposerForm",
@@ -327,6 +336,46 @@ function buildEls() {
   resolved.drawerBody = resolved.recordDrawerBody;
   resolved.drawerActions = resolved.recordDrawerActions;
   resolved.closeDrawerBtn = resolved.closeRecordDrawerBtn;
+
+  resolved.workspaceTitle = firstDefinedElement(
+    resolved.workspaceTitle,
+    resolved.pageTitle
+  );
+
+  resolved.workspaceSubtitle = firstDefinedElement(
+    resolved.workspaceSubtitle,
+    resolved.pageSubtitle
+  );
+
+  resolved.workspaceBody = firstDefinedElement(
+    resolved.workspaceBody,
+    resolved.viewContent
+  );
+
+  resolved.composerBody = firstDefinedElement(
+    resolved.composerBody,
+    resolved.recordComposerFields
+  );
+
+  resolved.composerFooter = firstDefinedElement(
+    resolved.composerFooter,
+    resolved.fullscreenPanelActions
+  );
+
+  resolved.composerError = firstDefinedElement(
+    resolved.composerError,
+    resolved.composerAiFeedback
+  );
+
+  resolved.assistantPanel = firstDefinedElement(
+    resolved.assistantPanel,
+    resolved.assistantModal
+  );
+
+  resolved.assistantBody = firstDefinedElement(
+    resolved.assistantBody,
+    resolved.assistantMessages
+  );
 
   return resolved;
 }
