@@ -104,7 +104,7 @@ function mapDailyLife(record = {}) {
       "Daily life record.",
     child_voice: record.child_voice || "",
     outcome: record.outcome || "",
-    record_type: "daily_life_record",
+    record_type: "daily_note",
     created_at: record.created_at || null,
     updated_at: record.updated_at || null,
   };
@@ -161,7 +161,7 @@ function renderCard(item = {}) {
       class="record-card"
       data-open-record="true"
       data-record-id="${safeText(item.id || "")}"
-      data-record-type="daily_life_record"
+      data-record-type="daily_note"
       data-title="${safeText(item.title || "Daily life record")}"
       role="button"
       tabindex="0"
@@ -225,9 +225,9 @@ function renderWorkspace({ recentItems, isFallback }) {
 }
 
 async function fetchAll(youngPersonId) {
-  const res = await safeGet(`/young-people/${youngPersonId}/daily-life`);
+  const res = await safeGet(`/young-people/${youngPersonId}/daily-notes`);
   const data = {
-    items: pickItems(res, ["daily_life", "records", "items"]).map(mapDailyLife),
+    items: pickItems(res, ["daily_life", "daily_notes", "records", "items"]).map(mapDailyLife),
   };
   if (!hasUsableData(data)) return buildFallbackData();
   return { ...data, isFallback: false };
