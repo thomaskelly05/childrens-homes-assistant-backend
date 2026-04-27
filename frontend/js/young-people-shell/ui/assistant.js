@@ -2,6 +2,7 @@ import { state, createAssistantMeta } from "../state.js";
 import { els } from "../dom.js";
 import { apiStreamAssistant } from "../core/api.js";
 import * as aiScrubber from "../core/ai-scrubber.js";
+import { askAssistantBrain } from "../assistant/brain.js";
 import {
   refreshAssistantUi,
   appendAssistantSystemMessage,
@@ -39,6 +40,7 @@ import {
 
 let assistantEventsBound = false;
 let assistantPromptDelegatesBound = false;
+let activeAssistantRequestId = 0;
 
 const MAX_UI_PROMPTS = 8;
 
@@ -83,16 +85,33 @@ function setAssistantSending(flag) {
   syncAssistantUi();
 }
 
+function getRequestSnapshot() {
+  return {
+    scope: getCurrentScope(),
+    section: getCurrentSection(),
+    youngPersonId: state.youngPersonId || null,
+    homeId: state.homeId || null,
+    providerId: state.providerId || null,
+  };
+}
+
+function snapshotMatches(snapshot = {}) {
+  return (
+    snapshot.scope === getCurrentScope() &&
+    snapshot.section === getCurrentSection() &&
+    snapshot.youngPersonId === (state.youngPersonId || null) &&
+    snapshot.homeId === (state.homeId || null) &&
+    snapshot.providerId === (state.providerId || null)
+  );
+}
+
 function replaceLastAssistantPlaceholder(text) {
   const safeValue =
     typeof text === "string"
       ? text
       : extractStreamText(text) || "No assistant reply returned.";
 
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const lists = [state.assistantMessages || [], state.assistantModalMessages || []];
 
   lists.forEach((list) => {
     if (!list.length) {
@@ -127,10 +146,7 @@ function updateLastAssistantStreamingText(text) {
   const safeValue =
     typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
 
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const lists = [state.assistantMessages || [], state.assistantModalMessages || []];
 
   lists.forEach((list) => {
     if (!list.length) return;
@@ -186,9 +202,11 @@ function buildAssistantContextPayload(message = "") {
   const reportingPeriodStart = reg45Range?.startDate
     ? reg45Range.startDate.toISOString()
     : null;
+
   const reportingPeriodEnd = reg45Range?.endDate
     ? reg45Range.endDate.toISOString()
     : null;
+
   const reportingPeriodInferred =
     reg45Range && typeof reg45Range.inferred === "boolean"
       ? reg45Range.inferred
@@ -279,6 +297,15 @@ function buildAssistantContextPayload(message = "") {
     reporting_period_start: reportingPeriodStart,
     reporting_period_end: reportingPeriodEnd,
     reporting_period_inferred: reportingPeriodInferred,
+    local_bundle_evidence_count:
+      state.assistantMeta?.evidence_count ||
+      state.assistantMeta?.brain_summary?.total ||
+      0,
+    local_bundle_last_updated:
+      state.assistantMeta?.last_updated ||
+      state.assistantMeta?.last_analysis_at ||
+      null,
+    local_confidence: state.assistantMeta?.confidence || null,
     suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(
       0,
       MAX_UI_PROMPTS
@@ -430,6 +457,7 @@ function applyAssistantMeta(meta = {}) {
   mergeAssistantMeta({
     ...meta,
     sources: Array.isArray(meta.sources) ? meta.sources : undefined,
+    top_sources: Array.isArray(meta.top_sources) ? meta.top_sources : undefined,
     suggested_actions: Array.isArray(meta.suggested_actions)
       ? meta.suggested_actions
       : undefined,
@@ -447,6 +475,74 @@ async function answerLocallyForGreeting(question) {
 async function answerLocallyForUnknown(question) {
   appendAssistantUserMessage(question);
   appendAssistantSystemMessage(buildUnknownIntentPrompt());
+}
+
+function buildLocalBrainContext(contextPayload = {}) {
+  return {
+    scope: contextPayload.scope,
+    young_person_name: contextPayload.young_person_name,
+    home_name: contextPayload.home_name,
+    placement_status: contextPayload.placement_status,
+    summary_risk_level: contextPayload.summary_risk_level,
+    person: {
+      name: contextPayload.young_person_name,
+      placement_status: contextPayload.placement_status,
+      risk: contextPayload.summary_risk_level,
+    },
+    home: {
+      home_name: contextPayload.home_name,
+    },
+    analysis_lens:
+      contextPayload.output_mode ||
+      contextPayload.assistant_intent ||
+      "general",
+  };
+}
+
+function getBestLocalAssistantPayload() {
+  return (
+    state.assistantScopeBundle ||
+    state.assistantBundle ||
+    state.assistantDerivedState?.evidence ||
+    state.assistantEvidence ||
+    {}
+  );
+}
+
+function answerWithLocalBrain(question, contextPayload = {}, error = null) {
+  const brain = askAssistantBrain(question, getBestLocalAssistantPayload(), {
+    context: buildLocalBrainContext(contextPayload),
+    analysis_lens:
+      contextPayload.scope === "quality" || contextPayload.scope === "ofsted"
+        ? "quality"
+        : contextPayload.scope === "home"
+          ? "manager"
+          : "general",
+  });
+
+  applyAssistantMeta({
+    sources: brain.top_sources || [],
+    top_sources: brain.top_sources || [],
+    suggested_actions: brain.suggested_actions || [],
+    brain_summary: brain.summary || null,
+    brain_insights: brain.insights || [],
+    evidence_count: brain.evidence_count || 0,
+    confidence: brain.confidence || "low",
+    confidence_reason: brain.confidence_reason || "",
+    runtime: {
+      local_brain_fallback: true,
+      original_error: error?.message || null,
+      evidence_count: brain.evidence_count || 0,
+      output_mode: brain.intent || "local",
+      analysis_lens: brain.analysis_lens || "general",
+    },
+    explainability: {
+      reasoning_summary:
+        "This response was generated locally from the currently scoped IndiCare evidence because the streamed assistant was unavailable.",
+    },
+  });
+
+  return brain.answer;
 }
 
 export async function askAssistant(question) {
@@ -475,6 +571,9 @@ export async function askAssistant(question) {
     return;
   }
 
+  const requestId = ++activeAssistantRequestId;
+  const requestSnapshot = getRequestSnapshot();
+
   appendAssistantUserMessage(trimmed);
   addAssistantPlaceholder(intent);
   setAssistantSending(true);
@@ -498,6 +597,8 @@ export async function askAssistant(question) {
 
     await apiStreamAssistant(scrubbed.payload, {
       onMeta: (meta) => {
+        if (requestId !== activeAssistantRequestId || !snapshotMatches(requestSnapshot)) return;
+
         applyAssistantMeta({
           ...meta,
           runtime: {
@@ -510,16 +611,19 @@ export async function askAssistant(question) {
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
             ai_scrubber_enabled: scrubbed.meta?.enabled ?? false,
+            local_bundle_evidence_count:
+              contextPayload.local_bundle_evidence_count || 0,
+            local_bundle_last_updated:
+              contextPayload.local_bundle_last_updated || null,
           },
           explainability: {
             ...(meta?.explainability || {}),
             reasoning_summary:
               meta?.explainability?.reasoning_summary ||
               "This answer used an evidence-led children’s home reasoning approach.",
-            ai_scrubber:
-              scrubbed.meta?.enabled
-                ? "Client-side AI scrubber applied before outbound request."
-                : "Client-side AI scrubber not applied.",
+            ai_scrubber: scrubbed.meta?.enabled
+              ? "Client-side AI scrubber applied before outbound request."
+              : "Client-side AI scrubber not applied.",
           },
           assistant_context: {
             ...(meta?.assistant_context || {}),
@@ -542,14 +646,24 @@ export async function askAssistant(question) {
       },
       onProgress: () => {},
       onMessage: (streamedPayload) => {
+        if (requestId !== activeAssistantRequestId || !snapshotMatches(requestSnapshot)) return;
+
         const safeValue = extractStreamText(streamedPayload) || "Thinking…";
         const restored = restoreAssistantReplyTokens(
           safeValue,
           scrubbed.reverseMap
         );
+
         updateLastAssistantStreamingText(restored || "Thinking…");
       },
       onDone: (streamedPayload) => {
+        if (requestId !== activeAssistantRequestId || !snapshotMatches(requestSnapshot)) {
+          replaceLastAssistantPlaceholder(
+            "The assistant context changed while this answer was being generated. Please ask again in the current view."
+          );
+          return;
+        }
+
         const safeValue =
           extractStreamText(streamedPayload) || "No assistant reply returned.";
 
@@ -584,12 +698,19 @@ export async function askAssistant(question) {
       },
     });
   } catch (error) {
+    console.error("[assistant] streamed answer failed; using local brain fallback", error);
+
+    const contextPayload = buildAssistantContextPayload(trimmed);
+    const localAnswer = answerWithLocalBrain(trimmed, contextPayload, error);
+
     replaceLastAssistantPlaceholder(
-      error?.message || "The assistant could not answer right now."
+      localAnswer || error?.message || "The assistant could not answer right now."
     );
   } finally {
-    setAssistantSending(false);
-    syncAssistantUi();
+    if (requestId === activeAssistantRequestId) {
+      setAssistantSending(false);
+      syncAssistantUi();
+    }
   }
 }
 
@@ -618,8 +739,7 @@ function handleQuickAction(actionId = "") {
   const id = String(actionId || "").trim();
   if (!id) return;
 
-  const router =
-    typeof window !== "undefined" ? window.handleQuickAction : null;
+  const router = typeof window !== "undefined" ? window.handleQuickAction : null;
 
   if (typeof router === "function") {
     router(id);
@@ -661,9 +781,7 @@ export function updateAssistantContext() {
     role: state.userRole || "staff",
   });
 
-  const sectionLabel = String(section)
-    .replaceAll("_", " ")
-    .replaceAll("-", " ");
+  const sectionLabel = String(section).replaceAll("_", " ").replaceAll("-", " ");
 
   const contextSummary =
     scope === "child"
