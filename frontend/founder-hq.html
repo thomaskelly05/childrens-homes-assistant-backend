@@ -107,6 +107,79 @@
           </div>
         </div>
 
+        <div class="founder-card">
+          <h3>Add Founder Data</h3>
+          <p>
+            Create tasks, leads and strategy notes that feed your Founder Dashboard Brain.
+          </p>
+
+          <div class="founder-create-grid">
+            <form id="founderTaskForm" class="founder-mini-form">
+              <h4>Add Task</h4>
+
+              <input
+                id="founderTaskTitle"
+                type="text"
+                placeholder="Task title"
+                autocomplete="off"
+              />
+
+              <select id="founderTaskPriority">
+                <option value="medium">Medium priority</option>
+                <option value="high">High priority</option>
+                <option value="low">Low priority</option>
+              </select>
+
+              <button type="submit">Save Task</button>
+            </form>
+
+            <form id="founderLeadForm" class="founder-mini-form">
+              <h4>Add Lead</h4>
+
+              <input
+                id="founderLeadOrg"
+                type="text"
+                placeholder="Organisation name"
+                autocomplete="off"
+              />
+
+              <input
+                id="founderLeadContact"
+                type="text"
+                placeholder="Contact name"
+                autocomplete="off"
+              />
+
+              <input
+                id="founderLeadEmail"
+                type="email"
+                placeholder="Email"
+                autocomplete="off"
+              />
+
+              <button type="submit">Save Lead</button>
+            </form>
+
+            <form id="founderNoteForm" class="founder-mini-form">
+              <h4>Add Strategy Note</h4>
+
+              <input
+                id="founderNoteTitle"
+                type="text"
+                placeholder="Note title"
+                autocomplete="off"
+              />
+
+              <textarea
+                id="founderNoteContent"
+                placeholder="Note content"
+              ></textarea>
+
+              <button type="submit">Save Note</button>
+            </form>
+          </div>
+        </div>
+
         <div class="founder-card founder-chat-card">
           <div id="founderChatOutput" class="founder-chat-output">
             <div class="founder-message founder-message-assistant">
