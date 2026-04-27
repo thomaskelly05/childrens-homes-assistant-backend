@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Founder HQ | IndiCare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="/css/os-unified.css" />
+  <link rel="stylesheet" href="/css/founder-hq.css" />
+</head>
+
+<body class="founder-hq-body">
+  <main class="founder-hq-shell">
+    <header class="founder-hq-hero">
+      <div>
+        <p class="founder-eyebrow">Private Founder Area</p>
+        <h1>Founder HQ</h1>
+        <p>
+          Your private AI leadership team for strategy, growth, funding, finance,
+          operations and product decisions.
+        </p>
+      </div>
+
+      <a class="founder-back-link" href="/index.html">Back to IndiCare</a>
+    </header>
+
+    <section class="founder-hq-layout">
+      <aside class="founder-sidebar">
+        <h2>AI Team</h2>
+
+        <button class="founder-mode is-active" data-founder-mode="strategy">
+          <strong>Strategy Advisor</strong>
+          <span>Direction, positioning and priorities</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="growth">
+          <strong>Growth & Sales</strong>
+          <span>Leads, outreach and demos</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="funding">
+          <strong>Funding</strong>
+          <span>Grants, impact and applications</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="finance">
+          <strong>Finance</strong>
+          <span>Pricing, forecasts and cashflow</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="operations">
+          <strong>Operations</strong>
+          <span>Systems, delivery and workload</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="product">
+          <strong>Product & UX</strong>
+          <span>Features, workflows and user experience</span>
+        </button>
+      </aside>
+
+      <section class="founder-main">
+        <div class="founder-card founder-snapshot">
+          <div>
+            <p class="founder-eyebrow">Today’s focus</p>
+            <h2 id="founderModeTitle">Strategy Advisor</h2>
+            <p id="founderModeDescription">
+              Ask for help deciding what IndiCare should focus on next.
+            </p>
+          </div>
+        </div>
+
+        <div class="founder-card founder-chat-card">
+          <div id="founderChatOutput" class="founder-chat-output">
+            <div class="founder-message founder-message-assistant">
+              <strong>Founder AI</strong>
+              <p>
+                Ask me what you should focus on this week, how to get your first customers,
+                how to price IndiCare, or how to position the company.
+              </p>
+            </div>
+          </div>
+
+          <form id="founderAiForm" class="founder-ai-form">
+            <textarea
+              id="founderAiMessage"
+              rows="5"
+              placeholder="Example: What should I focus on this week to move IndiCare forward?"
+            ></textarea>
+
+            <div class="founder-form-actions">
+              <button type="button" id="founderClearBtn">Clear</button>
+              <button type="submit" class="primary">Ask Founder AI</button>
+            </div>
+          </form>
+        </div>
+
+        <section class="founder-quick-actions">
+          <button data-founder-prompt="What should I focus on this week to grow IndiCare?">
+            Weekly focus
+          </button>
+
+          <button data-founder-prompt="Create a plan to get my first 5 paying children’s homes using IndiCare.">
+            First 5 customers
+          </button>
+
+          <button data-founder-prompt="Help me create a simple pricing model for IndiCare.">
+            Pricing model
+          </button>
+
+          <button data-founder-prompt="Write a strong funding summary for IndiCare as an AI operating system for children’s homes.">
+            Funding summary
+          </button>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="/js/founder-hq.js"></script>
+</body>
+</html>
