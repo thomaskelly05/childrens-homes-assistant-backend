@@ -260,6 +260,7 @@ ROUTERS = [
     "routers.exports_routes",
     "routers.rostering_routes",
     "routers.academy_routes",
+    "routers.frontend_compat_routes",
 ]
 
 
