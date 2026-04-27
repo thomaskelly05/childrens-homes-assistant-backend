@@ -18,6 +18,10 @@ async function request(path, options = {}) {
     throw new Error("FORBIDDEN");
   }
 
+  if (response.status === 404) {
+    throw new Error("NOT_FOUND");
+  }
+
   if (!response.ok) {
     throw new Error("REQUEST_FAILED");
   }
@@ -89,6 +93,13 @@ export const FounderAPI = {
     });
   },
 
+  updateLeadStatus(leadId, status) {
+    return request(`/founder/leads/${leadId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+
   // =========================
   // TASKS
   // =========================
@@ -98,6 +109,27 @@ export const FounderAPI = {
 
   createTask(data) {
     return request("/founder/tasks/create", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateTaskStatus(taskId, status) {
+    return request(`/founder/tasks/${taskId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  // =========================
+  // STRATEGY NOTES
+  // =========================
+  getStrategyNotes() {
+    return request("/founder/strategy-notes");
+  },
+
+  createStrategyNote(data) {
+    return request("/founder/strategy-notes/create", {
       method: "POST",
       body: JSON.stringify(data),
     });
