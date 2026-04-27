@@ -30,8 +30,17 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+async function readError(response, fallback) {
+  try {
+    const data = await response.json();
+    return data.detail || data.error || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function selectedMulti(select) {
-  return Array.from(select.selectedOptions)
+  return Array.from(select?.selectedOptions || [])
     .map((option) => Number(option.value))
     .filter((value) => Number.isFinite(value) && value > 0);
 }
@@ -68,23 +77,18 @@ async function loadOptions() {
   });
 
   if (response.status === 403) {
-    document.body.innerHTML = "<main class='admin-users-shell'><h1>Admin access required</h1></main>";
+    document.body.innerHTML =
+      "<main class='admin-users-shell'><h1>Admin access required</h1></main>";
     return;
   }
 
   if (!response.ok) {
-    throw new Error("Failed to load admin options");
+    throw new Error(await readError(response, "Failed to load admin options"));
   }
 
   options = await response.json();
 
-  fillSelect(
-    els.role,
-    options.roles || [],
-    (role) => role,
-    (role) => role,
-    null
-  );
+  fillSelect(els.role, options.roles || [], (role) => role, (role) => role, null);
 
   fillSelect(
     els.providerId,
@@ -123,7 +127,9 @@ async function loadUsers() {
   });
 
   if (!response.ok) {
-    els.usersList.innerHTML = "<p>Could not load users.</p>";
+    const message = await readError(response, "Could not load users.");
+    els.usersList.innerHTML = `<p>${escapeHtml(message)}</p>`;
+    setStatus(message, "error");
     return;
   }
 
@@ -135,26 +141,29 @@ async function loadUsers() {
     return;
   }
 
-  els.usersList.innerHTML = users.map((user) => {
-    const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || "No name";
-    const status = user.is_active ? "Active" : "Inactive";
+  els.usersList.innerHTML = users
+    .map((user) => {
+      const name =
+        [user.first_name, user.last_name].filter(Boolean).join(" ") || "No name";
+      const status = user.is_active ? "Active" : "Inactive";
 
-    return `
-      <article class="user-row">
-        <div>
-          <strong>${escapeHtml(name)}</strong>
-          <span>${escapeHtml(user.email)}</span>
-        </div>
+      return `
+        <article class="user-row">
+          <div>
+            <strong>${escapeHtml(name)}</strong>
+            <span>${escapeHtml(user.email)}</span>
+          </div>
 
-        <div>
-          <span class="pill">${escapeHtml(user.role)}</span>
-          <span>${escapeHtml(user.provider_name || "No provider")}</span>
-          <span>${escapeHtml(user.home_name || "No main home")}</span>
-          <span>${escapeHtml(status)}</span>
-        </div>
-      </article>
-    `;
-  }).join("");
+          <div>
+            <span class="pill">${escapeHtml(user.role)}</span>
+            <span>${escapeHtml(user.provider_name || "No provider")}</span>
+            <span>${escapeHtml(user.home_name || "No main home")}</span>
+            <span>${escapeHtml(status)}</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
 }
 
 async function createUser(event) {
@@ -184,15 +193,14 @@ async function createUser(event) {
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json().catch(() => ({}));
-
   if (!response.ok) {
-    setStatus(data.detail || "Could not create user.", "error");
+    setStatus(await readError(response, "Could not create user."), "error");
     return;
   }
 
   setStatus("User created successfully.", "success");
   els.form.reset();
+
   if (els.role) els.role.value = "staff";
   if (els.isActive) els.isActive.checked = true;
   if (els.subscriptionActive) els.subscriptionActive.checked = true;
@@ -207,5 +215,6 @@ try {
   await loadOptions();
   await loadUsers();
 } catch (error) {
+  console.error("[admin-users] failed to initialise", error);
   setStatus(error.message || "Admin users failed to load.", "error");
 }
