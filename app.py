@@ -459,7 +459,7 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
                     "ok": False,
                     "detail": "Current legal terms must be accepted before using this feature.",
                     "code": "legal_acceptance_required",
-                    "current_version": CURRENT_LEGAL_VERSION",
+                    "current_version": CURRENT_LEGAL_VERSION,
                 },
             )
 
