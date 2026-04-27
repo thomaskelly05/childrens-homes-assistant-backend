@@ -7,11 +7,19 @@ from pydantic import BaseModel, Field
 
 from auth.dependencies import get_current_user
 from db.founder_db import (
+    create_founder_lead,
+    create_founder_strategy_note,
+    create_founder_task,
     create_founder_thread,
     ensure_founder_tables,
     get_founder_messages,
+    list_founder_leads,
+    list_founder_strategy_notes,
+    list_founder_tasks,
     list_founder_threads,
     save_founder_message,
+    update_founder_lead_status,
+    update_founder_task_status,
 )
 from services.founder_ai_service import (
     normalise_founder_mode,
@@ -57,12 +65,25 @@ class FounderCreateLeadRequest(BaseModel):
     notes: str | None = None
 
 
+class FounderUpdateLeadStatusRequest(BaseModel):
+    status: str = Field(..., min_length=1)
+
+
 class FounderCreateTaskRequest(BaseModel):
     title: str = Field(..., min_length=1)
     status: str = "open"
     priority: str = "medium"
     due_date: str | None = None
     notes: str | None = None
+
+
+class FounderUpdateTaskStatusRequest(BaseModel):
+    status: str = Field(..., min_length=1)
+
+
+class FounderCreateStrategyNoteRequest(BaseModel):
+    title: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1)
 
 
 # ============================================================
@@ -104,6 +125,15 @@ def require_founder(current_user: dict[str, Any]) -> dict[str, Any]:
     return current_user
 
 
+def require_user_id(current_user: dict[str, Any]) -> int:
+    user_id = get_user_id(current_user)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User could not be identified.")
+
+    return user_id
+
+
 # ============================================================
 # HEALTH
 # ============================================================
@@ -130,22 +160,36 @@ async def founder_summary(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
+
+    leads = await list_founder_leads(user_id)
+    tasks = await list_founder_tasks(user_id)
+    notes = await list_founder_strategy_notes(user_id)
 
     response = await run_founder_quick_action(
         action="dashboard_brain",
         user=current_user,
     )
 
+    open_tasks = [task for task in tasks if task.get("status") != "done"]
+    active_leads = [
+        lead for lead in leads
+        if str(lead.get("status") or "").lower() not in {"closed", "lost", "not_interested"}
+    ]
+
     return {
         "status": "ok",
         "summary": response,
         "widgets": {
-            "priorities": [],
-            "leads": [],
-            "tasks": [],
+            "priorities": open_tasks[:5],
+            "leads": active_leads[:5],
+            "tasks": open_tasks[:8],
             "risks": [],
             "funding": [],
             "product": [],
+            "strategy_notes": notes[:5],
         },
     }
 
@@ -162,13 +206,11 @@ async def founder_ai_chat(
     require_founder(current_user)
     await ensure_founder_tables()
 
-    user_id = get_user_id(current_user)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="User could not be identified.")
-
+    user_id = require_user_id(current_user)
     mode = normalise_founder_mode(payload.mode)
 
     thread_id = payload.thread_id
+
     if not thread_id:
         thread_id = await create_founder_thread(
             user_id=user_id,
@@ -216,6 +258,7 @@ async def founder_quick_action(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
+    await ensure_founder_tables()
 
     response = await run_founder_quick_action(
         action=payload.action,
@@ -240,7 +283,7 @@ async def founder_threads(
     require_founder(current_user)
     await ensure_founder_tables()
 
-    user_id = get_user_id(current_user)
+    user_id = require_user_id(current_user)
 
     return {
         "threads": await list_founder_threads(user_id),
@@ -255,7 +298,7 @@ async def founder_thread_messages(
     require_founder(current_user)
     await ensure_founder_tables()
 
-    user_id = get_user_id(current_user)
+    user_id = require_user_id(current_user)
 
     return {
         "messages": await get_founder_messages(user_id, thread_id),
@@ -263,7 +306,7 @@ async def founder_thread_messages(
 
 
 # ============================================================
-# LEADS - FUTURE CRM READY
+# LEADS
 # ============================================================
 
 @router.get("/leads")
@@ -271,10 +314,12 @@ async def founder_leads(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
 
     return {
-        "leads": [],
-        "message": "Founder leads endpoint ready.",
+        "leads": await list_founder_leads(user_id),
     }
 
 
@@ -284,16 +329,56 @@ async def founder_create_lead(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
+
+    lead = await create_founder_lead(
+        user_id=user_id,
+        organisation_name=payload.organisation_name,
+        contact_name=payload.contact_name,
+        contact_role=payload.contact_role,
+        email=payload.email,
+        phone=payload.phone,
+        website=payload.website,
+        status=payload.status,
+        notes=payload.notes,
+    )
 
     return {
         "status": "created",
-        "lead": payload.dict(),
-        "message": "Lead route is ready. Database persistence can be connected next.",
+        "lead": lead,
+    }
+
+
+@router.patch("/leads/{lead_id}/status")
+async def founder_update_lead_status_route(
+    lead_id: int,
+    payload: FounderUpdateLeadStatusRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
+
+    lead = await update_founder_lead_status(
+        user_id=user_id,
+        lead_id=lead_id,
+        status=payload.status,
+    )
+
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found.")
+
+    return {
+        "status": "updated",
+        "lead": lead,
     }
 
 
 # ============================================================
-# TASKS - FUTURE COMMAND CENTRE READY
+# TASKS
 # ============================================================
 
 @router.get("/tasks")
@@ -301,10 +386,12 @@ async def founder_tasks(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
 
     return {
-        "tasks": [],
-        "message": "Founder tasks endpoint ready.",
+        "tasks": await list_founder_tasks(user_id),
     }
 
 
@@ -314,9 +401,86 @@ async def founder_create_task(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
+
+    task = await create_founder_task(
+        user_id=user_id,
+        title=payload.title,
+        status=payload.status,
+        priority=payload.priority,
+        due_date=payload.due_date,
+        notes=payload.notes,
+    )
 
     return {
         "status": "created",
-        "task": payload.dict(),
-        "message": "Task route is ready. Database persistence can be connected next.",
+        "task": task,
+    }
+
+
+@router.patch("/tasks/{task_id}/status")
+async def founder_update_task_status_route(
+    task_id: int,
+    payload: FounderUpdateTaskStatusRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
+
+    task = await update_founder_task_status(
+        user_id=user_id,
+        task_id=task_id,
+        status=payload.status,
+    )
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+
+    return {
+        "status": "updated",
+        "task": task,
+    }
+
+
+# ============================================================
+# STRATEGY NOTES
+# ============================================================
+
+@router.get("/strategy-notes")
+async def founder_strategy_notes(
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
+
+    return {
+        "notes": await list_founder_strategy_notes(user_id),
+    }
+
+
+@router.post("/strategy-notes/create")
+async def founder_create_strategy_note(
+    payload: FounderCreateStrategyNoteRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    require_founder(current_user)
+    await ensure_founder_tables()
+
+    user_id = require_user_id(current_user)
+
+    note = await create_founder_strategy_note(
+        user_id=user_id,
+        title=payload.title,
+        content=payload.content,
+    )
+
+    return {
+        "status": "created",
+        "note": note,
     }
