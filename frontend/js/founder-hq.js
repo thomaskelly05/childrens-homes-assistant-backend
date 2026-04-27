@@ -8,48 +8,14 @@ async function guardFounderPage() {
   try {
     await FounderAPI.health();
     return true;
-  } catch (error) {
+  } catch {
     window.location.href = "/index.html";
     return false;
   }
 }
 
 const founderAccessAllowed = await guardFounderPage();
-
-if (!founderAccessAllowed) {
-  throw new Error("Founder access denied");
-}
-
-// ============================================================
-// MODE META
-// ============================================================
-
-const MODE_META = {
-  strategy: {
-    title: "Strategy Advisor",
-    description: "Decide what IndiCare should focus on next.",
-  },
-  growth: {
-    title: "Growth & Sales",
-    description: "Get leads, outreach, demos and conversions.",
-  },
-  funding: {
-    title: "Funding",
-    description: "Grants, impact and funding narratives.",
-  },
-  finance: {
-    title: "Finance",
-    description: "Pricing, revenue and sustainability.",
-  },
-  operations: {
-    title: "Operations",
-    description: "Execution, systems and priorities.",
-  },
-  product: {
-    title: "Product & UX",
-    description: "Build what sells and works in homes.",
-  },
-};
+if (!founderAccessAllowed) throw new Error("Founder access denied");
 
 // ============================================================
 // STATE
@@ -71,7 +37,20 @@ const form = document.getElementById("founderAiForm");
 const messageInput = document.getElementById("founderAiMessage");
 const output = document.getElementById("founderChatOutput");
 const clearBtn = document.getElementById("founderClearBtn");
-const founderMain = document.querySelector(".founder-main");
+
+// NEW FORM ELEMENTS
+const taskForm = document.getElementById("founderTaskForm");
+const taskTitle = document.getElementById("founderTaskTitle");
+const taskPriority = document.getElementById("founderTaskPriority");
+
+const leadForm = document.getElementById("founderLeadForm");
+const leadOrg = document.getElementById("founderLeadOrg");
+const leadContact = document.getElementById("founderLeadContact");
+const leadEmail = document.getElementById("founderLeadEmail");
+
+const noteForm = document.getElementById("founderNoteForm");
+const noteTitle = document.getElementById("founderNoteTitle");
+const noteContent = document.getElementById("founderNoteContent");
 
 // ============================================================
 // HELPERS
@@ -81,38 +60,17 @@ function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function normaliseList(value) {
-  if (Array.isArray(value)) return value;
-  return [];
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  try {
-    return new Date(value).toLocaleDateString("en-GB");
-  } catch {
-    return String(value);
-  }
+    .replaceAll(">", "&gt;");
 }
 
 function addMessage(role, content) {
-  if (!output) return;
-
-  const isUser = role === "user";
-  const label = isUser ? "You" : "Founder AI";
-  const className = isUser
-    ? "founder-message-user"
-    : "founder-message-assistant";
-
   const wrapper = document.createElement("div");
-  wrapper.className = `founder-message ${className}`;
+  wrapper.className = `founder-message ${
+    role === "user" ? "founder-message-user" : "founder-message-assistant"
+  }`;
+
   wrapper.innerHTML = `
-    <strong>${escapeHtml(label)}</strong>
+    <strong>${role === "user" ? "You" : "Founder AI"}</strong>
     <p>${escapeHtml(content)}</p>
   `;
 
@@ -122,168 +80,50 @@ function addMessage(role, content) {
 
 function setLoading(isLoading) {
   const submit = form?.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = isLoading;
 
-  if (submit) {
-    submit.disabled = isLoading;
-    submit.textContent = isLoading ? "Thinking..." : "Ask Founder AI";
-  }
-
-  quickActionButtons.forEach((button) => {
-    button.disabled = isLoading;
-  });
+  quickActionButtons.forEach((btn) => (btn.disabled = isLoading));
 }
+
+// ============================================================
+// MODE
+// ============================================================
+
+const MODE_META = {
+  strategy: { title: "Strategy Advisor", description: "Focus direction" },
+  growth: { title: "Growth & Sales", description: "Leads & demos" },
+  funding: { title: "Funding", description: "Grants & impact" },
+  finance: { title: "Finance", description: "Pricing & revenue" },
+  operations: { title: "Operations", description: "Execution & systems" },
+  product: { title: "Product & UX", description: "Build what sells" },
+};
 
 function setMode(mode) {
   currentMode = MODE_META[mode] ? mode : "strategy";
 
-  modeButtons.forEach((button) => {
-    button.classList.toggle(
-      "is-active",
-      button.dataset.founderMode === currentMode
-    );
-  });
+  modeButtons.forEach((b) =>
+    b.classList.toggle("is-active", b.dataset.founderMode === currentMode)
+  );
 
-  const meta = MODE_META[currentMode];
-
-  if (modeTitle) modeTitle.textContent = meta.title;
-  if (modeDescription) modeDescription.textContent = meta.description;
+  modeTitle.textContent = MODE_META[currentMode].title;
+  modeDescription.textContent = MODE_META[currentMode].description;
 }
 
 // ============================================================
-// DASHBOARD WIDGETS
+// DASHBOARD DATA
 // ============================================================
 
-function ensureDashboardWidgets() {
-  if (document.getElementById("founderDashboardWidgets")) return;
-
-  const quickCard = document.querySelector(".founder-quick-actions")?.closest(".founder-card");
-  const chatCard = document.querySelector(".founder-chat-card");
-
-  const wrapper = document.createElement("section");
-  wrapper.id = "founderDashboardWidgets";
-  wrapper.className = "founder-dashboard-widgets";
-  wrapper.innerHTML = `
-    <div class="founder-card founder-widget-card">
-      <h3>Founder Tasks</h3>
-      <div id="founderTasksList" class="founder-widget-list">
-        <p>Loading tasks...</p>
-      </div>
-    </div>
-
-    <div class="founder-card founder-widget-card">
-      <h3>Founder Leads</h3>
-      <div id="founderLeadsList" class="founder-widget-list">
-        <p>Loading leads...</p>
-      </div>
-    </div>
-
-    <div class="founder-card founder-widget-card">
-      <h3>Strategy Notes</h3>
-      <div id="founderNotesList" class="founder-widget-list">
-        <p>Loading notes...</p>
-      </div>
-    </div>
-  `;
-
-  if (quickCard && quickCard.parentNode) {
-    quickCard.parentNode.insertBefore(wrapper, chatCard || quickCard.nextSibling);
-  } else if (founderMain) {
-    founderMain.appendChild(wrapper);
-  }
-}
-
-function renderTasks(tasks) {
-  const target = document.getElementById("founderTasksList");
-  if (!target) return;
-
-  const items = normaliseList(tasks);
-
-  if (!items.length) {
-    target.innerHTML = `<p>No founder tasks yet.</p>`;
-    return;
-  }
-
-  target.innerHTML = items
-    .slice(0, 8)
-    .map((task) => {
-      return `
-        <article class="founder-widget-item">
-          <strong>${escapeHtml(task.title)}</strong>
-          <span>${escapeHtml(task.priority || "medium")} · ${escapeHtml(task.status || "open")}</span>
-          ${task.due_date ? `<small>Due: ${escapeHtml(formatDate(task.due_date))}</small>` : ""}
-        </article>
-      `;
-    })
-    .join("");
-}
-
-function renderLeads(leads) {
-  const target = document.getElementById("founderLeadsList");
-  if (!target) return;
-
-  const items = normaliseList(leads);
-
-  if (!items.length) {
-    target.innerHTML = `<p>No founder leads yet.</p>`;
-    return;
-  }
-
-  target.innerHTML = items
-    .slice(0, 8)
-    .map((lead) => {
-      return `
-        <article class="founder-widget-item">
-          <strong>${escapeHtml(lead.organisation_name)}</strong>
-          <span>${escapeHtml(lead.contact_name || "No contact")} · ${escapeHtml(lead.status || "new")}</span>
-          ${lead.contact_role ? `<small>${escapeHtml(lead.contact_role)}</small>` : ""}
-        </article>
-      `;
-    })
-    .join("");
-}
-
-function renderNotes(notes) {
-  const target = document.getElementById("founderNotesList");
-  if (!target) return;
-
-  const items = normaliseList(notes);
-
-  if (!items.length) {
-    target.innerHTML = `<p>No strategy notes yet.</p>`;
-    return;
-  }
-
-  target.innerHTML = items
-    .slice(0, 6)
-    .map((note) => {
-      return `
-        <article class="founder-widget-item">
-          <strong>${escapeHtml(note.title)}</strong>
-          <span>${escapeHtml(formatDate(note.updated_at || note.created_at))}</span>
-          <small>${escapeHtml(String(note.content || "").slice(0, 120))}</small>
-        </article>
-      `;
-    })
-    .join("");
-}
-
-async function loadFounderDataWidgets() {
-  ensureDashboardWidgets();
-
+async function refreshDashboard() {
   try {
-    const [tasksData, leadsData, notesData] = await Promise.all([
+    const [tasks, leads, notes] = await Promise.all([
       FounderAPI.getTasks(),
       FounderAPI.getLeads(),
       FounderAPI.getStrategyNotes(),
     ]);
 
-    renderTasks(tasksData.tasks);
-    renderLeads(leadsData.leads);
-    renderNotes(notesData.notes);
-  } catch (error) {
-    renderTasks([]);
-    renderLeads([]);
-    renderNotes([]);
+    console.log("Dashboard refreshed", { tasks, leads, notes });
+  } catch {
+    console.warn("Dashboard refresh failed");
   }
 }
 
@@ -303,19 +143,9 @@ async function askFounderAi(message) {
     });
 
     currentThreadId = data.thread_id || currentThreadId;
-    addMessage("assistant", data.response || "No response returned.");
-  } catch (error) {
-    if (error.message === "FORBIDDEN") {
-      addMessage("assistant", "Founder HQ is restricted.");
-      return;
-    }
-
-    if (error.message === "UNAUTHENTICATED") {
-      addMessage("assistant", "You need to sign in again.");
-      return;
-    }
-
-    addMessage("assistant", "Founder AI failed to respond.");
+    addMessage("assistant", data.response);
+  } catch {
+    addMessage("assistant", "AI failed.");
   } finally {
     setLoading(false);
   }
@@ -326,86 +156,94 @@ async function askFounderAi(message) {
 // ============================================================
 
 async function runQuickAction(action) {
-  if (!action) return;
-
-  addMessage("user", `Run quick action: ${action.replaceAll("_", " ")}`);
-  setLoading(true);
+  addMessage("assistant", "Running...");
 
   try {
     const data = await FounderAPI.quickAction(action);
-    addMessage("assistant", data.response || "No response.");
-  } catch (error) {
-    if (error.message === "FORBIDDEN") {
-      addMessage("assistant", "Founder HQ is restricted.");
-      return;
-    }
-
-    addMessage("assistant", "Quick action failed.");
-  } finally {
-    setLoading(false);
+    addMessage("assistant", data.response);
+  } catch {
+    addMessage("assistant", "Failed.");
   }
 }
 
 // ============================================================
-// DASHBOARD BRAIN
+// FORM HANDLERS
 // ============================================================
 
-async function loadFounderDashboardBrain() {
-  if (dashboardLoaded) return;
-  dashboardLoaded = true;
+taskForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-  addMessage("assistant", "Loading Founder Dashboard Brain...");
+  const title = taskTitle.value.trim();
+  if (!title) return;
 
-  try {
-    const data = await FounderAPI.getSummary();
+  await FounderAPI.createTask({
+    title,
+    priority: taskPriority.value,
+  });
 
-    if (data?.summary) {
-      addMessage("assistant", data.summary);
+  taskTitle.value = "";
+  await refreshDashboard();
+  addMessage("assistant", "Task saved.");
+});
 
-      if (data.widgets) {
-        renderTasks(data.widgets.tasks || data.widgets.priorities || []);
-        renderLeads(data.widgets.leads || []);
-        renderNotes(data.widgets.strategy_notes || []);
-      }
+leadForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-      return;
-    }
+  const org = leadOrg.value.trim();
+  if (!org) return;
 
-    addMessage("assistant", "Founder Dashboard Brain is ready, but no summary was returned.");
-  } catch (error) {
-    addMessage(
-      "assistant",
-      "Founder Dashboard Brain is ready, but I could not load today’s summary."
-    );
-  }
-}
+  await FounderAPI.createLead({
+    organisation_name: org,
+    contact_name: leadContact.value,
+    email: leadEmail.value,
+  });
+
+  leadOrg.value = "";
+  leadContact.value = "";
+  leadEmail.value = "";
+
+  await refreshDashboard();
+  addMessage("assistant", "Lead saved.");
+});
+
+noteForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const title = noteTitle.value.trim();
+  const content = noteContent.value.trim();
+  if (!title || !content) return;
+
+  await FounderAPI.createStrategyNote({
+    title,
+    content,
+  });
+
+  noteTitle.value = "";
+  noteContent.value = "";
+
+  await refreshDashboard();
+  addMessage("assistant", "Strategy note saved.");
+});
 
 // ============================================================
 // EVENTS
 // ============================================================
 
-modeButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    setMode(button.dataset.founderMode);
-  });
-});
+modeButtons.forEach((b) =>
+  b.addEventListener("click", () => setMode(b.dataset.founderMode))
+);
 
-quickActionButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const action = button.dataset.founderAction;
-    runQuickAction(action);
-  });
-});
+quickActionButtons.forEach((b) =>
+  b.addEventListener("click", () =>
+    runQuickAction(b.dataset.founderAction)
+  )
+);
 
-form?.addEventListener("submit", async (event) => {
-  event.preventDefault();
+form?.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-  const message = messageInput?.value.trim();
-
-  if (!message) {
-    addMessage("assistant", "Type a question first.");
-    return;
-  }
+  const message = messageInput.value.trim();
+  if (!message) return;
 
   messageInput.value = "";
   await askFounderAi(message);
@@ -413,20 +251,7 @@ form?.addEventListener("submit", async (event) => {
 
 clearBtn?.addEventListener("click", () => {
   currentThreadId = null;
-
-  if (output) {
-    output.innerHTML = `
-      <div class="founder-message founder-message-assistant">
-        <strong>Founder AI</strong>
-        <p>New thread started. What should we work on?</p>
-      </div>
-    `;
-  }
-
-  if (messageInput) {
-    messageInput.value = "";
-    messageInput.focus();
-  }
+  output.innerHTML = "";
 });
 
 // ============================================================
@@ -434,6 +259,4 @@ clearBtn?.addEventListener("click", () => {
 // ============================================================
 
 setMode("strategy");
-ensureDashboardWidgets();
-loadFounderDataWidgets();
-loadFounderDashboardBrain();
+refreshDashboard();
