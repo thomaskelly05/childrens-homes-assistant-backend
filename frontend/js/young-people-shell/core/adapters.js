@@ -861,3 +861,196 @@ export default {
   buildAssistantEvidencePayload,
   summariseEvidenceSet,
 };
+
+function __compatArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function __compatId(item = {}) {
+  return item.id || item.source_id || item.record_id || item.uuid || null;
+}
+
+function __compatDate(item = {}) {
+  return (
+    item.date ||
+    item.event_date ||
+    item.created_at ||
+    item.updated_at ||
+    item.review_date ||
+    item.due_date ||
+    null
+  );
+}
+
+function __compatTitle(item = {}, fallback = "Record") {
+  return (
+    item.title ||
+    item.name ||
+    item.subject ||
+    item.heading ||
+    item.plan_title ||
+    item.document_title ||
+    fallback
+  );
+}
+
+function __compatSummary(item = {}) {
+  return (
+    item.summary ||
+    item.description ||
+    item.details ||
+    item.notes ||
+    item.content ||
+    item.body ||
+    item.overview ||
+    item.reason ||
+    item.action ||
+    ""
+  );
+}
+
+function __compatRecord(item = {}, type = "record", fallbackTitle = "Record") {
+  const id = __compatId(item);
+
+  return {
+    ...item,
+    id,
+    source_id: item.source_id || id,
+    record_id: item.record_id || id,
+    record_type: item.record_type || type,
+    type: item.type || item.record_type || type,
+    title: __compatTitle(item, fallbackTitle),
+    summary: __compatSummary(item),
+    description: item.description || __compatSummary(item),
+    section: item.section || type,
+    date: __compatDate(item),
+    created_at: item.created_at || item.date || null,
+    updated_at: item.updated_at || null,
+    status: item.status || item.workflow_status || item.plan_status || "",
+    urgency: item.urgency || item.priority || item.severity || "low",
+    tags: __compatArray(item.tags).length ? item.tags : [type],
+    raw: item.raw || item,
+  };
+}
+
+function __compatMapYoungPerson(item = {}) {
+  return {
+    ...__compatRecord(item, "young_person", "Young person"),
+    full_name:
+      item.full_name ||
+      item.name ||
+      [item.first_name, item.last_name].filter(Boolean).join(" ") ||
+      "Young person",
+    preferred_name: item.preferred_name || item.first_name || item.name || "",
+    home_id: item.home_id || item.homeId || null,
+    placement_status: item.placement_status || item.status || "",
+    summary_risk_level: item.summary_risk_level || item.risk_level || "",
+  };
+}
+
+function __compatMapIdentityProfile(item = {}) {
+  return __compatRecord(item, "identity_profile", "Identity profile");
+}
+
+function __compatMapCommunicationProfile(item = {}) {
+  return __compatRecord(item, "communication_profile", "Communication profile");
+}
+
+function __compatMapEducationProfile(item = {}) {
+  return __compatRecord(item, "education_record", "Education profile");
+}
+
+function __compatMapHealthProfile(item = {}) {
+  return __compatRecord(item, "health_record", "Health profile");
+}
+
+function __compatMapLegalStatus(item = {}) {
+  return __compatRecord(item, "legal_status", "Legal status");
+}
+
+function __compatMapFormulation(item = {}) {
+  return __compatRecord(item, "formulation", "Formulation");
+}
+
+function __compatMapYoungPersonContact(item = {}) {
+  return __compatRecord(item, "family_contact_record", "Young person contact");
+}
+
+function __compatMapIncident(item = {}) {
+  return __compatRecord(item, "incident", "Incident");
+}
+
+function __compatMapSupportPlan(item = {}) {
+  return __compatRecord(item, "support_plan", "Support plan");
+}
+
+function __compatMapTask(item = {}) {
+  return __compatRecord(item, "task", "Task");
+}
+
+function __compatMapCommunicationRecord(item = {}) {
+  return __compatRecord(item, "communication_record", "Communication record");
+}
+
+function __compatMapStatutoryDocument(item = {}) {
+  return __compatRecord(item, "statutory_document", "Statutory document");
+}
+
+function __compatMapInspectionAction(item = {}) {
+  return __compatRecord(item, "inspection_action", "Inspection action");
+}
+
+function __compatMapInspectionTask(item = {}) {
+  return __compatRecord(item, "inspection_task", "Inspection task");
+}
+
+function __compatMapInspectionHeader(item = {}) {
+  return __compatRecord(item, "inspection_header", "Inspection header");
+}
+
+function __compatMapInspectionSectionPanel(item = {}) {
+  return __compatRecord(
+    item,
+    "inspection_section_panel",
+    "Inspection section"
+  );
+}
+
+function __compatMapInspectionReason(item = {}) {
+  return __compatRecord(item, "inspection_reason", "Inspection reason");
+}
+
+function __compatMapInspectionBriefing(item = {}) {
+  return __compatRecord(item, "inspection_briefing", "Inspection briefing");
+}
+
+function __compatMapInspectionPrep72Hour(item = {}) {
+  return __compatRecord(
+    item,
+    "inspection_prep_72_hour",
+    "72-hour inspection prep"
+  );
+}
+
+export {
+  __compatMapYoungPerson as mapYoungPerson,
+  __compatMapIdentityProfile as mapIdentityProfile,
+  __compatMapCommunicationProfile as mapCommunicationProfile,
+  __compatMapEducationProfile as mapEducationProfile,
+  __compatMapHealthProfile as mapHealthProfile,
+  __compatMapLegalStatus as mapLegalStatus,
+  __compatMapFormulation as mapFormulation,
+  __compatMapYoungPersonContact as mapYoungPersonContact,
+  __compatMapIncident as mapIncident,
+  __compatMapSupportPlan as mapSupportPlan,
+  __compatMapTask as mapTask,
+  __compatMapCommunicationRecord as mapCommunicationRecord,
+  __compatMapStatutoryDocument as mapStatutoryDocument,
+  __compatMapInspectionAction as mapInspectionAction,
+  __compatMapInspectionTask as mapInspectionTask,
+  __compatMapInspectionHeader as mapInspectionHeader,
+  __compatMapInspectionSectionPanel as mapInspectionSectionPanel,
+  __compatMapInspectionReason as mapInspectionReason,
+  __compatMapInspectionBriefing as mapInspectionBriefing,
+  __compatMapInspectionPrep72Hour as mapInspectionPrep72Hour,
+};
