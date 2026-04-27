@@ -11,6 +11,8 @@
 
 <body class="founder-hq-body">
   <main class="founder-hq-shell">
+
+    <!-- HEADER -->
     <header class="founder-hq-hero">
       <div>
         <p class="founder-eyebrow">Private Founder Area</p>
@@ -24,7 +26,10 @@
       <a class="founder-back-link" href="/index.html">Back to IndiCare</a>
     </header>
 
+    <!-- LAYOUT -->
     <section class="founder-hq-layout">
+
+      <!-- SIDEBAR -->
       <aside class="founder-sidebar">
         <h2>AI Team</h2>
 
@@ -59,10 +64,13 @@
         </button>
       </aside>
 
+      <!-- MAIN -->
       <section class="founder-main">
+
+        <!-- MODE HEADER -->
         <div class="founder-card founder-snapshot">
           <div>
-            <p class="founder-eyebrow">Today’s focus</p>
+            <p class="founder-eyebrow">Current Focus</p>
             <h2 id="founderModeTitle">Strategy Advisor</h2>
             <p id="founderModeDescription">
               Ask for help deciding what IndiCare should focus on next.
@@ -70,7 +78,39 @@
           </div>
         </div>
 
+        <!-- QUICK ACTIONS -->
+        <div class="founder-card">
+          <h3>Quick Actions</h3>
+          <p>
+            Run high-impact actions instantly to move IndiCare forward.
+          </p>
+
+          <div class="founder-quick-actions">
+            <button data-founder-action="weekly_plan">
+              📅 Weekly Plan
+            </button>
+
+            <button data-founder-action="first_customers">
+              🧲 First 5 Customers
+            </button>
+
+            <button data-founder-action="pricing_model">
+              💰 Pricing Model
+            </button>
+
+            <button data-founder-action="funding_summary">
+              🏛️ Funding Summary
+            </button>
+
+            <button data-founder-action="product_focus">
+              🧠 Product Focus
+            </button>
+          </div>
+        </div>
+
+        <!-- CHAT -->
         <div class="founder-card founder-chat-card">
+
           <div id="founderChatOutput" class="founder-chat-output">
             <div class="founder-message founder-message-assistant">
               <strong>Founder AI</strong>
@@ -89,29 +129,17 @@
             ></textarea>
 
             <div class="founder-form-actions">
-              <button type="button" id="founderClearBtn">Clear</button>
-              <button type="submit" class="primary">Ask Founder AI</button>
+              <button type="button" id="founderClearBtn">
+                Clear
+              </button>
+              <button type="submit" class="primary">
+                Ask Founder AI
+              </button>
             </div>
           </form>
+
         </div>
 
-        <section class="founder-quick-actions">
-          <button data-founder-prompt="What should I focus on this week to grow IndiCare?">
-            Weekly focus
-          </button>
-
-          <button data-founder-prompt="Create a plan to get my first 5 paying children’s homes using IndiCare.">
-            First 5 customers
-          </button>
-
-          <button data-founder-prompt="Help me create a simple pricing model for IndiCare.">
-            Pricing model
-          </button>
-
-          <button data-founder-prompt="Write a strong funding summary for IndiCare as an AI operating system for children’s homes.">
-            Funding summary
-          </button>
-        </section>
       </section>
     </section>
   </main>
