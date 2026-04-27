@@ -81,7 +81,6 @@ const STAFF_LIKE_ROLES = new Set([
 function showWorkspace() {
   els.selectorPanel?.classList.add("hidden");
   els.selectorScreen?.classList.add("hidden");
-
   els.workspacePanel?.classList.remove("hidden");
   els.workspaceScreen?.classList.remove("hidden");
 }
@@ -89,7 +88,6 @@ function showWorkspace() {
 function showSelector() {
   els.workspacePanel?.classList.add("hidden");
   els.workspaceScreen?.classList.add("hidden");
-
   els.selectorPanel?.classList.remove("hidden");
   els.selectorScreen?.classList.remove("hidden");
 }
@@ -176,9 +174,7 @@ function hydrateRuntimeContextFromDom() {
   const datasetRole = normaliseRole(els.app.dataset.userRole || "");
   const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
   const datasetHomeId = normaliseNumericId(els.app.dataset.homeId);
-  const datasetYoungPersonId = normaliseNumericId(
-    els.app.dataset.youngPersonId
-  );
+  const datasetYoungPersonId = normaliseNumericId(els.app.dataset.youngPersonId);
   const datasetProviderId = normaliseNumericId(els.app.dataset.providerId);
   const datasetAllowedHomeIds = els.app.dataset.allowedHomeIds || "";
 
@@ -274,9 +270,7 @@ async function hydrateRuntimeContextFromAuthCheck() {
     }
 
     const role = normaliseRole(auth.role || auth.user_role || auth.role_name);
-
     const authHomeId = normaliseNumericId(auth.home_id || auth.homeId || null);
-
     const authProviderId = normaliseNumericId(
       auth.provider_id || auth.providerId || null
     );
@@ -354,10 +348,7 @@ function getAllowedSectionsForScope(scope = state.currentScope || "child") {
   return SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"];
 }
 
-function isSectionAllowedInScope(
-  section = "",
-  scope = state.currentScope || "child"
-) {
+function isSectionAllowedInScope(section = "", scope = state.currentScope || "child") {
   return getAllowedSectionsForScope(scope).includes(section);
 }
 
@@ -654,19 +645,13 @@ async function restoreOrShowYoungPersonSelector() {
   if ((state.currentScope || "child") !== "child") return false;
 
   const idFromUrl = normaliseNumericId(getYoungPersonIdFromUrl());
-  if (idFromUrl) {
-    return openYoungPersonSafely(idFromUrl);
-  }
+  if (idFromUrl) return openYoungPersonSafely(idFromUrl);
 
   const existingStateId = normaliseNumericId(state.youngPersonId);
-  if (existingStateId) {
-    return openYoungPersonSafely(existingStateId);
-  }
+  if (existingStateId) return openYoungPersonSafely(existingStateId);
 
   const datasetId = normaliseNumericId(els.app?.dataset?.youngPersonId);
-  if (datasetId) {
-    return openYoungPersonSafely(datasetId);
-  }
+  if (datasetId) return openYoungPersonSafely(datasetId);
 
   clearSelectedYoungPerson();
   state.youngPersonId = null;
@@ -678,7 +663,7 @@ async function restoreOrShowYoungPersonSelector() {
     await loadYoungPersonSelector();
   } catch (error) {
     console.error("[index] selector load failed", error);
-    showError(error?.message || "Failed to load young people.");
+    showError(error?.message || "Failed to load children and young people.");
   }
 
   refreshWorkspaceSummary();
@@ -710,7 +695,7 @@ async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
     refreshWorkspaceSummary();
   } catch (error) {
     console.error("[index] selector load failed", error);
-    showError(error?.message || "Failed to load young people.");
+    showError(error?.message || "Failed to load children and young people.");
   }
 }
 
@@ -737,7 +722,7 @@ function bindChangePersonFallback() {
         await loadYoungPersonSelector();
       } catch (error) {
         console.error("[index] failed loading selector from change button", error);
-        showError(error?.message || "Failed to load young people.");
+        showError(error?.message || "Failed to load children and young people.");
       }
     });
   }
@@ -894,7 +879,7 @@ async function bootstrap() {
     refreshWorkspaceSummary();
   } catch (error) {
     console.error("[index] bootstrap failed", error);
-    showError(error?.message || "Failed to start workspace.");
+    showError(error?.message || "Failed to start Care Hub.");
   }
 }
 
