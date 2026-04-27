@@ -1,23 +1,28 @@
 // frontend/js/services/founder-api.js
 
 async function request(path, options = {}) {
-  const res = await fetch(path, {
+  const response = await fetch(path, {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(options.headers || {}),
     },
     ...options,
   });
 
-  if (res.status === 403) {
+  if (response.status === 401) {
+    throw new Error("UNAUTHENTICATED");
+  }
+
+  if (response.status === 403) {
     throw new Error("FORBIDDEN");
   }
 
-  if (!res.ok) {
+  if (!response.ok) {
     throw new Error("REQUEST_FAILED");
   }
 
-  return res.json();
+  return response.json();
 }
 
 export const FounderAPI = {
@@ -29,19 +34,33 @@ export const FounderAPI = {
   },
 
   // =========================
+  // DASHBOARD
+  // =========================
+  getSummary() {
+    return request("/founder/summary");
+  },
+
+  // =========================
   // AI
   // =========================
-  chat({ message, mode = "strategy", thread_id = null }) {
+  chat({ message, mode = "strategy", thread_id = null, title = null }) {
     return request("/founder/ai/chat", {
       method: "POST",
-      body: JSON.stringify({ message, mode, thread_id }),
+      body: JSON.stringify({
+        message,
+        mode,
+        thread_id,
+        title,
+      }),
     });
   },
 
   quickAction(action) {
     return request("/founder/ai/quick-action", {
       method: "POST",
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({
+        action,
+      }),
     });
   },
 
@@ -57,14 +76,7 @@ export const FounderAPI = {
   },
 
   // =========================
-  // DASHBOARD / SUMMARY
-  // =========================
-  getSummary() {
-    return request("/founder/summary");
-  },
-
-  // =========================
-  // LEADS (CRM)
+  // LEADS
   // =========================
   getLeads() {
     return request("/founder/leads");
