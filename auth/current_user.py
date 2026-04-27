@@ -29,9 +29,18 @@ BILLING_EXEMPT_PREFIXES = (
     "/js",
     "/assets",
     "/components",
+    "/admin/users",
+    "/founder",
 )
 
-BILLING_EXEMPT_ROLES = {"admin", "provider_admin"}
+BILLING_EXEMPT_ROLES = {
+    "admin",
+    "provider_admin",
+    "founder",
+    "owner",
+    "super_admin",
+    "superadmin",
+}
 
 
 def get_bearer_token(
@@ -48,24 +57,15 @@ def get_bearer_token(
 
 
 def _unauthorised(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=detail,
-    )
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
 
 def _forbidden(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=detail,
-    )
+    return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
 
 def _service_unavailable(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail=detail,
-    )
+    return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
 
 
 def _normalise_role(role: str | None) -> str:
@@ -201,6 +201,10 @@ def _extract_billing_state(
             user_id,
             exc_info=True,
         )
+
+    if is_exempt and not subscription_active:
+        subscription_active = True
+        subscription_status = "exempt"
 
     return subscription_active, subscription_status, plan_name
 
