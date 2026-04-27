@@ -57,6 +57,7 @@ const MODE_META = {
 
 let currentMode = "strategy";
 let currentThreadId = null;
+let dashboardLoaded = false;
 
 // ============================================================
 // ELEMENTS
@@ -106,10 +107,15 @@ function addMessage(role, content) {
 
 function setLoading(isLoading) {
   const submit = form?.querySelector('button[type="submit"]');
+
   if (submit) {
     submit.disabled = isLoading;
     submit.textContent = isLoading ? "Thinking..." : "Ask Founder AI";
   }
+
+  quickActionButtons.forEach((button) => {
+    button.disabled = isLoading;
+  });
 }
 
 function setMode(mode) {
@@ -123,6 +129,7 @@ function setMode(mode) {
   });
 
   const meta = MODE_META[currentMode];
+
   if (modeTitle) modeTitle.textContent = meta.title;
   if (modeDescription) modeDescription.textContent = meta.description;
 }
@@ -150,6 +157,11 @@ async function askFounderAi(message) {
       return;
     }
 
+    if (error.message === "UNAUTHENTICATED") {
+      addMessage("assistant", "You need to sign in again.");
+      return;
+    }
+
     addMessage("assistant", "Founder AI failed to respond.");
   } finally {
     setLoading(false);
@@ -161,13 +173,50 @@ async function askFounderAi(message) {
 // ============================================================
 
 async function runQuickAction(action) {
-  addMessage("assistant", "Running action...");
+  if (!action) return;
+
+  addMessage("user", `Run quick action: ${action.replaceAll("_", " ")}`);
+  setLoading(true);
 
   try {
     const data = await FounderAPI.quickAction(action);
     addMessage("assistant", data.response || "No response.");
   } catch (error) {
+    if (error.message === "FORBIDDEN") {
+      addMessage("assistant", "Founder HQ is restricted.");
+      return;
+    }
+
     addMessage("assistant", "Quick action failed.");
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ============================================================
+// DASHBOARD BRAIN
+// ============================================================
+
+async function loadFounderDashboardBrain() {
+  if (dashboardLoaded) return;
+  dashboardLoaded = true;
+
+  addMessage("assistant", "Loading Founder Dashboard Brain...");
+
+  try {
+    const data = await FounderAPI.getSummary();
+
+    if (data?.summary) {
+      addMessage("assistant", data.summary);
+      return;
+    }
+
+    addMessage("assistant", "Founder Dashboard Brain is ready, but no summary was returned.");
+  } catch (error) {
+    addMessage(
+      "assistant",
+      "Founder Dashboard Brain is ready, but I could not load today’s summary."
+    );
   }
 }
 
@@ -213,6 +262,11 @@ clearBtn?.addEventListener("click", () => {
       </div>
     `;
   }
+
+  if (messageInput) {
+    messageInput.value = "";
+    messageInput.focus();
+  }
 });
 
 // ============================================================
@@ -220,3 +274,4 @@ clearBtn?.addEventListener("click", () => {
 // ============================================================
 
 setMode("strategy");
+loadFounderDashboardBrain();
