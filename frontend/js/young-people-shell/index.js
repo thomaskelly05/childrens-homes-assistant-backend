@@ -583,7 +583,7 @@ async function setScope(scope) {
     if (state.youngPersonId) {
       await loadSection(state.currentSection);
     } else {
-      await restoreOrAutoOpenYoungPerson();
+      await restoreOrShowYoungPersonSelector();
     }
 
     refreshWorkspaceSummary();
@@ -617,31 +617,6 @@ function bindScopeEvents() {
   }
 }
 
-async function fetchFirstYoungPersonId() {
-  try {
-    const response = await fetch("/young-people", {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    const rows = Array.isArray(data?.young_people)
-      ? data.young_people
-      : Array.isArray(data?.items)
-        ? data.items
-        : [];
-
-    const first = rows.find((item) => normaliseNumericId(item?.id));
-    return normaliseNumericId(first?.id);
-  } catch (error) {
-    console.error("[index] failed fetching first young person", error);
-    return null;
-  }
-}
-
 async function openYoungPersonSafely(id, options = {}) {
   const safeId = normaliseNumericId(id);
   if (!safeId) return false;
@@ -665,6 +640,7 @@ async function openYoungPersonSafely(id, options = {}) {
   } catch (error) {
     console.error("[index] failed to open young person", error);
     clearSelectedYoungPerson();
+    state.youngPersonId = null;
     setYoungPersonIdInUrl(null);
     syncDomDatasetFromState();
     showSelector();
@@ -674,7 +650,7 @@ async function openYoungPersonSafely(id, options = {}) {
   }
 }
 
-async function restoreOrAutoOpenYoungPerson() {
+async function restoreOrShowYoungPersonSelector() {
   if ((state.currentScope || "child") !== "child") return false;
 
   const idFromUrl = normaliseNumericId(getYoungPersonIdFromUrl());
@@ -692,19 +668,25 @@ async function restoreOrAutoOpenYoungPerson() {
     return openYoungPersonSafely(datasetId);
   }
 
-  const firstId = await fetchFirstYoungPersonId();
-  if (firstId) {
-    return openYoungPersonSafely(firstId);
+  clearSelectedYoungPerson();
+  state.youngPersonId = null;
+  setYoungPersonIdInUrl(null);
+  syncDomDatasetFromState();
+  showSelector();
+
+  try {
+    await loadYoungPersonSelector();
+  } catch (error) {
+    console.error("[index] selector load failed", error);
+    showError(error?.message || "Failed to load young people.");
   }
 
-  showSelector();
-  await loadYoungPersonSelector();
   refreshWorkspaceSummary();
   return false;
 }
 
 async function restoreSelectedYoungPerson() {
-  return restoreOrAutoOpenYoungPerson();
+  return restoreOrShowYoungPersonSelector();
 }
 
 async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
@@ -716,6 +698,11 @@ async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
     showWorkspace();
     return;
   }
+
+  clearSelectedYoungPerson();
+  state.youngPersonId = null;
+  setYoungPersonIdInUrl(null);
+  syncDomDatasetFromState();
 
   try {
     await loadYoungPersonSelector();
