@@ -209,12 +209,16 @@ ROUTERS = [
     "routers.passkey_routes",
     "routers.legal_acceptance_routes",
 
-    # This matches your actual file: routers/frontend_compat.py
-    # It must load before stricter legacy routers.
+    # Must load before stricter legacy/frontend routers.
     "routers.frontend_compat",
 
     "routers.account_routes",
     "routers.admin_routes",
+
+    # Founder/admin management additions.
+    "routers.founder_ai_routes",
+    "routers.admin_user_routes",
+
     "routers.billing_routes",
     "routers.ai_notes_routes",
     "routers.ai_note_templates_routes",
@@ -289,11 +293,13 @@ async def lifespan(_: FastAPI):
     init_legal_acceptance_table()
     init_mfa_tables()
     init_passkeys_table()
+
     logger.info(
         "IndiCare API started | env=%s revision=%s",
         settings.app_env,
         settings.app_revision,
     )
+
     try:
         yield
     finally:
@@ -354,6 +360,7 @@ def get_request_id(request: Request) -> str:
     existing = getattr(request.state, "request_id", None)
     if existing:
         return existing
+
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
     request.state.request_id = request_id
     return request_id
@@ -472,6 +479,7 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
         if not user_has_enabled_mfa(user_id):
             if wants_html(request):
                 return RedirectResponse(url="/mfa-setup", status_code=302)
+
             return JSONResponse(
                 status_code=403,
                 content={
@@ -484,6 +492,7 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
         if not is_mfa_verified_in_session(request):
             if wants_html(request):
                 return RedirectResponse(url="/mfa", status_code=302)
+
             return JSONResponse(
                 status_code=403,
                 content={
@@ -664,6 +673,12 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/childrens-home-os.html": "young-people-shell.html",
         "/rostering": "rostering.html",
         "/rostering.html": "rostering.html",
+
+        # Founder/Admin private pages.
+        "/founder-hq": "founder-hq.html",
+        "/founder-hq.html": "founder-hq.html",
+        "/admin-users": "admin-users.html",
+        "/admin-users.html": "admin-users.html",
     }
 
     academy_page_routes = {
@@ -721,7 +736,8 @@ def register_health_routes(app: FastAPI) -> None:
                 },
             )
         finally:
-            release_db_connection(conn)
+            if conn is not None:
+                release_db_connection(conn)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
