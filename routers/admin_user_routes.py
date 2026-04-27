@@ -41,8 +41,40 @@ class CreateUserPayload(BaseModel):
     subscription_active: bool = True
 
 
+def dict_rows(cursor) -> list[dict[str, Any]]:
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+def dict_row(cursor) -> dict[str, Any] | None:
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    columns = [col[0] for col in cursor.description]
+    return dict(zip(columns, row))
+
+
+def get_columns(conn, table_name: str) -> set[str]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = %s
+            """,
+            (table_name,),
+        )
+        return {row[0] for row in cur.fetchall()}
+
+
 def current_role(user: dict[str, Any]) -> str:
-    return str(user.get("role") or user.get("user_role") or "").strip().lower()
+    return str(
+        user.get("role")
+        or user.get("user_role")
+        or user.get("account_role")
+        or ""
+    ).strip().lower()
 
 
 def require_admin(user: dict[str, Any]) -> None:
@@ -62,170 +94,217 @@ def hash_password(password: str) -> str:
 
 
 @router.get("/options")
-async def admin_user_options(current_user: dict[str, Any] = Depends(get_current_user)):
+def admin_user_options(current_user: dict[str, Any] = Depends(get_current_user)):
     require_admin(current_user)
 
-    conn = await get_db_connection()
+    conn = get_db_connection()
     try:
-        providers = await conn.fetch(
-            """
-            SELECT id, name
-            FROM providers
-            WHERE archived IS NOT TRUE
-            ORDER BY name ASC
-            """
-        )
+        provider_columns = get_columns(conn, "providers")
+        home_columns = get_columns(conn, "homes")
 
-        homes = await conn.fetch(
-            """
-            SELECT id, name, provider_id
-            FROM homes
-            WHERE archived IS NOT TRUE
-            ORDER BY name ASC
-            """
-        )
+        provider_where = "WHERE archived IS NOT TRUE" if "archived" in provider_columns else ""
+        home_where = "WHERE archived IS NOT TRUE" if "archived" in home_columns else ""
+
+        home_name_col = "name" if "name" in home_columns else "home_name"
+
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT id, name
+                FROM providers
+                {provider_where}
+                ORDER BY name ASC
+                """
+            )
+            providers = dict_rows(cur)
+
+            cur.execute(
+                f"""
+                SELECT id, {home_name_col} AS name, provider_id
+                FROM homes
+                {home_where}
+                ORDER BY {home_name_col} ASC
+                """
+            )
+            homes = dict_rows(cur)
 
         return {
             "roles": sorted(VALID_ROLES),
-            "providers": [dict(row) for row in providers],
-            "homes": [dict(row) for row in homes],
+            "providers": providers,
+            "homes": homes,
         }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not load admin user options: {exc}",
+        ) from exc
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
 
 
 @router.get("")
-async def list_admin_users(current_user: dict[str, Any] = Depends(get_current_user)):
+def list_admin_users(current_user: dict[str, Any] = Depends(get_current_user)):
     require_admin(current_user)
 
-    conn = await get_db_connection()
+    conn = get_db_connection()
     try:
-        rows = await conn.fetch(
-            """
-            SELECT
-                u.id,
-                u.email,
-                u.first_name,
-                u.last_name,
-                u.role,
-                u.provider_id,
-                p.name AS provider_name,
-                u.home_id,
-                h.name AS home_name,
-                u.is_active,
-                u.subscription_active,
-                u.account_status,
-                u.created_at,
-                u.updated_at
-            FROM users u
-            LEFT JOIN providers p ON p.id = u.provider_id
-            LEFT JOIN homes h ON h.id = u.home_id
-            WHERE u.archived IS NOT TRUE
-            ORDER BY u.created_at DESC
-            LIMIT 250
-            """
-        )
+        home_columns = get_columns(conn, "homes")
+        home_name_col = "name" if "name" in home_columns else "home_name"
 
-        return {"users": [dict(row) for row in rows]}
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT
+                    u.id,
+                    u.email,
+                    u.first_name,
+                    u.last_name,
+                    u.role,
+                    u.provider_id,
+                    p.name AS provider_name,
+                    u.home_id,
+                    h.{home_name_col} AS home_name,
+                    u.is_active,
+                    u.subscription_active,
+                    u.account_status,
+                    u.created_at,
+                    u.updated_at
+                FROM users u
+                LEFT JOIN providers p ON p.id = u.provider_id
+                LEFT JOIN homes h ON h.id = u.home_id
+                WHERE u.archived IS NOT TRUE
+                ORDER BY u.created_at DESC
+                LIMIT 250
+                """
+            )
+            users = dict_rows(cur)
+
+        return {"users": users}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not load admin users: {exc}",
+        ) from exc
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
 
 
 @router.post("")
-async def create_admin_user(
+def create_admin_user(
     payload: CreateUserPayload,
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_admin(current_user)
 
     role = normalise_role(payload.role)
-    home_ids = list(dict.fromkeys([int(item) for item in payload.home_ids if int(item) > 0]))
+    home_ids = []
+
+    for item in payload.home_ids or []:
+        try:
+            value = int(item)
+            if value > 0 and value not in home_ids:
+                home_ids.append(value)
+        except Exception:
+            continue
 
     if payload.home_id and payload.home_id not in home_ids:
         home_ids.insert(0, int(payload.home_id))
 
-    conn = await get_db_connection()
+    conn = get_db_connection()
     try:
-        existing = await conn.fetchrow(
-            "SELECT id FROM users WHERE lower(email) = lower($1)",
-            payload.email,
-        )
-
-        if existing:
-            raise HTTPException(status_code=409, detail="A user with this email already exists.")
-
-        password_hash = hash_password(payload.password)
-
-        row = await conn.fetchrow(
-            """
-            INSERT INTO users (
-                email,
-                password_hash,
-                role,
-                first_name,
-                last_name,
-                provider_id,
-                home_id,
-                is_active,
-                subscription_active,
-                account_status,
-                archived,
-                created_at,
-                updated_at
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM users WHERE lower(email) = lower(%s)",
+                (payload.email,),
             )
-            VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', FALSE, now(), now()
-            )
-            RETURNING id, email, role, first_name, last_name, provider_id, home_id, is_active
-            """,
-            payload.email.lower(),
-            password_hash,
-            role,
-            payload.first_name,
-            payload.last_name,
-            payload.provider_id,
-            payload.home_id,
-            payload.is_active,
-            payload.subscription_active,
-        )
+            existing = cur.fetchone()
 
-        user_id = int(row["id"])
-
-        for home_id in home_ids:
-            await conn.execute(
-                """
-                INSERT INTO staff_home_assignments (
-                    user_id,
-                    home_id,
-                    role,
-                    provider_id,
-                    created_at
+            if existing:
+                raise HTTPException(
+                    status_code=409,
+                    detail="A user with this email already exists.",
                 )
-                VALUES ($1, $2, $3, $4, now())
-                """,
-                user_id,
-                home_id,
-                role,
-                payload.provider_id,
-            )
 
-            await conn.execute(
+            password_hash = hash_password(payload.password)
+
+            cur.execute(
                 """
-                INSERT INTO organisation_members (
-                    provider_id,
-                    user_id,
-                    home_id,
+                INSERT INTO users (
+                    email,
+                    password_hash,
                     role,
-                    created_at
+                    first_name,
+                    last_name,
+                    provider_id,
+                    home_id,
+                    is_active,
+                    subscription_active,
+                    account_status,
+                    archived,
+                    created_at,
+                    updated_at
                 )
-                VALUES ($1, $2, $3, $4, now())
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', FALSE, now(), now()
+                )
+                RETURNING id, email, role, first_name, last_name, provider_id, home_id, is_active
                 """,
-                payload.provider_id,
-                user_id,
-                home_id,
-                role,
+                (
+                    payload.email.lower(),
+                    password_hash,
+                    role,
+                    payload.first_name,
+                    payload.last_name,
+                    payload.provider_id,
+                    payload.home_id,
+                    payload.is_active,
+                    payload.subscription_active,
+                ),
             )
 
-        return {"ok": True, "user": dict(row)}
+            user = dict_row(cur)
+            user_id = int(user["id"])
+
+            for home_id in home_ids:
+                cur.execute(
+                    """
+                    INSERT INTO staff_home_assignments (
+                        user_id,
+                        home_id,
+                        role,
+                        provider_id,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s, now())
+                    """,
+                    (user_id, home_id, role, payload.provider_id),
+                )
+
+                cur.execute(
+                    """
+                    INSERT INTO organisation_members (
+                        provider_id,
+                        user_id,
+                        home_id,
+                        role,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s, now())
+                    """,
+                    (payload.provider_id, user_id, home_id, role),
+                )
+
+        conn.commit()
+        return {"ok": True, "user": user}
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as exc:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not create user: {exc}",
+        ) from exc
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
