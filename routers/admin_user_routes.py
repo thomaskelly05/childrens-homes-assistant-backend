@@ -3,11 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
 from passlib.context import CryptContext
+from pydantic import BaseModel, Field
+from psycopg2.extras import RealDictCursor
 
 from auth.dependencies import get_current_user
-from db.connection import get_db_connection, release_db_connection
+from db.connection import get_db
 
 router = APIRouter(prefix="/admin/users", tags=["admin-users"])
 
@@ -19,7 +20,7 @@ ADMIN_ROLES = {
     "super_admin",
     "superadmin",
     "admin",
-    "administrator",
+    "provider_admin",
 }
 
 VALID_ROLES = {
@@ -28,7 +29,7 @@ VALID_ROLES = {
     "super_admin",
     "superadmin",
     "admin",
-    "administrator",
+    "provider_admin",
     "responsible_individual",
     "registered_manager",
     "manager",
@@ -56,23 +57,9 @@ class CreateUserPayload(BaseModel):
     subscription_active: bool = True
 
 
-def user_value(user: Any, key: str, default: Any = None) -> Any:
-    if isinstance(user, dict):
-        return user.get(key, default)
-    return getattr(user, key, default)
-
-
-def current_role(user: Any) -> str:
-    return str(
-        user_value(user, "role")
-        or user_value(user, "user_role")
-        or user_value(user, "account_role")
-        or ""
-    ).strip().lower()
-
-
-def require_admin(user: Any) -> None:
-    if current_role(user) not in ADMIN_ROLES:
+def require_admin(user: dict[str, Any]) -> None:
+    role = str(user.get("role") or "").strip().lower()
+    if role not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required.")
 
 
@@ -83,17 +70,15 @@ def normalise_role(role: str) -> str:
     return clean
 
 
-def rows_to_dicts(cur) -> list[dict[str, Any]]:
-    columns = [desc[0] for desc in cur.description]
-    return [dict(zip(columns, row)) for row in cur.fetchall()]
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
 
-def row_to_dict(cur) -> dict[str, Any] | None:
-    row = cur.fetchone()
-    if row is None:
-        return None
-    columns = [desc[0] for desc in cur.description]
-    return dict(zip(columns, row))
+def clean_email(email: str) -> str:
+    value = str(email or "").strip().lower()
+    if "@" not in value:
+        raise HTTPException(status_code=400, detail="Valid email required.")
+    return value
 
 
 def get_table_columns(conn, table_name: str) -> set[str]:
@@ -110,15 +95,20 @@ def get_table_columns(conn, table_name: str) -> set[str]:
         return {row[0] for row in cur.fetchall()}
 
 
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def clean_email(email: str) -> str:
-    value = str(email or "").strip().lower()
-    if "@" not in value:
-        raise HTTPException(status_code=400, detail="Valid email required.")
-    return value
+def table_exists(conn, table_name: str) -> bool:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name = %s
+            )
+            """,
+            (table_name,),
+        )
+        return bool(cur.fetchone()[0])
 
 
 def get_home_provider_id(conn, home_id: int | None) -> int | None:
@@ -128,39 +118,37 @@ def get_home_provider_id(conn, home_id: int | None) -> int | None:
     with conn.cursor() as cur:
         cur.execute("SELECT provider_id FROM homes WHERE id = %s", (home_id,))
         row = cur.fetchone()
-        if not row:
-            return None
-        return row[0]
+        return row[0] if row else None
 
 
 @router.get("/options")
-def admin_user_options(current_user: Any = Depends(get_current_user)):
+def admin_user_options(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
     require_admin(current_user)
 
-    conn = None
     try:
-        conn = get_db_connection()
-
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
                 SELECT id, name
                 FROM providers
-                WHERE COALESCE(archived, false) IS false
+                WHERE COALESCE(archived, false) = false
                 ORDER BY name ASC
                 """
             )
-            providers = rows_to_dicts(cur)
+            providers = [dict(row) for row in cur.fetchall()]
 
             cur.execute(
                 """
                 SELECT id, name, provider_id
                 FROM homes
-                WHERE COALESCE(archived, false) IS false
+                WHERE COALESCE(archived, false) = false
                 ORDER BY name ASC
                 """
             )
-            homes = rows_to_dicts(cur)
+            homes = [dict(row) for row in cur.fetchall()]
 
         return {
             "roles": sorted(VALID_ROLES),
@@ -168,72 +156,92 @@ def admin_user_options(current_user: Any = Depends(get_current_user)):
             "homes": homes,
         }
 
-    except HTTPException:
-        raise
     except Exception as exc:
         raise HTTPException(
             status_code=500,
             detail=f"Could not load admin options: {exc}",
         ) from exc
-    finally:
-        if conn is not None:
-            release_db_connection(conn)
 
 
 @router.get("")
-def list_admin_users(current_user: Any = Depends(get_current_user)):
+def list_admin_users(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
     require_admin(current_user)
 
-    conn = None
     try:
-        conn = get_db_connection()
+        user_columns = get_table_columns(conn, "users")
 
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT
-                    u.id,
-                    u.email,
-                    u.first_name,
-                    u.last_name,
-                    u.role,
-                    u.provider_id,
-                    p.name AS provider_name,
-                    u.home_id,
-                    h.name AS home_name,
-                    COALESCE(u.is_active, false) AS is_active,
-                    COALESCE(u.subscription_active, false) AS subscription_active,
-                    u.account_status,
-                    u.created_at,
-                    u.updated_at
-                FROM users u
-                LEFT JOIN providers p ON p.id = u.provider_id
-                LEFT JOIN homes h ON h.id = u.home_id
-                WHERE COALESCE(u.archived, false) IS false
-                ORDER BY u.created_at DESC NULLS LAST, u.id DESC
-                LIMIT 250
-                """
-            )
-            users = rows_to_dicts(cur)
+        optional_selects = []
+
+        if "subscription_active" in user_columns:
+            optional_selects.append("COALESCE(u.subscription_active, false) AS subscription_active")
+        else:
+            optional_selects.append("false AS subscription_active")
+
+        if "account_status" in user_columns:
+            optional_selects.append("u.account_status")
+        else:
+            optional_selects.append("'unknown' AS account_status")
+
+        if "created_at" in user_columns:
+            created_order = "u.created_at DESC NULLS LAST, u.id DESC"
+            optional_selects.append("u.created_at")
+        else:
+            created_order = "u.id DESC"
+            optional_selects.append("NULL AS created_at")
+
+        if "updated_at" in user_columns:
+            optional_selects.append("u.updated_at")
+        else:
+            optional_selects.append("NULL AS updated_at")
+
+        archived_filter = (
+            "WHERE COALESCE(u.archived, false) = false"
+            if "archived" in user_columns
+            else ""
+        )
+
+        query = f"""
+            SELECT
+                u.id,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.role,
+                u.provider_id,
+                p.name AS provider_name,
+                u.home_id,
+                h.name AS home_name,
+                COALESCE(u.is_active, false) AS is_active,
+                {", ".join(optional_selects)}
+            FROM users u
+            LEFT JOIN providers p ON p.id = u.provider_id
+            LEFT JOIN homes h ON h.id = u.home_id
+            {archived_filter}
+            ORDER BY {created_order}
+            LIMIT 250
+        """
+
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query)
+            users = [dict(row) for row in cur.fetchall()]
 
         return {"users": users}
 
-    except HTTPException:
-        raise
     except Exception as exc:
         raise HTTPException(
             status_code=500,
             detail=f"Could not load users: {exc}",
         ) from exc
-    finally:
-        if conn is not None:
-            release_db_connection(conn)
 
 
 @router.post("")
 def create_admin_user(
     payload: CreateUserPayload,
-    current_user: Any = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
 ):
     require_admin(current_user)
 
@@ -255,16 +263,14 @@ def create_admin_user(
         if main_home_id not in home_ids:
             home_ids.insert(0, main_home_id)
 
-    conn = None
     try:
-        conn = get_db_connection()
         user_columns = get_table_columns(conn, "users")
 
         provider_id = payload.provider_id
         if not provider_id and payload.home_id:
             provider_id = get_home_provider_id(conn, int(payload.home_id))
 
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 "SELECT id FROM users WHERE lower(email) = lower(%s)",
                 (email,),
@@ -276,7 +282,7 @@ def create_admin_user(
                     detail="A user with this email already exists.",
                 )
 
-            values: dict[str, Any] = {
+            candidate_values = {
                 "email": email,
                 "password_hash": hash_password(payload.password),
                 "role": role,
@@ -292,109 +298,122 @@ def create_admin_user(
             }
 
             insert_columns = [
-                column
-                for column in values.keys()
-                if column in user_columns
+                column for column in candidate_values if column in user_columns
             ]
 
-            placeholders = ", ".join(["%s"] * len(insert_columns))
+            if "created_at" in user_columns:
+                insert_columns.append("created_at")
+                candidate_values["created_at"] = "NOW_SQL"
+
+            if "updated_at" in user_columns:
+                insert_columns.append("updated_at")
+                candidate_values["updated_at"] = "NOW_SQL"
+
             column_sql = ", ".join(insert_columns)
-            insert_values = [values[column] for column in insert_columns]
+
+            placeholders = []
+            values = []
+
+            for column in insert_columns:
+                if candidate_values[column] == "NOW_SQL":
+                    placeholders.append("now()")
+                else:
+                    placeholders.append("%s")
+                    values.append(candidate_values[column])
+
+            placeholder_sql = ", ".join(placeholders)
 
             cur.execute(
                 f"""
-                INSERT INTO users ({column_sql}, created_at, updated_at)
-                VALUES ({placeholders}, now(), now())
+                INSERT INTO users ({column_sql})
+                VALUES ({placeholder_sql})
                 RETURNING id, email, role, first_name, last_name, provider_id, home_id, is_active
                 """,
-                insert_values,
+                values,
             )
 
-            user = row_to_dict(cur)
-            if not user:
-                raise HTTPException(status_code=500, detail="User was not created.")
-
+            user = dict(cur.fetchone())
             user_id = int(user["id"])
 
-            for home_id in home_ids:
-                assignment_provider_id = provider_id or get_home_provider_id(conn, home_id)
+            if table_exists(conn, "staff_home_assignments"):
+                assignment_columns = get_table_columns(conn, "staff_home_assignments")
 
-                cur.execute(
-                    """
-                    INSERT INTO staff_home_assignments (
-                        user_id,
-                        home_id,
-                        role,
-                        provider_id,
-                        created_at
-                    )
-                    VALUES (%s, %s, %s, %s, now())
-                    """,
-                    (user_id, home_id, role, assignment_provider_id),
-                )
+                for home_id in home_ids:
+                    assignment_provider_id = provider_id or get_home_provider_id(conn, home_id)
 
-                cur.execute(
-                    """
-                    INSERT INTO organisation_members (
-                        provider_id,
-                        user_id,
-                        home_id,
-                        role,
-                        created_at
-                    )
-                    VALUES (%s, %s, %s, %s, now())
-                    """,
-                    (assignment_provider_id, user_id, home_id, role),
-                )
+                    columns = []
+                    vals = []
 
-            if "admin_audit_log" in get_existing_tables(conn):
-                cur.execute(
-                    """
-                    INSERT INTO admin_audit_log (
-                        admin_user_id,
-                        action,
-                        target_type,
-                        target_id,
-                        details,
-                        provider_id,
-                        created_at
+                    for column, value in {
+                        "user_id": user_id,
+                        "home_id": home_id,
+                        "role": role,
+                        "provider_id": assignment_provider_id,
+                    }.items():
+                        if column in assignment_columns:
+                            columns.append(column)
+                            vals.append(value)
+
+                    if "created_at" in assignment_columns:
+                        columns.append("created_at")
+
+                    col_sql = ", ".join(columns)
+                    ph_sql = ", ".join(["%s"] * len(vals))
+                    if "created_at" in assignment_columns:
+                        ph_sql = f"{ph_sql}, now()" if ph_sql else "now()"
+
+                    cur.execute(
+                        f"""
+                        INSERT INTO staff_home_assignments ({col_sql})
+                        VALUES ({ph_sql})
+                        """,
+                        vals,
                     )
-                    VALUES (%s, 'create_user', 'user', %s, %s::jsonb, %s, now())
-                    """,
-                    (
-                        user_value(current_user, "id") or user_value(current_user, "user_id"),
-                        user_id,
-                        '{"source":"admin-users-page"}',
-                        provider_id,
-                    ),
-                )
+
+            if table_exists(conn, "organisation_members"):
+                member_columns = get_table_columns(conn, "organisation_members")
+
+                for home_id in home_ids:
+                    member_provider_id = provider_id or get_home_provider_id(conn, home_id)
+
+                    columns = []
+                    vals = []
+
+                    for column, value in {
+                        "provider_id": member_provider_id,
+                        "user_id": user_id,
+                        "home_id": home_id,
+                        "role": role,
+                    }.items():
+                        if column in member_columns:
+                            columns.append(column)
+                            vals.append(value)
+
+                    if "created_at" in member_columns:
+                        columns.append("created_at")
+
+                    col_sql = ", ".join(columns)
+                    ph_sql = ", ".join(["%s"] * len(vals))
+                    if "created_at" in member_columns:
+                        ph_sql = f"{ph_sql}, now()" if ph_sql else "now()"
+
+                    cur.execute(
+                        f"""
+                        INSERT INTO organisation_members ({col_sql})
+                        VALUES ({ph_sql})
+                        """,
+                        vals,
+                    )
 
         conn.commit()
         return {"ok": True, "user": user}
 
     except HTTPException:
-        if conn is not None:
-            conn.rollback()
+        conn.rollback()
         raise
     except Exception as exc:
-        if conn is not None:
-            conn.rollback()
+        conn.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Could not create user: {exc}",
         ) from exc
-    finally:
-        if conn is not None:
-            release_db_connection(conn)
-
-
-def get_existing_tables(conn) -> set[str]:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-            """
-        )
-        return {row[0] for row in cur.fetchall()}
