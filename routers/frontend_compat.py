@@ -36,7 +36,7 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
     "safeguarding": {
         "table": "safeguarding_records",
         "key": "safeguarding",
-        "order": "concern_datetime",
+        "order": "created_at",
     },
     "support-plans": {
         "table": "support_plans",
@@ -69,9 +69,9 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
         "order": "full_name",
     },
     "supervisions": {
-        "table": "supervision_sessions",
+        "table": "supervision_submissions",
         "key": "supervisions",
-        "order": "scheduled_date",
+        "order": "created_at",
     },
     "training": {
         "table": "staff_training_records",
@@ -123,11 +123,6 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
         "key": "inspection_section_scores",
         "order": "created_at",
     },
-    "inspection-lines-of-enquiry": {
-        "table": "inspection_lines_of_enquiry",
-        "key": "inspection_lines_of_enquiry",
-        "order": "created_at",
-    },
     "inspection-score-reasons": {
         "table": "inspection_score_reasons",
         "key": "inspection_score_reasons",
@@ -136,6 +131,11 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
     "inspection-reasons": {
         "table": "inspection_score_reasons",
         "key": "inspection_reasons",
+        "order": "created_at",
+    },
+    "inspection-lines-of-enquiry": {
+        "table": "inspection_lines_of_enquiry",
+        "key": "inspection_lines_of_enquiry",
         "order": "created_at",
     },
     "inspection-improvement-actions": {
@@ -163,6 +163,11 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
         "key": "inspection_prep_72_hour",
         "order": "created_at",
     },
+    "manager-review-queue": {
+        "table": "manager_review_queue",
+        "key": "manager_review_queue",
+        "order": "created_at",
+    },
     "reg44-visits": {
         "table": "reg44_visits",
         "key": "reg44_visits",
@@ -187,11 +192,6 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
         "table": "reg45_actions",
         "key": "reg45_actions",
         "order": "due_date",
-    },
-    "manager-review-queue": {
-        "table": "manager_review_queue",
-        "key": "manager_review_queue",
-        "order": "created_at",
     },
 }
 
@@ -259,24 +259,22 @@ def get_context_id(request: Request, key: str) -> int | None:
     return get_int(request.query_params.get(key))
 
 
-def allowed_tables() -> set[str]:
-    return {config["table"] for config in ROUTE_TABLES.values()} | {
+def select_rows(
+    *,
+    table_name: str,
+    record_id: int | None = None,
+    young_person_id: int | None = None,
+    home_id: int | None = None,
+    provider_id: int | None = None,
+    limit: int = 100,
+    order_column: str | None = None,
+) -> list[dict[str, Any]]:
+    allowed_tables = {config["table"] for config in ROUTE_TABLES.values()} | {
         "homes",
         "providers",
     }
 
-
-def select_rows(
-    *,
-    table_name: str,
-    young_person_id: int | None = None,
-    home_id: int | None = None,
-    provider_id: int | None = None,
-    record_id: int | None = None,
-    limit: int = 100,
-    order_column: str | None = None,
-) -> list[dict[str, Any]]:
-    if table_name not in allowed_tables():
+    if table_name not in allowed_tables:
         return []
 
     conn = None
@@ -343,26 +341,13 @@ async def route_payload(
     young_person_id: int | None = None,
     home_id: int | None = None,
     provider_id: int | None = None,
-    record_id: int | None = None,
     limit: int = 100,
 ):
-    if route_key not in ROUTE_TABLES:
-        return JSONResponse(
-            status_code=404,
-            content={
-                "status": "not_found",
-                "route": route_key,
-                "items": [],
-                "count": 0,
-            },
-        )
-
     config = ROUTE_TABLES[route_key]
 
     young_person_id = young_person_id or get_context_id(request, "young_person_id")
     home_id = home_id or get_context_id(request, "home_id")
     provider_id = provider_id or get_context_id(request, "provider_id")
-    record_id = record_id or get_context_id(request, "record_id")
 
     try:
         rows = select_rows(
@@ -370,21 +355,18 @@ async def route_payload(
             young_person_id=young_person_id,
             home_id=home_id,
             provider_id=provider_id,
-            record_id=record_id,
             limit=limit,
             order_column=config.get("order"),
         )
 
         return {
             config["key"]: rows,
-            "item": rows[0] if record_id and rows else None,
             "items": rows,
             "count": len(rows),
             "status": "ok",
             "route": route_key,
             "table": config["table"],
             "filters": {
-                "record_id": record_id,
                 "young_person_id": young_person_id,
                 "home_id": home_id,
                 "provider_id": provider_id,
@@ -396,7 +378,6 @@ async def route_payload(
             status_code=200,
             content={
                 config["key"]: [],
-                "item": None,
                 "items": [],
                 "count": 0,
                 "status": "compat_error_softened",
@@ -404,7 +385,6 @@ async def route_payload(
                 "table": config["table"],
                 "message": str(error),
                 "filters": {
-                    "record_id": record_id,
                     "young_person_id": young_person_id,
                     "home_id": home_id,
                     "provider_id": provider_id,
@@ -430,23 +410,6 @@ def register_route(route_key: str) -> None:
             limit=limit,
         )
 
-    async def detail_handler(
-        request: Request,
-        record_id: int,
-        young_person_id: int | None = Query(default=None),
-        home_id: int | None = Query(default=None),
-        provider_id: int | None = Query(default=None),
-    ):
-        return await route_payload(
-            route_key,
-            request,
-            young_person_id=young_person_id,
-            home_id=home_id,
-            provider_id=provider_id,
-            record_id=record_id,
-            limit=1,
-        )
-
     async def young_person_handler(
         request: Request,
         young_person_id: int,
@@ -461,23 +424,6 @@ def register_route(route_key: str) -> None:
             home_id=home_id,
             provider_id=provider_id,
             limit=limit,
-        )
-
-    async def young_person_detail_handler(
-        request: Request,
-        young_person_id: int,
-        record_id: int,
-        home_id: int | None = Query(default=None),
-        provider_id: int | None = Query(default=None),
-    ):
-        return await route_payload(
-            route_key,
-            request,
-            young_person_id=young_person_id,
-            home_id=home_id,
-            provider_id=provider_id,
-            record_id=record_id,
-            limit=1,
         )
 
     async def home_handler(
@@ -496,23 +442,6 @@ def register_route(route_key: str) -> None:
             limit=limit,
         )
 
-    async def home_detail_handler(
-        request: Request,
-        home_id: int,
-        record_id: int,
-        young_person_id: int | None = Query(default=None),
-        provider_id: int | None = Query(default=None),
-    ):
-        return await route_payload(
-            route_key,
-            request,
-            young_person_id=young_person_id,
-            home_id=home_id,
-            provider_id=provider_id,
-            record_id=record_id,
-            limit=1,
-        )
-
     async def provider_handler(
         request: Request,
         provider_id: int,
@@ -529,32 +458,8 @@ def register_route(route_key: str) -> None:
             limit=limit,
         )
 
-    async def provider_detail_handler(
-        request: Request,
-        provider_id: int,
-        record_id: int,
-        young_person_id: int | None = Query(default=None),
-        home_id: int | None = Query(default=None),
-    ):
-        return await route_payload(
-            route_key,
-            request,
-            young_person_id=young_person_id,
-            home_id=home_id,
-            provider_id=provider_id,
-            record_id=record_id,
-            limit=1,
-        )
-
     router.add_api_route(f"/{route_key}", handler, methods=["GET"])
     router.add_api_route(f"/api/{route_key}", handler, methods=["GET"])
-
-    router.add_api_route(f"/{route_key}/{{record_id}}", detail_handler, methods=["GET"])
-    router.add_api_route(
-        f"/api/{route_key}/{{record_id}}",
-        detail_handler,
-        methods=["GET"],
-    )
 
     router.add_api_route(
         f"/young-people/{{young_person_id}}/{route_key}",
@@ -564,16 +469,6 @@ def register_route(route_key: str) -> None:
     router.add_api_route(
         f"/api/young-people/{{young_person_id}}/{route_key}",
         young_person_handler,
-        methods=["GET"],
-    )
-    router.add_api_route(
-        f"/young-people/{{young_person_id}}/{route_key}/{{record_id}}",
-        young_person_detail_handler,
-        methods=["GET"],
-    )
-    router.add_api_route(
-        f"/api/young-people/{{young_person_id}}/{route_key}/{{record_id}}",
-        young_person_detail_handler,
         methods=["GET"],
     )
 
@@ -587,16 +482,6 @@ def register_route(route_key: str) -> None:
         home_handler,
         methods=["GET"],
     )
-    router.add_api_route(
-        f"/homes/{{home_id}}/{route_key}/{{record_id}}",
-        home_detail_handler,
-        methods=["GET"],
-    )
-    router.add_api_route(
-        f"/api/homes/{{home_id}}/{route_key}/{{record_id}}",
-        home_detail_handler,
-        methods=["GET"],
-    )
 
     router.add_api_route(
         f"/providers/{{provider_id}}/{route_key}",
@@ -606,16 +491,6 @@ def register_route(route_key: str) -> None:
     router.add_api_route(
         f"/api/providers/{{provider_id}}/{route_key}",
         provider_handler,
-        methods=["GET"],
-    )
-    router.add_api_route(
-        f"/providers/{{provider_id}}/{route_key}/{{record_id}}",
-        provider_detail_handler,
-        methods=["GET"],
-    )
-    router.add_api_route(
-        f"/api/providers/{{provider_id}}/{route_key}/{{record_id}}",
-        provider_detail_handler,
         methods=["GET"],
     )
 
@@ -685,6 +560,43 @@ async def api_auth_check():
     }
 
 
+@router.get("/{route_key}/{record_id}")
+@router.get("/api/{route_key}/{record_id}")
+async def compat_record_detail(
+    request: Request,
+    route_key: str,
+    record_id: int,
+):
+    if route_key not in ROUTE_TABLES:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "not_found",
+                "items": [],
+                "count": 0,
+            },
+        )
+
+    config = ROUTE_TABLES[route_key]
+
+    rows = select_rows(
+        table_name=config["table"],
+        record_id=record_id,
+        limit=1,
+        order_column=config.get("order"),
+    )
+
+    return {
+        config["key"]: rows,
+        "item": rows[0] if rows else None,
+        "items": rows,
+        "count": len(rows),
+        "status": "ok",
+        "route": route_key,
+        "record_id": record_id,
+    }
+
+
 def source_title(row: dict[str, Any], fallback: str) -> str:
     return (
         row.get("title")
@@ -694,8 +606,6 @@ def source_title(row: dict[str, Any], fallback: str) -> str:
         or row.get("audit_title")
         or row.get("action_title")
         or row.get("document_type")
-        or row.get("judgement_area")
-        or row.get("quality_standard")
         or fallback
     )
 
@@ -707,9 +617,6 @@ def source_summary(row: dict[str, Any]) -> str:
         or row.get("notes")
         or row.get("details")
         or row.get("concern_details")
-        or row.get("finding")
-        or row.get("reason")
-        or row.get("action")
         or row.get("generated_text")
         or row.get("input_text")
         or ""
