@@ -1,3 +1,33 @@
+async function guardFounderPage() {
+  try {
+    const response = await fetch("/founder/health", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (response.status === 403 || response.status === 401) {
+      window.location.href = "/index.html";
+      return false;
+    }
+
+    if (!response.ok) {
+      window.location.href = "/index.html";
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    window.location.href = "/index.html";
+    return false;
+  }
+}
+
+const founderAccessAllowed = await guardFounderPage();
+
+if (!founderAccessAllowed) {
+  throw new Error("Founder access denied");
+}
+
 const MODE_META = {
   strategy: {
     title: "Strategy Advisor",
