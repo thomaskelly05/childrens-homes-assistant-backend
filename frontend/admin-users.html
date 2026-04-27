@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Users | IndiCare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="/css/os-unified.css" />
+  <link rel="stylesheet" href="/css/admin-users.css" />
+</head>
+
+<body class="admin-users-body">
+  <main class="admin-users-shell">
+    <header class="admin-users-header">
+      <div>
+        <p class="eyebrow">Founder / Admin</p>
+        <h1>User Administration</h1>
+        <p>Create users, set roles, connect them to providers and assign home access.</p>
+      </div>
+
+      <a href="/index.html">Back to IndiCare</a>
+    </header>
+
+    <section class="admin-users-grid">
+      <form id="createUserForm" class="admin-card">
+        <h2>Create new user</h2>
+
+        <label>
+          Email
+          <input id="email" type="email" required />
+        </label>
+
+        <label>
+          Temporary password
+          <input id="password" type="password" minlength="8" required />
+        </label>
+
+        <div class="two">
+          <label>
+            First name
+            <input id="firstName" type="text" />
+          </label>
+
+          <label>
+            Last name
+            <input id="lastName" type="text" />
+          </label>
+        </div>
+
+        <label>
+          Role
+          <select id="role"></select>
+        </label>
+
+        <label>
+          Provider
+          <select id="providerId">
+            <option value="">No provider</option>
+          </select>
+        </label>
+
+        <label>
+          Main home
+          <select id="homeId">
+            <option value="">No main home</option>
+          </select>
+        </label>
+
+        <label>
+          Home access
+          <select id="homeIds" multiple size="7"></select>
+        </label>
+
+        <label class="check">
+          <input id="isActive" type="checkbox" checked />
+          Active user
+        </label>
+
+        <label class="check">
+          <input id="subscriptionActive" type="checkbox" checked />
+          Subscription active
+        </label>
+
+        <button type="submit">Create user</button>
+
+        <p id="formStatus" class="status"></p>
+      </form>
+
+      <section class="admin-card users-list-card">
+        <div class="users-list-header">
+          <h2>Existing users</h2>
+          <button id="refreshUsersBtn" type="button">Refresh</button>
+        </div>
+
+        <div id="usersList" class="users-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="/js/admin-users.js"></script>
+</body>
+</html>
