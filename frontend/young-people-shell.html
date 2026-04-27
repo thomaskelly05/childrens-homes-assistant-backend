@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-  <title>IndiCare OS | Residential Care Workspace</title>
+  <title>IndiCare OS | Child-Centred Care Hub</title>
   <meta
     name="description"
-    content="IndiCare OS residential care workspace for child-centred recording, safeguarding, home operations, staffing, planning, compliance and quality oversight."
+    content="IndiCare OS child-centred care hub for residential children’s homes, supporting daily care, safeguarding, recording, team working, quality evidence and AI-assisted oversight."
   />
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#f3f6fb" />
+  <meta name="theme-color" content="#f7f2ea" />
   <meta name="application-name" content="IndiCare OS" />
   <meta name="robots" content="noindex,nofollow" />
 
@@ -30,7 +30,7 @@
 
   <div
     id="app"
-    class="app-shell theme-system"
+    class="app-shell theme-system indicare-care-hub"
     data-assistant-scope-type="child"
     data-young-person-id=""
     data-home-id=""
@@ -40,46 +40,46 @@
     data-scope="child"
     data-user-role="admin"
   >
-    <header class="shell-topbar" role="banner">
+    <header class="shell-topbar shell-topbar--care-hub" role="banner">
       <div class="shell-topbar-left">
-        <button id="logoBtn" class="brand-button" type="button" aria-label="Go to workspace home">
+        <button id="logoBtn" class="brand-button brand-button--care" type="button" aria-label="Go to Care Hub home">
           <span class="brand-mark" aria-hidden="true">IC</span>
           <span class="brand-copy">
-            <strong>IndiCare OS</strong>
-            <small>Residential care made clearer</small>
+            <strong>IndiCare</strong>
+            <small>Care Hub</small>
           </span>
         </button>
 
         <div class="workspace-context-pill desktop-only" aria-label="Current workspace">
-          <span class="workspace-context-pill-label">Current area</span>
-          <span class="workspace-context-pill-value">Residential care workspace</span>
+          <span class="workspace-context-pill-label">Today’s space</span>
+          <span class="workspace-context-pill-value">Child-centred care hub</span>
         </div>
       </div>
 
       <div class="shell-topbar-centre desktop-only">
-        <form id="globalSearchForm" class="topbar-search-wrap" role="search" aria-label="Search records">
-          <label class="sr-only" for="recordSearchInput">Search records</label>
+        <form id="globalSearchForm" class="topbar-search-wrap" role="search" aria-label="Search care story">
+          <label class="sr-only" for="recordSearchInput">Search care story</label>
           <input
             id="recordSearchInput"
             class="search-input topbar-search-input"
             type="search"
-            placeholder="Search notes, incidents, plans, documents, communication, risks or reports..."
+            placeholder="Search care story, daily life, risks, plans, appointments, documents or actions..."
             autocomplete="off"
             enterkeyhint="search"
           />
 
-          <label class="sr-only" for="recordTypeFilter">Filter by record type</label>
+          <label class="sr-only" for="recordTypeFilter">Filter by type</label>
           <select id="recordTypeFilter" class="select-input topbar-search-filter">
-            <option value="">All record types</option>
-            <option value="daily_note">Daily notes</option>
-            <option value="incident">Incidents and events</option>
+            <option value="">Everything</option>
+            <option value="daily_note">Daily life notes</option>
+            <option value="incident">Important events</option>
             <option value="support_plan">Care and support plans</option>
-            <option value="risk">Risk assessments</option>
+            <option value="risk">Safety and risk</option>
             <option value="safeguarding_record">Safeguarding</option>
             <option value="missing_episode">Missing from care</option>
-            <option value="health_record">Health</option>
+            <option value="health_record">Health and wellbeing</option>
             <option value="education_record">Education</option>
-            <option value="family_contact">Family contact</option>
+            <option value="family_contact">Family and relationships</option>
             <option value="appointment">Appointments</option>
             <option value="task">Actions</option>
             <option value="document">Documents</option>
@@ -91,17 +91,17 @@
       </div>
 
       <div class="shell-topbar-right">
-        <div id="scopeSwitch" class="scope-switch desktop-only" role="tablist" aria-label="Switch workspace area">
-          <button id="scopeChildBtn" class="scope-switch-btn active" type="button" data-scope="child" role="tab" aria-selected="true" aria-pressed="true">Child</button>
+        <div id="scopeSwitch" class="scope-switch desktop-only" role="tablist" aria-label="Switch Care Hub area">
+          <button id="scopeChildBtn" class="scope-switch-btn active" type="button" data-scope="child" role="tab" aria-selected="true" aria-pressed="true">Children</button>
           <button id="scopeHomeBtn" class="scope-switch-btn" type="button" data-scope="home" role="tab" aria-selected="false" aria-pressed="false">Home</button>
           <button id="scopeQualityBtn" class="scope-switch-btn" type="button" data-scope="quality" role="tab" aria-selected="false" aria-pressed="false">Quality</button>
-          <button id="scopeOfstedBtn" class="scope-switch-btn" type="button" data-scope="ofsted" role="tab" aria-selected="false" aria-pressed="false">Ofsted</button>
+          <button id="scopeOfstedBtn" class="scope-switch-btn" type="button" data-scope="ofsted" role="tab" aria-selected="false" aria-pressed="false">Evidence</button>
         </div>
 
-        <button id="mobileNavToggle" class="secondary-btn mobile-only" type="button" aria-label="Open navigation" aria-controls="mobileNavPanel" aria-expanded="false">Menu</button>
-        <button id="refreshBtn" class="secondary-btn" type="button" aria-label="Refresh workspace">Refresh</button>
+        <button id="mobileNavToggle" class="secondary-btn mobile-only" type="button" aria-label="Open Care Hub menu" aria-controls="mobileNavPanel" aria-expanded="false">Menu</button>
+        <button id="refreshBtn" class="secondary-btn" type="button" aria-label="Refresh Care Hub">Refresh</button>
         <button id="refreshWorkspaceBtn" class="secondary-btn hidden" type="button" aria-hidden="true" tabindex="-1">Refresh area</button>
-        <button id="goHomeBtn" class="ghost-btn desktop-only" type="button">Dashboard</button>
+        <button id="goHomeBtn" class="ghost-btn desktop-only" type="button">Care Hub</button>
 
         <a class="ghost-btn desktop-only" href="/young-people.html">Gateway</a>
         <a class="ghost-btn desktop-only" href="/ai-note.html">I-Notes</a>
@@ -110,32 +110,74 @@
       </div>
     </header>
 
-    <main class="shell-main" id="mainContent">
-      <section id="selectorPanel" class="selector-screen hidden" aria-labelledby="selectorHeading">
+    <main class="shell-main shell-main--care" id="mainContent">
+      <section id="selectorPanel" class="selector-screen selector-screen--care hidden" aria-labelledby="selectorHeading">
         <div class="selector-screen-inner">
-          <div class="selector-page-head">
+          <div class="selector-hero">
+            <div class="selector-hero-copy">
+              <div class="eyebrow">Start safely</div>
+              <h1 id="selectorHeading">Which home and child are you supporting today?</h1>
+              <p>
+                Choose the right home first, then open a child’s Care Hub. This helps adults work with the right records, context and safeguarding information.
+              </p>
+            </div>
+
+            <div class="selector-hero-card" aria-label="Care Hub guidance">
+              <span class="selector-hero-icon" aria-hidden="true">♥</span>
+              <strong>One calm workspace</strong>
+              <p>Daily life, risks, plans, chronology, relationships, actions and assistant support in one place.</p>
+            </div>
+          </div>
+
+          <section class="selector-step-panel" aria-label="Choose home and child">
+            <div class="selector-step-card">
+              <span class="selector-step-number">1</span>
+              <div>
+                <h2>Choose a home</h2>
+                <p>Adults should intentionally choose the home they are working in before opening a child’s record.</p>
+              </div>
+            </div>
+
+            <div class="selector-step-card">
+              <span class="selector-step-number">2</span>
+              <div>
+                <h2>Choose a child</h2>
+                <p>Open the child’s Care Hub only after the home and child are clear.</p>
+              </div>
+            </div>
+
+            <div class="selector-step-card">
+              <span class="selector-step-number">3</span>
+              <div>
+                <h2>Work with context</h2>
+                <p>Care story, risks, actions, plans and assistant context then load around that child.</p>
+              </div>
+            </div>
+          </section>
+
+          <div class="selector-page-head selector-page-head--care">
             <div>
               <div class="eyebrow">Children and young people</div>
-              <h1 id="selectorHeading">Choose a child or young person</h1>
-              <p>Open one clear workspace for daily recording, safeguarding, planning, chronology, health, education, relationships, transition and review.</p>
+              <h2>Open a Care Hub</h2>
+              <p>Search or filter by name, preferred name or home. Child cards should feel warm, clear and safe — not like admin rows.</p>
             </div>
 
             <div class="selector-tools">
               <label class="sr-only" for="selectorSearch">Search young people</label>
-              <input id="selectorSearch" class="search-input" type="search" placeholder="Search by name, preferred name or home..." autocomplete="off" />
+              <input id="selectorSearch" class="search-input" type="search" placeholder="Search child, preferred name or home..." autocomplete="off" />
 
               <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
-              <input id="youngPersonSearchInput" class="search-input hidden" type="search" placeholder="Search by name, preferred name or home..." autocomplete="off" aria-hidden="true" tabindex="-1" />
+              <input id="youngPersonSearchInput" class="search-input hidden" type="search" placeholder="Search child, preferred name or home..." autocomplete="off" aria-hidden="true" tabindex="-1" />
 
               <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh list</button>
             </div>
           </div>
 
-          <div id="selectorList" class="selector-list" aria-live="polite">
+          <div id="selectorList" class="selector-list selector-list--care-cards" aria-live="polite">
             <div class="loading-state">
               <div>
                 <div class="spinner" aria-hidden="true"></div>
-                <p>Loading children and young people…</p>
+                <p>Loading homes and children…</p>
               </div>
             </div>
           </div>
@@ -143,82 +185,100 @@
       </section>
 
       <section id="workspacePanel" class="workspace-screen" aria-labelledby="pageTitle">
-        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--topnav">
+        <section id="workspaceShell" class="workspace-screen-inner workspace-screen-inner--care">
           <section class="workspace-stage workspace-stage--full">
             <div class="workspace-stage-top">
-              <section class="workspace-stage-mobile-person mobile-only">
+              <section class="workspace-stage-mobile-person mobile-only" aria-label="Current child">
                 <div class="workspace-stage-mobile-avatar" id="mobilePersonAvatar" aria-hidden="true">YP</div>
                 <div class="workspace-stage-mobile-copy">
                   <h2 id="mobilePersonName">Young person</h2>
-                  <p id="mobilePersonMeta">Current child workspace</p>
+                  <p id="mobilePersonMeta">Care Hub open</p>
                 </div>
-                <button id="mobileHomeBtn" class="ghost-btn" type="button">Dashboard</button>
+                <button id="mobileHomeBtn" class="ghost-btn" type="button">Change</button>
               </section>
 
-              <section class="workspace-header-band workspace-header-band--premium" aria-labelledby="pageTitle">
+              <section class="workspace-header-band workspace-header-band--care" aria-labelledby="pageTitle">
                 <div class="workspace-header-main">
                   <div class="workspace-header-copy">
-                    <div id="workspaceEyebrow" class="eyebrow hidden" aria-hidden="true">Child workspace</div>
-                    <h1 id="pageTitle">Today at a glance</h1>
-                    <p id="pageSubtitle">A calm, practical workspace for recording, safeguarding, daily care, planning, continuity and clear next steps.</p>
+                    <div id="workspaceEyebrow" class="eyebrow hidden" aria-hidden="true">Care Hub</div>
+                    <h1 id="pageTitle">My Day</h1>
+                    <p id="pageSubtitle">A warm, practical view of today: what matters, what has changed, what adults need to know, and what needs doing next.</p>
                   </div>
 
                   <div class="workspace-header-actions">
-                    <button id="heroAssistantBtn" class="primary-btn" type="button">Ask assistant</button>
-                    <button id="profileOpenBtn" class="secondary-btn" type="button" data-view="profile">View profile</button>
-                    <button id="profilePhotoUploadBtn" class="ghost-btn" type="button" data-action-router="edit-profile-identity">Edit profile</button>
+                    <button id="heroAssistantBtn" class="primary-btn" type="button">Ask IndiCare</button>
+                    <button id="profileOpenBtn" class="secondary-btn" type="button" data-view="profile">Child profile</button>
+                    <button id="profilePhotoUploadBtn" class="ghost-btn" type="button" data-action-router="edit-profile-identity">Edit identity</button>
                     <button id="changePersonBtn" class="ghost-btn desktop-only" type="button">Change child</button>
                   </div>
                 </div>
 
-                <div class="workspace-header-context workspace-header-context--compact">
-                  <div class="workspace-person-card">
+                <div class="care-snapshot-grid">
+                  <article class="workspace-person-card workspace-person-card--hero">
                     <div class="profile-snapshot-photo-wrap" aria-label="Workspace avatar">
                       <div id="personAvatar" class="profile-photo-fallback" aria-hidden="true">YP</div>
                     </div>
 
                     <div class="workspace-person-copy">
+                      <span class="care-label">Current Care Hub</span>
                       <h3 id="personName">Young person</h3>
                       <p id="personMeta">Child-centred overview and current context</p>
                     </div>
-                  </div>
+                  </article>
 
+                  <article class="care-insight-card care-insight-card--soft">
+                    <span class="care-label">Today</span>
+                    <strong id="summaryToday">No summary yet</strong>
+                    <p>Key rhythm, wellbeing and daily-life updates.</p>
+                  </article>
+
+                  <article class="care-insight-card care-insight-card--soft">
+                    <span class="care-label">Next</span>
+                    <strong id="summaryNextEvent">Nothing loaded</strong>
+                    <p>Appointments, visits, reviews or important moments.</p>
+                  </article>
+
+                  <article class="care-insight-card care-insight-card--soft">
+                    <span class="care-label">Actions</span>
+                    <strong id="summaryOpenActions">Nothing loaded</strong>
+                    <p>Things adults need to follow through.</p>
+                  </article>
+                </div>
+
+                <div class="workspace-header-context workspace-header-context--care">
                   <div class="workspace-header-meta" id="personSummaryChips">
-                    <span class="meta-chip">Live</span>
-                    <span class="meta-chip meta-chip--soft">Current area</span>
-                    <span class="meta-chip meta-chip--soft">Ready to use</span>
+                    <span class="meta-chip">Live Care Hub</span>
+                    <span class="meta-chip meta-chip--soft">Child-centred</span>
+                    <span class="meta-chip meta-chip--soft">Assistant ready</span>
                   </div>
 
                   <div id="workspaceSummaryStrip" class="workspace-summary-strip" data-workspace-summary-strip aria-label="Current summary">
-                    <div class="workspace-summary-item"><span class="workspace-summary-label">Today</span><strong id="summaryToday" class="workspace-summary-value">No summary yet</strong></div>
-                    <div class="workspace-summary-item"><span class="workspace-summary-label">Next event</span><strong id="summaryNextEvent" class="workspace-summary-value">Nothing loaded</strong></div>
-                    <div class="workspace-summary-item"><span class="workspace-summary-label">Last record</span><strong id="summaryLastRecord" class="workspace-summary-value">Nothing loaded</strong></div>
-                    <div class="workspace-summary-item"><span class="workspace-summary-label">Open actions</span><strong id="summaryOpenActions" class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Today</span><strong class="workspace-summary-value">No summary yet</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Next event</span><strong class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Last care story entry</span><strong id="summaryLastRecord" class="workspace-summary-value">Nothing loaded</strong></div>
+                    <div class="workspace-summary-item"><span class="workspace-summary-label">Open actions</span><strong class="workspace-summary-value">Nothing loaded</strong></div>
                     <div class="workspace-summary-item"><span class="workspace-summary-label">Visibility alerts</span><strong class="workspace-summary-value">No active alerts</strong></div>
                   </div>
                 </div>
               </section>
 
-              <section id="quickCreateBar" class="quick-actions-panel quick-actions-panel--osmenu" aria-label="Workspace menu">
-                <div class="quick-actions-panel-head quick-actions-panel-head--compact">
+              <section id="quickCreateBar" class="quick-actions-panel quick-actions-panel--care-menu" aria-label="Care Hub menu">
+                <div class="quick-actions-panel-head quick-actions-panel-head--care">
                   <div>
-                    <div class="eyebrow">Main menu</div>
-                    <h2>Choose an area or start work</h2>
+                    <div class="eyebrow">Care Hub menu</div>
+                    <h2>What do you need to do?</h2>
                   </div>
-                  <p>A simpler operating menu built around child journey, home operations, workforce and quality.</p>
+                  <p>Move quickly between daily care, safeguarding, plans, home rhythm, team working and quality evidence.</p>
                 </div>
 
-                <nav id="heroQuickActions" class="workspace-menubar workspace-menubar--grouped" role="navigation" aria-label="Main workspace menu">
+                <nav id="heroQuickActions" class="workspace-menubar workspace-menubar--care" role="navigation" aria-label="Main Care Hub menu">
                   <details class="workspace-menu nav-group" data-workspace-menu open>
-                    <summary class="workspace-menu-trigger">Child journey</summary>
+                    <summary class="workspace-menu-trigger">Care story</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="home">Today at a glance</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="admission">Admission and planning</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="daily-life">Daily life in placement</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="health">Health overview</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="medication">Medication and treatment</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="education">Education overview</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="family">Family and relationships</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="home">My Day</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="daily-life">Daily life</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="timeline">Care story timeline</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="admission">Admission and matching</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="reviews">Reviews and outcomes</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="transition">Transition planning</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="leaving-care">Leaving placement</button>
@@ -226,67 +286,76 @@
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Safeguarding and risk</summary>
+                    <summary class="workspace-menu-trigger">Safety lens</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="timeline">Timeline and recent events</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="risk">Risk assessment</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="risk">Safety and risk</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="safeguarding">Safeguarding</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="missing-from-care">Missing from care</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="manager">Manager review</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="manager">Manager oversight</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Home operations</summary>
+                    <summary class="workspace-menu-trigger">Wellbeing</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="home-dashboard">Home dashboard</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="health">Health and wellbeing</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="medication">Medication and treatment</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="education">Education and learning</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="family">Family and relationships</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="appointments">Appointments and visits</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu nav-group" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Home rhythm</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-nav-section="home-dashboard">Home rhythm</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="operations">Daily operations</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="appointments">Calendar and appointments</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="rota">Rota and cover</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="team">Team and staffing</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="health-safety">Health and safety</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="maintenance">Maintenance and environment</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="maintenance">Home environment</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="policies">Policies and guidance</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Workforce</summary>
+                    <summary class="workspace-menu-trigger">Team</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="staff-profile">Staff profiles</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="onboarding">Recruitment and onboarding</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="supervision">Supervision and development</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="training-centre">Training and compliance</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="training-centre">Training academy</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="notifications">Alerts and notifications</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Quality and inspection</summary>
+                    <summary class="workspace-menu-trigger">Quality evidence</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="quality">Quality dashboard</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="quality">Quality picture</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="actions">Actions and follow-through</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="compliance">Compliance and statutory checks</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="ofsted-readiness">Ofsted readiness</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="compliance">Compliance checks</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="ofsted-readiness">Inspection readiness</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="provider-overview">Provider overview</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="quality-audits">Quality audits</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="reg44">Regulation 44</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="reg45">Regulation 45</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="evidence">Inspection readiness</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="evidence">Evidence library</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Create and record</summary>
+                    <summary class="workspace-menu-trigger">Record something</summary>
                     <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-action="daily-note">Add daily note</button>
-                      <button class="workspace-menu-link" type="button" data-action="incident">Add incident or important event</button>
-                      <button class="workspace-menu-link" type="button" data-action="plan">Add care or support plan</button>
-                      <button class="workspace-menu-link" type="button" data-action="risk">Add risk assessment</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-health-record">Add health record</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-education-record">Add education update</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">Add family contact</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="new-task">Add action</button>
+                      <button class="workspace-menu-link" type="button" data-action="daily-note">Daily life note</button>
+                      <button class="workspace-menu-link" type="button" data-action="incident">Important event</button>
+                      <button class="workspace-menu-link" type="button" data-action="plan">Care or support plan</button>
+                      <button class="workspace-menu-link" type="button" data-action="risk">Risk assessment</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-health-record">Health update</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-education-record">Education update</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">Family contact</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="new-task">Action</button>
                       <button class="workspace-menu-link" type="button" data-action-router="upload-document">Upload document</button>
                     </div>
                   </details>
@@ -303,7 +372,7 @@
                   <div class="search-results-head">
                     <div>
                       <div class="eyebrow">Search results</div>
-                      <h2 id="searchResultsTitle">Results</h2>
+                      <h2 id="searchResultsTitle">Care story results</h2>
                     </div>
                     <button id="clearSearchResultsBtn" class="ghost-btn" type="button">Clear search</button>
                   </div>
@@ -313,18 +382,18 @@
                       <div class="empty-state-inner">
                         <div class="empty-state-icon" aria-hidden="true">○</div>
                         <h3>No search results yet</h3>
-                        <p>Search results will appear here.</p>
+                        <p>Search the care story, actions, plans, documents and important events.</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div id="viewContent" class="workspace-view-content" aria-live="polite">
-                  <section class="overview-panel">
+                  <section class="overview-panel overview-panel--care">
                     <div class="loading-state">
                       <div>
                         <div class="spinner" aria-hidden="true"></div>
-                        <p>Loading workspace…</p>
+                        <p>Opening Care Hub…</p>
                       </div>
                     </div>
                   </section>
@@ -338,13 +407,13 @@
 
     <div id="mobileNavBackdrop" class="mobile-nav-backdrop hidden" aria-hidden="true"></div>
 
-    <aside id="mobileNavPanel" class="mobile-nav-drawer hidden" aria-hidden="true" aria-label="Mobile navigation">
+    <aside id="mobileNavPanel" class="mobile-nav-drawer hidden" aria-hidden="true" aria-label="Mobile Care Hub menu">
       <div class="mobile-nav-head">
         <div>
-          <div class="eyebrow">Navigation</div>
-          <h3>Main menu</h3>
+          <div class="eyebrow">Care Hub</div>
+          <h3>What do you need?</h3>
         </div>
-        <button id="closeMobileNavBtn" class="secondary-btn icon-btn" type="button" aria-label="Close navigation">✕</button>
+        <button id="closeMobileNavBtn" class="secondary-btn icon-btn" type="button" aria-label="Close menu">✕</button>
       </div>
 
       <div class="mobile-nav-context">
@@ -352,14 +421,14 @@
           <div class="workspace-stage-mobile-avatar" aria-hidden="true">YP</div>
           <div>
             <strong id="mobileDrawerPersonName">Young person</strong>
-            <p id="mobileDrawerPersonMeta">Current workspace</p>
+            <p id="mobileDrawerPersonMeta">Care Hub open</p>
           </div>
         </div>
 
         <div class="mobile-nav-search">
-          <form id="mobileSearchForm" role="search" aria-label="Search records">
-            <label class="sr-only" for="mobileRecordSearchInput">Search records</label>
-            <input id="mobileRecordSearchInput" class="search-input" type="search" placeholder="Search records..." autocomplete="off" />
+          <form id="mobileSearchForm" role="search" aria-label="Search care story">
+            <label class="sr-only" for="mobileRecordSearchInput">Search care story</label>
+            <input id="mobileRecordSearchInput" class="search-input" type="search" placeholder="Search care story..." autocomplete="off" />
           </form>
         </div>
       </div>
@@ -367,15 +436,15 @@
       <div id="mobileNavContent" class="mobile-nav-content"></div>
     </aside>
 
-    <nav id="mobileBottomNav" class="mobile-bottom-bar mobile-only" aria-label="Quick navigation"></nav>
+    <nav id="mobileBottomNav" class="mobile-bottom-bar mobile-only" aria-label="Quick Care Hub navigation"></nav>
 
     <section id="fullscreenPanel" class="fullscreen-panel hidden" aria-hidden="true" aria-labelledby="fullscreenPanelTitle">
       <div class="fullscreen-panel-shell">
         <header class="fullscreen-panel-head">
           <div>
-            <div class="eyebrow">Workspace panel</div>
+            <div class="eyebrow">Care Hub panel</div>
             <h2 id="fullscreenPanelTitle">Details</h2>
-            <p id="fullscreenPanelSubtitle">Open an item to view more.</p>
+            <p id="fullscreenPanelSubtitle">Open an item to see the detail clearly.</p>
           </div>
           <div class="fullscreen-panel-head-actions">
             <div id="fullscreenPanelActions" class="fullscreen-panel-actions"></div>
@@ -388,7 +457,7 @@
             <div class="empty-state-inner">
               <div class="empty-state-icon" aria-hidden="true">○</div>
               <h3>Nothing open yet</h3>
-              <p>Select something from the workspace to open it here.</p>
+              <p>Select something from the Care Hub to open it here.</p>
             </div>
           </div>
         </div>
@@ -399,9 +468,9 @@
       <div class="composer-shell">
         <header class="composer-header">
           <div class="composer-header-left">
-            <div class="eyebrow">Create or edit</div>
-            <h2 id="composerTitle">New record</h2>
-            <p id="composerSubtitle">Record clearly, kindly and professionally with the child at the centre.</p>
+            <div class="eyebrow">Record with care</div>
+            <h2 id="composerTitle">New care story entry</h2>
+            <p id="composerSubtitle">Write clearly, kindly and professionally. Keep the child’s experience, safety and next steps at the centre.</p>
           </div>
 
           <div class="composer-header-actions">
@@ -437,20 +506,20 @@
               <h3>Helpful prompts</h3>
               <div id="composerPrompts" class="composer-prompt-list">
                 <div class="composer-prompt">What happened, in clear order?</div>
-                <div class="composer-prompt">What may the child or young person have been feeling or communicating?</div>
-                <div class="composer-prompt">What worked, what did not, and what needs to happen next?</div>
+                <div class="composer-prompt">What might the child have been feeling, needing or communicating?</div>
+                <div class="composer-prompt">What helped, what did not, and what needs to happen next?</div>
               </div>
             </section>
 
             <section class="composer-side-card">
-              <h3>AI writing review</h3>
+              <h3>IndiCare review</h3>
               <div class="composer-ai-actions">
                 <button id="composerGrammarBtn" class="secondary-btn" type="button">Check tone and clarity</button>
                 <button id="composerClarityBtn" class="secondary-btn" type="button">Make clearer</button>
                 <button id="composerSafeguardingBtn" class="secondary-btn" type="button">Safeguarding review</button>
                 <button id="composerChildVoiceBtn" class="secondary-btn" type="button">Strengthen child voice</button>
               </div>
-              <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">No AI review has been run yet.</div>
+              <div id="composerAiFeedback" class="composer-side-body composer-ai-feedback">No review has been run yet.</div>
             </section>
           </aside>
         </div>
@@ -461,9 +530,9 @@
       <div class="fullscreen-panel-shell">
         <header class="fullscreen-panel-head">
           <div>
-            <div class="eyebrow">Suggestions</div>
-            <h2 id="suggestionsPanelTitle">Helpful next steps</h2>
-            <p id="suggestionsPanelSubtitle">Linked records and actions that may help next.</p>
+            <div class="eyebrow">Helpful next steps</div>
+            <h2 id="suggestionsPanelTitle">Suggested follow-up</h2>
+            <p id="suggestionsPanelSubtitle">Linked records and actions that may help adults respond well.</p>
           </div>
           <div class="fullscreen-panel-head-actions">
             <button id="closeSuggestionsPanelBtn" class="secondary-btn" type="button">Close</button>
@@ -484,12 +553,12 @@
 
     <div id="assistantBackdrop" class="assistant-backdrop hidden" aria-hidden="true"></div>
 
-    <section id="assistantModal" class="assistant-modal hidden" aria-hidden="true" aria-label="Workspace assistant">
+    <section id="assistantModal" class="assistant-modal hidden" aria-hidden="true" aria-label="IndiCare assistant">
       <div class="assistant-shell assistant-shell--large">
         <div class="assistant-header">
           <div>
-            <h3>Assistant</h3>
-            <p>Ask questions, draft records and get support with child-centred care, safeguarding, management oversight, quality and next steps.</p>
+            <h3>IndiCare Assistant</h3>
+            <p>Ask for shift briefs, safeguarding checks, recording support, care story summaries, patterns, quality evidence and next steps.</p>
           </div>
           <button id="closeAssistantBtn" class="secondary-btn icon-btn" type="button" aria-label="Close assistant">✕</button>
         </div>
@@ -497,7 +566,7 @@
         <div class="assistant-modal-layout assistant-modal-layout--split">
           <div class="assistant-modal-main">
             <div class="assistant-context-bar">
-              <span id="scopeBadge" class="meta-chip">Child assistant</span>
+              <span id="scopeBadge" class="meta-chip">Child Care Hub</span>
               <span id="scopeHomeBadge" class="meta-chip meta-chip--soft hidden"></span>
               <span id="scopeChildBadge" class="meta-chip meta-chip--soft hidden"></span>
               <span id="scopeShiftBadge" class="meta-chip meta-chip--soft"></span>
@@ -507,15 +576,15 @@
             <div id="assistantMessages" class="assistant-messages assistant-messages--modal" role="log" aria-live="polite" aria-relevant="additions text"></div>
 
             <form id="assistantForm" class="assistant-form assistant-form--sticky">
-              <label class="sr-only" for="assistantInput">Ask the assistant</label>
-              <input id="assistantInput" class="text-input" type="text" placeholder="Ask about this workspace..." autocomplete="off" />
+              <label class="sr-only" for="assistantInput">Ask IndiCare</label>
+              <input id="assistantInput" class="text-input" type="text" placeholder="Ask about this child, home, shift or quality evidence..." autocomplete="off" />
               <button id="assistantSendBtn" class="primary-btn" type="submit">Send</button>
             </form>
           </div>
 
           <aside class="assistant-modal-side">
             <section class="assistant-side-card">
-              <div class="overview-section-head"><h3>Current context</h3><p>What the assistant is looking at right now.</p></div>
+              <div class="overview-section-head"><h3>Current context</h3><p>What IndiCare is looking at right now.</p></div>
               <div id="assistantScopeSummary"></div>
             </section>
 
@@ -534,7 +603,7 @@
               <div class="overview-section-head"><h3>Live scope</h3><p>Current records bundle and refresh status.</p></div>
               <div class="assistant-context-row">
                 <button id="assistantRefreshScopeBtn" class="secondary-btn" type="button">Refresh scope</button>
-                <button id="assistantRefreshAnalysisBtn" class="secondary-btn" type="button">Refresh analysis</button>
+                <button id="assistantRefreshAnalysisBtn" class="secondary-btn" type="button">Refresh insight</button>
               </div>
               <div id="assistantScopeBundleStatus" class="assistant-inline-status">No scoped records loaded.</div>
               <div id="assistantScopeBundleError" class="assistant-inline-status assistant-inline-status--error hidden" aria-live="polite"></div>
@@ -542,7 +611,7 @@
             </section>
 
             <section class="assistant-side-card">
-              <div class="overview-section-head"><h3>Shift brief</h3><p>A practical summary for staff on duty.</p></div>
+              <div class="overview-section-head"><h3>Shift brief</h3><p>A practical summary for adults on duty.</p></div>
               <div id="morningBriefBody"><p>No shift brief available yet.</p></div>
             </section>
 
@@ -581,9 +650,9 @@
       <div class="record-drawer-panel">
         <header class="record-drawer-head">
           <div>
-            <div class="eyebrow">Record</div>
-            <h2 id="recordDrawerTitle">Record detail</h2>
-            <p id="recordDrawerSubtitle">Open a record to view details.</p>
+            <div class="eyebrow">Care story</div>
+            <h2 id="recordDrawerTitle">Entry detail</h2>
+            <p id="recordDrawerSubtitle">Open an entry to view the full detail.</p>
           </div>
           <button id="closeRecordDrawerBtn" class="secondary-btn" type="button">Close</button>
         </header>
@@ -600,8 +669,8 @@
           <div class="empty-state">
             <div class="empty-state-inner">
               <div class="empty-state-icon" aria-hidden="true">○</div>
-              <h3>Select a record</h3>
-              <p>Choose a record from the workspace to view it here.</p>
+              <h3>Select an entry</h3>
+              <p>Choose an entry from the Care Hub to view it here.</p>
             </div>
           </div>
         </div>
@@ -611,8 +680,8 @@
     <footer class="app-footer" role="contentinfo">
       <div class="app-footer-inner">
         <div class="app-footer-brand">
-          <strong>IndiCare OS</strong>
-          <span>Residential care made clearer</span>
+          <strong>IndiCare</strong>
+          <span>Child-centred care, made clearer.</span>
         </div>
         <div class="app-footer-copy">
           <span>© 2026 IndiCare OS. All rights reserved.</span>
@@ -620,9 +689,9 @@
       </div>
     </footer>
 
-    <button id="assistantLauncher" class="assistant-fab" type="button" aria-label="Open assistant" title="Open assistant">
+    <button id="assistantLauncher" class="assistant-fab" type="button" aria-label="Open IndiCare assistant" title="Open IndiCare assistant">
       <span class="assistant-fab-icon" aria-hidden="true">✦</span>
-      <span class="assistant-fab-label">Assistant</span>
+      <span class="assistant-fab-label">Ask IndiCare</span>
     </button>
   </div>
 
