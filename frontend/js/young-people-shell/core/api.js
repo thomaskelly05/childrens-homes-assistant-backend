@@ -239,7 +239,9 @@ function createTimeoutSignal(
   const abortFromExternal = () => {
     try {
       controller.abort(externalSignal?.reason);
-    } catch {}
+    } catch {
+      // Ignore abort errors.
+    }
   };
 
   if (externalSignal) {
@@ -257,7 +259,9 @@ function createTimeoutSignal(
       } catch {
         try {
           controller.abort();
-        } catch {}
+        } catch {
+          // Ignore abort errors.
+        }
       }
     }, timeoutMs);
   }
@@ -269,7 +273,9 @@ function createTimeoutSignal(
       if (externalSignal) {
         try {
           externalSignal.removeEventListener("abort", abortFromExternal);
-        } catch {}
+        } catch {
+          // Ignore cleanup errors.
+        }
       }
     },
   };
@@ -449,6 +455,7 @@ function mergeAssistantBundle(responses = []) {
   const mappings = [
     ["daily_notes", "daily_notes"],
     ["daily_life", "daily_notes"],
+    ["dailyNotes", "daily_notes"],
     ["incidents", "incidents"],
     ["home_incidents", "home_incidents"],
     ["safeguarding_records", "safeguarding_records"],
@@ -563,6 +570,8 @@ async function fetchHomeWideBundle(homeId) {
 
   const urls = [
     `/homes/${homeId}/inspection-scores`,
+    `/homes/${homeId}/daily-notes`,
+    `/homes/${homeId}/appointments`,
     `/homes/${homeId}/team`,
     `/homes/${homeId}/tasks`,
     `/homes/${homeId}/communications`,
@@ -1076,6 +1085,8 @@ export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
     cleanup();
     try {
       reader.releaseLock();
-    } catch {}
+    } catch {
+      // Ignore release errors.
+    }
   }
 }
