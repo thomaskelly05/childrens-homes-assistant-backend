@@ -16,7 +16,7 @@ import {
 import { refreshShellChrome } from "./shell-ui.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
 import {
-  onYoungPersonSelected,
+  onAssistantScopeChanged,
   renderAssistantControllerPanels,
 } from "./assistant-controller.js";
 
@@ -260,7 +260,7 @@ export async function openYoungPerson(id, options = {}) {
   refreshAssistantUi();
   renderAssistantControllerPanels();
 
-  await onYoungPersonSelected();
+  await onAssistantScopeChanged();
 
   if (!options.skipInitialSectionLoad) {
     const navModule = await import("./nav.js");
