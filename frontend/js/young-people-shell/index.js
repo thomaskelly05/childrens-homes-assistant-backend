@@ -12,7 +12,6 @@ import {
 } from "./state.js";
 import { els, refreshEls } from "./dom.js";
 import {
-  getYoungPersonIdFromUrl,
   setYoungPersonIdInUrl,
 } from "./core/utils.js";
 import {
@@ -172,26 +171,15 @@ function hydrateRuntimeContextFromDom() {
   if (!els.app) return;
 
   const datasetRole = normaliseRole(els.app.dataset.userRole || "");
-  const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
   const datasetHomeId = normaliseNumericId(els.app.dataset.homeId);
-  const datasetYoungPersonId = normaliseNumericId(els.app.dataset.youngPersonId);
   const datasetProviderId = normaliseNumericId(els.app.dataset.providerId);
   const datasetAllowedHomeIds = els.app.dataset.allowedHomeIds || "";
 
   setUserRole(datasetRole);
-
-  if (VALID_SCOPES.has(datasetScope)) {
-    setCurrentScope(datasetScope, { resetSection: false });
-  }
-
   setHomeContext(datasetHomeId);
   setProviderContext(datasetProviderId);
-
-  if (datasetYoungPersonId && !state.youngPersonId) {
-    state.youngPersonId = datasetYoungPersonId;
-  }
-
   setAllowedHomeIds(parseAllowedHomeIds(datasetAllowedHomeIds));
+
   syncSingleHomeFallback();
 }
 
@@ -472,29 +460,6 @@ function ensureInitialSectionForScope() {
   setCurrentSection(safeSection);
 }
 
-function applyRoleDefaultScopeIfNeeded() {
-  const defaultScope = getDefaultScopeForRole();
-  const currentScope = state.currentScope || "child";
-
-  const datasetScope = String(els.app?.dataset?.scope || "")
-    .trim()
-    .toLowerCase();
-
-  const hasExplicitScopeFromDom = VALID_SCOPES.has(datasetScope);
-  const currentScopeAccessible = canAccessScope(currentScope);
-
-  if (!currentScopeAccessible) {
-    setCurrentScope(defaultScope, { resetSection: true });
-    setCurrentSection(getDefaultSectionForScope(defaultScope));
-    return;
-  }
-
-  if (!hasExplicitScopeFromDom && !currentScope) {
-    setCurrentScope(defaultScope, { resetSection: true });
-    setCurrentSection(getDefaultSectionForScope(defaultScope));
-  }
-}
-
 function syncScopeButtons() {
   const scope = state.currentScope || "child";
   const allowedScopes = getAllowedScopesForRole();
@@ -574,7 +539,8 @@ async function setScope(scope) {
     if (state.youngPersonId) {
       await loadSection(state.currentSection);
     } else {
-      await restoreOrShowYoungPersonSelector();
+      showSelector();
+      await loadYoungPersonSelector();
     }
 
     refreshWorkspaceSummary();
@@ -641,21 +607,14 @@ async function openYoungPersonSafely(id, options = {}) {
   }
 }
 
-async function restoreOrShowYoungPersonSelector() {
-  if ((state.currentScope || "child") !== "child") return false;
-
-  const idFromUrl = normaliseNumericId(getYoungPersonIdFromUrl());
-  if (idFromUrl) return openYoungPersonSafely(idFromUrl);
-
-  const existingStateId = normaliseNumericId(state.youngPersonId);
-  if (existingStateId) return openYoungPersonSafely(existingStateId);
-
-  const datasetId = normaliseNumericId(els.app?.dataset?.youngPersonId);
-  if (datasetId) return openYoungPersonSafely(datasetId);
+async function bootstrapSelectorDashboard() {
+  setCurrentScope("child", { resetSection: true });
+  setCurrentSection(getDefaultSectionForScope("child"));
 
   clearSelectedYoungPerson();
   state.youngPersonId = null;
   setYoungPersonIdInUrl(null);
+
   syncDomDatasetFromState();
   showSelector();
 
@@ -663,40 +622,10 @@ async function restoreOrShowYoungPersonSelector() {
     await loadYoungPersonSelector();
   } catch (error) {
     console.error("[index] selector load failed", error);
-    showError(error?.message || "Failed to load children and young people.");
+    showError(error?.message || "Failed to load homes and children.");
   }
 
   refreshWorkspaceSummary();
-  return false;
-}
-
-async function restoreSelectedYoungPerson() {
-  return restoreOrShowYoungPersonSelector();
-}
-
-async function bootstrapSelectorIfNeeded(restoredYoungPerson) {
-  const scope = state.currentScope || "child";
-
-  if (scope !== "child") return;
-
-  if (restoredYoungPerson || state.youngPersonId) {
-    showWorkspace();
-    return;
-  }
-
-  clearSelectedYoungPerson();
-  state.youngPersonId = null;
-  setYoungPersonIdInUrl(null);
-  syncDomDatasetFromState();
-
-  try {
-    await loadYoungPersonSelector();
-    showSelector();
-    refreshWorkspaceSummary();
-  } catch (error) {
-    console.error("[index] selector load failed", error);
-    showError(error?.message || "Failed to load children and young people.");
-  }
 }
 
 function bindChangePersonFallback() {
@@ -712,18 +641,7 @@ function bindChangePersonFallback() {
     button.addEventListener("click", async () => {
       if ((state.currentScope || "child") !== "child") return;
 
-      clearSelectedYoungPerson();
-      state.youngPersonId = null;
-      setYoungPersonIdInUrl(null);
-      syncDomDatasetFromState();
-      showSelector();
-
-      try {
-        await loadYoungPersonSelector();
-      } catch (error) {
-        console.error("[index] failed loading selector from change button", error);
-        showError(error?.message || "Failed to load children and young people.");
-      }
+      await bootstrapSelectorDashboard();
     });
   }
 }
@@ -807,16 +725,7 @@ function bindGlobalRefreshShortcuts() {
 
   window.addEventListener("popstate", async () => {
     try {
-      const restoredYoungPerson = await restoreSelectedYoungPerson();
-      syncVisibleScreen();
-
-      if (
-        (state.currentScope || "child") === "child" &&
-        restoredYoungPerson &&
-        state.currentSection
-      ) {
-        await loadSection(state.currentSection);
-      }
+      await bootstrapSelectorDashboard();
     } catch (error) {
       console.error("[index] popstate restore failed", error);
     }
@@ -835,8 +744,13 @@ async function bootstrap() {
     hydrateRuntimeContextFromSession();
     await hydrateRuntimeContextFromAuthCheck();
 
+    setCurrentScope("child", { resetSection: true });
+    setCurrentSection(getDefaultSectionForScope("child"));
+    clearSelectedYoungPerson();
+    state.youngPersonId = null;
+    setYoungPersonIdInUrl(null);
+
     ensureValidScopeForRole();
-    applyRoleDefaultScopeIfNeeded();
     ensureInitialSectionForScope();
     syncDomDatasetFromState();
 
@@ -861,21 +775,10 @@ async function bootstrap() {
     bindGlobalRefreshShortcuts();
     bindRestrictedSectionGuard();
 
-    const restoredYoungPerson = await restoreSelectedYoungPerson();
-
-    await bootstrapSelectorIfNeeded(restoredYoungPerson);
+    await bootstrapSelectorDashboard();
     await initialiseShellNavigation();
 
     refreshAllChrome();
-
-    if (
-      (state.currentScope || "child") === "child" &&
-      state.youngPersonId &&
-      state.currentSection
-    ) {
-      await loadSection(state.currentSection);
-    }
-
     refreshWorkspaceSummary();
   } catch (error) {
     console.error("[index] bootstrap failed", error);
