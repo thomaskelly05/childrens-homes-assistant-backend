@@ -203,5 +203,9 @@ async function createUser(event) {
 els.form?.addEventListener("submit", createUser);
 els.refreshUsersBtn?.addEventListener("click", loadUsers);
 
-await loadOptions();
-await loadUsers();
+try {
+  await loadOptions();
+  await loadUsers();
+} catch (error) {
+  setStatus(error.message || "Admin users failed to load.", "error");
+}
