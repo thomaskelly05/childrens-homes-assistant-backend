@@ -12,23 +12,122 @@ from db.connection import get_db_connection, release_db_connection
 router = APIRouter(tags=["frontend-compat"])
 
 
-ROUTE_TABLES = {
-    "appointments": {"table": "young_person_appointments", "key": "appointments", "order": "appointment_date"},
-    "daily-notes": {"table": "daily_notes", "key": "daily_notes", "order": "note_date"},
-    "communications": {"table": "communications_log", "key": "communications", "order": "communication_datetime"},
-    "incidents": {"table": "incidents", "key": "incidents", "order": "incident_datetime"},
-    "safeguarding": {"table": "safeguarding_records", "key": "safeguarding", "order": "concern_datetime"},
-    "support-plans": {"table": "support_plans", "key": "support_plans", "order": "review_date"},
-    "tasks": {"table": "tasks", "key": "tasks", "order": "due_date"},
-    "documents": {"table": "documents", "key": "documents", "order": "created_at"},
-    "reports": {"table": "ai_generated_reports", "key": "reports", "order": "created_at"},
-    "team": {"table": "staff", "key": "team", "order": "full_name"},
-    "staff": {"table": "staff", "key": "staff", "order": "full_name"},
-    "supervisions": {"table": "supervision_sessions", "key": "supervisions", "order": "scheduled_date"},
-    "compliance-items": {"table": "compliance_items", "key": "compliance_items", "order": "due_date"},
-    "quality-audits": {"table": "quality_audits", "key": "quality_audits", "order": "audit_date"},
-    "inspection-scores": {"table": "inspection_scores", "key": "inspection_scores", "order": "created_at"},
-    "inspection-improvement-actions": {"table": "inspection_improvement_actions", "key": "inspection_improvement_actions", "order": "due_date"},
+ROUTE_TABLES: dict[str, dict[str, str]] = {
+    "appointments": {
+        "table": "young_person_appointments",
+        "key": "appointments",
+        "order": "appointment_date",
+    },
+    "daily-notes": {
+        "table": "daily_notes",
+        "key": "daily_notes",
+        "order": "note_date",
+    },
+    "communications": {
+        "table": "communications_log",
+        "key": "communications",
+        "order": "communication_datetime",
+    },
+    "incidents": {
+        "table": "incidents",
+        "key": "incidents",
+        "order": "incident_datetime",
+    },
+    "safeguarding": {
+        "table": "safeguarding_records",
+        "key": "safeguarding",
+        "order": "concern_datetime",
+    },
+    "support-plans": {
+        "table": "support_plans",
+        "key": "support_plans",
+        "order": "review_date",
+    },
+    "tasks": {
+        "table": "tasks",
+        "key": "tasks",
+        "order": "due_date",
+    },
+    "documents": {
+        "table": "documents",
+        "key": "documents",
+        "order": "created_at",
+    },
+    "reports": {
+        "table": "ai_generated_reports",
+        "key": "reports",
+        "order": "created_at",
+    },
+    "team": {
+        "table": "staff",
+        "key": "team",
+        "order": "full_name",
+    },
+    "staff": {
+        "table": "staff",
+        "key": "staff",
+        "order": "full_name",
+    },
+    "supervisions": {
+        "table": "supervision_sessions",
+        "key": "supervisions",
+        "order": "scheduled_date",
+    },
+    "training": {
+        "table": "staff_training_records",
+        "key": "training",
+        "order": "expires_on",
+    },
+    "rota": {
+        "table": "roster_shifts",
+        "key": "rota",
+        "order": "shift_date",
+    },
+    "compliance-items": {
+        "table": "compliance_items",
+        "key": "compliance_items",
+        "order": "due_date",
+    },
+    "quality-audits": {
+        "table": "quality_audits",
+        "key": "quality_audits",
+        "order": "audit_date",
+    },
+    "inspection-scores": {
+        "table": "inspection_scores",
+        "key": "inspection_scores",
+        "order": "created_at",
+    },
+    "inspection-improvement-actions": {
+        "table": "inspection_improvement_actions",
+        "key": "inspection_improvement_actions",
+        "order": "due_date",
+    },
+    "inspection-actions": {
+        "table": "inspection_improvement_actions",
+        "key": "inspection_actions",
+        "order": "due_date",
+    },
+    "inspection-tasks": {
+        "table": "inspection_improvement_actions",
+        "key": "inspection_tasks",
+        "order": "due_date",
+    },
+    "inspection-reasons": {
+        "table": "inspection_score_reasons",
+        "key": "inspection_reasons",
+        "order": "created_at",
+    },
+    "inspection-briefing": {
+        "table": "inspection_dashboard_snapshots",
+        "key": "inspection_briefing",
+        "order": "created_at",
+    },
+    "inspection-prep-72-hour": {
+        "table": "inspection_pack_jobs",
+        "key": "inspection_prep_72_hour",
+        "order": "created_at",
+    },
 }
 
 
@@ -37,18 +136,22 @@ def serialise(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, decimal.Decimal):
         return float(value)
+    if isinstance(value, list):
+        return [serialise(item) for item in value]
+    if isinstance(value, dict):
+        return {key: serialise(item) for key, item in value.items()}
     return value
 
 
-def rows_to_dicts(cursor, rows):
-    columns = [col[0] for col in cursor.description or []]
+def rows_to_dicts(cursor: Any, rows: list[Any]) -> list[dict[str, Any]]:
+    columns = [column[0] for column in cursor.description or []]
     return [
         {columns[index]: serialise(value) for index, value in enumerate(row)}
         for row in rows
     ]
 
 
-def table_exists(cursor, table_name: str) -> bool:
+def table_exists(cursor: Any, table_name: str) -> bool:
     cursor.execute(
         """
         SELECT EXISTS (
@@ -60,10 +163,11 @@ def table_exists(cursor, table_name: str) -> bool:
         """,
         (table_name,),
     )
-    return bool(cursor.fetchone()[0])
+    row = cursor.fetchone()
+    return bool(row and row[0])
 
 
-def get_columns(cursor, table_name: str) -> set[str]:
+def get_columns(cursor: Any, table_name: str) -> set[str]:
     cursor.execute(
         """
         SELECT column_name
@@ -76,6 +180,20 @@ def get_columns(cursor, table_name: str) -> set[str]:
     return {row[0] for row in cursor.fetchall()}
 
 
+def get_int(value: Any) -> int | None:
+    try:
+        if value in (None, ""):
+            return None
+        number = int(value)
+        return number if number > 0 else None
+    except Exception:
+        return None
+
+
+def get_context_id(request: Request, key: str) -> int | None:
+    return get_int(request.query_params.get(key))
+
+
 def select_rows(
     *,
     table_name: str,
@@ -84,20 +202,28 @@ def select_rows(
     provider_id: int | None = None,
     limit: int = 100,
     order_column: str | None = None,
-):
+) -> list[dict[str, Any]]:
+    if table_name not in {config["table"] for config in ROUTE_TABLES.values()} | {
+        "homes",
+        "providers",
+    }:
+        return []
+
     conn = None
+
     try:
         conn = get_db_connection()
+
         with conn.cursor() as cursor:
             if not table_exists(cursor, table_name):
                 return []
 
             columns = get_columns(cursor, table_name)
 
-            where = []
-            params = []
+            where: list[str] = []
+            params: list[Any] = []
 
-            def add_filter(column, value):
+            def add_filter(column: str, value: Any) -> None:
                 if value is None or column not in columns:
                     return
                 where.append(f'"{column}" = %s')
@@ -110,6 +236,9 @@ def select_rows(
             if "archived" in columns:
                 where.append("(archived IS NULL OR archived = false)")
 
+            if "is_deleted" in columns:
+                where.append("(is_deleted IS NULL OR is_deleted = false)")
+
             sql = f'SELECT * FROM public."{table_name}"'
 
             if where:
@@ -119,11 +248,14 @@ def select_rows(
                 sql += f' ORDER BY "{order_column}" DESC NULLS LAST'
             elif "created_at" in columns:
                 sql += ' ORDER BY "created_at" DESC NULLS LAST'
+            elif "updated_at" in columns:
+                sql += ' ORDER BY "updated_at" DESC NULLS LAST'
             elif "id" in columns:
                 sql += ' ORDER BY "id" DESC'
 
+            safe_limit = max(1, min(int(limit or 100), 500))
             sql += " LIMIT %s"
-            params.append(max(1, min(int(limit or 100), 500)))
+            params.append(safe_limit)
 
             cursor.execute(sql, tuple(params))
             rows = cursor.fetchall()
@@ -132,13 +264,6 @@ def select_rows(
     finally:
         if conn is not None:
             release_db_connection(conn)
-
-
-def get_int(value):
-    try:
-        return int(value) if value not in (None, "") else None
-    except Exception:
-        return None
 
 
 async def route_payload(
@@ -151,8 +276,9 @@ async def route_payload(
 ):
     config = ROUTE_TABLES[route_key]
 
-    home_id = home_id or get_int(request.query_params.get("home_id"))
-    provider_id = provider_id or get_int(request.query_params.get("provider_id"))
+    young_person_id = young_person_id or get_context_id(request, "young_person_id")
+    home_id = home_id or get_context_id(request, "home_id")
+    provider_id = provider_id or get_context_id(request, "provider_id")
 
     try:
         rows = select_rows(
@@ -171,6 +297,11 @@ async def route_payload(
             "status": "ok",
             "route": route_key,
             "table": config["table"],
+            "filters": {
+                "young_person_id": young_person_id,
+                "home_id": home_id,
+                "provider_id": provider_id,
+            },
         }
 
     except Exception as error:
@@ -184,11 +315,16 @@ async def route_payload(
                 "route": route_key,
                 "table": config["table"],
                 "message": str(error),
+                "filters": {
+                    "young_person_id": young_person_id,
+                    "home_id": home_id,
+                    "provider_id": provider_id,
+                },
             },
         )
 
 
-def register_route(route_key: str):
+def register_route(route_key: str) -> None:
     async def handler(
         request: Request,
         young_person_id: int | None = Query(default=None),
@@ -199,45 +335,214 @@ def register_route(route_key: str):
         return await route_payload(
             route_key,
             request,
-            young_person_id,
-            home_id,
-            provider_id,
-            limit,
+            young_person_id=young_person_id,
+            home_id=home_id,
+            provider_id=provider_id,
+            limit=limit,
         )
 
+    async def young_person_handler(
+        request: Request,
+        young_person_id: int,
+        home_id: int | None = Query(default=None),
+        provider_id: int | None = Query(default=None),
+        limit: int = Query(default=100),
+    ):
+        return await route_payload(
+            route_key,
+            request,
+            young_person_id=young_person_id,
+            home_id=home_id,
+            provider_id=provider_id,
+            limit=limit,
+        )
+
+    async def home_handler(
+        request: Request,
+        home_id: int,
+        young_person_id: int | None = Query(default=None),
+        provider_id: int | None = Query(default=None),
+        limit: int = Query(default=100),
+    ):
+        return await route_payload(
+            route_key,
+            request,
+            young_person_id=young_person_id,
+            home_id=home_id,
+            provider_id=provider_id,
+            limit=limit,
+        )
+
+    async def provider_handler(
+        request: Request,
+        provider_id: int,
+        young_person_id: int | None = Query(default=None),
+        home_id: int | None = Query(default=None),
+        limit: int = Query(default=100),
+    ):
+        return await route_payload(
+            route_key,
+            request,
+            young_person_id=young_person_id,
+            home_id=home_id,
+            provider_id=provider_id,
+            limit=limit,
+        )
+
+    # Flat routes used by current shell fetches.
     router.add_api_route(f"/{route_key}", handler, methods=["GET"])
     router.add_api_route(f"/api/{route_key}", handler, methods=["GET"])
 
+    # Young person nested routes.
+    router.add_api_route(
+        f"/young-people/{{young_person_id}}/{route_key}",
+        young_person_handler,
+        methods=["GET"],
+    )
+    router.add_api_route(
+        f"/api/young-people/{{young_person_id}}/{route_key}",
+        young_person_handler,
+        methods=["GET"],
+    )
 
-for route_key in ROUTE_TABLES:
-    register_route(route_key)
+    # Home nested routes.
+    router.add_api_route(
+        f"/homes/{{home_id}}/{route_key}",
+        home_handler,
+        methods=["GET"],
+    )
+    router.add_api_route(
+        f"/api/homes/{{home_id}}/{route_key}",
+        home_handler,
+        methods=["GET"],
+    )
+
+    # Provider nested routes.
+    router.add_api_route(
+        f"/providers/{{provider_id}}/{route_key}",
+        provider_handler,
+        methods=["GET"],
+    )
+    router.add_api_route(
+        f"/api/providers/{{provider_id}}/{route_key}",
+        provider_handler,
+        methods=["GET"],
+    )
+
+
+for key in ROUTE_TABLES:
+    register_route(key)
 
 
 @router.get("/homes")
 @router.get("/api/homes")
-async def homes(request: Request, provider_id: int | None = Query(default=None)):
-    return await route_payload("team", request, provider_id=provider_id, limit=1)
+async def homes(
+    request: Request,
+    provider_id: int | None = Query(default=None),
+    limit: int = Query(default=100),
+):
+    provider_id = provider_id or get_context_id(request, "provider_id")
+    rows = select_rows(
+        table_name="homes",
+        provider_id=provider_id,
+        limit=limit,
+        order_column="name",
+    )
+    return {
+        "homes": rows,
+        "items": rows,
+        "count": len(rows),
+        "status": "ok",
+        "route": "homes",
+        "table": "homes",
+    }
 
 
 @router.get("/providers")
 @router.get("/api/providers")
-async def providers():
-    rows = select_rows(table_name="providers", limit=100, order_column="name")
-    return {"providers": rows, "items": rows, "count": len(rows), "status": "ok"}
+async def providers(limit: int = Query(default=100)):
+    rows = select_rows(
+        table_name="providers",
+        limit=limit,
+        order_column="name",
+    )
+    return {
+        "providers": rows,
+        "items": rows,
+        "count": len(rows),
+        "status": "ok",
+        "route": "providers",
+        "table": "providers",
+    }
 
 
-@router.get("/assistant/scope-bundle")
-@router.get("/api/assistant/scope-bundle")
-@router.get("/assistant/os/scope-bundle")
-@router.get("/api/assistant/os/scope-bundle")
-async def assistant_scope_bundle(
-    request: Request,
-    young_person_id: int | None = Query(default=None),
-    home_id: int | None = Query(default=None),
-    provider_id: int | None = Query(default=None),
-):
-    bundle = {}
-    sources = []
+@router.get("/me")
+@router.get("/api/me")
+async def me():
+    return {
+        "authenticated": True,
+        "status": "ok",
+        "source": "frontend_compat",
+    }
+
+
+@router.get("/api/auth/check")
+async def api_auth_check():
+    return {
+        "authenticated": True,
+        "status": "ok",
+        "source": "frontend_compat",
+    }
+
+
+def source_title(row: dict[str, Any], fallback: str) -> str:
+    return (
+        row.get("title")
+        or row.get("name")
+        or row.get("subject")
+        or row.get("task")
+        or row.get("audit_title")
+        or row.get("action_title")
+        or row.get("document_type")
+        or fallback
+    )
+
+
+def source_summary(row: dict[str, Any]) -> str:
+    return (
+        row.get("summary")
+        or row.get("description")
+        or row.get("notes")
+        or row.get("details")
+        or row.get("concern_details")
+        or row.get("generated_text")
+        or row.get("input_text")
+        or ""
+    )
+
+
+def source_date(row: dict[str, Any]) -> Any:
+    return (
+        row.get("created_at")
+        or row.get("updated_at")
+        or row.get("due_date")
+        or row.get("review_date")
+        or row.get("appointment_date")
+        or row.get("note_date")
+        or row.get("incident_datetime")
+        or row.get("communication_datetime")
+        or row.get("concern_datetime")
+    )
+
+
+def build_bundle_rows(
+    *,
+    young_person_id: int | None = None,
+    home_id: int | None = None,
+    provider_id: int | None = None,
+) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+    bundle: dict[str, list[dict[str, Any]]] = {}
+    sources: list[dict[str, Any]] = []
 
     for route_key, config in ROUTE_TABLES.items():
         rows = select_rows(
@@ -251,15 +556,42 @@ async def assistant_scope_bundle(
         bundle[config["key"]] = rows
 
         for row in rows[:5]:
-            sources.append({
-                "id": row.get("id"),
-                "record_id": row.get("id"),
-                "source_id": row.get("id"),
-                "record_type": config["key"],
-                "title": row.get("title") or row.get("name") or row.get("subject") or config["key"],
-                "summary": row.get("summary") or row.get("description") or row.get("notes") or "",
-                "date": row.get("created_at") or row.get("updated_at") or row.get("due_date"),
-            })
+            sources.append(
+                {
+                    "id": row.get("id"),
+                    "record_id": row.get("id"),
+                    "source_id": row.get("id"),
+                    "record_type": config["key"],
+                    "title": source_title(row, config["key"]),
+                    "summary": source_summary(row),
+                    "description": source_summary(row),
+                    "date": source_date(row),
+                    "created_at": row.get("created_at") or source_date(row),
+                }
+            )
+
+    return bundle, sources
+
+
+@router.get("/assistant/scope-bundle")
+@router.get("/api/assistant/scope-bundle")
+@router.get("/assistant/os/scope-bundle")
+@router.get("/api/assistant/os/scope-bundle")
+async def assistant_scope_bundle_get(
+    request: Request,
+    young_person_id: int | None = Query(default=None),
+    home_id: int | None = Query(default=None),
+    provider_id: int | None = Query(default=None),
+):
+    young_person_id = young_person_id or get_context_id(request, "young_person_id")
+    home_id = home_id or get_context_id(request, "home_id")
+    provider_id = provider_id or get_context_id(request, "provider_id")
+
+    bundle, sources = build_bundle_rows(
+        young_person_id=young_person_id,
+        home_id=home_id,
+        provider_id=provider_id,
+    )
 
     return {
         "status": "ok",
@@ -271,10 +603,59 @@ async def assistant_scope_bundle(
             "Draft summary",
             "Review overdue items",
             "Check inspection readiness",
+            "Review safeguarding records",
         ],
         "runtime": {
             "source": "frontend_compat",
             "evidence_count": len(sources),
+            "young_person_id": young_person_id,
+            "home_id": home_id,
+            "provider_id": provider_id,
+        },
+    }
+
+
+@router.post("/assistant/scope-bundle")
+@router.post("/api/assistant/scope-bundle")
+@router.post("/assistant/os/scope-bundle")
+@router.post("/api/assistant/os/scope-bundle")
+async def assistant_scope_bundle_post(request: Request):
+    try:
+        parsed = await request.json()
+        body = parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        body = {}
+
+    context = body.get("context") if isinstance(body.get("context"), dict) else body
+
+    young_person_id = get_int(context.get("young_person_id"))
+    home_id = get_int(context.get("home_id"))
+    provider_id = get_int(context.get("provider_id"))
+
+    bundle, sources = build_bundle_rows(
+        young_person_id=young_person_id,
+        home_id=home_id,
+        provider_id=provider_id,
+    )
+
+    return {
+        "status": "ok",
+        "scope_bundle": bundle,
+        "bundle": bundle,
+        "items": sources,
+        "sources": sources,
+        "suggested_actions": [
+            "Draft summary",
+            "Review overdue items",
+            "Check inspection readiness",
+            "Review safeguarding records",
+        ],
+        "runtime": {
+            "source": "frontend_compat",
+            "evidence_count": len(sources),
+            "young_person_id": young_person_id,
+            "home_id": home_id,
+            "provider_id": provider_id,
         },
     }
 
@@ -283,10 +664,46 @@ async def assistant_scope_bundle(
 @router.post("/api/assistant/message")
 @router.post("/assistant/os/message")
 @router.post("/api/assistant/os/message")
-async def assistant_message():
+async def assistant_message(request: Request):
+    try:
+        parsed = await request.json()
+        body = parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        body = {}
+
+    message = str(body.get("message") or "").strip()
+    context = body.get("context") if isinstance(body.get("context"), dict) else {}
+
+    young_person_id = get_int(context.get("young_person_id"))
+    home_id = get_int(context.get("home_id"))
+    provider_id = get_int(context.get("provider_id"))
+
+    _, sources = build_bundle_rows(
+        young_person_id=young_person_id,
+        home_id=home_id,
+        provider_id=provider_id,
+    )
+
     return {
-        "answer": "The IndiCare assistant backend compatibility route is connected.",
-        "sources": [],
-        "suggested_actions": [],
-        "runtime": {"source": "frontend_compat"},
+        "answer": (
+            "The IndiCare assistant backend compatibility route is connected. "
+            f"I can see {len(sources)} evidence item(s) in the current scope."
+        ),
+        "message": message,
+        "sources": sources,
+        "suggested_actions": [
+            "Draft summary",
+            "Review overdue items",
+            "Check inspection readiness",
+        ],
+        "runtime": {
+            "source": "frontend_compat_message",
+            "evidence_count": len(sources),
+            "young_person_id": young_person_id,
+            "home_id": home_id,
+            "provider_id": provider_id,
+        },
+        "explainability": {
+            "reasoning_summary": "This response used the frontend compatibility scope bundle.",
+        },
     }
