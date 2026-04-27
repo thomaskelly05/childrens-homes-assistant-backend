@@ -105,37 +105,10 @@ function getScopeContext() {
   };
 }
 
-function getBundleFreshness(bundle = {}) {
-  const records = Array.isArray(bundle.records)
-    ? bundle.records
-    : Array.isArray(bundle.items)
-      ? bundle.items
-      : Array.isArray(bundle.evidence)
-        ? bundle.evidence
-        : [];
-
-  const dates = records
-    .map((item) => Date.parse(item?.date || item?.created_at || item?.updated_at || ""))
-    .filter((time) => Number.isFinite(time));
-
-  if (!dates.length) {
-    return {
-      latest_record_at: null,
-      oldest_record_at: null,
-      record_count_with_dates: 0,
-    };
-  }
-
-  return {
-    latest_record_at: new Date(Math.max(...dates)).toISOString(),
-    oldest_record_at: new Date(Math.min(...dates)).toISOString(),
-    record_count_with_dates: dates.length,
-  };
-}
-
 function buildBriefs(bundle, context) {
   try {
     const scope = context.scope;
+
     let brief;
 
     if (scope === "child") {
@@ -148,26 +121,23 @@ function buildBriefs(bundle, context) {
       });
     }
 
-    const existingMeta = getAssistantMeta();
-    const freshness = getBundleFreshness(bundle);
+    const previousMeta = getAssistantMeta();
 
     mergeAssistantMeta({
-      ...existingMeta,
+      ...previousMeta,
       latest_brief: brief,
       brain_summary: brief?.summary || null,
       brain_insights: brief?.insights || [],
       suggested_actions: brief?.suggested_actions || [],
       top_sources: brief?.top_sources || [],
       evidence_count: brief?.evidence_count || 0,
+      confidence: brief?.confidence || "low",
+      confidence_reason: brief?.confidence_reason || "",
       analysis_lens: brief?.analysis_lens || null,
-      confidence: brief?.confidence || null,
-      confidence_reason: brief?.confidence_reason || null,
-      recommended_next_records: brief?.recommended_next_records || [],
-      bundle_freshness: freshness,
       last_updated: new Date().toISOString(),
     });
   } catch (error) {
-    console.warn("[assistant-controller] brief generation failed", error);
+    console.warn("[assistant] brief generation failed", error);
   }
 }
 
@@ -198,29 +168,29 @@ export async function loadAssistantBundle({ force = false } = {}) {
 
       setAssistantDerivedState({
         evidence,
-        latest_bundle_context: context,
-        latest_bundle_loaded_at: new Date().toISOString(),
+        assistant_context: context,
+        refreshed_at: new Date().toISOString(),
       });
 
       buildBriefs(bundle, context);
+
       refreshAssistantUi();
 
       return bundle;
     } catch (error) {
-      console.error("[assistant-controller] load failed", error);
+      console.error("[assistant] load failed", error);
 
       if (token !== latestRefreshToken) return null;
 
-      setAssistantScopeBundleError(
-        error?.message || "Failed to load assistant evidence."
-      );
+      setAssistantScopeBundleError(error?.message || "Failed to load assistant");
 
       mergeAssistantMeta({
-        last_error: error?.message || "Failed to load assistant evidence.",
-        last_error_at: new Date().toISOString(),
+        bundle_error: error?.message || "Failed to load assistant bundle",
+        last_bundle_error_at: new Date().toISOString(),
       });
 
       refreshAssistantUi();
+
       return null;
     } finally {
       if (token === latestRefreshToken) {
@@ -251,10 +221,8 @@ export function startAssistantAutoRefresh(intervalMs = 60000) {
   stopAssistantAutoRefresh();
 
   autoRefreshInterval = window.setInterval(() => {
-    loadAssistantBundle().catch((error) => {
-      console.warn("[assistant-controller] auto refresh failed", error);
-    });
-  }, intervalMs);
+    loadAssistantBundle();
+  }, Math.max(Number(intervalMs) || 60000, 15000));
 }
 
 export function stopAssistantAutoRefresh() {
@@ -262,8 +230,4 @@ export function stopAssistantAutoRefresh() {
     window.clearInterval(autoRefreshInterval);
     autoRefreshInterval = null;
   }
-}
-
-export function getLatestAssistantScopeContext() {
-  return getScopeContext();
 }
