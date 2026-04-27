@@ -41,43 +41,22 @@ class CreateUserPayload(BaseModel):
     subscription_active: bool = True
 
 
-def dict_rows(cursor) -> list[dict[str, Any]]:
-    columns = [col[0] for col in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+def user_value(user: Any, key: str, default: Any = None) -> Any:
+    if isinstance(user, dict):
+        return user.get(key, default)
+    return getattr(user, key, default)
 
 
-def dict_row(cursor) -> dict[str, Any] | None:
-    row = cursor.fetchone()
-    if row is None:
-        return None
-    columns = [col[0] for col in cursor.description]
-    return dict(zip(columns, row))
-
-
-def get_columns(conn, table_name: str) -> set[str]:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_schema = 'public'
-              AND table_name = %s
-            """,
-            (table_name,),
-        )
-        return {row[0] for row in cur.fetchall()}
-
-
-def current_role(user: dict[str, Any]) -> str:
+def current_role(user: Any) -> str:
     return str(
-        user.get("role")
-        or user.get("user_role")
-        or user.get("account_role")
+        user_value(user, "role")
+        or user_value(user, "user_role")
+        or user_value(user, "account_role")
         or ""
     ).strip().lower()
 
 
-def require_admin(user: dict[str, Any]) -> None:
+def require_admin(user: Any) -> None:
     if current_role(user) not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required.")
 
@@ -89,71 +68,81 @@ def normalise_role(role: str) -> str:
     return clean
 
 
+def rows_to_dicts(cur) -> list[dict[str, Any]]:
+    columns = [desc[0] for desc in cur.description]
+    return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+
+def row_to_dict(cur) -> dict[str, Any] | None:
+    row = cur.fetchone()
+    if row is None:
+        return None
+    columns = [desc[0] for desc in cur.description]
+    return dict(zip(columns, row))
+
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
 @router.get("/options")
-def admin_user_options(current_user: dict[str, Any] = Depends(get_current_user)):
+def admin_user_options(current_user: Any = Depends(get_current_user)):
     require_admin(current_user)
 
-    conn = get_db_connection()
+    conn = None
     try:
-        provider_columns = get_columns(conn, "providers")
-        home_columns = get_columns(conn, "homes")
-
-        provider_where = "WHERE archived IS NOT TRUE" if "archived" in provider_columns else ""
-        home_where = "WHERE archived IS NOT TRUE" if "archived" in home_columns else ""
-
-        home_name_col = "name" if "name" in home_columns else "home_name"
+        conn = get_db_connection()
 
         with conn.cursor() as cur:
             cur.execute(
-                f"""
+                """
                 SELECT id, name
                 FROM providers
-                {provider_where}
+                WHERE archived IS NOT TRUE
                 ORDER BY name ASC
                 """
             )
-            providers = dict_rows(cur)
+            providers = rows_to_dicts(cur)
 
             cur.execute(
-                f"""
-                SELECT id, {home_name_col} AS name, provider_id
+                """
+                SELECT id, name, provider_id
                 FROM homes
-                {home_where}
-                ORDER BY {home_name_col} ASC
+                WHERE archived IS NOT TRUE
+                ORDER BY name ASC
                 """
             )
-            homes = dict_rows(cur)
+            homes = rows_to_dicts(cur)
 
         return {
             "roles": sorted(VALID_ROLES),
             "providers": providers,
             "homes": homes,
         }
+
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load admin user options: {exc}",
+            detail=f"Could not load admin options: {exc}",
         ) from exc
     finally:
-        release_db_connection(conn)
+        if conn is not None:
+            release_db_connection(conn)
 
 
 @router.get("")
-def list_admin_users(current_user: dict[str, Any] = Depends(get_current_user)):
+def list_admin_users(current_user: Any = Depends(get_current_user)):
     require_admin(current_user)
 
-    conn = get_db_connection()
+    conn = None
     try:
-        home_columns = get_columns(conn, "homes")
-        home_name_col = "name" if "name" in home_columns else "home_name"
+        conn = get_db_connection()
 
         with conn.cursor() as cur:
             cur.execute(
-                f"""
+                """
                 SELECT
                     u.id,
                     u.email,
@@ -163,7 +152,7 @@ def list_admin_users(current_user: dict[str, Any] = Depends(get_current_user)):
                     u.provider_id,
                     p.name AS provider_name,
                     u.home_id,
-                    h.{home_name_col} AS home_name,
+                    h.name AS home_name,
                     u.is_active,
                     u.subscription_active,
                     u.account_status,
@@ -177,28 +166,32 @@ def list_admin_users(current_user: dict[str, Any] = Depends(get_current_user)):
                 LIMIT 250
                 """
             )
-            users = dict_rows(cur)
+            users = rows_to_dicts(cur)
 
         return {"users": users}
+
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Could not load admin users: {exc}",
+            detail=f"Could not load users: {exc}",
         ) from exc
     finally:
-        release_db_connection(conn)
+        if conn is not None:
+            release_db_connection(conn)
 
 
 @router.post("")
 def create_admin_user(
     payload: CreateUserPayload,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
     require_admin(current_user)
 
     role = normalise_role(payload.role)
-    home_ids = []
 
+    home_ids: list[int] = []
     for item in payload.home_ids or []:
         try:
             value = int(item)
@@ -207,25 +200,24 @@ def create_admin_user(
         except Exception:
             continue
 
-    if payload.home_id and payload.home_id not in home_ids:
+    if payload.home_id and int(payload.home_id) not in home_ids:
         home_ids.insert(0, int(payload.home_id))
 
-    conn = get_db_connection()
+    conn = None
     try:
+        conn = get_db_connection()
+
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id FROM users WHERE lower(email) = lower(%s)",
                 (payload.email,),
             )
-            existing = cur.fetchone()
 
-            if existing:
+            if cur.fetchone():
                 raise HTTPException(
                     status_code=409,
                     detail="A user with this email already exists.",
                 )
-
-            password_hash = hash_password(payload.password)
 
             cur.execute(
                 """
@@ -245,13 +237,14 @@ def create_admin_user(
                     updated_at
                 )
                 VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', FALSE, now(), now()
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    'active', false, now(), now()
                 )
                 RETURNING id, email, role, first_name, last_name, provider_id, home_id, is_active
                 """,
                 (
-                    payload.email.lower(),
-                    password_hash,
+                    payload.email.lower().strip(),
+                    hash_password(payload.password),
                     role,
                     payload.first_name,
                     payload.last_name,
@@ -262,7 +255,10 @@ def create_admin_user(
                 ),
             )
 
-            user = dict_row(cur)
+            user = row_to_dict(cur)
+            if not user:
+                raise HTTPException(status_code=500, detail="User was not created.")
+
             user_id = int(user["id"])
 
             for home_id in home_ids:
@@ -298,13 +294,16 @@ def create_admin_user(
         return {"ok": True, "user": user}
 
     except HTTPException:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise
     except Exception as exc:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Could not create user: {exc}",
         ) from exc
     finally:
-        release_db_connection(conn)
+        if conn is not None:
+            release_db_connection(conn)
