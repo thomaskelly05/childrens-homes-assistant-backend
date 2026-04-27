@@ -560,39 +560,44 @@ async def api_auth_check():
     }
 
 
-@router.get("/{route_key}/{record_id}")
-@router.get("/api/{route_key}/{record_id}")
-async def compat_record_detail(
-    request: Request,
-    route_key: str,
-    record_id: int,
-):
-    if route_key not in ROUTE_TABLES:
-        return JSONResponse(
-            status_code=404,
-            content={
-                "status": "not_found",
-                "items": [],
-                "count": 0,
-            },
-        )
-
-    config = ROUTE_TABLES[route_key]
-
+@router.get("/quality/{record_id}")
+@router.get("/api/quality/{record_id}")
+async def quality_detail(record_id: int):
+    config = ROUTE_TABLES["quality"]
     rows = select_rows(
         table_name=config["table"],
         record_id=record_id,
         limit=1,
         order_column=config.get("order"),
     )
-
     return {
-        config["key"]: rows,
+        "quality": rows,
         "item": rows[0] if rows else None,
         "items": rows,
         "count": len(rows),
         "status": "ok",
-        "route": route_key,
+        "route": "quality",
+        "record_id": record_id,
+    }
+
+
+@router.get("/ofsted/{record_id}")
+@router.get("/api/ofsted/{record_id}")
+async def ofsted_detail(record_id: int):
+    config = ROUTE_TABLES["ofsted"]
+    rows = select_rows(
+        table_name=config["table"],
+        record_id=record_id,
+        limit=1,
+        order_column=config.get("order"),
+    )
+    return {
+        "ofsted": rows,
+        "item": rows[0] if rows else None,
+        "items": rows,
+        "count": len(rows),
+        "status": "ok",
+        "route": "ofsted",
         "record_id": record_id,
     }
 
