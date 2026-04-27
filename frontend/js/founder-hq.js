@@ -1,20 +1,12 @@
+import { FounderAPI } from "./services/founder-api.js";
+
+// ============================================================
+// ACCESS GUARD
+// ============================================================
+
 async function guardFounderPage() {
   try {
-    const response = await fetch("/founder/health", {
-      method: "GET",
-      credentials: "include",
-    });
-
-    if (response.status === 403 || response.status === 401) {
-      window.location.href = "/index.html";
-      return false;
-    }
-
-    if (!response.ok) {
-      window.location.href = "/index.html";
-      return false;
-    }
-
+    await FounderAPI.health();
     return true;
   } catch (error) {
     window.location.href = "/index.html";
@@ -28,44 +20,60 @@ if (!founderAccessAllowed) {
   throw new Error("Founder access denied");
 }
 
+// ============================================================
+// MODE META
+// ============================================================
+
 const MODE_META = {
   strategy: {
     title: "Strategy Advisor",
-    description: "Ask for help deciding what IndiCare should focus on next.",
+    description: "Decide what IndiCare should focus on next.",
   },
   growth: {
     title: "Growth & Sales",
-    description: "Create outreach, lead plans, sales scripts and demo strategies.",
+    description: "Get leads, outreach, demos and conversions.",
   },
   funding: {
     title: "Funding",
-    description: "Write grant answers, impact wording and funding narratives.",
+    description: "Grants, impact and funding narratives.",
   },
   finance: {
     title: "Finance",
-    description: "Work through pricing, costs, forecasts and financial decisions.",
+    description: "Pricing, revenue and sustainability.",
   },
   operations: {
     title: "Operations",
-    description: "Plan systems, workload, delivery and company processes.",
+    description: "Execution, systems and priorities.",
   },
   product: {
     title: "Product & UX",
-    description: "Improve IndiCare workflows, user experience and product priorities.",
+    description: "Build what sells and works in homes.",
   },
 };
+
+// ============================================================
+// STATE
+// ============================================================
 
 let currentMode = "strategy";
 let currentThreadId = null;
 
+// ============================================================
+// ELEMENTS
+// ============================================================
+
 const modeButtons = document.querySelectorAll("[data-founder-mode]");
-const quickPromptButtons = document.querySelectorAll("[data-founder-prompt]");
+const quickActionButtons = document.querySelectorAll("[data-founder-action]");
 const modeTitle = document.getElementById("founderModeTitle");
 const modeDescription = document.getElementById("founderModeDescription");
 const form = document.getElementById("founderAiForm");
 const messageInput = document.getElementById("founderAiMessage");
 const output = document.getElementById("founderChatOutput");
 const clearBtn = document.getElementById("founderClearBtn");
+
+// ============================================================
+// HELPERS
+// ============================================================
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -76,27 +84,14 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function setMode(mode) {
-  currentMode = MODE_META[mode] ? mode : "strategy";
-
-  modeButtons.forEach((button) => {
-    button.classList.toggle(
-      "is-active",
-      button.dataset.founderMode === currentMode
-    );
-  });
-
-  const meta = MODE_META[currentMode];
-  if (modeTitle) modeTitle.textContent = meta.title;
-  if (modeDescription) modeDescription.textContent = meta.description;
-}
-
 function addMessage(role, content) {
   if (!output) return;
 
   const isUser = role === "user";
   const label = isUser ? "You" : "Founder AI";
-  const className = isUser ? "founder-message-user" : "founder-message-assistant";
+  const className = isUser
+    ? "founder-message-user"
+    : "founder-message-assistant";
 
   const wrapper = document.createElement("div");
   wrapper.className = `founder-message ${className}`;
@@ -117,70 +112,93 @@ function setLoading(isLoading) {
   }
 }
 
+function setMode(mode) {
+  currentMode = MODE_META[mode] ? mode : "strategy";
+
+  modeButtons.forEach((button) => {
+    button.classList.toggle(
+      "is-active",
+      button.dataset.founderMode === currentMode
+    );
+  });
+
+  const meta = MODE_META[currentMode];
+  if (modeTitle) modeTitle.textContent = meta.title;
+  if (modeDescription) modeDescription.textContent = meta.description;
+}
+
+// ============================================================
+// AI CHAT
+// ============================================================
+
 async function askFounderAi(message) {
   addMessage("user", message);
   setLoading(true);
 
   try {
-    const response = await fetch("/founder/ai/chat", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        mode: currentMode,
-        message,
-        thread_id: currentThreadId,
-      }),
+    const data = await FounderAPI.chat({
+      message,
+      mode: currentMode,
+      thread_id: currentThreadId,
     });
 
-    if (response.status === 403) {
-      addMessage("assistant", "Founder HQ is restricted to founder users only.");
-      return;
-    }
-
-    if (!response.ok) {
-      addMessage("assistant", "Founder AI could not respond. Please try again.");
-      return;
-    }
-
-    const data = await response.json();
     currentThreadId = data.thread_id || currentThreadId;
     addMessage("assistant", data.response || "No response returned.");
   } catch (error) {
-    addMessage("assistant", "Founder AI connection failed.");
+    if (error.message === "FORBIDDEN") {
+      addMessage("assistant", "Founder HQ is restricted.");
+      return;
+    }
+
+    addMessage("assistant", "Founder AI failed to respond.");
   } finally {
     setLoading(false);
   }
 }
 
+// ============================================================
+// QUICK ACTIONS
+// ============================================================
+
+async function runQuickAction(action) {
+  addMessage("assistant", "Running action...");
+
+  try {
+    const data = await FounderAPI.quickAction(action);
+    addMessage("assistant", data.response || "No response.");
+  } catch (error) {
+    addMessage("assistant", "Quick action failed.");
+  }
+}
+
+// ============================================================
+// EVENTS
+// ============================================================
+
 modeButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    setMode(button.dataset.founderMode || "strategy");
+    setMode(button.dataset.founderMode);
   });
 });
 
-quickPromptButtons.forEach((button) => {
+quickActionButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    const prompt = button.dataset.founderPrompt || "";
-    if (messageInput) {
-      messageInput.value = prompt;
-      messageInput.focus();
-    }
+    const action = button.dataset.founderAction;
+    runQuickAction(action);
   });
 });
 
 form?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const message = messageInput?.value.trim() || "";
+  const message = messageInput?.value.trim();
+
   if (!message) {
-    addMessage("assistant", "Type a question for your Founder AI first.");
+    addMessage("assistant", "Type a question first.");
     return;
   }
 
-  if (messageInput) messageInput.value = "";
+  messageInput.value = "";
   await askFounderAi(message);
 });
 
@@ -191,15 +209,14 @@ clearBtn?.addEventListener("click", () => {
     output.innerHTML = `
       <div class="founder-message founder-message-assistant">
         <strong>Founder AI</strong>
-        <p>New founder thread started. What should we work on?</p>
+        <p>New thread started. What should we work on?</p>
       </div>
     `;
   }
-
-  if (messageInput) {
-    messageInput.value = "";
-    messageInput.focus();
-  }
 });
+
+// ============================================================
+// INIT
+// ============================================================
 
 setMode("strategy");
