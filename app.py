@@ -123,11 +123,13 @@ class Settings:
             enable_https_redirect=os.getenv(
                 "ENABLE_HTTPS_REDIRECT",
                 "true" if is_production else "false",
-            ).strip().lower() == "true",
+            ).strip().lower()
+            == "true",
             enable_trusted_hosts=os.getenv(
                 "ENABLE_TRUSTED_HOSTS",
                 "true" if is_production else "false",
-            ).strip().lower() == "true",
+            ).strip().lower()
+            == "true",
             allowed_origins=allowed_origins,
             allowed_hosts=allowed_hosts,
         )
@@ -207,8 +209,9 @@ ROUTERS = [
     "routers.passkey_routes",
     "routers.legal_acceptance_routes",
 
-    # Frontend shell compatibility routes must load before stricter legacy routers.
-    "routers.frontend_compat_routes",
+    # This matches your actual file: routers/frontend_compat.py
+    # It must load before stricter legacy routers.
+    "routers.frontend_compat",
 
     "routers.account_routes",
     "routers.admin_routes",
