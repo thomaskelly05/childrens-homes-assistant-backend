@@ -21,6 +21,24 @@ let options = {
   homes: [],
 };
 
+function getCookie(name) {
+  return (
+    document.cookie
+      .split("; ")
+      .find((row) => row.startsWith(`${name}=`))
+      ?.split("=")[1] || ""
+  );
+}
+
+function getCsrfToken() {
+  return decodeURIComponent(
+    getCookie("indicare_csrf") ||
+      getCookie("csrf_token") ||
+      getCookie("csrftoken") ||
+      ""
+  );
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -184,11 +202,14 @@ async function createUser(event) {
     subscription_active: els.subscriptionActive.checked,
   };
 
+  const csrfToken = getCsrfToken();
+
   const response = await fetch("/admin/users", {
     method: "POST",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken,
     },
     body: JSON.stringify(payload),
   });
