@@ -206,6 +206,10 @@ ROUTERS = [
     "routers.mfa_routes",
     "routers.passkey_routes",
     "routers.legal_acceptance_routes",
+
+    # Frontend shell compatibility routes must load before stricter legacy routers.
+    "routers.frontend_compat_routes",
+
     "routers.account_routes",
     "routers.admin_routes",
     "routers.billing_routes",
@@ -260,7 +264,6 @@ ROUTERS = [
     "routers.exports_routes",
     "routers.rostering_routes",
     "routers.academy_routes",
-    "routers.frontend_compat_routes",
 ]
 
 
@@ -456,7 +459,7 @@ class SecurityEnforcementMiddleware(BaseHTTPMiddleware):
                     "ok": False,
                     "detail": "Current legal terms must be accepted before using this feature.",
                     "code": "legal_acceptance_required",
-                    "current_version": CURRENT_LEGAL_VERSION,
+                    "current_version": CURRENT_LEGAL_VERSION",
                 },
             )
 
