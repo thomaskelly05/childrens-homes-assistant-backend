@@ -122,7 +122,10 @@ body.founder-hq-body {
   background: var(--founder-soft);
   color: var(--founder-ink);
   cursor: pointer;
-  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
 }
 
 .founder-mode:hover {
@@ -157,6 +160,16 @@ body.founder-hq-body {
   margin-bottom: 18px;
 }
 
+.founder-card h3 {
+  margin: 0 0 8px;
+  color: var(--founder-navy);
+}
+
+.founder-card > p {
+  margin-top: 0;
+  color: var(--founder-muted);
+}
+
 .founder-snapshot h2 {
   margin: 0;
   color: var(--founder-navy);
@@ -181,7 +194,7 @@ body.founder-hq-body {
 }
 
 .founder-message {
-  max-width: 86%;
+  max-width: 92%;
   padding: 14px 16px;
   margin-bottom: 12px;
   border-radius: 18px;
@@ -226,7 +239,7 @@ body.founder-hq-body {
   font: inherit;
   min-height: 130px;
   color: var(--founder-ink);
-  background: #fff;
+  background: #ffffff;
   outline: none;
 }
 
@@ -249,14 +262,20 @@ body.founder-hq-body {
   padding: 10px 16px;
   font-weight: 800;
   cursor: pointer;
-  background: #fff;
+  background: #ffffff;
   color: var(--founder-navy);
 }
 
 .founder-form-actions button.primary {
   background: var(--founder-navy);
-  color: #fff;
+  color: #ffffff;
   border-color: var(--founder-navy);
+}
+
+.founder-form-actions button:disabled,
+.founder-quick-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .founder-quick-actions {
@@ -267,6 +286,10 @@ body.founder-hq-body {
 
 .founder-quick-actions button {
   background: var(--founder-sand);
+}
+
+.founder-quick-actions button:hover {
+  transform: translateY(-1px);
 }
 
 @media (max-width: 860px) {
