@@ -231,3 +231,15 @@ export function stopAssistantAutoRefresh() {
     autoRefreshInterval = null;
   }
 }
+
+export function bindAssistantController() {
+  return loadAssistantBundle({ force: false });
+}
+
+export function onWorkspaceRefreshRequested() {
+  return loadAssistantBundle({ force: true });
+}
+
+export function refreshAssistantAnalysisOnly() {
+  return loadAssistantBundle({ force: true });
+}
