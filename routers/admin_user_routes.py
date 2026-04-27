@@ -14,33 +14,13 @@ router = APIRouter(prefix="/admin/users", tags=["admin-users"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-ADMIN_ROLES = {
-    "founder",
-    "owner",
-    "super_admin",
-    "superadmin",
-    "admin",
-    "provider_admin",
-}
+ADMIN_ROLES = {"founder", "owner", "super_admin", "superadmin", "admin", "provider_admin"}
 
 VALID_ROLES = {
-    "founder",
-    "owner",
-    "super_admin",
-    "superadmin",
-    "admin",
-    "provider_admin",
-    "responsible_individual",
-    "registered_manager",
-    "manager",
-    "deputy_manager",
-    "senior",
-    "senior_rsw",
-    "staff",
-    "rsw",
-    "bank_rsw",
-    "therapeutic_practitioner",
-    "domestic",
+    "founder", "owner", "super_admin", "superadmin", "admin", "provider_admin",
+    "responsible_individual", "registered_manager", "manager", "deputy_manager",
+    "senior", "senior_rsw", "staff", "rsw", "bank_rsw",
+    "therapeutic_practitioner", "domestic",
 }
 
 
@@ -114,7 +94,6 @@ def table_exists(conn, table_name: str) -> bool:
 def get_home_provider_id(conn, home_id: int | None) -> int | None:
     if not home_id:
         return None
-
     with conn.cursor() as cur:
         cur.execute("SELECT provider_id FROM homes WHERE id = %s", (home_id,))
         row = cur.fetchone()
@@ -129,38 +108,32 @@ def admin_user_options(
     require_admin(current_user)
 
     try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT id, name
-                FROM providers
-                WHERE COALESCE(archived, false) = false
-                ORDER BY name ASC
-                """
-            )
-            providers = [dict(row) for row in cur.fetchall()]
+        providers = []
+        homes = []
 
-            cur.execute(
-                """
-                SELECT id, name, provider_id
-                FROM homes
-                WHERE COALESCE(archived, false) = false
-                ORDER BY name ASC
-                """
-            )
-            homes = [dict(row) for row in cur.fetchall()]
+        if table_exists(conn, "providers"):
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT id, name FROM providers ORDER BY name ASC")
+                providers = [dict(row) for row in cur.fetchall()]
 
-        return {
-            "roles": sorted(VALID_ROLES),
-            "providers": providers,
-            "homes": homes,
-        }
+        if table_exists(conn, "homes"):
+            home_columns = get_table_columns(conn, "homes")
+            name_col = "name" if "name" in home_columns else "home_name"
+
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    f"""
+                    SELECT id, {name_col} AS name, provider_id
+                    FROM homes
+                    ORDER BY {name_col} ASC
+                    """
+                )
+                homes = [dict(row) for row in cur.fetchall()]
+
+        return {"roles": sorted(VALID_ROLES), "providers": providers, "homes": homes}
 
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Could not load admin options: {exc}",
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"Could not load admin options: {exc}") from exc
 
 
 @router.get("")
@@ -173,68 +146,42 @@ def list_admin_users(
     try:
         user_columns = get_table_columns(conn, "users")
 
-        optional_selects = []
+        fields = ["id", "email"]
+        for col in ("first_name", "last_name", "role", "provider_id", "home_id", "is_active", "created_at", "updated_at"):
+            if col in user_columns:
+                fields.append(col)
 
-        if "subscription_active" in user_columns:
-            optional_selects.append("COALESCE(u.subscription_active, false) AS subscription_active")
-        else:
-            optional_selects.append("false AS subscription_active")
-
-        if "account_status" in user_columns:
-            optional_selects.append("u.account_status")
-        else:
-            optional_selects.append("'unknown' AS account_status")
-
-        if "created_at" in user_columns:
-            created_order = "u.created_at DESC NULLS LAST, u.id DESC"
-            optional_selects.append("u.created_at")
-        else:
-            created_order = "u.id DESC"
-            optional_selects.append("NULL AS created_at")
-
-        if "updated_at" in user_columns:
-            optional_selects.append("u.updated_at")
-        else:
-            optional_selects.append("NULL AS updated_at")
-
-        archived_filter = (
-            "WHERE COALESCE(u.archived, false) = false"
-            if "archived" in user_columns
-            else ""
-        )
-
-        query = f"""
-            SELECT
-                u.id,
-                u.email,
-                u.first_name,
-                u.last_name,
-                u.role,
-                u.provider_id,
-                p.name AS provider_name,
-                u.home_id,
-                h.name AS home_name,
-                COALESCE(u.is_active, false) AS is_active,
-                {", ".join(optional_selects)}
-            FROM users u
-            LEFT JOIN providers p ON p.id = u.provider_id
-            LEFT JOIN homes h ON h.id = u.home_id
-            {archived_filter}
-            ORDER BY {created_order}
-            LIMIT 250
-        """
+        select_sql = ", ".join(fields)
+        archived_filter = "WHERE COALESCE(archived, false) = false" if "archived" in user_columns else ""
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query)
+            cur.execute(
+                f"""
+                SELECT {select_sql}
+                FROM users
+                {archived_filter}
+                ORDER BY id DESC
+                LIMIT 250
+                """
+            )
             users = [dict(row) for row in cur.fetchall()]
+
+        for user in users:
+            user.setdefault("first_name", "")
+            user.setdefault("last_name", "")
+            user.setdefault("role", "staff")
+            user.setdefault("provider_id", None)
+            user.setdefault("home_id", None)
+            user.setdefault("is_active", False)
+            user.setdefault("provider_name", "No provider")
+            user.setdefault("home_name", "No main home")
+            user.setdefault("subscription_active", False)
+            user.setdefault("account_status", "unknown")
 
         return {"users": users}
 
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Could not load users: {exc}",
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"Could not load users: {exc}") from exc
 
 
 @router.post("")
@@ -249,7 +196,6 @@ def create_admin_user(
     role = normalise_role(payload.role)
 
     home_ids: list[int] = []
-
     for item in payload.home_ids or []:
         try:
             value = int(item)
@@ -265,22 +211,12 @@ def create_admin_user(
 
     try:
         user_columns = get_table_columns(conn, "users")
-
-        provider_id = payload.provider_id
-        if not provider_id and payload.home_id:
-            provider_id = get_home_provider_id(conn, int(payload.home_id))
+        provider_id = payload.provider_id or get_home_provider_id(conn, payload.home_id)
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                "SELECT id FROM users WHERE lower(email) = lower(%s)",
-                (email,),
-            )
-
+            cur.execute("SELECT id FROM users WHERE lower(email) = lower(%s)", (email,))
             if cur.fetchone():
-                raise HTTPException(
-                    status_code=409,
-                    detail="A user with this email already exists.",
-                )
+                raise HTTPException(status_code=409, detail="A user with this email already exists.")
 
             candidate_values = {
                 "email": email,
@@ -297,36 +233,22 @@ def create_admin_user(
                 "archived": False,
             }
 
-            insert_columns = [
-                column for column in candidate_values if column in user_columns
-            ]
+            insert_columns = [col for col in candidate_values if col in user_columns]
+            values = [candidate_values[col] for col in insert_columns]
+            placeholders = ["%s"] * len(values)
 
             if "created_at" in user_columns:
                 insert_columns.append("created_at")
-                candidate_values["created_at"] = "NOW_SQL"
+                placeholders.append("now()")
 
             if "updated_at" in user_columns:
                 insert_columns.append("updated_at")
-                candidate_values["updated_at"] = "NOW_SQL"
-
-            column_sql = ", ".join(insert_columns)
-
-            placeholders = []
-            values = []
-
-            for column in insert_columns:
-                if candidate_values[column] == "NOW_SQL":
-                    placeholders.append("now()")
-                else:
-                    placeholders.append("%s")
-                    values.append(candidate_values[column])
-
-            placeholder_sql = ", ".join(placeholders)
+                placeholders.append("now()")
 
             cur.execute(
                 f"""
-                INSERT INTO users ({column_sql})
-                VALUES ({placeholder_sql})
+                INSERT INTO users ({", ".join(insert_columns)})
+                VALUES ({", ".join(placeholders)})
                 RETURNING id, email, role, first_name, last_name, provider_id, home_id, is_active
                 """,
                 values,
@@ -335,12 +257,11 @@ def create_admin_user(
             user = dict(cur.fetchone())
             user_id = int(user["id"])
 
-            if table_exists(conn, "staff_home_assignments"):
+            if home_ids and table_exists(conn, "staff_home_assignments"):
                 assignment_columns = get_table_columns(conn, "staff_home_assignments")
 
                 for home_id in home_ids:
                     assignment_provider_id = provider_id or get_home_provider_id(conn, home_id)
-
                     columns = []
                     vals = []
 
@@ -354,28 +275,25 @@ def create_admin_user(
                             columns.append(column)
                             vals.append(value)
 
+                    placeholders = ["%s"] * len(vals)
+
                     if "created_at" in assignment_columns:
                         columns.append("created_at")
-
-                    col_sql = ", ".join(columns)
-                    ph_sql = ", ".join(["%s"] * len(vals))
-                    if "created_at" in assignment_columns:
-                        ph_sql = f"{ph_sql}, now()" if ph_sql else "now()"
+                        placeholders.append("now()")
 
                     cur.execute(
                         f"""
-                        INSERT INTO staff_home_assignments ({col_sql})
-                        VALUES ({ph_sql})
+                        INSERT INTO staff_home_assignments ({", ".join(columns)})
+                        VALUES ({", ".join(placeholders)})
                         """,
                         vals,
                     )
 
-            if table_exists(conn, "organisation_members"):
+            if home_ids and table_exists(conn, "organisation_members"):
                 member_columns = get_table_columns(conn, "organisation_members")
 
                 for home_id in home_ids:
                     member_provider_id = provider_id or get_home_provider_id(conn, home_id)
-
                     columns = []
                     vals = []
 
@@ -389,18 +307,16 @@ def create_admin_user(
                             columns.append(column)
                             vals.append(value)
 
+                    placeholders = ["%s"] * len(vals)
+
                     if "created_at" in member_columns:
                         columns.append("created_at")
-
-                    col_sql = ", ".join(columns)
-                    ph_sql = ", ".join(["%s"] * len(vals))
-                    if "created_at" in member_columns:
-                        ph_sql = f"{ph_sql}, now()" if ph_sql else "now()"
+                        placeholders.append("now()")
 
                     cur.execute(
                         f"""
-                        INSERT INTO organisation_members ({col_sql})
-                        VALUES ({ph_sql})
+                        INSERT INTO organisation_members ({", ".join(columns)})
+                        VALUES ({", ".join(placeholders)})
                         """,
                         vals,
                     )
@@ -413,7 +329,4 @@ def create_admin_user(
         raise
     except Exception as exc:
         conn.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Could not create user: {exc}",
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"Could not create user: {exc}") from exc
