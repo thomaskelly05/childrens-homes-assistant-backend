@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from db.connection import get_db_connection
 
-frontend_compat_router = APIRouter(tags=["frontend-compat"])
+router = APIRouter(tags=["frontend-compat"])
 
 
 ROUTE_TABLES: dict[str, dict[str, Any]] = {
@@ -200,9 +200,15 @@ def parse_allowed_home_ids(value: Any) -> list[int]:
             raw = str(value).split(",")
 
     ids: list[int] = []
-    for item in raw if isinstance(raw, list) else []:
+
+    if isinstance(raw, list):
+        iterable = raw
+    else:
+        iterable = str(raw).split(",")
+
+    for item in iterable:
         try:
-            num = int(item)
+            num = int(str(item).strip())
             if num > 0:
                 ids.append(num)
         except Exception:
@@ -398,13 +404,13 @@ def register_get_aliases(route_key: str) -> None:
             limit=limit,
         )
 
-    frontend_compat_router.add_api_route(
+    router.add_api_route(
         f"/{route_key}",
         handler,
         methods=["GET"],
         name=f"compat_{route_key.replace('-', '_')}",
     )
-    frontend_compat_router.add_api_route(
+    router.add_api_route(
         f"/api/{route_key}",
         handler,
         methods=["GET"],
@@ -416,8 +422,8 @@ for key in ROUTE_TABLES:
     register_get_aliases(key)
 
 
-@frontend_compat_router.get("/me")
-@frontend_compat_router.get("/api/me")
+@router.get("/me")
+@router.get("/api/me")
 async def compat_me(request: Request):
     auth = await get_auth_context(request)
     return {
@@ -429,7 +435,7 @@ async def compat_me(request: Request):
     }
 
 
-@frontend_compat_router.get("/api/auth/check")
+@router.get("/api/auth/check")
 async def compat_api_auth_check(request: Request):
     auth = await get_auth_context(request)
     return {
@@ -531,10 +537,10 @@ async def build_scope_bundle(
     }
 
 
-@frontend_compat_router.get("/assistant/scope-bundle")
-@frontend_compat_router.get("/api/assistant/scope-bundle")
-@frontend_compat_router.get("/assistant/os/scope-bundle")
-@frontend_compat_router.get("/api/assistant/os/scope-bundle")
+@router.get("/assistant/scope-bundle")
+@router.get("/api/assistant/scope-bundle")
+@router.get("/assistant/os/scope-bundle")
+@router.get("/api/assistant/os/scope-bundle")
 async def compat_scope_bundle_get(
     request: Request,
     young_person_id: int | None = Query(default=None),
@@ -544,14 +550,16 @@ async def compat_scope_bundle_get(
     return await build_scope_bundle(request, young_person_id, home_id, provider_id)
 
 
-@frontend_compat_router.post("/assistant/scope-bundle")
-@frontend_compat_router.post("/api/assistant/scope-bundle")
-@frontend_compat_router.post("/assistant/os/scope-bundle")
-@frontend_compat_router.post("/api/assistant/os/scope-bundle")
+@router.post("/assistant/scope-bundle")
+@router.post("/api/assistant/scope-bundle")
+@router.post("/assistant/os/scope-bundle")
+@router.post("/api/assistant/os/scope-bundle")
 async def compat_scope_bundle_post(request: Request):
-    body = {}
+    body: dict[str, Any] = {}
     try:
-        body = await request.json()
+        parsed = await request.json()
+        if isinstance(parsed, dict):
+            body = parsed
     except Exception:
         body = {}
 
@@ -565,13 +573,14 @@ async def compat_scope_bundle_post(request: Request):
     )
 
 
-@frontend_compat_router.post("/assistant/message")
-@frontend_compat_router.post("/api/assistant/message")
-@frontend_compat_router.post("/assistant/os/message")
-@frontend_compat_router.post("/api/assistant/os/message")
+@router.post("/assistant/message")
+@router.post("/api/assistant/message")
+@router.post("/assistant/os/message")
+@router.post("/api/assistant/os/message")
 async def compat_assistant_message(request: Request):
     try:
-        body = await request.json()
+        parsed = await request.json()
+        body = parsed if isinstance(parsed, dict) else {}
     except Exception:
         body = {}
 
