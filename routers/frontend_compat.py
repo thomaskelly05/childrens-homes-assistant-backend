@@ -13,186 +13,42 @@ router = APIRouter(tags=["frontend-compat"])
 
 
 ROUTE_TABLES: dict[str, dict[str, str]] = {
-    "appointments": {
-        "table": "young_person_appointments",
-        "key": "appointments",
-        "order": "appointment_date",
-    },
-    "daily-notes": {
-        "table": "daily_notes",
-        "key": "daily_notes",
-        "order": "note_date",
-    },
-    "communications": {
-        "table": "communications_log",
-        "key": "communications",
-        "order": "communication_datetime",
-    },
-    "incidents": {
-        "table": "incidents",
-        "key": "incidents",
-        "order": "incident_datetime",
-    },
-    "safeguarding": {
-        "table": "safeguarding_records",
-        "key": "safeguarding",
-        "order": "created_at",
-    },
-    "support-plans": {
-        "table": "support_plans",
-        "key": "support_plans",
-        "order": "review_date",
-    },
-    "tasks": {
-        "table": "tasks",
-        "key": "tasks",
-        "order": "due_date",
-    },
-    "documents": {
-        "table": "documents",
-        "key": "documents",
-        "order": "created_at",
-    },
-    "reports": {
-        "table": "ai_generated_reports",
-        "key": "reports",
-        "order": "created_at",
-    },
-    "team": {
-        "table": "staff",
-        "key": "team",
-        "order": "full_name",
-    },
-    "staff": {
-        "table": "staff",
-        "key": "staff",
-        "order": "full_name",
-    },
-    "supervisions": {
-        "table": "supervision_submissions",
-        "key": "supervisions",
-        "order": "created_at",
-    },
-    "training": {
-        "table": "staff_training_records",
-        "key": "training",
-        "order": "expires_on",
-    },
-    "rota": {
-        "table": "roster_shifts",
-        "key": "rota",
-        "order": "shift_date",
-    },
-    "compliance-items": {
-        "table": "compliance_items",
-        "key": "compliance_items",
-        "order": "due_date",
-    },
-    "quality": {
-        "table": "quality_audits",
-        "key": "quality",
-        "order": "audit_date",
-    },
-    "quality-audits": {
-        "table": "quality_audits",
-        "key": "quality_audits",
-        "order": "audit_date",
-    },
-    "quality-audit-findings": {
-        "table": "quality_audit_findings",
-        "key": "quality_audit_findings",
-        "order": "created_at",
-    },
-    "quality-audit-actions": {
-        "table": "quality_audit_actions",
-        "key": "quality_audit_actions",
-        "order": "due_date",
-    },
-    "ofsted": {
-        "table": "inspection_scores",
-        "key": "ofsted",
-        "order": "created_at",
-    },
-    "inspection-scores": {
-        "table": "inspection_scores",
-        "key": "inspection_scores",
-        "order": "created_at",
-    },
-    "inspection-section-scores": {
-        "table": "inspection_section_scores",
-        "key": "inspection_section_scores",
-        "order": "created_at",
-    },
-    "inspection-score-reasons": {
-        "table": "inspection_score_reasons",
-        "key": "inspection_score_reasons",
-        "order": "created_at",
-    },
-    "inspection-reasons": {
-        "table": "inspection_score_reasons",
-        "key": "inspection_reasons",
-        "order": "created_at",
-    },
-    "inspection-lines-of-enquiry": {
-        "table": "inspection_lines_of_enquiry",
-        "key": "inspection_lines_of_enquiry",
-        "order": "created_at",
-    },
-    "inspection-improvement-actions": {
-        "table": "inspection_improvement_actions",
-        "key": "inspection_improvement_actions",
-        "order": "due_date",
-    },
-    "inspection-actions": {
-        "table": "inspection_improvement_actions",
-        "key": "inspection_actions",
-        "order": "due_date",
-    },
-    "inspection-tasks": {
-        "table": "inspection_improvement_actions",
-        "key": "inspection_tasks",
-        "order": "due_date",
-    },
-    "inspection-briefing": {
-        "table": "inspection_dashboard_snapshots",
-        "key": "inspection_briefing",
-        "order": "created_at",
-    },
-    "inspection-prep-72-hour": {
-        "table": "inspection_pack_jobs",
-        "key": "inspection_prep_72_hour",
-        "order": "created_at",
-    },
-    "manager-review-queue": {
-        "table": "manager_review_queue",
-        "key": "manager_review_queue",
-        "order": "created_at",
-    },
-    "reg44-visits": {
-        "table": "reg44_visits",
-        "key": "reg44_visits",
-        "order": "visit_date",
-    },
-    "reg44-findings": {
-        "table": "reg44_findings",
-        "key": "reg44_findings",
-        "order": "created_at",
-    },
-    "reg44-actions": {
-        "table": "reg44_actions",
-        "key": "reg44_actions",
-        "order": "due_date",
-    },
-    "reg45-reviews": {
-        "table": "reg45_reviews",
-        "key": "reg45_reviews",
-        "order": "review_date",
-    },
-    "reg45-actions": {
-        "table": "reg45_actions",
-        "key": "reg45_actions",
-        "order": "due_date",
-    },
+    "appointments": {"table": "young_person_appointments", "key": "appointments", "order": "appointment_date"},
+    "daily-notes": {"table": "daily_notes", "key": "daily_notes", "order": "note_date"},
+    "communications": {"table": "communications_log", "key": "communications", "order": "communication_datetime"},
+    "incidents": {"table": "incidents", "key": "incidents", "order": "incident_datetime"},
+    "safeguarding": {"table": "safeguarding_records", "key": "safeguarding", "order": "created_at"},
+    "support-plans": {"table": "support_plans", "key": "support_plans", "order": "review_date"},
+    "tasks": {"table": "tasks", "key": "tasks", "order": "due_date"},
+    "documents": {"table": "documents", "key": "documents", "order": "created_at"},
+    "reports": {"table": "ai_generated_reports", "key": "reports", "order": "created_at"},
+    "team": {"table": "staff", "key": "team", "order": "full_name"},
+    "staff": {"table": "staff", "key": "staff", "order": "full_name"},
+    "supervisions": {"table": "supervision_submissions", "key": "supervisions", "order": "created_at"},
+    "training": {"table": "staff_training_records", "key": "training", "order": "expires_on"},
+    "rota": {"table": "roster_shifts", "key": "rota", "order": "shift_date"},
+    "compliance-items": {"table": "compliance_items", "key": "compliance_items", "order": "due_date"},
+    "quality": {"table": "quality_audits", "key": "quality", "order": "audit_date"},
+    "quality-audits": {"table": "quality_audits", "key": "quality_audits", "order": "audit_date"},
+    "quality-audit-findings": {"table": "quality_audit_findings", "key": "quality_audit_findings", "order": "created_at"},
+    "quality-audit-actions": {"table": "quality_audit_actions", "key": "quality_audit_actions", "order": "due_date"},
+    "ofsted": {"table": "inspection_scores", "key": "ofsted", "order": "created_at"},
+    "inspection-scores": {"table": "inspection_scores", "key": "inspection_scores", "order": "created_at"},
+    "inspection-section-scores": {"table": "inspection_section_scores", "key": "inspection_section_scores", "order": "created_at"},
+    "inspection-score-reasons": {"table": "inspection_score_reasons", "key": "inspection_score_reasons", "order": "created_at"},
+    "inspection-reasons": {"table": "inspection_score_reasons", "key": "inspection_reasons", "order": "created_at"},
+    "inspection-lines-of-enquiry": {"table": "inspection_lines_of_enquiry", "key": "inspection_lines_of_enquiry", "order": "created_at"},
+    "inspection-improvement-actions": {"table": "inspection_improvement_actions", "key": "inspection_improvement_actions", "order": "due_date"},
+    "inspection-actions": {"table": "inspection_improvement_actions", "key": "inspection_actions", "order": "due_date"},
+    "inspection-tasks": {"table": "inspection_improvement_actions", "key": "inspection_tasks", "order": "due_date"},
+    "inspection-briefing": {"table": "inspection_dashboard_snapshots", "key": "inspection_briefing", "order": "created_at"},
+    "inspection-prep-72-hour": {"table": "inspection_pack_jobs", "key": "inspection_prep_72_hour", "order": "created_at"},
+    "manager-review-queue": {"table": "manager_review_queue", "key": "manager_review_queue", "order": "created_at"},
+    "reg44-visits": {"table": "reg44_visits", "key": "reg44_visits", "order": "visit_date"},
+    "reg44-findings": {"table": "reg44_findings", "key": "reg44_findings", "order": "created_at"},
+    "reg44-actions": {"table": "reg44_actions", "key": "reg44_actions", "order": "due_date"},
+    "reg45-reviews": {"table": "reg45_reviews", "key": "reg45_reviews", "order": "review_date"},
+    "reg45-actions": {"table": "reg45_actions", "key": "reg45_actions", "order": "due_date"},
 }
 
 
@@ -219,7 +75,6 @@ def rows_to_dicts(cursor: Any, rows: list[Any]) -> list[dict[str, Any]]:
         return []
 
     converted: list[dict[str, Any]] = []
-
     columns = [column[0] for column in cursor.description or []]
 
     for row in rows:
@@ -237,6 +92,7 @@ def rows_to_dicts(cursor: Any, rows: list[Any]) -> list[dict[str, Any]]:
 
     return converted
 
+
 def table_exists(cursor: Any, table_name: str) -> bool:
     cursor.execute(
         """
@@ -250,6 +106,10 @@ def table_exists(cursor: Any, table_name: str) -> bool:
         (table_name,),
     )
     row = cursor.fetchone()
+
+    if isinstance(row, dict):
+        return bool(row.get("exists"))
+
     return bool(row and row[0])
 
 
@@ -263,7 +123,19 @@ def get_columns(cursor: Any, table_name: str) -> set[str]:
         """,
         (table_name,),
     )
-    return {row[0] for row in cursor.fetchall()}
+
+    columns: set[str] = set()
+
+    for row in cursor.fetchall():
+        if isinstance(row, dict):
+            value = row.get("column_name")
+        else:
+            value = row[0] if row else None
+
+        if value:
+            columns.add(str(value))
+
+    return columns
 
 
 def get_int(value: Any) -> int | None:
