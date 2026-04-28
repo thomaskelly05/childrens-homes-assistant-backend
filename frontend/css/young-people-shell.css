@@ -2429,3 +2429,158 @@ textarea:focus {
     min-height: auto !important;
   }
 }
+
+/* ============================================================
+   IndiCare Simple Opening Page
+   Home selector + young person cards only
+============================================================ */
+
+#selectorPanel .safe-start-hero,
+#selectorPanel .safe-start-attention-strip,
+#selectorPanel .safe-start-support-grid,
+#openCareHubDrawer {
+  display: none !important;
+}
+
+#selectorPanel .selector-screen-inner {
+  display: grid;
+  gap: 18px;
+}
+
+.safe-start-drawer-grid {
+  display: grid !important;
+  grid-template-columns: 340px minmax(0, 1fr) !important;
+  gap: 18px !important;
+  align-items: start;
+}
+
+/* Home selector becomes compact left panel */
+#homePickerDrawer {
+  min-height: calc(100vh - 130px);
+}
+
+#homePickerDrawer .safe-drawer-body {
+  padding: 18px;
+}
+
+#homePickerDrawer .safe-drawer-head {
+  display: grid !important;
+  gap: 14px;
+}
+
+#homePickerDrawer .selector-tools--drawer {
+  grid-template-columns: 1fr !important;
+}
+
+#homePickerDrawer .safe-chip-list--homes {
+  grid-template-columns: 1fr !important;
+}
+
+/* Young people area becomes the main page */
+#childPickerDrawer {
+  min-height: calc(100vh - 130px);
+}
+
+#childPickerDrawer .safe-drawer-body {
+  padding: 22px;
+}
+
+#childPickerDrawer .safe-drawer-head {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+#childPickerDrawer .selector-tools--drawer {
+  min-width: 420px;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.7fr) auto !important;
+}
+
+/* Young people cards in proper rows */
+.safe-child-list,
+.safe-child-list .selector-grid,
+#selectorList,
+#selectorList .selector-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  gap: 16px !important;
+  align-items: start;
+}
+
+/* Better young person cards */
+.selector-card {
+  min-height: 220px;
+  display: grid !important;
+  grid-template-columns: 56px 1fr !important;
+  gap: 14px !important;
+  align-content: start;
+  border-radius: 20px !important;
+}
+
+.selector-card-actions {
+  grid-column: 1 / -1 !important;
+  justify-content: stretch !important;
+}
+
+.selector-card-actions > * {
+  width: 100%;
+}
+
+/* Make drawer headers read like page sections */
+.safe-drawer-trigger {
+  pointer-events: none;
+}
+
+.safe-drawer-trigger::after {
+  display: none !important;
+}
+
+#homePickerDrawer,
+#childPickerDrawer {
+  display: block !important;
+}
+
+#homePickerDrawer[open],
+#childPickerDrawer[open] {
+  display: block !important;
+}
+
+/* Hide unnecessary drawer chrome feeling */
+.safe-drawer {
+  overflow: hidden;
+}
+
+.safe-drawer-body {
+  border-top: 1px solid var(--border);
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .safe-start-drawer-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  #homePickerDrawer,
+  #childPickerDrawer {
+    min-height: auto;
+  }
+
+  #childPickerDrawer .safe-drawer-head {
+    display: grid !important;
+  }
+
+  #childPickerDrawer .selector-tools--drawer {
+    min-width: 0;
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .safe-child-list,
+  .safe-child-list .selector-grid,
+  #selectorList,
+  #selectorList .selector-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
