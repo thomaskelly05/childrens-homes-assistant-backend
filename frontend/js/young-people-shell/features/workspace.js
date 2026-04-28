@@ -25,8 +25,6 @@ const SAFE_VISIBILITY = Object.freeze({
   pressures: {},
 });
 
-/* -------------------------------- constants -------------------------------- */
-
 const SEARCHABLE_FIELDS = [
   "title",
   "summary",
@@ -61,10 +59,12 @@ const WORKSPACE_RECORD_TYPE_MAP = Object.freeze({
   keywork: "chronology",
 });
 
-/* -------------------------------- helpers -------------------------------- */
-
 const toText = (value, fallback = "") =>
   escapeHtml(String(value ?? fallback ?? ""));
+
+function getViewContent() {
+  return els.viewContent || document.getElementById("viewContent");
+}
 
 function buildRecordPayloadAttr(item = {}) {
   try {
@@ -202,6 +202,7 @@ function recordMatchesRecordType(item = {}, recordType = "") {
 
 function dedupeById(items = []) {
   const seen = new Set();
+
   return items.filter((item) => {
     const key = `${getRecordType(item)}::${getRecordId(item)}::${getPrimaryDate(item)}`;
     if (seen.has(key)) return false;
@@ -212,6 +213,7 @@ function dedupeById(items = []) {
 
 async function fetchVisibility(id) {
   if (!id) return SAFE_VISIBILITY;
+
   try {
     return (await apiGet(`/visibility/young-people/${id}`)) || SAFE_VISIBILITY;
   } catch {
@@ -235,6 +237,7 @@ function renderVisibilitySignals(signals = []) {
       </div>
     `;
   }
+
   return `
     <div class="record-list">
       ${signals
@@ -263,6 +266,7 @@ function renderVisibilitySignals(signals = []) {
 
 function renderInsightStory(story = "") {
   const text = String(story || "").trim();
+
   if (!text) {
     return `
       <div class="empty-state">
@@ -270,6 +274,7 @@ function renderInsightStory(story = "") {
       </div>
     `;
   }
+
   return `
     <article class="insight-story">
       <p>${toText(text)}</p>
@@ -285,6 +290,7 @@ function renderTrendCards(trends = []) {
       </div>
     `;
   }
+
   return `
     <div class="insight-trend-grid">
       ${trends
@@ -299,6 +305,7 @@ function renderTrendCards(trends = []) {
               : "muted";
           const delta = Number(trend.delta || 0);
           const arrow = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
+
           return `
             <article class="insight-card">
               <div class="insight-card-head">
@@ -328,6 +335,7 @@ function renderPatternCards(patterns = []) {
       </div>
     `;
   }
+
   return `
     <div class="record-list">
       ${patterns
@@ -365,6 +373,7 @@ function renderDecisionSupport(items = []) {
       </div>
     `;
   }
+
   return `
     <div class="priority-list">
       ${items
@@ -392,6 +401,7 @@ function renderChildStoryBlocks(items = []) {
       </div>
     `;
   }
+
   return `
     <div class="priority-list">
       ${items
@@ -419,6 +429,7 @@ function renderMissingItems(items = []) {
       </div>
     `;
   }
+
   return `
     <div class="priority-list">
       ${items
@@ -434,8 +445,6 @@ function renderMissingItems(items = []) {
     </div>
   `;
 }
-
-/* -------------------------------- UI bits -------------------------------- */
 
 function renderEmpty(title, message) {
   return `
@@ -636,8 +645,6 @@ function renderWorkspace({
   `;
 }
 
-/* -------------------------------- data -------------------------------- */
-
 function getId() {
   return state.youngPersonId || state.selectedYoungPerson?.id || null;
 }
@@ -753,8 +760,6 @@ async function fetchAll(id, search = {}) {
   };
 }
 
-/* -------------------------------- filtering -------------------------------- */
-
 function filterCollection(items = [], search = {}) {
   const query = normaliseText(search.query);
   const recordType = normaliseText(search.record_type);
@@ -778,8 +783,6 @@ function applySearch(data, search = {}) {
     family: filterCollection(data.family, search),
   };
 }
-
-/* -------------------------------- builders -------------------------------- */
 
 function buildTodayItems(data) {
   return dedupeById([
@@ -866,27 +869,28 @@ function buildUrgentItems(data) {
   );
 }
 
-/* -------------------------------- controller -------------------------------- */
-
 export async function loadCurrentView(options = {}) {
-  if (!els.viewContent) return;
+  const viewContent = getViewContent();
+  if (!viewContent) return;
 
   const id = getId();
+
   const search = {
     query: String(options?.search?.query || "").trim(),
     record_type: String(options?.search?.record_type || "").trim(),
   };
+
   const searchActive = Boolean(search.query || search.record_type);
 
   if (!id) {
-    els.viewContent.innerHTML = renderEmpty(
+    viewContent.innerHTML = renderEmpty(
       "No young person",
       "Select a young person first."
     );
     return;
   }
 
-  els.viewContent.innerHTML = `
+  viewContent.innerHTML = `
     <div class="loading-state">
       <div>
         <div class="spinner" aria-hidden="true"></div>
@@ -900,6 +904,7 @@ export async function loadCurrentView(options = {}) {
       fetchAll(id, search),
       fetchVisibility(id),
     ]);
+
     const filteredData = applySearch(rawData, search);
 
     const today = buildTodayItems(filteredData);
@@ -915,7 +920,7 @@ export async function loadCurrentView(options = {}) {
     const childStoryBlocks = makeArray(visibility?.child_story_blocks || []);
     const missingItems = makeArray(visibility?.what_is_missing || []);
 
-    els.viewContent.innerHTML = renderWorkspace({
+    viewContent.innerHTML = renderWorkspace({
       today,
       recent,
       upcoming,
@@ -950,7 +955,8 @@ export async function loadCurrentView(options = {}) {
     renderAssistantControllerPanels();
   } catch (error) {
     console.error("[workspace] failed loading current view", error);
-    els.viewContent.innerHTML = renderEmpty(
+
+    viewContent.innerHTML = renderEmpty(
       "Error",
       "Failed to load workspace."
     );
