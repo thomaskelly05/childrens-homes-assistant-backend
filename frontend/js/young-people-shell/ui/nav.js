@@ -1194,10 +1194,28 @@ if (!isSectionAllowed(safeSection, scope)) {
   }
 }
 
-  if (!isSectionAllowed(safeSection, scope)) {
-    showError(`This area is not available yet: ${safeSection || "unknown"}.`);
-    return;
-  }
+const coreChildSections = new Set([
+  "timeline",
+  "daily-life",
+  "daily-notes",
+  "incidents",
+  "safeguarding",
+  "risk",
+  "health",
+  "education",
+  "family",
+  "appointments",
+  "actions",
+  "profile",
+]);
+
+if (
+  !isSectionAllowed(safeSection, scope) &&
+  !(scope === "child" && coreChildSections.has(safeSection))
+) {
+  showError(`This area is not available yet: ${safeSection || "unknown"}.`);
+  return;
+}
 
   if (scope === "child" && !requireChildContext()) {
     showError("Select a child or young person first.");
