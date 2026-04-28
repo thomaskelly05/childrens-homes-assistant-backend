@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-  <title>IndiCare OS | Safe Start Care Hub</title>
+  <title>IndiCare OS | Young People Care Hub</title>
   <meta
     name="description"
-    content="IndiCare OS Safe Start Care Hub for residential children’s homes, helping adults choose the right home and child before opening records, safeguarding context and AI support."
+    content="IndiCare OS Young People Care Hub for residential children’s homes. Select a home, then open the right young person’s Care Hub."
   />
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#16b8a6" />
+  <meta name="theme-color" content="#2563eb" />
   <meta name="application-name" content="IndiCare OS" />
   <meta name="robots" content="noindex,nofollow" />
 
@@ -42,17 +42,17 @@
   >
     <header class="shell-topbar shell-topbar--safe-start" role="banner">
       <div class="shell-topbar-left">
-        <button id="logoBtn" class="brand-button brand-button--bold" type="button" aria-label="Go to Safe Start">
+        <button id="logoBtn" class="brand-button brand-button--bold" type="button" aria-label="Go to entry point">
           <span class="brand-mark" aria-hidden="true">IC</span>
           <span class="brand-copy">
             <strong>IndiCare</strong>
-            <small>Safe Start Care Hub</small>
+            <small>Young People Care Hub</small>
           </span>
         </button>
 
         <div class="workspace-context-pill desktop-only" aria-label="Current workspace">
           <span class="workspace-context-pill-label">Entry point</span>
-          <span class="workspace-context-pill-value">Choose home and child first</span>
+          <span class="workspace-context-pill-value">Choose home and young person</span>
         </div>
       </div>
 
@@ -63,7 +63,7 @@
             id="recordSearchInput"
             class="search-input topbar-search-input"
             type="search"
-            placeholder="Search after opening a child’s Care Hub..."
+            placeholder="Search after opening a Care Hub..."
             autocomplete="off"
             enterkeyhint="search"
           />
@@ -99,9 +99,9 @@
         </div>
 
         <button id="mobileNavToggle" class="secondary-btn mobile-only" type="button" aria-label="Open Care Hub menu" aria-controls="mobileNavPanel" aria-expanded="false">Menu</button>
-        <button id="refreshBtn" class="secondary-btn" type="button" aria-label="Refresh Safe Start">Refresh</button>
+        <button id="refreshBtn" class="secondary-btn" type="button" aria-label="Refresh entry point">Refresh</button>
         <button id="refreshWorkspaceBtn" class="secondary-btn hidden" type="button" aria-hidden="true" tabindex="-1">Refresh area</button>
-        <button id="goHomeBtn" class="ghost-btn desktop-only" type="button">Safe Start</button>
+        <button id="goHomeBtn" class="ghost-btn desktop-only" type="button">Entry point</button>
         <a class="ghost-btn desktop-only" href="/ai-note.html">I-Notes</a>
         <a class="ghost-btn desktop-only" href="/rostering.html">Rostering</a>
       </div>
@@ -109,253 +109,98 @@
 
     <main class="shell-main shell-main--safe-start" id="mainContent">
       <section id="selectorPanel" class="selector-screen selector-screen--safe-start hidden" aria-labelledby="selectorHeading">
-        <div class="selector-screen-inner selector-screen-inner--bold">
-          <section class="safe-start-hero" aria-labelledby="selectorHeading">
-            <div class="safe-start-hero-copy">
-              <div class="eyebrow eyebrow--bright">Safe Start</div>
-              <h1 id="selectorHeading">Start your shift with the right home and child.</h1>
+        <div class="selector-screen-inner selector-screen-inner--simple">
+          <section class="simple-entry-head" aria-labelledby="selectorHeading">
+            <div>
+              <div class="eyebrow">IndiCare entry point</div>
+              <h1 id="selectorHeading">Select a home, then open a young person’s Care Hub.</h1>
               <p>
-                IndiCare opens safely here first. Choose the home you are working in, then choose the child before records, assistant context or care story information loads.
+                Choose the home you are working in. Young people in that home will appear below as clear cards.
               </p>
+            </div>
 
-              <div class="safe-start-actions">
-                <button id="safeStartChooseHomeBtn" class="primary-btn primary-btn--large" type="button">Choose home</button>
-                <button id="safeStartAskAssistantBtn" class="secondary-btn secondary-btn--large" type="button">Ask IndiCare</button>
+            <button id="safeStartAskAssistantBtn" class="secondary-btn" type="button">Ask IndiCare</button>
+          </section>
+
+          <section class="simple-home-panel" aria-label="Choose home">
+            <div class="simple-section-head">
+              <div>
+                <div class="eyebrow">Home</div>
+                <h2>Select home</h2>
+              </div>
+
+              <div class="selector-tools selector-tools--simple">
+                <label class="sr-only" for="homeSearchInput">Search homes</label>
+                <input id="homeSearchInput" class="search-input" type="search" placeholder="Search homes..." autocomplete="off" />
+
+                <label class="sr-only" for="homeSelect">Choose home</label>
+                <select id="homeSelect" class="select-input">
+                  <option value="">Choose a home</option>
+                </select>
               </div>
             </div>
 
-            <aside class="safe-start-hero-panel" aria-label="Today’s safe start summary">
-              <div class="safe-start-orb" aria-hidden="true">✓</div>
-              <h2>Nothing opens until context is clear.</h2>
-              <p>Home first. Child second. Care Hub third.</p>
-
-              <div class="safe-start-mini-metrics">
+            <div id="homeChipList" class="safe-chip-list safe-chip-list--homes simple-home-row" aria-live="polite">
+              <div class="loading-state loading-state--drawer">
                 <div>
-                  <span>Step 1</span>
-                  <strong>Home</strong>
-                </div>
-                <div>
-                  <span>Step 2</span>
-                  <strong>Child</strong>
-                </div>
-                <div>
-                  <span>Step 3</span>
-                  <strong>Care Hub</strong>
+                  <div class="spinner" aria-hidden="true"></div>
+                  <p>Loading homes…</p>
                 </div>
               </div>
-            </aside>
+            </div>
+
+            <p id="selectedHomeSummary" class="simple-context-note">No home selected</p>
           </section>
 
-          <section class="safe-start-attention-strip" aria-label="Shift attention">
-            <article class="attention-chip attention-chip--urgent">
-              <span class="attention-chip-icon" aria-hidden="true">!</span>
+          <section class="simple-children-panel" aria-label="Young people in selected home">
+            <div class="simple-section-head">
               <div>
-                <strong id="safeStartUrgentCount">Loading</strong>
-                <span>urgent updates</span>
+                <div class="eyebrow">Young people</div>
+                <h2>Young people in this home</h2>
+                <p id="selectedChildSummary">Choose a home first</p>
               </div>
-            </article>
 
-            <article class="attention-chip attention-chip--meds">
-              <span class="attention-chip-icon" aria-hidden="true">+</span>
-              <div>
-                <strong id="safeStartMedicationCount">Loading</strong>
-                <span>medication prompts</span>
+              <div class="selector-tools selector-tools--simple">
+                <label class="sr-only" for="selectorSearch">Search young people</label>
+                <input id="selectorSearch" class="search-input" type="search" placeholder="Search young people..." autocomplete="off" />
+
+                <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
+                <input id="youngPersonSearchInput" class="search-input hidden" type="search" placeholder="Search young people..." autocomplete="off" aria-hidden="true" tabindex="-1" />
+
+                <label class="sr-only" for="youngPersonSelect">Choose young person</label>
+                <select id="youngPersonSelect" class="select-input">
+                  <option value="">Choose a child</option>
+                </select>
+
+                <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
               </div>
-            </article>
+            </div>
 
-            <article class="attention-chip attention-chip--actions">
-              <span class="attention-chip-icon" aria-hidden="true">→</span>
-              <div>
-                <strong id="safeStartActionCount">Loading</strong>
-                <span>open actions</span>
-              </div>
-            </article>
-
-            <article class="attention-chip attention-chip--handover">
-              <span class="attention-chip-icon" aria-hidden="true">✦</span>
-              <div>
-                <strong id="safeStartHandoverStatus">Loading</strong>
-                <span>handover status</span>
-              </div>
-            </article>
-          </section>
-
-          <section class="safe-start-drawer-grid" aria-label="Choose home and child">
-            <details id="homePickerDrawer" class="safe-drawer safe-drawer--home" open>
-              <summary class="safe-drawer-trigger">
-                <span class="safe-drawer-number">1</span>
-                <span>
-                  <strong>Choose home</strong>
-                  <small id="selectedHomeSummary">No home selected</small>
-                </span>
-              </summary>
-
-              <div class="safe-drawer-body">
-                <div class="safe-drawer-head">
-                  <div>
-                    <div class="eyebrow">Homes</div>
-                    <h2>Where are you working today?</h2>
-                  </div>
-
-                  <div class="selector-tools selector-tools--drawer">
-                    <label class="sr-only" for="homeSearchInput">Search homes</label>
-                    <input id="homeSearchInput" class="search-input" type="search" placeholder="Search homes..." autocomplete="off" />
-
-                    <label class="sr-only" for="homeSelect">Choose home</label>
-                    <select id="homeSelect" class="select-input">
-                      <option value="">Choose a home</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div id="homeChipList" class="safe-chip-list safe-chip-list--homes" aria-live="polite">
-                  <div class="loading-state loading-state--drawer">
-                    <div>
-                      <div class="spinner" aria-hidden="true"></div>
-                      <p>Loading homes…</p>
-                    </div>
-                  </div>
+            <div id="selectorList" class="selector-list selector-list--care-cards safe-child-list simple-child-grid" aria-live="polite">
+              <div class="empty-state empty-state--drawer">
+                <div class="empty-state-inner">
+                  <div class="empty-state-icon" aria-hidden="true">○</div>
+                  <h3>Choose a home first</h3>
+                  <p>Young people will appear here once a home is selected.</p>
                 </div>
               </div>
-            </details>
-
-            <details id="childPickerDrawer" class="safe-drawer safe-drawer--child">
-              <summary class="safe-drawer-trigger">
-                <span class="safe-drawer-number">2</span>
-                <span>
-                  <strong>Choose child</strong>
-                  <small id="selectedChildSummary">Choose a home first</small>
-                </span>
-              </summary>
-
-              <div class="safe-drawer-body">
-                <div class="safe-drawer-head">
-                  <div>
-                    <div class="eyebrow">Children and young people</div>
-                    <h2>Who are you supporting?</h2>
-                  </div>
-
-                  <div class="selector-tools selector-tools--drawer">
-                    <label class="sr-only" for="selectorSearch">Search young people</label>
-                    <input id="selectorSearch" class="search-input" type="search" placeholder="Search child, preferred name or home..." autocomplete="off" />
-
-                    <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
-                    <input id="youngPersonSearchInput" class="search-input hidden" type="search" placeholder="Search child, preferred name or home..." autocomplete="off" aria-hidden="true" tabindex="-1" />
-
-                    <label class="sr-only" for="youngPersonSelect">Choose young person</label>
-                    <select id="youngPersonSelect" class="select-input">
-                      <option value="">Choose a child</option>
-                    </select>
-
-                    <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
-                  </div>
-                </div>
-
-                <div id="selectorList" class="selector-list selector-list--care-cards safe-child-list" aria-live="polite">
-                  <div class="empty-state empty-state--drawer">
-                    <div class="empty-state-inner">
-                      <div class="empty-state-icon" aria-hidden="true">1</div>
-                      <h3>Choose a home first</h3>
-                      <p>Children will appear after the home context is selected.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </details>
-
-            <details id="openCareHubDrawer" class="safe-drawer safe-drawer--open">
-              <summary class="safe-drawer-trigger">
-                <span class="safe-drawer-number">3</span>
-                <span>
-                  <strong>Open Care Hub</strong>
-                  <small id="safeStartReadySummary">Waiting for home and child</small>
-                </span>
-              </summary>
-
-              <div class="safe-drawer-body safe-open-body">
-                <div>
-                  <div class="eyebrow">Ready check</div>
-                  <h2>Confirm before records open.</h2>
-                  <p>This protects children’s information by making sure adults are in the correct home and child context.</p>
-                </div>
-
-                <div class="safe-ready-card">
-                  <div>
-                    <span>Selected home</span>
-                    <strong id="readyHomeName">Not selected</strong>
-                  </div>
-                  <div>
-                    <span>Selected child</span>
-                    <strong id="readyChildName">Not selected</strong>
-                  </div>
-                </div>
-
-                <div class="safe-start-actions">
-                  <button id="openCareHubBtn" class="primary-btn primary-btn--large" type="button">Open Care Hub</button>
-                  <button id="clearSafeStartBtn" class="ghost-btn ghost-btn--large" type="button">Start again</button>
-                </div>
-              </div>
-            </details>
-          </section>
-
-          <section class="safe-start-support-grid" aria-label="Helpful context before opening a child">
-            <details class="safe-drawer safe-drawer--support">
-              <summary class="safe-drawer-trigger">
-                <span class="safe-drawer-icon" aria-hidden="true">↺</span>
-                <span>
-                  <strong>Recently opened</strong>
-                  <small>Quickly return to recent Care Hubs</small>
-                </span>
-              </summary>
-              <div id="recentChildrenList" class="safe-drawer-body safe-chip-list">
-                <div class="empty-state empty-state--drawer">
-                  <div class="empty-state-inner">
-                    <h3>No recent children yet</h3>
-                    <p>Recent Care Hubs will appear here after they are opened.</p>
-                  </div>
-                </div>
-              </div>
-            </details>
-
-            <details class="safe-drawer safe-drawer--support">
-              <summary class="safe-drawer-trigger">
-                <span class="safe-drawer-icon" aria-hidden="true">★</span>
-                <span>
-                  <strong>My shift</strong>
-                  <small>Allocated children, visits and actions</small>
-                </span>
-              </summary>
-              <div id="myShiftList" class="safe-drawer-body safe-chip-list">
-                <div class="loading-state loading-state--drawer">
-                  <div>
-                    <div class="spinner" aria-hidden="true"></div>
-                    <p>Loading shift context…</p>
-                  </div>
-                </div>
-              </div>
-            </details>
-
-            <details class="safe-drawer safe-drawer--support">
-              <summary class="safe-drawer-trigger">
-                <span class="safe-drawer-icon" aria-hidden="true">!</span>
-                <span>
-                  <strong>Needs attention</strong>
-                  <small>Risk, overdue and follow-up prompts</small>
-                </span>
-              </summary>
-              <div id="attentionList" class="safe-drawer-body safe-chip-list">
-                <div class="loading-state loading-state--drawer">
-                  <div>
-                    <div class="spinner" aria-hidden="true"></div>
-                    <p>Loading attention prompts…</p>
-                  </div>
-                </div>
-              </div>
-            </details>
+            </div>
           </section>
 
           <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite" aria-atomic="true"></section>
           <section id="statusMessage" class="status-bar hidden" role="status" aria-live="polite" aria-atomic="true"></section>
+
+          <!-- Compatibility hooks required by existing JS -->
+          <button id="safeStartChooseHomeBtn" class="hidden" type="button" aria-hidden="true" tabindex="-1">Choose home</button>
+
+          <details id="openCareHubDrawer" class="hidden" aria-hidden="true">
+            <summary>Open Care Hub</summary>
+            <strong id="safeStartReadySummary">Waiting for home and young person</strong>
+            <strong id="readyHomeName">Not selected</strong>
+            <strong id="readyChildName">Not selected</strong>
+            <button id="openCareHubBtn" type="button">Open Care Hub</button>
+            <button id="clearSafeStartBtn" type="button">Start again</button>
+          </details>
         </div>
       </section>
 
@@ -377,14 +222,14 @@
                   <div class="workspace-header-copy">
                     <div id="workspaceEyebrow" class="eyebrow hidden" aria-hidden="true">Care Hub</div>
                     <h1 id="pageTitle">My Day</h1>
-                    <p id="pageSubtitle">A bold, practical view of today: what matters, what has changed, what adults need to know, and what needs doing next.</p>
+                    <p id="pageSubtitle">A practical view of today: what matters, what has changed, what adults need to know, and what needs doing next.</p>
                   </div>
 
                   <div class="workspace-header-actions">
                     <button id="heroAssistantBtn" class="primary-btn" type="button">Ask IndiCare</button>
                     <button id="profileOpenBtn" class="secondary-btn" type="button" data-view="profile">Child profile</button>
                     <button id="profilePhotoUploadBtn" class="ghost-btn" type="button" data-action-router="edit-profile-identity">Edit identity</button>
-                    <button id="changePersonBtn" class="ghost-btn desktop-only" type="button">Safe Start</button>
+                    <button id="changePersonBtn" class="ghost-btn desktop-only" type="button">Entry point</button>
                   </div>
                 </div>
 
