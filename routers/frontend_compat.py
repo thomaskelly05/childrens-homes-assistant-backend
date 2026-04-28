@@ -196,6 +196,12 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
 }
 
 
+TIMELINE_COMPAT_CATEGORIES: dict[str, str] = {
+    "daily-notes": "daily_note",
+    "incidents": "incident",
+}
+
+
 def serialise(value: Any) -> Any:
     if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
         return value.isoformat()
@@ -272,6 +278,8 @@ def select_rows(
     allowed_tables = {config["table"] for config in ROUTE_TABLES.values()} | {
         "homes",
         "providers",
+        "chronology_events",
+        "young_person_chronology",
     }
 
     if table_name not in allowed_tables:
@@ -315,6 +323,10 @@ def select_rows(
 
             if order_column and order_column in columns:
                 sql += f' ORDER BY "{order_column}" DESC NULLS LAST'
+            elif "event_datetime" in columns:
+                sql += ' ORDER BY "event_datetime" DESC NULLS LAST'
+            elif "occurred_at" in columns:
+                sql += ' ORDER BY "occurred_at" DESC NULLS LAST'
             elif "created_at" in columns:
                 sql += ' ORDER BY "created_at" DESC NULLS LAST'
             elif "updated_at" in columns:
@@ -327,8 +339,110 @@ def select_rows(
             params.append(safe_limit)
 
             cursor.execute(sql, tuple(params))
-            rows = cursor.fetchall()
-            return rows_to_dicts(cursor, rows)
+            return rows_to_dicts(cursor, cursor.fetchall())
+
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
+
+
+def normalise_timeline_row_for_route(row: dict[str, Any], category: str) -> dict[str, Any]:
+    normalised = dict(row)
+
+    timeline_date = (
+        row.get("event_datetime")
+        or row.get("occurred_at")
+        or row.get("created_at")
+        or row.get("updated_at")
+    )
+
+    normalised["record_type"] = row.get("record_type") or row.get("category") or category
+    normalised["type"] = row.get("type") or row.get("category") or category
+    normalised["source"] = row.get("source") or "timeline"
+    normalised["source_table"] = row.get("source_table") or "chronology_events"
+
+    if category == "daily_note":
+        normalised["note_date"] = row.get("note_date") or timeline_date
+        normalised["note"] = (
+            row.get("note")
+            or row.get("narrative")
+            or row.get("summary")
+            or row.get("description")
+            or ""
+        )
+        normalised["daily_note"] = normalised["note"]
+
+    if category == "incident":
+        normalised["incident_datetime"] = row.get("incident_datetime") or timeline_date
+        normalised["description"] = (
+            row.get("description")
+            or row.get("narrative")
+            or row.get("summary")
+            or ""
+        )
+        normalised["incident_summary"] = row.get("incident_summary") or row.get("summary") or ""
+
+    return normalised
+
+
+def select_timeline_category_rows(
+    *,
+    young_person_id: int | None,
+    category: str,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    if not young_person_id or not category:
+        return []
+
+    conn = None
+
+    try:
+        conn = get_db_connection()
+
+        with conn.cursor() as cursor:
+            table_name = None
+
+            for candidate in ("chronology_events", "young_person_chronology"):
+                if table_exists(cursor, candidate):
+                    table_name = candidate
+                    break
+
+            if not table_name:
+                return []
+
+            columns = get_columns(cursor, table_name)
+
+            if "young_person_id" not in columns or "category" not in columns:
+                return []
+
+            where = ['"young_person_id" = %s', '"category" = %s']
+            params: list[Any] = [young_person_id, category]
+
+            if "archived" in columns:
+                where.append("(archived IS NULL OR archived = false)")
+
+            if "is_deleted" in columns:
+                where.append("(is_deleted IS NULL OR is_deleted = false)")
+
+            sql = f'SELECT * FROM public."{table_name}" WHERE ' + " AND ".join(where)
+
+            if "event_datetime" in columns:
+                sql += ' ORDER BY "event_datetime" DESC NULLS LAST'
+            elif "occurred_at" in columns:
+                sql += ' ORDER BY "occurred_at" DESC NULLS LAST'
+            elif "created_at" in columns:
+                sql += ' ORDER BY "created_at" DESC NULLS LAST'
+            elif "id" in columns:
+                sql += ' ORDER BY "id" DESC'
+
+            safe_limit = max(1, min(int(limit or 100), 500))
+            sql += " LIMIT %s"
+            params.append(safe_limit)
+
+            cursor.execute(sql, tuple(params))
+            rows = rows_to_dicts(cursor, cursor.fetchall())
+
+            return [normalise_timeline_row_for_route(row, category) for row in rows]
 
     finally:
         if conn is not None:
@@ -359,6 +473,17 @@ async def route_payload(
             order_column=config.get("order"),
         )
 
+        source = "table"
+
+        timeline_category = TIMELINE_COMPAT_CATEGORIES.get(route_key)
+        if not rows and timeline_category and young_person_id:
+            rows = select_timeline_category_rows(
+                young_person_id=young_person_id,
+                category=timeline_category,
+                limit=limit,
+            )
+            source = "timeline_compat"
+
         return {
             config["key"]: rows,
             "items": rows,
@@ -366,6 +491,7 @@ async def route_payload(
             "status": "ok",
             "route": route_key,
             "table": config["table"],
+            "source": source,
             "filters": {
                 "young_person_id": young_person_id,
                 "home_id": home_id,
@@ -622,6 +748,7 @@ def source_summary(row: dict[str, Any]) -> str:
         or row.get("notes")
         or row.get("details")
         or row.get("concern_details")
+        or row.get("narrative")
         or row.get("generated_text")
         or row.get("input_text")
         or ""
@@ -630,7 +757,9 @@ def source_summary(row: dict[str, Any]) -> str:
 
 def source_date(row: dict[str, Any]) -> Any:
     return (
-        row.get("created_at")
+        row.get("event_datetime")
+        or row.get("occurred_at")
+        or row.get("created_at")
         or row.get("updated_at")
         or row.get("due_date")
         or row.get("review_date")
@@ -662,6 +791,15 @@ def build_bundle_rows(
             limit=25,
             order_column=config.get("order"),
         )
+
+        timeline_category = TIMELINE_COMPAT_CATEGORIES.get(route_key)
+        if not rows and timeline_category and young_person_id:
+            rows = select_timeline_category_rows(
+                young_person_id=young_person_id,
+                category=timeline_category,
+                limit=25,
+            )
+
         bundle[config["key"]] = rows
 
         for row in rows[:5]:
@@ -670,7 +808,7 @@ def build_bundle_rows(
                     "id": row.get("id"),
                     "record_id": row.get("id"),
                     "source_id": row.get("id"),
-                    "record_type": config["key"],
+                    "record_type": row.get("record_type") or row.get("category") or config["key"],
                     "title": source_title(row, config["key"]),
                     "summary": source_summary(row),
                     "description": source_summary(row),
