@@ -215,12 +215,27 @@ def serialise(value: Any) -> Any:
 
 
 def rows_to_dicts(cursor: Any, rows: list[Any]) -> list[dict[str, Any]]:
-    columns = [column[0] for column in cursor.description or []]
-    return [
-        {columns[index]: serialise(value) for index, value in enumerate(row)}
-        for row in rows
-    ]
+    if not rows:
+        return []
 
+    converted: list[dict[str, Any]] = []
+
+    columns = [column[0] for column in cursor.description or []]
+
+    for row in rows:
+        if isinstance(row, dict):
+            converted.append({key: serialise(value) for key, value in row.items()})
+            continue
+
+        converted.append(
+            {
+                columns[index]: serialise(value)
+                for index, value in enumerate(row)
+                if index < len(columns)
+            }
+        )
+
+    return converted
 
 def table_exists(cursor: Any, table_name: str) -> bool:
     cursor.execute(
