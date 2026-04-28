@@ -27,6 +27,7 @@ export const SCOPE_SECTIONS = Object.freeze({
   child: Object.freeze([
     "workspace",
     "overview",
+    "experience-intelligence",
     "admission",
     "profile",
     "timeline",
@@ -123,6 +124,7 @@ export const SCOPE_SECTIONS = Object.freeze({
 export const SECTION_TITLES = Object.freeze({
   workspace: "Today at a glance",
   overview: "What matters today",
+  "experience-intelligence": "Child Experience Intelligence",
   admission: "Admission and planning",
   profile: "About this child",
   timeline: "Timeline and recent events",
@@ -179,6 +181,8 @@ export const SECTION_SUBTITLES = Object.freeze({
     "A calm, practical space to record, reflect, safeguard and respond to what matters today.",
   overview:
     "A clear picture of strengths, risks, priorities, progress and next steps.",
+  "experience-intelligence":
+    "Understand lived experience, stability, triggers, positive anchors, relationship patterns and risk trajectory over time.",
   admission:
     "Admission tasks, planning, baseline needs, risk and welcome arrangements.",
   profile:
@@ -496,6 +500,7 @@ export const QUICK_ACTION_MAP = Object.freeze(
 export const SECTION_DEFAULT_ACTION = Object.freeze({
   workspace: "daily_note",
   overview: "daily_note",
+  "experience-intelligence": "task",
   admission: "support_plan",
   profile: "profile_identity",
   timeline: "incident",
@@ -761,7 +766,6 @@ export function buildInspectionUiEndpoints(homeId) {
     homeId: safeHomeId,
     base,
 
-    // Canonical quality / governance
     qualityAudits: `${base}/quality-audits`,
     qualityAuditFindings: `${base}/quality-audit-findings`,
     qualityAuditActions: `${base}/quality-audit-actions`,
@@ -786,7 +790,6 @@ export function buildInspectionUiEndpoints(homeId) {
     visibilityQuality: `/visibility/quality?home_id=${safeHomeId}&all_accessible_homes=false`,
     visibilityOfsted: `/visibility/ofsted?home_id=${safeHomeId}&all_accessible_homes=false`,
 
-    // Home-level operational sources still used by compliance / builder pages
     team: `${base}/team`,
     training: `${base}/training`,
     supervisions: `${base}/supervisions`,
@@ -798,7 +801,6 @@ export function buildInspectionUiEndpoints(homeId) {
     safeguarding: `${base}/safeguarding`,
     reports: `${base}/reports`,
 
-    // Compatibility aliases for existing UI loaders
     dashboard: `${base}/inspection-scores`,
     ofstedDashboard: `${base}/inspection-scores`,
     sccifEvidence: `${base}/inspection-section-scores`,
