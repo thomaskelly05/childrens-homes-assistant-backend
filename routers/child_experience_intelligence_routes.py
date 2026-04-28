@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,10 +11,100 @@ from services.child_experience_intelligence_service import (
     build_child_experience_intelligence,
 )
 
+logger = logging.getLogger("indicare.child_experience_intelligence")
 
 router = APIRouter(
     prefix="/young-people",
     tags=["child-experience-intelligence"],
+)
+
+
+# ============================================================
+# SAFE TABLE CONFIG
+# ============================================================
+
+RECORD_SOURCES: tuple[dict[str, Any], ...] = (
+    {
+        "context_key": "daily_notes",
+        "fallback_type": "daily_note",
+        "tables": ("daily_notes", "young_person_daily_notes"),
+        "date_columns": ("note_date", "created_at", "updated_at"),
+        "limit": 120,
+    },
+    {
+        "context_key": "incidents",
+        "fallback_type": "incident",
+        "tables": ("incidents", "young_person_incidents"),
+        "date_columns": ("incident_datetime", "created_at", "updated_at"),
+        "limit": 120,
+    },
+    {
+        "context_key": "safeguarding",
+        "fallback_type": "safeguarding",
+        "tables": (
+            "safeguarding_records",
+            "young_person_safeguarding",
+            "young_people_safeguarding",
+        ),
+        "date_columns": ("created_at", "updated_at", "event_at"),
+        "limit": 100,
+    },
+    {
+        "context_key": "keywork",
+        "fallback_type": "keywork",
+        "tables": ("keywork_sessions", "young_person_keywork", "keywork"),
+        "date_columns": ("session_date", "created_at", "updated_at"),
+        "limit": 100,
+    },
+    {
+        "context_key": "education",
+        "fallback_type": "education",
+        "tables": ("education_records", "young_person_education"),
+        "date_columns": ("created_at", "updated_at", "event_at"),
+        "limit": 80,
+    },
+    {
+        "context_key": "health",
+        "fallback_type": "health",
+        "tables": ("health_records", "young_person_health"),
+        "date_columns": ("created_at", "updated_at", "event_at"),
+        "limit": 80,
+    },
+    {
+        "context_key": "family",
+        "fallback_type": "family_contact",
+        "tables": ("family_contacts", "young_person_family", "family_contact"),
+        "date_columns": ("contact_date", "created_at", "updated_at"),
+        "limit": 80,
+    },
+    {
+        "context_key": "risk",
+        "fallback_type": "risk",
+        "tables": ("risk_assessments", "young_person_risk"),
+        "date_columns": ("created_at", "updated_at"),
+        "limit": 80,
+    },
+    {
+        "context_key": "plans",
+        "fallback_type": "plan",
+        "tables": ("young_person_plans", "support_plans", "care_plans"),
+        "date_columns": ("created_at", "updated_at"),
+        "limit": 80,
+    },
+    {
+        "context_key": "reviews",
+        "fallback_type": "review",
+        "tables": ("monthly_reviews", "young_person_reviews"),
+        "date_columns": ("created_at", "updated_at", "review_date"),
+        "limit": 80,
+    },
+    {
+        "context_key": "chronology",
+        "fallback_type": "chronology",
+        "tables": ("young_people_chronology", "young_person_chronology"),
+        "date_columns": ("event_at", "created_at", "updated_at"),
+        "limit": 160,
+    },
 )
 
 
@@ -79,9 +170,12 @@ def _can_access_home(current_user: dict[str, Any], home_id: int | None) -> bool:
         "super_admin",
         "superadmin",
         "admin",
+        "administrator",
         "responsible_individual",
         "ri",
         "provider_admin",
+        "manager",
+        "registered_manager",
     }:
         return True
 
@@ -97,6 +191,52 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
 
 def _rows_to_list(rows: Any) -> list[dict[str, Any]]:
     return [dict(row) for row in rows or []]
+
+
+async def _table_exists(conn: Any, table: str) -> bool:
+    row = await conn.fetchrow(
+        """
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name = $1
+        ) AS exists
+        """,
+        table,
+    )
+
+    return bool(row and row["exists"])
+
+
+async def _column_exists(conn: Any, table: str, column: str) -> bool:
+    row = await conn.fetchrow(
+        """
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = $1
+              AND column_name = $2
+        ) AS exists
+        """,
+        table,
+        column,
+    )
+
+    return bool(row and row["exists"])
+
+
+async def _first_existing_column(
+    conn: Any,
+    table: str,
+    candidates: tuple[str, ...],
+) -> str | None:
+    for column in candidates:
+        if await _column_exists(conn, table, column):
+            return column
+
+    return None
 
 
 async def _get_young_person(young_person_id: int) -> dict[str, Any]:
@@ -115,35 +255,90 @@ async def _get_young_person(young_person_id: int) -> dict[str, Any]:
         await release_db_connection(conn)
 
 
-async def _fetch_optional_records(
+async def _fetch_source_records(
     *,
-    table: str,
+    source: dict[str, Any],
     young_person_id: int,
-    date_column: str = "created_at",
-    limit: int = 80,
-) -> list[dict[str, Any]]:
-    """
-    Safely fetches from known IndiCare record tables.
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    context_key = str(source["context_key"])
+    fallback_type = str(source["fallback_type"])
+    tables = tuple(source["tables"])
+    date_columns = tuple(source["date_columns"])
+    limit = int(source.get("limit") or 80)
 
-    If a table does not exist in a particular deployment yet, this returns
-    an empty list instead of breaking Child Experience Intelligence.
-    """
+    attempted_tables: list[str] = []
+
     conn = await get_db_connection()
     try:
-        rows = await conn.fetch(
-            f"""
-            SELECT *
-            FROM {table}
-            WHERE young_person_id = $1
-            ORDER BY {date_column} DESC NULLS LAST
-            LIMIT $2
-            """,
+        for table in tables:
+            attempted_tables.append(table)
+
+            if not await _table_exists(conn, table):
+                continue
+
+            if not await _column_exists(conn, table, "young_person_id"):
+                continue
+
+            date_column = await _first_existing_column(conn, table, date_columns)
+            order_clause = (
+                f"ORDER BY {date_column} DESC NULLS LAST"
+                if date_column
+                else "ORDER BY id DESC"
+            )
+
+            rows = await conn.fetch(
+                f"""
+                SELECT *
+                FROM {table}
+                WHERE young_person_id = $1
+                {order_clause}
+                LIMIT $2
+                """,
+                young_person_id,
+                limit,
+            )
+
+            records = _rows_to_list(rows)
+
+            for record in records:
+                record.setdefault("record_type", fallback_type)
+                record.setdefault("_source_table", table)
+                record.setdefault("_source_context", context_key)
+
+            return records, {
+                "context_key": context_key,
+                "source_table": table,
+                "attempted_tables": attempted_tables,
+                "record_count": len(records),
+                "date_column": date_column,
+                "loaded": True,
+            }
+
+        return [], {
+            "context_key": context_key,
+            "source_table": None,
+            "attempted_tables": attempted_tables,
+            "record_count": 0,
+            "date_column": None,
+            "loaded": False,
+        }
+
+    except Exception as exc:
+        logger.exception(
+            "Failed to fetch CEI records | young_person_id=%s context_key=%s",
             young_person_id,
-            limit,
+            context_key,
         )
-        return _rows_to_list(rows)
-    except Exception:
-        return []
+
+        return [], {
+            "context_key": context_key,
+            "source_table": None,
+            "attempted_tables": attempted_tables,
+            "record_count": 0,
+            "date_column": None,
+            "loaded": False,
+            "error": exc.__class__.__name__,
+        }
     finally:
         await release_db_connection(conn)
 
@@ -151,93 +346,33 @@ async def _fetch_optional_records(
 async def _build_child_experience_context(
     *,
     young_person_id: int,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, Any]]:
     young_person = await _get_young_person(young_person_id)
 
     if not young_person:
         raise HTTPException(status_code=404, detail="Young person not found.")
 
-    daily_notes = await _fetch_optional_records(
-        table="daily_notes",
-        young_person_id=young_person_id,
-        date_column="note_date",
-    )
-
-    incidents = await _fetch_optional_records(
-        table="incidents",
-        young_person_id=young_person_id,
-        date_column="incident_datetime",
-    )
-
-    safeguarding = await _fetch_optional_records(
-        table="safeguarding_records",
-        young_person_id=young_person_id,
-        date_column="created_at",
-    )
-
-    keywork = await _fetch_optional_records(
-        table="keywork_sessions",
-        young_person_id=young_person_id,
-        date_column="session_date",
-    )
-
-    education = await _fetch_optional_records(
-        table="education_records",
-        young_person_id=young_person_id,
-        date_column="created_at",
-    )
-
-    health = await _fetch_optional_records(
-        table="health_records",
-        young_person_id=young_person_id,
-        date_column="created_at",
-    )
-
-    family = await _fetch_optional_records(
-        table="family_contacts",
-        young_person_id=young_person_id,
-        date_column="contact_date",
-    )
-
-    risk = await _fetch_optional_records(
-        table="risk_assessments",
-        young_person_id=young_person_id,
-        date_column="created_at",
-    )
-
-    plans = await _fetch_optional_records(
-        table="young_person_plans",
-        young_person_id=young_person_id,
-        date_column="created_at",
-    )
-
-    reviews = await _fetch_optional_records(
-        table="monthly_reviews",
-        young_person_id=young_person_id,
-        date_column="created_at",
-    )
-
-    chronology = await _fetch_optional_records(
-        table="young_people_chronology",
-        young_person_id=young_person_id,
-        date_column="event_at",
-        limit=120,
-    )
-
-    return {
+    context: dict[str, Any] = {
         "young_person": young_person,
-        "daily_notes": daily_notes,
-        "incidents": incidents,
-        "safeguarding": safeguarding,
-        "keywork": keywork,
-        "education": education,
-        "health": health,
-        "family": family,
-        "risk": risk,
-        "plans": plans,
-        "reviews": reviews,
-        "chronology": chronology,
     }
+
+    coverage: dict[str, Any] = {
+        "young_person_loaded": True,
+        "sources": [],
+        "total_records_loaded": 0,
+    }
+
+    for source in RECORD_SOURCES:
+        records, source_coverage = await _fetch_source_records(
+            source=source,
+            young_person_id=young_person_id,
+        )
+
+        context[str(source["context_key"])] = records
+        coverage["sources"].append(source_coverage)
+        coverage["total_records_loaded"] += len(records)
+
+    return context, coverage
 
 
 # ============================================================
@@ -266,7 +401,7 @@ async def get_child_experience_intelligence(
             detail="You do not have access to this young person's Child Experience Intelligence.",
         )
 
-    context = await _build_child_experience_context(
+    context, coverage = await _build_child_experience_context(
         young_person_id=young_person_id,
     )
 
@@ -275,9 +410,12 @@ async def get_child_experience_intelligence(
         context=context,
     )
 
+    intelligence["context_coverage"] = coverage
+
     return {
         "status": "ok",
         "young_person_id": young_person_id,
         "home_id": home_id,
+        "context_coverage": coverage,
         "intelligence": intelligence,
     }
