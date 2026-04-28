@@ -44,8 +44,6 @@ let changePersonFallbackBound = false;
 let restrictedSectionGuardBound = false;
 let openCareHubFallbackBound = false;
 
-const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
-
 const ADMIN_LIKE_ROLES = new Set([
   "administrator",
   "admin",
@@ -560,7 +558,10 @@ function refreshAllChrome() {
   renderAssistantInsights();
   syncScopeButtons();
   syncRestrictedNavigationVisibility();
-  refreshWorkspaceSummary();
+
+  if (!state.youngPersonId) {
+    refreshWorkspaceSummary();
+  }
 }
 
 async function setScope(scope) {
@@ -577,14 +578,13 @@ async function setScope(scope) {
     } else {
       showSelector();
       await loadYoungPersonSelector();
+      refreshWorkspaceSummary();
     }
 
-    refreshWorkspaceSummary();
     return;
   }
 
   await loadSection(state.currentSection, { force: true });
-  refreshWorkspaceSummary();
 }
 
 function bindScopeEvents() {
@@ -690,7 +690,6 @@ function bindChangePersonFallback() {
   for (const button of buttons) {
     button.addEventListener("click", async () => {
       if ((state.currentScope || "child") !== "child") return;
-
       await bootstrapSelectorDashboard();
     });
   }
@@ -792,6 +791,10 @@ function bindOpenCareHubFallback() {
       const button = event.target.closest("#openCareHubBtn");
       if (!button) return;
 
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
       const select = document.getElementById("youngPersonSelect");
       const selectedId =
         select?.value ||
@@ -799,18 +802,16 @@ function bindOpenCareHubFallback() {
         document.getElementById("app")?.dataset.youngPersonId ||
         null;
 
-      if (!selectedId) return;
+      if (!selectedId) {
+        showError("Choose a child or young person first.");
+        return;
+      }
 
-      window.setTimeout(async () => {
-        const text = document.getElementById("viewContent")?.innerText || "";
-
-        if (!/Opening Care Hub/i.test(text)) return;
-
-        await openYoungPersonSafely(selectedId, {
-          initialSection: "workspace",
-          forceInitialSectionLoad: true,
-        });
-      }, 900);
+      await openYoungPersonSafely(selectedId, {
+        initialSection: "workspace",
+        forceInitialSectionLoad: true,
+        skipInitialSectionLoad: false,
+      });
     },
     true
   );
