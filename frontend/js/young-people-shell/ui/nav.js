@@ -1164,7 +1164,25 @@ export async function loadSection(section, options = {}) {
 
   let safeSection = requestedSection || getDefaultSectionForScope(scope);
 
-  if (!isSectionAllowed(safeSection, scope)) {
+if (!isSectionAllowed(safeSection, scope)) {
+  const coreChildSections = new Set([
+    "timeline",
+    "daily-life",
+    "daily-notes",
+    "incidents",
+    "safeguarding",
+    "risk",
+    "health",
+    "education",
+    "family",
+    "appointments",
+    "actions",
+    "profile",
+  ]);
+
+  if (scope === "child" && coreChildSections.has(safeSection)) {
+    // Allow known child Care Hub sections even if config is incomplete.
+  } else {
     const betterScope = findBestScopeForSection(safeSection);
 
     if (betterScope && betterScope !== scope) {
@@ -1174,6 +1192,7 @@ export async function loadSection(section, options = {}) {
 
     safeSection = ensureValidCurrentSection();
   }
+}
 
   if (!isSectionAllowed(safeSection, scope)) {
     showError(`This area is not available yet: ${safeSection || "unknown"}.`);
