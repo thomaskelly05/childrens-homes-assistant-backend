@@ -52,10 +52,11 @@ function renderRecommendations(items = []) {
   `;
 }
 
-function renderExperienceIntelligence(target, intelligence) {
+function renderExperienceIntelligenceView(target, intelligence) {
   const scores = intelligence?.scores || {};
   const trends = intelligence?.trends || {};
   const signals = intelligence?.signals || {};
+  const status = intelligence?.status || "stable";
 
   target.innerHTML = `
     <section class="cei-shell">
@@ -66,8 +67,8 @@ function renderExperienceIntelligence(target, intelligence) {
           <p>${escapeHtml(intelligence?.summary || "No summary available yet.")}</p>
         </div>
 
-        <div class="cei-status cei-status-${escapeHtml(intelligence?.status || "stable")}">
-          ${escapeHtml(intelligence?.status || "unknown")}
+        <div class="cei-status cei-status-${escapeHtml(status)}">
+          ${escapeHtml(status)}
         </div>
       </header>
 
@@ -117,15 +118,18 @@ function renderExperienceIntelligence(target, intelligence) {
 
       <article class="cei-panel">
         <h3>Evidence coverage</h3>
+
         <div class="cei-grid">
           <div class="cei-mini-stat">
             <strong>${escapeHtml(scores.total_record_count || 0)}</strong>
             <span>Total visible records</span>
           </div>
+
           <div class="cei-mini-stat">
             <strong>${escapeHtml(scores.recent_record_count || 0)}</strong>
             <span>Recent records</span>
           </div>
+
           <div class="cei-mini-stat">
             <strong>${escapeHtml(scores.recent_incident_count || 0)}</strong>
             <span>Recent incident/safeguarding records</span>
@@ -167,7 +171,7 @@ export async function renderExperienceIntelligence(target) {
       `/young-people/${youngPersonId}/experience-intelligence`
     );
 
-    renderExperienceIntelligence(target, data?.intelligence || {});
+    renderExperienceIntelligenceView(target, data?.intelligence || {});
   } catch (error) {
     target.innerHTML = `
       <section class="cei-shell">
