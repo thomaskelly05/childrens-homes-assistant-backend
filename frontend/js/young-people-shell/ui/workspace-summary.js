@@ -1,5 +1,6 @@
 import { els } from "../dom.js";
-import { escapeHtml } from "../core/utils.js";
+import { state } from "../state.js";
+import { escapeHtml, getDisplayName } from "../core/utils.js";
 
 function getSummaryHost() {
   return (
@@ -9,9 +10,21 @@ function getSummaryHost() {
   );
 }
 
+function getCurrentPersonName() {
+  return (
+    getDisplayName?.(state.selectedYoungPerson || {}) ||
+    state.selectedYoungPerson?.preferred_name ||
+    state.selectedYoungPerson?.first_name ||
+    document.getElementById("personName")?.textContent?.trim() ||
+    ""
+  );
+}
+
 function normaliseSummary(summary = {}) {
+  const personName = getCurrentPersonName();
+
   return {
-    today: summary.today || "No summary available",
+    today: summary.today || (personName ? `${personName} selected` : "No summary available"),
     nextEvent: summary.nextEvent || "No upcoming appointments",
     lastRecord: summary.lastRecord || "No recent records",
     openActions: summary.openActions || "No open actions",
@@ -21,10 +34,12 @@ function normaliseSummary(summary = {}) {
 
 function buildSummaryItem(label, value) {
   return `
-    <div class="workspace-summary-item">
-      <span class="workspace-summary-label">${escapeHtml(label)}</span>
-      <strong class="workspace-summary-value">${escapeHtml(value)}</strong>
-    </div>
+    <details class="summary-drawer">
+      <summary>
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value)}</strong>
+      </summary>
+    </details>
   `;
 }
 
@@ -45,15 +60,18 @@ export function updateWorkspaceSummaryStrip(summary = {}) {
   const safeSummary = normaliseSummary(summary);
   host.innerHTML = buildSummaryHtml(safeSummary);
   host.classList.remove("hidden");
+  host.setAttribute("aria-hidden", "false");
 }
 
 export function resetWorkspaceSummaryStrip() {
   const host = getSummaryHost();
   if (!host) return;
 
+  const personName = getCurrentPersonName();
+
   host.innerHTML = buildSummaryHtml(
     normaliseSummary({
-      today: "No summary yet",
+      today: personName ? `${personName} selected` : "No summary yet",
       nextEvent: "No event loaded",
       lastRecord: "No record loaded",
       openActions: "No actions loaded",
@@ -62,4 +80,5 @@ export function resetWorkspaceSummaryStrip() {
   );
 
   host.classList.remove("hidden");
+  host.setAttribute("aria-hidden", "false");
 }
