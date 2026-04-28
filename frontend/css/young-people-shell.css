@@ -2302,3 +2302,130 @@ textarea:focus {
     transition-duration: 0.01ms !important;
   }
 }
+/* ============================================================
+   IndiCare Layout Fix — row-based Safe Start layout
+   Paste at very bottom
+============================================================ */
+
+/* Main page should feel like a command centre, not stacked blocks */
+.safe-start-drawer-grid {
+  display: grid !important;
+  grid-template-columns: minmax(320px, 0.75fr) minmax(420px, 1.25fr) minmax(320px, 0.75fr);
+  gap: 16px !important;
+  align-items: start;
+}
+
+/* Each drawer becomes a vertical card within the row */
+.safe-drawer {
+  height: auto;
+  min-height: 280px;
+}
+
+.safe-drawer-trigger {
+  min-height: 72px;
+}
+
+.safe-drawer-body {
+  min-height: 200px;
+}
+
+/* Stop open drawers taking the full page width */
+#homePickerDrawer,
+#childPickerDrawer,
+#openCareHubDrawer {
+  width: 100%;
+}
+
+/* Child picker should use internal card layout */
+.safe-child-list,
+.safe-child-list .selector-grid,
+.selector-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  align-items: start;
+}
+
+/* Home cards tighter */
+.safe-chip-list--homes {
+  grid-template-columns: 1fr !important;
+}
+
+/* Ready drawer should look like a compact confirmation card */
+.safe-ready-card {
+  grid-template-columns: 1fr !important;
+}
+
+/* Attention row stays as a clean 4-card strip */
+.safe-start-attention-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+/* Support row underneath */
+.safe-start-support-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+
+/* Keep selector tools tidy inside card headers */
+.safe-drawer-head {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.selector-tools--drawer {
+  grid-template-columns: 1fr !important;
+}
+
+/* Hero should remain a strong top row */
+.safe-start-hero {
+  grid-template-columns: minmax(0, 1.4fr) minmax(360px, 0.7fr) !important;
+  align-items: stretch;
+}
+
+/* Make hero slightly less tall so the drawer row is visible */
+.safe-start-hero-copy,
+.safe-start-hero-panel {
+  min-height: 300px !important;
+}
+
+.safe-start-hero-copy h1 {
+  font-size: clamp(3.2rem, 4.8vw, 5.8rem) !important;
+}
+
+/* Medium screens: two-column drawer flow */
+@media (max-width: 1280px) {
+  .safe-start-drawer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #openCareHubDrawer {
+    grid-column: 1 / -1;
+  }
+
+  .safe-start-hero {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tablet/mobile: stack cleanly */
+@media (max-width: 860px) {
+  .safe-start-drawer-grid,
+  .safe-start-support-grid,
+  .safe-start-attention-strip {
+    grid-template-columns: 1fr !important;
+  }
+
+  .safe-drawer {
+    min-height: auto;
+  }
+
+  .safe-drawer-body {
+    min-height: auto;
+  }
+
+  .safe-start-hero-copy,
+  .safe-start-hero-panel {
+    min-height: auto !important;
+  }
+}
