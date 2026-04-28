@@ -71,6 +71,7 @@ function getCurrentHomeLabel() {
     state.currentUser?.home_name ||
     state.currentUser?.homeName ||
     state.selectedYoungPerson?.home_name ||
+    state.selectedYoungPerson?.homeName ||
     (state.homeId ? `Home ${state.homeId}` : "Home")
   );
 }
@@ -82,7 +83,7 @@ function getCurrentPerson() {
 function buildPersonMeta(person = {}) {
   return [
     person.preferred_name ? `Preferred: ${person.preferred_name}` : "",
-    person.home_name || "",
+    person.home_name || person.homeName || "",
     person.placement_status || "",
     person.summary_risk_level ? `Risk: ${person.summary_risk_level}` : "",
   ]
@@ -137,7 +138,11 @@ function getWorkspaceContextValue() {
   if (scope === "home") return "Home workspace";
   if (scope === "quality") return "Quality workspace";
   if (scope === "ofsted") return "Ofsted workspace";
-  return "Child workspace";
+
+  const person = getCurrentPerson();
+  const name = person ? getDisplayName(person) : "";
+
+  return name ? `${name} Care Hub` : "Child workspace";
 }
 
 function getScopeTitle() {
@@ -239,8 +244,9 @@ function updateMobileAvatars(person = {}) {
   }
 
   const drawerAvatar = document.querySelector(
-    "#mobileNavDrawer .workspace-stage-mobile-avatar"
+    "#mobileNavPanel .workspace-stage-mobile-avatar, #mobileNavDrawer .workspace-stage-mobile-avatar"
   );
+
   if (drawerAvatar) {
     drawerAvatar.innerHTML = html;
   }
@@ -255,8 +261,9 @@ function updateMobileDrawerPerson(person = {}) {
     return;
   }
 
-  const displayName = getDisplayName(person);
-  const meta = buildPersonMeta(person) || "Current workspace";
+  const safePerson = person || getCurrentPerson() || {};
+  const displayName = getDisplayName(safePerson);
+  const meta = buildPersonMeta(safePerson) || "Current workspace";
 
   setText("mobileDrawerPersonName", displayName, "Child");
   setText("mobileDrawerPersonMeta", meta, "Current workspace");
@@ -266,11 +273,22 @@ function updateYoungPersonText(person = {}) {
   const scopeIdentity = getScopeIdentity();
 
   if (scopeIdentity) {
+    setText("personName", scopeIdentity.title, "Workspace");
+    setText("personMeta", scopeIdentity.meta, "Workspace");
+
     setText("mobilePersonName", scopeIdentity.title, "Workspace");
     setText("mobilePersonMeta", scopeIdentity.meta, "Workspace");
 
     setText("profileSnapshotName", scopeIdentity.title, "Workspace");
     setText("profileSnapshotMeta", scopeIdentity.meta, "Dashboard snapshot");
+
+    if (els.personAvatar) {
+      els.personAvatar.innerHTML = renderAvatarHtml(
+        scopeIdentity.seed,
+        "profile-photo",
+        "profile-photo-fallback"
+      );
+    }
 
     updateSnapshotAvatar(scopeIdentity.seed);
     updateMobileAvatars(scopeIdentity.seed);
@@ -278,8 +296,12 @@ function updateYoungPersonText(person = {}) {
     return;
   }
 
-  const displayName = getDisplayName(person);
-  const meta = buildPersonMeta(person) || "Child workspace";
+  const safePerson = person || getCurrentPerson() || {};
+  const displayName = getDisplayName(safePerson);
+  const meta = buildPersonMeta(safePerson) || "Child workspace";
+
+  setText("personName", displayName, "Young person");
+  setText("personMeta", meta, "Child-centred overview and current context");
 
   setText("mobilePersonName", displayName, "Child");
   setText("mobilePersonMeta", meta, "Workspace");
@@ -287,9 +309,17 @@ function updateYoungPersonText(person = {}) {
   setText("profileSnapshotName", displayName, "Child");
   setText("profileSnapshotMeta", meta, "Current context");
 
-  updateSnapshotAvatar(person);
-  updateMobileAvatars(person);
-  updateMobileDrawerPerson(person);
+  if (els.personAvatar) {
+    els.personAvatar.innerHTML = renderAvatarHtml(
+      safePerson,
+      "profile-photo",
+      "profile-photo-fallback"
+    );
+  }
+
+  updateSnapshotAvatar(safePerson);
+  updateMobileAvatars(safePerson);
+  updateMobileDrawerPerson(safePerson);
 }
 
 function updateScopeButtons() {
@@ -352,10 +382,16 @@ function updateHeaderChrome(section = "workspace") {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
+
+  document.querySelectorAll("[data-view]").forEach((button) => {
+    const isActive = button.dataset.view === section;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
 }
 
 function updateTopLevelLabels() {
-  const mobileNavHeading = document.querySelector("#mobileNavDrawer h3");
+  const mobileNavHeading = document.querySelector("#mobileNavPanel h3, #mobileNavDrawer h3");
   if (mobileNavHeading) mobileNavHeading.textContent = "Main menu";
 }
 
@@ -438,11 +474,18 @@ export function updateSectionChrome(section = "workspace") {
 
 export function openMobileNav() {
   qs("mobileNavBackdrop")?.classList.remove("hidden");
+  qs("mobileNavPanel")?.classList.remove("hidden");
   qs("mobileNavDrawer")?.classList.remove("hidden");
+
+  qs("mobileNavPanel")?.setAttribute("aria-hidden", "false");
   qs("mobileNavDrawer")?.setAttribute("aria-hidden", "false");
 
   if (els.mobileNavBtn) {
     els.mobileNavBtn.setAttribute("aria-expanded", "true");
+  }
+
+  if (els.mobileNavToggle) {
+    els.mobileNavToggle.setAttribute("aria-expanded", "true");
   }
 
   state.mobileNavOpen = true;
@@ -450,11 +493,18 @@ export function openMobileNav() {
 
 export function closeMobileNav() {
   qs("mobileNavBackdrop")?.classList.add("hidden");
+  qs("mobileNavPanel")?.classList.add("hidden");
   qs("mobileNavDrawer")?.classList.add("hidden");
+
+  qs("mobileNavPanel")?.setAttribute("aria-hidden", "true");
   qs("mobileNavDrawer")?.setAttribute("aria-hidden", "true");
 
   if (els.mobileNavBtn) {
     els.mobileNavBtn.setAttribute("aria-expanded", "false");
+  }
+
+  if (els.mobileNavToggle) {
+    els.mobileNavToggle.setAttribute("aria-expanded", "false");
   }
 
   state.mobileNavOpen = false;
@@ -490,7 +540,7 @@ async function goHomeToSelector() {
 }
 
 async function openSectionFromButton(button) {
-  const section = button?.dataset?.navSection;
+  const section = button?.dataset?.navSection || button?.dataset?.view;
   if (!section) return;
 
   const { loadSection } = await import("./nav.js");
@@ -504,7 +554,7 @@ function bindChromeNavDelegates() {
 
   document.addEventListener("click", async (event) => {
     const navButton = event.target.closest(
-      "#mobileNavContent [data-nav-section], #mobileBottomBar [data-nav-section]"
+      "#mobileNavContent [data-nav-section], #mobileBottomBar [data-nav-section], #mobileBottomNav [data-nav-section], #mobileNavContent [data-view], #mobileBottomBar [data-view], #mobileBottomNav [data-view]"
     );
     if (!navButton) return;
 
@@ -517,6 +567,7 @@ export function bindShellChrome() {
   shellChromeBound = true;
 
   qs("mobileNavBtn")?.addEventListener("click", openMobileNav);
+  qs("mobileNavToggle")?.addEventListener("click", openMobileNav);
   qs("closeMobileNavBtn")?.addEventListener("click", closeMobileNav);
   qs("mobileNavBackdrop")?.addEventListener("click", closeMobileNav);
 
@@ -524,6 +575,7 @@ export function bindShellChrome() {
   qs("changePersonBtn")?.addEventListener("click", goHomeToSelector);
   qs("logoBtn")?.addEventListener("click", goHomeToSelector);
   qs("homeBtn")?.addEventListener("click", goHomeToSelector);
+  qs("goHomeBtn")?.addEventListener("click", goHomeToSelector);
 
   qs("heroAssistantBtn")?.addEventListener("click", async () => {
     const { openAssistant } = await import("./assistant.js");
