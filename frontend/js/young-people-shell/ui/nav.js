@@ -1041,6 +1041,117 @@ function bindOverlayDismiss() {
   });
 }
 
+async function renderCoreSectionFallback(section) {
+  const safeSection = normaliseSectionId(section);
+  const youngPersonId = state.youngPersonId || state.selectedYoungPerson?.id;
+
+  if (!els.viewContent || !youngPersonId) return false;
+
+  const routeMap = {
+    timeline: `/young-people/${youngPersonId}/timeline`,
+    "daily-life": `/young-people/${youngPersonId}/daily-notes`,
+    "daily-notes": `/young-people/${youngPersonId}/daily-notes`,
+    incidents: `/young-people/${youngPersonId}/incidents`,
+  };
+
+  const titleMap = {
+    timeline: "Care story timeline",
+    "daily-life": "Daily life",
+    "daily-notes": "Daily life",
+    incidents: "Important events",
+  };
+
+  const url = routeMap[safeSection];
+  if (!url) return false;
+
+  const res = await fetch(url, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!res.ok) return false;
+
+  const data = await res.json();
+  const items = data.items || data.timeline || data.daily_notes || data.incidents || [];
+
+  if (els.pageTitle) els.pageTitle.textContent = titleMap[safeSection] || safeSection;
+  if (els.pageSubtitle) {
+    els.pageSubtitle.textContent = `${items.length} record${
+      items.length === 1 ? "" : "s"
+    } loaded from live records.`;
+  }
+
+  els.viewContent.innerHTML = `
+    <section class="overview-panel overview-panel--care">
+      <div class="overview-section-head">
+        <div>
+          <div class="eyebrow">Live records</div>
+          <h2>${escapeHtml(titleMap[safeSection] || safeSection)}</h2>
+          <p>${items.length} record${items.length === 1 ? "" : "s"} found.</p>
+        </div>
+      </div>
+
+      <div class="record-list">
+        ${
+          items.length
+            ? items
+                .map(
+                  (item) => `
+              <article
+                class="record-card"
+                data-record-id="${escapeHtml(
+                  String(item.id || item.record_id || item.source_id || "")
+                )}"
+                data-record-type="${escapeHtml(
+                  item.record_type || item.category || safeSection
+                )}"
+                tabindex="0"
+                role="button"
+              >
+                <div class="record-card-main">
+                  <div class="eyebrow">${escapeHtml(
+                    item.category || item.record_type || safeSection
+                  )}</div>
+                  <h3>${escapeHtml(item.title || item.subject || "Record")}</h3>
+                  <p>${escapeHtml(
+                    item.summary ||
+                      item.note ||
+                      item.description ||
+                      item.narrative ||
+                      "No summary available."
+                  )}</p>
+                </div>
+                <div class="record-card-meta">
+                  ${escapeHtml(
+                    item.event_datetime ||
+                      item.occurred_at ||
+                      item.note_date ||
+                      item.incident_datetime ||
+                      item.created_at ||
+                      ""
+                  )}
+                </div>
+              </article>
+            `
+                )
+                .join("")
+            : `
+              <div class="empty-state">
+                <div class="empty-state-inner">
+                  <div class="empty-state-icon" aria-hidden="true">○</div>
+                  <h3>No records found</h3>
+                  <p>No live records were returned for this section.</p>
+                </div>
+              </div>
+            `
+        }
+      </div>
+    </section>
+  `;
+
+  return true;
+}
+
 export async function loadSection(section, options = {}) {
   const requestedSection = normaliseSectionId(section || "");
   let scope = getCurrentScope();
@@ -1106,6 +1217,15 @@ export async function loadSection(section, options = {}) {
         section: safeSection,
         scope,
       });
+
+      const currentText = els.viewContent?.innerText || "";
+      const stillLoading =
+        currentText.includes("Opening Care Hub") ||
+        currentText.trim().length < 20;
+
+      if (stillLoading) {
+        await renderCoreSectionFallback(safeSection);
+      }
 
       if (loadToken !== currentLoadToken) return;
 
