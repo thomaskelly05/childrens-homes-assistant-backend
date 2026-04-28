@@ -3050,3 +3050,141 @@ body {
     min-height: auto;
   }
 }
+
+/* ============================================================
+   INDICARE FULL SCREEN FIX
+   Restores full-width shell and readable desktop scaling
+============================================================ */
+
+body {
+  overflow-x: hidden;
+}
+
+.app-shell {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.shell-main {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 18px 24px 0 !important;
+}
+
+.shell-topbar {
+  width: calc(100% - 36px) !important;
+  max-width: none !important;
+  margin: 12px 18px 0 !important;
+  grid-template-columns: minmax(250px, auto) minmax(360px, 1fr) auto !important;
+}
+
+/* Give the hero proper room again */
+.safe-start-hero {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr) !important;
+  gap: 18px !important;
+}
+
+.safe-start-hero-copy,
+.safe-start-hero-panel {
+  min-height: 360px !important;
+}
+
+/* Make heading readable, not crushed */
+.safe-start-hero-copy h1 {
+  max-width: 980px !important;
+  font-size: clamp(4rem, 5.8vw, 7rem) !important;
+  line-height: 0.88 !important;
+  letter-spacing: -0.085em !important;
+  text-wrap: balance;
+}
+
+.safe-start-hero-copy p {
+  max-width: 720px !important;
+  font-size: 1.08rem !important;
+  line-height: 1.6 !important;
+}
+
+/* Restore full-width drawer/card areas */
+.safe-start-attention-strip,
+.safe-start-drawer-grid,
+.safe-start-support-grid,
+.workspace-stage,
+.workspace-stage-top,
+.workspace-content-wrap,
+.workspace-content,
+.workspace-header-band,
+.quick-actions-panel {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Child cards should use available width without tiny squeezing */
+.safe-child-list,
+.safe-child-list .selector-grid,
+.selector-grid {
+  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)) !important;
+}
+
+/* Home chips should fill naturally */
+.safe-chip-list--homes {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+}
+
+/* Stop Safari looking blurry from too much glass blur */
+.safe-start-hero-copy,
+.safe-start-hero-panel,
+.safe-drawer,
+.attention-chip,
+.shell-topbar,
+.workspace-content,
+.quick-actions-panel,
+.workspace-header-band {
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+/* Sharpen text rendering */
+body,
+button,
+input,
+select,
+textarea {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Medium screens */
+@media (max-width: 1280px) {
+  .safe-start-hero {
+    grid-template-columns: 1fr !important;
+  }
+
+  .safe-start-hero-copy h1 {
+    font-size: clamp(3.4rem, 7vw, 5.8rem) !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 860px) {
+  .shell-main {
+    padding: 10px !important;
+  }
+
+  .shell-topbar {
+    width: calc(100% - 20px) !important;
+    margin: 8px 10px 0 !important;
+    grid-template-columns: 1fr auto !important;
+  }
+
+  .safe-start-hero-copy h1 {
+    font-size: clamp(2.3rem, 11vw, 3.4rem) !important;
+    line-height: 0.94 !important;
+  }
+
+  .safe-start-hero-copy p {
+    font-size: 0.96rem !important;
+  }
+}
