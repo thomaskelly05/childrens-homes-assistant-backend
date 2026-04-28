@@ -443,11 +443,13 @@ function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
 
   const loaders = getLoaderMapForScope(scope);
 
-  return new Set(
-    Array.from(configured).filter(
-      (sectionId) => typeof loaders[sectionId] === "function"
-    )
-  );
+  Object.keys(loaders).forEach((sectionId) => {
+    if (typeof loaders[sectionId] === "function") {
+      configured.add(normaliseSectionId(sectionId));
+    }
+  });
+
+  return configured;
 }
 
 function isSectionAllowed(sectionId, scope = getCurrentScope()) {
