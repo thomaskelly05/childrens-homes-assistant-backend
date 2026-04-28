@@ -319,6 +319,7 @@ function syncDomDatasetFromState() {
   els.app.dataset.allowedHomeIds = JSON.stringify(
     Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
   );
+
   els.app.dataset.assistantScopeType =
     state.currentScope === "home"
       ? "home"
@@ -807,11 +808,19 @@ function bindOpenCareHubFallback() {
         return;
       }
 
-      await openYoungPersonSafely(selectedId, {
-        initialSection: "workspace",
-        forceInitialSectionLoad: true,
-        skipInitialSectionLoad: false,
-      });
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+
+      try {
+        await openYoungPersonSafely(selectedId, {
+          initialSection: "workspace",
+          forceInitialSectionLoad: true,
+          skipInitialSectionLoad: false,
+        });
+      } finally {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+      }
     },
     true
   );
