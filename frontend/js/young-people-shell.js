@@ -31,31 +31,12 @@
   }
 
   function ensureRequiredDomAliases() {
-    const selectorPanel = byId("selectorPanel");
-    const workspacePanel = byId("workspacePanel");
-
-    if (selectorPanel && !byId("selectorScreen")) {
-      selectorPanel.id = "selectorScreen";
-      selectorPanel.dataset.originalId = "selectorPanel";
-    }
-
-    if (workspacePanel && !byId("workspaceScreen")) {
-      workspacePanel.id = "workspaceScreen";
-      workspacePanel.dataset.originalId = "workspacePanel";
-    }
+    // Do not rename live DOM IDs.
+    // Compatibility aliases are handled inside /js/young-people-shell/dom.js.
   }
 
   function restoreHtmlCompatibilityIds() {
-    const selectorScreen = byId("selectorScreen");
-    const workspaceScreen = byId("workspaceScreen");
-
-    if (selectorScreen && selectorScreen.dataset.originalId === "selectorPanel") {
-      selectorScreen.id = "selectorPanel";
-    }
-
-    if (workspaceScreen && workspaceScreen.dataset.originalId === "workspacePanel") {
-      workspaceScreen.id = "workspacePanel";
-    }
+    // No-op. IDs must remain stable after the page loads.
   }
 
   function normaliseDataset() {
@@ -372,9 +353,7 @@
 
     host.dataset.clockBound = "true";
 
-    const original =
-      host.textContent.trim() ||
-      "Child-centred Care Hub";
+    const original = host.textContent.trim() || "Child-centred Care Hub";
 
     const tick = () => {
       const now = new Date();
@@ -482,16 +461,20 @@
   }
 
   function closeOtherCareMenus() {
-    document.addEventListener("toggle", (event) => {
-      const current = event.target;
-      if (!(current instanceof HTMLDetailsElement)) return;
-      if (!current.matches("[data-workspace-menu]")) return;
-      if (!current.open) return;
+    document.addEventListener(
+      "toggle",
+      (event) => {
+        const current = event.target;
+        if (!(current instanceof HTMLDetailsElement)) return;
+        if (!current.matches("[data-workspace-menu]")) return;
+        if (!current.open) return;
 
-      document.querySelectorAll("details[data-workspace-menu][open]").forEach((menu) => {
-        if (menu !== current) menu.open = false;
-      });
-    }, true);
+        document.querySelectorAll("details[data-workspace-menu][open]").forEach((menu) => {
+          if (menu !== current) menu.open = false;
+        });
+      },
+      true
+    );
 
     document.addEventListener("click", (event) => {
       const clickedInside = event.target.closest("details[data-workspace-menu]");
