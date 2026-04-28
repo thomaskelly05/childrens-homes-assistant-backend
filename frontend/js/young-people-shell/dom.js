@@ -45,13 +45,43 @@ const DOM_KEYS = {
   scopeOfstedBtn: "scopeOfstedBtn",
 
   /* --------------------------------
-     Selector
+     Safe Start selector
   --------------------------------- */
   selectorList: "selectorList",
   selectorSearch: "selectorSearch",
   youngPersonSearchInput: "youngPersonSearchInput",
   selectorRefreshBtn: "selectorRefreshBtn",
   backToSelectorBtn: "backToSelectorBtn",
+
+  safeStartChooseHomeBtn: "safeStartChooseHomeBtn",
+  safeStartAskAssistantBtn: "safeStartAskAssistantBtn",
+
+  homePickerDrawer: "homePickerDrawer",
+  childPickerDrawer: "childPickerDrawer",
+  openCareHubDrawer: "openCareHubDrawer",
+
+  homeSearchInput: "homeSearchInput",
+  homeSelect: "homeSelect",
+  homeChipList: "homeChipList",
+  selectedHomeSummary: "selectedHomeSummary",
+
+  youngPersonSelect: "youngPersonSelect",
+  selectedChildSummary: "selectedChildSummary",
+
+  openCareHubBtn: "openCareHubBtn",
+  clearSafeStartBtn: "clearSafeStartBtn",
+  safeStartReadySummary: "safeStartReadySummary",
+  readyHomeName: "readyHomeName",
+  readyChildName: "readyChildName",
+
+  safeStartUrgentCount: "safeStartUrgentCount",
+  safeStartMedicationCount: "safeStartMedicationCount",
+  safeStartActionCount: "safeStartActionCount",
+  safeStartHandoverStatus: "safeStartHandoverStatus",
+
+  recentChildrenList: "recentChildrenList",
+  myShiftList: "myShiftList",
+  attentionList: "attentionList",
 
   /* --------------------------------
      Workspace person summary
@@ -377,6 +407,38 @@ function buildEls() {
     resolved.assistantMessages
   );
 
+  resolved.youngPersonSelector = firstDefinedElement(
+    resolved.selectorPanel,
+    resolved.selectorScreen,
+    resolved.selectorList
+  );
+
+  resolved.assistantComposer = firstDefinedElement(
+    resolved.assistantForm,
+    byId("assistantComposer")
+  );
+
+  resolved.assistantSend = firstDefinedElement(
+    resolved.assistantSendBtn,
+    byId("assistantSend")
+  );
+
+  resolved.workspaceRoot = firstDefinedElement(
+    resolved.workspacePanel,
+    resolved.workspaceScreen,
+    resolved.workspaceShell
+  );
+
+  resolved.youngPeopleRoot = firstDefinedElement(
+    resolved.mainContent,
+    resolved.workspacePanel
+  );
+
+  resolved.youngPeopleShell = firstDefinedElement(
+    resolved.app,
+    byId("youngPeopleShell")
+  );
+
   return resolved;
 }
 
@@ -407,6 +469,9 @@ export function validateCoreDom() {
     "workspacePanel",
     "selectorPanel",
     "viewContent",
+    "homeSelect",
+    "youngPersonSelect",
+    "openCareHubBtn",
   ];
 
   const missing = requiredIds.filter((id) => !byId(id));
