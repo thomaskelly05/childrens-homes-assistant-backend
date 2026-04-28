@@ -34,6 +34,7 @@ import {
 
 import { loadCurrentView as loadWorkspace } from "../features/workspace.js";
 import { loadOverview } from "../features/overview.js";
+import renderExperienceIntelligence from "../features/experience-intelligence.js";
 import { loadProfile } from "../features/profile.js";
 import { loadTimeline } from "../features/timeline.js";
 import { loadHandover } from "../features/handover.js";
@@ -113,6 +114,7 @@ const MOBILE_BOTTOM_BY_SCOPE = {
 const SECTION_SCOPE_MAP = {
   workspace: "child",
   overview: "child",
+  "experience-intelligence": "child",
   admission: "child",
   profile: "child",
   timeline: "child",
@@ -292,6 +294,7 @@ async function runPlaceholderLoader(options = {}) {
 const CHILD_SECTION_LOADERS = Object.freeze({
   workspace: loadWorkspace,
   overview: loadOverview,
+  "experience-intelligence": renderExperienceIntelligence,
   admission: loadAdmission,
   profile: loadProfile,
   timeline: loadTimeline,
