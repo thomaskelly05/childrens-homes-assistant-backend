@@ -215,7 +215,15 @@ async function fetchVisibility(id) {
   if (!id) return SAFE_VISIBILITY;
 
   try {
-    return (await apiGet(`/visibility/young-people/${id}`)) || SAFE_VISIBILITY;
+    const response = await fetch(`/visibility/young-people/${id}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return SAFE_VISIBILITY;
+
+    return (await response.json()) || SAFE_VISIBILITY;
   } catch {
     return SAFE_VISIBILITY;
   }
@@ -529,11 +537,7 @@ function renderWorkspace({
         <div>
           <div class="eyebrow">Workspace</div>
           <h2>Today’s workspace</h2>
-          ${
-            searchActive
-              ? `<p>Showing filtered workspace results.</p>`
-              : ""
-          }
+          ${searchActive ? `<p>Showing filtered workspace results.</p>` : ""}
         </div>
       </div>
 
@@ -542,17 +546,14 @@ function renderWorkspace({
           <span class="overview-stat-label">Urgent</span>
           <strong class="overview-stat-value">${urgent.length}</strong>
         </article>
-
         <article class="overview-stat-card">
           <span class="overview-stat-label">Today</span>
           <strong class="overview-stat-value">${today.length}</strong>
         </article>
-
         <article class="overview-stat-card">
           <span class="overview-stat-label">Recent</span>
           <strong class="overview-stat-value">${recent.length}</strong>
         </article>
-
         <article class="overview-stat-card">
           <span class="overview-stat-label">Upcoming</span>
           <strong class="overview-stat-value">${upcoming.length}</strong>
@@ -562,81 +563,59 @@ function renderWorkspace({
       <div class="overview-grid">
         <div class="overview-main">
           <section class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Today</h3>
-            </div>
+            <div class="overview-section-head"><h3>Today</h3></div>
             ${renderRows(today)}
           </section>
 
           <section class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Recent</h3>
-            </div>
+            <div class="overview-section-head"><h3>Recent</h3></div>
             ${renderRows(recent)}
           </section>
 
           <section class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>What is changing</h3>
-            </div>
+            <div class="overview-section-head"><h3>What is changing</h3></div>
             ${renderTrendCards(changing)}
           </section>
 
           <section class="overview-section-card">
-            <div class="overview-section-head">
-              <h3>Patterns</h3>
-            </div>
+            <div class="overview-section-head"><h3>Patterns</h3></div>
             ${renderPatternCards(patterns)}
           </section>
         </div>
 
         <aside class="overview-side">
           <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Story right now</h3>
-            </div>
+            <div class="overview-section-head"><h3>Story right now</h3></div>
             ${renderInsightStory(insightStory)}
           </section>
 
           <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Visibility alerts</h3>
-            </div>
+            <div class="overview-section-head"><h3>Visibility alerts</h3></div>
             ${renderVisibilitySignals(visibilitySignals)}
           </section>
 
           <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Decision support</h3>
-            </div>
+            <div class="overview-section-head"><h3>Decision support</h3></div>
             ${renderDecisionSupport(decisionSupport)}
           </section>
 
           <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Child story blocks</h3>
-            </div>
+            <div class="overview-section-head"><h3>Child story blocks</h3></div>
             ${renderChildStoryBlocks(childStoryBlocks)}
           </section>
 
           <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Needs attention</h3>
-            </div>
+            <div class="overview-section-head"><h3>Needs attention</h3></div>
             ${renderRows(urgent)}
           </section>
 
           <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>What is missing</h3>
-            </div>
+            <div class="overview-section-head"><h3>What is missing</h3></div>
             ${renderMissingItems(missingItems)}
           </section>
 
           <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Upcoming</h3>
-            </div>
+            <div class="overview-section-head"><h3>Upcoming</h3></div>
             ${renderRows(upcoming)}
           </section>
         </aside>
@@ -646,7 +625,17 @@ function renderWorkspace({
 }
 
 function getId() {
-  return state.youngPersonId || state.selectedYoungPerson?.id || null;
+  const app = document.getElementById("app");
+  const params = new URLSearchParams(window.location.search);
+
+  return (
+    state.youngPersonId ||
+    state.selectedYoungPerson?.id ||
+    app?.dataset?.youngPersonId ||
+    params.get("id") ||
+    document.getElementById("youngPersonSelect")?.value ||
+    null
+  );
 }
 
 async function fetchAll(id, search = {}) {
@@ -677,30 +666,14 @@ async function fetchAll(id, search = {}) {
     education,
     family,
   ] = await Promise.all([
-    shouldFetchPlans
-      ? safe(`/young-people/${id}/plans`)
-      : Promise.resolve({ items: [] }),
-    shouldFetchAppointments
-      ? safe(`/young-people/${id}/appointments`)
-      : Promise.resolve({ items: [] }),
-    shouldFetchChronology
-      ? safe(`/young-people/${id}/timeline`)
-      : Promise.resolve({ items: [] }),
-    shouldFetchTasks
-      ? safe(`/young-people/${id}/tasks`)
-      : Promise.resolve({ items: [] }),
-    shouldFetchDailyNotes
-      ? safe(`/young-people/${id}/daily-notes`)
-      : Promise.resolve({ items: [] }),
-    shouldFetchHealth
-      ? safe(`/young-people/${id}/health`)
-      : Promise.resolve({ items: [] }),
-    shouldFetchEducation
-      ? safe(`/young-people/${id}/education`)
-      : Promise.resolve({ items: [] }),
-    shouldFetchFamily
-      ? safe(`/young-people/${id}/family`)
-      : Promise.resolve({ items: [] }),
+    shouldFetchPlans ? safe(`/young-people/${id}/plans`) : { items: [] },
+    shouldFetchAppointments ? safe(`/young-people/${id}/appointments`) : { items: [] },
+    shouldFetchChronology ? safe(`/young-people/${id}/timeline`) : { items: [] },
+    shouldFetchTasks ? safe(`/young-people/${id}/tasks`) : { items: [] },
+    shouldFetchDailyNotes ? safe(`/young-people/${id}/daily-notes`) : { items: [] },
+    shouldFetchHealth ? safe(`/young-people/${id}/health`) : { items: [] },
+    shouldFetchEducation ? safe(`/young-people/${id}/education`) : { items: [] },
+    shouldFetchFamily ? safe(`/young-people/${id}/family`) : { items: [] },
   ]);
 
   return {
@@ -798,7 +771,9 @@ function buildTodayItems(data) {
     ...data.daily_notes.filter((item) =>
       isToday(item.record_date || item.date || item.created_at)
     ),
-    ...data.health.filter((item) => isToday(item.event_datetime || item.record_date)),
+    ...data.health.filter((item) =>
+      isToday(item.event_datetime || item.record_date)
+    ),
     ...data.education.filter((item) => isToday(item.record_date)),
     ...data.family.filter((item) => isToday(item.contact_datetime)),
   ]);
@@ -911,10 +886,13 @@ export async function loadCurrentView(options = {}) {
     const recent = buildRecentItems(filteredData);
     const upcoming = buildUpcomingItems(filteredData);
     const urgent = buildUrgentItems(filteredData);
+
     const visibilitySignals = makeArray(visibility?.signals || []);
     const visibilityUrgent = makeArray(visibility?.queues?.urgent || []);
     const visibilityPressure = Number(visibility?.pressures?.total || 0);
-    const changing = makeArray(visibility?.what_is_changing || visibility?.trends || []);
+    const changing = makeArray(
+      visibility?.what_is_changing || visibility?.trends || []
+    );
     const patterns = makeArray(visibility?.patterns || []);
     const decisionSupport = makeArray(visibility?.decision_support || []);
     const childStoryBlocks = makeArray(visibility?.child_story_blocks || []);
@@ -956,9 +934,6 @@ export async function loadCurrentView(options = {}) {
   } catch (error) {
     console.error("[workspace] failed loading current view", error);
 
-    viewContent.innerHTML = renderEmpty(
-      "Error",
-      "Failed to load workspace."
-    );
+    viewContent.innerHTML = renderEmpty("Error", "Failed to load workspace.");
   }
 }
