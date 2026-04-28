@@ -436,18 +436,36 @@ function getLoaderForSection(scope, section) {
 
 function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
   const configured = new Set(
-    (SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]).map(
-      normaliseSectionId
-    )
+    (SCOPE_SECTIONS?.[scope] || []).map(normaliseSectionId)
   );
 
   const loaders = getLoaderMapForScope(scope);
 
-  Object.keys(loaders).forEach((sectionId) => {
-    if (typeof loaders[sectionId] === "function") {
+  Object.entries(loaders).forEach(([sectionId, loader]) => {
+    if (typeof loader === "function") {
       configured.add(normaliseSectionId(sectionId));
     }
   });
+
+  if (scope === "child") {
+    [
+      "workspace",
+      "timeline",
+      "daily-life",
+      "daily-notes",
+      "incidents",
+      "risk",
+      "safeguarding",
+      "health",
+      "education",
+      "family",
+      "calendar",
+      "appointments",
+      "profile",
+      "actions",
+      "reviews",
+    ].forEach((sectionId) => configured.add(sectionId));
+  }
 
   return configured;
 }
@@ -1164,25 +1182,14 @@ export async function loadSection(section, options = {}) {
 
   let safeSection = requestedSection || getDefaultSectionForScope(scope);
 
-if (!isSectionAllowed(safeSection, scope)) {
   const coreChildSections = new Set([
     "timeline",
     "daily-life",
     "daily-notes",
     "incidents",
-    "safeguarding",
-    "risk",
-    "health",
-    "education",
-    "family",
-    "appointments",
-    "actions",
-    "profile",
   ]);
 
-  if (scope === "child" && coreChildSections.has(safeSection)) {
-    // Allow known child Care Hub sections even if config is incomplete.
-  } else {
+  if (!isSectionAllowed(safeSection, scope)) {
     const betterScope = findBestScopeForSection(safeSection);
 
     if (betterScope && betterScope !== scope) {
@@ -1190,32 +1197,18 @@ if (!isSectionAllowed(safeSection, scope)) {
       return;
     }
 
-    safeSection = ensureValidCurrentSection();
+    if (!(scope === "child" && coreChildSections.has(safeSection))) {
+      safeSection = ensureValidCurrentSection();
+    }
   }
-}
 
-const coreChildSections = new Set([
-  "timeline",
-  "daily-life",
-  "daily-notes",
-  "incidents",
-  "safeguarding",
-  "risk",
-  "health",
-  "education",
-  "family",
-  "appointments",
-  "actions",
-  "profile",
-]);
-
-if (
-  !isSectionAllowed(safeSection, scope) &&
-  !(scope === "child" && coreChildSections.has(safeSection))
-) {
-  showError(`This area is not available yet: ${safeSection || "unknown"}.`);
-  return;
-}
+  if (
+    !isSectionAllowed(safeSection, scope) &&
+    !(scope === "child" && coreChildSections.has(safeSection))
+  ) {
+    showError(`This area is not available yet: ${safeSection || "unknown"}.`);
+    return;
+  }
 
   if (scope === "child" && !requireChildContext()) {
     showError("Select a child or young person first.");
@@ -1233,13 +1226,6 @@ if (
     return currentLoadPromise;
   }
 
-  const loader = getLoaderForSection(scope, safeSection);
-
-  if (typeof loader !== "function") {
-    showError(`No loader is configured for "${safeSection}" in ${scope} scope.`);
-    return;
-  }
-
   updateSectionState(safeSection);
   showWorkspaceScreen();
   paintNavigationChrome();
@@ -1251,25 +1237,22 @@ if (
 
   currentLoadPromise = (async () => {
     try {
-      await loader({
-        ...options,
-        section: safeSection,
-        scope,
-      });
+      if (scope === "child" && coreChildSections.has(safeSection)) {
+        await renderCoreSectionFallback(safeSection);
+      } else {
+        const loader = getLoaderForSection(scope, safeSection);
 
-  const currentText = els.viewContent?.innerText || "";
+        if (typeof loader !== "function") {
+          showError(`No loader is configured for "${safeSection}" in ${scope} scope.`);
+          return;
+        }
 
-const shouldUseCoreFallback =
-  ["timeline", "daily-life", "daily-notes", "incidents"].includes(safeSection) &&
-  (
-    currentText.includes("Opening Care Hub") ||
-    currentText.includes("Today at a glance") ||
-    document.querySelectorAll(".record-card, [data-record-id]").length === 0
-  );
-
-if (shouldUseCoreFallback) {
-  await renderCoreSectionFallback(safeSection);
-}
+        await loader({
+          ...options,
+          section: safeSection,
+          scope,
+        });
+      }
 
       if (loadToken !== currentLoadToken) return;
 
