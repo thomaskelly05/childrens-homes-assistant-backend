@@ -3138,3 +3138,158 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+.cei-shell {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.cei-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+}
+
+.cei-header h2 {
+  margin: 0;
+  color: var(--care-navy);
+}
+
+.cei-header p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.cei-eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--care-teal);
+}
+
+.cei-status {
+  align-self: flex-start;
+  min-width: max-content;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 900;
+  text-transform: capitalize;
+  background: var(--care-sage-2);
+  color: var(--care-navy);
+}
+
+.cei-status-escalating,
+.cei-status-critical {
+  background: #fde8e3;
+  color: #8a2f1f;
+}
+
+.cei-status-heightened,
+.cei-status-declining {
+  background: #fff3df;
+  color: #8a5a10;
+}
+
+.cei-status-strengthening,
+.cei-status-improving {
+  background: #e8f5ef;
+  color: #1d6b55;
+}
+
+.cei-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cei-grid-wide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cei-card,
+.cei-panel,
+.cei-mini-stat {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  padding: 18px;
+}
+
+.cei-card span,
+.cei-mini-stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.cei-card strong,
+.cei-mini-stat strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--care-navy);
+  font-size: 1.3rem;
+  text-transform: capitalize;
+}
+
+.cei-panel h3 {
+  margin: 0 0 12px;
+  color: var(--care-navy);
+}
+
+.cei-muted {
+  margin: 0;
+  color: var(--muted);
+}
+
+.cei-signal-list,
+.cei-recommendations {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.cei-signal-list li,
+.cei-recommendations li {
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+
+.cei-signal-list strong {
+  color: var(--care-navy);
+}
+
+.cei-signal-list span {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.cei-limitations {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--care-sand-2);
+  color: var(--muted);
+}
+
+.cei-limitations p {
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .cei-header {
+    flex-direction: column;
+  }
+
+  .cei-grid,
+  .cei-grid-wide {
+    grid-template-columns: 1fr;
+  }
+}
