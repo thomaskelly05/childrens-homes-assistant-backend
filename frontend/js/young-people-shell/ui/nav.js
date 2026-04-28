@@ -104,14 +104,34 @@ const ICON_MAP = {
   "bar-chart-3": "▦",
 };
 
+const SECTION_ALIASES = Object.freeze({
+  home: "workspace",
+  myday: "workspace",
+  "my-day": "workspace",
+  dashboard: "workspace",
+});
+
 const MOBILE_BOTTOM_BY_SCOPE = {
   child: ["workspace", "timeline", "actions", "risk", "reviews"],
   home: ["home-dashboard", "operations", "actions", "team", "rota"],
-  quality: ["provider-overview", "quality", "actions", "compliance", "quality-audits"],
-  ofsted: ["ofsted-dashboard", "sccif-evidence", "judgement-builder", "inspection-readiness", "actions"],
+  quality: [
+    "provider-overview",
+    "quality",
+    "actions",
+    "compliance",
+    "quality-audits",
+  ],
+  ofsted: [
+    "ofsted-dashboard",
+    "sccif-evidence",
+    "judgement-builder",
+    "inspection-readiness",
+    "actions",
+  ],
 };
 
 const SECTION_SCOPE_MAP = {
+  home: "child",
   workspace: "child",
   overview: "child",
   "experience-intelligence": "child",
@@ -189,11 +209,36 @@ let currentLoadKey = "";
 function normaliseRole(role) {
   const raw = String(role || "staff").trim().toLowerCase();
 
-  if (["admin", "administrator", "super_admin", "superadmin", "owner", "admin_user", "system_admin"].includes(raw)) return "admin";
-  if (["manager", "registered_manager", "deputy_manager", "rm"].includes(raw)) return "manager";
-  if (["ri", "responsible_individual", "director", "ceo"].includes(raw)) return "ri";
+  if (
+    [
+      "admin",
+      "administrator",
+      "super_admin",
+      "superadmin",
+      "owner",
+      "admin_user",
+      "system_admin",
+    ].includes(raw)
+  ) {
+    return "admin";
+  }
+
+  if (
+    ["manager", "registered_manager", "deputy_manager", "rm"].includes(raw)
+  ) {
+    return "manager";
+  }
+
+  if (["ri", "responsible_individual", "director", "ceo"].includes(raw)) {
+    return "ri";
+  }
 
   return "staff";
+}
+
+function normaliseSectionId(sectionId) {
+  const raw = String(sectionId || "").trim().toLowerCase();
+  return SECTION_ALIASES[raw] || raw;
 }
 
 function getCurrentRole() {
@@ -204,7 +249,10 @@ function getAllowedScopesForCurrentRole() {
   const role = getCurrentRole();
 
   if (ROLE_SCOPE_ACCESS?.[role]) return ROLE_SCOPE_ACCESS[role];
-  if (["admin", "manager", "ri"].includes(role)) return ["child", "home", "quality", "ofsted"];
+
+  if (["admin", "manager", "ri"].includes(role)) {
+    return ["child", "home", "quality", "ofsted"];
+  }
 
   return ["child", "home"];
 }
@@ -225,34 +273,43 @@ function getCurrentScope() {
 }
 
 function getDefaultSectionForScope(scope = getCurrentScope()) {
-  return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
+  return normaliseSectionId(SCOPE_DEFAULT_SECTION?.[scope] || "workspace");
 }
 
 function getCurrentSection() {
-  return (
+  return normaliseSectionId(
     state.currentSection ||
-    state.activeSection ||
-    state.currentView ||
-    getDefaultSectionForScope()
+      state.activeSection ||
+      state.currentView ||
+      getDefaultSectionForScope()
   );
 }
 
 function getSectionConfig(sectionId) {
-  return (NAV_SECTIONS || []).find((item) => item.id === sectionId) || null;
+  const safeSection = normaliseSectionId(sectionId);
+
+  return (
+    (NAV_SECTIONS || []).find((item) => normaliseSectionId(item.id) === safeSection) ||
+    null
+  );
 }
 
 function getSectionLabel(itemOrId) {
   if (!itemOrId) return "";
-  if (typeof itemOrId === "string") return getSectionConfig(itemOrId)?.label || itemOrId;
+  if (typeof itemOrId === "string") {
+    return getSectionConfig(itemOrId)?.label || normaliseSectionId(itemOrId);
+  }
   return itemOrId.label || itemOrId.id || "";
 }
 
 function getSectionDescription(itemOrId) {
   if (!itemOrId) return "";
+
   if (typeof itemOrId === "string") {
     const found = getSectionConfig(itemOrId);
-    return found?.description || found?.label || itemOrId;
+    return found?.description || found?.label || normaliseSectionId(itemOrId);
   }
+
   return itemOrId.description || itemOrId.label || itemOrId.id || "";
 }
 
@@ -269,16 +326,21 @@ function shouldShowDesktopSidebar() {
 }
 
 function isReadinessSection(sectionId) {
-  return ["readiness", "ofsted-readiness", "inspection-readiness"].includes(String(sectionId || ""));
+  return ["readiness", "ofsted-readiness", "inspection-readiness"].includes(
+    String(sectionId || "")
+  );
 }
 
 function getRequiredScopeForSection(sectionId) {
-  return SECTION_SCOPE_MAP[String(sectionId || "").trim().toLowerCase()] || getCurrentScope();
+  return SECTION_SCOPE_MAP[normaliseSectionId(sectionId)] || getCurrentScope();
 }
 
 async function runPlaceholderLoader(options = {}) {
-  const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
-  const section = options.section || getCurrentSection();
+  const { renderPlaceholderFeaturePage } = await import(
+    "../features/placeholder.js"
+  );
+
+  const section = normaliseSectionId(options.section || getCurrentSection());
   const config = getSectionConfig(section);
 
   await renderPlaceholderFeaturePage({
@@ -292,6 +354,7 @@ async function runPlaceholderLoader(options = {}) {
 }
 
 const CHILD_SECTION_LOADERS = Object.freeze({
+  home: loadWorkspace,
   workspace: loadWorkspace,
   overview: loadOverview,
   "experience-intelligence": renderExperienceIntelligence,
@@ -367,28 +430,43 @@ function getLoaderMapForScope(scope = getCurrentScope()) {
 }
 
 function getLoaderForSection(scope, section) {
-  return getLoaderMapForScope(scope)[section] || null;
+  const safeSection = normaliseSectionId(section);
+  return getLoaderMapForScope(scope)[safeSection] || null;
 }
 
 function getAllowedSectionIdsForScope(scope = getCurrentScope()) {
-  const configured = new Set(SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]);
+  const configured = new Set(
+    (SCOPE_SECTIONS?.[scope] || SCOPE_SECTIONS?.child || ["workspace"]).map(
+      normaliseSectionId
+    )
+  );
+
   const loaders = getLoaderMapForScope(scope);
 
   return new Set(
-    Array.from(configured).filter((sectionId) => typeof loaders[sectionId] === "function")
+    Array.from(configured).filter(
+      (sectionId) => typeof loaders[sectionId] === "function"
+    )
   );
 }
 
 function isSectionAllowed(sectionId, scope = getCurrentScope()) {
-  if (!sectionId) return false;
+  const safeSection = normaliseSectionId(sectionId);
+
+  if (!safeSection) return false;
   if (!roleCanAccessScope(scope)) return false;
-  return getAllowedSectionIdsForScope(scope).has(sectionId);
+
+  return getAllowedSectionIdsForScope(scope).has(safeSection);
 }
 
 function findBestScopeForSection(sectionId) {
-  const required = getRequiredScopeForSection(sectionId);
+  const safeSection = normaliseSectionId(sectionId);
+  const required = getRequiredScopeForSection(safeSection);
 
-  if (roleCanAccessScope(required) && getAllowedSectionIdsForScope(required).has(sectionId)) {
+  if (
+    roleCanAccessScope(required) &&
+    getAllowedSectionIdsForScope(required).has(safeSection)
+  ) {
     return required;
   }
 
@@ -404,7 +482,8 @@ function updateAppShellDataset() {
 
   app.dataset.scope = scope;
   app.dataset.section = section;
-  app.dataset.assistantScopeType = scope === "child" ? "child" : scope === "home" ? "home" : "quality";
+  app.dataset.assistantScopeType =
+    scope === "child" ? "child" : scope === "home" ? "home" : "quality";
   app.dataset.youngPersonId = state.youngPersonId || "";
   app.dataset.homeId =
     state.homeId ||
@@ -418,13 +497,17 @@ function updateAppShellDataset() {
     state.currentUser?.providerId ||
     "";
   app.dataset.userRole = getCurrentRole();
-  app.dataset.allowedHomeIds = JSON.stringify(Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []);
+  app.dataset.allowedHomeIds = JSON.stringify(
+    Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
+  );
 }
 
 function updateSectionState(section) {
-  setCurrentSection(section);
-  state.activeSection = section;
-  state.currentView = section;
+  const safeSection = normaliseSectionId(section);
+
+  setCurrentSection(safeSection);
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
   updateAppShellDataset();
 }
 
@@ -458,7 +541,9 @@ function getScopedNavSections() {
   const scope = getCurrentScope();
   const allowed = getAllowedSectionIdsForScope(scope);
 
-  return (NAV_SECTIONS || []).filter((item) => allowed.has(item.id));
+  return (NAV_SECTIONS || []).filter((item) =>
+    allowed.has(normaliseSectionId(item.id))
+  );
 }
 
 function getScopedNavGroups() {
@@ -467,7 +552,9 @@ function getScopedNavGroups() {
   return (NAV_GROUPS_CONFIG || [])
     .map((group) => ({
       ...group,
-      items: (group.items || []).filter((item) => allowed.has(item.id)),
+      items: (group.items || []).filter((item) =>
+        allowed.has(normaliseSectionId(item.id))
+      ),
     }))
     .filter((group) => group.items.length > 0);
 }
@@ -477,22 +564,27 @@ function getMobileBottomSections() {
 }
 
 function renderNavItem(item, { compact = false } = {}) {
-  const isActive = item.id === getCurrentSection();
+  const safeId = normaliseSectionId(item.id);
+  const isActive = safeId === getCurrentSection();
   const label = getSectionLabel(item);
   const description = getSectionDescription(item);
-  const meta = compact ? "" : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
+  const meta = compact
+    ? ""
+    : `<span class="nav-btn-meta">${escapeHtml(description)}</span>`;
 
   return `
     <button
       class="nav-btn ${isActive ? "active" : ""}"
       type="button"
-      data-nav-section="${escapeHtml(item.id)}"
-      data-nav-key="${escapeHtml(item.id)}"
-      data-view-key="${escapeHtml(item.id)}"
+      data-nav-section="${escapeHtml(safeId)}"
+      data-nav-key="${escapeHtml(safeId)}"
+      data-view-key="${escapeHtml(safeId)}"
       aria-pressed="${isActive ? "true" : "false"}"
       title="${escapeHtml(description)}"
     >
-      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+      <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(
+        getNavIcon(item.icon)
+      )}</span>
       <span class="nav-btn-copy">
         <span class="nav-btn-label">${escapeHtml(label)}</span>
         ${meta}
@@ -509,7 +601,9 @@ function buildMobileDrawerNavHtml() {
   return getScopedNavGroups()
     .map(
       (group) => `
-        <section class="nav-section" data-nav-group="${escapeHtml(group.id || "")}">
+        <section class="nav-section" data-nav-group="${escapeHtml(
+          group.id || ""
+        )}">
           <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
           <div class="nav-section-items">
             ${(group.items || []).map((item) => renderNavItem(item)).join("")}
@@ -521,26 +615,33 @@ function buildMobileDrawerNavHtml() {
 }
 
 function buildMobileBottomBarHtml() {
-  const byId = new Map(getScopedNavSections().map((item) => [item.id, item]));
+  const byId = new Map(
+    getScopedNavSections().map((item) => [normaliseSectionId(item.id), item])
+  );
 
   return getMobileBottomSections()
     .map((sectionId) => {
-      const item = byId.get(sectionId);
+      const safeSection = normaliseSectionId(sectionId);
+      const item = byId.get(safeSection);
       if (!item) return "";
 
-      const isActive = item.id === getCurrentSection();
+      const isActive = safeSection === getCurrentSection();
 
       return `
         <button
           class="nav-btn ${isActive ? "active" : ""}"
           type="button"
-          data-nav-section="${escapeHtml(item.id)}"
+          data-nav-section="${escapeHtml(safeSection)}"
           aria-pressed="${isActive ? "true" : "false"}"
           title="${escapeHtml(getSectionLabel(item))}"
         >
-          <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(getNavIcon(item.icon))}</span>
+          <span class="nav-btn-icon" aria-hidden="true">${escapeHtml(
+            getNavIcon(item.icon)
+          )}</span>
           <span class="nav-btn-copy">
-            <span class="nav-btn-label">${escapeHtml(item.short_label || getSectionLabel(item))}</span>
+            <span class="nav-btn-label">${escapeHtml(
+              item.short_label || getSectionLabel(item)
+            )}</span>
           </span>
         </button>
       `;
@@ -549,7 +650,8 @@ function buildMobileBottomBarHtml() {
 }
 
 function syncDesktopSidebarChrome() {
-  const workspaceShell = els.workspaceShell || document.getElementById("workspaceShell");
+  const workspaceShell =
+    els.workspaceShell || document.getElementById("workspaceShell");
   const sidebar = document.querySelector(".workspace-sidebar");
   const desktopNav = els.desktopNav || document.getElementById("desktopNav");
   const showSidebar = shouldShowDesktopSidebar();
@@ -573,8 +675,15 @@ function renderNavigation() {
   ensureValidCurrentSection();
 
   if (els.desktopNav) els.desktopNav.innerHTML = buildDesktopNavHtml();
-  if (els.mobileNavContent) els.mobileNavContent.innerHTML = buildMobileDrawerNavHtml();
-  if (els.mobileBottomBar) els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
+  if (els.mobileNavContent) {
+    els.mobileNavContent.innerHTML = buildMobileDrawerNavHtml();
+  }
+  if (els.mobileBottomBar) {
+    els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
+  }
+  if (els.mobileBottomNav && els.mobileBottomNav !== els.mobileBottomBar) {
+    els.mobileBottomNav.innerHTML = buildMobileBottomBarHtml();
+  }
 
   syncDesktopSidebarChrome();
   updateAppShellDataset();
@@ -585,6 +694,11 @@ function showWorkspaceScreen() {
   els.selectorScreen?.classList.add("hidden");
   els.workspacePanel?.classList.remove("hidden");
   els.workspaceScreen?.classList.remove("hidden");
+
+  els.selectorPanel?.setAttribute("aria-hidden", "true");
+  els.selectorScreen?.setAttribute("aria-hidden", "true");
+  els.workspacePanel?.setAttribute("aria-hidden", "false");
+  els.workspaceScreen?.setAttribute("aria-hidden", "false");
 }
 
 function showSelectorScreen() {
@@ -592,6 +706,11 @@ function showSelectorScreen() {
   els.workspaceScreen?.classList.add("hidden");
   els.selectorPanel?.classList.remove("hidden");
   els.selectorScreen?.classList.remove("hidden");
+
+  els.workspacePanel?.setAttribute("aria-hidden", "true");
+  els.workspaceScreen?.setAttribute("aria-hidden", "true");
+  els.selectorPanel?.setAttribute("aria-hidden", "false");
+  els.selectorScreen?.setAttribute("aria-hidden", "false");
 }
 
 export function showError(message) {
@@ -628,8 +747,14 @@ export function clearStatus() {
 }
 
 function markActiveNav(section) {
-  document.querySelectorAll("[data-nav-section]").forEach((button) => {
-    const isActive = button.dataset.navSection === section;
+  const safeSection = normaliseSectionId(section);
+
+  document.querySelectorAll("[data-nav-section], [data-view]").forEach((button) => {
+    const buttonSection = normaliseSectionId(
+      button.dataset.navSection || button.dataset.view || ""
+    );
+
+    const isActive = buttonSection === safeSection;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
@@ -736,7 +861,10 @@ async function applyScopeChange(scope, options = {}) {
       null;
   }
 
-  if (options.preferredSection && isSectionAllowed(options.preferredSection, safeScope)) {
+  if (
+    options.preferredSection &&
+    isSectionAllowed(options.preferredSection, safeScope)
+  ) {
     updateSectionState(options.preferredSection);
   } else {
     ensureValidCurrentSection();
@@ -768,15 +896,11 @@ function bindWorkspaceMenuLinks() {
     if (!button) return;
 
     const actionRouter = button.dataset.actionRouter;
-    const navSection = button.dataset.navSection;
+    const navSection = button.dataset.navSection || button.dataset.view;
 
     if (actionRouter) {
-      const target = document.querySelector(`[data-action-router="${actionRouter}"]`);
-      if (target && target !== button && typeof target.click === "function") {
-        target.click();
-        closeAllWorkspaceMenus();
-        return;
-      }
+      closeAllWorkspaceMenus();
+      return;
     }
 
     if (!navSection) return;
@@ -784,7 +908,8 @@ function bindWorkspaceMenuLinks() {
     event.preventDefault();
     event.stopPropagation();
 
-    const targetScope = findBestScopeForSection(navSection);
+    const safeSection = normaliseSectionId(navSection);
+    const targetScope = findBestScopeForSection(safeSection);
 
     if (!targetScope) {
       showError("This area is not available for your current role or is not wired yet.");
@@ -793,12 +918,12 @@ function bindWorkspaceMenuLinks() {
     }
 
     if (targetScope !== getCurrentScope()) {
-      await applyScopeChange(targetScope, { preferredSection: navSection });
+      await applyScopeChange(targetScope, { preferredSection: safeSection });
       closeAllWorkspaceMenus();
       return;
     }
 
-    await loadSection(navSection);
+    await loadSection(safeSection);
     closeAllWorkspaceMenus();
   });
 }
@@ -844,6 +969,7 @@ function bindOverlayDismiss() {
 
   document.addEventListener("click", (event) => {
     const assistantModal = document.getElementById("assistantModal");
+
     if (
       assistantModal &&
       !assistantModal.classList.contains("hidden") &&
@@ -867,6 +993,7 @@ function bindOverlayDismiss() {
     }
 
     const fullscreenPanel = document.getElementById("fullscreenPanel");
+
     if (
       fullscreenPanel &&
       !fullscreenPanel.classList.contains("hidden") &&
@@ -877,6 +1004,7 @@ function bindOverlayDismiss() {
     }
 
     const suggestionsPanel = document.getElementById("suggestionsPanel");
+
     if (
       suggestionsPanel &&
       !suggestionsPanel.classList.contains("hidden") &&
@@ -890,6 +1018,7 @@ function bindOverlayDismiss() {
     const drawerBackdrop = document.getElementById("recordDrawerBackdrop");
 
     if (event.target === drawerBackdrop) closeRecordDrawerOverlay();
+
     if (drawer && !drawer.classList.contains("hidden") && event.target === drawer) {
       closeRecordDrawerOverlay();
     }
@@ -913,7 +1042,7 @@ function bindOverlayDismiss() {
 }
 
 export async function loadSection(section, options = {}) {
-  const requestedSection = String(section || "").trim();
+  const requestedSection = normaliseSectionId(section || "");
   let scope = getCurrentScope();
 
   if (!roleCanAccessScope(scope)) {
@@ -1013,11 +1142,11 @@ function bindNavButtons() {
   navButtonsBound = true;
 
   document.addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-nav-section]");
+    const button = event.target.closest("[data-nav-section], [data-view]");
     if (!button) return;
     if (button.classList.contains("workspace-menu-link")) return;
 
-    const section = button.dataset.navSection;
+    const section = button.dataset.navSection || button.dataset.view;
     if (!section) return;
 
     event.preventDefault();
@@ -1029,10 +1158,18 @@ function bindScopeSwitch() {
   if (scopeSwitchBound) return;
   scopeSwitchBound = true;
 
-  els.scopeChildBtn?.addEventListener("click", async () => applyScopeChange("child"));
-  els.scopeHomeBtn?.addEventListener("click", async () => applyScopeChange("home"));
-  els.scopeQualityBtn?.addEventListener("click", async () => applyScopeChange("quality"));
-  els.scopeOfstedBtn?.addEventListener("click", async () => applyScopeChange("ofsted"));
+  els.scopeChildBtn?.addEventListener("click", async () =>
+    applyScopeChange("child")
+  );
+  els.scopeHomeBtn?.addEventListener("click", async () =>
+    applyScopeChange("home")
+  );
+  els.scopeQualityBtn?.addEventListener("click", async () =>
+    applyScopeChange("quality")
+  );
+  els.scopeOfstedBtn?.addEventListener("click", async () =>
+    applyScopeChange("ofsted")
+  );
 }
 
 function bindSelectorControls() {
@@ -1074,9 +1211,15 @@ function bindComposerControls() {
     }
   };
 
-  els.composerSaveBtn?.addEventListener("click", async () => saveThenRefresh("draft", "Draft saved."));
-  els.composerSaveDraftBtn?.addEventListener("click", async () => saveThenRefresh("draft", "Draft saved."));
-  els.composerSubmitBtn?.addEventListener("click", async () => saveThenRefresh("submit", "Record sent for review."));
+  els.composerSaveBtn?.addEventListener("click", async () =>
+    saveThenRefresh("draft", "Draft saved.")
+  );
+  els.composerSaveDraftBtn?.addEventListener("click", async () =>
+    saveThenRefresh("draft", "Draft saved.")
+  );
+  els.composerSubmitBtn?.addEventListener("click", async () =>
+    saveThenRefresh("submit", "Record sent for review.")
+  );
 }
 
 function bindRefreshControls() {
@@ -1110,7 +1253,7 @@ function bindSearchControls() {
     const query = String(detail.query || "").trim();
     const recordType = String(detail.recordType || "").trim();
     const scope = String(detail.scope || getCurrentScope()).trim();
-    const section = String(detail.section || getCurrentSection()).trim();
+    const section = normaliseSectionId(detail.section || getCurrentSection());
 
     if (scope !== getCurrentScope()) return;
     if (section && section !== getCurrentSection()) return;
@@ -1121,7 +1264,10 @@ function bindSearchControls() {
     }
 
     try {
-      const currentLoader = getLoaderForSection(getCurrentScope(), getCurrentSection());
+      const currentLoader = getLoaderForSection(
+        getCurrentScope(),
+        getCurrentSection()
+      );
 
       if (typeof currentLoader === "function") {
         await currentLoader({
@@ -1264,7 +1410,7 @@ function bindYoungPersonOpen() {
       setCurrentScope("child");
       updateSectionState(getDefaultSectionForScope("child"));
 
-      await openYoungPerson(id);
+      await openYoungPerson(id, { skipInitialSectionLoad: true });
 
       showWorkspaceScreen();
       paintNavigationChrome();
@@ -1351,10 +1497,10 @@ export async function initialiseShellNavigation() {
   }
 
   if (!state.activeSection) {
-    state.activeSection = state.currentSection;
+    state.activeSection = normaliseSectionId(state.currentSection);
   }
 
-  state.currentView = state.currentSection;
+  state.currentView = normaliseSectionId(state.currentSection);
   ensureValidCurrentSection();
 
   renderNavigation();
@@ -1382,4 +1528,5 @@ export async function initialiseShellNavigation() {
 
   showWorkspaceScreen();
   await runAssistantScopeSync();
+  await loadSection(getCurrentSection(), { force: true });
 }
