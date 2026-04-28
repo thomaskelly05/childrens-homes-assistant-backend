@@ -1,11 +1,12 @@
 import { state } from "../state.js";
+import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 
 function getSelectedYoungPersonId() {
   return (
     state?.selectedYoungPerson?.id ||
-    state?.selectedYoungPersonId ||
     state?.youngPersonId ||
+    state?.selectedYoungPersonId ||
     null
   );
 }
@@ -17,6 +18,15 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function getTarget() {
+  return (
+    els?.viewContent ||
+    document.getElementById("viewContent") ||
+    document.querySelector("[data-view-content]") ||
+    document.querySelector(".workspace-content")
+  );
 }
 
 function renderSignalList(items = []) {
@@ -146,7 +156,8 @@ function renderExperienceIntelligenceView(target, intelligence) {
   `;
 }
 
-export async function renderExperienceIntelligence(target) {
+export async function renderExperienceIntelligence() {
+  const target = getTarget();
   if (!target) return;
 
   const youngPersonId = getSelectedYoungPersonId();
@@ -182,5 +193,7 @@ export async function renderExperienceIntelligence(target) {
     `;
   }
 }
+
+export const loadExperienceIntelligence = renderExperienceIntelligence;
 
 export default renderExperienceIntelligence;
