@@ -525,11 +525,11 @@ function updateAppShellDataset() {
 function updateSectionState(section) {
   const safeSection = normaliseSectionId(section);
 
+  setCurrentSection(safeSection);
+
   state.currentSection = safeSection;
   state.activeSection = safeSection;
   state.currentView = safeSection;
-
-  setCurrentSection(safeSection);
 
   const app = document.getElementById("app");
   if (app) {
