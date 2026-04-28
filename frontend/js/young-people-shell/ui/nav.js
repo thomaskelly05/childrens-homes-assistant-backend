@@ -82,6 +82,13 @@ import { loadJudgementBuilder } from "../features/judgement-builder.js";
 
 const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
 
+const CORE_CHILD_SECTIONS = new Set([
+  "timeline",
+  "daily-life",
+  "daily-notes",
+  "incidents",
+]);
+
 const ICON_MAP = {
   home: "⌂",
   "layout-dashboard": "◫",
@@ -114,13 +121,7 @@ const SECTION_ALIASES = Object.freeze({
 const MOBILE_BOTTOM_BY_SCOPE = {
   child: ["workspace", "timeline", "actions", "risk", "reviews"],
   home: ["home-dashboard", "operations", "actions", "team", "rota"],
-  quality: [
-    "provider-overview",
-    "quality",
-    "actions",
-    "compliance",
-    "quality-audits",
-  ],
+  quality: ["provider-overview", "quality", "actions", "compliance", "quality-audits"],
   ofsted: [
     "ofsted-dashboard",
     "sccif-evidence",
@@ -158,6 +159,7 @@ const SECTION_SCOPE_MAP = {
   communication: "child",
   manager: "child",
   actions: "child",
+  incidents: "child",
 
   "home-dashboard": "home",
   operations: "home",
@@ -205,6 +207,7 @@ let assistantControllerBound = false;
 let currentLoadToken = 0;
 let currentLoadPromise = null;
 let currentLoadKey = "";
+let requestedSectionLock = "";
 
 function normaliseRole(role) {
   const raw = String(role || "staff").trim().toLowerCase();
@@ -223,9 +226,7 @@ function normaliseRole(role) {
     return "admin";
   }
 
-  if (
-    ["manager", "registered_manager", "deputy_manager", "rm"].includes(raw)
-  ) {
+  if (["manager", "registered_manager", "deputy_manager", "rm"].includes(raw)) {
     return "manager";
   }
 
@@ -289,16 +290,19 @@ function getSectionConfig(sectionId) {
   const safeSection = normaliseSectionId(sectionId);
 
   return (
-    (NAV_SECTIONS || []).find((item) => normaliseSectionId(item.id) === safeSection) ||
-    null
+    (NAV_SECTIONS || []).find(
+      (item) => normaliseSectionId(item.id) === safeSection
+    ) || null
   );
 }
 
 function getSectionLabel(itemOrId) {
   if (!itemOrId) return "";
+
   if (typeof itemOrId === "string") {
     return getSectionConfig(itemOrId)?.label || normaliseSectionId(itemOrId);
   }
+
   return itemOrId.label || itemOrId.id || "";
 }
 
@@ -336,9 +340,7 @@ function getRequiredScopeForSection(sectionId) {
 }
 
 async function runPlaceholderLoader(options = {}) {
-  const { renderPlaceholderFeaturePage } = await import(
-    "../features/placeholder.js"
-  );
+  const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
 
   const section = normaliseSectionId(options.section || getCurrentSection());
   const config = getSectionConfig(section);
@@ -476,6 +478,8 @@ function isSectionAllowed(sectionId, scope = getCurrentScope()) {
   if (!safeSection) return false;
   if (!roleCanAccessScope(scope)) return false;
 
+  if (scope === "child" && CORE_CHILD_SECTIONS.has(safeSection)) return true;
+
   return getAllowedSectionIdsForScope(scope).has(safeSection);
 }
 
@@ -489,6 +493,8 @@ function findBestScopeForSection(sectionId) {
   ) {
     return required;
   }
+
+  if (required === "child" && CORE_CHILD_SECTIONS.has(safeSection)) return "child";
 
   return null;
 }
@@ -525,11 +531,11 @@ function updateAppShellDataset() {
 function updateSectionState(section) {
   const safeSection = normaliseSectionId(section);
 
-  setCurrentSection(safeSection);
-
   state.currentSection = safeSection;
   state.activeSection = safeSection;
   state.currentView = safeSection;
+
+  setCurrentSection(safeSection);
 
   const app = document.getElementById("app");
   if (app) {
@@ -538,6 +544,31 @@ function updateSectionState(section) {
   }
 
   updateAppShellDataset();
+}
+
+function forceSectionState(section) {
+  const safeSection = normaliseSectionId(section);
+  if (!safeSection) return;
+
+  updateSectionState(safeSection);
+
+  const app = document.getElementById("app");
+  if (app) app.dataset.section = safeSection;
+
+  markActiveNav(safeSection);
+}
+
+function stabiliseRequestedSection(section, token) {
+  const safeSection = normaliseSectionId(section);
+  requestedSectionLock = safeSection;
+
+  [0, 80, 200, 500, 900].forEach((delay) => {
+    window.setTimeout(() => {
+      if (token !== currentLoadToken) return;
+      if (requestedSectionLock !== safeSection) return;
+      forceSectionState(safeSection);
+    }, delay);
+  });
 }
 
 function ensureValidCurrentScope() {
@@ -630,9 +661,7 @@ function buildMobileDrawerNavHtml() {
   return getScopedNavGroups()
     .map(
       (group) => `
-        <section class="nav-section" data-nav-group="${escapeHtml(
-          group.id || ""
-        )}">
+        <section class="nav-section" data-nav-group="${escapeHtml(group.id || "")}">
           <div class="nav-section-title">${escapeHtml(group.title || "")}</div>
           <div class="nav-section-items">
             ${(group.items || []).map((item) => renderNavItem(item)).join("")}
@@ -704,12 +733,15 @@ function renderNavigation() {
   ensureValidCurrentSection();
 
   if (els.desktopNav) els.desktopNav.innerHTML = buildDesktopNavHtml();
+
   if (els.mobileNavContent) {
     els.mobileNavContent.innerHTML = buildMobileDrawerNavHtml();
   }
+
   if (els.mobileBottomBar) {
     els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
   }
+
   if (els.mobileBottomNav && els.mobileBottomNav !== els.mobileBottomBar) {
     els.mobileBottomNav.innerHTML = buildMobileBottomBarHtml();
   }
@@ -952,7 +984,7 @@ function bindWorkspaceMenuLinks() {
       return;
     }
 
-    await loadSection(safeSection);
+    await loadSection(safeSection, { force: true });
     closeAllWorkspaceMenus();
   });
 }
@@ -1070,11 +1102,66 @@ function bindOverlayDismiss() {
   });
 }
 
+function getYoungPersonId() {
+  return (
+    state.youngPersonId ||
+    state.selectedYoungPerson?.id ||
+    state.selectedYoungPerson?.young_person_id ||
+    ""
+  );
+}
+
+function setCoreLoadingState(section) {
+  const safeSection = normaliseSectionId(section);
+
+  if (els.pageTitle) {
+    els.pageTitle.textContent =
+      safeSection === "timeline"
+        ? "Care story timeline"
+        : safeSection === "incidents"
+          ? "Important events"
+          : "Daily life";
+  }
+
+  if (els.pageSubtitle) {
+    els.pageSubtitle.textContent = "Opening live records for this child.";
+  }
+
+  if (els.viewContent) {
+    els.viewContent.innerHTML = `
+      <section class="overview-panel overview-panel--care">
+        <div class="empty-state">
+          <div class="empty-state-inner">
+            <div class="empty-state-icon" aria-hidden="true">○</div>
+            <h3>Loading ${escapeHtml(safeSection)} records…</h3>
+            <p>Opening live records for this child.</p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+}
+
+function normaliseItemsFromResponse(data, section) {
+  if (!data || typeof data !== "object") return [];
+
+  const safeSection = normaliseSectionId(section);
+
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.records)) return data.records;
+  if (Array.isArray(data.timeline)) return data.timeline;
+  if (Array.isArray(data.daily_notes)) return data.daily_notes;
+  if (Array.isArray(data.incidents)) return data.incidents;
+  if (Array.isArray(data[safeSection])) return data[safeSection];
+
+  return [];
+}
+
 async function renderCoreSectionFallback(section) {
   const safeSection = normaliseSectionId(section);
-  const youngPersonId = state.youngPersonId || state.selectedYoungPerson?.id;
+  const youngPersonId = getYoungPersonId();
 
-  if (!els.viewContent || !youngPersonId) return false;
+  if (!els.viewContent) return false;
 
   const routeMap = {
     timeline: `/young-people/${youngPersonId}/timeline`,
@@ -1090,33 +1177,67 @@ async function renderCoreSectionFallback(section) {
     incidents: "Important events",
   };
 
+  if (!youngPersonId) {
+    els.viewContent.innerHTML = `
+      <section class="overview-panel overview-panel--care">
+        <div class="empty-state">
+          <div class="empty-state-inner">
+            <div class="empty-state-icon" aria-hidden="true">○</div>
+            <h3>Select a child or young person first</h3>
+            <p>This section needs a child record before live records can open.</p>
+          </div>
+        </div>
+      </section>
+    `;
+    return false;
+  }
+
   const url = routeMap[safeSection];
   if (!url) return false;
 
-  const res = await fetch(url, {
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
+  let items = [];
+  let loadFailed = false;
 
-  if (!res.ok) return false;
+  try {
+    const res = await fetch(url, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
 
-  const data = await res.json();
-  const items = data.items || data.timeline || data.daily_notes || data.incidents || [];
+    if (!res.ok) {
+      loadFailed = true;
+    } else {
+      const data = await res.json();
+      items = normaliseItemsFromResponse(data, safeSection);
+    }
+  } catch (error) {
+    console.error(`[nav] failed fetching core section "${safeSection}"`, error);
+    loadFailed = true;
+  }
+
+  forceSectionState(safeSection);
 
   if (els.pageTitle) els.pageTitle.textContent = titleMap[safeSection] || safeSection;
+
   if (els.pageSubtitle) {
-    els.pageSubtitle.textContent = `${items.length} record${
-      items.length === 1 ? "" : "s"
-    } loaded from live records.`;
+    els.pageSubtitle.textContent = loadFailed
+      ? "The section opened, but live records could not be fetched."
+      : `${items.length} record${items.length === 1 ? "" : "s"} loaded from live records.`;
   }
 
   els.viewContent.innerHTML = `
-    <section class="overview-panel overview-panel--care">
+    <section class="overview-panel overview-panel--care" data-core-section="${escapeHtml(
+      safeSection
+    )}">
       <div class="overview-section-head">
         <div>
           <div class="eyebrow">Live records</div>
           <h2>${escapeHtml(titleMap[safeSection] || safeSection)}</h2>
-          <p>${items.length} record${items.length === 1 ? "" : "s"} found.</p>
+          <p>${
+            loadFailed
+              ? "Unable to load live records from the API."
+              : `${items.length} record${items.length === 1 ? "" : "s"} found.`
+          }</p>
         </div>
       </div>
 
@@ -1124,52 +1245,71 @@ async function renderCoreSectionFallback(section) {
         ${
           items.length
             ? items
-                .map(
-                  (item) => `
-              <article
-                class="record-card"
-                data-record-id="${escapeHtml(
-                  String(item.id || item.record_id || item.source_id || "")
-                )}"
-                data-record-type="${escapeHtml(
-                  item.record_type || item.category || safeSection
-                )}"
-                tabindex="0"
-                role="button"
-              >
-                <div class="record-card-main">
-                  <div class="eyebrow">${escapeHtml(
-                    item.category || item.record_type || safeSection
-                  )}</div>
-                  <h3>${escapeHtml(item.title || item.subject || "Record")}</h3>
-                  <p>${escapeHtml(
+                .map((item) => {
+                  const id = String(
+                    item.id || item.record_id || item.source_id || item.note_id || ""
+                  );
+
+                  const type =
+                    item.record_type ||
+                    item.type ||
+                    item.category ||
+                    safeSection;
+
+                  const title =
+                    item.title ||
+                    item.subject ||
+                    item.heading ||
+                    item.category ||
+                    type ||
+                    "Record";
+
+                  const summary =
                     item.summary ||
-                      item.note ||
-                      item.description ||
-                      item.narrative ||
-                      "No summary available."
-                  )}</p>
-                </div>
-                <div class="record-card-meta">
-                  ${escapeHtml(
+                    item.note ||
+                    item.description ||
+                    item.narrative ||
+                    item.body ||
+                    item.details ||
+                    "No summary available.";
+
+                  const date =
                     item.event_datetime ||
-                      item.occurred_at ||
-                      item.note_date ||
-                      item.incident_datetime ||
-                      item.created_at ||
-                      ""
-                  )}
-                </div>
-              </article>
-            `
-                )
+                    item.occurred_at ||
+                    item.note_date ||
+                    item.incident_datetime ||
+                    item.created_at ||
+                    item.updated_at ||
+                    "";
+
+                  return `
+                    <article
+                      class="record-card"
+                      data-record-id="${escapeHtml(id)}"
+                      data-record-type="${escapeHtml(type)}"
+                      tabindex="0"
+                      role="button"
+                    >
+                      <div class="record-card-main">
+                        <div class="eyebrow">${escapeHtml(type)}</div>
+                        <h3>${escapeHtml(title)}</h3>
+                        <p>${escapeHtml(summary)}</p>
+                      </div>
+                      <div class="record-card-meta">${escapeHtml(date)}</div>
+                    </article>
+                  `;
+                })
                 .join("")
             : `
               <div class="empty-state">
                 <div class="empty-state-inner">
                   <div class="empty-state-icon" aria-hidden="true">○</div>
-                  <h3>No records found</h3>
-                  <p>No live records were returned for this section.</p>
+                  <h3>${loadFailed ? "Records could not be loaded" : "No records found"}</h3>
+                  <p>${
+                    loadFailed
+                      ? "The page is now in the correct section, but the API request failed."
+                      : "No live records were returned for this section."
+                  }</p>
                 </div>
               </div>
             `
@@ -1178,7 +1318,8 @@ async function renderCoreSectionFallback(section) {
     </section>
   `;
 
-  return true;
+  forceSectionState(safeSection);
+  return !loadFailed;
 }
 
 export async function loadSection(section, options = {}) {
@@ -1191,13 +1332,6 @@ export async function loadSection(section, options = {}) {
 
   let safeSection = requestedSection || getDefaultSectionForScope(scope);
 
-  const coreChildSections = new Set([
-    "timeline",
-    "daily-life",
-    "daily-notes",
-    "incidents",
-  ]);
-
   if (!isSectionAllowed(safeSection, scope)) {
     const betterScope = findBestScopeForSection(safeSection);
 
@@ -1206,15 +1340,10 @@ export async function loadSection(section, options = {}) {
       return;
     }
 
-    if (!(scope === "child" && coreChildSections.has(safeSection))) {
-      safeSection = ensureValidCurrentSection();
-    }
+    safeSection = ensureValidCurrentSection();
   }
 
-  if (
-    !isSectionAllowed(safeSection, scope) &&
-    !(scope === "child" && coreChildSections.has(safeSection))
-  ) {
+  if (!isSectionAllowed(safeSection, scope)) {
     showError(`This area is not available yet: ${safeSection || "unknown"}.`);
     return;
   }
@@ -1231,50 +1360,34 @@ export async function loadSection(section, options = {}) {
   const loadKey = `${scope}:${safeSection}`;
   const loadToken = ++currentLoadToken;
 
+  requestedSectionLock = safeSection;
+
   if (!force && currentLoadPromise && currentLoadKey === loadKey) {
     return currentLoadPromise;
   }
 
-updateSectionState(safeSection);
-showWorkspaceScreen();
-
-requestAnimationFrame(() => {
-  if (getCurrentSection() === safeSection) {
-    updateSectionState(safeSection);
-    paintNavigationChrome();
-  }
-});
+  updateSectionState(safeSection);
+  showWorkspaceScreen();
   clearStatus();
   resetWorkspaceSummaryStrip();
   closeAllWorkspaceMenus();
 
   currentLoadKey = loadKey;
 
-  currentLoadPromise = (async () => {
-    try {
-if (scope === "child" && coreChildSections.has(safeSection)) {
-  if (els.viewContent) {
-    els.viewContent.innerHTML = `
-      <section class="overview-panel overview-panel--care">
-        <div class="empty-state">
-          <div class="empty-state-inner">
-            <div class="empty-state-icon" aria-hidden="true">○</div>
-            <h3>Loading ${escapeHtml(safeSection)} records…</h3>
-            <p>Opening live records for this child.</p>
-          </div>
-        </div>
-      </section>
-    `;
+  if (scope === "child" && CORE_CHILD_SECTIONS.has(safeSection)) {
+    forceSectionState(safeSection);
+    setCoreLoadingState(safeSection);
+    stabiliseRequestedSection(safeSection, loadToken);
+  } else {
+    paintNavigationChrome();
   }
 
-  await renderCoreSectionFallback(safeSection);
-
-  setTimeout(() => {
-    if (getCurrentSection() === safeSection) {
-      renderCoreSectionFallback(safeSection);
-    }
-  }, 300);
-} else {
+  currentLoadPromise = (async () => {
+    try {
+      if (scope === "child" && CORE_CHILD_SECTIONS.has(safeSection)) {
+        await renderCoreSectionFallback(safeSection);
+        stabiliseRequestedSection(safeSection, loadToken);
+      } else {
         const loader = getLoaderForSection(scope, safeSection);
 
         if (typeof loader !== "function") {
@@ -1297,6 +1410,12 @@ if (scope === "child" && coreChildSections.has(safeSection)) {
         state.currentView = safeSection;
       }
 
+      if (scope === "child" && CORE_CHILD_SECTIONS.has(safeSection)) {
+        forceSectionState(safeSection);
+      } else {
+        paintNavigationChrome();
+      }
+
       renderAssistantControllerPanels();
     } catch (error) {
       if (loadToken !== currentLoadToken) return;
@@ -1304,6 +1423,10 @@ if (scope === "child" && coreChildSections.has(safeSection)) {
       console.error(`[nav] failed loading section "${safeSection}"`, error);
       showError(error?.message || "Failed to load this section.");
       resetWorkspaceSummaryStrip();
+
+      if (scope === "child" && CORE_CHILD_SECTIONS.has(safeSection)) {
+        await renderCoreSectionFallback(safeSection);
+      }
     } finally {
       if (loadToken === currentLoadToken) {
         currentLoadPromise = null;
@@ -1332,7 +1455,7 @@ function bindNavButtons() {
     if (!section) return;
 
     event.preventDefault();
-    await loadSection(section);
+    await loadSection(section, { force: true });
   });
 }
 
@@ -1340,12 +1463,8 @@ function bindScopeSwitch() {
   if (scopeSwitchBound) return;
   scopeSwitchBound = true;
 
-  els.scopeChildBtn?.addEventListener("click", async () =>
-    applyScopeChange("child")
-  );
-  els.scopeHomeBtn?.addEventListener("click", async () =>
-    applyScopeChange("home")
-  );
+  els.scopeChildBtn?.addEventListener("click", async () => applyScopeChange("child"));
+  els.scopeHomeBtn?.addEventListener("click", async () => applyScopeChange("home"));
   els.scopeQualityBtn?.addEventListener("click", async () =>
     applyScopeChange("quality")
   );
@@ -1396,9 +1515,11 @@ function bindComposerControls() {
   els.composerSaveBtn?.addEventListener("click", async () =>
     saveThenRefresh("draft", "Draft saved.")
   );
+
   els.composerSaveDraftBtn?.addEventListener("click", async () =>
     saveThenRefresh("draft", "Draft saved.")
   );
+
   els.composerSubmitBtn?.addEventListener("click", async () =>
     saveThenRefresh("submit", "Record sent for review.")
   );
@@ -1446,10 +1567,7 @@ function bindSearchControls() {
     }
 
     try {
-      const currentLoader = getLoaderForSection(
-        getCurrentScope(),
-        getCurrentSection()
-      );
+      const currentLoader = getLoaderForSection(getCurrentScope(), getCurrentSection());
 
       if (typeof currentLoader === "function") {
         await currentLoader({
