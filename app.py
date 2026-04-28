@@ -246,6 +246,7 @@ ROUTERS = [
     "routers.manager_routes",
     "routers.home_inspection_compat_routes",
     "routers.young_people_profile_routes",
+    "routers.child_experience_intelligence_routes",
     "routers.young_people_daily_notes_routes",
     "routers.young_people_incidents_routes",
     "routers.young_people_health_routes",
