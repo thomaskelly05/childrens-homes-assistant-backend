@@ -3,9 +3,6 @@ function byId(id) {
 }
 
 const DOM_KEYS = {
-  /* --------------------------------
-     App shell
-  --------------------------------- */
   app: "app",
   mainContent: "mainContent",
   workspaceScreen: "workspacePanel",
@@ -19,9 +16,6 @@ const DOM_KEYS = {
   workspaceSubtitle: "workspaceSubtitle",
   workspaceBody: "workspaceBody",
 
-  /* --------------------------------
-     Top bar
-  --------------------------------- */
   logoBtn: "logoBtn",
   mobileNavBtn: "mobileNavBtn",
   mobileNavToggle: "mobileNavToggle",
@@ -35,18 +29,12 @@ const DOM_KEYS = {
   recordSearchInput: "recordSearchInput",
   recordTypeFilter: "recordTypeFilter",
 
-  /* --------------------------------
-     Scope switch
-  --------------------------------- */
   scopeSwitch: "scopeSwitch",
   scopeChildBtn: "scopeChildBtn",
   scopeHomeBtn: "scopeHomeBtn",
   scopeQualityBtn: "scopeQualityBtn",
   scopeOfstedBtn: "scopeOfstedBtn",
 
-  /* --------------------------------
-     Safe Start selector
-  --------------------------------- */
   selectorList: "selectorList",
   selectorSearch: "selectorSearch",
   youngPersonSearchInput: "youngPersonSearchInput",
@@ -83,9 +71,6 @@ const DOM_KEYS = {
   myShiftList: "myShiftList",
   attentionList: "attentionList",
 
-  /* --------------------------------
-     Workspace person summary
-  --------------------------------- */
   personAvatar: "personAvatar",
   personName: "personName",
   personMeta: "personMeta",
@@ -99,10 +84,8 @@ const DOM_KEYS = {
   mobileDrawerPersonName: "mobileDrawerPersonName",
   mobileDrawerPersonMeta: "mobileDrawerPersonMeta",
 
-  /* --------------------------------
-     Navigation
-  --------------------------------- */
   desktopNav: "desktopNav",
+  sectionNav: "sectionNav",
   mobileNavContent: "mobileNavContent",
   mobileNavDrawer: "mobileNavDrawer",
   mobileNavPanel: "mobileNavPanel",
@@ -111,15 +94,9 @@ const DOM_KEYS = {
   mobileBottomBar: "mobileBottomBar",
   mobileBottomNav: "mobileBottomNav",
 
-  /* --------------------------------
-     Mobile search
-  --------------------------------- */
   mobileSearchForm: "mobileSearchForm",
   mobileRecordSearchInput: "mobileRecordSearchInput",
 
-  /* --------------------------------
-     Header / hero
-  --------------------------------- */
   workspaceEyebrow: "workspaceEyebrow",
   pageTitle: "pageTitle",
   pageSubtitle: "pageSubtitle",
@@ -130,33 +107,21 @@ const DOM_KEYS = {
   profileOpenBtn: "profileOpenBtn",
   profilePhotoUploadBtn: "profilePhotoUploadBtn",
 
-  /* --------------------------------
-     Workspace summary strip
-  --------------------------------- */
   workspaceSummaryStrip: "workspaceSummaryStrip",
   summaryToday: "summaryToday",
   summaryNextEvent: "summaryNextEvent",
   summaryLastRecord: "summaryLastRecord",
   summaryOpenActions: "summaryOpenActions",
 
-  /* --------------------------------
-     Profile snapshot
-  --------------------------------- */
   profileSnapshotPhotoWrap: "profileSnapshotPhotoWrap",
   profileSnapshotName: "profileSnapshotName",
   profileSnapshotMeta: "profileSnapshotMeta",
 
-  /* --------------------------------
-     Search results
-  --------------------------------- */
   searchResultsRegion: "searchResultsRegion",
   searchResultsTitle: "searchResultsTitle",
   searchResultsList: "searchResultsList",
   clearSearchResultsBtn: "clearSearchResultsBtn",
 
-  /* --------------------------------
-     Assistant
-  --------------------------------- */
   assistantBackdrop: "assistantBackdrop",
   assistantModal: "assistantModal",
   assistantPanel: "assistantPanel",
@@ -177,17 +142,11 @@ const DOM_KEYS = {
   assistantRuntime: "assistantRuntime",
   assistantExplainability: "assistantExplainability",
 
-  /* --------------------------------
-     Assistant badges
-  --------------------------------- */
   scopeBadge: "scopeBadge",
   scopeHomeBadge: "scopeHomeBadge",
   scopeChildBadge: "scopeChildBadge",
   scopeShiftBadge: "scopeShiftBadge",
 
-  /* --------------------------------
-     Assistant controller / intelligence panels
-  --------------------------------- */
   assistantScopeBundleStatus: "assistantScopeBundleStatus",
   assistantScopeBundleError: "assistantScopeBundleError",
   assistantLiveStatus: "assistantLiveStatus",
@@ -199,9 +158,6 @@ const DOM_KEYS = {
   liveUpdatesBody: "liveUpdatesBody",
   clearLiveUpdatesBtn: "clearLiveUpdatesBtn",
 
-  /* --------------------------------
-     Fullscreen panel
-  --------------------------------- */
   fullscreenPanel: "fullscreenPanel",
   fullscreenPanelTitle: "fullscreenPanelTitle",
   fullscreenPanelSubtitle: "fullscreenPanelSubtitle",
@@ -209,9 +165,6 @@ const DOM_KEYS = {
   closeFullscreenPanelBtn: "closeFullscreenPanelBtn",
   fullscreenPanelBody: "fullscreenPanelBody",
 
-  /* --------------------------------
-     Composer
-  --------------------------------- */
   composerPanel: "composerPanel",
   recordComposerPage: "recordComposerPage",
   composerTitle: "composerTitle",
@@ -237,9 +190,6 @@ const DOM_KEYS = {
   composerSafeguardingBtn: "composerSafeguardingBtn",
   composerChildVoiceBtn: "composerChildVoiceBtn",
 
-  /* --------------------------------
-     Record drawer
-  --------------------------------- */
   recordDrawer: "recordDrawer",
   recordDrawerBackdrop: "recordDrawerBackdrop",
   recordDrawerTitle: "recordDrawerTitle",
@@ -253,9 +203,6 @@ const DOM_KEYS = {
   drawerReturnBtn: "drawerReturnBtn",
   drawerArchiveBtn: "drawerArchiveBtn",
 
-  /* --------------------------------
-     Suggestions
-  --------------------------------- */
   suggestionsPanel: "suggestionsPanel",
   suggestionsPanelTitle: "suggestionsPanelTitle",
   suggestionsPanelSubtitle: "suggestionsPanelSubtitle",
@@ -277,10 +224,6 @@ function buildEls() {
   Object.entries(DOM_KEYS).forEach(([key, id]) => {
     resolved[key] = byId(id);
   });
-
-  /* --------------------------------
-     Compatibility aliases
-  --------------------------------- */
 
   resolved.selectorPanel = firstDefinedElement(
     resolved.selectorScreen,
@@ -382,6 +325,13 @@ function buildEls() {
     resolved.viewContent
   );
 
+  resolved.sectionNav = firstDefinedElement(
+    resolved.sectionNav,
+    resolved.heroQuickActions,
+    resolved.desktopNav,
+    resolved.mobileNavContent
+  );
+
   resolved.composerBody = firstDefinedElement(
     resolved.composerBody,
     resolved.recordComposerFields
@@ -408,8 +358,8 @@ function buildEls() {
   );
 
   resolved.youngPersonSelector = firstDefinedElement(
-    resolved.selectorPanel,
-    resolved.selectorScreen,
+    resolved.youngPersonSelect,
+    byId("youngPersonSelector"),
     resolved.selectorList
   );
 
