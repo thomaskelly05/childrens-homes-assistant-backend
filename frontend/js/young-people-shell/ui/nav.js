@@ -1235,9 +1235,15 @@ export async function loadSection(section, options = {}) {
     return currentLoadPromise;
   }
 
-  updateSectionState(safeSection);
-  showWorkspaceScreen();
-  paintNavigationChrome();
+updateSectionState(safeSection);
+showWorkspaceScreen();
+
+requestAnimationFrame(() => {
+  if (getCurrentSection() === safeSection) {
+    updateSectionState(safeSection);
+    paintNavigationChrome();
+  }
+});
   clearStatus();
   resetWorkspaceSummaryStrip();
   closeAllWorkspaceMenus();
@@ -1246,9 +1252,29 @@ export async function loadSection(section, options = {}) {
 
   currentLoadPromise = (async () => {
     try {
-      if (scope === "child" && coreChildSections.has(safeSection)) {
-        await renderCoreSectionFallback(safeSection);
-      } else {
+if (scope === "child" && coreChildSections.has(safeSection)) {
+  if (els.viewContent) {
+    els.viewContent.innerHTML = `
+      <section class="overview-panel overview-panel--care">
+        <div class="empty-state">
+          <div class="empty-state-inner">
+            <div class="empty-state-icon" aria-hidden="true">○</div>
+            <h3>Loading ${escapeHtml(safeSection)} records…</h3>
+            <p>Opening live records for this child.</p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  await renderCoreSectionFallback(safeSection);
+
+  setTimeout(() => {
+    if (getCurrentSection() === safeSection) {
+      renderCoreSectionFallback(safeSection);
+    }
+  }, 300);
+} else {
         const loader = getLoaderForSection(scope, safeSection);
 
         if (typeof loader !== "function") {
