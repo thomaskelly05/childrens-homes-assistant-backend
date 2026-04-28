@@ -1218,14 +1218,19 @@ export async function loadSection(section, options = {}) {
         scope,
       });
 
-      const currentText = els.viewContent?.innerText || "";
-      const stillLoading =
-        currentText.includes("Opening Care Hub") ||
-        currentText.trim().length < 20;
+  const currentText = els.viewContent?.innerText || "";
 
-      if (stillLoading) {
-        await renderCoreSectionFallback(safeSection);
-      }
+const shouldUseCoreFallback =
+  ["timeline", "daily-life", "daily-notes", "incidents"].includes(safeSection) &&
+  (
+    currentText.includes("Opening Care Hub") ||
+    currentText.includes("Today at a glance") ||
+    document.querySelectorAll(".record-card, [data-record-id]").length === 0
+  );
+
+if (shouldUseCoreFallback) {
+  await renderCoreSectionFallback(safeSection);
+}
 
       if (loadToken !== currentLoadToken) return;
 
