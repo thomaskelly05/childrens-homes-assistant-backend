@@ -42,6 +42,7 @@ let globalSearchMirrorsBound = false;
 let globalRefreshShortcutsBound = false;
 let changePersonFallbackBound = false;
 let restrictedSectionGuardBound = false;
+let openCareHubFallbackBound = false;
 
 const VALID_SCOPES = new Set(["child", "home", "quality", "ofsted"]);
 
@@ -187,11 +188,16 @@ function hydrateRuntimeContextFromDom() {
   const datasetHomeId = normaliseNumericId(els.app.dataset.homeId);
   const datasetProviderId = normaliseNumericId(els.app.dataset.providerId);
   const datasetAllowedHomeIds = els.app.dataset.allowedHomeIds || "";
+  const datasetYoungPersonId = normaliseNumericId(els.app.dataset.youngPersonId);
 
   setUserRole(datasetRole);
   setHomeContext(datasetHomeId);
   setProviderContext(datasetProviderId);
   setAllowedHomeIds(parseAllowedHomeIds(datasetAllowedHomeIds));
+
+  if (datasetYoungPersonId) {
+    state.youngPersonId = datasetYoungPersonId;
+  }
 
   syncSingleHomeFallback();
 }
@@ -634,7 +640,6 @@ async function openYoungPersonSafely(id, options = {}) {
     updateAssistantContext();
     renderAssistantMessages();
     renderAssistantInsights();
-    refreshWorkspaceSummary();
 
     return true;
   } catch (error) {
@@ -778,6 +783,9 @@ function bindGlobalRefreshShortcuts() {
 }
 
 function bindOpenCareHubFallback() {
+  if (openCareHubFallbackBound) return;
+  openCareHubFallbackBound = true;
+
   document.addEventListener(
     "click",
     async (event) => {
@@ -820,14 +828,12 @@ async function bootstrap() {
     hydrateRuntimeContextFromSession();
     await hydrateRuntimeContextFromAuthCheck();
 
+    const existingYoungPersonId = state.youngPersonId;
+
     setCurrentScope("child", { resetSection: true });
     setCurrentSection(getDefaultSectionForScope("child"));
     state.activeSection = getDefaultSectionForScope("child");
     state.currentView = getDefaultSectionForScope("child");
-
-    clearSelectedYoungPerson();
-    state.youngPersonId = null;
-    setYoungPersonIdInUrl(null);
 
     ensureValidScopeForRole();
     ensureInitialSectionForScope();
@@ -855,11 +861,24 @@ async function bootstrap() {
     bindRestrictedSectionGuard();
     bindOpenCareHubFallback();
 
-    await bootstrapSelectorDashboard();
     await initialiseShellNavigation();
 
+    if (existingYoungPersonId) {
+      await openYoungPersonSafely(existingYoungPersonId, {
+        initialSection: "workspace",
+        forceInitialSectionLoad: true,
+      });
+    } else {
+      await bootstrapSelectorDashboard();
+    }
+
     refreshAllChrome();
-    refreshWorkspaceSummary();
+
+    if (state.youngPersonId) {
+      await loadSection("workspace", { force: true });
+    } else {
+      refreshWorkspaceSummary();
+    }
   } catch (error) {
     console.error("[index] bootstrap failed", error);
     showError(error?.message || "Failed to start Care Hub.");
