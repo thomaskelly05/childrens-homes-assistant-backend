@@ -3293,3 +3293,356 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   INDICARE ACI REBRAND
+   Ambient Care Interface — final visual identity layer
+   Paste at the VERY BOTTOM of young-people-shell.css
+============================================================ */
+
+:root {
+  --aci-ink: #102320;
+  --aci-deep: #123239;
+  --aci-teal: #16b8a6;
+  --aci-mint: #c8fff1;
+  --aci-sage: #dce9df;
+  --aci-sand: #f3dfbd;
+  --aci-clay: #b96f51;
+  --aci-lilac: #e9e2f5;
+  --aci-paper: rgba(255, 255, 255, 0.72);
+  --aci-glass: rgba(255, 255, 255, 0.56);
+  --aci-line: rgba(18, 50, 57, 0.1);
+  --aci-glow: 0 30px 90px rgba(22, 184, 166, 0.18),
+    0 12px 34px rgba(18, 50, 57, 0.08);
+}
+
+/* whole shell becomes a living care environment */
+body.indicare-care-hub-body,
+body.safe-start-body {
+  background:
+    radial-gradient(circle at 8% 10%, rgba(22, 184, 166, 0.2), transparent 30%),
+    radial-gradient(circle at 92% 14%, rgba(233, 226, 245, 0.62), transparent 32%),
+    radial-gradient(circle at 50% 96%, rgba(243, 223, 189, 0.7), transparent 38%),
+    linear-gradient(180deg, #fffaf2 0%, #f7f2ea 48%, #eef8f3 100%) !important;
+  color: var(--aci-ink);
+}
+
+body.indicare-care-hub-body::before {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.42) 0 1px, transparent 1px),
+    linear-gradient(rgba(18, 50, 57, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(18, 50, 57, 0.02) 1px, transparent 1px);
+  background-size: 34px 34px, 68px 68px, 68px 68px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,0.42), transparent 72%);
+}
+
+/* topbar becomes floating, not fixed-dashboard */
+.shell-topbar {
+  top: 14px;
+  margin: 0 18px;
+  border: 1px solid var(--aci-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.64) !important;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: var(--aci-glow);
+}
+
+/* brand mark becomes IndiCare signature orb */
+.brand-mark,
+.safe-start-orb,
+.profile-photo-fallback,
+.workspace-stage-mobile-avatar,
+.empty-state-icon,
+.selector-card-photo-fallback {
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,0.95), transparent 26%),
+    conic-gradient(from 150deg, var(--aci-teal), var(--aci-mint), var(--aci-sand), var(--aci-lilac), var(--aci-teal)) !important;
+  color: var(--aci-deep) !important;
+  box-shadow:
+    inset 0 0 26px rgba(255,255,255,0.72),
+    0 22px 55px rgba(22, 184, 166, 0.24);
+}
+
+/* main surfaces become therapeutic glass */
+.safe-start-hero-copy,
+.safe-start-hero-panel,
+.safe-drawer,
+.attention-chip,
+.workspace-header-band,
+.quick-actions-panel,
+.workspace-content,
+.panel,
+.overview-section-card,
+.overview-side-card,
+.record-table-shell,
+.assistant-shell,
+.composer-shell,
+.fullscreen-panel-shell,
+.record-drawer-panel,
+.mobile-nav-drawer,
+.care-insight-card,
+.workspace-person-card--hero,
+.summary-drawer,
+.assistant-side-card,
+.composer-side-card,
+.selector-card,
+.entity-row,
+.record-row,
+.record-card,
+.timeline-item,
+.insight-card,
+.priority-item,
+.cei-card,
+.cei-panel,
+.cei-mini-stat {
+  border: 1px solid var(--aci-line) !important;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.78), rgba(255,250,242,0.54)) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--aci-glow);
+}
+
+/* hero becomes iconic */
+.safe-start-hero-copy,
+.workspace-header-band--bold,
+.workspace-header-band--care {
+  position: relative;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(22, 184, 166, 0.24), transparent 34%),
+    radial-gradient(circle at 92% 18%, rgba(243, 223, 189, 0.44), transparent 36%),
+    linear-gradient(135deg, rgba(255,255,255,0.84), rgba(248,243,234,0.68)) !important;
+}
+
+.safe-start-hero-copy::before,
+.workspace-header-band--bold::after {
+  content: "";
+  position: absolute;
+  width: 460px;
+  height: 460px;
+  right: -150px;
+  top: -150px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(22,184,166,0.26), transparent 68%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+/* typography becomes more premium */
+.safe-start-hero-copy h1,
+#pageTitle,
+.selector-hero-copy h1,
+.selector-page-head h1 {
+  color: var(--aci-deep) !important;
+  font-weight: 1000;
+  letter-spacing: -0.085em;
+}
+
+.eyebrow,
+.eyebrow--bright,
+.workspace-context-pill-label,
+.care-label,
+.stat-label {
+  color: var(--aci-teal) !important;
+  letter-spacing: 0.18em;
+}
+
+/* buttons become recognisable */
+.primary-btn,
+.primary-btn--large {
+  border: 0 !important;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.34), transparent 26%),
+    linear-gradient(135deg, var(--aci-deep), var(--aci-teal)) !important;
+  color: white !important;
+  box-shadow: 0 22px 55px rgba(22,184,166,0.32);
+}
+
+.secondary-btn,
+.ghost-btn,
+.workspace-menu-trigger,
+.workspace-menu-link,
+.nav-btn,
+.scope-switch-btn,
+.table-row-btn,
+.quick-action {
+  border: 1px solid var(--aci-line) !important;
+  background: rgba(255,255,255,0.58) !important;
+  color: var(--aci-deep) !important;
+  backdrop-filter: blur(16px);
+}
+
+/* menu should feel like care pathways */
+.workspace-menu-dropdown {
+  border-radius: 26px !important;
+  background: rgba(255,255,255,0.86) !important;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: 0 34px 90px rgba(18, 50, 57, 0.18) !important;
+}
+
+.workspace-menu-link:hover,
+.nav-btn:hover,
+.secondary-btn:hover,
+.ghost-btn:hover {
+  background: rgba(200,255,241,0.45) !important;
+  border-color: rgba(22,184,166,0.32) !important;
+}
+
+/* record cards become living care moments */
+.record-row,
+.record-card,
+.timeline-item,
+.record-list > article,
+.timeline-list > article {
+  border-radius: 24px !important;
+}
+
+.record-row::before,
+.record-card::before,
+.timeline-item::before,
+.record-list > article::before,
+.timeline-list > article::before {
+  width: 6px !important;
+  background:
+    linear-gradient(180deg, var(--aci-teal), var(--aci-sand)) !important;
+}
+
+/* assistant becomes a presence */
+.assistant-fab {
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255,255,255,0.9), transparent 24%),
+    linear-gradient(135deg, var(--aci-deep), var(--aci-teal)) !important;
+  box-shadow:
+    0 30px 90px rgba(22,184,166,0.42),
+    0 10px 28px rgba(18,50,57,0.2) !important;
+}
+
+.assistant-fab-icon {
+  animation: indicarePresencePulse 3.4s ease-in-out infinite;
+}
+
+@keyframes indicarePresencePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.78;
+  }
+  50% {
+    transform: scale(1.16);
+    opacity: 1;
+  }
+}
+
+/* form fields become calmer */
+.search-input,
+.text-input,
+.select-input,
+.textarea-input,
+.field input,
+.field select,
+.field textarea,
+textarea,
+input,
+select {
+  border-radius: 18px !important;
+  border: 1px solid rgba(18,50,57,0.12) !important;
+  background: rgba(255,255,255,0.72) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+}
+
+.search-input:focus,
+.text-input:focus,
+.select-input:focus,
+.textarea-input:focus,
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: rgba(22,184,166,0.54) !important;
+  box-shadow:
+    0 0 0 4px rgba(22,184,166,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.85) !important;
+}
+
+/* status and attention chips */
+.attention-chip-icon,
+.safe-drawer-number,
+.safe-drawer-icon {
+  background:
+    radial-gradient(circle at 28% 20%, rgba(255,255,255,0.5), transparent 32%),
+    linear-gradient(135deg, var(--aci-deep), var(--aci-teal)) !important;
+}
+
+.attention-chip strong,
+.safe-drawer-trigger strong,
+.safe-ready-card strong,
+.summary-drawer strong,
+.workspace-summary-value,
+.care-insight-card strong {
+  color: var(--aci-deep) !important;
+}
+
+/* mobile bottom bar: soft dock */
+.mobile-bottom-bar {
+  border-radius: 999px !important;
+  background: rgba(255,255,255,0.72) !important;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: var(--aci-glow);
+}
+
+/* footer less heavy */
+.app-footer {
+  background: transparent !important;
+  border-top: 0 !important;
+}
+
+/* dark mode adjusted to keep ACI identity */
+@media (prefers-color-scheme: dark) {
+  body.indicare-care-hub-body,
+  body.safe-start-body {
+    background:
+      radial-gradient(circle at 10% 8%, rgba(22,184,166,0.22), transparent 32%),
+      radial-gradient(circle at 90% 10%, rgba(185,111,81,0.16), transparent 30%),
+      linear-gradient(180deg, #071211 0%, #102224 100%) !important;
+  }
+
+  .safe-start-hero-copy,
+  .safe-start-hero-panel,
+  .safe-drawer,
+  .attention-chip,
+  .workspace-header-band,
+  .quick-actions-panel,
+  .workspace-content,
+  .panel,
+  .assistant-shell,
+  .composer-shell,
+  .fullscreen-panel-shell,
+  .record-drawer-panel,
+  .mobile-nav-drawer,
+  .care-insight-card,
+  .workspace-person-card--hero,
+  .summary-drawer,
+  .assistant-side-card,
+  .composer-side-card,
+  .selector-card,
+  .entity-row,
+  .record-row,
+  .record-card,
+  .timeline-item,
+  .insight-card,
+  .priority-item {
+    background:
+      linear-gradient(145deg, rgba(15,31,34,0.88), rgba(7,18,17,0.72)) !important;
+    border-color: rgba(255,255,255,0.1) !important;
+  }
+
+  .safe-start-hero-copy h1,
+  #pageTitle,
+  .safe-drawer-trigger strong,
+  .attention-chip strong,
+  .care-insight-card strong {
+    color: #f8faf7 !important;
+  }
+}
