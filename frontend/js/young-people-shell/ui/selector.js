@@ -539,9 +539,11 @@ function bindSafeStartControls() {
       }
 
       await openYoungPerson(childId, {
-        forceInitialSectionLoad: true,
         initialSection: "workspace",
+        forceInitialSectionLoad: true,
+        skipInitialSectionLoad: false,
       });
+
       return;
     }
 
@@ -552,6 +554,7 @@ function bindSafeStartControls() {
       if (s.youngPersonSelect) s.youngPersonSelect.value = "";
 
       state.homeId = null;
+      state.youngPersonId = null;
       clearSelectedYoungPerson();
       setYoungPersonIdInUrl(null);
       syncAppDataset(null);
@@ -609,6 +612,7 @@ export async function loadYoungPersonSelector() {
 }
 
 export function goBackToSelector() {
+  state.youngPersonId = null;
   clearSelectedYoungPerson();
   setYoungPersonIdInUrl(null);
   syncAppDataset(null);
@@ -657,10 +661,12 @@ export async function openYoungPerson(id, options = {}) {
 
   state.youngPersonId = youngPersonId;
 
+  const initialSection = options.initialSection || "workspace";
+
   setCurrentScope("child", { resetSection: false });
-  setCurrentSection("workspace");
-  state.activeSection = "workspace";
-  state.currentView = "workspace";
+  setCurrentSection(initialSection);
+  state.activeSection = initialSection;
+  state.currentView = initialSection;
 
   syncAppDataset(state.selectedYoungPerson || { id: youngPersonId });
   showWorkspaceScreen();
@@ -675,8 +681,8 @@ export async function openYoungPerson(id, options = {}) {
     const navModule = await import("./nav.js");
 
     if (typeof navModule.loadSection === "function") {
-      await navModule.loadSection(options.initialSection || "workspace", {
-        force: true,
+      await navModule.loadSection(initialSection, {
+        force: Boolean(options.forceInitialSectionLoad ?? true),
       });
     }
   }
