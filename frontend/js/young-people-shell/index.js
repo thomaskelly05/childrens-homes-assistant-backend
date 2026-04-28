@@ -43,6 +43,7 @@ let globalRefreshShortcutsBound = false;
 let changePersonFallbackBound = false;
 let restrictedSectionGuardBound = false;
 let openCareHubFallbackBound = false;
+let workspaceNavigationFallbackBound = false;
 
 const ADMIN_LIKE_ROLES = new Set([
   "administrator",
@@ -826,6 +827,88 @@ function bindOpenCareHubFallback() {
   );
 }
 
+async function loadWorkspaceTarget(target, options = {}) {
+  const section = String(target || "").trim();
+  if (!section) return;
+
+  if ((state.currentScope || "child") === "child" && !state.youngPersonId) {
+    showError("Choose a child or young person first.");
+    showSelector();
+    return;
+  }
+
+  setCurrentSection(section);
+  state.activeSection = section;
+  state.currentView = section;
+
+  syncDomDatasetFromState();
+  showWorkspace();
+
+  try {
+    await loadSection(section, {
+      force: true,
+      ...options,
+    });
+
+    refreshShellChrome();
+    refreshAssistantUi();
+    updateAssistantContext();
+    renderAssistantMessages();
+    renderAssistantInsights();
+    refreshWorkspaceSummary();
+  } catch (error) {
+    console.error(`[index] failed loading workspace section "${section}"`, error);
+    showError(error?.message || `Failed to load ${section}.`);
+  }
+}
+
+function normaliseViewToSection(view) {
+  const value = String(view || "").trim().toLowerCase();
+
+  const map = {
+    home: "workspace",
+    timeline: "timeline",
+    profile: "profile",
+    risk: "risk",
+    manager: "manager",
+    health: "health",
+    education: "education",
+    family: "family",
+    appointments: "appointments",
+    compliance: "compliance",
+    evidence: "evidence",
+  };
+
+  return map[value] || value;
+}
+
+function bindWorkspaceNavigationFallback() {
+  if (workspaceNavigationFallbackBound) return;
+  workspaceNavigationFallbackBound = true;
+
+  document.addEventListener(
+    "click",
+    async (event) => {
+      const viewButton = event.target.closest("[data-view]");
+      const sectionButton = event.target.closest("[data-nav-section]");
+
+      if (!viewButton && !sectionButton) return;
+
+      const rawTarget =
+        viewButton?.dataset.view || sectionButton?.dataset.navSection || "";
+      const target = viewButton ? normaliseViewToSection(rawTarget) : rawTarget;
+
+      if (!target) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      await loadWorkspaceTarget(target);
+    },
+    false
+  );
+}
+
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
@@ -870,6 +953,7 @@ async function bootstrap() {
     bindGlobalRefreshShortcuts();
     bindRestrictedSectionGuard();
     bindOpenCareHubFallback();
+    bindWorkspaceNavigationFallback();
 
     await initialiseShellNavigation();
 
