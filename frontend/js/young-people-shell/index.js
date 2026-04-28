@@ -11,9 +11,7 @@ import {
   initialiseStateGuards,
 } from "./state.js";
 import { els, refreshEls } from "./dom.js";
-import {
-  setYoungPersonIdInUrl,
-} from "./core/utils.js";
+import { setYoungPersonIdInUrl } from "./core/utils.js";
 import {
   initialiseShellNavigation,
   showError,
@@ -78,17 +76,31 @@ const STAFF_LIKE_ROLES = new Set([
 ]);
 
 function showWorkspace() {
+  refreshEls();
+
   els.selectorPanel?.classList.add("hidden");
   els.selectorScreen?.classList.add("hidden");
   els.workspacePanel?.classList.remove("hidden");
   els.workspaceScreen?.classList.remove("hidden");
+
+  els.selectorPanel?.setAttribute("aria-hidden", "true");
+  els.selectorScreen?.setAttribute("aria-hidden", "true");
+  els.workspacePanel?.setAttribute("aria-hidden", "false");
+  els.workspaceScreen?.setAttribute("aria-hidden", "false");
 }
 
 function showSelector() {
+  refreshEls();
+
   els.workspacePanel?.classList.add("hidden");
   els.workspaceScreen?.classList.add("hidden");
   els.selectorPanel?.classList.remove("hidden");
   els.selectorScreen?.classList.remove("hidden");
+
+  els.workspacePanel?.setAttribute("aria-hidden", "true");
+  els.workspaceScreen?.setAttribute("aria-hidden", "true");
+  els.selectorPanel?.setAttribute("aria-hidden", "false");
+  els.selectorScreen?.setAttribute("aria-hidden", "false");
 }
 
 function normaliseRole(role) {
@@ -125,6 +137,7 @@ function readSessionUser() {
     const raw =
       sessionStorage.getItem("current_user") ||
       localStorage.getItem("current_user");
+
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -150,7 +163,7 @@ function parseAllowedHomeIds(rawValue) {
   try {
     return toIdArray(JSON.parse(rawValue));
   } catch {
-    return rawValue
+    return String(rawValue)
       .split(",")
       .map((item) => Number(item.trim()))
       .filter((item) => Number.isFinite(item) && item > 0);
@@ -288,6 +301,8 @@ async function hydrateRuntimeContextFromAuthCheck() {
 }
 
 function syncDomDatasetFromState() {
+  refreshEls();
+
   if (!els.app) return;
 
   els.app.dataset.userRole = normaliseRole(state.userRole || "staff");
@@ -300,6 +315,12 @@ function syncDomDatasetFromState() {
   els.app.dataset.allowedHomeIds = JSON.stringify(
     Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : []
   );
+  els.app.dataset.assistantScopeType =
+    state.currentScope === "home"
+      ? "home"
+      : state.currentScope === "quality" || state.currentScope === "ofsted"
+        ? "quality"
+        : "child";
 }
 
 function getCurrentRole() {
@@ -458,6 +479,15 @@ function ensureInitialSectionForScope() {
     : expectedDefault;
 
   setCurrentSection(safeSection);
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
+}
+
+function forceWorkspaceSection() {
+  setCurrentScope("child", { resetSection: false });
+  setCurrentSection("workspace");
+  state.activeSection = "workspace";
+  state.currentView = "workspace";
 }
 
 function syncScopeButtons() {
@@ -537,7 +567,7 @@ async function setScope(scope) {
 
   if (scope === "child") {
     if (state.youngPersonId) {
-      await loadSection(state.currentSection);
+      await loadSection(state.currentSection || "workspace", { force: true });
     } else {
       showSelector();
       await loadYoungPersonSelector();
@@ -547,7 +577,7 @@ async function setScope(scope) {
     return;
   }
 
-  await loadSection(state.currentSection);
+  await loadSection(state.currentSection, { force: true });
   refreshWorkspaceSummary();
 }
 
@@ -579,18 +609,31 @@ async function openYoungPersonSafely(id, options = {}) {
   if (!safeId) return false;
 
   state.youngPersonId = safeId;
+  forceWorkspaceSection();
   setYoungPersonIdInUrl(safeId);
   syncDomDatasetFromState();
 
   try {
     await openYoungPerson(safeId, {
-      skipInitialSectionLoad: true,
+      initialSection: "workspace",
+      forceInitialSectionLoad: true,
+      skipInitialSectionLoad: false,
       ...options,
     });
 
     state.youngPersonId = safeId;
+    forceWorkspaceSection();
+
     syncDomDatasetFromState();
     showWorkspace();
+
+    await loadSection("workspace", { force: true });
+
+    refreshShellChrome();
+    refreshAssistantUi();
+    updateAssistantContext();
+    renderAssistantMessages();
+    renderAssistantInsights();
     refreshWorkspaceSummary();
 
     return true;
@@ -610,6 +653,8 @@ async function openYoungPersonSafely(id, options = {}) {
 async function bootstrapSelectorDashboard() {
   setCurrentScope("child", { resetSection: true });
   setCurrentSection(getDefaultSectionForScope("child"));
+  state.activeSection = getDefaultSectionForScope("child");
+  state.currentView = getDefaultSectionForScope("child");
 
   clearSelectedYoungPerson();
   state.youngPersonId = null;
@@ -732,6 +777,37 @@ function bindGlobalRefreshShortcuts() {
   });
 }
 
+function bindOpenCareHubFallback() {
+  document.addEventListener(
+    "click",
+    async (event) => {
+      const button = event.target.closest("#openCareHubBtn");
+      if (!button) return;
+
+      const select = document.getElementById("youngPersonSelect");
+      const selectedId =
+        select?.value ||
+        state.youngPersonId ||
+        document.getElementById("app")?.dataset.youngPersonId ||
+        null;
+
+      if (!selectedId) return;
+
+      window.setTimeout(async () => {
+        const text = document.getElementById("viewContent")?.innerText || "";
+
+        if (!/Opening Care Hub/i.test(text)) return;
+
+        await openYoungPersonSafely(selectedId, {
+          initialSection: "workspace",
+          forceInitialSectionLoad: true,
+        });
+      }, 900);
+    },
+    true
+  );
+}
+
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
@@ -746,6 +822,9 @@ async function bootstrap() {
 
     setCurrentScope("child", { resetSection: true });
     setCurrentSection(getDefaultSectionForScope("child"));
+    state.activeSection = getDefaultSectionForScope("child");
+    state.currentView = getDefaultSectionForScope("child");
+
     clearSelectedYoungPerson();
     state.youngPersonId = null;
     setYoungPersonIdInUrl(null);
@@ -774,6 +853,7 @@ async function bootstrap() {
     bindGlobalSearchMirrors();
     bindGlobalRefreshShortcuts();
     bindRestrictedSectionGuard();
+    bindOpenCareHubFallback();
 
     await bootstrapSelectorDashboard();
     await initialiseShellNavigation();
