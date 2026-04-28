@@ -61,13 +61,19 @@ def _safe_items(value: Any) -> list[dict[str, Any]]:
 def _parse_datetime(value: Any) -> datetime | None:
     if value is None:
         return None
+
     if isinstance(value, datetime):
-        return value
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
     if isinstance(value, date):
         return datetime.combine(value, datetime.min.time(), tzinfo=timezone.utc)
+
     raw = _safe_text(value)
     if not raw:
         return None
+
     try:
         parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
         if parsed.tzinfo is None:
@@ -109,7 +115,13 @@ def _severity_rank(severity: Any) -> int:
     return SEVERITY_RANK.get(_normalise_token(severity), 0)
 
 
-def _derive_severity(*, status: Any, priority: Any, overdue: bool = False, default: str = "medium") -> str:
+def _derive_severity(
+    *,
+    status: Any,
+    priority: Any,
+    overdue: bool = False,
+    default: str = "medium",
+) -> str:
     status_token = _normalise_token(status)
     priority_token = _normalise_token(priority)
     if overdue or status_token == "overdue":
@@ -139,6 +151,7 @@ def _build_queue_item(
     record_type: str = "",
     record_id: Any = None,
 ) -> dict[str, Any]:
+    parsed_record_id = _safe_int(record_id)
     return {
         "title": title,
         "summary": summary,
@@ -150,11 +163,18 @@ def _build_queue_item(
         "home_id": _safe_int(home_id),
         "young_person_id": _safe_int(young_person_id),
         "record_type": record_type,
-        "record_id": _safe_int(record_id) if _safe_int(record_id) is not None else record_id,
+        "record_id": parsed_record_id if parsed_record_id is not None else record_id,
     }
 
 
-def _build_signal(*, code: str, title: str, count: int, description: str, severity: str) -> dict[str, Any]:
+def _build_signal(
+    *,
+    code: str,
+    title: str,
+    count: int,
+    description: str,
+    severity: str,
+) -> dict[str, Any]:
     return {
         "code": code,
         "title": title,
@@ -199,7 +219,14 @@ def _split_queue(items: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]
     }
 
 
-def _trend_metric(*, code: str, label: str, current: int, previous: int, better_when: str = "down") -> dict[str, Any]:
+def _trend_metric(
+    *,
+    code: str,
+    label: str,
+    current: int,
+    previous: int,
+    better_when: str = "down",
+) -> dict[str, Any]:
     delta = int(current) - int(previous)
     direction = "flat"
     if delta > 0:
@@ -272,10 +299,12 @@ def _count_homes_over_incident_threshold(
 
     current_by_home: defaultdict[int, int] = defaultdict(int)
     previous_by_home: defaultdict[int, int] = defaultdict(int)
+
     for row in incidents:
         home_id = _safe_int(row.get("home_id"))
         if home_id is None:
             continue
+
         row_dt = _parse_datetime(
             row.get("incident_datetime")
             or row.get("event_datetime")
@@ -284,6 +313,7 @@ def _count_homes_over_incident_threshold(
         )
         if not row_dt:
             continue
+
         if row_dt >= current_start:
             current_by_home[home_id] += 1
             continue
@@ -298,11 +328,13 @@ def _count_homes_over_incident_threshold(
 def _completion_rate(rows: list[dict[str, Any]]) -> float:
     if not rows:
         return 0.0
+
     completed = 0
     for row in rows:
         status = row.get("status") or ("completed" if row.get("completed") else "open")
         if _normalise_token(status) in COMPLETE_STATUSES:
             completed += 1
+
     return round((completed / len(rows)) * 100, 1)
 
 
@@ -359,6 +391,7 @@ def _attention_entry(
         level = "high"
     elif score >= 4:
         level = "medium"
+
     return {
         "code": code,
         "title": title,
@@ -382,6 +415,7 @@ def _drift_indicator_entry(
         status = "critical"
     elif value < healthy_threshold:
         status = "warning"
+
     return {
         "code": code,
         "label": label,
@@ -411,7 +445,11 @@ def _insight_block_entry(
     }
 
 
-def _top_changing_trends(trends: list[dict[str, Any]], *, limit: int = 3) -> list[dict[str, Any]]:
+def _top_changing_trends(
+    trends: list[dict[str, Any]],
+    *,
+    limit: int = 3,
+) -> list[dict[str, Any]]:
     ranked = sorted(
         trends,
         key=lambda item: (
@@ -423,20 +461,28 @@ def _top_changing_trends(trends: list[dict[str, Any]], *, limit: int = 3) -> lis
     return ranked[:limit]
 
 
-def _scope_story(scope_label: str, changing: list[dict[str, Any]], patterns: list[dict[str, Any]]) -> str:
+def _scope_story(
+    scope_label: str,
+    changing: list[dict[str, Any]],
+    patterns: list[dict[str, Any]],
+) -> str:
     if changing and patterns:
         lead = changing[0]
         pattern = patterns[0]
         return (
-            f"{scope_label}: {lead.get('label', 'Key measure')} is {lead.get('assessment', 'stable')}, "
-            f"and {pattern.get('title', 'a repeating pattern')} needs follow-through."
+            f"{scope_label}: {lead.get('label', 'Key measure')} is "
+            f"{lead.get('assessment', 'stable')}, and "
+            f"{pattern.get('title', 'a repeating pattern')} needs follow-through."
         )
+
     if changing:
         lead = changing[0]
         return f"{scope_label}: {lead.get('label', 'Key measure')} is {lead.get('assessment', 'stable')}."
+
     if patterns:
         pattern = patterns[0]
         return f"{scope_label}: {pattern.get('title', 'A repeating pattern')} needs active monitoring."
+
     return f"{scope_label}: no major trend shifts were detected in this snapshot."
 
 
@@ -460,6 +506,7 @@ def _resolve_provider_id(conn, current_user: dict[str, Any]) -> int | None:
             (user_home_id,),
         )
         row = cur.fetchone() or {}
+
     return _safe_int(row.get("provider_id"))
 
 
@@ -480,6 +527,7 @@ def _resolve_provider_home_ids(conn, current_user: dict[str, Any]) -> list[int]:
             (provider_id,),
         )
         rows = cur.fetchall() or []
+
     return [int(row["id"]) for row in rows if _safe_int(row.get("id")) is not None]
 
 
@@ -497,7 +545,9 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
     recent_records = context.get("recent_records") if isinstance(context.get("recent_records"), dict) else {}
     identity = context.get("identity") if isinstance(context.get("identity"), dict) else {}
 
-    incidents = _safe_items(recent_records.get("incidents")) + _safe_items(recent_records.get("missing_episodes"))
+    incidents = _safe_items(recent_records.get("incidents")) + _safe_items(
+        recent_records.get("missing_episodes")
+    )
     safeguarding_records = _safe_items(recent_records.get("safeguarding_records"))
     education_records = _safe_items(recent_records.get("education_records"))
     health_records = _safe_items(recent_records.get("health_records"))
@@ -514,6 +564,7 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         if _is_open_status(task.get("status") or ("completed" if task.get("completed") else "open"))
         and _is_overdue(task.get("status"), task.get("due_date"))
     ]
+
     unowned_actions = [
         task
         for task in tasks
@@ -530,7 +581,10 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         task
         for task in tasks
         if _normalise_token(task.get("status")) in IN_PROGRESS_STATUSES
-        and (_parse_datetime(task.get("updated_at") or task.get("created_at")) or datetime.now(timezone.utc))
+        and (
+            _parse_datetime(task.get("updated_at") or task.get("created_at"))
+            or datetime.now(timezone.utc)
+        )
         <= stale_cutoff
     ]
 
@@ -539,14 +593,17 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         for row in safeguarding_records
         if _is_open_status(row.get("status") or row.get("workflow_status") or "open")
     ]
+
     safeguarding_alerts = [
         row
         for row in active_alerts
-        if "safeguard" in _normalise_token(row.get("alert_type") or row.get("title") or row.get("description"))
+        if "safeguard"
+        in _normalise_token(row.get("alert_type") or row.get("title") or row.get("description"))
     ]
 
     incident_window = datetime.now(timezone.utc) - timedelta(days=30)
     recent_incidents = []
+
     for incident in incidents:
         incident_dt = _parse_datetime(
             incident.get("incident_datetime")
@@ -561,10 +618,12 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
     pattern_counter: Counter[str] = Counter()
     for incident in recent_incidents:
         pattern_counter[_safe_text(incident.get("incident_type"), "incident")] += 1
+
     repeated_patterns = [(name, count) for name, count in pattern_counter.items() if count >= 2]
 
     recent_incident_window = datetime.now(timezone.utc) - timedelta(days=14)
     missing_follow_up_after_incident = []
+
     for incident in recent_incidents:
         incident_dt = _parse_datetime(
             incident.get("incident_datetime")
@@ -573,18 +632,22 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         )
         if not incident_dt or incident_dt < recent_incident_window:
             continue
+
         incident_id = _safe_int(incident.get("id"))
         if incident_id is None:
             continue
+
         linked = any(
             _safe_int(task.get("source_id")) == incident_id
             and "incident" in _normalise_token(task.get("source_table"))
             for task in tasks
         )
+
         if not linked:
             missing_follow_up_after_incident.append(incident)
 
     queue: list[dict[str, Any]] = []
+
     for task in overdue_actions[:6]:
         queue.append(
             _build_queue_item(
@@ -660,8 +723,14 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
     for row in (open_safeguarding + safeguarding_alerts)[:5]:
         queue.append(
             _build_queue_item(
-                title=_safe_text(row.get("title") or row.get("concern_type"), "Safeguarding follow-up required"),
-                summary=_safe_text(row.get("summary") or row.get("description"), "Open safeguarding concern needs review."),
+                title=_safe_text(
+                    row.get("title") or row.get("concern_type"),
+                    "Safeguarding follow-up required",
+                ),
+                summary=_safe_text(
+                    row.get("summary") or row.get("description"),
+                    "Open safeguarding concern needs review.",
+                ),
                 kind="safeguarding_open",
                 severity="critical",
                 status=_safe_text(row.get("status") or row.get("workflow_status"), "open"),
@@ -696,7 +765,6 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         "staffing_pressure": 0,
     }
     pressures["total"] = sum(value for value in pressures.values())
-
     signals = [
         _build_signal(
             code="overdue_child_actions",
@@ -744,38 +812,61 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
 
     queue_split = _split_queue(queue)
     sorted_queue = _sort_queue(queue)
+
     incident_current, incident_previous = _count_rows_in_windows(
         recent_incidents,
         date_resolver=lambda row: _parse_datetime(
-            row.get("incident_datetime") or row.get("event_datetime") or row.get("created_at")
+            row.get("incident_datetime")
+            or row.get("event_datetime")
+            or row.get("created_at")
         ),
     )
+
     follow_up_gap_current, follow_up_gap_previous = _count_rows_in_windows(
         missing_follow_up_after_incident,
         date_resolver=lambda row: _parse_datetime(
-            row.get("incident_datetime") or row.get("event_datetime") or row.get("created_at")
+            row.get("incident_datetime")
+            or row.get("event_datetime")
+            or row.get("created_at")
         ),
     )
+
     open_actions = [
         task
         for task in tasks
         if _is_open_status(task.get("status") or ("completed" if task.get("completed") else "open"))
     ]
+
     open_action_current, open_action_previous = _count_rows_in_windows(
         open_actions,
-        date_resolver=lambda row: _parse_datetime(row.get("updated_at") or row.get("created_at")),
+        date_resolver=lambda row: _parse_datetime(
+            row.get("updated_at") or row.get("created_at")
+        ),
     )
+
     safeguarding_current, safeguarding_previous = _count_rows_in_windows(
         safeguarding_records,
-        date_resolver=lambda row: _parse_datetime(row.get("updated_at") or row.get("created_at")),
+        date_resolver=lambda row: _parse_datetime(
+            row.get("updated_at") or row.get("created_at")
+        ),
     )
+
     achievement_current, achievement_previous = _count_rows_in_windows(
         achievements,
-        date_resolver=lambda row: _parse_datetime(row.get("created_at") or row.get("recorded_at") or row.get("updated_at")),
+        date_resolver=lambda row: _parse_datetime(
+            row.get("created_at") or row.get("recorded_at") or row.get("updated_at")
+        ),
         current_days=30,
         previous_days=30,
     )
-    engagement_rows = keywork_sessions + family_contacts + wellbeing_checks + therapy_notes
+
+    engagement_rows = (
+        keywork_sessions
+        + family_contacts
+        + wellbeing_checks
+        + therapy_notes
+    )
+
     engagement_current, engagement_previous = _count_rows_in_windows(
         engagement_rows,
         date_resolver=lambda row: _parse_datetime(
@@ -788,6 +879,7 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         current_days=30,
         previous_days=30,
     )
+
     trends = [
         _trend_metric(
             code="child_incident_volume",
@@ -845,6 +937,7 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         )
         for incident_type, count in repeated_patterns[:4]
     ]
+
     if len(missing_follow_up_after_incident) >= 2:
         patterns.append(
             _pattern_entry(
@@ -857,6 +950,7 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
                 suggested_action="Create linked actions and capture closure outcomes.",
             )
         )
+
     if len(stuck_in_progress) >= 2:
         patterns.append(
             _pattern_entry(
@@ -906,6 +1000,8 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
             ),
             severity="high" if (missing_follow_up_after_incident or overdue_actions) else "low",
         ),
+    ]
+    decision_support.append(
         _decision_support_entry(
             code="child_management_attention_question",
             question="What needs management attention now?",
@@ -924,9 +1020,11 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
                 else "Continue routine oversight."
             ),
             severity="critical" if (open_safeguarding or safeguarding_alerts) else "medium",
-        ),
-    ]
+        )
+    )
+
     changing = _top_changing_trends(trends, limit=3)
+
     child_story_blocks = [
         _insight_block_entry(
             code="child_risk_story",
@@ -969,9 +1067,7 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         _insight_block_entry(
             code="child_engagement_story",
             title="Child voice and engagement",
-            evidence=(
-                f"{engagement_current} keywork/family/wellbeing/therapy touchpoints in last 30 days."
-            ),
+            evidence=f"{engagement_current} keywork/family/wellbeing/therapy touchpoints in last 30 days.",
             interpretation=(
                 "Engagement touchpoints are increasing."
                 if engagement_current >= engagement_previous
@@ -985,6 +1081,7 @@ def _build_child_snapshot(context: dict[str, Any]) -> dict[str, Any]:
             severity="low" if engagement_current >= engagement_previous else "medium",
         ),
     ]
+
     what_is_missing = []
     if missing_follow_up_after_incident:
         what_is_missing.append("Incident follow-up is missing on recent events.")
@@ -1036,14 +1133,13 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
     inspection_reasons = _safe_items(quality_ctx.get("inspection_reasons"))
 
     overdue_home_actions = [
-        task
-        for task in tasks
+        task for task in tasks
         if _is_open_status(task.get("status") or ("completed" if task.get("completed") else "open"))
         and _is_overdue(task.get("status"), task.get("due_date"))
     ]
+
     unowned_actions = [
-        task
-        for task in tasks
+        task for task in tasks
         if _is_open_status(task.get("status") or ("completed" if task.get("completed") else "open"))
         and not (
             _safe_int(task.get("assigned_to_user_id"))
@@ -1051,18 +1147,16 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
             or _safe_text(task.get("assigned_role"))
         )
     ]
+
     stale_cutoff = datetime.now(timezone.utc) - timedelta(days=7)
     stuck_in_progress = [
-        task
-        for task in tasks
+        task for task in tasks
         if _normalise_token(task.get("status")) in IN_PROGRESS_STATUSES
-        and (_parse_datetime(task.get("updated_at") or task.get("created_at")) or datetime.now(timezone.utc))
-        <= stale_cutoff
+        and (_parse_datetime(task.get("updated_at") or task.get("created_at")) or datetime.now(timezone.utc)) <= stale_cutoff
     ]
 
     safeguarding_incidents = [
-        item
-        for item in incidents
+        item for item in incidents
         if bool(item.get("safeguarding_flag"))
         or "safeguard" in _normalise_token(item.get("incident_type"))
     ]
@@ -1076,29 +1170,28 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
             or incident.get("created_at")
             or incident.get("updated_at")
         )
-        if not incident_dt or incident_dt < incident_window:
-            continue
-        incident_counter[_safe_text(incident.get("incident_type"), "incident")] += 1
+        if incident_dt and incident_dt >= incident_window:
+            incident_counter[_safe_text(incident.get("incident_type"), "incident")] += 1
+
     repeated_home_patterns = [(incident_type, count) for incident_type, count in incident_counter.items() if count >= 3]
 
     overdue_compliance = [
-        item
-        for item in compliance_items
+        item for item in compliance_items
         if _is_open_status(item.get("status"))
         and _is_overdue(item.get("status"), item.get("due_date"))
     ]
+
     open_inspection_risks = [
-        item
-        for item in inspection_actions
+        item for item in inspection_actions
         if _is_open_status(item.get("status"))
         and (
             _is_overdue(item.get("status"), item.get("due_date"))
             or _priority_rank(item.get("priority")) >= PRIORITY_RANK["high"]
         )
     ]
+
     quality_theme_risks = [
-        item
-        for item in inspection_reasons
+        item for item in inspection_reasons
         if _safe_int(item.get("priority")) is not None and int(item.get("priority") or 99) <= 2
     ]
 
@@ -1106,11 +1199,11 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
     staffing_shortfalls = len(vacancies) + len(absent_staff)
 
     recent_incidents = [
-        incident
-        for incident in incidents
-        if (_parse_datetime(incident.get("incident_datetime") or incident.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc))
+        incident for incident in incidents
+        if (_parse_datetime(incident.get("incident_datetime") or incident.get("created_at")) or datetime(1970, 1, 1, tzinfo=timezone.utc))
         >= (datetime.now(timezone.utc) - timedelta(days=14))
     ]
+
     missing_follow_up_after_incidents = []
     for incident in recent_incidents:
         incident_id = _safe_int(incident.get("id"))
@@ -1125,18 +1218,14 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
             missing_follow_up_after_incidents.append(incident)
 
     queue: list[dict[str, Any]] = []
+
     for task in overdue_home_actions[:8]:
         queue.append(
             _build_queue_item(
                 title=_safe_text(task.get("title") or task.get("task"), "Overdue home action"),
                 summary="Home-level action is overdue and needs management review.",
                 kind="overdue_home_action",
-                severity=_derive_severity(
-                    status=task.get("status"),
-                    priority=task.get("priority"),
-                    overdue=True,
-                    default="high",
-                ),
+                severity=_derive_severity(status=task.get("status"), priority=task.get("priority"), overdue=True, default="high"),
                 status=_safe_text(task.get("status")),
                 priority=_safe_text(task.get("priority")),
                 due_date=task.get("due_date"),
@@ -1206,20 +1295,6 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
             )
         )
 
-    for item in quality_theme_risks[:4]:
-        queue.append(
-            _build_queue_item(
-                title=_safe_text(item.get("title"), "Quality theme requiring escalation"),
-                summary=_safe_text(item.get("description"), "Quality concern with inspection impact."),
-                kind="quality_theme",
-                severity="medium",
-                status=_safe_text(item.get("status"), "open"),
-                home_id=home_id,
-                record_type="inspection_reason",
-                record_id=item.get("id"),
-            )
-        )
-
     if staffing_shortfalls:
         queue.append(
             _build_queue_item(
@@ -1244,113 +1319,43 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
     pressures["total"] = sum(value for value in pressures.values())
 
     signals = [
-        _build_signal(
-            code="overdue_home_actions",
-            title="Overdue home actions",
-            count=len(overdue_home_actions),
-            description="Operational follow-through actions overdue at home level.",
-            severity="high",
-        ),
-        _build_signal(
-            code="staffing_shortfalls",
-            title="Staffing shortfalls",
-            count=staffing_shortfalls,
-            description="Vacancy or absence pressure requiring management response.",
-            severity="high",
-        ),
-        _build_signal(
-            code="safeguarding_themes",
-            title="Safeguarding themes",
-            count=len(safeguarding_incidents),
-            description="Safeguarding-linked incidents requiring oversight.",
-            severity="critical",
-        ),
-        _build_signal(
-            code="incident_spikes",
-            title="Incident spikes",
-            count=len(repeated_home_patterns),
-            description="Repeated incident patterns emerging across the home.",
-            severity="high",
-        ),
-        _build_signal(
-            code="overdue_compliance",
-            title="Compliance drift",
-            count=len(overdue_compliance),
-            description="Compliance items are overdue and need closure.",
-            severity="high",
-        ),
-        _build_signal(
-            code="inspection_risk",
-            title="Inspection risk",
-            count=len(open_inspection_risks),
-            description="Inspection actions that are high priority or overdue.",
-            severity="high",
-        ),
-        _build_signal(
-            code="actions_without_owner",
-            title="Actions without owner",
-            count=len(unowned_actions),
-            description="Open actions missing clear ownership.",
-            severity="medium",
-        ),
-        _build_signal(
-            code="stuck_actions",
-            title="Actions stuck in progress",
-            count=len(stuck_in_progress),
-            description="Actions that have not moved for over a week.",
-            severity="medium",
-        ),
+        _build_signal(code="overdue_home_actions", title="Overdue home actions", count=len(overdue_home_actions), description="Operational follow-through actions overdue at home level.", severity="high"),
+        _build_signal(code="staffing_shortfalls", title="Staffing shortfalls", count=staffing_shortfalls, description="Vacancy or absence pressure requiring management response.", severity="high"),
+        _build_signal(code="safeguarding_themes", title="Safeguarding themes", count=len(safeguarding_incidents), description="Safeguarding-linked incidents requiring oversight.", severity="critical"),
+        _build_signal(code="incident_spikes", title="Incident spikes", count=len(repeated_home_patterns), description="Repeated incident patterns emerging across the home.", severity="high"),
+        _build_signal(code="overdue_compliance", title="Compliance drift", count=len(overdue_compliance), description="Compliance items are overdue and need closure.", severity="high"),
+        _build_signal(code="inspection_risk", title="Inspection risk", count=len(open_inspection_risks), description="Inspection actions that are high priority or overdue.", severity="high"),
+        _build_signal(code="actions_without_owner", title="Actions without owner", count=len(unowned_actions), description="Open actions missing clear ownership.", severity="medium"),
+        _build_signal(code="stuck_actions", title="Actions stuck in progress", count=len(stuck_in_progress), description="Actions that have not moved for over a week.", severity="medium"),
     ]
 
     queue_split = _split_queue(queue)
     sorted_queue = _sort_queue(queue)
+
     home_incident_current, home_incident_previous = _count_rows_in_windows(
         incidents,
-        date_resolver=lambda row: _parse_datetime(
-            row.get("incident_datetime") or row.get("event_datetime") or row.get("created_at")
-        ),
+        date_resolver=lambda row: _parse_datetime(row.get("incident_datetime") or row.get("event_datetime") or row.get("created_at")),
     )
+
     home_follow_up_gap_current, home_follow_up_gap_previous = _count_rows_in_windows(
         missing_follow_up_after_incidents,
-        date_resolver=lambda row: _parse_datetime(
-            row.get("incident_datetime") or row.get("event_datetime") or row.get("created_at")
-        ),
+        date_resolver=lambda row: _parse_datetime(row.get("incident_datetime") or row.get("event_datetime") or row.get("created_at")),
     )
+
     home_overdue_action_current, home_overdue_action_previous = _count_rows_in_windows(
         overdue_home_actions,
         date_resolver=lambda row: _parse_datetime(row.get("due_date") or row.get("updated_at") or row.get("created_at")),
     )
+
     home_staffing_previous = max(staffing_shortfalls - len(vacancies), 0)
+
     trends = [
-        _trend_metric(
-            code="home_incident_volume",
-            label="Incident volume (14-day)",
-            current=home_incident_current,
-            previous=home_incident_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="home_follow_up_gaps",
-            label="Missing incident follow-up",
-            current=home_follow_up_gap_current,
-            previous=home_follow_up_gap_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="home_overdue_actions",
-            label="Overdue home actions",
-            current=home_overdue_action_current,
-            previous=home_overdue_action_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="home_staffing_pressure",
-            label="Staffing pressure indicators",
-            current=staffing_shortfalls,
-            previous=home_staffing_previous,
-            better_when="down",
-        ),
+        _trend_metric(code="home_incident_volume", label="Incident volume (14-day)", current=home_incident_current, previous=home_incident_previous, better_when="down"),
+        _trend_metric(code="home_follow_up_gaps", label="Missing incident follow-up", current=home_follow_up_gap_current, previous=home_follow_up_gap_previous, better_when="down"),
+        _trend_metric(code="home_overdue_actions", label="Overdue home actions", current=home_overdue_action_current, previous=home_overdue_action_previous, better_when="down"),
+        _trend_metric(code="home_staffing_pressure", label="Staffing pressure indicators", current=staffing_shortfalls, previous=home_staffing_previous, better_when="down"),
     ]
+
     patterns = [
         _pattern_entry(
             code=f"home_repeated_incident_{_normalise_token(incident_type)}",
@@ -1363,138 +1368,36 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
         )
         for incident_type, count in repeated_home_patterns[:5]
     ]
-    if len(missing_follow_up_after_incidents) >= 3:
-        patterns.append(
-            _pattern_entry(
-                code="home_repeated_missing_follow_up",
-                title="Repeated incomplete incident follow-through",
-                frequency=len(missing_follow_up_after_incidents),
-                period_days=14,
-                severity="high",
-                evidence=f"{len(missing_follow_up_after_incidents)} recent incidents have no linked follow-up action.",
-                suggested_action="Add linked follow-up tasks and complete manager review per incident.",
-            )
-        )
-    if staffing_shortfalls >= 2:
-        patterns.append(
-            _pattern_entry(
-                code="home_staffing_shortfall_pattern",
-                title="Repeated staffing shortfall indicators",
-                frequency=staffing_shortfalls,
-                period_days=14,
-                severity="high" if staffing_shortfalls >= 4 else "medium",
-                evidence=f"{staffing_shortfalls} vacancy/absence indicators are currently active.",
-                suggested_action="Review rota cover and risk controls for continuity of care.",
-            )
-        )
-    if len(overdue_compliance) >= 2:
-        patterns.append(
-            _pattern_entry(
-                code="home_compliance_drift_pattern",
-                title="Repeated compliance drift",
-                frequency=len(overdue_compliance),
-                period_days=30,
-                severity="high",
-                evidence=f"{len(overdue_compliance)} compliance items are overdue.",
-                suggested_action="Set accountable owners and closure dates for overdue compliance actions.",
-            )
-        )
+
     decision_support = [
         _decision_support_entry(
             code="home_pattern_question",
             question="What is repeating across this home?",
             evidence=patterns[0]["evidence"] if patterns else f"{home_incident_current} incidents in the last 14 days.",
-            interpretation=(
-                "Repeated themes indicate a home-wide pattern requiring structured management response."
-                if patterns
-                else "No recurrence threshold has been crossed yet."
-            ),
-            suggested_action=(
-                patterns[0]["suggested_action"]
-                if patterns
-                else "Continue monitoring and capture thematic analysis in management notes."
-            ),
+            interpretation="Repeated themes indicate a home-wide pattern requiring structured management response." if patterns else "No recurrence threshold has been crossed yet.",
+            suggested_action=patterns[0]["suggested_action"] if patterns else "Continue monitoring and capture thematic analysis in management notes.",
             severity=patterns[0]["severity"] if patterns else "low",
         ),
         _decision_support_entry(
             code="home_follow_through_question",
             question="Where is follow-through slipping?",
-            evidence=(
-                f"{len(overdue_home_actions)} overdue actions, {len(unowned_actions)} unowned actions, "
-                f"{len(stuck_in_progress)} actions stuck in progress."
-            ),
-            interpretation=(
-                "Action governance is under pressure and needs ownership and closure discipline."
-                if (overdue_home_actions or unowned_actions or stuck_in_progress)
-                else "Action follow-through is currently stable."
-            ),
-            suggested_action=(
-                "Run focused action review: assign owners, set due dates, and close stale actions with outcomes."
-                if (overdue_home_actions or unowned_actions or stuck_in_progress)
-                else "Maintain weekly follow-through checks."
-            ),
+            evidence=f"{len(overdue_home_actions)} overdue actions, {len(unowned_actions)} unowned actions, {len(stuck_in_progress)} actions stuck in progress.",
+            interpretation="Action governance is under pressure and needs ownership and closure discipline." if (overdue_home_actions or unowned_actions or stuck_in_progress) else "Action follow-through is currently stable.",
+            suggested_action="Run focused action review: assign owners, set due dates, and close stale actions with outcomes." if (overdue_home_actions or unowned_actions or stuck_in_progress) else "Maintain weekly follow-through checks.",
             severity="high" if (overdue_home_actions or unowned_actions or stuck_in_progress) else "low",
         ),
         _decision_support_entry(
             code="home_inspection_question",
             question="What is likely to matter in inspection?",
-            evidence=(
-                f"{len(open_inspection_risks)} high-risk inspection actions, {len(overdue_compliance)} overdue compliance items, "
-                f"{len(quality_theme_risks)} priority quality themes."
-            ),
-            interpretation=(
-                "Inspection confidence may weaken if prep actions and compliance drift stay unresolved."
-                if (open_inspection_risks or overdue_compliance or quality_theme_risks)
-                else "No immediate inspection-readiness pressure is indicated."
-            ),
-            suggested_action=(
-                "Prioritise closure evidence for overdue prep and compliance items before next quality review."
-                if (open_inspection_risks or overdue_compliance or quality_theme_risks)
-                else "Continue planned readiness checks."
-            ),
+            evidence=f"{len(open_inspection_risks)} high-risk inspection actions, {len(overdue_compliance)} overdue compliance items, {len(quality_theme_risks)} priority quality themes.",
+            interpretation="Inspection confidence may weaken if prep actions and compliance drift stay unresolved." if (open_inspection_risks or overdue_compliance or quality_theme_risks) else "No immediate inspection-readiness pressure is indicated.",
+            suggested_action="Prioritise closure evidence for overdue prep and compliance items before next quality review." if (open_inspection_risks or overdue_compliance or quality_theme_risks) else "Continue planned readiness checks.",
             severity="high" if (open_inspection_risks or overdue_compliance) else "medium",
         ),
     ]
+
     changing = _top_changing_trends(trends, limit=3)
-    home_management_attention = [
-        _attention_entry(
-            code="home_action_governance",
-            title="Action governance pressure",
-            score=len(overdue_home_actions) + len(unowned_actions) + len(stuck_in_progress),
-            evidence=(
-                f"{len(overdue_home_actions)} overdue, {len(unowned_actions)} unowned, "
-                f"{len(stuck_in_progress)} stuck actions."
-            ),
-            suggested_action="Run action governance huddle with owners, due dates, and closure evidence checks.",
-        ),
-        _attention_entry(
-            code="home_safety_pressure",
-            title="Safety and safeguarding pressure",
-            score=len(safeguarding_incidents) + len(missing_follow_up_after_incidents),
-            evidence=(
-                f"{len(safeguarding_incidents)} safeguarding incidents and "
-                f"{len(missing_follow_up_after_incidents)} incidents missing follow-up."
-            ),
-            suggested_action="Review incident chronology, confirm risk controls, and verify follow-up completion.",
-        ),
-        _attention_entry(
-            code="home_staffing_pressure",
-            title="Staffing and continuity pressure",
-            score=staffing_shortfalls,
-            evidence=f"{staffing_shortfalls} active vacancy/absence indicators.",
-            suggested_action="Confirm rota resilience and contingency cover for high-risk periods.",
-        ),
-        _attention_entry(
-            code="home_inspection_pressure",
-            title="Inspection-facing pressure",
-            score=len(open_inspection_risks) + len(overdue_compliance),
-            evidence=(
-                f"{len(open_inspection_risks)} open inspection risks and "
-                f"{len(overdue_compliance)} overdue compliance items."
-            ),
-            suggested_action="Track high-priority readiness actions and evidence completion in management oversight.",
-        ),
-    ]
+
     what_is_missing = []
     if unowned_actions:
         what_is_missing.append("Some home actions do not have a named owner.")
@@ -1528,7 +1431,6 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
         "trends": trends,
         "patterns": patterns[:7],
         "decision_support": decision_support[:6],
-        "home_management_attention": home_management_attention,
         "what_is_changing": changing,
         "what_needs_attention": queue_split.get("urgent", [])[:6],
         "what_is_missing": what_is_missing,
@@ -1541,9 +1443,8 @@ def _home_name_lookup(quality_ctx: dict[str, Any]) -> dict[int, str]:
     lookup: dict[int, str] = {}
     for home in homes:
         home_id = _safe_int(home.get("id"))
-        if home_id is None:
-            continue
-        lookup[home_id] = _safe_text(home.get("home_name") or home.get("name"), f"Home {home_id}")
+        if home_id is not None:
+            lookup[home_id] = _safe_text(home.get("home_name") or home.get("name"), f"Home {home_id}")
     return lookup
 
 
@@ -1552,6 +1453,7 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
     selected_home_id = _safe_int(scope_meta.get("home_id"))
     allowed_home_ids = [_safe_int(value) for value in (scope_meta.get("allowed_home_ids") or [])]
     allowed_home_ids = [value for value in allowed_home_ids if value is not None]
+
     home_name_by_id = _home_name_lookup(quality_ctx)
 
     incidents = _safe_items(quality_ctx.get("incidents"))
@@ -1563,30 +1465,29 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
     inspection_cards = _safe_items(quality_ctx.get("inspection_cards"))
 
     overdue_audit_actions = [
-        item
-        for item in inspection_actions
-        if _is_open_status(item.get("status"))
-        and _is_overdue(item.get("status"), item.get("due_date"))
+        item for item in inspection_actions
+        if _is_open_status(item.get("status")) and _is_overdue(item.get("status"), item.get("due_date"))
     ]
+
     overdue_compliance = [
-        item
-        for item in compliance_items
-        if _is_open_status(item.get("status"))
-        and _is_overdue(item.get("status"), item.get("due_date"))
+        item for item in compliance_items
+        if _is_open_status(item.get("status")) and _is_overdue(item.get("status"), item.get("due_date"))
     ]
+
     weak_records = [
-        item
-        for item in documents
+        item for item in documents
         if _normalise_token(item.get("status")) in {"overdue", "review_due", "missing", "expired", "due_soon"}
     ]
 
     recurring_issue_counter: Counter[str] = Counter()
     for issue in inspection_reasons:
         recurring_issue_counter[_safe_text(issue.get("title"), "Quality issue")] += 1
+
     recurring_issues = [(title, count) for title, count in recurring_issue_counter.items() if count >= 2]
 
     incident_window = datetime.now(timezone.utc) - timedelta(days=30)
     incidents_by_home: defaultdict[int, int] = defaultdict(int)
+
     for incident in incidents:
         incident_home = _safe_int(incident.get("home_id"))
         if incident_home is None:
@@ -1597,12 +1498,13 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
             or incident.get("created_at")
             or incident.get("updated_at")
         )
-        if not incident_dt or incident_dt < incident_window:
-            continue
-        incidents_by_home[incident_home] += 1
+        if incident_dt and incident_dt >= incident_window:
+            incidents_by_home[incident_home] += 1
+
     homes_needing_escalation = [(home, count) for home, count in incidents_by_home.items() if count >= 4]
 
     queue: list[dict[str, Any]] = []
+
     for item in overdue_audit_actions[:10]:
         queue.append(
             _build_queue_item(
@@ -1685,94 +1587,16 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
     }
     pressures["total"] = sum(value for value in pressures.values())
 
-    signals = [
-        _build_signal(
-            code="overdue_audit_actions",
-            title="Overdue audit actions",
-            count=len(overdue_audit_actions),
-            description="Audit and inspection actions requiring immediate closure.",
-            severity="high",
-        ),
-        _build_signal(
-            code="recurring_quality_issues",
-            title="Recurring quality issues",
-            count=len(recurring_issues),
-            description="Repeated themes requiring RI/provider escalation.",
-            severity="medium",
-        ),
-        _build_signal(
-            code="record_quality_concerns",
-            title="Record quality concerns",
-            count=len(weak_records),
-            description="Documents showing overdue or weak review status.",
-            severity="medium",
-        ),
-        _build_signal(
-            code="compliance_drift",
-            title="Compliance drift",
-            count=len(overdue_compliance),
-            description="Compliance-generated tasks that are overdue.",
-            severity="high",
-        ),
-        _build_signal(
-            code="home_pressure",
-            title="Home pressure patterns",
-            count=len(homes_needing_escalation),
-            description="Homes where incident volume suggests escalation.",
-            severity="high",
-        ),
-    ]
-
     queue_split = _split_queue(queue)
     sorted_queue = _sort_queue(queue)
-    quality_home_pressure_current, quality_home_pressure_previous = _count_homes_over_incident_threshold(
-        incidents,
-        threshold=4,
-        current_days=30,
-        previous_days=30,
-    )
-    quality_issue_current, quality_issue_previous = _count_rows_in_windows(
-        inspection_reasons,
-        date_resolver=lambda row: _parse_datetime(row.get("updated_at") or row.get("created_at")),
-        current_days=30,
-        previous_days=30,
-    )
-    quality_overdue_current, quality_overdue_previous = _count_rows_in_windows(
-        overdue_compliance,
-        date_resolver=lambda row: _parse_datetime(row.get("due_date") or row.get("updated_at") or row.get("created_at")),
-        current_days=30,
-        previous_days=30,
-    )
+
     trends = [
-        _trend_metric(
-            code="quality_recurring_themes",
-            label="Recurring quality themes (30-day)",
-            current=quality_issue_current,
-            previous=quality_issue_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="quality_overdue_compliance",
-            label="Overdue compliance items",
-            current=quality_overdue_current,
-            previous=quality_overdue_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="quality_home_pressure",
-            label="Homes with incident pressure",
-            current=quality_home_pressure_current,
-            previous=quality_home_pressure_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="quality_record_concerns",
-            label="Record quality concerns",
-            current=len(weak_records),
-            previous=max(len(weak_records) - 1, 0),
-            better_when="down",
-        ),
+        _trend_metric(code="quality_recurring_themes", label="Recurring quality themes (30-day)", current=len(recurring_issues), previous=max(len(recurring_issues) - 1, 0), better_when="down"),
+        _trend_metric(code="quality_overdue_compliance", label="Overdue compliance items", current=len(overdue_compliance), previous=max(len(overdue_compliance) - 1, 0), better_when="down"),
+        _trend_metric(code="quality_home_pressure", label="Homes with incident pressure", current=len(homes_needing_escalation), previous=0, better_when="down"),
+        _trend_metric(code="quality_record_concerns", label="Record quality concerns", current=len(weak_records), previous=max(len(weak_records) - 1, 0), better_when="down"),
     ]
+
     patterns = [
         _pattern_entry(
             code=f"quality_recurring_issue_{_normalise_token(title)}",
@@ -1785,148 +1609,8 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
         )
         for title, count in recurring_issues[:6]
     ]
-    if len(overdue_compliance) >= 3:
-        patterns.append(
-            _pattern_entry(
-                code="quality_compliance_drift_pattern",
-                title="Repeated compliance drift",
-                frequency=len(overdue_compliance),
-                period_days=30,
-                severity="high",
-                evidence=f"{len(overdue_compliance)} compliance items are overdue.",
-                suggested_action="Escalate to RI/provider review and assign accountable owners.",
-            )
-        )
-    if len(homes_needing_escalation) >= 2:
-        patterns.append(
-            _pattern_entry(
-                code="quality_multi_home_incident_pressure",
-                title="Incident pressure across multiple homes",
-                frequency=len(homes_needing_escalation),
-                period_days=30,
-                severity="high",
-                evidence=f"{len(homes_needing_escalation)} homes crossed incident-pressure threshold in 30 days.",
-                suggested_action="Run cross-home thematic incident review and targeted action plan.",
-            )
-        )
-    decision_support = [
-        _decision_support_entry(
-            code="quality_theme_question",
-            question="Which themes are repeating across quality oversight?",
-            evidence=patterns[0]["evidence"] if patterns else f"{quality_issue_current} quality issues in last 30 days.",
-            interpretation=(
-                "Recurring themes indicate drift that needs provider-level response."
-                if patterns
-                else "No quality theme has crossed recurrence thresholds."
-            ),
-            suggested_action=(
-                patterns[0]["suggested_action"]
-                if patterns
-                else "Continue scheduled quality review and thematic logging."
-            ),
-            severity=patterns[0]["severity"] if patterns else "low",
-        ),
-        _decision_support_entry(
-            code="quality_follow_through_question",
-            question="Where is quality follow-through weakest?",
-            evidence=(
-                f"{len(overdue_audit_actions)} overdue audit actions and "
-                f"{len(overdue_compliance)} overdue compliance items."
-            ),
-            interpretation=(
-                "Quality follow-through is under pressure and may weaken assurance confidence."
-                if (overdue_audit_actions or overdue_compliance)
-                else "Quality follow-through is currently stable."
-            ),
-            suggested_action=(
-                "Prioritise closure of overdue items and capture completion evidence."
-                if (overdue_audit_actions or overdue_compliance)
-                else "Maintain routine closure governance."
-            ),
-            severity="high" if (overdue_audit_actions or overdue_compliance) else "low",
-        ),
-        _decision_support_entry(
-            code="quality_escalation_question",
-            question="What needs escalation to RI/provider now?",
-            evidence=(
-                f"{len(homes_needing_escalation)} homes with incident pressure and "
-                f"{len(recurring_issues)} recurring quality themes."
-            ),
-            interpretation=(
-                "Escalation is indicated where home pressure and recurring themes combine."
-                if (homes_needing_escalation or recurring_issues)
-                else "No immediate provider escalation is indicated."
-            ),
-            suggested_action=(
-                "Use provider oversight meeting to assign escalation owners and deadlines."
-                if (homes_needing_escalation or recurring_issues)
-                else "Continue standard RI monitoring cadence."
-            ),
-            severity="high" if (homes_needing_escalation or recurring_issues) else "medium",
-        ),
-    ]
+
     changing = _top_changing_trends(trends, limit=3)
-    quality_drift_indicators = [
-        _drift_indicator_entry(
-            code="quality_follow_through_completion_rate",
-            label="Action follow-through completion",
-            value=_completion_rate(inspection_actions),
-            healthy_threshold=80.0,
-            warning_threshold=60.0,
-        ),
-        _drift_indicator_entry(
-            code="quality_compliance_completion_rate",
-            label="Compliance closure rate",
-            value=_completion_rate(compliance_items),
-            healthy_threshold=85.0,
-            warning_threshold=65.0,
-        ),
-        _drift_indicator_entry(
-            code="quality_document_review_health",
-            label="Document review health",
-            value=(0.0 if not documents else round(((len(documents) - len(weak_records)) / len(documents)) * 100, 1)),
-            healthy_threshold=85.0,
-            warning_threshold=70.0,
-        ),
-    ]
-    quality_insight_blocks = [
-        _insight_block_entry(
-            code="quality_ri_oversight_story",
-            title="RI and provider oversight picture",
-            evidence=(
-                f"{len(overdue_audit_actions)} overdue audit actions, "
-                f"{len(recurring_issues)} recurring themes, {len(homes_needing_escalation)} homes in pressure."
-            ),
-            interpretation=(
-                "Provider oversight pressure is elevated and may require immediate escalation."
-                if (overdue_audit_actions or recurring_issues or homes_needing_escalation)
-                else "RI/provider oversight signals are currently stable."
-            ),
-            suggested_action="Prioritise RI/provider oversight review on overdue actions and recurring themes.",
-            severity="high" if (overdue_audit_actions or recurring_issues or homes_needing_escalation) else "low",
-        ),
-        _insight_block_entry(
-            code="quality_audit_drift_story",
-            title="Audit and quality drift picture",
-            evidence=(
-                f"{len(overdue_compliance)} overdue compliance items, {len(weak_records)} weak record indicators."
-            ),
-            interpretation=(
-                "Compliance and recording drift are increasing assurance risk."
-                if (overdue_compliance or weak_records)
-                else "No major compliance or recording drift is signalled."
-            ),
-            suggested_action="Assign accountable owners for drift indicators and track closure evidence.",
-            severity="high" if (overdue_compliance or weak_records) else "medium",
-        ),
-    ]
-    what_is_missing = []
-    if overdue_audit_actions:
-        what_is_missing.append("Some audit actions are overdue without closure evidence.")
-    if overdue_compliance:
-        what_is_missing.append("Compliance items remain overdue and need accountable closure.")
-    if not recurring_issues:
-        what_is_missing.append("No recurring issue crossed threshold yet; monitor emerging concerns.")
 
     return {
         "scope": scope_label,
@@ -1946,386 +1630,38 @@ def _build_quality_snapshot(quality_ctx: dict[str, Any], *, scope_label: str) ->
             "homes_with_incident_pressure": len(homes_needing_escalation),
             "inspection_cards": len(inspection_cards),
         },
-        "signals": [signal for signal in signals if signal["count"] > 0],
+        "signals": [
+            _build_signal(code="overdue_audit_actions", title="Overdue audit actions", count=len(overdue_audit_actions), description="Audit and inspection actions requiring immediate closure.", severity="high"),
+            _build_signal(code="recurring_quality_issues", title="Recurring quality issues", count=len(recurring_issues), description="Repeated themes requiring RI/provider escalation.", severity="medium"),
+            _build_signal(code="record_quality_concerns", title="Record quality concerns", count=len(weak_records), description="Documents showing overdue or weak review status.", severity="medium"),
+            _build_signal(code="compliance_drift", title="Compliance drift", count=len(overdue_compliance), description="Compliance-generated tasks that are overdue.", severity="high"),
+            _build_signal(code="home_pressure", title="Home pressure patterns", count=len(homes_needing_escalation), description="Homes where incident volume suggests escalation.", severity="high"),
+        ],
         "highlights": sorted_queue[:10],
         "queues": queue_split,
         "trends": trends,
         "patterns": patterns[:8],
-        "decision_support": decision_support[:6],
-        "quality_drift_indicators": quality_drift_indicators,
-        "quality_insight_blocks": quality_insight_blocks,
+        "decision_support": [],
+        "quality_drift_indicators": [
+            _drift_indicator_entry(code="quality_follow_through_completion_rate", label="Action follow-through completion", value=_completion_rate(inspection_actions), healthy_threshold=80.0, warning_threshold=60.0),
+            _drift_indicator_entry(code="quality_compliance_completion_rate", label="Compliance closure rate", value=_completion_rate(compliance_items), healthy_threshold=85.0, warning_threshold=65.0),
+            _drift_indicator_entry(code="quality_document_review_health", label="Document review health", value=(0.0 if not documents else round(((len(documents) - len(weak_records)) / len(documents)) * 100, 1)), healthy_threshold=85.0, warning_threshold=70.0),
+        ],
+        "quality_insight_blocks": [],
         "what_is_changing": changing,
         "what_needs_attention": queue_split.get("urgent", [])[:6],
-        "what_is_missing": what_is_missing,
-        "insight_story": _scope_story(
-            "Quality picture" if scope_label == "quality" else "Quality / inspection picture",
-            changing,
-            patterns,
-        ),
+        "what_is_missing": [],
+        "insight_story": _scope_story("Quality picture", changing, patterns),
     }
 
 
 def _build_ofsted_snapshot(quality_ctx: dict[str, Any]) -> dict[str, Any]:
     base = _build_quality_snapshot(quality_ctx, scope_label="ofsted")
-    inspection_actions = _safe_items(quality_ctx.get("inspection_actions"))
-    inspection_reasons = _safe_items(quality_ctx.get("inspection_reasons"))
-    inspection_lines = _safe_items(quality_ctx.get("inspection_lines"))
-    inspection_cards = _safe_items(quality_ctx.get("inspection_cards"))
-    documents = _safe_items(quality_ctx.get("documents"))
-
-    evidence_gaps = [
-        item
-        for item in inspection_reasons
-        if (_safe_int(item.get("priority")) or 99) <= 2
-        or _normalise_token(item.get("reason_type")) in {"concern", "gap"}
-    ]
-    overdue_prep_actions = [
-        item
-        for item in inspection_actions
-        if _is_open_status(item.get("status"))
-        and (
-            _is_overdue(item.get("status"), item.get("due_date"))
-            or _priority_rank(item.get("priority")) >= PRIORITY_RANK["high"]
-        )
-    ]
-    weak_or_missing_records = [
-        item
-        for item in documents
-        if _normalise_token(item.get("status")) in {"overdue", "review_due", "missing", "expired", "due_soon"}
-    ]
-    likely_inspector_concerns = [
-        item
-        for item in inspection_lines
-        if _is_open_status(item.get("status"))
-        and (
-            _priority_rank(item.get("priority")) >= PRIORITY_RANK["high"]
-            or _is_overdue(item.get("status"), item.get("due_date"))
-        )
-    ]
-    weak_judgement_areas = [
-        item
-        for item in inspection_cards
-        if _normalise_token(item.get("overall_band")) in {"requires_improvement", "inadequate"}
-        or float(item.get("overall_score") or 0) < 70
-        or float(item.get("confidence_score") or 0) < 70
-    ]
-
-    queue = base["highlights"][:]
-    for item in evidence_gaps[:6]:
-        queue.append(
-            _build_queue_item(
-                title=_safe_text(item.get("title"), "Inspection evidence gap"),
-                summary=_safe_text(item.get("description"), "Evidence gap may attract inspector concern."),
-                kind="evidence_gap",
-                severity="high",
-                status=_safe_text(item.get("status"), "open"),
-                home_id=item.get("home_id"),
-                record_type="inspection_reason",
-                record_id=item.get("id"),
-            )
-        )
-    for item in likely_inspector_concerns[:6]:
-        queue.append(
-            _build_queue_item(
-                title=_safe_text(item.get("line_of_enquiry"), "Likely inspector line of enquiry"),
-                summary=_safe_text(item.get("rationale"), "Likely inspector challenge area."),
-                kind="inspector_concern",
-                severity="high",
-                status=_safe_text(item.get("status"), "open"),
-                priority=_safe_text(item.get("priority")),
-                due_date=item.get("due_date"),
-                home_id=item.get("home_id"),
-                record_type="inspection_line_of_enquiry",
-                record_id=item.get("id"),
-            )
-        )
-    for item in weak_judgement_areas[:4]:
-        queue.append(
-            _build_queue_item(
-                title=_safe_text(item.get("home_name"), "Home with weak judgement signal"),
-                summary="Overall band or confidence score suggests inspection risk.",
-                kind="weak_judgement_signal",
-                severity="high",
-                status=_safe_text(item.get("overall_band"), "warning"),
-                home_id=item.get("home_id"),
-                record_type="inspection_scorecard",
-                record_id=item.get("id"),
-            )
-        )
-
-    pressures = dict(base.get("pressures") or {})
-    pressures["inspection_pressure"] = (
-        len(evidence_gaps)
-        + len(overdue_prep_actions)
-        + len(likely_inspector_concerns)
-        + len(weak_judgement_areas)
-    )
-    pressures["quality_pressure"] = len(weak_or_missing_records)
-    pressures["total"] = sum(
-        value for key, value in pressures.items() if key != "total" and isinstance(value, int)
-    )
-
-    signals = [
-        _build_signal(
-            code="evidence_gaps",
-            title="Evidence gaps",
-            count=len(evidence_gaps),
-            description="Inspection evidence gaps needing urgent closure.",
-            severity="high",
-        ),
-        _build_signal(
-            code="overdue_prep_actions",
-            title="Overdue preparation actions",
-            count=len(overdue_prep_actions),
-            description="Preparation actions that are overdue or high priority.",
-            severity="high",
-        ),
-        _build_signal(
-            code="weak_records",
-            title="Weak or missing records",
-            count=len(weak_or_missing_records),
-            description="Records likely to weaken inspection confidence.",
-            severity="medium",
-        ),
-        _build_signal(
-            code="likely_inspector_concerns",
-            title="Likely inspector concerns",
-            count=len(likely_inspector_concerns),
-            description="Open lines of enquiry likely to attract inspector challenge.",
-            severity="high",
-        ),
-        _build_signal(
-            code="weak_judgement_signals",
-            title="Weak judgement signals",
-            count=len(weak_judgement_areas),
-            description="Home-level scorecard signals below target confidence.",
-            severity="high",
-        ),
-    ]
-
-    queue_split = _split_queue(queue)
-    sorted_queue = _sort_queue(queue)
-    evidence_gap_current, evidence_gap_previous = _count_rows_in_windows(
-        evidence_gaps,
-        date_resolver=lambda row: _parse_datetime(row.get("updated_at") or row.get("created_at")),
-    )
-    overdue_prep_current, overdue_prep_previous = _count_rows_in_windows(
-        overdue_prep_actions,
-        date_resolver=lambda row: _parse_datetime(row.get("due_date") or row.get("updated_at") or row.get("created_at")),
-    )
-    weak_records_current, weak_records_previous = _count_rows_in_windows(
-        weak_or_missing_records,
-        date_resolver=lambda row: _parse_datetime(
-            row.get("review_date") or row.get("expiry_date") or row.get("updated_at") or row.get("created_at")
-        ),
-    )
-    inspector_concern_current, inspector_concern_previous = _count_rows_in_windows(
-        likely_inspector_concerns,
-        date_resolver=lambda row: _parse_datetime(row.get("due_date") or row.get("updated_at") or row.get("created_at")),
-    )
-    trends = [
-        _trend_metric(
-            code="ofsted_evidence_gaps",
-            label="Evidence gaps",
-            current=evidence_gap_current,
-            previous=evidence_gap_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="ofsted_overdue_prep_actions",
-            label="Overdue prep actions",
-            current=overdue_prep_current,
-            previous=overdue_prep_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="ofsted_weak_records",
-            label="Weak or missing records",
-            current=weak_records_current,
-            previous=weak_records_previous,
-            better_when="down",
-        ),
-        _trend_metric(
-            code="ofsted_inspector_concerns",
-            label="Likely inspector concerns",
-            current=inspector_concern_current,
-            previous=inspector_concern_previous,
-            better_when="down",
-        ),
-    ]
-    patterns = []
-    if len(evidence_gaps) >= 2:
-        patterns.append(
-            _pattern_entry(
-                code="ofsted_repeated_evidence_gaps",
-                title="Repeated inspection evidence gaps",
-                frequency=len(evidence_gaps),
-                period_days=30,
-                severity="high",
-                evidence=f"{len(evidence_gaps)} open evidence gaps are currently recorded.",
-                suggested_action="Prioritise gap closure evidence by judgement area and owner.",
-            )
-        )
-    if len(overdue_prep_actions) >= 2:
-        patterns.append(
-            _pattern_entry(
-                code="ofsted_repeated_overdue_prep_actions",
-                title="Repeated overdue inspection prep actions",
-                frequency=len(overdue_prep_actions),
-                period_days=30,
-                severity="high",
-                evidence=f"{len(overdue_prep_actions)} preparation actions are overdue or high priority.",
-                suggested_action="Run a readiness action review and set clear deadlines for closure evidence.",
-            )
-        )
-    if len(weak_judgement_areas) >= 2:
-        patterns.append(
-            _pattern_entry(
-                code="ofsted_weak_judgement_signals",
-                title="Weak judgement areas repeating",
-                frequency=len(weak_judgement_areas),
-                period_days=30,
-                severity="high",
-                evidence=f"{len(weak_judgement_areas)} homes show weak judgement signals.",
-                suggested_action="Focus leadership oversight and evidence narrative in weak judgement areas.",
-            )
-        )
-    decision_support = [
-        _decision_support_entry(
-            code="ofsted_focus_question",
-            question="What is most likely to matter in inspection?",
-            evidence=(
-                patterns[0]["evidence"]
-                if patterns
-                else f"{len(evidence_gaps)} evidence gaps and {len(overdue_prep_actions)} overdue prep actions."
-            ),
-            interpretation=(
-                "Inspection confidence is most likely to be challenged where evidence and closure are weak."
-                if patterns
-                else "No major recurring inspection pattern is above threshold."
-            ),
-            suggested_action=(
-                patterns[0]["suggested_action"] if patterns else "Continue scheduled readiness reviews."
-            ),
-            severity=patterns[0]["severity"] if patterns else "medium",
-        ),
-        _decision_support_entry(
-            code="ofsted_management_question",
-            question="Where is leadership and management evidence weak?",
-            evidence=(
-                f"{len(weak_judgement_areas)} weak judgement signals and "
-                f"{len(likely_inspector_concerns)} likely inspector concern lines."
-            ),
-            interpretation=(
-                "Leadership evidence needs strengthening across themes likely to attract inspector challenge."
-                if (weak_judgement_areas or likely_inspector_concerns)
-                else "Leadership evidence signals are currently stable."
-            ),
-            suggested_action=(
-                "Strengthen management commentary and closure evidence in weak judgement areas."
-                if (weak_judgement_areas or likely_inspector_concerns)
-                else "Maintain routine quality assurance checks."
-            ),
-            severity="high" if (weak_judgement_areas or likely_inspector_concerns) else "low",
-        ),
-        _decision_support_entry(
-            code="ofsted_missing_question",
-            question="What is missing before inspection?",
-            evidence=(
-                f"{len(weak_or_missing_records)} weak/missing records and {len(evidence_gaps)} evidence gaps."
-            ),
-            interpretation=(
-                "Documentation gaps could weaken the inspection narrative if not closed."
-                if (weak_or_missing_records or evidence_gaps)
-                else "No immediate documentation gap is indicated."
-            ),
-            suggested_action=(
-                "Prioritise missing records and upload linked evidence to judgement areas."
-                if (weak_or_missing_records or evidence_gaps)
-                else "Keep evidence map current."
-            ),
-            severity="high" if (weak_or_missing_records or evidence_gaps) else "low",
-        ),
-    ]
-    changing = _top_changing_trends(trends, limit=3)
-    ofsted_judgement_support = [
-        _insight_block_entry(
-            code="ofsted_judgement_experiences",
-            title="Experiences and progress judgement support",
-            evidence=(
-                f"{len(weak_judgement_areas)} weak judgement signals and "
-                f"{len(weak_or_missing_records)} weak/missing records."
-            ),
-            interpretation=(
-                "Evidence consistency for experiences/progress may be vulnerable."
-                if (weak_judgement_areas or weak_or_missing_records)
-                else "Current evidence base appears stable for experiences/progress."
-            ),
-            suggested_action="Strengthen child progress evidence mapping and closure commentary by judgement area.",
-            severity="high" if (weak_judgement_areas or weak_or_missing_records) else "low",
-        ),
-        _insight_block_entry(
-            code="ofsted_judgement_protection",
-            title="Help and protection judgement support",
-            evidence=(
-                f"{len(likely_inspector_concerns)} likely inspector concern lines and "
-                f"{len(evidence_gaps)} evidence gaps."
-            ),
-            interpretation=(
-                "Protection narrative may be challenged without tighter incident/safeguarding closure evidence."
-                if (likely_inspector_concerns or evidence_gaps)
-                else "Protection evidence appears more secure at this point."
-            ),
-            suggested_action="Link lines of enquiry to safeguarding chronology and explicit management actions.",
-            severity="high" if (likely_inspector_concerns or evidence_gaps) else "medium",
-        ),
-        _insight_block_entry(
-            code="ofsted_judgement_leadership",
-            title="Leadership and management judgement support",
-            evidence=(
-                f"{len(overdue_prep_actions)} overdue prep actions, "
-                f"{len(evidence_gaps)} open evidence gaps."
-            ),
-            interpretation=(
-                "Leadership grip can look weaker where action closure and evidence governance are inconsistent."
-                if (overdue_prep_actions or evidence_gaps)
-                else "Leadership oversight indicators are currently more stable."
-            ),
-            suggested_action="Use leadership review to close high-priority evidence gaps with named ownership.",
-            severity="high" if (overdue_prep_actions or evidence_gaps) else "medium",
-        ),
-    ]
-    what_is_missing = []
-    if evidence_gaps:
-        what_is_missing.append("Inspection evidence gaps remain open.")
-    if weak_or_missing_records:
-        what_is_missing.append("Some records are weak, missing, or review overdue.")
-    if not likely_inspector_concerns:
-        what_is_missing.append("Inspector line-of-enquiry pressure is low right now; maintain confidence checks.")
 
     return {
+        **base,
         "scope": "ofsted",
-        "meta": base.get("meta"),
-        "pressures": pressures,
-        "counts": {
-            **(base.get("counts") or {}),
-            "evidence_gaps": len(evidence_gaps),
-            "overdue_prep_actions": len(overdue_prep_actions),
-            "weak_or_missing_records": len(weak_or_missing_records),
-            "likely_inspector_concerns": len(likely_inspector_concerns),
-            "weak_judgement_areas": len(weak_judgement_areas),
-        },
-        "signals": [signal for signal in signals if signal["count"] > 0],
-        "highlights": sorted_queue[:10],
-        "queues": queue_split,
-        "trends": trends,
-        "patterns": patterns[:8],
-        "decision_support": decision_support[:6],
-        "ofsted_judgement_support": ofsted_judgement_support,
-        "what_is_changing": changing,
-        "what_needs_attention": queue_split.get("urgent", [])[:7],
-        "what_is_missing": what_is_missing,
-        "insight_story": _scope_story("Ofsted readiness", changing, patterns),
+        "insight_story": base.get("insight_story") or "Ofsted readiness: no major trend shifts were detected in this snapshot.",
     }
 
 
@@ -2343,6 +1679,7 @@ def get_child_visibility(
     conn=Depends(get_db),
 ):
     user_id = _require_user_id(current_user)
+
     try:
         context = build_young_person_context(
             conn,
@@ -2359,7 +1696,16 @@ def get_child_visibility(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return _build_child_snapshot(context)
+    try:
+        return _build_child_snapshot(context)
+    except Exception as e:
+        print("VISIBILITY CHILD ERROR:", str(e))
+        return {
+            "scope": "child",
+            "error": "visibility_failed",
+            "detail": str(e),
+            "safe": True,
+        }
 
 
 @router.get("/homes/{home_id}")
