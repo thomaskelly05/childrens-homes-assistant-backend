@@ -3,8 +3,9 @@ import {
   clearSelectedYoungPerson,
   setSelectedYoungPerson,
   setCurrentScope,
+  setCurrentSection,
 } from "../state.js";
-import { els } from "../dom.js";
+import { els, refreshEls } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import {
   escapeHtml,
@@ -273,6 +274,19 @@ function findHomeById(homeId) {
   return uniqueHomes(state.youngPeople || []).find((home) => home.id === id) || null;
 }
 
+function syncAppDataset(child = null) {
+  const app = byId("app");
+  if (!app) return;
+
+  const childId = state.youngPersonId || child?.id || "";
+  const homeId = state.homeId || getHomeId(child || {}) || "";
+
+  app.dataset.scope = "child";
+  app.dataset.assistantScopeType = "child";
+  app.dataset.youngPersonId = childId ? String(childId) : "";
+  app.dataset.homeId = homeId ? String(homeId) : "";
+}
+
 function updateSafeStartReadyState() {
   const s = getSafeStartEls();
 
@@ -431,16 +445,9 @@ function setSelectedSafeStartChild(childId) {
   updateSafeStartReadyState();
 }
 
-function getResolvedSection() {
-  return (
-    state.currentSection ||
-    state.activeSection ||
-    state.currentView ||
-    "workspace"
-  );
-}
-
 function showSelectorScreen() {
+  refreshEls();
+
   els.workspacePanel?.classList.add("hidden");
   els.workspaceScreen?.classList.add("hidden");
   els.selectorPanel?.classList.remove("hidden");
@@ -453,6 +460,8 @@ function showSelectorScreen() {
 }
 
 function showWorkspaceScreen() {
+  refreshEls();
+
   els.selectorPanel?.classList.add("hidden");
   els.selectorScreen?.classList.add("hidden");
   els.workspacePanel?.classList.remove("hidden");
@@ -529,7 +538,10 @@ function bindSafeStartControls() {
         return;
       }
 
-      await openYoungPerson(childId);
+      await openYoungPerson(childId, {
+        forceInitialSectionLoad: true,
+        initialSection: "workspace",
+      });
       return;
     }
 
@@ -542,6 +554,7 @@ function bindSafeStartControls() {
       state.homeId = null;
       clearSelectedYoungPerson();
       setYoungPersonIdInUrl(null);
+      syncAppDataset(null);
 
       renderSafeStartHomes(state.youngPeople || []);
       return;
@@ -598,6 +611,7 @@ export async function loadYoungPersonSelector() {
 export function goBackToSelector() {
   clearSelectedYoungPerson();
   setYoungPersonIdInUrl(null);
+  syncAppDataset(null);
 
   showSelectorScreen();
   refreshShellChrome();
@@ -641,9 +655,16 @@ export async function openYoungPerson(id, options = {}) {
     }
   }
 
-  setCurrentScope("child", { resetSection: false });
+  state.youngPersonId = youngPersonId;
 
+  setCurrentScope("child", { resetSection: false });
+  setCurrentSection("workspace");
+  state.activeSection = "workspace";
+  state.currentView = "workspace";
+
+  syncAppDataset(state.selectedYoungPerson || { id: youngPersonId });
   showWorkspaceScreen();
+
   refreshShellChrome();
   refreshAssistantUi();
   renderAssistantControllerPanels();
@@ -654,7 +675,9 @@ export async function openYoungPerson(id, options = {}) {
     const navModule = await import("./nav.js");
 
     if (typeof navModule.loadSection === "function") {
-      await navModule.loadSection(getResolvedSection());
+      await navModule.loadSection(options.initialSection || "workspace", {
+        force: true,
+      });
     }
   }
 
