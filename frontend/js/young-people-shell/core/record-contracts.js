@@ -26,6 +26,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -44,6 +46,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
@@ -62,6 +66,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
@@ -75,11 +81,13 @@ export const RECORD_CONTRACTS = freeze({
     label: "Risk assessment",
     pluralLabel: "Risk assessments",
     table: RECORD_TABLES.risk,
-    route: "/young-people/{youngPersonId}/risk-assessments",
+    route: "/young-people/{youngPersonId}/risk",
     section: "risk",
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
@@ -98,6 +106,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -116,6 +126,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
@@ -134,6 +146,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -152,6 +166,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -170,6 +186,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -188,6 +206,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: false,
+    createable: false,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
@@ -201,11 +221,13 @@ export const RECORD_CONTRACTS = freeze({
     label: "Chronology event",
     pluralLabel: "Chronology events",
     table: RECORD_TABLES.chronology_event,
-    route: "/young-people/{youngPersonId}/chronology",
+    route: "/young-people/{youngPersonId}/timeline",
     section: "timeline",
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -224,6 +246,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: false,
     ofstedRelevant: false,
     riskRelevant: false,
@@ -242,6 +266,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: false,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -260,6 +286,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: false,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -273,11 +301,13 @@ export const RECORD_CONTRACTS = freeze({
     label: "Medication record",
     pluralLabel: "Medication records",
     table: RECORD_TABLES.medication_record,
-    route: "/young-people/{youngPersonId}/medication",
+    route: "/young-people/{youngPersonId}/medication-records",
     section: "medication",
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: false,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
@@ -296,6 +326,8 @@ export const RECORD_CONTRACTS = freeze({
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
+    listable: true,
+    createable: true,
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: false,
@@ -378,6 +410,14 @@ export function isRecordRiskRelevant(recordType) {
   return Boolean(getRecordContract(recordType)?.riskRelevant);
 }
 
+export function isRecordListable(recordType) {
+  return Boolean(getRecordContract(recordType)?.listable);
+}
+
+export function isRecordCreateable(recordType) {
+  return Boolean(getRecordContract(recordType)?.createable);
+}
+
 export function getAssistantReadableContracts() {
   return RECORD_CONTRACT_LIST.filter((contract) => contract.assistantReadable);
 }
@@ -392,6 +432,14 @@ export function getOfstedRelevantContracts() {
 
 export function getRiskRelevantContracts() {
   return RECORD_CONTRACT_LIST.filter((contract) => contract.riskRelevant);
+}
+
+export function getListableContracts() {
+  return RECORD_CONTRACT_LIST.filter((contract) => contract.listable);
+}
+
+export function getCreateableContracts() {
+  return RECORD_CONTRACT_LIST.filter((contract) => contract.createable);
 }
 
 export function getRecordTableFromContract(recordType) {
