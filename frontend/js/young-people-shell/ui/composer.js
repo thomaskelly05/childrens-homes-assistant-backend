@@ -388,27 +388,28 @@ function keyworkForm(item = {}) {
     title: "Key work session",
     intro:
       "Capture the purpose of the session, what was explored, the young person’s voice, reflection and agreed actions.",
-    required: ["session_date", "topic", "summary", "young_person_voice"],
+    required: ["session_date", "topic", "child_voice"],
     html: `
       ${journeySection(item)}
 
       ${section("Session information", "Core key work details.", [
         { name: "session_date", label: "Date", type: "date", value: today(), required: true },
         { name: "topic", label: "Topic", required: true },
+        { name: "purpose", label: "Purpose", type: "textarea", full: true },
         { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
       ], item)}
 
       ${section("Session content", "What was discussed or completed.", [
-        { name: "summary", label: "Session summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "young_person_voice", label: "Young person’s voice", type: "textarea", required: true, full: true },
-        { name: "reflection", label: "Reflection / analysis", type: "textarea", full: true },
+        { name: "summary", label: "Session summary", type: "textarea", rows: 5, full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", required: true, full: true },
+        { name: "reflective_analysis", label: "Reflection / analysis", type: "textarea", full: true },
       ], item)}
 
       ${meaningSection(item)}
 
       ${section("Outcome", "What changes or actions were agreed.", [
         { name: "actions_agreed", label: "Actions agreed", type: "textarea", full: true },
-        { name: "follow_up_required", label: "Follow-up required", type: "textarea", full: true },
+        { name: "next_session_date", label: "Next session date", type: "date" },
         { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
       ], item)}
     `,
@@ -549,7 +550,13 @@ function runWritingQualityCheck(data = {}) {
 function strictValidation(type, data = {}) {
   const issues = [];
 
-  if (!data.note_date && !data.record_date && !data.incident_datetime && !data.session_date) {
+  if (
+    !data.note_date &&
+    !data.record_date &&
+    !data.incident_datetime &&
+    !data.session_date &&
+    !data.review_date
+  ) {
     issues.push("date or context");
   }
 
@@ -571,7 +578,7 @@ function strictValidation(type, data = {}) {
     !data.what_helped &&
     !data.what_did_adults_learn &&
     !data.what_needs_to_change &&
-    !data.reflection &&
+    !data.reflective_analysis &&
     !data.concern_summary
   ) {
     issues.push("meaning / analysis");
@@ -661,7 +668,7 @@ async function maybeCreateFollowUpTask(ids, type, data = {}) {
       description,
       priority: data.severity || data.significance || "medium",
       status: "draft",
-      due_date: data.next_action_date || "",
+      due_date: data.next_action_date || data.next_session_date || "",
       young_person_id: ids.youngPersonId,
       home_id: ids.homeId,
     });
