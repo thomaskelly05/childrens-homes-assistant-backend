@@ -623,7 +623,6 @@ async function setScope(scope) {
   if (safeScope === "child" && !state.youngPersonId) {
     showSelector();
     await loadYoungPersonSelector();
-    refreshWorkspaceSummary();
     return;
   }
 
@@ -886,11 +885,10 @@ function bindOpenCareHubFallback() {
       button.setAttribute("aria-busy", "true");
 
       try {
-  await openYoungPersonSafely(selectedId, {
-    initialSection: "workspace",
-  });
-} finally {
-
+        await openYoungPersonSafely(selectedId, {
+          initialSection: "workspace",
+        });
+      } finally {
         button.disabled = false;
         button.removeAttribute("aria-busy");
       }
@@ -936,10 +934,6 @@ async function loadWorkspaceTarget(target, options = {}) {
     updateAssistantContext();
     renderAssistantMessages();
     renderAssistantInsights();
-
-    if (getCurrentSection() === section) {
-      refreshWorkspaceSummary();
-    }
   } catch (error) {
     console.error(`[index] failed loading workspace section "${section}"`, error);
     showError(error?.message || `Failed to load ${section}.`);
@@ -1058,7 +1052,6 @@ async function bootstrap() {
     } else if ((state.currentScope || "child") === "child") {
       showSelector();
       await loadYoungPersonSelector();
-      refreshWorkspaceSummary();
     } else {
       showWorkspace();
       await loadSection(getCurrentSection(), { force: true });
