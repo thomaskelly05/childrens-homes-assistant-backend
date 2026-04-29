@@ -3,34 +3,52 @@ import { normaliseToken, cleanText } from "./helpers.js";
 export const RECORD_TYPES = Object.freeze({
   daily_note: "daily_note",
   incident: "incident",
+
   support_plan: "support_plan",
+  support_plans: "support_plan",
+  plan: "support_plan",
+  plans: "support_plan",
+
   risk_assessment: "risk",
   risk: "risk",
+
   health_record: "health_record",
   health: "health_record",
+
   education_record: "education_record",
   education: "education_record",
+
   family_contact_record: "family_contact",
   family_contact: "family_contact",
   family: "family_contact",
+
   keywork_session: "keywork",
   keywork: "keywork",
+
   appointment: "appointment",
   achievement_record: "achievement_record",
+
   safeguarding_record: "safeguarding_record",
   safeguarding: "safeguarding_record",
+
   missing_episode: "missing_episode",
+
   chronology_event: "chronology_event",
   chronology: "chronology_event",
+
   compliance_item: "compliance_item",
   ai_generated_report: "ai_generated_report",
   monthly_review: "monthly_review",
+
   handover_record: "handover_record",
   handover: "handover_record",
+
   manager_action: "manager_action",
   task: "task",
+
   document: "document",
   statutory_document: "statutory_document",
+
   medication_profile: "medication_profile",
   medication_record: "medication_record",
 });
@@ -60,26 +78,42 @@ export const RECORD_TABLES = Object.freeze({
 export const WORKSPACE_TO_RECORD_TYPE = Object.freeze({
   workspace: null,
   profile: null,
+
+  plans: RECORD_TYPES.support_plan,
+  "support-plans": RECORD_TYPES.support_plan,
+  "support-plan": RECORD_TYPES.support_plan,
+
   "daily-notes": RECORD_TYPES.daily_note,
   "daily-life": RECORD_TYPES.daily_note,
+
   incidents: RECORD_TYPES.incident,
   incident: RECORD_TYPES.incident,
+
   safeguarding: RECORD_TYPES.safeguarding_record,
+
   risk: RECORD_TYPES.risk,
   "risk-assessments": RECORD_TYPES.risk,
+
   keywork: RECORD_TYPES.keywork,
+
   education: RECORD_TYPES.education_record,
   health: RECORD_TYPES.health_record,
   family: RECORD_TYPES.family_contact,
+
   documents: RECORD_TYPES.document,
   timeline: RECORD_TYPES.chronology_event,
   chronology: RECORD_TYPES.chronology_event,
+
   tasks: RECORD_TYPES.task,
+  actions: RECORD_TYPES.task,
+
   medication: RECORD_TYPES.medication_record,
   handover: RECORD_TYPES.handover_record,
+  appointments: RECORD_TYPES.appointment,
 });
 
 export const RECORD_TYPE_TO_WORKSPACE = Object.freeze({
+  support_plan: "plans",
   daily_note: "daily-notes",
   incident: "incidents",
   safeguarding_record: "safeguarding",
@@ -94,6 +128,7 @@ export const RECORD_TYPE_TO_WORKSPACE = Object.freeze({
   task: "tasks",
   medication_record: "medication",
   handover_record: "handover",
+  appointment: "appointments",
 });
 
 export const WORKFLOW_STATUS = Object.freeze({
@@ -199,9 +234,19 @@ export const RECORD_TYPE_ALIASES = Object.freeze({
   incident: RECORD_TYPES.incident,
   incidents: RECORD_TYPES.incident,
 
+  support_plan: RECORD_TYPES.support_plan,
+  support_plans: RECORD_TYPES.support_plan,
+  plan: RECORD_TYPES.support_plan,
+  plans: RECORD_TYPES.support_plan,
+
   risk: RECORD_TYPES.risk,
   risk_assessment: RECORD_TYPES.risk,
   risk_assessments: RECORD_TYPES.risk,
+
+  appointment: RECORD_TYPES.appointment,
+  appointments: RECORD_TYPES.appointment,
+  young_person_appointment: RECORD_TYPES.appointment,
+  young_person_appointments: RECORD_TYPES.appointment,
 
   health: RECORD_TYPES.health_record,
   health_record: RECORD_TYPES.health_record,
@@ -224,6 +269,11 @@ export const RECORD_TYPE_ALIASES = Object.freeze({
   safeguarding_record: RECORD_TYPES.safeguarding_record,
   safeguarding_records: RECORD_TYPES.safeguarding_record,
 
+  missing: RECORD_TYPES.missing_episode,
+  missing_episode: RECORD_TYPES.missing_episode,
+  missing_episodes: RECORD_TYPES.missing_episode,
+  missing_from_care: RECORD_TYPES.missing_episode,
+
   chronology: RECORD_TYPES.chronology_event,
   chronology_event: RECORD_TYPES.chronology_event,
   chronology_events: RECORD_TYPES.chronology_event,
@@ -231,11 +281,14 @@ export const RECORD_TYPE_ALIASES = Object.freeze({
 
   document: RECORD_TYPES.document,
   documents: RECORD_TYPES.document,
+
   statutory_document: RECORD_TYPES.statutory_document,
   statutory_documents: RECORD_TYPES.statutory_document,
 
   task: RECORD_TYPES.task,
   tasks: RECORD_TYPES.task,
+  action: RECORD_TYPES.task,
+  actions: RECORD_TYPES.task,
 
   handover: RECORD_TYPES.handover_record,
   handover_record: RECORD_TYPES.handover_record,
@@ -423,7 +476,8 @@ export function createAssistantAction(action = {}) {
     type: normaliseAssistantActionType(safe.type),
     label: cleanText(safe.label) || "Suggested action",
     section: toNullableString(safe.section),
-    record_type: normaliseRecordType(safe.record_type) || toNullableString(safe.record_type),
+    record_type:
+      normaliseRecordType(safe.record_type) || toNullableString(safe.record_type),
     record_id: toNullableId(safe.record_id),
     payload: safe.payload && typeof safe.payload === "object" ? safe.payload : null,
   };
