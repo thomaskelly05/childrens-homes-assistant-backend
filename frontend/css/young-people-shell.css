@@ -1,11 +1,6 @@
 /* ============================================================
-   IndiCare OS — Production SaaS Shell
+   IndiCare OS — Production Ready Operating Shell
    young-people-shell.css
-   Full replacement file
-============================================================ */
-
-/* ============================================================
-   01. Design Tokens
 ============================================================ */
 
 :root {
@@ -27,15 +22,10 @@
   --brand-soft: #dbeafe;
   --brand-pale: #eff6ff;
 
-  --cyan: #06b6d4;
-  --cyan-soft: #cffafe;
-
   --success: #047857;
   --success-soft: #ecfdf5;
-
   --warning: #b45309;
   --warning-soft: #fffbeb;
-
   --danger: #b91c1c;
   --danger-soft: #fef2f2;
 
@@ -47,20 +37,19 @@
   --shadow: 0 18px 50px rgba(15, 23, 42, 0.1);
   --shadow-strong: 0 30px 90px rgba(15, 23, 42, 0.22);
 
-  --radius-xs: 10px;
   --radius-sm: 12px;
   --radius: 18px;
   --radius-lg: 24px;
   --radius-xl: 32px;
 
   --topbar-height: 76px;
-  --content-width: 1440px;
+  --content-width: 1720px;
 
   --font-main: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 /* ============================================================
-   02. Reset / Base
+   Base
 ============================================================ */
 
 *,
@@ -71,8 +60,8 @@
 
 html {
   min-height: 100%;
-  scroll-behavior: smooth;
   color-scheme: light;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -86,9 +75,9 @@ body {
   font-family: var(--font-main);
   font-size: 15px;
   line-height: 1.5;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
 }
 
 button,
@@ -148,7 +137,7 @@ a {
 }
 
 /* ============================================================
-   03. Topbar
+   Topbar
 ============================================================ */
 
 .shell-topbar {
@@ -266,7 +255,7 @@ a {
 }
 
 /* ============================================================
-   04. Inputs
+   Inputs
 ============================================================ */
 
 .search-input,
@@ -317,7 +306,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   05. Buttons
+   Buttons
 ============================================================ */
 
 .primary-btn,
@@ -391,7 +380,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   06. Scope Switch
+   Scope Switch
 ============================================================ */
 
 .scope-switch {
@@ -420,14 +409,14 @@ textarea:focus {
 }
 
 /* ============================================================
-   07. App Layout
+   App Layout
 ============================================================ */
 
 .shell-main {
-  width: min(var(--content-width), 100%);
+  width: min(var(--content-width), calc(100vw - 40px));
   max-width: var(--content-width);
   margin: 0 auto;
-  padding: 28px 28px 0;
+  padding: 28px 20px 0;
   overflow: visible !important;
 }
 
@@ -455,12 +444,8 @@ textarea:focus {
   gap: 20px;
 }
 
-.safe-start-body .shell-main {
-  padding-top: 28px;
-}
-
 /* ============================================================
-   08. Shared Card Surfaces
+   Shared Surfaces
 ============================================================ */
 
 .safe-start-hero-copy,
@@ -504,12 +489,13 @@ textarea:focus {
 }
 
 /* ============================================================
-   09. Entry Launcher
+   Entry Launcher
 ============================================================ */
 
 #selectorPanel .selector-screen-inner--simple,
 #selectorPanel .selector-screen-inner {
-  width: min(1180px, 100%);
+  width: 100%;
+  max-width: var(--content-width);
   margin: 0 auto;
   display: grid;
   gap: 22px;
@@ -518,7 +504,7 @@ textarea:focus {
 .simple-entry-head {
   position: relative;
   overflow: hidden;
-  min-height: 220px;
+  min-height: 240px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -533,7 +519,7 @@ textarea:focus {
 }
 
 .simple-entry-head h1 {
-  max-width: 780px;
+  max-width: 860px;
   margin: 6px 0 14px;
   color: var(--ink);
   font-size: clamp(3rem, 4.5vw, 5.4rem);
@@ -543,7 +529,7 @@ textarea:focus {
 }
 
 .simple-entry-head p {
-  max-width: 760px;
+  max-width: 820px;
   margin: 0;
   color: var(--muted);
   font-weight: 680;
@@ -552,8 +538,8 @@ textarea:focus {
 
 .safe-start-launch-grid {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 330px minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
 }
 
@@ -568,6 +554,10 @@ textarea:focus {
 .simple-home-panel {
   position: sticky;
   top: calc(var(--topbar-height) + 20px);
+}
+
+.simple-children-panel {
+  min-height: 620px;
 }
 
 .simple-section-head {
@@ -633,7 +623,6 @@ textarea:focus {
   font-weight: 780;
 }
 
-/* Hide old entry page chrome when older HTML exists */
 #selectorPanel .safe-start-hero,
 #selectorPanel .safe-start-attention-strip,
 #selectorPanel .safe-start-support-grid,
@@ -642,7 +631,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   10. Home + Child Selector Cards
+   Selector Cards
 ============================================================ */
 
 .safe-home-chip,
@@ -714,8 +703,8 @@ textarea:focus {
 .safe-child-list .selector-grid,
 .selector-grid {
   display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)) !important;
-  gap: 16px !important;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  gap: 18px !important;
   align-items: stretch;
 }
 
@@ -726,17 +715,24 @@ textarea:focus {
 #selectorList .selector-card,
 .simple-child-grid .selector-card,
 .selector-card {
-  min-height: 255px;
+  min-height: 250px;
   display: grid !important;
   grid-template-columns: 1fr !important;
+  grid-template-rows: auto 1fr auto;
   align-content: start;
   gap: 14px !important;
   padding: 20px !important;
-  border-radius: 26px !important;
+  border-radius: 24px !important;
   background: #fff;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.07);
   transition: 0.16s ease;
+}
+
+#selectorList .selector-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 99, 235, 0.32);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.11);
 }
 
 .selector-card-photo-fallback,
@@ -808,7 +804,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   11. Chips / Badges
+   Chips
 ============================================================ */
 
 .meta-chip,
@@ -854,7 +850,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   12. Workspace Header
+   Workspace Header
 ============================================================ */
 
 .workspace-header-band {
@@ -971,7 +967,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   13. Summary Strip
+   Summary Strip
 ============================================================ */
 
 .workspace-summary-strip,
@@ -1015,7 +1011,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   14. Care Hub Menu / Folders
+   Care Hub Menu
 ============================================================ */
 
 .quick-actions-panel {
@@ -1130,7 +1126,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   15. Workspace Content
+   Workspace Content
 ============================================================ */
 
 .status-bar {
@@ -1183,7 +1179,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   16. Panels / Lists / Records
+   Records / Lists / Timeline
 ============================================================ */
 
 .overview-panel {
@@ -1229,9 +1225,9 @@ textarea:focus {
 .entity-list,
 .insight-list,
 .priority-list {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
+  display: grid !important;
+  gap: 10px !important;
+  padding: 12px !important;
 }
 
 .record-row,
@@ -1244,11 +1240,14 @@ textarea:focus {
 .record-list > article,
 .timeline-list > article {
   position: relative;
-  display: block;
-  padding: 15px 17px 15px 22px;
-  border-radius: var(--radius);
+  min-height: 72px;
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px 14px 20px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
   background: #fff;
-  border: 1px solid var(--border);
+  box-shadow: none;
 }
 
 .record-row,
@@ -1262,10 +1261,12 @@ textarea:focus {
 .record-row:hover,
 .record-card:hover,
 .timeline-item:hover,
+.entity-row:hover,
 .record-list > article:hover,
 .timeline-list > article:hover {
   background: var(--brand-pale);
   border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
 }
 
 .entity-row::before,
@@ -1291,6 +1292,7 @@ textarea:focus {
 .record-card-title,
 .insight-title {
   color: var(--ink);
+  font-size: 0.95rem;
   font-weight: 900;
 }
 
@@ -1303,14 +1305,14 @@ textarea:focus {
 .timeline-meta,
 .record-summary,
 .insight-body {
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--muted);
-  font-size: 0.86rem;
-  line-height: 1.5;
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 /* ============================================================
-   17. Tables
+   Tables
 ============================================================ */
 
 .record-table-shell {
@@ -1371,7 +1373,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   18. Detail Rows / Empty / Loading
+   Detail / Empty / Loading
 ============================================================ */
 
 .detail-list {
@@ -1455,7 +1457,209 @@ textarea:focus {
 }
 
 /* ============================================================
-   19. Assistant / Modals
+   Composer
+============================================================ */
+
+.composer-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.composer-shell {
+  width: min(1480px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  display: grid;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: #fff;
+  box-shadow: var(--shadow-strong);
+}
+
+.composer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.composer-header h2 {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.composer-header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+}
+
+.composer-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.composer-layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+
+.composer-main {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+  background: #f8fbff;
+}
+
+.composer-side {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+  border-left: 1px solid var(--border);
+  background: #fff;
+}
+
+.composer-form,
+.composer-fields {
+  display: grid;
+  gap: 18px;
+}
+
+.section,
+.composer-section {
+  padding: 22px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.section h3,
+.composer-section h3 {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.section-desc {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-weight: 650;
+}
+
+.composer-field-grid,
+.composer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field.full,
+.composer-field.full {
+  grid-column: 1 / -1;
+}
+
+.field,
+.composer-field {
+  display: grid;
+  gap: 7px;
+}
+
+.field .label,
+.label,
+.form-label {
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.description {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.field input,
+.field select,
+.field textarea {
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #fff;
+  color: var(--ink);
+}
+
+.field textarea {
+  min-height: 130px;
+  line-height: 1.55;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.checkbox-field input {
+  width: auto;
+  min-height: 0;
+}
+
+.composer-side-card {
+  padding: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.composer-side-card + .composer-side-card {
+  margin-top: 14px;
+}
+
+.composer-side-card h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.composer-side-body,
+.composer-prompt,
+.composer-ai-feedback {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.composer-ai-actions,
+.composer-prompt-list {
+  display: grid;
+  gap: 8px;
+}
+
+/* ============================================================
+   Assistant / Modals
 ============================================================ */
 
 .assistant-backdrop,
@@ -1470,7 +1674,6 @@ textarea:focus {
 }
 
 .assistant-modal,
-.composer-panel,
 .fullscreen-panel {
   position: fixed;
   inset: 0;
@@ -1481,7 +1684,6 @@ textarea:focus {
 }
 
 .assistant-shell,
-.composer-shell,
 .fullscreen-panel-shell {
   width: min(1260px, 100%);
   max-height: calc(100vh - 48px);
@@ -1492,12 +1694,7 @@ textarea:focus {
   box-shadow: var(--shadow-strong);
 }
 
-.composer-shell {
-  width: min(1360px, 100%);
-}
-
 .assistant-header,
-.composer-header,
 .fullscreen-panel-head,
 .record-drawer-head,
 .mobile-nav-head {
@@ -1511,7 +1708,6 @@ textarea:focus {
 }
 
 .assistant-header h3,
-.composer-header h2,
 .fullscreen-panel-head h2,
 .record-drawer-head h2 {
   margin: 0;
@@ -1520,7 +1716,6 @@ textarea:focus {
 }
 
 .assistant-header p,
-.composer-header p,
 .fullscreen-panel-head p,
 .record-drawer-head p {
   margin: 5px 0 0;
@@ -1535,16 +1730,13 @@ textarea:focus {
 
 .assistant-modal-main,
 .assistant-modal-side,
-.composer-main,
-.composer-side,
 .fullscreen-panel-body {
   min-height: 0;
   overflow: auto;
   padding: 18px;
 }
 
-.assistant-modal-side,
-.composer-side {
+.assistant-modal-side {
   border-left: 1px solid var(--border);
 }
 
@@ -1592,8 +1784,7 @@ textarea:focus {
   gap: 10px;
 }
 
-.assistant-side-card,
-.composer-side-card {
+.assistant-side-card {
   padding: 14px;
   border-radius: var(--radius);
 }
@@ -1617,14 +1808,14 @@ textarea:focus {
 }
 
 /* ============================================================
-   20. Record Drawer / Composer
+   Record Drawer
 ============================================================ */
 
 .record-drawer {
   position: fixed;
   z-index: 9300;
   inset: 0 0 0 auto;
-  width: min(620px, 100vw);
+  width: min(760px, 100vw);
   display: flex;
   justify-content: flex-end;
 }
@@ -1634,66 +1825,22 @@ textarea:focus {
   height: 100%;
   overflow: auto;
   border-left: 1px solid var(--border);
+  border-radius: 28px 0 0 28px;
   background: #fff;
   box-shadow: -24px 0 80px rgba(15, 23, 42, 0.2);
 }
 
+.record-drawer-head {
+  padding: 22px;
+}
+
 .record-drawer-actions,
 .record-drawer-body {
-  padding: 18px;
-}
-
-.composer-layout {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-}
-
-.composer-form,
-.composer-fields {
-  display: grid;
-  gap: 16px;
-}
-
-.composer-section,
-.section {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: #fff;
-  padding: 16px;
-}
-
-.composer-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.composer-field.full,
-.field.full {
-  grid-column: 1 / -1;
-}
-
-.field,
-.composer-field {
-  display: grid;
-  gap: 6px;
-}
-
-.label,
-.form-label {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 850;
-}
-
-.description {
-  color: var(--muted);
-  font-size: 0.82rem;
+  padding: 22px;
 }
 
 /* ============================================================
-   21. Mobile Nav / Footer
+   Mobile Nav / Footer
 ============================================================ */
 
 .mobile-nav-drawer {
@@ -1797,7 +1944,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   22. Quality / Ofsted / CEI
+   Quality / Ofsted / CEI
 ============================================================ */
 
 .ofsted-dashboard-shell,
@@ -1903,8 +2050,14 @@ textarea:focus {
 }
 
 /* ============================================================
-   23. Responsive
+   Responsive
 ============================================================ */
+
+@media (min-width: 1500px) {
+  #selectorList {
+    grid-template-columns: repeat(5, minmax(220px, 1fr)) !important;
+  }
+}
 
 @media (max-width: 1280px) {
   .shell-topbar {
@@ -1943,7 +2096,8 @@ textarea:focus {
 }
 
 @media (max-width: 1100px) {
-  .safe-start-launch-grid {
+  .safe-start-launch-grid,
+  .composer-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1957,6 +2111,16 @@ textarea:focus {
 
   #selectorList {
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)) !important;
+  }
+
+  .composer-field-grid,
+  .composer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-side {
+    border-left: 0;
+    border-top: 1px solid var(--border);
   }
 }
 
@@ -1988,6 +2152,7 @@ textarea:focus {
   }
 
   .shell-main {
+    width: 100%;
     padding: 12px !important;
   }
 
@@ -2119,6 +2284,10 @@ textarea:focus {
     width: 100vw;
   }
 
+  .record-drawer-panel {
+    border-radius: 0;
+  }
+
   .detail-row,
   .safe-ready-card {
     grid-template-columns: 1fr;
@@ -2185,7 +2354,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   24. Reduced Motion
+   Reduced Motion
 ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
@@ -2196,107 +2365,5 @@ textarea:focus {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-/* ============================================================
-   Wide production shell + stronger case cards
-============================================================ */
-
-:root {
-  --content-width: 1680px;
-}
-
-.shell-main {
-  width: min(var(--content-width), calc(100vw - 48px)) !important;
-  max-width: var(--content-width) !important;
-  padding: 28px 24px 0 !important;
-}
-
-#selectorPanel .selector-screen-inner--simple,
-#selectorPanel .selector-screen-inner {
-  width: 100% !important;
-  max-width: 1480px !important;
-}
-
-.safe-start-launch-grid {
-  grid-template-columns: 320px minmax(0, 1fr) !important;
-  gap: 22px !important;
-}
-
-#selectorPanel .simple-entry-head {
-  width: 100% !important;
-}
-
-#selectorPanel .simple-children-panel {
-  min-height: 560px !important;
-}
-
-#selectorList {
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important;
-  align-items: stretch !important;
-}
-
-#selectorList .selector-card {
-  min-height: 235px !important;
-  padding: 18px !important;
-  display: grid !important;
-  grid-template-rows: auto 1fr auto !important;
-}
-
-#selectorList .selector-card-body {
-  display: grid !important;
-  align-content: start !important;
-  gap: 8px !important;
-}
-
-#selectorList .selector-card-body h3 {
-  font-size: 1.05rem !important;
-}
-
-#selectorList .selector-card-body p {
-  max-width: 100% !important;
-}
-
-.workspace-content,
-.workspace-header-band,
-.quick-actions-panel {
-  width: 100% !important;
-}
-
-.record-list,
-.timeline-list,
-.entity-list {
-  padding: 12px !important;
-}
-
-.record-row,
-.record-card,
-.timeline-item,
-.record-list > article,
-.timeline-list > article {
-  min-height: 74px !important;
-  padding: 14px 16px 14px 20px !important;
-  border-radius: 16px !important;
-  display: grid !important;
-  gap: 4px !important;
-}
-
-.record-row-summary,
-.record-row-meta,
-.record-secondary,
-.timeline-meta,
-.record-summary {
-  font-size: 0.82rem !important;
-  line-height: 1.45 !important;
-}
-
-.record-drawer {
-  width: min(720px, 100vw) !important;
-}
-
-@media (min-width: 1500px) {
-  #selectorList {
-    grid-template-columns: repeat(5, minmax(210px, 1fr)) !important;
   }
 }
