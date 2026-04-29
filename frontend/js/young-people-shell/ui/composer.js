@@ -1,9 +1,6 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import {
-  createRecord,
-  updateRecord,
-} from "../core/api-adapter.js";
+import { createRecord, updateRecord } from "../core/api-adapter.js";
 import { normaliseRecordType } from "../core/contracts.js";
 import {
   getRecordLabel,
@@ -23,27 +20,84 @@ function now() {
   return toDateTimeLocalValue(new Date());
 }
 
-function safeValue(value = "") {
-  return value ?? "";
+function text(value = "") {
+  return escapeHtml(String(value ?? ""));
 }
 
 function getYoungPersonId() {
+  const app = document.getElementById("app");
+  const params = new URLSearchParams(window.location.search);
+  const selector = document.getElementById("youngPersonSelect");
+
   return (
     state.youngPersonId ||
     state.currentYoungPersonId ||
+    state.personId ||
+    state.currentPersonId ||
+    state.selectedYoungPersonId ||
     state.selectedYoungPerson?.id ||
     state.selectedYoungPerson?.young_person_id ||
-    document.getElementById("app")?.dataset?.youngPersonId ||
+    state.youngPerson?.id ||
+    state.youngPerson?.young_person_id ||
+    state.activeYoungPerson?.id ||
+    state.activeYoungPerson?.young_person_id ||
+    app?.dataset?.youngPersonId ||
+    app?.dataset?.personId ||
+    params.get("young_person_id") ||
+    params.get("youngPersonId") ||
+    params.get("person_id") ||
+    params.get("id") ||
+    selector?.value ||
     null
+  );
+}
+
+function getHomeId() {
+  return (
+    state.homeId ||
+    state.currentHomeId ||
+    state.selectedHomeId ||
+    state.readinessSelectedHomeId ||
+    state.selectedYoungPerson?.home_id ||
+    state.currentUser?.home_id ||
+    state.currentUser?.homeId ||
+    null
+  );
+}
+
+function getComposerForm() {
+  return (
+    els.composerForm ||
+    document.getElementById("recordComposerForm") ||
+    document.getElementById("composerForm") ||
+    document.querySelector("[data-composer-form]") ||
+    document.querySelector(".composer-panel form") ||
+    document.querySelector(".record-composer form")
+  );
+}
+
+function getComposerPanel() {
+  return (
+    els.composerPanel ||
+    document.getElementById("recordComposerPanel") ||
+    document.getElementById("composerPanel") ||
+    document.querySelector(".composer-panel") ||
+    document.querySelector(".record-composer")
+  );
+}
+
+function getComposerFields() {
+  return (
+    els.composerFields ||
+    document.getElementById("recordComposerFields") ||
+    document.getElementById("composerFields") ||
+    document.querySelector("[data-composer-fields]") ||
+    getComposerForm()?.querySelector(".composer-fields")
   );
 }
 
 function getRecordId(item = {}) {
   return item.id || item.record_id || item.source_id || "";
-}
-
-function text(value = "") {
-  return escapeHtml(String(value ?? ""));
 }
 
 function getInitialValue(item = {}, fieldName = "", fallback = "") {
@@ -55,6 +109,7 @@ function field(f, item = {}) {
   const fullClass = f.full ? "full" : "";
   const required = f.required ? "required" : "";
   const value = getInitialValue(item, f.name, f.value || "");
+
   const description = f.desc
     ? `<div class="description">${text(f.desc)}</div>`
     : "";
@@ -63,11 +118,9 @@ function field(f, item = {}) {
 
   if (f.type === "textarea") {
     control = `
-      <textarea
-        name="${text(f.name)}"
-        rows="${text(f.rows || 4)}"
-        ${required}
-      >${text(value)}</textarea>
+      <textarea name="${text(f.name)}" rows="${text(f.rows || 4)}" ${required}>${text(
+        value
+      )}</textarea>
     `;
   } else if (f.type === "select") {
     control = `
@@ -87,9 +140,12 @@ function field(f, item = {}) {
       value === "on" ||
       value === 1 ||
       value === "1";
+
     control = `
       <label class="checkbox-field">
-        <input type="checkbox" name="${text(f.name)}" value="true" ${checked ? "checked" : ""} />
+        <input type="checkbox" name="${text(f.name)}" value="true" ${
+      checked ? "checked" : ""
+    } />
         <span>${text(f.checkboxLabel || "Yes")}</span>
       </label>
     `;
@@ -156,27 +212,27 @@ function dailyRecord(item = {}) {
     required: ["note_date", "summary", "young_person_voice", "actions_required"],
     html: `
       ${section("Basic information", "Core shift details for this daily note.", [
-        { name: "note_date", label: "Date", type: "date", value: today(), required: true, desc: "The date this daily note relates to." },
+        { name: "note_date", label: "Date", type: "date", value: today(), required: true },
         { name: "shift", label: "Shift", desc: "For example: day, late, waking night or sleep-in." },
         { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
       ], item)}
 
       ${section("What happened", "Give a clear, factual account of the day.", [
-        { name: "summary", label: "Daily summary", type: "textarea", rows: 5, required: true, full: true, desc: "Summarise the key events, routines, presentation and meaningful moments." },
-        { name: "chronology", label: "Chronology", type: "textarea", rows: 5, full: true, desc: "Set out important events in order. Keep this factual and neutral." },
+        { name: "summary", label: "Daily summary", type: "textarea", rows: 5, required: true, full: true },
+        { name: "chronology", label: "Chronology", type: "textarea", rows: 5, full: true },
       ], item)}
 
       ${section("Young person’s experience", "Capture how the day appeared from the young person’s perspective.", [
-        { name: "presentation", label: "Presentation", type: "textarea", full: true, desc: "Mood, regulation, behaviour, engagement, sleep, appetite and emotional presentation." },
-        { name: "young_person_voice", label: "Young person’s voice", type: "textarea", required: true, full: true, desc: "Use exact words where possible, or describe communication, behaviour or non-verbal expression." },
-        { name: "analysis", label: "What this may mean", type: "textarea", full: true, desc: "Brief reflective analysis. What might the behaviour, presentation or communication be telling us?" },
+        { name: "presentation", label: "Presentation", type: "textarea", full: true },
+        { name: "young_person_voice", label: "Young person’s voice", type: "textarea", required: true, full: true },
+        { name: "analysis", label: "What this may mean", type: "textarea", full: true },
       ], item)}
 
       ${section("Staff response and follow-up", "Show what adults did, why, and what must happen next.", [
-        { name: "staff_response", label: "Staff response", type: "textarea", full: true, desc: "What staff did, how they supported the young person, and why." },
-        { name: "risk_update", label: "Risk update", type: "textarea", full: true, desc: "Any change in risk, protective factors or monitoring needed." },
-        { name: "actions_required", label: "Actions required", type: "textarea", required: true, full: true, desc: "Clear follow-up with owner, timescale or escalation where known." },
-        { name: "manager_oversight", label: "Manager oversight", type: "textarea", full: true, desc: "Any decision, review, escalation or management sign-off needed." },
+        { name: "staff_response", label: "Staff response", type: "textarea", full: true },
+        { name: "risk_update", label: "Risk update", type: "textarea", full: true },
+        { name: "actions_required", label: "Actions required", type: "textarea", required: true, full: true },
+        { name: "manager_oversight", label: "Manager oversight", type: "textarea", full: true },
       ], item)}
     `,
   };
@@ -191,25 +247,25 @@ function incidentForm(item = {}) {
     html: `
       ${section("Incident details", "Core incident information.", [
         { name: "incident_datetime", label: "Date and time", type: "datetime-local", value: now(), required: true },
-        { name: "incident_type", label: "Incident type", required: true, desc: "For example: aggression, missing episode, self-harm concern, damage, allegation, restraint, medication error." },
+        { name: "incident_type", label: "Incident type", required: true },
         { name: "location", label: "Location" },
         { name: "severity", label: "Severity", type: "select", options: SEVERITY_OPTIONS },
       ], item)}
 
       ${section("Factual account", "A clear, neutral chronology of what happened.", [
-        { name: "description", label: "What happened", type: "textarea", rows: 6, required: true, full: true, desc: "Describe what happened. Avoid judgemental language. Include who was present and what was observed." },
-        { name: "antecedent", label: "What happened before", type: "textarea", full: true, desc: "Known triggers, context, changes, interactions or events leading up to the incident." },
+        { name: "description", label: "What happened", type: "textarea", rows: 6, required: true, full: true },
+        { name: "antecedent", label: "What happened before", type: "textarea", full: true },
       ], item)}
 
       ${section("Young person and staff response", "Capture presentation, child voice and adult response.", [
-        { name: "presentation", label: "Presentation", type: "textarea", full: true, desc: "Emotional state, behaviour, regulation, communication and signs of distress." },
-        { name: "child_voice", label: "Child voice", type: "textarea", full: true, desc: "Exact words where possible, or describe non-verbal communication." },
-        { name: "staff_response", label: "Staff response", type: "textarea", full: true, desc: "What staff did to reduce risk, support regulation and maintain safety." },
+        { name: "presentation", label: "Presentation", type: "textarea", full: true },
+        { name: "child_voice", label: "Child voice", type: "textarea", full: true },
+        { name: "staff_response", label: "Staff response", type: "textarea", full: true },
       ], item)}
 
       ${section("Outcome and safeguarding", "Record the result, notifications and next actions.", [
-        { name: "outcome", label: "Outcome", type: "textarea", full: true, desc: "How the incident ended and how the young person was afterwards." },
-        { name: "actions_taken", label: "Actions taken / required", type: "textarea", required: true, full: true, desc: "Immediate actions and any follow-up required." },
+        { name: "outcome", label: "Outcome", type: "textarea", full: true },
+        { name: "actions_taken", label: "Actions taken / required", type: "textarea", required: true, full: true },
         { name: "police_involved", label: "Police involved", type: "checkbox" },
         { name: "ofsted_notified", label: "Ofsted notified", type: "checkbox" },
         { name: "placing_authority_notified", label: "Placing authority notified", type: "checkbox" },
@@ -235,7 +291,7 @@ function keyworkForm(item = {}) {
       ${section("Session content", "What was discussed or completed.", [
         { name: "summary", label: "Session summary", type: "textarea", rows: 5, required: true, full: true },
         { name: "young_person_voice", label: "Young person’s voice", type: "textarea", required: true, full: true },
-        { name: "reflection", label: "Reflection / analysis", type: "textarea", full: true, desc: "What did the session suggest about needs, wishes, risk, progress or relationships?" },
+        { name: "reflection", label: "Reflection / analysis", type: "textarea", full: true },
       ], item)}
 
       ${section("Outcome", "What changes or actions were agreed.", [
@@ -256,7 +312,7 @@ function riskForm(item = {}) {
       ${section("Risk overview", "Identify the risk and review date.", [
         { name: "review_date", label: "Review date", type: "date", value: today(), required: true },
         { name: "risk_area", label: "Risk area", required: true },
-        { name: "severity", label: "Current risk level", type: "select", options: SEVERITY_OPTIONS, required: true },
+        { name: "severity", label: "Current risk level", type: "select", options: SEVERITY_OPTIONS },
       ], item)}
 
       ${section("Assessment", "Describe the risk clearly.", [
@@ -299,36 +355,6 @@ function safeguardingForm(item = {}) {
         { name: "ofsted_notified", label: "Ofsted notified", type: "checkbox" },
         { name: "police_notified", label: "Police notified", type: "checkbox" },
         { name: "manager_oversight", label: "Manager oversight", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function missingEpisodeForm(item = {}) {
-  return {
-    title: "Missing episode",
-    intro:
-      "Record the missing episode, actions taken, return, child voice, risks and follow-up.",
-    required: ["missing_from", "summary", "actions_taken"],
-    html: `
-      ${section("Episode details", "Core missing episode information.", [
-        { name: "missing_from", label: "Missing from", type: "datetime-local", value: now(), required: true },
-        { name: "returned_at", label: "Returned at", type: "datetime-local" },
-        { name: "location_last_seen", label: "Location last seen" },
-        { name: "severity", label: "Risk level", type: "select", options: SEVERITY_OPTIONS },
-      ], item)}
-
-      ${section("Account", "What happened and what may have contributed.", [
-        { name: "summary", label: "Episode summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "trigger_factors", label: "Trigger factors", type: "textarea", full: true },
-        { name: "push_pull_factors", label: "Push / pull factors", type: "textarea", full: true },
-      ], item)}
-
-      ${section("Response and return", "Record actions and return conversation.", [
-        { name: "actions_taken", label: "Actions taken", type: "textarea", required: true, full: true },
-        { name: "child_voice", label: "Child voice on return", type: "textarea", full: true },
-        { name: "return_interview_required", label: "Return interview required", type: "checkbox" },
-        { name: "follow_up_required", label: "Follow-up required", type: "textarea", full: true },
       ], item)}
     `,
   };
@@ -460,7 +486,7 @@ function taskForm(item = {}) {
 
       ${section("Description", "Give enough detail for someone else to complete it safely.", [
         { name: "description", label: "Task description", type: "textarea", rows: 5, required: true, full: true },
-        { name: "owner_name", label: "Owner", desc: "Name or role responsible for completion." },
+        { name: "owner_name", label: "Owner" },
         { name: "completion_notes", label: "Completion notes", type: "textarea", full: true },
       ], item)}
     `,
@@ -548,6 +574,7 @@ function documentForm(item = {}) {
 function fallbackForm(type, item = {}) {
   const label = getRecordLabel(type, "Record");
   const primaryDate = getRecordPrimaryDateField(type) || "created_at";
+  const isDateTime = primaryDate.includes("datetime");
 
   return {
     title: label,
@@ -556,7 +583,7 @@ function fallbackForm(type, item = {}) {
     required: ["title", "summary"],
     html: `
       ${section("Record details", "Core information for this record.", [
-        { name: primaryDate, label: "Date", type: primaryDate.includes("datetime") ? "datetime-local" : "date", value: primaryDate.includes("datetime") ? now() : today() },
+        { name: primaryDate, label: "Date", type: isDateTime ? "datetime-local" : "date", value: isDateTime ? now() : today() },
         { name: "title", label: "Title", required: true },
         { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
       ], item)}
@@ -577,7 +604,6 @@ function getForm(type, item = {}) {
   if (safeType === "keywork") return keyworkForm(item);
   if (safeType === "risk") return riskForm(item);
   if (safeType === "safeguarding_record") return safeguardingForm(item);
-  if (safeType === "missing_episode") return missingEpisodeForm(item);
   if (safeType === "health_record") return healthForm(item);
   if (safeType === "education_record") return educationForm(item);
   if (safeType === "family_contact") return familyContactForm(item);
@@ -595,13 +621,7 @@ function getForm(type, item = {}) {
 function getComposerIds() {
   return {
     youngPersonId: getYoungPersonId(),
-    homeId:
-      state.homeId ||
-      state.currentHomeId ||
-      state.selectedHomeId ||
-      state.selectedYoungPerson?.home_id ||
-      state.currentUser?.home_id ||
-      null,
+    homeId: getHomeId(),
   };
 }
 
@@ -613,9 +633,7 @@ function collectFormData(form) {
   });
 
   Object.entries(data).forEach(([key, value]) => {
-    if (typeof value === "string") {
-      data[key] = value.trim();
-    }
+    if (typeof value === "string") data[key] = value.trim();
   });
 
   return data;
@@ -664,6 +682,7 @@ function buildPayload(type, data = {}, mode = "draft") {
     status: data.status || status,
     record_type: type,
     young_person_id: getYoungPersonId(),
+    home_id: getHomeId(),
   };
 }
 
@@ -675,39 +694,53 @@ export function openComposer(type, item = {}) {
   state.composerMode = getRecordId(item) ? "edit" : "create";
 
   const form = getForm(safeType, item);
-
   state.composerRequiredFields = form.required || [];
 
   if (els.composerTitle) els.composerTitle.textContent = form.title;
-  if (els.composerGuidanceText) els.composerGuidanceText.textContent = form.intro;
-  if (els.composerFields) els.composerFields.innerHTML = form.html;
 
-  els.composerPanel?.classList.remove("hidden");
-  els.composerPanel?.setAttribute("aria-hidden", "false");
+  const titleEl =
+    els.composerTitle ||
+    document.getElementById("recordComposerTitle") ||
+    document.getElementById("composerTitle");
 
-  const firstInput = els.composerFields?.querySelector("input, textarea, select");
-  if (firstInput) {
-    window.setTimeout(() => firstInput.focus(), 50);
-  }
+  const guidanceEl =
+    els.composerGuidanceText ||
+    document.getElementById("recordComposerGuidanceText") ||
+    document.getElementById("composerGuidanceText");
+
+  const fieldsEl = getComposerFields();
+  const panel = getComposerPanel();
+
+  if (titleEl) titleEl.textContent = form.title;
+  if (guidanceEl) guidanceEl.textContent = form.intro;
+  if (fieldsEl) fieldsEl.innerHTML = form.html;
+
+  panel?.classList.remove("hidden");
+  panel?.setAttribute("aria-hidden", "false");
+
+  const firstInput = fieldsEl?.querySelector("input, textarea, select");
+  if (firstInput) window.setTimeout(() => firstInput.focus(), 50);
 }
 
 export function openComposerFor(type, mode = "create", item = {}) {
   openComposer(type, item);
-
   state.composerMode = mode || (getRecordId(item) ? "edit" : "create");
   state.composerEditItem = item || null;
-
   return state.composerEditItem;
 }
 
 export function closeComposer() {
-  els.composerPanel?.classList.add("hidden");
-  els.composerPanel?.setAttribute("aria-hidden", "true");
+  const panel = getComposerPanel();
+  panel?.classList.add("hidden");
+  panel?.setAttribute("aria-hidden", "true");
 }
 
 export function resetComposer() {
-  if (els.composerForm) els.composerForm.reset();
-  if (els.composerFields) els.composerFields.innerHTML = "";
+  const form = getComposerForm();
+  const fieldsEl = getComposerFields();
+
+  if (form) form.reset();
+  if (fieldsEl) fieldsEl.innerHTML = "";
 
   state.composerRecordType = null;
   state.composerEditItem = null;
@@ -729,13 +762,14 @@ function dispatchComposerSaved(detail = {}) {
 }
 
 export async function saveComposer(mode = "draft") {
-  const form = els.composerForm;
+  const form = getComposerForm();
 
   if (!form) {
     throw new Error("Composer form is not available.");
   }
 
-  const type = normaliseRecordType(state.composerRecordType) || state.composerRecordType;
+  const type =
+    normaliseRecordType(state.composerRecordType) || state.composerRecordType;
 
   if (!type) {
     throw new Error("No record type selected.");
@@ -749,7 +783,6 @@ export async function saveComposer(mode = "draft") {
 
   const data = collectFormData(form);
   const required = state.composerRequiredFields || getForm(type).required || [];
-
   const issues = qualityCheck(type, data, required);
 
   if (issues.length && mode === "submit") {
@@ -783,14 +816,31 @@ export function bindComposerEvents({ onSaved } = {}) {
   if (state.composerEventsBound) return;
   state.composerEventsBound = true;
 
+  const form = getComposerForm();
+
   els.closeComposerBtn?.addEventListener("click", closeComposer);
 
-  els.composerCancelBtn?.addEventListener("click", (event) => {
+  const cancelBtn =
+    els.composerCancelBtn ||
+    document.getElementById("recordComposerCancelBtn") ||
+    document.getElementById("composerCancelBtn");
+
+  const draftBtn =
+    els.composerDraftBtn ||
+    document.getElementById("recordComposerDraftBtn") ||
+    document.getElementById("composerDraftBtn");
+
+  const submitBtn =
+    els.composerSubmitBtn ||
+    document.getElementById("recordComposerSubmitBtn") ||
+    document.getElementById("composerSubmitBtn");
+
+  cancelBtn?.addEventListener("click", (event) => {
     event.preventDefault();
     closeComposer();
   });
 
-  els.composerDraftBtn?.addEventListener("click", async (event) => {
+  draftBtn?.addEventListener("click", async (event) => {
     event.preventDefault();
 
     try {
@@ -802,7 +852,7 @@ export function bindComposerEvents({ onSaved } = {}) {
     }
   });
 
-  els.composerSubmitBtn?.addEventListener("click", async (event) => {
+  submitBtn?.addEventListener("click", async (event) => {
     event.preventDefault();
 
     try {
@@ -810,6 +860,18 @@ export function bindComposerEvents({ onSaved } = {}) {
       await onSaved?.(saved);
     } catch (error) {
       console.error("[composer] submit failed", error);
+      window.alert(error?.message || "Unable to submit record.");
+    }
+  });
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    try {
+      const saved = await saveComposer("submit");
+      await onSaved?.(saved);
+    } catch (error) {
+      console.error("[composer] form submit failed", error);
       window.alert(error?.message || "Unable to submit record.");
     }
   });
