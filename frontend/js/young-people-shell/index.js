@@ -89,6 +89,13 @@ const SECTION_ALIASES = Object.freeze({
   "my-day": "workspace",
 });
 
+const CORE_CHILD_SECTIONS = new Set([
+  "timeline",
+  "daily-life",
+  "daily-notes",
+  "incidents",
+]);
+
 function normaliseRole(role) {
   const rawRole = String(role || "staff").toLowerCase().trim();
 
@@ -243,9 +250,16 @@ function getAllowedSectionsForScope(scope = state.currentScope || "child") {
 }
 
 function isSectionAllowedInScope(section = "", scope = state.currentScope || "child") {
-  return getAllowedSectionsForScope(scope).map(normaliseSection).includes(
-    normaliseSection(section)
-  );
+  const safeSection = normaliseSection(section);
+  const safeScope = String(scope || "child").trim().toLowerCase();
+
+  if (safeScope === "child" && CORE_CHILD_SECTIONS.has(safeSection)) {
+    return true;
+  }
+
+  return getAllowedSectionsForScope(safeScope)
+    .map(normaliseSection)
+    .includes(safeSection);
 }
 
 function getRequiredScopeForSection(section = "") {
@@ -409,7 +423,7 @@ async function hydrateRuntimeContextFromAuthCheck() {
     }
 
     const role = normaliseRole(auth.role || auth.user_role || auth.role_name);
-    const authHomeId = normaliseNumericId(auth.home_id || auth.homeId || null);
+    const authHomeId = normaliseNumericId(auth.home_id || authHomeId || null);
     const authProviderId = normaliseNumericId(
       auth.provider_id || auth.providerId || null
     );
@@ -481,10 +495,12 @@ function ensureInitialSectionForScope() {
 
   if (isSectionAllowedInScope(currentSection, scope)) {
     setSectionSafe(currentSection);
-    return;
+    return currentSection;
   }
 
-  setSectionSafe(getDefaultSectionForScope(scope));
+  const fallback = getDefaultSectionForScope(scope);
+  setSectionSafe(fallback);
+  return fallback;
 }
 
 function syncScopeButtons() {
@@ -590,6 +606,7 @@ function refreshAllChrome() {
 
 async function setScope(scope) {
   const safeScope = String(scope || "").trim().toLowerCase();
+
   if (!safeScope || state.currentScope === safeScope || !canAccessScope(safeScope)) {
     return;
   }
@@ -668,6 +685,7 @@ async function openYoungPersonSafely(id, options = {}) {
 
     await loadSection(initialSection, { force: true });
 
+    setSectionSafe(initialSection);
     refreshShellChrome();
     refreshAssistantUi();
     updateAssistantContext();
@@ -917,7 +935,10 @@ async function loadWorkspaceTarget(target, options = {}) {
     updateAssistantContext();
     renderAssistantMessages();
     renderAssistantInsights();
-    refreshWorkspaceSummary();
+
+    if (getCurrentSection() === section) {
+      refreshWorkspaceSummary();
+    }
   } catch (error) {
     console.error(`[index] failed loading workspace section "${section}"`, error);
     showError(error?.message || `Failed to load ${section}.`);
