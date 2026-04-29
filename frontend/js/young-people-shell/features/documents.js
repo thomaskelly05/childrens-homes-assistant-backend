@@ -2,6 +2,11 @@ import { state } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import {
+  normaliseRecords,
+  sortNormalisedRecordsNewestFirst,
+} from "../core/record-normaliser.js";
+import { openRecordDetail } from "../ui/records.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import { buildInspectionUiEndpoints } from "../core/config.js";
 import { mapStatutoryDocument } from "../core/adapters.js";
@@ -28,6 +33,7 @@ function getHomeId() {
     state.readinessSelectedHomeId ||
     state.homeId ||
     state.selectedHomeId ||
+    state.currentHomeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
     state.selectedYoungPerson?.home_id ||
@@ -39,7 +45,9 @@ function getHomeId() {
 function getYoungPersonId() {
   return (
     state.youngPersonId ||
+    state.currentYoungPersonId ||
     state.selectedYoungPerson?.id ||
+    state.selectedYoungPerson?.young_person_id ||
     state.youngPerson?.id ||
     null
   );
@@ -56,14 +64,6 @@ function getScopeTitle() {
       [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
       person.preferred_name ||
       "Young person"
-    );
-  }
-
-  if (scope === "quality" || scope === "ofsted") {
-    return (
-      state.currentUser?.home_name ||
-      state.currentUser?.homeName ||
-      (getHomeId() ? `Home ${getHomeId()}` : "Home")
     );
   }
 
@@ -123,15 +123,17 @@ function toTime(value) {
 }
 
 function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean);
-    const bValue = keys.map((key) => b?.[key]).find(Boolean);
+  return sortNormalisedRecordsNewestFirst(
+    normaliseRecords(items)
+  ).sort((a, b) => {
+    const aValue = keys.map((key) => a?.[key]).find(Boolean) || a.date;
+    const bValue = keys.map((key) => b?.[key]).find(Boolean) || b.date;
     return toTime(bValue) - toTime(aValue);
   });
 }
 
 function sortSoonestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
+  return normaliseRecords(items).sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
     const aTime = aValue ? toTime(aValue) : Number.POSITIVE_INFINITY;
@@ -322,14 +324,24 @@ function renderSection(title = "", subtitle = "", body = "") {
   `;
 }
 
+function getRecordId(item = {}) {
+  return item.id ?? item.record_id ?? item.source_id ?? "";
+}
+
+function getRecordType(item = {}) {
+  return item.type || item.record_type || "record";
+}
+
 function renderRecordRows(items = [], emptyMessage = "No records found.", limit = 8) {
-  if (!items.length) {
+  const normalised = normaliseRecords(items);
+
+  if (!normalised.length) {
     return renderEmptyState(emptyMessage);
   }
 
   return `
     <div class="record-list">
-      ${items
+      ${normalised
         .slice(0, limit)
         .map((item) => {
           const tone = getStatusTone(item.status || item.tone || "");
@@ -337,8 +349,8 @@ function renderRecordRows(items = [], emptyMessage = "No records found.", limit 
             .flat()
             .filter(Boolean)
             .join(" • ");
-          const rowId = item.id ?? "";
-          const recordType = item.record_type || "record";
+          const rowId = getRecordId(item);
+          const recordType = getRecordType(item);
 
           return `
             <article
@@ -346,12 +358,12 @@ function renderRecordRows(items = [], emptyMessage = "No records found.", limit 
               data-open-record="true"
               data-record-id="${safeText(rowId)}"
               data-record-type="${safeText(recordType)}"
-              data-title="${safeText(item.title || "Record")}"
+              data-title="${safeText(item.title || item.label || "Record")}"
               role="button"
               tabindex="0"
             >
               <div class="record-row-main">
-                <div class="record-row-title">${safeText(item.title || "Record")}</div>
+                <div class="record-row-title">${safeText(item.title || item.label || "Record")}</div>
                 <div class="record-row-summary">${safeText(item.summary || "No summary available.")}</div>
                 ${meta ? `<div class="record-row-meta">${safeText(meta)}</div>` : ""}
               </div>
@@ -457,8 +469,8 @@ function renderDocumentsPage({
 function normaliseRecordType(item = {}) {
   const raw = String(
     item.record_type ||
-      item.source_table ||
       item.type ||
+      item.source_table ||
       item.document_type ||
       ""
   )
@@ -522,242 +534,332 @@ function pickRawDocumentItems(data = {}, scope = "home") {
 function normaliseDocuments(data = {}, scope = "home") {
   const rawItems = pickRawDocumentItems(data, scope);
 
-  return rawItems.map((item) => {
-    const mapped = shouldUseStatutoryMapper(item)
-      ? mapStatutoryDocument(item)
-      : item;
+  return normaliseRecords(
+    rawItems.map((item) => {
+      const mapped = shouldUseStatutoryMapper(item)
+        ? mapStatutoryDocument(item)
+        : item;
 
-    const recordType = normaliseRecordType({
-      ...item,
-      ...mapped,
-    });
+      const recordType = normaliseRecordType({
+        ...item,
+        ...mapped,
+      });
 
-    const reviewDate =
-      mapped.review_date || item.review_date || item.next_review_date || null;
-    const expiryDate = mapped.expiry_date || item.expiry_date || null;
-    const updatedAt = mapped.updated_at || item.updated_at || item.created_at || null;
+      const reviewDate =
+        mapped.review_date || item.review_date || item.next_review_date || null;
+      const expiryDate = mapped.expiry_date || item.expiry_date || null;
+      const updatedAt =
+        mapped.updated_at || item.updated_at || item.created_at || null;
 
-    return {
-      ...mapped,
-      id:
-        mapped.id ??
-        item.id ??
-        item.document_id ??
-        item.source_id ??
-        item.file_document_id ??
-        item.statutory_document_id ??
-        null,
-      record_type: recordType,
-      title:
-        mapped.title ||
-        item.title ||
-        item.document_title ||
-        item.policy_name ||
-        item.file_name ||
-        item.document_type ||
-        "Document",
-      summary:
-        mapped.summary ||
-        item.summary ||
-        item.description ||
-        item.notes ||
-        item.content ||
-        "No description",
-      status:
-        mapped.status ||
-        item.status ||
-        item.approval_status ||
-        item.compliance_status ||
-        "recorded",
-      review_date: reviewDate,
-      expiry_date: expiryDate,
-      updated_at: updatedAt,
-      meta: [
-        mapped.document_type ||
+      return {
+        ...mapped,
+        id:
+          mapped.id ??
+          item.id ??
+          item.document_id ??
+          item.source_id ??
+          item.file_document_id ??
+          item.statutory_document_id ??
+          null,
+        record_id:
+          mapped.record_id ??
+          mapped.id ??
+          item.id ??
+          item.document_id ??
+          item.source_id ??
+          item.file_document_id ??
+          item.statutory_document_id ??
+          null,
+        type: recordType,
+        record_type: recordType,
+        title:
+          mapped.title ||
+          item.title ||
+          item.document_title ||
+          item.policy_name ||
+          item.file_name ||
           item.document_type ||
-          item.category ||
-          item.compliance_category ||
           "Document",
-        reviewDate ? `Review ${formatDate(reviewDate)}` : "",
-        expiryDate ? `Expiry ${formatDate(expiryDate)}` : "",
-      ].filter(Boolean),
-    };
-  });
+        summary:
+          mapped.summary ||
+          item.summary ||
+          item.description ||
+          item.notes ||
+          item.content ||
+          "No description",
+        status:
+          mapped.status ||
+          item.status ||
+          item.approval_status ||
+          item.compliance_status ||
+          "recorded",
+        review_date: reviewDate,
+        expiry_date: expiryDate,
+        updated_at: updatedAt,
+        date: updatedAt || reviewDate || expiryDate,
+        meta: [
+          mapped.document_type ||
+            item.document_type ||
+            item.category ||
+            item.compliance_category ||
+            "Document",
+          reviewDate ? `Review ${formatDate(reviewDate)}` : "",
+          expiryDate ? `Expiry ${formatDate(expiryDate)}` : "",
+        ].filter(Boolean),
+        raw: item,
+      };
+    })
+  );
 }
 
 function normaliseTimelineRows(data = {}) {
-  return toArray(data.items, [data.timeline, data.records]).map((item) => ({
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "timeline_event",
-    title: item.title || item.event_title || item.event_type || "Journey event",
-    summary:
-      item.summary || item.description || item.notes || "Journey event recorded.",
-    status: item.status || "recorded",
-    updated_at:
-      item.event_date ||
-      item.event_datetime ||
-      item.created_at ||
-      item.updated_at ||
-      null,
-    meta: [
-      item.event_type || item.category || "Timeline",
-      item.event_date
-        ? formatDate(item.event_date)
-        : item.event_datetime
-        ? formatDateTime(item.event_datetime)
-        : "",
-    ].filter(Boolean),
-  }));
+  return normaliseRecords(
+    toArray(data.items, [data.timeline, data.records, data.chronology_events]).map(
+      (item) => ({
+        ...item,
+        id: item.id ?? item.record_id ?? item.source_id ?? null,
+        record_id: item.record_id ?? item.id ?? item.source_id ?? null,
+        type: item.type || item.record_type || "chronology_event",
+        record_type: item.record_type || item.type || "chronology_event",
+        title: item.title || item.event_title || item.event_type || "Journey event",
+        summary:
+          item.summary ||
+          item.description ||
+          item.notes ||
+          "Journey event recorded.",
+        status: item.status || "recorded",
+        updated_at:
+          item.event_date ||
+          item.event_datetime ||
+          item.created_at ||
+          item.updated_at ||
+          null,
+        date:
+          item.event_date ||
+          item.event_datetime ||
+          item.created_at ||
+          item.updated_at ||
+          null,
+        meta: [
+          item.event_type || item.category || "Timeline",
+          item.event_date
+            ? formatDate(item.event_date)
+            : item.event_datetime
+            ? formatDateTime(item.event_datetime)
+            : "",
+        ].filter(Boolean),
+        raw: item,
+      })
+    )
+  );
 }
 
 function normaliseTaskRows(data = {}) {
-  return toArray(data.items, [data.tasks, data.records]).map((item) => ({
-    id: item.id ?? item.task_id ?? item.record_id ?? null,
-    record_type: item.record_type || "task",
-    title: item.title || item.task_title || "Task",
-    summary:
-      item.summary ||
-      item.description ||
-      item.task ||
-      item.action_description ||
-      "Task recorded.",
-    status: item.status || (item.completed ? "completed" : "open"),
-    due_date: item.due_date || item.task_due_date || item.action_due_date || null,
-    updated_at: item.updated_at || item.created_at || null,
-    meta: [
-      item.priority || "",
-      item.owner_user_name || item.assigned_to || "",
-      item.due_date || item.task_due_date
-        ? `Due ${formatDate(item.due_date || item.task_due_date)}`
-        : "",
-    ].filter(Boolean),
-  }));
-}
-
-function normaliseIncidentRows(data = {}) {
-  return toArray(data.items, [data.incidents, data.records]).map((item) => ({
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "incident",
-    title: item.title || item.incident_type || "Incident",
-    summary:
-      item.summary ||
-      item.description ||
-      item.outcome ||
-      item.notes ||
-      "Incident recorded.",
-    status: item.status || item.risk_level || "recorded",
-    updated_at: item.event_datetime || item.created_at || item.updated_at || null,
-    meta: [
-      item.incident_type || "",
-      item.safeguarding_flag ? "Safeguarding linked" : "",
-      item.event_datetime ? formatDateTime(item.event_datetime) : "",
-    ].filter(Boolean),
-  }));
-}
-
-function normaliseComplianceRows(data = {}) {
-  return toArray(data.items, [data.compliance_items, data.records]).map((item) => {
-    const dueDate = item.due_date || item.review_date || item.expiry_date || null;
-    const status = item.compliance_status || item.status || "recorded";
-
-    return {
-      id: item.id ?? item.record_id ?? item.source_id ?? null,
-      record_type: item.record_type || "compliance_item",
-      title: item.title || item.compliance_type || "Compliance item",
+  return normaliseRecords(
+    toArray(data.items, [data.tasks, data.records]).map((item) => ({
+      ...item,
+      id: item.id ?? item.task_id ?? item.record_id ?? null,
+      record_id: item.record_id ?? item.id ?? item.task_id ?? null,
+      type: item.type || item.record_type || "task",
+      record_type: item.record_type || item.type || "task",
+      title: item.title || item.task_title || item.task || "Task",
       summary:
         item.summary ||
         item.description ||
-        item.notes ||
-        (dueDate ? `Due ${formatDate(dueDate)}` : "Compliance item recorded."),
-      status,
-      due_date: dueDate,
+        item.task ||
+        item.action_description ||
+        "Task recorded.",
+      status: item.status || (item.completed ? "completed" : "open"),
+      due_date: item.due_date || item.task_due_date || item.action_due_date || null,
       updated_at: item.updated_at || item.created_at || null,
+      date: item.due_date || item.task_due_date || item.action_due_date || item.updated_at || item.created_at || null,
       meta: [
-        item.compliance_type || "",
-        dueDate ? `Due ${formatDate(dueDate)}` : "",
-        item.approval_status || "",
+        item.priority || "",
+        item.owner_user_name || item.assigned_to || "",
+        item.due_date || item.task_due_date
+          ? `Due ${formatDate(item.due_date || item.task_due_date)}`
+          : "",
       ].filter(Boolean),
-    };
-  });
+      raw: item,
+    }))
+  );
+}
+
+function normaliseIncidentRows(data = {}) {
+  return normaliseRecords(
+    toArray(data.items, [data.incidents, data.records]).map((item) => ({
+      ...item,
+      id: item.id ?? item.record_id ?? item.source_id ?? null,
+      record_id: item.record_id ?? item.id ?? item.source_id ?? null,
+      type: item.type || item.record_type || "incident",
+      record_type: item.record_type || item.type || "incident",
+      title: item.title || item.incident_type || "Incident",
+      summary:
+        item.summary ||
+        item.description ||
+        item.outcome ||
+        item.notes ||
+        "Incident recorded.",
+      status: item.status || item.risk_level || "recorded",
+      updated_at: item.event_datetime || item.created_at || item.updated_at || null,
+      date: item.event_datetime || item.created_at || item.updated_at || null,
+      meta: [
+        item.incident_type || "",
+        item.safeguarding_flag ? "Safeguarding linked" : "",
+        item.event_datetime ? formatDateTime(item.event_datetime) : "",
+      ].filter(Boolean),
+      raw: item,
+    }))
+  );
+}
+
+function normaliseComplianceRows(data = {}) {
+  return normaliseRecords(
+    toArray(data.items, [data.compliance_items, data.records]).map((item) => {
+      const dueDate = item.due_date || item.review_date || item.expiry_date || null;
+      const status = item.compliance_status || item.status || "recorded";
+
+      return {
+        ...item,
+        id: item.id ?? item.record_id ?? item.source_id ?? null,
+        record_id: item.record_id ?? item.id ?? item.source_id ?? null,
+        type: item.type || item.record_type || "compliance_item",
+        record_type: item.record_type || item.type || "compliance_item",
+        title: item.title || item.compliance_type || "Compliance item",
+        summary:
+          item.summary ||
+          item.description ||
+          item.notes ||
+          (dueDate ? `Due ${formatDate(dueDate)}` : "Compliance item recorded."),
+        status,
+        due_date: dueDate,
+        updated_at: item.updated_at || item.created_at || null,
+        date: dueDate || item.updated_at || item.created_at || null,
+        meta: [
+          item.compliance_type || "",
+          dueDate ? `Due ${formatDate(dueDate)}` : "",
+          item.approval_status || "",
+        ].filter(Boolean),
+        raw: item,
+      };
+    })
+  );
 }
 
 function normaliseReportRows(data = {}) {
-  return toArray(data.items, [data.reports, data.records]).map((item) => ({
-    id: item.id ?? item.report_id ?? item.source_id ?? null,
-    record_type: item.record_type || "report",
-    title: item.title || item.report_type || "Report",
-    summary:
-      item.summary ||
-      item.description ||
-      item.report_text ||
-      item.notes ||
-      "Report output available.",
-    status: item.status || item.workflow_status || "completed",
-    updated_at: item.updated_at || item.generated_at || item.created_at || null,
-    meta: [
-      item.report_type || "",
-      item.review_month ? formatDate(item.review_month) : "",
-      item.generated_at ? `Generated ${formatDateTime(item.generated_at)}` : "",
-    ].filter(Boolean),
-  }));
+  return normaliseRecords(
+    toArray(data.items, [data.reports, data.records]).map((item) => ({
+      ...item,
+      id: item.id ?? item.report_id ?? item.source_id ?? null,
+      record_id: item.record_id ?? item.id ?? item.report_id ?? item.source_id ?? null,
+      type: item.type || item.record_type || "report",
+      record_type: item.record_type || item.type || "report",
+      title: item.title || item.report_type || "Report",
+      summary:
+        item.summary ||
+        item.description ||
+        item.report_text ||
+        item.notes ||
+        "Report output available.",
+      status: item.status || item.workflow_status || "completed",
+      updated_at: item.updated_at || item.generated_at || item.created_at || null,
+      date: item.updated_at || item.generated_at || item.created_at || null,
+      meta: [
+        item.report_type || "",
+        item.review_month ? formatDate(item.review_month) : "",
+        item.generated_at ? `Generated ${formatDateTime(item.generated_at)}` : "",
+      ].filter(Boolean),
+      raw: item,
+    }))
+  );
 }
 
 function normaliseQualityAuditRows(data = {}) {
-  return toArray(data.items, [data.audits, data.records]).map((item) => ({
-    id: item.id ?? item.audit_id ?? item.record_id ?? null,
-    record_type: item.record_type || "quality_audit",
-    title: item.title || item.audit_name || item.audit_type || "Quality audit",
-    summary:
-      item.summary ||
-      item.finding ||
-      item.concerns ||
-      item.notes ||
-      "Quality audit record available.",
-    status: item.status || item.overall_outcome || "recorded",
-    updated_at: item.updated_at || item.audit_date || item.created_at || null,
-    meta: [
-      item.audit_type || "",
-      item.audit_date ? formatDate(item.audit_date) : "",
-      item.overall_outcome ? `Outcome ${item.overall_outcome}` : "",
-    ].filter(Boolean),
-  }));
+  return normaliseRecords(
+    toArray(data.items, [data.quality_audits, data.audits, data.records]).map(
+      (item) => ({
+        ...item,
+        id: item.id ?? item.audit_id ?? item.record_id ?? null,
+        record_id: item.record_id ?? item.id ?? item.audit_id ?? null,
+        type: item.type || item.record_type || "quality_audit",
+        record_type: item.record_type || item.type || "quality_audit",
+        title: item.title || item.audit_title || item.audit_name || item.audit_type || "Quality audit",
+        summary:
+          item.summary ||
+          item.finding ||
+          item.concerns ||
+          item.notes ||
+          "Quality audit record available.",
+        status: item.status || item.overall_outcome || "recorded",
+        updated_at: item.updated_at || item.audit_date || item.created_at || null,
+        date: item.audit_date || item.updated_at || item.created_at || null,
+        meta: [
+          item.audit_type || "",
+          item.audit_date ? formatDate(item.audit_date) : "",
+          item.overall_outcome ? `Outcome ${item.overall_outcome}` : "",
+        ].filter(Boolean),
+        raw: item,
+      })
+    )
+  );
 }
 
 function normaliseQualityActionRows(data = {}) {
-  return toArray(data.items, [data.actions, data.records]).map((item) => ({
-    id: item.id ?? item.action_id ?? item.record_id ?? null,
-    record_type: item.record_type || "quality_action",
-    title: item.title || item.action_title || "Quality action",
-    summary:
-      item.summary ||
-      item.action_description ||
-      item.description ||
-      "Quality action recorded.",
-    status: item.status || "open",
-    due_date: item.due_date || null,
-    updated_at: item.updated_at || item.created_at || null,
-    meta: [
-      item.priority || "",
-      item.owner_user_name || "",
-      item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-    ].filter(Boolean),
-  }));
+  return normaliseRecords(
+    toArray(data.items, [data.quality_audit_actions, data.actions, data.records]).map(
+      (item) => ({
+        ...item,
+        id: item.id ?? item.action_id ?? item.record_id ?? null,
+        record_id: item.record_id ?? item.id ?? item.action_id ?? null,
+        type: item.type || item.record_type || "quality_action",
+        record_type: item.record_type || item.type || "quality_action",
+        title: item.title || item.action_title || "Quality action",
+        summary:
+          item.summary ||
+          item.action_description ||
+          item.description ||
+          "Quality action recorded.",
+        status: item.status || "open",
+        due_date: item.due_date || null,
+        updated_at: item.updated_at || item.created_at || null,
+        date: item.due_date || item.updated_at || item.created_at || null,
+        meta: [
+          item.priority || "",
+          item.owner_user_name || "",
+          item.due_date ? `Due ${formatDate(item.due_date)}` : "",
+        ].filter(Boolean),
+        raw: item,
+      })
+    )
+  );
 }
 
 function normaliseQualityFindingRows(data = {}) {
-  return toArray(data.items, [data.findings, data.records]).map((item) => ({
-    id: item.id ?? item.finding_id ?? item.record_id ?? null,
-    record_type: item.record_type || "quality_finding",
-    title: item.title || item.finding_type || "Quality finding",
-    summary: item.summary || item.details || item.description || "Finding recorded.",
-    status: item.priority || item.status || "recorded",
-    updated_at: item.updated_at || item.created_at || null,
-    meta: [
-      item.finding_type || "",
-      item.priority || "",
-      item.action_required ? "Action required" : "",
-    ].filter(Boolean),
-  }));
+  return normaliseRecords(
+    toArray(data.items, [
+      data.quality_audit_findings,
+      data.findings,
+      data.records,
+    ]).map((item) => ({
+      ...item,
+      id: item.id ?? item.finding_id ?? item.record_id ?? null,
+      record_id: item.record_id ?? item.id ?? item.finding_id ?? null,
+      type: item.type || item.record_type || "quality_finding",
+      record_type: item.record_type || item.type || "quality_finding",
+      title: item.title || item.finding_type || "Quality finding",
+      summary:
+        item.summary || item.details || item.description || "Finding recorded.",
+      status: item.priority || item.status || "recorded",
+      updated_at: item.updated_at || item.created_at || null,
+      date: item.updated_at || item.created_at || null,
+      meta: [
+        item.finding_type || "",
+        item.priority || "",
+        item.action_required ? "Action required" : "",
+      ].filter(Boolean),
+      raw: item,
+    }))
+  );
 }
 
 function getInspectionConfidenceText({ header, sections = [], reasons = [] }) {
@@ -766,10 +868,10 @@ function getInspectionConfidenceText({ header, sections = [], reasons = [] }) {
   }
 
   const populatedSections = sections.filter(
-    (item) => item.summary_text || item.strengths_text || item.concerns_text
+    (item) => item.summary_text || item.strengths_text || item.concerns_text || item.summary
   ).length;
   const concernCount = reasons.filter((item) =>
-    ["concern", "risk", "gap", "weakness"].includes(normaliseToken(item.reason_type))
+    ["concern", "risk", "gap", "weakness"].includes(normaliseToken(item.reason_type || item.status))
   ).length;
 
   if (populatedSections < 2) {
@@ -793,7 +895,7 @@ async function safeGet(path) {
   if (!path) return { __error: false, items: [] };
 
   try {
-    return (await apiGet(path)) || {};
+    return (await apiGet(path, { skipCache: true })) || {};
   } catch {
     return { __error: true, items: [] };
   }
@@ -855,16 +957,23 @@ async function fetchHomeLensData(homeId) {
 }
 
 async function fetchQualityLensData(homeId) {
-  const [documentsRes, qualityRes, auditsRes, findingsRes, actionsRes, complianceRes, reportsRes] =
-    await Promise.all([
-      safeGet(`/homes/${homeId}/documents`),
-      safeGet(`/homes/${homeId}/quality`),
-      safeGet(`/homes/${homeId}/quality-audits`),
-      safeGet(`/homes/${homeId}/quality-audit-findings`),
-      safeGet(`/homes/${homeId}/quality-audit-actions`),
-      safeGet(`/homes/${homeId}/compliance`),
-      safeGet(`/homes/${homeId}/reports`),
-    ]);
+  const [
+    documentsRes,
+    qualityRes,
+    auditsRes,
+    findingsRes,
+    actionsRes,
+    complianceRes,
+    reportsRes,
+  ] = await Promise.all([
+    safeGet(`/homes/${homeId}/documents`),
+    safeGet(`/homes/${homeId}/quality`),
+    safeGet(`/homes/${homeId}/quality-audits`),
+    safeGet(`/homes/${homeId}/quality-audit-findings`),
+    safeGet(`/homes/${homeId}/quality-audit-actions`),
+    safeGet(`/homes/${homeId}/compliance`),
+    safeGet(`/homes/${homeId}/reports`),
+  ]);
 
   assertDataAvailability(
     [
@@ -890,6 +999,50 @@ async function fetchQualityLensData(homeId) {
     compliance: normaliseComplianceRows(complianceRes),
     reports: normaliseReportRows(reportsRes),
   };
+}
+
+function normaliseInspectionRows(rows = [], fallbackType = "inspection_record") {
+  return normaliseRecords(
+    rows.map((row) => ({
+      ...row,
+      id: row.id ?? row.record_id ?? row.source_id ?? null,
+      record_id: row.record_id ?? row.id ?? row.source_id ?? null,
+      type: row.type || row.record_type || fallbackType,
+      record_type: row.record_type || row.type || fallbackType,
+      title:
+        row.title ||
+        row.section_name ||
+        row.line_of_enquiry ||
+        row.action_title ||
+        row.task_title ||
+        row.reason_title ||
+        fallbackType.replaceAll("_", " "),
+      summary:
+        row.summary ||
+        row.description ||
+        row.rationale ||
+        row.action_description ||
+        row.task_description ||
+        row.summary_text ||
+        row.concerns_text ||
+        row.headline_summary ||
+        "Inspection record available.",
+      status:
+        row.status ||
+        row.score_band ||
+        row.reason_type ||
+        row.priority ||
+        "recorded",
+      date:
+        row.due_date ||
+        row.task_due_date ||
+        row.action_due_date ||
+        row.updated_at ||
+        row.created_at ||
+        null,
+      raw: row,
+    }))
+  );
 }
 
 async function fetchOfstedLensData(homeId) {
@@ -936,23 +1089,39 @@ async function fetchOfstedLensData(homeId) {
   const headerRows = toArray(headerRes.items, [headerRes.inspection_headers]).map(
     mapInspectionHeader
   );
-  const sectionRows = toArray(sectionsRes.items, [sectionsRes.inspection_sections]).map(
-    mapInspectionSectionPanel
+  const sectionRows = normaliseInspectionRows(
+    toArray(sectionsRes.items, [sectionsRes.inspection_sections]).map(
+      mapInspectionSectionPanel
+    ),
+    "inspection_section_panel"
   );
-  const reasonRows = toArray(reasonsRes.items, [reasonsRes.inspection_reasons]).map(
-    mapInspectionReason
+  const reasonRows = normaliseInspectionRows(
+    toArray(reasonsRes.items, [reasonsRes.inspection_reasons]).map(
+      mapInspectionReason
+    ),
+    "inspection_reason"
   );
-  const actionRows = toArray(actionsRes.items, [actionsRes.inspection_actions]).map(
-    mapInspectionAction
+  const actionRows = normaliseInspectionRows(
+    toArray(actionsRes.items, [actionsRes.inspection_actions]).map(
+      mapInspectionAction
+    ),
+    "inspection_action"
   );
-  const taskRows = toArray(tasksRes.items, [tasksRes.inspection_tasks]).map(
-    mapInspectionTask
+  const taskRows = normaliseInspectionRows(
+    toArray(tasksRes.items, [tasksRes.inspection_tasks]).map(mapInspectionTask),
+    "inspection_task"
   );
-  const briefingRows = toArray(briefingRes.items, [briefingRes.inspection_briefings]).map(
-    mapInspectionBriefing
+  const briefingRows = normaliseInspectionRows(
+    toArray(briefingRes.items, [briefingRes.inspection_briefings]).map(
+      mapInspectionBriefing
+    ),
+    "inspection_briefing"
   );
-  const prepRows = toArray(prepRes.items, [prepRes.inspection_prep_72_hour]).map(
-    mapInspectionPrep72Hour
+  const prepRows = normaliseInspectionRows(
+    toArray(prepRes.items, [prepRes.inspection_prep_72_hour]).map(
+      mapInspectionPrep72Hour
+    ),
+    "inspection_prep_72_hour"
   );
 
   return {
@@ -971,10 +1140,12 @@ async function fetchOfstedLensData(homeId) {
     })),
     tasks: taskRows.map((row) => ({
       ...row,
-      due_date: row.task_due_date || row.action_due_date || null,
+      due_date: row.task_due_date || row.action_due_date || row.due_date || null,
       meta: [
         row.assigned_user_name || "",
-        row.task_due_date ? `Due ${formatDate(row.task_due_date)}` : "",
+        row.task_due_date || row.due_date
+          ? `Due ${formatDate(row.task_due_date || row.due_date)}`
+          : "",
       ].filter(Boolean),
     })),
     briefing: briefingRows[0] || null,
@@ -983,11 +1154,15 @@ async function fetchOfstedLensData(homeId) {
 }
 
 function buildChildViewModel(data = {}) {
-  const documents = sortNewestFirst(data.documents || [], ["updated_at", "review_date"]);
-  const timeline = sortNewestFirst(data.timeline || [], ["updated_at"]);
-  const reports = sortNewestFirst(data.reports || [], ["updated_at"]);
-  const tasks = sortSoonestFirst(data.tasks || [], ["due_date", "updated_at"]);
-  const compliance = sortSoonestFirst(data.compliance || [], ["due_date", "updated_at"]);
+  const documents = sortNewestFirst(data.documents || [], ["updated_at", "review_date", "date"]);
+  const timeline = sortNewestFirst(data.timeline || [], ["updated_at", "date"]);
+  const reports = sortNewestFirst(data.reports || [], ["updated_at", "date"]);
+  const tasks = sortSoonestFirst(data.tasks || [], ["due_date", "updated_at", "date"]);
+  const compliance = sortSoonestFirst(data.compliance || [], [
+    "due_date",
+    "updated_at",
+    "date",
+  ]);
 
   const priority = sortSoonestFirst(
     [...tasks, ...compliance].filter((item) =>
@@ -995,7 +1170,7 @@ function buildChildViewModel(data = {}) {
         normaliseToken(item.status)
       )
     ),
-    ["due_date", "updated_at"]
+    ["due_date", "updated_at", "date"]
   );
 
   const openActions = [...tasks, ...compliance].filter(
@@ -1066,7 +1241,7 @@ function buildChildViewModel(data = {}) {
         title: "Recent updates",
         subtitle: "Latest updates across chronology and key documents.",
         body: renderRecordRows(
-          sortNewestFirst([...timeline, ...documents], ["updated_at"]).slice(0, 8),
+          sortNewestFirst([...timeline, ...documents], ["updated_at", "date"]).slice(0, 8),
           "No recent child activity found.",
           8
         ),
@@ -1084,11 +1259,15 @@ function buildChildViewModel(data = {}) {
 }
 
 function buildHomeViewModel(data = {}) {
-  const documents = sortNewestFirst(data.documents || [], ["updated_at", "review_date"]);
-  const incidents = sortNewestFirst(data.incidents || [], ["updated_at"]);
-  const tasks = sortSoonestFirst(data.tasks || [], ["due_date", "updated_at"]);
-  const compliance = sortSoonestFirst(data.compliance || [], ["due_date", "updated_at"]);
-  const reports = sortNewestFirst(data.reports || [], ["updated_at"]);
+  const documents = sortNewestFirst(data.documents || [], ["updated_at", "review_date", "date"]);
+  const incidents = sortNewestFirst(data.incidents || [], ["updated_at", "date"]);
+  const tasks = sortSoonestFirst(data.tasks || [], ["due_date", "updated_at", "date"]);
+  const compliance = sortSoonestFirst(data.compliance || [], [
+    "due_date",
+    "updated_at",
+    "date",
+  ]);
+  const reports = sortNewestFirst(data.reports || [], ["updated_at", "date"]);
 
   const operationalPressure = sortSoonestFirst(
     [...tasks, ...compliance].filter((item) =>
@@ -1096,7 +1275,7 @@ function buildHomeViewModel(data = {}) {
         normaliseToken(item.status)
       )
     ),
-    ["due_date", "updated_at"]
+    ["due_date", "updated_at", "date"]
   );
 
   const safeguardingIncidents = incidents.filter((item) =>
@@ -1195,25 +1374,38 @@ function buildQualitySummaryRows(summary = {}) {
     ["critical_actions", "Critical actions"],
   ];
 
-  return pairs
-    .filter(([key]) => summary[key] !== null && summary[key] !== undefined && summary[key] !== "")
-    .map(([key, label]) => ({
-      id: `quality-summary-${key}`,
-      record_type: "quality_summary_metric",
-      title: label,
-      summary: `Current value: ${summary[key]}`,
-      status: Number(summary[key]) > 0 ? "recorded" : "not_recorded",
-      meta: ["Quality summary"],
-    }));
+  return normaliseRecords(
+    pairs
+      .filter(
+        ([key]) =>
+          summary[key] !== null &&
+          summary[key] !== undefined &&
+          summary[key] !== ""
+      )
+      .map(([key, label]) => ({
+        id: `quality-summary-${key}`,
+        record_id: `quality-summary-${key}`,
+        type: "quality_summary_metric",
+        record_type: "quality_summary_metric",
+        title: label,
+        summary: `Current value: ${summary[key]}`,
+        status: Number(summary[key]) > 0 ? "recorded" : "not_recorded",
+        meta: ["Quality summary"],
+      }))
+  );
 }
 
 function buildQualityViewModel(data = {}) {
-  const documents = sortNewestFirst(data.documents || [], ["updated_at", "review_date"]);
-  const audits = sortNewestFirst(data.audits || [], ["updated_at"]);
-  const findings = sortNewestFirst(data.findings || [], ["updated_at"]);
-  const actions = sortSoonestFirst(data.actions || [], ["due_date", "updated_at"]);
-  const compliance = sortSoonestFirst(data.compliance || [], ["due_date", "updated_at"]);
-  const reports = sortNewestFirst(data.reports || [], ["updated_at"]);
+  const documents = sortNewestFirst(data.documents || [], ["updated_at", "review_date", "date"]);
+  const audits = sortNewestFirst(data.audits || [], ["updated_at", "date"]);
+  const findings = sortNewestFirst(data.findings || [], ["updated_at", "date"]);
+  const actions = sortSoonestFirst(data.actions || [], ["due_date", "updated_at", "date"]);
+  const compliance = sortSoonestFirst(data.compliance || [], [
+    "due_date",
+    "updated_at",
+    "date",
+  ]);
+  const reports = sortNewestFirst(data.reports || [], ["updated_at", "date"]);
   const summaryRows = buildQualitySummaryRows(data.summary || {});
 
   const concernFindings = findings.filter((item) =>
@@ -1314,32 +1506,44 @@ function buildOfstedOutputsRows({ reports = [], briefing = null, prep72h = null 
 
   if (briefing) {
     outputRows.unshift({
+      ...briefing,
       id: briefing.id || "inspection-briefing",
-      record_type: briefing.record_type || "inspection_briefing",
+      record_id: briefing.id || "inspection-briefing",
+      type: briefing.type || briefing.record_type || "inspection_briefing",
+      record_type: briefing.record_type || briefing.type || "inspection_briefing",
       title: "Inspection briefing",
       summary:
         briefing.headline_summary ||
         briefing.overall_position_statement ||
+        briefing.summary ||
         "Inspection briefing available.",
       status: "ready",
       updated_at: briefing.updated_at || briefing.created_at || null,
-      meta: ["Manager briefing", briefing.updated_at ? formatDate(briefing.updated_at) : ""].filter(
-        Boolean
-      ),
+      date: briefing.updated_at || briefing.created_at || null,
+      meta: [
+        "Manager briefing",
+        briefing.updated_at ? formatDate(briefing.updated_at) : "",
+      ].filter(Boolean),
     });
   }
 
   if (prep72h) {
     outputRows.unshift({
+      ...prep72h,
       id: prep72h.id || "inspection-prep-72h",
-      record_type: prep72h.record_type || "inspection_prep_72_hour",
+      record_id: prep72h.id || "inspection-prep-72h",
+      type: prep72h.type || prep72h.record_type || "inspection_prep_72_hour",
+      record_type:
+        prep72h.record_type || prep72h.type || "inspection_prep_72_hour",
       title: "72-hour inspection prep",
       summary:
         prep72h.urgent_actions ||
         prep72h.primary_focus_area ||
+        prep72h.summary ||
         "72-hour preparation view available.",
       status: prep72h.inspection_pressure_level || "recorded",
       updated_at: prep72h.updated_at || prep72h.created_at || null,
+      date: prep72h.updated_at || prep72h.created_at || null,
       meta: [
         prep72h.primary_focus_area || "",
         prep72h.inspection_pressure_level
@@ -1349,27 +1553,31 @@ function buildOfstedOutputsRows({ reports = [], briefing = null, prep72h = null 
     });
   }
 
-  return sortNewestFirst(outputRows, ["updated_at"]);
+  return sortNewestFirst(outputRows, ["updated_at", "date"]);
 }
 
 function buildOfstedViewModel(data = {}) {
-  const documents = sortNewestFirst(data.documents || [], ["updated_at", "review_date"]);
-  const sections = sortNewestFirst(data.sections || [], ["updated_at"]);
-  const reasons = sortNewestFirst(data.reasons || [], ["created_at", "updated_at"]);
-  const actions = sortSoonestFirst(data.actions || [], ["due_date", "updated_at"]);
-  const tasks = sortSoonestFirst(data.tasks || [], ["due_date", "updated_at"]);
+  const documents = sortNewestFirst(data.documents || [], ["updated_at", "review_date", "date"]);
+  const sections = sortNewestFirst(data.sections || [], ["updated_at", "date"]);
+  const reasons = sortNewestFirst(data.reasons || [], ["created_at", "updated_at", "date"]);
+  const actions = sortSoonestFirst(data.actions || [], ["due_date", "updated_at", "date"]);
+  const tasks = sortSoonestFirst(data.tasks || [], ["due_date", "updated_at", "date"]);
   const outputs = buildOfstedOutputsRows({
-    reports: sortNewestFirst(data.reports || [], ["updated_at"]),
+    reports: sortNewestFirst(data.reports || [], ["updated_at", "date"]),
     briefing: data.briefing,
     prep72h: data.prep72h,
   });
   const header = data.header || null;
 
   const concernReasons = reasons.filter((item) =>
-    ["concern", "risk", "gap", "weakness"].includes(normaliseToken(item.reason_type))
+    ["concern", "risk", "gap", "weakness"].includes(
+      normaliseToken(item.reason_type || item.status)
+    )
   );
   const strengthReasons = reasons.filter((item) =>
-    ["strength", "positive", "impact"].includes(normaliseToken(item.reason_type))
+    ["strength", "positive", "impact"].includes(
+      normaliseToken(item.reason_type || item.status)
+    )
   );
   const openActions = [...actions, ...tasks].filter(
     (item) => !["completed", "closed", "resolved"].includes(normaliseToken(item.status))
@@ -1436,7 +1644,7 @@ function buildOfstedViewModel(data = {}) {
         body: renderRecordRows(
           sections.map((section) => ({
             ...section,
-            status: section.score_band || "recorded",
+            status: section.score_band || section.status || "recorded",
             meta: [
               section.section_name || section.section_code || "",
               section.score_value ? `Score ${section.score_value}` : "",
@@ -1453,7 +1661,7 @@ function buildOfstedViewModel(data = {}) {
         body: renderRecordRows(
           reasons.map((reason) => ({
             ...reason,
-            status: reason.reason_type || "recorded",
+            status: reason.reason_type || reason.status || "recorded",
             meta: [
               reason.section_name || reason.section_code || "",
               reason.line_of_enquiry_name || "",
@@ -1474,7 +1682,10 @@ function buildOfstedViewModel(data = {}) {
       {
         title: "Inspection action tracker",
         subtitle: "Open inspection actions and linked tasks requiring follow-through.",
-        body: renderPriorityRows(openActions, "No open inspection actions are currently showing."),
+        body: renderPriorityRows(
+          openActions,
+          "No open inspection actions are currently showing."
+        ),
       },
       {
         title: "Supporting evidence documents",
@@ -1488,6 +1699,8 @@ function buildOfstedViewModel(data = {}) {
           [
             {
               id: "ofsted-strength-count",
+              record_id: "ofsted-strength-count",
+              type: "inspection_metric",
               record_type: "inspection_metric",
               title: "Strength-linked reasons",
               summary: `${strengthReasons.length} reasons currently tagged as strengths or positive evidence.`,
@@ -1496,6 +1709,8 @@ function buildOfstedViewModel(data = {}) {
             },
             {
               id: "ofsted-concern-count",
+              record_id: "ofsted-concern-count",
+              type: "inspection_metric",
               record_type: "inspection_metric",
               title: "Concern-linked reasons",
               summary: `${concernReasons.length} reasons currently indicate concerns, risk or evidence gaps.`,
@@ -1525,231 +1740,267 @@ function buildOfstedViewModel(data = {}) {
 function getDemoItemsForScope(scope = getCurrentScope()) {
   if (scope === "child") {
     return {
-      documents: [
+      documents: normaliseRecords([
         {
           id: "demo-child-doc-1",
           record_type: "document",
+          type: "document",
           title: "Placement plan",
           summary: "Current placement plan and therapeutic approach.",
           status: "active",
           updated_at: "2026-04-10T09:00:00Z",
+          date: "2026-04-10T09:00:00Z",
           review_date: "2026-05-11",
           meta: ["Placement", "Review 11 May 2026"],
         },
-      ],
-      timeline: [
+      ]),
+      timeline: normaliseRecords([
         {
           id: "demo-child-tl-1",
-          record_type: "timeline_event",
+          record_type: "chronology_event",
+          type: "chronology_event",
           title: "Admission review completed",
           summary: "Initial review confirms placement stability and priority support themes.",
           status: "recorded",
           updated_at: "2026-04-08T13:00:00Z",
+          date: "2026-04-08T13:00:00Z",
           meta: ["Review", "8 Apr 2026"],
         },
-      ],
-      reports: [
+      ]),
+      reports: normaliseRecords([
         {
           id: "demo-child-report-1",
           record_type: "report",
+          type: "report",
           title: "Child journey summary",
           summary: "Summary output of progress, risk and next steps.",
           status: "completed",
           updated_at: "2026-04-12T11:30:00Z",
+          date: "2026-04-12T11:30:00Z",
           meta: ["Journey report"],
         },
-      ],
-      tasks: [
+      ]),
+      tasks: normaliseRecords([
         {
           id: "demo-child-task-1",
           record_type: "task",
+          type: "task",
           title: "Complete keywork follow-up",
           summary: "Record follow-up on agreed direct-work action.",
           status: "due_soon",
           due_date: "2026-04-22",
+          date: "2026-04-22",
           meta: ["Due 22 Apr 2026"],
         },
-      ],
+      ]),
       compliance: [],
     };
   }
 
   if (scope === "home") {
     return {
-      documents: [
+      documents: normaliseRecords([
         {
           id: "demo-home-doc-1",
           record_type: "document",
+          type: "document",
           title: "Statement of Purpose",
           summary: "Latest home statement of purpose and operational details.",
           status: "review_due",
           updated_at: "2026-04-11T12:00:00Z",
+          date: "2026-04-11T12:00:00Z",
           review_date: "2026-04-28",
           meta: ["Statutory", "Review 28 Apr 2026"],
         },
-      ],
-      incidents: [
+      ]),
+      incidents: normaliseRecords([
         {
           id: "demo-home-incident-1",
           record_type: "incident",
+          type: "incident",
           title: "Missing from care episode",
           summary: "One episode requiring return interview follow-up.",
           status: "warning",
           updated_at: "2026-04-14T21:00:00Z",
+          date: "2026-04-14T21:00:00Z",
           meta: ["Safeguarding linked"],
         },
-      ],
-      tasks: [
+      ]),
+      tasks: normaliseRecords([
         {
           id: "demo-home-task-1",
           record_type: "task",
+          type: "task",
           title: "Close overdue medication audit action",
           summary: "Manager review and close linked action.",
           status: "overdue",
           due_date: "2026-04-18",
+          date: "2026-04-18",
           meta: ["High priority"],
         },
-      ],
+      ]),
       compliance: [],
-      reports: [
+      reports: normaliseRecords([
         {
           id: "demo-home-report-1",
           record_type: "report",
+          type: "report",
           title: "Weekly home overview",
           summary: "Operational summary of incidents, staffing and actions.",
           status: "completed",
           updated_at: "2026-04-13T10:00:00Z",
+          date: "2026-04-13T10:00:00Z",
           meta: ["Weekly output"],
         },
-      ],
+      ]),
     };
   }
 
   if (scope === "quality") {
     return {
-      documents: [
+      documents: normaliseRecords([
         {
           id: "demo-quality-doc-1",
           record_type: "document",
+          type: "document",
           title: "RI quality assurance notes",
           summary: "Oversight notes and evidence links from recent review.",
           status: "active",
           updated_at: "2026-04-12T09:45:00Z",
+          date: "2026-04-12T09:45:00Z",
           meta: ["Quality evidence"],
         },
-      ],
+      ]),
       summary: {
         overall_score: 72,
         readiness_score: 69,
         open_actions: 5,
         overdue_actions: 2,
       },
-      audits: [
+      audits: normaliseRecords([
         {
           id: "demo-quality-audit-1",
           record_type: "quality_audit",
+          type: "quality_audit",
           title: "Monthly quality audit",
           summary: "Audit identified strengths in care consistency and gaps in closure pace.",
           status: "requires_improvement",
           updated_at: "2026-04-09T15:00:00Z",
+          date: "2026-04-09T15:00:00Z",
           meta: ["Monthly audit"],
         },
-      ],
-      findings: [
+      ]),
+      findings: normaliseRecords([
         {
           id: "demo-quality-finding-1",
           record_type: "quality_finding",
+          type: "quality_finding",
           title: "Follow-up closure delay",
           summary: "Repeated delays in closing quality actions after escalation.",
           status: "warning",
           updated_at: "2026-04-10T10:00:00Z",
+          date: "2026-04-10T10:00:00Z",
           meta: ["Action required"],
         },
-      ],
-      actions: [
+      ]),
+      actions: normaliseRecords([
         {
           id: "demo-quality-action-1",
           record_type: "quality_action",
+          type: "quality_action",
           title: "Strengthen action closure discipline",
           summary: "Implement weekly closure review with escalation log.",
           status: "open",
           due_date: "2026-04-25",
+          date: "2026-04-25",
           meta: ["High", "Due 25 Apr 2026"],
         },
-      ],
+      ]),
       compliance: [],
       reports: [],
     };
   }
 
   return {
-    documents: [
+    documents: normaliseRecords([
       {
         id: "demo-ofsted-doc-1",
         record_type: "document",
+        type: "document",
         title: "Inspection evidence pack",
         summary: "Current evidence pack grouped for likely inspection focus.",
         status: "active",
         updated_at: "2026-04-15T09:00:00Z",
+        date: "2026-04-15T09:00:00Z",
         meta: ["Inspection evidence"],
       },
-    ],
-    reports: [
+    ]),
+    reports: normaliseRecords([
       {
         id: "demo-ofsted-report-1",
         record_type: "report",
+        type: "report",
         title: "Inspection preparation summary",
         summary: "Generated preparation summary with strengths, gaps and actions.",
         status: "completed",
         updated_at: "2026-04-15T12:00:00Z",
+        date: "2026-04-15T12:00:00Z",
         meta: ["Inspection output"],
       },
-    ],
+    ]),
     header: {
       id: "demo-ofsted-header-1",
       home_name: getScopeTitle(),
       overall_band: "requires_improvement",
       overall_score: 68.4,
     },
-    sections: [
+    sections: normaliseRecords([
       {
         id: "demo-ofsted-sec-1",
         record_type: "inspection_section_panel",
+        type: "inspection_section_panel",
         section_name: "Help and protection",
+        title: "Help and protection",
         score_band: "requires_improvement",
         score_value: 66.2,
         summary:
           "Safeguarding response is mostly sound but follow-up consistency needs improvement.",
         status: "requires_improvement",
       },
-    ],
-    reasons: [
+    ]),
+    reasons: normaliseRecords([
       {
         id: "demo-ofsted-reason-1",
         record_type: "inspection_reason",
+        type: "inspection_reason",
         title: "Return interview evidence is inconsistent",
         summary: "Some return interviews are not yet evidenced quickly enough.",
         reason_type: "concern",
         status: "concern",
       },
-    ],
-    actions: [
+    ]),
+    actions: normaliseRecords([
       {
         id: "demo-ofsted-action-1",
         record_type: "inspection_action",
+        type: "inspection_action",
         title: "Close return interview evidence gap",
         summary: "Strengthen and evidence timely return interview closure.",
         status: "open",
         due_date: "2026-04-24",
+        date: "2026-04-24",
         meta: ["Due 24 Apr 2026"],
       },
-    ],
+    ]),
     tasks: [],
     briefing: {
       id: "demo-ofsted-briefing-1",
+      record_type: "inspection_briefing",
+      type: "inspection_briefing",
       headline_summary:
         "Home shows steady care quality with clear pressure in action closure and safeguarding follow-up evidence.",
       updated_at: "2026-04-15T08:00:00Z",
+      date: "2026-04-15T08:00:00Z",
     },
     prep72h: null,
   };
@@ -1807,6 +2058,54 @@ async function fetchScopePayload(scope, { youngPersonId, homeId }) {
   return fetchOfstedLensData(homeId);
 }
 
+function getPayloadRecords(payload = {}) {
+  return [
+    ...toArray(payload.documents),
+    ...toArray(payload.compliance),
+    ...toArray(payload.reports),
+    ...toArray(payload.timeline),
+    ...toArray(payload.tasks),
+    ...toArray(payload.incidents),
+    ...toArray(payload.audits),
+    ...toArray(payload.findings),
+    ...toArray(payload.actions),
+    ...toArray(payload.sections),
+    ...toArray(payload.reasons),
+    ...toArray(payload.outputs),
+  ];
+}
+
+function bindDocumentRecordEvents(records = []) {
+  if (!els.viewContent) return;
+
+  const normalised = normaliseRecords(records);
+  const byKey = new Map();
+
+  normalised.forEach((record) => {
+    byKey.set(`${record.type || record.record_type}:${record.id}`, record);
+  });
+
+  els.viewContent.querySelectorAll("[data-open-record='true']").forEach((row) => {
+    const open = () => {
+      const type = row.getAttribute("data-record-type") || "";
+      const id = row.getAttribute("data-record-id") || "";
+      const record = byKey.get(`${type}:${id}`);
+
+      if (record) {
+        openRecordDetail(record);
+      }
+    };
+
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
+  });
+}
+
 export async function loadDocuments() {
   if (!els.viewContent) return;
 
@@ -1847,6 +2146,7 @@ export async function loadDocuments() {
       isDemo: false,
     });
 
+    bindDocumentRecordEvents(getPayloadRecords(payload));
     updateSummaryStrip(model);
   } catch {
     const fallbackPayload = getDemoItemsForScope(scope);
@@ -1864,6 +2164,8 @@ export async function loadDocuments() {
       isDemo: true,
     });
 
+    bindDocumentRecordEvents(getPayloadRecords(fallbackPayload));
+
     updateSummaryStrip({
       ...model,
       summaryStrip: {
@@ -1873,3 +2175,5 @@ export async function loadDocuments() {
     });
   }
 }
+
+export const loadCurrentView = loadDocuments;
