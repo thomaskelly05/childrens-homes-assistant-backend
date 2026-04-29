@@ -8,6 +8,7 @@ import {
 } from "../state.js";
 
 import { fetchAssistantScopeBundle } from "../core/api.js";
+import { getAssistantContext } from "../core/api-adapter.js";
 import { buildAssistantEvidenceContext } from "../core/assistant-runtime.js";
 import { refreshAssistantUi } from "./assistant-ui.js";
 
@@ -48,6 +49,8 @@ function getResolvedHomeId() {
   return (
     toNumericId(state.readinessSelectedHomeId) ||
     toNumericId(state.homeId) ||
+    toNumericId(state.selectedHomeId) ||
+    toNumericId(state.currentHomeId) ||
     toNumericId(state.selectedYoungPerson?.home_id) ||
     toNumericId(state.selectedYoungPerson?.homeId) ||
     toNumericId(state.currentUser?.home_id) ||
@@ -105,6 +108,32 @@ function getScopeContext() {
   };
 }
 
+async function fetchAssistantBundleForContext(context = {}) {
+  try {
+    const response = await getAssistantContext(
+      {
+        youngPersonId: context.young_person_id,
+        childId: context.young_person_id,
+        homeId: context.home_id,
+      },
+      {
+        provider_id: context.provider_id,
+        scope: context.scope,
+        access_level: context.access_level,
+      }
+    );
+
+    return response.scope_bundle || response.bundle || response.context || response;
+  } catch (error) {
+    console.warn(
+      "[assistant] compat context route failed, falling back to scope bundle",
+      error
+    );
+
+    return fetchAssistantScopeBundle(context);
+  }
+}
+
 function buildBriefs(bundle, context) {
   try {
     const scope = context.scope;
@@ -130,10 +159,21 @@ function buildBriefs(bundle, context) {
       brain_insights: brief?.insights || [],
       suggested_actions: brief?.suggested_actions || [],
       top_sources: brief?.top_sources || [],
+      sources: brief?.top_sources || previousMeta.sources || [],
       evidence_count: brief?.evidence_count || 0,
       confidence: brief?.confidence || "low",
       confidence_reason: brief?.confidence_reason || "",
       analysis_lens: brief?.analysis_lens || null,
+      assistant_context: context,
+      runtime: {
+        ...(previousMeta.runtime || {}),
+        source: "assistant_controller",
+        evidence_count: brief?.evidence_count || 0,
+        scope: context.scope,
+        home_id: context.home_id,
+        provider_id: context.provider_id,
+        young_person_id: context.young_person_id,
+      },
       last_updated: new Date().toISOString(),
     });
   } catch (error) {
@@ -158,7 +198,7 @@ export async function loadAssistantBundle({ force = false } = {}) {
 
   const promise = (async () => {
     try {
-      const bundle = await fetchAssistantScopeBundle(context);
+      const bundle = await fetchAssistantBundleForContext(context);
 
       if (token !== latestRefreshToken) return null;
 
