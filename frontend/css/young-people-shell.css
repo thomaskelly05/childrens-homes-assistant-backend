@@ -2776,3 +2776,264 @@ textarea {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
   }
 }
+
+/* ============================================================
+   FINAL OVERRIDE — Production launcher styling
+   Paste at very bottom of young-people-shell.css
+============================================================ */
+
+html,
+body,
+#app,
+#app * {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+}
+
+/* Topbar fix */
+.shell-topbar {
+  min-height: 76px !important;
+  padding: 12px 28px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04) !important;
+}
+
+.brand-button {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.brand-mark {
+  display: grid !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 16px !important;
+  place-items: center !important;
+  background: linear-gradient(135deg, #1e40af, #2563eb) !important;
+  color: #fff !important;
+  font-weight: 900 !important;
+}
+
+.brand-copy strong {
+  display: block !important;
+  color: #0b1f33 !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+}
+
+.brand-copy small {
+  color: #64748b !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+}
+
+/* Entry page width and placement */
+.shell-main {
+  padding: 34px 32px 0 !important;
+}
+
+#selectorPanel .selector-screen-inner--simple {
+  width: min(1180px, calc(100vw - 64px)) !important;
+  margin: 0 auto !important;
+  gap: 24px !important;
+}
+
+/* Hero */
+#selectorPanel .simple-entry-head {
+  min-height: 230px !important;
+  padding: 38px 44px !important;
+  border-radius: 32px !important;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(6, 182, 212, 0.14), transparent 35%),
+    radial-gradient(circle at 8% 10%, rgba(37, 99, 235, 0.12), transparent 34%),
+    linear-gradient(135deg, #ffffff, #eff6ff) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08) !important;
+}
+
+#selectorPanel .simple-entry-head h1 {
+  max-width: 760px !important;
+  margin: 6px 0 14px !important;
+  color: #0b1f33 !important;
+  font-size: clamp(3rem, 4.8vw, 5.6rem) !important;
+  line-height: 0.9 !important;
+  letter-spacing: -0.08em !important;
+  font-weight: 950 !important;
+}
+
+#selectorPanel .simple-entry-head p {
+  max-width: 760px !important;
+  color: #475569 !important;
+  font-size: 1rem !important;
+  line-height: 1.6 !important;
+  font-weight: 650 !important;
+}
+
+/* Main launch area */
+.safe-start-launch-grid {
+  grid-template-columns: 300px minmax(0, 1fr) !important;
+  gap: 20px !important;
+  align-items: start !important;
+}
+
+#selectorPanel .simple-home-panel,
+#selectorPanel .simple-children-panel {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 18px 55px rgba(15, 23, 42, 0.08) !important;
+}
+
+#selectorPanel .simple-home-panel {
+  padding: 22px !important;
+}
+
+#selectorPanel .simple-children-panel {
+  padding: 24px !important;
+}
+
+#selectorPanel .eyebrow {
+  color: #2563eb !important;
+  font-size: 0.7rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+#selectorPanel h2 {
+  color: #0b1f33 !important;
+  font-size: 1.18rem !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.04em !important;
+}
+
+#selectorPanel p {
+  color: #64748b !important;
+  font-weight: 650 !important;
+}
+
+/* Inputs */
+#selectorPanel input,
+#selectorPanel select {
+  min-height: 44px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+  color: #0b1f33 !important;
+  font-size: 0.86rem !important;
+}
+
+/* Home card */
+#homeChipList button,
+#homeChipList .home-chip,
+#homeChipList .safe-home-chip {
+  min-height: 82px !important;
+  padding: 15px !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04) !important;
+  color: #0b1f33 !important;
+  font-weight: 850 !important;
+}
+
+/* Young people cards */
+#selectorList {
+  margin-top: 18px !important;
+  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)) !important;
+  gap: 16px !important;
+}
+
+#selectorList .selector-card {
+  min-height: 255px !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  align-content: start !important;
+  padding: 20px !important;
+  border-radius: 26px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.07) !important;
+}
+
+#selectorList .selector-card-photo-fallback,
+#selectorList .profile-photo-fallback {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 18px !important;
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  font-weight: 900 !important;
+  margin-bottom: 10px !important;
+}
+
+#selectorList .selector-card-body h3 {
+  color: #0b1f33 !important;
+  font-size: 1.08rem !important;
+  font-weight: 900 !important;
+  margin-bottom: 8px !important;
+}
+
+#selectorList .selector-card-body p {
+  color: #475569 !important;
+  font-size: 0.82rem !important;
+  line-height: 1.5 !important;
+  font-weight: 650 !important;
+}
+
+#selectorList .selector-pill,
+#selectorList .meta-chip,
+#selectorList .badge,
+#selectorList .row-pill {
+  background: #eff6ff !important;
+  color: #1e40af !important;
+  border: 1px solid rgba(37, 99, 235, 0.2) !important;
+  font-size: 0.7rem !important;
+  font-weight: 850 !important;
+  padding: 5px 9px !important;
+}
+
+#selectorList .selector-card-actions button,
+#selectorList .selector-card-actions .secondary-btn,
+#selectorList .selector-card-actions .primary-btn {
+  min-height: 42px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(135deg, #1e40af, #2563eb) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Assistant button */
+#safeStartAskAssistantBtn,
+.assistant-fab {
+  background: linear-gradient(135deg, #1e40af, #2563eb) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.24) !important;
+}
+
+/* Footer */
+.app-footer {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.app-footer-inner {
+  color: #64748b !important;
+  font-size: 0.8rem !important;
+}
+
+@media (max-width: 1100px) {
+  .safe-start-launch-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  #selectorList {
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)) !important;
+  }
+}
