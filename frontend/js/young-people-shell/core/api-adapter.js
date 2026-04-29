@@ -1,9 +1,8 @@
 import { apiSend } from "./api.js";
-import {
-  normaliseRecordType,
-} from "./contracts.js";
+import { normaliseRecordType } from "./contracts.js";
 import {
   getRecordContract,
+  getRecordContractBySection,
   getRecordRoute,
   getRecordLabel,
 } from "./record-contracts.js";
@@ -12,10 +11,6 @@ function safeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
     : {};
-}
-
-function safeArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function hasValue(value) {
@@ -181,7 +176,12 @@ export async function createRecord(recordType, ids = {}, payload = {}) {
   return unwrapSingleResponse(response);
 }
 
-export async function updateRecord(recordType, ids = {}, recordId = "", payload = {}) {
+export async function updateRecord(
+  recordType,
+  ids = {},
+  recordId = "",
+  payload = {}
+) {
   const url = buildRecordItemUrl(recordType, ids, recordId);
   const response = await apiSend(url, {
     method: "PATCH",
@@ -191,7 +191,12 @@ export async function updateRecord(recordType, ids = {}, recordId = "", payload 
   return unwrapSingleResponse(response);
 }
 
-export async function replaceRecord(recordType, ids = {}, recordId = "", payload = {}) {
+export async function replaceRecord(
+  recordType,
+  ids = {},
+  recordId = "",
+  payload = {}
+) {
   const url = buildRecordItemUrl(recordType, ids, recordId);
   const response = await apiSend(url, {
     method: "PUT",
@@ -211,7 +216,7 @@ export async function deleteRecord(recordType, ids = {}, recordId = "") {
 }
 
 export async function listSectionRecords(section, ids = {}, query = {}) {
-  const contract = getRecordContract(section);
+  const contract = getRecordContractBySection(section);
 
   if (contract) {
     return listRecords(contract.type, ids, query);
@@ -221,7 +226,7 @@ export async function listSectionRecords(section, ids = {}, query = {}) {
 }
 
 export async function createSectionRecord(section, ids = {}, payload = {}) {
-  const contract = getRecordContract(section);
+  const contract = getRecordContractBySection(section);
 
   if (contract) {
     return createRecord(contract.type, ids, payload);
@@ -249,7 +254,9 @@ export async function getAssistantContext(ids = {}, query = {}) {
 
   if (youngPersonId) {
     return apiSend(
-      `/young-people/${encodeURIComponent(youngPersonId)}/assistant/context${params}`,
+      `/young-people/${encodeURIComponent(
+        youngPersonId
+      )}/assistant/context${params}`,
       { method: "GET" }
     );
   }
@@ -265,11 +272,9 @@ export async function getAssistantContext(ids = {}, query = {}) {
 }
 
 export async function runAssistantAction(action = {}) {
-  const safe = safeObject(action);
-
   return apiSend("/assistant/actions", {
     method: "POST",
-    body: safe,
+    body: safeObject(action),
   });
 }
 
