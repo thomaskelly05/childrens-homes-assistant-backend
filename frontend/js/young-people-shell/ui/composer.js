@@ -336,25 +336,36 @@ function riskForm(item = {}) {
   return {
     title: "Risk assessment",
     intro:
-      "Record the risk area, current level, triggers, protective factors and practical response guidance.",
-    required: ["review_date", "risk_area", "summary", "response_plan"],
+      "Record the risk category, concern, triggers, controls, response actions and review date.",
+    required: ["category", "title"],
     html: `
       ${section("Risk overview", "Identify the risk and review date.", [
-        { name: "review_date", label: "Review date", type: "date", value: today(), required: true },
-        { name: "risk_area", label: "Risk area", required: true },
-        { name: "severity", label: "Current risk level", type: "select", options: SEVERITY_OPTIONS },
+        { name: "category", label: "Category", required: true },
+        { name: "title", label: "Risk title", required: true },
+        { name: "review_date", label: "Review date", type: "date", value: today() },
+        { name: "severity", label: "Severity", type: "select", options: SEVERITY_OPTIONS, value: "medium" },
+        { name: "likelihood", label: "Likelihood", type: "select", options: SEVERITY_OPTIONS, value: "medium" },
+        { name: "status", label: "Status", type: "select", options: [
+          { value: "active", label: "Active" },
+          { value: "draft", label: "Draft" },
+          { value: "submitted", label: "Submitted" },
+          { value: "approved", label: "Approved" },
+          { value: "archived", label: "Archived" },
+        ], value: "active" },
       ], item)}
 
-      ${section("Assessment", "Describe the risk clearly.", [
-        { name: "summary", label: "Risk summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "triggers", label: "Known triggers / early signs", type: "textarea", full: true },
-        { name: "protective_factors", label: "Protective factors", type: "textarea", full: true },
+      ${section("Assessment", "Describe the concern and what may increase risk.", [
+        { name: "concern_summary", label: "Concern summary", type: "textarea", rows: 5, full: true },
+        { name: "known_triggers", label: "Known triggers", type: "textarea", full: true },
+        { name: "early_warning_signs", label: "Early warning signs", type: "textarea", full: true },
+        { name: "contextual_factors", label: "Contextual factors", type: "textarea", full: true },
       ], item)}
 
-      ${section("Response plan", "Set out what adults should do.", [
-        { name: "response_plan", label: "Response guidance", type: "textarea", rows: 5, required: true, full: true },
-        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
-        { name: "manager_oversight", label: "Manager oversight", type: "textarea", full: true },
+      ${section("Controls and response", "Set out what adults should do.", [
+        { name: "current_controls", label: "Current controls", type: "textarea", full: true },
+        { name: "deescalation_strategies", label: "De-escalation strategies", type: "textarea", full: true },
+        { name: "response_actions", label: "Response actions", type: "textarea", rows: 5, full: true },
+        { name: "child_views", label: "Child views", type: "textarea", full: true },
       ], item)}
     `,
   };
@@ -695,7 +706,7 @@ function qualityCheck(type, data = {}, required = []) {
     !data.actions_required &&
     !data.actions_taken &&
     !data.immediate_action_taken &&
-    !data.response_plan
+    !data.response_actions
   ) {
     issues.push("actions / response plan");
   }
