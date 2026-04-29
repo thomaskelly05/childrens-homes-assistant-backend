@@ -30,15 +30,6 @@
     el.setAttribute("aria-expanded", expanded ? "true" : "false");
   }
 
-  function ensureRequiredDomAliases() {
-    // Do not rename live DOM IDs.
-    // Compatibility aliases are handled inside /js/young-people-shell/dom.js.
-  }
-
-  function restoreHtmlCompatibilityIds() {
-    // No-op. IDs must remain stable after the page loads.
-  }
-
   function normaliseDataset() {
     const app = byId("app");
     if (!app) return;
@@ -58,8 +49,38 @@
     const app = byId("app");
     if (!app) return;
 
-    app.classList.add("indicare-care-hub");
-    document.body.classList.add("indicare-care-hub-body");
+    app.classList.add(
+      "indicare-care-hub",
+      "safe-start-shell",
+      "premium-ready",
+      "care-hub-ready"
+    );
+
+    document.body.classList.add(
+      "indicare-care-hub-body",
+      "safe-start-body",
+      "indicare-shell-ready"
+    );
+  }
+
+  function enhanceSafeStartLayout() {
+    const selectorPanel = byId("selectorPanel");
+    const selectorInner = selectorPanel?.querySelector(".selector-screen-inner");
+    const launchGrid = selectorPanel?.querySelector(".safe-start-launch-grid");
+    const homePanel = selectorPanel?.querySelector(".simple-home-panel");
+    const childPanel = selectorPanel?.querySelector(".simple-children-panel");
+    const homeList = byId("homeChipList");
+    const childList = byId("selectorList");
+
+    if (!selectorPanel) return;
+
+    selectorPanel.classList.add("safe-start-clean-entry");
+    selectorInner?.classList.add("selector-screen-inner--simple");
+    launchGrid?.classList.add("safe-start-launch-grid");
+    homePanel?.classList.add("safe-start-home-column");
+    childPanel?.classList.add("safe-start-young-people-column");
+    homeList?.classList.add("safe-start-home-row");
+    childList?.classList.add("safe-start-young-people-row");
   }
 
   function syncMobileDrawerState() {
@@ -76,13 +97,37 @@
     document.body.classList.toggle("mobile-nav-open", open);
   }
 
+  function getFocusableElements(container) {
+    if (!container) return [];
+
+    return Array.from(
+      container.querySelectorAll(
+        [
+          "a[href]",
+          "button:not([disabled])",
+          "textarea:not([disabled])",
+          "input:not([disabled])",
+          "select:not([disabled])",
+          "summary",
+          "[tabindex]:not([tabindex='-1'])",
+        ].join(",")
+      )
+    ).filter((el) => {
+      if (el.getAttribute("aria-hidden") === "true") return false;
+      const style = window.getComputedStyle(el);
+      return style.display !== "none" && style.visibility !== "hidden";
+    });
+  }
+
   function enhanceMobileNavigation() {
     const toggle = byId("mobileNavToggle");
     const panel = byId("mobileNavPanel");
     const backdrop = byId("mobileNavBackdrop");
     const closeBtn = byId("closeMobileNavBtn");
 
-    if (!toggle || !panel) return;
+    if (!toggle || !panel || toggle.dataset.bound === "true") return;
+
+    toggle.dataset.bound = "true";
 
     toggle.addEventListener("click", () => {
       const nextOpen = !isVisible(panel);
@@ -167,7 +212,9 @@
 
   function observeWorkspaceContent() {
     const content = byId("viewContent");
-    if (!content) return;
+    if (!content || content.dataset.observed === "true") return;
+
+    content.dataset.observed = "true";
 
     const observer = new MutationObserver(() => {
       addTableResponsiveLabels();
@@ -181,28 +228,6 @@
 
     addTableResponsiveLabels();
     improvePlainWorkspaceBlocks();
-  }
-
-  function getFocusableElements(container) {
-    if (!container) return [];
-
-    return Array.from(
-      container.querySelectorAll(
-        [
-          "a[href]",
-          "button:not([disabled])",
-          "textarea:not([disabled])",
-          "input:not([disabled])",
-          "select:not([disabled])",
-          "summary",
-          "[tabindex]:not([tabindex='-1'])",
-        ].join(",")
-      )
-    ).filter((el) => {
-      if (el.getAttribute("aria-hidden") === "true") return false;
-      const style = window.getComputedStyle(el);
-      return style.display !== "none" && style.visibility !== "hidden";
-    });
   }
 
   function trapFocus(container, event) {
@@ -226,6 +251,9 @@
   }
 
   function bindDialogFocusManagement() {
+    if (document.body.dataset.dialogFocusBound === "true") return;
+    document.body.dataset.dialogFocusBound = "true";
+
     const getDialogs = () =>
       [
         byId("assistantModal"),
@@ -244,7 +272,9 @@
 
   function improveComposerControls() {
     const composer = byId("recordComposerPage");
-    if (!composer) return;
+    if (!composer || composer.dataset.composerEnhanced === "true") return;
+
+    composer.dataset.composerEnhanced = "true";
 
     const enhance = () => {
       composer.querySelectorAll("textarea").forEach((textarea) => {
@@ -279,7 +309,9 @@
 
   function improveAssistantText() {
     const host = byId("assistantMessages");
-    if (!host) return;
+    if (!host || host.dataset.assistantTextEnhanced === "true") return;
+
+    host.dataset.assistantTextEnhanced = "true";
 
     const enhance = () => {
       host.querySelectorAll(".assistant-message-body").forEach((body) => {
@@ -300,9 +332,10 @@
   }
 
   function improveStatusAnnouncements() {
-    ["statusBar", "statusMessage"].forEach((id) => {
+    ["statusBar", "statusMessage", "selectorStatusMessage"].forEach((id) => {
       const status = byId(id);
       if (!status) return;
+
       status.setAttribute("role", "status");
       status.setAttribute("aria-live", "polite");
       status.setAttribute("aria-atomic", "true");
@@ -310,6 +343,9 @@
   }
 
   function addGlobalSearchShortcut() {
+    if (document.body.dataset.searchShortcutBound === "true") return;
+    document.body.dataset.searchShortcutBound = "true";
+
     const search = byId("recordSearchInput");
 
     document.addEventListener("keydown", (event) => {
@@ -328,6 +364,9 @@
   }
 
   function addSafeExternalLinkHandling() {
+    if (document.body.dataset.externalLinkHandlingBound === "true") return;
+    document.body.dataset.externalLinkHandlingBound = "true";
+
     document.addEventListener("click", (event) => {
       const link = event.target.closest("a[href]");
       if (!link) return;
@@ -353,7 +392,7 @@
 
     host.dataset.clockBound = "true";
 
-    const original = host.textContent.trim() || "Child-centred Care Hub";
+    const original = host.textContent.trim() || "Choose home and young person";
 
     const tick = () => {
       const now = new Date();
@@ -376,9 +415,10 @@
       ["Ask assistant", "Ask IndiCare"],
       ["Assistant", "IndiCare Assistant"],
       ["Dashboard", "Care Hub"],
-      ["Change child", "Change child"],
       ["Search records", "Search care story"],
       ["Loading workspace…", "Opening Care Hub…"],
+      ["Care Hub menu", "Care Hub folders"],
+      ["What do you need to do?", "Choose the area you need"],
     ];
 
     const walker = document.createTreeWalker(
@@ -461,6 +501,9 @@
   }
 
   function closeOtherCareMenus() {
+    if (document.body.dataset.careMenuBound === "true") return;
+    document.body.dataset.careMenuBound = "true";
+
     document.addEventListener(
       "toggle",
       (event) => {
@@ -486,6 +529,107 @@
     });
   }
 
+  function bindEntryPointButtons() {
+    const logoBtn = byId("logoBtn");
+    const goHomeBtn = byId("goHomeBtn");
+    const changePersonBtn = byId("changePersonBtn");
+    const mobileHomeBtn = byId("mobileHomeBtn");
+
+    const goToEntry = () => {
+      const selectorPanel = byId("selectorPanel");
+      const workspacePanel = byId("workspacePanel");
+
+      if (selectorPanel && workspacePanel) {
+        setHidden(workspacePanel, true);
+        setHidden(selectorPanel, false);
+        selectorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+
+    [logoBtn, goHomeBtn, changePersonBtn, mobileHomeBtn].forEach((button) => {
+      if (!button || button.dataset.entryBound === "true") return;
+      button.dataset.entryBound = "true";
+      button.addEventListener("click", goToEntry);
+    });
+  }
+
+  function bindAssistantLaunchers() {
+    const launchers = [
+      byId("safeStartAskAssistantBtn"),
+      byId("heroAssistantBtn"),
+      byId("assistantLauncher"),
+    ].filter(Boolean);
+
+    const openAssistant = () => {
+      const modal = byId("assistantModal");
+      const backdrop = byId("assistantBackdrop");
+
+      setHidden(backdrop, false);
+      setHidden(modal, false);
+
+      const input = byId("assistantInput");
+      requestAnimationFrame(() => input?.focus?.());
+    };
+
+    const closeAssistant = () => {
+      setHidden(byId("assistantModal"), true);
+      setHidden(byId("assistantBackdrop"), true);
+    };
+
+    launchers.forEach((button) => {
+      if (button.dataset.assistantLauncherBound === "true") return;
+      button.dataset.assistantLauncherBound = "true";
+      button.addEventListener("click", openAssistant);
+    });
+
+    const closeBtn = byId("closeAssistantBtn");
+    if (closeBtn && closeBtn.dataset.assistantCloseBound !== "true") {
+      closeBtn.dataset.assistantCloseBound = "true";
+      closeBtn.addEventListener("click", closeAssistant);
+    }
+
+    const backdrop = byId("assistantBackdrop");
+    if (backdrop && backdrop.dataset.assistantBackdropBound !== "true") {
+      backdrop.dataset.assistantBackdropBound = "true";
+      backdrop.addEventListener("click", closeAssistant);
+    }
+  }
+
+  function bindPanelCloseButtons() {
+    const bindings = [
+      ["closeFullscreenPanelBtn", "fullscreenPanel"],
+      ["closeSuggestionsPanelBtn", "suggestionsPanel"],
+      ["closeComposerBtn", "recordComposerPage"],
+      ["closeRecordDrawerBtn", "recordDrawer"],
+    ];
+
+    bindings.forEach(([buttonId, panelId]) => {
+      const button = byId(buttonId);
+      const panel = byId(panelId);
+
+      if (!button || !panel || button.dataset.closeBound === "true") return;
+
+      button.dataset.closeBound = "true";
+
+      button.addEventListener("click", () => {
+        setHidden(panel, true);
+
+        if (panelId === "recordDrawer") {
+          setHidden(byId("recordDrawerBackdrop"), true);
+        }
+      });
+    });
+
+    const drawerBackdrop = byId("recordDrawerBackdrop");
+    if (drawerBackdrop && drawerBackdrop.dataset.drawerBackdropBound !== "true") {
+      drawerBackdrop.dataset.drawerBackdropBound = "true";
+      drawerBackdrop.addEventListener("click", () => {
+        setHidden(byId("recordDrawer"), true);
+        setHidden(drawerBackdrop, true);
+      });
+    }
+  }
+
   function addProductionReadyClass() {
     const app = byId("app");
     if (!app) return;
@@ -497,7 +641,11 @@
   }
 
   function showStartupError(error) {
-    const status = byId("statusBar") || byId("statusMessage");
+    const status =
+      byId("statusBar") ||
+      byId("selectorStatusMessage") ||
+      byId("statusMessage");
+
     if (status) {
       status.classList.remove("hidden");
       status.removeAttribute("aria-hidden");
@@ -510,17 +658,14 @@
 
   async function loadModularShell() {
     try {
-      ensureRequiredDomAliases();
       normaliseDataset();
       addCareHubClasses();
 
       await import(SHELL_MODULE);
 
-      restoreHtmlCompatibilityIds();
       log("modular shell loaded");
       return true;
     } catch (error) {
-      restoreHtmlCompatibilityIds();
       showStartupError(error);
       return false;
     }
@@ -528,6 +673,7 @@
 
   function initEnhancements() {
     addCareHubClasses();
+    enhanceSafeStartLayout();
     improveCareHubCopy();
     enhanceMobileNavigation();
     observeWorkspaceContent();
@@ -540,6 +686,9 @@
     addLiveClockToShell();
     addMobileBottomNavFallback();
     closeOtherCareMenus();
+    bindEntryPointButtons();
+    bindAssistantLaunchers();
+    bindPanelCloseButtons();
     addProductionReadyClass();
   }
 
