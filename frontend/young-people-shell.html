@@ -109,24 +109,28 @@
 
     <main class="shell-main shell-main--safe-start" id="mainContent">
       <section id="selectorPanel" class="selector-screen selector-screen--safe-start hidden" aria-labelledby="selectorHeading">
-        <div class="selector-screen-inner selector-screen-inner--simple">
+        <div class="selector-screen-inner selector-screen-inner--simple safe-start-clean-entry">
           <section class="simple-entry-head" aria-labelledby="selectorHeading">
             <div>
               <div class="eyebrow">IndiCare entry point</div>
-              <h1 id="selectorHeading">Select a home, then open a young person’s Care Hub.</h1>
+              <h1 id="selectorHeading">Open the right Care Hub with confidence.</h1>
               <p>
-                Choose the home you are working in. Young people in that home will appear below as clear cards.
+                Select the home first, then choose the young person from a clear row of cards.
+                This keeps launching into records calm, professional and easy to follow.
               </p>
             </div>
 
             <button id="safeStartAskAssistantBtn" class="secondary-btn" type="button">Ask IndiCare</button>
           </section>
 
-          <section class="simple-home-panel" aria-label="Choose home">
-            <div class="simple-section-head">
-              <div>
-                <div class="eyebrow">Home</div>
-                <h2>Select home</h2>
+          <section class="safe-start-launch-grid" aria-label="Care Hub launch area">
+            <section class="simple-home-panel safe-start-home-column" aria-label="Choose home">
+              <div class="simple-section-head">
+                <div>
+                  <div class="eyebrow">Step 1</div>
+                  <h2>Select home</h2>
+                  <p>Choose the home you are working in today.</p>
+                </div>
               </div>
 
               <div class="selector-tools selector-tools--simple">
@@ -138,59 +142,58 @@
                   <option value="">Choose a home</option>
                 </select>
               </div>
-            </div>
 
-            <div id="homeChipList" class="safe-chip-list safe-chip-list--homes simple-home-row" aria-live="polite">
-              <div class="loading-state loading-state--drawer">
+              <div id="homeChipList" class="safe-chip-list safe-chip-list--homes simple-home-row safe-start-home-row" aria-live="polite">
+                <div class="loading-state loading-state--drawer">
+                  <div>
+                    <div class="spinner" aria-hidden="true"></div>
+                    <p>Loading homes…</p>
+                  </div>
+                </div>
+              </div>
+
+              <p id="selectedHomeSummary" class="simple-context-note">No home selected</p>
+            </section>
+
+            <section class="simple-children-panel safe-start-young-people-column" aria-label="Young people in selected home">
+              <div class="simple-section-head">
                 <div>
-                  <div class="spinner" aria-hidden="true"></div>
-                  <p>Loading homes…</p>
+                  <div class="eyebrow">Step 2</div>
+                  <h2>Young people in this home</h2>
+                  <p id="selectedChildSummary">Choose a home first</p>
+                </div>
+
+                <div class="selector-tools selector-tools--simple">
+                  <label class="sr-only" for="selectorSearch">Search young people</label>
+                  <input id="selectorSearch" class="search-input" type="search" placeholder="Search young people..." autocomplete="off" />
+
+                  <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
+                  <input id="youngPersonSearchInput" class="search-input hidden" type="search" placeholder="Search young people..." autocomplete="off" aria-hidden="true" tabindex="-1" />
+
+                  <label class="sr-only" for="youngPersonSelect">Choose young person</label>
+                  <select id="youngPersonSelect" class="select-input">
+                    <option value="">Choose a child</option>
+                  </select>
+
+                  <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
                 </div>
               </div>
-            </div>
 
-            <p id="selectedHomeSummary" class="simple-context-note">No home selected</p>
-          </section>
-
-          <section class="simple-children-panel" aria-label="Young people in selected home">
-            <div class="simple-section-head">
-              <div>
-                <div class="eyebrow">Young people</div>
-                <h2>Young people in this home</h2>
-                <p id="selectedChildSummary">Choose a home first</p>
-              </div>
-
-              <div class="selector-tools selector-tools--simple">
-                <label class="sr-only" for="selectorSearch">Search young people</label>
-                <input id="selectorSearch" class="search-input" type="search" placeholder="Search young people..." autocomplete="off" />
-
-                <label class="sr-only" for="youngPersonSearchInput">Search young people</label>
-                <input id="youngPersonSearchInput" class="search-input hidden" type="search" placeholder="Search young people..." autocomplete="off" aria-hidden="true" tabindex="-1" />
-
-                <label class="sr-only" for="youngPersonSelect">Choose young person</label>
-                <select id="youngPersonSelect" class="select-input">
-                  <option value="">Choose a child</option>
-                </select>
-
-                <button id="selectorRefreshBtn" class="secondary-btn" type="button">Refresh</button>
-              </div>
-            </div>
-
-            <div id="selectorList" class="selector-list selector-list--care-cards safe-child-list simple-child-grid" aria-live="polite">
-              <div class="empty-state empty-state--drawer">
-                <div class="empty-state-inner">
-                  <div class="empty-state-icon" aria-hidden="true">○</div>
-                  <h3>Choose a home first</h3>
-                  <p>Young people will appear here once a home is selected.</p>
+              <div id="selectorList" class="selector-list selector-list--care-cards safe-child-list simple-child-grid safe-start-young-people-row" aria-live="polite">
+                <div class="empty-state empty-state--drawer">
+                  <div class="empty-state-inner">
+                    <div class="empty-state-icon" aria-hidden="true">○</div>
+                    <h3>Choose a home first</h3>
+                    <p>Young people will appear here once a home is selected.</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
           </section>
 
           <section id="statusBar" class="status-bar hidden" role="status" aria-live="polite" aria-atomic="true"></section>
-          <section id="statusMessage" class="status-bar hidden" role="status" aria-live="polite" aria-atomic="true"></section>
+          <section id="selectorStatusMessage" class="status-bar hidden" role="status" aria-live="polite" aria-atomic="true"></section>
 
-          <!-- Compatibility hooks required by existing JS -->
           <button id="safeStartChooseHomeBtn" class="hidden" type="button" aria-hidden="true" tabindex="-1">Choose home</button>
 
           <details id="openCareHubDrawer" class="hidden" aria-hidden="true">
@@ -295,28 +298,26 @@
               <section id="quickCreateBar" class="quick-actions-panel quick-actions-panel--care-menu quick-actions-panel--drawers" aria-label="Care Hub menu">
                 <div class="quick-actions-panel-head quick-actions-panel-head--care">
                   <div>
-                    <div class="eyebrow">Care Hub menu</div>
-                    <h2>What do you need to do?</h2>
+                    <div class="eyebrow">Care Hub folders</div>
+                    <h2>Choose the area you need</h2>
                   </div>
-                  <p>Choose the drawer that matches the task. This keeps the workspace calm and avoids a cluttered admin dashboard.</p>
+                  <p>Folders are grouped by real care workflow so the workspace feels calmer, clearer and less like a crowded admin dashboard.</p>
                 </div>
 
                 <nav id="heroQuickActions" class="workspace-menubar workspace-menubar--care" role="navigation" aria-label="Main Care Hub menu">
                   <details class="workspace-menu nav-group" data-workspace-menu open>
-                    <summary class="workspace-menu-trigger">Care story</summary>
+                    <summary class="workspace-menu-trigger">Daily Care</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link nav-btn" type="button" data-view="home">My Day</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="daily-life">Daily life</button>
                       <button class="workspace-menu-link nav-btn" type="button" data-view="timeline">Care story timeline</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="admission">Admission and matching</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="reviews">Reviews and outcomes</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="transition">Transition planning</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="leaving-care">Leaving placement</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="appointments">Appointments and visits</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="actions">Actions and follow-through</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Safety lens</summary>
+                    <summary class="workspace-menu-trigger">Safety & Safeguarding</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link nav-btn" type="button" data-view="risk">Safety and risk</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="safeguarding">Safeguarding</button>
@@ -326,57 +327,59 @@
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Wellbeing</summary>
+                    <summary class="workspace-menu-trigger">Health, Education & Family</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link nav-btn" type="button" data-view="health">Health and wellbeing</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="medication">Medication and treatment</button>
                       <button class="workspace-menu-link nav-btn" type="button" data-view="education">Education and learning</button>
                       <button class="workspace-menu-link nav-btn" type="button" data-view="family">Family and relationships</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="appointments">Appointments and visits</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Home rhythm</summary>
+                    <summary class="workspace-menu-trigger">Plans, Reviews & Outcomes</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link" type="button" data-nav-section="admission">Admission and matching</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reviews">Reviews and outcomes</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="transition">Transition planning</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="leaving-care">Leaving placement</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu nav-group" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Documents & Evidence</summary>
+                    <div class="workspace-menu-dropdown">
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="evidence">Evidence library</button>
+                      <button class="workspace-menu-link nav-btn" type="button" data-view="compliance">Compliance checks</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="ofsted-readiness">Inspection readiness</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reg44">Regulation 44</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="reg45">Regulation 45</button>
+                      <button class="workspace-menu-link" type="button" data-action-router="upload-document">Upload document</button>
+                    </div>
+                  </details>
+
+                  <details class="workspace-menu nav-group" data-workspace-menu>
+                    <summary class="workspace-menu-trigger">Home, Team & Quality</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-nav-section="home-dashboard">Home rhythm</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="operations">Daily operations</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="rota">Rota and cover</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="team">Team and staffing</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="staff-profile">Staff profiles</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="supervision">Supervision and development</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="training-centre">Training academy</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="quality">Quality picture</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="quality-audits">Quality audits</button>
+                      <button class="workspace-menu-link" type="button" data-nav-section="provider-overview">Provider overview</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="health-safety">Health and safety</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="maintenance">Home environment</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="policies">Policies and guidance</button>
-                    </div>
-                  </details>
-
-                  <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Team</summary>
-                    <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="staff-profile">Staff profiles</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="onboarding">Recruitment and onboarding</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="supervision">Supervision and development</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="training-centre">Training academy</button>
                       <button class="workspace-menu-link" type="button" data-nav-section="notifications">Alerts and notifications</button>
                     </div>
                   </details>
 
                   <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Quality evidence</summary>
-                    <div class="workspace-menu-dropdown">
-                      <button class="workspace-menu-link" type="button" data-nav-section="quality">Quality picture</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="actions">Actions and follow-through</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="compliance">Compliance checks</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="ofsted-readiness">Inspection readiness</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="provider-overview">Provider overview</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="quality-audits">Quality audits</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="reg44">Regulation 44</button>
-                      <button class="workspace-menu-link" type="button" data-nav-section="reg45">Regulation 45</button>
-                      <button class="workspace-menu-link nav-btn" type="button" data-view="evidence">Evidence library</button>
-                    </div>
-                  </details>
-
-                  <details class="workspace-menu nav-group" data-workspace-menu>
-                    <summary class="workspace-menu-trigger">Record something</summary>
+                    <summary class="workspace-menu-trigger">Record Something</summary>
                     <div class="workspace-menu-dropdown">
                       <button class="workspace-menu-link" type="button" data-action="daily-note">Daily life note</button>
                       <button class="workspace-menu-link" type="button" data-action="incident">Important event</button>
@@ -386,7 +389,6 @@
                       <button class="workspace-menu-link" type="button" data-action-router="new-education-record">Education update</button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-family-contact">Family contact</button>
                       <button class="workspace-menu-link" type="button" data-action-router="new-task">Action</button>
-                      <button class="workspace-menu-link" type="button" data-action-router="upload-document">Upload document</button>
                     </div>
                   </details>
                 </nav>
