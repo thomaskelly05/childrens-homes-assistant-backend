@@ -1,6 +1,7 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
 import { escapeHtml } from "../core/utils.js";
+import { normaliseRecord } from "../core/record-normaliser.js";
 import {
   ensureAssistantState,
   getAssistantMeta,
@@ -504,8 +505,10 @@ function renderSourcesHtml(sources = []) {
       ${uniqueSources
         .map((source, index) => {
           const citationRef = sourceCitationRef(source, index);
+          const normalised = normaliseRecord(source, source?.record_type || source?.type || "");
           const title = escapeHtml(
-            source?.title ||
+            normalised.title ||
+              source?.title ||
               source?.label ||
               source?.document_title ||
               source?.name ||
@@ -513,11 +516,13 @@ function renderSourcesHtml(sources = []) {
           );
 
           const meta = [
-            source?.record_type || source?.type || "",
-            source?.section || "",
+            normalised.label || source?.record_type || source?.type || "",
+            normalised.section || source?.section || "",
             source?.evidence_kind || "",
-            source?.date || "",
-            source?.created_at
+            normalised.date
+              ? new Date(normalised.date).toLocaleDateString("en-GB")
+              : source?.date || "",
+            source?.created_at && !normalised.date
               ? new Date(source.created_at).toLocaleDateString("en-GB")
               : "",
           ]
@@ -527,7 +532,11 @@ function renderSourcesHtml(sources = []) {
 
           const description = escapeHtml(
             String(
-              source?.description || source?.excerpt || source?.summary || ""
+              normalised.summary ||
+                source?.description ||
+                source?.excerpt ||
+                source?.summary ||
+                ""
             ).slice(0, 220)
           );
 
@@ -538,10 +547,10 @@ function renderSourcesHtml(sources = []) {
               type="button"
               data-source-ref="${escapeHtml(citationRef)}"
               data-linked-record-id="${escapeHtml(
-                String(source?.record_id || source?.id || source?.source_id || "")
+                String(normalised.id || source?.record_id || source?.id || source?.source_id || "")
               )}"
               data-linked-record-type="${escapeHtml(
-                String(source?.record_type || source?.type || "")
+                String(normalised.type || source?.record_type || source?.type || "")
               )}"
             >
               <div class="assistant-source-row-top">
@@ -787,16 +796,21 @@ async function openLinkedRecord(recordId = "", recordType = "") {
     const numericId = Number(recordId);
     const safeId = Number.isNaN(numericId) ? recordId : numericId;
 
-    state.activeRecordType = recordType || null;
-    state.activeRecordItem = {
-      id: safeId,
-      source_id: safeId,
-      record_id: safeId,
-      record_type: recordType || "",
-      title: "",
-    };
+    const normalised = normaliseRecord(
+      {
+        id: safeId,
+        source_id: safeId,
+        record_id: safeId,
+        record_type: recordType || "",
+        title: "",
+      },
+      recordType
+    );
 
-    await openRecordDetail(state.activeRecordItem);
+    state.activeRecordType = normalised.type || recordType || null;
+    state.activeRecordItem = normalised;
+
+    await openRecordDetail(normalised);
   } catch (error) {
     console.error("[assistant-ui] failed opening linked record", error);
   }
