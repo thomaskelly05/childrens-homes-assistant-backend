@@ -1,6 +1,5 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
-import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import {
@@ -204,11 +203,39 @@ function dedupeById(items = []) {
   const seen = new Set();
 
   return items.filter((item) => {
-    const key = `${getRecordType(item)}::${getRecordId(item)}::${getPrimaryDate(item)}`;
+    const key = `${getRecordType(item)}::${getRecordId(item)}::${getPrimaryDate(
+      item
+    )}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+async function fetchWithTimeout(path, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(path, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      console.warn(`[workspace] ${path} returned ${response.status}`);
+      return { items: [] };
+    }
+
+    return (await response.json()) || { items: [] };
+  } catch (error) {
+    console.warn(`[workspace] failed loading ${path}`, error);
+    return { items: [] };
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 async function fetchVisibility(id) {
@@ -254,7 +281,9 @@ function renderVisibilitySignals(signals = []) {
           (signal) => `
             <article class="record-row">
               <div class="record-row-main">
-                <div class="record-row-title">${toText(signal.title || "Visibility signal")}</div>
+                <div class="record-row-title">${toText(
+                  signal.title || "Visibility signal"
+                )}</div>
                 <div class="record-row-summary">${toText(
                   signal.description || "Signal requires follow-through."
                 )}</div>
@@ -318,14 +347,18 @@ function renderTrendCards(trends = []) {
             <article class="insight-card">
               <div class="insight-card-head">
                 <strong>${toText(trend.label || "Trend")}</strong>
-                <span class="row-pill ${toText(tone)}">${toText(assessment)}</span>
+                <span class="row-pill ${toText(tone)}">${toText(
+            assessment
+          )}</span>
               </div>
               <div class="insight-card-meta">
                 <span>${toText(`Now ${trend.current ?? 0}`)}</span>
                 <span>${toText(`Prev ${trend.previous ?? 0}`)}</span>
               </div>
               <div class="insight-card-summary">
-                ${toText(`${arrow} ${Math.abs(delta)} (${trend.pct_change ?? 0}%)`)}
+                ${toText(
+                  `${arrow} ${Math.abs(delta)} (${trend.pct_change ?? 0}%)`
+                )}
               </div>
             </article>
           `;
@@ -352,11 +385,17 @@ function renderPatternCards(patterns = []) {
           (pattern) => `
             <article class="record-row">
               <div class="record-row-main">
-                <div class="record-row-title">${toText(pattern.title || "Pattern")}</div>
-                <div class="record-row-summary">${toText(pattern.evidence || "")}</div>
+                <div class="record-row-title">${toText(
+                  pattern.title || "Pattern"
+                )}</div>
+                <div class="record-row-summary">${toText(
+                  pattern.evidence || ""
+                )}</div>
                 <div class="record-row-meta">
                   <span>${toText(
-                    `${pattern.frequency ?? 0} in ${pattern.period_days ?? 0} days`
+                    `${pattern.frequency ?? 0} in ${
+                      pattern.period_days ?? 0
+                    } days`
                   )}</span>
                 </div>
               </div>
@@ -392,7 +431,9 @@ function renderDecisionSupport(items = []) {
               <strong>${toText(item.question || "Decision support")}</strong>
               <p>${toText(item.evidence || "")}</p>
               <p>${toText(item.interpretation || "")}</p>
-              <p><strong>Suggested:</strong> ${toText(item.suggested_action || "")}</p>
+              <p><strong>Suggested:</strong> ${toText(
+                item.suggested_action || ""
+              )}</p>
             </article>
           `
         )
@@ -420,7 +461,9 @@ function renderChildStoryBlocks(items = []) {
               <strong>${toText(item.title || "Child story")}</strong>
               <p>${toText(item.evidence || "")}</p>
               <p>${toText(item.interpretation || "")}</p>
-              <p><strong>Suggested:</strong> ${toText(item.suggested_action || "")}</p>
+              <p><strong>Suggested:</strong> ${toText(
+                item.suggested_action || ""
+              )}</p>
             </article>
           `
         )
@@ -490,7 +533,9 @@ function renderRows(items = []) {
               data-record-type="${toText(recordType)}"
               data-title="${toText(title)}"
               data-record-summary="${toText(summary)}"
-              data-record-status="${toText(item.status || item.workflow_status || "")}"
+              data-record-status="${toText(
+                item.status || item.workflow_status || ""
+              )}"
               data-record-date="${toText(getPrimaryDate(item) || "")}"
               data-record-payload="${toText(recordPayload)}"
               role="button"
@@ -503,7 +548,9 @@ function renderRows(items = []) {
                 <div class="record-row-meta">
                   ${
                     recordType
-                      ? `<span class="row-pill muted">${toText(recordType.replaceAll("_", " "))}</span>`
+                      ? `<span class="row-pill muted">${toText(
+                          String(recordType).replaceAll("_", " ")
+                        )}</span>`
                       : ""
                   }
                   ${dateLabel ? `<span>${toText(dateLabel)}</span>` : ""}
@@ -537,7 +584,11 @@ function renderWorkspace({
         <div>
           <div class="eyebrow">Workspace</div>
           <h2>Today’s workspace</h2>
-          ${searchActive ? `<p>Showing filtered workspace results.</p>` : ""}
+          ${
+            searchActive
+              ? `<p>Showing filtered workspace results.</p>`
+              : `<p>Live daily picture, recent records, urgent actions and upcoming events.</p>`
+          }
         </div>
       </div>
 
@@ -639,7 +690,7 @@ function getId() {
 }
 
 async function fetchAll(id, search = {}) {
-  const safe = (path) => apiGet(path).catch(() => ({ items: [] }));
+  const safe = (path) => fetchWithTimeout(path);
 
   const recordTypeBucket = mapRecordTypeFilterToBuckets(search.record_type);
 
@@ -667,10 +718,14 @@ async function fetchAll(id, search = {}) {
     family,
   ] = await Promise.all([
     shouldFetchPlans ? safe(`/young-people/${id}/plans`) : { items: [] },
-    shouldFetchAppointments ? safe(`/young-people/${id}/appointments`) : { items: [] },
+    shouldFetchAppointments
+      ? safe(`/young-people/${id}/appointments`)
+      : { items: [] },
     shouldFetchChronology ? safe(`/young-people/${id}/timeline`) : { items: [] },
     shouldFetchTasks ? safe(`/young-people/${id}/tasks`) : { items: [] },
-    shouldFetchDailyNotes ? safe(`/young-people/${id}/daily-notes`) : { items: [] },
+    shouldFetchDailyNotes
+      ? safe(`/young-people/${id}/daily-notes`)
+      : { items: [] },
     shouldFetchHealth ? safe(`/young-people/${id}/health`) : { items: [] },
     shouldFetchEducation ? safe(`/young-people/${id}/education`) : { items: [] },
     shouldFetchFamily ? safe(`/young-people/${id}/family`) : { items: [] },
@@ -696,32 +751,34 @@ async function fetchAll(id, search = {}) {
         []
     ).map(mapChronologyEvent),
 
-    tasks: makeArray(tasks.items || tasks.actions || tasks.records || []).map((item) => ({
-      ...item,
-      record_type: item.record_type || "task",
-      summary: item.summary || item.task || item.description || "",
-      event_datetime:
-        item.due_date ||
-        item.updated_at ||
-        item.created_at ||
-        item.task_date ||
-        null,
-      severity:
-        String(item.priority || "").toLowerCase() === "critical" ||
-        String(item.status || "").toLowerCase() === "overdue"
-          ? "critical"
-          : item.priority || item.severity || "",
-      status: item.status || (item.completed ? "completed" : "open"),
-      title: item.title || item.task || "Action",
-    })),
+    tasks: makeArray(tasks.items || tasks.actions || tasks.records || []).map(
+      (item) => ({
+        ...item,
+        record_type: item.record_type || "task",
+        summary: item.summary || item.task || item.description || "",
+        event_datetime:
+          item.due_date ||
+          item.updated_at ||
+          item.created_at ||
+          item.task_date ||
+          null,
+        severity:
+          String(item.priority || "").toLowerCase() === "critical" ||
+          String(item.status || "").toLowerCase() === "overdue"
+            ? "critical"
+            : item.priority || item.severity || "",
+        status: item.status || (item.completed ? "completed" : "open"),
+        title: item.title || item.task || "Action",
+      })
+    ),
 
     daily_notes: makeArray(
       dailyNotes.items || dailyNotes.daily_notes || dailyNotes.records || []
     ).map(mapDailyNote),
 
-    health: makeArray(
-      health.items || health.health_records || []
-    ).map(mapHealthRecord),
+    health: makeArray(health.items || health.health_records || []).map(
+      mapHealthRecord
+    ),
 
     education: makeArray(
       education.items || education.education_records || []
@@ -850,6 +907,12 @@ export async function loadCurrentView(options = {}) {
 
   const id = getId();
 
+  if (els.pageTitle) els.pageTitle.textContent = "Today at a glance";
+  if (els.pageSubtitle) {
+    els.pageSubtitle.textContent =
+      "Live daily picture, recent records, urgent actions and upcoming events.";
+  }
+
   const search = {
     query: String(options?.search?.query || "").trim(),
     record_type: String(options?.search?.record_type || "").trim(),
@@ -918,9 +981,7 @@ export async function loadCurrentView(options = {}) {
       nextEvent: upcoming[0]
         ? formatDate(upcoming[0].start_datetime)
         : "None",
-      lastRecord: recent[0]
-        ? formatDate(getPrimaryDate(recent[0]))
-        : "None",
+      lastRecord: recent[0] ? formatDate(getPrimaryDate(recent[0])) : "None",
       openActions: `${urgent.length} urgent`,
       pressure: visibilityUrgent.length
         ? `${visibilityUrgent.length} child alerts`
@@ -934,6 +995,9 @@ export async function loadCurrentView(options = {}) {
   } catch (error) {
     console.error("[workspace] failed loading current view", error);
 
-    viewContent.innerHTML = renderEmpty("Error", "Failed to load workspace.");
+    viewContent.innerHTML = renderEmpty(
+      "Workspace opened with limited data",
+      "Some records could not be loaded. Refresh the workspace or check the API routes."
+    );
   }
 }
