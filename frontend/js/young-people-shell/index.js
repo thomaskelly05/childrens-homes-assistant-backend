@@ -114,6 +114,22 @@ function normaliseRole(role) {
   return "staff";
 }
 
+function normaliseSection(section) {
+  const value = String(section || "").trim().toLowerCase();
+
+  const map = {
+    home: "workspace",
+    myday: "workspace",
+    "my-day": "workspace",
+    dashboard: "workspace",
+    evidence: "sccif-evidence",
+    ofsted: "ofsted-dashboard",
+    "ofsted-readiness": "inspection-readiness",
+  };
+
+  return map[value] || value || "workspace";
+}
+
 function normaliseNumericId(value) {
   if (value === null || value === undefined || value === "") return null;
   const num = Number(value);
@@ -170,6 +186,25 @@ function parseAllowedHomeIds(rawValue) {
   }
 }
 
+function getCurrentSection() {
+  return normaliseSection(
+    state.currentSection || state.activeSection || state.currentView || "workspace"
+  );
+}
+
+function setSectionState(section) {
+  const safeSection = normaliseSection(section);
+
+  setCurrentSection(safeSection);
+  state.currentSection = safeSection;
+  state.activeSection = safeSection;
+  state.currentView = safeSection;
+
+  syncDomDatasetFromState();
+
+  return safeSection;
+}
+
 function syncSingleHomeFallback() {
   if (
     !state.homeId &&
@@ -188,6 +223,8 @@ function hydrateRuntimeContextFromDom() {
   const datasetProviderId = normaliseNumericId(els.app.dataset.providerId);
   const datasetAllowedHomeIds = els.app.dataset.allowedHomeIds || "";
   const datasetYoungPersonId = normaliseNumericId(els.app.dataset.youngPersonId);
+  const datasetScope = String(els.app.dataset.scope || "").trim().toLowerCase();
+  const datasetSection = normaliseSection(els.app.dataset.section || "");
 
   setUserRole(datasetRole);
   setHomeContext(datasetHomeId);
@@ -196,6 +233,14 @@ function hydrateRuntimeContextFromDom() {
 
   if (datasetYoungPersonId) {
     state.youngPersonId = datasetYoungPersonId;
+  }
+
+  if (datasetScope) {
+    setCurrentScope(datasetScope, { resetSection: false });
+  }
+
+  if (datasetSection) {
+    setSectionState(datasetSection);
   }
 
   syncSingleHomeFallback();
@@ -312,6 +357,7 @@ function syncDomDatasetFromState() {
 
   els.app.dataset.userRole = normaliseRole(state.userRole || "staff");
   els.app.dataset.scope = state.currentScope || "child";
+  els.app.dataset.section = getCurrentSection();
   els.app.dataset.homeId = state.homeId ? String(state.homeId) : "";
   els.app.dataset.youngPersonId = state.youngPersonId
     ? String(state.youngPersonId)
@@ -348,15 +394,23 @@ function getAllowedScopesForRole() {
 }
 
 function canAccessScope(scope) {
-  return canRoleAccessScope(getCurrentRole(), scope);
+  if (typeof canRoleAccessScope === "function") {
+    return canRoleAccessScope(getCurrentRole(), scope);
+  }
+
+  return getAllowedScopesForRole().includes(scope);
 }
 
 function getDefaultScopeForRole() {
-  return getConfigDefaultScopeForRole(getCurrentRole());
+  if (typeof getConfigDefaultScopeForRole === "function") {
+    return getConfigDefaultScopeForRole(getCurrentRole());
+  }
+
+  return "child";
 }
 
 function getDefaultSectionForScope(scope = state.currentScope || "child") {
-  return SCOPE_DEFAULT_SECTION?.[scope] || "workspace";
+  return normaliseSection(SCOPE_DEFAULT_SECTION?.[scope] || "workspace");
 }
 
 function getAllowedSectionsForScope(scope = state.currentScope || "child") {
@@ -364,27 +418,26 @@ function getAllowedSectionsForScope(scope = state.currentScope || "child") {
 }
 
 function isSectionAllowedInScope(section = "", scope = state.currentScope || "child") {
-  return getAllowedSectionsForScope(scope).includes(section);
+  const safeSection = normaliseSection(section);
+  return getAllowedSectionsForScope(scope).map(normaliseSection).includes(safeSection);
 }
 
 function getRequiredScopeForSection(section = "") {
-  const value = String(section || "").trim().toLowerCase();
+  const value = normaliseSection(section);
 
   const qualitySections = new Set([
-    "quality",
-    "actions",
     "provider-overview",
+    "quality",
     "quality-audits",
     "reg44",
     "reg45",
   ]);
 
   const ofstedSections = new Set([
-    "ofsted",
     "ofsted-dashboard",
-    "ofsted-readiness",
+    "sccif-evidence",
+    "judgement-builder",
     "inspection-readiness",
-    "evidence",
   ]);
 
   const homeSections = new Set([
@@ -400,6 +453,7 @@ function getRequiredScopeForSection(section = "") {
     "health-safety",
     "maintenance",
     "policies",
+    "compliance",
   ]);
 
   if (ofstedSections.has(value)) return "ofsted";
@@ -419,7 +473,7 @@ function bindRestrictedSectionGuard() {
       const button = event.target.closest("[data-nav-section]");
       if (!button) return;
 
-      const section = button.dataset.navSection || "";
+      const section = normaliseSection(button.dataset.navSection || "");
       const requiredScope = getRequiredScopeForSection(section);
 
       if (canAccessScope(requiredScope)) return;
@@ -438,7 +492,7 @@ function bindRestrictedSectionGuard() {
 
 function syncRestrictedNavigationVisibility() {
   document.querySelectorAll("[data-nav-section]").forEach((button) => {
-    const section = button.dataset.navSection || "";
+    const section = normaliseSection(button.dataset.navSection || "");
     const requiredScope = getRequiredScopeForSection(section);
     const allowed = canAccessScope(requiredScope);
 
@@ -476,24 +530,29 @@ function ensureValidScopeForRole() {
 
 function ensureInitialSectionForScope() {
   const scope = state.currentScope || "child";
-  const expectedDefault = getDefaultSectionForScope(scope);
-  const currentSection =
-    state.currentSection || state.activeSection || state.currentView || "";
+  const currentSection = getCurrentSection();
 
-  const safeSection = isSectionAllowedInScope(currentSection, scope)
-    ? currentSection
-    : expectedDefault;
+  if (isSectionAllowedInScope(currentSection, scope)) {
+    setSectionState(currentSection);
+    return;
+  }
 
-  setCurrentSection(safeSection);
-  state.activeSection = safeSection;
-  state.currentView = safeSection;
+  const requiredScope = getRequiredScopeForSection(currentSection);
+
+  if (canAccessScope(requiredScope)) {
+    setCurrentScope(requiredScope, { resetSection: false });
+    setSectionState(currentSection);
+    return;
+  }
+
+  setSectionState(getDefaultSectionForScope(scope));
 }
 
-function forceWorkspaceSection() {
+function forceChildSection(section = "workspace") {
+  const safeSection = normaliseSection(section);
+
   setCurrentScope("child", { resetSection: false });
-  setCurrentSection("workspace");
-  state.activeSection = "workspace";
-  state.currentView = "workspace";
+  setSectionState(safeSection);
 }
 
 function syncScopeButtons() {
@@ -548,9 +607,13 @@ function syncVisibleScreen() {
   showWorkspace();
 }
 
-function refreshAllChrome() {
+function refreshAllChrome({ preserveSection = true } = {}) {
   ensureValidScopeForRole();
-  ensureInitialSectionForScope();
+
+  if (!preserveSection) {
+    ensureInitialSectionForScope();
+  }
+
   syncDomDatasetFromState();
   syncVisibleScreen();
   refreshShellChrome();
@@ -569,14 +632,17 @@ function refreshAllChrome() {
 async function setScope(scope) {
   if (!scope || state.currentScope === scope || !canAccessScope(scope)) return;
 
-  setCurrentScope(scope, { resetSection: true });
+  const targetDefaultSection = getDefaultSectionForScope(scope);
+
+  setCurrentScope(scope, { resetSection: false });
+  setSectionState(targetDefaultSection);
   syncDomDatasetFromState();
   rerenderNavigationForScope();
   refreshAllChrome();
 
   if (scope === "child") {
     if (state.youngPersonId) {
-      await loadSection(state.currentSection || "workspace", { force: true });
+      await loadSection(getCurrentSection(), { force: true });
     } else {
       showSelector();
       await loadYoungPersonSelector();
@@ -586,7 +652,7 @@ async function setScope(scope) {
     return;
   }
 
-  await loadSection(state.currentSection, { force: true });
+  await loadSection(getCurrentSection(), { force: true });
 }
 
 function bindScopeEvents() {
@@ -616,26 +682,28 @@ async function openYoungPersonSafely(id, options = {}) {
   const safeId = normaliseNumericId(id);
   if (!safeId) return false;
 
+  const initialSection = normaliseSection(options.initialSection || "workspace");
+
   state.youngPersonId = safeId;
-  forceWorkspaceSection();
+  forceChildSection(initialSection);
   setYoungPersonIdInUrl(safeId);
   syncDomDatasetFromState();
 
   try {
     await openYoungPerson(safeId, {
-      initialSection: "workspace",
+      initialSection,
       forceInitialSectionLoad: true,
       skipInitialSectionLoad: false,
       ...options,
     });
 
     state.youngPersonId = safeId;
-    forceWorkspaceSection();
+    forceChildSection(initialSection);
 
     syncDomDatasetFromState();
     showWorkspace();
 
-    await loadSection("workspace", { force: true });
+    await loadSection(initialSection, { force: true });
 
     refreshShellChrome();
     refreshAssistantUi();
@@ -658,10 +726,8 @@ async function openYoungPersonSafely(id, options = {}) {
 }
 
 async function bootstrapSelectorDashboard() {
-  setCurrentScope("child", { resetSection: true });
-  setCurrentSection(getDefaultSectionForScope("child"));
-  state.activeSection = getDefaultSectionForScope("child");
-  state.currentView = getDefaultSectionForScope("child");
+  setCurrentScope("child", { resetSection: false });
+  setSectionState(getDefaultSectionForScope("child"));
 
   clearSelectedYoungPerson();
   state.youngPersonId = null;
@@ -720,8 +786,7 @@ function bindGlobalSearchMirrors() {
       query: desktopSearch?.value || mobileSearch?.value || "",
       recordType: filter?.value || "",
       scope: state.currentScope || "child",
-      section:
-        state.currentSection || state.activeSection || state.currentView || "",
+      section: getCurrentSection(),
     };
 
     const payloadKey = JSON.stringify(payload);
@@ -828,19 +893,27 @@ function bindOpenCareHubFallback() {
 }
 
 async function loadWorkspaceTarget(target, options = {}) {
-  const section = String(target || "").trim();
+  const section = normaliseSection(target);
   if (!section) return;
 
-  if ((state.currentScope || "child") === "child" && !state.youngPersonId) {
+  const requiredScope = getRequiredScopeForSection(section);
+
+  if (!canAccessScope(requiredScope)) {
+    showError(`Your current role does not have access to the ${requiredScope} area.`);
+    return;
+  }
+
+  if ((state.currentScope || "child") !== requiredScope) {
+    setCurrentScope(requiredScope, { resetSection: false });
+  }
+
+  if (requiredScope === "child" && !state.youngPersonId) {
     showError("Choose a child or young person first.");
     showSelector();
     return;
   }
 
-  setCurrentSection(section);
-  state.activeSection = section;
-  state.currentView = section;
-
+  setSectionState(section);
   syncDomDatasetFromState();
   showWorkspace();
 
@@ -850,6 +923,7 @@ async function loadWorkspaceTarget(target, options = {}) {
       ...options,
     });
 
+    setSectionState(section);
     refreshShellChrome();
     refreshAssistantUi();
     updateAssistantContext();
@@ -863,23 +937,7 @@ async function loadWorkspaceTarget(target, options = {}) {
 }
 
 function normaliseViewToSection(view) {
-  const value = String(view || "").trim().toLowerCase();
-
-  const map = {
-    home: "workspace",
-    timeline: "timeline",
-    profile: "profile",
-    risk: "risk",
-    manager: "manager",
-    health: "health",
-    education: "education",
-    family: "family",
-    appointments: "appointments",
-    compliance: "compliance",
-    evidence: "evidence",
-  };
-
-  return map[value] || value;
+  return normaliseSection(view);
 }
 
 function bindWorkspaceNavigationFallback() {
@@ -896,7 +954,7 @@ function bindWorkspaceNavigationFallback() {
 
       const rawTarget =
         viewButton?.dataset.view || sectionButton?.dataset.navSection || "";
-      const target = viewButton ? normaliseViewToSection(rawTarget) : rawTarget;
+      const target = viewButton ? normaliseViewToSection(rawTarget) : normaliseSection(rawTarget);
 
       if (!target) return;
 
@@ -922,11 +980,17 @@ async function bootstrap() {
     await hydrateRuntimeContextFromAuthCheck();
 
     const existingYoungPersonId = state.youngPersonId;
+    const existingSection = getCurrentSection();
 
-    setCurrentScope("child", { resetSection: true });
-    setCurrentSection(getDefaultSectionForScope("child"));
-    state.activeSection = getDefaultSectionForScope("child");
-    state.currentView = getDefaultSectionForScope("child");
+    if (!state.currentScope) {
+      setCurrentScope("child", { resetSection: false });
+    }
+
+    if (!state.currentSection && !state.activeSection && !state.currentView) {
+      setSectionState(getDefaultSectionForScope(state.currentScope || "child"));
+    } else {
+      setSectionState(existingSection);
+    }
 
     ensureValidScopeForRole();
     ensureInitialSectionForScope();
@@ -959,17 +1023,17 @@ async function bootstrap() {
 
     if (existingYoungPersonId) {
       await openYoungPersonSafely(existingYoungPersonId, {
-        initialSection: "workspace",
+        initialSection: existingSection || "workspace",
         forceInitialSectionLoad: true,
       });
     } else {
       await bootstrapSelectorDashboard();
     }
 
-    refreshAllChrome();
+    refreshAllChrome({ preserveSection: true });
 
     if (state.youngPersonId) {
-      await loadSection("workspace", { force: true });
+      await loadSection(getCurrentSection(), { force: true });
     } else {
       refreshWorkspaceSummary();
     }
