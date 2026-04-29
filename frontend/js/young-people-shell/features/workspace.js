@@ -1,6 +1,6 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
-import { escapeHtml, getDisplayName } from "../core/utils.js";
+import { escapeHtml } from "../core/utils.js";
 import { listRecords } from "../core/api-adapter.js";
 import {
   normaliseRecords,
@@ -33,6 +33,7 @@ const WORKSPACE_RECORD_TYPE_MAP = Object.freeze({
   family_contact: "family",
   communication: "chronology",
   document: "chronology",
+  statutory_document: "chronology",
   task: "chronology",
   safeguarding_record: "chronology",
   missing_episode: "chronology",
@@ -59,7 +60,9 @@ function makeArray(value) {
 
 function formatDate(value) {
   if (!value) return "";
+
   const d = new Date(value);
+
   if (Number.isNaN(d.getTime())) return String(value);
 
   return d.toLocaleString("en-GB", {
@@ -87,50 +90,99 @@ function isToday(value) {
 
 function isFuture(value) {
   if (!value) return false;
+
   const d = new Date(value);
+
   if (Number.isNaN(d.getTime())) return false;
+
   return d.getTime() >= Date.now();
 }
 
 function getPrimaryDate(item = {}) {
-  return item.date || item.created_at || item.updated_at || null;
+  return (
+    item.date ||
+    item.record_date ||
+    item.event_datetime ||
+    item.incident_datetime ||
+    item.start_datetime ||
+    item.due_date ||
+    item.contact_datetime ||
+    item.review_date ||
+    item.created_at ||
+    item.updated_at ||
+    null
+  );
 }
 
 function getRecordTitle(item = {}) {
-  return item.title || item.label || "Record";
+  return (
+    item.title ||
+    item.label ||
+    item.subject ||
+    item.name ||
+    item.heading ||
+    item.category ||
+    "Record"
+  );
 }
 
 function getRecordSummary(item = {}) {
-  return item.summary || "";
+  return (
+    item.summary ||
+    item.description ||
+    item.note ||
+    item.details ||
+    item.narrative ||
+    item.body ||
+    item.outcome ||
+    ""
+  );
 }
 
 function getRecordId(item = {}) {
-  return item.id || item.source_id || item.record_id || "";
+  return item.id || item.source_id || item.record_id || item.note_id || "";
 }
 
 function getRecordType(item = {}) {
-  return item.type || item.record_type || "record";
+  return item.type || item.record_type || item.category || "record";
 }
 
 function getSeverity(item = {}) {
-  return String(item.severity || item.significance || item.priority || "").toLowerCase();
+  return String(
+    item.severity ||
+      item.significance ||
+      item.priority ||
+      item.risk_level ||
+      item.summary_risk_level ||
+      ""
+  ).toLowerCase();
+}
+
+function getStatus(item = {}) {
+  return String(item.status || item.workflow_status || "").toLowerCase();
 }
 
 function recordMatchesQuery(item = {}, query = "") {
   const safeQuery = normaliseText(query);
+
   if (!safeQuery) return true;
+
   return recordSearchText(item).includes(safeQuery);
 }
 
 function mapRecordTypeFilterToBuckets(recordType = "") {
   const safeType = normaliseText(recordType);
+
   if (!safeType) return null;
+
   return WORKSPACE_RECORD_TYPE_MAP[safeType] || null;
 }
 
 function recordMatchesRecordType(item = {}, recordType = "") {
   const safeType = normaliseText(recordType);
+
   if (!safeType) return true;
+
   return normaliseText(getRecordType(item)) === safeType;
 }
 
@@ -138,8 +190,12 @@ function dedupeById(items = []) {
   const seen = new Set();
 
   return items.filter((item) => {
-    const key = `${getRecordType(item)}::${getRecordId(item)}::${getPrimaryDate(item)}`;
+    const key = `${getRecordType(item)}::${getRecordId(item)}::${getPrimaryDate(
+      item
+    )}`;
+
     if (seen.has(key)) return false;
+
     seen.add(key);
     return true;
   });
@@ -165,9 +221,11 @@ async function fetchVisibility(id) {
 
 function getSignalTone(signal = {}) {
   const token = String(signal.severity || "").toLowerCase();
+
   if (["critical", "high"].includes(token)) return "danger";
   if (token === "medium") return "warning";
   if (token === "low") return "success";
+
   return "muted";
 }
 
@@ -188,7 +246,9 @@ function renderVisibilitySignals(signals = []) {
           (signal) => `
             <article class="record-row">
               <div class="record-row-main">
-                <div class="record-row-title">${toText(signal.title || "Visibility signal")}</div>
+                <div class="record-row-title">${toText(
+                  signal.title || "Visibility signal"
+                )}</div>
                 <div class="record-row-summary">${toText(
                   signal.description || "Signal requires follow-through."
                 )}</div>
@@ -239,12 +299,14 @@ function renderTrendCards(trends = []) {
         .slice(0, 4)
         .map((trend) => {
           const assessment = String(trend.assessment || "stable").toLowerCase();
+
           const tone =
             assessment === "declining"
               ? "danger"
               : assessment === "improving"
-              ? "success"
-              : "muted";
+                ? "success"
+                : "muted";
+
           const delta = Number(trend.delta || 0);
           const arrow = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
 
@@ -252,14 +314,18 @@ function renderTrendCards(trends = []) {
             <article class="insight-card">
               <div class="insight-card-head">
                 <strong>${toText(trend.label || "Trend")}</strong>
-                <span class="row-pill ${toText(tone)}">${toText(assessment)}</span>
+                <span class="row-pill ${toText(tone)}">${toText(
+                  assessment
+                )}</span>
               </div>
               <div class="insight-card-meta">
                 <span>${toText(`Now ${trend.current ?? 0}`)}</span>
                 <span>${toText(`Prev ${trend.previous ?? 0}`)}</span>
               </div>
               <div class="insight-card-summary">
-                ${toText(`${arrow} ${Math.abs(delta)} (${trend.pct_change ?? 0}%)`)}
+                ${toText(
+                  `${arrow} ${Math.abs(delta)} (${trend.pct_change ?? 0}%)`
+                )}
               </div>
             </article>
           `;
@@ -286,10 +352,18 @@ function renderPatternCards(patterns = []) {
           (pattern) => `
             <article class="record-row">
               <div class="record-row-main">
-                <div class="record-row-title">${toText(pattern.title || "Pattern")}</div>
-                <div class="record-row-summary">${toText(pattern.evidence || "")}</div>
+                <div class="record-row-title">${toText(
+                  pattern.title || "Pattern"
+                )}</div>
+                <div class="record-row-summary">${toText(
+                  pattern.evidence || ""
+                )}</div>
                 <div class="record-row-meta">
-                  <span>${toText(`${pattern.frequency ?? 0} in ${pattern.period_days ?? 0} days`)}</span>
+                  <span>${toText(
+                    `${pattern.frequency ?? 0} in ${
+                      pattern.period_days ?? 0
+                    } days`
+                  )}</span>
                 </div>
               </div>
               <div class="record-row-side">
@@ -324,7 +398,9 @@ function renderDecisionSupport(items = []) {
               <strong>${toText(item.question || "Decision support")}</strong>
               <p>${toText(item.evidence || "")}</p>
               <p>${toText(item.interpretation || "")}</p>
-              <p><strong>Suggested:</strong> ${toText(item.suggested_action || "")}</p>
+              <p><strong>Suggested:</strong> ${toText(
+                item.suggested_action || ""
+              )}</p>
             </article>
           `
         )
@@ -352,7 +428,9 @@ function renderChildStoryBlocks(items = []) {
               <strong>${toText(item.title || "Child story")}</strong>
               <p>${toText(item.evidence || "")}</p>
               <p>${toText(item.interpretation || "")}</p>
-              <p><strong>Suggested:</strong> ${toText(item.suggested_action || "")}</p>
+              <p><strong>Suggested:</strong> ${toText(
+                item.suggested_action || ""
+              )}</p>
             </article>
           `
         )
@@ -429,7 +507,9 @@ function renderRows(items = []) {
                 <div class="record-row-meta">
                   ${
                     recordType
-                      ? `<span class="row-pill muted">${toText(String(recordType).replaceAll("_", " "))}</span>`
+                      ? `<span class="row-pill muted">${toText(
+                          String(recordType).replaceAll("_", " ")
+                        )}</span>`
                       : ""
                   }
                   ${dateLabel ? `<span>${toText(dateLabel)}</span>` : ""}
@@ -562,6 +642,7 @@ function getId() {
     state.youngPersonId ||
     state.currentYoungPersonId ||
     state.selectedYoungPerson?.id ||
+    state.selectedYoungPerson?.young_person_id ||
     app?.dataset?.youngPersonId ||
     params.get("id") ||
     document.getElementById("youngPersonSelect")?.value ||
@@ -571,7 +652,14 @@ function getId() {
 
 async function safeList(recordType, ids = {}) {
   try {
-    return await listRecords(recordType, ids);
+    const result = await listRecords(recordType, ids);
+
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.items)) return result.items;
+    if (Array.isArray(result?.records)) return result.records;
+    if (Array.isArray(result?.results)) return result.results;
+
+    return [];
   } catch (error) {
     console.warn(`[workspace] failed loading ${recordType}`, error);
     return [];
@@ -710,14 +798,18 @@ function buildUpcomingItems(data) {
   return dedupeById(
     [...data.appointments, ...data.tasks]
       .filter((item) => {
-        const status = normaliseText(item.status);
+        const status = getStatus(item);
+
         return (
           !["completed", "closed", "done", "approved"].includes(status) &&
           isFuture(getPrimaryDate(item))
         );
       })
       .sort((a, b) => {
-        return new Date(getPrimaryDate(a)).getTime() - new Date(getPrimaryDate(b)).getTime();
+        return (
+          new Date(getPrimaryDate(a)).getTime() -
+          new Date(getPrimaryDate(b)).getTime()
+        );
       })
   ).slice(0, 10);
 }
@@ -732,16 +824,21 @@ function buildUrgentItems(data) {
   );
 
   const urgentTasks = data.tasks.filter((item) => {
-    const status = normaliseText(item.status);
+    const status = getStatus(item);
     const severity = getSeverity(item);
+
     return status === "overdue" || ["high", "critical"].includes(severity);
   });
 
-  return dedupeById([...urgentPlans, ...urgentChronology, ...urgentTasks]).slice(0, 10);
+  return dedupeById([...urgentPlans, ...urgentChronology, ...urgentTasks]).slice(
+    0,
+    10
+  );
 }
 
 function bindWorkspaceRowEvents(records = []) {
   const host = getViewContent();
+
   if (!host) return;
 
   const byKey = new Map();
@@ -755,6 +852,7 @@ function bindWorkspaceRowEvents(records = []) {
       const type = row.getAttribute("data-record-type") || "";
       const id = row.getAttribute("data-record-id") || "";
       const record = byKey.get(`${type}:${id}`);
+
       if (record) openRecordDetail(record);
     };
 
@@ -770,6 +868,7 @@ function bindWorkspaceRowEvents(records = []) {
 
 export async function loadCurrentView(options = {}) {
   const viewContent = getViewContent();
+
   if (!viewContent) return;
 
   const id = getId();
@@ -860,8 +959,8 @@ export async function loadCurrentView(options = {}) {
       pressure: visibilityUrgent.length
         ? `${visibilityUrgent.length} child alerts`
         : visibilityPressure
-        ? `${visibilityPressure} pressure score`
-        : "No active alerts",
+          ? `${visibilityPressure} pressure score`
+          : "No active alerts",
     });
 
     await onAssistantScopeChanged();
