@@ -2500,5 +2500,79 @@ textarea:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+   /* ============================================================
+   Emergency light-theme correction for Young People entry page
+============================================================ */
+
+html,
+body,
+#app {
+  color-scheme: light !important;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(37, 99, 235, 0.1), transparent 30%),
+    radial-gradient(circle at 90% 6%, rgba(6, 182, 212, 0.1), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #f5f8fc 52%, #eef5ff 100%) !important;
+  color: var(--ink) !important;
+}
+
+#selectorPanel,
+#selectorPanel * {
+  color: var(--ink);
+}
+
+#selectorPanel .simple-entry-head,
+#selectorPanel .simple-home-panel,
+#selectorPanel .simple-children-panel {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+}
+
+#selectorPanel .simple-entry-head {
+  background:
+    radial-gradient(circle at 96% 12%, rgba(37, 99, 235, 0.08), transparent 32%),
+    linear-gradient(135deg, #ffffff, var(--brand-pale)) !important;
+}
+
+#selectorPanel p,
+#selectorPanel small,
+#selectorPanel span,
+#selectorPanel label {
+  color: var(--muted) !important;
+}
+
+#selectorPanel h1,
+#selectorPanel h2,
+#selectorPanel h3,
+#selectorPanel strong {
+  color: var(--ink) !important;
+}
+
+#selectorPanel .eyebrow {
+  color: var(--brand) !important;
+}
+
+#selectorPanel .selector-card,
+#selectorPanel .safe-home-chip,
+#selectorPanel .home-chip,
+#selectorPanel .child-chip,
+#selectorPanel .safe-child-chip,
+#selectorPanel .empty-state,
+#selectorPanel .loading-state {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+}
+
+#selectorPanel input,
+#selectorPanel select,
+#selectorPanel textarea {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+  border-color: var(--border) !important;
+}
+
+#selectorPanel input::placeholder {
+  color: var(--muted-2) !important;
+}
 }
 ```
