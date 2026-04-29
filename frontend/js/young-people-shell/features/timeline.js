@@ -1,22 +1,14 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
-import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import { listRecords } from "../core/api-adapter.js";
 import {
-  mapChronologyEvent,
-  mapIncident,
-  mapDailyNote,
-  mapHealthRecord,
-  mapEducationRecord,
-  mapFamilyContactRecord,
-  mapAppointment,
-  mapMissingEpisode,
-  mapSafeguardingRecord,
-  mapCommunicationRecord,
-  mapTask,
-  mapComplianceItem,
-} from "../core/adapters.js";
+  normaliseRecord,
+  normaliseRecords,
+  sortNormalisedRecordsNewestFirst,
+} from "../core/record-normaliser.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
+import { openRecordDetail } from "./records.js";
 
 function getCurrentScope() {
   return state.currentScope || "child";
@@ -32,6 +24,7 @@ function getHomeId() {
     state.readinessSelectedHomeId ||
       state.homeId ||
       state.selectedHomeId ||
+      state.currentHomeId ||
       state.currentUser?.home_id ||
       state.currentUser?.homeId ||
       state.selectedYoungPerson?.home_id ||
@@ -54,9 +47,19 @@ function getHomeId() {
   return preferredHomeId;
 }
 
+function getYoungPersonId() {
+  return (
+    state.youngPersonId ||
+    state.currentYoungPersonId ||
+    state.selectedYoungPerson?.id ||
+    state.selectedYoungPerson?.young_person_id ||
+    null
+  );
+}
+
 function getScopeEntityId() {
   if (getCurrentScope() === "child") {
-    return state.youngPersonId || null;
+    return getYoungPersonId();
   }
 
   return getHomeId();
@@ -91,31 +94,6 @@ function getScopeTitle() {
   );
 }
 
-function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
-  });
-}
-
-function getTimelineDate(item = {}) {
-  return (
-    item.event_datetime ||
-    item.occurred_at ||
-    item.incident_datetime ||
-    item.contact_datetime ||
-    item.start_datetime ||
-    item.record_date ||
-    item.session_date ||
-    item.recorded_at ||
-    item.concern_datetime ||
-    item.due_date ||
-    item.created_at ||
-    null
-  );
-}
-
 function toText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
@@ -124,6 +102,7 @@ function formatTimelineDate(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
+
   return date.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -133,122 +112,66 @@ function formatTimelineDate(value) {
   });
 }
 
-function toTimelineRow(item = {}, overrides = {}) {
-  return {
-    id: item.id ?? item.source_id ?? null,
-    source_id: item.source_id ?? item.id ?? null,
-    source_table: item.source_table || overrides.source_table || "",
-    record_type: item.record_type || overrides.record_type || "timeline_item",
-    title: item.title || overrides.title || "Timeline item",
-    summary: item.summary || overrides.summary || "",
-    description: item.description || "",
-    presentation: item.presentation || "",
-    event_datetime: getTimelineDate(item),
-    significance: item.significance || overrides.significance || "",
-    severity: item.severity || overrides.severity || "",
-    workflow_status: item.workflow_status || item.status || "",
-    status: item.status || "",
-    safeguarding_flag: item.safeguarding_flag || false,
-    child_voice_present: item.child_voice_present || false,
-    auto_generated: item.auto_generated || false,
-    raw: item.raw || item,
-  };
+function getRecordDate(item = {}) {
+  return item.date || item.created_at || item.updated_at || null;
 }
 
-function buildFallbackTimeline({
-  incidents = [],
-  dailyNotes = [],
-  healthRecords = [],
-  educationRecords = [],
-  familyRecords = [],
-  appointments = [],
-  missingEpisodes = [],
-  safeguardingRecords = [],
-  communications = [],
-  tasks = [],
-  complianceItems = [],
-}) {
-  return sortNewestFirst(
-    [
-      ...incidents.map((item) =>
-        toTimelineRow(item, {
-          source_table: "incidents",
-          record_type: "incident",
-        })
-      ),
-      ...dailyNotes.map((item) =>
-        toTimelineRow(item, {
-          source_table: "daily_notes",
-          record_type: "daily_note",
-        })
-      ),
-      ...healthRecords.map((item) =>
-        toTimelineRow(item, {
-          source_table: "health_records",
-          record_type: "health_record",
-        })
-      ),
-      ...educationRecords.map((item) =>
-        toTimelineRow(item, {
-          source_table: "education_records",
-          record_type: "education_record",
-        })
-      ),
-      ...familyRecords.map((item) =>
-        toTimelineRow(item, {
-          source_table: "family_contact_records",
-          record_type: "family_contact",
-        })
-      ),
-      ...appointments.map((item) =>
-        toTimelineRow(item, {
-          source_table: "appointments",
-          record_type: "appointment",
-        })
-      ),
-      ...missingEpisodes.map((item) =>
-        toTimelineRow(item, {
-          source_table: "missing_episodes",
-          record_type: "missing_episode",
-        })
-      ),
-      ...safeguardingRecords.map((item) =>
-        toTimelineRow(item, {
-          source_table: "safeguarding_records",
-          record_type: "safeguarding_record",
-        })
-      ),
-      ...communications.map((item) =>
-        toTimelineRow(item, {
-          source_table: "communications",
-          record_type: "communication",
-        })
-      ),
-      ...tasks.map((item) =>
-        toTimelineRow(item, {
-          source_table: "tasks",
-          record_type: "task",
-        })
-      ),
-      ...complianceItems.map((item) =>
-        toTimelineRow(item, {
-          source_table: "compliance_items",
-          record_type: "compliance_item",
-        })
-      ),
-    ],
-    ["event_datetime", "created_at"]
-  );
+function getRowTitle(item = {}) {
+  return item.title || item.label || "Timeline item";
 }
 
-function buildPatternCounts(chronology = []) {
-  const highRisk = chronology.filter((item) =>
+function getRowSummary(item = {}) {
+  return item.summary || "No additional summary recorded.";
+}
+
+function getRowPill(item = {}) {
+  const severity = String(item.severity || "").toLowerCase();
+  const status = String(item.status || "").toLowerCase();
+
+  if (
+    ["critical", "high"].includes(severity) ||
+    ["overdue", "escalated", "returned", "rejected"].includes(status) ||
+    item.is_overdue
+  ) {
+    return { label: "Needs review", tone: "warning" };
+  }
+
+  if (["completed", "approved", "complete"].includes(status)) {
+    return { label: "Completed", tone: "success" };
+  }
+
+  if (["submitted", "pending_review", "draft", "active"].includes(status)) {
+    return { label: status.replaceAll("_", " "), tone: "muted" };
+  }
+
+  return { label: "Recorded", tone: "muted" };
+}
+
+function buildPatternCounts(records = []) {
+  const highRisk = records.filter((item) =>
     ["high", "critical"].includes(String(item.severity || "").toLowerCase())
   ).length;
 
-  const safeguarding = chronology.filter((item) => item.safeguarding_flag).length;
-  const childVoice = chronology.filter((item) => item.child_voice_present).length;
-  const autoGenerated = chronology.filter((item) => item.auto_generated).length;
+  const safeguarding = records.filter((item) =>
+    ["safeguarding_record", "missing_episode", "incident", "risk"].includes(
+      String(item.type || item.record_type || "").toLowerCase()
+    )
+  ).length;
+
+  const childVoice = records.filter((item) => {
+    const raw = item.raw || {};
+    return Boolean(
+      raw.child_voice ||
+        raw.young_person_voice ||
+        raw.child_voice_present ||
+        raw.voice_of_child
+    );
+  }).length;
+
+  const autoGenerated = records.filter((item) => {
+    const raw = item.raw || {};
+    return Boolean(raw.auto_generated || raw.generated_by_ai);
+  }).length;
 
   return {
     highRisk,
@@ -258,105 +181,54 @@ function buildPatternCounts(chronology = []) {
   };
 }
 
-function buildRecentImportantRows(chronology = []) {
-  return chronology.filter((item) => {
+function buildRecentImportantRows(records = []) {
+  return records.filter((item) => {
     const severity = String(item.severity || "").toLowerCase();
-    const significance = String(item.significance || "").toLowerCase();
-    const status = String(item.status || item.workflow_status || "").toLowerCase();
+    const status = String(item.status || "").toLowerCase();
+    const type = String(item.type || item.record_type || "").toLowerCase();
 
     return (
       ["high", "critical"].includes(severity) ||
-      ["high", "critical"].includes(significance) ||
-      ["overdue", "escalated"].includes(status) ||
-      item.safeguarding_flag
+      ["overdue", "escalated", "returned", "rejected"].includes(status) ||
+      ["safeguarding_record", "missing_episode", "incident", "risk"].includes(type) ||
+      item.is_overdue
     );
   });
 }
 
-function buildCategoryBuckets(chronology = []) {
-  const incidents = chronology.filter((item) =>
-    ["incident", "incidents", "missing_episode", "safeguarding_record"].includes(
-      String(item.record_type || item.primary_record_type || "").toLowerCase()
+function buildCategoryBuckets(records = []) {
+  const incidents = records.filter((item) =>
+    ["incident", "missing_episode", "safeguarding_record", "risk"].includes(
+      String(item.type || item.record_type || "").toLowerCase()
     )
   );
 
-  const health = chronology.filter((item) =>
-    String(item.record_type || item.primary_record_type || "")
-      .toLowerCase()
-      .includes("health")
+  const health = records.filter((item) =>
+    ["health_record", "appointment", "medication_record"].includes(
+      String(item.type || item.record_type || "").toLowerCase()
+    )
   );
 
-  const education = chronology.filter((item) =>
-    String(item.record_type || item.primary_record_type || "")
-      .toLowerCase()
-      .includes("education")
+  const education = records.filter((item) =>
+    String(item.type || item.record_type || "").toLowerCase().includes("education")
   );
 
-  const family = chronology.filter((item) =>
-    String(item.record_type || item.primary_record_type || "")
-      .toLowerCase()
-      .includes("family")
+  const family = records.filter((item) =>
+    String(item.type || item.record_type || "").toLowerCase().includes("family")
   );
 
   return { incidents, health, education, family };
 }
 
-function buildTopCounts({
-  timelineRows = [],
-  incidents = [],
-  healthRecords = [],
-  educationRecords = [],
-}) {
+function buildTopCounts({ timelineRows = [] }) {
   return {
     chronologyItems: timelineRows.length,
-    incidents: incidents.length,
-    health: healthRecords.length,
-    education: educationRecords.length,
+    incidents: timelineRows.filter((item) => item.type === "incident").length,
+    health: timelineRows.filter((item) =>
+      ["health_record", "appointment", "medication_record"].includes(item.type)
+    ).length,
+    education: timelineRows.filter((item) => item.type === "education_record").length,
   };
-}
-
-function getRowTitle(item = {}) {
-  return item.title || item.summary || "Timeline item";
-}
-
-function getRowSummary(item = {}) {
-  return (
-    item.summary ||
-    item.description ||
-    item.presentation ||
-    item.note ||
-    "No additional summary recorded."
-  );
-}
-
-function getRowMeta(item = {}) {
-  return (
-    item.event_datetime ||
-    item.occurred_at ||
-    item.contact_datetime ||
-    item.start_datetime ||
-    item.record_date ||
-    item.concern_datetime ||
-    item.due_date ||
-    item.created_at ||
-    ""
-  );
-}
-
-function getRowPill(item = {}) {
-  const severity = String(item.severity || "").toLowerCase();
-  const significance = String(item.significance || "").toLowerCase();
-  const status = String(item.status || item.workflow_status || "").toLowerCase();
-
-  if (
-    ["critical", "high"].includes(severity) ||
-    ["critical", "high"].includes(significance) ||
-    ["overdue", "escalated"].includes(status)
-  ) {
-    return { label: "Needs review", tone: "warning" };
-  }
-
-  return { label: "Recorded", tone: "muted" };
 }
 
 function renderRecordRows(items = [], emptyMessage = "No timeline items found.") {
@@ -373,8 +245,8 @@ function renderRecordRows(items = [], emptyMessage = "No timeline items found.")
       ${items
         .map((item) => {
           const pill = getRowPill(item);
-          const id = item.id ?? item.record_id ?? item.source_id ?? "";
-          const type = item.record_type || item.type || "";
+          const id = item.id ?? "";
+          const type = item.type || item.record_type || "";
 
           return `
             <article
@@ -382,14 +254,13 @@ function renderRecordRows(items = [], emptyMessage = "No timeline items found.")
               data-open-record="true"
               data-record-id="${toText(id)}"
               data-record-type="${toText(type)}"
-              data-title="${toText(getRowTitle(item))}"
               role="button"
               tabindex="0"
             >
               <div class="record-row-main">
                 <div class="record-row-title">${toText(getRowTitle(item))}</div>
                 <div class="record-row-summary">${toText(getRowSummary(item))}</div>
-                <div class="record-row-meta">${toText(formatTimelineDate(getRowMeta(item)))}</div>
+                <div class="record-row-meta">${toText(formatTimelineDate(getRecordDate(item)))}</div>
               </div>
               <div class="record-row-side">
                 <span class="row-pill ${toText(pill.tone)}">${toText(pill.label)}</span>
@@ -444,10 +315,9 @@ function renderTimelineHtml({
       ? "Home timeline overview"
       : "Quality timeline overview";
 
-  const subtitle =
-    chronology.length
-      ? "Chronology events generated and linked across the current scope."
-      : "Chronology events are not available, so this view is showing a fallback timeline from linked records.";
+  const subtitle = chronology.length
+    ? "Chronology and linked records across the current scope."
+    : "This view is showing a fallback timeline from linked records.";
 
   return `
     <section class="overview-panel">
@@ -463,9 +333,9 @@ function renderTimelineHtml({
         <section class="overview-main">
           <div class="overview-stats-grid">
             <article class="overview-stat-card">
-              <span class="overview-stat-label">Chronology items</span>
+              <span class="overview-stat-label">Timeline items</span>
               <strong class="overview-stat-value">${toText(topCounts.chronologyItems)}</strong>
-              <span class="overview-stat-note">Timeline items available</span>
+              <span class="overview-stat-note">Normalised records available</span>
             </article>
 
             <article class="overview-stat-card">
@@ -497,7 +367,7 @@ function renderTimelineHtml({
               <article class="record-row">
                 <div class="record-row-main">
                   <div class="record-row-title">High-risk events</div>
-                  <div class="record-row-summary">Chronology items marked high or critical.</div>
+                  <div class="record-row-summary">Records marked high or critical.</div>
                 </div>
                 <div class="record-row-side">
                   <span class="row-pill ${patternCounts.highRisk > 0 ? "warning" : "muted"}">${toText(patternCounts.highRisk)}</span>
@@ -507,7 +377,7 @@ function renderTimelineHtml({
               <article class="record-row">
                 <div class="record-row-main">
                   <div class="record-row-title">Safeguarding-linked</div>
-                  <div class="record-row-summary">Events carrying safeguarding flags.</div>
+                  <div class="record-row-summary">Safeguarding, missing, risk and incident-linked records.</div>
                 </div>
                 <div class="record-row-side">
                   <span class="row-pill ${patternCounts.safeguarding > 0 ? "warning" : "muted"}">${toText(patternCounts.safeguarding)}</span>
@@ -517,7 +387,7 @@ function renderTimelineHtml({
               <article class="record-row">
                 <div class="record-row-main">
                   <div class="record-row-title">Child voice present</div>
-                  <div class="record-row-summary">Chronology items with the young person’s voice captured.</div>
+                  <div class="record-row-summary">Records where the young person’s voice appears captured.</div>
                 </div>
                 <div class="record-row-side">
                   <span class="row-pill muted">${toText(patternCounts.childVoice)}</span>
@@ -527,7 +397,7 @@ function renderTimelineHtml({
               <article class="record-row">
                 <div class="record-row-main">
                   <div class="record-row-title">Auto-generated</div>
-                  <div class="record-row-summary">Events projected from linked records.</div>
+                  <div class="record-row-summary">Records projected or generated by automation.</div>
                 </div>
                 <div class="record-row-side">
                   <span class="row-pill muted">${toText(patternCounts.autoGenerated)}</span>
@@ -538,12 +408,8 @@ function renderTimelineHtml({
 
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Full chronology</h3>
-              <p>${
-                chronology.length
-                  ? "Recorded chronology events in newest-first order."
-                  : "Fallback view built from incidents, notes, health, education, family, appointments, safeguarding, communication and readiness items."
-              }</p>
+              <h3>Full timeline</h3>
+              <p>All available records in newest-first order.</p>
             </div>
 
             ${renderRecordRows(timelineRows, "No timeline items found.")}
@@ -554,7 +420,7 @@ function renderTimelineHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Important recent events</h3>
-              <p>High-significance, safeguarding-linked or high-severity events to notice first.</p>
+              <p>High-risk, safeguarding-linked or overdue records to notice first.</p>
             </div>
 
             ${renderPriorityList(importantRows)}
@@ -562,8 +428,8 @@ function renderTimelineHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Recent incidents in timeline</h3>
-              <p>Incident-related chronology and linked events.</p>
+              <h3>Recent incidents and safeguarding</h3>
+              <p>Incident, missing, safeguarding and risk-related items.</p>
             </div>
 
             ${renderRecordRows(buckets.incidents.slice(0, 8), "No incident-related timeline items found.")}
@@ -572,7 +438,7 @@ function renderTimelineHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Recent health-related events</h3>
-              <p>Appointments, health records and related chronology items.</p>
+              <p>Appointments, health records and medication items.</p>
             </div>
 
             ${renderRecordRows(buckets.health.slice(0, 8), "No health-related timeline items found.")}
@@ -581,7 +447,7 @@ function renderTimelineHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Recent education-related events</h3>
-              <p>Attendance, engagement, school issues and progress in the timeline.</p>
+              <p>Education records and learning-related items.</p>
             </div>
 
             ${renderRecordRows(buckets.education.slice(0, 8), "No education-related timeline items found.")}
@@ -590,7 +456,7 @@ function renderTimelineHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Recent family-related events</h3>
-              <p>Family contact and relationship-related items in the timeline.</p>
+              <p>Family contact and relationship-related items.</p>
             </div>
 
             ${renderRecordRows(buckets.family.slice(0, 8), "No family-related timeline items found.")}
@@ -599,62 +465,6 @@ function renderTimelineHtml({
       </div>
     </section>
   `;
-}
-
-function getTimelineEndpoints() {
-  const scope = getCurrentScope();
-  const id = getScopeEntityId();
-
-  if (!id) return null;
-
-  if (scope === "home") {
-    return {
-      timeline: `/homes/${id}/timeline`,
-      incidents: `/homes/${id}/incidents`,
-      dailyNotes: `/homes/${id}/daily-notes`,
-      health: `/homes/${id}/health-records`,
-      education: `/homes/${id}/education-records`,
-      family: `/homes/${id}/family-contact-records`,
-      appointments: `/homes/${id}/appointments`,
-      missing: `/homes/${id}/missing-episodes`,
-      safeguarding: `/homes/${id}/safeguarding-records`,
-      communications: `/homes/${id}/communications`,
-      tasks: `/homes/${id}/tasks`,
-      compliance: `/homes/${id}/compliance`,
-    };
-  }
-
-  if (scope === "quality") {
-    return {
-      timeline: `/homes/${id}/timeline`,
-      incidents: `/homes/${id}/incidents`,
-      dailyNotes: `/homes/${id}/daily-notes`,
-      health: `/homes/${id}/health-records`,
-      education: `/homes/${id}/education-records`,
-      family: `/homes/${id}/family-contact-records`,
-      appointments: `/homes/${id}/appointments`,
-      missing: `/homes/${id}/missing-episodes`,
-      safeguarding: `/homes/${id}/safeguarding-records`,
-      communications: `/homes/${id}/communications`,
-      tasks: `/homes/${id}/tasks`,
-      compliance: `/homes/${id}/compliance`,
-    };
-  }
-
-  return {
-    timeline: `/young-people/${id}/timeline`,
-    incidents: `/young-people/${id}/incidents`,
-    dailyNotes: `/young-people/${id}/daily-notes`,
-    health: `/young-people/${id}/health-records`,
-    education: `/young-people/${id}/education-records`,
-    family: `/young-people/${id}/family-contact-records`,
-    appointments: `/young-people/${id}/appointments`,
-    missing: `/young-people/${id}/missing-episodes`,
-    safeguarding: `/young-people/${id}/safeguarding-records`,
-    communications: `/young-people/${id}/communications`,
-    tasks: `/young-people/${id}/tasks`,
-    compliance: `/young-people/${id}/compliance`,
-  };
 }
 
 function renderNoContext() {
@@ -679,11 +489,142 @@ function renderNoContext() {
   });
 }
 
+async function safeList(recordType, ids = {}) {
+  try {
+    return await listRecords(recordType, ids);
+  } catch (error) {
+    console.warn(`[timeline] failed to load ${recordType}`, error);
+    return [];
+  }
+}
+
+async function loadChildTimeline(youngPersonId) {
+  const ids = { youngPersonId };
+
+  const [
+    chronology,
+    incidents,
+    dailyNotes,
+    healthRecords,
+    educationRecords,
+    familyRecords,
+    appointments,
+    missingEpisodes,
+    safeguardingRecords,
+    tasks,
+    documents,
+    statutoryDocuments,
+    medicationRecords,
+    handoverRecords,
+    riskRecords,
+    keyworkRecords,
+  ] = await Promise.all([
+    safeList("chronology_event", ids),
+    safeList("incident", ids),
+    safeList("daily_note", ids),
+    safeList("health_record", ids),
+    safeList("education_record", ids),
+    safeList("family_contact", ids),
+    safeList("appointment", ids),
+    safeList("missing_episode", ids),
+    safeList("safeguarding_record", ids),
+    safeList("task", ids),
+    safeList("document", ids),
+    safeList("statutory_document", ids),
+    safeList("medication_record", ids),
+    safeList("handover_record", ids),
+    safeList("risk", ids),
+    safeList("keywork", ids),
+  ]);
+
+  const fallback = [
+    ...incidents,
+    ...dailyNotes,
+    ...healthRecords,
+    ...educationRecords,
+    ...familyRecords,
+    ...appointments,
+    ...missingEpisodes,
+    ...safeguardingRecords,
+    ...tasks,
+    ...documents,
+    ...statutoryDocuments,
+    ...medicationRecords,
+    ...handoverRecords,
+    ...riskRecords,
+    ...keyworkRecords,
+  ];
+
+  const timelineRows = sortNormalisedRecordsNewestFirst(
+    chronology.length ? chronology : fallback
+  );
+
+  return {
+    chronology,
+    timelineRows,
+  };
+}
+
+async function loadHomeTimeline(homeId) {
+  const homeFallbackTypes = [
+    "incident",
+    "daily_note",
+    "appointment",
+    "task",
+    "document",
+    "safeguarding_record",
+  ];
+
+  const results = await Promise.all(
+    homeFallbackTypes.map((type) => safeList(type, { homeId }))
+  );
+
+  const timelineRows = sortNormalisedRecordsNewestFirst(results.flat());
+
+  return {
+    chronology: [],
+    timelineRows,
+  };
+}
+
+function bindTimelineRowEvents(records = []) {
+  if (!els.viewContent) return;
+
+  const byKey = new Map();
+
+  records.forEach((record) => {
+    const key = `${record.type || record.record_type || ""}:${record.id || ""}`;
+    byKey.set(key, record);
+  });
+
+  els.viewContent.querySelectorAll("[data-open-record='true']").forEach((row) => {
+    const open = () => {
+      const type = row.getAttribute("data-record-type") || "";
+      const id = row.getAttribute("data-record-id") || "";
+      const record = byKey.get(`${type}:${id}`);
+
+      if (record) {
+        openRecordDetail(record);
+      }
+    };
+
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
+  });
+}
+
 export async function loadTimeline() {
   if (!els.viewContent) return;
 
-  const endpoints = getTimelineEndpoints();
-  if (!endpoints) {
+  const scope = getCurrentScope();
+  const id = getScopeEntityId();
+
+  if (!id) {
     renderNoContext();
     return;
   }
@@ -698,138 +639,21 @@ export async function loadTimeline() {
   `;
 
   try {
-    const [
-      timelineData,
-      incidentsData,
-      dailyNotesData,
-      healthData,
-      educationData,
-      familyData,
-      appointmentsData,
-      missingData,
-      safeguardingData,
-      communicationsData,
-      tasksData,
-      complianceData,
-    ] = await Promise.all([
-      apiGet(endpoints.timeline).catch(() => ({ items: [] })),
-      apiGet(endpoints.incidents).catch(() => ({ items: [] })),
-      apiGet(endpoints.dailyNotes).catch(() => ({ items: [] })),
-      apiGet(endpoints.health).catch(() => ({ items: [] })),
-      apiGet(endpoints.education).catch(() => ({ items: [] })),
-      apiGet(endpoints.family).catch(() => ({ items: [] })),
-      apiGet(endpoints.appointments).catch(() => ({ items: [] })),
-      apiGet(endpoints.missing).catch(() => ({ items: [] })),
-      apiGet(endpoints.safeguarding).catch(() => ({ items: [] })),
-      apiGet(endpoints.communications).catch(() => ({ items: [] })),
-      apiGet(endpoints.tasks).catch(() => ({ items: [] })),
-      apiGet(endpoints.compliance).catch(() => ({ items: [] })),
-    ]);
+    const result =
+      scope === "child" ? await loadChildTimeline(id) : await loadHomeTimeline(id);
 
-    const chronology = sortNewestFirst(
-      (
-        timelineData.timeline ||
-        timelineData.items ||
-        timelineData.records ||
-        timelineData.chronology_events ||
-        []
-      ).map(mapChronologyEvent),
-      ["event_datetime", "created_at"]
+    const timelineRows = sortNormalisedRecordsNewestFirst(
+      normaliseRecords(result.timelineRows)
     );
 
-    const incidents = sortNewestFirst(
-      (incidentsData.items || incidentsData.records || incidentsData.incidents || []).map(mapIncident),
-      ["occurred_at", "incident_datetime", "created_at"]
+    const chronology = sortNormalisedRecordsNewestFirst(
+      normaliseRecords(result.chronology)
     );
 
-    const dailyNotes = sortNewestFirst(
-      (dailyNotesData.items || dailyNotesData.records || dailyNotesData.daily_notes || []).map(mapDailyNote),
-      ["record_date", "created_at"]
-    );
-
-    const healthRecords = sortNewestFirst(
-      (healthData.items || healthData.records || healthData.health_records || []).map(mapHealthRecord),
-      ["event_datetime", "created_at"]
-    );
-
-    const educationRecords = sortNewestFirst(
-      (educationData.items || educationData.records || educationData.education_records || []).map(mapEducationRecord),
-      ["record_date", "created_at"]
-    );
-
-    const familyRecords = sortNewestFirst(
-      (familyData.items || familyData.records || familyData.family_contact_records || []).map(mapFamilyContactRecord),
-      ["contact_datetime", "created_at"]
-    );
-
-    const appointments = sortNewestFirst(
-      (
-        appointmentsData.items ||
-        appointmentsData.records ||
-        appointmentsData.appointments ||
-        appointmentsData.young_person_appointments ||
-        []
-      ).map(mapAppointment),
-      ["start_datetime", "created_at"]
-    );
-
-    const missingEpisodes = sortNewestFirst(
-      (missingData.items || missingData.records || missingData.missing_episodes || []).map(mapMissingEpisode),
-      ["start_datetime", "created_at"]
-    );
-
-    const safeguardingRecords = sortNewestFirst(
-      (safeguardingData.items || safeguardingData.records || safeguardingData.safeguarding_records || []).map(
-        mapSafeguardingRecord
-      ),
-      ["concern_datetime", "created_at"]
-    );
-
-    const communications = sortNewestFirst(
-      (
-        communicationsData.items ||
-        communicationsData.records ||
-        communicationsData.communications ||
-        []
-      ).map((item) => (typeof mapCommunicationRecord === "function" ? mapCommunicationRecord(item) : item)),
-      ["contact_datetime", "created_at", "updated_at"]
-    );
-
-    const tasks = sortNewestFirst(
-      (tasksData.items || tasksData.records || tasksData.tasks || []).map(mapTask),
-      ["due_date", "created_at"]
-    );
-
-    const complianceItems = sortNewestFirst(
-      (complianceData.items || complianceData.records || complianceData.compliance_items || []).map(mapComplianceItem),
-      ["due_date", "created_at"]
-    );
-
-    const fallbackTimeline = buildFallbackTimeline({
-      incidents,
-      dailyNotes,
-      healthRecords,
-      educationRecords,
-      familyRecords,
-      appointments,
-      missingEpisodes,
-      safeguardingRecords,
-      communications,
-      tasks,
-      complianceItems,
-    });
-
-    const timelineRows = chronology.length ? chronology : fallbackTimeline;
     const importantRows = buildRecentImportantRows(timelineRows).slice(0, 10);
     const buckets = buildCategoryBuckets(timelineRows);
     const patternCounts = buildPatternCounts(timelineRows);
-
-    const topCounts = buildTopCounts({
-      timelineRows,
-      incidents,
-      healthRecords,
-      educationRecords,
-    });
+    const topCounts = buildTopCounts({ timelineRows });
 
     els.viewContent.innerHTML = renderTimelineHtml({
       chronology,
@@ -840,6 +664,8 @@ export async function loadTimeline() {
       topCounts,
     });
 
+    bindTimelineRowEvents(timelineRows);
+
     const latest = timelineRows[0] || null;
     const nextAttention = importantRows[0] || null;
 
@@ -848,10 +674,12 @@ export async function loadTimeline() {
       nextEvent: nextAttention
         ? `${nextAttention.title || "Priority event"}`
         : "No urgent timeline event",
-      lastRecord: latest?.event_datetime
-        ? `Latest ${formatTimelineDate(latest.event_datetime)}`
+      lastRecord: latest?.date
+        ? `Latest ${formatTimelineDate(latest.date)}`
         : "No recent timeline record",
-      openActions: `${importantRows.length} important event${importantRows.length === 1 ? "" : "s"}`,
+      openActions: `${importantRows.length} important event${
+        importantRows.length === 1 ? "" : "s"
+      }`,
     });
   } catch (error) {
     els.viewContent.innerHTML = `
@@ -868,4 +696,5 @@ export async function loadTimeline() {
     });
   }
 }
+
 export const loadCurrentView = loadTimeline;
