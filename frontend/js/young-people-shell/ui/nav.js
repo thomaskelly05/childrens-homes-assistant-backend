@@ -1727,17 +1727,20 @@ function bindYoungPersonOpen() {
     if (!id) return;
 
     try {
-      setCurrentScope("child");
-      updateSectionState(getDefaultSectionForScope("child"));
+      setCurrentScope("child", { resetSection: false });
+      updateSectionState("workspace");
 
-      await openYoungPerson(id, { skipInitialSectionLoad: true });
+      await openYoungPerson(id, {
+        initialSection: "workspace",
+        skipInitialSectionLoad: true,
+      });
 
       showWorkspaceScreen();
       paintNavigationChrome();
       clearStatus();
       resetWorkspaceSummaryStrip();
       await runAssistantScopeSync();
-      await loadSection(getCurrentSection(), { force: true });
+      await loadSection("workspace", { force: true });
     } catch (error) {
       console.error("[nav] open young person failed", error);
       showError(error?.message || "Unable to open workspace.");
