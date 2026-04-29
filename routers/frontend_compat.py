@@ -19,8 +19,19 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
     "incidents": {"table": "incidents", "key": "incidents", "order": "incident_datetime"},
     "safeguarding": {"table": "safeguarding_records", "key": "safeguarding", "order": "created_at"},
     "support-plans": {"table": "support_plans", "key": "support_plans", "order": "review_date"},
+    "risk": {"table": "risk_assessments", "key": "risk", "order": "review_date"},
+    "missing-episodes": {"table": "missing_episodes", "key": "missing_episodes", "order": "missing_from"},
+    "medication-records": {"table": "medication_records", "key": "medication_records", "order": "administered_at"},
     "tasks": {"table": "tasks", "key": "tasks", "order": "due_date"},
     "documents": {"table": "documents", "key": "documents", "order": "created_at"},
+    "statutory-documents": {"table": "statutory_documents", "key": "statutory_documents", "order": "review_date"},
+    "handover": {"table": "handover_records", "key": "handover", "order": "handover_datetime"},
+    "health": {"table": "health_records", "key": "health", "order": "record_date"},
+    "education": {"table": "education_records", "key": "education", "order": "record_date"},
+    "family": {"table": "family_contact_records", "key": "family", "order": "contact_datetime"},
+    "keywork": {"table": "keywork_sessions", "key": "keywork", "order": "session_date"},
+    "timeline": {"table": "chronology_events", "key": "timeline", "order": "event_datetime"},
+
     "reports": {"table": "ai_generated_reports", "key": "reports", "order": "created_at"},
     "team": {"table": "staff", "key": "team", "order": "full_name"},
     "staff": {"table": "staff", "key": "staff", "order": "full_name"},
@@ -374,6 +385,7 @@ async def route_payload(
         return {
             config["key"]: rows,
             "items": rows,
+            "records": rows,
             "count": len(rows),
             "status": "ok",
             "route": route_key,
@@ -392,6 +404,7 @@ async def route_payload(
             content={
                 config["key"]: [],
                 "items": [],
+                "records": [],
                 "count": 0,
                 "status": "compat_error_softened",
                 "route": route_key,
@@ -529,6 +542,7 @@ async def homes(
     return {
         "homes": rows,
         "items": rows,
+        "records": rows,
         "count": len(rows),
         "status": "ok",
         "route": "homes",
@@ -547,6 +561,7 @@ async def providers(limit: int = Query(default=100)):
     return {
         "providers": rows,
         "items": rows,
+        "records": rows,
         "count": len(rows),
         "status": "ok",
         "route": "providers",
@@ -587,6 +602,7 @@ async def quality_detail(record_id: int):
         "quality": rows,
         "item": rows[0] if rows else None,
         "items": rows,
+        "records": rows,
         "count": len(rows),
         "status": "ok",
         "route": "quality",
@@ -608,6 +624,7 @@ async def ofsted_detail(record_id: int):
         "ofsted": rows,
         "item": rows[0] if rows else None,
         "items": rows,
+        "records": rows,
         "count": len(rows),
         "status": "ok",
         "route": "ofsted",
@@ -705,6 +722,117 @@ def build_bundle_rows(
             )
 
     return bundle, sources
+
+
+@router.get("/assistant/context")
+@router.get("/api/assistant/context")
+async def assistant_global_context(
+    request: Request,
+    young_person_id: int | None = Query(default=None),
+    home_id: int | None = Query(default=None),
+    provider_id: int | None = Query(default=None),
+):
+    young_person_id = young_person_id or get_context_id(request, "young_person_id")
+    home_id = home_id or get_context_id(request, "home_id")
+    provider_id = provider_id or get_context_id(request, "provider_id")
+
+    bundle, sources = build_bundle_rows(
+        young_person_id=young_person_id,
+        home_id=home_id,
+        provider_id=provider_id,
+    )
+
+    return {
+        "status": "ok",
+        "scope": "global",
+        "context": bundle,
+        "scope_bundle": bundle,
+        "bundle": bundle,
+        "items": sources,
+        "sources": sources,
+        "warnings": [],
+        "runtime": {
+            "source": "frontend_compat_context",
+            "evidence_count": len(sources),
+            "young_person_id": young_person_id,
+            "home_id": home_id,
+            "provider_id": provider_id,
+        },
+    }
+
+
+@router.get("/young-people/{young_person_id}/assistant/context")
+@router.get("/api/young-people/{young_person_id}/assistant/context")
+async def assistant_young_person_context(
+    young_person_id: int,
+    request: Request,
+    home_id: int | None = Query(default=None),
+    provider_id: int | None = Query(default=None),
+):
+    home_id = home_id or get_context_id(request, "home_id")
+    provider_id = provider_id or get_context_id(request, "provider_id")
+
+    bundle, sources = build_bundle_rows(
+        young_person_id=young_person_id,
+        home_id=home_id,
+        provider_id=provider_id,
+    )
+
+    return {
+        "status": "ok",
+        "scope": "child",
+        "young_person_id": young_person_id,
+        "context": bundle,
+        "scope_bundle": bundle,
+        "bundle": bundle,
+        "items": sources,
+        "sources": sources,
+        "warnings": [],
+        "runtime": {
+            "source": "frontend_compat_child_context",
+            "evidence_count": len(sources),
+            "young_person_id": young_person_id,
+            "home_id": home_id,
+            "provider_id": provider_id,
+        },
+    }
+
+
+@router.get("/homes/{home_id}/assistant/context")
+@router.get("/api/homes/{home_id}/assistant/context")
+async def assistant_home_context(
+    home_id: int,
+    request: Request,
+    young_person_id: int | None = Query(default=None),
+    provider_id: int | None = Query(default=None),
+):
+    young_person_id = young_person_id or get_context_id(request, "young_person_id")
+    provider_id = provider_id or get_context_id(request, "provider_id")
+
+    bundle, sources = build_bundle_rows(
+        young_person_id=young_person_id,
+        home_id=home_id,
+        provider_id=provider_id,
+    )
+
+    return {
+        "status": "ok",
+        "scope": "home",
+        "home_id": home_id,
+        "context": bundle,
+        "scope_bundle": bundle,
+        "bundle": bundle,
+        "items": sources,
+        "sources": sources,
+        "warnings": [],
+        "runtime": {
+            "source": "frontend_compat_home_context",
+            "evidence_count": len(sources),
+            "young_person_id": young_person_id,
+            "home_id": home_id,
+            "provider_id": provider_id,
+        },
+    }
 
 
 @router.get("/assistant/scope-bundle")
