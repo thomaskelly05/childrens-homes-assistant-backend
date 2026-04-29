@@ -24,6 +24,57 @@ function text(value = "") {
   return escapeHtml(String(value ?? ""));
 }
 
+const JOURNEY_OPTIONS = [
+  { value: "", label: "Not set" },
+  { value: "referral", label: "Referral" },
+  { value: "matching", label: "Matching" },
+  { value: "admission", label: "Admission" },
+  { value: "settling", label: "Settling" },
+  { value: "living", label: "Living" },
+  { value: "review", label: "Review" },
+  { value: "transition", label: "Transition" },
+  { value: "leaving", label: "Leaving care" },
+  { value: "aftercare", label: "Aftercare" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "submitted", label: "Submitted" },
+  { value: "approved", label: "Approved" },
+  { value: "completed", label: "Completed" },
+];
+
+const SHIFT_OPTIONS = [
+  { value: "day", label: "Day" },
+  { value: "late", label: "Late" },
+  { value: "night", label: "Night" },
+  { value: "sleep_in", label: "Sleep-in" },
+  { value: "waking_night", label: "Waking night" },
+];
+
+const SEVERITY_OPTIONS = [
+  { value: "", label: "Not specified" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+];
+
+const PRIORITY_OPTIONS = SEVERITY_OPTIONS;
+
+const COMMON_SPELLING_HINTS = [
+  ["teh", "the"],
+  ["recieve", "receive"],
+  ["seperate", "separate"],
+  ["behavour", "behaviour"],
+  ["occured", "occurred"],
+  ["definately", "definitely"],
+  ["acommodation", "accommodation"],
+  ["adress", "address"],
+  ["neccessary", "necessary"],
+  ["suport", "support"],
+];
+
 function getYoungPersonId() {
   const app = document.getElementById("app");
   const params = new URLSearchParams(window.location.search);
@@ -118,9 +169,15 @@ function field(f, item = {}) {
 
   if (f.type === "textarea") {
     control = `
-      <textarea name="${text(f.name)}" rows="${text(f.rows || 4)}" ${required}>${text(
-        value
-      )}</textarea>
+      <textarea
+        name="${text(f.name)}"
+        rows="${text(f.rows || 4)}"
+        ${required}
+        spellcheck="true"
+        autocomplete="on"
+        autocapitalize="sentences"
+        data-writing-aid="true"
+      >${text(value)}</textarea>
     `;
   } else if (f.type === "select") {
     control = `
@@ -156,6 +213,10 @@ function field(f, item = {}) {
         name="${text(f.name)}"
         value="${text(value)}"
         ${required}
+        spellcheck="true"
+        autocomplete="on"
+        autocapitalize="sentences"
+        data-writing-aid="true"
       />
     `;
   }
@@ -181,36 +242,55 @@ function section(title, desc, fields, item = {}) {
   `;
 }
 
-const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "submitted", label: "Submitted" },
-  { value: "approved", label: "Approved" },
-  { value: "completed", label: "Completed" },
-];
+function journeySection(item = {}) {
+  return section(
+    "Journey stage",
+    "Link this record to the young person’s care journey.",
+    [
+      {
+        name: "journey_stage",
+        label: "Journey stage",
+        type: "select",
+        options: JOURNEY_OPTIONS,
+      },
+    ],
+    item
+  );
+}
 
-const SHIFT_OPTIONS = [
-  { value: "day", label: "Day" },
-  { value: "late", label: "Late" },
-  { value: "night", label: "Night" },
-  { value: "sleep_in", label: "Sleep-in" },
-  { value: "waking_night", label: "Waking night" },
-];
-
-const SEVERITY_OPTIONS = [
-  { value: "", label: "Not specified" },
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "critical", label: "Critical" },
-];
-
-const PRIORITY_OPTIONS = [
-  { value: "", label: "Not specified" },
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "critical", label: "Critical" },
-];
+function meaningSection(item = {}) {
+  return section(
+    "Meaning and learning",
+    "What does this tell us, and what should adults do differently?",
+    [
+      {
+        name: "what_is_child_communicating",
+        label: "What is the child communicating?",
+        type: "textarea",
+        full: true,
+      },
+      {
+        name: "what_helped",
+        label: "What helped?",
+        type: "textarea",
+        full: true,
+      },
+      {
+        name: "what_did_adults_learn",
+        label: "What did adults learn?",
+        type: "textarea",
+        full: true,
+      },
+      {
+        name: "what_needs_to_change",
+        label: "What needs to change?",
+        type: "textarea",
+        full: true,
+      },
+    ],
+    item
+  );
+}
 
 function dailyRecord(item = {}) {
   return {
@@ -219,17 +299,11 @@ function dailyRecord(item = {}) {
       "Record the day clearly, including the young person’s experience, staff response, risk changes and follow-up.",
     required: ["note_date", "shift_type", "young_person_voice", "actions_required"],
     html: `
+      ${journeySection(item)}
+
       ${section("Basic information", "Core shift details for this daily note.", [
         { name: "note_date", label: "Date", type: "date", value: today(), required: true },
-        {
-          name: "shift_type",
-          label: "Shift",
-          type: "select",
-          value: "day",
-          required: true,
-          options: SHIFT_OPTIONS,
-          desc: "The shift this daily note relates to.",
-        },
+        { name: "shift_type", label: "Shift", type: "select", value: "day", required: true, options: SHIFT_OPTIONS },
         { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
       ], item)}
 
@@ -246,6 +320,8 @@ function dailyRecord(item = {}) {
         { name: "positives", label: "Positives", type: "textarea", full: true },
       ], item)}
 
+      ${meaningSection(item)}
+
       ${section("Health, education and family", "Record any relevant daily updates.", [
         { name: "education_update", label: "Education update", type: "textarea", full: true },
         { name: "health_update", label: "Health update", type: "textarea", full: true },
@@ -258,10 +334,8 @@ function dailyRecord(item = {}) {
         { name: "manager_review_comment", label: "Manager review comment", type: "textarea", full: true },
         { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
         { name: "link_to_chronology", label: "Link to chronology", type: "checkbox", value: true },
-        { name: "link_to_support_plans", label: "Link to support plans", type: "checkbox" },
         { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
         { name: "safeguarding_concern", label: "Safeguarding concern", type: "checkbox" },
-        { name: "link_monthly_reviews", label: "Link monthly reviews", type: "checkbox" },
         { name: "link_quality_standards", label: "Link quality standards", type: "checkbox", value: true },
       ], item)}
     `,
@@ -275,6 +349,8 @@ function incidentForm(item = {}) {
       "Record the incident factually, including context, risk management, child voice, staff response and safeguarding follow-up.",
     required: ["incident_datetime", "incident_type", "description", "actions_taken"],
     html: `
+      ${journeySection(item)}
+
       ${section("Incident details", "Core incident information.", [
         { name: "incident_datetime", label: "Date and time", type: "datetime-local", value: now(), required: true },
         { name: "incident_type", label: "Incident type", required: true },
@@ -292,6 +368,8 @@ function incidentForm(item = {}) {
         { name: "child_voice", label: "Child voice", type: "textarea", full: true },
         { name: "staff_response", label: "Staff response", type: "textarea", full: true },
       ], item)}
+
+      ${meaningSection(item)}
 
       ${section("Outcome and safeguarding", "Record the result, notifications and next actions.", [
         { name: "outcome", label: "Outcome", type: "textarea", full: true },
@@ -312,6 +390,8 @@ function keyworkForm(item = {}) {
       "Capture the purpose of the session, what was explored, the young person’s voice, reflection and agreed actions.",
     required: ["session_date", "topic", "summary", "young_person_voice"],
     html: `
+      ${journeySection(item)}
+
       ${section("Session information", "Core key work details.", [
         { name: "session_date", label: "Date", type: "date", value: today(), required: true },
         { name: "topic", label: "Topic", required: true },
@@ -324,9 +404,12 @@ function keyworkForm(item = {}) {
         { name: "reflection", label: "Reflection / analysis", type: "textarea", full: true },
       ], item)}
 
+      ${meaningSection(item)}
+
       ${section("Outcome", "What changes or actions were agreed.", [
         { name: "actions_agreed", label: "Actions agreed", type: "textarea", full: true },
         { name: "follow_up_required", label: "Follow-up required", type: "textarea", full: true },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
       ], item)}
     `,
   };
@@ -339,6 +422,8 @@ function riskForm(item = {}) {
       "Record the risk category, concern, triggers, controls, response actions and review date.",
     required: ["category", "title"],
     html: `
+      ${journeySection(item)}
+
       ${section("Risk overview", "Identify the risk and review date.", [
         { name: "category", label: "Category", required: true },
         { name: "title", label: "Risk title", required: true },
@@ -361,258 +446,21 @@ function riskForm(item = {}) {
         { name: "contextual_factors", label: "Contextual factors", type: "textarea", full: true },
       ], item)}
 
+      ${meaningSection(item)}
+
       ${section("Controls and response", "Set out what adults should do.", [
         { name: "current_controls", label: "Current controls", type: "textarea", full: true },
         { name: "deescalation_strategies", label: "De-escalation strategies", type: "textarea", full: true },
         { name: "response_actions", label: "Response actions", type: "textarea", rows: 5, full: true },
         { name: "child_views", label: "Child views", type: "textarea", full: true },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
       ], item)}
     `,
   };
 }
 
-function safeguardingForm(item = {}) {
-  return {
-    title: "Safeguarding record",
-    intro:
-      "Record the concern, immediate action, notifications, referrals and oversight clearly and safely.",
-    required: ["concern_type", "concern_summary", "immediate_action_taken"],
-    html: `
-      ${section("Concern details", "Describe the safeguarding concern.", [
-        { name: "concern_type", label: "Concern type", required: true },
-        { name: "concern_datetime", label: "Date and time", type: "datetime-local", value: now() },
-        { name: "severity", label: "Severity", type: "select", options: SEVERITY_OPTIONS },
-      ], item)}
-
-      ${section("Concern and disclosure", "Record facts and child voice.", [
-        { name: "concern_summary", label: "Concern summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "disclosure_details", label: "Disclosure / child voice", type: "textarea", full: true },
-      ], item)}
-
-      ${section("Immediate action and referrals", "Record safeguarding action taken.", [
-        { name: "immediate_action_taken", label: "Immediate action taken", type: "textarea", required: true, full: true },
-        { name: "referral_details", label: "Referral / notification details", type: "textarea", full: true },
-        { name: "placing_authority_notified", label: "Placing authority notified", type: "checkbox" },
-        { name: "ofsted_notified", label: "Ofsted notified", type: "checkbox" },
-        { name: "police_notified", label: "Police notified", type: "checkbox" },
-        { name: "manager_oversight", label: "Manager oversight", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function healthForm(item = {}) {
-  return {
-    title: "Health record",
-    intro:
-      "Record health needs, appointments, outcomes, professional advice and follow-up.",
-    required: ["record_date", "health_area", "summary"],
-    html: `
-      ${section("Health information", "Core health record details.", [
-        { name: "record_date", label: "Date", type: "date", value: today(), required: true },
-        { name: "health_area", label: "Health area", required: true },
-        { name: "professional_name", label: "Professional / service" },
-      ], item)}
-
-      ${section("Health update", "Describe the issue, advice or outcome.", [
-        { name: "summary", label: "Summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
-        { name: "outcome", label: "Outcome", type: "textarea", full: true },
-      ], item)}
-
-      ${section("Follow-up", "Record actions and next steps.", [
-        { name: "next_action_date", label: "Next action date", type: "date" },
-        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function educationForm(item = {}) {
-  return {
-    title: "Education record",
-    intro:
-      "Record attendance, engagement, learning experience, issues, achievements and follow-up.",
-    required: ["record_date", "education_area", "summary"],
-    html: `
-      ${section("Education information", "Core education details.", [
-        { name: "record_date", label: "Date", type: "date", value: today(), required: true },
-        { name: "education_area", label: "Education area", required: true },
-        { name: "school_or_provider", label: "School / provider" },
-      ], item)}
-
-      ${section("Learning and experience", "Capture what happened and how the young person experienced it.", [
-        { name: "summary", label: "Summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "learning_engagement", label: "Learning engagement", type: "textarea", full: true },
-        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
-        { name: "achievement_note", label: "Achievement / progress", type: "textarea", full: true },
-      ], item)}
-
-      ${section("Actions", "Record follow-up.", [
-        { name: "issue_raised", label: "Issue raised", type: "textarea", full: true },
-        { name: "action_taken", label: "Action taken / required", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function familyContactForm(item = {}) {
-  return {
-    title: "Family contact",
-    intro:
-      "Record family contact, presentation before and after, child voice, concerns and follow-up.",
-    required: ["contact_datetime", "contact_type", "summary"],
-    html: `
-      ${section("Contact details", "Core family contact information.", [
-        { name: "contact_datetime", label: "Date and time", type: "datetime-local", value: now(), required: true },
-        { name: "contact_type", label: "Contact type", required: true },
-        { name: "contact_person", label: "Person contacted" },
-      ], item)}
-
-      ${section("Experience", "Capture the young person’s experience.", [
-        { name: "summary", label: "Summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "pre_contact_presentation", label: "Before contact", type: "textarea", full: true },
-        { name: "post_contact_presentation", label: "After contact", type: "textarea", full: true },
-        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
-      ], item)}
-
-      ${section("Concerns and follow-up", "Record any impact, concern or next step.", [
-        { name: "concerns", label: "Concerns", type: "textarea", full: true },
-        { name: "follow_up_required", label: "Follow-up required", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function appointmentForm(item = {}) {
-  return {
-    title: "Appointment",
-    intro:
-      "Record appointment purpose, time, preparation, outcome and follow-up.",
-    required: ["appointment_date", "appointment_type"],
-    html: `
-      ${section("Appointment details", "Core appointment information.", [
-        { name: "appointment_date", label: "Appointment date", type: "datetime-local", value: now(), required: true },
-        { name: "appointment_type", label: "Appointment type", required: true },
-        { name: "location", label: "Location" },
-        { name: "professional_name", label: "Professional / service" },
-      ], item)}
-
-      ${section("Purpose and preparation", "What is this appointment for?", [
-        { name: "purpose", label: "Purpose", type: "textarea", full: true },
-        { name: "preparation_needed", label: "Preparation needed", type: "textarea", full: true },
-      ], item)}
-
-      ${section("Outcome", "Complete after the appointment where relevant.", [
-        { name: "outcome", label: "Outcome", type: "textarea", full: true },
-        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function taskForm(item = {}) {
-  return {
-    title: "Action / task",
-    intro:
-      "Create a clear task with ownership, priority, due date and closure expectation.",
-    required: ["title", "description"],
-    html: `
-      ${section("Task details", "What needs to happen?", [
-        { name: "title", label: "Task title", required: true },
-        { name: "due_date", label: "Due date", type: "date" },
-        { name: "priority", label: "Priority", type: "select", options: PRIORITY_OPTIONS },
-        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
-      ], item)}
-
-      ${section("Description", "Give enough detail for someone else to complete it safely.", [
-        { name: "description", label: "Task description", type: "textarea", rows: 5, required: true, full: true },
-        { name: "owner_name", label: "Owner" },
-        { name: "completion_notes", label: "Completion notes", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function medicationRecordForm(item = {}) {
-  return {
-    title: "Medication record",
-    intro:
-      "Record medication administration, omission, refusal or concern clearly and safely.",
-    required: ["administered_at", "medication_name", "status"],
-    html: `
-      ${section("Medication details", "Core medication information.", [
-        { name: "administered_at", label: "Date and time", type: "datetime-local", value: now(), required: true },
-        { name: "medication_name", label: "Medication name", required: true },
-        { name: "dose", label: "Dose" },
-        { name: "route", label: "Route" },
-        { name: "status", label: "Status", type: "select", required: true, options: [
-          { value: "administered", label: "Administered" },
-          { value: "refused", label: "Refused" },
-          { value: "omitted", label: "Omitted" },
-          { value: "error", label: "Medication error" },
-        ] },
-      ], item)}
-
-      ${section("Details", "Record what happened and any action taken.", [
-        { name: "notes", label: "Notes", type: "textarea", full: true },
-        { name: "refusal_reason", label: "Refusal reason", type: "textarea", full: true },
-        { name: "omission_reason", label: "Omission reason", type: "textarea", full: true },
-        { name: "error_details", label: "Error details", type: "textarea", full: true },
-        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function handoverForm(item = {}) {
-  return {
-    title: "Handover record",
-    intro:
-      "Record key information needed for the next shift to provide safe, consistent care.",
-    required: ["handover_datetime", "shift", "summary"],
-    html: `
-      ${section("Handover details", "Core shift handover information.", [
-        { name: "handover_datetime", label: "Date and time", type: "datetime-local", value: now(), required: true },
-        { name: "shift", label: "Shift", required: true },
-        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
-      ], item)}
-
-      ${section("Key handover", "What must the next adults know?", [
-        { name: "summary", label: "Handover summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "risks_to_monitor", label: "Risks to monitor", type: "textarea", full: true },
-        { name: "positive_updates", label: "Positive updates", type: "textarea", full: true },
-        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function documentForm(item = {}) {
-  return {
-    title: "Document record",
-    intro:
-      "Record document details, review dates and any actions needed. File upload can remain handled separately if required.",
-    required: ["title"],
-    html: `
-      ${section("Document details", "Describe the document being recorded.", [
-        { name: "title", label: "Document title", required: true },
-        { name: "document_type", label: "Document type" },
-        { name: "review_date", label: "Review date", type: "date" },
-        { name: "expiry_date", label: "Expiry date", type: "date" },
-        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
-      ], item)}
-
-      ${section("Summary and actions", "Why this document matters and what needs doing.", [
-        { name: "description", label: "Description", type: "textarea", full: true },
-        { name: "summary", label: "Summary", type: "textarea", full: true },
-        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
-      ], item)}
-    `,
-  };
-}
-
-function fallbackForm(type, item = {}) {
+function simpleForm(type, item = {}) {
   const label = getRecordLabel(type, "Record");
   const primaryDate = getRecordPrimaryDateField(type) || "created_at";
   const isDateTime = primaryDate.includes("datetime");
@@ -620,18 +468,24 @@ function fallbackForm(type, item = {}) {
   return {
     title: label,
     intro:
-      "Complete this general record form. Add enough detail for safe review and follow-up.",
+      "Complete this record clearly, including context, voice, meaning and follow-up.",
     required: ["title", "summary"],
     html: `
+      ${journeySection(item)}
       ${section("Record details", "Core information for this record.", [
         { name: primaryDate, label: "Date", type: isDateTime ? "datetime-local" : "date", value: isDateTime ? now() : today() },
         { name: "title", label: "Title", required: true },
         { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
       ], item)}
-
       ${section("Summary", "Record the detail clearly.", [
         { name: "summary", label: "Summary", type: "textarea", rows: 6, required: true, full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
+      ], item)}
+      ${meaningSection(item)}
+      ${section("Actions", "Record follow-up and oversight.", [
         { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
       ], item)}
     `,
   };
@@ -644,19 +498,8 @@ function getForm(type, item = {}) {
   if (safeType === "incident") return incidentForm(item);
   if (safeType === "keywork") return keyworkForm(item);
   if (safeType === "risk") return riskForm(item);
-  if (safeType === "safeguarding_record") return safeguardingForm(item);
-  if (safeType === "health_record") return healthForm(item);
-  if (safeType === "education_record") return educationForm(item);
-  if (safeType === "family_contact") return familyContactForm(item);
-  if (safeType === "appointment") return appointmentForm(item);
-  if (safeType === "task") return taskForm(item);
-  if (safeType === "medication_record") return medicationRecordForm(item);
-  if (safeType === "handover_record") return handoverForm(item);
-  if (safeType === "document" || safeType === "statutory_document") {
-    return documentForm(item);
-  }
 
-  return fallbackForm(safeType, item);
+  return simpleForm(safeType, item);
 }
 
 function getComposerIds() {
@@ -687,44 +530,145 @@ function validateRequired(data = {}, required = []) {
   });
 }
 
-function qualityCheck(type, data = {}, required = []) {
-  const missing = validateRequired(data, required);
-  const issues = missing.map((key) => key.replaceAll("_", " "));
+function runWritingQualityCheck(data = {}) {
+  const issues = [];
+  const joined = Object.values(data)
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  COMMON_SPELLING_HINTS.forEach(([wrong, right]) => {
+    if (joined.includes(wrong)) {
+      issues.push(`Possible spelling: "${wrong}" should be "${right}"`);
+    }
+  });
+
+  return issues;
+}
+
+function strictValidation(type, data = {}) {
+  const issues = [];
+
+  if (!data.note_date && !data.record_date && !data.incident_datetime && !data.session_date) {
+    issues.push("date or context");
+  }
+
+  if (!data.narrative && !data.summary && !data.description && !data.concern_summary) {
+    issues.push("summary / factual account");
+  }
 
   if (
-    ["daily_note", "incident", "keywork", "safeguarding_record"].includes(type) &&
     !data.young_person_voice &&
     !data.child_voice &&
-    !data.voice &&
+    !data.child_views &&
     !data.disclosure_details
   ) {
-    issues.push("young person voice");
+    issues.push("child voice or reason unavailable");
   }
 
   if (
-    ["daily_note", "incident", "risk", "safeguarding_record"].includes(type) &&
-    !data.actions_required &&
-    !data.actions_taken &&
-    !data.immediate_action_taken &&
-    !data.response_actions
+    !data.what_is_child_communicating &&
+    !data.what_helped &&
+    !data.what_did_adults_learn &&
+    !data.what_needs_to_change &&
+    !data.reflection &&
+    !data.concern_summary
   ) {
-    issues.push("actions / response plan");
+    issues.push("meaning / analysis");
   }
 
-  return [...new Set(issues)];
+  if (
+    !data.actions_required &&
+    !data.actions_taken &&
+    !data.response_actions &&
+    !data.follow_up_required &&
+    !data.actions_agreed
+  ) {
+    issues.push("actions or response");
+  }
+
+  if (
+    ["incident", "risk", "safeguarding_record"].includes(type) &&
+    ["high", "critical"].includes(String(data.severity || "").toLowerCase()) &&
+    !data.manager_oversight &&
+    !data.manager_review_comment &&
+    !data.manager_review_needed
+  ) {
+    issues.push("manager oversight for high-risk record");
+  }
+
+  return issues;
+}
+
+function qualityCheck(type, data = {}, required = []) {
+  const missing = validateRequired(data, required);
+  return [...new Set(missing.map((key) => key.replaceAll("_", " ")))];
+}
+
+function applySmartDefaults(type, data = {}) {
+  const next = { ...data };
+
+  const highRisk =
+    ["high", "critical"].includes(String(next.severity || "").toLowerCase()) ||
+    next.safeguarding_concern === true ||
+    type === "safeguarding_record";
+
+  if (highRisk) {
+    next.manager_review_needed = true;
+  }
+
+  if (type === "daily_note" && !next.title) {
+    next.title = "Daily note";
+  }
+
+  if (type === "risk" && !next.approval_status) {
+    next.approval_status = "not_required";
+  }
+
+  return next;
 }
 
 function buildPayload(type, data = {}, mode = "draft") {
   const status = mode === "submit" ? "submitted" : data.status || "draft";
+  const smartData = applySmartDefaults(type, data);
 
   return {
-    ...data,
+    ...smartData,
     workflow_status: status,
-    status: data.status || status,
+    status: smartData.status || status,
     record_type: type,
     young_person_id: getYoungPersonId(),
     home_id: getHomeId(),
   };
+}
+
+async function maybeCreateFollowUpTask(ids, type, data = {}) {
+  if (!data.create_follow_up_task) return null;
+
+  const description =
+    data.actions_required ||
+    data.actions_taken ||
+    data.response_actions ||
+    data.follow_up_required ||
+    data.actions_agreed ||
+    "";
+
+  if (!description) return null;
+
+  try {
+    return await createRecord("task", ids, {
+      title: `Follow-up: ${getRecordLabel(type, type)}`,
+      description,
+      priority: data.severity || data.significance || "medium",
+      status: "draft",
+      due_date: data.next_action_date || "",
+      young_person_id: ids.youngPersonId,
+      home_id: ids.homeId,
+    });
+  } catch (error) {
+    console.warn("[composer] follow-up task creation failed", error);
+    return null;
+  }
 }
 
 export function openComposer(type, item = {}) {
@@ -751,7 +695,9 @@ export function openComposer(type, item = {}) {
   const panel = getComposerPanel();
 
   if (titleEl) titleEl.textContent = form.title;
-  if (guidanceEl) guidanceEl.textContent = form.intro;
+  if (guidanceEl) {
+    guidanceEl.textContent = `${form.intro} Spelling and grammar support is enabled in all writing fields.`;
+  }
   if (fieldsEl) fieldsEl.innerHTML = form.html;
 
   panel?.classList.remove("hidden");
@@ -803,16 +749,12 @@ function dispatchComposerSaved(detail = {}) {
 export async function saveComposer(mode = "draft") {
   const form = getComposerForm();
 
-  if (!form) {
-    throw new Error("Composer form is not available.");
-  }
+  if (!form) throw new Error("Composer form is not available.");
 
   const type =
     normaliseRecordType(state.composerRecordType) || state.composerRecordType;
 
-  if (!type) {
-    throw new Error("No record type selected.");
-  }
+  if (!type) throw new Error("No record type selected.");
 
   const ids = getComposerIds();
 
@@ -828,6 +770,18 @@ export async function saveComposer(mode = "draft") {
     throw new Error(`Please complete: ${issues.join(", ")}`);
   }
 
+  if (mode === "submit") {
+    const strictIssues = strictValidation(type, data);
+    if (strictIssues.length) {
+      throw new Error(`Submit requires: ${strictIssues.join(", ")}`);
+    }
+
+    const writingIssues = runWritingQualityCheck(data);
+    if (writingIssues.length) {
+      throw new Error(`Please review writing: ${writingIssues.join("; ")}`);
+    }
+  }
+
   const payload = buildPayload(type, data, mode);
   const editItem = state.composerEditItem || {};
   const recordId = getRecordId(editItem);
@@ -840,12 +794,15 @@ export async function saveComposer(mode = "draft") {
     saved = await createRecord(type, ids, payload);
   }
 
+  const followUpTask = await maybeCreateFollowUpTask(ids, type, payload);
+
   closeComposer();
 
   dispatchComposerSaved({
     type,
     mode,
     saved,
+    followUpTask,
   });
 
   return saved;
