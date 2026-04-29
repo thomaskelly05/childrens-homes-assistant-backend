@@ -480,6 +480,15 @@ function syncDomDatasetFromState() {
         : "child";
 }
 
+function forceChildEntryMode() {
+  setCurrentScope("child", { resetSection: false });
+  setSectionSafe("workspace");
+  clearSelectedYoungPerson();
+  state.youngPersonId = null;
+  setYoungPersonIdInUrl(null);
+  syncDomDatasetFromState();
+}
+
 function ensureValidScopeForRole() {
   const allowedScopes = getAllowedScopesForRole();
   const currentScope = state.currentScope || "child";
@@ -706,14 +715,7 @@ async function openYoungPersonSafely(id, options = {}) {
 }
 
 async function bootstrapSelectorDashboard() {
-  setCurrentScope("child", { resetSection: false });
-  setSectionSafe("workspace");
-
-  clearSelectedYoungPerson();
-  state.youngPersonId = null;
-  setYoungPersonIdInUrl(null);
-
-  syncDomDatasetFromState();
+  forceChildEntryMode();
   showSelector();
 
   try {
@@ -737,7 +739,6 @@ function bindChangePersonFallback() {
 
   for (const button of buttons) {
     button.addEventListener("click", async () => {
-      if ((state.currentScope || "child") !== "child") return;
       await bootstrapSelectorDashboard();
     });
   }
@@ -1000,24 +1001,26 @@ async function bootstrap() {
     hydrateRuntimeContextFromSession();
     await hydrateRuntimeContextFromAuthCheck();
 
-    const existingYoungPersonId = state.youngPersonId;
-    const existingScope = state.currentScope || "child";
+    const existingYoungPersonId = normaliseNumericId(state.youngPersonId);
+
+    /*
+      This route is the Young People Care Hub entry route.
+      Admin/manager users may have access to quality/ofsted/home, but this page
+      should not boot into those scopes unless a young person is already open.
+    */
+    if (!existingYoungPersonId) {
+      forceChildEntryMode();
+    }
+
     const existingSection = getCurrentSection();
-
-    if (!state.currentScope) {
-      setCurrentScope(getDefaultScopeForRole(), { resetSection: false });
-    } else {
-      setCurrentScope(existingScope, { resetSection: false });
-    }
-
-    if (!state.currentSection && !state.activeSection && !state.currentView) {
-      setSectionSafe(getDefaultSectionForScope(state.currentScope || "child"));
-    } else {
-      setSectionSafe(existingSection);
-    }
 
     ensureValidScopeForRole();
     ensureInitialSectionForScope();
+
+    if (!existingYoungPersonId) {
+      forceChildEntryMode();
+    }
+
     syncDomDatasetFromState();
 
     console.log("[young-people-shell] boot", {
@@ -1047,14 +1050,11 @@ async function bootstrap() {
 
     if (existingYoungPersonId) {
       await openYoungPersonSafely(existingYoungPersonId, {
-        initialSection: existingSection || getCurrentSection(),
+        initialSection: existingSection || "workspace",
       });
-    } else if ((state.currentScope || "child") === "child") {
+    } else {
       showSelector();
       await loadYoungPersonSelector();
-    } else {
-      showWorkspace();
-      await loadSection(getCurrentSection(), { force: true });
     }
 
     refreshAllChrome();
@@ -1062,6 +1062,7 @@ async function bootstrap() {
     if (state.youngPersonId) {
       await loadSection(getCurrentSection(), { force: true });
     } else {
+      showSelector();
       refreshWorkspaceSummary();
     }
   } catch (error) {
