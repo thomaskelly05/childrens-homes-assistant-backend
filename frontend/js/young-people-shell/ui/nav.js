@@ -1386,11 +1386,23 @@ if (requiredScope && requiredScope !== scope && roleCanAccessScope(requiredScope
     return currentLoadPromise;
   }
 
-  updateSectionState(safeSection);
-  showWorkspaceScreen();
-  clearStatus();
-  resetWorkspaceSummaryStrip();
-  closeAllWorkspaceMenus();
+updateSectionState(safeSection);
+showWorkspaceScreen();
+clearStatus();
+
+if (els.viewContent) {
+  els.viewContent.innerHTML = `
+    <div class="loading-state">
+      <div>
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading ${escapeHtml(safeSection)}…</p>
+      </div>
+    </div>
+  `;
+}
+
+resetWorkspaceSummaryStrip();
+closeAllWorkspaceMenus();
 
   currentLoadKey = loadKey;
 
