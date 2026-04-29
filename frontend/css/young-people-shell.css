@@ -1,6 +1,9 @@
+Paste this as your full `young-people-shell.css`:
+
+```css
 /* ============================================================
    IndiCare OS — Blue Clinical Calm Reset
-   Replace the whole young-people-shell.css with this
+   young-people-shell.css
 ============================================================ */
 
 :root {
@@ -460,7 +463,10 @@ textarea:focus {
 .selector-card,
 .cei-card,
 .cei-panel,
-.cei-mini-stat {
+.cei-mini-stat,
+.simple-entry-head,
+.simple-home-panel,
+.simple-children-panel {
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: var(--radius-lg);
@@ -468,7 +474,198 @@ textarea:focus {
 }
 
 /* ============================================================
-   Safe Start Hero
+   Professional Entry Point
+============================================================ */
+
+#selectorPanel .selector-screen-inner--simple,
+#selectorPanel .selector-screen-inner {
+  width: min(1500px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 22px;
+}
+
+.simple-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 30px;
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 96% 12%, rgba(37, 99, 235, 0.08), transparent 32%),
+    linear-gradient(135deg, #fff, var(--brand-pale));
+}
+
+.simple-entry-head h1 {
+  max-width: 900px;
+  margin: 4px 0 10px;
+  color: var(--ink);
+  font-size: clamp(2.4rem, 4.8vw, 5rem);
+  line-height: 0.95;
+  letter-spacing: -0.065em;
+  font-weight: 900;
+}
+
+.simple-entry-head p {
+  max-width: 780px;
+  margin: 0;
+  color: var(--muted);
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.safe-start-launch-grid {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.simple-home-panel,
+.simple-children-panel {
+  padding: 22px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.simple-home-panel {
+  position: sticky;
+  top: calc(var(--topbar-height) + 20px);
+}
+
+.simple-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.simple-section-head h2 {
+  margin: 4px 0 5px;
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+}
+
+.simple-section-head p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.selector-tools--simple {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.simple-home-panel .selector-tools--simple {
+  display: grid;
+  margin-bottom: 16px;
+}
+
+.simple-children-panel .selector-tools--simple {
+  min-width: min(620px, 100%);
+}
+
+.selector-tools--simple .search-input {
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.selector-tools--simple .select-input {
+  min-width: 190px;
+  flex: 0 1 220px;
+}
+
+.simple-home-row,
+#homeChipList,
+.safe-start-home-row,
+.safe-chip-list--homes {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+.simple-child-grid,
+#selectorList,
+#selectorList .selector-grid,
+.selector-list--care-cards,
+.safe-start-young-people-row,
+.safe-child-list,
+.safe-child-list .selector-grid,
+.selector-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  gap: 16px !important;
+  align-items: stretch;
+}
+
+#selectorList .selector-card,
+.simple-child-grid .selector-card,
+.selector-card {
+  min-height: 210px;
+  display: grid !important;
+  grid-template-columns: 56px 1fr !important;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px !important;
+  padding: 18px !important;
+  border-radius: 22px !important;
+  background: #fff;
+  transition: 0.16s ease;
+}
+
+#selectorList .selector-card-body,
+.selector-card-body {
+  min-width: 0;
+}
+
+#selectorList .selector-card-body h3,
+.selector-card-body h3 {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 850;
+}
+
+.selector-card-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+#selectorList .selector-card-actions,
+.selector-card-actions {
+  grid-column: 1 / -1 !important;
+  display: flex;
+  justify-content: stretch !important;
+}
+
+#selectorList .selector-card-actions > *,
+.selector-card-actions > * {
+  width: 100%;
+}
+
+.simple-context-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-weight: 750;
+}
+
+/* Hide old entry-page chrome if older HTML still exists */
+#selectorPanel .safe-start-hero,
+#selectorPanel .safe-start-attention-strip,
+#selectorPanel .safe-start-support-grid,
+#openCareHubDrawer {
+  display: none !important;
+}
+
+/* ============================================================
+   Safe Start Legacy Support
 ============================================================ */
 
 .safe-start-hero {
@@ -594,10 +791,6 @@ textarea:focus {
   color: #fff;
 }
 
-/* ============================================================
-   Attention Strip
-============================================================ */
-
 .safe-start-attention-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -644,7 +837,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   Safe Start Drawers
+   Drawers / Cards
 ============================================================ */
 
 .safe-start-drawer-grid,
@@ -753,17 +946,9 @@ textarea:focus {
   gap: 8px;
 }
 
-/* ============================================================
-   Cards / Children / Homes
-============================================================ */
-
 .safe-chip-list {
   display: grid;
   gap: 10px;
-}
-
-.safe-chip-list--homes {
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
 .safe-home-chip,
@@ -818,25 +1003,6 @@ textarea:focus {
   font-weight: 650;
 }
 
-.safe-child-list,
-.safe-child-list .selector-grid,
-.selector-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
-  gap: 14px;
-}
-
-.selector-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 14px;
-  padding: 16px;
-  border-radius: var(--radius);
-  background: #fff;
-  transition: 0.16s ease;
-}
-
 .selector-card-photo-fallback,
 .profile-photo-fallback,
 .workspace-stage-mobile-avatar {
@@ -850,30 +1016,11 @@ textarea:focus {
   font-weight: 850;
 }
 
-.selector-card-body h3 {
-  margin: 0 0 4px;
-  color: var(--ink);
-  font-size: 1.04rem;
-  font-weight: 850;
-}
-
-.selector-card-body p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.86rem;
-}
-
 .selector-card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 10px;
-}
-
-.selector-card-actions {
-  grid-column: 2;
-  display: flex;
-  justify-content: flex-end;
 }
 
 .safe-open-body {
@@ -1095,7 +1242,7 @@ textarea:focus {
 }
 
 /* ============================================================
-   Menu
+   Professional Care Hub Menu
 ============================================================ */
 
 .quick-actions-panel {
@@ -1128,12 +1275,13 @@ textarea:focus {
   line-height: 1.5;
 }
 
-.workspace-menubar {
+.workspace-menubar,
+.workspace-menubar--care {
   position: relative;
   z-index: 7000 !important;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
   margin-top: 16px;
   overflow: visible !important;
 }
@@ -1142,6 +1290,7 @@ textarea:focus {
   position: relative;
   z-index: 7001 !important;
   overflow: visible !important;
+  width: 100%;
 }
 
 .workspace-menu[open] {
@@ -1157,7 +1306,9 @@ textarea:focus {
 }
 
 .workspace-menu-trigger {
-  border-radius: 999px;
+  width: 100%;
+  justify-content: space-between;
+  border-radius: 16px;
 }
 
 .workspace-menu-trigger::after {
@@ -1176,7 +1327,7 @@ textarea:focus {
   z-index: 999999 !important;
   top: calc(100% + 10px);
   left: 0;
-  min-width: 310px;
+  min-width: 100%;
   max-height: 70vh;
   overflow-y: auto;
   display: grid !important;
@@ -2048,6 +2199,20 @@ textarea:focus {
   }
 }
 
+@media (max-width: 1100px) {
+  .safe-start-launch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .simple-home-panel {
+    position: static;
+  }
+
+  .simple-children-panel .selector-tools--simple {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 860px) {
   .desktop-only {
     display: none !important;
@@ -2079,12 +2244,60 @@ textarea:focus {
     padding: 12px !important;
   }
 
+  .simple-entry-head,
+  .simple-section-head,
+  .safe-drawer-head,
+  .workspace-header-main,
+  .quick-actions-panel-head,
+  .overview-panel-head,
+  .ofsted-hero-card,
+  .quality-hero-card,
+  .cei-header {
+    display: grid;
+  }
+
+  .simple-entry-head {
+    padding: 24px;
+  }
+
+  .simple-entry-head h1 {
+    font-size: clamp(2.25rem, 11vw, 3.5rem);
+  }
+
+  .selector-tools--simple,
+  .simple-children-panel .selector-tools--simple {
+    display: grid;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .simple-child-grid,
+  #selectorList,
+  #selectorList .selector-grid,
+  .selector-list--care-cards,
+  .safe-start-young-people-row,
+  .safe-child-list,
+  .safe-child-list .selector-grid,
+  .selector-grid,
+  .safe-chip-list--homes,
+  .grid-3,
+  .grid-4,
+  .overview-stats-grid,
+  .quality-metric-grid,
+  .ofsted-metric-grid,
+  .cei-grid {
+    grid-template-columns: 1fr !important;
+  }
+
   .safe-start-hero-copy,
   .safe-start-hero-panel,
   .safe-drawer,
   .workspace-header-band,
   .quick-actions-panel,
-  .workspace-content {
+  .workspace-content,
+  .simple-entry-head,
+  .simple-home-panel,
+  .simple-children-panel {
     border-radius: 22px;
   }
 
@@ -2115,18 +2328,8 @@ textarea:focus {
     padding: 24px;
   }
 
-  .safe-start-attention-strip,
-  .safe-child-list,
-  .safe-child-list .selector-grid,
-  .selector-grid,
-  .safe-chip-list--homes,
-  .grid-3,
-  .grid-4,
-  .overview-stats-grid,
-  .quality-metric-grid,
-  .ofsted-metric-grid,
-  .cei-grid {
-    grid-template-columns: 1fr;
+  .safe-start-attention-strip {
+    grid-template-columns: 1fr !important;
   }
 
   .safe-drawer-trigger {
@@ -2136,16 +2339,6 @@ textarea:focus {
 
   .safe-drawer-trigger::after {
     display: none;
-  }
-
-  .safe-drawer-head,
-  .workspace-header-main,
-  .quick-actions-panel-head,
-  .overview-panel-head,
-  .ofsted-hero-card,
-  .quality-hero-card,
-  .cei-header {
-    display: grid;
   }
 
   .workspace-header-band {
@@ -2171,8 +2364,10 @@ textarea:focus {
     width: 100%;
   }
 
-  .workspace-menubar {
+  .workspace-menubar,
+  .workspace-menubar--care {
     display: grid;
+    grid-template-columns: 1fr;
   }
 
   .workspace-menu-dropdown {
@@ -2229,8 +2424,9 @@ textarea:focus {
     display: grid;
   }
 
-  .selector-card {
-    grid-template-columns: 56px 1fr;
+  .selector-card,
+  #selectorList .selector-card {
+    grid-template-columns: 56px 1fr !important;
   }
 
   .assistant-fab {
@@ -2270,16 +2466,19 @@ textarea:focus {
   }
 
   .selector-card,
+  #selectorList .selector-card,
   .safe-child-list .selector-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 
-  .selector-card-actions {
+  .selector-card-actions,
+  #selectorList .selector-card-actions {
     grid-column: 1;
     justify-content: stretch;
   }
 
-  .selector-card-actions > * {
+  .selector-card-actions > *,
+  #selectorList .selector-card-actions > * {
     width: 100%;
   }
 
@@ -2302,285 +2501,4 @@ textarea:focus {
     transition-duration: 0.01ms !important;
   }
 }
-/* ============================================================
-   IndiCare Layout Fix — row-based Safe Start layout
-   Paste at very bottom
-============================================================ */
-
-/* Main page should feel like a command centre, not stacked blocks */
-.safe-start-drawer-grid {
-  display: grid !important;
-  grid-template-columns: minmax(320px, 0.75fr) minmax(420px, 1.25fr) minmax(320px, 0.75fr);
-  gap: 16px !important;
-  align-items: start;
-}
-
-/* Each drawer becomes a vertical card within the row */
-.safe-drawer {
-  height: auto;
-  min-height: 280px;
-}
-
-.safe-drawer-trigger {
-  min-height: 72px;
-}
-
-.safe-drawer-body {
-  min-height: 200px;
-}
-
-/* Stop open drawers taking the full page width */
-#homePickerDrawer,
-#childPickerDrawer,
-#openCareHubDrawer {
-  width: 100%;
-}
-
-/* Child picker should use internal card layout */
-.safe-child-list,
-.safe-child-list .selector-grid,
-.selector-grid {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
-  align-items: start;
-}
-
-/* Home cards tighter */
-.safe-chip-list--homes {
-  grid-template-columns: 1fr !important;
-}
-
-/* Ready drawer should look like a compact confirmation card */
-.safe-ready-card {
-  grid-template-columns: 1fr !important;
-}
-
-/* Attention row stays as a clean 4-card strip */
-.safe-start-attention-strip {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-}
-
-/* Support row underneath */
-.safe-start-support-grid {
-  display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 16px !important;
-}
-
-/* Keep selector tools tidy inside card headers */
-.safe-drawer-head {
-  display: grid !important;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
-
-.selector-tools--drawer {
-  grid-template-columns: 1fr !important;
-}
-
-/* Hero should remain a strong top row */
-.safe-start-hero {
-  grid-template-columns: minmax(0, 1.4fr) minmax(360px, 0.7fr) !important;
-  align-items: stretch;
-}
-
-/* Make hero slightly less tall so the drawer row is visible */
-.safe-start-hero-copy,
-.safe-start-hero-panel {
-  min-height: 300px !important;
-}
-
-.safe-start-hero-copy h1 {
-  font-size: clamp(3.2rem, 4.8vw, 5.8rem) !important;
-}
-
-/* Medium screens: two-column drawer flow */
-@media (max-width: 1280px) {
-  .safe-start-drawer-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-
-  #openCareHubDrawer {
-    grid-column: 1 / -1;
-  }
-
-  .safe-start-hero {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-/* Tablet/mobile: stack cleanly */
-@media (max-width: 860px) {
-  .safe-start-drawer-grid,
-  .safe-start-support-grid,
-  .safe-start-attention-strip {
-    grid-template-columns: 1fr !important;
-  }
-
-  .safe-drawer {
-    min-height: auto;
-  }
-
-  .safe-drawer-body {
-    min-height: auto;
-  }
-
-  .safe-start-hero-copy,
-  .safe-start-hero-panel {
-    min-height: auto !important;
-  }
-}
-
-/* ============================================================
-   IndiCare Simple Opening Page
-   Home selector + young person cards only
-============================================================ */
-
-#selectorPanel .safe-start-hero,
-#selectorPanel .safe-start-attention-strip,
-#selectorPanel .safe-start-support-grid,
-#openCareHubDrawer {
-  display: none !important;
-}
-
-#selectorPanel .selector-screen-inner {
-  display: grid;
-  gap: 18px;
-}
-
-.safe-start-drawer-grid {
-  display: grid !important;
-  grid-template-columns: 340px minmax(0, 1fr) !important;
-  gap: 18px !important;
-  align-items: start;
-}
-
-/* Home selector becomes compact left panel */
-#homePickerDrawer {
-  min-height: calc(100vh - 130px);
-}
-
-#homePickerDrawer .safe-drawer-body {
-  padding: 18px;
-}
-
-#homePickerDrawer .safe-drawer-head {
-  display: grid !important;
-  gap: 14px;
-}
-
-#homePickerDrawer .selector-tools--drawer {
-  grid-template-columns: 1fr !important;
-}
-
-#homePickerDrawer .safe-chip-list--homes {
-  grid-template-columns: 1fr !important;
-}
-
-/* Young people area becomes the main page */
-#childPickerDrawer {
-  min-height: calc(100vh - 130px);
-}
-
-#childPickerDrawer .safe-drawer-body {
-  padding: 22px;
-}
-
-#childPickerDrawer .safe-drawer-head {
-  display: flex !important;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
-}
-
-#childPickerDrawer .selector-tools--drawer {
-  min-width: 420px;
-  grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.7fr) auto !important;
-}
-
-/* Young people cards in proper rows */
-.safe-child-list,
-.safe-child-list .selector-grid,
-#selectorList,
-#selectorList .selector-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
-  gap: 16px !important;
-  align-items: start;
-}
-
-/* Better young person cards */
-.selector-card {
-  min-height: 220px;
-  display: grid !important;
-  grid-template-columns: 56px 1fr !important;
-  gap: 14px !important;
-  align-content: start;
-  border-radius: 20px !important;
-}
-
-.selector-card-actions {
-  grid-column: 1 / -1 !important;
-  justify-content: stretch !important;
-}
-
-.selector-card-actions > * {
-  width: 100%;
-}
-
-/* Make drawer headers read like page sections */
-.safe-drawer-trigger {
-  pointer-events: none;
-}
-
-.safe-drawer-trigger::after {
-  display: none !important;
-}
-
-#homePickerDrawer,
-#childPickerDrawer {
-  display: block !important;
-}
-
-#homePickerDrawer[open],
-#childPickerDrawer[open] {
-  display: block !important;
-}
-
-/* Hide unnecessary drawer chrome feeling */
-.safe-drawer {
-  overflow: hidden;
-}
-
-.safe-drawer-body {
-  border-top: 1px solid var(--border);
-}
-
-/* Responsive */
-@media (max-width: 1100px) {
-  .safe-start-drawer-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  #homePickerDrawer,
-  #childPickerDrawer {
-    min-height: auto;
-  }
-
-  #childPickerDrawer .safe-drawer-head {
-    display: grid !important;
-  }
-
-  #childPickerDrawer .selector-tools--drawer {
-    min-width: 0;
-    grid-template-columns: 1fr !important;
-  }
-}
-
-@media (max-width: 700px) {
-  .safe-child-list,
-  .safe-child-list .selector-grid,
-  #selectorList,
-  #selectorList .selector-grid {
-    grid-template-columns: 1fr !important;
-  }
-}
+```
