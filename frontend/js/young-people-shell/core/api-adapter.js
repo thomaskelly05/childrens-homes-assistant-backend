@@ -8,6 +8,53 @@ import {
 } from "./record-contracts.js";
 import { normaliseRecord, normaliseRecords } from "./record-normaliser.js";
 
+const FALLBACK_RECORD_ROUTES = Object.freeze({
+  support_plan: "/young-people/:youngPersonId/plans",
+  risk: "/young-people/:youngPersonId/plans",
+
+  appointment: "/young-people/:youngPersonId/appointments",
+  chronology_event: "/young-people/:youngPersonId/timeline",
+  timeline: "/young-people/:youngPersonId/timeline",
+  daily_note: "/young-people/:youngPersonId/daily-notes",
+  incident: "/young-people/:youngPersonId/incidents",
+
+  safeguarding_record: "/young-people/:youngPersonId/safeguarding",
+  missing_episode: "/young-people/:youngPersonId/missing",
+  keywork: "/young-people/:youngPersonId/keywork",
+
+  health_record: "/young-people/:youngPersonId/health",
+  medication_record: "/young-people/:youngPersonId/medication",
+
+  education_record: "/young-people/:youngPersonId/education",
+  family_contact: "/young-people/:youngPersonId/family",
+
+  document: "/young-people/:youngPersonId/documents",
+  statutory_document: "/young-people/:youngPersonId/documents",
+  handover_record: "/young-people/:youngPersonId/handover",
+  task: "/young-people/:youngPersonId/tasks",
+});
+
+const FALLBACK_RECORD_LABELS = Object.freeze({
+  support_plan: "Support plan",
+  risk: "Risk",
+  appointment: "Appointment",
+  chronology_event: "Timeline event",
+  timeline: "Timeline event",
+  daily_note: "Daily note",
+  incident: "Incident",
+  safeguarding_record: "Safeguarding record",
+  missing_episode: "Missing episode",
+  keywork: "Keywork",
+  health_record: "Health record",
+  medication_record: "Medication record",
+  education_record: "Education record",
+  family_contact: "Family contact",
+  document: "Document",
+  statutory_document: "Statutory document",
+  handover_record: "Handover record",
+  task: "Task",
+});
+
 function safeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
@@ -44,29 +91,47 @@ function normaliseId(value) {
   return String(value).trim();
 }
 
-function assertRecordType(recordType) {
+function getFallbackRoute(type) {
+  return FALLBACK_RECORD_ROUTES[type] || "";
+}
+
+function getFallbackLabel(type) {
+  return FALLBACK_RECORD_LABELS[type] || type || "Record";
+}
+
+function needsYoungPersonFallback(type) {
+  return Boolean(getFallbackRoute(type)?.includes(":youngPersonId"));
+}
+
+function resolveRecordType(recordType) {
   const type = normaliseRecordType(recordType);
 
   if (!type) {
     throw new Error(`Unknown record type: ${recordType || "empty"}`);
   }
 
-  const contract = getRecordContract(type);
+  const contract = getRecordContract(type) || null;
+  const fallbackRoute = getFallbackRoute(type);
 
-  if (!contract) {
+  if (!contract && !fallbackRoute) {
     throw new Error(`No record contract found for: ${type}`);
   }
 
-  return { type, contract };
+  return { type, contract, fallbackRoute };
 }
 
-function assertYoungPersonId(contract, ids = {}) {
+function assertYoungPersonId(contract, ids = {}, type = "") {
   const youngPersonId = normaliseId(
     ids.youngPersonId ?? ids.childId ?? ids.selectedYoungPersonId
   );
 
-  if (contract.requiresYoungPerson && !youngPersonId) {
-    throw new Error(`${contract.label || "Record"} requires youngPersonId`);
+  const requiredByContract = Boolean(contract?.requiresYoungPerson);
+  const requiredByFallback = needsYoungPersonFallback(type);
+
+  if ((requiredByContract || requiredByFallback) && !youngPersonId) {
+    throw new Error(
+      `${contract?.label || getFallbackLabel(type)} requires youngPersonId`
+    );
   }
 
   return youngPersonId;
@@ -75,11 +140,24 @@ function assertYoungPersonId(contract, ids = {}) {
 function assertHomeId(contract, ids = {}) {
   const homeId = normaliseId(ids.homeId ?? ids.currentHomeId);
 
-  if (contract.requiresHome && !homeId) {
+  if (contract?.requiresHome && !homeId) {
     throw new Error(`${contract.label || "Record"} requires homeId`);
   }
 
   return homeId;
+}
+
+function hydrateFallbackRoute(route = "", ids = {}) {
+  const youngPersonId = normaliseId(
+    ids.youngPersonId ?? ids.childId ?? ids.selectedYoungPersonId
+  );
+
+  const homeId = normaliseId(ids.homeId ?? ids.currentHomeId);
+
+  return route
+    .replaceAll(":youngPersonId", encodeURIComponent(youngPersonId))
+    .replaceAll(":childId", encodeURIComponent(youngPersonId))
+    .replaceAll(":homeId", encodeURIComponent(homeId));
 }
 
 function unwrapListResponse(response, recordType) {
@@ -93,6 +171,20 @@ function unwrapListResponse(response, recordType) {
     safe.records,
     safe.results,
     safe.data,
+    safe.young_people,
+    safe.youngPeople,
+    safe.timeline,
+    safe.daily_notes,
+    safe.appointments,
+    safe.incidents,
+    safe.health_records,
+    safe.education_records,
+    safe.family_contact_records,
+    safe.support_plans,
+    safe.risks,
+    safe.risk_assessments,
+    safe.tasks,
+    safe.documents,
     safe[recordType],
     safe[contract?.section],
     safe[contract?.table],
@@ -117,35 +209,50 @@ function unwrapSingleResponse(response) {
     safe.data ||
     safe.created ||
     safe.updated ||
+    safe.young_person ||
     safe
   );
 }
 
 function buildRecordUrl(recordType, ids = {}, query = {}) {
-  const { type, contract } = assertRecordType(recordType);
+  const { type, contract, fallbackRoute } = resolveRecordType(recordType);
 
-  const youngPersonId = assertYoungPersonId(contract, ids);
+  const youngPersonId = assertYoungPersonId(contract, ids, type);
   const homeId = assertHomeId(contract, ids);
 
-  const baseUrl = getRecordRoute(type, {
-    youngPersonId,
-    childId: youngPersonId,
-    homeId,
-  });
+  let baseUrl = "";
+
+  if (contract) {
+    baseUrl = getRecordRoute(type, {
+      youngPersonId,
+      childId: youngPersonId,
+      homeId,
+    });
+  }
+
+  if (!baseUrl && fallbackRoute) {
+    baseUrl = hydrateFallbackRoute(fallbackRoute, {
+      ...ids,
+      youngPersonId,
+      childId: youngPersonId,
+      homeId,
+    });
+  }
 
   if (!baseUrl) {
-    throw new Error(`No route configured for ${getRecordLabel(type)}`);
+    throw new Error(`No route configured for ${getRecordLabel(type) || getFallbackLabel(type)}`);
   }
 
   return `${baseUrl}${buildQuery(query)}`;
 }
 
 function buildRecordItemUrl(recordType, ids = {}, recordId = "") {
-  const base = buildRecordUrl(recordType, ids);
+  const type = normaliseRecordType(recordType);
+  const base = buildRecordUrl(type, ids);
   const id = normaliseId(recordId ?? ids.recordId ?? ids.id);
 
   if (!id) {
-    throw new Error(`${getRecordLabel(recordType)} requires recordId`);
+    throw new Error(`${getRecordLabel(type) || getFallbackLabel(type)} requires recordId`);
   }
 
   return `${base}/${encodeURIComponent(id)}`;
@@ -178,7 +285,8 @@ export async function getRecord(recordType, ids = {}, recordId = "") {
 }
 
 export async function getRawRecord(recordType, ids = {}, recordId = "") {
-  const url = buildRecordItemUrl(recordType, ids, recordId);
+  const type = normaliseRecordType(recordType);
+  const url = buildRecordItemUrl(type, ids, recordId);
   const response = await apiSend(url, "GET", null, { skipCache: true });
 
   return unwrapSingleResponse(response);
@@ -244,6 +352,12 @@ export async function listSectionRecords(section, ids = {}, query = {}) {
     return listRecords(contract.type, ids, query);
   }
 
+  const fallbackType = normaliseRecordType(section);
+
+  if (fallbackType && getFallbackRoute(fallbackType)) {
+    return listRecords(fallbackType, ids, query);
+  }
+
   throw new Error(`No record contract found for section: ${section}`);
 }
 
@@ -254,6 +368,12 @@ export async function listRawSectionRecords(section, ids = {}, query = {}) {
     return listRawRecords(contract.type, ids, query);
   }
 
+  const fallbackType = normaliseRecordType(section);
+
+  if (fallbackType && getFallbackRoute(fallbackType)) {
+    return listRawRecords(fallbackType, ids, query);
+  }
+
   throw new Error(`No record contract found for section: ${section}`);
 }
 
@@ -262,6 +382,12 @@ export async function createSectionRecord(section, ids = {}, payload = {}) {
 
   if (contract) {
     return createRecord(contract.type, ids, payload);
+  }
+
+  const fallbackType = normaliseRecordType(section);
+
+  if (fallbackType && getFallbackRoute(fallbackType)) {
+    return createRecord(fallbackType, ids, payload);
   }
 
   throw new Error(`No record contract found for section: ${section}`);
