@@ -6,10 +6,7 @@ import {
   getRecordRoute,
   getRecordLabel,
 } from "./record-contracts.js";
-import {
-  normaliseRecord,
-  normaliseRecords,
-} from "./record-normaliser.js";
+import { normaliseRecord, normaliseRecords } from "./record-normaliser.js";
 
 function safeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -157,7 +154,7 @@ function buildRecordItemUrl(recordType, ids = {}, recordId = "") {
 export async function listRecords(recordType, ids = {}, query = {}) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordUrl(type, ids, query);
-  const response = await apiSend(url, { method: "GET" });
+  const response = await apiSend(url, "GET", null, { skipCache: true });
   const rows = unwrapListResponse(response, type);
 
   return normaliseRecords(rows, type);
@@ -166,7 +163,7 @@ export async function listRecords(recordType, ids = {}, query = {}) {
 export async function listRawRecords(recordType, ids = {}, query = {}) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordUrl(type, ids, query);
-  const response = await apiSend(url, { method: "GET" });
+  const response = await apiSend(url, "GET", null, { skipCache: true });
 
   return unwrapListResponse(response, type);
 }
@@ -174,7 +171,7 @@ export async function listRawRecords(recordType, ids = {}, query = {}) {
 export async function getRecord(recordType, ids = {}, recordId = "") {
   const type = normaliseRecordType(recordType);
   const url = buildRecordItemUrl(type, ids, recordId);
-  const response = await apiSend(url, { method: "GET" });
+  const response = await apiSend(url, "GET", null, { skipCache: true });
   const row = unwrapSingleResponse(response);
 
   return normaliseRecord(row, type);
@@ -182,7 +179,7 @@ export async function getRecord(recordType, ids = {}, recordId = "") {
 
 export async function getRawRecord(recordType, ids = {}, recordId = "") {
   const url = buildRecordItemUrl(recordType, ids, recordId);
-  const response = await apiSend(url, { method: "GET" });
+  const response = await apiSend(url, "GET", null, { skipCache: true });
 
   return unwrapSingleResponse(response);
 }
@@ -190,9 +187,8 @@ export async function getRawRecord(recordType, ids = {}, recordId = "") {
 export async function createRecord(recordType, ids = {}, payload = {}) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordUrl(type, ids);
-  const response = await apiSend(url, {
-    method: "POST",
-    body: payload,
+  const response = await apiSend(url, "POST", payload, {
+    invalidatePrefixes: [url],
   });
 
   return normaliseRecord(unwrapSingleResponse(response), type);
@@ -206,9 +202,9 @@ export async function updateRecord(
 ) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordItemUrl(type, ids, recordId);
-  const response = await apiSend(url, {
-    method: "PATCH",
-    body: payload,
+  const listUrl = buildRecordUrl(type, ids);
+  const response = await apiSend(url, "PATCH", payload, {
+    invalidatePrefixes: [listUrl],
   });
 
   return normaliseRecord(unwrapSingleResponse(response), type);
@@ -222,18 +218,20 @@ export async function replaceRecord(
 ) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordItemUrl(type, ids, recordId);
-  const response = await apiSend(url, {
-    method: "PUT",
-    body: payload,
+  const listUrl = buildRecordUrl(type, ids);
+  const response = await apiSend(url, "PUT", payload, {
+    invalidatePrefixes: [listUrl],
   });
 
   return normaliseRecord(unwrapSingleResponse(response), type);
 }
 
 export async function deleteRecord(recordType, ids = {}, recordId = "") {
-  const url = buildRecordItemUrl(recordType, ids, recordId);
-  const response = await apiSend(url, {
-    method: "DELETE",
+  const type = normaliseRecordType(recordType);
+  const url = buildRecordItemUrl(type, ids, recordId);
+  const listUrl = buildRecordUrl(type, ids);
+  const response = await apiSend(url, "DELETE", null, {
+    invalidatePrefixes: [listUrl],
   });
 
   return unwrapSingleResponse(response);
@@ -276,9 +274,12 @@ export async function getVisibilityContext(ids = {}) {
     throw new Error("Visibility context requires youngPersonId");
   }
 
-  return apiSend(`/visibility/young-people/${encodeURIComponent(youngPersonId)}`, {
-    method: "GET",
-  });
+  return apiSend(
+    `/visibility/young-people/${encodeURIComponent(youngPersonId)}`,
+    "GET",
+    null,
+    { skipCache: true }
+  );
 }
 
 export async function getAssistantContext(ids = {}, query = {}) {
@@ -291,32 +292,32 @@ export async function getAssistantContext(ids = {}, query = {}) {
       `/young-people/${encodeURIComponent(
         youngPersonId
       )}/assistant/context${params}`,
-      { method: "GET" }
+      "GET",
+      null,
+      { skipCache: true }
     );
   }
 
   if (homeId) {
     return apiSend(
       `/homes/${encodeURIComponent(homeId)}/assistant/context${params}`,
-      { method: "GET" }
+      "GET",
+      null,
+      { skipCache: true }
     );
   }
 
-  return apiSend(`/assistant/context${params}`, { method: "GET" });
+  return apiSend(`/assistant/context${params}`, "GET", null, {
+    skipCache: true,
+  });
 }
 
 export async function runAssistantAction(action = {}) {
-  return apiSend("/assistant/actions", {
-    method: "POST",
-    body: safeObject(action),
-  });
+  return apiSend("/assistant/actions", "POST", safeObject(action));
 }
 
 export async function submitAssistantMessage(payload = {}) {
-  return apiSend("/assistant/message", {
-    method: "POST",
-    body: safeObject(payload),
-  });
+  return apiSend("/assistant/message", "POST", safeObject(payload));
 }
 
 export const recordApi = Object.freeze({
