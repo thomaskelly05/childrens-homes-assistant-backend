@@ -62,7 +62,7 @@ const toText = (value, fallback = "") =>
   escapeHtml(String(value ?? fallback ?? ""));
 
 function getViewContent() {
-  return els.viewContent || document.getElementById("viewContent");
+  return document.getElementById("viewContent") || els.viewContent;
 }
 
 function buildRecordPayloadAttr(item = {}) {
