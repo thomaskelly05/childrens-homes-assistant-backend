@@ -3,7 +3,11 @@ import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml, formatDate } from "../core/utils.js";
 import {
-  renderRowList,
+  normaliseRecords,
+  sortNormalisedRecordsNewestFirst,
+} from "../core/record-normaliser.js";
+import { openRecordDetail } from "../ui/records.js";
+import {
   renderSection,
   renderSummaryStat,
   renderEmptyState,
@@ -17,6 +21,7 @@ function getCurrentScope() {
 function getYoungPersonId() {
   return (
     state.youngPersonId ||
+    state.currentYoungPersonId ||
     state.selectedYoungPerson?.id ||
     state.youngPerson?.id ||
     null
@@ -27,6 +32,8 @@ function getHomeId() {
   return (
     state.readinessSelectedHomeId ||
     state.homeId ||
+    state.selectedHomeId ||
+    state.currentHomeId ||
     state.currentUser?.home_id ||
     state.currentUser?.homeId ||
     state.selectedYoungPerson?.home_id ||
@@ -71,30 +78,51 @@ function normaliseToken(value = "") {
     .replaceAll("-", "_");
 }
 
-function sortNewestFirst(items = [], keys = []) {
-  return [...items].sort((a, b) => {
-    const aValue = keys.map((key) => a?.[key]).find(Boolean) || 0;
-    const bValue = keys.map((key) => b?.[key]).find(Boolean) || 0;
-    return new Date(bValue).getTime() - new Date(aValue).getTime();
-  });
+function getPrimaryDate(item = {}) {
+  return item.date || item.created_at || item.updated_at || null;
 }
 
-function buildReportRows(items = []) {
-  return items.map((item) => ({
-    ...item,
-    id: item.id ?? item.report_id ?? item.source_id ?? null,
-    record_type: item.record_type || "report",
-    title: item.title || item.report_type || item.name || "Report",
-    summary:
-      item.summary ||
-      item.description ||
-      item.report_text ||
-      item.notes ||
-      "Report available.",
-    status: item.status || item.workflow_status || "completed",
-    created_at: item.created_at || item.generated_at || item.updated_at || null,
-    report_type: item.report_type || "",
-  }));
+function getRecordId(item = {}) {
+  return item.id || item.record_id || item.source_id || "";
+}
+
+function getRecordType(item = {}) {
+  return item.type || item.record_type || "report";
+}
+
+function getRecordTitle(item = {}) {
+  return item.title || item.label || "Report";
+}
+
+function getRecordSummary(item = {}) {
+  return item.summary || "Report available.";
+}
+
+function toText(value, fallback = "") {
+  return escapeHtml(String(value ?? fallback ?? ""));
+}
+
+function buildReportRows(items = [], fallbackType = "report") {
+  return normaliseRecords(
+    items.map((item) => ({
+      ...item,
+      id: item.id ?? item.report_id ?? item.source_id ?? null,
+      record_id: item.record_id ?? item.id ?? item.report_id ?? item.source_id ?? null,
+      record_type: item.record_type || item.type || fallbackType,
+      type: item.type || item.record_type || fallbackType,
+      title: item.title || item.report_type || item.name || "Report",
+      summary:
+        item.summary ||
+        item.description ||
+        item.report_text ||
+        item.notes ||
+        "Report available.",
+      status: item.status || item.workflow_status || "completed",
+      created_at: item.created_at || item.generated_at || item.updated_at || null,
+      date: item.date || item.created_at || item.generated_at || item.updated_at || null,
+      report_type: item.report_type || "",
+    }))
+  );
 }
 
 function getReportEndpoints() {
@@ -114,8 +142,25 @@ function getReportEndpoints() {
   return {
     reports: `/homes/${id}/reports`,
     reviews: `/homes/${id}/reports`,
-    inspection: `/homes/${id}/inspection-readiness`,
+    inspection: `/homes/${id}/inspection-improvement-actions`,
   };
+}
+
+function unwrapRows(data = {}) {
+  if (Array.isArray(data)) return data;
+
+  return safeArray(
+    data.items ||
+      data.records ||
+      data.results ||
+      data.data ||
+      data.reports ||
+      data.readiness ||
+      data.monthly_reviews ||
+      data.inspection_actions ||
+      data.inspection_improvement_actions ||
+      []
+  );
 }
 
 function renderLoadingState() {
@@ -155,6 +200,77 @@ function renderNoContext() {
   });
 }
 
+function renderReportRows(items = [], emptyMessage = "No reports found.") {
+  if (!items.length) {
+    return renderEmptyState("No reports", emptyMessage);
+  }
+
+  return `
+    <div class="record-list">
+      ${items
+        .map((item) => {
+          const id = getRecordId(item);
+          const type = getRecordType(item);
+          const title = getRecordTitle(item);
+          const summary = getRecordSummary(item);
+          const date = getPrimaryDate(item);
+          const status = item.status || "";
+
+          return `
+            <article
+              class="record-row"
+              data-open-record="true"
+              data-record-id="${toText(id)}"
+              data-record-type="${toText(type)}"
+              role="button"
+              tabindex="0"
+              aria-label="${toText(title)}"
+            >
+              <div class="record-row-main">
+                <div class="record-row-title">${toText(title)}</div>
+                <div class="record-row-summary">${toText(summary)}</div>
+                <div class="record-row-meta">
+                  <span class="row-pill muted">${toText(String(type).replaceAll("_", " "))}</span>
+                  ${status ? `<span class="row-pill muted">${toText(String(status).replaceAll("_", " "))}</span>` : ""}
+                  ${date ? `<span>${toText(formatDate(date))}</span>` : ""}
+                </div>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderLatestActivity(latestReport) {
+  if (!latestReport) {
+    return renderEmptyState("No recent report", "No report activity found.");
+  }
+
+  return `
+    <div class="record-list">
+      <article
+        class="record-row"
+        data-open-record="true"
+        data-record-id="${toText(getRecordId(latestReport))}"
+        data-record-type="${toText(getRecordType(latestReport))}"
+        role="button"
+        tabindex="0"
+        aria-label="${toText(getRecordTitle(latestReport))}"
+      >
+        <div class="record-row-main">
+          <div class="record-row-title">${toText(getRecordTitle(latestReport))}</div>
+          <div class="record-row-summary">${toText(getRecordSummary(latestReport))}</div>
+          <div class="record-row-meta">
+            ${getPrimaryDate(latestReport) ? toText(formatDate(getPrimaryDate(latestReport))) : "No date"}
+          </div>
+        </div>
+      </article>
+    </div>
+  `;
+}
+
 function renderReportsHtml({
   reports = [],
   reviewItems = [],
@@ -172,7 +288,7 @@ function renderReportsHtml({
     )
   ).length;
 
-  const latestReport = reports[0] || null;
+  const latestReport = reports[0] || reviewItems[0] || inspectionItems[0] || null;
 
   return `
     <section class="overview-panel">
@@ -201,13 +317,13 @@ function renderReportsHtml({
         <section class="overview-main">
           ${renderSection(
             "Latest reports",
-            renderRowList(reports.slice(0, 10), "No reports found."),
+            renderReportRows(reports.slice(0, 10), "No reports found."),
             "Recent generated or saved reports."
           )}
 
           ${renderSection(
             "Reviews and outputs",
-            renderRowList(reviewItems.slice(0, 10), "No review outputs found."),
+            renderReportRows(reviewItems.slice(0, 10), "No review outputs found."),
             "Monthly reviews, summaries and structured outputs."
           )}
         </section>
@@ -215,7 +331,7 @@ function renderReportsHtml({
         <aside class="overview-side">
           ${renderSection(
             "Inspection-linked outputs",
-            renderRowList(
+            renderReportRows(
               inspectionItems.slice(0, 8),
               "No inspection-linked outputs found."
             ),
@@ -224,33 +340,43 @@ function renderReportsHtml({
 
           ${renderSection(
             "Latest activity",
-            latestReport
-              ? `
-                <div class="record-list">
-                  <article class="record-row">
-                    <div class="record-row-main">
-                      <div class="record-row-title">${escapeHtml(
-                        latestReport.title || "Latest report"
-                      )}</div>
-                      <div class="record-row-summary">${escapeHtml(
-                        latestReport.summary || "Report available."
-                      )}</div>
-                      <div class="record-row-meta">${escapeHtml(
-                        latestReport.created_at
-                          ? formatDate(latestReport.created_at)
-                          : "No date"
-                      )}</div>
-                    </div>
-                  </article>
-                </div>
-              `
-              : renderEmptyState("No recent report", "No report activity found."),
+            renderLatestActivity(latestReport),
             "The most recent report activity."
           )}
         </aside>
       </div>
     </section>
   `;
+}
+
+function bindReportRowEvents(records = []) {
+  if (!els.viewContent) return;
+
+  const byKey = new Map();
+
+  records.forEach((record) => {
+    byKey.set(`${getRecordType(record)}:${getRecordId(record)}`, record);
+  });
+
+  els.viewContent.querySelectorAll("[data-open-record='true']").forEach((row) => {
+    const open = () => {
+      const type = row.getAttribute("data-record-type") || "";
+      const id = row.getAttribute("data-record-id") || "";
+      const record = byKey.get(`${type}:${id}`);
+
+      if (record) {
+        openRecordDetail(record);
+      }
+    };
+
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
+  });
 }
 
 export async function loadReports() {
@@ -267,38 +393,26 @@ export async function loadReports() {
 
   try {
     const [reportsData, reviewsData, inspectionData] = await Promise.all([
-      apiGet(endpoints.reports).catch(() => ({ items: [] })),
-      apiGet(endpoints.reviews).catch(() => ({ items: [] })),
+      apiGet(endpoints.reports, { skipCache: true }).catch(() => ({ items: [] })),
+      apiGet(endpoints.reviews, { skipCache: true }).catch(() => ({ items: [] })),
       endpoints.inspection
-        ? apiGet(endpoints.inspection).catch(() => ({ items: [] }))
+        ? apiGet(endpoints.inspection, { skipCache: true }).catch(() => ({ items: [] }))
         : Promise.resolve({ items: [] }),
     ]);
 
-    const reports = sortNewestFirst(
-      buildReportRows(
-        safeArray(reportsData.items || reportsData.records || reportsData.reports)
-      ),
-      ["created_at", "updated_at"]
+    const reports = sortNormalisedRecordsNewestFirst(
+      buildReportRows(unwrapRows(reportsData), "report")
     );
 
-    const reviewItems = sortNewestFirst(
-      buildReportRows(
-        safeArray(reviewsData.items || reviewsData.records || reviewsData.reports)
-      ),
-      ["created_at", "updated_at"]
+    const reviewItems = sortNormalisedRecordsNewestFirst(
+      buildReportRows(unwrapRows(reviewsData), "monthly_review")
     );
 
-    const inspectionItems = sortNewestFirst(
-      buildReportRows(
-        safeArray(
-          inspectionData.items ||
-            inspectionData.records ||
-            inspectionData.reports ||
-            inspectionData.readiness
-        )
-      ),
-      ["created_at", "updated_at", "review_date"]
+    const inspectionItems = sortNormalisedRecordsNewestFirst(
+      buildReportRows(unwrapRows(inspectionData), "inspection_improvement_action")
     );
+
+    const allRecords = [...reports, ...reviewItems, ...inspectionItems];
 
     els.viewContent.innerHTML = renderReportsHtml({
       reports,
@@ -306,11 +420,13 @@ export async function loadReports() {
       inspectionItems,
     });
 
+    bindReportRowEvents(allRecords);
+
     updateWorkspaceSummaryStrip({
       today: `${reports.length} report${reports.length === 1 ? "" : "s"} available`,
       nextEvent:
-        reviewItems[0]?.created_at
-          ? `Latest review ${formatDate(reviewItems[0].created_at)}`
+        reviewItems[0]?.date
+          ? `Latest review ${formatDate(reviewItems[0].date)}`
           : "No review schedule loaded",
       lastRecord:
         reports[0]?.title || reviewItems[0]?.title || "No recent report loaded",
@@ -340,3 +456,5 @@ export async function loadReports() {
     });
   }
 }
+
+export const loadCurrentView = loadReports;
