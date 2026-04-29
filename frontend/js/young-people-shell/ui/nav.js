@@ -730,18 +730,27 @@ function syncDesktopSidebarChrome() {
 }
 
 function renderNavigation() {
-  ensureValidCurrentSection();
+  const current = getCurrentSection();
+  const scope = getCurrentScope();
+
+  const coreChildSections = new Set([
+    "timeline",
+    "daily-life",
+    "daily-notes",
+    "incidents",
+  ]);
+
+  if (!(scope === "child" && coreChildSections.has(current))) {
+    ensureValidCurrentSection();
+  }
 
   if (els.desktopNav) els.desktopNav.innerHTML = buildDesktopNavHtml();
-
   if (els.mobileNavContent) {
     els.mobileNavContent.innerHTML = buildMobileDrawerNavHtml();
   }
-
   if (els.mobileBottomBar) {
     els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
   }
-
   if (els.mobileBottomNav && els.mobileBottomNav !== els.mobileBottomBar) {
     els.mobileBottomNav.innerHTML = buildMobileBottomBarHtml();
   }
