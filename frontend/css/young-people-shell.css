@@ -2500,9 +2500,10 @@ textarea:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
 
-   /* ============================================================
-   Emergency light-theme correction for Young People entry page
+/* ============================================================
+   Force Light Theme — Young People Entry Page
 ============================================================ */
 
 html,
@@ -2516,9 +2517,13 @@ body,
   color: var(--ink) !important;
 }
 
-#selectorPanel,
+#selectorPanel {
+  background: transparent !important;
+  color: var(--ink) !important;
+}
+
 #selectorPanel * {
-  color: var(--ink);
+  color: inherit;
 }
 
 #selectorPanel .simple-entry-head,
@@ -2534,18 +2539,18 @@ body,
     linear-gradient(135deg, #ffffff, var(--brand-pale)) !important;
 }
 
-#selectorPanel p,
-#selectorPanel small,
-#selectorPanel span,
-#selectorPanel label {
-  color: var(--muted) !important;
-}
-
 #selectorPanel h1,
 #selectorPanel h2,
 #selectorPanel h3,
 #selectorPanel strong {
   color: var(--ink) !important;
+}
+
+#selectorPanel p,
+#selectorPanel small,
+#selectorPanel span,
+#selectorPanel label {
+  color: var(--muted) !important;
 }
 
 #selectorPanel .eyebrow {
@@ -2574,5 +2579,3 @@ body,
 #selectorPanel input::placeholder {
   color: var(--muted-2) !important;
 }
-}
-```
