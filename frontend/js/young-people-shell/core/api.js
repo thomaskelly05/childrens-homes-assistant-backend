@@ -1,4 +1,4 @@
-const API_BASE = window.location.origin;
+const API_BASE = "";
 
 const GET_CACHE_MS = 30000;
 const REQUEST_TIMEOUT_MS = 20000;
@@ -40,11 +40,11 @@ const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/chronology$/, "/young-people/$1/timeline"],
 
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
-  [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
+  [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/handover"],
 
   [/\/young-people\/(\d+)\/health-records$/, "/young-people/$1/health"],
-  [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/health"],
-  [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/medication-records"],
+  [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/medication-records"],
 
   [/\/young-people\/(\d+)\/education-records$/, "/young-people/$1/education"],
   [/\/young-people\/(\d+)\/achievements$/, "/young-people/$1/education"],
@@ -53,15 +53,17 @@ const API_ROUTE_ALIASES = [
 
   [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/safeguarding"],
   [/\/young-people\/(\d+)\/safeguarding$/, "/young-people/$1/safeguarding"],
-  [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/missing-episodes"],
 
-  [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/documents"],
+  [/\/young-people\/(\d+)\/statutory-documents$/, "/young-people/$1/statutory-documents"],
   [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/child-compliance$/, "/young-people/$1/compliance"],
 
-  [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
+  [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/risk"],
+  [/\/young-people\/(\d+)\/risk-assessments$/, "/young-people/$1/risk"],
 
   [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
   [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
@@ -432,6 +434,7 @@ function mergeAssistantBundle(responses = []) {
     maintenance: [],
     finance: [],
     medication: [],
+    medication_records: [],
     admissions: [],
     discharges: [],
     visitors: [],
@@ -469,9 +472,11 @@ function mergeAssistantBundle(responses = []) {
     ["young_person_appointments", "appointments"],
     ["monthly_reviews", "monthly_reviews"],
     ["handover_records", "handover_records"],
+    ["handover", "handover_records"],
     ["handovers", "handover_records"],
     ["timeline", "chronology_events"],
     ["chronology_events", "chronology_events"],
+    ["risk", "risk_assessments"],
     ["risk_assessments", "risk_assessments"],
     ["risks", "risk_assessments"],
     ["support_plans", "support_plans"],
@@ -498,6 +503,7 @@ function mergeAssistantBundle(responses = []) {
     ["maintenance", "maintenance"],
     ["finance", "finance"],
     ["medication", "medication"],
+    ["medication_records", "medication_records"],
     ["admissions", "admissions"],
     ["discharges", "discharges"],
     ["visitors", "visitors"],
@@ -623,9 +629,15 @@ export async function fetchYoungPersonAssistantBundle(youngPersonId) {
     `/young-people/${youngPersonId}/appointments`,
     `/young-people/${youngPersonId}/reports`,
     `/young-people/${youngPersonId}/timeline`,
+    `/young-people/${youngPersonId}/risk`,
     `/young-people/${youngPersonId}/plans`,
     `/young-people/${youngPersonId}/compliance`,
     `/young-people/${youngPersonId}/keywork`,
+    `/young-people/${youngPersonId}/missing-episodes`,
+    `/young-people/${youngPersonId}/medication-records`,
+    `/young-people/${youngPersonId}/documents`,
+    `/young-people/${youngPersonId}/statutory-documents`,
+    `/young-people/${youngPersonId}/handover`,
   ];
 
   const responses = await apiGetSettled(urls);
@@ -761,7 +773,7 @@ export async function apiRequest(url, options = {}) {
       const error = new Error(buildErrorMessage(response, data));
       error.status = response.status;
       error.data = data;
-      error.url = `${API_BASE}${resolvedUrl}`;
+      error.url = resolvedUrl;
       error.originalUrl = url;
       throw error;
     }
@@ -806,7 +818,7 @@ export async function apiSend(url, method = "POST", body = null, options = {}) {
     options.invalidatePrefixes.length
   ) {
     invalidateCacheByPrefixes(options.invalidatePrefixes);
-  } else {
+  } else if (method !== "GET") {
     clearApiCache();
   }
 
@@ -839,7 +851,7 @@ export function buildSseContextFetch(url, payload, options = {}) {
     "Assistant request timed out"
   );
 
-  const request = fetch(`${API_BASE}${url}`, {
+  const request = fetch(url, {
     method: "POST",
     credentials: "include",
     signal,
