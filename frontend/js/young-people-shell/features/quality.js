@@ -2,6 +2,11 @@ import { els } from "../dom.js";
 import { state } from "../state.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
+import {
+  normaliseRecords,
+  sortNormalisedRecordsNewestFirst,
+} from "../core/record-normaliser.js";
+import { openRecordDetail } from "../ui/records.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import {
   onAssistantScopeChanged,
@@ -11,10 +16,8 @@ import { buildInspectionUiEndpoints } from "../core/config.js";
 
 const SAFE_EMPTY = Object.freeze({ items: [] });
 
-function toArray(value, fallback = []) {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(fallback)) return fallback;
-  return [];
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 function toNumber(value, fallback = 0) {
@@ -22,20 +25,8 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
-function toBool(value) {
-  return Boolean(value);
-}
-
 function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
-}
-
-function buildRecordPayloadAttr(item = {}) {
-  try {
-    return encodeURIComponent(JSON.stringify(item));
-  } catch {
-    return "";
-  }
 }
 
 function lower(value) {
@@ -50,19 +41,8 @@ function titleCase(value) {
     .trim();
 }
 
-function qualityVisibilityPath(homeId) {
-  if (homeId) {
-    return `/visibility/quality?home_id=${encodeURIComponent(
-      homeId
-    )}&all_accessible_homes=false`;
-  }
-
-  return "/visibility/quality?all_accessible_homes=true";
-}
-
 function formatDate(value, fallback = "No date") {
   if (!value) return fallback;
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -75,7 +55,6 @@ function formatDate(value, fallback = "No date") {
 
 function formatDateTime(value, fallback = "No date") {
   if (!value) return fallback;
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -111,6 +90,7 @@ function getHomeId() {
     state.readinessSelectedHomeId ||
       state.homeId ||
       state.selectedHomeId ||
+      state.currentHomeId ||
       state.currentUser?.home_id ||
       state.currentUser?.homeId ||
       state.selectedYoungPerson?.home_id ||
@@ -157,17 +137,28 @@ function hasProviderContext() {
   return Number.isFinite(providerId) && providerId > 0;
 }
 
+function qualityVisibilityPath(homeId) {
+  if (homeId) {
+    return `/visibility/quality?home_id=${encodeURIComponent(
+      homeId
+    )}&all_accessible_homes=false`;
+  }
+
+  return "/visibility/quality?all_accessible_homes=true";
+}
+
 async function safeGet(path) {
   try {
-    return (await apiGet(path)) || SAFE_EMPTY;
-  } catch {
+    return (await apiGet(path, { skipCache: true })) || SAFE_EMPTY;
+  } catch (error) {
+    console.warn("[quality] failed loading", path, error);
     return SAFE_EMPTY;
   }
 }
 
 async function fetchVisibility(homeId) {
   try {
-    return (await apiGet(qualityVisibilityPath(homeId))) || SAFE_EMPTY;
+    return (await apiGet(qualityVisibilityPath(homeId), { skipCache: true })) || SAFE_EMPTY;
   } catch {
     return SAFE_EMPTY;
   }
@@ -179,6 +170,9 @@ function pickItems(response, keys = []) {
   }
 
   if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response?.records)) return response.records;
+  if (Array.isArray(response?.results)) return response.results;
+  if (Array.isArray(response?.data)) return response.data;
   if (Array.isArray(response)) return response;
 
   return [];
@@ -188,12 +182,11 @@ function sortNewest(items = [], dateKeys = []) {
   return [...items].sort((a, b) => {
     const aValue = dateKeys.map((key) => a?.[key]).find(Boolean);
     const bValue = dateKeys.map((key) => b?.[key]).find(Boolean);
-
     return new Date(bValue || 0).getTime() - new Date(aValue || 0).getTime();
   });
 }
 
-function sortSoonest(items = [], dateKey) {
+function sortSoonest(items = [], dateKey = "due_date") {
   return [...items].sort((a, b) => {
     const aDate = a?.[dateKey]
       ? new Date(a[dateKey]).getTime()
@@ -205,38 +198,6 @@ function sortSoonest(items = [], dateKey) {
 
     return aDate - bDate;
   });
-}
-
-function dedupeBy(items = [], keyBuilder) {
-  const seen = new Set();
-
-  return items.filter((item) => {
-    const key = keyBuilder(item);
-    if (!key || seen.has(key)) return false;
-
-    seen.add(key);
-    return true;
-  });
-}
-
-function hasLiveData(data = {}) {
-  return (
-    data.qualityAudits.length ||
-    data.qualityAuditFindings.length ||
-    data.qualityAuditActions.length ||
-    data.complianceItems.length ||
-    data.reg44Visits.length ||
-    data.reg44Findings.length ||
-    data.reg44Actions.length ||
-    data.reg45Reviews.length ||
-    data.reg45Actions.length ||
-    data.inspectionScores.length ||
-    data.inspectionSectionScores.length ||
-    data.inspectionReasons.length ||
-    data.inspectionLines.length ||
-    data.inspectionActions.length ||
-    data.managerReviewQueue.length
-  );
 }
 
 function badgeClass(value) {
@@ -253,15 +214,11 @@ function badgeClass(value) {
       "open",
       "not_started",
       "due",
-      "problematic",
       "red",
       "unsafe",
-      "declined",
-      "cancelled",
       "late",
       "stale",
       "missing",
-      "critical_action",
       "expired",
       "escalated",
       "failed",
@@ -285,7 +242,6 @@ function badgeClass(value) {
       "scheduled",
       "active",
       "under_review",
-      "ri",
       "review_due",
       "awaiting_approval",
       "requires_improvement",
@@ -338,712 +294,152 @@ function signalTone(signal = {}) {
   return "muted";
 }
 
-/* -------------------------------- mappers -------------------------------- */
+function mapRecord(record = {}, type = "quality_record") {
+  const title =
+    record.title ||
+    record.audit_title ||
+    record.action_title ||
+    record.line_of_enquiry ||
+    record.section_name ||
+    record.overall_band ||
+    record.finding_type ||
+    record.record_type ||
+    titleCase(type);
+
+  const summary =
+    record.summary ||
+    record.description ||
+    record.details ||
+    record.action_description ||
+    record.rationale ||
+    record.narrative_summary ||
+    record.overall_summary ||
+    record.recommendations_summary ||
+    record.finding_text ||
+    record.review_reason ||
+    record.concerns_summary ||
+    record.strengths_summary ||
+    record.overall_quality_summary ||
+    record.action_plan_summary ||
+    record.title ||
+    "";
+
+  const date =
+    record.due_date ||
+    record.audit_date ||
+    record.visit_date ||
+    record.review_period_end ||
+    record.review_date ||
+    record.period_end ||
+    record.created_at ||
+    record.updated_at ||
+    null;
+
+  return {
+    ...record,
+    id: record.id ?? record.record_id ?? record.source_id ?? null,
+    record_id: record.record_id ?? record.id ?? record.source_id ?? null,
+    type,
+    record_type: type,
+    title: title || titleCase(type),
+    label: title || titleCase(type),
+    summary: summary || `${titleCase(type)} recorded.`,
+    description: summary || "",
+    date,
+    status:
+      record.status ||
+      record.priority ||
+      record.overall_band ||
+      record.score_band ||
+      record.severity ||
+      record.review_status ||
+      record.workflow_status ||
+      record.overall_outcome ||
+      "",
+    severity: record.severity || record.priority || "",
+    raw: record,
+  };
+}
 
 function mapQualityAudit(record = {}) {
-  return {
-    id: record.id,
-    provider_id: record.provider_id || null,
-    home_id: record.home_id || null,
-    audit_type: record.audit_type || "",
-    audit_title: record.audit_title || "Quality audit",
-    audit_date: record.audit_date || null,
-    period_start: record.period_start || null,
-    period_end: record.period_end || null,
-    completed_by: record.completed_by || record.auditor_user_id || null,
-    overall_outcome: record.overall_outcome || record.overall_rating || "",
-    summary: record.summary || "",
-    strengths: record.strengths || "",
-    concerns: record.concerns || "",
-    recommendations: record.recommendations || "",
-    status: record.status || "",
-    title: record.audit_title || titleCase(record.audit_type || "Quality audit"),
-    record_type: "quality_audit",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "quality_audit");
 }
 
 function mapQualityAuditFinding(record = {}) {
-  return {
-    id: record.id,
-    provider_id: record.provider_id || null,
-    audit_id: record.audit_id || null,
-    home_id: record.home_id || null,
-    finding_type: record.finding_type || "",
-    priority: record.priority || "",
-    title: record.title || "Audit finding",
-    details: record.details || "",
-    action_required: toBool(record.action_required),
-    linked_record_type: record.linked_record_type || "",
-    linked_record_id: record.linked_record_id || null,
-    summary: record.details || "Audit finding recorded.",
-    record_type: "quality_audit_finding",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "quality_audit_finding");
 }
 
 function mapQualityAuditAction(record = {}) {
-  return {
-    id: record.id,
-    provider_id: record.provider_id || null,
-    quality_audit_id: record.quality_audit_id || null,
-    home_id: record.home_id || null,
-    action_title: record.action_title || "Audit action",
-    action_description: record.action_description || "",
-    priority: record.priority || "",
-    owner_user_id: record.owner_user_id || null,
-    owner_user_name: record.owner_user_name || "",
-    due_date: record.due_date || null,
-    status: record.status || "",
-    completed_at: record.completed_at || null,
-    linked_task_id: record.linked_task_id || null,
-    completion_notes: record.completion_notes || "",
-    finding_id: record.finding_id || null,
-    title: record.action_title || "Audit action",
-    summary:
-      record.action_description ||
-      record.completion_notes ||
-      "Quality action recorded.",
-    record_type: "quality_audit_action",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "quality_audit_action");
 }
 
 function mapComplianceItem(record = {}) {
-  return {
-    id: record.id,
-    provider_id: record.provider_id || null,
-    young_person_id: record.young_person_id || null,
-    home_id: record.home_id || null,
-    rule_id: record.rule_id || null,
-    record_type_name: record.record_type || "",
-    source_table: record.source_table || "",
-    source_id: record.source_id || null,
-    title: record.title || "Compliance item",
-    owner_id: record.owner_id || null,
-    due_date: record.due_date || null,
-    completed_date: record.completed_date || null,
-    status: record.status || "",
-    severity: record.severity || "",
-    escalation_level: record.escalation_level ?? 0,
-    title_text: record.title || "Compliance item",
-    summary: record.title || "Compliance item raised.",
-    record_type: "compliance_item",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "compliance_item");
 }
 
 function mapReg44Visit(record = {}) {
-  return {
-    id: record.id,
-    home_id: record.home_id || null,
-    visit_date: record.visit_date || null,
-    independent_person_name: record.independent_person_name || "",
-    overall_summary: record.overall_summary || "",
-    recommendations_summary: record.recommendations_summary || "",
-    report_document_id: record.report_document_id || null,
-    title: `Reg 44 visit${
-      record.visit_date ? ` - ${formatDate(record.visit_date)}` : ""
-    }`,
-    summary:
-      record.overall_summary ||
-      record.recommendations_summary ||
-      "Reg 44 visit recorded.",
-    record_type: "reg44_visit",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "reg44_visit");
 }
 
 function mapReg44Finding(record = {}) {
-  return {
-    id: record.id,
-    reg44_visit_id: record.reg44_visit_id || null,
-    finding_type: record.finding_type || "",
-    judgement_area: record.judgement_area || "",
-    finding_text: record.finding_text || "",
-    priority: record.priority || "",
-    requires_action: toBool(record.requires_action),
-    title: titleCase(record.finding_type || "Reg 44 finding"),
-    summary: record.finding_text || "Reg 44 finding recorded.",
-    record_type: "reg44_finding",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "reg44_finding");
 }
 
 function mapReg44Action(record = {}) {
-  return {
-    id: record.id,
-    reg44_finding_id: record.reg44_finding_id || null,
-    home_id: record.home_id || null,
-    action_title: record.action_title || "Reg 44 action",
-    action_description: record.action_description || "",
-    owner_user_id: record.owner_user_id || null,
-    owner_user_name: record.owner_user_name || "",
-    due_date: record.due_date || null,
-    status: record.status || "",
-    completed_at: record.completed_at || null,
-    title: record.action_title || "Reg 44 action",
-    summary: record.action_description || "Reg 44 action recorded.",
-    record_type: "reg44_action",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "reg44_action");
 }
 
 function mapReg45Review(record = {}) {
-  return {
-    id: record.id,
-    home_id: record.home_id || null,
-    review_period_start: record.review_period_start || null,
-    review_period_end: record.review_period_end || null,
-    review_status: record.review_status || "",
-    reviewed_by_user_id: record.reviewed_by_user_id || null,
-    approved_by_user_id: record.approved_by_user_id || null,
-    approved_at: record.approved_at || null,
-    overall_quality_summary: record.overall_quality_summary || "",
-    action_plan_summary: record.action_plan_summary || "",
-    report_document_id: record.report_document_id || null,
-    title: "Reg 45 review",
-    summary:
-      record.overall_quality_summary ||
-      record.action_plan_summary ||
-      "Reg 45 review recorded.",
-    record_type: "reg45_review",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "reg45_review");
 }
 
 function mapReg45Action(record = {}) {
-  return {
-    id: record.id,
-    reg45_review_id: record.reg45_review_id || null,
-    home_id: record.home_id || null,
-    action_title: record.action_title || "Reg 45 action",
-    action_description: record.action_description || "",
-    owner_user_id: record.owner_user_id || null,
-    owner_user_name: record.owner_user_name || "",
-    due_date: record.due_date || null,
-    priority: record.priority || "",
-    status: record.status || "",
-    completed_at: record.completed_at || null,
-    title: record.action_title || "Reg 45 action",
-    summary: record.action_description || "Reg 45 action recorded.",
-    record_type: "reg45_action",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "reg45_action");
 }
 
 function mapInspectionScore(record = {}) {
-  return {
-    id: record.id,
-    run_id: record.run_id || null,
-    framework_id: record.framework_id || null,
-    provider_id: record.provider_id || null,
-    home_id: record.home_id || null,
-    period_start: record.period_start || null,
-    period_end: record.period_end || null,
-    overall_band: record.overall_band || "",
-    overall_score: record.overall_score ?? null,
-    confidence_score: record.confidence_score ?? null,
-    data_completeness_score: record.data_completeness_score ?? null,
-    evidence_freshness_score: record.evidence_freshness_score ?? null,
-    limiting_judgement_triggered: toBool(record.limiting_judgement_triggered),
-    limiting_reason: record.limiting_reason || "",
-    narrative_summary: record.narrative_summary || "",
-    strengths_summary: record.strengths_summary || "",
-    concerns_summary: record.concerns_summary || "",
-    generated_by: record.generated_by || "",
-    title: "Inspection readiness",
-    summary:
-      record.narrative_summary ||
-      record.concerns_summary ||
-      record.strengths_summary ||
-      "Inspection readiness score recorded.",
-    record_type: "inspection_score",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "inspection_score");
 }
 
 function mapInspectionSectionScore(record = {}) {
-  return {
-    id: record.id,
-    inspection_score_id: record.inspection_score_id || null,
-    section_id: record.section_id || null,
-    section_code: record.section_code || "",
-    section_name: record.section_name || "",
-    score_value: record.score_value ?? null,
-    score_band: record.score_band || "",
-    confidence_score: record.confidence_score ?? null,
-    data_completeness_score: record.data_completeness_score ?? null,
-    evidence_freshness_score: record.evidence_freshness_score ?? null,
-    limiting_issue_present: toBool(record.limiting_issue_present),
-    summary_text: record.summary_text || "",
-    strengths_text: record.strengths_text || "",
-    concerns_text: record.concerns_text || "",
-    title: record.section_name || record.section_code || "Inspection section",
-    summary:
-      record.concerns_text ||
-      record.summary_text ||
-      record.strengths_text ||
-      "Inspection section scored.",
-    record_type: "inspection_section_score",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "inspection_section_score");
 }
 
 function mapInspectionReason(record = {}) {
-  return {
-    id: record.id,
-    inspection_score_id: record.inspection_score_id || null,
-    section_score_id: record.section_score_id || null,
-    descriptor_id: record.descriptor_id || null,
-    reason_type: record.reason_type || "",
-    priority: record.priority ?? 0,
-    title: record.title || "Inspection reason",
-    description: record.description || "",
-    impact_weight: record.impact_weight ?? null,
-    source_table: record.source_table || "",
-    source_record_id: record.source_record_id || null,
-    evidence_fact_id: record.evidence_fact_id || null,
-    summary: record.description || "Inspection reason recorded.",
-    record_type: "inspection_reason",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "inspection_reason");
 }
 
 function mapInspectionLineOfEnquiry(record = {}) {
-  return {
-    id: record.id,
-    inspection_score_id: record.inspection_score_id || null,
-    section_score_id: record.section_score_id || null,
-    home_id: record.home_id || null,
-    provider_id: record.provider_id || null,
-    priority: record.priority || "",
-    line_of_enquiry: record.line_of_enquiry || "",
-    rationale: record.rationale || "",
-    linked_reason_id: record.linked_reason_id || null,
-    status: record.status || "",
-    owner_user_id: record.owner_user_id || null,
-    due_date: record.due_date || null,
-    title: record.line_of_enquiry || "Line of enquiry",
-    summary: record.rationale || "Inspection line of enquiry recorded.",
-    record_type: "inspection_line_of_enquiry",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "inspection_line_of_enquiry");
 }
 
 function mapInspectionAction(record = {}) {
-  return {
-    id: record.id,
-    inspection_score_id: record.inspection_score_id || null,
-    line_of_enquiry_id: record.line_of_enquiry_id || null,
-    home_id: record.home_id || null,
-    provider_id: record.provider_id || null,
-    action_title: record.action_title || "Inspection action",
-    action_description: record.action_description || "",
-    action_type: record.action_type || "",
-    priority: record.priority || "",
-    owner_user_id: record.owner_user_id || null,
-    owner_staff_id: record.owner_staff_id || null,
-    owner_user_name: record.owner_user_name || "",
-    due_date: record.due_date || null,
-    started_at: record.started_at || null,
-    completed_at: record.completed_at || null,
-    status: record.status || "",
-    completion_notes: record.completion_notes || "",
-    evidence_required: record.evidence_required || "",
-    linked_task_id: record.linked_task_id || null,
-    title: record.action_title || "Inspection action",
-    summary:
-      record.action_description ||
-      record.evidence_required ||
-      record.completion_notes ||
-      "Inspection action recorded.",
-    record_type: "inspection_action",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "inspection_action");
 }
 
 function mapManagerReviewRecord(record = {}) {
-  return {
-    id: record.id,
-    provider_id: record.provider_id || null,
-    home_id: record.home_id || null,
-    young_person_id: record.young_person_id || null,
-    source_table: record.source_table || "",
-    source_id: record.source_id || null,
-    record_type_name: record.record_type || "",
-    workflow_status: record.workflow_status || "",
-    priority: record.priority || "",
-    assigned_manager_user_id: record.assigned_manager_user_id || null,
-    due_date: record.due_date || null,
-    review_reason: record.review_reason || "",
-    title: titleCase(record.record_type || "Manager review"),
-    summary:
-      record.review_reason ||
-      `Awaiting manager review for ${titleCase(record.record_type || "record")}.`,
-    record_type: "manager_review_queue",
-    created_at: record.created_at || null,
-    updated_at: record.updated_at || null,
-  };
+  return mapRecord(record, "manager_review_queue");
 }
 
-/* ------------------------------ fallback data ----------------------------- */
-
-function buildFallbackData(homeId) {
-  const now = new Date();
-
-  const plusDays = (days, hour = 9) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    d.setHours(hour, 0, 0, 0);
-    return d.toISOString();
-  };
-
-  const minusDays = (days, hour = 9) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - days);
-    d.setHours(hour, 0, 0, 0);
-    return d.toISOString();
-  };
-
-  return {
-    qualityAudits: [
-      mapQualityAudit({
-        id: "qa-1",
-        home_id: homeId,
-        audit_type: "monthly_quality_audit",
-        audit_title: "Monthly quality audit",
-        audit_date: minusDays(10),
-        overall_outcome: "good",
-        summary:
-          "Overall practice remains stable with clear routines, improved recording consistency and some gaps in review timeliness.",
-        strengths:
-          "Daily recording quality improved. Team oversight is stronger. Safer escalation pathways are evident.",
-        concerns:
-          "Two review-sensitive actions remain open and one compliance item is overdue.",
-        recommendations:
-          "Close overdue action, refresh supervision follow-up, and improve document review discipline.",
-        status: "completed",
-        created_at: minusDays(10),
-        updated_at: minusDays(9),
-      }),
-    ],
-
-    qualityAuditFindings: [
-      mapQualityAuditFinding({
-        id: "qf-1",
-        audit_id: "qa-1",
-        home_id: homeId,
-        finding_type: "concern",
-        priority: "high",
-        title: "Review dates not consistently closed",
-        details:
-          "A small number of review-linked items remained open beyond target date.",
-        action_required: true,
-        created_at: minusDays(9),
-      }),
-      mapQualityAuditFinding({
-        id: "qf-2",
-        audit_id: "qa-1",
-        home_id: homeId,
-        finding_type: "strength",
-        priority: "medium",
-        title: "Improved recording consistency",
-        details:
-          "Daily records show stronger chronology and clearer professional language.",
-        action_required: false,
-        created_at: minusDays(8),
-      }),
-    ],
-
-    qualityAuditActions: [
-      mapQualityAuditAction({
-        id: "qaa-1",
-        quality_audit_id: "qa-1",
-        home_id: homeId,
-        action_title: "Close overdue review items",
-        action_description:
-          "Resolve overdue compliance and document review items.",
-        priority: "high",
-        due_date: plusDays(2),
-        status: "open",
-        created_at: minusDays(7),
-        updated_at: minusDays(6),
-      }),
-      mapQualityAuditAction({
-        id: "qaa-2",
-        quality_audit_id: "qa-1",
-        home_id: homeId,
-        action_title: "Refresh manager oversight tracker",
-        action_description:
-          "Tighten weekly oversight of open quality actions.",
-        priority: "medium",
-        due_date: plusDays(6),
-        status: "in_progress",
-        created_at: minusDays(6),
-        updated_at: minusDays(5),
-      }),
-    ],
-
-    complianceItems: [
-      mapComplianceItem({
-        id: "ci-1",
-        home_id: homeId,
-        title: "Statement of purpose review overdue",
-        due_date: minusDays(3),
-        status: "overdue",
-        severity: "high",
-        escalation_level: 2,
-        created_at: minusDays(12),
-        updated_at: minusDays(3),
-      }),
-      mapComplianceItem({
-        id: "ci-2",
-        home_id: homeId,
-        title: "Annex A update due soon",
-        due_date: plusDays(4),
-        status: "due_soon",
-        severity: "medium",
-        escalation_level: 1,
-        created_at: minusDays(5),
-        updated_at: minusDays(2),
-      }),
-    ],
-
-    reg44Visits: [
-      mapReg44Visit({
-        id: "r44-1",
-        home_id: homeId,
-        visit_date: minusDays(14),
-        independent_person_name: "Jane Porter",
-        overall_summary:
-          "Visit noted warm interactions and predictable routines, with a recommendation to improve evidence of action closure.",
-        recommendations_summary:
-          "Strengthen tracking of action completion and documentary evidence.",
-        created_at: minusDays(14),
-        updated_at: minusDays(13),
-      }),
-    ],
-
-    reg44Findings: [
-      mapReg44Finding({
-        id: "r44f-1",
-        reg44_visit_id: "r44-1",
-        finding_type: "recommendation",
-        judgement_area: "leadership_and_management",
-        finding_text:
-          "Action tracking requires greater consistency to evidence completion.",
-        priority: "medium",
-        requires_action: true,
-        created_at: minusDays(13),
-      }),
-    ],
-
-    reg44Actions: [
-      mapReg44Action({
-        id: "r44a-1",
-        reg44_finding_id: "r44f-1",
-        home_id: homeId,
-        action_title: "Evidence completion of Reg 44 actions",
-        action_description:
-          "Upload closure evidence and confirm review of outstanding items.",
-        due_date: plusDays(3),
-        status: "open",
-        created_at: minusDays(12),
-      }),
-    ],
-
-    reg45Reviews: [
-      mapReg45Review({
-        id: "r45-1",
-        home_id: homeId,
-        review_period_start: minusDays(90),
-        review_period_end: minusDays(1),
-        review_status: "approved",
-        overall_quality_summary:
-          "Service quality remains broadly positive with improved consistency in practice and ongoing attention required around tracking and review completion.",
-        action_plan_summary:
-          "Action plan includes documentation freshness, action closure, and sharper audit follow-through.",
-        created_at: minusDays(2),
-        updated_at: minusDays(1),
-      }),
-    ],
-
-    reg45Actions: [
-      mapReg45Action({
-        id: "r45a-1",
-        reg45_review_id: "r45-1",
-        home_id: homeId,
-        action_title: "Complete quarterly action plan review",
-        action_description:
-          "Check progress across all open quality actions and update evidence.",
-        due_date: plusDays(5),
-        priority: "medium",
-        status: "open",
-        created_at: minusDays(1),
-      }),
-    ],
-
-    inspectionScores: [
-      mapInspectionScore({
-        id: "is-1",
-        run_id: "run-1",
-        framework_id: 1,
-        provider_id: 1,
-        home_id: homeId,
-        period_start: minusDays(30),
-        period_end: minusDays(1),
-        overall_band: "good",
-        overall_score: 73.4,
-        confidence_score: 78.2,
-        data_completeness_score: 80.1,
-        evidence_freshness_score: 69.8,
-        limiting_judgement_triggered: false,
-        narrative_summary:
-          "Current evidence suggests a good profile overall, with leadership strengthened but action closure still affecting readiness confidence.",
-        strengths_summary:
-          "Safer routines, stronger chronology, improved leadership grip.",
-        concerns_summary:
-          "Some evidence freshness and action completion gaps remain.",
-        generated_by: "system",
-        created_at: minusDays(1),
-        updated_at: minusDays(1),
-      }),
-    ],
-
-    inspectionSectionScores: [
-      mapInspectionSectionScore({
-        id: "iss-1",
-        inspection_score_id: "is-1",
-        section_id: "leadership_management",
-        section_code: "leadership_management",
-        section_name: "Leadership and management",
-        score_value: 71.2,
-        score_band: "good",
-        confidence_score: 76.0,
-        summary_text: "Leadership is stable but some actions remain live.",
-        strengths_text: "Clear oversight and better quality assurance rhythm.",
-        concerns_text: "Need stronger action closure evidence.",
-        created_at: minusDays(1),
-      }),
-      mapInspectionSectionScore({
-        id: "iss-2",
-        inspection_score_id: "is-1",
-        section_id: "helped_protected",
-        section_code: "helped_protected",
-        section_name: "Helped and protected",
-        score_value: 75.8,
-        score_band: "good",
-        confidence_score: 80.5,
-        summary_text: "Safeguarding systems are consistent and visible.",
-        strengths_text: "Risk awareness and escalation are clear.",
-        concerns_text: "",
-        created_at: minusDays(1),
-      }),
-    ],
-
-    inspectionReasons: [
-      mapInspectionReason({
-        id: "ir-1",
-        inspection_score_id: "is-1",
-        section_score_id: "iss-1",
-        descriptor_id: "desc-1",
-        reason_type: "concern",
-        priority: 1,
-        title: "Action closure evidence is inconsistent",
-        description:
-          "A small number of actions remain live without clear closure evidence.",
-        impact_weight: 8.4,
-        source_table: "quality_audit_actions",
-        source_record_id: "qaa-1",
-        created_at: minusDays(1),
-      }),
-    ],
-
-    inspectionLines: [
-      mapInspectionLineOfEnquiry({
-        id: "ile-1",
-        inspection_score_id: "is-1",
-        section_score_id: "iss-1",
-        home_id: homeId,
-        provider_id: 1,
-        priority: "high",
-        line_of_enquiry:
-          "How consistently are improvement actions tracked to completion?",
-        rationale:
-          "Recent quality and Reg 44 activity indicates action closure evidence is variable.",
-        status: "open",
-        due_date: plusDays(4),
-        created_at: minusDays(1),
-      }),
-    ],
-
-    inspectionActions: [
-      mapInspectionAction({
-        id: "ia-1",
-        inspection_score_id: "is-1",
-        line_of_enquiry_id: "ile-1",
-        home_id: homeId,
-        provider_id: 1,
-        action_title: "Evidence action completion in quality tracker",
-        action_description:
-          "Update quality tracker with closure notes and linked evidence.",
-        action_type: "quality_improvement",
-        priority: "high",
-        due_date: plusDays(2),
-        status: "open",
-        evidence_required: "Closure note and linked documentary evidence.",
-        created_at: minusDays(1),
-      }),
-      mapInspectionAction({
-        id: "ia-2",
-        inspection_score_id: "is-1",
-        line_of_enquiry_id: "ile-1",
-        home_id: homeId,
-        provider_id: 1,
-        action_title: "Refresh readiness evidence pack",
-        action_description:
-          "Bring freshness of evidence pack up to date for current cycle.",
-        action_type: "inspection_readiness",
-        priority: "medium",
-        due_date: plusDays(7),
-        status: "planned",
-        created_at: minusDays(1),
-      }),
-    ],
-
-    managerReviewQueue: [
-      mapManagerReviewRecord({
-        id: "mrq-1",
-        home_id: homeId,
-        source_table: "quality_audit_actions",
-        source_id: "qaa-1",
-        record_type: "quality_action",
-        workflow_status: "awaiting_review",
-        priority: "high",
-        due_date: plusDays(1),
-        review_reason: "Manager sign-off needed on closure evidence.",
-        created_at: minusDays(1),
-      }),
-    ],
-  };
+function hasLiveData(data = {}) {
+  return (
+    data.qualityAudits.length ||
+    data.qualityAuditFindings.length ||
+    data.qualityAuditActions.length ||
+    data.complianceItems.length ||
+    data.reg44Visits.length ||
+    data.reg44Findings.length ||
+    data.reg44Actions.length ||
+    data.reg45Reviews.length ||
+    data.reg45Actions.length ||
+    data.inspectionScores.length ||
+    data.inspectionSectionScores.length ||
+    data.inspectionReasons.length ||
+    data.inspectionLines.length ||
+    data.inspectionActions.length ||
+    data.managerReviewQueue.length
+  );
 }
-
-/* -------------------------------- rendering -------------------------------- */
 
 function renderEmpty(title, message) {
   return `
@@ -1082,28 +478,8 @@ function renderPanelSection(title, subtitle, content) {
 }
 
 function renderRecordCard(item = {}) {
-  const recordPayload = buildRecordPayloadAttr(item);
-
-  const status =
-    item.status ||
-    item.priority ||
-    item.overall_band ||
-    item.score_band ||
-    item.severity ||
-    item.review_status ||
-    item.workflow_status ||
-    item.overall_outcome ||
-    "";
-
-  const primaryDate =
-    item.due_date ||
-    item.audit_date ||
-    item.visit_date ||
-    item.review_period_end ||
-    item.review_date ||
-    item.period_end ||
-    item.created_at ||
-    item.updated_at;
+  const status = item.status || "";
+  const primaryDate = item.date || item.due_date || item.created_at || item.updated_at || "";
 
   const meta = [
     item.record_type ? titleCase(item.record_type) : "",
@@ -1118,12 +494,7 @@ function renderRecordCard(item = {}) {
       class="quality-record-card"
       data-open-record="true"
       data-record-id="${safeText(item.id || "")}"
-      data-record-type="${safeText(item.record_type || "record")}"
-      data-title="${safeText(item.title || "Record")}"
-      data-record-summary="${safeText(item.summary || "")}"
-      data-record-status="${safeText(status || "")}"
-      data-record-date="${safeText(primaryDate || "")}"
-      data-record-payload="${safeText(recordPayload)}"
+      data-record-type="${safeText(item.type || item.record_type || "record")}"
       role="button"
       tabindex="0"
     >
@@ -1197,39 +568,6 @@ function renderRecordCard(item = {}) {
             : ""
         }
       </div>
-
-      ${
-        item.action_description
-          ? `
-            <div class="quality-record-note">
-              <strong>Action</strong>
-              <span>${safeText(item.action_description)}</span>
-            </div>
-          `
-          : ""
-      }
-
-      ${
-        item.evidence_required
-          ? `
-            <div class="quality-record-note">
-              <strong>Evidence required</strong>
-              <span>${safeText(item.evidence_required)}</span>
-            </div>
-          `
-          : ""
-      }
-
-      ${
-        item.review_reason
-          ? `
-            <div class="quality-record-note">
-              <strong>Reason</strong>
-              <span>${safeText(item.review_reason)}</span>
-            </div>
-          `
-          : ""
-      }
     </article>
   `;
 }
@@ -1334,8 +672,8 @@ function renderTrendRows(trends = []) {
             direction === "up" && assessment === "declining"
               ? "danger"
               : direction === "down" && assessment === "improving"
-                ? "success"
-                : "muted";
+              ? "success"
+              : "muted";
 
           return `
             <article class="quality-signal-row">
@@ -1356,174 +694,30 @@ function renderTrendRows(trends = []) {
   `;
 }
 
-function renderPatternRows(patterns = []) {
-  if (!patterns.length) {
-    return renderEmpty(
-      "No repeated quality pattern",
-      "No repeated quality pattern has crossed threshold yet."
-    );
-  }
-
-  return `
-    <div class="quality-record-list">
-      ${patterns
-        .slice(0, 5)
-        .map(
-          (item) => `
-            <article class="quality-signal-row">
-              <div>
-                <h4>${safeText(item?.title || "Pattern")}</h4>
-                <p>${safeText(item?.evidence || "")}</p>
-                <small>${safeText(
-                  `${toNumber(item?.frequency, 0)} in ${toNumber(
-                    item?.period_days,
-                    0
-                  )} days`
-                )}</small>
-              </div>
-              <span class="row-pill ${safeText(
-                signalTone({ severity: item?.severity || "medium" })
-              )}">
-                ${safeText(item?.severity || "medium")}
-              </span>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderDecisionRows(items = []) {
-  if (!items.length) {
-    return renderEmpty(
-      "No decision support",
-      "No decision-support prompts are available yet."
-    );
-  }
-
-  return `
-    <div class="quality-record-list">
-      ${items
-        .slice(0, 4)
-        .map(
-          (item) => `
-            <article class="quality-signal-row">
-              <div>
-                <h4>${safeText(item?.question || "Decision prompt")}</h4>
-                <p>${safeText(item?.evidence || "")}</p>
-                <small>${safeText(item?.suggested_action || "")}</small>
-              </div>
-              <span class="row-pill ${safeText(
-                signalTone({ severity: item?.severity || "medium" })
-              )}">
-                ${safeText(item?.severity || "medium")}
-              </span>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderMissingRows(items = []) {
-  if (!items.length) {
-    return renderEmpty(
-      "No missing follow-through gaps",
-      "No missing quality follow-through gaps are currently highlighted."
-    );
-  }
-
-  return `
-    <div class="quality-priority-list">
-      ${items
-        .slice(0, 5)
-        .map(
-          (text) => `
-            <article class="quality-priority-item">
-              <p>${safeText(text)}</p>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderInsightBlocks(items = []) {
-  if (!items.length) {
-    return renderEmpty(
-      "No insight blocks",
-      "No quality insight blocks are available yet."
-    );
-  }
+function renderSimpleRows(items = [], emptyTitle, emptyMessage, titleKey = "title") {
+  if (!items.length) return renderEmpty(emptyTitle, emptyMessage);
 
   return `
     <div class="quality-record-list">
       ${items
         .slice(0, 6)
-        .map((item) => {
-          const title =
-            item?.title || item?.heading || item?.label || "Insight block";
-
-          const summary =
-            item?.summary ||
-            item?.text ||
-            item?.description ||
-            item?.content ||
-            "";
-
-          const meta = [item?.category || "", item?.type || "", item?.status || ""]
-            .filter(Boolean)
-            .join(" • ");
-
-          return `
-            <article class="quality-record-card">
-              <h4 class="quality-record-title">${safeText(title)}</h4>
-              ${
-                summary
-                  ? `<p class="quality-record-summary">${safeText(summary)}</p>`
-                  : ""
-              }
-              ${meta ? `<p class="quality-record-meta">${safeText(meta)}</p>` : ""}
-            </article>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
-function renderQualityDriftIndicators(items = []) {
-  if (!items.length) {
-    return renderEmpty(
-      "No drift indicators",
-      "No drift indicators are available yet."
-    );
-  }
-
-  return `
-    <div class="quality-record-list">
-      ${items
-        .slice(0, 4)
         .map(
           (item) => `
             <article class="quality-signal-row">
               <div>
-                <h4>${safeText(item?.label || "Drift indicator")}</h4>
-                <p>${safeText(
-                  `${toNumber(item?.value, 0)}% (healthy ${toNumber(
-                    item?.healthy_threshold,
-                    0
-                  )}%)`
-                )}</p>
+                <h4>${safeText(item?.[titleKey] || item?.title || item?.label || "Item")}</h4>
+                <p>${safeText(item?.evidence || item?.summary || item?.description || item?.text || "")}</p>
+                ${
+                  item?.suggested_action
+                    ? `<small>${safeText(item.suggested_action)}</small>`
+                    : ""
+                }
               </div>
-              <span class="row-pill ${safeText(
-                signalTone({ severity: item?.status || "medium" })
-              )}">
-                ${safeText(item?.status || "unknown")}
-              </span>
+              ${
+                item?.severity || item?.status
+                  ? `<span class="row-pill ${safeText(signalTone(item))}">${safeText(item.severity || item.status)}</span>`
+                  : ""
+              }
             </article>
           `
         )
@@ -1544,27 +738,18 @@ function renderTimeline(items = []) {
     <div class="quality-timeline">
       ${items
         .map((item) => {
-          const dateValue =
-            item.due_date ||
-            item.audit_date ||
-            item.visit_date ||
-            item.review_period_end ||
-            item.review_date ||
-            item.period_end ||
-            item.created_at ||
-            item.updated_at;
-
-          const status =
-            item.status ||
-            item.priority ||
-            item.overall_band ||
-            item.score_band ||
-            item.severity ||
-            item.workflow_status ||
-            "";
+          const dateValue = item.date || item.due_date || item.created_at || item.updated_at;
+          const status = item.status || "";
 
           return `
-            <article class="quality-timeline-item">
+            <article
+              class="quality-timeline-item"
+              data-open-record="true"
+              data-record-id="${safeText(item.id || "")}"
+              data-record-type="${safeText(item.type || item.record_type || "record")}"
+              role="button"
+              tabindex="0"
+            >
               <div class="quality-timeline-date">${safeText(
                 formatDateTime(dateValue, "No date")
               )}</div>
@@ -1581,9 +766,7 @@ function renderTimeline(items = []) {
                       : ""
                   }
                 </div>
-                <p class="quality-timeline-summary">${safeText(
-                  item.summary || ""
-                )}</p>
+                <p class="quality-timeline-summary">${safeText(item.summary || "")}</p>
               </div>
             </article>
           `;
@@ -1598,20 +781,13 @@ function buildHeroNarrative({
   overdueCompliance = [],
   openQualityActions = [],
   managerReviewItems = [],
-  isFallback = false,
 }) {
   const inspection = latestInspection[0];
 
-  if (inspection?.summary) {
-    return inspection.summary;
-  }
+  if (inspection?.summary) return inspection.summary;
 
   if (overdueCompliance.length || openQualityActions.length || managerReviewItems.length) {
     return "The quality view is showing live operational pressure. Focus should be on overdue compliance, open actions, manager review items and evidence that proves follow-through.";
-  }
-
-  if (isFallback) {
-    return "Preview quality data is being shown until live quality endpoints return records.";
   }
 
   return "Quality oversight is not currently surfacing urgent pressure. Continue monitoring compliance, audit actions, Reg 44, Reg 45 and inspection readiness.";
@@ -1639,7 +815,6 @@ function renderWorkspace(payload) {
     qualityDriftIndicators,
     qualityInsightBlocks,
     missingItems,
-    isFallback,
   } = payload;
 
   const latestInspectionRecord = latestInspection[0] || {};
@@ -1662,7 +837,6 @@ function renderWorkspace(payload) {
     overdueCompliance,
     openQualityActions,
     managerReviewItems,
-    isFallback,
   });
 
   return `
@@ -1672,11 +846,6 @@ function renderWorkspace(payload) {
           <div class="eyebrow">Quality operating picture</div>
           <h2>Audit, compliance, Reg 44, Reg 45 and inspection readiness</h2>
           <p>${safeText(heroNarrative)}</p>
-          ${
-            isFallback
-              ? `<p class="overview-helper-text">Showing seeded preview data until live quality endpoints are available.</p>`
-              : ""
-          }
         </div>
 
         <div class="quality-hero-side">
@@ -1690,13 +859,13 @@ function renderWorkspace(payload) {
           </div>
           <div class="quality-hero-meta">
             <span>${safeText(
-              latestInspectionRecord.overall_band
-                ? titleCase(latestInspectionRecord.overall_band)
+              latestInspectionRecord.status
+                ? titleCase(latestInspectionRecord.status)
                 : "No inspection score"
             )}</span>
             <span>${safeText(
-              latestAuditRecord.audit_date
-                ? `Latest audit ${formatDate(latestAuditRecord.audit_date)}`
+              latestAuditRecord.date
+                ? `Latest audit ${formatDate(latestAuditRecord.date)}`
                 : "No recent audit"
             )}</span>
           </div>
@@ -1791,25 +960,43 @@ function renderWorkspace(payload) {
           ${renderPanelSection(
             "Repeating patterns",
             "Repeated issues that may suggest drift, weakness or inconsistent follow-through.",
-            renderPatternRows(patterns)
+            renderSimpleRows(
+              patterns,
+              "No repeated quality pattern",
+              "No repeated quality pattern has crossed threshold yet."
+            )
           )}
 
           ${renderPanelSection(
             "Decision support",
             "Evidence-backed prompts for leadership decisions.",
-            renderDecisionRows(decisionSupport)
+            renderSimpleRows(
+              decisionSupport,
+              "No decision support",
+              "No decision-support prompts are available yet.",
+              "question"
+            )
           )}
 
           ${renderPanelSection(
             "Quality drift indicators",
             "Indicators that help spot whether practice is strengthening or slipping.",
-            renderQualityDriftIndicators(qualityDriftIndicators)
+            renderSimpleRows(
+              qualityDriftIndicators,
+              "No drift indicators",
+              "No drift indicators are available yet.",
+              "label"
+            )
           )}
 
           ${renderPanelSection(
             "Quality insight blocks",
             "Generated or grouped insight from quality signals.",
-            renderInsightBlocks(qualityInsightBlocks)
+            renderSimpleRows(
+              qualityInsightBlocks,
+              "No insight blocks",
+              "No quality insight blocks are available yet."
+            )
           )}
 
           ${renderPanelSection(
@@ -1827,7 +1014,15 @@ function renderWorkspace(payload) {
           ${renderPanelSection(
             "What is missing",
             "Gaps likely to weaken quality assurance if left open.",
-            renderMissingRows(missingItems)
+            renderSimpleRows(
+              missingItems.map((text, index) => ({
+                id: `missing-${index}`,
+                title: "Missing evidence",
+                summary: text,
+              })),
+              "No missing follow-through gaps",
+              "No missing quality follow-through gaps are currently highlighted."
+            )
           )}
 
           ${renderPanelSection(
@@ -1904,8 +1099,6 @@ function renderWorkspace(payload) {
     </section>
   `;
 }
-
-/* -------------------------------- fetch -------------------------------- */
 
 async function fetchAll(homeId) {
   const endpoints = buildInspectionUiEndpoints(homeId);
@@ -2026,27 +1219,16 @@ async function fetchAll(homeId) {
 
 async function fetchDataset(homeId) {
   const live = await fetchAll(homeId);
-
-  if (hasLiveData(live)) {
-    return { ...live, isFallback: false };
-  }
-
-  return {
-    ...buildFallbackData(homeId),
-    isFallback: true,
-  };
+  return { ...live, isFallback: !hasLiveData(live) };
 }
-
-/* ------------------------------- selectors ------------------------------- */
 
 function buildOverdueCompliance(data) {
   return sortSoonest(
     data.complianceItems.filter((item) => {
       const status = lower(item.status);
-
       return (
         !["completed", "closed", "resolved"].includes(status) &&
-        isOverdue(item.due_date)
+        isOverdue(item.due_date || item.date)
       );
     }),
     "due_date"
@@ -2086,7 +1268,7 @@ function buildReg45OpenActions(data) {
 function buildManagerReviewItems(data) {
   return sortSoonest(
     data.managerReviewQueue.filter((item) => {
-      const status = lower(item.workflow_status);
+      const status = lower(item.workflow_status || item.status);
       return !["approved", "completed", "closed"].includes(status);
     }),
     "due_date"
@@ -2094,25 +1276,17 @@ function buildManagerReviewItems(data) {
 }
 
 function buildLatestAudit(data) {
-  return sortNewest(data.qualityAudits, [
-    "audit_date",
-    "created_at",
-    "updated_at",
-  ]).slice(0, 1);
+  return sortNewest(data.qualityAudits, ["audit_date", "date", "created_at", "updated_at"]).slice(0, 1);
 }
 
 function buildLatestInspection(data) {
-  return sortNewest(data.inspectionScores, [
-    "period_end",
-    "created_at",
-    "updated_at",
-  ]).slice(0, 1);
+  return sortNewest(data.inspectionScores, ["period_end", "date", "created_at", "updated_at"]).slice(0, 1);
 }
 
 function buildUrgentInspectionActions(data) {
   return sortSoonest(
     data.inspectionActions.filter((item) => {
-      const priority = lower(item.priority);
+      const priority = lower(item.priority || item.severity);
       const status = lower(item.status);
 
       return (
@@ -2141,7 +1315,7 @@ function buildRecentFindings(data) {
       ...data.reg44Findings,
       ...data.inspectionReasons,
     ],
-    ["created_at", "updated_at"]
+    ["created_at", "updated_at", "date"]
   ).slice(0, 10);
 }
 
@@ -2173,7 +1347,7 @@ function buildPriorityItems(data) {
     });
 
   buildManagerReviewItems(data)
-    .filter((item) => ["high", "critical"].includes(lower(item.priority)))
+    .filter((item) => ["high", "critical"].includes(lower(item.priority || item.severity)))
     .slice(0, 1)
     .forEach((item) => {
       items.push({
@@ -2212,41 +1386,23 @@ function buildPriorityItems(data) {
 }
 
 function buildTimeline(data) {
-  return sortNewest(
-    dedupeBy(
-      [
-        ...data.qualityAudits,
-        ...data.qualityAuditActions,
-        ...data.complianceItems,
-        ...data.reg44Visits,
-        ...data.reg44Actions,
-        ...data.reg45Reviews,
-        ...data.reg45Actions,
-        ...data.inspectionScores,
-        ...data.inspectionSectionScores,
-        ...data.inspectionLines,
-        ...data.inspectionActions,
-        ...data.managerReviewQueue,
-      ],
-      (item) =>
-        `${item.record_type}:${item.id}:${item.title || ""}:${
-          item.created_at || ""
-        }`
-    ),
-    [
-      "due_date",
-      "audit_date",
-      "visit_date",
-      "review_period_end",
-      "review_date",
-      "period_end",
-      "created_at",
-      "updated_at",
-    ]
+  return sortNormalisedRecordsNewestFirst(
+    normaliseRecords([
+      ...data.qualityAudits,
+      ...data.qualityAuditActions,
+      ...data.complianceItems,
+      ...data.reg44Visits,
+      ...data.reg44Actions,
+      ...data.reg45Reviews,
+      ...data.reg45Actions,
+      ...data.inspectionScores,
+      ...data.inspectionSectionScores,
+      ...data.inspectionLines,
+      ...data.inspectionActions,
+      ...data.managerReviewQueue,
+    ])
   ).slice(0, 25);
 }
-
-/* ------------------------------ ui states -------------------------------- */
 
 function renderNoHomeContext() {
   if (!els.viewContent) return;
@@ -2302,7 +1458,34 @@ function renderErrorState(message) {
   });
 }
 
-/* -------------------------------- public -------------------------------- */
+function bindQualityRecordEvents(records = []) {
+  if (!els.viewContent) return;
+
+  const normalised = normaliseRecords(records);
+  const byKey = new Map();
+
+  normalised.forEach((record) => {
+    byKey.set(`${record.type || record.record_type}:${record.id}`, record);
+  });
+
+  els.viewContent.querySelectorAll("[data-open-record='true']").forEach((row) => {
+    const open = () => {
+      const type = row.getAttribute("data-record-type") || "";
+      const id = row.getAttribute("data-record-id") || "";
+      const record = byKey.get(`${type}:${id}`);
+
+      if (record) openRecordDetail(record);
+    };
+
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
+  });
+}
 
 export async function loadQualityDashboard() {
   return loadCurrentView();
@@ -2336,7 +1519,24 @@ export async function loadCurrentView() {
     const [data, visibility] = await Promise.all([
       homeId
         ? fetchDataset(homeId)
-        : Promise.resolve({ ...buildFallbackData(null), isFallback: true }),
+        : Promise.resolve({
+            qualityAudits: [],
+            qualityAuditFindings: [],
+            qualityAuditActions: [],
+            complianceItems: [],
+            reg44Visits: [],
+            reg44Findings: [],
+            reg44Actions: [],
+            reg45Reviews: [],
+            reg45Actions: [],
+            inspectionScores: [],
+            inspectionSectionScores: [],
+            inspectionReasons: [],
+            inspectionLines: [],
+            inspectionActions: [],
+            managerReviewQueue: [],
+            isFallback: true,
+          }),
       fetchVisibility(homeId),
     ]);
 
@@ -2356,9 +1556,7 @@ export async function loadCurrentView() {
     const changing = toArray(visibility?.what_is_changing || visibility?.trends);
     const patterns = toArray(visibility?.patterns);
     const decisionSupport = toArray(visibility?.decision_support);
-    const qualityDriftIndicators = toArray(
-      visibility?.quality_drift_indicators
-    );
+    const qualityDriftIndicators = toArray(visibility?.quality_drift_indicators);
     const qualityInsightBlocks = toArray(visibility?.quality_insight_blocks);
     const missingItems = toArray(visibility?.what_is_missing);
 
@@ -2383,8 +1581,21 @@ export async function loadCurrentView() {
       qualityDriftIndicators,
       qualityInsightBlocks,
       missingItems,
-      isFallback: data.isFallback,
     });
+
+    bindQualityRecordEvents([
+      ...overdueCompliance,
+      ...openQualityActions,
+      ...reg44OpenActions,
+      ...reg45OpenActions,
+      ...managerReviewItems,
+      ...latestAudit,
+      ...latestInspection,
+      ...urgentInspectionActions,
+      ...openLinesOfEnquiry,
+      ...recentTimeline,
+      ...recentFindings,
+    ]);
 
     const latestInspectionRecord = latestInspection[0] || null;
 
@@ -2397,25 +1608,15 @@ export async function loadCurrentView() {
       null;
 
     updateWorkspaceSummaryStrip({
-      today: data.isFallback
-        ? `${overdueCompliance.length} quality issues • preview mode`
-        : latestInspectionRecord
-          ? `${titleCase(latestInspectionRecord.overall_band || "unknown")} readiness`
-          : `${overdueCompliance.length} compliance items overdue`,
+      today: latestInspectionRecord
+        ? `${titleCase(latestInspectionRecord.status || "unknown")} readiness`
+        : `${overdueCompliance.length} compliance items overdue`,
       nextEvent: nextPriorityAction?.due_date
         ? `Due ${formatDate(nextPriorityAction.due_date)}`
         : "No due quality action",
       lastRecord: recentTimeline[0]
-        ? `Latest quality activity ${formatDate(
-            recentTimeline[0].audit_date ||
-              recentTimeline[0].visit_date ||
-              recentTimeline[0].review_period_end ||
-              recentTimeline[0].period_end ||
-              recentTimeline[0].created_at
-          )}`
-        : data.isFallback
-          ? "Preview quality data loaded"
-          : "No recent quality activity",
+        ? `Latest quality activity ${formatDate(recentTimeline[0].date)}`
+        : "No recent quality activity",
       openActions: `${
         openQualityActions.length +
         reg44OpenActions.length +
@@ -2425,8 +1626,8 @@ export async function loadCurrentView() {
       pressure: toArray(visibility?.queues?.urgent).length
         ? `${toArray(visibility?.queues?.urgent).length} escalation alerts`
         : toNumber(visibility?.pressures?.total, 0)
-          ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
-          : "No active alerts",
+        ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
+        : "No active alerts",
     });
 
     await onAssistantScopeChanged();
@@ -2439,3 +1640,5 @@ export async function loadCurrentView() {
     );
   }
 }
+
+export const loadCurrentViewAlias = loadCurrentView;
