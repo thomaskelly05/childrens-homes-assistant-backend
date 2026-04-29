@@ -188,6 +188,14 @@ const STATUS_OPTIONS = [
   { value: "completed", label: "Completed" },
 ];
 
+const SHIFT_OPTIONS = [
+  { value: "day", label: "Day" },
+  { value: "late", label: "Late" },
+  { value: "night", label: "Night" },
+  { value: "sleep_in", label: "Sleep-in" },
+  { value: "waking_night", label: "Waking night" },
+];
+
 const SEVERITY_OPTIONS = [
   { value: "", label: "Not specified" },
   { value: "low", label: "Low" },
@@ -209,30 +217,52 @@ function dailyRecord(item = {}) {
     title: "Daily note",
     intro:
       "Record the day clearly, including the young person’s experience, staff response, risk changes and follow-up.",
-    required: ["note_date", "summary", "young_person_voice", "actions_required"],
+    required: ["note_date", "shift_type", "young_person_voice", "actions_required"],
     html: `
       ${section("Basic information", "Core shift details for this daily note.", [
         { name: "note_date", label: "Date", type: "date", value: today(), required: true },
-        { name: "shift", label: "Shift", desc: "For example: day, late, waking night or sleep-in." },
+        {
+          name: "shift_type",
+          label: "Shift",
+          type: "select",
+          value: "day",
+          required: true,
+          options: SHIFT_OPTIONS,
+          desc: "The shift this daily note relates to.",
+        },
         { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
       ], item)}
 
       ${section("What happened", "Give a clear, factual account of the day.", [
-        { name: "summary", label: "Daily summary", type: "textarea", rows: 5, required: true, full: true },
-        { name: "chronology", label: "Chronology", type: "textarea", rows: 5, full: true },
+        { name: "narrative", label: "Daily summary", type: "textarea", rows: 5, full: true },
+        { name: "activities", label: "Activities", type: "textarea", rows: 4, full: true },
+        { name: "behaviour_update", label: "Behaviour update", type: "textarea", rows: 4, full: true },
       ], item)}
 
       ${section("Young person’s experience", "Capture how the day appeared from the young person’s perspective.", [
+        { name: "mood", label: "Mood", full: true },
         { name: "presentation", label: "Presentation", type: "textarea", full: true },
         { name: "young_person_voice", label: "Young person’s voice", type: "textarea", required: true, full: true },
-        { name: "analysis", label: "What this may mean", type: "textarea", full: true },
+        { name: "positives", label: "Positives", type: "textarea", full: true },
       ], item)}
 
-      ${section("Staff response and follow-up", "Show what adults did, why, and what must happen next.", [
-        { name: "staff_response", label: "Staff response", type: "textarea", full: true },
-        { name: "risk_update", label: "Risk update", type: "textarea", full: true },
+      ${section("Health, education and family", "Record any relevant daily updates.", [
+        { name: "education_update", label: "Education update", type: "textarea", full: true },
+        { name: "health_update", label: "Health update", type: "textarea", full: true },
+        { name: "family_update", label: "Family update", type: "textarea", full: true },
+      ], item)}
+
+      ${section("Follow-up and oversight", "Show what must happen next.", [
         { name: "actions_required", label: "Actions required", type: "textarea", required: true, full: true },
-        { name: "manager_oversight", label: "Manager oversight", type: "textarea", full: true },
+        { name: "significance", label: "Significance", type: "select", options: SEVERITY_OPTIONS },
+        { name: "manager_review_comment", label: "Manager review comment", type: "textarea", full: true },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+        { name: "link_to_chronology", label: "Link to chronology", type: "checkbox", value: true },
+        { name: "link_to_support_plans", label: "Link to support plans", type: "checkbox" },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+        { name: "safeguarding_concern", label: "Safeguarding concern", type: "checkbox" },
+        { name: "link_monthly_reviews", label: "Link monthly reviews", type: "checkbox" },
+        { name: "link_quality_standards", label: "Link quality standards", type: "checkbox", value: true },
       ], item)}
     `,
   };
@@ -695,8 +725,6 @@ export function openComposer(type, item = {}) {
 
   const form = getForm(safeType, item);
   state.composerRequiredFields = form.required || [];
-
-  if (els.composerTitle) els.composerTitle.textContent = form.title;
 
   const titleEl =
     els.composerTitle ||
