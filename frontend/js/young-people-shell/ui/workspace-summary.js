@@ -1,6 +1,7 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
 import { escapeHtml, getDisplayName } from "../core/utils.js";
+import { sortNormalisedRecordsNewestFirst } from "../core/record-normaliser.js";
 
 function getSummaryHost() {
   return (
@@ -20,15 +21,21 @@ function getCurrentPersonName() {
   );
 }
 
+function safeText(value, fallback = "") {
+  return String(value ?? fallback ?? "").trim();
+}
+
 function normaliseSummary(summary = {}) {
   const personName = getCurrentPersonName();
 
   return {
-    today: summary.today || (personName ? `${personName} selected` : "No summary available"),
-    nextEvent: summary.nextEvent || "No upcoming appointments",
-    lastRecord: summary.lastRecord || "No recent records",
-    openActions: summary.openActions || "No open actions",
-    pressure: summary.pressure || "No active alerts",
+    today:
+      safeText(summary.today) ||
+      (personName ? `${personName} selected` : "No summary available"),
+    nextEvent: safeText(summary.nextEvent) || "No upcoming appointments",
+    lastRecord: safeText(summary.lastRecord) || "No recent records",
+    openActions: safeText(summary.openActions) || "No open actions",
+    pressure: safeText(summary.pressure) || "No active alerts",
   };
 }
 
@@ -61,6 +68,30 @@ export function updateWorkspaceSummaryStrip(summary = {}) {
   host.innerHTML = buildSummaryHtml(safeSummary);
   host.classList.remove("hidden");
   host.setAttribute("aria-hidden", "false");
+}
+
+export function updateWorkspaceSummaryFromRecords(records = []) {
+  const sorted = sortNormalisedRecordsNewestFirst(records);
+  const latest = sorted[0] || null;
+
+  const important = sorted.filter((record) => {
+    const severity = String(record.severity || "").toLowerCase();
+    const status = String(record.status || "").toLowerCase();
+
+    return (
+      ["high", "critical"].includes(severity) ||
+      ["overdue", "escalated", "returned", "rejected"].includes(status) ||
+      record.is_overdue
+    );
+  });
+
+  updateWorkspaceSummaryStrip({
+    today: `${sorted.length} record${sorted.length === 1 ? "" : "s"} loaded`,
+    nextEvent: important[0]?.title || "No urgent record",
+    lastRecord: latest?.title || "No recent record",
+    openActions: `${important.length} important item${important.length === 1 ? "" : "s"}`,
+    pressure: important.length ? "Review recommended" : "No active alerts",
+  });
 }
 
 export function resetWorkspaceSummaryStrip() {
