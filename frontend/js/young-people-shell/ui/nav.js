@@ -1344,6 +1344,14 @@ export async function loadSection(section, options = {}) {
 
   let safeSection = requestedSection || getDefaultSectionForScope(scope);
 
+const requiredScope = getRequiredScopeForSection(safeSection);
+
+if (requiredScope && requiredScope !== scope && roleCanAccessScope(requiredScope)) {
+  scope = requiredScope;
+  setCurrentScope(requiredScope, { resetSection: false });
+  updateAppShellDataset();
+}
+
   if (!isSectionAllowed(safeSection, scope)) {
     const betterScope = findBestScopeForSection(safeSection);
 
