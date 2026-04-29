@@ -43,7 +43,8 @@
   --radius-xl: 32px;
 
   --topbar-height: 76px;
-  --content-width: 1720px;
+  --content-width: 1760px;
+  --sidebar-width: 270px;
 
   --font-main: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
@@ -445,6 +446,136 @@ textarea:focus {
 }
 
 /* ============================================================
+   OS Layout — Sidebar + Main Content
+============================================================ */
+
+.os-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  gap: 22px;
+  width: 100%;
+  min-height: calc(100vh - var(--topbar-height) - 56px);
+}
+
+.os-sidebar {
+  position: sticky;
+  top: calc(var(--topbar-height) + 20px);
+  height: calc(100vh - var(--topbar-height) - 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-sm);
+  overflow: auto;
+}
+
+.os-sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.os-logo {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 950;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
+}
+
+.os-title {
+  display: grid;
+  gap: 1px;
+}
+
+.os-title strong,
+.os-title {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.os-title small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.os-nav,
+.os-nav-group {
+  display: grid;
+  gap: 7px;
+}
+
+.os-nav-group-title {
+  margin: 10px 8px 3px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.os-nav-item {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.os-nav-item:hover {
+  background: var(--brand-pale);
+  color: var(--brand-dark);
+  box-shadow: none;
+  transform: none;
+}
+
+.os-nav-item.active,
+.os-nav-item[aria-current="page"] {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.os-nav-icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--brand-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.os-content {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+
+/* ============================================================
    Shared Surfaces
 ============================================================ */
 
@@ -481,7 +612,9 @@ textarea:focus {
 .cei-mini-stat,
 .simple-entry-head,
 .simple-home-panel,
-.simple-children-panel {
+.simple-children-panel,
+.record-register-shell,
+.section-header-card {
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: var(--radius-lg);
@@ -1126,6 +1259,78 @@ textarea:focus {
 }
 
 /* ============================================================
+   Section Header / Register Shell
+============================================================ */
+
+.section-header,
+.section-header-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 20px 22px;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 95% 10%, rgba(37, 99, 235, 0.08), transparent 34%),
+    #fff;
+}
+
+.section-header h2,
+.section-header-card h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.45rem;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.section-header p,
+.section-header-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.record-register-shell {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.record-register-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.record-register-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.record-register-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ============================================================
    Workspace Content
 ============================================================ */
 
@@ -1220,6 +1425,7 @@ textarea:focus {
   font-size: 0.86rem;
 }
 
+.record-register,
 .record-list,
 .timeline-list,
 .entity-list,
@@ -1248,6 +1454,12 @@ textarea:focus {
   border-radius: 16px;
   background: #fff;
   box-shadow: none;
+}
+
+.record-row {
+  grid-template-columns: minmax(120px, 0.16fr) minmax(0, 1fr) minmax(120px, 0.18fr) auto;
+  align-items: center;
+  gap: 14px;
 }
 
 .record-row,
@@ -1285,8 +1497,28 @@ textarea:focus {
   background: var(--brand);
 }
 
+.record-date {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.record-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.record-status,
+.record-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
 .record-row-title,
 .record-primary,
+.record-title,
 .entity-title,
 .timeline-title,
 .record-card-title,
@@ -1298,12 +1530,13 @@ textarea:focus {
 
 .record-row-summary,
 .record-row-meta,
+.record-summary,
+.record-meta,
 .insight-story p,
 .priority-item p,
 .record-secondary,
 .entity-meta,
 .timeline-meta,
-.record-summary,
 .insight-body {
   margin-top: 4px;
   color: var(--muted);
@@ -1506,6 +1739,19 @@ textarea:focus {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.composer-autosave-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .composer-layout {
@@ -1808,16 +2054,31 @@ textarea:focus {
 }
 
 /* ============================================================
-   Record Drawer
+   Record Drawer / Detail Drawer
 ============================================================ */
 
-.record-drawer {
+.record-drawer,
+.record-detail-drawer {
   position: fixed;
   z-index: 9300;
   inset: 0 0 0 auto;
   width: min(760px, 100vw);
   display: flex;
   justify-content: flex-end;
+}
+
+.record-detail-drawer {
+  top: var(--topbar-height);
+  height: calc(100vh - var(--topbar-height));
+  background: #fff;
+  border-left: 1px solid var(--border);
+  box-shadow: -20px 0 60px rgba(15, 23, 42, 0.12);
+  transform: translateX(100%);
+  transition: 0.25s ease;
+}
+
+.record-detail-drawer.open {
+  transform: translateX(0);
 }
 
 .record-drawer-panel {
@@ -2096,9 +2357,19 @@ textarea:focus {
 }
 
 @media (max-width: 1100px) {
+  .os-layout,
   .safe-start-launch-grid,
   .composer-layout {
     grid-template-columns: 1fr;
+  }
+
+  .os-sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .os-nav {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
   .simple-home-panel {
@@ -2121,6 +2392,16 @@ textarea:focus {
   .composer-side {
     border-left: 0;
     border-top: 1px solid var(--border);
+  }
+
+  .record-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .record-status,
+  .record-actions {
+    justify-content: flex-start;
   }
 }
 
@@ -2164,7 +2445,10 @@ textarea:focus {
   .overview-panel-head,
   .ofsted-hero-card,
   .quality-hero-card,
-  .cei-header {
+  .cei-header,
+  .section-header,
+  .section-header-card,
+  .record-register-toolbar {
     display: grid;
   }
 
@@ -2208,7 +2492,9 @@ textarea:focus {
   .workspace-content,
   .simple-entry-head,
   .simple-home-panel,
-  .simple-children-panel {
+  .simple-children-panel,
+  .os-sidebar,
+  .record-register-shell {
     border-radius: 22px;
   }
 
@@ -2286,6 +2572,12 @@ textarea:focus {
 
   .record-drawer-panel {
     border-radius: 0;
+  }
+
+  .record-detail-drawer {
+    top: 0;
+    height: 100vh;
+    width: 100vw;
   }
 
   .detail-row,
