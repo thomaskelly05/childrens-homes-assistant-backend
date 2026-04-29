@@ -2579,3 +2579,200 @@ body,
 #selectorPanel input::placeholder {
   color: var(--muted-2) !important;
 }
+
+/* ============================================================
+   Final polish — modern young people launcher
+============================================================ */
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-main) !important;
+}
+
+.shell-main {
+  padding: 32px 24px 0 !important;
+}
+
+#selectorPanel .selector-screen-inner--simple {
+  width: min(1280px, calc(100vw - 48px)) !important;
+}
+
+#selectorPanel .simple-entry-head {
+  min-height: 210px;
+  padding: 34px !important;
+  align-items: flex-start;
+}
+
+#selectorPanel .simple-entry-head h1 {
+  max-width: 720px;
+  font-size: clamp(2.8rem, 4vw, 4.8rem) !important;
+  line-height: 0.92 !important;
+  letter-spacing: -0.075em !important;
+}
+
+#selectorPanel .simple-entry-head p {
+  max-width: 720px;
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.safe-start-launch-grid {
+  grid-template-columns: 300px minmax(0, 1fr) !important;
+  gap: 18px !important;
+}
+
+#selectorPanel .simple-home-panel,
+#selectorPanel .simple-children-panel {
+  border-radius: 24px !important;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08) !important;
+}
+
+#selectorPanel .simple-home-panel {
+  padding: 20px !important;
+}
+
+#selectorPanel .simple-children-panel {
+  padding: 22px !important;
+}
+
+#selectorPanel .simple-section-head h2 {
+  font-size: 1.15rem !important;
+  letter-spacing: -0.03em;
+}
+
+#selectorPanel .simple-section-head p,
+#selectedChildSummary,
+#selectedHomeSummary {
+  font-size: 0.84rem !important;
+  color: var(--muted) !important;
+}
+
+#homeChipList {
+  margin-top: 12px;
+}
+
+#homeChipList button,
+#homeChipList .home-chip,
+#homeChipList .safe-home-chip {
+  min-height: 72px !important;
+  padding: 14px !important;
+  border-radius: 16px !important;
+  text-align: left !important;
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
+  color: var(--ink) !important;
+  font-weight: 800 !important;
+}
+
+#homeChipList button.active,
+#homeChipList .active {
+  background: var(--brand-pale) !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+}
+
+#selectorPanel .selector-tools--simple {
+  gap: 8px !important;
+}
+
+#selectorPanel input,
+#selectorPanel select {
+  min-height: 42px !important;
+  border-radius: 14px !important;
+  font-size: 0.86rem !important;
+}
+
+#selectorRefreshBtn {
+  min-height: 42px !important;
+  border-radius: 14px !important;
+  background: var(--brand) !important;
+  color: #fff !important;
+  border: 0 !important;
+  font-weight: 850 !important;
+}
+
+#selectorList {
+  margin-top: 18px !important;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important;
+  gap: 14px !important;
+}
+
+#selectorList .selector-card {
+  min-height: 235px !important;
+  grid-template-columns: 1fr !important;
+  align-content: start !important;
+  padding: 18px !important;
+  border-radius: 22px !important;
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+}
+
+#selectorList .selector-card-photo-fallback,
+#selectorList .profile-photo-fallback {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 15px !important;
+  margin-bottom: 8px;
+}
+
+#selectorList .selector-card-body h3 {
+  font-size: 1rem !important;
+  margin-bottom: 6px !important;
+}
+
+#selectorList .selector-card-body p {
+  font-size: 0.8rem !important;
+  line-height: 1.45 !important;
+}
+
+#selectorList .selector-card-meta {
+  margin-top: 12px !important;
+  gap: 6px !important;
+}
+
+#selectorList .selector-pill,
+#selectorList .meta-chip,
+#selectorList .badge,
+#selectorList .row-pill {
+  font-size: 0.7rem !important;
+  padding: 5px 8px !important;
+}
+
+#selectorList .selector-card-actions {
+  margin-top: 14px !important;
+}
+
+#selectorList .selector-card-actions button,
+#selectorList .selector-card-actions .secondary-btn,
+#selectorList .selector-card-actions .primary-btn {
+  min-height: 38px !important;
+  border-radius: 12px !important;
+  background: var(--brand-pale) !important;
+  color: var(--brand-dark) !important;
+  border: 1px solid rgba(37, 99, 235, 0.2) !important;
+  font-weight: 850 !important;
+}
+
+#safeStartAskAssistantBtn {
+  background: #fff !important;
+  color: var(--brand-dark) !important;
+  border: 1px solid rgba(37, 99, 235, 0.18) !important;
+  box-shadow: var(--shadow-xs) !important;
+}
+
+.assistant-fab {
+  opacity: 1 !important;
+}
+
+@media (max-width: 1100px) {
+  .safe-start-launch-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  #selectorList {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  }
+}
