@@ -121,7 +121,13 @@ const SECTION_ALIASES = Object.freeze({
 const MOBILE_BOTTOM_BY_SCOPE = {
   child: ["workspace", "timeline", "actions", "risk", "reviews"],
   home: ["home-dashboard", "operations", "actions", "team", "rota"],
-  quality: ["provider-overview", "quality", "actions", "compliance", "quality-audits"],
+  quality: [
+    "provider-overview",
+    "quality",
+    "actions",
+    "compliance",
+    "quality-audits",
+  ],
   ofsted: [
     "ofsted-dashboard",
     "sccif-evidence",
@@ -340,7 +346,9 @@ function getRequiredScopeForSection(sectionId) {
 }
 
 async function runPlaceholderLoader(options = {}) {
-  const { renderPlaceholderFeaturePage } = await import("../features/placeholder.js");
+  const { renderPlaceholderFeaturePage } = await import(
+    "../features/placeholder.js"
+  );
 
   const section = normaliseSectionId(options.section || getCurrentSection());
   const config = getSectionConfig(section);
@@ -494,7 +502,9 @@ function findBestScopeForSection(sectionId) {
     return required;
   }
 
-  if (required === "child" && CORE_CHILD_SECTIONS.has(safeSection)) return "child";
+  if (required === "child" && CORE_CHILD_SECTIONS.has(safeSection)) {
+    return "child";
+  }
 
   return null;
 }
@@ -733,14 +743,7 @@ function renderNavigation() {
   const current = getCurrentSection();
   const scope = getCurrentScope();
 
-  const coreChildSections = new Set([
-    "timeline",
-    "daily-life",
-    "daily-notes",
-    "incidents",
-  ]);
-
-  if (!(scope === "child" && coreChildSections.has(current))) {
+  if (!(scope === "child" && CORE_CHILD_SECTIONS.has(current))) {
     ensureValidCurrentSection();
   }
 
@@ -1792,7 +1795,6 @@ export function bindNavEvents() {
 }
 
 export function rerenderNavigationForScope() {
-  ensureValidCurrentSection();
   paintNavigationChrome();
   renderAssistantControllerPanels();
 }
@@ -1809,8 +1811,7 @@ export async function initialiseShellNavigation() {
     state.activeSection = normaliseSectionId(state.currentSection);
   }
 
-  state.currentView = normaliseSectionId(state.currentSection);
-  ensureValidCurrentSection();
+  state.currentView = normaliseSectionId(state.currentSection || "workspace");
 
   renderNavigation();
   bindNavButtons();
