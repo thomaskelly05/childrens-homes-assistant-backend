@@ -2198,3 +2198,105 @@ textarea:focus {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   Wide production shell + stronger case cards
+============================================================ */
+
+:root {
+  --content-width: 1680px;
+}
+
+.shell-main {
+  width: min(var(--content-width), calc(100vw - 48px)) !important;
+  max-width: var(--content-width) !important;
+  padding: 28px 24px 0 !important;
+}
+
+#selectorPanel .selector-screen-inner--simple,
+#selectorPanel .selector-screen-inner {
+  width: 100% !important;
+  max-width: 1480px !important;
+}
+
+.safe-start-launch-grid {
+  grid-template-columns: 320px minmax(0, 1fr) !important;
+  gap: 22px !important;
+}
+
+#selectorPanel .simple-entry-head {
+  width: 100% !important;
+}
+
+#selectorPanel .simple-children-panel {
+  min-height: 560px !important;
+}
+
+#selectorList {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important;
+  align-items: stretch !important;
+}
+
+#selectorList .selector-card {
+  min-height: 235px !important;
+  padding: 18px !important;
+  display: grid !important;
+  grid-template-rows: auto 1fr auto !important;
+}
+
+#selectorList .selector-card-body {
+  display: grid !important;
+  align-content: start !important;
+  gap: 8px !important;
+}
+
+#selectorList .selector-card-body h3 {
+  font-size: 1.05rem !important;
+}
+
+#selectorList .selector-card-body p {
+  max-width: 100% !important;
+}
+
+.workspace-content,
+.workspace-header-band,
+.quick-actions-panel {
+  width: 100% !important;
+}
+
+.record-list,
+.timeline-list,
+.entity-list {
+  padding: 12px !important;
+}
+
+.record-row,
+.record-card,
+.timeline-item,
+.record-list > article,
+.timeline-list > article {
+  min-height: 74px !important;
+  padding: 14px 16px 14px 20px !important;
+  border-radius: 16px !important;
+  display: grid !important;
+  gap: 4px !important;
+}
+
+.record-row-summary,
+.record-row-meta,
+.record-secondary,
+.timeline-meta,
+.record-summary {
+  font-size: 0.82rem !important;
+  line-height: 1.45 !important;
+}
+
+.record-drawer {
+  width: min(720px, 100vw) !important;
+}
+
+@media (min-width: 1500px) {
+  #selectorList {
+    grid-template-columns: repeat(5, minmax(210px, 1fr)) !important;
+  }
+}
