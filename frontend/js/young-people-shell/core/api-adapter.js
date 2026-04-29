@@ -9,34 +9,87 @@ import {
 import { normaliseRecord, normaliseRecords } from "./record-normaliser.js";
 
 const FALLBACK_RECORD_ROUTES = Object.freeze({
-  support_plan: "/young-people/:youngPersonId/plans",
-  risk: "/young-people/:youngPersonId/plans",
-
-  appointment: "/young-people/:youngPersonId/appointments",
-  chronology_event: "/young-people/:youngPersonId/timeline",
-  timeline: "/young-people/:youngPersonId/timeline",
-  daily_note: "/young-people/:youngPersonId/daily-notes",
-  incident: "/young-people/:youngPersonId/incidents",
-
-  safeguarding_record: "/young-people/:youngPersonId/safeguarding",
-  missing_episode: "/young-people/:youngPersonId/missing",
-  keywork: "/young-people/:youngPersonId/keywork",
-
-  health_record: "/young-people/:youngPersonId/health",
-  medication_record: "/young-people/:youngPersonId/medication",
-
-  education_record: "/young-people/:youngPersonId/education",
-  family_contact: "/young-people/:youngPersonId/family",
-
-  document: "/young-people/:youngPersonId/documents",
-  statutory_document: "/young-people/:youngPersonId/documents",
-  handover_record: "/young-people/:youngPersonId/handover",
-  task: "/young-people/:youngPersonId/tasks",
+  support_plan: {
+    child: "/young-people/:youngPersonId/plans",
+    home: "/homes/:homeId/support-plans",
+  },
+  risk: {
+    child: "/young-people/:youngPersonId/risk",
+    home: "/homes/:homeId/risk",
+  },
+  appointment: {
+    child: "/young-people/:youngPersonId/appointments",
+    home: "/homes/:homeId/appointments",
+  },
+  chronology_event: {
+    child: "/young-people/:youngPersonId/timeline",
+    home: "/homes/:homeId/timeline",
+  },
+  timeline: {
+    child: "/young-people/:youngPersonId/timeline",
+    home: "/homes/:homeId/timeline",
+  },
+  daily_note: {
+    child: "/young-people/:youngPersonId/daily-notes",
+    home: "/homes/:homeId/daily-notes",
+  },
+  incident: {
+    child: "/young-people/:youngPersonId/incidents",
+    home: "/homes/:homeId/incidents",
+  },
+  safeguarding_record: {
+    child: "/young-people/:youngPersonId/safeguarding",
+    home: "/homes/:homeId/safeguarding",
+  },
+  missing_episode: {
+    child: "/young-people/:youngPersonId/missing-episodes",
+    home: "/homes/:homeId/missing-episodes",
+  },
+  keywork: {
+    child: "/young-people/:youngPersonId/keywork",
+    home: "/homes/:homeId/keywork",
+  },
+  health_record: {
+    child: "/young-people/:youngPersonId/health",
+    home: "/homes/:homeId/health",
+  },
+  medication_record: {
+    child: "/young-people/:youngPersonId/medication-records",
+    home: "/homes/:homeId/medication-records",
+  },
+  education_record: {
+    child: "/young-people/:youngPersonId/education",
+    home: "/homes/:homeId/education",
+  },
+  family_contact: {
+    child: "/young-people/:youngPersonId/family",
+    home: "/homes/:homeId/family",
+  },
+  document: {
+    child: "/young-people/:youngPersonId/documents",
+    home: "/homes/:homeId/documents",
+  },
+  statutory_document: {
+    child: "/young-people/:youngPersonId/statutory-documents",
+    home: "/homes/:homeId/statutory-documents",
+  },
+  handover_record: {
+    child: "/young-people/:youngPersonId/handover",
+    home: "/homes/:homeId/handover",
+  },
+  task: {
+    child: "/young-people/:youngPersonId/tasks",
+    home: "/homes/:homeId/tasks",
+  },
+  report: {
+    child: "/young-people/:youngPersonId/reports",
+    home: "/homes/:homeId/reports",
+  },
 });
 
 const FALLBACK_RECORD_LABELS = Object.freeze({
   support_plan: "Support plan",
-  risk: "Risk",
+  risk: "Risk assessment",
   appointment: "Appointment",
   chronology_event: "Timeline event",
   timeline: "Timeline event",
@@ -44,7 +97,7 @@ const FALLBACK_RECORD_LABELS = Object.freeze({
   incident: "Incident",
   safeguarding_record: "Safeguarding record",
   missing_episode: "Missing episode",
-  keywork: "Keywork",
+  keywork: "Key work session",
   health_record: "Health record",
   medication_record: "Medication record",
   education_record: "Education record",
@@ -53,6 +106,7 @@ const FALLBACK_RECORD_LABELS = Object.freeze({
   statutory_document: "Statutory document",
   handover_record: "Handover record",
   task: "Task",
+  report: "Report",
 });
 
 function safeObject(value) {
@@ -66,10 +120,9 @@ function hasValue(value) {
 }
 
 function buildQuery(params = {}) {
-  const safe = safeObject(params);
   const query = new URLSearchParams();
 
-  Object.entries(safe).forEach(([key, value]) => {
+  Object.entries(safeObject(params)).forEach(([key, value]) => {
     if (!hasValue(value)) return;
 
     if (Array.isArray(value)) {
@@ -91,16 +144,51 @@ function normaliseId(value) {
   return String(value).trim();
 }
 
-function getFallbackRoute(type) {
-  return FALLBACK_RECORD_ROUTES[type] || "";
+function getFallbackRouteConfig(type) {
+  return FALLBACK_RECORD_ROUTES[type] || null;
 }
 
 function getFallbackLabel(type) {
   return FALLBACK_RECORD_LABELS[type] || type || "Record";
 }
 
-function needsYoungPersonFallback(type) {
-  return Boolean(getFallbackRoute(type)?.includes(":youngPersonId"));
+function getIds(ids = {}) {
+  const youngPersonId = normaliseId(
+    ids.youngPersonId ?? ids.childId ?? ids.selectedYoungPersonId
+  );
+
+  const homeId = normaliseId(
+    ids.homeId ?? ids.currentHomeId ?? ids.selectedHomeId
+  );
+
+  return { youngPersonId, homeId };
+}
+
+function resolveScope(ids = {}) {
+  const { youngPersonId, homeId } = getIds(ids);
+
+  if (youngPersonId) return "child";
+  if (homeId) return "home";
+
+  return "child";
+}
+
+function getFallbackRoute(type, ids = {}) {
+  const config = getFallbackRouteConfig(type);
+  if (!config) return "";
+
+  if (typeof config === "string") return config;
+
+  const scope = resolveScope(ids);
+  return config[scope] || config.child || "";
+}
+
+function routeRequiresYoungPerson(route = "") {
+  return route.includes(":youngPersonId") || route.includes(":childId");
+}
+
+function routeRequiresHome(route = "") {
+  return route.includes(":homeId");
 }
 
 function resolveRecordType(recordType) {
@@ -111,48 +199,17 @@ function resolveRecordType(recordType) {
   }
 
   const contract = getRecordContract(type) || null;
-  const fallbackRoute = getFallbackRoute(type);
+  const fallbackConfig = getFallbackRouteConfig(type);
 
-  if (!contract && !fallbackRoute) {
+  if (!contract && !fallbackConfig) {
     throw new Error(`No record contract found for: ${type}`);
   }
 
-  return { type, contract, fallbackRoute };
+  return { type, contract, fallbackConfig };
 }
 
-function assertYoungPersonId(contract, ids = {}, type = "") {
-  const youngPersonId = normaliseId(
-    ids.youngPersonId ?? ids.childId ?? ids.selectedYoungPersonId
-  );
-
-  const requiredByContract = Boolean(contract?.requiresYoungPerson);
-  const requiredByFallback = needsYoungPersonFallback(type);
-
-  if ((requiredByContract || requiredByFallback) && !youngPersonId) {
-    throw new Error(
-      `${contract?.label || getFallbackLabel(type)} requires youngPersonId`
-    );
-  }
-
-  return youngPersonId;
-}
-
-function assertHomeId(contract, ids = {}) {
-  const homeId = normaliseId(ids.homeId ?? ids.currentHomeId);
-
-  if (contract?.requiresHome && !homeId) {
-    throw new Error(`${contract.label || "Record"} requires homeId`);
-  }
-
-  return homeId;
-}
-
-function hydrateFallbackRoute(route = "", ids = {}) {
-  const youngPersonId = normaliseId(
-    ids.youngPersonId ?? ids.childId ?? ids.selectedYoungPersonId
-  );
-
-  const homeId = normaliseId(ids.homeId ?? ids.currentHomeId);
+function hydrateRoute(route = "", ids = {}) {
+  const { youngPersonId, homeId } = getIds(ids);
 
   return route
     .replaceAll(":youngPersonId", encodeURIComponent(youngPersonId))
@@ -171,20 +228,25 @@ function unwrapListResponse(response, recordType) {
     safe.records,
     safe.results,
     safe.data,
-    safe.young_people,
-    safe.youngPeople,
     safe.timeline,
     safe.daily_notes,
     safe.appointments,
     safe.incidents,
+    safe.safeguarding,
+    safe.safeguarding_records,
     safe.health_records,
     safe.education_records,
     safe.family_contact_records,
+    safe.family_contacts,
     safe.support_plans,
     safe.risks,
     safe.risk_assessments,
     safe.tasks,
     safe.documents,
+    safe.statutory_documents,
+    safe.medication_records,
+    safe.handover_records,
+    safe.reports,
     safe[recordType],
     safe[contract?.section],
     safe[contract?.table],
@@ -215,14 +277,12 @@ function unwrapSingleResponse(response) {
 }
 
 function buildRecordUrl(recordType, ids = {}, query = {}) {
-  const { type, contract, fallbackRoute } = resolveRecordType(recordType);
-
-  const youngPersonId = assertYoungPersonId(contract, ids, type);
-  const homeId = assertHomeId(contract, ids);
+  const { type, contract } = resolveRecordType(recordType);
+  const { youngPersonId, homeId } = getIds(ids);
 
   let baseUrl = "";
 
-  if (contract) {
+  if (contract && youngPersonId) {
     baseUrl = getRecordRoute(type, {
       youngPersonId,
       childId: youngPersonId,
@@ -230,17 +290,26 @@ function buildRecordUrl(recordType, ids = {}, query = {}) {
     });
   }
 
-  if (!baseUrl && fallbackRoute) {
-    baseUrl = hydrateFallbackRoute(fallbackRoute, {
-      ...ids,
-      youngPersonId,
-      childId: youngPersonId,
-      homeId,
-    });
+  if (!baseUrl) {
+    const fallbackRoute = getFallbackRoute(type, ids);
+
+    if (fallbackRoute) {
+      if (routeRequiresYoungPerson(fallbackRoute) && !youngPersonId) {
+        throw new Error(`${contract?.label || getFallbackLabel(type)} requires youngPersonId`);
+      }
+
+      if (routeRequiresHome(fallbackRoute) && !homeId) {
+        throw new Error(`${contract?.label || getFallbackLabel(type)} requires homeId`);
+      }
+
+      baseUrl = hydrateRoute(fallbackRoute, ids);
+    }
   }
 
   if (!baseUrl) {
-    throw new Error(`No route configured for ${getRecordLabel(type) || getFallbackLabel(type)}`);
+    throw new Error(
+      `No route configured for ${getRecordLabel(type) || getFallbackLabel(type)}`
+    );
   }
 
   return `${baseUrl}${buildQuery(query)}`;
@@ -279,9 +348,7 @@ export async function getRecord(recordType, ids = {}, recordId = "") {
   const type = normaliseRecordType(recordType);
   const url = buildRecordItemUrl(type, ids, recordId);
   const response = await apiSend(url, "GET", null, { skipCache: true });
-  const row = unwrapSingleResponse(response);
-
-  return normaliseRecord(row, type);
+  return normaliseRecord(unwrapSingleResponse(response), type);
 }
 
 export async function getRawRecord(recordType, ids = {}, recordId = "") {
@@ -302,12 +369,7 @@ export async function createRecord(recordType, ids = {}, payload = {}) {
   return normaliseRecord(unwrapSingleResponse(response), type);
 }
 
-export async function updateRecord(
-  recordType,
-  ids = {},
-  recordId = "",
-  payload = {}
-) {
+export async function updateRecord(recordType, ids = {}, recordId = "", payload = {}) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordItemUrl(type, ids, recordId);
   const listUrl = buildRecordUrl(type, ids);
@@ -318,12 +380,7 @@ export async function updateRecord(
   return normaliseRecord(unwrapSingleResponse(response), type);
 }
 
-export async function replaceRecord(
-  recordType,
-  ids = {},
-  recordId = "",
-  payload = {}
-) {
+export async function replaceRecord(recordType, ids = {}, recordId = "", payload = {}) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordItemUrl(type, ids, recordId);
   const listUrl = buildRecordUrl(type, ids);
@@ -354,7 +411,7 @@ export async function listSectionRecords(section, ids = {}, query = {}) {
 
   const fallbackType = normaliseRecordType(section);
 
-  if (fallbackType && getFallbackRoute(fallbackType)) {
+  if (fallbackType && getFallbackRouteConfig(fallbackType)) {
     return listRecords(fallbackType, ids, query);
   }
 
@@ -370,7 +427,7 @@ export async function listRawSectionRecords(section, ids = {}, query = {}) {
 
   const fallbackType = normaliseRecordType(section);
 
-  if (fallbackType && getFallbackRoute(fallbackType)) {
+  if (fallbackType && getFallbackRouteConfig(fallbackType)) {
     return listRawRecords(fallbackType, ids, query);
   }
 
@@ -386,7 +443,7 @@ export async function createSectionRecord(section, ids = {}, payload = {}) {
 
   const fallbackType = normaliseRecordType(section);
 
-  if (fallbackType && getFallbackRoute(fallbackType)) {
+  if (fallbackType && getFallbackRouteConfig(fallbackType)) {
     return createRecord(fallbackType, ids, payload);
   }
 
@@ -415,9 +472,7 @@ export async function getAssistantContext(ids = {}, query = {}) {
 
   if (youngPersonId) {
     return apiSend(
-      `/young-people/${encodeURIComponent(
-        youngPersonId
-      )}/assistant/context${params}`,
+      `/young-people/${encodeURIComponent(youngPersonId)}/assistant/context${params}`,
       "GET",
       null,
       { skipCache: true }
