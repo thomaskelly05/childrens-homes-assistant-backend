@@ -1,4 +1,3 @@
-import { apiSend } from "./api.js";
 import { RECORD_CONTRACT_LIST, getRecordRoute } from "./record-contracts.js";
 
 function hasValue(value) {
@@ -10,31 +9,52 @@ function safeId(value) {
 }
 
 async function checkUrl(url) {
-  try {
-    const startedAt = performance.now();
+  const startedAt = performance.now();
 
-    const response = await apiSend(url, {
+  try {
+    const response = await fetch(url, {
       method: "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+      },
     });
 
     const finishedAt = performance.now();
 
+    let body = null;
+    const contentType = response.headers.get("content-type") || "";
+
+    try {
+      if (contentType.includes("application/json")) {
+        body = await response.json();
+      } else {
+        body = await response.text();
+      }
+    } catch {
+      body = null;
+    }
+
     return {
-      ok: true,
-      status: 200,
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
       url,
       ms: Math.round(finishedAt - startedAt),
-      response,
-      error: null,
+      response: body,
+      error: response.ok
+        ? null
+        : body?.detail || body?.message || response.statusText || "Request failed",
     };
   } catch (error) {
     return {
       ok: false,
-      status: error?.status || error?.response?.status || null,
+      status: null,
+      statusText: "",
       url,
       ms: null,
       response: null,
-      error: error?.message || "Route check failed",
+      error: error?.message || "Network error",
     };
   }
 }
@@ -83,7 +103,6 @@ export async function checkRecordRoutes(ids = {}) {
       label: contract.label,
       table: contract.table,
       section: contract.section,
-      url,
       ...result,
     });
   }
@@ -166,6 +185,7 @@ export function logRouteHealthReport(report) {
   if (!report) return;
 
   console.group("[IndiCare] Route health check");
+
   console.table(
     report.all.map((item) => ({
       key: item.key || item.type,
@@ -173,11 +193,13 @@ export function logRouteHealthReport(report) {
       ok: item.ok,
       skipped: Boolean(item.skipped),
       status: item.status,
+      statusText: item.statusText || "",
       ms: item.ms,
       url: item.url,
       error: item.error || item.reason || "",
     }))
   );
+
   console.log("Summary:", report.summary);
   console.groupEnd();
 }
