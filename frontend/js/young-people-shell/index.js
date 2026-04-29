@@ -886,9 +886,9 @@ function bindOpenCareHubFallback() {
       button.setAttribute("aria-busy", "true");
 
       try {
-        await openYoungPersonSafely(selectedId, {
-          initialSection: "workspace",
-        });
+      await openYoungPersonSafely(selectedId, {
+      initialSection: "timeline",
+      });
       } finally {
         button.disabled = false;
         button.removeAttribute("aria-busy");
