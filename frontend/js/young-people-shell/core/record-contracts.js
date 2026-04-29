@@ -313,13 +313,15 @@ export function getRecordContract(recordType) {
 }
 
 export function getRecordContractBySection(section) {
-  const type = WORKSPACE_TO_RECORD_TYPE[section] || null;
+  const key = String(section || "").trim();
+  const type = WORKSPACE_TO_RECORD_TYPE[key] || null;
   return type ? getRecordContract(type) : null;
 }
 
 export function getRecordSection(recordType) {
   const contract = getRecordContract(recordType);
-  return contract?.section || RECORD_TYPE_TO_WORKSPACE[recordType] || "workspace";
+  const type = normaliseRecordType(recordType);
+  return contract?.section || RECORD_TYPE_TO_WORKSPACE[type] || "workspace";
 }
 
 export function getRecordLabel(recordType, fallback = "Record") {
@@ -337,8 +339,14 @@ export function getRecordRoute(recordType, params = {}) {
   if (!contract?.route) return "";
 
   return contract.route
-    .replace("{youngPersonId}", encodeURIComponent(params.youngPersonId ?? params.childId ?? ""))
-    .replace("{childId}", encodeURIComponent(params.childId ?? params.youngPersonId ?? ""))
+    .replace(
+      "{youngPersonId}",
+      encodeURIComponent(params.youngPersonId ?? params.childId ?? "")
+    )
+    .replace(
+      "{childId}",
+      encodeURIComponent(params.childId ?? params.youngPersonId ?? "")
+    )
     .replace("{homeId}", encodeURIComponent(params.homeId ?? ""));
 }
 
