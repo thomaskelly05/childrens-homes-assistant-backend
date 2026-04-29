@@ -8,7 +8,7 @@ import {
   sortNormalisedRecordsNewestFirst,
 } from "../core/record-normaliser.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
-import { openRecordDetail } from "./records.js";
+import { openRecordDetail } from "../ui/records.js";
 
 function getCurrentScope() {
   return state.currentScope || "child";
