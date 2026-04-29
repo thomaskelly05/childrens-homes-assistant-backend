@@ -1,9 +1,9 @@
 import { els } from "../dom.js";
 import { state } from "../state.js";
+import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { listRecords } from "../core/api-adapter.js";
 import {
-  normaliseRecord,
   normaliseRecords,
   sortNormalisedRecordsNewestFirst,
 } from "../core/record-normaliser.js";
@@ -58,11 +58,7 @@ function getYoungPersonId() {
 }
 
 function getScopeEntityId() {
-  if (getCurrentScope() === "child") {
-    return getYoungPersonId();
-  }
-
-  return getHomeId();
+  return getCurrentScope() === "child" ? getYoungPersonId() : getHomeId();
 }
 
 function getScopeTitle() {
@@ -498,6 +494,23 @@ async function safeList(recordType, ids = {}) {
   }
 }
 
+async function safeGetRows(url = "") {
+  try {
+    const response = await apiGet(url, { skipCache: true });
+
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response.items)) return response.items;
+    if (Array.isArray(response.records)) return response.records;
+    if (Array.isArray(response.results)) return response.results;
+    if (Array.isArray(response.data)) return response.data;
+
+    return [];
+  } catch (error) {
+    console.warn(`[timeline] failed to load ${url}`, error);
+    return [];
+  }
+}
+
 async function loadChildTimeline(youngPersonId) {
   const ids = { youngPersonId };
 
@@ -566,20 +579,42 @@ async function loadChildTimeline(youngPersonId) {
 }
 
 async function loadHomeTimeline(homeId) {
-  const homeFallbackTypes = [
-    "incident",
-    "daily_note",
-    "appointment",
-    "task",
-    "document",
-    "safeguarding_record",
+  const urls = [
+    `/homes/${homeId}/inspection-scores`,
+    `/homes/${homeId}/quality-audits`,
+    `/homes/${homeId}/quality-audit-findings`,
+    `/homes/${homeId}/quality-audit-actions`,
+    `/homes/${homeId}/compliance-items`,
+    `/homes/${homeId}/reg44-visits`,
+    `/homes/${homeId}/reg44-findings`,
+    `/homes/${homeId}/reg44-actions`,
+    `/homes/${homeId}/reg45-reviews`,
+    `/homes/${homeId}/reg45-actions`,
+    `/homes/${homeId}/inspection-section-scores`,
+    `/homes/${homeId}/inspection-score-reasons`,
+    `/homes/${homeId}/inspection-lines-of-enquiry`,
+    `/homes/${homeId}/inspection-improvement-actions`,
+    `/homes/${homeId}/manager-review-queue`,
+    `/homes/${homeId}/team`,
+    `/homes/${homeId}/supervisions`,
+    `/homes/${homeId}/training`,
+    `/homes/${homeId}/tasks`,
+    `/homes/${homeId}/documents`,
+    `/homes/${homeId}/reports`,
+    `/homes/${homeId}/incidents`,
+    `/homes/${homeId}/safeguarding`,
   ];
 
-  const results = await Promise.all(
-    homeFallbackTypes.map((type) => safeList(type, { homeId }))
-  );
+  const groups = await Promise.all(urls.map(safeGetRows));
 
-  const timelineRows = sortNormalisedRecordsNewestFirst(results.flat());
+  const rows = groups
+    .flat()
+    .map((row) => ({
+      ...row,
+      home_id: row.home_id || homeId,
+    }));
+
+  const timelineRows = sortNormalisedRecordsNewestFirst(normaliseRecords(rows));
 
   return {
     chronology: [],
