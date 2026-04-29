@@ -16,6 +16,26 @@ function freeze(value) {
 }
 
 export const RECORD_CONTRACTS = freeze({
+  support_plan: {
+    type: RECORD_TYPES.support_plan,
+    label: "Support plan",
+    pluralLabel: "Support plans",
+    table: RECORD_TABLES.support_plan,
+    route: "/young-people/{youngPersonId}/plans",
+    section: "plans",
+    requiresYoungPerson: true,
+    requiresHome: false,
+    assistantReadable: true,
+    listable: true,
+    createable: true,
+    timelineVisible: true,
+    ofstedRelevant: true,
+    riskRelevant: true,
+    primaryDateField: "review_date",
+    titleField: "title",
+    summaryField: "summary",
+  },
+
   daily_note: {
     type: RECORD_TYPES.daily_note,
     label: "Daily note",
@@ -32,8 +52,8 @@ export const RECORD_CONTRACTS = freeze({
     ofstedRelevant: true,
     riskRelevant: false,
     primaryDateField: "note_date",
-    titleField: "title",
-    summaryField: "note",
+    titleField: "shift_type",
+    summaryField: "presentation",
   },
 
   incident: {
@@ -71,9 +91,9 @@ export const RECORD_CONTRACTS = freeze({
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
-    primaryDateField: "created_at",
-    titleField: "concern_type",
-    summaryField: "concern_summary",
+    primaryDateField: "concern_datetime",
+    titleField: "safeguarding_category",
+    summaryField: "concern_details",
   },
 
   risk: {
@@ -92,8 +112,8 @@ export const RECORD_CONTRACTS = freeze({
     ofstedRelevant: true,
     riskRelevant: true,
     primaryDateField: "review_date",
-    titleField: "risk_area",
-    summaryField: "summary",
+    titleField: "title",
+    summaryField: "concern_summary",
   },
 
   keywork: {
@@ -131,8 +151,8 @@ export const RECORD_CONTRACTS = freeze({
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
-    primaryDateField: "record_date",
-    titleField: "health_area",
+    primaryDateField: "event_datetime",
+    titleField: "title",
     summaryField: "summary",
   },
 
@@ -152,8 +172,8 @@ export const RECORD_CONTRACTS = freeze({
     ofstedRelevant: true,
     riskRelevant: false,
     primaryDateField: "record_date",
-    titleField: "education_area",
-    summaryField: "summary",
+    titleField: "provision_name",
+    summaryField: "behaviour_summary",
   },
 
   family_contact: {
@@ -173,7 +193,7 @@ export const RECORD_CONTRACTS = freeze({
     riskRelevant: false,
     primaryDateField: "contact_datetime",
     titleField: "contact_type",
-    summaryField: "summary",
+    summaryField: "post_contact_presentation",
   },
 
   appointment: {
@@ -182,7 +202,7 @@ export const RECORD_CONTRACTS = freeze({
     pluralLabel: "Appointments",
     table: RECORD_TABLES.appointment,
     route: "/young-people/{youngPersonId}/appointments",
-    section: "health",
+    section: "appointments",
     requiresYoungPerson: true,
     requiresHome: false,
     assistantReadable: true,
@@ -192,8 +212,8 @@ export const RECORD_CONTRACTS = freeze({
     ofstedRelevant: true,
     riskRelevant: false,
     primaryDateField: "appointment_date",
-    titleField: "appointment_type",
-    summaryField: "notes",
+    titleField: "title",
+    summaryField: "summary",
   },
 
   missing_episode: {
@@ -211,9 +231,9 @@ export const RECORD_CONTRACTS = freeze({
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
-    primaryDateField: "missing_from",
-    titleField: "episode_type",
-    summaryField: "summary",
+    primaryDateField: "start_datetime",
+    titleField: "police_reference",
+    summaryField: "outcome",
   },
 
   chronology_event: {
@@ -249,11 +269,11 @@ export const RECORD_CONTRACTS = freeze({
     listable: true,
     createable: true,
     timelineVisible: false,
-    ofstedRelevant: false,
+    ofstedRelevant: true,
     riskRelevant: false,
     primaryDateField: "due_date",
     titleField: "title",
-    summaryField: "description",
+    summaryField: "task",
   },
 
   document: {
@@ -311,9 +331,9 @@ export const RECORD_CONTRACTS = freeze({
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: true,
-    primaryDateField: "administered_at",
+    primaryDateField: "administered_time",
     titleField: "medication_name",
-    summaryField: "notes",
+    summaryField: "status",
   },
 
   handover_record: {
@@ -331,9 +351,9 @@ export const RECORD_CONTRACTS = freeze({
     timelineVisible: true,
     ofstedRelevant: true,
     riskRelevant: false,
-    primaryDateField: "handover_datetime",
-    titleField: "shift",
-    summaryField: "summary",
+    primaryDateField: "handover_date",
+    titleField: "title",
+    summaryField: "summary_text",
   },
 });
 
