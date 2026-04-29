@@ -423,7 +423,7 @@ async function hydrateRuntimeContextFromAuthCheck() {
     }
 
     const role = normaliseRole(auth.role || auth.user_role || auth.role_name);
-    const authHomeId = normaliseNumericId(auth.home_id || authHomeId || null);
+    const authHomeId = normaliseNumericId(auth.home_id || auth.homeId || null);
     const authProviderId = normaliseNumericId(
       auth.provider_id || auth.providerId || null
     );
@@ -886,10 +886,11 @@ function bindOpenCareHubFallback() {
       button.setAttribute("aria-busy", "true");
 
       try {
-      await openYoungPersonSafely(selectedId, {
-      initialSection: "timeline",
-      });
-      } finally {
+  await openYoungPersonSafely(selectedId, {
+    initialSection: "workspace",
+  });
+} finally {
+
         button.disabled = false;
         button.removeAttribute("aria-busy");
       }
