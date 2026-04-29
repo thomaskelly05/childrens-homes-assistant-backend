@@ -1,5 +1,9 @@
 import { cleanText, normaliseToken } from "./helpers.js";
-import { normaliseRecordType, normaliseWorkflowStatus, normaliseSeverity } from "./contracts.js";
+import {
+  normaliseRecordType,
+  normaliseWorkflowStatus,
+  normaliseSeverity,
+} from "./contracts.js";
 import {
   getRecordContract,
   getRecordLabel,
@@ -174,28 +178,19 @@ export function normaliseRecord(row = {}, fallbackType = "") {
   const contract = getRecordContract(recordType);
 
   const id = normaliseId(
-    safe.id ??
-      safe.record_id ??
-      safe.source_id ??
-      safe[`${recordType}_id`]
+    safe.id ?? safe.record_id ?? safe.source_id ?? safe[`${recordType}_id`]
   );
-
-  const title = inferTitle(safe, recordType);
-  const summary = inferSummary(safe, recordType);
-  const date = inferDate(safe, recordType);
-  const status = inferStatus(safe);
-  const severity = inferSeverity(safe);
 
   return {
     id,
     type: recordType,
     record_type: recordType,
     label: getRecordLabel(recordType, "Record"),
-    title,
-    summary,
-    date,
-    status,
-    severity,
+    title: inferTitle(safe, recordType),
+    summary: inferSummary(safe, recordType),
+    date: inferDate(safe, recordType),
+    status: inferStatus(safe),
+    severity: inferSeverity(safe),
     section: contract?.section || getRecordSection(recordType),
     table: contract?.table || cleanText(safe.source_table),
     source: cleanText(safe.source) || "record",
