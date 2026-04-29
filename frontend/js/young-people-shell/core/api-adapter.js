@@ -6,6 +6,10 @@ import {
   getRecordRoute,
   getRecordLabel,
 } from "./record-contracts.js";
+import {
+  normaliseRecord,
+  normaliseRecords,
+} from "./record-normaliser.js";
 
 function safeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -154,11 +158,29 @@ export async function listRecords(recordType, ids = {}, query = {}) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordUrl(type, ids, query);
   const response = await apiSend(url, { method: "GET" });
+  const rows = unwrapListResponse(response, type);
+
+  return normaliseRecords(rows, type);
+}
+
+export async function listRawRecords(recordType, ids = {}, query = {}) {
+  const type = normaliseRecordType(recordType);
+  const url = buildRecordUrl(type, ids, query);
+  const response = await apiSend(url, { method: "GET" });
 
   return unwrapListResponse(response, type);
 }
 
 export async function getRecord(recordType, ids = {}, recordId = "") {
+  const type = normaliseRecordType(recordType);
+  const url = buildRecordItemUrl(type, ids, recordId);
+  const response = await apiSend(url, { method: "GET" });
+  const row = unwrapSingleResponse(response);
+
+  return normaliseRecord(row, type);
+}
+
+export async function getRawRecord(recordType, ids = {}, recordId = "") {
   const url = buildRecordItemUrl(recordType, ids, recordId);
   const response = await apiSend(url, { method: "GET" });
 
@@ -173,7 +195,7 @@ export async function createRecord(recordType, ids = {}, payload = {}) {
     body: payload,
   });
 
-  return unwrapSingleResponse(response);
+  return normaliseRecord(unwrapSingleResponse(response), type);
 }
 
 export async function updateRecord(
@@ -182,13 +204,14 @@ export async function updateRecord(
   recordId = "",
   payload = {}
 ) {
-  const url = buildRecordItemUrl(recordType, ids, recordId);
+  const type = normaliseRecordType(recordType);
+  const url = buildRecordItemUrl(type, ids, recordId);
   const response = await apiSend(url, {
     method: "PATCH",
     body: payload,
   });
 
-  return unwrapSingleResponse(response);
+  return normaliseRecord(unwrapSingleResponse(response), type);
 }
 
 export async function replaceRecord(
@@ -197,13 +220,14 @@ export async function replaceRecord(
   recordId = "",
   payload = {}
 ) {
-  const url = buildRecordItemUrl(recordType, ids, recordId);
+  const type = normaliseRecordType(recordType);
+  const url = buildRecordItemUrl(type, ids, recordId);
   const response = await apiSend(url, {
     method: "PUT",
     body: payload,
   });
 
-  return unwrapSingleResponse(response);
+  return normaliseRecord(unwrapSingleResponse(response), type);
 }
 
 export async function deleteRecord(recordType, ids = {}, recordId = "") {
@@ -220,6 +244,16 @@ export async function listSectionRecords(section, ids = {}, query = {}) {
 
   if (contract) {
     return listRecords(contract.type, ids, query);
+  }
+
+  throw new Error(`No record contract found for section: ${section}`);
+}
+
+export async function listRawSectionRecords(section, ids = {}, query = {}) {
+  const contract = getRecordContractBySection(section);
+
+  if (contract) {
+    return listRawRecords(contract.type, ids, query);
   }
 
   throw new Error(`No record contract found for section: ${section}`);
@@ -287,12 +321,15 @@ export async function submitAssistantMessage(payload = {}) {
 
 export const recordApi = Object.freeze({
   listRecords,
+  listRawRecords,
   getRecord,
+  getRawRecord,
   createRecord,
   updateRecord,
   replaceRecord,
   deleteRecord,
   listSectionRecords,
+  listRawSectionRecords,
   createSectionRecord,
   getVisibilityContext,
   getAssistantContext,
