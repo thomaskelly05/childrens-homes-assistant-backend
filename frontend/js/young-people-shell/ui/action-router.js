@@ -48,6 +48,8 @@ function getYoungPersonId() {
     state.selectedYoungPerson?.young_person_id ||
     state.currentYoungPerson?.id ||
     state.currentYoungPerson?.young_person_id ||
+    document.getElementById("app")?.dataset?.youngPersonId ||
+    document.getElementById("youngPersonSelect")?.value ||
     null
   );
 }
@@ -208,13 +210,106 @@ function resolveRecordType(value = "") {
     profile_health: "profile_health",
     profile_legal: "profile_legal",
     profile_formulation: "profile_formulation",
+
+    inspection_refresh: "inspection_refresh",
+    inspection_sync: "inspection_sync",
+    sync_actions: "inspection_sync",
   };
 
   return aliases[type] || type;
 }
 
 function normaliseActionKey(value = "") {
-  return resolveRecordType(value);
+  const raw = String(value || "").trim().toLowerCase();
+  const underscored = normaliseToken(raw);
+
+  const aliases = {
+    "daily-note": "daily_note",
+    daily_note: "daily_note",
+    new_daily_note: "daily_note",
+
+    incident: "incident",
+    new_incident: "incident",
+
+    risk: "risk",
+    new_risk: "risk",
+
+    plan: "support_plan",
+    support_plan: "support_plan",
+    care_plan: "support_plan",
+
+    health: "health_record",
+    health_record: "health_record",
+    "new-health-record": "health_record",
+    new_health_record: "health_record",
+
+    education: "education_record",
+    education_record: "education_record",
+    "new-education-record": "education_record",
+    new_education_record: "education_record",
+
+    family: "family_contact",
+    family_contact: "family_contact",
+    "new-family-contact": "family_contact",
+    new_family_contact: "family_contact",
+
+    keywork: "keywork",
+    "new-keywork": "keywork",
+    new_keywork: "keywork",
+
+    appointment: "appointment",
+    "new-appointment": "appointment",
+    new_appointment: "appointment",
+
+    task: "task",
+    action: "task",
+    "new-task": "task",
+    new_task: "task",
+
+    document: "document",
+    "upload-document": "document",
+    upload_document: "document",
+    "new-document": "document",
+    new_document: "document",
+
+    safeguarding: "safeguarding_record",
+    safeguarding_record: "safeguarding_record",
+    "new-safeguarding": "safeguarding_record",
+    new_safeguarding: "safeguarding_record",
+
+    missing: "missing_episode",
+    missing_episode: "missing_episode",
+    "new-missing-episode": "missing_episode",
+    new_missing_episode: "missing_episode",
+
+    medication: "medication_record",
+    medication_record: "medication_record",
+    "new-medication-record": "medication_record",
+    new_medication_record: "medication_record",
+
+    handover: "handover_record",
+    handover_record: "handover_record",
+    "new-handover-record": "handover_record",
+    new_handover_record: "handover_record",
+
+    therapy: "therapy",
+    "new-therapy": "therapy",
+    new_therapy: "therapy",
+
+    team: "team",
+    "new-team": "team",
+    new_team: "team",
+
+    supervision: "supervision",
+    "new-supervision": "supervision",
+    new_supervision: "supervision",
+
+    inspection_refresh: "inspection_refresh",
+    inspection_sync: "inspection_sync",
+    sync_actions: "inspection_sync",
+  };
+
+  return aliases[raw] || aliases[underscored] || resolveRecordType(underscored);
 }
 
 function isActionAllowedInScope(recordType, scope = getCurrentScope()) {
@@ -481,6 +576,7 @@ function getFallbackActionKey(section = "", scope = getCurrentScope()) {
   if (configured) {
     const safeConfigured = normaliseActionKey(configured);
     const action = ACTIONS[safeConfigured];
+
     if (action && isActionAllowedInScope(action.record_type, scope)) {
       return safeConfigured;
     }
@@ -582,9 +678,9 @@ export async function runSuggestionAction(suggestion = {}) {
 
 function getActionKeyFromButton(button) {
   return (
+    button.dataset.action ||
     button.dataset.actionRouter ||
     button.dataset.quickAction ||
-    button.dataset.action ||
     button.dataset.recordType ||
     ""
   );
@@ -610,7 +706,7 @@ export function bindActionRouter({
   onMissingHomeContext,
   onSectionChange,
   onInspectionActionComplete,
-  quickButtonSelector = "[data-quick-action], [data-action-router], [data-action]",
+  quickButtonSelector = "[data-action], [data-action-router], [data-quick-action], [data-record-type]",
   suggestionButtonSelector = "[data-suggestion-action]",
 } = {}) {
   if (actionRouterBound) return;
@@ -622,10 +718,12 @@ export function bindActionRouter({
       const quickButton = event.target.closest(quickButtonSelector);
 
       if (quickButton) {
+        const actionKey = getActionKeyFromButton(quickButton);
         const action = getActionFromButton(quickButton);
 
         console.log("[action-router] quick button clicked", {
-          key: getActionKeyFromButton(quickButton),
+          key: actionKey,
+          normalisedKey: normaliseActionKey(actionKey),
           action,
         });
 
