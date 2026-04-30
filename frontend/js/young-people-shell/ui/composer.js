@@ -1321,75 +1321,36 @@ export async function saveComposer(mode = "draft") {
 
   const ids = getComposerIds();
 
-  if (CHILD_SCOPED_TYPES.has(type) && !ids.youngPersonId) {
+  if (type === "daily_note" && !ids.youngPersonId) {
     throw new Error("Select a child or young person first.");
   }
 
   const data = collectFormData(form);
-  updateQualityStrip(data);
-
   const status = mode === "submit" ? "submitted" : data.status || "draft";
 
-  let payload = buildPayload(type, data, mode, ids);
+  let payload;
 
   if (type === "daily_note") {
     payload = {
       note_date: data.note_date || today(),
       shift_type: data.shift_type || "day",
-      mood: data.mood || null,
       presentation: data.presentation || null,
-      activities: data.activities || null,
-      education_update: data.education_update || null,
-      health_update: data.health_update || null,
-      family_update: data.family_update || null,
       behaviour_update: data.behaviour_update || null,
-      young_person_voice: data.young_person_voice || data.child_voice || null,
       positives: data.positives || null,
       actions_required: data.actions_required || null,
-      significance: data.significance || "medium",
+      young_person_voice: data.young_person_voice || null,
       workflow_status: status,
       status,
-      title: data.title || "Daily life note",
-      narrative: data.narrative || data.presentation || "Daily note recorded",
-      create_follow_up_task: Boolean(data.create_follow_up_task),
-      link_to_chronology: Boolean(data.link_to_chronology),
-      link_quality_standards: Boolean(data.link_quality_standards),
-      manager_review_needed: Boolean(data.manager_review_needed),
-      safeguarding_concern: Boolean(data.safeguarding_concern),
-      home_id: ids.homeId,
-      young_person_id: ids.youngPersonId,
+      young_person_id: Number(ids.youngPersonId),
+      home_id: Number(ids.homeId || data.home_id || 1),
     };
+  } else {
+    payload = buildPayload(type, data, mode, ids);
   }
 
-  const editItem = state.composerEditItem || {};
-  const recordId = getRecordId(editItem);
-
-  const savePromise =
-    state.composerMode === "edit" && recordId
-      ? updateRecord(type, ids, recordId, payload)
-      : createRecord(type, ids, payload);
-
-  const saved = await Promise.race([
-    savePromise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Composer save timed out")), 10000)
-    ),
-  ]);
+  const saved = await createRecord(type, ids, payload);
 
   closeComposer();
-
-  window.setTimeout(() => {
-    try {
-      dispatchComposerSaved({
-        type,
-        mode,
-        saved,
-        followUpTask: null,
-      });
-    } catch (error) {
-      console.warn("[composer] post-save refresh failed", error);
-    }
-  }, 0);
 
   return saved;
 }
