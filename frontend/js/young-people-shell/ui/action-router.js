@@ -42,8 +42,12 @@ function getCurrentHomeId() {
 function getYoungPersonId() {
   return (
     state.youngPersonId ||
+    state.currentYoungPersonId ||
+    state.selectedYoungPersonId ||
     state.selectedYoungPerson?.id ||
     state.selectedYoungPerson?.young_person_id ||
+    state.currentYoungPerson?.id ||
+    state.currentYoungPerson?.young_person_id ||
     null
   );
 }
@@ -73,6 +77,8 @@ function ensureScopeContext(recordType = "") {
     "appointment",
     "safeguarding_record",
     "missing_episode",
+    "medication_record",
+    "handover_record",
     "therapy",
     "profile_identity",
     "profile_communication",
@@ -98,63 +104,94 @@ function resolveRecordType(value = "") {
     daily: "daily_note",
     daily_note: "daily_note",
     daily_notes: "daily_note",
+    new_daily_note: "daily_note",
 
     incident: "incident",
     incidents: "incident",
     event: "incident",
     important_event: "incident",
+    new_incident: "incident",
 
     plan: "support_plan",
     support_plan: "support_plan",
     care_plan: "support_plan",
+    new_support_plan: "support_plan",
 
     risk: "risk",
     risk_assessment: "risk",
     risk_assessments: "risk",
+    new_risk: "risk",
 
     health: "health_record",
     health_record: "health_record",
+    new_health_record: "health_record",
+
     education: "education_record",
     education_record: "education_record",
+    new_education_record: "education_record",
 
     family: "family_contact",
     family_contact: "family_contact",
+    new_family_contact: "family_contact",
 
     keywork: "keywork",
     keywork_session: "keywork",
+    new_keywork: "keywork",
 
     appointment: "appointment",
     appointments: "appointment",
+    new_appointment: "appointment",
 
     task: "task",
     tasks: "task",
     action: "task",
     actions: "task",
+    new_task: "task",
 
     document: "document",
     documents: "document",
     upload: "document",
     upload_document: "document",
+    new_document: "document",
 
     communication: "communication",
     communications: "communication",
     professional_message: "communication",
+    new_communication: "communication",
+    new_professional_message: "communication",
 
     safeguarding: "safeguarding_record",
     safeguarding_record: "safeguarding_record",
+    new_safeguarding: "safeguarding_record",
+    new_safeguarding_record: "safeguarding_record",
 
     missing: "missing_episode",
     missing_episode: "missing_episode",
     missing_from_care: "missing_episode",
+    new_missing_episode: "missing_episode",
+    new_missing_from_care: "missing_episode",
+
+    medication: "medication_record",
+    medication_record: "medication_record",
+    medication_records: "medication_record",
+    new_medication_record: "medication_record",
+
+    handover: "handover_record",
+    handover_record: "handover_record",
+    new_handover: "handover_record",
+    new_handover_record: "handover_record",
 
     therapy: "therapy",
     therapy_note: "therapy",
+    new_therapy: "therapy",
 
     team: "team",
     staffing: "team",
+    new_team: "team",
 
     supervision: "supervision",
     supervisions: "supervision",
+    new_supervision: "supervision",
 
     manager_action: "manager_action",
     report: "ai_generated_report",
@@ -180,44 +217,123 @@ function normaliseActionKey(value = "") {
   const key = normaliseToken(value);
 
   const aliases = {
-    "daily-note": "daily_note",
+    daily: "daily_note",
     daily_note: "daily_note",
+    daily_notes: "daily_note",
     new_daily_note: "daily_note",
 
     incident: "incident",
+    incidents: "incident",
+    event: "incident",
+    important_event: "incident",
     new_incident: "incident",
 
     plan: "support_plan",
+    care_plan: "support_plan",
     support_plan: "support_plan",
     new_support_plan: "support_plan",
 
     risk: "risk",
+    risk_assessment: "risk",
+    risk_assessments: "risk",
     new_risk: "risk",
 
+    health: "health_record",
+    health_record: "health_record",
     new_health_record: "health_record",
+
+    education: "education_record",
+    education_record: "education_record",
     new_education_record: "education_record",
+
+    family: "family_contact",
+    family_contact: "family_contact",
     new_family_contact: "family_contact",
+
+    keywork: "keywork",
+    keywork_session: "keywork",
     new_keywork: "keywork",
+
+    appointment: "appointment",
+    appointments: "appointment",
     new_appointment: "appointment",
+
+    task: "task",
+    tasks: "task",
+    action: "task",
+    actions: "task",
     new_task: "task",
 
+    document: "document",
+    documents: "document",
+    upload: "document",
     upload_document: "document",
     new_document: "document",
 
+    communication: "communication",
+    communications: "communication",
+    professional_message: "communication",
     new_communication: "communication",
     new_professional_message: "communication",
 
+    safeguarding: "safeguarding_record",
+    safeguarding_record: "safeguarding_record",
     new_safeguarding: "safeguarding_record",
+    new_safeguarding_record: "safeguarding_record",
+
+    missing: "missing_episode",
+    missing_episode: "missing_episode",
+    missing_from_care: "missing_episode",
     new_missing_episode: "missing_episode",
+    new_missing_from_care: "missing_episode",
+
+    medication: "medication_record",
+    medication_record: "medication_record",
+    medication_records: "medication_record",
+    new_medication_record: "medication_record",
+
+    handover: "handover_record",
+    handover_record: "handover_record",
+    new_handover: "handover_record",
+    new_handover_record: "handover_record",
+
+    therapy: "therapy",
+    therapy_note: "therapy",
     new_therapy: "therapy",
+
+    team: "team",
+    staffing: "team",
     new_team: "team",
+
+    supervision: "supervision",
+    supervisions: "supervision",
     new_supervision: "supervision",
 
+    manager_action: "manager_action",
+    staff_task: "staff_task",
+    policy_review: "policy_review",
+    health_safety_check: "health_safety_check",
+
+    report: "ai_generated_report",
+    summary: "ai_generated_report",
+    ai_generated_report: "ai_generated_report",
+
+    profile_identity: "profile_identity",
     edit_profile_identity: "profile_identity",
+
+    profile_communication: "profile_communication",
     edit_profile_communication: "profile_communication",
+
+    profile_education: "profile_education",
     edit_profile_education: "profile_education",
+
+    profile_health: "profile_health",
     edit_profile_health: "profile_health",
+
+    profile_legal: "profile_legal",
     edit_profile_legal: "profile_legal",
+
+    profile_formulation: "profile_formulation",
     edit_profile_formulation: "profile_formulation",
 
     assistant_handover: "task",
@@ -249,6 +365,7 @@ function isActionAllowedInScope(recordType, scope = getCurrentScope()) {
     "ai_generated_report",
     "policy_review",
     "health_safety_check",
+    "handover_record",
   ]);
 
   if (homeSafe.has(recordType)) return true;
@@ -273,6 +390,8 @@ function inferSectionForRecordType(recordType = "", scope = getCurrentScope()) {
     appointment: "calendar",
     safeguarding_record: "safeguarding",
     missing_episode: "missing-from-care",
+    medication_record: "health",
+    handover_record: "workspace",
     therapy: "therapy",
     task: scope === "child" ? "actions" : "actions",
     staff_task: "team",
@@ -323,9 +442,29 @@ function safeOpen(recordType, mode = "create", item = {}) {
   const resolvedType = resolveRecordType(recordType);
   const scope = getCurrentScope();
 
+  console.log("[action-router] safeOpen", {
+    recordType,
+    resolvedType,
+    mode,
+    scope,
+    youngPersonId: getYoungPersonId(),
+    homeId: getCurrentHomeId(),
+  });
+
   if (!resolvedType) return false;
-  if (!ensureScopeContext(resolvedType)) return false;
-  if (!isActionAllowedInScope(resolvedType, scope)) return false;
+
+  if (!ensureScopeContext(resolvedType)) {
+    console.warn("[action-router] missing scope context", { resolvedType, scope });
+    return false;
+  }
+
+  if (!isActionAllowedInScope(resolvedType, scope)) {
+    console.warn("[action-router] action not allowed in scope", {
+      resolvedType,
+      scope,
+    });
+    return false;
+  }
 
   openComposerFor(resolvedType, mode, buildDraftPayload(item, resolvedType));
   return true;
@@ -390,6 +529,8 @@ function buildQuickActionMap() {
     family_contact: "family_contact",
     keywork: "keywork",
     appointment: "appointment",
+    medication_record: "medication_record",
+    handover_record: "handover_record",
     task: "task",
     document: "document",
     communication: "communication",
@@ -507,7 +648,10 @@ function buildSuggestionFromButton(button) {
     source_record_id: button.dataset.sourceRecordId || null,
     priority: button.dataset.priority || "",
     young_person_id: button.dataset.youngPersonId || getYoungPersonId(),
-    home_id: button.dataset.homeId || getCurrentReadinessHomeId?.() || getCurrentHomeId(),
+    home_id:
+      button.dataset.homeId ||
+      getCurrentReadinessHomeId?.() ||
+      getCurrentHomeId(),
     prefill: {},
     metadata: {},
   };
@@ -528,14 +672,16 @@ export async function runSuggestionAction(suggestion = {}) {
   }
 
   if (actionType === "inspection_refresh") {
-    const homeId = suggestion.home_id || getCurrentReadinessHomeId?.() || getCurrentHomeId();
+    const homeId =
+      suggestion.home_id || getCurrentReadinessHomeId?.() || getCurrentHomeId();
     if (!homeId) return false;
     await postInspectionAction(homeId, "refresh");
     return navigateToSection(inferSectionForRecordType("inspection_refresh"));
   }
 
   if (actionType === "inspection_sync") {
-    const homeId = suggestion.home_id || getCurrentReadinessHomeId?.() || getCurrentHomeId();
+    const homeId =
+      suggestion.home_id || getCurrentReadinessHomeId?.() || getCurrentHomeId();
     if (!homeId) return false;
     await postInspectionAction(homeId, "sync");
     return navigateToSection(inferSectionForRecordType("inspection_sync"));
@@ -593,6 +739,11 @@ export function bindActionRouter({
 
     if (quickButton) {
       const action = getActionFromButton(quickButton);
+
+      console.log("[action-router] quick button clicked", {
+        key: getActionKeyFromButton(quickButton),
+        action,
+      });
 
       if (!action) return;
 
