@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from auth.current_user import get_current_user
-from db.connection import get_db
+from db.connection import get_db, get_db_connection, release_db_connection
 
 
 router = APIRouter(prefix="/debug", tags=["debug-health"])
@@ -17,6 +17,14 @@ def safe_type(value: Any) -> str:
     return f"{type(value).__module__}.{type(value).__name__}"
 
 
+def serialise_row(row: Any) -> Any:
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return dict(row)
+    return str(row)
+
+
 @router.get("/health")
 async def debug_get_health():
     return {
@@ -24,6 +32,63 @@ async def debug_get_health():
         "method": "GET",
         "message": "Debug GET health route is reachable.",
     }
+
+
+@router.post("/echo")
+async def debug_echo(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+
+    return {
+        "ok": True,
+        "message": "Echo route reached without auth/db dependencies.",
+        "body": body,
+    }
+
+
+@router.post("/manual-health")
+async def debug_manual_health(request: Request):
+    conn = None
+
+    try:
+        try:
+            body = await request.json()
+        except Exception:
+            body = None
+
+        conn = get_db_connection()
+
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 AS ok")
+            db_row = cur.fetchone()
+
+        return {
+            "ok": True,
+            "method": "POST",
+            "message": "Manual DB health route reached.",
+            "body": body,
+            "conn_type": safe_type(conn),
+            "conn_closed": bool(getattr(conn, "closed", True)),
+            "db_row": serialise_row(db_row),
+        }
+
+    except Exception as error:
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "ok": False,
+                "error_type": type(error).__name__,
+                "error": str(error),
+                "traceback": traceback.format_exc(),
+            },
+        )
+
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
 
 
 @router.post("/post-health")
@@ -38,7 +103,6 @@ async def debug_post_health(
         except Exception:
             body = None
 
-        db_check = None
         with conn.cursor() as cur:
             cur.execute("SELECT 1 AS ok")
             db_check = cur.fetchone()
@@ -60,7 +124,7 @@ async def debug_post_health(
             },
             "conn_type": safe_type(conn),
             "conn_closed": bool(getattr(conn, "closed", True)),
-            "db_check": db_check,
+            "db_check": serialise_row(db_check),
         }
 
     except Exception as error:
@@ -74,17 +138,3 @@ async def debug_post_health(
                 "traceback": traceback.format_exc(),
             },
         )
-
-
-@router.post("/echo")
-async def debug_echo(request: Request):
-    try:
-        body = await request.json()
-    except Exception:
-        body = None
-
-    return {
-        "ok": True,
-        "message": "Echo route reached without auth/db dependencies.",
-        "body": body,
-    }
