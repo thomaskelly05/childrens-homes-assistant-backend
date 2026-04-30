@@ -748,12 +748,15 @@ function renderNavigation() {
   }
 
   if (els.desktopNav) els.desktopNav.innerHTML = buildDesktopNavHtml();
+
   if (els.mobileNavContent) {
     els.mobileNavContent.innerHTML = buildMobileDrawerNavHtml();
   }
+
   if (els.mobileBottomBar) {
     els.mobileBottomBar.innerHTML = buildMobileBottomBarHtml();
   }
+
   if (els.mobileBottomNav && els.mobileBottomNav !== els.mobileBottomBar) {
     els.mobileBottomNav.innerHTML = buildMobileBottomBarHtml();
   }
@@ -926,7 +929,7 @@ async function applyScopeChange(scope, options = {}) {
 
   setCurrentScope(safeScope);
 
-  if (safeScope !== "child" && !state.readinessSelectedHomeId) {
+  if (!["child"].includes(safeScope) && !state.readinessSelectedHomeId) {
     state.readinessSelectedHomeId =
       state.homeId ||
       state.currentUser?.home_id ||
@@ -1015,12 +1018,14 @@ function closeAssistantOverlay() {
 function closeFullscreenOverlay() {
   state.fullscreenPanelOpen = false;
   const panel = document.getElementById("fullscreenPanel");
+
   panel?.classList.add("hidden");
   panel?.setAttribute("aria-hidden", "true");
 }
 
 function closeSuggestionsOverlay() {
   const panel = document.getElementById("suggestionsPanel");
+
   panel?.classList.add("hidden");
   panel?.setAttribute("aria-hidden", "true");
 }
@@ -1343,14 +1348,13 @@ export async function loadSection(section, options = {}) {
   }
 
   let safeSection = requestedSection || getDefaultSectionForScope(scope);
+  const requiredScope = getRequiredScopeForSection(safeSection);
 
-const requiredScope = getRequiredScopeForSection(safeSection);
-
-if (requiredScope && requiredScope !== scope && roleCanAccessScope(requiredScope)) {
-  scope = requiredScope;
-  setCurrentScope(requiredScope, { resetSection: false });
-  updateAppShellDataset();
-}
+  if (requiredScope && requiredScope !== scope && roleCanAccessScope(requiredScope)) {
+    scope = requiredScope;
+    setCurrentScope(requiredScope, { resetSection: false });
+    updateAppShellDataset();
+  }
 
   if (!isSectionAllowed(safeSection, scope)) {
     const betterScope = findBestScopeForSection(safeSection);
@@ -1386,23 +1390,23 @@ if (requiredScope && requiredScope !== scope && roleCanAccessScope(requiredScope
     return currentLoadPromise;
   }
 
-updateSectionState(safeSection);
-showWorkspaceScreen();
-clearStatus();
+  updateSectionState(safeSection);
+  showWorkspaceScreen();
+  clearStatus();
 
-if (els.viewContent) {
-  els.viewContent.innerHTML = `
-    <div class="loading-state">
-      <div>
-        <div class="spinner" aria-hidden="true"></div>
-        <p>Loading ${escapeHtml(safeSection)}…</p>
+  if (els.viewContent) {
+    els.viewContent.innerHTML = `
+      <div class="loading-state">
+        <div>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading ${escapeHtml(safeSection)}…</p>
+        </div>
       </div>
-    </div>
-  `;
-}
+    `;
+  }
 
-resetWorkspaceSummaryStrip();
-closeAllWorkspaceMenus();
+  resetWorkspaceSummaryStrip();
+  closeAllWorkspaceMenus();
 
   currentLoadKey = loadKey;
 
