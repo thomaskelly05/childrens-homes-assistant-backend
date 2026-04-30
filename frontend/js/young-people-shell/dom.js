@@ -137,7 +137,6 @@ const DOM_KEYS = {
   composerAiFeedback: "composerAiFeedback",
   autosaveStatus: "autosaveStatus",
   autosaveTime: "autosaveTime",
-  closeComposerBtn: "closeComposerBtn",
   composerSaveBtn: "composerSaveBtn",
   composerSaveDraftBtn: "composerSaveDraftBtn",
   composerCheckBtn: "composerCheckBtn",
