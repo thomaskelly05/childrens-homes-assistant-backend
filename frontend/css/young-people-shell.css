@@ -3181,3 +3181,6 @@ body.show-folder-menu #quickCreateBar,
 #recordComposerPage.composer-panel:not(.hidden) .composer-side {
   overflow: auto !important;
 }
+body.composer-open {
+  overflow: hidden !important;
+}
