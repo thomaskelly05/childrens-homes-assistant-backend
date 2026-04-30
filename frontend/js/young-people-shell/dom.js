@@ -6,12 +6,13 @@ const DOM_KEYS = {
   app: "app",
   mainContent: "mainContent",
 
-  workspaceScreen: "workspacePanel",
-  workspacePanel: "workspacePanel",
-  workspaceShell: "workspaceShell",
-  selectorScreen: "selectorPanel",
   selectorPanel: "selectorPanel",
+  selectorScreen: "selectorPanel",
+  workspacePanel: "workspacePanel",
+  workspaceScreen: "workspacePanel",
+  workspaceShell: "workspaceShell",
   viewContent: "viewContent",
+
   statusBar: "statusBar",
   statusMessage: "statusMessage",
   selectorStatusMessage: "selectorStatusMessage",
@@ -20,14 +21,10 @@ const DOM_KEYS = {
   refreshBtn: "refreshBtn",
   refreshWorkspaceBtn: "refreshWorkspaceBtn",
   goHomeBtn: "goHomeBtn",
-  assistantLauncher: "assistantLauncher",
+  changePersonBtn: "changePersonBtn",
 
   themeToggleBtn: "themeToggleBtn",
   nightShiftModeBtn: "nightShiftModeBtn",
-
-  globalSearchForm: "globalSearchForm",
-  recordSearchInput: "recordSearchInput",
-  recordTypeFilter: "recordTypeFilter",
 
   scopeSwitch: "scopeSwitch",
   scopeChildBtn: "scopeChildBtn",
@@ -35,64 +32,42 @@ const DOM_KEYS = {
   scopeQualityBtn: "scopeQualityBtn",
   scopeOfstedBtn: "scopeOfstedBtn",
 
-  welcomePanel: "welcomePanel",
-  welcomeMessage: "welcomeMessage",
-  welcomeSubMessage: "welcomeSubMessage",
-  welcomeOpenActions: "welcomeOpenActions",
-  welcomeReviewsDue: "welcomeReviewsDue",
-  welcomeDocumentsDue: "welcomeDocumentsDue",
-
-  selectorList: "selectorList",
-  selectorSearch: "selectorSearch",
-  youngPersonSearchInput: "youngPersonSearchInput",
-  selectorRefreshBtn: "selectorRefreshBtn",
-
-  safeStartChooseHomeBtn: "safeStartChooseHomeBtn",
-  safeStartAskAssistantBtn: "safeStartAskAssistantBtn",
-  safeStartVoiceSearchBtn: "safeStartVoiceSearchBtn",
-
   homeSearchInput: "homeSearchInput",
   homeSelect: "homeSelect",
   homeChipList: "homeChipList",
   selectedHomeSummary: "selectedHomeSummary",
 
+  selectorList: "selectorList",
+  selectorSearch: "selectorSearch",
+  youngPersonSearchInput: "youngPersonSearchInput",
   youngPersonSelect: "youngPersonSelect",
+  selectorRefreshBtn: "selectorRefreshBtn",
   selectedChildSummary: "selectedChildSummary",
 
-  launchReadinessStrip: "launchReadinessStrip",
   launchReadyHome: "launchReadyHome",
   launchReadyChild: "launchReadyChild",
   launchLastRefreshed: "launchLastRefreshed",
   launchOpenCareHubBtn: "launchOpenCareHubBtn",
 
-  openCareHubDrawer: "openCareHubDrawer",
   openCareHubBtn: "openCareHubBtn",
   clearSafeStartBtn: "clearSafeStartBtn",
   safeStartReadySummary: "safeStartReadySummary",
   readyHomeName: "readyHomeName",
   readyChildName: "readyChildName",
 
+  welcomePanel: "welcomePanel",
+  welcomeMessage: "welcomeMessage",
+  welcomeSubMessage: "welcomeSubMessage",
+
+  recordSearchInput: "recordSearchInput",
+  mobileRecordSearchInput: "mobileRecordSearchInput",
+  recordTypeFilter: "recordTypeFilter",
+  globalSearchForm: "globalSearchForm",
+  mobileSearchForm: "mobileSearchForm",
+
   workspaceEyebrow: "workspaceEyebrow",
   pageTitle: "pageTitle",
   pageSubtitle: "pageSubtitle",
-  heroAssistantBtn: "heroAssistantBtn",
-  heroQuickActions: "heroQuickActions",
-  quickCreateBar: "quickCreateBar",
-  changePersonBtn: "changePersonBtn",
-  profileOpenBtn: "profileOpenBtn",
-  profilePhotoUploadBtn: "profilePhotoUploadBtn",
-
-  osSidebar: "osSidebar",
-  therapeuticPromptPanel: "therapeuticPromptPanel",
-  dismissTherapeuticPromptBtn: "dismissTherapeuticPromptBtn",
-  journeyRail: "journeyRail",
-  recordQuickDock: "recordQuickDock",
-  priorityDock: "priorityDock",
-
-  priorityRiskChanges: "priorityRiskChanges",
-  priorityDueToday: "priorityDueToday",
-  priorityDocuments: "priorityDocuments",
-  priorityOversight: "priorityOversight",
 
   personAvatar: "personAvatar",
   personName: "personName",
@@ -104,19 +79,25 @@ const DOM_KEYS = {
   mobilePersonMeta: "mobilePersonMeta",
   mobileHomeBtn: "mobileHomeBtn",
 
-  mobileNavToggle: "mobileNavToggle",
-  mobileNavPanel: "mobileNavPanel",
-  mobileNavDrawer: "mobileNavPanel",
-  mobileNavBackdrop: "mobileNavBackdrop",
-  closeMobileNavBtn: "closeMobileNavBtn",
-  mobileNavContent: "mobileNavContent",
-  mobileBottomNav: "mobileBottomNav",
-  mobileBottomBar: "mobileBottomNav",
-
   mobileDrawerPersonName: "mobileDrawerPersonName",
   mobileDrawerPersonMeta: "mobileDrawerPersonMeta",
-  mobileSearchForm: "mobileSearchForm",
-  mobileRecordSearchInput: "mobileRecordSearchInput",
+
+  heroAssistantBtn: "heroAssistantBtn",
+  safeStartAskAssistantBtn: "safeStartAskAssistantBtn",
+  assistantLauncher: "assistantLauncher",
+
+  profileOpenBtn: "profileOpenBtn",
+  profilePhotoUploadBtn: "profilePhotoUploadBtn",
+
+  osSidebar: "osSidebar",
+  journeyRail: "journeyRail",
+  recordQuickDock: "recordQuickDock",
+  priorityDock: "priorityDock",
+  quickCreateBar: "quickCreateBar",
+  heroQuickActions: "heroQuickActions",
+
+  therapeuticPromptPanel: "therapeuticPromptPanel",
+  dismissTherapeuticPromptBtn: "dismissTherapeuticPromptBtn",
 
   workspaceSummaryStrip: "workspaceSummaryStrip",
   summaryToday: "summaryToday",
@@ -129,21 +110,55 @@ const DOM_KEYS = {
   searchResultsList: "searchResultsList",
   clearSearchResultsBtn: "clearSearchResultsBtn",
 
-  documentLibraryShell: "documentLibraryShell",
-  documentCategoryGrid: "documentCategoryGrid",
-  staffJourneyShell: "staffJourneyShell",
-  staffJourneyGrid: "staffJourneyGrid",
+  mobileNavToggle: "mobileNavToggle",
+  mobileNavPanel: "mobileNavPanel",
+  mobileNavDrawer: "mobileNavPanel",
+  mobileNavBackdrop: "mobileNavBackdrop",
+  closeMobileNavBtn: "closeMobileNavBtn",
+  mobileNavContent: "mobileNavContent",
+  mobileBottomNav: "mobileBottomNav",
+  mobileBottomBar: "mobileBottomNav",
+
+  fullscreenPanel: "fullscreenPanel",
+  fullscreenPanelTitle: "fullscreenPanelTitle",
+  fullscreenPanelSubtitle: "fullscreenPanelSubtitle",
+  fullscreenPanelActions: "fullscreenPanelActions",
+  fullscreenPanelBody: "fullscreenPanelBody",
+  closeFullscreenPanelBtn: "closeFullscreenPanelBtn",
+
+  recordComposerPage: "recordComposerPage",
+  composerPanel: "recordComposerPage",
+  composerTitle: "composerTitle",
+  composerSubtitle: "composerSubtitle",
+  recordComposerForm: "recordComposerForm",
+  recordComposerFields: "recordComposerFields",
+  composerGuidanceText: "composerGuidanceText",
+  composerPrompts: "composerPrompts",
+  composerAiFeedback: "composerAiFeedback",
+  autosaveStatus: "autosaveStatus",
+  autosaveTime: "autosaveTime",
+  closeComposerBtn: "closeComposerBtn",
+  composerSaveBtn: "composerSaveBtn",
+  composerSaveDraftBtn: "composerSaveDraftBtn",
+  composerCheckBtn: "composerCheckBtn",
+  composerSubmitBtn: "composerSubmitBtn",
+  composerSpeechBtn: "composerSpeechBtn",
+  composerTherapeuticModeBtn: "composerTherapeuticModeBtn",
+  composerGrammarBtn: "composerGrammarBtn",
+  composerClarityBtn: "composerClarityBtn",
+  composerSafeguardingBtn: "composerSafeguardingBtn",
+  composerChildVoiceBtn: "composerChildVoiceBtn",
+  composerLanguageBtn: "composerLanguageBtn",
 
   assistantBackdrop: "assistantBackdrop",
   assistantModal: "assistantModal",
-  assistantPanel: "assistantModal",
-  closeAssistantBtn: "closeAssistantBtn",
   assistantMessages: "assistantMessages",
   assistantForm: "assistantForm",
   assistantInput: "assistantInput",
-  assistantVoiceBtn: "assistantVoiceBtn",
   assistantSendBtn: "assistantSendBtn",
+  assistantVoiceBtn: "assistantVoiceBtn",
   assistantClearBtn: "assistantClearBtn",
+  closeAssistantBtn: "closeAssistantBtn",
 
   assistantContext: "assistantContext",
   assistantSuggestions: "assistantSuggestions",
@@ -163,53 +178,12 @@ const DOM_KEYS = {
   assistantLiveStatus: "assistantLiveStatus",
   assistantRefreshScopeBtn: "assistantRefreshScopeBtn",
   assistantRefreshAnalysisBtn: "assistantRefreshAnalysisBtn",
+
   morningBriefBody: "morningBriefBody",
   managerBriefBody: "managerBriefBody",
   qualityBriefBody: "qualityBriefBody",
   liveUpdatesBody: "liveUpdatesBody",
   clearLiveUpdatesBtn: "clearLiveUpdatesBtn",
-
-  fullscreenPanel: "fullscreenPanel",
-  fullscreenPanelTitle: "fullscreenPanelTitle",
-  fullscreenPanelSubtitle: "fullscreenPanelSubtitle",
-  fullscreenPanelActions: "fullscreenPanelActions",
-  closeFullscreenPanelBtn: "closeFullscreenPanelBtn",
-  fullscreenPanelBody: "fullscreenPanelBody",
-
-  composerPanel: "recordComposerPage",
-  recordComposerPage: "recordComposerPage",
-  composerTitle: "composerTitle",
-  composerSubtitle: "composerSubtitle",
-  composerGuidanceText: "composerGuidanceText",
-  composerPrompts: "composerPrompts",
-  recordComposerForm: "recordComposerForm",
-  recordComposerFields: "recordComposerFields",
-
-  autosaveStatus: "autosaveStatus",
-  autosaveTime: "autosaveTime",
-
-  composerSpeechBtn: "composerSpeechBtn",
-  composerTherapeuticModeBtn: "composerTherapeuticModeBtn",
-  closeComposerBtn: "closeComposerBtn",
-  composerSaveBtn: "composerSaveBtn",
-  composerSaveDraftBtn: "composerSaveDraftBtn",
-  composerCheckBtn: "composerCheckBtn",
-  composerSubmitBtn: "composerSubmitBtn",
-
-  recordQualityMeter: "recordQualityMeter",
-  qualityFactsStatus: "qualityFactsStatus",
-  qualityChildVoiceStatus: "qualityChildVoiceStatus",
-  qualityActionsStatus: "qualityActionsStatus",
-  qualityOversightStatus: "qualityOversightStatus",
-  composerModePanel: "composerModePanel",
-
-  composerGrammarBtn: "composerGrammarBtn",
-  composerClarityBtn: "composerClarityBtn",
-  composerSafeguardingBtn: "composerSafeguardingBtn",
-  composerChildVoiceBtn: "composerChildVoiceBtn",
-  composerLanguageBtn: "composerLanguageBtn",
-  composerAiFeedback: "composerAiFeedback",
-  childVoiceReminder: "childVoiceReminder",
 
   recordDrawer: "recordDrawer",
   recordDrawerBackdrop: "recordDrawerBackdrop",
@@ -231,8 +205,8 @@ const DOM_KEYS = {
   closeSuggestionsPanelBtn: "closeSuggestionsPanelBtn",
 };
 
-function firstDefinedElement(...candidates) {
-  return candidates.find(Boolean) || null;
+function firstDefinedElement(...items) {
+  return items.find(Boolean) || null;
 }
 
 function buildEls() {
@@ -242,62 +216,23 @@ function buildEls() {
     resolved[key] = byId(id);
   });
 
-  resolved.selectorPanel = firstDefinedElement(
-    resolved.selectorPanel,
-    resolved.selectorScreen,
-    byId("selectorScreen")
-  );
+  resolved.selectorPanel = firstDefinedElement(resolved.selectorPanel, resolved.selectorScreen);
+  resolved.selectorScreen = firstDefinedElement(resolved.selectorScreen, resolved.selectorPanel);
 
-  resolved.selectorScreen = firstDefinedElement(
-    resolved.selectorScreen,
-    resolved.selectorPanel
-  );
+  resolved.workspacePanel = firstDefinedElement(resolved.workspacePanel, resolved.workspaceScreen);
+  resolved.workspaceScreen = firstDefinedElement(resolved.workspaceScreen, resolved.workspacePanel);
 
-  resolved.workspacePanel = firstDefinedElement(
-    resolved.workspacePanel,
-    resolved.workspaceScreen,
-    byId("workspaceScreen")
-  );
+  resolved.mobileNavDrawer = firstDefinedElement(resolved.mobileNavDrawer, resolved.mobileNavPanel);
+  resolved.mobileNavPanel = firstDefinedElement(resolved.mobileNavPanel, resolved.mobileNavDrawer);
 
-  resolved.workspaceScreen = firstDefinedElement(
-    resolved.workspaceScreen,
-    resolved.workspacePanel
-  );
+  resolved.mobileBottomBar = firstDefinedElement(resolved.mobileBottomBar, resolved.mobileBottomNav);
+  resolved.mobileBottomNav = firstDefinedElement(resolved.mobileBottomNav, resolved.mobileBottomBar);
 
-  resolved.mobileNavBtn = firstDefinedElement(
-    resolved.mobileNavToggle,
-    byId("mobileNavBtn")
-  );
-
-  resolved.mobileNavDrawer = firstDefinedElement(
-    resolved.mobileNavPanel,
-    resolved.mobileNavDrawer
-  );
-
-  resolved.mobileBottomBar = firstDefinedElement(
-    resolved.mobileBottomNav,
-    resolved.mobileBottomBar
-  );
-
-  resolved.homeBtn = firstDefinedElement(
-    byId("homeBtn"),
-    resolved.goHomeBtn,
-    resolved.logoBtn
-  );
-
-  resolved.composerPanel = firstDefinedElement(
-    resolved.recordComposerPage,
-    resolved.composerPanel
-  );
+  resolved.composerPanel = firstDefinedElement(resolved.composerPanel, resolved.recordComposerPage);
+  resolved.recordComposerPage = firstDefinedElement(resolved.recordComposerPage, resolved.composerPanel);
 
   resolved.composerForm = resolved.recordComposerForm;
   resolved.composerFields = resolved.recordComposerFields;
-  resolved.composerBody = resolved.recordComposerFields;
-  resolved.composerError = resolved.composerAiFeedback;
-  resolved.composerAutosaveStatus = firstDefinedElement(
-    resolved.autosaveStatus,
-    byId("composerAutosaveStatus")
-  );
 
   resolved.drawer = resolved.recordDrawer;
   resolved.drawerBackdrop = resolved.recordDrawerBackdrop;
@@ -307,48 +242,25 @@ function buildEls() {
   resolved.drawerActions = resolved.recordDrawerActions;
   resolved.closeDrawerBtn = resolved.closeRecordDrawerBtn;
 
-  resolved.workspaceTitle = firstDefinedElement(
-    byId("workspaceTitle"),
-    resolved.pageTitle
-  );
-
-  resolved.workspaceSubtitle = firstDefinedElement(
-    byId("workspaceSubtitle"),
-    resolved.pageSubtitle
-  );
-
-  resolved.workspaceBody = firstDefinedElement(
-    byId("workspaceBody"),
-    resolved.viewContent
-  );
+  resolved.workspaceTitle = resolved.pageTitle;
+  resolved.workspaceSubtitle = resolved.pageSubtitle;
+  resolved.workspaceBody = resolved.viewContent;
 
   resolved.sectionNav = firstDefinedElement(
-    byId("sectionNav"),
     resolved.heroQuickActions,
-    resolved.mobileNavContent,
-    resolved.osSidebar
+    resolved.mobileNavContent
   );
 
-  resolved.assistantBody = firstDefinedElement(
-    byId("assistantBody"),
-    resolved.assistantMessages
-  );
+  resolved.assistantPanel = resolved.assistantModal;
+  resolved.assistantBody = resolved.assistantMessages;
 
   resolved.youngPersonSelector = firstDefinedElement(
     resolved.youngPersonSelect,
-    byId("youngPersonSelector"),
     resolved.selectorList
   );
 
-  resolved.assistantComposer = firstDefinedElement(
-    resolved.assistantForm,
-    byId("assistantComposer")
-  );
-
-  resolved.assistantSend = firstDefinedElement(
-    resolved.assistantSendBtn,
-    byId("assistantSend")
-  );
+  resolved.assistantComposer = resolved.assistantForm;
+  resolved.assistantSend = resolved.assistantSendBtn;
 
   resolved.workspaceRoot = firstDefinedElement(
     resolved.workspacePanel,
@@ -358,8 +270,7 @@ function buildEls() {
 
   resolved.youngPeopleRoot = firstDefinedElement(
     resolved.mainContent,
-    resolved.workspacePanel,
-    resolved.selectorPanel
+    resolved.workspacePanel
   );
 
   resolved.youngPeopleShell = firstDefinedElement(
@@ -394,20 +305,11 @@ export function requireEl(id, context = "unknown") {
 export function validateCoreDom() {
   const requiredIds = [
     "app",
-    "mainContent",
     "workspacePanel",
     "selectorPanel",
     "viewContent",
     "homeSelect",
     "youngPersonSelect",
-    "selectorList",
-    "homeChipList",
-    "recordComposerPage",
-    "recordComposerForm",
-    "recordComposerFields",
-    "assistantModal",
-    "assistantMessages",
-    "recordDrawer",
   ];
 
   const missing = requiredIds.filter((id) => !byId(id));
