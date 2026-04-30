@@ -1227,6 +1227,57 @@ function bindComposerReviewButtons() {
   }
 }
 
+function forceComposerVisible(panel) {
+  if (!panel) return;
+
+  panel.classList.remove("hidden");
+  panel.setAttribute("aria-hidden", "false");
+
+  Object.assign(panel.style, {
+    display: "grid",
+    position: "fixed",
+    inset: "0",
+    zIndex: "2147483647",
+    placeItems: "center",
+    pointerEvents: "auto",
+    background: "rgba(15, 23, 42, 0.42)",
+  });
+
+  const shell = panel.querySelector(".composer-shell");
+
+  if (shell) {
+    Object.assign(shell.style, {
+      display: "grid",
+      position: "relative",
+      zIndex: "2147483647",
+      width: "min(1440px, 96vw)",
+      maxHeight: "92vh",
+      overflow: "hidden",
+      pointerEvents: "auto",
+      opacity: "1",
+      visibility: "visible",
+      background: "var(--surface, #fff)",
+    });
+  }
+
+  document.body.classList.add("composer-open");
+  document.body.style.overflow = "hidden";
+}
+
+function clearComposerForcedVisibility(panel) {
+  if (!panel) return;
+
+  panel.classList.add("hidden");
+  panel.setAttribute("aria-hidden", "true");
+  panel.removeAttribute("style");
+
+  const shell = panel.querySelector(".composer-shell");
+  shell?.removeAttribute("style");
+
+  document.body.classList.remove("composer-open");
+  document.body.style.overflow = "";
+}
+
 export function openComposer(type, item = {}) {
   const safeType = normaliseRecordType(type) || type;
 
@@ -1267,26 +1318,52 @@ export function openComposer(type, item = {}) {
   setComposerFeedback("No review has been run yet.");
   updateQualityStrip({});
 
-  panel?.classList.remove("hidden");
-  panel?.setAttribute("aria-hidden", "false");
+  forceComposerVisible(panel);
 
   bindComposerReviewButtons();
+
+  console.log("[composer] openComposer rendered", {
+    safeType,
+    titleFound: !!titleEl,
+    subtitleFound: !!subtitleEl,
+    fieldsFound: !!fieldsEl,
+    panelFound: !!panel,
+    fieldsLength: fieldsEl?.innerHTML?.length,
+    panelClass: panel?.className,
+    ariaHidden: panel?.getAttribute("aria-hidden"),
+  });
 
   const firstInput = fieldsEl?.querySelector("input, textarea, select");
   if (firstInput) window.setTimeout(() => firstInput.focus(), 50);
 }
 
 export function openComposerFor(type, mode = "create", item = {}) {
-  openComposer(type, item);
+  const safeType = normaliseRecordType(type) || type;
+
+  state.composerRecordType = safeType;
   state.composerMode = mode || (getRecordId(item) ? "edit" : "create");
   state.composerEditItem = item || null;
+
+  openComposer(safeType, item);
+
+  state.composerMode = mode || (getRecordId(item) ? "edit" : "create");
+  state.composerEditItem = item || null;
+
+  console.log("[composer] openComposerFor complete", {
+    type,
+    safeType,
+    mode: state.composerMode,
+    item,
+    panel: document.getElementById("recordComposerPage")?.className,
+    fieldsLength: document.getElementById("recordComposerFields")?.innerHTML?.length,
+  });
+
   return state.composerEditItem;
 }
 
 export function closeComposer() {
   const panel = getComposerPanel();
-  panel?.classList.add("hidden");
-  panel?.setAttribute("aria-hidden", "true");
+  clearComposerForcedVisibility(panel);
 }
 
 export function resetComposer() {
