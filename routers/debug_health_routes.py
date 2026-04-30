@@ -90,6 +90,47 @@ async def debug_manual_health(request: Request):
         if conn is not None:
             release_db_connection(conn)
 
+@router.post("/daily-note-create-test")
+async def debug_daily_note_create_test(request: Request):
+    from services.young_person_daily_notes_service import YoungPersonDailyNotesService
+    from services.young_people_linking_service import YoungPeopleLinkingService
+    from db.connection import get_db_connection, release_db_connection
+
+    conn = None
+
+    try:
+        body = await request.json()
+        conn = get_db_connection()
+
+        result = YoungPersonDailyNotesService.create_daily_note(
+            conn,
+            young_person_id=int(body.get("young_person_id") or 1001),
+            payload=body.get("payload") or {},
+            author_id=int(body.get("author_id") or 1),
+            linking_service=YoungPeopleLinkingService,
+        )
+
+        return {
+            "ok": True,
+            "result": result,
+        }
+
+    except Exception as error:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "ok": False,
+                "error_type": type(error).__name__,
+                "error": str(error),
+                "traceback": traceback.format_exc(),
+            },
+        )
+
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
 
 @router.post("/post-health")
 async def debug_post_health(
