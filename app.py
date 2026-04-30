@@ -2,6 +2,7 @@ import importlib
 import logging
 import os
 import time
+import traceback
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -210,8 +211,7 @@ ROUTERS = [
     "routers.passkey_routes",
     "routers.legal_acceptance_routes",
 
-    
-    # Temporary diagnostics
+    # Temporary diagnostics.
     "routers.debug_health_routes",
 
     # Must load before stricter legacy/frontend routers.
@@ -760,15 +760,18 @@ def register_exception_handlers(app: FastAPI) -> None:
             str(exc),
         )
 
-        if settings.is_development_like:
+        debug_requested = request.headers.get("X-Debug-Error") == "true"
+
+        if settings.is_development_like or debug_requested:
             return JSONResponse(
                 status_code=500,
                 content={
                     "ok": False,
                     "error": "internal_server_error",
-                    "detail": str(exc),
                     "exception_type": exc.__class__.__name__,
+                    "detail": str(exc),
                     "request_id": request_id,
+                    "traceback": traceback.format_exc(),
                 },
             )
 
@@ -800,7 +803,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.allowed_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Debug-Error"],
     )
 
     app.add_middleware(SecurityHeadersMiddleware)
