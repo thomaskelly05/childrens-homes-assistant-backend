@@ -116,6 +116,8 @@ const CHILD_SCOPED_TYPES = new Set([
   "missing_episode",
 ]);
 
+let composerSaveInProgress = false;
+
 function cleanId(value) {
   if (value === null || value === undefined || value === "") return null;
   const textValue = String(value).trim();
@@ -129,6 +131,11 @@ function firstId(...values) {
     if (parsed) return parsed;
   }
   return null;
+}
+
+function toNumberOrNull(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function getDomYoungPersonId() {
@@ -1088,8 +1095,8 @@ function buildPayload(type, data = {}, mode = "draft", ids = getComposerIds()) {
     workflow_status: status,
     status: smartData.status || status,
     record_type: type,
-    young_person_id: ids.youngPersonId,
-    home_id: ids.homeId,
+    young_person_id: ids.youngPersonId ? toNumberOrNull(ids.youngPersonId) : null,
+    home_id: ids.homeId ? toNumberOrNull(ids.homeId) : null,
   };
 }
 
@@ -1113,8 +1120,8 @@ async function maybeCreateFollowUpTask(ids, type, data = {}) {
       priority: data.severity || data.significance || "medium",
       status: "draft",
       due_date: data.next_action_date || data.next_session_date || data.next_review_date || "",
-      young_person_id: ids.youngPersonId,
-      home_id: ids.homeId,
+      young_person_id: ids.youngPersonId ? toNumberOrNull(ids.youngPersonId) : null,
+      home_id: ids.homeId ? toNumberOrNull(ids.homeId) : null,
     });
   } catch (error) {
     console.warn("[composer] follow-up task creation failed", error);
@@ -1310,56 +1317,196 @@ function dispatchComposerSaved(detail = {}) {
   );
 }
 
+function setSavingState(isSaving, label = "Saving...") {
+  const buttons = [
+    els.composerDraftBtn,
+    els.composerSaveDraftBtn,
+    els.composerSubmitBtn,
+    document.getElementById("recordComposerDraftBtn"),
+    document.getElementById("composerDraftBtn"),
+    document.getElementById("composerSaveDraftBtn"),
+    document.getElementById("recordComposerSubmitBtn"),
+    document.getElementById("composerSubmitBtn"),
+  ].filter(Boolean);
+
+  buttons.forEach((button) => {
+    if (!button.dataset.originalText) {
+      button.dataset.originalText = button.textContent || "";
+    }
+
+    button.disabled = isSaving;
+
+    if (isSaving) {
+      button.textContent = label;
+    } else {
+      button.textContent = button.dataset.originalText || button.textContent;
+    }
+  });
+}
+
+function buildDailyNotePayload(data, ids, status) {
+  return {
+    note_date: data.note_date || today(),
+    shift_type: data.shift_type || "day",
+    presentation: data.presentation || null,
+    behaviour_update: data.behaviour_update || null,
+    positives: data.positives || null,
+    actions_required: data.actions_required || null,
+    young_person_voice: data.young_person_voice || null,
+    workflow_status: status,
+    status,
+    young_person_id: toNumberOrNull(ids.youngPersonId),
+    home_id: toNumberOrNull(ids.homeId || data.home_id || 1),
+  };
+}
+
 export async function saveComposer(mode = "draft") {
-  const form = getComposerForm();
-  if (!form) throw new Error("Composer form is not available.");
-
-  const type =
-    normaliseRecordType(state.composerRecordType) || state.composerRecordType;
-
-  if (!type) throw new Error("No record type selected.");
-
-  const ids = getComposerIds();
-
-  if (type === "daily_note" && !ids.youngPersonId) {
-    throw new Error("Select a child or young person first.");
+  if (composerSaveInProgress) {
+    console.warn("[composer] duplicate save blocked");
+    return null;
   }
 
-  const data = collectFormData(form);
-  const status = mode === "submit" ? "submitted" : data.status || "draft";
+  composerSaveInProgress = true;
+  setSavingState(true, mode === "submit" ? "Submitting..." : "Saving...");
 
-  let payload;
+  console.log("[composer] save started", {
+    mode,
+    composerMode: state.composerMode,
+    composerRecordType: state.composerRecordType,
+    composerEditItem: state.composerEditItem,
+  });
 
-  if (type === "daily_note") {
-    payload = {
-      note_date: data.note_date || today(),
-      shift_type: data.shift_type || "day",
-      presentation: data.presentation || null,
-      behaviour_update: data.behaviour_update || null,
-      positives: data.positives || null,
-      actions_required: data.actions_required || null,
-      young_person_voice: data.young_person_voice || null,
-      workflow_status: status,
-      status,
-      young_person_id: Number(ids.youngPersonId),
-      home_id: Number(ids.homeId || data.home_id || 1),
-    };
-  } else {
-    payload = buildPayload(type, data, mode, ids);
+  try {
+    const form = getComposerForm();
+    if (!form) throw new Error("Composer form is not available.");
+
+    const type =
+      normaliseRecordType(state.composerRecordType) || state.composerRecordType;
+
+    if (!type) throw new Error("No record type selected.");
+
+    const ids = getComposerIds();
+
+    console.log("[composer] ids resolved", ids);
+
+    if (CHILD_SCOPED_TYPES.has(type) && !ids.youngPersonId) {
+      throw new Error("Select a child or young person first.");
+    }
+
+    const data = collectFormData(form);
+
+    console.log("[composer] form data collected", data);
+
+    const required = state.composerRequiredFields || getForm(type).required || [];
+    const missing = validateRequired(data, required);
+
+    if (missing.length) {
+      throw new Error(`Please complete: ${missing.map((key) => key.replaceAll("_", " ")).join(", ")}.`);
+    }
+
+    const status = mode === "submit" ? "submitted" : data.status || "draft";
+
+    const payload =
+      type === "daily_note"
+        ? buildDailyNotePayload(data, ids, status)
+        : buildPayload(type, data, mode, ids);
+
+    console.log("[composer] payload ready", {
+      type,
+      mode,
+      ids,
+      payload,
+    });
+
+    const editItem = state.composerEditItem || {};
+    const existingId = getRecordId(editItem);
+    const isEdit = state.composerMode === "edit" && existingId;
+
+    let saved;
+
+    if (isEdit) {
+      console.log("[composer] updateRecord starting", {
+        type,
+        existingId,
+        ids,
+        payload,
+      });
+
+      saved = await updateRecord(type, existingId, ids, payload);
+
+      console.log("[composer] updateRecord complete", saved);
+    } else {
+      console.log("[composer] createRecord starting", {
+        type,
+        ids,
+        payload,
+      });
+
+      saved = await createRecord(type, ids, payload);
+
+      console.log("[composer] createRecord complete", saved);
+    }
+
+    const followUp = await maybeCreateFollowUpTask(ids, type, data);
+
+    if (followUp) {
+      console.log("[composer] follow-up task created", followUp);
+    }
+
+    dispatchComposerSaved({
+      type,
+      mode,
+      ids,
+      payload,
+      saved,
+      followUp,
+      action: isEdit ? "update" : "create",
+    });
+
+    closeComposer();
+
+    console.log("[composer] save finished", saved);
+
+    return saved;
+  } catch (error) {
+    console.error("[composer] save failed", error);
+    throw error;
+  } finally {
+    composerSaveInProgress = false;
+    setSavingState(false);
   }
+}
 
-  const saved = await createRecord(type, ids, payload);
+async function runSaveAndRefresh(mode, onSaved) {
+  try {
+    const saved = await saveComposer(mode);
 
-  closeComposer();
+    console.log("[composer] saveComposer returned", saved);
 
-  return saved;
+    if (!saved) return saved;
+
+    try {
+      console.log("[composer] onSaved starting");
+      await onSaved?.(saved);
+      console.log("[composer] onSaved complete");
+    } catch (error) {
+      console.error("[composer] onSaved failed after save", error);
+      window.alert(
+        "The record saved, but the screen refresh failed. Refresh the page if you cannot see the new record."
+      );
+    }
+
+    return saved;
+  } catch (error) {
+    console.error(`[composer] ${mode} failed`, error);
+    window.alert(error?.message || "Unable to save record.");
+    return null;
+  }
 }
 
 export function bindComposerEvents({ onSaved } = {}) {
   if (state.composerEventsBound) return;
   state.composerEventsBound = true;
-
-  const form = getComposerForm();
 
   els.closeComposerBtn?.addEventListener("click", closeComposer);
 
@@ -1387,38 +1534,20 @@ export function bindComposerEvents({ onSaved } = {}) {
 
   draftBtn?.addEventListener("click", async (event) => {
     event.preventDefault();
-
-    try {
-      const saved = await saveComposer("draft");
-      await onSaved?.(saved);
-    } catch (error) {
-      console.error("[composer] draft save failed", error);
-      window.alert(error?.message || "Unable to save draft.");
-    }
+    await runSaveAndRefresh("draft", onSaved);
   });
 
   submitBtn?.addEventListener("click", async (event) => {
     event.preventDefault();
-
-    try {
-      const saved = await saveComposer("submit");
-      await onSaved?.(saved);
-    } catch (error) {
-      console.error("[composer] submit failed", error);
-      window.alert(error?.message || "Unable to submit record.");
-    }
+    await runSaveAndRefresh("submit", onSaved);
   });
 
-  form?.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  document.addEventListener("submit", async (event) => {
+    const form = getComposerForm();
+    if (!form || event.target !== form) return;
 
-    try {
-      const saved = await saveComposer("submit");
-      await onSaved?.(saved);
-    } catch (error) {
-      console.error("[composer] form submit failed", error);
-      window.alert(error?.message || "Unable to submit record.");
-    }
+    event.preventDefault();
+    await runSaveAndRefresh("submit", onSaved);
   });
 
   bindComposerReviewButtons();
