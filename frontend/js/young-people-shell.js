@@ -998,7 +998,6 @@
     const bindings = [
       ["closeFullscreenPanelBtn", "fullscreenPanel"],
       ["closeSuggestionsPanelBtn", "suggestionsPanel"],
-      ["closeComposerBtn", "recordComposerPage"],
       ["closeRecordDrawerBtn", "recordDrawer"],
     ];
 
