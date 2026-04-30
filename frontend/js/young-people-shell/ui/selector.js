@@ -39,21 +39,45 @@ function getSafeStartEls() {
     selectedHomeSummary: byId("selectedHomeSummary"),
 
     youngPersonSelect: byId("youngPersonSelect"),
+    selectorSearch: byId("selectorSearch"),
+    youngPersonSearchInput: byId("youngPersonSearchInput"),
     selectedChildSummary: byId("selectedChildSummary"),
 
     safeStartChooseHomeBtn: byId("safeStartChooseHomeBtn"),
     safeStartAskAssistantBtn: byId("safeStartAskAssistantBtn"),
+    safeStartVoiceSearchBtn: byId("safeStartVoiceSearchBtn"),
+
     openCareHubBtn: byId("openCareHubBtn"),
+    launchOpenCareHubBtn: byId("launchOpenCareHubBtn"),
     clearSafeStartBtn: byId("clearSafeStartBtn"),
     safeStartReadySummary: byId("safeStartReadySummary"),
 
     readyHomeName: byId("readyHomeName"),
     readyChildName: byId("readyChildName"),
 
+    launchReadyHome: byId("launchReadyHome"),
+    launchReadyChild: byId("launchReadyChild"),
+    launchLastRefreshed: byId("launchLastRefreshed"),
+
     homePickerDrawer: byId("homePickerDrawer"),
     childPickerDrawer: byId("childPickerDrawer"),
     openCareHubDrawer: byId("openCareHubDrawer"),
+
+    welcomeOpenActions: byId("welcomeOpenActions"),
+    welcomeReviewsDue: byId("welcomeReviewsDue"),
+    welcomeDocumentsDue: byId("welcomeDocumentsDue"),
   };
+}
+
+function nowTime() {
+  try {
+    return new Date().toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "Updated";
+  }
 }
 
 function renderEmptyState({
@@ -95,6 +119,10 @@ function getHomeName(item = {}) {
   );
 }
 
+function getYoungPersonId(item = {}) {
+  return item.id || item.young_person_id || item.person_id || null;
+}
+
 function uniqueHomes(items = []) {
   const homes = new Map();
 
@@ -132,7 +160,12 @@ function normaliseYoungPeopleResponse(data = {}) {
 function renderPhoto(item = {}) {
   const name = getDisplayName(item);
   const initials = initialsFromName(name);
-  const photoUrl = item.photo_url || item.profile_photo_url || "";
+  const photoUrl =
+    item.photo_url ||
+    item.profile_photo_url ||
+    item.profilePhotoUrl ||
+    item.image_url ||
+    "";
 
   if (photoUrl) {
     return `
@@ -141,37 +174,49 @@ function renderPhoto(item = {}) {
         src="${escapeHtml(photoUrl)}"
         alt=""
         loading="lazy"
+        onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');"
       />
+      <div class="selector-card-photo-fallback hidden">${escapeHtml(initials)}</div>
     `;
   }
 
   return `<div class="selector-card-photo-fallback">${escapeHtml(initials)}</div>`;
 }
 
-function renderYoungPersonCard(item = {}) {
-  const displayName = getDisplayName(item);
-
-  const metaPills = [
-    item.preferred_name ? `Prefers ${item.preferred_name}` : "",
-    item.placement_status || "",
-    item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : "",
-  ].filter(Boolean);
-
-  const subtitle = [
+function buildCardSubtitle(item = {}) {
+  return [
     item.date_of_birth ? `DOB ${formatDate(item.date_of_birth)}` : "",
     item.admission_date ? `Admitted ${formatDate(item.admission_date)}` : "",
     item.home_name || item.homeName || "",
   ]
     .filter(Boolean)
     .join(" • ");
+}
+
+function buildMetaPills(item = {}) {
+  return [
+    item.preferred_name ? `Prefers ${item.preferred_name}` : "",
+    item.placement_status || "",
+    item.summary_risk_level ? `Risk: ${item.summary_risk_level}` : "",
+    item.legal_status || "",
+  ].filter(Boolean);
+}
+
+function renderYoungPersonCard(item = {}) {
+  const id = getYoungPersonId(item);
+  const displayName = getDisplayName(item) || `Young person ${id || ""}`;
+  const subtitle = buildCardSubtitle(item);
+  const metaPills = buildMetaPills(item);
+  const active = String(state.youngPersonId || "") === String(id || "");
 
   return `
     <button
       type="button"
-      class="selector-card selector-card--photo"
-      data-open-young-person="${escapeHtml(String(item.id || ""))}"
-      data-young-person-id="${escapeHtml(String(item.id || ""))}"
+      class="selector-card selector-card--photo ${active ? "active" : ""}"
+      data-open-young-person="${escapeHtml(String(id || ""))}"
+      data-young-person-id="${escapeHtml(String(id || ""))}"
       aria-label="Choose ${escapeHtml(displayName)}"
+      aria-pressed="${active ? "true" : "false"}"
     >
       <div class="selector-card-media">
         ${renderPhoto(item)}
@@ -207,7 +252,7 @@ function renderSelectorList(items = []) {
 
   if (!items.length) {
     list.innerHTML = renderEmptyState({
-      title: "No children found",
+      title: "No young people found",
       message: "Choose a home, refresh the list, or try a different search.",
     });
     return;
@@ -231,6 +276,7 @@ function matchesSearch(item = {}, term = "") {
     item.name,
     item.placement_status,
     item.summary_risk_level,
+    item.legal_status,
     item.local_id_number,
     item.nhs_number,
     item.home_name,
@@ -266,7 +312,11 @@ function getChildrenForHome(homeId) {
 
 function findChildById(childId) {
   const id = String(childId || "");
-  return (state.youngPeople || []).find((item) => String(item.id) === id) || null;
+  return (
+    (state.youngPeople || []).find(
+      (item) => String(getYoungPersonId(item) || "") === id
+    ) || null
+  );
 }
 
 function findHomeById(homeId) {
@@ -278,7 +328,7 @@ function syncAppDataset(child = null) {
   const app = byId("app");
   if (!app) return;
 
-  const childId = state.youngPersonId || child?.id || "";
+  const childId = state.youngPersonId || getYoungPersonId(child || {}) || "";
   const homeId = state.homeId || getHomeId(child || {}) || "";
 
   app.dataset.scope = "child";
@@ -287,14 +337,34 @@ function syncAppDataset(child = null) {
   app.dataset.homeId = homeId ? String(homeId) : "";
 }
 
+function syncSelectedVisuals() {
+  const selectedHomeId = getSelectedHomeId();
+  const selectedChildId = getSelectedChildId();
+
+  document.querySelectorAll("[data-safe-home-id]").forEach((chip) => {
+    const active = String(chip.dataset.safeHomeId || "") === selectedHomeId;
+    chip.classList.toggle("active", active);
+    chip.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+
+  document.querySelectorAll("[data-open-young-person]").forEach((card) => {
+    const active = String(card.dataset.openYoungPerson || "") === selectedChildId;
+    card.classList.toggle("active", active);
+    card.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
 function updateSafeStartReadyState() {
   const s = getSafeStartEls();
 
-  const selectedHomeId = String(s.homeSelect?.value || "");
-  const selectedChildId = String(s.youngPersonSelect?.value || "");
+  const selectedHomeId = String(s.homeSelect?.value || state.homeId || "");
+  const selectedChildId = String(s.youngPersonSelect?.value || state.youngPersonId || "");
 
   const home = findHomeById(selectedHomeId);
   const child = findChildById(selectedChildId);
+
+  const homeName = home ? home.name : "Not selected";
+  const childName = child ? getDisplayName(child) : "Not selected";
 
   if (s.selectedHomeSummary) {
     s.selectedHomeSummary.textContent = home ? home.name : "No home selected";
@@ -304,33 +374,44 @@ function updateSafeStartReadyState() {
     s.selectedChildSummary.textContent = child
       ? getDisplayName(child)
       : selectedHomeId
-        ? "No child selected"
+        ? "No young person selected"
         : "Choose a home first";
   }
 
-  if (s.readyHomeName) {
-    s.readyHomeName.textContent = home ? home.name : "Not selected";
-  }
+  if (s.readyHomeName) s.readyHomeName.textContent = homeName;
+  if (s.readyChildName) s.readyChildName.textContent = childName;
 
-  if (s.readyChildName) {
-    s.readyChildName.textContent = child ? getDisplayName(child) : "Not selected";
-  }
+  if (s.launchReadyHome) s.launchReadyHome.textContent = homeName;
+  if (s.launchReadyChild) s.launchReadyChild.textContent = childName;
+  if (s.launchLastRefreshed) s.launchLastRefreshed.textContent = nowTime();
 
   if (s.safeStartReadySummary) {
     s.safeStartReadySummary.textContent = child
       ? "Ready to open Care Hub"
-      : "Waiting for home and child";
+      : "Waiting for home and young person";
   }
 
-  if (s.openCareHubBtn) {
-    s.openCareHubBtn.textContent = "Open Care Hub";
-    s.openCareHubBtn.disabled = !child;
-    s.openCareHubBtn.setAttribute("aria-disabled", child ? "false" : "true");
-  }
+  [s.openCareHubBtn, s.launchOpenCareHubBtn].forEach((button) => {
+    if (!button) return;
+
+    button.textContent = "Open Care Hub";
+    button.disabled = !child;
+    button.setAttribute("aria-disabled", child ? "false" : "true");
+  });
 
   if (s.openCareHubDrawer && child) {
     s.openCareHubDrawer.open = true;
   }
+
+  syncSelectedVisuals();
+}
+
+function updateWelcomeMetrics() {
+  const s = getSafeStartEls();
+
+  if (s.welcomeOpenActions) s.welcomeOpenActions.textContent = "Ready";
+  if (s.welcomeReviewsDue) s.welcomeReviewsDue.textContent = "Check Care Hub";
+  if (s.welcomeDocumentsDue) s.welcomeDocumentsDue.textContent = "Check Care Hub";
 }
 
 function updateSafeStartChildren() {
@@ -345,25 +426,41 @@ function updateSafeStartChildren() {
     s.youngPersonSelect.innerHTML = `
       <option value="">Choose a child</option>
       ${children
-        .map(
-          (child) => `
-            <option value="${escapeHtml(String(child.id))}">
+        .map((child) => {
+          const id = getYoungPersonId(child);
+
+          return `
+            <option value="${escapeHtml(String(id || ""))}">
               ${escapeHtml(getDisplayName(child))}
             </option>
-          `
-        )
+          `;
+        })
         .join("")}
     `;
 
     if (
       previousChildId &&
-      children.some((child) => String(child.id) === previousChildId)
+      children.some((child) => String(getYoungPersonId(child)) === previousChildId)
     ) {
       s.youngPersonSelect.value = previousChildId;
+    } else if (
+      state.youngPersonId &&
+      children.some((child) => String(getYoungPersonId(child)) === String(state.youngPersonId))
+    ) {
+      s.youngPersonSelect.value = String(state.youngPersonId);
+    } else {
+      state.youngPersonId = null;
     }
   }
 
-  renderSelectorList(children);
+  const term =
+    s.selectorSearch?.value ||
+    s.youngPersonSearchInput?.value ||
+    state.youngPeopleFilter ||
+    "";
+
+  const filtered = children.filter((item) => matchesSearch(item, term));
+  renderSelectorList(filtered);
 
   if (s.childPickerDrawer && selectedHomeId) {
     s.childPickerDrawer.open = true;
@@ -403,18 +500,21 @@ function renderSafeStartHomes(items = []) {
   if (s.homeChipList) {
     s.homeChipList.innerHTML = homes.length
       ? homes
-          .map(
-            (home) => `
+          .map((home) => {
+            const active = String(state.homeId || "") === String(home.id);
+
+            return `
               <button
                 type="button"
-                class="safe-chip"
+                class="safe-chip home-chip ${active ? "active" : ""}"
                 data-safe-home-id="${escapeHtml(home.id)}"
+                aria-pressed="${active ? "true" : "false"}"
               >
                 <strong>${escapeHtml(home.name)}</strong>
-                <span>Open children in this home</span>
+                <span>Open young people in this home</span>
               </button>
-            `
-          )
+            `;
+          })
           .join("")
       : renderEmptyState({
           title: "No homes found",
@@ -423,6 +523,7 @@ function renderSafeStartHomes(items = []) {
   }
 
   updateSafeStartChildren();
+  updateWelcomeMetrics();
 }
 
 function setSelectedSafeStartChild(childId) {
@@ -439,9 +540,12 @@ function setSelectedSafeStartChild(childId) {
   }
 
   if (s.youngPersonSelect) {
-    s.youngPersonSelect.value = String(child.id);
+    s.youngPersonSelect.value = String(getYoungPersonId(child));
   }
 
+  state.youngPersonId = Number(getYoungPersonId(child)) || getYoungPersonId(child);
+
+  syncAppDataset(child);
   updateSafeStartReadyState();
 }
 
@@ -473,19 +577,72 @@ function showWorkspaceScreen() {
   els.workspaceScreen?.setAttribute("aria-hidden", "false");
 }
 
+async function openSelectedCareHub(button = null) {
+  const childId = getSelectedChildId();
+
+  if (!childId) {
+    updateSafeStartReadyState();
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  }
+
+  try {
+    await openYoungPerson(childId, {
+      initialSection: "workspace",
+      forceInitialSectionLoad: true,
+      skipInitialSectionLoad: false,
+    });
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
+  }
+}
+
+function clearSafeStartSelection() {
+  const s = getSafeStartEls();
+
+  if (s.homeSelect) s.homeSelect.value = "";
+  if (s.youngPersonSelect) s.youngPersonSelect.value = "";
+  if (s.selectorSearch) s.selectorSearch.value = "";
+  if (s.youngPersonSearchInput) s.youngPersonSearchInput.value = "";
+  if (s.homeSearchInput) s.homeSearchInput.value = "";
+
+  state.homeId = null;
+  state.youngPersonId = null;
+  state.youngPeopleFilter = "";
+
+  clearSelectedYoungPerson();
+  setYoungPersonIdInUrl(null);
+  syncAppDataset(null);
+
+  renderSafeStartHomes(state.youngPeople || []);
+}
+
 function bindSafeStartControls() {
   if (safeStartBound) return;
   safeStartBound = true;
 
   document.addEventListener("change", (event) => {
     if (event.target?.id === "homeSelect") {
-      state.homeId = Number(event.target.value) || null;
+      state.homeId = Number(event.target.value) || event.target.value || null;
       updateSafeStartChildren();
       return;
     }
 
     if (event.target?.id === "youngPersonSelect") {
-      updateSafeStartReadyState();
+      const childId = event.target.value || "";
+      if (childId) {
+        setSelectedSafeStartChild(childId);
+      } else {
+        state.youngPersonId = null;
+        updateSafeStartReadyState();
+      }
     }
   });
 
@@ -503,7 +660,7 @@ function bindSafeStartControls() {
 
       s.homeChipList?.querySelectorAll("[data-safe-home-id]").forEach((chip) => {
         const text = chip.innerText.toLowerCase();
-        chip.classList.toggle("hidden", term && !text.includes(term));
+        chip.classList.toggle("hidden", Boolean(term && !text.includes(term)));
       });
     }
   });
@@ -519,6 +676,12 @@ function bindSafeStartControls() {
       }
 
       state.homeId = Number(homeId) || homeId || null;
+      state.youngPersonId = null;
+
+      if (s.youngPersonSelect) {
+        s.youngPersonSelect.value = "";
+      }
+
       updateSafeStartChildren();
       return;
     }
@@ -530,41 +693,22 @@ function bindSafeStartControls() {
       return;
     }
 
-    if (event.target.closest("#openCareHubBtn")) {
-      const childId = getSelectedChildId();
-
-      if (!childId) {
-        updateSafeStartReadyState();
-        return;
-      }
-
-      await openYoungPerson(childId, {
-        initialSection: "workspace",
-        forceInitialSectionLoad: true,
-        skipInitialSectionLoad: false,
-      });
-
+    const openButton = event.target.closest("#openCareHubBtn, #launchOpenCareHubBtn");
+    if (openButton) {
+      event.preventDefault();
+      await openSelectedCareHub(openButton);
       return;
     }
 
     if (event.target.closest("#clearSafeStartBtn")) {
-      const s = getSafeStartEls();
-
-      if (s.homeSelect) s.homeSelect.value = "";
-      if (s.youngPersonSelect) s.youngPersonSelect.value = "";
-
-      state.homeId = null;
-      state.youngPersonId = null;
-      clearSelectedYoungPerson();
-      setYoungPersonIdInUrl(null);
-      syncAppDataset(null);
-
-      renderSafeStartHomes(state.youngPeople || []);
+      clearSafeStartSelection();
       return;
     }
 
     if (event.target.closest("#safeStartAskAssistantBtn")) {
       byId("assistantLauncher")?.click();
+      byId("heroAssistantBtn")?.click();
+      return;
     }
 
     if (event.target.closest("#safeStartChooseHomeBtn")) {
@@ -589,26 +733,41 @@ export function filterSelectorList(term = "") {
   });
 
   renderSelectorList(filtered);
+  updateSafeStartReadyState();
 }
 
 export async function loadYoungPersonSelector() {
   const list = getSelectorList();
 
   if (list) {
-    list.innerHTML = renderLoadingState("Loading homes and children…");
+    list.innerHTML = renderLoadingState("Loading homes and young people…");
   }
 
   bindSafeStartControls();
 
-  const data = await apiGet("/young-people");
-  const items = normaliseYoungPeopleResponse(data);
+  try {
+    const data = await apiGet("/young-people");
+    const items = normaliseYoungPeopleResponse(data);
 
-  state.youngPeople = Array.isArray(items) ? items : [];
+    state.youngPeople = Array.isArray(items) ? items : [];
 
-  renderSafeStartHomes(state.youngPeople);
-  filterSelectorList(state.youngPeopleFilter || "");
+    renderSafeStartHomes(state.youngPeople);
+    filterSelectorList(state.youngPeopleFilter || "");
+    updateSafeStartReadyState();
 
-  updateSafeStartReadyState();
+    return state.youngPeople;
+  } catch (error) {
+    console.error("[selector] failed to load young people", error);
+
+    if (list) {
+      list.innerHTML = renderEmptyState({
+        title: "Unable to load young people",
+        message: "Please refresh or check the API route for /young-people.",
+      });
+    }
+
+    throw error;
+  }
 }
 
 export function goBackToSelector() {
@@ -637,7 +796,7 @@ export async function openYoungPerson(id, options = {}) {
 
   const existing =
     (state.youngPeople || []).find(
-      (item) => String(item.id) === String(youngPersonId)
+      (item) => String(getYoungPersonId(item)) === String(youngPersonId)
     ) || null;
 
   if (existing) {
@@ -648,7 +807,7 @@ export async function openYoungPerson(id, options = {}) {
   } else {
     try {
       const data = await apiGet(`/young-people/${youngPersonId}`);
-      const person = data.young_person || data.item || data || null;
+      const person = data.young_person || data.youngPerson || data.item || data || null;
 
       setSelectedYoungPerson(person || { id: youngPersonId });
 
