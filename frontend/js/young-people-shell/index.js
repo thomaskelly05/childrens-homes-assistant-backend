@@ -51,6 +51,10 @@ let changePersonFallbackBound = false;
 let restrictedSectionGuardBound = false;
 let openCareHubFallbackBound = false;
 let workspaceNavigationFallbackBound = false;
+let launchReadinessBound = false;
+let osNavigationBound = false;
+let therapeuticPromptBound = false;
+let nightShiftBound = false;
 
 const ADMIN_LIKE_ROLES = new Set([
   "administrator",
@@ -89,12 +93,48 @@ const SECTION_ALIASES = Object.freeze({
   "my-day": "workspace",
 });
 
+const VIEW_SECTION_MAP = Object.freeze({
+  home: "workspace",
+  timeline: "timeline",
+  profile: "profile",
+  risk: "risk",
+  manager: "manager",
+  health: "health",
+  education: "education",
+  family: "family",
+  appointments: "appointments",
+  compliance: "compliance",
+  evidence: "sccif-evidence",
+});
+
 const CORE_CHILD_SECTIONS = new Set([
+  "workspace",
+  "profile",
   "timeline",
   "daily-life",
   "daily-notes",
   "incidents",
+  "risk",
+  "safeguarding",
+  "missing-from-care",
+  "health",
+  "education",
+  "family",
+  "appointments",
+  "actions",
+  "admission",
+  "reviews",
+  "transition",
+  "leaving-care",
+  "medication",
+  "manager",
+  "sccif-evidence",
+  "compliance",
 ]);
+
+function byId(id) {
+  return document.getElementById(id);
+}
 
 function normaliseRole(role) {
   const rawRole = String(role || "staff").toLowerCase().trim();
@@ -168,6 +208,17 @@ function writeSessionUser(user) {
   }
 }
 
+function formatTime(value = new Date()) {
+  try {
+    return value.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 function showWorkspace() {
   refreshEls();
 
@@ -194,6 +245,8 @@ function showSelector() {
   els.workspaceScreen?.setAttribute("aria-hidden", "true");
   els.selectorPanel?.setAttribute("aria-hidden", "false");
   els.selectorScreen?.setAttribute("aria-hidden", "false");
+
+  syncLaunchReadinessStrip();
 }
 
 function getCurrentSection() {
@@ -478,6 +531,8 @@ function syncDomDatasetFromState() {
       : scope === "quality" || scope === "ofsted"
         ? "quality"
         : "child";
+
+  syncLaunchReadinessStrip();
 }
 
 function forceChildEntryMode() {
@@ -607,6 +662,7 @@ function refreshAllChrome() {
   renderAssistantInsights();
   syncScopeButtons();
   syncRestrictedNavigationVisibility();
+  syncOsNavigationActiveState();
 
   if (!state.youngPersonId) {
     refreshWorkspaceSummary();
@@ -699,6 +755,8 @@ async function openYoungPersonSafely(id, options = {}) {
     updateAssistantContext();
     renderAssistantMessages();
     renderAssistantInsights();
+    syncOsNavigationActiveState();
+    showTherapeuticPrompt();
 
     return true;
   } catch (error) {
@@ -726,6 +784,7 @@ async function bootstrapSelectorDashboard() {
   }
 
   refreshWorkspaceSummary();
+  syncLaunchReadinessStrip();
 }
 
 function bindChangePersonFallback() {
@@ -733,8 +792,8 @@ function bindChangePersonFallback() {
   changePersonFallbackBound = true;
 
   const buttons = [
-    document.getElementById("changePersonBtn"),
-    document.getElementById("mobileHomeBtn"),
+    byId("changePersonBtn"),
+    byId("mobileHomeBtn"),
   ].filter(Boolean);
 
   for (const button of buttons) {
@@ -775,9 +834,9 @@ function bindGlobalSearchMirrors() {
   if (globalSearchMirrorsBound) return;
   globalSearchMirrorsBound = true;
 
-  const desktopSearch = document.getElementById("recordSearchInput");
-  const mobileSearch = document.getElementById("mobileRecordSearchInput");
-  const filter = document.getElementById("recordTypeFilter");
+  const desktopSearch = byId("recordSearchInput");
+  const mobileSearch = byId("mobileRecordSearchInput");
+  const filter = byId("recordTypeFilter");
 
   if (!desktopSearch && !mobileSearch && !filter) return;
 
@@ -856,6 +915,141 @@ function bindGlobalRefreshShortcuts() {
   });
 }
 
+function getSelectedYoungPersonIdFromDom() {
+  const select = byId("youngPersonSelect");
+  const app = byId("app");
+
+  return (
+    select?.value ||
+    state.youngPersonId ||
+    app?.dataset.youngPersonId ||
+    null
+  );
+}
+
+function getSelectedHomeLabelFromDom() {
+  const select = byId("homeSelect");
+  const selectedOption = select?.selectedOptions?.[0];
+
+  if (selectedOption?.value) return selectedOption.textContent.trim();
+
+  const activeChip =
+    document.querySelector("#homeChipList .active") ||
+    document.querySelector("#homeChipList [aria-pressed='true']");
+
+  if (activeChip) return activeChip.textContent.trim();
+
+  if (state.homeId) return `Home ${state.homeId}`;
+
+  return "Not selected";
+}
+
+function getSelectedChildLabelFromDom() {
+  const select = byId("youngPersonSelect");
+  const selectedOption = select?.selectedOptions?.[0];
+
+  if (selectedOption?.value) return selectedOption.textContent.trim();
+
+  const activeCard =
+    document.querySelector("#selectorList .active") ||
+    document.querySelector("#selectorList [aria-pressed='true']");
+
+  const heading = activeCard?.querySelector("h3");
+  if (heading) return heading.textContent.trim();
+
+  if (state.youngPersonId) return `Young person ${state.youngPersonId}`;
+
+  return "Not selected";
+}
+
+function syncLaunchReadinessStrip() {
+  const readyHome = byId("launchReadyHome");
+  const readyChild = byId("launchReadyChild");
+  const refreshed = byId("launchLastRefreshed");
+  const openBtn = byId("launchOpenCareHubBtn");
+
+  if (!readyHome && !readyChild && !refreshed && !openBtn) return;
+
+  const selectedHome = getSelectedHomeLabelFromDom();
+  const selectedChild = getSelectedChildLabelFromDom();
+  const selectedId = normaliseNumericId(getSelectedYoungPersonIdFromDom());
+
+  if (readyHome) readyHome.textContent = selectedHome;
+  if (readyChild) readyChild.textContent = selectedChild;
+  if (refreshed && !refreshed.dataset.touched) {
+    refreshed.textContent = "Ready";
+    refreshed.dataset.touched = "true";
+  }
+
+  if (openBtn) {
+    openBtn.disabled = !selectedId;
+    openBtn.setAttribute("aria-disabled", selectedId ? "false" : "true");
+  }
+}
+
+function bindLaunchReadinessStrip() {
+  if (launchReadinessBound) return;
+  launchReadinessBound = true;
+
+  const homeSelect = byId("homeSelect");
+  const youngPersonSelect = byId("youngPersonSelect");
+  const selectorSearch = byId("selectorSearch");
+  const openBtn = byId("launchOpenCareHubBtn");
+  const refreshBtn = byId("selectorRefreshBtn");
+  const refreshed = byId("launchLastRefreshed");
+
+  const sync = () => {
+    if (refreshed) {
+      refreshed.textContent = formatTime(new Date());
+      refreshed.dataset.touched = "true";
+    }
+    syncLaunchReadinessStrip();
+  };
+
+  homeSelect?.addEventListener("change", sync);
+  youngPersonSelect?.addEventListener("change", sync);
+  selectorSearch?.addEventListener("input", sync);
+
+  document.addEventListener("click", (event) => {
+    if (
+      event.target.closest("#homeChipList") ||
+      event.target.closest("#selectorList")
+    ) {
+      window.setTimeout(sync, 80);
+    }
+  });
+
+  refreshBtn?.addEventListener("click", () => {
+    window.setTimeout(sync, 120);
+  });
+
+  openBtn?.addEventListener("click", async (event) => {
+    event.preventDefault();
+
+    const selectedId = normaliseNumericId(getSelectedYoungPersonIdFromDom());
+
+    if (!selectedId) {
+      showError("Choose a child or young person first.");
+      return;
+    }
+
+    openBtn.disabled = true;
+    openBtn.setAttribute("aria-busy", "true");
+
+    try {
+      await openYoungPersonSafely(selectedId, {
+        initialSection: "workspace",
+      });
+    } finally {
+      openBtn.disabled = false;
+      openBtn.removeAttribute("aria-busy");
+      syncLaunchReadinessStrip();
+    }
+  });
+
+  syncLaunchReadinessStrip();
+}
+
 function bindOpenCareHubFallback() {
   if (openCareHubFallbackBound) return;
   openCareHubFallbackBound = true;
@@ -870,12 +1064,7 @@ function bindOpenCareHubFallback() {
       event.stopPropagation();
       event.stopImmediatePropagation();
 
-      const select = document.getElementById("youngPersonSelect");
-      const selectedId =
-        select?.value ||
-        state.youngPersonId ||
-        document.getElementById("app")?.dataset.youngPersonId ||
-        null;
+      const selectedId = getSelectedYoungPersonIdFromDom();
 
       if (!selectedId) {
         showError("Choose a child or young person first.");
@@ -935,6 +1124,7 @@ async function loadWorkspaceTarget(target, options = {}) {
     updateAssistantContext();
     renderAssistantMessages();
     renderAssistantInsights();
+    syncOsNavigationActiveState();
   } catch (error) {
     console.error(`[index] failed loading workspace section "${section}"`, error);
     showError(error?.message || `Failed to load ${section}.`);
@@ -943,22 +1133,7 @@ async function loadWorkspaceTarget(target, options = {}) {
 
 function normaliseViewToSection(view) {
   const value = normaliseSection(view);
-
-  const map = {
-    home: "workspace",
-    timeline: "timeline",
-    profile: "profile",
-    risk: "risk",
-    manager: "manager",
-    health: "health",
-    education: "education",
-    family: "family",
-    appointments: "appointments",
-    compliance: "compliance",
-    evidence: "sccif-evidence",
-  };
-
-  return map[value] || value;
+  return VIEW_SECTION_MAP[value] || value;
 }
 
 function bindWorkspaceNavigationFallback() {
@@ -989,6 +1164,123 @@ function bindWorkspaceNavigationFallback() {
   );
 }
 
+function syncOsNavigationActiveState() {
+  const currentSection = getCurrentSection();
+
+  document.querySelectorAll(".os-nav-item").forEach((button) => {
+    const target = button.dataset.view
+      ? normaliseViewToSection(button.dataset.view)
+      : normaliseSection(button.dataset.navSection || "");
+
+    const active = target === currentSection;
+
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+
+  document.querySelectorAll(".journey-step").forEach((button) => {
+    const target = button.dataset.view
+      ? normaliseViewToSection(button.dataset.view)
+      : normaliseSection(button.dataset.navSection || "");
+
+    const active = target === currentSection;
+
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "step" : "false");
+  });
+}
+
+function bindOsNavigationActiveState() {
+  if (osNavigationBound) return;
+  osNavigationBound = true;
+
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest(".os-nav-item, .journey-step");
+    if (!button) return;
+
+    document
+      .querySelectorAll(".os-nav-item, .journey-step")
+      .forEach((item) => {
+        if (item.classList.contains("journey-step") !== button.classList.contains("journey-step")) {
+          return;
+        }
+
+        item.classList.remove("active");
+        item.setAttribute("aria-current", "false");
+      });
+
+    button.classList.add("active");
+    button.setAttribute(
+      "aria-current",
+      button.classList.contains("journey-step") ? "step" : "page"
+    );
+  });
+
+  syncOsNavigationActiveState();
+}
+
+function showTherapeuticPrompt() {
+  const panel = byId("therapeuticPromptPanel");
+  if (!panel) return;
+
+  const dismissed = sessionStorage.getItem("indicare-therapeutic-prompt-dismissed");
+  if (dismissed === "true") return;
+
+  panel.classList.remove("hidden");
+  panel.setAttribute("aria-hidden", "false");
+}
+
+function bindTherapeuticPrompt() {
+  if (therapeuticPromptBound) return;
+  therapeuticPromptBound = true;
+
+  const panel = byId("therapeuticPromptPanel");
+  const dismissBtn = byId("dismissTherapeuticPromptBtn");
+
+  dismissBtn?.addEventListener("click", () => {
+    panel?.classList.add("hidden");
+    panel?.setAttribute("aria-hidden", "true");
+    sessionStorage.setItem("indicare-therapeutic-prompt-dismissed", "true");
+  });
+
+  document.addEventListener("click", (event) => {
+    const recordButton = event.target.closest(
+      "[data-action='daily-note'], [data-action='incident'], [data-action='risk'], [data-action='plan']"
+    );
+
+    if (!recordButton) return;
+    showTherapeuticPrompt();
+  });
+}
+
+function bindNightShiftMode() {
+  if (nightShiftBound) return;
+  nightShiftBound = true;
+
+  const button = byId("nightShiftModeBtn");
+  const app = byId("app");
+  const stored = localStorage.getItem("indicare-night-shift") === "true";
+
+  const apply = (enabled) => {
+    document.body.classList.toggle("night-shift-mode", enabled);
+    app?.setAttribute("data-night-shift", enabled ? "true" : "false");
+    button?.setAttribute("aria-pressed", enabled ? "true" : "false");
+
+    if (button) {
+      button.textContent = enabled ? "Night mode on" : "Night mode";
+    }
+
+    localStorage.setItem("indicare-night-shift", enabled ? "true" : "false");
+  };
+
+  apply(stored);
+
+  button?.addEventListener("click", () => {
+    const enabled = document.body.classList.contains("night-shift-mode");
+    apply(!enabled);
+  });
+}
+
 async function bootstrap() {
   if (bootstrapped) return;
   bootstrapped = true;
@@ -1003,11 +1295,6 @@ async function bootstrap() {
 
     const existingYoungPersonId = normaliseNumericId(state.youngPersonId);
 
-    /*
-      This route is the Young People Care Hub entry route.
-      Admin/manager users may have access to quality/ofsted/home, but this page
-      should not boot into those scopes unless a young person is already open.
-    */
     if (!existingYoungPersonId) {
       forceChildEntryMode();
     }
@@ -1045,6 +1332,10 @@ async function bootstrap() {
     bindRestrictedSectionGuard();
     bindOpenCareHubFallback();
     bindWorkspaceNavigationFallback();
+    bindLaunchReadinessStrip();
+    bindOsNavigationActiveState();
+    bindTherapeuticPrompt();
+    bindNightShiftMode();
 
     await initialiseShellNavigation();
 
@@ -1055,15 +1346,19 @@ async function bootstrap() {
     } else {
       showSelector();
       await loadYoungPersonSelector();
+      syncLaunchReadinessStrip();
     }
 
     refreshAllChrome();
 
     if (state.youngPersonId) {
       await loadSection(getCurrentSection(), { force: true });
+      syncOsNavigationActiveState();
+      showTherapeuticPrompt();
     } else {
       showSelector();
       refreshWorkspaceSummary();
+      syncLaunchReadinessStrip();
     }
   } catch (error) {
     console.error("[index] bootstrap failed", error);
