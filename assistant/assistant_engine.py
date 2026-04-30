@@ -17,6 +17,14 @@ from assistant.supervision_engine import maybe_build_supervision_context
 
 logger = logging.getLogger("indicare.engine")
 
+OS_ASSISTANT_TYPES = {
+    "young_people_os",
+    "home_os",
+    "quality_os",
+    "ofsted_os",
+    "manager_os",
+}
+
 FAST_MODES_SKIP_RETRIEVAL = {
     "handover",
     "rewrite",
@@ -121,6 +129,7 @@ RECORDING_KEYWORDS = {
     "recording",
     "chronology",
     "daily note",
+    "daily log",
     "incident",
     "handover",
     "log",
@@ -202,12 +211,15 @@ REPORT_SIGNAL_KEYS = {
     "supervision_summary",
     "management_summary",
     "positive_indicators",
+    "report_snapshot",
 }
 
 SCOPED_CONTEXT_SIGNAL_KEYS = {
     "scope",
     "scope_type",
     "assistant_type",
+    "assistant_surface",
+    "requires_evidence_grounding",
     "young_person",
     "identity",
     "active_work",
@@ -230,6 +242,48 @@ SCOPED_CONTEXT_SIGNAL_KEYS = {
     "summary",
     "evidence_index",
     "sources",
+}
+
+REPORT_REQUEST_TERMS = {
+    "monthly report",
+    "monthly summary",
+    "monthly overview",
+    "reg 45",
+    "reg45",
+    "regulation 45",
+    "annual report",
+    "annual overview",
+    "yearly report",
+    "yearly overview",
+    "inspection overview",
+    "quality overview",
+    "quality review",
+    "service overview",
+}
+
+OS_RECORD_SPECIFIC_TERMS = {
+    "record",
+    "records",
+    "whole record",
+    "whole scoped record",
+    "across all records",
+    "full summary",
+    "full overview",
+    "chronology",
+    "timeline",
+    "risk",
+    "incident",
+    "handover",
+    "daily note",
+    "daily log",
+    "evidence",
+    "what is missing",
+    "what does the record show",
+    "what do the records show",
+    "reg 45",
+    "reg45",
+    "inspection",
+    "ofsted",
 }
 
 
@@ -255,6 +309,8 @@ class AssistantRuntimeContext:
     urgency: str = "routine"
     safeguarding_level: str = "normal"
     user_role_profile: str = "staff"
+    assistant_surface: str = "standalone"
+    requires_evidence_grounding: bool = False
     retrieval_level: str = "none"
     reflection_level: str = "none"
     response_stance: str = "practice_support"
@@ -273,6 +329,8 @@ class AssistantRuntimeContext:
     escalation_context: str = ""
     scoped_context_summary: str = ""
     evidence_safety_context: str = ""
+    surface_context: str = ""
+    missing_evidence_context: str = ""
     sources_used: list[dict[str, Any]] = field(default_factory=list)
     evidence_index: list[dict[str, Any]] = field(default_factory=list)
 
@@ -300,6 +358,8 @@ def _normalise_speed(speed: str | None) -> str:
     value = _safe_string(speed).lower()
     if value in {"quick", "balanced", "deep"}:
         return value
+    if value == "slow":
+        return "deep"
     return "balanced"
 
 
@@ -374,6 +434,44 @@ def _contains_any(text: str, keywords: set[str]) -> bool:
     return any(keyword in normalised for keyword in keywords)
 
 
+def _assistant_surface_from_context(user_context: dict[str, Any] | None) -> str:
+    if not isinstance(user_context, dict):
+        return "standalone"
+
+    explicit = _safe_string(user_context.get("assistant_surface")).lower()
+    if explicit in {"standalone", "os_embedded"}:
+        return explicit
+
+    assistant_type = _safe_string(user_context.get("assistant_type")).lower()
+    if assistant_type in OS_ASSISTANT_TYPES or assistant_type.endswith("_os"):
+        return "os_embedded"
+
+    scope_type = _safe_string(user_context.get("scope_type")).lower()
+    if scope_type in {"young_person", "child", "home", "quality"}:
+        return "os_embedded"
+
+    scope = user_context.get("scope")
+    if isinstance(scope, dict):
+        nested_scope_type = _safe_string(scope.get("scope_type") or scope.get("scope")).lower()
+        if nested_scope_type in {"young_person", "child", "home", "quality"}:
+            return "os_embedded"
+    elif _safe_string(scope).lower() in {"young_person", "child", "home", "quality"}:
+        return "os_embedded"
+
+    return "standalone"
+
+
+def _requires_evidence_grounding(user_context: dict[str, Any] | None) -> bool:
+    if not isinstance(user_context, dict):
+        return False
+
+    explicit = user_context.get("requires_evidence_grounding")
+    if isinstance(explicit, bool):
+        return explicit
+
+    return _assistant_surface_from_context(user_context) == "os_embedded"
+
+
 def _looks_like_internal_report_context(user_context: dict[str, Any] | None) -> bool:
     if not isinstance(user_context, dict) or not user_context:
         return False
@@ -386,6 +484,19 @@ def _looks_like_scoped_os_context(user_context: dict[str, Any] | None) -> bool:
     return any(key in user_context for key in SCOPED_CONTEXT_SIGNAL_KEYS)
 
 
+def _has_structured_evidence(user_context: dict[str, Any] | None) -> bool:
+    if not isinstance(user_context, dict):
+        return False
+
+    if _extract_evidence_index_from_user_context(user_context):
+        return True
+
+    if _extract_sources_from_user_context(user_context):
+        return True
+
+    return False
+
+
 def _looks_like_internal_report_request(
     message: str,
     user_context: dict[str, Any] | None,
@@ -394,23 +505,12 @@ def _looks_like_internal_report_request(
         return True
 
     text = _normalise_text(message)
-    report_terms = {
-        "monthly report",
-        "monthly summary",
-        "monthly overview",
-        "reg 45",
-        "reg45",
-        "regulation 45",
-        "annual report",
-        "annual overview",
-        "yearly report",
-        "yearly overview",
-        "inspection overview",
-        "quality overview",
-        "quality review",
-        "service overview",
-    }
-    return any(term in text for term in report_terms)
+    return any(term in text for term in REPORT_REQUEST_TERMS)
+
+
+def _looks_like_os_record_specific_request(message: str) -> bool:
+    text = _normalise_text(message)
+    return any(term in text for term in OS_RECORD_SPECIFIC_TERMS)
 
 
 def _normalise_user_role_profile(
@@ -506,7 +606,7 @@ def _legacy_output_type_from_mode(mode: str, task_type: str, message: str) -> st
         return "handover_note"
     if " incident " in text or mode == "incident_summary":
         return "incident_record"
-    if " daily note " in text:
+    if " daily note " in text or " daily log " in text:
         return "daily_note"
     if " risk assessment " in text or mode == "support_planning":
         return "risk_summary"
@@ -536,12 +636,14 @@ def _map_classifier_output_to_runtime(
         "incident_record": "incident_record",
         "chronology_entry": "chronology_entry",
         "daily_log": "daily_note",
+        "daily_note": "daily_note",
         "support_plan": "risk_summary",
         "manager_update": "manager_review",
         "reflective_debrief": "supervision_reflection",
         "professional_rewrite": "structured_record",
         "safeguarding_note": "structured_record",
         "report": "report",
+        "structured_report": "report",
         "plain_response": _legacy_output_type_from_mode(legacy_mode, task_type, message),
     }
 
@@ -570,17 +672,23 @@ def _retrieval_level(
     response_mode: str,
     user_context: dict[str, Any] | None = None,
 ) -> str:
+    assistant_surface = _assistant_surface_from_context(user_context)
+    requires_evidence_grounding = _requires_evidence_grounding(user_context)
+
     if document_text:
         return "none"
 
     if _looks_like_internal_report_context(user_context):
         return "none"
 
-    if _looks_like_scoped_os_context(user_context) and _extract_evidence_index_from_user_context(user_context):
+    if requires_evidence_grounding and _has_structured_evidence(user_context):
+        return "none"
+
+    if requires_evidence_grounding and _looks_like_os_record_specific_request(message):
         return "none"
 
     if response_mode == "quick":
-        if _contains_guidance_trigger(message):
+        if _contains_guidance_trigger(message) and assistant_surface == "standalone":
             return "light"
         return "none"
 
@@ -608,11 +716,21 @@ def _retrieval_level(
     return "none"
 
 
-def _should_use_memory(mode: str, response_mode: str, task_type: str) -> bool:
+def _should_use_memory(
+    mode: str,
+    response_mode: str,
+    task_type: str,
+    user_context: dict[str, Any] | None = None,
+) -> bool:
+    assistant_surface = _assistant_surface_from_context(user_context)
+
     if response_mode == "quick":
         return False
     if task_type == "report":
         return False
+    if assistant_surface == "os_embedded":
+        return False
+
     return mode not in FAST_MODES_LIGHT_MEMORY
 
 
@@ -860,6 +978,51 @@ def _build_evidence_index_prompt_block(evidence_index: list[dict[str, Any]], lim
     )
 
 
+def _build_surface_context(runtime: AssistantRuntimeContext) -> str:
+    if runtime.assistant_surface == "os_embedded":
+        return (
+            "OS-EMBEDDED ASSISTANT MODE:\n"
+            "• You are operating inside IndiCare OS.\n"
+            "• Scoped records, evidence indexes, sources, and runtime context are the primary source of truth.\n"
+            "• Do not answer record-specific questions from general knowledge alone.\n"
+            "• If scoped evidence is missing, limited, unclear, or outside the visible context, say so directly.\n"
+            "• Use exact citation_ref values where supplied.\n"
+            "• Never invent record IDs, dates, incidents, risks, chronology, outcomes, actions, progress, staff responses, or citations.\n"
+            "• General guidance may support interpretation, but it must not be presented as evidence that something happened."
+        )
+
+    return (
+        "STANDALONE ASSISTANT MODE:\n"
+        "• You are operating as the standalone IndiCare assistant.\n"
+        "• You can support residential childcare practice, drafting, reflection, learning, and professional wording.\n"
+        "• You cannot see IndiCare OS records unless the user supplies record content, an uploaded document, or runtime context.\n"
+        "• Do not imply access to a child, home, incident, chronology, care record, or evidence index unless it is visible.\n"
+        "• If the user asks for record-specific analysis without records, explain that you need the relevant record content."
+    )
+
+
+def _build_missing_evidence_context(
+    runtime: AssistantRuntimeContext,
+    message: str,
+) -> str:
+    if runtime.assistant_surface != "os_embedded":
+        return ""
+
+    if runtime.evidence_index or runtime.sources_used:
+        return ""
+
+    if not _looks_like_os_record_specific_request(message):
+        return ""
+
+    return (
+        "MISSING OS EVIDENCE WARNING:\n"
+        "• The user appears to be asking something record-specific, but no structured evidence or source list is visible.\n"
+        "• Do not infer what the records say.\n"
+        "• Say that scoped evidence is not visible.\n"
+        "• You may provide general practice guidance only if useful and clearly label it as general guidance, not record evidence."
+    )
+
+
 def _build_evidence_safety_context(runtime: AssistantRuntimeContext) -> str:
     lines = [
         "EVIDENCE SAFETY OVERRIDE:",
@@ -872,6 +1035,11 @@ def _build_evidence_safety_context(runtime: AssistantRuntimeContext) -> str:
         "• Include what is not visible / missing evidence when answering record summaries, reviews, reports, or risk questions.",
         "• Frame recommendations as staff or manager review points, not final decisions.",
     ]
+
+    if runtime.assistant_surface == "os_embedded":
+        lines.append("• OS embedded mode requires evidence-led answers for record-specific questions.")
+    else:
+        lines.append("• Standalone mode must not imply access to OS records unless records are supplied.")
 
     if runtime.evidence_index:
         lines.append(f"• Structured evidence items available: {len(runtime.evidence_index)}.")
@@ -897,12 +1065,15 @@ def _build_scoped_context_summary(user_context: dict[str, Any] | None) -> str:
     scope = _safe_string(user_context.get("scope"))
     scope_type = _safe_string(user_context.get("scope_type"))
     assistant_type = _safe_string(user_context.get("assistant_type"))
+    assistant_surface = _assistant_surface_from_context(user_context)
     young_person_name = _safe_string(user_context.get("young_person_name"))
     home_name = _safe_string(user_context.get("home_name"))
     access_level = _safe_string(user_context.get("access_level"))
     report_type = _safe_string(user_context.get("report_type"))
 
     lines: list[str] = []
+
+    lines.append(f"Assistant surface: {assistant_surface}")
 
     if assistant_type:
         lines.append(f"Assistant type: {assistant_type}")
@@ -1149,6 +1320,8 @@ def _build_runtime_mode_context(runtime: AssistantRuntimeContext, speed: str) ->
         f"Urgency: {runtime.urgency}",
         f"Selected response mode: {speed}",
         f"Detected user role profile: {runtime.user_role_profile}",
+        f"Assistant surface: {runtime.assistant_surface}",
+        f"Requires evidence grounding: {runtime.requires_evidence_grounding}",
         f"Response stance: {runtime.response_stance}",
         f"Classification confidence: {runtime.classification_confidence}",
         f"Retrieval level: {runtime.retrieval_level}",
@@ -1456,6 +1629,8 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
     )
 
     runtime = AssistantRuntimeContext()
+    runtime.assistant_surface = _assistant_surface_from_context(req.user_context)
+    runtime.requires_evidence_grounding = _requires_evidence_grounding(req.user_context)
 
     classification = _safe_classify_intent(message, history, req.role)
 
@@ -1556,7 +1731,7 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
     runtime.scoped_context_summary = _build_scoped_context_summary(req.user_context)
 
     if speed != "quick":
-        if _should_use_memory(runtime.mode, speed, runtime.task_type):
+        if _should_use_memory(runtime.mode, speed, runtime.task_type, req.user_context):
             runtime.memory_context = _safe_memory_context(req, runtime.mode, speed)
 
         if runtime.retrieval_level != "none":
@@ -1616,6 +1791,8 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
             runtime.sources_used.append(uploaded_source)
 
     runtime.sources_used = _normalise_sources(runtime.sources_used)
+    runtime.surface_context = _build_surface_context(runtime)
+    runtime.missing_evidence_context = _build_missing_evidence_context(runtime, message)
     runtime.evidence_safety_context = _build_evidence_safety_context(runtime)
 
     system_prompt, user_message = build_chat_prompt(
@@ -1630,6 +1807,12 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
 
     system_prompt = _append_section(
         system_prompt,
+        "ASSISTANT SURFACE CONTEXT",
+        runtime.surface_context,
+    )
+
+    system_prompt = _append_section(
+        system_prompt,
         "RUNTIME MODE CONTEXT",
         _build_runtime_mode_context(runtime, speed),
     )
@@ -1638,6 +1821,12 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
         system_prompt,
         "EVIDENCE SAFETY CONTEXT",
         runtime.evidence_safety_context,
+    )
+
+    system_prompt = _append_section(
+        system_prompt,
+        "MISSING EVIDENCE CONTEXT",
+        runtime.missing_evidence_context,
     )
 
     system_prompt = _append_section(
@@ -1735,13 +1924,14 @@ def build_assistant_prompt_package(req: AssistantRequest) -> AssistantPromptPack
     logger.info(
         (
             "Assistant prompt package built "
-            "session_id=%s mode=%s task_type=%s output_type=%s "
+            "session_id=%s surface=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s urgency=%s response_mode=%s role_profile=%s "
             "stance=%s confidence=%s retrieval_level=%s reflection_level=%s "
             "memory=%s retrieval=%s reflection=%s supervision=%s leadership_lens=%s "
             "suggested_actions=%s sources=%s evidence=%s scoped_context=%s"
         ),
         req.session_id,
+        runtime.assistant_surface,
         runtime.mode,
         runtime.task_type,
         runtime.output_type,
