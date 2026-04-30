@@ -8,6 +8,31 @@ from fastapi import HTTPException
 from services.os_sync_hooks import archive_after_status_change, sync_after_save
 
 
+def _row_get(row: Any, key: str, index: int | None = None, default: Any = None) -> Any:
+    if row is None:
+        return default
+    if isinstance(row, dict):
+        return row.get(key, default)
+    if index is not None:
+        try:
+            return row[index]
+        except Exception:
+            return default
+    return default
+
+
+def _returned_id(row: Any, *, label: str = "record") -> int:
+    value = _row_get(row, "id", 0)
+
+    if value is None:
+        raise HTTPException(
+            status_code=500,
+            detail=f"{label} operation did not return an id",
+        )
+
+    return int(value)
+
+
 class YoungPersonDailyNotesService:
     @staticmethod
     def now_utc() -> datetime:
@@ -35,9 +60,7 @@ class YoungPersonDailyNotesService:
     @staticmethod
     def workflow_display_status(value: str | None) -> str:
         v = YoungPersonDailyNotesService.normalise_workflow_status(value)
-        if v == "reviewed":
-            return "approved"
-        return v
+        return "approved" if v == "reviewed" else v
 
     @staticmethod
     def ensure_young_person_exists(conn, young_person_id: int) -> dict[str, Any]:
@@ -52,9 +75,19 @@ class YoungPersonDailyNotesService:
                 (young_person_id,),
             )
             row = cur.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Young person not found")
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Young person not found")
+
+        if isinstance(row, dict):
             return row
+
+        return {
+            "id": _row_get(row, "id", 0),
+            "home_id": _row_get(row, "home_id", 1),
+            "first_name": _row_get(row, "first_name", 2),
+            "last_name": _row_get(row, "last_name", 3),
+        }
 
     @staticmethod
     def fetch_daily_note_select_sql(where_sql: str) -> str:
@@ -97,7 +130,49 @@ class YoungPersonDailyNotesService:
         """
 
     @staticmethod
+    def _normalise_daily_note_db_row(row: Any) -> dict[str, Any]:
+        if isinstance(row, dict):
+            return row
+
+        keys = [
+            "id",
+            "young_person_id",
+            "home_id",
+            "note_date",
+            "shift_type",
+            "mood",
+            "presentation",
+            "activities",
+            "education_update",
+            "health_update",
+            "family_update",
+            "behaviour_update",
+            "young_person_voice",
+            "positives",
+            "actions_required",
+            "significance",
+            "workflow_status",
+            "manager_review_comment",
+            "approved_by",
+            "approved_at",
+            "returned_at",
+            "submitted_at",
+            "last_edited_at",
+            "author_id",
+            "created_at",
+            "updated_at",
+            "author_first_name",
+            "author_last_name",
+            "approved_by_first_name",
+            "approved_by_last_name",
+        ]
+
+        return {key: _row_get(row, key, index) for index, key in enumerate(keys)}
+
+    @staticmethod
     def transform_daily_note_row(row: dict[str, Any]) -> dict[str, Any]:
+        row = YoungPersonDailyNotesService._normalise_daily_note_db_row(row)
+
         author_name = YoungPersonDailyNotesService.full_name(
             row.get("author_first_name"),
             row.get("author_last_name"),
@@ -171,9 +246,11 @@ class YoungPersonDailyNotesService:
                 (daily_note_id,),
             )
             row = cur.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Daily note not found")
-            return row
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Daily note not found")
+
+        return YoungPersonDailyNotesService._normalise_daily_note_db_row(row)
 
     @staticmethod
     def build_daily_note_summary(
@@ -274,7 +351,8 @@ class YoungPersonDailyNotesService:
                 (young_person_id,),
             )
             rows = cur.fetchall() or []
-            return [YoungPersonDailyNotesService.transform_daily_note_row(r) for r in rows]
+
+        return [YoungPersonDailyNotesService.transform_daily_note_row(r) for r in rows]
 
     @staticmethod
     def get_daily_note(conn, daily_note_id: int) -> dict[str, Any]:
@@ -404,8 +482,8 @@ class YoungPersonDailyNotesService:
                 ),
             )
             created = cur.fetchone()
-            daily_note_id = created["id"]
 
+        daily_note_id = _returned_id(created, label="Daily note insert")
         conn.commit()
 
         workflow_result = None
@@ -459,7 +537,9 @@ class YoungPersonDailyNotesService:
                     "safeguarding": bool(payload.get("safeguarding_concern", False)),
                     "link_support_plans": bool(payload.get("link_to_support_plans", False)),
                     "link_monthly_reviews": bool(payload.get("link_monthly_reviews", False)),
-                    "link_quality_standards": bool(payload.get("link_quality_standards", True)),
+                    "link_quality_standards": bool(
+                        payload.get("link_quality_standards", True)
+                    ),
                 },
                 metadata={
                     "severity": payload.get("significance") or "medium",
@@ -535,8 +615,10 @@ class YoungPersonDailyNotesService:
             update_data.pop(key, None)
 
         if "workflow_status" in update_data and update_data["workflow_status"] is not None:
-            update_data["workflow_status"] = YoungPersonDailyNotesService.normalise_workflow_status(
-                update_data["workflow_status"]
+            update_data["workflow_status"] = (
+                YoungPersonDailyNotesService.normalise_workflow_status(
+                    update_data["workflow_status"]
+                )
             )
 
         now = YoungPersonDailyNotesService.now_utc()
@@ -567,13 +649,15 @@ class YoungPersonDailyNotesService:
             conn.rollback()
             raise HTTPException(status_code=404, detail="Daily note not found")
 
+        updated_id = _returned_id(row, label="Daily note update")
         conn.commit()
+
         YoungPersonDailyNotesService._run_os_sync_after_save(
             conn,
             daily_note_id=daily_note_id,
         )
 
-        return {"message": "Daily note updated successfully", "id": row["id"]}
+        return {"message": "Daily note updated successfully", "id": updated_id}
 
     @staticmethod
     def submit_daily_note(
@@ -602,6 +686,7 @@ class YoungPersonDailyNotesService:
             )
             updated = cur.fetchone()
 
+        updated_id = _returned_id(updated, label="Daily note submit")
         conn.commit()
 
         transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
@@ -660,7 +745,7 @@ class YoungPersonDailyNotesService:
         return {
             "ok": True,
             "status": "submitted",
-            "id": updated["id"],
+            "id": updated_id,
             "workflow": workflow_result,
         }
 
@@ -693,6 +778,7 @@ class YoungPersonDailyNotesService:
             )
             updated = cur.fetchone()
 
+        updated_id = _returned_id(updated, label="Daily note approve")
         conn.commit()
 
         transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
@@ -752,7 +838,7 @@ class YoungPersonDailyNotesService:
         return {
             "ok": True,
             "status": "approved",
-            "id": updated["id"],
+            "id": updated_id,
             "workflow": workflow_result,
         }
 
@@ -784,6 +870,7 @@ class YoungPersonDailyNotesService:
             )
             updated = cur.fetchone()
 
+        updated_id = _returned_id(updated, label="Daily note return")
         conn.commit()
 
         transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
@@ -840,7 +927,7 @@ class YoungPersonDailyNotesService:
         return {
             "ok": True,
             "status": "returned",
-            "id": updated["id"],
+            "id": updated_id,
             "review_note": review_note or "",
             "workflow": workflow_result,
         }
@@ -870,6 +957,7 @@ class YoungPersonDailyNotesService:
             )
             updated = cur.fetchone()
 
+        updated_id = _returned_id(updated, label="Daily note archive")
         conn.commit()
 
         transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
@@ -928,6 +1016,6 @@ class YoungPersonDailyNotesService:
         return {
             "ok": True,
             "status": "archived",
-            "id": updated["id"],
+            "id": updated_id,
             "workflow": workflow_result,
         }
