@@ -3154,3 +3154,30 @@ body.show-folder-menu #quickCreateBar,
 }
 
 
+/* Composer must sit above workspace reloads/drawers */
+#recordComposerPage.composer-panel:not(.hidden) {
+  display: grid !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  place-items: center !important;
+  pointer-events: auto !important;
+  background: rgba(15, 23, 42, 0.42) !important;
+}
+
+#recordComposerPage.composer-panel:not(.hidden) .composer-shell {
+  display: grid !important;
+  position: relative !important;
+  z-index: 2147483647 !important;
+  width: min(1440px, 96vw) !important;
+  max-height: 92vh !important;
+  overflow: hidden !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+#recordComposerPage.composer-panel:not(.hidden) .composer-main,
+#recordComposerPage.composer-panel:not(.hidden) .composer-side {
+  overflow: auto !important;
+}
