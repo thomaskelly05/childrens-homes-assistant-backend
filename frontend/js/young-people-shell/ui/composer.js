@@ -98,45 +98,141 @@ const COMMON_SPELLING_HINTS = [
   ["non compliant", "non-compliant"],
 ];
 
+const CHILD_SCOPED_TYPES = new Set([
+  "daily_note",
+  "incident",
+  "keywork",
+  "risk",
+  "safeguarding_record",
+  "health_record",
+  "education_record",
+  "family_contact",
+  "appointment",
+  "medication_record",
+  "handover_record",
+  "document",
+  "statutory_document",
+  "support_plan",
+  "missing_episode",
+]);
+
+function cleanId(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const textValue = String(value).trim();
+  if (!textValue || textValue === "null" || textValue === "undefined") return null;
+  return textValue;
+}
+
+function firstId(...values) {
+  for (const value of values) {
+    const parsed = cleanId(value);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+function getDomYoungPersonId() {
+  const selectors = [
+    "[data-young-person-id]",
+    "[data-child-id]",
+    "[data-person-id]",
+    "[data-selected-young-person-id]",
+    "[data-current-young-person-id]",
+  ];
+
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    const value = firstId(
+      el?.dataset?.youngPersonId,
+      el?.dataset?.childId,
+      el?.dataset?.personId,
+      el?.dataset?.selectedYoungPersonId,
+      el?.dataset?.currentYoungPersonId,
+      el?.value
+    );
+    if (value) return value;
+  }
+
+  return null;
+}
+
+function getYoungPersonIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const queryValue = firstId(
+    params.get("young_person_id"),
+    params.get("youngPersonId"),
+    params.get("child_id"),
+    params.get("childId"),
+    params.get("person_id"),
+    params.get("personId"),
+    params.get("id")
+  );
+
+  if (queryValue) return queryValue;
+
+  const pathMatch = window.location.pathname.match(
+    /(?:young-people|children|child|person)[\/-](\d+)/i
+  );
+
+  return pathMatch?.[1] || null;
+}
+
 function getYoungPersonId() {
   const app = document.getElementById("app");
-  const params = new URLSearchParams(window.location.search);
   const selector = document.getElementById("youngPersonSelect");
 
-  return (
-    state.youngPersonId ||
-    state.currentYoungPersonId ||
-    state.personId ||
-    state.currentPersonId ||
-    state.selectedYoungPersonId ||
-    state.selectedYoungPerson?.id ||
-    state.selectedYoungPerson?.young_person_id ||
-    state.youngPerson?.id ||
-    state.youngPerson?.young_person_id ||
-    state.activeYoungPerson?.id ||
-    state.activeYoungPerson?.young_person_id ||
-    app?.dataset?.youngPersonId ||
-    app?.dataset?.personId ||
-    params.get("young_person_id") ||
-    params.get("youngPersonId") ||
-    params.get("person_id") ||
-    params.get("id") ||
-    selector?.value ||
-    null
+  return firstId(
+    state.youngPersonId,
+    state.currentYoungPersonId,
+    state.personId,
+    state.currentPersonId,
+    state.selectedYoungPersonId,
+    state.selectedYoungPerson?.id,
+    state.selectedYoungPerson?.young_person_id,
+    state.youngPerson?.id,
+    state.youngPerson?.young_person_id,
+    state.activeYoungPerson?.id,
+    state.activeYoungPerson?.young_person_id,
+    state.currentYoungPerson?.id,
+    state.currentYoungPerson?.young_person_id,
+    state.context?.young_person_id,
+    state.context?.youngPersonId,
+    state.assistantContext?.young_person_id,
+    state.assistantContext?.youngPersonId,
+    app?.dataset?.youngPersonId,
+    app?.dataset?.childId,
+    app?.dataset?.personId,
+    document.body?.dataset?.youngPersonId,
+    document.body?.dataset?.childId,
+    document.body?.dataset?.personId,
+    selector?.value,
+    getDomYoungPersonId(),
+    getYoungPersonIdFromUrl(),
+    window.__INDICARE_CONTEXT__?.young_person_id,
+    window.__INDICARE_CONTEXT__?.youngPersonId,
+    window.__INDICARE_STATE__?.youngPersonId,
+    window.__INDICARE_STATE__?.selectedYoungPersonId
   );
 }
 
 function getHomeId() {
-  return (
-    state.homeId ||
-    state.currentHomeId ||
-    state.selectedHomeId ||
-    state.readinessSelectedHomeId ||
-    state.selectedYoungPerson?.home_id ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    document.getElementById("app")?.dataset?.homeId ||
-    null
+  return firstId(
+    state.homeId,
+    state.currentHomeId,
+    state.selectedHomeId,
+    state.readinessSelectedHomeId,
+    state.selectedYoungPerson?.home_id,
+    state.currentYoungPerson?.home_id,
+    state.youngPerson?.home_id,
+    state.currentUser?.home_id,
+    state.currentUser?.homeId,
+    state.context?.home_id,
+    state.context?.homeId,
+    document.getElementById("app")?.dataset?.homeId,
+    document.body?.dataset?.homeId,
+    window.__INDICARE_CONTEXT__?.home_id,
+    window.__INDICARE_CONTEXT__?.homeId,
+    window.__INDICARE_STATE__?.homeId
   );
 }
 
@@ -845,9 +941,12 @@ function getForm(type, item = {}) {
 }
 
 function getComposerIds() {
+  const youngPersonId = getYoungPersonId();
+  const homeId = getHomeId();
+
   return {
-    youngPersonId: getYoungPersonId(),
-    homeId: getHomeId(),
+    youngPersonId: youngPersonId ? String(youngPersonId) : null,
+    homeId: homeId ? String(homeId) : null,
   };
 }
 
@@ -980,7 +1079,7 @@ function applySmartDefaults(type, data = {}) {
   return next;
 }
 
-function buildPayload(type, data = {}, mode = "draft") {
+function buildPayload(type, data = {}, mode = "draft", ids = getComposerIds()) {
   const status = mode === "submit" ? "submitted" : data.status || "draft";
   const smartData = applySmartDefaults(type, data);
 
@@ -989,8 +1088,8 @@ function buildPayload(type, data = {}, mode = "draft") {
     workflow_status: status,
     status: smartData.status || status,
     record_type: type,
-    young_person_id: getYoungPersonId(),
-    home_id: getHomeId(),
+    young_person_id: ids.youngPersonId,
+    home_id: ids.homeId,
   };
 }
 
@@ -1212,57 +1311,85 @@ function dispatchComposerSaved(detail = {}) {
 }
 
 export async function saveComposer(mode = "draft") {
-  console.log("[composer] 1 saveComposer started", mode);
-
   const form = getComposerForm();
-  console.log("[composer] 2 form", Boolean(form));
   if (!form) throw new Error("Composer form is not available.");
 
   const type =
     normaliseRecordType(state.composerRecordType) || state.composerRecordType;
 
-  console.log("[composer] 3 type", type);
   if (!type) throw new Error("No record type selected.");
 
   const ids = getComposerIds();
-  console.log("[composer] 4 ids", ids);
+
+  if (CHILD_SCOPED_TYPES.has(type) && !ids.youngPersonId) {
+    throw new Error(
+      "Select a child or young person first. Composer cannot save this record against home only."
+    );
+  }
+
+  if (
+    !ids.youngPersonId &&
+    !ids.homeId &&
+    !["task", "staff_profile", "supervision", "training", "onboarding"].includes(type)
+  ) {
+    throw new Error("Select a child, young person or home first.");
+  }
 
   const data = collectFormData(form);
-  console.log("[composer] 5 data", data);
+  const required = state.composerRequiredFields || getForm(type).required || [];
+  const issues = qualityCheck(type, data, required);
 
-  const payload = buildPayload(type, data, mode);
-  console.log("[composer] 6 payload", payload);
+  updateQualityStrip(data);
 
+  if (issues.length && mode === "submit") {
+    throw new Error(`Please complete: ${issues.join(", ")}`);
+  }
+
+  if (mode === "submit") {
+    const strictIssues = strictValidation(type, data);
+    if (strictIssues.length) {
+      throw new Error(`Submit requires: ${strictIssues.join(", ")}`);
+    }
+
+    const writingIssues = runWritingQualityCheck(data);
+    if (writingIssues.length) {
+      throw new Error(`Please review writing: ${writingIssues.join("; ")}`);
+    }
+  }
+
+  const payload = buildPayload(type, data, mode, ids);
   const editItem = state.composerEditItem || {};
   const recordId = getRecordId(editItem);
 
-  console.log("[composer] 7 before save", {
-    composerMode: state.composerMode,
-    recordId,
-  });
+  let saved;
 
-  const savePromise =
-    state.composerMode === "edit" && recordId
-      ? updateRecord(type, ids, recordId, payload)
-      : createRecord(type, ids, payload);
-
-  const saved = await Promise.race([
-    savePromise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("create/update record timed out")), 8000)
-    ),
-  ]);
-
-  console.log("[composer] 8 saved", saved);
-
-  try {
-    closeComposer();
-    console.log("[composer] 9 closed");
-  } catch (error) {
-    console.warn("[composer] close failed", error);
+  if (state.composerMode === "edit" && recordId) {
+    saved = await updateRecord(type, ids, recordId, payload);
+  } else {
+    saved = await createRecord(type, ids, payload);
   }
 
-  console.log("[composer] 10 returning saved");
+  closeComposer();
+
+  if (payload.create_follow_up_task) {
+    maybeCreateFollowUpTask(ids, type, payload).catch((error) => {
+      console.warn("[composer] follow-up task creation failed", error);
+    });
+  }
+
+  window.setTimeout(() => {
+    try {
+      dispatchComposerSaved({
+        type,
+        mode,
+        saved,
+        followUpTask: null,
+      });
+    } catch (error) {
+      console.warn("[composer] post-save refresh failed", error);
+    }
+  }, 0);
+
   return saved;
 }
 
