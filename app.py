@@ -178,6 +178,7 @@ PUBLIC_PREFIXES = (
     "/auth/auth-policy",
     "/auth/passkeys/authenticate/options",
     "/auth/passkeys/authenticate/verify",
+    "/debug",
     "/css",
     "/js",
     "/assets",
@@ -208,6 +209,10 @@ ROUTERS = [
     "routers.mfa_routes",
     "routers.passkey_routes",
     "routers.legal_acceptance_routes",
+
+    
+    # Temporary diagnostics
+    "routers.debug_health_routes",
 
     # Must load before stricter legacy/frontend routers.
     "routers.frontend_compat",
