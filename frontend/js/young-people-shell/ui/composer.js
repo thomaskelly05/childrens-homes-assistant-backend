@@ -1230,6 +1230,7 @@ function bindComposerReviewButtons() {
 function forceComposerVisible(panel) {
   if (!panel) return;
 
+  panel.classList.add("composer-panel");
   panel.classList.remove("hidden");
   panel.setAttribute("aria-hidden", "false");
 
@@ -1356,6 +1357,18 @@ export function openComposerFor(type, mode = "create", item = {}) {
     item,
     panel: document.getElementById("recordComposerPage")?.className,
     fieldsLength: document.getElementById("recordComposerFields")?.innerHTML?.length,
+  });
+
+  window.requestAnimationFrame(() => {
+    const panel = getComposerPanel();
+    if (!panel) return;
+
+    if (
+      panel.classList.contains("hidden") ||
+      panel.getAttribute("aria-hidden") === "true"
+    ) {
+      forceComposerVisible(panel);
+    }
   });
 
   return state.composerEditItem;
