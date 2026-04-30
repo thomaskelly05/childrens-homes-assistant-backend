@@ -50,6 +50,15 @@ function getViewContent() {
   return document.getElementById("viewContent") || els.viewContent;
 }
 
+function isComposerOpen() {
+  const composer = document.getElementById("recordComposerPage");
+  return Boolean(
+    composer &&
+      !composer.classList.contains("hidden") &&
+      composer.getAttribute("aria-hidden") !== "true"
+  );
+}
+
 function normaliseText(value = "") {
   return String(value || "").trim().toLowerCase();
 }
@@ -62,7 +71,6 @@ function formatDate(value) {
   if (!value) return "";
 
   const d = new Date(value);
-
   if (Number.isNaN(d.getTime())) return String(value);
 
   return d.toLocaleString("en-GB", {
@@ -92,7 +100,6 @@ function isFuture(value) {
   if (!value) return false;
 
   const d = new Date(value);
-
   if (Number.isNaN(d.getTime())) return false;
 
   return d.getTime() >= Date.now();
@@ -101,12 +108,16 @@ function isFuture(value) {
 function getPrimaryDate(item = {}) {
   return (
     item.date ||
+    item.note_date ||
     item.record_date ||
     item.event_datetime ||
     item.incident_datetime ||
     item.start_datetime ||
-    item.due_date ||
+    item.appointment_date ||
     item.contact_datetime ||
+    item.session_date ||
+    item.handover_datetime ||
+    item.due_date ||
     item.review_date ||
     item.created_at ||
     item.updated_at ||
@@ -122,6 +133,11 @@ function getRecordTitle(item = {}) {
     item.name ||
     item.heading ||
     item.category ||
+    item.incident_type ||
+    item.appointment_type ||
+    item.health_area ||
+    item.education_area ||
+    item.topic ||
     "Record"
   );
 }
@@ -135,6 +151,9 @@ function getRecordSummary(item = {}) {
     item.narrative ||
     item.body ||
     item.outcome ||
+    item.presentation ||
+    item.behaviour_update ||
+    item.actions_required ||
     ""
   );
 }
@@ -164,7 +183,6 @@ function getStatus(item = {}) {
 
 function recordMatchesQuery(item = {}, query = "") {
   const safeQuery = normaliseText(query);
-
   if (!safeQuery) return true;
 
   return recordSearchText(item).includes(safeQuery);
@@ -172,7 +190,6 @@ function recordMatchesQuery(item = {}, query = "") {
 
 function mapRecordTypeFilterToBuckets(recordType = "") {
   const safeType = normaliseText(recordType);
-
   if (!safeType) return null;
 
   return WORKSPACE_RECORD_TYPE_MAP[safeType] || null;
@@ -180,7 +197,6 @@ function mapRecordTypeFilterToBuckets(recordType = "") {
 
 function recordMatchesRecordType(item = {}, recordType = "") {
   const safeType = normaliseText(recordType);
-
   if (!safeType) return true;
 
   return normaliseText(getRecordType(item)) === safeType;
@@ -641,6 +657,7 @@ function getId() {
   return (
     state.youngPersonId ||
     state.currentYoungPersonId ||
+    state.selectedYoungPersonId ||
     state.selectedYoungPerson?.id ||
     state.selectedYoungPerson?.young_person_id ||
     app?.dataset?.youngPersonId ||
@@ -661,7 +678,7 @@ async function safeList(recordType, ids = {}) {
 
     return [];
   } catch (error) {
-    console.warn(`[workspace] failed loading ${recordType}`, error);
+    console.warn(`[workspace] optional record load skipped: ${recordType}`, error);
     return [];
   }
 }
@@ -692,15 +709,10 @@ async function fetchAll(id, search = {}) {
     tasks,
     dailyNotes,
     incidents,
-    safeguarding,
-    missingEpisodes,
     keywork,
     health,
     education,
     family,
-    documents,
-    statutoryDocuments,
-    medicationRecords,
     handoverRecords,
   ] = await Promise.all([
     shouldFetchPlans ? safeList("support_plan", ids) : [],
@@ -710,15 +722,10 @@ async function fetchAll(id, search = {}) {
     shouldFetchTasks ? safeList("task", ids) : [],
     shouldFetchDailyNotes ? safeList("daily_note", ids) : [],
     shouldFetchChronology ? safeList("incident", ids) : [],
-    shouldFetchChronology ? safeList("safeguarding_record", ids) : [],
-    shouldFetchChronology ? safeList("missing_episode", ids) : [],
     shouldFetchChronology ? safeList("keywork", ids) : [],
     shouldFetchHealth ? safeList("health_record", ids) : [],
     shouldFetchEducation ? safeList("education_record", ids) : [],
     shouldFetchFamily ? safeList("family_contact", ids) : [],
-    shouldFetchChronology ? safeList("document", ids) : [],
-    shouldFetchChronology ? safeList("statutory_document", ids) : [],
-    shouldFetchHealth ? safeList("medication_record", ids) : [],
     shouldFetchChronology ? safeList("handover_record", ids) : [],
   ]);
 
@@ -728,16 +735,12 @@ async function fetchAll(id, search = {}) {
     chronology: normaliseRecords([
       ...chronology,
       ...incidents,
-      ...safeguarding,
-      ...missingEpisodes,
       ...keywork,
-      ...documents,
-      ...statutoryDocuments,
       ...handoverRecords,
     ]),
     tasks: normaliseRecords(tasks),
     daily_notes: normaliseRecords(dailyNotes),
-    health: normaliseRecords([...health, ...medicationRecords]),
+    health: normaliseRecords(health),
     education: normaliseRecords(education),
     family: normaliseRecords(family),
   };
@@ -871,6 +874,11 @@ export async function loadCurrentView(options = {}) {
 
   if (!viewContent) return;
 
+  if (isComposerOpen()) {
+    console.log("[workspace] skipped reload because composer is open");
+    return;
+  }
+
   const id = getId();
 
   if (els.pageTitle) els.pageTitle.textContent = "Today at a glance";
@@ -908,6 +916,11 @@ export async function loadCurrentView(options = {}) {
       fetchAll(id, search),
       fetchVisibility(id),
     ]);
+
+    if (isComposerOpen()) {
+      console.log("[workspace] skipped render because composer opened during load");
+      return;
+    }
 
     const filteredData = applySearch(rawData, search);
 
@@ -963,10 +976,17 @@ export async function loadCurrentView(options = {}) {
           : "No active alerts",
     });
 
-    await onAssistantScopeChanged();
-    renderAssistantControllerPanels();
+    if (!isComposerOpen()) {
+      await onAssistantScopeChanged();
+      renderAssistantControllerPanels();
+    }
   } catch (error) {
     console.error("[workspace] failed loading current view", error);
+
+    if (isComposerOpen()) {
+      console.log("[workspace] skipped error render because composer is open");
+      return;
+    }
 
     viewContent.innerHTML = renderEmpty(
       "Workspace opened with limited data",
