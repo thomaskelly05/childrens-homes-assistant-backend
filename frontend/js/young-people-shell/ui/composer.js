@@ -1222,7 +1222,10 @@ export async function saveComposer(mode = "draft") {
 
   const ids = getComposerIds();
 
-  if (!ids.youngPersonId && !["task", "staff_profile", "supervision", "training", "onboarding"].includes(type)) {
+  if (
+    !ids.youngPersonId &&
+    !["task", "staff_profile", "supervision", "training", "onboarding"].includes(type)
+  ) {
     throw new Error("Select a child or young person first.");
   }
 
@@ -1260,16 +1263,26 @@ export async function saveComposer(mode = "draft") {
     saved = await createRecord(type, ids, payload);
   }
 
-  const followUpTask = await maybeCreateFollowUpTask(ids, type, payload);
-
   closeComposer();
 
-  dispatchComposerSaved({
-    type,
-    mode,
-    saved,
-    followUpTask,
-  });
+  if (payload.create_follow_up_task) {
+    maybeCreateFollowUpTask(ids, type, payload).catch((error) => {
+      console.warn("[composer] follow-up task creation failed", error);
+    });
+  }
+
+  window.setTimeout(() => {
+    try {
+      dispatchComposerSaved({
+        type,
+        mode,
+        saved,
+        followUpTask: null,
+      });
+    } catch (error) {
+      console.warn("[composer] post-save refresh failed", error);
+    }
+  }, 0);
 
   return saved;
 }
