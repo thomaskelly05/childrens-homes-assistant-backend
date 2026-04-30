@@ -1212,78 +1212,57 @@ function dispatchComposerSaved(detail = {}) {
 }
 
 export async function saveComposer(mode = "draft") {
+  console.log("[composer] 1 saveComposer started", mode);
+
   const form = getComposerForm();
+  console.log("[composer] 2 form", Boolean(form));
   if (!form) throw new Error("Composer form is not available.");
 
   const type =
     normaliseRecordType(state.composerRecordType) || state.composerRecordType;
 
+  console.log("[composer] 3 type", type);
   if (!type) throw new Error("No record type selected.");
 
   const ids = getComposerIds();
-
-  if (
-    !ids.youngPersonId &&
-    !["task", "staff_profile", "supervision", "training", "onboarding"].includes(type)
-  ) {
-    throw new Error("Select a child or young person first.");
-  }
+  console.log("[composer] 4 ids", ids);
 
   const data = collectFormData(form);
-  const required = state.composerRequiredFields || getForm(type).required || [];
-  const issues = qualityCheck(type, data, required);
-
-  updateQualityStrip(data);
-
-  if (issues.length && mode === "submit") {
-    throw new Error(`Please complete: ${issues.join(", ")}`);
-  }
-
-  if (mode === "submit") {
-    const strictIssues = strictValidation(type, data);
-    if (strictIssues.length) {
-      throw new Error(`Submit requires: ${strictIssues.join(", ")}`);
-    }
-
-    const writingIssues = runWritingQualityCheck(data);
-    if (writingIssues.length) {
-      throw new Error(`Please review writing: ${writingIssues.join("; ")}`);
-    }
-  }
+  console.log("[composer] 5 data", data);
 
   const payload = buildPayload(type, data, mode);
+  console.log("[composer] 6 payload", payload);
+
   const editItem = state.composerEditItem || {};
   const recordId = getRecordId(editItem);
 
-  let saved;
+  console.log("[composer] 7 before save", {
+    composerMode: state.composerMode,
+    recordId,
+  });
 
-  if (state.composerMode === "edit" && recordId) {
-    saved = await updateRecord(type, ids, recordId, payload);
-  } else {
-    saved = await createRecord(type, ids, payload);
+  const savePromise =
+    state.composerMode === "edit" && recordId
+      ? updateRecord(type, ids, recordId, payload)
+      : createRecord(type, ids, payload);
+
+  const saved = await Promise.race([
+    savePromise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("create/update record timed out")), 8000)
+    ),
+  ]);
+
+  console.log("[composer] 8 saved", saved);
+
+  try {
+    closeComposer();
+    console.log("[composer] 9 closed");
+  } catch (error) {
+    console.warn("[composer] close failed", error);
   }
 
-  closeComposer();
-
-  if (payload.create_follow_up_task) {
-    maybeCreateFollowUpTask(ids, type, payload).catch((error) => {
-      console.warn("[composer] follow-up task creation failed", error);
-    });
-  }
-
-  window.setTimeout(() => {
-    try {
-      dispatchComposerSaved({
-        type,
-        mode,
-        saved,
-        followUpTask: null,
-      });
-    } catch (error) {
-      console.warn("[composer] post-save refresh failed", error);
-    }
-  }, 0);
-
+  console.log("[composer] 10 returning saved");
   return saved;
 }
 
