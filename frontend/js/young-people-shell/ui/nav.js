@@ -1057,19 +1057,6 @@ function bindOverlayDismiss() {
       closeAssistantOverlay();
     }
 
-    const composerPanel =
-      document.getElementById("composerPanel") ||
-      document.getElementById("recordComposerPage");
-
-    if (
-      composerPanel &&
-      !composerPanel.classList.contains("hidden") &&
-      !event.target.closest(".composer-shell") &&
-      event.target === composerPanel
-    ) {
-      closeComposer(true);
-    }
-
     const fullscreenPanel = document.getElementById("fullscreenPanel");
 
     if (
@@ -1115,7 +1102,6 @@ function bindOverlayDismiss() {
     closeSuggestionsOverlay();
     closeRecordDrawerOverlay();
     closeMobileNav();
-    closeComposer(true);
   });
 }
 
@@ -1533,7 +1519,7 @@ function bindComposerControls() {
   if (composerControlsBound) return;
   composerControlsBound = true;
 
-  els.closeComposerBtn?.addEventListener("click", () => closeComposer(true));
+  els.closeComposerBtn?.addEventListener("click", () => closeComposer());
 
   const saveThenRefresh = async (mode, successMessage) => {
     try {
