@@ -3,6 +3,7 @@
 
   const SHELL_MODULE = "/js/young-people-shell/index.js";
   const STORAGE_THEME_KEY = "indicare-theme";
+  const STORAGE_NIGHT_KEY = "indicare-night-shift";
 
   let speechRecognition = null;
   let activeSpeechField = null;
@@ -58,24 +59,17 @@
     );
   }
 
-  function getRoleLabel(role = "") {
-    const value = String(role || "").replaceAll("_", " ").trim();
-    if (!value) return "Care team";
-    return value
-      .split(" ")
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ");
-  }
-
   function normaliseDataset() {
     const app = byId("app");
     if (!app) return;
 
     app.dataset.workspace ||= "young-people-shell";
     app.dataset.scope ||= "child";
+    app.dataset.section ||= "workspace";
     app.dataset.userRole ||= "admin";
     app.dataset.allowedHomeIds ||= "[]";
     app.dataset.assistantScopeType ||= "child";
+    app.dataset.themePreference ||= "system";
 
     if (!app.dataset.youngPersonId) app.dataset.youngPersonId = "";
     if (!app.dataset.homeId) app.dataset.homeId = "";
@@ -100,70 +94,106 @@
     );
   }
 
-  function enhanceSafeStartLayout() {
-    const selectorPanel = byId("selectorPanel");
-    const selectorInner = selectorPanel?.querySelector(".selector-screen-inner");
-    const launchGrid = selectorPanel?.querySelector(".safe-start-launch-grid");
-    const homePanel = selectorPanel?.querySelector(".simple-home-panel");
-    const childPanel = selectorPanel?.querySelector(".simple-children-panel");
-    const homeList = byId("homeChipList");
-    const childList = byId("selectorList");
+  function setTheme(theme) {
+    const app = byId("app");
+    const safeTheme = ["light", "dark", "system"].includes(theme)
+      ? theme
+      : "system";
 
-    if (!selectorPanel) return;
+    document.documentElement.classList.remove(
+      "theme-light",
+      "theme-dark",
+      "theme-system"
+    );
+    document.body.classList.remove("theme-light", "theme-dark", "theme-system");
+    app?.classList.remove("theme-light", "theme-dark", "theme-system");
 
-    selectorPanel.classList.add("safe-start-clean-entry");
-    selectorInner?.classList.add("selector-screen-inner--simple");
-    launchGrid?.classList.add("safe-start-launch-grid");
-    homePanel?.classList.add("safe-start-home-column");
-    childPanel?.classList.add("safe-start-young-people-column");
-    homeList?.classList.add("safe-start-home-row");
-    childList?.classList.add("safe-start-young-people-row");
+    document.documentElement.classList.add(`theme-${safeTheme}`);
+    document.body.classList.add(`theme-${safeTheme}`);
+    app?.classList.add(`theme-${safeTheme}`);
+
+    document.documentElement.dataset.theme = safeTheme;
+    document.body.dataset.theme = safeTheme;
+    if (app) {
+      app.dataset.themePreference = safeTheme;
+      app.setAttribute("data-theme", safeTheme);
+    }
+
+    localStorage.setItem(STORAGE_THEME_KEY, safeTheme);
+
+    const toggle = byId("themeToggleBtn") || qs("[data-theme-toggle]");
+    if (toggle) {
+      const label =
+        safeTheme === "light"
+          ? "Light mode"
+          : safeTheme === "dark"
+            ? "Dark mode"
+            : "System mode";
+
+      toggle.textContent = label;
+      toggle.setAttribute("aria-pressed", safeTheme === "dark" ? "true" : "false");
+      toggle.title = "Toggle light, dark or system mode";
+    }
   }
 
   function initThemeMode() {
-    const app = byId("app");
-    const toggle =
-      byId("themeToggleBtn") ||
-      byId("darkModeToggleBtn") ||
-      qs("[data-theme-toggle]");
+    const toggle = byId("themeToggleBtn") || qs("[data-theme-toggle]");
+    const savedTheme = localStorage.getItem(STORAGE_THEME_KEY) || "system";
 
-    const savedTheme = localStorage.getItem(STORAGE_THEME_KEY);
-    const preferredDark =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-    const initialTheme =
-      savedTheme === "dark" || savedTheme === "light"
-        ? savedTheme
-        : preferredDark
-          ? "dark"
-          : "light";
-
-    document.documentElement.dataset.theme = initialTheme;
-    document.body.dataset.theme = initialTheme;
-    app?.setAttribute("data-theme", initialTheme);
-
-    if (toggle) {
-      toggle.setAttribute("aria-pressed", initialTheme === "dark" ? "true" : "false");
-      toggle.title =
-        initialTheme === "dark" ? "Switch to light mode" : "Switch to dark mode";
-    }
+    setTheme(savedTheme);
 
     if (!toggle || toggle.dataset.themeBound === "true") return;
     toggle.dataset.themeBound = "true";
 
     toggle.addEventListener("click", () => {
-      const current = document.documentElement.dataset.theme || "light";
-      const next = current === "dark" ? "light" : "dark";
+      const current = document.documentElement.dataset.theme || "system";
+      const next =
+        current === "system" ? "light" : current === "light" ? "dark" : "system";
 
-      document.documentElement.dataset.theme = next;
-      document.body.dataset.theme = next;
-      app?.setAttribute("data-theme", next);
-      localStorage.setItem(STORAGE_THEME_KEY, next);
-
-      toggle.setAttribute("aria-pressed", next === "dark" ? "true" : "false");
-      toggle.title = next === "dark" ? "Switch to light mode" : "Switch to dark mode";
+      setTheme(next);
     });
+  }
+
+  function setNightShift(enabled) {
+    const app = byId("app");
+    document.body.classList.toggle("night-shift-mode", enabled);
+    document.documentElement.classList.toggle("night-shift-mode", enabled);
+    app?.classList.toggle("night-shift-mode", enabled);
+
+    document.body.dataset.nightShift = enabled ? "true" : "false";
+    app?.setAttribute("data-night-shift", enabled ? "true" : "false");
+
+    localStorage.setItem(STORAGE_NIGHT_KEY, enabled ? "true" : "false");
+
+    const toggle = byId("nightShiftModeBtn") || qs("[data-night-shift-toggle]");
+    if (toggle) {
+      toggle.textContent = enabled ? "Night mode on" : "Night mode";
+      toggle.setAttribute("aria-pressed", enabled ? "true" : "false");
+    }
+  }
+
+  function initNightShiftMode() {
+    const toggle = byId("nightShiftModeBtn") || qs("[data-night-shift-toggle]");
+    setNightShift(localStorage.getItem(STORAGE_NIGHT_KEY) === "true");
+
+    if (!toggle || toggle.dataset.nightShiftBound === "true") return;
+    toggle.dataset.nightShiftBound = "true";
+
+    toggle.addEventListener("click", () => {
+      const enabled = document.body.dataset.nightShift === "true";
+      setNightShift(!enabled);
+    });
+  }
+
+  function getRoleLabel(role = "") {
+    const value = String(role || "").replaceAll("_", " ").trim();
+    if (!value) return "Care team";
+
+    return value
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
   }
 
   function initWelcomeMessage() {
@@ -190,29 +220,44 @@
     else if (hour < 18) greeting = "Good afternoon";
     else greeting = "Good evening";
 
-    const welcomeText = firstName
-      ? `${greeting}, ${firstName}`
-      : `${greeting}`;
+    const welcomeText = firstName ? `${greeting}, ${firstName}` : greeting;
 
-    const welcomeTargets = [
-      byId("welcomeMessage"),
-      byId("userWelcomeMessage"),
-      qs("[data-user-welcome]"),
-    ].filter(Boolean);
+    [byId("welcomeMessage"), byId("userWelcomeMessage"), qs("[data-user-welcome]")]
+      .filter(Boolean)
+      .forEach((target) => {
+        target.textContent = welcomeText;
+      });
 
-    welcomeTargets.forEach((target) => {
-      target.textContent = welcomeText;
-    });
+    [byId("welcomeRole"), byId("userRoleLabel"), qs("[data-user-role-label]")]
+      .filter(Boolean)
+      .forEach((target) => {
+        target.textContent = getRoleLabel(role);
+      });
+  }
 
-    const roleTargets = [
-      byId("welcomeRole"),
-      byId("userRoleLabel"),
-      qs("[data-user-role-label]"),
-    ].filter(Boolean);
+  function enhanceSafeStartLayout() {
+    const selectorPanel = byId("selectorPanel");
+    if (!selectorPanel) return;
 
-    roleTargets.forEach((target) => {
-      target.textContent = getRoleLabel(role);
-    });
+    selectorPanel.classList.add("safe-start-clean-entry");
+    selectorPanel
+      .querySelector(".selector-screen-inner")
+      ?.classList.add("selector-screen-inner--simple");
+
+    selectorPanel
+      .querySelector(".safe-start-launch-grid")
+      ?.classList.add("safe-start-launch-grid");
+
+    selectorPanel
+      .querySelector(".simple-home-panel")
+      ?.classList.add("safe-start-home-column");
+
+    selectorPanel
+      .querySelector(".simple-children-panel")
+      ?.classList.add("safe-start-young-people-column");
+
+    byId("homeChipList")?.classList.add("safe-start-home-row");
+    byId("selectorList")?.classList.add("safe-start-young-people-row");
   }
 
   function syncMobileDrawerState() {
@@ -225,7 +270,6 @@
     const open = isVisible(panel);
     setExpanded(toggle, open);
     setHidden(backdrop, !open);
-
     document.body.classList.toggle("mobile-nav-open", open);
   }
 
@@ -258,7 +302,6 @@
     const closeBtn = byId("closeMobileNavBtn");
 
     if (!toggle || !panel || toggle.dataset.bound === "true") return;
-
     toggle.dataset.bound = "true";
 
     toggle.addEventListener("click", () => {
@@ -267,8 +310,7 @@
       syncMobileDrawerState();
 
       if (nextOpen) {
-        const firstFocusable = getFocusableElements(panel)[0];
-        firstFocusable?.focus?.();
+        getFocusableElements(panel)[0]?.focus?.();
       }
     });
 
@@ -285,9 +327,7 @@
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return;
-      if (!isVisible(panel)) return;
-
+      if (event.key !== "Escape" || !isVisible(panel)) return;
       setHidden(panel, true);
       syncMobileDrawerState();
       toggle.focus();
@@ -297,12 +337,10 @@
   }
 
   function addTableResponsiveLabels() {
-    document.querySelectorAll(".record-table").forEach((table) => {
-      const headers = Array.from(table.querySelectorAll("thead th")).map((th) =>
-        th.textContent.trim()
-      );
+    qsa(".record-table").forEach((table) => {
+      const headers = qsa("thead th", table).map((th) => th.textContent.trim());
 
-      table.querySelectorAll("tbody tr").forEach((row) => {
+      qsa("tbody tr", table).forEach((row) => {
         Array.from(row.children).forEach((cell, index) => {
           if (headers[index]) cell.dataset.label = headers[index];
         });
@@ -314,25 +352,25 @@
     const content = byId("viewContent");
     if (!content) return;
 
-    content.querySelectorAll(".panel").forEach((panel, index) => {
+    qsa(".panel", content).forEach((panel, index) => {
       panel.dataset.panelTone = String((index % 6) + 1);
     });
 
-    content.querySelectorAll(".record-table-shell").forEach((table, index) => {
+    qsa(".record-table-shell", content).forEach((table, index) => {
       table.dataset.tableTone = String((index % 6) + 1);
     });
 
-    content.querySelectorAll(".empty-state").forEach((empty) => {
-      if (!empty.querySelector(".empty-state-icon")) {
-        const icon = document.createElement("div");
-        icon.className = "empty-state-icon";
-        icon.setAttribute("aria-hidden", "true");
-        icon.textContent = "○";
-        empty.prepend(icon);
-      }
+    qsa(".empty-state", content).forEach((empty) => {
+      if (empty.querySelector(".empty-state-icon")) return;
+
+      const icon = document.createElement("div");
+      icon.className = "empty-state-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = "○";
+      empty.prepend(icon);
     });
 
-    content.querySelectorAll("table").forEach((table) => {
+    qsa("table", content).forEach((table) => {
       if (table.closest(".record-table-scroll")) return;
 
       const wrapper = document.createElement("div");
@@ -342,26 +380,43 @@
     });
   }
 
+  function enhanceRecordSurfaces() {
+    const root = byId("viewContent");
+    if (!root) return;
+
+    qsa(".record-row, .record-card, .timeline-item, .entity-row", root).forEach(
+      (record) => {
+        record.classList.add("production-record-card");
+
+        if (!record.querySelector(".record-card-action-hint")) {
+          const hint = document.createElement("span");
+          hint.className = "record-card-action-hint";
+          hint.textContent = "Open";
+          record.appendChild(hint);
+        }
+      }
+    );
+
+    qsa(".record-list, .timeline-list, .entity-list", root).forEach((list) => {
+      list.classList.add("production-record-list");
+    });
+  }
+
   function observeWorkspaceContent() {
     const content = byId("viewContent");
     if (!content || content.dataset.observed === "true") return;
-
     content.dataset.observed = "true";
 
-    const observer = new MutationObserver(() => {
+    const enhance = () => {
       addTableResponsiveLabels();
       improvePlainWorkspaceBlocks();
       enhanceRecordSurfaces();
-    });
+    };
 
-    observer.observe(content, {
-      childList: true,
-      subtree: true,
-    });
+    const observer = new MutationObserver(enhance);
+    observer.observe(content, { childList: true, subtree: true });
 
-    addTableResponsiveLabels();
-    improvePlainWorkspaceBlocks();
-    enhanceRecordSurfaces();
+    enhance();
   }
 
   function trapFocus(container, event) {
@@ -404,11 +459,19 @@
     });
   }
 
+  function ensureFieldId(field, index) {
+    if (field.id) return field.id;
+
+    const name = field.getAttribute("name") || "composer-field";
+    field.id = `${name.replace(/[^a-zA-Z0-9_-]/g, "-")}-${index}`;
+    return field.id;
+  }
+
   function createSpeechButton(field) {
-    if (!field || !field.id) return null;
-    if (field.closest(".field")?.querySelector(`[data-speech-target="${field.id}"]`)) {
-      return null;
-    }
+    if (!field?.id) return null;
+
+    const wrap = field.closest(".field, .composer-field");
+    if (wrap?.querySelector(`[data-speech-target="${field.id}"]`)) return null;
 
     const button = document.createElement("button");
     button.type = "button";
@@ -419,14 +482,6 @@
     button.innerHTML = `<span aria-hidden="true">🎙</span><span>Dictate</span>`;
 
     return button;
-  }
-
-  function ensureFieldId(field, index) {
-    if (field.id) return field.id;
-
-    const name = field.getAttribute("name") || "composer-field";
-    field.id = `${name.replace(/[^a-zA-Z0-9_-]/g, "-")}-${index}`;
-    return field.id;
   }
 
   function setupSpeechRecognition() {
@@ -477,13 +532,13 @@
     qsa("textarea", root).forEach((textarea, index) => {
       ensureFieldId(textarea, index);
 
-      const fieldWrap = textarea.closest(".field, .composer-field");
-      if (!fieldWrap) return;
+      const wrap = textarea.closest(".field, .composer-field");
+      if (!wrap) return;
 
-      fieldWrap.classList.add("field--speech-ready");
+      wrap.classList.add("field--speech-ready");
 
       if (!supported) {
-        fieldWrap.classList.add("field--speech-unsupported");
+        wrap.classList.add("field--speech-unsupported");
         return;
       }
 
@@ -491,8 +546,7 @@
       if (!button) return;
 
       const label =
-        fieldWrap.querySelector(".label, .form-label") ||
-        fieldWrap.querySelector("label");
+        wrap.querySelector(".label, .form-label") || wrap.querySelector("label");
 
       if (label) {
         const actions = document.createElement("div");
@@ -503,6 +557,19 @@
         textarea.before(button);
       }
     });
+  }
+
+  function getSpeechFieldFromButton(button) {
+    const targetId = button.dataset.speechTarget;
+    const direct = targetId ? byId(targetId) : null;
+
+    if (direct && ["INPUT", "TEXTAREA"].includes(direct.tagName)) return direct;
+
+    if (direct) {
+      return direct.querySelector("textarea, input[type='text'], input[type='search']");
+    }
+
+    return null;
   }
 
   function bindSpeechToText() {
@@ -520,7 +587,7 @@
         return;
       }
 
-      const field = byId(button.dataset.speechTarget);
+      const field = getSpeechFieldFromButton(button);
       if (!field) return;
 
       try {
@@ -531,51 +598,6 @@
         document.body.classList.remove("speech-listening");
       }
     });
-  }
-
-  function improveComposerControls() {
-    const composer = byId("recordComposerPage");
-    if (!composer || composer.dataset.composerEnhanced === "true") return;
-
-    composer.dataset.composerEnhanced = "true";
-
-    const enhance = () => {
-      composer.querySelectorAll("textarea").forEach((textarea) => {
-        textarea.setAttribute("rows", textarea.getAttribute("rows") || "5");
-        textarea.setAttribute("spellcheck", "true");
-        textarea.setAttribute("autocomplete", "off");
-      });
-
-      composer.querySelectorAll("input, textarea, select").forEach((field) => {
-        if (!field.id && field.name) {
-          field.id = `composer-${field.name}`;
-        }
-
-        if (!field.id || field.dataset.premiumEnhanced === "true") return;
-
-        field.dataset.premiumEnhanced = "true";
-
-        field.addEventListener("invalid", () => {
-          field.closest(".composer-field, .field")?.classList.add("field-has-error");
-        });
-
-        field.addEventListener("input", () => {
-          field.closest(".composer-field, .field")?.classList.remove("field-has-error");
-          updateTherapeuticNudge(field);
-        });
-      });
-
-      enhanceSpeechToTextControls(composer);
-      enhanceComposerSections(composer);
-    };
-
-    const observer = new MutationObserver(enhance);
-    observer.observe(composer, {
-      childList: true,
-      subtree: true,
-    });
-
-    enhance();
   }
 
   function updateTherapeuticNudge(field) {
@@ -623,14 +645,120 @@
     });
   }
 
+  function updateRecordQualityMeter() {
+    const composer = byId("recordComposerPage");
+    if (!composer || !isVisible(composer)) return;
+
+    const textValue = qsa("textarea", composer)
+      .map((field) => field.value || "")
+      .join(" ")
+      .toLowerCase();
+
+    const setStatus = (id, ok, good = "Present", missing = "Add detail") => {
+      const el = byId(id);
+      if (!el) return;
+      el.textContent = ok ? good : missing;
+      el.closest("div")?.classList.toggle("quality-ok", ok);
+      el.closest("div")?.classList.toggle("quality-missing", !ok);
+    };
+
+    setStatus(
+      "qualityFactsStatus",
+      textValue.length > 40,
+      "Detail added",
+      "Needs facts"
+    );
+    setStatus(
+      "qualityChildVoiceStatus",
+      textValue.includes("said") ||
+        textValue.includes("voice") ||
+        textValue.includes("wishes") ||
+        textValue.includes("feel"),
+      "Included",
+      "Add voice"
+    );
+    setStatus(
+      "qualityActionsStatus",
+      textValue.includes("action") ||
+        textValue.includes("next") ||
+        textValue.includes("follow"),
+      "Included",
+      "Add actions"
+    );
+    setStatus(
+      "qualityOversightStatus",
+      textValue.includes("manager") ||
+        textValue.includes("oversight") ||
+        textValue.includes("review"),
+      "Considered",
+      "Consider oversight"
+    );
+  }
+
+  function improveComposerControls() {
+    const composer = byId("recordComposerPage");
+    if (!composer || composer.dataset.composerEnhanced === "true") return;
+    composer.dataset.composerEnhanced = "true";
+
+    const enhance = () => {
+      qsa("textarea", composer).forEach((textarea) => {
+        textarea.setAttribute("rows", textarea.getAttribute("rows") || "5");
+        textarea.setAttribute("spellcheck", "true");
+        textarea.setAttribute("autocomplete", "off");
+      });
+
+      qsa("input, textarea, select", composer).forEach((field) => {
+        if (!field.id && field.name) field.id = `composer-${field.name}`;
+        if (!field.id || field.dataset.premiumEnhanced === "true") return;
+
+        field.dataset.premiumEnhanced = "true";
+
+        field.addEventListener("invalid", () => {
+          field.closest(".composer-field, .field")?.classList.add("field-has-error");
+        });
+
+        field.addEventListener("input", () => {
+          field.closest(".composer-field, .field")?.classList.remove("field-has-error");
+          updateTherapeuticNudge(field);
+          updateRecordQualityMeter();
+        });
+      });
+
+      enhanceSpeechToTextControls(composer);
+      enhanceComposerSections(composer);
+      updateRecordQualityMeter();
+    };
+
+    const observer = new MutationObserver(enhance);
+    observer.observe(composer, { childList: true, subtree: true });
+
+    enhance();
+  }
+
+  function bindComposerModeControls() {
+    if (document.body.dataset.composerModeBound === "true") return;
+    document.body.dataset.composerModeBound = "true";
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-composer-view]");
+      if (!button) return;
+
+      const mode = button.dataset.composerView || "factual";
+      qsa("[data-composer-view]").forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+
+      byId("recordComposerPage")?.setAttribute("data-composer-view", mode);
+    });
+  }
+
   function improveAssistantText() {
     const host = byId("assistantMessages");
     if (!host || host.dataset.assistantTextEnhanced === "true") return;
-
     host.dataset.assistantTextEnhanced = "true";
 
     const enhance = () => {
-      host.querySelectorAll(".assistant-message-body").forEach((body) => {
+      qsa(".assistant-message-body", host).forEach((body) => {
         body.innerHTML = body.innerHTML
           .replaceAll("&amp;bull;", "•")
           .replaceAll("&amp;nbsp;", " ")
@@ -639,11 +767,7 @@
     };
 
     const observer = new MutationObserver(enhance);
-    observer.observe(host, {
-      childList: true,
-      subtree: true,
-    });
-
+    observer.observe(host, { childList: true, subtree: true });
     enhance();
   }
 
@@ -651,7 +775,6 @@
     ["statusBar", "statusMessage", "selectorStatusMessage"].forEach((id) => {
       const status = byId(id);
       if (!status) return;
-
       status.setAttribute("role", "status");
       status.setAttribute("aria-live", "polite");
       status.setAttribute("aria-atomic", "true");
@@ -662,8 +785,6 @@
     if (document.body.dataset.searchShortcutBound === "true") return;
     document.body.dataset.searchShortcutBound = "true";
 
-    const search = byId("recordSearchInput");
-
     document.addEventListener("keydown", (event) => {
       const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(
         document.activeElement?.tagName || ""
@@ -672,6 +793,7 @@
       if (isTyping) return;
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        const search = byId("recordSearchInput") || byId("selectorSearch");
         if (!search) return;
         event.preventDefault();
         search.focus();
@@ -703,9 +825,8 @@
   }
 
   function addLiveClockToShell() {
-    const host = document.querySelector(".workspace-context-pill-value");
+    const host = qs(".workspace-context-pill-value");
     if (!host || host.dataset.clockBound === "true") return;
-
     host.dataset.clockBound = "true";
 
     const original = host.textContent.trim() || "Choose home and young person";
@@ -740,23 +861,18 @@
       ["What do you need to do?", "Choose the area you need"],
     ];
 
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode(node) {
-          const parent = node.parentElement;
-          if (!parent) return NodeFilter.FILTER_REJECT;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
 
-          const tag = parent.tagName;
-          if (["SCRIPT", "STYLE", "NOSCRIPT"].includes(tag)) {
-            return NodeFilter.FILTER_REJECT;
-          }
+        if (["SCRIPT", "STYLE", "NOSCRIPT"].includes(parent.tagName)) {
+          return NodeFilter.FILTER_REJECT;
+        }
 
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      }
-    );
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
 
     const nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
@@ -773,7 +889,6 @@
   function addMobileBottomNavFallback() {
     const host = byId("mobileBottomNav");
     if (!host || host.dataset.bound === "true") return;
-
     host.dataset.bound = "true";
 
     host.innerHTML = `
@@ -801,20 +916,15 @@
       }
 
       if (action === "record") {
-        const dailyNote =
-          document.querySelector('[data-action="daily-note"]') ||
-          document.querySelector('[data-action-router="new-task"]');
-
-        dailyNote?.click();
+        (
+          qs('[data-action="daily-note"]') ||
+          qs('[data-action-router="new-task"]')
+        )?.click();
         return;
       }
 
       if (action === "home") {
-        const homeBtn =
-          document.querySelector('[data-view="home"]') ||
-          byId("goHomeBtn");
-
-        homeBtn?.click();
+        (qs('[data-view="home"]') || byId("goHomeBtn"))?.click();
       }
     });
   }
@@ -831,7 +941,7 @@
         if (!current.matches("[data-workspace-menu]")) return;
         if (!current.open) return;
 
-        document.querySelectorAll("details[data-workspace-menu][open]").forEach((menu) => {
+        qsa("details[data-workspace-menu][open]").forEach((menu) => {
           if (menu !== current) menu.open = false;
         });
       },
@@ -839,55 +949,19 @@
     );
 
     document.addEventListener("click", (event) => {
-      const clickedInside = event.target.closest("details[data-workspace-menu]");
-      if (clickedInside) return;
+      if (event.target.closest("details[data-workspace-menu]")) return;
 
-      document.querySelectorAll("details[data-workspace-menu][open]").forEach((menu) => {
+      qsa("details[data-workspace-menu][open]").forEach((menu) => {
         menu.open = false;
       });
     });
   }
 
-  function bindEntryPointButtons() {
-    const logoBtn = byId("logoBtn");
-    const goHomeBtn = byId("goHomeBtn");
-    const changePersonBtn = byId("changePersonBtn");
-    const mobileHomeBtn = byId("mobileHomeBtn");
-
-    const goToEntry = () => {
-      const selectorPanel = byId("selectorPanel");
-      const workspacePanel = byId("workspacePanel");
-
-      if (selectorPanel && workspacePanel) {
-        setHidden(workspacePanel, true);
-        setHidden(selectorPanel, false);
-        selectorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    };
-
-    [logoBtn, goHomeBtn, changePersonBtn, mobileHomeBtn].forEach((button) => {
-      if (!button || button.dataset.entryBound === "true") return;
-      button.dataset.entryBound = "true";
-      button.addEventListener("click", goToEntry);
-    });
-  }
-
   function bindAssistantLaunchers() {
-    const launchers = [
-      byId("safeStartAskAssistantBtn"),
-      byId("heroAssistantBtn"),
-      byId("assistantLauncher"),
-    ].filter(Boolean);
-
     const openAssistant = () => {
-      const modal = byId("assistantModal");
-      const backdrop = byId("assistantBackdrop");
-
-      setHidden(backdrop, false);
-      setHidden(modal, false);
-
-      const input = byId("assistantInput");
-      requestAnimationFrame(() => input?.focus?.());
+      setHidden(byId("assistantBackdrop"), false);
+      setHidden(byId("assistantModal"), false);
+      requestAnimationFrame(() => byId("assistantInput")?.focus?.());
     };
 
     const closeAssistant = () => {
@@ -895,11 +969,17 @@
       setHidden(byId("assistantBackdrop"), true);
     };
 
-    launchers.forEach((button) => {
-      if (button.dataset.assistantLauncherBound === "true") return;
-      button.dataset.assistantLauncherBound = "true";
-      button.addEventListener("click", openAssistant);
-    });
+    [
+      byId("safeStartAskAssistantBtn"),
+      byId("heroAssistantBtn"),
+      byId("assistantLauncher"),
+    ]
+      .filter(Boolean)
+      .forEach((button) => {
+        if (button.dataset.assistantLauncherBound === "true") return;
+        button.dataset.assistantLauncherBound = "true";
+        button.addEventListener("click", openAssistant);
+      });
 
     const closeBtn = byId("closeAssistantBtn");
     if (closeBtn && closeBtn.dataset.assistantCloseBound !== "true") {
@@ -925,7 +1005,6 @@
     bindings.forEach(([buttonId, panelId]) => {
       const button = byId(buttonId);
       const panel = byId(panelId);
-
       if (!button || !panel || button.dataset.closeBound === "true") return;
 
       button.dataset.closeBound = "true";
@@ -949,26 +1028,75 @@
     }
   }
 
-  function enhanceRecordSurfaces() {
-    const root = byId("viewContent");
-    if (!root) return;
+  function bindTherapeuticPrompt() {
+    const prompt = byId("therapeuticPromptPanel");
+    const dismiss = byId("dismissTherapeuticPromptBtn");
 
-    qsa(".record-row, .record-card, .timeline-item, .entity-row", root).forEach(
-      (record) => {
-        record.classList.add("production-record-card");
+    dismiss?.addEventListener("click", () => setHidden(prompt, true));
 
-        if (!record.querySelector(".record-card-action-hint")) {
-          const hint = document.createElement("span");
-          hint.className = "record-card-action-hint";
-          hint.textContent = "Open";
-          record.appendChild(hint);
-        }
-      }
-    );
+    document.addEventListener("click", (event) => {
+      const recordButton = event.target.closest(
+        '[data-action="incident"], [data-action="risk"], [data-nav-section="safeguarding"]'
+      );
 
-    qsa(".record-list, .timeline-list, .entity-list", root).forEach((list) => {
-      list.classList.add("production-record-list");
+      if (!recordButton || !prompt) return;
+      setHidden(prompt, false);
     });
+  }
+
+  function bindEntryReadinessBridge() {
+    if (document.body.dataset.entryReadinessBound === "true") return;
+    document.body.dataset.entryReadinessBound = "true";
+
+    const sync = () => {
+      const homeSelect = byId("homeSelect");
+      const childSelect = byId("youngPersonSelect");
+      const openBtn = byId("launchOpenCareHubBtn");
+
+      const homeText =
+        homeSelect?.selectedOptions?.[0]?.textContent?.trim() ||
+        byId("selectedHomeSummary")?.textContent?.trim() ||
+        "Not selected";
+
+      const childText =
+        childSelect?.selectedOptions?.[0]?.textContent?.trim() ||
+        byId("selectedChildSummary")?.textContent?.trim() ||
+        "Not selected";
+
+      const hasChild = !!childSelect?.value;
+
+      if (byId("launchReadyHome")) byId("launchReadyHome").textContent = homeText;
+      if (byId("launchReadyChild")) {
+        byId("launchReadyChild").textContent = hasChild ? childText : "Not selected";
+      }
+      if (byId("launchLastRefreshed")) {
+        byId("launchLastRefreshed").textContent = new Date().toLocaleTimeString(
+          "en-GB",
+          { hour: "2-digit", minute: "2-digit" }
+        );
+      }
+
+      if (openBtn) openBtn.disabled = !hasChild;
+    };
+
+    ["homeSelect", "youngPersonSelect"].forEach((id) => {
+      byId(id)?.addEventListener("change", sync);
+    });
+
+    byId("selectorRefreshBtn")?.addEventListener("click", () => {
+      window.setTimeout(sync, 350);
+    });
+
+    byId("launchOpenCareHubBtn")?.addEventListener("click", () => {
+      byId("openCareHubBtn")?.click();
+    });
+
+    const observerTargets = [byId("homeChipList"), byId("selectorList")].filter(Boolean);
+    observerTargets.forEach((target) => {
+      new MutationObserver(sync).observe(target, { childList: true, subtree: true });
+    });
+
+    sync();
   }
 
   function addClickFeedback() {
@@ -976,7 +1104,10 @@
     document.body.dataset.clickFeedbackBound = "true";
 
     document.addEventListener("click", (event) => {
-      const button = event.target.closest("button, .primary-btn, .secondary-btn, .ghost-btn");
+      const button = event.target.closest(
+        "button, .primary-btn, .secondary-btn, .ghost-btn"
+      );
+
       if (!button) return;
 
       button.classList.add("is-clicked");
@@ -996,9 +1127,7 @@
 
   function showStartupError(error) {
     const status =
-      byId("statusBar") ||
-      byId("selectorStatusMessage") ||
-      byId("statusMessage");
+      byId("statusBar") || byId("selectorStatusMessage") || byId("statusMessage");
 
     if (status) {
       status.classList.remove("hidden");
@@ -1029,6 +1158,7 @@
     addCareHubClasses();
     enhanceSafeStartLayout();
     initThemeMode();
+    initNightShiftMode();
     initWelcomeMessage();
     improveCareHubCopy();
     enhanceMobileNavigation();
@@ -1036,6 +1166,7 @@
     bindDialogFocusManagement();
     bindSpeechToText();
     improveComposerControls();
+    bindComposerModeControls();
     improveAssistantText();
     improveStatusAnnouncements();
     addGlobalSearchShortcut();
@@ -1043,9 +1174,10 @@
     addLiveClockToShell();
     addMobileBottomNavFallback();
     closeOtherCareMenus();
-    bindEntryPointButtons();
     bindAssistantLaunchers();
     bindPanelCloseButtons();
+    bindTherapeuticPrompt();
+    bindEntryReadinessBridge();
     addClickFeedback();
     addProductionReadyClass();
   }
