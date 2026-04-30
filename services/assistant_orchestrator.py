@@ -30,14 +30,6 @@ from services.assistant_security import (
 
 logger = logging.getLogger("indicare.orchestrator")
 
-OS_ASSISTANT_TYPES = {
-    "young_people_os",
-    "home_os",
-    "quality_os",
-    "ofsted_os",
-    "manager_os",
-}
-
 
 @dataclass
 class OrchestratorRequest:
@@ -99,48 +91,6 @@ def _coerce_bool(value: Any, default: bool = False) -> bool:
     return bool(value)
 
 
-def _assistant_surface_from_context(user_context: dict[str, Any] | None) -> str:
-    if not isinstance(user_context, dict):
-        return "standalone"
-
-    explicit = _safe_string(user_context.get("assistant_surface")).lower()
-    if explicit in {"standalone", "os_embedded"}:
-        return explicit
-
-    assistant_type = _safe_string(user_context.get("assistant_type")).lower()
-    if assistant_type in OS_ASSISTANT_TYPES or assistant_type.endswith("_os"):
-        return "os_embedded"
-
-    scope_type = _safe_string(user_context.get("scope_type")).lower()
-    if scope_type in {"young_person", "child", "home", "quality"}:
-        return "os_embedded"
-
-    scope = user_context.get("scope")
-    if isinstance(scope, dict):
-        nested_scope_type = _safe_string(scope.get("scope_type") or scope.get("scope")).lower()
-        if nested_scope_type in {"young_person", "child", "home", "quality"}:
-            return "os_embedded"
-    elif _safe_string(scope).lower() in {"young_person", "child", "home", "quality"}:
-        return "os_embedded"
-
-    return "standalone"
-
-
-def _enrich_surface_context(user_context: dict[str, Any] | None) -> dict[str, Any]:
-    enriched = dict(user_context or {})
-    assistant_surface = _assistant_surface_from_context(enriched)
-
-    enriched["assistant_surface"] = assistant_surface
-    enriched["requires_evidence_grounding"] = assistant_surface == "os_embedded"
-
-    if assistant_surface == "standalone":
-        enriched.setdefault("assistant_type", "standalone")
-    else:
-        enriched.setdefault("assistant_type", "os_embedded")
-
-    return enriched
-
-
 def _build_fallback_session_id(message: Any = None) -> str:
     suffix = uuid.uuid4().hex[:12]
     message_hint = _safe_string(message)[:24].replace(" ", "-")
@@ -166,11 +116,84 @@ def _extract_attr(obj: Any, *names: str, default: Any = None) -> Any:
     return default
 
 
-def _merge_dicts(base: dict[str, Any] | None, overlay: dict[str, Any] | None) -> dict[str, Any]:
+def _merge_dicts(
+    base: dict[str, Any] | None,
+    overlay: dict[str, Any] | None,
+) -> dict[str, Any]:
     merged: dict[str, Any] = dict(base or {})
     for key, value in (overlay or {}).items():
         merged[key] = value
     return merged
+
+
+def _detect_assistant_surface(user_context: dict[str, Any] | None) -> str:
+    if not isinstance(user_context, dict):
+        return "standalone"
+
+    explicit = _safe_string(user_context.get("assistant_surface")).lower()
+    if explicit in {"standalone", "os_embedded"}:
+        return explicit
+
+    assistant_type = _safe_string(user_context.get("assistant_type")).lower()
+
+    if assistant_type in {
+        "os",
+        "embedded",
+        "care_os",
+        "indicare_os",
+        "young_people_os",
+        "home_os",
+        "quality_os",
+        "ofsted_os",
+        "manager_os",
+    }:
+        return "os_embedded"
+
+    if assistant_type.endswith("_os"):
+        return "os_embedded"
+
+    scope_type = _safe_string(user_context.get("scope_type")).lower()
+    if scope_type in {"young_person", "child", "home", "quality"}:
+        return "os_embedded"
+
+    scope = user_context.get("scope")
+    if isinstance(scope, dict):
+        nested_scope = _safe_string(scope.get("scope_type") or scope.get("scope")).lower()
+        if nested_scope in {"young_person", "child", "home", "quality"}:
+            return "os_embedded"
+    elif _safe_string(scope).lower() in {"young_person", "child", "home", "quality"}:
+        return "os_embedded"
+
+    if user_context.get("evidence_index") or user_context.get("sources"):
+        return "os_embedded"
+
+    if user_context.get("report_snapshot"):
+        return "os_embedded"
+
+    return "standalone"
+
+
+def _detect_evidence_grounding(user_context: dict[str, Any] | None) -> bool:
+    if not isinstance(user_context, dict):
+        return False
+
+    explicit = user_context.get("requires_evidence_grounding")
+    if isinstance(explicit, bool):
+        return explicit
+
+    if user_context.get("evidence_index"):
+        return True
+
+    if user_context.get("sources"):
+        return True
+
+    if user_context.get("report_snapshot"):
+        return True
+
+    if user_context.get("scope_type"):
+        return True
+
+    return _detect_assistant_surface(user_context) == "os_embedded"
 
 
 def _trim_history(
@@ -212,8 +235,10 @@ def _trim_history(
 
         if role_name not in {"user", "assistant"}:
             continue
+
         if not content:
             continue
+
         if contains_prompt_injection_attempt(content):
             continue
 
@@ -445,12 +470,14 @@ def _extract_suggested_actions(runtime: AssistantRuntimeContext | None) -> list[
         if line.upper().startswith("SUGGESTED ACTIONS"):
             continue
 
-        if line.startswith("-"):
-            line = line.lstrip("-").strip()
-        if line.startswith("*"):
-            line = line.lstrip("*").strip()
         if line.startswith("•"):
             line = line.lstrip("•").strip()
+
+        if line.startswith("-"):
+            line = line.lstrip("-").strip()
+
+        if line.startswith("*"):
+            line = line.lstrip("*").strip()
 
         if not line:
             continue
@@ -516,7 +543,6 @@ def _infer_output_overrides(
 
     reg45_requested = _coerce_bool(user_context.get("reg45_requested"))
     report_type = _safe_string(user_context.get("report_type")).lower()
-    has_internal_evidence = _has_internal_evidence(user_context)
 
     if reg45_requested or report_type == "reg45":
         return {
@@ -525,34 +551,34 @@ def _infer_output_overrides(
             "response_stance": "inspection_ready",
         }
 
-    report_terms = {
+    report_terms = [
         "reg 45",
         "reg45",
-        "regulation 45",
-        "review pack",
-        "compliance view",
-        "monthly report",
-        "annual report",
-        "yearly report",
-    }
-
-    if any(term in text for term in report_terms):
-        return {
-            "task_type": "report",
-            "output_type": "structured_report",
-        }
-
-    broad_report_terms = {
         "overview",
         "full overview",
+        "chronology",
         "summary",
+        "report",
+        "review pack",
         "inspection",
-    }
+        "compliance view",
+    ]
 
-    if has_internal_evidence and any(term in text for term in broad_report_terms):
+    if any(term in text for term in report_terms):
+        task_type = "summary"
+        output_type = "plain_response"
+
+        if "report" in text or "reg 45" in text or "reg45" in text:
+            task_type = "report"
+            output_type = "structured_report"
+
+        if "review pack" in text:
+            task_type = "report"
+            output_type = "structured_report"
+
         return {
-            "task_type": "summary",
-            "output_type": "plain_response",
+            "task_type": task_type,
+            "output_type": output_type,
         }
 
     return {}
@@ -565,8 +591,12 @@ def _serialise_runtime(
     evidence_index: list[dict[str, Any]] | None = None,
     sources: list[dict[str, Any]] | None = None,
     selected_mode: str = "balanced",
-    user_context: dict[str, Any] | None = None,
     user_id: Any | None = None,
+    user_context: dict[str, Any] | None = None,
+    response_plan: ResponsePlan | None = None,
+    assistant_surface: str = "standalone",
+    requires_evidence_grounding: bool = False,
+    trimmed_history: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     if runtime is None:
         return {}
@@ -574,8 +604,8 @@ def _serialise_runtime(
     evidence_index = evidence_index or []
     sources = sources or []
     user_context = user_context or {}
+    trimmed_history = trimmed_history or []
 
-    assistant_surface = _assistant_surface_from_context(user_context)
     scope = _safe_string(user_context.get("scope"))
     scope_type = _safe_string(user_context.get("scope_type"))
     assistant_type = _safe_string(user_context.get("assistant_type"))
@@ -597,18 +627,19 @@ def _serialise_runtime(
         "suggested_actions": _extract_suggested_actions(runtime),
         "regulation_basis": regulation_payload or [],
         "response_mode": selected_mode,
+        "assistant_surface": assistant_surface,
+        "requires_evidence_grounding": requires_evidence_grounding,
         "evidence_items_loaded": len(evidence_index),
         "evidence_preview": evidence_index[:10],
         "source_count": len(sources),
         "source_preview": sources[:10],
+        "history_items_loaded": len(trimmed_history),
         "user_id": user_id,
-        "assistant_surface": assistant_surface,
-        "requires_evidence_grounding": assistant_surface == "os_embedded",
         "scope": scope or None,
         "scope_type": scope_type or None,
         "assistant_type": assistant_type or None,
         "report_type": report_type or None,
-        "has_internal_evidence": bool(evidence_index or sources or _has_internal_evidence(user_context)),
+        "has_internal_evidence": bool(evidence_index or sources),
         "reg45_requested": _coerce_bool(user_context.get("reg45_requested")),
         "current_view": user_context.get("current_view"),
         "current_section": user_context.get("current_section"),
@@ -623,6 +654,40 @@ def _serialise_runtime(
         "retrieval_mode": user_context.get("retrieval_mode"),
         "output_mode": user_context.get("output_mode"),
     }
+
+    if response_plan is not None:
+        payload["response_plan"] = {
+            "stance": response_plan.response_stance,
+            "mode": response_plan.selected_mode,
+            "use_memory": response_plan.should_use_memory,
+            "use_retrieval": response_plan.should_use_retrieval,
+            "use_reflection": response_plan.should_use_reflection,
+            "use_supervision": response_plan.should_use_supervision,
+            "use_leadership_lens": response_plan.should_use_leadership_lens,
+            "use_inspection_lens": response_plan.should_use_inspection_lens,
+            "use_ri_lens": response_plan.should_use_ri_lens,
+            "use_therapeutic_lens": response_plan.should_use_therapeutic_lens,
+            "guidance_enabled": response_plan.should_use_guidance_search,
+            "must_lead_with_safety": response_plan.must_lead_with_safety,
+            "must_preserve_source_facts": response_plan.must_preserve_source_facts,
+            "fact_vs_inference": response_plan.should_distinguish_fact_from_inference,
+            "brief": response_plan.should_be_brief,
+            "assistant_surface": response_plan.assistant_surface,
+            "requires_evidence_grounding": response_plan.requires_evidence_grounding,
+            "reasons": response_plan.reasons,
+        }
+
+        payload["model"] = {
+            "name": response_plan.model_plan.model,
+            "temperature": response_plan.model_plan.temperature,
+            "max_tokens": response_plan.model_plan.max_tokens,
+        }
+
+        payload["guidance"] = {
+            "enabled": response_plan.guidance_plan.enabled,
+            "reason": response_plan.guidance_plan.reason,
+            "query": response_plan.guidance_plan.search_query,
+        }
 
     return {key: value for key, value in payload.items() if value not in (None, "", [])}
 
@@ -642,43 +707,13 @@ def _append_regulation_context(
     ).strip()
 
 
-def _append_surface_context(
-    system_prompt: str,
-    *,
-    assistant_surface: str,
-) -> str:
-    if assistant_surface == "os_embedded":
-        block = (
-            "ASSISTANT SURFACE CONTEXT\n\n"
-            "You are operating inside IndiCare OS.\n"
-            "Treat scoped OS records, sources, and evidence indexes as the primary source of truth.\n"
-            "Do not answer record-specific questions from general practice knowledge alone.\n"
-            "If scoped evidence is missing, limited, unclear, or outside the visible context, say so directly.\n"
-            "Use exact citation_ref values where supplied.\n"
-            "Do not invent records, chronology, risks, incidents, outcomes, staff actions, dates, or citations."
-        )
-    else:
-        block = (
-            "ASSISTANT SURFACE CONTEXT\n\n"
-            "You are operating as the standalone IndiCare assistant.\n"
-            "You can support residential childcare practice, drafting, reflection, guidance, and professional wording.\n"
-            "You cannot see IndiCare OS records unless they are supplied in the prompt, uploaded document, or runtime context.\n"
-            "Do not imply access to a child, home, incident, chronology, or care record unless visible context provides it."
-        )
-
-    return (
-        f"{system_prompt}\n\n"
-        "============================================================\n"
-        f"{block}"
-    ).strip()
-
-
 def _append_orchestrator_evidence_guard(
     system_prompt: str,
     *,
     evidence_index: list[dict[str, Any]],
     sources: list[dict[str, Any]],
     assistant_surface: str,
+    requires_evidence_grounding: bool,
 ) -> str:
     guard = (
         "ORCHESTRATOR EVIDENCE GUARD\n\n"
@@ -689,14 +724,15 @@ def _append_orchestrator_evidence_guard(
         "If evidence is missing or unclear, say what is not visible.\n"
         "Do not treat internal knowledge or regulation guidance as evidence that something happened to a child.\n"
         f"Assistant surface: {assistant_surface}.\n"
+        f"Requires evidence grounding: {requires_evidence_grounding}.\n"
         f"Evidence index items available: {len(evidence_index)}.\n"
         f"Sources available: {len(sources)}."
     )
 
-    if assistant_surface == "os_embedded" and not evidence_index and not sources:
+    if requires_evidence_grounding and not evidence_index and not sources:
         guard += (
-            "\nNo scoped record evidence is visible. For record-specific questions, do not infer facts. "
-            "Say that scoped evidence is not visible and provide only general practice guidance if appropriate."
+            "\nNo structured OS evidence is visible. For record-specific questions, "
+            "state that the scoped evidence is not visible and avoid guessing."
         )
 
     return (
@@ -711,34 +747,28 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     trimmed_history = _trim_history(req.history, selected_mode)
     trimmed_document_text = _trim_document_text(req.document_text, selected_mode)
 
-    enriched_context = _enrich_surface_context(req.user_context)
-    assistant_surface = _assistant_surface_from_context(enriched_context)
-
-    session_id = _safe_string(req.session_id)
-    if not session_id:
-        session_id = _build_fallback_session_id(req.message)
-        logger.warning(
-            "OrchestratorRequest missing session_id; generated fallback session_id=%s",
-            session_id,
-        )
+    assistant_surface = _detect_assistant_surface(req.user_context)
+    requires_evidence_grounding = _detect_evidence_grounding(req.user_context)
 
     logger.info(
-        (
-            "Orchestrator starting session_id=%s surface=%s response_mode=%s "
-            "history=%s has_document=%s user_id=%s"
-        ),
-        session_id,
-        assistant_surface,
+        "Orchestrator starting session_id=%s response_mode=%s history=%s has_document=%s user_id=%s surface=%s evidence_grounding=%s",
+        req.session_id,
         selected_mode,
         len(trimmed_history),
         bool(trimmed_document_text),
         req.user_id,
+        assistant_surface,
+        requires_evidence_grounding,
     )
+
+    enriched_user_context = dict(req.user_context or {})
+    enriched_user_context.setdefault("assistant_surface", assistant_surface)
+    enriched_user_context.setdefault("requires_evidence_grounding", requires_evidence_grounding)
 
     prompt_package = build_assistant_prompt_package(
         AssistantRequest(
             message=req.message,
-            session_id=session_id,
+            session_id=req.session_id,
             history=req.history[-8:] if req.history else [],
             role=req.role,
             document_text=trimmed_document_text,
@@ -746,7 +776,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
             ld_lens=req.ld_lens,
             training_mode=req.training_mode,
             speed=selected_mode,
-            user_context=enriched_context,
+            user_context=enriched_user_context,
         )
     )
 
@@ -762,7 +792,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     user_role_profile = getattr(runtime, "user_role_profile", "staff")
     response_stance = getattr(runtime, "response_stance", "practice_support")
 
-    inferred_overrides = _infer_output_overrides(req.message, enriched_context)
+    inferred_overrides = _infer_output_overrides(req.message, enriched_user_context)
 
     if inferred_overrides.get("task_type"):
         task_type = inferred_overrides["task_type"]
@@ -783,7 +813,13 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         user_role_profile=user_role_profile,
         selected_mode=selected_mode,
         has_document=bool(trimmed_document_text),
+        assistant_surface=assistant_surface,
+        requires_evidence_grounding=requires_evidence_grounding,
     )
+
+    runtime.response_plan = response_plan
+    runtime.assistant_surface = assistant_surface
+    runtime.requires_evidence_grounding = requires_evidence_grounding
 
     regulation_mapping = map_regulation_references(
         message=req.message,
@@ -799,18 +835,14 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     regulation_payload = serialise_regulation_mapping(regulation_mapping)
     regulation_context_block = build_regulation_context_block(regulation_mapping)
 
-    system_prompt = _append_surface_context(
-        system_prompt,
-        assistant_surface=assistant_surface,
-    )
     system_prompt = _append_regulation_context(system_prompt, regulation_context_block)
 
     runtime_sources = _normalise_sources(getattr(runtime, "sources_used", []))
-    context_sources = _extract_sources_from_context(enriched_context)
+    context_sources = _extract_sources_from_context(enriched_user_context)
     sources = _normalise_sources(runtime_sources + context_sources)
 
     runtime_evidence = _normalise_evidence_index(getattr(runtime, "evidence_index", []))
-    context_evidence = _extract_evidence_index(enriched_context)
+    context_evidence = _extract_evidence_index(enriched_user_context)
     evidence_index = _normalise_evidence_index(runtime_evidence + context_evidence)
 
     system_prompt = _append_orchestrator_evidence_guard(
@@ -818,6 +850,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         evidence_index=evidence_index,
         sources=sources,
         assistant_surface=assistant_surface,
+        requires_evidence_grounding=requires_evidence_grounding,
     )
 
     runtime_payload = _serialise_runtime(
@@ -826,15 +859,13 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         evidence_index=evidence_index,
         sources=sources,
         selected_mode=selected_mode,
-        user_context=enriched_context,
         user_id=req.user_id,
+        user_context=enriched_user_context,
+        response_plan=response_plan,
+        assistant_surface=assistant_surface,
+        requires_evidence_grounding=requires_evidence_grounding,
+        trimmed_history=trimmed_history,
     )
-
-    runtime_payload["task_type"] = task_type
-    runtime_payload["output_type"] = output_type
-    runtime_payload["response_stance"] = response_stance
-    runtime_payload["assistant_surface"] = assistant_surface
-    runtime_payload["requires_evidence_grounding"] = assistant_surface == "os_embedded"
 
     if evidence_index:
         runtime_payload["evidence_index"] = evidence_index
@@ -846,9 +877,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     runtime_payload["history_items_loaded"] = len(trimmed_history)
     runtime_payload["document_attached"] = bool(trimmed_document_text)
     runtime_payload["regulation_refs_count"] = len(regulation_payload)
-    runtime_payload["has_internal_evidence"] = bool(
-        evidence_index or sources or _has_internal_evidence(enriched_context)
-    )
+    runtime_payload["has_internal_evidence"] = _has_internal_evidence(enriched_user_context)
 
     messages = _build_messages(
         system_prompt=system_prompt,
@@ -858,21 +887,23 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
 
     logger.info(
         (
-            "Orchestrator built session_id=%s surface=%s mode=%s task_type=%s output_type=%s "
-            "safeguarding=%s urgency=%s response_mode=%s stance=%s "
-            "guidance_enabled=%s guidance_reason=%s model=%s temp=%s max_tokens=%s "
-            "memory=%s retrieval=%s reflection=%s supervision=%s leadership=%s "
-            "regulation_refs=%s sources=%s evidence=%s internal_evidence=%s user_id=%s"
+            "Orchestrator built session_id=%s surface=%s evidence_grounding=%s "
+            "mode=%s task_type=%s output_type=%s safeguarding=%s urgency=%s "
+            "response_mode=%s stance=%s guidance_enabled=%s guidance_reason=%s "
+            "model=%s temp=%s max_tokens=%s memory=%s retrieval=%s reflection=%s "
+            "supervision=%s leadership=%s regulation_refs=%s sources=%s evidence=%s "
+            "history=%s user_id=%s"
         ),
-        session_id,
+        req.session_id,
         assistant_surface,
+        requires_evidence_grounding,
         mode,
         task_type,
         output_type,
         safeguarding_level,
         urgency,
         response_plan.selected_mode,
-        response_stance,
+        response_plan.response_stance,
         response_plan.guidance_plan.enabled,
         response_plan.guidance_plan.reason,
         response_plan.model_plan.model,
@@ -886,7 +917,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         len(regulation_payload),
         len(sources),
         len(evidence_index),
-        runtime_payload.get("has_internal_evidence"),
+        len(trimmed_history),
         req.user_id,
     )
 
@@ -938,7 +969,6 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
     user_id = kwargs.pop("user_id", None)
     scope = kwargs.pop("scope", None)
     assistant_type = kwargs.pop("assistant_type", None)
-    assistant_surface = kwargs.pop("assistant_surface", None)
 
     if request_obj is not None:
         if message is None:
@@ -1018,6 +1048,7 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
             "runtime",
             default=None,
         )
+
         if isinstance(request_user_context, dict):
             user_context = _merge_dicts(request_user_context, user_context)
 
@@ -1030,22 +1061,6 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 "scope",
                 "scope_type",
                 "scopeType",
-                default=None,
-            )
-
-        if assistant_type is None:
-            assistant_type = _extract_attr(
-                request_obj,
-                "assistant_type",
-                "assistantType",
-                default=None,
-            )
-
-        if assistant_surface is None:
-            assistant_surface = _extract_attr(
-                request_obj,
-                "assistant_surface",
-                "assistantSurface",
                 default=None,
             )
 
@@ -1073,8 +1088,11 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
     if assistant_type is not None and "assistant_type" not in merged_user_context:
         merged_user_context["assistant_type"] = assistant_type
 
-    if assistant_surface is not None and "assistant_surface" not in merged_user_context:
-        merged_user_context["assistant_surface"] = assistant_surface
+    assistant_surface = _detect_assistant_surface(merged_user_context)
+    requires_evidence_grounding = _detect_evidence_grounding(merged_user_context)
+
+    merged_user_context.setdefault("assistant_surface", assistant_surface)
+    merged_user_context.setdefault("requires_evidence_grounding", requires_evidence_grounding)
 
     if kwargs:
         merged_user_context.setdefault("_orchestrator_extra_kwargs", {})
@@ -1083,8 +1101,6 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
         for key, value in kwargs.items():
             if key not in merged_user_context:
                 merged_user_context[key] = value
-
-    merged_user_context = _enrich_surface_context(merged_user_context)
 
     result = build_orchestrator_result(
         OrchestratorRequest(
@@ -1111,7 +1127,7 @@ def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
         context_payload["evidence_index"] = result.runtime_payload.get("evidence_index")
 
     return {
-        "prompt": result.user_message,
+        "prompt": message,
         "context": context_payload,
         "session_id": session_id,
         "system_prompt": result.system_prompt,
