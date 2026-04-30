@@ -1279,6 +1279,33 @@ function clearComposerForcedVisibility(panel) {
   document.body.style.overflow = "";
 }
 
+function guardComposerVisibility(panel) {
+  if (!panel) return;
+
+  if (panel.dataset.visibilityGuardBound === "true") return;
+  panel.dataset.visibilityGuardBound = "true";
+
+  const observer = new MutationObserver(() => {
+    const shouldBeOpen = state.composerRecordType && state.composerMode !== "closed";
+
+    if (!shouldBeOpen) return;
+
+    if (
+      panel.classList.contains("hidden") ||
+      panel.getAttribute("aria-hidden") === "true" ||
+      panel.style.display === "none"
+    ) {
+      console.warn("[composer] visibility guard restored composer");
+      forceComposerVisible(panel);
+    }
+  });
+
+  observer.observe(panel, {
+    attributes: true,
+    attributeFilter: ["class", "aria-hidden", "style"],
+  });
+}
+
 export function openComposer(type, item = {}) {
   const safeType = normaliseRecordType(type) || type;
 
@@ -1320,6 +1347,7 @@ export function openComposer(type, item = {}) {
   updateQualityStrip({});
 
   forceComposerVisible(panel);
+  guardComposerVisibility(panel);
 
   bindComposerReviewButtons();
 
@@ -1375,6 +1403,7 @@ export function openComposerFor(type, mode = "create", item = {}) {
 }
 
 export function closeComposer() {
+  state.composerMode = "closed";
   const panel = getComposerPanel();
   clearComposerForcedVisibility(panel);
 }
@@ -1388,7 +1417,7 @@ export function resetComposer() {
 
   state.composerRecordType = null;
   state.composerEditItem = null;
-  state.composerMode = "create";
+  state.composerMode = "closed";
   state.composerRequiredFields = [];
 
   setComposerFeedback("No review has been run yet.");
