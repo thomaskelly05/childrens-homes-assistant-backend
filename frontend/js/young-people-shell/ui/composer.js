@@ -1322,60 +1322,61 @@ export async function saveComposer(mode = "draft") {
   const ids = getComposerIds();
 
   if (CHILD_SCOPED_TYPES.has(type) && !ids.youngPersonId) {
-    throw new Error(
-      "Select a child or young person first. Composer cannot save this record against home only."
-    );
-  }
-
-  if (
-    !ids.youngPersonId &&
-    !ids.homeId &&
-    !["task", "staff_profile", "supervision", "training", "onboarding"].includes(type)
-  ) {
-    throw new Error("Select a child, young person or home first.");
+    throw new Error("Select a child or young person first.");
   }
 
   const data = collectFormData(form);
-  const required = state.composerRequiredFields || getForm(type).required || [];
-  const issues = qualityCheck(type, data, required);
-
   updateQualityStrip(data);
 
-  if (issues.length && mode === "submit") {
-    throw new Error(`Please complete: ${issues.join(", ")}`);
+  const status = mode === "submit" ? "submitted" : data.status || "draft";
+
+  let payload = buildPayload(type, data, mode, ids);
+
+  if (type === "daily_note") {
+    payload = {
+      note_date: data.note_date || today(),
+      shift_type: data.shift_type || "day",
+      mood: data.mood || null,
+      presentation: data.presentation || null,
+      activities: data.activities || null,
+      education_update: data.education_update || null,
+      health_update: data.health_update || null,
+      family_update: data.family_update || null,
+      behaviour_update: data.behaviour_update || null,
+      young_person_voice: data.young_person_voice || data.child_voice || null,
+      positives: data.positives || null,
+      actions_required: data.actions_required || null,
+      significance: data.significance || "medium",
+      workflow_status: status,
+      status,
+      title: data.title || "Daily life note",
+      narrative: data.narrative || data.presentation || "Daily note recorded",
+      create_follow_up_task: Boolean(data.create_follow_up_task),
+      link_to_chronology: Boolean(data.link_to_chronology),
+      link_quality_standards: Boolean(data.link_quality_standards),
+      manager_review_needed: Boolean(data.manager_review_needed),
+      safeguarding_concern: Boolean(data.safeguarding_concern),
+      home_id: ids.homeId,
+      young_person_id: ids.youngPersonId,
+    };
   }
 
-  if (mode === "submit") {
-    const strictIssues = strictValidation(type, data);
-    if (strictIssues.length) {
-      throw new Error(`Submit requires: ${strictIssues.join(", ")}`);
-    }
-
-    const writingIssues = runWritingQualityCheck(data);
-    if (writingIssues.length) {
-      throw new Error(`Please review writing: ${writingIssues.join("; ")}`);
-    }
-  }
-
-  const payload = buildPayload(type, data, mode, ids);
   const editItem = state.composerEditItem || {};
   const recordId = getRecordId(editItem);
 
-  let saved;
+  const savePromise =
+    state.composerMode === "edit" && recordId
+      ? updateRecord(type, ids, recordId, payload)
+      : createRecord(type, ids, payload);
 
-  if (state.composerMode === "edit" && recordId) {
-    saved = await updateRecord(type, ids, recordId, payload);
-  } else {
-    saved = await createRecord(type, ids, payload);
-  }
+  const saved = await Promise.race([
+    savePromise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Composer save timed out")), 10000)
+    ),
+  ]);
 
   closeComposer();
-
-  if (payload.create_follow_up_task) {
-    maybeCreateFollowUpTask(ids, type, payload).catch((error) => {
-      console.warn("[composer] follow-up task creation failed", error);
-    });
-  }
 
   window.setTimeout(() => {
     try {
