@@ -58,7 +58,7 @@
       </div>
 
       <div class="shell-topbar-centre desktop-only">
-        <form id="globalSearchForm" class="topbar-search-wrap" role="search" aria-label="Search care story">
+        <form id="globalSearchForm" class="topbar-search-wrap" role="search" aria-label="Search care story" action="javascript:void(0)" method="dialog">
           <label class="sr-only" for="recordSearchInput">Search care story</label>
           <input
             id="recordSearchInput"
@@ -644,7 +644,7 @@
         </div>
 
         <div class="mobile-nav-search">
-          <form id="mobileSearchForm" role="search" aria-label="Search care story">
+          <form id="mobileSearchForm" role="search" aria-label="Search care story" action="javascript:void(0)" method="dialog">
             <label class="sr-only" for="mobileRecordSearchInput">Search care story</label>
             <input id="mobileRecordSearchInput" class="search-input" type="search" placeholder="Search care story..." autocomplete="off" />
           </form>
@@ -743,7 +743,7 @@
 
         <div class="composer-layout">
           <section class="composer-main">
-            <form id="recordComposerForm" class="composer-form">
+            <form id="recordComposerForm" class="composer-form" action="javascript:void(0)" method="dialog">
               <div id="recordComposerFields" class="composer-fields"></div>
             </form>
           </section>
@@ -837,7 +837,7 @@
             <div id="assistantContext" class="assistant-context-text">No context loaded.</div>
             <div id="assistantMessages" class="assistant-messages assistant-messages--modal" role="log" aria-live="polite" aria-relevant="additions text"></div>
 
-            <form id="assistantForm" class="assistant-form assistant-form--sticky">
+            <form id="assistantForm" class="assistant-form assistant-form--sticky" action="javascript:void(0)" method="dialog">
               <label class="sr-only" for="assistantInput">Ask IndiCare</label>
               <input id="assistantInput" class="text-input" type="text" placeholder="Ask about this child, home, shift or quality evidence..." autocomplete="off" />
               <button id="assistantVoiceBtn" class="secondary-btn" type="button" data-speech-target="assistantInput">Speak</button>
