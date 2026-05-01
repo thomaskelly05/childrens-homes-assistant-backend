@@ -20,6 +20,7 @@ import {
   loadSection,
   rerenderNavigationForScope,
 } from "./ui/nav.js";
+import { bindComposerEvents } from "./ui/composer.js";
 
 import { loadYoungPersonSelector, openYoungPerson } from "./ui/selector.js";
 
@@ -1326,6 +1327,7 @@ async function bootstrap() {
     bindAssistantUi();
     bindAssistantEvents();
     bindScopeEvents();
+    bindComposerEvents();
     bindChangePersonFallback();
     bindGlobalSearchMirrors();
     bindGlobalRefreshShortcuts();

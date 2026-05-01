@@ -1517,6 +1517,7 @@ function bindSelectorControls() {
 
 function bindComposerControls() {
   if (composerControlsBound) return;
+  if (state.composerEventsBound) return;
   composerControlsBound = true;
 
   els.closeComposerBtn?.addEventListener("click", () => closeComposer());

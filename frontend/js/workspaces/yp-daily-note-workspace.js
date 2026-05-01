@@ -258,7 +258,7 @@ window.YoungPersonDailyNoteWorkspace = (function () {
     try {
       showSaveStatus("Saving daily note...");
 
-      await api("/young-people/daily-notes", {
+      await api(`/young-people/${youngPersonId}/daily-notes`, {
         method: "POST",
         body: JSON.stringify(payload)
       });

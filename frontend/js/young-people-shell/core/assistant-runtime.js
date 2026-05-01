@@ -5,7 +5,7 @@ import {
   setAssistantScopeBundleError,
   setAssistantScopeBundleLoading,
 } from "../state.js";
-import { fetchAssistantScopeBundle } from "../core/api.js";
+import { fetchAssistantScopeBundle, apiStreamAssistant } from "../core/api.js";
 import {
   buildAssistantEvidenceSet,
   mapReadinessEvidence,
@@ -2115,12 +2115,7 @@ export async function runAssistantMessage(message, options = {}) {
 
   if (useApi && typeof fetch === "function") {
     try {
-      const response = await fetch("/assistant/os/young-people/stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const streamPayload = {
           message: cleanText(message),
           context,
           assistant_identity: {
@@ -2171,24 +2166,48 @@ export async function runAssistantMessage(message, options = {}) {
           evidence_sufficiency,
           summary,
           include_scope_bundle: false,
-        }),
+        };
+
+      let metaPayload = {};
+      let donePayload = null;
+
+      await apiStreamAssistant(streamPayload, {
+        onMeta: (meta) => {
+          if (meta && typeof meta === "object") {
+            metaPayload = meta;
+          }
+        },
+        onDone: (finalPayload) => {
+          donePayload = finalPayload;
+        },
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data =
+        donePayload && typeof donePayload === "object"
+          ? donePayload
+          : {};
+
+      if (Object.keys(data).length || Object.keys(metaPayload).length) {
+        const mergedPayload = {
+          ...(metaPayload && typeof metaPayload === "object" ? metaPayload : {}),
+          ...data,
+        };
 
         return createAssistantResponse({
-          answer: data.answer || "No answer returned.",
-          suggested_actions: Array.isArray(data.suggested_actions)
-            ? data.suggested_actions
+          answer:
+            mergedPayload.answer ||
+            mergedPayload.accumulated_text ||
+            "No answer returned.",
+          suggested_actions: Array.isArray(mergedPayload.suggested_actions)
+            ? mergedPayload.suggested_actions
             : inferSuggestedActions(
                 context,
                 evidence,
                 intent,
                 operational_actions
               ),
-          sources: Array.isArray(data.sources)
-            ? data.sources.slice(0, MAX_SOURCE_ITEMS)
+          sources: Array.isArray(mergedPayload.sources)
+            ? mergedPayload.sources.slice(0, MAX_SOURCE_ITEMS)
             : evidence
                 .slice(0, MAX_SOURCE_ITEMS)
                 .map((item) => makeSource(item, "direct")),
@@ -2204,7 +2223,7 @@ export async function runAssistantMessage(message, options = {}) {
             confidence: evidence_sufficiency.confidence,
             operational_action_count: operational_action_summary.total,
             critical_action_count: operational_action_summary.critical,
-            ...data.runtime,
+            ...mergedPayload.runtime,
           },
           explainability: {
             scope: context.scope,
@@ -2215,18 +2234,19 @@ export async function runAssistantMessage(message, options = {}) {
             triangulation,
             operational_action_summary,
             reasoning_summary:
-              data.explainability?.reasoning_summary ||
+              mergedPayload.explainability?.reasoning_summary ||
               `This answer used an evidence-led children’s home reasoning approach with a ${context.analysis_lens} lens.`,
             evidence_summary:
-              data.explainability?.evidence_summary ||
+              mergedPayload.explainability?.evidence_summary ||
               `${evidence.length} evidence item(s) were reviewed with ${evidence_sufficiency.confidence} confidence.`,
             key_concerns: getTopConcerns(evidence),
-            ...data.explainability,
+            ...mergedPayload.explainability,
           },
           assistant_scope:
-            data.assistant_scope || buildAssistantScopeMeta(context, runtime),
+            mergedPayload.assistant_scope ||
+            buildAssistantScopeMeta(context, runtime),
           assistant_context:
-            data.assistant_context ||
+            mergedPayload.assistant_context ||
             buildAssistantContextMeta(context, runtime),
         });
       }

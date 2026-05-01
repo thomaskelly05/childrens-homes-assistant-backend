@@ -715,6 +715,10 @@ export function bindActionRouter({
   document.addEventListener(
     "click",
     async (event) => {
+      if (event.target.closest("#recordComposerPage, #recordComposerForm")) {
+        return;
+      }
+
       const quickButton = event.target.closest(quickButtonSelector);
 
       if (quickButton) {
@@ -731,7 +735,6 @@ export function bindActionRouter({
 
         event.preventDefault();
         event.stopPropagation();
-        event.stopImmediatePropagation();
 
         if (!ensureScopeContext(action.record_type)) {
           showMissingContext({ onMissingYoungPerson, onMissingHomeContext });
@@ -757,7 +760,6 @@ export function bindActionRouter({
 
       event.preventDefault();
       event.stopPropagation();
-      event.stopImmediatePropagation();
 
       const suggestion = buildSuggestionFromButton(suggestionButton);
       const didRun = await runSuggestionAction(suggestion);

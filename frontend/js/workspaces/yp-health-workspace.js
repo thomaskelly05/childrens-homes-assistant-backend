@@ -224,7 +224,7 @@ window.YoungPersonHealthWorkspace = (function () {
     showStatus("healthSaveStatus", "Saving health record...");
 
     try {
-      await window.YoungPeopleShell.api("/young-people/health-records", {
+      await window.YoungPeopleShell.api(`/young-people/${selectedYoungPerson.id}/health-records`, {
         method: "POST",
         body: JSON.stringify(payload)
       });
