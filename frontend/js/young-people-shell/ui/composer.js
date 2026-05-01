@@ -1230,8 +1230,13 @@ function bindComposerReviewButtons() {
 function forceComposerVisible(panel) {
   if (!panel) return;
 
-  panel.classList.add("composer-panel");
+  document.getElementById("assistantModal")?.classList.add("hidden");
+  document.getElementById("assistantBackdrop")?.classList.add("hidden");
+  document.getElementById("assistantModal")?.setAttribute("aria-hidden", "true");
+  document.getElementById("assistantBackdrop")?.setAttribute("aria-hidden", "true");
+
   panel.classList.remove("hidden");
+  panel.classList.add("composer-panel");
   panel.setAttribute("aria-hidden", "false");
 
   Object.assign(panel.style, {
@@ -1666,6 +1671,8 @@ export function bindComposerEvents({ onSaved } = {}) {
     if (!form || event.target !== form) return;
 
     event.preventDefault();
+    event.stopPropagation();
+
     await runSaveAndRefresh("submit", onSaved);
   });
 
