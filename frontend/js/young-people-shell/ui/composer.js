@@ -1227,7 +1227,15 @@ function bindComposerReviewButtons() {
   const form = getComposerForm();
   if (form && form.dataset.qualityBound !== "true") {
     form.dataset.qualityBound = "true";
-    form.addEventListener("input", () => updateQualityStrip(collectFormData(form)));
+
+    let qualityStripRaf = null;
+    form.addEventListener("input", () => {
+      if (qualityStripRaf) return;
+      qualityStripRaf = window.requestAnimationFrame(() => {
+        qualityStripRaf = null;
+        updateQualityStrip(collectFormData(form));
+      });
+    });
   }
 }
 
@@ -1326,11 +1334,13 @@ export function openComposer(type, item = {}) {
   if (fieldsEl) fieldsEl.innerHTML = form.html;
 
   setComposerFeedback("No review has been run yet.");
-  updateQualityStrip({});
 
   forceComposerVisible(panel);
 
-  bindComposerReviewButtons();
+  window.requestAnimationFrame(() => {
+    updateQualityStrip({});
+    bindComposerReviewButtons();
+  });
 
   console.log("[composer] openComposer rendered", {
     safeType,
