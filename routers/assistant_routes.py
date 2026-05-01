@@ -560,6 +560,9 @@ async def _stream_assistant_response(
     runtime: dict[str, Any] = {}
     explainability: dict[str, Any] = {}
     suggested_actions: list[str] = []
+    pipeline: dict[str, Any] = {}
+    user_transparency_panel: dict[str, Any] = {}
+    audit_panel: dict[str, Any] = {}
 
     assistant_scope_meta: dict[str, Any] = dict(meta_payload.get("assistant_scope") or {})
     assistant_context_meta: dict[str, Any] = (
@@ -632,6 +635,12 @@ async def _stream_assistant_response(
                         for action in item.get("suggested_actions")
                         if safe_string(action)
                     ]
+                if isinstance(item.get("pipeline"), dict):
+                    pipeline = item.get("pipeline") or {}
+                if isinstance(item.get("user_transparency_panel"), dict):
+                    user_transparency_panel = item.get("user_transparency_panel") or {}
+                if isinstance(item.get("audit_panel"), dict):
+                    audit_panel = item.get("audit_panel") or {}
                 continue
 
     except Exception:
@@ -658,6 +667,9 @@ async def _stream_assistant_response(
 
         final_runtime.setdefault("assistant_type", meta_payload.get("assistant_type", "public"))
 
+        if pipeline:
+            final_runtime.setdefault("pipeline", pipeline)
+
         final_sources = _dedupe_sources(
             [
                 *(sources or []),
@@ -682,6 +694,9 @@ async def _stream_assistant_response(
                 "suggested_actions": suggested_actions,
                 "evidence_index": evidence_index,
                 "evidence_count": len(evidence_index) if isinstance(evidence_index, list) else 0,
+                "pipeline": pipeline,
+                "user_transparency_panel": user_transparency_panel,
+                "audit_panel": audit_panel,
             },
         )
         yield _sse_done()
