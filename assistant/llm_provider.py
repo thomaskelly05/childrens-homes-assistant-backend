@@ -73,9 +73,9 @@ def _normalise_messages(
                 parts: list[str] = []
                 for part in raw_content:
                     if isinstance(part, dict):
-                        part_text = _safe_string(part.get("text"))
-                        if part_text:
-                            parts.append(part_text)
+                        text = _safe_string(part.get("text"))
+                        if text:
+                            parts.append(text)
                 content = "\n".join(parts).strip()
             else:
                 content = _safe_string(raw_content)
@@ -137,9 +137,37 @@ def _safe_json_loads(text: str) -> dict[str, Any] | None:
         return None
 
 
+def _normalise_structured_payload(
+    payload: dict[str, Any] | None,
+    *,
+    fallback_text: str,
+) -> dict[str, Any]:
+    payload = payload if isinstance(payload, dict) else {}
+
+    text = _safe_string(
+        payload.get("text")
+        or payload.get("answer")
+        or payload.get("message")
+        or payload.get("content")
+        or fallback_text
+    )
+
+    return {
+        "type": "structured",
+        "text": text or fallback_text,
+        "sources": payload.get("sources") if isinstance(payload.get("sources"), list) else [],
+        "runtime": payload.get("runtime") if isinstance(payload.get("runtime"), dict) else {},
+        "explainability": payload.get("explainability") if isinstance(payload.get("explainability"), dict) else {},
+        "assistant_scope": payload.get("assistant_scope") if isinstance(payload.get("assistant_scope"), dict) else {},
+        "assistant_context": payload.get("assistant_context") if isinstance(payload.get("assistant_context"), dict) else {},
+        "suggested_actions": payload.get("suggested_actions") if isinstance(payload.get("suggested_actions"), list) else [],
+        "evidence_index": payload.get("evidence_index") if isinstance(payload.get("evidence_index"), list) else [],
+    }
+
+
 def _build_structured_output_instruction() -> str:
     return """
-Return the final answer in this exact JSON shape:
+Return valid JSON only in this exact shape:
 
 {
   "text": "final answer text for the user",
@@ -154,12 +182,11 @@ Return the final answer in this exact JSON shape:
 
 Rules:
 - "text" must contain the full user-facing answer.
-- Preserve any inline evidence citations already used in the answer.
+- Preserve inline evidence citations already used in the answer.
 - Never invent source IDs, record IDs, citation_ref values, dates, or evidence.
 - If no sources are available, return an empty array.
 - If no evidence_index is available, return an empty array.
 - Do not wrap the JSON in markdown fences.
-- Return valid JSON only.
 """.strip()
 
 
@@ -172,56 +199,6 @@ def _should_request_structured_output(metadata: dict[str, Any]) -> bool:
         return explicit
 
     return True
-
-
-def _merge_structured_instruction(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-    if not messages:
-        return [{"role": "system", "content": _build_structured_output_instruction()}]
-
-    updated = list(messages)
-    instruction = _build_structured_output_instruction()
-
-    if updated[0]["role"] == "system":
-        updated[0] = {
-            "role": "system",
-            "content": (
-                f"{updated[0]['content']}\n\n"
-                "============================================================\n"
-                "STRUCTURED OUTPUT CONTRACT\n\n"
-                f"{instruction}"
-            ),
-        }
-        return updated
-
-    return [{"role": "system", "content": instruction}, *updated]
-
-
-def _normalise_structured_payload(
-    payload: dict[str, Any],
-    *,
-    fallback_text: str,
-) -> dict[str, Any]:
-    if not isinstance(payload, dict):
-        payload = {}
-
-    text = _safe_string(
-        payload.get("text")
-        or payload.get("answer")
-        or payload.get("message")
-        or payload.get("content")
-        or fallback_text
-    )
-
-    return {
-        "text": text or fallback_text,
-        "sources": payload.get("sources") if isinstance(payload.get("sources"), list) else [],
-        "runtime": payload.get("runtime") if isinstance(payload.get("runtime"), dict) else {},
-        "explainability": payload.get("explainability") if isinstance(payload.get("explainability"), dict) else {},
-        "assistant_scope": payload.get("assistant_scope") if isinstance(payload.get("assistant_scope"), dict) else {},
-        "assistant_context": payload.get("assistant_context") if isinstance(payload.get("assistant_context"), dict) else {},
-        "suggested_actions": payload.get("suggested_actions") if isinstance(payload.get("suggested_actions"), list) else [],
-        "evidence_index": payload.get("evidence_index") if isinstance(payload.get("evidence_index"), list) else [],
-    }
 
 
 class OpenAIProvider:
@@ -293,60 +270,57 @@ class OpenAIProvider:
                 logger.exception("Error while reading streamed OpenAI chunk")
                 continue
 
-    async def _generate_structured_followup(
+    async def _generate_structured_meta(
         self,
         *,
         request: ChatStreamRequest,
         original_messages: list[dict[str, str]],
         final_answer_text: str,
-    ) -> dict[str, Any] | None:
+    ) -> dict[str, Any]:
         model = _safe_string(request.model) or "gpt-4o-mini"
         max_tokens = min(max(_normalise_max_tokens(request.max_tokens), 512), 4096)
 
-        followup_messages = [
-            *original_messages,
-            {"role": "assistant", "content": final_answer_text},
+        messages = [
+            {
+                "role": "system",
+                "content": _build_structured_output_instruction(),
+            },
             {
                 "role": "user",
                 "content": (
-                    "Convert your final answer into the required JSON structure only. "
-                    "Do not change the meaning. Preserve inline citations. "
-                    "Do not invent sources or evidence. Return valid JSON only."
+                    "Create the JSON metadata wrapper for this final answer.\n\n"
+                    "Do not rewrite the answer. Do not add new facts. "
+                    "Do not invent sources or evidence.\n\n"
+                    f"Final answer:\n{final_answer_text}"
                 ),
             },
         ]
 
-        followup_messages = _merge_structured_instruction(followup_messages)
-
         try:
             response = await self._client.chat.completions.create(
                 model=model,
-                messages=followup_messages,
+                messages=messages,
                 temperature=0,
                 max_tokens=max_tokens,
                 stream=False,
             )
 
             if not response.choices:
-                return None
+                return _normalise_structured_payload(
+                    None,
+                    fallback_text=final_answer_text,
+                )
 
             raw_content = getattr(response.choices[0].message, "content", None)
-
-            if isinstance(raw_content, list):
-                parts: list[str] = []
-                for part in raw_content:
-                    if isinstance(part, dict):
-                        part_text = _safe_string(part.get("text"))
-                        if part_text:
-                            parts.append(part_text)
-                text = "\n".join(parts).strip()
-            else:
-                text = _safe_string(raw_content)
-
+            text = _safe_string(raw_content)
             parsed = _safe_json_loads(text)
+
             if parsed is None:
-                logger.warning("Structured follow-up was not valid JSON")
-                return None
+                logger.warning("Structured metadata response was not valid JSON")
+                return _normalise_structured_payload(
+                    None,
+                    fallback_text=final_answer_text,
+                )
 
             return _normalise_structured_payload(
                 parsed,
@@ -354,8 +328,11 @@ class OpenAIProvider:
             )
 
         except Exception:
-            logger.exception("Structured follow-up generation failed")
-            return None
+            logger.exception("Structured metadata generation failed")
+            return _normalise_structured_payload(
+                None,
+                fallback_text=final_answer_text,
+            )
 
     async def stream_chat(self, request: ChatStreamRequest) -> AsyncIterator[str | dict[str, Any]]:
         messages = _normalise_messages(request.messages)
@@ -379,19 +356,12 @@ class OpenAIProvider:
             final_answer_text = "".join(final_text_parts).strip()
 
             if structured_output and final_answer_text:
-                structured = await self._generate_structured_followup(
+                structured = await self._generate_structured_meta(
                     request=request,
                     original_messages=messages,
                     final_answer_text=final_answer_text,
                 )
-
-                if structured:
-                    yield structured
-                else:
-                    yield _normalise_structured_payload(
-                        {"text": final_answer_text},
-                        fallback_text=final_answer_text,
-                    )
+                yield structured
 
         except Exception as exc:
             logger.exception(
