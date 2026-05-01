@@ -7,6 +7,10 @@ import os
 import re
 from typing import Any
 
+from assistant.assistant_response_pipeline import (
+    build_pipeline_prompt_blocks,
+    process_assistant_response,
+)
 from assistant.audit_logger import (
     AssistantAuditTimer,
     log_assistant_request_finished,
@@ -554,8 +558,6 @@ def _append_service_level_answer_rules(
     *,
     assistant_surface: str,
 ) -> str:
-    surface_rules = ""
-
     if assistant_surface == "os_embedded":
         surface_rules = """
 OS-EMBEDDED ASSISTANT RULES:
@@ -1186,6 +1188,22 @@ async def generate_ai_stream(
         assistant_surface=assistant_surface,
     )
 
+    pipeline_prompt_block = build_pipeline_prompt_blocks(
+        message=message,
+        user_context=user_context,
+        runtime=runtime_payload,
+        selected_mode=selected_mode,
+        output_type=output_type,
+        task_type=task_type,
+        user_role=role,
+    )
+
+    final_system_prompt = (
+        f"{final_system_prompt}\n\n"
+        "============================================================\n"
+        f"{pipeline_prompt_block}"
+    ).strip()
+
     messages = [
         {"role": "system", "content": final_system_prompt},
         *trimmed_history,
@@ -1223,8 +1241,7 @@ async def generate_ai_stream(
     provider_error_code = None
     provider_error_message = None
 
-    final_answer_parts: list[str] = []
-    streamed_text_already_sent = False
+    raw_answer_parts: list[str] = []
 
     provider_meta_sources: list[dict[str, Any]] = []
     provider_runtime: dict[str, Any] = {}
@@ -1271,14 +1288,8 @@ async def generate_ai_stream(
 
                 if structured:
                     text = _extract_text_from_provider_payload(structured)
-
-                    if text and not streamed_text_already_sent:
-                        final_answer_parts.append(text)
-                        streamed_text_already_sent = True
-                        yield {
-                            "type": "token",
-                            "content": text,
-                        }
+                    if text:
+                        raw_answer_parts.append(text)
 
                     if isinstance(structured.get("sources"), list):
                         provider_meta_sources = _normalise_sources(structured.get("sources"))
@@ -1319,22 +1330,12 @@ async def generate_ai_stream(
 
                 token_text = _extract_text_from_provider_payload(content)
                 if _safe_string(token_text):
-                    final_answer_parts.append(token_text)
-                    streamed_text_already_sent = True
-                    yield {
-                        "type": "token",
-                        "content": token_text,
-                    }
+                    raw_answer_parts.append(token_text)
+
                 continue
 
             if _safe_string(content):
-                token_text = str(content)
-                final_answer_parts.append(token_text)
-                streamed_text_already_sent = True
-                yield {
-                    "type": "token",
-                    "content": token_text,
-                }
+                raw_answer_parts.append(str(content))
 
         provider_success = True
 
@@ -1349,18 +1350,13 @@ async def generate_ai_stream(
             exc,
         )
 
-        fallback_text = _build_safe_user_fallback_text(
-            safeguarding_level=safeguarding_level,
+        raw_answer_parts.append(
+            _build_safe_user_fallback_text(
+                safeguarding_level=safeguarding_level,
+            )
         )
-        final_answer_parts.append(fallback_text)
-        streamed_text_already_sent = True
 
-        yield {
-            "type": "token",
-            "content": fallback_text,
-        }
-
-    final_answer_text = "".join(final_answer_parts).strip()
+    raw_answer_text = "".join(raw_answer_parts).strip()
 
     final_sources = _merge_sources(
         orchestration_sources,
@@ -1388,20 +1384,13 @@ async def generate_ai_stream(
         provider_evidence_index,
     )
 
-    final_answer_text = _append_os_no_evidence_warning_if_needed(
-        answer_text=final_answer_text,
+    raw_answer_text = _append_os_no_evidence_warning_if_needed(
+        answer_text=raw_answer_text,
         assistant_surface=assistant_surface,
         evidence_index=final_evidence_index,
         sources=final_sources,
         message=message,
     )
-
-    if final_answer_text != "".join(final_answer_parts).strip():
-        final_answer_parts = [final_answer_text]
-        yield {
-            "type": "token",
-            "content": final_answer_text,
-        }
 
     source_group_counts = _classify_source_groups(final_sources)
     evidence_sufficiency = _estimate_evidence_sufficiency(
@@ -1411,7 +1400,7 @@ async def generate_ai_stream(
     )
 
     quality_flags = _build_answer_quality_flags(
-        answer_text=final_answer_text,
+        answer_text=raw_answer_text,
         output_type=output_type,
         sources=final_sources,
         evidence_index=final_evidence_index,
@@ -1419,36 +1408,30 @@ async def generate_ai_stream(
     )
 
     answer_confidence = _estimate_answer_confidence(
-        answer_text=final_answer_text,
+        answer_text=raw_answer_text,
         output_type=output_type,
         evidence_sufficiency=evidence_sufficiency,
         provider_success=provider_success,
     )
 
     if quality_flags["answer_empty"]:
-        fallback_text = _build_empty_answer_fallback_text(
+        raw_answer_text = _build_empty_answer_fallback_text(
             output_type=output_type,
             guidance_used=bool(trimmed_search_results),
             source_count=len(final_sources),
             safeguarding_level=safeguarding_level,
         )
-        final_answer_text = fallback_text
-        final_answer_parts = [fallback_text]
-
-        yield {
-            "type": "token",
-            "content": fallback_text,
-        }
 
         quality_flags = _build_answer_quality_flags(
-            answer_text=final_answer_text,
+            answer_text=raw_answer_text,
             output_type=output_type,
             sources=final_sources,
             evidence_index=final_evidence_index,
             assistant_surface=assistant_surface,
         )
+
         answer_confidence = _estimate_answer_confidence(
-            answer_text=final_answer_text,
+            answer_text=raw_answer_text,
             output_type=output_type,
             evidence_sufficiency=evidence_sufficiency,
             provider_success=provider_success,
@@ -1464,6 +1447,29 @@ async def generate_ai_stream(
     if final_evidence_index:
         final_runtime["evidence_index"] = final_evidence_index
 
+    pipeline_result = process_assistant_response(
+        answer_text=raw_answer_text,
+        message=message,
+        user_context=user_context,
+        runtime=final_runtime,
+        sources=final_sources,
+        evidence_index=final_evidence_index,
+        selected_mode=selected_mode,
+        output_type=output_type,
+        task_type=task_type,
+        user_role=role,
+    )
+
+    final_answer_text = _safe_string(pipeline_result.get("answer")) or raw_answer_text
+    pipeline_meta = pipeline_result.get("meta") if isinstance(pipeline_result, dict) else {}
+
+    final_runtime["pipeline"] = pipeline_meta
+
+    yield {
+        "type": "token",
+        "content": final_answer_text,
+    }
+
     final_explainability = {
         **(explainability_payload or {}),
         **provider_explainability,
@@ -1471,6 +1477,7 @@ async def generate_ai_stream(
         "evidence_sufficiency": evidence_sufficiency,
         "answer_confidence": answer_confidence,
         "assistant_surface": assistant_surface,
+        "pipeline": (pipeline_meta or {}).get("explainability"),
     }
 
     meta_payload = {
@@ -1482,6 +1489,9 @@ async def generate_ai_stream(
         "assistant_context": provider_assistant_context or {},
         "suggested_actions": provider_suggested_actions or [],
         "assistant_surface": assistant_surface,
+        "pipeline": pipeline_meta,
+        "user_transparency_panel": (pipeline_meta or {}).get("user_transparency_panel"),
+        "audit_panel": (pipeline_meta or {}).get("audit_panel"),
     }
 
     if final_evidence_index:
@@ -1508,6 +1518,7 @@ async def generate_ai_stream(
                 "evidence_sufficiency": evidence_sufficiency,
                 "answer_confidence": answer_confidence,
                 "answer_quality_warnings": quality_flags.get("warnings", []),
+                "pipeline_quality": (pipeline_meta or {}).get("quality"),
             },
         )
 
