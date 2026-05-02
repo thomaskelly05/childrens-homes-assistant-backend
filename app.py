@@ -40,6 +40,7 @@ from db.legal_acceptance_db import (
     init_legal_acceptance_table,
 )
 from db.mfa_db import init_mfa_tables
+from db.partner_assistant_db import init_partner_assistant_tables
 from db.passkeys_db import init_passkeys_table
 from security.middleware import CSRFMiddleware, SecurityHeadersMiddleware
 
@@ -190,6 +191,7 @@ PUBLIC_PREFIXES = (
     "/redoc",
     "/openapi",
     "/health",
+    "/v1/assistant",
 )
 
 PUBLIC_EXACT_PATHS = {
@@ -230,6 +232,7 @@ ROUTERS = [
     "routers.ai_note_export_routes",
     "routers.assistant_general_routes",
     "routers.assistant_os_routes",
+    "routers.assistant_partner_api",
     "routers.chat_routes",
     "routers.document_library_routes",
     "routers.dashboard_routes",
@@ -299,6 +302,7 @@ async def lifespan(_: FastAPI):
     init_legal_acceptance_table()
     init_mfa_tables()
     init_passkeys_table()
+    init_partner_assistant_tables()
 
     logger.info(
         "IndiCare API started | env=%s revision=%s",
@@ -803,7 +807,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.allowed_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Debug-Error"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Debug-Error", "x-api-key"],
     )
 
     app.add_middleware(SecurityHeadersMiddleware)
