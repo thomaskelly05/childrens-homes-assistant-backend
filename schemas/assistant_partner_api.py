@@ -57,6 +57,7 @@ class PartnerAssistantCitation(BaseModel):
     title: str
     source_type: str | None = None
     source_id: str | int | None = None
+    url: str | None = None
     excerpt: str | None = None
 
 
