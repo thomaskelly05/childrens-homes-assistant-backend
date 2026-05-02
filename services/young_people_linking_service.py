@@ -242,6 +242,11 @@ class YoungPeopleLinkingService:
         return value
 
     @staticmethod
+    def _normalise_task_date(value: str | date | None) -> str | date:
+        safe_value = YoungPeopleLinkingService._normalise_due_date(value)
+        return safe_value or date.today()
+
+    @staticmethod
     def _resolve_home_id(conn, young_person_id: int) -> int | None:
         with conn.cursor() as cur:
             cur.execute(
@@ -397,6 +402,7 @@ class YoungPeopleLinkingService:
         task_type: str,
     ) -> int | None:
         safe_due_date = YoungPeopleLinkingService._normalise_due_date(due_date)
+        safe_task_date = YoungPeopleLinkingService._normalise_task_date(safe_due_date)
         home_id = YoungPeopleLinkingService._resolve_home_id(conn, young_person_id)
         now = datetime.utcnow()
 
@@ -426,13 +432,22 @@ class YoungPeopleLinkingService:
                     SET
                         title = %s,
                         task = %s,
+                        task_date = %s,
                         due_date = %s,
                         assigned_to_user_id = COALESCE(%s, assigned_to_user_id),
                         home_id = COALESCE(home_id, %s)
                     WHERE id = %s
                     RETURNING id
                     """,
-                    (title, task, safe_due_date, owner_id, home_id, existing_id),
+                    (
+                        title,
+                        task,
+                        safe_task_date,
+                        safe_due_date,
+                        owner_id,
+                        home_id,
+                        existing_id,
+                    ),
                 )
                 row = cur.fetchone()
                 if not row:
@@ -445,28 +460,30 @@ class YoungPeopleLinkingService:
                     home_id,
                     title,
                     task,
+                    task_date,
+                    due_date,
                     young_person_id,
                     source_table,
                     source_id,
                     task_type,
-                    due_date,
                     assigned_to_user_id,
                     completed,
                     compliance_generated,
                     created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
                     home_id,
                     title,
                     task,
+                    safe_task_date,
+                    safe_due_date,
                     young_person_id,
                     source_table,
                     source_id,
                     task_type,
-                    safe_due_date,
                     owner_id,
                     False,
                     False,
