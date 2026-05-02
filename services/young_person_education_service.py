@@ -14,6 +14,18 @@ class YoungPersonEducationService:
         return datetime.utcnow()
 
     @staticmethod
+    def _meaningful_text(value: Any) -> str | None:
+        text = str(value or "").strip()
+        if not text:
+            return None
+
+        normalised = text.lower().strip().rstrip(".")
+        if normalised in {"none", "no", "n/a", "na", "nil", "nothing", "not applicable"}:
+            return None
+
+        return text
+
+    @staticmethod
     def ensure_young_person_exists(conn, young_person_id: int) -> dict[str, Any]:
         with conn.cursor() as cur:
             cur.execute(
@@ -81,7 +93,6 @@ class YoungPersonEducationService:
                 recorded_by_name=record.get("created_by_name"),
             )
         except Exception:
-            # Keep the source record write successful even if OS sync fails.
             pass
 
     @staticmethod
@@ -273,6 +284,9 @@ class YoungPersonEducationService:
         now = YoungPersonEducationService.now_utc()
         YoungPersonEducationService.ensure_young_person_exists(conn, young_person_id)
 
+        issue_raised = YoungPersonEducationService._meaningful_text(payload.get("issue_raised"))
+        action_taken = YoungPersonEducationService._meaningful_text(payload.get("action_taken"))
+
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -330,7 +344,7 @@ class YoungPersonEducationService:
                 created_by=payload.get("created_by") or actor_user_id,
                 workflow={
                     "link_chronology": True,
-                    "create_task": bool(payload.get("issue_raised") or payload.get("action_taken")),
+                    "create_task": bool(issue_raised or action_taken),
                     "manager_review": False,
                     "safeguarding": False,
                     "link_support_plans": True,
@@ -339,11 +353,11 @@ class YoungPersonEducationService:
                 },
                 metadata={
                     "severity": "medium",
-                    "workflow_status": "recorded",
+                    "workflow_status": payload.get("workflow_status") or payload.get("status") or "recorded",
                     "quality_standards": ["education"],
                     "standards_rationale": "Linked from education workflow",
                     "evidence_strength": "medium",
-                    "response_actions": payload.get("action_taken"),
+                    "response_actions": action_taken,
                     "judgement_areas": ["experiences_and_progress"],
                 },
             )
