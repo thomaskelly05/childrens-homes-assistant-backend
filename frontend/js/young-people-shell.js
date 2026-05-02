@@ -1,4 +1,4 @@
-  (() => {
+(() => {
   "use strict";
 
   const state = {
@@ -55,15 +55,15 @@
       subtitle: "Record the day clearly, kindly and professionally.",
       endpoint: "/daily-notes",
       refreshTab: "daily",
-    fields: [
-      { name: "note_date", label: "Date", type: "date" },
-      { name: "shift_type", label: "Shift type", type: "text", placeholder: "Day, late, night..." },
-      { name: "presentation", label: "Presentation / wellbeing", type: "textarea", required: true },
-      { name: "behaviour_update", label: "Behaviour update", type: "textarea" },
-      { name: "positives", label: "Positives", type: "textarea" },
-      { name: "actions_required", label: "Actions required / next steps", type: "textarea" },
-      { name: "young_person_voice", label: "Young person’s voice", type: "textarea" },
-    ],
+      fields: [
+        { name: "note_date", label: "Date", type: "date" },
+        { name: "shift_type", label: "Shift type", type: "text", placeholder: "Day, late, night..." },
+        { name: "presentation", label: "Presentation / wellbeing", type: "textarea", required: true },
+        { name: "behaviour_update", label: "Behaviour update", type: "textarea" },
+        { name: "positives", label: "Positives", type: "textarea" },
+        { name: "actions_required", label: "Actions required / next steps", type: "textarea" },
+        { name: "young_person_voice", label: "Young person’s voice", type: "textarea" },
+      ],
     },
     health_record: {
       title: "New health record",
@@ -76,7 +76,7 @@
         { name: "title", label: "Title", type: "text" },
         { name: "summary", label: "Summary", type: "textarea", required: true },
         { name: "action_taken", label: "Action taken", type: "textarea" },
-        { name: "follow_up_required", label: "Follow-up required", type: "textarea" },
+        { name: "follow_up_required", label: "Follow-up required", type: "text" },
       ],
     },
     education_record: {
@@ -171,37 +171,30 @@
     return `/young-people/${encodeURIComponent(state.youngPersonId)}${suffix}`;
   }
 
-  function getCookieMap() {
-    return Object.fromEntries(
-      document.cookie
-        .split("; ")
-        .filter(Boolean)
-        .map((entry) => {
-          const index = entry.indexOf("=");
-          if (index === -1) return [entry, ""];
-          return [
-            decodeURIComponent(entry.slice(0, index)),
-            decodeURIComponent(entry.slice(index + 1)),
-          ];
-        })
-    );
+  function getCookie(name) {
+    const encodedName = encodeURIComponent(name);
+    const parts = document.cookie.split("; ").filter(Boolean);
+
+    for (const part of parts) {
+      const index = part.indexOf("=");
+      if (index === -1) continue;
+
+      const key = decodeURIComponent(part.slice(0, index));
+      if (key !== name && key !== encodedName) continue;
+
+      return decodeURIComponent(part.slice(index + 1));
+    }
+
+    return "";
   }
 
   function getCsrfToken() {
-    const meta = document.querySelector('meta[name="csrf-token"]')?.content;
-    if (meta) return meta;
-
-    const input = document.querySelector(
-      'input[name="csrf_token"], input[name="csrfToken"], input[name="_csrf"]'
-    )?.value;
-    if (input) return input;
-
-    const cookies = getCookieMap();
-    const key = Object.keys(cookies).find((name) =>
-      name.toLowerCase().includes("csrf")
+    return (
+      getCookie("indicare_csrf") ||
+      document.querySelector('meta[name="csrf-token"]')?.content ||
+      document.querySelector('input[name="csrf_token"], input[name="csrfToken"], input[name="_csrf"]')?.value ||
+      ""
     );
-
-    return key ? cookies[key] : "";
   }
 
   function csrfHeaders(method) {
@@ -214,9 +207,7 @@
     const contentType = response.headers.get("content-type") || "";
 
     try {
-      if (contentType.includes("application/json")) {
-        return await response.json();
-      }
+      if (contentType.includes("application/json")) return await response.json();
       return await response.text();
     } catch {
       return "";
@@ -245,9 +236,7 @@
 
     if (!response.ok) {
       const body = await readErrorBody(response);
-      const error = new Error(
-        `${method} ${path} failed with ${response.status}`
-      );
+      const error = new Error(`${method} ${path} failed with ${response.status}`);
       error.status = response.status;
       error.body = body;
       throw error;
@@ -314,35 +303,24 @@
         let data = "";
 
         for (const line of frame.split("\n")) {
-          if (line.startsWith("event:")) {
-            event = line.slice(6).trim();
-          } else if (line.startsWith("data:")) {
-            data += line.slice(5).trim();
-          }
+          if (line.startsWith("event:")) event = line.slice(6).trim();
+          if (line.startsWith("data:")) data += line.slice(5).trim();
         }
 
-        if (event === "meta") {
-          handlers.onMeta?.(parseJsonMaybe(data) || data);
-        } else if (event === "token") {
-          handlers.onToken?.(data);
-        } else if (event === "done") {
-          handlers.onDone?.(parseJsonMaybe(data) || data);
-        } else if (event === "error") {
-          handlers.onError?.(parseJsonMaybe(data) || data);
-        } else if (data) {
-          handlers.onToken?.(data);
-        }
+        if (event === "meta") handlers.onMeta?.(parseJsonMaybe(data) || data);
+        else if (event === "token") handlers.onToken?.(data);
+        else if (event === "done") handlers.onDone?.(parseJsonMaybe(data) || data);
+        else if (event === "error") handlers.onError?.(parseJsonMaybe(data) || data);
+        else if (data) handlers.onToken?.(data);
       }
     }
   }
 
   function pickArray(source, keys) {
     if (!source || typeof source !== "object") return [];
-
     for (const key of keys) {
       if (Array.isArray(source[key])) return source[key];
     }
-
     if (Array.isArray(source)) return source;
     return [];
   }
@@ -361,68 +339,41 @@
     if (!value) return "";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
+
     return date.toLocaleString("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",
-      hour: value.includes("T") ? "2-digit" : undefined,
-      minute: value.includes("T") ? "2-digit" : undefined,
+      hour: String(value).includes("T") ? "2-digit" : undefined,
+      minute: String(value).includes("T") ? "2-digit" : undefined,
     });
   }
 
   async function loadDaily() {
     const data = await apiGet(youngPersonPath("/daily-notes"));
-    state.data.daily = pickArray(data, [
-      "items",
-      "records",
-      "daily_notes",
-      "daily_life",
-    ]);
+    state.data.daily = pickArray(data, ["items", "records", "daily_notes", "daily_life"]);
   }
 
   async function loadHealth() {
     const data = await apiGet(youngPersonPath("/health"));
-    state.data.health = pickArray(data, [
-      "health_records",
-      "items",
-      "records",
-    ]);
-    state.data.medicationProfiles = pickArray(data, [
-      "medication_profiles",
-      "profiles",
-    ]);
-    state.data.medicationRecords = pickArray(data, [
-      "medication_records",
-      "administrations",
-    ]);
+    state.data.health = pickArray(data, ["health_records", "items", "records"]);
+    state.data.medicationProfiles = pickArray(data, ["medication_profiles", "profiles"]);
+    state.data.medicationRecords = pickArray(data, ["medication_records", "administrations"]);
   }
 
   async function loadEducation() {
     const data = await apiGet(youngPersonPath("/education"));
-    state.data.education = pickArray(data, [
-      "education_records",
-      "items",
-      "records",
-    ]);
+    state.data.education = pickArray(data, ["education_records", "items", "records"]);
   }
 
   async function loadFamily() {
     const data = await apiGet(youngPersonPath("/family"));
-    state.data.family = pickArray(data, [
-      "family_contact_records",
-      "contacts",
-      "items",
-      "records",
-    ]);
+    state.data.family = pickArray(data, ["family_contact_records", "contacts", "items", "records"]);
   }
 
   async function loadIncidents() {
     const data = await apiGet(youngPersonPath("/incidents"));
-    state.data.incidents = pickArray(data, [
-      "incidents",
-      "items",
-      "records",
-    ]);
+    state.data.incidents = pickArray(data, ["incidents", "items", "records"]);
   }
 
   async function loadMedication() {
@@ -469,22 +420,31 @@
       "title",
       "summary",
       "narrative",
+      "presentation",
       "incident_type",
       "record_type",
       "contact_type",
       "attendance_status",
     ]);
 
-    const body = firstText(record, [
-      "narrative",
-      "summary",
-      "staff_response",
-      "actions_taken",
-      "outcome",
-      "next_steps",
-      "child_voice",
-      "young_person_voice",
-    ], "No further detail recorded.");
+    const body = firstText(
+      record,
+      [
+        "presentation",
+        "narrative",
+        "summary",
+        "behaviour_update",
+        "positives",
+        "staff_response",
+        "actions_required",
+        "action_taken",
+        "outcome",
+        "next_steps",
+        "child_voice",
+        "young_person_voice",
+      ],
+      "No further detail recorded."
+    );
 
     const date = firstText(record, [
       "note_date",
@@ -496,11 +456,7 @@
       "updated_at",
     ], "");
 
-    const status = firstText(record, [
-      "status",
-      "workflow_status",
-      "approval_status",
-    ], "");
+    const status = firstText(record, ["status", "workflow_status", "approval_status"], "");
 
     return `
       <article class="yp-record-card" data-tab="${escapeHtml(tab)}">
@@ -542,18 +498,13 @@
       <article class="yp-record-card">
         <h3>Medication profiles</h3>
         <p>${profiles.length} profile(s) found.</p>
-        <div class="yp-record-list">
-          ${profiles.map((item) => renderRecordCard(item, "medication")).join("")}
-        </div>
       </article>
-
+      ${profiles.map((item) => renderRecordCard(item, "medication")).join("")}
       <article class="yp-record-card">
         <h3>Medication records</h3>
         <p>${records.length} medication record(s) found.</p>
-        <div class="yp-record-list">
-          ${records.map((item) => renderRecordCard(item, "medication")).join("")}
-        </div>
       </article>
+      ${records.map((item) => renderRecordCard(item, "medication")).join("")}
     `;
   }
 
@@ -629,20 +580,15 @@
     assistantPanel?.classList.toggle("hidden", !isAssistant);
     recordsPanel?.classList.toggle("hidden", isAssistant);
 
-    if (isAssistant) {
-      setStatus("Assistant ready.");
-    } else {
-      loadActiveTab();
-    }
+    if (isAssistant) setStatus("Assistant ready.");
+    else loadActiveTab();
   }
 
   function fieldHtml(field) {
     const label = escapeHtml(field.label || field.name);
     const name = escapeHtml(field.name);
     const required = field.required ? "required" : "";
-    const placeholder = field.placeholder
-      ? `placeholder="${escapeHtml(field.placeholder)}"`
-      : "";
+    const placeholder = field.placeholder ? `placeholder="${escapeHtml(field.placeholder)}"` : "";
 
     if (field.type === "textarea") {
       return `
@@ -683,9 +629,7 @@
     setText("ypComposerStatus", "");
 
     const fields = $("ypComposerFields");
-    if (fields) {
-      fields.innerHTML = definition.fields.map(fieldHtml).join("");
-    }
+    if (fields) fields.innerHTML = definition.fields.map(fieldHtml).join("");
 
     const composer = $("ypComposer");
     composer?.classList.remove("hidden");
@@ -754,7 +698,7 @@
         typeof error?.body === "string"
           ? error.body
           : error?.body?.detail || error?.message || "Save failed.";
-      setText("ypComposerStatus", `Save failed: ${detail}`);
+      setText("ypComposerStatus", `Save failed: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
     } finally {
       setComposerSaving(false);
     }
@@ -808,9 +752,7 @@
           },
           onError: (error) => {
             if (status) status.textContent = "Assistant error.";
-            if (target) {
-              target.textContent += ` ${typeof error === "string" ? error : JSON.stringify(error)}`;
-            }
+            if (target) target.textContent += ` ${typeof error === "string" ? error : JSON.stringify(error)}`;
           },
         }
       );
