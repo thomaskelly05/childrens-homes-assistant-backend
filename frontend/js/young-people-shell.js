@@ -130,7 +130,18 @@
         { name: "staff_response", label: "Staff response", type: "textarea" },
         { name: "outcome", label: "Outcome", type: "textarea" },
         { name: "safeguarding_follow_up", label: "Safeguarding follow-up", type: "textarea" },
-        { name: "follow_up_required", label: "Follow-up required", type: "checkbox" },
+
+        /*
+          IMPORTANT:
+          Backend currently expects this as a string, not boolean.
+          Do not make this a checkbox unless backend schema is changed.
+        */
+        {
+          name: "follow_up_required",
+          label: "Follow-up required",
+          type: "text",
+          placeholder: "No / Yes - describe what follow-up is needed",
+        },
       ],
     },
   };
@@ -681,6 +692,7 @@
 
   function collectComposerPayload(status) {
     const fields = $("ypComposerFields");
+
     const payload = {
       status,
       workflow_status: status,
@@ -695,6 +707,15 @@
         payload[field.name] = field.value;
       }
     });
+
+    /*
+      Safety guard:
+      Incident follow_up_required must not be sent as boolean to the current backend.
+      This protects us even if old cached HTML/JS briefly renders it as a checkbox.
+    */
+    if (state.composerType === "incident" && typeof payload.follow_up_required === "boolean") {
+      payload.follow_up_required = payload.follow_up_required ? "Yes" : "No";
+    }
 
     return payload;
   }
@@ -730,10 +751,12 @@
       setStatus(status === "draft" ? "Draft saved." : "Sent for review.");
     } catch (error) {
       console.error("[young-people-shell] save failed", error);
+
       const detail =
         typeof error?.body === "string"
           ? error.body
           : error?.body?.detail || error?.message || "Save failed.";
+
       setText(
         "ypComposerStatus",
         `Save failed: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`
@@ -836,9 +859,11 @@
 
     if (!state.youngPersonId) {
       setStatus("No young person ID found. Add ?young_person_id=1001 to test.");
+
       document.querySelectorAll("[data-composer-type]").forEach((button) => {
         button.disabled = true;
       });
+
       renderEmpty("No young person selected.");
       return;
     }
