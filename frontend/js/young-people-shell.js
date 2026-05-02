@@ -173,25 +173,24 @@
     const params = new URLSearchParams(window.location.search);
 
     return normaliseId(
-      document.body?.dataset?.youngPersonId ||
-      $("ypShell")?.dataset?.youngPersonId ||
-      window.__YOUNG_PERSON_ID__ ||
       params.get("young_person_id") ||
       params.get("youngPersonId") ||
       params.get("id") ||
+      document.body?.dataset?.youngPersonId ||
+      $("ypShell")?.dataset?.youngPersonId ||
+      window.__YOUNG_PERSON_ID__ ||
       state.youngPersonId
     );
   }
 
   function ensureYoungPersonId() {
-    const resolved = detectYoungPersonId();
+    const detected = detectYoungPersonId();
 
-    if (resolved) {
-      state.youngPersonId = resolved;
-      return resolved;
+    if (detected && state.youngPersonId !== detected) {
+      state.youngPersonId = detected;
     }
 
-    return null;
+    return state.youngPersonId;
   }
 
   function youngPersonPath(suffix) {
@@ -366,6 +365,7 @@
         return String(value).trim();
       }
     }
+
     return fallback;
   }
 
@@ -895,12 +895,12 @@
 
   window.YoungPeopleShell = {
     state,
+    detectYoungPersonId,
+    ensureYoungPersonId,
     openComposer,
     closeComposer,
     loadActiveTab,
     switchTab,
-    detectYoungPersonId,
-    ensureYoungPersonId,
   };
 
   if (document.readyState === "loading") {
