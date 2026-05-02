@@ -44,9 +44,17 @@
       </div>
 
       <div class="yp-header-actions">
+        <label class="yp-selector-label" for="ypSelector">
+          <span>Young person</span>
+          <select id="ypSelector" class="yp-selector" aria-label="Select young person">
+            <option value="">Loading young people…</option>
+          </select>
+        </label>
+
         <div id="ypStatus" class="yp-status" role="status" aria-live="polite">
           Loading…
         </div>
+
         <a class="yp-button yp-button-ghost" href="/ai-note.html">I-Notes</a>
         <a class="yp-button yp-button-ghost" href="/rostering.html">Rostering</a>
       </div>
