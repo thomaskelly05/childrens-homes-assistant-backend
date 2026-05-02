@@ -20,34 +20,13 @@
   };
 
   const TAB_COPY = {
-    daily: {
-      title: "Daily notes",
-      subtitle: "Load and record daily life information for this young person.",
-    },
-    health: {
-      title: "Health",
-      subtitle: "Health, wellbeing and medical updates.",
-    },
-    education: {
-      title: "Education",
-      subtitle: "Education, learning, attendance and progress.",
-    },
-    family: {
-      title: "Family",
-      subtitle: "Family time, relationships and important contact.",
-    },
-    incidents: {
-      title: "Incidents",
-      subtitle: "Important events, responses and follow-up.",
-    },
-    medication: {
-      title: "Medication",
-      subtitle: "Medication profiles and medication records from the health bundle.",
-    },
-    assistant: {
-      title: "Assistant",
-      subtitle: "Ask IndiCare about this young person.",
-    },
+    daily: { title: "Daily notes", subtitle: "Load and record daily life information for this young person." },
+    health: { title: "Health", subtitle: "Health, wellbeing and medical updates." },
+    education: { title: "Education", subtitle: "Education, learning, attendance and progress." },
+    family: { title: "Family", subtitle: "Family time, relationships and important contact." },
+    incidents: { title: "Incidents", subtitle: "Important events, responses and follow-up." },
+    medication: { title: "Medication", subtitle: "Medication profiles and medication records from the health bundle." },
+    assistant: { title: "Assistant", subtitle: "Ask IndiCare about this young person." },
   };
 
   const COMPOSER_DEFS = {
@@ -210,11 +189,7 @@
 
   function youngPersonPath(suffix) {
     const youngPersonId = ensureYoungPersonId();
-
-    if (!youngPersonId) {
-      throw new Error("No young person selected.");
-    }
-
+    if (!youngPersonId) throw new Error("No young person selected.");
     return `/young-people/${encodeURIComponent(youngPersonId)}${suffix}`;
   }
 
@@ -858,6 +833,26 @@
 
     if (state.composerType === "education_record") {
       normaliseEducationPayload(payload);
+
+      if (status === "submitted") {
+        payload.create_follow_up_task = false;
+        payload.manager_review_needed = false;
+        payload.safeguarding_concern = false;
+        payload.link_to_chronology = true;
+        payload.link_to_support_plans = false;
+        payload.link_monthly_reviews = true;
+        payload.link_quality_standards = true;
+      }
+    }
+
+    if (state.composerType === "daily_note") {
+      payload.manager_review_needed = status === "submitted";
+      payload.create_follow_up_task = false;
+      payload.link_to_chronology = true;
+      payload.link_to_support_plans = false;
+      payload.safeguarding_concern = false;
+      payload.link_monthly_reviews = false;
+      payload.link_quality_standards = true;
     }
 
     if (state.composerType === "incident" && typeof payload.follow_up_required === "boolean") {
