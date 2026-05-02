@@ -130,12 +130,6 @@
         { name: "staff_response", label: "Staff response", type: "textarea" },
         { name: "outcome", label: "Outcome", type: "textarea" },
         { name: "safeguarding_follow_up", label: "Safeguarding follow-up", type: "textarea" },
-
-        /*
-          IMPORTANT:
-          Backend currently expects this as a string, not boolean.
-          Do not make this a checkbox unless backend schema is changed.
-        */
         {
           name: "follow_up_required",
           label: "Follow-up required",
@@ -177,19 +171,37 @@
 
   function detectYoungPersonId() {
     const params = new URLSearchParams(window.location.search);
+
     return normaliseId(
       document.body?.dataset?.youngPersonId ||
       $("ypShell")?.dataset?.youngPersonId ||
       window.__YOUNG_PERSON_ID__ ||
       params.get("young_person_id") ||
       params.get("youngPersonId") ||
-      params.get("id")
+      params.get("id") ||
+      state.youngPersonId
     );
   }
 
+  function ensureYoungPersonId() {
+    const resolved = detectYoungPersonId();
+
+    if (resolved) {
+      state.youngPersonId = resolved;
+      return resolved;
+    }
+
+    return null;
+  }
+
   function youngPersonPath(suffix) {
-    if (!state.youngPersonId) throw new Error("No young person selected.");
-    return `/young-people/${encodeURIComponent(state.youngPersonId)}${suffix}`;
+    const youngPersonId = ensureYoungPersonId();
+
+    if (!youngPersonId) {
+      throw new Error("No young person selected.");
+    }
+
+    return `/young-people/${encodeURIComponent(youngPersonId)}${suffix}`;
   }
 
   function getCookie(name) {
@@ -556,6 +568,8 @@
   }
 
   async function loadActiveTab() {
+    ensureYoungPersonId();
+
     if (state.activeTab === "assistant") return;
 
     updateTabCopy(state.activeTab);
@@ -602,6 +616,8 @@
 
   function switchTab(tab) {
     if (!TAB_COPY[tab]) return;
+
+    ensureYoungPersonId();
 
     state.activeTab = tab;
     setActiveTabButton(tab);
@@ -650,6 +666,8 @@
   }
 
   function openComposer(type) {
+    ensureYoungPersonId();
+
     const definition = COMPOSER_DEFS[type];
 
     if (!state.youngPersonId) {
@@ -708,11 +726,6 @@
       }
     });
 
-    /*
-      Safety guard:
-      Incident follow_up_required must not be sent as boolean to the current backend.
-      This protects us even if old cached HTML/JS briefly renders it as a checkbox.
-    */
     if (state.composerType === "incident" && typeof payload.follow_up_required === "boolean") {
       payload.follow_up_required = payload.follow_up_required ? "Yes" : "No";
     }
@@ -731,6 +744,8 @@
   }
 
   async function saveComposer(status) {
+    ensureYoungPersonId();
+
     if (state.composerSaving || !state.composerType) return;
 
     const definition = COMPOSER_DEFS[state.composerType];
@@ -784,6 +799,8 @@
   }
 
   async function sendAssistantMessage() {
+    ensureYoungPersonId();
+
     const input = $("ypAssistantInput");
     const status = $("ypAssistantStatus");
     const message = input?.value?.trim();
@@ -876,17 +893,19 @@
     await loadActiveTab();
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootstrap, { once: true });
-  } else {
-    bootstrap();
-  }
-
   window.YoungPeopleShell = {
     state,
     openComposer,
     closeComposer,
     loadActiveTab,
     switchTab,
+    detectYoungPersonId,
+    ensureYoungPersonId,
   };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootstrap, { once: true });
+  } else {
+    bootstrap();
+  }
 })();
