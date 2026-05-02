@@ -7,6 +7,7 @@
     composerOpen: false,
     composerType: null,
     composerSaving: false,
+    youngPeople: [],
     data: {
       daily: [],
       health: [],
@@ -17,6 +18,12 @@
       medicationRecords: [],
     },
   };
+
+  const YOUNG_PEOPLE_ENDPOINTS = [
+    "/young-people",
+    "/young-people/list",
+    "/api/young-people",
+  ];
 
   const TAB_COPY = {
     daily: {
@@ -65,7 +72,6 @@
         { name: "young_person_voice", label: "Young person’s voice", type: "textarea" },
       ],
     },
-
     health_record: {
       title: "New health record",
       subtitle: "Record health and wellbeing information.",
@@ -80,7 +86,6 @@
         { name: "follow_up_required", label: "Follow-up required", type: "checkbox" },
       ],
     },
-
     education_record: {
       title: "New education record",
       subtitle: "Record education, attendance or learning updates.",
@@ -98,7 +103,6 @@
         { name: "achievement_note", label: "Achievement / positive note", type: "textarea" },
       ],
     },
-
     family_record: {
       title: "New family record",
       subtitle: "Record family time, contact and relationship updates.",
@@ -115,7 +119,6 @@
         { name: "follow_up_required", label: "Follow-up required", type: "checkbox" },
       ],
     },
-
     incident: {
       title: "New incident",
       subtitle: "Record important events factually and clearly.",
@@ -176,6 +179,7 @@
       params.get("young_person_id") ||
       params.get("youngPersonId") ||
       params.get("id") ||
+      $("ypSelector")?.value ||
       document.body?.dataset?.youngPersonId ||
       $("ypShell")?.dataset?.youngPersonId ||
       window.__YOUNG_PERSON_ID__ ||
@@ -289,64 +293,6 @@
     });
   }
 
-  function parseJsonMaybe(text) {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return null;
-    }
-  }
-
-  async function apiStreamAssistant(payload, handlers = {}) {
-    const response = await fetch("/assistant/os/young-people/stream", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        Accept: "text/event-stream",
-        "Content-Type": "application/json",
-        ...csrfHeaders("POST"),
-      },
-      body: JSON.stringify(payload || {}),
-    });
-
-    if (!response.ok || !response.body) {
-      const body = await readErrorBody(response);
-      const error = new Error(`Assistant stream failed with ${response.status}`);
-      error.status = response.status;
-      error.body = body;
-      throw error;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const frames = buffer.split("\n\n");
-      buffer = frames.pop() || "";
-
-      for (const frame of frames) {
-        let event = "message";
-        let data = "";
-
-        for (const line of frame.split("\n")) {
-          if (line.startsWith("event:")) event = line.slice(6).trim();
-          if (line.startsWith("data:")) data += line.slice(5).trim();
-        }
-
-        if (event === "meta") handlers.onMeta?.(parseJsonMaybe(data) || data);
-        else if (event === "token") handlers.onToken?.(data);
-        else if (event === "done") handlers.onDone?.(parseJsonMaybe(data) || data);
-        else if (event === "error") handlers.onError?.(parseJsonMaybe(data) || data);
-        else if (data) handlers.onToken?.(data);
-      }
-    }
-  }
-
   function pickArray(source, keys) {
     if (!source || typeof source !== "object") return [];
 
@@ -356,6 +302,124 @@
 
     if (Array.isArray(source)) return source;
     return [];
+  }
+
+  function personName(person) {
+    const first = person.first_name || person.firstName || "";
+    const last = person.last_name || person.lastName || "";
+    const full = person.full_name || person.name || `${first} ${last}`.trim();
+
+    return full || `Young person ${person.id}`;
+  }
+
+  function normaliseYoungPerson(person) {
+    return {
+      ...person,
+      id: normaliseId(person.id || person.young_person_id || person.youngPersonId),
+      display_name: personName(person),
+    };
+  }
+
+  async function loadYoungPeople() {
+    const selector = $("ypSelector");
+    if (!selector) return [];
+
+    for (const endpoint of YOUNG_PEOPLE_ENDPOINTS) {
+      try {
+        const data = await apiGet(endpoint);
+        const raw = pickArray(data, ["items", "young_people", "youngPeople", "records"]);
+
+        if (raw.length) {
+          state.youngPeople = raw.map(normaliseYoungPerson).filter((p) => p.id);
+          return state.youngPeople;
+        }
+      } catch {
+        // Try next endpoint.
+      }
+    }
+
+    state.youngPeople = [];
+    return [];
+  }
+
+  function renderYoungPersonSelector() {
+    const selector = $("ypSelector");
+    if (!selector) return;
+
+    const selectedId = ensureYoungPersonId();
+
+    if (!state.youngPeople.length) {
+      selector.innerHTML = selectedId
+        ? `<option value="${escapeHtml(selectedId)}">Young person ${escapeHtml(selectedId)}</option>`
+        : `<option value="">No young people found</option>`;
+      selector.value = selectedId || "";
+      return;
+    }
+
+    selector.innerHTML = state.youngPeople
+      .map((person) => {
+        const selected = String(person.id) === String(selectedId) ? "selected" : "";
+        return `<option value="${escapeHtml(person.id)}" ${selected}>${escapeHtml(person.display_name)}</option>`;
+      })
+      .join("");
+
+    if (selectedId) selector.value = selectedId;
+  }
+
+  function currentYoungPerson() {
+    const id = ensureYoungPersonId();
+    return state.youngPeople.find((person) => String(person.id) === String(id)) || null;
+  }
+
+  function updateYoungPersonChrome() {
+    const id = ensureYoungPersonId();
+    const person = currentYoungPerson();
+
+    if (person) {
+      setText("ypPersonName", person.display_name);
+      setText("ypPersonMeta", `Young person ID ${person.id} · Care Hub open`);
+    } else if (id) {
+      setText("ypPersonName", `Young person ${id}`);
+      setText("ypPersonMeta", "Care Hub open");
+    } else {
+      setText("ypPersonName", "Young People Care Hub");
+      setText("ypPersonMeta", "Select or load a young person to begin.");
+    }
+
+    const selector = $("ypSelector");
+    if (selector && id) selector.value = id;
+  }
+
+  function updateUrlYoungPersonId(id) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("young_person_id", id);
+    url.searchParams.delete("youngPersonId");
+    url.searchParams.delete("id");
+    window.history.replaceState({}, "", url.toString());
+  }
+
+  async function switchYoungPerson(id) {
+    const nextId = normaliseId(id);
+    if (!nextId) return;
+
+    closeComposer();
+
+    state.youngPersonId = nextId;
+    document.body.dataset.youngPersonId = nextId;
+
+    updateUrlYoungPersonId(nextId);
+    updateYoungPersonChrome();
+
+    state.data.daily = [];
+    state.data.health = [];
+    state.data.education = [];
+    state.data.family = [];
+    state.data.incidents = [];
+    state.data.medicationProfiles = [];
+    state.data.medicationRecords = [];
+
+    setStatus(`Loaded young person ID ${nextId}`);
+    await loadActiveTab();
   }
 
   function firstText(record, keys, fallback = "Untitled record") {
@@ -798,6 +862,64 @@
     return item.querySelector("span");
   }
 
+  function parseJsonMaybe(text) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  }
+
+  async function apiStreamAssistant(payload, handlers = {}) {
+    const response = await fetch("/assistant/os/young-people/stream", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "text/event-stream",
+        "Content-Type": "application/json",
+        ...csrfHeaders("POST"),
+      },
+      body: JSON.stringify(payload || {}),
+    });
+
+    if (!response.ok || !response.body) {
+      const body = await readErrorBody(response);
+      const error = new Error(`Assistant stream failed with ${response.status}`);
+      error.status = response.status;
+      error.body = body;
+      throw error;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split("\n\n");
+      buffer = frames.pop() || "";
+
+      for (const frame of frames) {
+        let event = "message";
+        let data = "";
+
+        for (const line of frame.split("\n")) {
+          if (line.startsWith("event:")) event = line.slice(6).trim();
+          if (line.startsWith("data:")) data += line.slice(5).trim();
+        }
+
+        if (event === "meta") handlers.onMeta?.(parseJsonMaybe(data) || data);
+        else if (event === "token") handlers.onToken?.(data);
+        else if (event === "done") handlers.onDone?.(parseJsonMaybe(data) || data);
+        else if (event === "error") handlers.onError?.(parseJsonMaybe(data) || data);
+        else if (data) handlers.onToken?.(data);
+      }
+    }
+  }
+
   async function sendAssistantMessage() {
     ensureYoungPersonId();
 
@@ -845,6 +967,10 @@
   }
 
   function bindEvents() {
+    $("ypSelector")?.addEventListener("change", (event) => {
+      switchYoungPerson(event.target.value);
+    });
+
     document.querySelectorAll("#ypTabs [data-tab]").forEach((button) => {
       button.addEventListener("click", () => switchTab(button.dataset.tab));
     });
@@ -874,6 +1000,16 @@
   async function bootstrap() {
     state.youngPersonId = detectYoungPersonId();
 
+    bindEvents();
+
+    await loadYoungPeople();
+    renderYoungPersonSelector();
+
+    if (!state.youngPersonId && state.youngPeople.length) {
+      state.youngPersonId = state.youngPeople[0].id;
+      updateUrlYoungPersonId(state.youngPersonId);
+    }
+
     if (!state.youngPersonId) {
       setStatus("No young person ID found. Add ?young_person_id=1001 to test.");
 
@@ -885,11 +1021,12 @@
       return;
     }
 
-    setText("ypPersonName", `Young person ${state.youngPersonId}`);
-    setText("ypPersonMeta", "Care Hub open");
-    setStatus(`Loaded young person ID ${state.youngPersonId}`);
+    document.querySelectorAll("[data-composer-type]").forEach((button) => {
+      button.disabled = false;
+    });
 
-    bindEvents();
+    updateYoungPersonChrome();
+    setStatus(`Loaded young person ID ${state.youngPersonId}`);
     await loadActiveTab();
   }
 
@@ -901,6 +1038,8 @@
     closeComposer,
     loadActiveTab,
     switchTab,
+    switchYoungPerson,
+    loadYoungPeople,
   };
 
   if (document.readyState === "loading") {
