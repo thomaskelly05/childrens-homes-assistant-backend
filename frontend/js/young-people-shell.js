@@ -65,6 +65,7 @@
         { name: "young_person_voice", label: "Young person’s voice", type: "textarea" },
       ],
     },
+
     health_record: {
       title: "New health record",
       subtitle: "Record health and wellbeing information.",
@@ -76,9 +77,10 @@
         { name: "title", label: "Title", type: "text" },
         { name: "summary", label: "Summary", type: "textarea", required: true },
         { name: "action_taken", label: "Action taken", type: "textarea" },
-        { name: "follow_up_required", label: "Follow-up required", type: "text" },
+        { name: "follow_up_required", label: "Follow-up required", type: "checkbox" },
       ],
     },
+
     education_record: {
       title: "New education record",
       subtitle: "Record education, attendance or learning updates.",
@@ -88,10 +90,15 @@
         { name: "record_date", label: "Date", type: "date" },
         { name: "attendance_status", label: "Attendance status", type: "text" },
         { name: "provision_name", label: "Provision / school", type: "text" },
-        { name: "summary", label: "Summary", type: "textarea", required: true },
-        { name: "next_steps", label: "Next steps", type: "textarea" },
+        { name: "behaviour_summary", label: "Behaviour / presentation", type: "textarea" },
+        { name: "learning_engagement", label: "Learning engagement", type: "textarea" },
+        { name: "issue_raised", label: "Any issue raised", type: "textarea" },
+        { name: "action_taken", label: "Action taken", type: "textarea" },
+        { name: "professional_involved", label: "Professional involved", type: "text" },
+        { name: "achievement_note", label: "Achievement / positive note", type: "textarea" },
       ],
     },
+
     family_record: {
       title: "New family record",
       subtitle: "Record family time, contact and relationship updates.",
@@ -101,11 +108,14 @@
         { name: "contact_datetime", label: "Date and time", type: "datetime-local" },
         { name: "contact_type", label: "Contact type", type: "text" },
         { name: "contact_person", label: "Contact person", type: "text" },
-        { name: "summary", label: "Summary", type: "textarea", required: true },
-        { name: "child_response", label: "Young person’s response", type: "textarea" },
-        { name: "next_steps", label: "Next steps", type: "textarea" },
+        { name: "pre_contact_presentation", label: "Presentation before contact", type: "textarea" },
+        { name: "post_contact_presentation", label: "Presentation after contact", type: "textarea" },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea" },
+        { name: "concerns", label: "Concerns", type: "textarea" },
+        { name: "follow_up_required", label: "Follow-up required", type: "checkbox" },
       ],
     },
+
     incident: {
       title: "New incident",
       subtitle: "Record important events factually and clearly.",
@@ -114,11 +124,13 @@
       fields: [
         { name: "incident_datetime", label: "Date and time", type: "datetime-local" },
         { name: "incident_type", label: "Incident type", type: "text" },
+        { name: "category", label: "Category", type: "text" },
         { name: "title", label: "Title", type: "text" },
         { name: "summary", label: "What happened?", type: "textarea", required: true },
         { name: "staff_response", label: "Staff response", type: "textarea" },
         { name: "outcome", label: "Outcome", type: "textarea" },
         { name: "safeguarding_follow_up", label: "Safeguarding follow-up", type: "textarea" },
+        { name: "follow_up_required", label: "Follow-up required", type: "checkbox" },
       ],
     },
   };
@@ -165,14 +177,11 @@
   }
 
   function youngPersonPath(suffix) {
-    if (!state.youngPersonId) {
-      throw new Error("No young person selected.");
-    }
+    if (!state.youngPersonId) throw new Error("No young person selected.");
     return `/young-people/${encodeURIComponent(state.youngPersonId)}${suffix}`;
   }
 
   function getCookie(name) {
-    const encodedName = encodeURIComponent(name);
     const parts = document.cookie.split("; ").filter(Boolean);
 
     for (const part of parts) {
@@ -180,7 +189,7 @@
       if (index === -1) continue;
 
       const key = decodeURIComponent(part.slice(0, index));
-      if (key !== name && key !== encodedName) continue;
+      if (key !== name) continue;
 
       return decodeURIComponent(part.slice(index + 1));
     }
@@ -318,9 +327,11 @@
 
   function pickArray(source, keys) {
     if (!source || typeof source !== "object") return [];
+
     for (const key of keys) {
       if (Array.isArray(source[key])) return source[key];
     }
+
     if (Array.isArray(source)) return source;
     return [];
   }
@@ -410,7 +421,7 @@
     list.innerHTML = `
       <div class="yp-error-card">
         <h3>Could not load this area</h3>
-        <p>${escapeHtml(detail)}</p>
+        <p>${escapeHtml(typeof detail === "string" ? detail : JSON.stringify(detail))}</p>
       </div>
     `;
   }
@@ -419,8 +430,9 @@
     const title = firstText(record, [
       "title",
       "summary",
-      "narrative",
       "presentation",
+      "behaviour_summary",
+      "pre_contact_presentation",
       "incident_type",
       "record_type",
       "contact_type",
@@ -431,30 +443,40 @@
       record,
       [
         "presentation",
-        "narrative",
         "summary",
         "behaviour_update",
         "positives",
+        "behaviour_summary",
+        "learning_engagement",
+        "issue_raised",
+        "action_taken",
+        "achievement_note",
+        "pre_contact_presentation",
+        "post_contact_presentation",
+        "child_voice",
+        "concerns",
         "staff_response",
         "actions_required",
-        "action_taken",
         "outcome",
         "next_steps",
-        "child_voice",
         "young_person_voice",
       ],
       "No further detail recorded."
     );
 
-    const date = firstText(record, [
-      "note_date",
-      "event_datetime",
-      "incident_datetime",
-      "record_date",
-      "contact_datetime",
-      "created_at",
-      "updated_at",
-    ], "");
+    const date = firstText(
+      record,
+      [
+        "note_date",
+        "event_datetime",
+        "incident_datetime",
+        "record_date",
+        "contact_datetime",
+        "created_at",
+        "updated_at",
+      ],
+      ""
+    );
 
     const status = firstText(record, ["status", "workflow_status", "approval_status"], "");
 
@@ -599,6 +621,15 @@
       `;
     }
 
+    if (field.type === "checkbox") {
+      return `
+        <label class="yp-field yp-field-checkbox">
+          <span>${label}</span>
+          <input name="${name}" type="checkbox" />
+        </label>
+      `;
+    }
+
     return `
       <label class="yp-field">
         <span>${label}</span>
@@ -657,7 +688,12 @@
 
     fields?.querySelectorAll("input, textarea, select").forEach((field) => {
       if (!field.name) return;
-      payload[field.name] = field.value;
+
+      if (field.type === "checkbox") {
+        payload[field.name] = Boolean(field.checked);
+      } else {
+        payload[field.name] = field.value;
+      }
     });
 
     return payload;
@@ -698,7 +734,10 @@
         typeof error?.body === "string"
           ? error.body
           : error?.body?.detail || error?.message || "Save failed.";
-      setText("ypComposerStatus", `Save failed: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
+      setText(
+        "ypComposerStatus",
+        `Save failed: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`
+      );
     } finally {
       setComposerSaving(false);
     }
@@ -752,7 +791,9 @@
           },
           onError: (error) => {
             if (status) status.textContent = "Assistant error.";
-            if (target) target.textContent += ` ${typeof error === "string" ? error : JSON.stringify(error)}`;
+            if (target) {
+              target.textContent += ` ${typeof error === "string" ? error : JSON.stringify(error)}`;
+            }
           },
         }
       );
