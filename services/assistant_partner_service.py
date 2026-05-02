@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
@@ -57,7 +56,6 @@ async def generate_partner_response(payload: PartnerAssistantRequest) -> dict[st
         "follow_up_required": False,
         "citations": [],
         "suggested_actions": [],
-        "audit_id": f"audit_{uuid.uuid4().hex[:12]}",
         "conversation_id": payload.conversation_id,
         "metadata": {},
     }
