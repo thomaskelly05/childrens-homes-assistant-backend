@@ -548,3 +548,34 @@ select:focus-visible {
     flex-direction: column;
   }
 }
+
+.yp-selector-label {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 13rem;
+  color: var(--yp-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.yp-selector-label span {
+  padding-left: 0.2rem;
+}
+
+.yp-selector {
+  min-height: 2.5rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  color: var(--yp-text);
+  font-weight: 750;
+  background: #ffffff;
+  border: 1px solid var(--yp-border-strong);
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 760px) {
+  .yp-selector-label {
+    width: 100%;
+  }
+}
