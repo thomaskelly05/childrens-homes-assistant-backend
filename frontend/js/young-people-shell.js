@@ -7,6 +7,7 @@
     composerOpen: false,
     composerType: null,
     composerSaving: false,
+    youngPeople: [],
     data: {
       daily: [],
       health: [],
@@ -176,6 +177,7 @@
       params.get("young_person_id") ||
       params.get("youngPersonId") ||
       params.get("id") ||
+      $("ypSelector")?.value ||
       document.body?.dataset?.youngPersonId ||
       $("ypShell")?.dataset?.youngPersonId ||
       window.__YOUNG_PERSON_ID__ ||
@@ -188,9 +190,22 @@
 
     if (detected && state.youngPersonId !== detected) {
       state.youngPersonId = detected;
+      document.body.dataset.youngPersonId = detected;
+
+      const shell = $("ypShell");
+      if (shell) shell.dataset.youngPersonId = detected;
+
+      const selector = $("ypSelector");
+      if (selector && selector.value !== detected) selector.value = detected;
     }
 
     return state.youngPersonId;
+  }
+
+  function updateUrlYoungPersonId(youngPersonId) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("young_person_id", youngPersonId);
+    window.history.replaceState({}, "", url.toString());
   }
 
   function youngPersonPath(suffix) {
@@ -297,6 +312,106 @@
     }
   }
 
+  function pickArray(source, keys) {
+    if (!source || typeof source !== "object") return [];
+
+    for (const key of keys) {
+      if (Array.isArray(source[key])) return source[key];
+    }
+
+    if (Array.isArray(source)) return source;
+    return [];
+  }
+
+  function youngPersonName(person) {
+    const first = person?.first_name || person?.firstName || "";
+    const last = person?.last_name || person?.lastName || "";
+    const combined = `${first} ${last}`.trim();
+
+    return (
+      person?.name ||
+      person?.full_name ||
+      person?.display_name ||
+      combined ||
+      `Young person ${person?.id ?? ""}`.trim()
+    );
+  }
+
+  async function loadYoungPeopleSelector() {
+    const selector = $("ypSelector");
+    if (!selector) return;
+
+    selector.disabled = true;
+    selector.innerHTML = `<option value="">Loading young people…</option>`;
+
+    try {
+      const data = await apiGet("/young-people");
+      const people = pickArray(data, ["items", "young_people", "youngPeople", "records", "data"]);
+
+      state.youngPeople = people;
+
+      if (!people.length) {
+        selector.innerHTML = `<option value="">No young people found</option>`;
+        return;
+      }
+
+      selector.innerHTML = people
+        .map((person) => {
+          const id = normaliseId(person?.id || person?.young_person_id);
+          if (!id) return "";
+          return `<option value="${escapeHtml(id)}">${escapeHtml(youngPersonName(person))}</option>`;
+        })
+        .join("");
+
+      const current = ensureYoungPersonId() || normaliseId(people[0]?.id || people[0]?.young_person_id);
+
+      if (current) {
+        state.youngPersonId = current;
+        selector.value = current;
+        document.body.dataset.youngPersonId = current;
+      }
+    } catch (error) {
+      console.error("[young-people-shell] selector load failed", error);
+      selector.innerHTML = `<option value="${escapeHtml(state.youngPersonId || "")}">Current young person</option>`;
+    } finally {
+      selector.disabled = false;
+    }
+  }
+
+  async function changeYoungPerson(youngPersonId) {
+    const resolved = normaliseId(youngPersonId);
+    if (!resolved) return;
+
+    closeComposer();
+
+    state.youngPersonId = resolved;
+    document.body.dataset.youngPersonId = resolved;
+
+    const shell = $("ypShell");
+    if (shell) shell.dataset.youngPersonId = resolved;
+
+    updateUrlYoungPersonId(resolved);
+
+    const selectedPerson = state.youngPeople.find((person) => {
+      return String(person?.id || person?.young_person_id) === String(resolved);
+    });
+
+    setText("ypPersonName", selectedPerson ? youngPersonName(selectedPerson) : `Young person ${resolved}`);
+    setText("ypPersonMeta", "Care Hub open");
+    setStatus(`Loaded young person ID ${resolved}`);
+
+    await loadActiveTab();
+  }
+
+  function bindYoungPeopleSelector() {
+    const selector = $("ypSelector");
+    if (!selector) return;
+
+    selector.addEventListener("change", async () => {
+      await changeYoungPerson(selector.value);
+    });
+  }
+
   async function apiStreamAssistant(payload, handlers = {}) {
     const response = await fetch("/assistant/os/young-people/stream", {
       method: "POST",
@@ -345,17 +460,6 @@
         else if (data) handlers.onToken?.(data);
       }
     }
-  }
-
-  function pickArray(source, keys) {
-    if (!source || typeof source !== "object") return [];
-
-    for (const key of keys) {
-      if (Array.isArray(source[key])) return source[key];
-    }
-
-    if (Array.isArray(source)) return source;
-    return [];
   }
 
   function firstText(record, keys, fallback = "Untitled record") {
@@ -875,6 +979,8 @@
   }
 
   function bindEvents() {
+    bindYoungPeopleSelector();
+
     document.querySelectorAll("#ypTabs [data-tab]").forEach((button) => {
       button.addEventListener("click", () => switchTab(button.dataset.tab));
     });
@@ -904,8 +1010,13 @@
   async function bootstrap() {
     state.youngPersonId = detectYoungPersonId();
 
+    bindEvents();
+    await loadYoungPeopleSelector();
+
+    state.youngPersonId = ensureYoungPersonId();
+
     if (!state.youngPersonId) {
-      setStatus("No young person ID found. Add ?young_person_id=1001 to test.");
+      setStatus("No young person selected.");
 
       document.querySelectorAll("[data-composer-type]").forEach((button) => {
         button.disabled = true;
@@ -915,11 +1026,18 @@
       return;
     }
 
-    setText("ypPersonName", `Young person ${state.youngPersonId}`);
+    document.querySelectorAll("[data-composer-type]").forEach((button) => {
+      button.disabled = false;
+    });
+
+    const selectedPerson = state.youngPeople.find((person) => {
+      return String(person?.id || person?.young_person_id) === String(state.youngPersonId);
+    });
+
+    setText("ypPersonName", selectedPerson ? youngPersonName(selectedPerson) : `Young person ${state.youngPersonId}`);
     setText("ypPersonMeta", "Care Hub open");
     setStatus(`Loaded young person ID ${state.youngPersonId}`);
 
-    bindEvents();
     await loadActiveTab();
   }
 
@@ -931,6 +1049,8 @@
     closeComposer,
     loadActiveTab,
     switchTab,
+    loadYoungPeopleSelector,
+    changeYoungPerson,
   };
 
   if (document.readyState === "loading") {
