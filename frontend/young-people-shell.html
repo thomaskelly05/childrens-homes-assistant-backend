@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-  <title>IndiCare OS | Children’s Home Care Hub</title>
+  <title>IndiCare OS | Young People Care Hub</title>
   <meta
     name="description"
-    content="IndiCare OS Children’s Home Care Hub for residential children’s homes. Record daily life, health, education, family time, incidents and use IndiCare Assistant in one calm workspace."
+    content="IndiCare OS Young People Care Hub for residential children’s homes. Daily notes, care records and IndiCare Assistant in one calm workspace."
   />
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#2563eb" />
+  <meta name="theme-color" content="#20443f" />
   <meta name="application-name" content="IndiCare OS" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="csrf-token" content="" />
@@ -37,47 +37,51 @@
       <div class="yp-brand">
         <div class="yp-brand-mark" aria-hidden="true">IC</div>
         <div>
-          <p class="yp-eyebrow">IndiCare OS · Residential children’s home</p>
+          <p class="yp-eyebrow">IndiCare OS</p>
           <h1 id="ypPersonName">Young People Care Hub</h1>
-          <p id="ypPersonMeta">Select a young person to open their care workspace.</p>
+          <p id="ypPersonMeta">Select a young person to begin.</p>
         </div>
       </div>
 
       <div class="yp-header-actions">
+        <label class="yp-selector-wrap" for="ypSelector">
+          <span>Young person</span>
+          <select id="ypSelector" class="yp-selector">
+            <option value="">Loading…</option>
+          </select>
+        </label>
+
         <div id="ypStatus" class="yp-status" role="status" aria-live="polite">
           Loading…
         </div>
+
         <a class="yp-button yp-button-ghost" href="/ai-note.html">I-Notes</a>
         <a class="yp-button yp-button-ghost" href="/rostering.html">Rostering</a>
       </div>
     </header>
 
-    <section class="yp-context-strip" aria-label="Care context">
-      <div class="yp-context-card yp-context-card-main">
-        <label for="ypSelector">
-          <span class="yp-context-label">Current young person</span>
-          <select id="ypSelector" class="yp-selector">
-            <option value="1001">Young person 1001</option>
-          </select>
-        </label>
+    <section class="yp-hero">
+      <div>
+        <p class="yp-eyebrow">Children’s home workspace</p>
+        <h2>Calm records, joined-up care, safer decisions.</h2>
+        <p>
+          View daily life, health, education, family time, incidents, medication and assistant support from one child-centred hub.
+        </p>
       </div>
 
-      <div class="yp-context-card">
-        <span class="yp-context-label">Workspace</span>
-        <strong>Children’s Home OS</strong>
-        <p>Daily recording, care evidence, oversight and AI support.</p>
-      </div>
-
-      <div class="yp-context-card">
-        <span class="yp-context-label">Recording standard</span>
-        <strong>Clear · Kind · Factual</strong>
-        <p>Write records as if the young person may read them one day.</p>
-      </div>
-
-      <div class="yp-context-card">
-        <span class="yp-context-label">Safeguarding reminder</span>
-        <strong>Professional curiosity</strong>
-        <p>Record concerns, patterns, actions and management oversight.</p>
+      <div class="yp-hero-cards" aria-label="Workspace summary">
+        <div class="yp-hero-card">
+          <strong id="ypSummaryDaily">—</strong>
+          <span>Daily notes</span>
+        </div>
+        <div class="yp-hero-card">
+          <strong id="ypSummaryHealth">—</strong>
+          <span>Health</span>
+        </div>
+        <div class="yp-hero-card">
+          <strong id="ypSummaryEducation">—</strong>
+          <span>Education</span>
+        </div>
       </div>
     </section>
 
@@ -95,7 +99,7 @@
       <section id="ypRecordsPanel" class="yp-panel" aria-labelledby="ypRecordsTitle">
         <div class="yp-panel-head">
           <div>
-            <p class="yp-eyebrow">Care records and evidence</p>
+            <p class="yp-eyebrow">Care records</p>
             <h2 id="ypRecordsTitle">Daily notes</h2>
             <p id="ypRecordsSubtitle">
               Load and record daily life information for this young person.
@@ -121,11 +125,6 @@
           </div>
         </div>
 
-        <div class="yp-guidance-card">
-          <strong>Good recording helps adults understand the child’s lived experience.</strong>
-          <span>Capture what happened, how the young person presented, what staff did, what changed, and what needs following up.</span>
-        </div>
-
         <div id="ypRecordsList" class="yp-record-list" aria-live="polite">
           <div class="yp-empty-card">
             <h3>Opening Care Hub…</h3>
@@ -140,14 +139,9 @@
             <p class="yp-eyebrow">IndiCare Assistant</p>
             <h2 id="ypAssistantTitle">Ask about this young person</h2>
             <p>
-              Use the assistant for summaries, recording support, safeguarding reflection, handover preparation and next steps.
+              Use the assistant for summaries, recording support, safeguarding checks and next steps.
             </p>
           </div>
-        </div>
-
-        <div class="yp-guidance-card">
-          <strong>Assistant safety note.</strong>
-          <span>IndiCare can support thinking and drafting, but adults remain responsible for professional judgement, safeguarding decisions and final records.</span>
         </div>
 
         <div id="ypAssistantMessages" class="yp-assistant-messages" role="log" aria-live="polite"></div>
@@ -157,7 +151,7 @@
           <textarea
             id="ypAssistantInput"
             rows="4"
-            placeholder="Ask IndiCare to summarise recent patterns, draft a handover, check recording quality, or suggest next steps…"
+            placeholder="Ask about this young person…"
           ></textarea>
           <button id="ypAssistantSend" class="yp-button yp-button-primary" type="button">
             Send
@@ -185,9 +179,7 @@
         <div>
           <p class="yp-eyebrow">Record with care</p>
           <h2 id="ypComposerTitle">New record</h2>
-          <p id="ypComposerSubtitle">
-            Write clearly, kindly and professionally.
-          </p>
+          <p id="ypComposerSubtitle">Write clearly, kindly and professionally.</p>
         </div>
 
         <button id="ypComposerClose" class="yp-button yp-button-ghost" type="button">
