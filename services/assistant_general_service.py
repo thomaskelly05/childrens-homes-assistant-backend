@@ -68,20 +68,6 @@ def _model_config_for_mode(response_mode: str) -> tuple[str, float, int]:
     return ("gpt-4o-mini", 0.2, 850)
 
 
-def _extract_structured_text(payload: dict[str, Any]) -> str:
-    candidates = [
-        payload.get("text"),
-        payload.get("message"),
-        payload.get("answer"),
-        payload.get("content"),
-    ]
-    for candidate in candidates:
-        text = safe_string(candidate)
-        if text:
-            return text
-    return ""
-
-
 async def generate_general_assistant_stream(
     *,
     message: str,
@@ -137,16 +123,17 @@ async def generate_general_assistant_stream(
             )
         ):
             if isinstance(content, str):
-                token = safe_string(content)
-                if token:
-                    yield {"type": "token", "content": token}
+                # Preserve whitespace exactly as streamed. Stripping each chunk
+                # removes spaces between words when the API response is later
+                # joined by the partner/widget routes.
+                if content:
+                    yield {"type": "token", "content": content}
                 continue
 
             if isinstance(content, dict):
-                text = _extract_structured_text(content)
-                if text:
-                    yield {"type": "token", "content": text}
-
+                # Structured payloads are metadata wrappers generated after the
+                # streamed answer. Do not emit the text again or clients receive
+                # a duplicated answer.
                 runtime_value = content.get("runtime")
                 if isinstance(runtime_value, dict):
                     provider_runtime.update(runtime_value)
