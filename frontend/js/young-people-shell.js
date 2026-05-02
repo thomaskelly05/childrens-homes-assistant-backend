@@ -22,23 +22,23 @@
   const TAB_COPY = {
     daily: {
       title: "Daily notes",
-      subtitle: "Load and record daily life information for this young person.",
+      subtitle: "Record the young person’s day, presentation, positives, voice, behaviour, and actions needed.",
     },
     health: {
       title: "Health",
-      subtitle: "Health, wellbeing and medical updates.",
+      subtitle: "Health, wellbeing, appointments, illness, medication context and follow-up.",
     },
     education: {
       title: "Education",
-      subtitle: "Education, learning, attendance and progress.",
+      subtitle: "Education, attendance, engagement, achievements, barriers and school communication.",
     },
     family: {
       title: "Family",
-      subtitle: "Family time, relationships and important contact.",
+      subtitle: "Family time, relationships, contact arrangements, emotional impact and follow-up.",
     },
     incidents: {
       title: "Incidents",
-      subtitle: "Important events, responses and follow-up.",
+      subtitle: "Important events, staff responses, outcomes, safeguarding follow-up and management oversight.",
     },
     medication: {
       title: "Medication",
@@ -46,30 +46,30 @@
     },
     assistant: {
       title: "Assistant",
-      subtitle: "Ask IndiCare about this young person.",
+      subtitle: "Ask IndiCare for care summaries, recording support, safeguarding reflection and next steps.",
     },
   };
 
   const COMPOSER_DEFS = {
     daily_note: {
       title: "New daily note",
-      subtitle: "Record the day clearly, kindly and professionally.",
+      subtitle: "Capture the child’s day clearly, kindly and factually.",
       endpoint: "/daily-notes",
       refreshTab: "daily",
       fields: [
         { name: "note_date", label: "Date", type: "date" },
         { name: "shift_type", label: "Shift type", type: "text", placeholder: "Day, late, night..." },
-        { name: "presentation", label: "Presentation / wellbeing", type: "textarea", required: true },
-        { name: "behaviour_update", label: "Behaviour update", type: "textarea" },
-        { name: "positives", label: "Positives", type: "textarea" },
-        { name: "actions_required", label: "Actions required / next steps", type: "textarea" },
-        { name: "young_person_voice", label: "Young person’s voice", type: "textarea" },
+        { name: "presentation", label: "Presentation / wellbeing", type: "textarea", required: true, placeholder: "How did the young person present emotionally, physically and socially?" },
+        { name: "behaviour_update", label: "Behaviour update", type: "textarea", placeholder: "Record behaviour factually, including triggers, support offered and response." },
+        { name: "positives", label: "Positives / strengths", type: "textarea", placeholder: "What went well? What strengths were seen?" },
+        { name: "actions_required", label: "Actions required / next steps", type: "textarea", placeholder: "What needs to happen next, by whom, and why?" },
+        { name: "young_person_voice", label: "Young person’s voice", type: "textarea", placeholder: "Use the young person’s own words where possible." },
       ],
     },
 
     health_record: {
       title: "New health record",
-      subtitle: "Record health and wellbeing information.",
+      subtitle: "Record health and wellbeing information safely.",
       endpoint: "/health-records",
       refreshTab: "health",
       fields: [
@@ -84,7 +84,7 @@
 
     education_record: {
       title: "New education record",
-      subtitle: "Record education, attendance or learning updates.",
+      subtitle: "Record education, attendance, engagement and progress.",
       endpoint: "/education-records",
       refreshTab: "education",
       fields: [
@@ -93,8 +93,8 @@
         { name: "provision_name", label: "Provision / school", type: "text" },
         { name: "behaviour_summary", label: "Behaviour / presentation", type: "textarea" },
         { name: "learning_engagement", label: "Learning engagement", type: "textarea" },
-        { name: "issue_raised", label: "Any issue raised", type: "textarea" },
-        { name: "action_taken", label: "Action taken", type: "textarea" },
+        { name: "issue_raised", label: "Any issue raised", type: "textarea", placeholder: "Leave blank if no issue was raised." },
+        { name: "action_taken", label: "Action taken", type: "textarea", placeholder: "Leave blank if no action was required." },
         { name: "professional_involved", label: "Professional involved", type: "text" },
         { name: "achievement_note", label: "Achievement / positive note", type: "textarea" },
       ],
@@ -102,7 +102,7 @@
 
     family_record: {
       title: "New family record",
-      subtitle: "Record family time, contact and relationship updates.",
+      subtitle: "Record family time and emotional impact.",
       endpoint: "/family/records",
       refreshTab: "family",
       fields: [
@@ -212,11 +212,7 @@
 
   function youngPersonPath(suffix) {
     const youngPersonId = ensureYoungPersonId();
-
-    if (!youngPersonId) {
-      throw new Error("No young person selected.");
-    }
-
+    if (!youngPersonId) throw new Error("No young person selected.");
     return `/young-people/${encodeURIComponent(youngPersonId)}${suffix}`;
   }
 
