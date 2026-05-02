@@ -1,1194 +1,885 @@
-(() => {
+  (() => {
   "use strict";
 
-  const SHELL_MODULE = "/js/young-people-shell/index.js";
-  const STORAGE_THEME_KEY = "indicare-theme";
-  const STORAGE_NIGHT_KEY = "indicare-night-shift";
+  const state = {
+    youngPersonId: null,
+    activeTab: "daily",
+    composerOpen: false,
+    composerType: null,
+    composerSaving: false,
+    data: {
+      daily: [],
+      health: [],
+      education: [],
+      family: [],
+      incidents: [],
+      medicationProfiles: [],
+      medicationRecords: [],
+    },
+  };
 
-  let speechRecognition = null;
-  let activeSpeechField = null;
+  const TAB_COPY = {
+    daily: {
+      title: "Daily notes",
+      subtitle: "Load and record daily life information for this young person.",
+    },
+    health: {
+      title: "Health",
+      subtitle: "Health, wellbeing and medical updates.",
+    },
+    education: {
+      title: "Education",
+      subtitle: "Education, learning, attendance and progress.",
+    },
+    family: {
+      title: "Family",
+      subtitle: "Family time, relationships and important contact.",
+    },
+    incidents: {
+      title: "Incidents",
+      subtitle: "Important events, responses and follow-up.",
+    },
+    medication: {
+      title: "Medication",
+      subtitle: "Medication profiles and medication records from the health bundle.",
+    },
+    assistant: {
+      title: "Assistant",
+      subtitle: "Ask IndiCare about this young person.",
+    },
+  };
 
-  function log(...args) {
-    console.log("[young-people-shell]", ...args);
-  }
+  const COMPOSER_DEFS = {
+    daily_note: {
+      title: "New daily note",
+      subtitle: "Record the day clearly, kindly and professionally.",
+      endpoint: "/daily-notes",
+      refreshTab: "daily",
+      fields: [
+        { name: "note_date", label: "Date", type: "date" },
+        { name: "shift_type", label: "Shift type", type: "text", placeholder: "Day, late, night..." },
+        { name: "title", label: "Title", type: "text", placeholder: "Brief title for this note" },
+        { name: "narrative", label: "What happened?", type: "textarea", required: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea" },
+        { name: "staff_response", label: "Staff response", type: "textarea" },
+        { name: "actions_taken", label: "Actions taken / next steps", type: "textarea" },
+        { name: "significance", label: "Why this matters", type: "textarea" },
+      ],
+    },
+    health_record: {
+      title: "New health record",
+      subtitle: "Record health and wellbeing information.",
+      endpoint: "/health-records",
+      refreshTab: "health",
+      fields: [
+        { name: "event_datetime", label: "Date and time", type: "datetime-local" },
+        { name: "record_type", label: "Record type", type: "text", placeholder: "Appointment, illness, wellbeing..." },
+        { name: "title", label: "Title", type: "text" },
+        { name: "summary", label: "Summary", type: "textarea", required: true },
+        { name: "action_taken", label: "Action taken", type: "textarea" },
+        { name: "follow_up_required", label: "Follow-up required", type: "textarea" },
+      ],
+    },
+    education_record: {
+      title: "New education record",
+      subtitle: "Record education, attendance or learning updates.",
+      endpoint: "/education-records",
+      refreshTab: "education",
+      fields: [
+        { name: "record_date", label: "Date", type: "date" },
+        { name: "attendance_status", label: "Attendance status", type: "text" },
+        { name: "provision_name", label: "Provision / school", type: "text" },
+        { name: "summary", label: "Summary", type: "textarea", required: true },
+        { name: "next_steps", label: "Next steps", type: "textarea" },
+      ],
+    },
+    family_record: {
+      title: "New family record",
+      subtitle: "Record family time, contact and relationship updates.",
+      endpoint: "/family/records",
+      refreshTab: "family",
+      fields: [
+        { name: "contact_datetime", label: "Date and time", type: "datetime-local" },
+        { name: "contact_type", label: "Contact type", type: "text" },
+        { name: "contact_person", label: "Contact person", type: "text" },
+        { name: "summary", label: "Summary", type: "textarea", required: true },
+        { name: "child_response", label: "Young person’s response", type: "textarea" },
+        { name: "next_steps", label: "Next steps", type: "textarea" },
+      ],
+    },
+    incident: {
+      title: "New incident",
+      subtitle: "Record important events factually and clearly.",
+      endpoint: "/incidents",
+      refreshTab: "incidents",
+      fields: [
+        { name: "incident_datetime", label: "Date and time", type: "datetime-local" },
+        { name: "incident_type", label: "Incident type", type: "text" },
+        { name: "title", label: "Title", type: "text" },
+        { name: "summary", label: "What happened?", type: "textarea", required: true },
+        { name: "staff_response", label: "Staff response", type: "textarea" },
+        { name: "outcome", label: "Outcome", type: "textarea" },
+        { name: "safeguarding_follow_up", label: "Safeguarding follow-up", type: "textarea" },
+      ],
+    },
+  };
 
-  function byId(id) {
+  function $(id) {
     return document.getElementById(id);
   }
 
-  function qs(selector, root = document) {
-    return root.querySelector(selector);
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "'": "&#39;",
+      '"': "&quot;",
+    })[char]);
   }
 
-  function qsa(selector, root = document) {
-    return Array.from(root.querySelectorAll(selector));
+  function setText(id, value) {
+    const node = $(id);
+    if (node) node.textContent = value ?? "";
   }
 
-  function isVisible(el) {
-    return (
-      !!el &&
-      !el.classList.contains("hidden") &&
-      el.getAttribute("aria-hidden") !== "true"
+  function setStatus(message) {
+    setText("ypStatus", message || "");
+  }
+
+  function normaliseId(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw || raw === "null" || raw === "undefined") return null;
+    return raw;
+  }
+
+  function detectYoungPersonId() {
+    const params = new URLSearchParams(window.location.search);
+    return normaliseId(
+      document.body?.dataset?.youngPersonId ||
+      $("ypShell")?.dataset?.youngPersonId ||
+      window.__YOUNG_PERSON_ID__ ||
+      params.get("young_person_id") ||
+      params.get("youngPersonId") ||
+      params.get("id")
     );
   }
 
-  function setHidden(el, hidden) {
-    if (!el) return;
-    el.classList.toggle("hidden", hidden);
-    el.setAttribute("aria-hidden", hidden ? "true" : "false");
+  function youngPersonPath(suffix) {
+    if (!state.youngPersonId) {
+      throw new Error("No young person selected.");
+    }
+    return `/young-people/${encodeURIComponent(state.youngPersonId)}${suffix}`;
   }
 
-  function setExpanded(el, expanded) {
-    if (!el) return;
-    el.setAttribute("aria-expanded", expanded ? "true" : "false");
+  function getCookieMap() {
+    return Object.fromEntries(
+      document.cookie
+        .split("; ")
+        .filter(Boolean)
+        .map((entry) => {
+          const index = entry.indexOf("=");
+          if (index === -1) return [entry, ""];
+          return [
+            decodeURIComponent(entry.slice(0, index)),
+            decodeURIComponent(entry.slice(index + 1)),
+          ];
+        })
+    );
   }
 
-  function safeJsonParse(value, fallback = null) {
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (meta) return meta;
+
+    const input = document.querySelector(
+      'input[name="csrf_token"], input[name="csrfToken"], input[name="_csrf"]'
+    )?.value;
+    if (input) return input;
+
+    const cookies = getCookieMap();
+    const key = Object.keys(cookies).find((name) =>
+      name.toLowerCase().includes("csrf")
+    );
+
+    return key ? cookies[key] : "";
+  }
+
+  function csrfHeaders(method) {
+    if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return {};
+    const token = getCsrfToken();
+    return token ? { "X-CSRF-Token": token } : {};
+  }
+
+  async function readErrorBody(response) {
+    const contentType = response.headers.get("content-type") || "";
+
     try {
-      return JSON.parse(value);
-    } catch {
-      return fallback;
-    }
-  }
-
-  function getStoredUser() {
-    return (
-      safeJsonParse(sessionStorage.getItem("current_user"), null) ||
-      safeJsonParse(localStorage.getItem("current_user"), null) ||
-      null
-    );
-  }
-
-  function normaliseDataset() {
-    const app = byId("app");
-    if (!app) return;
-
-    app.dataset.workspace ||= "young-people-shell";
-    app.dataset.scope ||= "child";
-    app.dataset.section ||= "workspace";
-    app.dataset.userRole ||= "admin";
-    app.dataset.allowedHomeIds ||= "[]";
-    app.dataset.assistantScopeType ||= "child";
-    app.dataset.themePreference ||= "system";
-
-    if (!app.dataset.youngPersonId) app.dataset.youngPersonId = "";
-    if (!app.dataset.homeId) app.dataset.homeId = "";
-    if (!app.dataset.providerId) app.dataset.providerId = "";
-  }
-
-  function addCareHubClasses() {
-    const app = byId("app");
-    if (!app) return;
-
-    app.classList.add(
-      "indicare-care-hub",
-      "safe-start-shell",
-      "premium-ready",
-      "care-hub-ready"
-    );
-
-    document.body.classList.add(
-      "indicare-care-hub-body",
-      "safe-start-body",
-      "indicare-shell-ready"
-    );
-  }
-
-  function setTheme(theme) {
-    const app = byId("app");
-    const safeTheme = ["light", "dark", "system"].includes(theme)
-      ? theme
-      : "system";
-
-    document.documentElement.classList.remove(
-      "theme-light",
-      "theme-dark",
-      "theme-system"
-    );
-    document.body.classList.remove("theme-light", "theme-dark", "theme-system");
-    app?.classList.remove("theme-light", "theme-dark", "theme-system");
-
-    document.documentElement.classList.add(`theme-${safeTheme}`);
-    document.body.classList.add(`theme-${safeTheme}`);
-    app?.classList.add(`theme-${safeTheme}`);
-
-    document.documentElement.dataset.theme = safeTheme;
-    document.body.dataset.theme = safeTheme;
-    if (app) {
-      app.dataset.themePreference = safeTheme;
-      app.setAttribute("data-theme", safeTheme);
-    }
-
-    localStorage.setItem(STORAGE_THEME_KEY, safeTheme);
-
-    const toggle = byId("themeToggleBtn") || qs("[data-theme-toggle]");
-    if (toggle) {
-      const label =
-        safeTheme === "light"
-          ? "Light mode"
-          : safeTheme === "dark"
-            ? "Dark mode"
-            : "System mode";
-
-      toggle.textContent = label;
-      toggle.setAttribute("aria-pressed", safeTheme === "dark" ? "true" : "false");
-      toggle.title = "Toggle light, dark or system mode";
-    }
-  }
-
-  function initThemeMode() {
-    const toggle = byId("themeToggleBtn") || qs("[data-theme-toggle]");
-    const savedTheme = localStorage.getItem(STORAGE_THEME_KEY) || "system";
-
-    setTheme(savedTheme);
-
-    if (!toggle || toggle.dataset.themeBound === "true") return;
-    toggle.dataset.themeBound = "true";
-
-    toggle.addEventListener("click", () => {
-      const current = document.documentElement.dataset.theme || "system";
-      const next =
-        current === "system" ? "light" : current === "light" ? "dark" : "system";
-
-      setTheme(next);
-    });
-  }
-
-  function setNightShift(enabled) {
-    const app = byId("app");
-    document.body.classList.toggle("night-shift-mode", enabled);
-    document.documentElement.classList.toggle("night-shift-mode", enabled);
-    app?.classList.toggle("night-shift-mode", enabled);
-
-    document.body.dataset.nightShift = enabled ? "true" : "false";
-    app?.setAttribute("data-night-shift", enabled ? "true" : "false");
-
-    localStorage.setItem(STORAGE_NIGHT_KEY, enabled ? "true" : "false");
-
-    const toggle = byId("nightShiftModeBtn") || qs("[data-night-shift-toggle]");
-    if (toggle) {
-      toggle.textContent = enabled ? "Night mode on" : "Night mode";
-      toggle.setAttribute("aria-pressed", enabled ? "true" : "false");
-    }
-  }
-
-  function initNightShiftMode() {
-    const toggle = byId("nightShiftModeBtn") || qs("[data-night-shift-toggle]");
-    setNightShift(localStorage.getItem(STORAGE_NIGHT_KEY) === "true");
-
-    if (!toggle || toggle.dataset.nightShiftBound === "true") return;
-    toggle.dataset.nightShiftBound = "true";
-
-    toggle.addEventListener("click", () => {
-      const enabled = document.body.dataset.nightShift === "true";
-      setNightShift(!enabled);
-    });
-  }
-
-  function getRoleLabel(role = "") {
-    const value = String(role || "").replaceAll("_", " ").trim();
-    if (!value) return "Care team";
-
-    return value
-      .split(" ")
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ");
-  }
-
-  function initWelcomeMessage() {
-    const user = getStoredUser();
-    const app = byId("app");
-
-    const role =
-      user?.role ||
-      user?.user_role ||
-      user?.account_role ||
-      app?.dataset.userRole ||
-      "care team";
-
-    const firstName =
-      user?.first_name ||
-      user?.firstName ||
-      user?.name?.split?.(" ")?.[0] ||
-      "";
-
-    const hour = new Date().getHours();
-
-    let greeting = "Welcome";
-    if (hour < 12) greeting = "Good morning";
-    else if (hour < 18) greeting = "Good afternoon";
-    else greeting = "Good evening";
-
-    const welcomeText = firstName ? `${greeting}, ${firstName}` : greeting;
-
-    [byId("welcomeMessage"), byId("userWelcomeMessage"), qs("[data-user-welcome]")]
-      .filter(Boolean)
-      .forEach((target) => {
-        target.textContent = welcomeText;
-      });
-
-    [byId("welcomeRole"), byId("userRoleLabel"), qs("[data-user-role-label]")]
-      .filter(Boolean)
-      .forEach((target) => {
-        target.textContent = getRoleLabel(role);
-      });
-  }
-
-  function enhanceSafeStartLayout() {
-    const selectorPanel = byId("selectorPanel");
-    if (!selectorPanel) return;
-
-    selectorPanel.classList.add("safe-start-clean-entry");
-    selectorPanel
-      .querySelector(".selector-screen-inner")
-      ?.classList.add("selector-screen-inner--simple");
-
-    selectorPanel
-      .querySelector(".safe-start-launch-grid")
-      ?.classList.add("safe-start-launch-grid");
-
-    selectorPanel
-      .querySelector(".simple-home-panel")
-      ?.classList.add("safe-start-home-column");
-
-    selectorPanel
-      .querySelector(".simple-children-panel")
-      ?.classList.add("safe-start-young-people-column");
-
-    byId("homeChipList")?.classList.add("safe-start-home-row");
-    byId("selectorList")?.classList.add("safe-start-young-people-row");
-  }
-
-  function syncMobileDrawerState() {
-    const toggle = byId("mobileNavToggle");
-    const panel = byId("mobileNavPanel");
-    const backdrop = byId("mobileNavBackdrop");
-
-    if (!toggle || !panel) return;
-
-    const open = isVisible(panel);
-    setExpanded(toggle, open);
-    setHidden(backdrop, !open);
-    document.body.classList.toggle("mobile-nav-open", open);
-  }
-
-  function getFocusableElements(container) {
-    if (!container) return [];
-
-    return Array.from(
-      container.querySelectorAll(
-        [
-          "a[href]",
-          "button:not([disabled])",
-          "textarea:not([disabled])",
-          "input:not([disabled])",
-          "select:not([disabled])",
-          "summary",
-          "[tabindex]:not([tabindex='-1'])",
-        ].join(",")
-      )
-    ).filter((el) => {
-      if (el.getAttribute("aria-hidden") === "true") return false;
-      const style = window.getComputedStyle(el);
-      return style.display !== "none" && style.visibility !== "hidden";
-    });
-  }
-
-  function enhanceMobileNavigation() {
-    const toggle = byId("mobileNavToggle");
-    const panel = byId("mobileNavPanel");
-    const backdrop = byId("mobileNavBackdrop");
-    const closeBtn = byId("closeMobileNavBtn");
-
-    if (!toggle || !panel || toggle.dataset.bound === "true") return;
-    toggle.dataset.bound = "true";
-
-    toggle.addEventListener("click", () => {
-      const nextOpen = !isVisible(panel);
-      setHidden(panel, !nextOpen);
-      syncMobileDrawerState();
-
-      if (nextOpen) {
-        getFocusableElements(panel)[0]?.focus?.();
+      if (contentType.includes("application/json")) {
+        return await response.json();
       }
-    });
-
-    closeBtn?.addEventListener("click", () => {
-      setHidden(panel, true);
-      syncMobileDrawerState();
-      toggle.focus();
-    });
-
-    backdrop?.addEventListener("click", () => {
-      setHidden(panel, true);
-      syncMobileDrawerState();
-      toggle.focus();
-    });
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape" || !isVisible(panel)) return;
-      setHidden(panel, true);
-      syncMobileDrawerState();
-      toggle.focus();
-    });
-
-    syncMobileDrawerState();
+      return await response.text();
+    } catch {
+      return "";
+    }
   }
 
-  function addTableResponsiveLabels() {
-    qsa(".record-table").forEach((table) => {
-      const headers = qsa("thead th", table).map((th) => th.textContent.trim());
+  async function apiJson(path, options = {}) {
+    const method = String(options.method || "GET").toUpperCase();
 
-      qsa("tbody tr", table).forEach((row) => {
-        Array.from(row.children).forEach((cell, index) => {
-          if (headers[index]) cell.dataset.label = headers[index];
-        });
-      });
+    const headers = {
+      Accept: "application/json",
+      ...(options.headers || {}),
+      ...csrfHeaders(method),
+    };
+
+    if (options.body !== undefined && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    const response = await fetch(path, {
+      ...options,
+      method,
+      headers,
+      credentials: "include",
     });
+
+    if (!response.ok) {
+      const body = await readErrorBody(response);
+      const error = new Error(
+        `${method} ${path} failed with ${response.status}`
+      );
+      error.status = response.status;
+      error.body = body;
+      throw error;
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) return {};
+    return response.json();
   }
 
-  function improvePlainWorkspaceBlocks() {
-    const content = byId("viewContent");
-    if (!content) return;
+  function apiGet(path) {
+    return apiJson(path);
+  }
 
-    qsa(".panel", content).forEach((panel, index) => {
-      panel.dataset.panelTone = String((index % 6) + 1);
-    });
-
-    qsa(".record-table-shell", content).forEach((table, index) => {
-      table.dataset.tableTone = String((index % 6) + 1);
-    });
-
-    qsa(".empty-state", content).forEach((empty) => {
-      if (empty.querySelector(".empty-state-icon")) return;
-
-      const icon = document.createElement("div");
-      icon.className = "empty-state-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = "○";
-      empty.prepend(icon);
-    });
-
-    qsa("table", content).forEach((table) => {
-      if (table.closest(".record-table-scroll")) return;
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "record-table-scroll";
-      table.parentNode?.insertBefore(wrapper, table);
-      wrapper.appendChild(table);
+  function apiPost(path, payload) {
+    return apiJson(path, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
     });
   }
 
-  function enhanceRecordSurfaces() {
-    const root = byId("viewContent");
-    if (!root) return;
+  function parseJsonMaybe(text) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  }
 
-    qsa(".record-row, .record-card, .timeline-item, .entity-row", root).forEach(
-      (record) => {
-        record.classList.add("production-record-card");
+  async function apiStreamAssistant(payload, handlers = {}) {
+    const response = await fetch("/assistant/os/young-people/stream", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "text/event-stream",
+        "Content-Type": "application/json",
+        ...csrfHeaders("POST"),
+      },
+      body: JSON.stringify(payload || {}),
+    });
 
-        if (!record.querySelector(".record-card-action-hint")) {
-          const hint = document.createElement("span");
-          hint.className = "record-card-action-hint";
-          hint.textContent = "Open";
-          record.appendChild(hint);
+    if (!response.ok || !response.body) {
+      const body = await readErrorBody(response);
+      const error = new Error(`Assistant stream failed with ${response.status}`);
+      error.status = response.status;
+      error.body = body;
+      throw error;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split("\n\n");
+      buffer = frames.pop() || "";
+
+      for (const frame of frames) {
+        let event = "message";
+        let data = "";
+
+        for (const line of frame.split("\n")) {
+          if (line.startsWith("event:")) {
+            event = line.slice(6).trim();
+          } else if (line.startsWith("data:")) {
+            data += line.slice(5).trim();
+          }
+        }
+
+        if (event === "meta") {
+          handlers.onMeta?.(parseJsonMaybe(data) || data);
+        } else if (event === "token") {
+          handlers.onToken?.(data);
+        } else if (event === "done") {
+          handlers.onDone?.(parseJsonMaybe(data) || data);
+        } else if (event === "error") {
+          handlers.onError?.(parseJsonMaybe(data) || data);
+        } else if (data) {
+          handlers.onToken?.(data);
         }
       }
-    );
-
-    qsa(".record-list, .timeline-list, .entity-list", root).forEach((list) => {
-      list.classList.add("production-record-list");
-    });
-  }
-
-  function observeWorkspaceContent() {
-    const content = byId("viewContent");
-    if (!content || content.dataset.observed === "true") return;
-    content.dataset.observed = "true";
-
-    const enhance = () => {
-      addTableResponsiveLabels();
-      improvePlainWorkspaceBlocks();
-      enhanceRecordSurfaces();
-    };
-
-    const observer = new MutationObserver(enhance);
-    observer.observe(content, { childList: true, subtree: true });
-
-    enhance();
-  }
-
-  function trapFocus(container, event) {
-    if (!container || event.key !== "Tab") return;
-
-    const focusable = getFocusableElements(container);
-    if (!focusable.length) return;
-
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    }
-
-    if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
     }
   }
 
-  function bindDialogFocusManagement() {
-    if (document.body.dataset.dialogFocusBound === "true") return;
-    document.body.dataset.dialogFocusBound = "true";
+  function pickArray(source, keys) {
+    if (!source || typeof source !== "object") return [];
 
-    const getDialogs = () =>
-      [
-        byId("assistantModal"),
-        byId("recordComposerPage"),
-        byId("recordDrawer"),
-        byId("fullscreenPanel"),
-        byId("suggestionsPanel"),
-        byId("mobileNavPanel"),
-      ].filter(Boolean);
-
-    document.addEventListener("keydown", (event) => {
-      const activeDialog = getDialogs().find(isVisible);
-      if (activeDialog) trapFocus(activeDialog, event);
-    });
-  }
-
-  function ensureFieldId(field, index) {
-    if (field.id) return field.id;
-
-    const name = field.getAttribute("name") || "composer-field";
-    field.id = `${name.replace(/[^a-zA-Z0-9_-]/g, "-")}-${index}`;
-    return field.id;
-  }
-
-  function createSpeechButton(field) {
-    if (!field?.id) return null;
-
-    const wrap = field.closest(".field, .composer-field");
-    if (wrap?.querySelector(`[data-speech-target="${field.id}"]`)) return null;
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "speech-input-btn";
-    button.dataset.speechTarget = field.id;
-    button.setAttribute("aria-label", "Dictate into this field");
-    button.title = "Dictate into this field";
-    button.innerHTML = `<span aria-hidden="true">🎙</span><span>Dictate</span>`;
-
-    return button;
-  }
-
-  function setupSpeechRecognition() {
-    const Recognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition || null;
-
-    if (!Recognition) return null;
-
-    const recognition = new Recognition();
-    recognition.lang = "en-GB";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onresult = (event) => {
-      if (!activeSpeechField) return;
-
-      const transcript = Array.from(event.results)
-        .map((result) => result[0]?.transcript || "")
-        .join(" ")
-        .trim();
-
-      if (!transcript) return;
-
-      const current = activeSpeechField.value || "";
-      const separator = current.trim() ? " " : "";
-
-      activeSpeechField.value = `${current}${separator}${transcript}`;
-      activeSpeechField.dispatchEvent(new Event("input", { bubbles: true }));
-    };
-
-    recognition.onerror = () => {
-      document.body.classList.remove("speech-listening");
-      activeSpeechField = null;
-    };
-
-    recognition.onend = () => {
-      document.body.classList.remove("speech-listening");
-      activeSpeechField = null;
-    };
-
-    return recognition;
-  }
-
-  function enhanceSpeechToTextControls(root = document) {
-    const supported =
-      "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
-
-    qsa("textarea", root).forEach((textarea, index) => {
-      ensureFieldId(textarea, index);
-
-      const wrap = textarea.closest(".field, .composer-field");
-      if (!wrap) return;
-
-      wrap.classList.add("field--speech-ready");
-
-      if (!supported) {
-        wrap.classList.add("field--speech-unsupported");
-        return;
-      }
-
-      const button = createSpeechButton(textarea);
-      if (!button) return;
-
-      const label =
-        wrap.querySelector(".label, .form-label") || wrap.querySelector("label");
-
-      if (label) {
-        const actions = document.createElement("div");
-        actions.className = "field-inline-actions";
-        actions.appendChild(button);
-        label.after(actions);
-      } else {
-        textarea.before(button);
-      }
-    });
-  }
-
-  function getSpeechFieldFromButton(button) {
-    const targetId = button.dataset.speechTarget;
-    const direct = targetId ? byId(targetId) : null;
-
-    if (direct && ["INPUT", "TEXTAREA"].includes(direct.tagName)) return direct;
-
-    if (direct) {
-      return direct.querySelector("textarea, input[type='text'], input[type='search']");
+    for (const key of keys) {
+      if (Array.isArray(source[key])) return source[key];
     }
 
-    return null;
+    if (Array.isArray(source)) return source;
+    return [];
   }
 
-  function bindSpeechToText() {
-    if (document.body.dataset.speechBound === "true") return;
-    document.body.dataset.speechBound = "true";
-
-    speechRecognition = setupSpeechRecognition();
-
-    document.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-speech-target]");
-      if (!button) return;
-
-      if (!speechRecognition) {
-        window.alert("Speech-to-text is not supported in this browser.");
-        return;
+  function firstText(record, keys, fallback = "Untitled record") {
+    for (const key of keys) {
+      const value = record?.[key];
+      if (value !== undefined && value !== null && String(value).trim()) {
+        return String(value).trim();
       }
+    }
+    return fallback;
+  }
 
-      const field = getSpeechFieldFromButton(button);
-      if (!field) return;
-
-      try {
-        activeSpeechField = field;
-        document.body.classList.add("speech-listening");
-        speechRecognition.start();
-      } catch {
-        document.body.classList.remove("speech-listening");
-      }
+  function formatDateLike(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: value.includes("T") ? "2-digit" : undefined,
+      minute: value.includes("T") ? "2-digit" : undefined,
     });
   }
 
-  function updateTherapeuticNudge(field) {
-    if (!field || field.tagName !== "TEXTAREA") return;
+  async function loadDaily() {
+    const data = await apiGet(youngPersonPath("/daily-notes"));
+    state.data.daily = pickArray(data, [
+      "items",
+      "records",
+      "daily_notes",
+      "daily_life",
+    ]);
+  }
 
-    const wrap = field.closest(".field, .composer-field");
-    if (!wrap) return;
+  async function loadHealth() {
+    const data = await apiGet(youngPersonPath("/health"));
+    state.data.health = pickArray(data, [
+      "health_records",
+      "items",
+      "records",
+    ]);
+    state.data.medicationProfiles = pickArray(data, [
+      "medication_profiles",
+      "profiles",
+    ]);
+    state.data.medicationRecords = pickArray(data, [
+      "medication_records",
+      "administrations",
+    ]);
+  }
 
-    let nudge = wrap.querySelector(".therapeutic-nudge");
-    const value = String(field.value || "").toLowerCase();
+  async function loadEducation() {
+    const data = await apiGet(youngPersonPath("/education"));
+    state.data.education = pickArray(data, [
+      "education_records",
+      "items",
+      "records",
+    ]);
+  }
 
-    const needsNudge =
-      value.includes("refused") ||
-      value.includes("challenging") ||
-      value.includes("attention seeking") ||
-      value.includes("non compliant") ||
-      value.includes("aggressive");
+  async function loadFamily() {
+    const data = await apiGet(youngPersonPath("/family"));
+    state.data.family = pickArray(data, [
+      "family_contact_records",
+      "contacts",
+      "items",
+      "records",
+    ]);
+  }
 
-    if (!needsNudge) {
-      nudge?.remove();
+  async function loadIncidents() {
+    const data = await apiGet(youngPersonPath("/incidents"));
+    state.data.incidents = pickArray(data, [
+      "incidents",
+      "items",
+      "records",
+    ]);
+  }
+
+  async function loadMedication() {
+    if (
+      !state.data.health.length &&
+      !state.data.medicationProfiles.length &&
+      !state.data.medicationRecords.length
+    ) {
+      await loadHealth();
+    }
+  }
+
+  function renderEmpty(message = "No records yet.") {
+    const list = $("ypRecordsList");
+    if (!list) return;
+
+    list.innerHTML = `
+      <div class="yp-empty-card">
+        <h3>${escapeHtml(message)}</h3>
+        <p>When records are added, they will appear here.</p>
+      </div>
+    `;
+  }
+
+  function renderError(error) {
+    const list = $("ypRecordsList");
+    if (!list) return;
+
+    const detail =
+      typeof error?.body === "string"
+        ? error.body
+        : error?.body?.detail || error?.message || "Something went wrong.";
+
+    list.innerHTML = `
+      <div class="yp-error-card">
+        <h3>Could not load this area</h3>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+    `;
+  }
+
+  function renderRecordCard(record, tab) {
+    const title = firstText(record, [
+      "title",
+      "summary",
+      "narrative",
+      "incident_type",
+      "record_type",
+      "contact_type",
+      "attendance_status",
+    ]);
+
+    const body = firstText(record, [
+      "narrative",
+      "summary",
+      "staff_response",
+      "actions_taken",
+      "outcome",
+      "next_steps",
+      "child_voice",
+      "young_person_voice",
+    ], "No further detail recorded.");
+
+    const date = firstText(record, [
+      "note_date",
+      "event_datetime",
+      "incident_datetime",
+      "record_date",
+      "contact_datetime",
+      "created_at",
+      "updated_at",
+    ], "");
+
+    const status = firstText(record, [
+      "status",
+      "workflow_status",
+      "approval_status",
+    ], "");
+
+    return `
+      <article class="yp-record-card" data-tab="${escapeHtml(tab)}">
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(body)}</p>
+        <div class="yp-record-meta">
+          ${date ? `<span class="yp-chip">${escapeHtml(formatDateLike(date))}</span>` : ""}
+          ${status ? `<span class="yp-chip">${escapeHtml(status)}</span>` : ""}
+        </div>
+      </article>
+    `;
+  }
+
+  function renderCards(records, tab) {
+    const list = $("ypRecordsList");
+    if (!list) return;
+
+    if (!Array.isArray(records) || records.length === 0) {
+      renderEmpty("No records yet.");
       return;
     }
 
-    if (!nudge) {
-      nudge = document.createElement("div");
-      nudge.className = "therapeutic-nudge";
-      wrap.appendChild(nudge);
+    list.innerHTML = records.map((record) => renderRecordCard(record, tab)).join("");
+  }
+
+  function renderMedication() {
+    const list = $("ypRecordsList");
+    if (!list) return;
+
+    const profiles = state.data.medicationProfiles || [];
+    const records = state.data.medicationRecords || [];
+
+    if (!profiles.length && !records.length) {
+      renderEmpty("No medication information found.");
+      return;
     }
 
-    nudge.textContent =
-      "Therapeutic prompt: add what the young person may have been feeling, needing, communicating, and what adults did to help them feel safer.";
+    list.innerHTML = `
+      <article class="yp-record-card">
+        <h3>Medication profiles</h3>
+        <p>${profiles.length} profile(s) found.</p>
+        <div class="yp-record-list">
+          ${profiles.map((item) => renderRecordCard(item, "medication")).join("")}
+        </div>
+      </article>
+
+      <article class="yp-record-card">
+        <h3>Medication records</h3>
+        <p>${records.length} medication record(s) found.</p>
+        <div class="yp-record-list">
+          ${records.map((item) => renderRecordCard(item, "medication")).join("")}
+        </div>
+      </article>
+    `;
   }
 
-  function enhanceComposerSections(root = document) {
-    qsa(".section, .composer-section", root).forEach((section, index) => {
-      section.classList.add("composer-section-card");
-      section.dataset.sectionStep = String(index + 1);
+  function setActiveTabButton(tab) {
+    document.querySelectorAll("#ypTabs [data-tab]").forEach((button) => {
+      const isActive = button.dataset.tab === tab;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-current", isActive ? "page" : "false");
+    });
+  }
 
-      if (!section.querySelector(".composer-section-step")) {
-        const step = document.createElement("div");
-        step.className = "composer-section-step";
-        step.textContent = `Step ${index + 1}`;
-        section.prepend(step);
+  function updateTabCopy(tab) {
+    const copy = TAB_COPY[tab] || TAB_COPY.daily;
+    setText("ypRecordsTitle", copy.title);
+    setText("ypRecordsSubtitle", copy.subtitle);
+  }
+
+  async function loadActiveTab() {
+    if (state.activeTab === "assistant") return;
+
+    updateTabCopy(state.activeTab);
+    setStatus("Loading…");
+
+    const list = $("ypRecordsList");
+    if (list) {
+      list.innerHTML = `
+        <div class="yp-empty-card">
+          <h3>Loading…</h3>
+          <p>Getting the latest information.</p>
+        </div>
+      `;
+    }
+
+    try {
+      if (state.activeTab === "daily") {
+        await loadDaily();
+        renderCards(state.data.daily, "daily");
+      } else if (state.activeTab === "health") {
+        await loadHealth();
+        renderCards(state.data.health, "health");
+      } else if (state.activeTab === "education") {
+        await loadEducation();
+        renderCards(state.data.education, "education");
+      } else if (state.activeTab === "family") {
+        await loadFamily();
+        renderCards(state.data.family, "family");
+      } else if (state.activeTab === "incidents") {
+        await loadIncidents();
+        renderCards(state.data.incidents, "incidents");
+      } else if (state.activeTab === "medication") {
+        await loadMedication();
+        renderMedication();
       }
-    });
+
+      setStatus("Loaded.");
+    } catch (error) {
+      console.error("[young-people-shell] load failed", error);
+      renderError(error);
+      setStatus("Could not load this area.");
+    }
   }
 
-  function updateRecordQualityMeter() {
-    const composer = byId("recordComposerPage");
-    if (!composer || !isVisible(composer)) return;
+  function switchTab(tab) {
+    if (!TAB_COPY[tab]) return;
 
-    const textValue = qsa("textarea", composer)
-      .map((field) => field.value || "")
-      .join(" ")
-      .toLowerCase();
+    state.activeTab = tab;
+    setActiveTabButton(tab);
 
-    const setStatus = (id, ok, good = "Present", missing = "Add detail") => {
-      const el = byId(id);
-      if (!el) return;
-      el.textContent = ok ? good : missing;
-      el.closest("div")?.classList.toggle("quality-ok", ok);
-      el.closest("div")?.classList.toggle("quality-missing", !ok);
+    const assistantPanel = $("ypAssistantPanel");
+    const recordsPanel = $("ypRecordsPanel");
+
+    const isAssistant = tab === "assistant";
+    assistantPanel?.classList.toggle("hidden", !isAssistant);
+    recordsPanel?.classList.toggle("hidden", isAssistant);
+
+    if (isAssistant) {
+      setStatus("Assistant ready.");
+    } else {
+      loadActiveTab();
+    }
+  }
+
+  function fieldHtml(field) {
+    const label = escapeHtml(field.label || field.name);
+    const name = escapeHtml(field.name);
+    const required = field.required ? "required" : "";
+    const placeholder = field.placeholder
+      ? `placeholder="${escapeHtml(field.placeholder)}"`
+      : "";
+
+    if (field.type === "textarea") {
+      return `
+        <label class="yp-field">
+          <span>${label}</span>
+          <textarea name="${name}" ${required} ${placeholder}></textarea>
+        </label>
+      `;
+    }
+
+    return `
+      <label class="yp-field">
+        <span>${label}</span>
+        <input name="${name}" type="${escapeHtml(field.type || "text")}" ${required} ${placeholder} />
+      </label>
+    `;
+  }
+
+  function openComposer(type) {
+    const definition = COMPOSER_DEFS[type];
+
+    if (!state.youngPersonId) {
+      setStatus("No young person selected.");
+      return;
+    }
+
+    if (!definition) {
+      setStatus("This record type is not available yet.");
+      return;
+    }
+
+    state.composerOpen = true;
+    state.composerType = type;
+    state.composerSaving = false;
+
+    setText("ypComposerTitle", definition.title);
+    setText("ypComposerSubtitle", definition.subtitle);
+    setText("ypComposerStatus", "");
+
+    const fields = $("ypComposerFields");
+    if (fields) {
+      fields.innerHTML = definition.fields.map(fieldHtml).join("");
+    }
+
+    const composer = $("ypComposer");
+    composer?.classList.remove("hidden");
+    composer?.setAttribute("aria-hidden", "false");
+  }
+
+  function closeComposer() {
+    state.composerOpen = false;
+    state.composerType = null;
+    state.composerSaving = false;
+
+    const composer = $("ypComposer");
+    composer?.classList.add("hidden");
+    composer?.setAttribute("aria-hidden", "true");
+
+    setText("ypComposerStatus", "");
+  }
+
+  function collectComposerPayload(status) {
+    const fields = $("ypComposerFields");
+    const payload = {
+      status,
+      workflow_status: status,
     };
 
-    setStatus(
-      "qualityFactsStatus",
-      textValue.length > 40,
-      "Detail added",
-      "Needs facts"
-    );
-    setStatus(
-      "qualityChildVoiceStatus",
-      textValue.includes("said") ||
-        textValue.includes("voice") ||
-        textValue.includes("wishes") ||
-        textValue.includes("feel"),
-      "Included",
-      "Add voice"
-    );
-    setStatus(
-      "qualityActionsStatus",
-      textValue.includes("action") ||
-        textValue.includes("next") ||
-        textValue.includes("follow"),
-      "Included",
-      "Add actions"
-    );
-    setStatus(
-      "qualityOversightStatus",
-      textValue.includes("manager") ||
-        textValue.includes("oversight") ||
-        textValue.includes("review"),
-      "Considered",
-      "Consider oversight"
-    );
-  }
-
-  function improveComposerControls() {
-    const composer = byId("recordComposerPage");
-    if (!composer || composer.dataset.composerEnhanced === "true") return;
-    composer.dataset.composerEnhanced = "true";
-
-    const enhance = () => {
-      qsa("textarea", composer).forEach((textarea) => {
-        textarea.setAttribute("rows", textarea.getAttribute("rows") || "5");
-        textarea.setAttribute("spellcheck", "true");
-        textarea.setAttribute("autocomplete", "off");
-      });
-
-      qsa("input, textarea, select", composer).forEach((field) => {
-        if (!field.id && field.name) field.id = `composer-${field.name}`;
-        if (!field.id || field.dataset.premiumEnhanced === "true") return;
-
-        field.dataset.premiumEnhanced = "true";
-
-        field.addEventListener("invalid", () => {
-          field.closest(".composer-field, .field")?.classList.add("field-has-error");
-        });
-
-        field.addEventListener("input", () => {
-          field.closest(".composer-field, .field")?.classList.remove("field-has-error");
-          updateTherapeuticNudge(field);
-          updateRecordQualityMeter();
-        });
-      });
-
-      enhanceSpeechToTextControls(composer);
-      enhanceComposerSections(composer);
-      updateRecordQualityMeter();
-    };
-
-    const observer = new MutationObserver(enhance);
-    observer.observe(composer, { childList: true, subtree: true });
-
-    enhance();
-  }
-
-  function bindComposerModeControls() {
-    if (document.body.dataset.composerModeBound === "true") return;
-    document.body.dataset.composerModeBound = "true";
-
-    document.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-composer-view]");
-      if (!button) return;
-
-      const mode = button.dataset.composerView || "factual";
-      qsa("[data-composer-view]").forEach((item) => {
-        item.classList.toggle("active", item === button);
-      });
-
-      byId("recordComposerPage")?.setAttribute("data-composer-view", mode);
-    });
-  }
-
-  function improveAssistantText() {
-    const host = byId("assistantMessages");
-    if (!host || host.dataset.assistantTextEnhanced === "true") return;
-    host.dataset.assistantTextEnhanced = "true";
-
-    const enhance = () => {
-      qsa(".assistant-message-body", host).forEach((body) => {
-        body.innerHTML = body.innerHTML
-          .replaceAll("&amp;bull;", "•")
-          .replaceAll("&amp;nbsp;", " ")
-          .replaceAll("Thinking...", "Thinking…");
-      });
-    };
-
-    const observer = new MutationObserver(enhance);
-    observer.observe(host, { childList: true, subtree: true });
-    enhance();
-  }
-
-  function improveStatusAnnouncements() {
-    ["statusBar", "statusMessage", "selectorStatusMessage"].forEach((id) => {
-      const status = byId(id);
-      if (!status) return;
-      status.setAttribute("role", "status");
-      status.setAttribute("aria-live", "polite");
-      status.setAttribute("aria-atomic", "true");
-    });
-  }
-
-  function addGlobalSearchShortcut() {
-    if (document.body.dataset.searchShortcutBound === "true") return;
-    document.body.dataset.searchShortcutBound = "true";
-
-    document.addEventListener("keydown", (event) => {
-      const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(
-        document.activeElement?.tagName || ""
-      );
-
-      if (isTyping) return;
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        const search = byId("recordSearchInput") || byId("selectorSearch");
-        if (!search) return;
-        event.preventDefault();
-        search.focus();
-      }
-    });
-  }
-
-  function addSafeExternalLinkHandling() {
-    if (document.body.dataset.externalLinkHandlingBound === "true") return;
-    document.body.dataset.externalLinkHandlingBound = "true";
-
-    document.addEventListener("click", (event) => {
-      const link = event.target.closest("a[href]");
-      if (!link) return;
-
-      const href = link.getAttribute("href") || "";
-      if (!href.startsWith("http")) return;
-
-      try {
-        const url = new URL(href);
-        if (url.origin === window.location.origin) return;
-
-        link.setAttribute("target", "_blank");
-        link.setAttribute("rel", "noopener noreferrer");
-      } catch {
-        // Ignore invalid URLs.
-      }
-    });
-  }
-
-  function addLiveClockToShell() {
-    const host = qs(".workspace-context-pill-value");
-    if (!host || host.dataset.clockBound === "true") return;
-    host.dataset.clockBound = "true";
-
-    const original = host.textContent.trim() || "Choose home and young person";
-
-    const tick = () => {
-      const now = new Date();
-      const time = now.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      host.textContent = `${original} • ${time}`;
-    };
-
-    tick();
-    window.setInterval(tick, 30000);
-  }
-
-  function improveCareHubCopy() {
-    if (document.body.dataset.copyImproved === "true") return;
-    document.body.dataset.copyImproved = "true";
-
-    const replacements = [
-      ["Residential care workspace", "Child-centred Care Hub"],
-      ["Today at a glance", "My Day"],
-      ["Ask assistant", "Ask IndiCare"],
-      ["Assistant", "IndiCare Assistant"],
-      ["Dashboard", "Care Hub"],
-      ["Search records", "Search care story"],
-      ["Loading workspace…", "Opening Care Hub…"],
-      ["Care Hub menu", "Care Hub folders"],
-      ["What do you need to do?", "Choose the area you need"],
-    ];
-
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        const parent = node.parentElement;
-        if (!parent) return NodeFilter.FILTER_REJECT;
-
-        if (["SCRIPT", "STYLE", "NOSCRIPT"].includes(parent.tagName)) {
-          return NodeFilter.FILTER_REJECT;
-        }
-
-        return NodeFilter.FILTER_ACCEPT;
-      },
+    fields?.querySelectorAll("input, textarea, select").forEach((field) => {
+      if (!field.name) return;
+      payload[field.name] = field.value;
     });
 
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-
-    nodes.forEach((node) => {
-      let text = node.nodeValue;
-      replacements.forEach(([from, to]) => {
-        text = text.replaceAll(from, to);
-      });
-      node.nodeValue = text;
-    });
+    return payload;
   }
 
-  function addMobileBottomNavFallback() {
-    const host = byId("mobileBottomNav");
-    if (!host || host.dataset.bound === "true") return;
-    host.dataset.bound = "true";
+  function setComposerSaving(isSaving) {
+    state.composerSaving = isSaving;
 
-    host.innerHTML = `
-      <button class="nav-btn" type="button" data-mobile-nav-action="home">My Day</button>
-      <button class="nav-btn" type="button" data-mobile-nav-action="record">Record</button>
-      <button class="nav-btn" type="button" data-mobile-nav-action="menu">Menu</button>
-      <button class="nav-btn" type="button" data-mobile-nav-action="assistant">Ask</button>
+    const saveDraft = $("ypComposerSaveDraft");
+    const submit = $("ypComposerSubmit");
+
+    if (saveDraft) saveDraft.disabled = isSaving;
+    if (submit) submit.disabled = isSaving;
+  }
+
+  async function saveComposer(status) {
+    if (state.composerSaving || !state.composerType) return;
+
+    const definition = COMPOSER_DEFS[state.composerType];
+    if (!definition) return;
+
+    setComposerSaving(true);
+    setText("ypComposerStatus", status === "draft" ? "Saving draft…" : "Sending for review…");
+
+    try {
+      const payload = collectComposerPayload(status);
+      await apiPost(youngPersonPath(definition.endpoint), payload);
+
+      closeComposer();
+      state.activeTab = definition.refreshTab || state.activeTab;
+      setActiveTabButton(state.activeTab);
+      await loadActiveTab();
+
+      setStatus(status === "draft" ? "Draft saved." : "Sent for review.");
+    } catch (error) {
+      console.error("[young-people-shell] save failed", error);
+      const detail =
+        typeof error?.body === "string"
+          ? error.body
+          : error?.body?.detail || error?.message || "Save failed.";
+      setText("ypComposerStatus", `Save failed: ${detail}`);
+    } finally {
+      setComposerSaving(false);
+    }
+  }
+
+  function appendAssistantMessage(role, text) {
+    const box = $("ypAssistantMessages");
+    if (!box) return null;
+
+    const item = document.createElement("div");
+    item.className = `yp-message yp-message-${role === "You" ? "user" : "assistant"}`;
+    item.innerHTML = `
+      <strong>${escapeHtml(role)}</strong>
+      <span>${escapeHtml(text || "")}</span>
     `;
 
-    host.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-mobile-nav-action]");
-      if (!button) return;
+    box.appendChild(item);
+    box.scrollTop = box.scrollHeight;
 
-      const action = button.dataset.mobileNavAction;
-
-      if (action === "menu") {
-        byId("mobileNavToggle")?.click();
-        return;
-      }
-
-      if (action === "assistant") {
-        byId("assistantLauncher")?.click();
-        byId("heroAssistantBtn")?.click();
-        return;
-      }
-
-      if (action === "record") {
-        (
-          qs('[data-action="daily-note"]') ||
-          qs('[data-action-router="new-task"]')
-        )?.click();
-        return;
-      }
-
-      if (action === "home") {
-        (qs('[data-view="home"]') || byId("goHomeBtn"))?.click();
-      }
-    });
+    return item.querySelector("span");
   }
 
-  function closeOtherCareMenus() {
-    if (document.body.dataset.careMenuBound === "true") return;
-    document.body.dataset.careMenuBound = "true";
+  async function sendAssistantMessage() {
+    const input = $("ypAssistantInput");
+    const status = $("ypAssistantStatus");
+    const message = input?.value?.trim();
 
-    document.addEventListener(
-      "toggle",
-      (event) => {
-        const current = event.target;
-        if (!(current instanceof HTMLDetailsElement)) return;
-        if (!current.matches("[data-workspace-menu]")) return;
-        if (!current.open) return;
+    if (!message) return;
 
-        qsa("details[data-workspace-menu][open]").forEach((menu) => {
-          if (menu !== current) menu.open = false;
-        });
-      },
-      true
-    );
+    input.value = "";
+    appendAssistantMessage("You", message);
+    const target = appendAssistantMessage("Assistant", "");
 
-    document.addEventListener("click", (event) => {
-      if (event.target.closest("details[data-workspace-menu]")) return;
+    if (status) status.textContent = "Streaming…";
 
-      qsa("details[data-workspace-menu][open]").forEach((menu) => {
-        menu.open = false;
-      });
-    });
-  }
-
-  function bindAssistantLaunchers() {
-    const openAssistant = () => {
-      setHidden(byId("assistantBackdrop"), false);
-      setHidden(byId("assistantModal"), false);
-      requestAnimationFrame(() => byId("assistantInput")?.focus?.());
-    };
-
-    const closeAssistant = () => {
-      setHidden(byId("assistantModal"), true);
-      setHidden(byId("assistantBackdrop"), true);
-    };
-
-    [
-      byId("safeStartAskAssistantBtn"),
-      byId("heroAssistantBtn"),
-      byId("assistantLauncher"),
-    ]
-      .filter(Boolean)
-      .forEach((button) => {
-        if (button.dataset.assistantLauncherBound === "true") return;
-        button.dataset.assistantLauncherBound = "true";
-        button.addEventListener("click", openAssistant);
-      });
-
-    const closeBtn = byId("closeAssistantBtn");
-    if (closeBtn && closeBtn.dataset.assistantCloseBound !== "true") {
-      closeBtn.dataset.assistantCloseBound = "true";
-      closeBtn.addEventListener("click", closeAssistant);
-    }
-
-    const backdrop = byId("assistantBackdrop");
-    if (backdrop && backdrop.dataset.assistantBackdropBound !== "true") {
-      backdrop.dataset.assistantBackdropBound = "true";
-      backdrop.addEventListener("click", closeAssistant);
-    }
-  }
-
-  function bindPanelCloseButtons() {
-    const bindings = [
-      ["closeFullscreenPanelBtn", "fullscreenPanel"],
-      ["closeSuggestionsPanelBtn", "suggestionsPanel"],
-      ["closeRecordDrawerBtn", "recordDrawer"],
-    ];
-
-    bindings.forEach(([buttonId, panelId]) => {
-      const button = byId(buttonId);
-      const panel = byId(panelId);
-      if (!button || !panel || button.dataset.closeBound === "true") return;
-
-      button.dataset.closeBound = "true";
-
-      button.addEventListener("click", () => {
-        setHidden(panel, true);
-
-        if (panelId === "recordDrawer") {
-          setHidden(byId("recordDrawerBackdrop"), true);
-        }
-      });
-    });
-
-    const drawerBackdrop = byId("recordDrawerBackdrop");
-    if (drawerBackdrop && drawerBackdrop.dataset.drawerBackdropBound !== "true") {
-      drawerBackdrop.dataset.drawerBackdropBound = "true";
-      drawerBackdrop.addEventListener("click", () => {
-        setHidden(byId("recordDrawer"), true);
-        setHidden(drawerBackdrop, true);
-      });
-    }
-  }
-
-  function bindTherapeuticPrompt() {
-    const prompt = byId("therapeuticPromptPanel");
-    const dismiss = byId("dismissTherapeuticPromptBtn");
-
-    dismiss?.addEventListener("click", () => setHidden(prompt, true));
-
-    document.addEventListener("click", (event) => {
-      const recordButton = event.target.closest(
-        '[data-action="incident"], [data-action="risk"], [data-nav-section="safeguarding"]'
-      );
-
-      if (!recordButton || !prompt) return;
-      setHidden(prompt, false);
-    });
-  }
-
-  function bindEntryReadinessBridge() {
-    if (document.body.dataset.entryReadinessBound === "true") return;
-    document.body.dataset.entryReadinessBound = "true";
-
-    const sync = () => {
-      const homeSelect = byId("homeSelect");
-      const childSelect = byId("youngPersonSelect");
-      const openBtn = byId("launchOpenCareHubBtn");
-
-      const homeText =
-        homeSelect?.selectedOptions?.[0]?.textContent?.trim() ||
-        byId("selectedHomeSummary")?.textContent?.trim() ||
-        "Not selected";
-
-      const childText =
-        childSelect?.selectedOptions?.[0]?.textContent?.trim() ||
-        byId("selectedChildSummary")?.textContent?.trim() ||
-        "Not selected";
-
-      const hasChild = !!childSelect?.value;
-
-      if (byId("launchReadyHome")) byId("launchReadyHome").textContent = homeText;
-      if (byId("launchReadyChild")) {
-        byId("launchReadyChild").textContent = hasChild ? childText : "Not selected";
-      }
-      if (byId("launchLastRefreshed")) {
-        byId("launchLastRefreshed").textContent = new Date().toLocaleTimeString(
-          "en-GB",
-          { hour: "2-digit", minute: "2-digit" }
-        );
-      }
-
-      if (openBtn) openBtn.disabled = !hasChild;
-    };
-
-    ["homeSelect", "youngPersonSelect"].forEach((id) => {
-      byId(id)?.addEventListener("change", sync);
-    });
-
-    byId("selectorRefreshBtn")?.addEventListener("click", () => {
-      window.setTimeout(sync, 350);
-    });
-
-    byId("launchOpenCareHubBtn")?.addEventListener("click", () => {
-      byId("openCareHubBtn")?.click();
-    });
-
-    const observerTargets = [byId("homeChipList"), byId("selectorList")].filter(Boolean);
-    observerTargets.forEach((target) => {
-      new MutationObserver(sync).observe(target, { childList: true, subtree: true });
-    });
-
-    sync();
-  }
-
-  function addClickFeedback() {
-    if (document.body.dataset.clickFeedbackBound === "true") return;
-    document.body.dataset.clickFeedbackBound = "true";
-
-    document.addEventListener("click", (event) => {
-      const button = event.target.closest(
-        "button, .primary-btn, .secondary-btn, .ghost-btn"
-      );
-
-      if (!button) return;
-
-      button.classList.add("is-clicked");
-      window.setTimeout(() => button.classList.remove("is-clicked"), 180);
-    });
-  }
-
-  function addProductionReadyClass() {
-    const app = byId("app");
-    if (!app) return;
-
-    requestAnimationFrame(() => {
-      app.classList.add("premium-ready", "care-hub-ready");
-      document.body.classList.add("indicare-shell-ready");
-    });
-  }
-
-  function showStartupError(error) {
-    const status =
-      byId("statusBar") || byId("selectorStatusMessage") || byId("statusMessage");
-
-    if (status) {
-      status.classList.remove("hidden");
-      status.removeAttribute("aria-hidden");
-      status.textContent =
-        "The Care Hub could not start. Check that /js/young-people-shell/index.js is available and has no import errors.";
-    }
-
-    console.error("[young-people-shell] failed to load modular shell", error);
-  }
-
-  async function loadModularShell() {
     try {
-      normaliseDataset();
-      addCareHubClasses();
-
-      await import(SHELL_MODULE);
-
-      log("modular shell loaded");
-      return true;
+      await apiStreamAssistant(
+        {
+          message,
+          response_mode: "young_people_shell",
+          context: {
+            young_person_id: state.youngPersonId,
+          },
+        },
+        {
+          onToken: (token) => {
+            if (target) target.textContent += token;
+          },
+          onDone: () => {
+            if (status) status.textContent = "Assistant ready.";
+          },
+          onError: (error) => {
+            if (status) status.textContent = "Assistant error.";
+            if (target) {
+              target.textContent += ` ${typeof error === "string" ? error : JSON.stringify(error)}`;
+            }
+          },
+        }
+      );
     } catch (error) {
-      showStartupError(error);
-      return false;
+      console.error("[young-people-shell] assistant failed", error);
+      if (status) status.textContent = `Error: ${error.message}`;
+      if (target) target.textContent = "I could not send that message. Please try again.";
     }
   }
 
-  function initEnhancements() {
-    addCareHubClasses();
-    enhanceSafeStartLayout();
-    initThemeMode();
-    initNightShiftMode();
-    initWelcomeMessage();
-    improveCareHubCopy();
-    enhanceMobileNavigation();
-    observeWorkspaceContent();
-    bindDialogFocusManagement();
-    bindSpeechToText();
-    improveComposerControls();
-    bindComposerModeControls();
-    improveAssistantText();
-    improveStatusAnnouncements();
-    addGlobalSearchShortcut();
-    addSafeExternalLinkHandling();
-    addLiveClockToShell();
-    addMobileBottomNavFallback();
-    closeOtherCareMenus();
-    bindAssistantLaunchers();
-    bindPanelCloseButtons();
-    bindTherapeuticPrompt();
-    bindEntryReadinessBridge();
-    addClickFeedback();
-    addProductionReadyClass();
+  function bindEvents() {
+    document.querySelectorAll("#ypTabs [data-tab]").forEach((button) => {
+      button.addEventListener("click", () => switchTab(button.dataset.tab));
+    });
+
+    document.querySelectorAll("[data-composer-type]").forEach((button) => {
+      button.addEventListener("click", () => openComposer(button.dataset.composerType));
+    });
+
+    $("ypComposerClose")?.addEventListener("click", closeComposer);
+    $("ypComposerBackdrop")?.addEventListener("click", closeComposer);
+    $("ypComposerSaveDraft")?.addEventListener("click", () => saveComposer("draft"));
+    $("ypComposerSubmit")?.addEventListener("click", () => saveComposer("submitted"));
+
+    $("ypComposerForm")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+    });
+
+    $("ypAssistantSend")?.addEventListener("click", sendAssistantMessage);
+
+    $("ypAssistantInput")?.addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        sendAssistantMessage();
+      }
+    });
   }
 
-  async function init() {
-    await loadModularShell();
-    initEnhancements();
+  async function bootstrap() {
+    state.youngPersonId = detectYoungPersonId();
+
+    if (!state.youngPersonId) {
+      setStatus("No young person ID found. Add ?young_person_id=1001 to test.");
+      document.querySelectorAll("[data-composer-type]").forEach((button) => {
+        button.disabled = true;
+      });
+      renderEmpty("No young person selected.");
+      return;
+    }
+
+    setText("ypPersonName", `Young person ${state.youngPersonId}`);
+    setText("ypPersonMeta", "Care Hub open");
+    setStatus(`Loaded young person ID ${state.youngPersonId}`);
+
+    bindEvents();
+    await loadActiveTab();
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
+    document.addEventListener("DOMContentLoaded", bootstrap, { once: true });
   } else {
-    init();
+    bootstrap();
   }
+
+  window.YoungPeopleShell = {
+    state,
+    openComposer,
+    closeComposer,
+    loadActiveTab,
+    switchTab,
+  };
 })();
