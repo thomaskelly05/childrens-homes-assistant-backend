@@ -92,8 +92,8 @@
         { name: "provision_name", label: "Provision / school", type: "text" },
         { name: "behaviour_summary", label: "Behaviour / presentation", type: "textarea" },
         { name: "learning_engagement", label: "Learning engagement", type: "textarea" },
-        { name: "issue_raised", label: "Any issue raised", type: "textarea" },
-        { name: "action_taken", label: "Action taken", type: "textarea" },
+        { name: "issue_raised", label: "Any issue raised", type: "textarea", placeholder: "Leave blank if no issue was raised." },
+        { name: "action_taken", label: "Action taken", type: "textarea", placeholder: "Leave blank if no action was needed." },
         { name: "professional_involved", label: "Professional involved", type: "text" },
         { name: "achievement_note", label: "Achievement / positive note", type: "textarea" },
       ],
@@ -708,6 +708,32 @@
     setText("ypComposerStatus", "");
   }
 
+  function isEmptyMeaning(value) {
+    return ["", "none", "none.", "n/a", "na", "no", "no.", "not applicable"].includes(
+      String(value ?? "").trim().toLowerCase()
+    );
+  }
+
+  function normaliseEducationPayload(payload) {
+    if (!Object.prototype.hasOwnProperty.call(payload, "issue_raised")) {
+      payload.issue_raised = "";
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(payload, "action_taken")) {
+      payload.action_taken = "";
+    }
+
+    if (isEmptyMeaning(payload.issue_raised)) {
+      payload.issue_raised = "";
+    }
+
+    if (isEmptyMeaning(payload.action_taken)) {
+      payload.action_taken = "";
+    }
+
+    return payload;
+  }
+
   function collectComposerPayload(status) {
     const fields = $("ypComposerFields");
 
@@ -727,13 +753,7 @@
     });
 
     if (state.composerType === "education_record") {
-      if (!Object.prototype.hasOwnProperty.call(payload, "issue_raised")) {
-        payload.issue_raised = "";
-      }
-
-      if (!Object.prototype.hasOwnProperty.call(payload, "action_taken")) {
-        payload.action_taken = "";
-      }
+      normaliseEducationPayload(payload);
     }
 
     if (state.composerType === "incident" && typeof payload.follow_up_required === "boolean") {
