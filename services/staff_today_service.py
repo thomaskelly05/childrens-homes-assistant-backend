@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from db.connection import get_db_connection
 from services.staff_profile_service import StaffProfileService
 
 
@@ -29,13 +30,15 @@ class StaffTodayService:
         appraisal = profile.get("appraisal") or {}
         probation = profile.get("probation") or {}
         induction = profile.get("induction") or {}
+        rota = self._rostering_today(staff)
 
-        due_items = []
-        reminders = []
-        warnings = []
+        due_items: list[dict[str, Any]] = []
+        reminders: list[dict[str, Any]] = []
+        warnings: list[dict[str, Any]] = []
         quick_links = [
             {"label": "My Profile", "href": "/my-profile"},
             {"label": "Academy", "href": "/academy"},
+            {"label": "Rostering", "href": "/rostering"},
             {"label": "Staff Hub", "href": "/staff-profiles"},
         ]
 
@@ -100,6 +103,38 @@ class StaffTodayService:
                     "href": f"/academy/module-detail.html?id={row.get('module_id') or row.get('id')}",
                 })
 
+        for shift in rota.get("today_shifts") or []:
+            due_items.append({
+                "type": "rota_shift",
+                "priority": "high",
+                "title": f"You are rostered today: {shift.get('shift_type')}",
+                "detail": f"{shift.get('start_time')} to {shift.get('end_time')} at {shift.get('home_name') or 'your home'}. Status: {shift.get('assignment_status') or 'assigned'}.",
+                "href": "/rostering",
+            })
+            if not shift.get("checked_in"):
+                reminders.append({
+                    "type": "check_in",
+                    "priority": "medium",
+                    "title": "Check-in not recorded for this shift",
+                    "detail": "Use rostering check-in when you arrive so attendance evidence is complete.",
+                    "href": "/rostering",
+                })
+            if shift.get("training_valid_until") and str(shift.get("training_valid_until")) < str(date.today()):
+                warnings.append({
+                    "type": "training_expired_for_shift",
+                    "priority": "high",
+                    "title": "Training may be expired before today’s shift",
+                    "detail": "Rostering has flagged a training validity date before this shift.",
+                })
+
+        for warning in rota.get("warnings") or []:
+            warnings.append({
+                "type": warning.get("type") or "rota_warning",
+                "priority": warning.get("level") or "medium",
+                "title": "Rostering warning",
+                "detail": warning.get("message") or "A rota issue needs review.",
+            })
+
         for need in intelligence.get("learning_needs") or []:
             reminders.append({
                 "type": "learning_need",
@@ -119,6 +154,10 @@ class StaffTodayService:
             })
 
         priority_score = int(intelligence.get("priority_score") or 0)
+        priority_score += min(20, len(rota.get("warnings") or []) * 5)
+        priority_score += min(10, len(rota.get("today_shifts") or []) * 2)
+        priority_score = max(0, min(priority_score, 100))
+
         if priority_score >= 70:
             warnings.append({
                 "type": "attention_score",
@@ -137,11 +176,118 @@ class StaffTodayService:
             "generated_at": datetime.utcnow().isoformat() + "Z",
             "priority_score": priority_score,
             "summary": self._summary(due_items, reminders, warnings),
-            "due_now": due_items[:12],
-            "reminders": reminders[:12],
-            "warnings": warnings[:12],
+            "due_now": due_items[:16],
+            "reminders": reminders[:16],
+            "warnings": warnings[:16],
+            "rota": rota,
             "quick_links": quick_links,
-            "assistant_context": self._assistant_context(staff, due_items, reminders, warnings, intelligence),
+            "assistant_context": self._assistant_context(staff, due_items, reminders, warnings, intelligence, rota),
+        }
+
+    def _rostering_today(self, staff: dict[str, Any]) -> dict[str, Any]:
+        user_id = staff.get("id")
+        email = staff.get("email")
+        full_name = " ".join([str(staff.get("first_name") or ""), str(staff.get("last_name") or "")]).strip()
+        today = date.today()
+
+        queries = [
+            (
+                """
+                SELECT
+                    rs.id AS shift_id,
+                    rs.home_id,
+                    h.name AS home_name,
+                    rs.shift_date,
+                    rs.shift_type,
+                    rs.start_time,
+                    rs.end_time,
+                    ra.assignment_status,
+                    st.id AS roster_staff_id,
+                    st.full_name,
+                    st.role,
+                    st.training_valid_until,
+                    EXISTS (
+                        SELECT 1 FROM staff_checkins sc
+                        WHERE sc.shift_id = rs.id
+                          AND sc.staff_id = st.id
+                          AND sc.event_type = 'check_in'
+                    ) AS checked_in
+                FROM roster_assignments ra
+                JOIN roster_shifts rs ON rs.id = ra.shift_id
+                LEFT JOIN homes h ON h.id = rs.home_id
+                JOIN staff st ON st.id = ra.staff_id
+                WHERE rs.shift_date = %s
+                  AND (st.user_id = %s OR st.email = %s OR LOWER(st.full_name) = LOWER(%s))
+                ORDER BY rs.start_time, rs.id
+                """,
+                (today, user_id, email, full_name),
+            ),
+            (
+                """
+                SELECT
+                    rs.id AS shift_id,
+                    rs.home_id,
+                    h.name AS home_name,
+                    rs.shift_date,
+                    rs.shift_type,
+                    rs.start_time,
+                    rs.end_time,
+                    ra.assignment_status,
+                    st.id AS roster_staff_id,
+                    st.full_name,
+                    st.role,
+                    st.training_valid_until,
+                    EXISTS (
+                        SELECT 1 FROM staff_checkins sc
+                        WHERE sc.shift_id = rs.id
+                          AND sc.staff_id = st.id
+                          AND sc.event_type = 'check_in'
+                    ) AS checked_in
+                FROM roster_assignments ra
+                JOIN roster_shifts rs ON rs.id = ra.shift_id
+                LEFT JOIN homes h ON h.id = rs.home_id
+                JOIN staff st ON st.id = ra.staff_id
+                WHERE rs.shift_date = %s
+                  AND (st.email = %s OR LOWER(st.full_name) = LOWER(%s))
+                ORDER BY rs.start_time, rs.id
+                """,
+                (today, email, full_name),
+            ),
+        ]
+
+        shifts: list[dict[str, Any]] = []
+        for query, params in queries:
+            try:
+                with get_db_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(query, params)
+                        rows = cur.fetchall()
+                shifts = [dict(row) for row in rows]
+                if shifts:
+                    break
+            except Exception:
+                continue
+
+        warnings: list[dict[str, Any]] = []
+        for shift in shifts:
+            if shift.get("training_valid_until") and str(shift.get("training_valid_until")) < str(today):
+                warnings.append({
+                    "level": "high",
+                    "type": "training_expired",
+                    "message": f"Training validity appears expired for {shift.get('shift_type')} today.",
+                })
+            if not shift.get("checked_in"):
+                warnings.append({
+                    "level": "medium",
+                    "type": "attendance_pending",
+                    "message": f"Check-in is not recorded for {shift.get('shift_type')} today.",
+                })
+
+        return {
+            "date": str(today),
+            "today_shifts": shifts,
+            "shift_count": len(shifts),
+            "warnings": warnings,
         }
 
     def _dated_status(self, value: Any, *, due_after_days: int) -> dict[str, str]:
@@ -172,7 +318,7 @@ class StaffTodayService:
 
     def _summary(self, due_items: list[dict[str, Any]], reminders: list[dict[str, Any]], warnings: list[dict[str, Any]]) -> str:
         if not due_items and not reminders and not warnings:
-            return "Nothing urgent is currently showing. Keep your profile, training and evidence up to date."
+            return "Nothing urgent is currently showing. Keep your profile, training, rota and evidence up to date."
         return f"{len(due_items)} actions due now, {len(reminders)} reminders and {len(warnings)} warnings."
 
     def _assistant_context(
@@ -182,16 +328,19 @@ class StaffTodayService:
         reminders: list[dict[str, Any]],
         warnings: list[dict[str, Any]],
         intelligence: dict[str, Any],
+        rota: dict[str, Any],
     ) -> dict[str, Any]:
         return {
             "staff_name": " ".join([str(staff.get("first_name") or ""), str(staff.get("last_name") or "")]).strip(),
             "role": staff.get("role"),
             "priority_score": intelligence.get("priority_score"),
+            "rota_today": rota,
             "top_due_items": due_items[:5],
             "top_reminders": reminders[:5],
             "warnings": warnings[:5],
             "suggested_questions": [
                 "What do I need to do today?",
+                "Am I on shift today?",
                 "What training should I complete first?",
                 "What should I discuss in supervision?",
                 "What evidence should I add to my portfolio?",
