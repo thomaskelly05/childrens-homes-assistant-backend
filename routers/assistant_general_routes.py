@@ -53,7 +53,7 @@ def _assistant_component_path() -> Path:
 
 
 def _inject_ofsted_ui_patch(html: str) -> str:
-    script = '<script src="/js/assistant-ofsted-ui-patch.js"></script>'
+    script = '<script src="/js/assistant-copilot-controller.js"></script>'
     if script in html:
         return html
     if "</body>" in html:
@@ -77,7 +77,7 @@ async def stream_general_assistant(
     current_user=Depends(get_current_user),
 ):
     user_id = _safe_user_id(current_user)
-    history = normalise_history(payload.history, max_items=12, max_chars=1600)
+    history = normalise_history(payload.history, max_items=12, max_chars=2200)
     conversation_id = safe_string(payload.conversation_id) or f"general-{user_id}"
 
     async def _stream():
@@ -86,8 +86,9 @@ async def stream_general_assistant(
         explainability: dict[str, Any] = {}
         assistant_scope: dict[str, Any] = {
             "assistant_mode": "general",
-            "scope": "global",
-            "scope_type": "global",
+            "assistant_surface": "standalone",
+            "scope": "public_guidance_only",
+            "scope_type": "public_guidance_only",
             "internal_data_access": False,
         }
         assistant_context: dict[str, Any] = {
@@ -96,6 +97,7 @@ async def stream_general_assistant(
         }
         suggested_actions: list[dict[str, Any]] = []
         safeguarding: dict[str, Any] = {}
+        boundary: dict[str, Any] = {}
 
         try:
             async for item in generate_general_assistant_stream(
@@ -141,6 +143,8 @@ async def stream_general_assistant(
                         ]
                     if isinstance(item.get("safeguarding"), dict):
                         safeguarding = item.get("safeguarding") or {}
+                    if isinstance(item.get("boundary"), dict):
+                        boundary = item.get("boundary") or {}
                     continue
 
         except Exception:
@@ -159,6 +163,7 @@ async def stream_general_assistant(
                     "assistant_context": assistant_context,
                     "suggested_actions": suggested_actions,
                     "safeguarding": safeguarding,
+                    "boundary": boundary,
                 },
             )
             yield _sse_done()
