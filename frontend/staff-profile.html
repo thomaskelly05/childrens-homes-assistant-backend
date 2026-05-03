@@ -3,44 +3,73 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Staff Profile | IndiCare OS</title>
+  <title>My Profile | IndiCare OS</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
 </head>
 
-<body style="padding:20px;font-family:system-ui;">
+<body style="margin:0;font-family:system-ui;background:#f6f7f9;color:#10201f;">
+  <main style="max-width:1180px;margin:0 auto;padding:24px;">
+    <header style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px;">
+      <section>
+        <p style="margin:0 0 6px;color:#55706d;text-transform:uppercase;letter-spacing:.08em;font-size:12px;">IndiCare OS</p>
+        <h1 id="staffProfileName" style="margin:0;font-size:34px;">My Profile</h1>
+        <p style="margin:8px 0 0;color:#55706d;">Your personal workspace for training, induction, supervision, appraisal, evidence and next actions.</p>
+      </section>
+      <nav style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/young-people-shell" style="padding:10px 14px;border:1px solid #cfd8d6;border-radius:12px;text-decoration:none;color:#163b3a;background:white;">Back to OS</a>
+        <a href="/academy" style="padding:10px 14px;border:1px solid #cfd8d6;border-radius:12px;text-decoration:none;color:#163b3a;background:white;">Academy</a>
+      </nav>
+    </header>
 
-<h1 id="staffProfileName">Staff Profile</h1>
-<p><strong>Role:</strong> <span id="staffProfileRole"></span></p>
-<p><strong>Status:</strong> <span id="staffProfileStatus"></span></p>
-<p><strong>Lifecycle Stage:</strong> <span id="staffProfileStage"></span></p>
-<p><strong>Priority Score:</strong> <span id="staffProfileScore"></span></p>
+    <div id="staffProfileError" style="color:#b00020;margin-bottom:12px;"></div>
 
-<div id="staffProfileError" style="color:red"></div>
+    <section style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px;">
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:16px;padding:16px;"><span style="color:#55706d;font-size:13px;">Role</span><strong id="staffProfileRole" style="display:block;margin-top:8px;font-size:20px;">—</strong></article>
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:16px;padding:16px;"><span style="color:#55706d;font-size:13px;">Status</span><strong id="staffProfileStatus" style="display:block;margin-top:8px;font-size:20px;">—</strong></article>
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:16px;padding:16px;"><span style="color:#55706d;font-size:13px;">Current stage</span><strong id="staffProfileStage" style="display:block;margin-top:8px;font-size:20px;">—</strong></article>
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:16px;padding:16px;"><span style="color:#55706d;font-size:13px;">Priority score</span><strong id="staffProfileScore" style="display:block;margin-top:8px;font-size:20px;">—</strong></article>
+    </section>
 
-<hr>
+    <section style="display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-bottom:18px;">
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
+        <h2 style="margin-top:0;">What I need to know now</h2>
+        <ul id="staffTodayList" style="line-height:1.55;"></ul>
+      </article>
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
+        <h2 style="margin-top:0;">Important dates</h2>
+        <ul id="staffDatesList" style="line-height:1.55;"></ul>
+      </article>
+    </section>
 
-<h2>Employment</h2>
-<pre id="staffEmployment"></pre>
+    <section style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px;">
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;"><h2 style="margin-top:0;">My training</h2><ul id="staffTrainingList"></ul></article>
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;"><h2 style="margin-top:0;">My supervision</h2><div id="staffSupervisionCard"></div></article>
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;"><h2 style="margin-top:0;">My evidence</h2><div id="staffEvidenceCard"></div></article>
+    </section>
 
-<h2>Lifecycle</h2>
-<pre id="staffLifecycle"></pre>
+    <section style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:18px;">
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
+        <h2 style="margin-top:0;">Lifecycle pathway</h2>
+        <ol id="staffLifecyclePath" style="line-height:1.7;"></ol>
+      </article>
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
+        <h2 style="margin-top:0;">Manager actions</h2>
+        <ul id="staffManagerActions" style="line-height:1.55;"></ul>
+      </article>
+    </section>
 
-<h2>Supervision</h2>
-<pre id="staffSupervision"></pre>
+    <section style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
+        <h2 style="margin-top:0;">Learning needs</h2>
+        <ul id="staffLearningNeeds" style="line-height:1.55;"></ul>
+      </article>
+      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
+        <h2 style="margin-top:0;">Recommended modules</h2>
+        <ul id="staffRecommendedModules" style="line-height:1.55;"></ul>
+      </article>
+    </section>
+  </main>
 
-<h2>Academy Summary</h2>
-<pre id="staffAcademy"></pre>
-
-<h2>Learning Needs</h2>
-<ul id="staffLearningNeeds"></ul>
-
-<h2>Recommended Modules</h2>
-<ul id="staffRecommendedModules"></ul>
-
-<h2>Manager Actions</h2>
-<ul id="staffManagerActions"></ul>
-
-<script src="/js/staff-profile.js"></script>
-
+  <script src="/js/staff-profile.js"></script>
 </body>
 </html>

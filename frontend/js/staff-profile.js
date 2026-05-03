@@ -1,71 +1,64 @@
-const staffProfileParams = new URLSearchParams(window.location.search);
-const staffProfileId = staffProfileParams.get('id');
+const params = new URLSearchParams(window.location.search);
+const id = params.get('id');
 
-function staffProfileText(value, fallback = 'Not recorded') {
-  if (value === null || value === undefined || value === '') return fallback;
-  return String(value);
-}
+function el(id){return document.getElementById(id)}
+function txt(v,f='—'){return (v===null||v===undefined||v==='')?f:String(v)}
 
-function staffProfileJson(value) {
-  return JSON.stringify(value || {}, null, 2);
-}
-
-function staffProfileList(containerId, rows, render) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  container.innerHTML = '';
-  if (!Array.isArray(rows) || rows.length === 0) {
-    const li = document.createElement('li');
-    li.textContent = 'Nothing currently flagged.';
-    container.appendChild(li);
-    return;
-  }
-  rows.forEach((row) => {
-    const li = document.createElement('li');
-    li.textContent = render(row);
-    container.appendChild(li);
+function list(id,data,map){
+  const c=el(id); if(!c)return; c.innerHTML='';
+  if(!data||!data.length){c.innerHTML='<li>No items</li>';return}
+  data.forEach(d=>{
+    const li=document.createElement('li');
+    li.innerText=map(d);
+    c.appendChild(li);
   });
 }
 
-async function loadStaffProfile() {
-  const endpoint = staffProfileId ? '/staff/' + encodeURIComponent(staffProfileId) : '/staff/me';
-  const response = await fetch(endpoint, { credentials: 'include' });
-  const json = await response.json();
-  if (!response.ok || !json.ok) throw new Error(json.detail || json.error || 'Could not load staff profile');
-  const data = json.data;
-  const staff = data.staff || {};
-  const intelligence = (((data.academy || {}).intelligence) || {});
+async function load(){
+  const res=await fetch(id?`/staff/${id}`:'/staff/me');
+  const json=await res.json();
+  const d=json.data;
+  const i=(d.academy||{}).intelligence||{};
 
-  document.getElementById('staffProfileName').textContent = [staff.first_name, staff.last_name].filter(Boolean).join(' ') || 'Staff member';
-  document.getElementById('staffProfileRole').textContent = staffProfileText(staff.role);
-  document.getElementById('staffProfileStatus').textContent = staffProfileText((data.employment || {}).status);
-  document.getElementById('staffProfileStage').textContent = staffProfileText((data.lifecycle || {}).current_stage);
-  document.getElementById('staffProfileScore').textContent = staffProfileText(intelligence.priority_score, '0');
+  el('staffProfileName').innerText = d.staff.first_name+' '+d.staff.last_name;
+  el('staffProfileRole').innerText = txt(d.staff.role);
+  el('staffProfileStatus').innerText = txt(d.employment.status);
+  el('staffProfileStage').innerText = txt(d.lifecycle.current_stage);
+  el('staffProfileScore').innerText = txt(i.priority_score);
 
-  document.getElementById('staffEmployment').textContent = staffProfileJson(data.employment);
-  document.getElementById('staffLifecycle').textContent = staffProfileJson(data.lifecycle);
-  document.getElementById('staffSupervision').textContent = staffProfileJson(data.supervision);
-  document.getElementById('staffAcademy').textContent = staffProfileJson({
-    modules: ((data.academy || {}).modules || []).length,
-    workbooks: ((data.academy || {}).workbooks || []).length,
-    certificates: ((data.academy || {}).certificates || []).length,
-    evidence: ((data.academy || {}).evidence || []).length
-  });
+  // TODAY PRIORITIES
+  const today=[];
+  (i.learning_needs||[]).forEach(n=> today.push(n.title));
+  (d.manager_actions||[]).forEach(a=> today.push(a.action));
+  list('staffTodayList',today,v=>v);
 
-  staffProfileList('staffLearningNeeds', intelligence.learning_needs || [], (item) => {
-    return staffProfileText(item.title) + ' - ' + staffProfileText(item.priority, 'priority not set');
-  });
-  staffProfileList('staffRecommendedModules', intelligence.recommended_modules || [], (item) => {
-    return staffProfileText(item.title) + ' - ' + staffProfileText(item.reason, 'recommended');
-  });
-  staffProfileList('staffManagerActions', data.manager_actions || [], (item) => {
-    return staffProfileText(item.action) + ' - ' + staffProfileText(item.priority, 'priority not set');
-  });
+  // DATES (basic placeholder until DB fields expand)
+  const dates=[];
+  if(d.lifecycle?.probation) dates.push('Probation review required');
+  if(d.lifecycle?.appraisal) dates.push('Appraisal due/recorded');
+  list('staffDatesList',dates,v=>v);
+
+  // TRAINING
+  list('staffTrainingList',i.recommended_modules||[],m=>m.title);
+
+  // SUPERVISION
+  el('staffSupervisionCard').innerText = txt(d.supervision?.last_supervision_date,'No supervision recorded');
+
+  // EVIDENCE
+  el('staffEvidenceCard').innerText = (d.academy?.evidence||[]).length + ' evidence items';
+
+  // LIFECYCLE PATH
+  const path=['onboarding','induction','probation','active','appraisal','exit'];
+  list('staffLifecyclePath',path,p=>p.toUpperCase());
+
+  // MANAGER ACTIONS
+  list('staffManagerActions',d.manager_actions||[],a=>a.action);
+
+  // LEARNING
+  list('staffLearningNeeds',i.learning_needs||[],n=>n.title);
+  list('staffRecommendedModules',i.recommended_modules||[],m=>m.title);
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  loadStaffProfile().catch((error) => {
-    const errorBox = document.getElementById('staffProfileError');
-    if (errorBox) errorBox.textContent = error.message;
-  });
+load().catch(e=>{
+  el('staffProfileError').innerText=e.message;
 });
