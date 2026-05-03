@@ -14,47 +14,44 @@ function list(id,data,map){
   });
 }
 
+async function loadToday(){
+  const res=await fetch(id?`/staff-today/${id}`:'/staff-today/me');
+  const json=await res.json();
+  if(!json.ok) return null;
+  return json.data;
+}
+
 async function load(){
   const res=await fetch(id?`/staff/${id}`:'/staff/me');
   const json=await res.json();
   const d=json.data;
   const i=(d.academy||{}).intelligence||{};
+  const today=await loadToday();
 
   el('staffProfileName').innerText = d.staff.first_name+' '+d.staff.last_name;
   el('staffProfileRole').innerText = txt(d.staff.role);
   el('staffProfileStatus').innerText = txt(d.employment.status);
   el('staffProfileStage').innerText = txt(d.lifecycle.current_stage);
-  el('staffProfileScore').innerText = txt(i.priority_score);
+  el('staffProfileScore').innerText = txt(today?.priority_score ?? i.priority_score);
 
-  // TODAY PRIORITIES
-  const today=[];
-  (i.learning_needs||[]).forEach(n=> today.push(n.title));
-  (d.manager_actions||[]).forEach(a=> today.push(a.action));
-  list('staffTodayList',today,v=>v);
+  if(today){
+    list('staffTodayList',today.due_now||[],v=>`${v.title} - ${v.detail||''}`);
+    list('staffDatesList',[...(today.reminders||[]),...(today.warnings||[])],v=>`${v.title} - ${v.detail||''}`);
+  } else {
+    const fallback=[];
+    (i.learning_needs||[]).forEach(n=> fallback.push(n.title));
+    (d.manager_actions||[]).forEach(a=> fallback.push(a.action));
+    list('staffTodayList',fallback,v=>v);
+    list('staffDatesList',[],v=>v);
+  }
 
-  // DATES (basic placeholder until DB fields expand)
-  const dates=[];
-  if(d.lifecycle?.probation) dates.push('Probation review required');
-  if(d.lifecycle?.appraisal) dates.push('Appraisal due/recorded');
-  list('staffDatesList',dates,v=>v);
-
-  // TRAINING
   list('staffTrainingList',i.recommended_modules||[],m=>m.title);
-
-  // SUPERVISION
   el('staffSupervisionCard').innerText = txt(d.supervision?.last_supervision_date,'No supervision recorded');
-
-  // EVIDENCE
   el('staffEvidenceCard').innerText = (d.academy?.evidence||[]).length + ' evidence items';
 
-  // LIFECYCLE PATH
   const path=['onboarding','induction','probation','active','appraisal','exit'];
   list('staffLifecyclePath',path,p=>p.toUpperCase());
-
-  // MANAGER ACTIONS
   list('staffManagerActions',d.manager_actions||[],a=>a.action);
-
-  // LEARNING
   list('staffLearningNeeds',i.learning_needs||[],n=>n.title);
   list('staffRecommendedModules',i.recommended_modules||[],m=>m.title);
 }
