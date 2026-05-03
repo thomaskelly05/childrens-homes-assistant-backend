@@ -9,7 +9,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from auth.tokens import decode_session_token
-from auth.routes import settings as auth_settings
+from routers.auth_routes import settings as auth_settings
 from db.connection import get_db_connection, release_db_connection
 
 logger = logging.getLogger("indicare.access_scope")
