@@ -60,6 +60,12 @@ class InspectionOSService:
         week_start = date.today() - timedelta(days=date.today().weekday())
         roster = self._home_roster_week(home_id=home_id, week_start=week_start)
         shift_safety = self._shift_safety_for_home(roster)
+        leadership_oversight = self._leadership_oversight(home_id=home_id)
+        enforcement = self._enforcement_for_home(shift_safety, staff_cards)
+        oversight_alerts = self._oversight_gap_alerts(leadership_oversight, context="home")
+        if oversight_alerts:
+            enforcement.setdefault("gates", []).extend(oversight_alerts)
+            enforcement["status"] = "action_required"
         return {
             "generated_at": self._now(),
             "home_id": home_id,
@@ -71,12 +77,12 @@ class InspectionOSService:
             },
             "shift_safety": shift_safety,
             "responsibility": self._responsibility_for_home(home_id),
-            "leadership_oversight": self._leadership_oversight(home_id=home_id),
+            "leadership_oversight": leadership_oversight,
             "child_voice": self._child_voice(home_id=home_id),
             "consistency": self._consistency(home_id=home_id),
             "workforce_competency": self._workforce_competency(staff_cards),
             "safeguarding_story": self._safeguarding_story(home_id=home_id),
-            "enforcement": self._enforcement_for_home(shift_safety, staff_cards),
+            "enforcement": enforcement,
         }
 
     def child_operating_brief(self, *, young_person_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
@@ -91,13 +97,15 @@ class InspectionOSService:
                 summary="Manager opened child inspection operating brief.",
                 outcome="Child-level leadership oversight evidence recorded.",
             )
+        leadership_oversight = self._leadership_oversight(young_person_id=young_person_id)
         return {
             "generated_at": self._now(),
             "young_person_id": young_person_id,
             "responsibility": self._responsibility_for_child(young_person_id),
             "child_voice": self._child_voice(young_person_id=young_person_id),
             "safeguarding_story": self._safeguarding_story(young_person_id=young_person_id),
-            "leadership_oversight": self._leadership_oversight(young_person_id=young_person_id),
+            "leadership_oversight": leadership_oversight,
+            "oversight_alerts": self._oversight_gap_alerts(leadership_oversight, context="child"),
             "consistency": self._consistency(young_person_id=young_person_id),
         }
 
@@ -290,7 +298,32 @@ class InspectionOSService:
                 (home_id, home_id, young_person_id, young_person_id),
             ),
         ])
-        return {"recent_reviews": rows, "review_count": len(rows), "status": "no_recent_oversight" if not rows else "active"}
+        latest = rows[0].get("created_at") if rows else None
+        return {
+            "recent_reviews": rows,
+            "review_count": len(rows),
+            "latest_review_at": latest,
+            "status": "no_recent_oversight" if not rows else "active",
+        }
+
+    def _oversight_gap_alerts(self, oversight: dict[str, Any], *, context: str) -> list[dict[str, Any]]:
+        rows = oversight.get("recent_reviews") or []
+        if not rows:
+            return [{
+                "gate": "leadership_oversight",
+                "status": "manager_review_required",
+                "priority": "high",
+                "message": f"No recent leadership oversight is recorded for this {context}.",
+            }]
+        latest = self._parse_date(rows[0].get("created_at"))
+        if latest and (date.today() - latest).days > 7:
+            return [{
+                "gate": "leadership_oversight",
+                "status": "manager_review_required",
+                "priority": "high",
+                "message": f"Leadership oversight for this {context} is older than 7 days.",
+            }]
+        return []
 
     def _child_voice(self, *, home_id: int | None = None, young_person_id: int | None = None) -> dict[str, Any]:
         since = date.today() - timedelta(days=14)
@@ -472,6 +505,19 @@ class InspectionOSService:
             except Exception:
                 continue
         return []
+
+    def _parse_date(self, value: Any) -> date | None:
+        if isinstance(value, date) and not isinstance(value, datetime):
+            return value
+        if isinstance(value, datetime):
+            return value.date()
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+        except Exception:
+            try:
+                return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+            except Exception:
+                return None
 
     def _current_user_id(self, current_user: dict[str, Any]) -> int | None:
         value = current_user.get("id") or current_user.get("user_id")
