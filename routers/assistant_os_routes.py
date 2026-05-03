@@ -22,6 +22,7 @@ from services.assistant_security import (
     role_can_access_scope,
     safe_string,
 )
+from services.young_people_assistant_context_service import build_young_person_assistant_context
 
 router = APIRouter(prefix="/assistant/os", tags=["OS Assistant"])
 
@@ -99,13 +100,6 @@ def _assert_home_context_for_scope(
     current_user: dict[str, Any],
     scope: str,
 ) -> None:
-    """
-    Basic guard to stop OS assistant calls being made without a usable user/home context.
-
-    Detailed child/home/provider permission checks should still remain inside the legacy route
-    and underlying context builders, because they know the exact payload shape and selected
-    young person/home/provider identifiers.
-    """
     role = _normalise_role(current_user)
 
     if role in {"super_admin", "superadmin", "admin", "administrator"}:
@@ -128,6 +122,19 @@ def _preflight_assistant_request(
     _assert_scope_access(current_user, scope)
     _assert_home_context_for_scope(current_user, scope)
     _assert_safe_message(message)
+
+
+@router.get("/context/{young_person_id}")
+def get_os_context(
+    young_person_id: int,
+    current_user=Depends(get_current_user),
+):
+    _assert_authenticated_user(current_user)
+    _assert_scope_access(current_user, "child")
+
+    return build_young_person_assistant_context(
+        young_person_id=young_person_id
+    )
 
 
 @router.post("/young-people/stream")
