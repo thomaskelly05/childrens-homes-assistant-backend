@@ -9,6 +9,8 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from middleware.security_middleware import AuditLoggingMiddleware, SecurityHeadersMiddleware
+
 from db.connection import close_db_pool, init_db_pool
 from db.legal_acceptance_db import init_legal_acceptance_table
 from db.mfa_db import init_mfa_tables
@@ -33,6 +35,7 @@ ROUTERS = [
     "routers.passkey_routes",
     "routers.legal_acceptance_routes",
     "routers.debug_health_routes",
+    "routers.security_routes",
     "routers.frontend_compat",
     "routers.young_people_shell_item_compat_routes",
     "routers.account_routes",
@@ -242,6 +245,9 @@ def create_app() -> FastAPI:
         https_only=(os.getenv("COOKIE_SECURE", "true").lower() == "true"),
         max_age=60 * 60 * 24 * 14,
     )
+
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuditLoggingMiddleware)
 
     app.add_middleware(
         CORSMiddleware,
