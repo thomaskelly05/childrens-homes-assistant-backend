@@ -44,6 +44,7 @@ ROUTERS = [
     "routers.ai_note_export_routes",
     "routers.assistant_general_routes",
     "routers.assistant_os_routes",
+    "routers.operational_intelligence_routes",
     "routers.assistant_partner_api",
     "routers.chat_routes",
     "routers.document_library_routes",
@@ -94,6 +95,7 @@ ROUTERS = [
     "routers.academy_routes",
     "routers.academy_intelligence_routes",
     "routers.staff_profile_routes",
+    "routers.staff_today_routes",
 ]
 
 
@@ -177,6 +179,12 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/young-people-shell.html": frontend("young-people-shell.html"),
         "/childrens-home-os": frontend("young-people-shell.html"),
         "/childrens-home-os.html": frontend("young-people-shell.html"),
+        "/os-dashboard": frontend("os-dashboard.html"),
+        "/os-dashboard.html": frontend("os-dashboard.html"),
+        "/staff-dashboard": frontend("os-dashboard.html"),
+        "/manager-dashboard": frontend("os-dashboard.html"),
+        "/ri-dashboard": frontend("os-dashboard.html"),
+        "/provider-dashboard": frontend("os-dashboard.html"),
         "/rostering": frontend("rostering.html"),
         "/rostering.html": frontend("rostering.html"),
         "/founder-hq": frontend("founder-hq.html"),
