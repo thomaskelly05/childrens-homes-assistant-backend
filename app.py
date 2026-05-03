@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from middleware.access_scope_middleware import AccessScopeMiddleware
 from middleware.security_middleware import AuditLoggingMiddleware, SecurityHeadersMiddleware
 
 from db.connection import close_db_pool, init_db_pool
@@ -248,6 +249,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditLoggingMiddleware)
+    app.add_middleware(AccessScopeMiddleware)
 
     app.add_middleware(
         CORSMiddleware,
