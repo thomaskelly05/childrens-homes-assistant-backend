@@ -12,6 +12,12 @@ from assistant.knowledge_loader import (
     select_relevant_python_knowledge,
 )
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
+from services.assistant_data_boundary import (
+    BOUNDARY_REDIRECT_MESSAGE,
+    build_boundary_metadata,
+    detect_internal_data_request,
+    standalone_boundary_prompt_block,
+)
 from services.assistant_security import (
     contains_prompt_injection_attempt,
     normalise_history,
@@ -58,7 +64,9 @@ def _general_system_prompt(response_mode: str) -> str:
     base = """
 You are IndiCare General Assistant.
 
-You are a specialist guidance assistant for UK residential children's homes. Your role is to help adults answer practice questions, improve recording, prepare for oversight, and think in a child-centred, safeguarding-aware and inspection-ready way.
+You are the standalone IndiCare Assistant for UK residential children's homes. Your role is to help adults answer practice questions, improve recording, prepare for oversight, and think in a child-centred, safeguarding-aware and inspection-ready way.
+
+You are not the IndiCare OS Assistant. You do not have access to live IndiCare OS records, child profiles, home records, chronology, daily notes, incidents, risk assessments, quality dashboards, staff records, or database content.
 
 Inspection-ready operating principles:
 - Always centre the child's lived experience, safety, welfare, progress and day-to-day experience.
@@ -69,11 +77,12 @@ Inspection-ready operating principles:
 
 Hard boundaries:
 - You do not have automatic access to internal database records, dashboards, home data, child data, quality dashboards, compliance records, or Ofsted evidence unless the user explicitly provides that content in the message or attached material.
-- Use only information supplied by the user, selected IndiCare knowledge and official source summaries provided in this prompt.
+- Use only information supplied by the user in the current conversation, selected IndiCare public practice knowledge, and official source summaries provided in this prompt.
 - Do not invent names, dates, times, incidents, disclosures, injuries, restraints, missing episodes, medication, staff actions, professional opinions or outcomes.
 - If essential facts are missing, either use neutral placeholders sparingly or say what detail is needed.
 - Do not present assumptions as facts.
-- If asked about internal records that were not supplied, say that the user needs to provide the record/export or use the OS Assistant.
+- If asked about internal records that were not supplied, say that the user needs to provide the record/export or use the OS Assistant inside the authorised IndiCare OS workspace.
+- Never say or imply: "I checked the record", "your records show", "the system shows", "from the chronology", "based on existing notes", or similar unless the user pasted that exact content into the current prompt.
 
 Care-recording principles:
 - Prefer concise, factual, chronological writing.
@@ -156,13 +165,93 @@ async def generate_general_assistant_stream(
     mode = _normalise_response_mode(response_mode)
     safe_history = normalise_history(history, max_items=12, max_chars=1600)
     injection_flag = contains_prompt_injection_attempt(clean_message)
+    internal_data_request = detect_internal_data_request(clean_message)
+    boundary_metadata = build_boundary_metadata(
+        internal_data_request_detected=internal_data_request
+    )
     safeguarding = analyse_safeguarding_escalation(clean_message)
 
     selected_knowledge = select_relevant_python_knowledge(clean_message, max_modules=6)
     knowledge_sources = build_knowledge_source_summary(selected_knowledge)
     official_sources = select_official_sources(clean_message, max_sources=4)
 
+    yield {
+        "type": "progress",
+        "content": "Preparing guidance response.",
+    }
+
+    if internal_data_request:
+        final_runtime = {
+            "assistant_mode": "general",
+            "assistant_type": "standalone",
+            "scope_type": "public_guidance_only",
+            "internal_data_access": False,
+            "response_mode": mode,
+            "prompt_injection_flagged": injection_flag,
+            "internal_data_request_detected": True,
+            "safeguarding_level": safeguarding.get("level"),
+            "follow_up_required": safeguarding.get("follow_up_required"),
+            "knowledge_modules_loaded": [item.get("module") for item in knowledge_sources],
+            "official_sources_loaded": [item.get("source_id") for item in official_sources],
+        }
+        final_explainability = {
+            "assistant_mode": "general",
+            "data_boundary": "standalone_public_guidance_only",
+            "reasoning_summary": (
+                "Standalone assistant boundary guard stopped a request that appeared to ask for internal OS records."
+            ),
+            "boundary": boundary_metadata,
+            "knowledge_sources": knowledge_sources,
+            "official_sources": official_sources,
+            "safeguarding": {
+                "level": safeguarding.get("level"),
+                "banner": safeguarding.get("banner"),
+                "matched_signals": safeguarding.get("matched_signals"),
+            },
+            "security_notes": [
+                "Standalone assistant cannot access or retrieve IndiCare OS records."
+            ],
+        }
+
+        yield {"type": "token", "content": BOUNDARY_REDIRECT_MESSAGE}
+        yield {
+            "type": "meta",
+            "sources": official_sources,
+            "runtime": final_runtime,
+            "explainability": final_explainability,
+            "assistant_scope": {
+                "assistant_mode": "general",
+                "assistant_surface": "standalone",
+                "scope": "public_guidance_only",
+                "scope_type": "public_guidance_only",
+                "internal_data_access": False,
+            },
+            "assistant_context": {
+                "guidance_only": True,
+                "stateless": True,
+                "history_items_loaded": len(safe_history),
+                "selected_knowledge_modules": [item.get("module") for item in knowledge_sources],
+                "boundary": boundary_metadata,
+            },
+            "suggested_actions": [
+                {
+                    "label": "Use OS Assistant inside authorised IndiCare OS workspace",
+                    "action_type": "boundary_redirect",
+                    "payload": {"target": "os_assistant"},
+                },
+                {
+                    "label": "Paste the relevant record text here for guidance-only support",
+                    "action_type": "guidance_prompt",
+                    "payload": {"boundary": "user_supplied_text_only"},
+                },
+            ],
+            "safeguarding": safeguarding,
+            "boundary": boundary_metadata,
+        }
+        return
+
     system_prompt = _general_system_prompt(mode)
+    system_prompt = f"{system_prompt}\n\n{standalone_boundary_prompt_block()}"
 
     knowledge_block = _build_selected_knowledge_block(selected_knowledge)
     if knowledge_block:
@@ -188,11 +277,6 @@ async def generate_general_assistant_stream(
     model, temperature, max_tokens = _model_config_for_mode(mode)
     provider = get_llm_provider()
 
-    yield {
-        "type": "progress",
-        "content": "Preparing guidance response.",
-    }
-
     provider_runtime: dict[str, Any] = {}
     provider_explainability: dict[str, Any] = {}
 
@@ -205,9 +289,12 @@ async def generate_general_assistant_stream(
                 max_tokens=max_tokens,
                 metadata={
                     "assistant_mode": "general",
+                    "assistant_surface": "standalone",
                     "conversation_id": safe_string(conversation_id),
                     "user_id": safe_string(user_id),
                     "structured_output": True,
+                    "internal_data_access": False,
+                    "data_boundary": "public_guidance_only",
                     "safeguarding_level": safeguarding.get("level"),
                 },
             )
@@ -236,11 +323,14 @@ async def generate_general_assistant_stream(
 
     final_runtime = {
         "assistant_mode": "general",
-        "assistant_type": "general",
-        "scope_type": "global",
+        "assistant_type": "standalone",
+        "assistant_surface": "standalone",
+        "scope_type": "public_guidance_only",
         "internal_data_access": False,
+        "data_boundary": "public_guidance_only",
         "response_mode": mode,
         "prompt_injection_flagged": injection_flag,
+        "internal_data_request_detected": False,
         "safeguarding_level": safeguarding.get("level"),
         "follow_up_required": safeguarding.get("follow_up_required"),
         "knowledge_modules_loaded": [item.get("module") for item in knowledge_sources],
@@ -250,10 +340,11 @@ async def generate_general_assistant_stream(
 
     final_explainability = {
         "assistant_mode": "general",
-        "data_boundary": "guidance_plus_selected_knowledge",
+        "data_boundary": "standalone_public_guidance_only",
         "reasoning_summary": (
-            "General assistant response generated using selected IndiCare practice knowledge, safeguarding escalation metadata and relevant official source metadata where available."
+            "Standalone assistant response generated using user-supplied text, selected public IndiCare practice knowledge, safeguarding escalation metadata and relevant official source metadata where available. No internal OS records were accessed."
         ),
+        "boundary": boundary_metadata,
         "knowledge_sources": knowledge_sources,
         "official_sources": official_sources,
         "safeguarding": {
@@ -276,8 +367,9 @@ async def generate_general_assistant_stream(
         "explainability": final_explainability,
         "assistant_scope": {
             "assistant_mode": "general",
-            "scope": "global",
-            "scope_type": "global",
+            "assistant_surface": "standalone",
+            "scope": "public_guidance_only",
+            "scope_type": "public_guidance_only",
             "internal_data_access": False,
         },
         "assistant_context": {
@@ -285,7 +377,9 @@ async def generate_general_assistant_stream(
             "stateless": True,
             "history_items_loaded": len(safe_history),
             "selected_knowledge_modules": [item.get("module") for item in knowledge_sources],
+            "boundary": boundary_metadata,
         },
         "suggested_actions": safeguarding.get("suggested_actions") or [],
         "safeguarding": safeguarding,
+        "boundary": boundary_metadata,
     }
