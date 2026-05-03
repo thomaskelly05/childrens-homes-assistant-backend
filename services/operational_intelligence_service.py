@@ -207,6 +207,14 @@ def _group_by_home(events: list[dict[str, Any]], home_names: dict[int, str]) -> 
     return sorted(rows, key=lambda row: (-row["risk_score"], -row["total_events"]))
 
 
+def _event_date(event: dict[str, Any]) -> date | None:
+    raw = event.get("event_date")
+    try:
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).date()
+    except Exception:
+        return None
+
+
 def _trend_series(events: list[dict[str, Any]], days: int) -> list[dict[str, Any]]:
     bucket_count = 7 if days <= 30 else 10
     today = date.today()
@@ -215,15 +223,7 @@ def _trend_series(events: list[dict[str, Any]], days: int) -> list[dict[str, Any
     for index in range(bucket_count):
         end = today - timedelta(days=index * step)
         start = max(today - timedelta(days=days), end - timedelta(days=step - 1))
-        items = []
-        for event in events:
-            raw = event.get("event_date")
-            try:
-                event_date = datetime.fromisoformat(str(raw).replace("Z", "+00:00")).date()
-            except Exception:
-                continue
-            if start <= event_date <= end:
-                items.append(event)
+        items = [event for event in events if (event_date := _event_date(event)) and start <= event_date <= end]
         counts = Counter(str(item.get("record_type") or "record") for item in items)
         buckets.append({
             "label": f"{start.strftime('%d %b')} - {end.strftime('%d %b')}",
@@ -233,6 +233,55 @@ def _trend_series(events: list[dict[str, Any]], days: int) -> list[dict[str, Any
             "missing_episodes": counts.get("missing_episode", 0),
         })
     return list(reversed(buckets))
+
+
+def _predictive_signals(events: list[dict[str, Any]], trends: list[dict[str, Any]], homes: list[dict[str, Any]]) -> list[dict[str, str]]:
+    signals: list[dict[str, str]] = []
+    if len(trends) >= 2:
+        previous = trends[-2]
+        latest = trends[-1]
+        if latest.get("incidents", 0) > previous.get("incidents", 0):
+            signals.append({"level": "warning", "title": "Incident trend rising", "summary": "The latest trend window shows more incidents than the previous window. Check whether behaviour support and risk plans remain current."})
+        if latest.get("safeguarding", 0) > previous.get("safeguarding", 0):
+            signals.append({"level": "high", "title": "Safeguarding trend rising", "summary": "Safeguarding activity has increased in the latest trend window. Check escalation, management oversight and external notifications."})
+        if latest.get("missing_episodes", 0) > previous.get("missing_episodes", 0):
+            signals.append({"level": "high", "title": "Missing episode trend rising", "summary": "Missing episode activity has increased. Check return home interviews, risk controls and multi-agency planning."})
+
+    high_homes = [home for home in homes if home.get("risk_score", 0) >= 70]
+    if high_homes:
+        signals.append({"level": "high", "title": "High-risk home(s) identified", "summary": f"{len(high_homes)} home(s) are currently scoring high risk. Prioritise leadership review and evidence checks."})
+
+    if events and not any(event.get("record_type") == "keywork" for event in events):
+        signals.append({"level": "medium", "title": "Child voice visibility risk", "summary": "No keywork evidence is visible in this window. This may weaken inspection evidence of wishes and feelings."})
+
+    return signals[:6]
+
+
+def _inspection_report(scope: str, score: int, counts: Counter[str], alerts: list[dict[str, Any]], homes: list[dict[str, Any]], signals: list[dict[str, str]]) -> dict[str, Any]:
+    high_homes = [home for home in homes if home.get("risk_score", 0) >= 70]
+    return {
+        "title": f"IndiCare {scope.title()} Inspection Summary",
+        "risk_statement": f"Current operational risk is scored at {score}/100 ({_risk_band(score)}).",
+        "headline_findings": [
+            f"{counts.get('incident', 0)} incident(s), {counts.get('safeguarding', 0)} safeguarding record(s), and {counts.get('missing_episode', 0)} missing episode(s) are visible in the review window.",
+            f"{len(high_homes)} home(s) currently require high-priority leadership attention.",
+            f"{len(alerts)} live alert(s) and {len(signals)} predictive signal(s) have been generated.",
+        ],
+        "strengths_to_check": [
+            "Evidence of child voice through keywork, daily life records and direct work.",
+            "Clear manager oversight on incidents, safeguarding and risk reviews.",
+            "Plans updated in response to meaningful events and changing needs.",
+        ],
+        "challenge_points": [
+            item.get("summary", item.get("title", "Review required")) for item in [*alerts, *signals]
+        ][:8],
+        "recommended_leadership_actions": [
+            "Prioritise high-risk homes and safeguarding alerts for management review.",
+            "Check that incidents and safeguarding concerns are linked to plans and risk assessments.",
+            "Confirm child voice and impact are evidenced, not just events recorded.",
+            "Use the trend view to determine whether risk is increasing, reducing or stable.",
+        ],
+    }
 
 
 def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], days: int = 30) -> dict[str, Any]:
@@ -265,6 +314,8 @@ def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], 
         homes = _group_by_home(events, home_names)
         high_risk_homes = [home for home in homes if home.get("risk_score", 0) >= 70]
         trends = _trend_series(events, safe_days)
+        predictive_signals = _predictive_signals(events, trends, homes)
+        inspection_report = _inspection_report(scope, score, counts, alerts, homes, predictive_signals)
 
         return {
             "ok": True,
@@ -284,9 +335,12 @@ def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], 
                 "homes_visible": len(homes),
                 "risk_score": score,
                 "high_risk_homes": len(high_risk_homes),
+                "predictive_signals": len(predictive_signals),
             },
             "counts_by_category": dict(counts),
             "alerts": alerts,
+            "predictive_signals": predictive_signals,
+            "inspection_report": inspection_report,
             "homes": homes,
             "ranked_homes": homes,
             "high_risk_homes": high_risk_homes,
@@ -297,13 +351,9 @@ def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], 
                 f"{counts.get('incident', 0)} incident(s) across the current window.",
                 f"{counts.get('safeguarding', 0)} safeguarding record(s) across the current window.",
                 f"{len(high_risk_homes)} home(s) currently score as high risk.",
+                f"{len(predictive_signals)} predictive signal(s) require review.",
             ],
-            "recommended_actions": [
-                "Review all high-priority safeguarding and missing episode alerts first.",
-                "Check whether incident patterns are reflected in risk and support plans.",
-                "Use keywork and daily life evidence to ensure the child’s voice is visible.",
-                "For provider/RI view, compare homes by repeated incidents, safeguarding activity and plan linkage gaps.",
-            ],
+            "recommended_actions": inspection_report["recommended_leadership_actions"],
         }
     finally:
         if conn is not None:
