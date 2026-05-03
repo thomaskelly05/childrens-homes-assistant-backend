@@ -64,27 +64,13 @@ def _rows_to_dicts(cursor: Any, rows: list[Any]) -> list[dict[str, Any]]:
 
 
 def _table_exists(cursor: Any, table_name: str) -> bool:
-    cursor.execute(
-        """
-        SELECT EXISTS (
-            SELECT 1 FROM information_schema.tables
-            WHERE table_schema = 'public' AND table_name = %s
-        )
-        """,
-        (table_name,),
-    )
+    cursor.execute("""SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s)""", (table_name,))
     row = cursor.fetchone()
     return bool(row.get("exists") if isinstance(row, dict) else row and row[0])
 
 
 def _columns(cursor: Any, table_name: str) -> set[str]:
-    cursor.execute(
-        """
-        SELECT column_name FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = %s
-        """,
-        (table_name,),
-    )
+    cursor.execute("""SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s""", (table_name,))
     return {str(row.get("column_name") if isinstance(row, dict) else row[0]) for row in cursor.fetchall() or [] if row}
 
 
@@ -114,31 +100,20 @@ def _source_rows(cursor: Any, source: dict[str, str], filters: dict[str, int | N
     if not date_col:
         return []
 
-    select_parts = [
-        "id",
-        f"'{source['type']}' AS record_type",
-        f"'{source['label']}' AS label",
-        f'"{date_col}" AS event_date',
-        f"'{table}' AS source_table",
-    ]
-
+    select_parts = ["id", f"'{source['type']}' AS record_type", f"'{source['label']}' AS label", f'"{date_col}" AS event_date', f"'{table}' AS source_table"]
     for col in ("home_id", "provider_id", "young_person_id"):
         select_parts.append(f'"{col}"' if col in columns else f"NULL AS {col}")
-
     summary_col = source.get("summary") if source.get("summary") in columns else None
     select_parts.append(f'COALESCE("{summary_col}"::text, \'\') AS summary' if summary_col else "'' AS summary")
 
     where = [f'"{date_col}" >= %s']
     params: list[Any] = [start_date]
-
     if filters.get("home_id") and "home_id" in columns:
         where.append("home_id = %s")
         params.append(filters["home_id"])
-
     if filters.get("provider_id") and "provider_id" in columns:
         where.append("provider_id = %s")
         params.append(filters["provider_id"])
-
     if "archived" in columns:
         where.append("COALESCE(archived, FALSE) = FALSE")
     if "is_deleted" in columns:
@@ -168,6 +143,27 @@ def _allowed_scope(scope: str, role: str) -> bool:
     return False
 
 
+def _risk_score(counts: Counter[str]) -> int:
+    score = 0
+    score += counts.get("safeguarding", 0) * 20
+    score += counts.get("missing_episode", 0) * 18
+    score += counts.get("incident", 0) * 8
+    score += counts.get("risk", 0) * 7
+    if counts.get("keywork", 0) == 0 and sum(counts.values()):
+        score += 10
+    if (counts.get("incident", 0) or counts.get("safeguarding", 0)) and counts.get("support_plan", 0) == 0:
+        score += 12
+    return max(0, min(score, 100))
+
+
+def _risk_band(score: int) -> str:
+    if score >= 70:
+        return "high"
+    if score >= 40:
+        return "warning"
+    return "review"
+
+
 def _build_alerts(events: list[dict[str, Any]], counts: Counter[str]) -> list[dict[str, Any]]:
     alerts: list[dict[str, Any]] = []
     if counts.get("safeguarding", 0):
@@ -194,6 +190,7 @@ def _group_by_home(events: list[dict[str, Any]], home_names: dict[int, str]) -> 
     rows: list[dict[str, Any]] = []
     for home_id, items in grouped.items():
         counts = Counter(str(item.get("record_type") or "record") for item in items)
+        score = _risk_score(counts)
         rows.append({
             "home_id": home_id or None,
             "home_name": home_names.get(home_id, "Unassigned / unknown home" if not home_id else f"Home {home_id}"),
@@ -204,9 +201,38 @@ def _group_by_home(events: list[dict[str, Any]], home_names: dict[int, str]) -> 
             "risk_reviews": counts.get("risk", 0),
             "keywork": counts.get("keywork", 0),
             "support_plans": counts.get("support_plan", 0),
-            "alert_level": "high" if counts.get("safeguarding", 0) or counts.get("missing_episode", 0) else "warning" if counts.get("incident", 0) >= 5 else "review",
+            "risk_score": score,
+            "alert_level": _risk_band(score),
         })
-    return sorted(rows, key=lambda row: (row["alert_level"] != "high", -row["total_events"]))
+    return sorted(rows, key=lambda row: (-row["risk_score"], -row["total_events"]))
+
+
+def _trend_series(events: list[dict[str, Any]], days: int) -> list[dict[str, Any]]:
+    bucket_count = 7 if days <= 30 else 10
+    today = date.today()
+    step = max(1, days // bucket_count)
+    buckets: list[dict[str, Any]] = []
+    for index in range(bucket_count):
+        end = today - timedelta(days=index * step)
+        start = max(today - timedelta(days=days), end - timedelta(days=step - 1))
+        items = []
+        for event in events:
+            raw = event.get("event_date")
+            try:
+                event_date = datetime.fromisoformat(str(raw).replace("Z", "+00:00")).date()
+            except Exception:
+                continue
+            if start <= event_date <= end:
+                items.append(event)
+        counts = Counter(str(item.get("record_type") or "record") for item in items)
+        buckets.append({
+            "label": f"{start.strftime('%d %b')} - {end.strftime('%d %b')}",
+            "total": len(items),
+            "incidents": counts.get("incident", 0),
+            "safeguarding": counts.get("safeguarding", 0),
+            "missing_episodes": counts.get("missing_episode", 0),
+        })
+    return list(reversed(buckets))
 
 
 def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], days: int = 30) -> dict[str, Any]:
@@ -234,14 +260,19 @@ def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], 
 
         events = sorted(events, key=lambda item: str(item.get("event_date") or ""), reverse=True)
         counts = Counter(str(item.get("record_type") or "record") for item in events)
+        score = _risk_score(counts)
         alerts = _build_alerts(events, counts)
         homes = _group_by_home(events, home_names)
+        high_risk_homes = [home for home in homes if home.get("risk_score", 0) >= 70]
+        trends = _trend_series(events, safe_days)
 
         return {
             "ok": True,
             "scope": scope,
             "role": role,
             "window_days": safe_days,
+            "risk_score": score,
+            "risk_band": _risk_band(score),
             "summary": {
                 "total_events": len(events),
                 "incidents": counts.get("incident", 0),
@@ -251,15 +282,21 @@ def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], 
                 "keywork": counts.get("keywork", 0),
                 "support_plans": counts.get("support_plan", 0),
                 "homes_visible": len(homes),
+                "risk_score": score,
+                "high_risk_homes": len(high_risk_homes),
             },
             "counts_by_category": dict(counts),
             "alerts": alerts,
             "homes": homes,
+            "ranked_homes": homes,
+            "high_risk_homes": high_risk_homes,
+            "trends": trends,
             "recent_events": events[:50],
             "provider_patterns": [
+                f"Overall risk score is {score}/100 ({_risk_band(score)}).",
                 f"{counts.get('incident', 0)} incident(s) across the current window.",
                 f"{counts.get('safeguarding', 0)} safeguarding record(s) across the current window.",
-                f"{len(homes)} home(s) visible in this dashboard scope.",
+                f"{len(high_risk_homes)} home(s) currently score as high risk.",
             ],
             "recommended_actions": [
                 "Review all high-priority safeguarding and missing episode alerts first.",
