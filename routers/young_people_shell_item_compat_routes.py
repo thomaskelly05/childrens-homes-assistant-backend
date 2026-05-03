@@ -161,6 +161,11 @@ def _get_young_person_home_id(young_person_id: int) -> int | None:
             release_db_connection(conn)
 
 
+@router.get("/shell-item-compat/health")
+def young_people_shell_item_compat_health():
+    return {"ok": True, "router": "young_people_shell_item_compat_routes"}
+
+
 @router.get("/{young_person_id}/assistant/context")
 def get_unified_assistant_context(
     young_person_id: int,
