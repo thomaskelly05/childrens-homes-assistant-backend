@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -28,6 +28,12 @@ CSS_DIR = os.path.join(FRONTEND_DIR, "css")
 JS_DIR = os.path.join(FRONTEND_DIR, "js")
 ASSETS_DIR = os.path.join(FRONTEND_DIR, "assets")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
+
+APP_SHELL_SCRIPTS = [
+    '<script src="/js/api.js"></script>',
+    '<script src="/js/auth.js"></script>',
+    '<script src="/js/staff-os-nav.js"></script>',
+]
 
 ROUTERS = [
     "routers.auth_routes",
@@ -138,9 +144,28 @@ def include_router(app: FastAPI, module_path: str) -> None:
         app.include_router(compat_router)
 
 
+def inject_app_shell_scripts(html: str) -> str:
+    injection = "\n".join(script for script in APP_SHELL_SCRIPTS if script not in html)
+    if not injection:
+        return html
+
+    marker = "</body>"
+    if marker in html:
+        return html.replace(marker, f"  {injection}\n</body>")
+
+    return f"{html}\n{injection}\n"
+
+
+def serve_html(path: str):
+    html = open(path, encoding="utf-8").read()
+    return HTMLResponse(inject_app_shell_scripts(html))
+
+
 def serve_from(paths: list[str], error: str):
     for path in paths:
         if os.path.exists(path):
+            if path.lower().endswith(".html"):
+                return serve_html(path)
             return FileResponse(path)
     return JSONResponse(status_code=404, content={"error": error})
 
