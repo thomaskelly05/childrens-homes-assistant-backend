@@ -4,51 +4,198 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>IndiCare OS | Young People Operating System</title>
+  <meta name="description" content="IndiCare OS Young People Shell for residential children’s homes: care records, chronology, inspection readiness, workforce intelligence and assistant support." />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#163b3a" />
+  <meta name="application-name" content="IndiCare OS" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="csrf-token" content="" />
   <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <link rel="stylesheet" href="/css/young-people-shell-os.css" />
 </head>
-<body class="indicare-care-hub-body" data-young-person-id="">
-  <main id="ypShell">
 
-    <header>
-      <h1 id="ypPersonName">Young Person</h1>
-      <select id="ypSelector"></select>
-      <div id="ypStatus"></div>
-    </header>
+<body class="indicare-care-hub-body" data-young-person-id="" data-home-id="" data-provider-id="">
+  <a class="sr-only sr-only-focusable" href="#ypMainWorkspace">Skip to main workspace</a>
+  <a class="sr-only sr-only-focusable" href="#ypAssistantPanel">Skip to assistant</a>
 
-    <section id="ypContent">
-      <section>
-        <h2>Records</h2>
-        <div id="ypRecordsList"></div>
+  <noscript>
+    <div class="yp-noscript" role="alert">IndiCare OS works best with JavaScript enabled.</div>
+  </noscript>
+
+  <main id="ypShell" class="yp-shell yp-os-shell yp-operational-shell" data-workspace="young-people-shell">
+    <aside class="yp-os-sidebar" aria-label="IndiCare OS navigation">
+      <div class="yp-sidebar-brand">
+        <div class="yp-brand-mark" aria-hidden="true">IC</div>
+        <div>
+          <p class="yp-eyebrow">IndiCare OS</p>
+          <h1>Care Hub</h1>
+        </div>
+      </div>
+
+      <label class="yp-selector-wrap yp-sidebar-selector" for="ypSelector">
+        <span>Open young person</span>
+        <select id="ypSelector" class="yp-selector">
+          <option value="">Loading…</option>
+        </select>
+      </label>
+
+      <nav id="ypTabs" class="yp-sidebar-nav yp-tabs" aria-label="Young person record areas">
+        <button type="button" class="active" data-tab="daily"><span>Daily notes</span><small>Care notes</small></button>
+        <button type="button" data-tab="health"><span>Health</span><small>Wellbeing</small></button>
+        <button type="button" data-tab="education"><span>Education</span><small>Learning</small></button>
+        <button type="button" data-tab="family"><span>Family</span><small>Relationships</small></button>
+        <button type="button" data-tab="incidents"><span>Incidents</span><small>Events & responses</small></button>
+        <button type="button" data-tab="medication"><span>Medication</span><small>Profiles & records</small></button>
+        <button type="button" data-tab="assistant"><span>Assistant</span><small>Ask IndiCare</small></button>
+      </nav>
+
+      <div class="yp-sidebar-footer">
+        <a class="yp-button yp-button-ghost" href="/my-profile">My Profile</a>
+        <a class="yp-button yp-button-ghost" href="/staff-profiles">Staff Hub</a>
+        <a class="yp-button yp-button-ghost" href="/rostering">Rostering</a>
+        <a class="yp-button yp-button-ghost" href="/academy">Academy</a>
+        <a class="yp-button yp-button-ghost" href="/assistant">Standalone assistant</a>
+        <div id="ypStatus" class="yp-status" role="status" aria-live="polite">Loading…</div>
+      </div>
+    </aside>
+
+    <section class="yp-os-main-frame">
+      <header id="ypHeader" class="yp-os-topbar">
+        <section class="yp-child-context-bar" aria-label="Current young person context">
+          <div class="yp-profile-avatar" id="ypAvatar" aria-hidden="true">YP</div>
+          <div class="yp-child-context-copy">
+            <p class="yp-eyebrow">Young People Operating System</p>
+            <h2 id="ypPersonName">Select a young person</h2>
+            <p id="ypPersonMeta">Choose a young person to load their live care, safety and inspection view.</p>
+          </div>
+          <div class="yp-profile-pills">
+            <span class="yp-chip yp-chip-dark" id="ypHomeChip">Home context</span>
+            <span class="yp-chip" id="ypContextChip">Context loading</span>
+          </div>
+        </section>
+
+        <section class="yp-live-summary yp-inspection-summary" aria-label="Care Hub summary">
+          <article class="yp-metric-card yp-metric-primary"><span>Daily notes</span><strong id="ypSummaryDaily">—</strong><small>records</small></article>
+          <article class="yp-metric-card"><span>Health</span><strong id="ypSummaryHealth">—</strong><small>records</small></article>
+          <article class="yp-metric-card"><span>Education</span><strong id="ypSummaryEducation">—</strong><small>records</small></article>
+          <article class="yp-metric-card"><span>Safety</span><strong id="ypInspectionShiftSafety">—</strong><small>shift status</small></article>
+        </section>
+      </header>
+
+      <section id="ypContent" class="yp-os-grid yp-operational-grid">
+        <section id="ypMainWorkspace" class="yp-panel yp-main-panel yp-inspection-workspace" aria-labelledby="ypRecordsTitle">
+          <div id="ypRecordsPanel">
+            <div class="yp-panel-head yp-workspace-head">
+              <div>
+                <p class="yp-eyebrow">Care records</p>
+                <h2 id="ypRecordsTitle">Daily notes</h2>
+                <p id="ypRecordsSubtitle">Load and record daily life information for this young person.</p>
+              </div>
+
+              <div class="yp-actions" aria-label="Create record">
+                <button type="button" class="yp-button yp-button-primary" data-composer-type="daily_note">New daily note</button>
+                <button type="button" class="yp-button" data-composer-type="health_record">Health record</button>
+                <button type="button" class="yp-button" data-composer-type="education_record">Education record</button>
+                <button type="button" class="yp-button" data-composer-type="family_record">Family record</button>
+                <button type="button" class="yp-button" data-composer-type="incident">Incident</button>
+              </div>
+            </div>
+
+            <div id="ypRecordsList" class="yp-record-list" aria-live="polite">
+              <div class="yp-empty-card"><h3>Opening Care Hub…</h3><p>Records will appear here shortly.</p></div>
+            </div>
+          </div>
+
+          <section id="ypInspectionPanel" class="yp-intelligence-card yp-inspection-panel" aria-labelledby="ypInspectionTitle">
+            <div class="yp-card-head">
+              <div>
+                <p class="yp-eyebrow">Inspection, safety and responsibility</p>
+                <h2 id="ypInspectionTitle">Live inspection view</h2>
+                <p id="ypInspectionStatus" class="yp-muted">Inspection intelligence loading…</p>
+              </div>
+              <a class="yp-mini-button" href="/os-dashboard">OS dashboard</a>
+            </div>
+
+            <div class="yp-inspection-grid">
+              <article class="yp-insight-item"><strong>Responsible adult / key worker</strong><span id="ypInspectionResponsibility">Loading…</span></article>
+              <article class="yp-insight-item"><strong>Enforcement</strong><span id="ypInspectionEnforcement">Loading…</span></article>
+            </div>
+
+            <div class="yp-inspection-grid">
+              <section>
+                <h3>Child voice</h3>
+                <ul id="ypInspectionChildVoice" class="yp-insight-list"><li>Loading…</li></ul>
+              </section>
+              <section>
+                <h3>Safeguarding story</h3>
+                <ul id="ypInspectionSafeguardingStory" class="yp-insight-list"><li>Loading…</li></ul>
+              </section>
+              <section>
+                <h3>Consistency</h3>
+                <ul id="ypInspectionConsistency" class="yp-insight-list"><li>Loading…</li></ul>
+              </section>
+            </div>
+          </section>
+        </section>
+
+        <aside id="ypAssistantPanel" class="yp-panel yp-assistant-rail yp-inspection-assistant hidden" aria-labelledby="ypAssistantTitle">
+          <div class="yp-panel-head yp-rail-head">
+            <div>
+              <p class="yp-eyebrow">IndiCare Assistant</p>
+              <h2 id="ypAssistantTitle">Ask about this young person</h2>
+              <p>Use the assistant for summaries, safeguarding checks, Reg 45 evidence, inspection readiness and next steps.</p>
+            </div>
+          </div>
+
+          <div class="yp-quick-prompts" aria-label="Suggested assistant questions">
+            <button type="button" data-prompt="Prepare an Ofsted-friendly summary of this young person with evidence.">Ofsted summary</button>
+            <button type="button" data-prompt="What safeguarding concerns or risk signals should the manager review?">Safeguarding review</button>
+            <button type="button" data-prompt="What evidence would support a Reg 45 quality review?">Reg 45 evidence</button>
+            <button type="button" data-prompt="What has changed for this young person recently?">What changed?</button>
+          </div>
+
+          <div id="ypAssistantMessages" class="yp-assistant-messages" role="log" aria-live="polite"></div>
+
+          <div class="yp-assistant-input-row">
+            <label class="sr-only" for="ypAssistantInput">Ask IndiCare</label>
+            <textarea id="ypAssistantInput" rows="4" placeholder="Ask about this young person…"></textarea>
+            <button id="ypAssistantSend" class="yp-button yp-button-primary" type="button">Send</button>
+          </div>
+
+          <div id="ypAssistantStatus" class="yp-status yp-status-soft" role="status" aria-live="polite">Assistant ready.</div>
+        </aside>
       </section>
-
-      <section id="ypInspectionPanel">
-        <h2>Inspection & Safety</h2>
-        <p id="ypInspectionStatus"></p>
-
-        <h3>Shift Safety</h3>
-        <p id="ypInspectionShiftSafety"></p>
-
-        <h3>Responsibility</h3>
-        <p id="ypInspectionResponsibility"></p>
-
-        <h3>Child Voice</h3>
-        <ul id="ypInspectionChildVoice"></ul>
-
-        <h3>Safeguarding Story</h3>
-        <ul id="ypInspectionSafeguardingStory"></ul>
-
-        <h3>Consistency</h3>
-        <ul id="ypInspectionConsistency"></ul>
-
-        <h3>Enforcement</h3>
-        <p id="ypInspectionEnforcement"></p>
-      </section>
-
     </section>
-
   </main>
 
+  <section id="ypComposer" class="yp-composer hidden" aria-hidden="true">
+    <div id="ypComposerBackdrop" class="yp-composer-backdrop" aria-hidden="true"></div>
+    <div id="ypComposerDialog" class="yp-composer-dialog" role="dialog" aria-modal="true" aria-labelledby="ypComposerTitle">
+      <header class="yp-composer-header">
+        <div>
+          <p class="yp-eyebrow">Record with care</p>
+          <h2 id="ypComposerTitle">New record</h2>
+          <p id="ypComposerSubtitle">Write clearly, kindly and professionally.</p>
+        </div>
+        <button id="ypComposerClose" class="yp-button yp-button-ghost" type="button">Close</button>
+      </header>
+
+      <form id="ypComposerForm" class="yp-composer-form" action="javascript:void(0)" method="dialog">
+        <div id="ypComposerFields" class="yp-composer-fields"></div>
+        <div class="yp-composer-actions">
+          <button id="ypComposerSaveDraft" class="yp-button" type="button">Save draft</button>
+          <button id="ypComposerSubmit" class="yp-button yp-button-primary" type="button">Send for review</button>
+        </div>
+      </form>
+
+      <div id="ypComposerStatus" class="yp-status yp-status-soft" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
   <script src="/js/young-people-shell.js"></script>
+  <script src="/js/young-people-shell-os.js"></script>
+  <script src="/js/staff-os-nav.js"></script>
+  <script src="/js/record-guidance.js"></script>
   <script src="/js/inspection-shell-panel.js"></script>
 </body>
 </html>
