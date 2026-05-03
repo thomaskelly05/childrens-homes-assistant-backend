@@ -47,11 +47,25 @@ class InspectionOSService:
 
     def home_operating_brief(self, *, home_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
         self._ensure_manager(current_user)
+        self._log_oversight(
+            home_id=home_id,
+            manager_id=self._current_user_id(current_user),
+            action="reviewed_home_inspection_os",
+            area="home_operating_brief",
+            summary="Manager opened home inspection operating brief.",
+            outcome="Leadership oversight evidence recorded.",
+        )
         staff_profiles = StaffProfileService().list_home_staff_profiles(home_id=home_id, current_user=current_user)
         staff_cards = staff_profiles.get("staff_profiles", [])
         week_start = date.today() - timedelta(days=date.today().weekday())
         roster = self._home_roster_week(home_id=home_id, week_start=week_start)
         shift_safety = self._shift_safety_for_home(roster)
+        leadership_oversight = self._leadership_oversight(home_id=home_id)
+        enforcement = self._enforcement_for_home(shift_safety, staff_cards)
+        oversight_alerts = self._oversight_gap_alerts(leadership_oversight, context="home")
+        if oversight_alerts:
+            enforcement.setdefault("gates", []).extend(oversight_alerts)
+            enforcement["status"] = "action_required"
         return {
             "generated_at": self._now(),
             "home_id": home_id,
@@ -63,22 +77,35 @@ class InspectionOSService:
             },
             "shift_safety": shift_safety,
             "responsibility": self._responsibility_for_home(home_id),
-            "leadership_oversight": self._leadership_oversight(home_id=home_id),
+            "leadership_oversight": leadership_oversight,
             "child_voice": self._child_voice(home_id=home_id),
             "consistency": self._consistency(home_id=home_id),
             "workforce_competency": self._workforce_competency(staff_cards),
             "safeguarding_story": self._safeguarding_story(home_id=home_id),
-            "enforcement": self._enforcement_for_home(shift_safety, staff_cards),
+            "enforcement": enforcement,
         }
 
     def child_operating_brief(self, *, young_person_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+        home_id = self._home_id_for_child(young_person_id)
+        if self._is_manager(current_user):
+            self._log_oversight(
+                home_id=home_id,
+                young_person_id=young_person_id,
+                manager_id=self._current_user_id(current_user),
+                action="reviewed_child_inspection_os",
+                area="child_operating_brief",
+                summary="Manager opened child inspection operating brief.",
+                outcome="Child-level leadership oversight evidence recorded.",
+            )
+        leadership_oversight = self._leadership_oversight(young_person_id=young_person_id)
         return {
             "generated_at": self._now(),
             "young_person_id": young_person_id,
             "responsibility": self._responsibility_for_child(young_person_id),
             "child_voice": self._child_voice(young_person_id=young_person_id),
             "safeguarding_story": self._safeguarding_story(young_person_id=young_person_id),
-            "leadership_oversight": self._leadership_oversight(young_person_id=young_person_id),
+            "leadership_oversight": leadership_oversight,
+            "oversight_alerts": self._oversight_gap_alerts(leadership_oversight, context="child"),
             "consistency": self._consistency(young_person_id=young_person_id),
         }
 
@@ -271,7 +298,32 @@ class InspectionOSService:
                 (home_id, home_id, young_person_id, young_person_id),
             ),
         ])
-        return {"recent_reviews": rows, "review_count": len(rows), "status": "no_recent_oversight" if not rows else "active"}
+        latest = rows[0].get("created_at") if rows else None
+        return {
+            "recent_reviews": rows,
+            "review_count": len(rows),
+            "latest_review_at": latest,
+            "status": "no_recent_oversight" if not rows else "active",
+        }
+
+    def _oversight_gap_alerts(self, oversight: dict[str, Any], *, context: str) -> list[dict[str, Any]]:
+        rows = oversight.get("recent_reviews") or []
+        if not rows:
+            return [{
+                "gate": "leadership_oversight",
+                "status": "manager_review_required",
+                "priority": "high",
+                "message": f"No recent leadership oversight is recorded for this {context}.",
+            }]
+        latest = self._parse_date(rows[0].get("created_at"))
+        if latest and (date.today() - latest).days > 7:
+            return [{
+                "gate": "leadership_oversight",
+                "status": "manager_review_required",
+                "priority": "high",
+                "message": f"Leadership oversight for this {context} is older than 7 days.",
+            }]
+        return []
 
     def _child_voice(self, *, home_id: int | None = None, young_person_id: int | None = None) -> dict[str, Any]:
         since = date.today() - timedelta(days=14)
@@ -408,6 +460,40 @@ class InspectionOSService:
                 gates.append({"gate": "staff_attention", "status": "manager_review_required", "message": f"{staff.get('staff', {}).get('first_name', 'Staff')} has a high attention score."})
         return {"gates": gates[:20], "status": "clear" if not gates else "action_required"}
 
+    def _home_id_for_child(self, young_person_id: int) -> int | None:
+        rows = self._optional_rows([
+            ("SELECT home_id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,)),
+        ])
+        value = rows[0].get("home_id") if rows else None
+        return int(value) if value else None
+
+    def _log_oversight(
+        self,
+        *,
+        home_id: int | None = None,
+        young_person_id: int | None = None,
+        staff_user_id: int | None = None,
+        manager_id: int | None = None,
+        action: str,
+        area: str,
+        summary: str,
+        outcome: str,
+    ) -> None:
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO leadership_oversight_log
+                        (home_id, young_person_id, staff_user_id, manager_id, action, area, summary, outcome, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                        """,
+                        (home_id, young_person_id, staff_user_id, manager_id, action, area, summary, outcome),
+                    )
+                    conn.commit()
+        except Exception:
+            return
+
     def _optional_rows(self, queries: list[tuple[str, tuple[Any, ...]]]) -> list[dict[str, Any]]:
         for query, params in queries:
             try:
@@ -420,9 +506,32 @@ class InspectionOSService:
                 continue
         return []
 
-    def _ensure_manager(self, current_user: dict[str, Any]) -> None:
+    def _parse_date(self, value: Any) -> date | None:
+        if isinstance(value, date) and not isinstance(value, datetime):
+            return value
+        if isinstance(value, datetime):
+            return value.date()
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+        except Exception:
+            try:
+                return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+            except Exception:
+                return None
+
+    def _current_user_id(self, current_user: dict[str, Any]) -> int | None:
+        value = current_user.get("id") or current_user.get("user_id")
+        try:
+            return int(value) if value else None
+        except Exception:
+            return None
+
+    def _is_manager(self, current_user: dict[str, Any]) -> bool:
         role = str(current_user.get("role") or current_user.get("user_role") or "").strip().lower()
-        if role not in MANAGER_ROLES:
+        return role in MANAGER_ROLES
+
+    def _ensure_manager(self, current_user: dict[str, Any]) -> None:
+        if not self._is_manager(current_user):
             from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager permission required.")
 
