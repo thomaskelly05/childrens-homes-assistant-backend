@@ -47,6 +47,14 @@ class InspectionOSService:
 
     def home_operating_brief(self, *, home_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
         self._ensure_manager(current_user)
+        self._log_oversight(
+            home_id=home_id,
+            manager_id=self._current_user_id(current_user),
+            action="reviewed_home_inspection_os",
+            area="home_operating_brief",
+            summary="Manager opened home inspection operating brief.",
+            outcome="Leadership oversight evidence recorded.",
+        )
         staff_profiles = StaffProfileService().list_home_staff_profiles(home_id=home_id, current_user=current_user)
         staff_cards = staff_profiles.get("staff_profiles", [])
         week_start = date.today() - timedelta(days=date.today().weekday())
@@ -72,6 +80,17 @@ class InspectionOSService:
         }
 
     def child_operating_brief(self, *, young_person_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+        home_id = self._home_id_for_child(young_person_id)
+        if self._is_manager(current_user):
+            self._log_oversight(
+                home_id=home_id,
+                young_person_id=young_person_id,
+                manager_id=self._current_user_id(current_user),
+                action="reviewed_child_inspection_os",
+                area="child_operating_brief",
+                summary="Manager opened child inspection operating brief.",
+                outcome="Child-level leadership oversight evidence recorded.",
+            )
         return {
             "generated_at": self._now(),
             "young_person_id": young_person_id,
@@ -408,6 +427,40 @@ class InspectionOSService:
                 gates.append({"gate": "staff_attention", "status": "manager_review_required", "message": f"{staff.get('staff', {}).get('first_name', 'Staff')} has a high attention score."})
         return {"gates": gates[:20], "status": "clear" if not gates else "action_required"}
 
+    def _home_id_for_child(self, young_person_id: int) -> int | None:
+        rows = self._optional_rows([
+            ("SELECT home_id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,)),
+        ])
+        value = rows[0].get("home_id") if rows else None
+        return int(value) if value else None
+
+    def _log_oversight(
+        self,
+        *,
+        home_id: int | None = None,
+        young_person_id: int | None = None,
+        staff_user_id: int | None = None,
+        manager_id: int | None = None,
+        action: str,
+        area: str,
+        summary: str,
+        outcome: str,
+    ) -> None:
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO leadership_oversight_log
+                        (home_id, young_person_id, staff_user_id, manager_id, action, area, summary, outcome, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                        """,
+                        (home_id, young_person_id, staff_user_id, manager_id, action, area, summary, outcome),
+                    )
+                    conn.commit()
+        except Exception:
+            return
+
     def _optional_rows(self, queries: list[tuple[str, tuple[Any, ...]]]) -> list[dict[str, Any]]:
         for query, params in queries:
             try:
@@ -420,9 +473,19 @@ class InspectionOSService:
                 continue
         return []
 
-    def _ensure_manager(self, current_user: dict[str, Any]) -> None:
+    def _current_user_id(self, current_user: dict[str, Any]) -> int | None:
+        value = current_user.get("id") or current_user.get("user_id")
+        try:
+            return int(value) if value else None
+        except Exception:
+            return None
+
+    def _is_manager(self, current_user: dict[str, Any]) -> bool:
         role = str(current_user.get("role") or current_user.get("user_role") or "").strip().lower()
-        if role not in MANAGER_ROLES:
+        return role in MANAGER_ROLES
+
+    def _ensure_manager(self, current_user: dict[str, Any]) -> None:
+        if not self._is_manager(current_user):
             from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager permission required.")
 
