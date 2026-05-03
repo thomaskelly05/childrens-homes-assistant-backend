@@ -52,11 +52,25 @@
         </div>
       </header>
 
+      <section class="os-command-strip" aria-label="Risk score and trends">
+        <article class="os-risk-score-card" id="osRiskScoreCard">
+          <p class="yp-eyebrow">Inspection risk score</p>
+          <div class="os-risk-score-row"><strong id="metricRiskScore">—</strong><span>/100</span></div>
+          <p id="metricRiskBand">Awaiting intelligence</p>
+          <div class="os-risk-meter"><span id="osRiskMeterFill"></span></div>
+        </article>
+
+        <article class="os-trend-card">
+          <div class="yp-card-head"><div><p class="yp-eyebrow">Trend view</p><h3>Incidents, safeguarding and missing episodes</h3></div></div>
+          <div id="osTrendChart" class="os-trend-chart"><p class="yp-muted">Loading trend data…</p></div>
+        </article>
+      </section>
+
       <section class="os-dashboard-metrics" aria-label="Operational summary">
         <article class="yp-metric-card yp-metric-primary"><span>Total evidence</span><strong id="metricTotalEvents">—</strong><small>records in window</small></article>
         <article class="yp-metric-card"><span>Incidents</span><strong id="metricIncidents">—</strong><small>behaviour / events</small></article>
         <article class="yp-metric-card"><span>Safeguarding</span><strong id="metricSafeguarding">—</strong><small>concerns / actions</small></article>
-        <article class="yp-metric-card"><span>Homes visible</span><strong id="metricHomes">—</strong><small>scope access</small></article>
+        <article class="yp-metric-card"><span>High-risk homes</span><strong id="metricHighRiskHomes">—</strong><small>leadership focus</small></article>
       </section>
 
       <section class="os-dashboard-grid">
@@ -70,14 +84,19 @@
           <div id="osPatternsList" class="yp-insight-list"><p class="yp-muted">Loading patterns…</p></div>
         </section>
 
-        <section class="yp-intelligence-card os-home-map-card">
-          <div class="yp-card-head"><div><p class="yp-eyebrow">Home risk map</p><h3>Where leadership should look</h3></div></div>
+        <section class="yp-intelligence-card os-home-map-card os-wide-card">
+          <div class="yp-card-head"><div><p class="yp-eyebrow">Home risk heatmap</p><h3>Ranked homes by risk score</h3></div></div>
           <div id="osHomesList" class="os-home-list"><p class="yp-muted">Loading home intelligence…</p></div>
         </section>
 
         <section class="yp-intelligence-card os-action-card">
           <div class="yp-card-head"><div><p class="yp-eyebrow">Recommended action</p><h3>Leadership next steps</h3></div></div>
           <div id="osActionsList" class="yp-insight-list"><p class="yp-muted">Loading actions…</p></div>
+        </section>
+
+        <section class="yp-intelligence-card">
+          <div class="yp-card-head"><div><p class="yp-eyebrow">Homes at risk</p><h3>Immediate oversight focus</h3></div></div>
+          <div id="osHighRiskHomes" class="yp-insight-list"><p class="yp-muted">Loading high-risk homes…</p></div>
         </section>
 
         <section class="yp-intelligence-card os-wide-card">
