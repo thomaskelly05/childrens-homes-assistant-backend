@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.current_user import get_current_user
@@ -15,6 +16,7 @@ from services.assistant_security import normalise_history, safe_int, safe_string
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assistant/general", tags=["General Assistant"])
+ui_router = APIRouter(tags=["Assistant UI"])
 
 
 class GeneralAssistantRequest(BaseModel):
@@ -46,6 +48,29 @@ def _sse_done() -> str:
     return "event: done\ndata: [DONE]\n\n"
 
 
+def _assistant_component_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "frontend" / "components" / "assistant.html"
+
+
+def _inject_ofsted_ui_patch(html: str) -> str:
+    script = '<script src="/js/assistant-ofsted-ui-patch.js"></script>'
+    if script in html:
+        return html
+    if "</body>" in html:
+        return html.replace("</body>", f"  {script}\n</body>")
+    return f"{html}\n{script}\n"
+
+
+@ui_router.get("/assistant", response_class=HTMLResponse)
+@ui_router.get("/assistant.html", response_class=HTMLResponse)
+def serve_standalone_assistant_with_ofsted_ui():
+    path = _assistant_component_path()
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Assistant page not found.")
+    html = path.read_text(encoding="utf-8")
+    return HTMLResponse(_inject_ofsted_ui_patch(html))
+
+
 @router.post("/stream")
 async def stream_general_assistant(
     payload: GeneralAssistantRequest,
@@ -69,7 +94,8 @@ async def stream_general_assistant(
             "guidance_only": True,
             "history_items_loaded": len(history),
         }
-        suggested_actions: list[str] = []
+        suggested_actions: list[dict[str, Any]] = []
+        safeguarding: dict[str, Any] = {}
 
         try:
             async for item in generate_general_assistant_stream(
@@ -91,8 +117,8 @@ async def stream_general_assistant(
                     continue
 
                 if item_type == "token":
-                    content = safe_string(item.get("content"))
-                    if content:
+                    content = item.get("content")
+                    if isinstance(content, str) and content:
                         yield _sse_message(content)
                     continue
 
@@ -109,10 +135,12 @@ async def stream_general_assistant(
                         assistant_context = item.get("assistant_context") or assistant_context
                     if isinstance(item.get("suggested_actions"), list):
                         suggested_actions = [
-                            safe_string(action)
+                            action
                             for action in item.get("suggested_actions")
-                            if safe_string(action)
+                            if isinstance(action, dict) and safe_string(action.get("label"))
                         ]
+                    if isinstance(item.get("safeguarding"), dict):
+                        safeguarding = item.get("safeguarding") or {}
                     continue
 
         except Exception:
@@ -130,6 +158,7 @@ async def stream_general_assistant(
                     "assistant_scope": assistant_scope,
                     "assistant_context": assistant_context,
                     "suggested_actions": suggested_actions,
+                    "safeguarding": safeguarding,
                 },
             )
             yield _sse_done()
