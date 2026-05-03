@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from auth.current_user import get_current_user
 from db.connection import get_db, get_db_connection, release_db_connection
+from routers.young_people_shell_item_compat_routes import router as compat_router
 
 
 router = APIRouter(prefix="/debug", tags=["debug-health"])
@@ -90,6 +91,7 @@ async def debug_manual_health(request: Request):
         if conn is not None:
             release_db_connection(conn)
 
+
 @router.post("/daily-note-create-test")
 async def debug_daily_note_create_test(request: Request):
     from services.young_person_daily_notes_service import YoungPersonDailyNotesService
@@ -131,6 +133,7 @@ async def debug_daily_note_create_test(request: Request):
     finally:
         if conn is not None:
             release_db_connection(conn)
+
 
 @router.post("/post-health")
 async def debug_post_health(
