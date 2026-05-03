@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 from db.connection import close_db_pool, init_db_pool
 from db.legal_acceptance_db import init_legal_acceptance_table
@@ -232,6 +233,15 @@ def register_frontend_routes(app: FastAPI) -> None:
 
 def create_app() -> FastAPI:
     app = FastAPI(title="IndiCare API", lifespan=lifespan)
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=os.getenv("SESSION_SECRET_KEY") or os.getenv("SECRET_KEY") or "dev-session-secret-change-me",
+        same_site=os.getenv("COOKIE_SAMESITE", "lax").lower(),
+        https_only=(os.getenv("COOKIE_SECURE", "true").lower() == "true"),
+        max_age=60 * 60 * 24 * 14,
+    )
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "https://app.indicare.co.uk,http://localhost:3000,http://127.0.0.1:3000").split(",") if origin.strip()],
