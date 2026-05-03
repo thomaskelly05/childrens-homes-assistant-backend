@@ -53,12 +53,20 @@ def _assistant_component_path() -> Path:
 
 
 def _inject_ofsted_ui_patch(html: str) -> str:
-    script = '<script src="/js/assistant-copilot-controller.js"></script>'
-    if script in html:
-        return html
-    if "</body>" in html:
-        return html.replace("</body>", f"  {script}\n</body>")
-    return f"{html}\n{script}\n"
+    scripts = [
+        '<script src="/js/assistant-copilot-controller.js"></script>',
+        '<script src="/js/assistant-action-bridge.js"></script>',
+    ]
+
+    for script in scripts:
+        if script in html:
+            continue
+        if "</body>" in html:
+            html = html.replace("</body>", f"  {script}\n</body>")
+        else:
+            html = f"{html}\n{script}\n"
+
+    return html
 
 
 @ui_router.get("/assistant", response_class=HTMLResponse)
