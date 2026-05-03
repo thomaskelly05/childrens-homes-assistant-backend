@@ -46,6 +46,7 @@ ROUTERS = [
     "routers.assistant_general_routes",
     "routers.assistant_os_routes",
     "routers.operational_intelligence_routes",
+    "routers.inspection_os_routes",
     "routers.assistant_partner_api",
     "routers.chat_routes",
     "routers.document_library_routes",

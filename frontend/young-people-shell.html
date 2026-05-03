@@ -4,27 +4,51 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>IndiCare OS | Young People Operating System</title>
-  <meta name="description" content="IndiCare OS Young People Shell for residential children’s homes: care records, chronology, evidence, inspection readiness and assistant support." />
-  <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#163b3a" />
-  <meta name="application-name" content="IndiCare OS" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="csrf-token" content="" />
   <link rel="stylesheet" href="/css/young-people-shell.css" />
-  <link rel="stylesheet" href="/css/young-people-shell-os.css" />
 </head>
+<body class="indicare-care-hub-body" data-young-person-id="">
+  <main id="ypShell">
 
-<body class="indicare-care-hub-body" data-young-person-id="" data-home-id="" data-provider-id="">
-  <a class="sr-only sr-only-focusable" href="#ypMainWorkspace">Skip to main workspace</a>
-  <a class="sr-only sr-only-focusable" href="#ypAssistantPanel">Skip to assistant</a>
+    <header>
+      <h1 id="ypPersonName">Young Person</h1>
+      <select id="ypSelector"></select>
+      <div id="ypStatus"></div>
+    </header>
 
-  <main id="ypShell" class="yp-shell yp-os-shell yp-operational-shell" data-workspace="young-people-shell">
-    <!-- existing content unchanged -->
+    <section id="ypContent">
+      <section>
+        <h2>Records</h2>
+        <div id="ypRecordsList"></div>
+      </section>
+
+      <section id="ypInspectionPanel">
+        <h2>Inspection & Safety</h2>
+        <p id="ypInspectionStatus"></p>
+
+        <h3>Shift Safety</h3>
+        <p id="ypInspectionShiftSafety"></p>
+
+        <h3>Responsibility</h3>
+        <p id="ypInspectionResponsibility"></p>
+
+        <h3>Child Voice</h3>
+        <ul id="ypInspectionChildVoice"></ul>
+
+        <h3>Safeguarding Story</h3>
+        <ul id="ypInspectionSafeguardingStory"></ul>
+
+        <h3>Consistency</h3>
+        <ul id="ypInspectionConsistency"></ul>
+
+        <h3>Enforcement</h3>
+        <p id="ypInspectionEnforcement"></p>
+      </section>
+
+    </section>
+
   </main>
 
   <script src="/js/young-people-shell.js"></script>
-  <script src="/js/young-people-shell-os.js"></script>
-  <script src="/js/staff-os-nav.js"></script>
-  <script src="/js/record-guidance.js"></script>
+  <script src="/js/inspection-shell-panel.js"></script>
 </body>
 </html>
