@@ -1,8 +1,11 @@
 /*
-  IndiCare Assistant Ofsted UI polish patch.
-  Loaded after assistant.js to improve presentation without rewriting the main assistant file.
+  IndiCare Assistant Outstanding UI layer.
+  Loaded after assistant.js to improve the standalone /assistant experience
+  without rewriting the large legacy assistant file.
 */
 (function () {
+  const MODE_STORAGE_KEY = "indicare_assistant_ofsted_mode";
+
   function escapeHtml(value) {
     return String(value || "")
       .replace(/&/g, "&amp;")
@@ -17,12 +20,37 @@
     return /^https:\/\//i.test(raw) ? raw : "";
   }
 
+  function currentMeta() {
+    return window.state && window.state.currentStreamMeta
+      ? window.state.currentStreamMeta
+      : { sources: [], runtime: {}, explainability: {}, suggested_actions: [] };
+  }
+
+  function getSafeguardingMeta(meta) {
+    const explainability = meta && meta.explainability ? meta.explainability : {};
+    const runtime = meta && meta.runtime ? meta.runtime : {};
+    return (
+      meta.safeguarding ||
+      explainability.safeguarding ||
+      {
+        level: runtime.safeguarding_level || "standard",
+        banner: "",
+        matched_signals: [],
+      }
+    );
+  }
+
   function enhanceBeautify(text) {
     return String(text || "")
+      .replace(/Improved note:/gi, "### Improved note")
+      .replace(/Improved note/gi, "### Improved note")
+      .replace(/Details to add if known:/gi, "### Details to add if known")
       .replace(/Inspection lens:/gi, "### Inspection lens")
       .replace(/Recording\s*\/\s*evidence to check:/gi, "### Recording / evidence to check")
+      .replace(/Recording and evidence to check:/gi, "### Recording / evidence to check")
       .replace(/Evidence to check:/gi, "### Evidence to check")
       .replace(/Safeguarding considerations:/gi, "### Safeguarding considerations")
+      .replace(/Immediate actions:/gi, "### Immediate actions")
       .replace(/Management oversight:/gi, "### Management oversight")
       .replace(/Reg 45 lens:/gi, "### Reg 45 lens")
       .replace(/Sources:/gi, "### Sources");
@@ -92,8 +120,75 @@
 
     return `
       <div class="ofsted-source-panel">
-        <div class="ofsted-source-title">Sources and evidence base</div>
+        <div class="ofsted-panel-title">Sources and evidence base</div>
         ${clean.slice(0, 6).map(sourceCard).join("")}
+      </div>
+    `;
+  }
+
+  function renderSafeguardingBanner(meta) {
+    const safeguarding = getSafeguardingMeta(meta || {});
+    const level = String(safeguarding.level || meta?.runtime?.safeguarding_level || "standard").toLowerCase();
+    if (!["urgent", "concern"].includes(level)) return "";
+
+    const title = level === "urgent" ? "Immediate safeguarding concern" : "Safeguarding consideration";
+    const fallback =
+      level === "urgent"
+        ? "Prioritise immediate safety. Follow safeguarding procedures and inform the relevant manager/DSL without delay."
+        : "Ensure this is recorded clearly, shared with the relevant manager/DSL, and reviewed against the young person's plan.";
+    const matched = Array.isArray(safeguarding.matched_signals)
+      ? safeguarding.matched_signals
+          .map((item) => item && item.label)
+          .filter(Boolean)
+          .slice(0, 3)
+      : [];
+
+    return `
+      <div class="ofsted-sg-banner ${level}">
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(safeguarding.banner || fallback)}</p>
+        ${matched.length ? `<small>Detected indicators: ${escapeHtml(matched.join(", "))}</small>` : ""}
+      </div>
+    `;
+  }
+
+  function renderSuggestedActions(actions) {
+    const clean = Array.isArray(actions)
+      ? actions.filter((action) => action && (action.label || typeof action === "string"))
+      : [];
+    if (!clean.length) return "";
+
+    return `
+      <div class="ofsted-action-panel">
+        <div class="ofsted-panel-title">Suggested actions</div>
+        ${clean
+          .slice(0, 6)
+          .map((action) => {
+            const label = typeof action === "string" ? action : action.label;
+            return `<button type="button" class="ofsted-action-btn" data-action-label="${escapeHtml(label)}">${escapeHtml(label)}</button>`;
+          })
+          .join("")}
+      </div>
+    `;
+  }
+
+  function renderQualityFooter(meta) {
+    const runtime = (meta && meta.runtime) || {};
+    const mode = runtime.response_mode || runtime.assistant_mode || "guidance";
+    const level = runtime.safeguarding_level || getSafeguardingMeta(meta || {}).level || "standard";
+    const knowledge = Array.isArray(runtime.knowledge_modules_loaded)
+      ? runtime.knowledge_modules_loaded.filter(Boolean).length
+      : 0;
+    const sources = Array.isArray(runtime.official_sources_loaded)
+      ? runtime.official_sources_loaded.filter(Boolean).length
+      : 0;
+
+    return `
+      <div class="ofsted-quality-footer">
+        <span>Mode: ${escapeHtml(mode)}</span>
+        <span>Safeguarding: ${escapeHtml(level)}</span>
+        ${knowledge ? `<span>Knowledge modules: ${knowledge}</span>` : ""}
+        ${sources ? `<span>Sources: ${sources}</span>` : ""}
       </div>
     `;
   }
@@ -104,10 +199,111 @@
     const style = document.createElement("style");
     style.id = "assistant-ofsted-ui-patch-styles";
     style.textContent = `
+      :root {
+        --ofsted-ink: #12211f;
+        --ofsted-muted: #64748b;
+        --ofsted-line: rgba(15, 23, 42, 0.12);
+        --ofsted-teal: #16766d;
+        --ofsted-teal-dark: #115e59;
+        --ofsted-soft: rgba(47, 143, 131, 0.08);
+        --ofsted-card: #ffffff;
+        --ofsted-red-bg: #fff1f1;
+        --ofsted-red-border: #f5c2c2;
+        --ofsted-red-text: #7f1d1d;
+        --ofsted-amber-bg: #fff7ed;
+        --ofsted-amber-border: #fed7aa;
+        --ofsted-amber-text: #7c2d12;
+      }
+
+      body.theme-dark {
+        --ofsted-ink: #f8fafc;
+        --ofsted-muted: #cbd5e1;
+        --ofsted-line: rgba(226,232,240,0.16);
+        --ofsted-card: rgba(255,255,255,0.06);
+        --ofsted-soft: rgba(125, 211, 199, 0.11);
+      }
+
+      .assistant-empty-inner {
+        max-width: 980px !important;
+      }
+
+      .assistant-title {
+        letter-spacing: -0.045em;
+      }
+
+      .ofsted-hero-panel {
+        margin: 18px auto 0;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        width: min(920px, 100%);
+      }
+
+      .ofsted-hero-card {
+        border: 1px solid var(--ofsted-line);
+        border-radius: 18px;
+        padding: 13px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,250,249,0.82));
+        color: var(--ofsted-ink);
+        text-align: left;
+        box-shadow: 0 16px 36px rgba(15,23,42,0.08);
+        cursor: pointer;
+      }
+
+      body.theme-dark .ofsted-hero-card {
+        background: rgba(255,255,255,0.06);
+      }
+
+      .ofsted-hero-card strong {
+        display: block;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+      }
+
+      .ofsted-hero-card span {
+        display: block;
+        color: var(--ofsted-muted);
+        line-height: 1.35;
+        font-size: 0.78rem;
+      }
+
+      .ofsted-modebar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin: 16px auto 0;
+        width: min(920px, 100%);
+      }
+
+      .ofsted-mode-btn {
+        border: 1px solid var(--ofsted-line);
+        background: var(--ofsted-card);
+        color: var(--ofsted-ink);
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-weight: 850;
+        font-size: 0.78rem;
+        cursor: pointer;
+      }
+
+      .ofsted-mode-btn.active {
+        background: var(--ofsted-soft);
+        color: var(--ofsted-teal-dark);
+        border-color: rgba(22, 118, 109, 0.35);
+      }
+
       .msg.assistant .bubble,
       .assistant-msg .bubble,
       .message.assistant .bubble {
-        line-height: 1.55;
+        line-height: 1.58;
+        border: 1px solid var(--ofsted-line) !important;
+        box-shadow: 0 14px 34px rgba(15,23,42,0.07);
+      }
+
+      .msg.user .bubble,
+      .message.user .bubble {
+        line-height: 1.45;
       }
 
       .msg.assistant .bubble h2,
@@ -116,10 +312,12 @@
       .assistant-msg .bubble h3,
       .message.assistant .bubble h2,
       .message.assistant .bubble h3 {
-        margin: 14px 0 7px;
+        margin: 16px 0 7px;
         font-size: 0.95rem;
-        color: #16675f;
-        letter-spacing: -0.01em;
+        color: var(--ofsted-teal-dark);
+        letter-spacing: -0.015em;
+        padding-top: 8px;
+        border-top: 1px solid rgba(22, 118, 109, 0.12);
       }
 
       .msg.assistant .bubble h2:first-child,
@@ -129,44 +327,121 @@
       .message.assistant .bubble h2:first-child,
       .message.assistant .bubble h3:first-child {
         margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
       }
 
       .msg.assistant .bubble a,
       .assistant-msg .bubble a,
       .message.assistant .bubble a {
-        color: #16766d;
-        font-weight: 800;
+        color: var(--ofsted-teal);
+        font-weight: 850;
         text-decoration: underline;
         text-underline-offset: 2px;
       }
 
-      .ofsted-source-panel {
-        margin-top: 12px;
-        border: 1px solid rgba(22, 103, 95, 0.18);
-        border-radius: 16px;
-        padding: 12px;
-        background: rgba(47, 143, 131, 0.07);
+      .msg.assistant .bubble ul,
+      .assistant-msg .bubble ul,
+      .message.assistant .bubble ul {
+        padding-left: 1.15rem;
       }
 
-      .ofsted-source-title {
+      .ofsted-sg-banner,
+      .ofsted-action-panel,
+      .ofsted-source-panel,
+      .ofsted-quality-footer {
+        width: min(760px, 92%);
+        margin: 10px 0 0 48px;
+      }
+
+      .ofsted-sg-banner {
+        border-radius: 18px;
+        padding: 13px 15px;
+        font-size: 0.86rem;
+        line-height: 1.42;
+        border: 1px solid var(--ofsted-line);
+      }
+
+      .ofsted-sg-banner strong {
+        display: block;
+        font-weight: 950;
+        margin-bottom: 4px;
+      }
+
+      .ofsted-sg-banner p { margin: 0; }
+      .ofsted-sg-banner small {
+        display: block;
+        margin-top: 7px;
+        opacity: 0.86;
+      }
+
+      .ofsted-sg-banner.urgent {
+        background: var(--ofsted-red-bg);
+        border-color: var(--ofsted-red-border);
+        color: var(--ofsted-red-text);
+      }
+
+      .ofsted-sg-banner.concern {
+        background: var(--ofsted-amber-bg);
+        border-color: var(--ofsted-amber-border);
+        color: var(--ofsted-amber-text);
+      }
+
+      body.theme-dark .ofsted-sg-banner.urgent {
+        background: rgba(127, 29, 29, 0.22);
+        color: #fecaca;
+      }
+
+      body.theme-dark .ofsted-sg-banner.concern {
+        background: rgba(124, 45, 18, 0.22);
+        color: #fed7aa;
+      }
+
+      .ofsted-action-panel,
+      .ofsted-source-panel {
+        border: 1px solid var(--ofsted-line);
+        border-radius: 18px;
+        padding: 12px;
+        background: var(--ofsted-card);
+      }
+
+      .ofsted-panel-title {
         font-size: 0.72rem;
-        font-weight: 900;
+        font-weight: 950;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: #16675f;
+        color: var(--ofsted-teal-dark);
         margin-bottom: 8px;
       }
 
+      .ofsted-action-btn {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 1px solid var(--ofsted-line);
+        border-radius: 13px;
+        background: rgba(248,250,252,0.9);
+        color: var(--ofsted-ink);
+        padding: 9px 10px;
+        margin-top: 7px;
+        cursor: pointer;
+        font-weight: 780;
+      }
+
+      body.theme-dark .ofsted-action-btn { background: rgba(255,255,255,0.06); }
+
       .ofsted-source-card {
         display: block;
-        border: 1px solid rgba(15, 23, 42, 0.12);
-        border-radius: 12px;
-        background: #ffffff;
+        border: 1px solid var(--ofsted-line);
+        border-radius: 13px;
+        background: rgba(248,250,252,0.9);
         padding: 10px;
         margin-top: 8px;
         text-decoration: none;
-        color: #17211f;
+        color: var(--ofsted-ink);
       }
+
+      body.theme-dark .ofsted-source-card { background: rgba(255,255,255,0.06); }
 
       .ofsted-source-card strong {
         display: block;
@@ -176,8 +451,8 @@
 
       .ofsted-source-card span {
         display: block;
-        font-size: 0.72rem;
-        color: #64748b;
+        font-size: 0.7rem;
+        color: var(--ofsted-muted);
         text-transform: uppercase;
         letter-spacing: 0.04em;
         margin-bottom: 4px;
@@ -185,8 +460,23 @@
 
       .ofsted-source-card small {
         display: block;
-        color: #475569;
+        color: var(--ofsted-muted);
         line-height: 1.35;
+      }
+
+      .ofsted-quality-footer {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        color: var(--ofsted-muted);
+        font-size: 0.72rem;
+      }
+
+      .ofsted-quality-footer span {
+        border: 1px solid var(--ofsted-line);
+        background: var(--ofsted-card);
+        border-radius: 999px;
+        padding: 5px 8px;
       }
 
       .ofsted-trust-strip {
@@ -199,23 +489,26 @@
 
       .ofsted-trust-pill {
         border: 1px solid rgba(22, 103, 95, 0.18);
-        background: rgba(47, 143, 131, 0.08);
-        color: #16675f;
+        background: var(--ofsted-soft);
+        color: var(--ofsted-teal-dark);
         border-radius: 999px;
         padding: 7px 10px;
         font-size: 0.76rem;
-        font-weight: 800;
+        font-weight: 850;
       }
 
-      body.theme-dark .ofsted-source-card {
-        background: rgba(255,255,255,0.06);
-        color: #f8fafc;
-        border-color: rgba(226,232,240,0.16);
+      @media (max-width: 860px) {
+        .ofsted-hero-panel { grid-template-columns: 1fr 1fr; }
+        .ofsted-sg-banner,
+        .ofsted-action-panel,
+        .ofsted-source-panel,
+        .ofsted-quality-footer { margin-left: 0; width: 100%; }
       }
 
-      body.theme-dark .ofsted-source-card small,
-      body.theme-dark .ofsted-source-card span {
-        color: #cbd5e1;
+      @media (max-width: 560px) {
+        .ofsted-hero-panel { grid-template-columns: 1fr; }
+        .ofsted-modebar { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+        .ofsted-mode-btn { white-space: nowrap; }
       }
     `;
     document.head.appendChild(style);
@@ -232,9 +525,18 @@
   function patchStructuredPrompt() {
     if (typeof window.buildStructuredPrompt === "function") {
       window.buildStructuredPrompt = function patchedStructuredPrompt(intent) {
+        const mode = localStorage.getItem(MODE_STORAGE_KEY) || "guidance";
+        const modePrefix = {
+          guidance: "Answer as an Ofsted-ready residential children's home assistant. Include practical steps, inspection lens, evidence to check and sources where relevant.",
+          recording: "Prioritise paste-ready care-record wording. Keep it factual, neutral, child-centred and do not invent missing details.",
+          safeguarding: "Prioritise immediate safety, threshold-aware safeguarding thinking, who may need informing, recording expectations and management oversight.",
+          chronology: "Prioritise concise chronological recording, sequence, dates/times where supplied, impact and follow-up actions.",
+          reg45: "Prioritise Reg 45 review thinking: evidence, impact, patterns, leadership oversight, actions and monitoring.",
+        }[mode] || "Answer as an Ofsted-ready residential children's home assistant.";
+
         const map = {
           incident:
-            "Improve or structure the supplied incident information using factual, neutral, safeguarding-aware language. Do not invent missing details. Include inspection-ready evidence prompts only where helpful.",
+            "Improve or structure the supplied incident information using factual, neutral, safeguarding-aware language. Do not invent missing details.",
           risk:
             "Help review the supplied risk information. Identify presenting risks, protective factors, staff actions, oversight and review points. Do not invent facts.",
           handover:
@@ -254,42 +556,77 @@
           policy:
             "Answer the policy or guidance question clearly. Include practical application, recording implications and sources where available.",
           general:
-            "Answer clearly as an Ofsted-ready residential children's home assistant. Include inspection lens, evidence to check and sources where relevant.",
+            "Answer clearly and professionally for residential children's home practice.",
         };
-        return map[intent] || map.general;
+        return `${modePrefix} ${map[intent] || map.general}`;
       };
     }
   }
 
+  function renderLatestEnhancements() {
+    try {
+      const meta = currentMeta();
+      const messages = document.getElementById("messages");
+      if (!messages) return;
+
+      const candidates = Array.from(
+        messages.querySelectorAll(".msg.assistant, .assistant-msg, .message.assistant")
+      );
+      const latest = candidates[candidates.length - 1];
+      if (!latest || latest.dataset.ofstedEnhanced === "true") return;
+
+      const banner = renderSafeguardingBanner(meta);
+      const actions = renderSuggestedActions(meta.suggested_actions || meta.suggestedActions || []);
+      const sources = renderSources(meta.sources || []);
+      const footer = renderQualityFooter(meta);
+
+      if (banner) latest.insertAdjacentHTML("afterbegin", banner);
+      if (actions || sources || footer) latest.insertAdjacentHTML("beforeend", `${actions}${sources}${footer}`);
+
+      latest.dataset.ofstedEnhanced = "true";
+      if (typeof window.scrollMessagesToBottom === "function") window.scrollMessagesToBottom();
+    } catch (error) {
+      console.warn("Could not render IndiCare assistant enhancements", error);
+    }
+  }
+
   function patchMetaRendering() {
-    const originalScroll = window.scrollMessagesToBottom;
+    window.renderOfstedSourcesForLatestAssistantMessage = renderLatestEnhancements;
 
-    window.renderOfstedSourcesForLatestAssistantMessage = function renderLatestSources() {
+    const observerTarget = document.getElementById("messages");
+    if (observerTarget) {
+      const observer = new MutationObserver(() => {
+        window.clearTimeout(renderLatestEnhancements._timer);
+        renderLatestEnhancements._timer = window.setTimeout(renderLatestEnhancements, 120);
+      });
+      observer.observe(observerTarget, { childList: true, subtree: true });
+    }
+
+    document.addEventListener("click", async (event) => {
+      const btn = event.target && event.target.closest ? event.target.closest(".ofsted-action-btn") : null;
+      if (!btn) return;
+      const label = btn.dataset.actionLabel || btn.textContent || "";
       try {
-        const sources = window.state?.currentStreamMeta?.sources || [];
-        const html = renderSources(sources);
-        if (!html) return;
-
-        const messages = document.getElementById("messages");
-        if (!messages) return;
-
-        const candidates = Array.from(
-          messages.querySelectorAll(".msg.assistant, .assistant-msg, .message.assistant")
-        );
-        const latest = candidates[candidates.length - 1];
-        if (!latest || latest.querySelector(".ofsted-source-panel")) return;
-
-        latest.insertAdjacentHTML("beforeend", html);
-        if (typeof originalScroll === "function") originalScroll();
-      } catch (error) {
-        console.warn("Could not render Ofsted source cards", error);
-      }
-    };
+        await navigator.clipboard.writeText(label);
+        const original = btn.textContent;
+        btn.textContent = "Copied action";
+        window.setTimeout(() => (btn.textContent = original), 1300);
+      } catch (_) {}
+    });
   }
 
   function addTrustStrip() {
     const empty = document.getElementById("empty");
     if (!empty || empty.querySelector(".ofsted-trust-strip")) return;
+
+    const welcomeTitle = document.getElementById("welcomeTitle");
+    if (welcomeTitle) welcomeTitle.textContent = "How can I support practice today?";
+
+    const welcomeText = document.getElementById("welcomeText");
+    if (welcomeText) {
+      welcomeText.textContent =
+        "Ask about a situation, improve a note, check safeguarding, prepare a chronology or review evidence through an Ofsted-ready lens.";
+    }
 
     const strip = document.createElement("div");
     strip.className = "ofsted-trust-strip";
@@ -304,12 +641,88 @@
     target.appendChild(strip);
   }
 
+  function setMode(mode) {
+    localStorage.setItem(MODE_STORAGE_KEY, mode);
+    document.querySelectorAll(".ofsted-mode-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.mode === mode);
+    });
+  }
+
+  function addModeBarAndHeroCards() {
+    const empty = document.getElementById("empty");
+    const inner = empty && empty.querySelector(".assistant-empty-inner");
+    if (!inner || inner.querySelector(".ofsted-modebar")) return;
+
+    const activeMode = localStorage.getItem(MODE_STORAGE_KEY) || "guidance";
+
+    const modebar = document.createElement("div");
+    modebar.className = "ofsted-modebar";
+    modebar.innerHTML = `
+      <button type="button" class="ofsted-mode-btn" data-mode="guidance">Guidance</button>
+      <button type="button" class="ofsted-mode-btn" data-mode="recording">Recording</button>
+      <button type="button" class="ofsted-mode-btn" data-mode="safeguarding">Safeguarding</button>
+      <button type="button" class="ofsted-mode-btn" data-mode="chronology">Chronology</button>
+      <button type="button" class="ofsted-mode-btn" data-mode="reg45">Reg 45</button>
+    `;
+
+    const hero = document.createElement("div");
+    hero.className = "ofsted-hero-panel";
+    hero.innerHTML = `
+      <button type="button" class="ofsted-hero-card" data-prompt="Improve this daily note and show what detail is missing: ">
+        <strong>Improve a record</strong>
+        <span>Turn rough wording into factual, child-centred care recording.</span>
+      </button>
+      <button type="button" class="ofsted-hero-card" data-prompt="Check this safeguarding concern and tell me what to record, who may need informing and what oversight is needed: ">
+        <strong>Check safeguarding</strong>
+        <span>Think through immediate safety, escalation and recording expectations.</span>
+      </button>
+      <button type="button" class="ofsted-hero-card" data-prompt="Create a concise chronology entry from this information: ">
+        <strong>Create chronology</strong>
+        <span>Sequence events clearly with impact, actions and follow-up.</span>
+      </button>
+      <button type="button" class="ofsted-hero-card" data-prompt="Review this information through a Reg 45 and Ofsted evidence lens: ">
+        <strong>Reg 45 / Ofsted lens</strong>
+        <span>Identify evidence, impact, patterns, leadership oversight and actions.</span>
+      </button>
+    `;
+
+    inner.appendChild(modebar);
+    inner.appendChild(hero);
+
+    modebar.querySelectorAll(".ofsted-mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setMode(btn.dataset.mode || "guidance"));
+    });
+    setMode(activeMode);
+
+    hero.querySelectorAll(".ofsted-hero-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const input = document.getElementById("input");
+        if (!input) return;
+        input.value = card.dataset.prompt || "";
+        input.focus();
+        if (typeof window.resize === "function") window.resize();
+      });
+    });
+  }
+
+  function patchInputExperience() {
+    const input = document.getElementById("input");
+    if (input) {
+      input.placeholder = "Ask about a situation, improve a note, or check safeguarding...";
+    }
+
+    const send = document.getElementById("send");
+    if (send && !send.title) send.title = "Send to IndiCare Assistant";
+  }
+
   function init() {
     injectStyles();
     patchRender();
     patchStructuredPrompt();
     patchMetaRendering();
     addTrustStrip();
+    addModeBarAndHeroCards();
+    patchInputExperience();
   }
 
   if (document.readyState === "loading") {
