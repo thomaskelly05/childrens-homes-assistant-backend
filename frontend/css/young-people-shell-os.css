@@ -1,0 +1,1 @@
+:root{--primary:#16b8a6;--bg:#0f172a;--card:#1e293b;--text:#e5e7eb}body{background:var(--bg);color:var(--text)}.yp-os-grid{display:grid;grid-template-columns:1fr 360px;gap:16px}.yp-intelligence-card{background:var(--card);padding:16px;border-radius:12px}.yp-risk-card{border-left:4px solid red}.yp-assistant-rail{background:#020617;padding:16px;border-radius:12px}
