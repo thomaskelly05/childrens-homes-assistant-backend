@@ -12,14 +12,11 @@
 
   function safeUrl(value) {
     const raw = String(value || "").trim();
-    if (!/^https:\/\//i.test(raw)) return "";
-    return raw;
+    return /^https:\/\//i.test(raw) ? raw : "";
   }
 
   function renderMarkdown(text) {
-    let s = escapeHtml(text || "");
-
-    s = s
+    let s = escapeHtml(text || "")
       .replace(/^###\s+(.*)$/gm, "<h3>$1</h3>")
       .replace(/^##\s+(.*)$/gm, "<h2>$1</h2>")
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -45,9 +42,10 @@
         listOpen = false;
       }
 
-      if (!line.trim()) {
+      const trimmed = line.trim();
+      if (!trimmed) {
         html += "<br>";
-      } else if (/^<h[23]>.*<\/h[23]>$/.test(line.trim())) {
+      } else if (/^<h[23]>.*<\/h[23]>$/.test(trimmed)) {
         html += line;
       } else {
         html += `<p>${line}</p>`;
@@ -242,8 +240,14 @@
       #${WIDGET_ID} .ic-message.ic-user { align-items: flex-end; }
       #${WIDGET_ID} .ic-message.ic-assistant { align-items: flex-start; }
 
-      #${WIDGET_ID} .ic-bubble {
+      #${WIDGET_ID} .ic-bubble,
+      #${WIDGET_ID} .ic-sg-banner,
+      #${WIDGET_ID} .ic-action-panel,
+      #${WIDGET_ID} .ic-sources {
         max-width: 94%;
+      }
+
+      #${WIDGET_ID} .ic-bubble {
         border: 1px solid var(--ic-border);
         border-radius: 20px;
         padding: 12px 14px;
@@ -269,6 +273,57 @@
       #${WIDGET_ID} .ic-bubble li { margin: 4px 0; }
       #${WIDGET_ID} .ic-bubble a { color: var(--ic-primary-2); font-weight: 800; text-decoration: underline; }
 
+      #${WIDGET_ID} .ic-sg-banner {
+        border-radius: 16px;
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 1.4;
+        border: 1px solid var(--ic-border);
+      }
+      #${WIDGET_ID} .ic-sg-banner strong { display: block; font-weight: 900; margin-bottom: 4px; }
+      #${WIDGET_ID} .ic-sg-banner p { margin: 0; }
+      #${WIDGET_ID} .ic-sg-banner.urgent {
+        background: #fff1f1;
+        border-color: #f5c2c2;
+        color: #7f1d1d;
+      }
+      #${WIDGET_ID} .ic-sg-banner.concern {
+        background: #fff7ed;
+        border-color: #fed7aa;
+        color: #7c2d12;
+      }
+      #${WIDGET_ID}.ic-dark .ic-sg-banner.urgent { background: rgba(127,29,29,0.22); color: #fecaca; }
+      #${WIDGET_ID}.ic-dark .ic-sg-banner.concern { background: rgba(124,45,18,0.22); color: #fed7aa; }
+
+      #${WIDGET_ID} .ic-action-panel {
+        border: 1px solid var(--ic-border);
+        border-radius: 16px;
+        padding: 10px;
+        background: var(--ic-bg);
+      }
+      #${WIDGET_ID} .ic-action-title {
+        font-size: 11px;
+        font-weight: 900;
+        color: var(--ic-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 7px;
+      }
+      #${WIDGET_ID} .ic-action-btn {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 1px solid var(--ic-border);
+        background: var(--ic-bg-soft);
+        color: var(--ic-text);
+        border-radius: 12px;
+        padding: 9px 10px;
+        margin-top: 7px;
+        font-size: 12px;
+        font-weight: 750;
+        cursor: pointer;
+      }
+
       #${WIDGET_ID} .ic-meta {
         font-size: 11px;
         color: var(--ic-muted);
@@ -293,7 +348,6 @@
       }
 
       #${WIDGET_ID} .ic-sources {
-        width: 94%;
         border: 1px solid var(--ic-border);
         border-radius: 16px;
         background: var(--ic-bg);
@@ -390,6 +444,47 @@
     document.head.appendChild(style);
   }
 
+  function renderSafeguardingBanner(wrapper, level, safeguarding) {
+    if (!level || level === "standard" || level === "none") return;
+
+    const banner = document.createElement("div");
+    banner.className = `ic-sg-banner ${level === "urgent" ? "urgent" : "concern"}`;
+    const fallback = level === "urgent"
+      ? "Prioritise immediate safety. Follow safeguarding procedures and inform the relevant manager/DSL without delay."
+      : "Ensure this is recorded clearly, shared with the relevant manager/DSL, and reviewed against the young person's plan.";
+    banner.innerHTML = `
+      <strong>${level === "urgent" ? "Immediate safeguarding concern" : "Safeguarding consideration"}</strong>
+      <p>${escapeHtml((safeguarding && safeguarding.banner) || fallback)}</p>
+    `;
+    wrapper.appendChild(banner);
+  }
+
+  function renderSuggestedActions(wrapper, actions) {
+    const safeActions = Array.isArray(actions) ? actions.filter((item) => item && item.label) : [];
+    if (!safeActions.length) return;
+
+    const panel = document.createElement("div");
+    panel.className = "ic-action-panel";
+    panel.innerHTML = `<div class="ic-action-title">Suggested actions</div>`;
+
+    safeActions.slice(0, 5).forEach((action) => {
+      const button = document.createElement("button");
+      button.className = "ic-action-btn";
+      button.type = "button";
+      button.textContent = action.label;
+      button.addEventListener("click", async function () {
+        try {
+          await navigator.clipboard.writeText(action.label);
+          button.textContent = "Copied action";
+          setTimeout(() => (button.textContent = action.label), 1200);
+        } catch (_) {}
+      });
+      panel.appendChild(button);
+    });
+
+    wrapper.appendChild(panel);
+  }
+
   function renderSources(wrapper, citations) {
     const safeCitations = Array.isArray(citations) ? citations.filter((item) => item && item.url) : [];
     if (!safeCitations.length) return;
@@ -416,17 +511,23 @@
     wrapper.appendChild(box);
   }
 
-  function renderMessage(root, role, text, meta, citations) {
+  function renderMessage(root, role, text, meta, options) {
+    const opts = options || {};
     const messages = root.querySelector(".ic-messages");
     const wrapper = document.createElement("div");
     wrapper.className = `ic-message ic-${role}`;
+
+    if (role === "assistant") {
+      renderSafeguardingBanner(wrapper, opts.safeguardingLevel, opts.safeguarding);
+    }
 
     const bubble = document.createElement("div");
     bubble.className = "ic-bubble";
     bubble.innerHTML = role === "assistant" ? renderMarkdown(text) : escapeHtml(text);
     wrapper.appendChild(bubble);
 
-    renderSources(wrapper, citations);
+    renderSuggestedActions(wrapper, opts.suggestedActions);
+    renderSources(wrapper, opts.citations);
 
     if (meta) {
       const metaEl = document.createElement("div");
@@ -479,7 +580,7 @@
     input.disabled = true;
     send.disabled = true;
     renderMessage(root, "user", message);
-    const loading = renderMessage(root, "assistant", "Thinking through practice, evidence and inspection lens...");
+    const loading = renderMessage(root, "assistant", "Thinking through practice, safeguarding and inspection evidence...");
 
     try {
       const response = await fetch(config.apiUrl + "/v1/assistant/respond", {
@@ -512,7 +613,13 @@
       if (data.audit_id) metaParts.push(`Audit: ${data.audit_id}`);
       if (data.safeguarding_level && data.safeguarding_level !== "standard") metaParts.push(`Safeguarding: ${data.safeguarding_level}`);
       metaParts.push(`Mode: ${data.mode || mode}`);
-      renderMessage(root, "assistant", data.answer || "No answer returned.", metaParts.join(" · "), data.citations || []);
+
+      renderMessage(root, "assistant", data.answer || "No answer returned.", metaParts.join(" · "), {
+        citations: data.citations || [],
+        suggestedActions: data.suggested_actions || [],
+        safeguardingLevel: data.safeguarding_level,
+        safeguarding: data.metadata && data.metadata.explainability ? data.metadata.explainability.safeguarding : null,
+      });
     } catch (err) {
       loading.remove();
       root.classList.add("ic-has-error");
@@ -555,7 +662,7 @@
         <div class="ic-trustbar">
           <div class="ic-trust-pill">Ofsted lens</div>
           <div class="ic-trust-pill">Evidence checks</div>
-          <div class="ic-trust-pill">Clickable sources</div>
+          <div class="ic-trust-pill">Safeguarding-aware</div>
         </div>
         <div class="ic-modebar" aria-label="Assistant mode">
           <button class="ic-mode" type="button" data-mode="guidance">Guidance</button>
@@ -567,7 +674,7 @@
         <div class="ic-messages"></div>
         <footer class="ic-footer">
           <form class="ic-form">
-            <textarea class="ic-input" placeholder="Ask about recording, safeguarding, Reg 45, Ofsted evidence or care practice..."></textarea>
+            <textarea class="ic-input" placeholder="Ask about a situation, improve a note, or check safeguarding..."></textarea>
             <button class="ic-send" type="submit">Send</button>
           </form>
           <div class="ic-error"></div>
@@ -586,7 +693,7 @@
     renderMessage(
       root,
       "assistant",
-      "Hello, I’m IndiCare Assistant. I can help with care recording, safeguarding-aware wording, chronologies, Reg 45 preparation and inspection-ready evidence. Choose a mode above or ask naturally."
+      "Hello, I’m IndiCare Assistant. I can help you improve records, think through safeguarding, prepare chronologies and evidence practice for Reg 45 or Ofsted. Choose a mode above or ask naturally."
     );
 
     root.querySelectorAll(".ic-mode").forEach((modeButton) => {
