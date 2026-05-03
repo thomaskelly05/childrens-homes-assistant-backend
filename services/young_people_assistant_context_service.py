@@ -159,6 +159,61 @@ def _build_risk_signals(timeline: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return signals[:30]
 
 
+def _build_alerts(timeline: list[dict[str, Any]], risk_signals: list[dict[str, Any]], counts: Counter[str]) -> list[dict[str, str]]:
+    alerts: list[dict[str, str]] = []
+
+    incident_count = counts.get("incident", 0)
+    safeguarding_count = counts.get("safeguarding", 0)
+    missing_count = counts.get("missing_episode", 0)
+    risk_count = counts.get("risk", 0)
+
+    if safeguarding_count >= 2:
+        alerts.append({
+            "level": "high",
+            "title": "Multiple safeguarding records",
+            "summary": f"{safeguarding_count} safeguarding record(s) are visible. Check management oversight, actions taken and follow-up evidence.",
+        })
+
+    if incident_count >= 3:
+        alerts.append({
+            "level": "warning",
+            "title": "Repeated incidents",
+            "summary": f"{incident_count} incident record(s) are visible. Review for escalation, triggers, patterns and plan updates.",
+        })
+
+    if missing_count:
+        alerts.append({
+            "level": "high",
+            "title": "Missing episode evidence",
+            "summary": f"{missing_count} missing episode record(s) are visible. Check return home interviews, risk review and multi-agency follow-up.",
+        })
+
+    if risk_count or risk_signals:
+        alerts.append({
+            "level": "medium",
+            "title": "Risk review required",
+            "summary": f"{max(risk_count, len(risk_signals))} risk/safeguarding signal(s) should be checked for current controls and review dates.",
+        })
+
+    has_keywork = any(item.get("record_type") == "keywork" for item in timeline)
+    if not has_keywork and timeline:
+        alerts.append({
+            "level": "medium",
+            "title": "Child voice may be under-evidenced",
+            "summary": "No keywork evidence is visible in the current context window. Check whether the child’s wishes, feelings and voice are clearly recorded.",
+        })
+
+    has_plan = any(item.get("record_type") == "support_plan" for item in timeline)
+    if not has_plan and (incident_count or safeguarding_count or risk_count):
+        alerts.append({
+            "level": "medium",
+            "title": "Plan linkage gap",
+            "summary": "Risk, safeguarding or incident evidence is visible without support plan review evidence in the current window. Check whether plans reflect recent events.",
+        })
+
+    return alerts[:6]
+
+
 def _build_patterns(timeline: list[dict[str, Any]], risk_signals: list[dict[str, Any]]) -> list[str]:
     patterns: list[str] = []
     counts = Counter(_as_text(item.get("record_type") or "record") for item in timeline)
@@ -234,10 +289,11 @@ def build_young_person_assistant_context(
 
         timeline = sorted(rows, key=lambda item: str(item.get("date") or ""), reverse=True)[:safe_limit]
         risk_signals = _build_risk_signals(timeline)
+        counts = Counter(_as_text(item.get("record_type") or "record") for item in timeline)
+        alerts = _build_alerts(timeline, risk_signals, counts)
         patterns = _build_patterns(timeline, risk_signals)
         inspection_prompts = _build_inspection_prompts(timeline, risk_signals)
         sources = _build_sources(timeline)
-        counts = Counter(_as_text(item.get("record_type") or "record") for item in timeline)
 
         return {
             "ok": True,
@@ -249,6 +305,8 @@ def build_young_person_assistant_context(
             "recent_events": timeline[:30],
             "risk_signals": risk_signals,
             "risk_flags": risk_signals,
+            "alerts": alerts,
+            "safeguarding_alerts": alerts,
             "patterns": patterns,
             "inspection_prompts": inspection_prompts,
             "manager_oversight": inspection_prompts,
@@ -260,6 +318,7 @@ def build_young_person_assistant_context(
                 "summary": "Young person OS context built across core care records for inspection-ready review.",
                 "timeline_count": len(timeline),
                 "risk_signal_count": len(risk_signals),
+                "alert_count": len(alerts),
                 "pattern_count": len(patterns),
                 "inspection_prompt_count": len(inspection_prompts),
             },
