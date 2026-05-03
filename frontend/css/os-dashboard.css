@@ -1,0 +1,5 @@
+body { display: flex; margin: 0; font-family: Arial; }
+.sidebar { width: 200px; background: #1e293b; color: white; padding: 20px; }
+.sidebar button { display:block; margin:10px 0; width:100%; }
+.main { flex:1; padding:20px; }
+pre { background:#f3f4f6; padding:10px; }
