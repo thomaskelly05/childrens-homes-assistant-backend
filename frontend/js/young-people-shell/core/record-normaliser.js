@@ -58,6 +58,16 @@ function normaliseDateValue(value) {
   return text;
 }
 
+function toDateInputValue(value) {
+  const iso = normaliseDateValue(value);
+  return iso ? String(iso).slice(0, 10) : "";
+}
+
+function toDateTimeLocalValue(value) {
+  const iso = normaliseDateValue(value);
+  return iso ? String(iso).slice(0, 16) : "";
+}
+
 function inferRecordType(row = {}, fallbackType = "") {
   const safe = safeObject(row);
 
@@ -69,6 +79,120 @@ function inferRecordType(row = {}, fallbackType = "") {
     normaliseRecordType(safe.source_type) ||
     ""
   );
+}
+
+function assignIfMissing(target, key, value) {
+  if (!key) return;
+  if (target[key] !== null && target[key] !== undefined && target[key] !== "") return;
+  if (value === null || value === undefined || value === "") return;
+  target[key] = value;
+}
+
+function hydrateFormAliases(row = {}, recordType = "") {
+  const safe = { ...safeObject(row) };
+  const type = normaliseRecordType(recordType);
+
+  if (type === "daily_note") {
+    assignIfMissing(safe, "narrative", safe.presentation || safe.summary || safe.note || safe.daily_note);
+    assignIfMissing(safe, "child_voice", safe.young_person_voice);
+    assignIfMissing(safe, "young_person_voice", safe.child_voice);
+    assignIfMissing(safe, "status", safe.workflow_status);
+    assignIfMissing(safe, "workflow_status", safe.status);
+  }
+
+  if (type === "incident") {
+    assignIfMissing(safe, "actions_taken", safe.outcome || safe.actions_required);
+    assignIfMissing(safe, "manager_oversight", safe.manager_review_comment);
+    assignIfMissing(safe, "deescalation_attempted", safe.staff_response);
+    assignIfMissing(safe, "incident_datetime", safe.occurred_at);
+    assignIfMissing(safe, "occurred_at", safe.incident_datetime);
+    assignIfMissing(safe, "manager_review_status", safe.workflow_status || safe.status);
+    assignIfMissing(safe, "workflow_status", safe.manager_review_status || safe.status);
+  }
+
+  if (type === "health_record") {
+    assignIfMissing(safe, "record_date", toDateInputValue(safe.event_datetime || safe.record_date || safe.created_at));
+    assignIfMissing(safe, "health_area", safe.title || safe.area || safe.category);
+    assignIfMissing(safe, "professional_name", safe.professional || safe.service || safe.professional_name);
+    assignIfMissing(safe, "child_voice", safe.young_person_voice);
+    assignIfMissing(safe, "young_person_voice", safe.child_voice);
+    assignIfMissing(safe, "next_action_date", toDateInputValue(safe.review_date || safe.next_action_date));
+  }
+
+  if (type === "education_record") {
+    assignIfMissing(safe, "education_area", safe.provision_name || safe.area || safe.category);
+    assignIfMissing(safe, "school_or_provider", safe.provision_name || safe.school_or_provider);
+    assignIfMissing(safe, "summary", safe.education_summary || safe.behaviour_summary || safe.summary);
+    assignIfMissing(safe, "learning_engagement", safe.engagement_summary);
+    assignIfMissing(safe, "child_voice", safe.young_person_voice);
+    assignIfMissing(safe, "young_person_voice", safe.child_voice);
+    assignIfMissing(safe, "achievement_note", safe.progress_summary || safe.achievement_note);
+    assignIfMissing(safe, "action_taken", safe.actions_required || safe.action_taken);
+  }
+
+  if (type === "family_contact") {
+    assignIfMissing(safe, "summary", safe.post_contact_presentation || safe.summary);
+    assignIfMissing(safe, "child_voice", safe.young_person_voice);
+    assignIfMissing(safe, "young_person_voice", safe.child_voice);
+  }
+
+  if (type === "keywork") {
+    assignIfMissing(safe, "actions_agreed", safe.actions_required || safe.actions_agreed);
+    assignIfMissing(safe, "reflective_analysis", safe.reflection || safe.reflective_analysis);
+    assignIfMissing(safe, "child_voice", safe.young_person_voice);
+    assignIfMissing(safe, "young_person_voice", safe.child_voice);
+  }
+
+  if (type === "safeguarding_record") {
+    assignIfMissing(safe, "concern_type", safe.safeguarding_category || safe.concern_type);
+    assignIfMissing(safe, "concern_summary", safe.concern_details || safe.concern_summary);
+    assignIfMissing(safe, "disclosure_details", safe.young_person_voice || safe.disclosure_details);
+    assignIfMissing(safe, "immediate_action_taken", safe.actions_taken || safe.immediate_action_taken);
+    assignIfMissing(safe, "manager_oversight", safe.manager_review_comment || safe.manager_oversight);
+  }
+
+  if (type === "appointment") {
+    assignIfMissing(safe, "record_date", toDateInputValue(safe.appointment_date || safe.record_date));
+    assignIfMissing(safe, "appointment_datetime", safe.appointment_datetime || safe.appointment_date);
+    assignIfMissing(safe, "summary", safe.notes || safe.summary || safe.description);
+  }
+
+  if (type === "handover_record") {
+    assignIfMissing(safe, "handover_date", toDateInputValue(safe.handover_datetime || safe.handover_date));
+    assignIfMissing(safe, "summary", safe.summary_text || safe.summary);
+  }
+
+  if (type === "chronology_event") {
+    assignIfMissing(safe, "event_datetime", safe.occurred_at || safe.date || safe.created_at);
+    assignIfMissing(safe, "summary", safe.description || safe.narrative || safe.summary);
+  }
+
+  // Keep HTML input-friendly date values available without hiding the original raw values.
+  [
+    "note_date",
+    "record_date",
+    "review_date",
+    "session_date",
+    "contact_date",
+    "next_session_date",
+    "next_action_date",
+    "due_date",
+  ].forEach((key) => {
+    if (safe[key]) safe[key] = toDateInputValue(safe[key]) || safe[key];
+  });
+
+  [
+    "incident_datetime",
+    "concern_datetime",
+    "contact_datetime",
+    "event_datetime",
+    "appointment_datetime",
+    "handover_datetime",
+  ].forEach((key) => {
+    if (safe[key]) safe[key] = toDateTimeLocalValue(safe[key]) || safe[key];
+  });
+
+  return safe;
 }
 
 function inferTitle(row = {}, recordType = "") {
@@ -85,13 +209,17 @@ function inferTitle(row = {}, recordType = "") {
       "topic",
       "incident_type",
       "concern_type",
+      "safeguarding_category",
       "risk_area",
+      "category",
       "health_area",
       "education_area",
+      "provision_name",
       "contact_type",
       "appointment_type",
       "document_type",
       "medication_name",
+      "shift_type",
       "shift",
       "task",
     ]) || getRecordLabel(recordType, "Record")
@@ -110,12 +238,18 @@ function inferSummary(row = {}, recordType = "") {
     "note",
     "daily_note",
     "narrative",
+    "presentation",
     "details",
     "concern_summary",
     "concern_details",
     "incident_summary",
     "outcome",
     "actions_taken",
+    "actions_required",
+    "education_summary",
+    "behaviour_summary",
+    "post_contact_presentation",
+    "summary_text",
     "generated_text",
     "input_text",
   ]);
@@ -136,13 +270,16 @@ function inferDate(row = {}, recordType = "") {
     "concern_datetime",
     "review_date",
     "due_date",
+    "appointment_datetime",
     "appointment_date",
     "session_date",
     "record_date",
     "contact_datetime",
     "missing_from",
+    "administered_time",
     "administered_at",
     "handover_datetime",
+    "handover_date",
   ]);
 
   return normaliseDateValue(value);
@@ -154,8 +291,10 @@ function inferStatus(row = {}) {
   return (
     normaliseWorkflowStatus(safe.workflow_status) ||
     normaliseWorkflowStatus(safe.status) ||
+    normaliseWorkflowStatus(safe.manager_review_status) ||
     normaliseWorkflowStatus(safe.state) ||
     cleanText(safe.status) ||
+    cleanText(safe.manager_review_status) ||
     ""
   );
 }
@@ -166,6 +305,7 @@ function inferSeverity(row = {}) {
   return (
     normaliseSeverity(safe.severity) ||
     normaliseSeverity(safe.risk_level) ||
+    normaliseSeverity(safe.significance) ||
     normaliseSeverity(safe.level) ||
     normaliseSeverity(safe.priority) ||
     ""
@@ -173,8 +313,9 @@ function inferSeverity(row = {}) {
 }
 
 export function normaliseRecord(row = {}, fallbackType = "") {
-  const safe = safeObject(row);
-  const recordType = inferRecordType(safe, fallbackType);
+  const base = safeObject(row);
+  const recordType = inferRecordType(base, fallbackType);
+  const safe = hydrateFormAliases(base, recordType);
   const contract = getRecordContract(recordType);
 
   const id = normaliseId(
