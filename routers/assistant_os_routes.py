@@ -23,6 +23,7 @@ from services.assistant_security import (
     safe_string,
 )
 from services.young_people_assistant_context_service import build_young_person_assistant_context
+from services.ai_reasoning_service import run_os_reasoning
 
 router = APIRouter(prefix="/assistant/os", tags=["OS Assistant"])
 
@@ -135,6 +136,34 @@ def get_os_context(
     return build_young_person_assistant_context(
         young_person_id=young_person_id
     )
+
+
+@router.post("/reason")
+async def reason_about_child(
+    payload: dict,
+    current_user=Depends(get_current_user),
+):
+    _assert_authenticated_user(current_user)
+    _assert_scope_access(current_user, "child")
+
+    young_person_id = payload.get("young_person_id")
+    question = payload.get("question")
+
+    if not young_person_id:
+        raise HTTPException(status_code=400, detail="young_person_id is required")
+
+    _assert_safe_message(question or "")
+
+    context = build_young_person_assistant_context(
+        young_person_id=int(young_person_id)
+    )
+
+    answer = await run_os_reasoning(
+        question=question,
+        context=context,
+    )
+
+    return {"ok": True, "answer": answer}
 
 
 @router.post("/young-people/stream")
