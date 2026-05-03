@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>IndiCare OS Dashboard</title>
+  <link rel="stylesheet" href="/css/os-dashboard.css" />
+</head>
+<body>
+  <div class="sidebar">
+    <h2>IndiCare</h2>
+    <button onclick="loadScope('staff')">Staff</button>
+    <button onclick="loadScope('manager')">Manager</button>
+    <button onclick="loadScope('ri')">RI</button>
+    <button onclick="loadScope('provider')">Provider</button>
+  </div>
+  <div class="main">
+    <h1>Operational Dashboard</h1>
+    <pre id="output"></pre>
+  </div>
+  <script src="/js/os-dashboard.js"></script>
+</body>
+</html>
