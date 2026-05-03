@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>IndiCare OS | Operational Dashboard</title>
+  <meta name="description" content="IndiCare OS role-based operational intelligence dashboards for staff, managers, responsible individuals and providers." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="/css/young-people-shell-os.css" />
+  <link rel="stylesheet" href="/css/os-dashboard.css" />
+</head>
+<body class="indicare-care-hub-body os-dashboard-body">
+  <main class="os-dashboard-shell">
+    <aside class="yp-os-sidebar os-dashboard-sidebar" aria-label="IndiCare OS dashboard navigation">
+      <div class="yp-sidebar-brand">
+        <div class="yp-brand-mark" aria-hidden="true">IC</div>
+        <div>
+          <p class="yp-eyebrow">IndiCare OS</p>
+          <h1>Control Centre</h1>
+        </div>
+      </div>
+
+      <nav class="yp-sidebar-nav os-role-nav" aria-label="Dashboard role views">
+        <button type="button" class="active" data-scope="staff"><span>Staff daily view</span><small>Today’s priorities</small></button>
+        <button type="button" data-scope="manager"><span>Manager home view</span><small>Whole-home oversight</small></button>
+        <button type="button" data-scope="ri"><span>RI oversight</span><small>Multi-home assurance</small></button>
+        <button type="button" data-scope="provider"><span>Provider view</span><small>All homes intelligence</small></button>
+      </nav>
+
+      <div class="yp-sidebar-footer">
+        <a class="yp-button yp-button-ghost" href="/young-people-shell">Young People OS</a>
+        <a class="yp-button yp-button-ghost" href="/assistant">Standalone assistant</a>
+        <div id="osDashboardStatus" class="yp-status" role="status" aria-live="polite">Loading intelligence…</div>
+      </div>
+    </aside>
+
+    <section class="os-dashboard-main">
+      <header class="os-dashboard-hero">
+        <div>
+          <p class="yp-eyebrow" id="osDashboardEyebrow">Operational intelligence</p>
+          <h2 id="osDashboardTitle">Staff daily view</h2>
+          <p id="osDashboardSubtitle">A clear, role-based view of what needs attention today.</p>
+        </div>
+        <div class="os-dashboard-controls">
+          <label for="osWindowDays">Review window</label>
+          <select id="osWindowDays">
+            <option value="7">7 days</option>
+            <option value="30" selected>30 days</option>
+            <option value="60">60 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </div>
+      </header>
+
+      <section class="os-dashboard-metrics" aria-label="Operational summary">
+        <article class="yp-metric-card yp-metric-primary"><span>Total evidence</span><strong id="metricTotalEvents">—</strong><small>records in window</small></article>
+        <article class="yp-metric-card"><span>Incidents</span><strong id="metricIncidents">—</strong><small>behaviour / events</small></article>
+        <article class="yp-metric-card"><span>Safeguarding</span><strong id="metricSafeguarding">—</strong><small>concerns / actions</small></article>
+        <article class="yp-metric-card"><span>Homes visible</span><strong id="metricHomes">—</strong><small>scope access</small></article>
+      </section>
+
+      <section class="os-dashboard-grid">
+        <section class="yp-intelligence-card os-priority-card">
+          <div class="yp-card-head"><div><p class="yp-eyebrow">Live priorities</p><h3>What needs attention now</h3></div></div>
+          <div id="osAlertsList" class="yp-insight-list"><p class="yp-muted">Loading alerts…</p></div>
+        </section>
+
+        <section class="yp-intelligence-card os-pattern-card">
+          <div class="yp-card-head"><div><p class="yp-eyebrow">Patterns</p><h3>What the system is noticing</h3></div></div>
+          <div id="osPatternsList" class="yp-insight-list"><p class="yp-muted">Loading patterns…</p></div>
+        </section>
+
+        <section class="yp-intelligence-card os-home-map-card">
+          <div class="yp-card-head"><div><p class="yp-eyebrow">Home risk map</p><h3>Where leadership should look</h3></div></div>
+          <div id="osHomesList" class="os-home-list"><p class="yp-muted">Loading home intelligence…</p></div>
+        </section>
+
+        <section class="yp-intelligence-card os-action-card">
+          <div class="yp-card-head"><div><p class="yp-eyebrow">Recommended action</p><h3>Leadership next steps</h3></div></div>
+          <div id="osActionsList" class="yp-insight-list"><p class="yp-muted">Loading actions…</p></div>
+        </section>
+
+        <section class="yp-intelligence-card os-wide-card">
+          <div class="yp-card-head"><div><p class="yp-eyebrow">Recent evidence stream</p><h3>Latest operational evidence</h3></div></div>
+          <div id="osRecentEvents" class="os-event-stream"><p class="yp-muted">Loading recent records…</p></div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="/js/os-dashboard.js"></script>
+</body>
+</html>
