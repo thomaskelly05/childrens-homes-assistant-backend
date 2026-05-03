@@ -100,6 +100,17 @@
           </div>
 
           <div id="ypOverviewPanel" class="yp-overview-layout yp-inspection-layout">
+            <section class="yp-intelligence-card yp-alert-card">
+              <div class="yp-card-head">
+                <div>
+                  <p class="yp-eyebrow">Live safeguarding alerts</p>
+                  <h3>What needs immediate attention</h3>
+                </div>
+                <button type="button" class="yp-mini-button" data-tab-jump="safeguarding">Open safeguarding</button>
+              </div>
+              <div id="ypAlertsList" class="yp-insight-list"><p class="yp-muted">Loading alerts…</p></div>
+            </section>
+
             <section class="yp-intelligence-card yp-evidence-card">
               <div class="yp-card-head"><div><p class="yp-eyebrow">What is known</p><h3>Recent evidence</h3></div><button type="button" class="yp-mini-button" data-tab-jump="timeline">Chronology</button></div>
               <div id="ypTimelinePreview" class="yp-timeline-preview"><p class="yp-muted">Timeline loading…</p></div>
