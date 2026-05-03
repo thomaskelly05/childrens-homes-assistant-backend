@@ -38,6 +38,10 @@ ROUTERS = [
     "routers.security_routes",
     "routers.frontend_compat",
     "routers.young_people_shell_item_compat_routes",
+
+    # 🔒 SAFE ROUTE FIRST (prevents selector crash)
+    "routers.young_people_safe_routes",
+
     "routers.account_routes",
     "routers.admin_routes",
     "routers.founder_ai_routes",
