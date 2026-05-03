@@ -27,10 +27,22 @@
     });
   }
   async function getJson(url) {
-    const res = await fetch(url, { credentials: 'include' });
+    const res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' } });
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(`Server returned ${res.status}. Check backend logs for this inspection endpoint.`);
+    }
     const json = await res.json();
     if (!res.ok || json.ok === false) throw new Error(json.detail || json.error || 'Request failed');
     return json.data || json;
+  }
+  function setFallback(message) {
+    const fallback = message || 'Inspection intelligence unavailable.';
+    const ids = ['ypInspectionShiftSafety', 'ypInspectionEnforcement', 'ypInspectionResponsibility'];
+    ids.forEach((id) => { const el = byId(id); if (el) el.textContent = 'Unable to load'; });
+    renderList(byId('ypInspectionChildVoice'), [], () => '');
+    renderList(byId('ypInspectionSafeguardingStory'), [], () => '');
+    renderList(byId('ypInspectionConsistency'), [{ message: fallback }], (item) => text(item.message));
   }
   async function loadInspectionPanel() {
     const panel = byId('ypInspectionPanel');
@@ -65,6 +77,7 @@
 
       if (status) status.textContent = 'Inspection intelligence loaded.';
     } catch (error) {
+      setFallback(error.message);
       if (status) status.textContent = 'Inspection intelligence could not load: ' + error.message;
     }
   }
