@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from auth.current_user import get_current_user
 from db.connection import get_db_connection, release_db_connection
-from routers.frontend_compat import get_columns, rows_to_dicts, serialise, table_exists
+from routers.frontend_compat import get_columns, rows_to_dicts, table_exists
+from services.young_people_assistant_context_service import (
+    build_young_person_assistant_context,
+)
 
 
 router = APIRouter(prefix="/young-people", tags=["young-people-shell-item-compat"])
@@ -145,6 +148,44 @@ def _select_home_id(row: dict[str, Any] | None, young_person_id: int, cursor: An
             return _safe_int(result[0])
 
     return None
+
+
+def _get_young_person_home_id(young_person_id: int) -> int | None:
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            return _select_home_id(None, young_person_id, cursor)
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
+
+
+@router.get("/{young_person_id}/assistant/context")
+def get_unified_assistant_context(
+    young_person_id: int,
+    home_id: int | None = Query(default=None),
+    provider_id: int | None = Query(default=None),
+    limit: int = Query(default=120, ge=1, le=500),
+    current_user=Depends(get_current_user),
+):
+    resolved_home_id = home_id or _get_young_person_home_id(young_person_id)
+    _assert_home_access(current_user, resolved_home_id)
+
+    try:
+        return build_young_person_assistant_context(
+            young_person_id=young_person_id,
+            home_id=resolved_home_id,
+            provider_id=provider_id,
+            limit=limit,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to build assistant context: {exc}",
+        ) from exc
 
 
 @router.get("/{young_person_id}/{route_key}/{record_id}")
