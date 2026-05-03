@@ -93,6 +93,7 @@ ROUTERS = [
     "routers.rostering_routes",
     "routers.academy_routes",
     "routers.academy_intelligence_routes",
+    "routers.staff_profile_routes",
 ]
 
 
@@ -197,6 +198,7 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/academy/manager-compliance.html": academy("manager-compliance.html"),
         "/academy/evidence-portfolio.html": academy("evidence-portfolio.html"),
         "/academy/certificates.html": academy("certificates.html"),
+        "/staff-profile.html": frontend("staff-profile.html"),
     }
     for route_path, paths in page_routes.items():
         register_file_route(app, route_path, paths, "page")
