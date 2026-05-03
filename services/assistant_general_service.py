@@ -60,6 +60,50 @@ def _build_selected_knowledge_block(selected_modules: dict[str, str]) -> str:
     return "\n".join(parts).strip()
 
 
+def _is_follow_up_question(message: str, history: list[dict[str, Any]]) -> bool:
+    text = safe_string(message).lower()
+    if not history:
+        return False
+    follow_up_markers = (
+        "does this",
+        "would this",
+        "is this",
+        "based on this",
+        "based on the above",
+        "threshold",
+        "explain why",
+        "what about",
+        "can you also",
+        "turn this into",
+        "rewrite this as",
+        "expand this",
+        "summarise this",
+        "now",
+    )
+    return any(marker in text for marker in follow_up_markers)
+
+
+def _history_context_block(history: list[dict[str, Any]], *, max_chars: int = 3500) -> str:
+    if not history:
+        return ""
+
+    lines: list[str] = []
+    for item in history[-8:]:
+        role = safe_string(item.get("role") or "user").lower()
+        if role not in {"user", "assistant"}:
+            continue
+        content = safe_string(item.get("content"))
+        if not content:
+            continue
+        label = "User" if role == "user" else "Assistant"
+        lines.append(f"{label}: {content}")
+
+    block = "\n\n".join(lines)
+    if len(block) > max_chars:
+        block = block[-max_chars:]
+    return block.strip()
+
+
 def _general_system_prompt(response_mode: str) -> str:
     base = """
 You are IndiCare General Assistant.
@@ -83,6 +127,13 @@ Hard boundaries:
 - Do not present assumptions as facts.
 - If asked about internal records that were not supplied, say that the user needs to provide the record/export or use the OS Assistant inside the authorised IndiCare OS workspace.
 - Never say or imply: "I checked the record", "your records show", "the system shows", "from the chronology", "based on existing notes", or similar unless the user pasted that exact content into the current prompt.
+
+Conversation behaviour:
+- Treat the conversation as continuous within the current chat.
+- If the user asks a follow-up question, build on the previous user and assistant messages instead of starting again.
+- Do not repeat the previous full record or previous full answer unless the user explicitly asks you to repeat it.
+- For follow-up threshold, safeguarding, or analysis questions, answer the new question directly, then give brief reasons, recording implications, and next steps.
+- If previous context exists and the user says "this", "the above", "that incident", or asks "does this meet threshold", use the prior conversation content as user-supplied context.
 
 Care-recording principles:
 - Prefer concise, factual, chronological writing.
@@ -147,7 +198,7 @@ def _model_config_for_mode(response_mode: str) -> tuple[str, float, int]:
         return ("gpt-4o-mini", 0.1, 650)
     if response_mode == "deep":
         return ("gpt-4o-mini", 0.2, 1600)
-    return ("gpt-4o-mini", 0.2, 1050)
+    return ("gpt-4o-mini", 0.15, 1050)
 
 
 async def generate_general_assistant_stream(
@@ -163,7 +214,8 @@ async def generate_general_assistant_stream(
         raise ValueError("Message is required.")
 
     mode = _normalise_response_mode(response_mode)
-    safe_history = normalise_history(history, max_items=12, max_chars=1600)
+    safe_history = normalise_history(history, max_items=12, max_chars=2200)
+    is_follow_up = _is_follow_up_question(clean_message, safe_history)
     injection_flag = contains_prompt_injection_attempt(clean_message)
     internal_data_request = detect_internal_data_request(clean_message)
     boundary_metadata = build_boundary_metadata(
@@ -253,6 +305,21 @@ async def generate_general_assistant_stream(
     system_prompt = _general_system_prompt(mode)
     system_prompt = f"{system_prompt}\n\n{standalone_boundary_prompt_block()}"
 
+    history_block = _history_context_block(safe_history)
+    if history_block:
+        system_prompt = (
+            f"{system_prompt}\n\nCurrent conversation context supplied by the user/session:\n"
+            f"{history_block}\n\n"
+            "Use this context only to answer the current question. Do not repeat earlier answers unless explicitly asked."
+        )
+
+    if is_follow_up:
+        system_prompt = (
+            f"{system_prompt}\n\n"
+            "The current user message appears to be a follow-up. Answer the follow-up directly. "
+            "Do not regenerate the previous record in full. Keep the response focused on the new question."
+        )
+
     knowledge_block = _build_selected_knowledge_block(selected_knowledge)
     if knowledge_block:
         system_prompt = f"{system_prompt}\n\n{knowledge_block}"
@@ -296,6 +363,7 @@ async def generate_general_assistant_stream(
                     "internal_data_access": False,
                     "data_boundary": "public_guidance_only",
                     "safeguarding_level": safeguarding.get("level"),
+                    "is_follow_up": is_follow_up,
                 },
             )
         ):
@@ -333,6 +401,8 @@ async def generate_general_assistant_stream(
         "internal_data_request_detected": False,
         "safeguarding_level": safeguarding.get("level"),
         "follow_up_required": safeguarding.get("follow_up_required"),
+        "is_follow_up": is_follow_up,
+        "history_items_loaded": len(safe_history),
         "knowledge_modules_loaded": [item.get("module") for item in knowledge_sources],
         "official_sources_loaded": [item.get("source_id") for item in official_sources],
         **provider_runtime,
@@ -342,7 +412,7 @@ async def generate_general_assistant_stream(
         "assistant_mode": "general",
         "data_boundary": "standalone_public_guidance_only",
         "reasoning_summary": (
-            "Standalone assistant response generated using user-supplied text, selected public IndiCare practice knowledge, safeguarding escalation metadata and relevant official source metadata where available. No internal OS records were accessed."
+            "Standalone assistant response generated using user-supplied text, selected public IndiCare practice knowledge, session conversation context, safeguarding escalation metadata and relevant official source metadata where available. No internal OS records were accessed."
         ),
         "boundary": boundary_metadata,
         "knowledge_sources": knowledge_sources,
