@@ -218,6 +218,7 @@ ROUTERS = [
 
     # Must load before stricter legacy/frontend routers.
     "routers.frontend_compat",
+    "routers.young_people_shell_item_compat_routes",
 
     "routers.account_routes",
     "routers.admin_routes",
