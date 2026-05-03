@@ -44,7 +44,7 @@
 
   function normaliseHeadings(text) {
     return String(text || "")
-      .replace(/^(Direct answer|Improved note|Safeguarding consideration|Safeguarding analysis|What this means|What to do next|How to record it|Inspection lens|Recording \/ evidence to check|Recording and evidence to check|Evidence to check|Management oversight|Sources):/gim, "### $1")
+      .replace(/^(Direct answer|Improved note|Safeguarding threshold|Safeguarding consideration|Safeguarding analysis|What this means|What to do next|How to record it|Inspection lens|Recording \/ evidence to check|Recording and evidence to check|Evidence to check|Management oversight|Sources):/gim, "### $1")
       .replace(/Safeguarding Referral Threshold/g, "### Safeguarding threshold")
       .replace(/Follow-up/g, "### Follow-up")
       .replace(/Outcome/g, "### Outcome");
@@ -96,9 +96,10 @@
       .ic-mode-row,.ic-quick-row{max-width:960px;margin:12px auto 0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.ic-mode-chip,.ic-quick-chip{border:1px solid rgba(15,23,42,.12);background:#fff;border-radius:999px;padding:7px 11px;color:#0f172a;font-weight:800;cursor:pointer;font-size:13px}.ic-mode-chip.active,.ic-quick-chip:hover{background:rgba(22,118,109,.08);color:#16766d;border-color:rgba(22,118,109,.3)}
       .ic-row{max-width:920px;margin:18px auto;display:flex;gap:12px;align-items:flex-start}.ic-row.user{justify-content:flex-end}.ic-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(22,118,109,.08);color:#16766d;font-weight:900;border:1px solid rgba(15,23,42,.12);font-size:12px}.ic-row.user .ic-avatar{display:none}
       .ic-card{max-width:780px;border:1px solid rgba(15,23,42,.12);background:#fff;color:#0f172a;border-radius:20px;padding:16px 17px;box-shadow:0 14px 34px rgba(15,23,42,.07);line-height:1.58;animation:icFade .18s ease-out}.ic-row.user .ic-card{background:#2563eb;color:#fff;border-bottom-right-radius:7px}.ic-row.assistant .ic-card{border-bottom-left-radius:7px}.ic-card p{margin:0 0 10px}.ic-card h3{margin:15px 0 7px;padding-top:9px;border-top:1px solid rgba(22,118,109,.13);color:#16766d;font-size:15px;letter-spacing:-.01em}.ic-card h3:first-child{border-top:0;padding-top:0;margin-top:0}.ic-card ul{margin:7px 0 10px 18px;padding:0}.ic-card li{margin:4px 0}.ic-card a{color:#16766d;font-weight:800}.ic-meta{max-width:780px;margin-top:10px;display:grid;gap:10px}.ic-panel{border:1px solid rgba(15,23,42,.12);background:#fff;border-radius:16px;padding:12px;color:#0f172a;animation:icFade .18s ease-out}.ic-panel-title{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#16766d;margin-bottom:7px}.ic-btn,.ic-source{display:block;width:100%;border:1px solid rgba(15,23,42,.12);background:#f8fafc;border-radius:12px;padding:9px;margin-top:7px;text-align:left;color:#0f172a;text-decoration:none;font-weight:700}.ic-source small{color:#64748b;line-height:1.35}.ic-sg.urgent{background:#fff1f1;color:#7f1d1d;border-color:#f5c2c2}.ic-sg.concern{background:#fff7ed;color:#7c2d12;border-color:#fed7aa}.ic-boundary{background:#eff6ff;color:#1e3a8a;border-color:#bfdbfe}.ic-follow,.ic-quality{display:flex;gap:6px;flex-wrap:wrap}.ic-chip{border:1px solid rgba(15,23,42,.12);border-radius:999px;background:#fff;padding:7px 10px;font-weight:800;cursor:pointer}.ic-chip:hover{background:rgba(22,118,109,.08);color:#16766d}.ic-quality span{border:1px solid rgba(15,23,42,.12);border-radius:999px;background:#fff;color:#64748b;padding:5px 8px;font-size:12px}.ic-thinking{color:#64748b}.ic-thinking:after{content:"";animation:icdots 1.2s infinite}@keyframes icdots{0%{content:""}33%{content:"."}66%{content:".."}100%{content:"..."}}@keyframes icFade{from{opacity:.5;transform:translateY(3px)}to{opacity:1;transform:none}}
+      .ic-decision{border-left:5px solid #16766d}.ic-decision.immediate_action{background:#fff1f1;color:#7f1d1d;border-color:#f5c2c2;border-left-color:#dc2626}.ic-decision.likely_referral{background:#fff7ed;color:#7c2d12;border-color:#fed7aa;border-left-color:#ea580c}.ic-decision.possible_referral{background:#fffbeb;color:#78350f;border-color:#fde68a;border-left-color:#d97706}.ic-decision.monitor{background:#f0fdfa;color:#115e59;border-color:#99f6e4;border-left-color:#0d9488}.ic-decision.not_indicated{background:#f8fafc;color:#334155;border-left-color:#64748b}.ic-decision-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}.ic-threshold-badge{border-radius:999px;padding:5px 8px;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.04em;background:rgba(255,255,255,.72);border:1px solid rgba(15,23,42,.12);white-space:nowrap}.ic-decision-text{font-weight:850;line-height:1.35}.ic-decision-small{font-size:13px;line-height:1.45;margin-top:5px}.ic-decision-list{margin:8px 0 0 18px;padding:0}.ic-decision-list li{margin:4px 0;font-size:13px;line-height:1.42}.ic-decision-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.ic-decision-mini{border:1px solid rgba(15,23,42,.1);border-radius:12px;padding:9px;background:rgba(255,255,255,.55)}.ic-decision-mini strong{display:block;margin-bottom:5px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}.ic-decision-mini p{font-size:13px;margin:0 0 5px;line-height:1.4}
       .ic-toast{position:fixed;left:50%;bottom:82px;transform:translateX(-50%);z-index:99999;background:#0f172a;color:#fff;border-radius:999px;padding:9px 13px;font-weight:800;font-size:13px;box-shadow:0 18px 40px rgba(15,23,42,.25)}
-      body.theme-dark .ic-card,body.theme-dark .ic-panel,body.theme-dark .ic-top-strip,body.theme-dark .ic-chip,body.theme-dark .ic-mode-chip,body.theme-dark .ic-quick-chip,body.theme-dark .ic-quality span{background:rgba(255,255,255,.06);color:#f8fafc;border-color:rgba(226,232,240,.16)}body.theme-dark .ic-btn,body.theme-dark .ic-source{background:rgba(255,255,255,.06);color:#f8fafc;border-color:rgba(226,232,240,.16)}body.theme-dark .ic-source small{color:#cbd5e1}
-      @media(max-width:700px){.ic-row{max-width:calc(100% - 16px);gap:8px}.ic-card{max-width:100%;padding:14px}.ic-avatar{width:30px;height:30px}.ic-mode-row,.ic-quick-row{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding:0 10px 4px}.ic-mode-chip,.ic-quick-chip{white-space:nowrap}}
+      body.theme-dark .ic-card,body.theme-dark .ic-panel,body.theme-dark .ic-top-strip,body.theme-dark .ic-chip,body.theme-dark .ic-mode-chip,body.theme-dark .ic-quick-chip,body.theme-dark .ic-quality span{background:rgba(255,255,255,.06);color:#f8fafc;border-color:rgba(226,232,240,.16)}body.theme-dark .ic-btn,body.theme-dark .ic-source{background:rgba(255,255,255,.06);color:#f8fafc;border-color:rgba(226,232,240,.16)}body.theme-dark .ic-source small{color:#cbd5e1}body.theme-dark .ic-decision-mini{background:rgba(255,255,255,.06);border-color:rgba(226,232,240,.16)}
+      @media(max-width:700px){.ic-row{max-width:calc(100% - 16px);gap:8px}.ic-card{max-width:100%;padding:14px}.ic-avatar{width:30px;height:30px}.ic-mode-row,.ic-quick-row{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding:0 10px 4px}.ic-mode-chip,.ic-quick-chip{white-space:nowrap}.ic-decision-grid{grid-template-columns:1fr}.ic-decision-top{display:block}.ic-threshold-badge{display:inline-block;margin-top:7px}}
     `;
     document.head.appendChild(style);
   }
@@ -179,6 +180,32 @@
     scrollBottom();
   }
 
+  function renderDecisionPanel(box, decision) {
+    if (!decision || !decision.threshold_view) return;
+    const threshold = String(decision.threshold_view || "not_indicated");
+    const rationale = Array.isArray(decision.rationale) ? decision.rationale.filter(Boolean) : [];
+    const checks = Array.isArray(decision.recording_evidence_to_check) ? decision.recording_evidence_to_check.filter(Boolean) : [];
+    const refs = Array.isArray(decision.reference_points) ? decision.reference_points.filter(Boolean) : [];
+
+    box.insertAdjacentHTML("beforeend", `
+      <div class="ic-panel ic-decision ${escapeHtml(threshold)}">
+        <div class="ic-decision-top">
+          <div>
+            <div class="ic-panel-title">Safeguarding decision support</div>
+            <div class="ic-decision-text">${escapeHtml(decision.headline || "Safeguarding threshold considered")}</div>
+          </div>
+          <span class="ic-threshold-badge">${escapeHtml(threshold.replaceAll("_", " "))}</span>
+        </div>
+        <div class="ic-decision-small">${escapeHtml(decision.decision || "Use professional judgement and follow local safeguarding procedures.")}</div>
+        ${rationale.length ? `<ul class="ic-decision-list">${rationale.slice(0,6).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+        <div class="ic-decision-grid">
+          ${checks.length ? `<div class="ic-decision-mini"><strong>Recording/evidence to check</strong>${checks.slice(0,5).map(item => `<p>${escapeHtml(item)}</p>`).join("")}</div>` : ""}
+          ${refs.length ? `<div class="ic-decision-mini"><strong>Reference points</strong>${refs.slice(0,4).map(ref => `<p><b>${escapeHtml(ref.title || "Reference")}</b><br>${escapeHtml(ref.principle || "")}</p>`).join("")}</div>` : ""}
+        </div>
+      </div>
+    `);
+  }
+
   function renderMeta(rowEl, meta) {
     const box = rowEl.querySelector(".ic-meta");
     if (!box || box.dataset.done === "true") return;
@@ -186,6 +213,9 @@
 
     const sg = meta.safeguarding || (meta.explainability && meta.explainability.safeguarding) || {};
     const level = String(sg.level || (meta.runtime && meta.runtime.safeguarding_level) || "standard").toLowerCase();
+
+    renderDecisionPanel(box, sg.decision);
+
     if (level === "urgent" || level === "concern") {
       const fallback = level === "urgent" ? "Prioritise immediate safety and follow safeguarding procedures." : "Record clearly and share with the relevant manager/DSL.";
       box.insertAdjacentHTML("beforeend", `<div class="ic-panel ic-sg ${level}"><strong>${level === "urgent" ? "Immediate safeguarding concern" : "Safeguarding consideration"}</strong><p>${escapeHtml(sg.banner || fallback)}</p></div>`);
