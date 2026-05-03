@@ -141,7 +141,7 @@ def register_file_route(app: FastAPI, route_path: str, paths: list[str], name_pr
 def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     def root():
-        return RedirectResponse(url="/assistant", status_code=302)
+        return RedirectResponse(url="/my-profile", status_code=302)
 
     def frontend(file_name: str) -> list[str]:
         return [os.path.join(FRONTEND_DIR, file_name)]
@@ -199,6 +199,10 @@ def register_frontend_routes(app: FastAPI) -> None:
         "/academy/evidence-portfolio.html": academy("evidence-portfolio.html"),
         "/academy/certificates.html": academy("certificates.html"),
         "/staff-profile.html": frontend("staff-profile.html"),
+        "/my-profile": frontend("staff-profile.html"),
+        "/my-profile.html": frontend("staff-profile.html"),
+        "/staff-profiles": component("staff-profiles.html"),
+        "/staff-profiles.html": component("staff-profiles.html"),
     }
     for route_path, paths in page_routes.items():
         register_file_route(app, route_path, paths, "page")
