@@ -39,7 +39,7 @@ ROUTERS = [
     "routers.frontend_compat",
     "routers.young_people_shell_item_compat_routes",
 
-    # 🔒 SAFE ROUTE FIRST (prevents selector crash)
+    # Safe route first prevents selector crashes.
     "routers.young_people_safe_routes",
 
     "routers.account_routes",
@@ -52,6 +52,7 @@ ROUTERS = [
     "routers.ai_note_export_routes",
     "routers.assistant_general_routes",
     "routers.assistant_os_routes",
+    "routers.young_people_assistant_routes",
     "routers.operational_intelligence_routes",
     "routers.inspection_os_routes",
     "routers.rm_dashboard_routes",
@@ -110,6 +111,7 @@ ROUTERS = [
     "routers.staff_today_routes",
 ]
 
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db_pool()
@@ -146,6 +148,7 @@ def serve_from(paths: list[str], error: str):
 def register_file_route(app: FastAPI, route_path: str, paths: list[str], name_prefix: str) -> None:
     def endpoint():
         return serve_from(paths, "Page not found")
+
     endpoint.__name__ = f"{name_prefix}_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
     app.get(route_path)(endpoint)
 
@@ -278,5 +281,6 @@ def create_app() -> FastAPI:
 
     register_frontend_routes(app)
     return app
+
 
 app = create_app()
