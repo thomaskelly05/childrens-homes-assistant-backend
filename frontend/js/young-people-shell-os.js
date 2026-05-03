@@ -39,41 +39,36 @@
     if (node) node.innerText = value ?? "";
   }
 
-  function formatDate(value) {
-    if (!value) return "";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return text(value);
-    return parsed.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  }
-
-  function getYoungPersonName() {
-    const selector = $("ypSelector");
-    return text(selector?.selectedOptions?.[0]?.textContent) || text($("ypPersonName")?.innerText) || "this young person";
-  }
-
-  function safeArray(value) {
-    return Array.isArray(value) ? value : [];
+  async function safeJson(res) {
+    const raw = await res.text();
+    if (!raw) return {};
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      console.warn("Invalid JSON response", { status: res.status, body: raw.slice(0, 300) });
+      return {};
+    }
   }
 
   async function loadOSData(youngPersonId = getYoungPersonId()) {
     try {
       osState.youngPersonId = youngPersonId;
-      const res = await fetch(`/assistant/os/context/${encodeURIComponent(youngPersonId)}`);
-      const data = await res.json();
+      const res = await fetch(`/assistant/os/context/${encodeURIComponent(youngPersonId)}`, {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      const data = await safeJson(res);
       osState.data = data;
 
-      setText("ypSummaryTimeline", (data.timeline || []).length);
-      setText("ypSummaryRisk", (data.risk_signals || []).length);
-      setText("ypSummaryPatterns", (data.patterns || []).length);
-      setText("ypSummarySources", (data.sources || []).length);
+      setText("ypSummaryTimeline", Array.isArray(data.timeline) ? data.timeline.length : 0);
+      setText("ypSummaryRisk", Array.isArray(data.risk_signals) ? data.risk_signals.length : 0);
+      setText("ypSummaryPatterns", Array.isArray(data.patterns) ? data.patterns.length : 0);
+      setText("ypSummarySources", Array.isArray(data.sources) ? data.sources.length : 0);
 
       return data;
     } catch (err) {
       console.error("OS load error", err);
+      osState.data = {};
       return null;
     }
   }
@@ -99,20 +94,19 @@
     try {
       const res = await fetch("/assistant/os/reason", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          young_person_id: osState.youngPersonId || 1001,
-          question
-        })
+          young_person_id: osState.youngPersonId || getYoungPersonId() || 1001,
+          question,
+        }),
       });
 
-      const data = await res.json();
-
-      addMessage("assistant", data.answer || "No response");
-
+      const data = await safeJson(res);
+      addMessage("assistant", escapeHtml(data.answer || "I could not load a response, but the OS is still running safely."));
     } catch (err) {
       console.error(err);
-      addMessage("assistant", "There was an error getting a response.");
+      addMessage("assistant", "There was an error getting a response, but the OS is still running safely.");
     }
   }
 
@@ -135,5 +129,6 @@
   document.addEventListener("DOMContentLoaded", () => {
     bindAssistant();
     loadOSData();
+    $("ypSelector")?.addEventListener("change", () => loadOSData());
   });
 })();
