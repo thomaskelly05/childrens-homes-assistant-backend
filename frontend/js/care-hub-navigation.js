@@ -48,6 +48,11 @@ export const CARE_HUB_NAVIGATION = Object.freeze([
         sections: ["Health overview", "Medication", "Appointments", "Professionals", "Emotional wellbeing"],
       },
       {
+        id: "therapeutic-services",
+        label: "Therapeutic Support & Services",
+        sections: ["Active supports", "Referrals & assessments", "External input", "Working together", "Impact"],
+      },
+      {
         id: "learning",
         label: "Learning",
         sections: ["Education overview", "Attendance", "Progress", "EHCP / PEP", "School communication"],
