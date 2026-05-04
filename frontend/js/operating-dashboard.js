@@ -1,3 +1,5 @@
+import { dashboardFromRecords } from "./workflow-engine.js";
+
 const EMPTY_DASHBOARD = Object.freeze({
   pending_approvals: 0,
   actions_due: 0,
@@ -6,7 +8,7 @@ const EMPTY_DASHBOARD = Object.freeze({
   today: [
     {
       title: "No urgent items loaded",
-      body: "Connect /workflow/dashboard to show overdue records, approvals, actions and safeguarding alerts.",
+      body: "Connect /workflow/dashboard or /workflow/records to show overdue records, approvals, actions and safeguarding alerts.",
       priority: "info",
     },
   ],
@@ -71,24 +73,35 @@ function mergeDashboard(data = {}) {
   };
 }
 
-async function fetchDashboard() {
-  const response = await fetch("/workflow/dashboard", {
+async function fetchJson(path) {
+  const response = await fetch(path, {
     credentials: "include",
     headers: { Accept: "application/json" },
   });
 
-  if (response.status === 404) return EMPTY_DASHBOARD;
+  if (response.status === 404) return null;
   if (response.status === 401) {
     window.location.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`);
-    return EMPTY_DASHBOARD;
+    return null;
   }
   if (response.status === 403) {
     window.location.replace(`/access-denied?blocked=${encodeURIComponent(window.location.pathname)}`);
-    return EMPTY_DASHBOARD;
+    return null;
   }
 
-  if (!response.ok) throw new Error(`Dashboard request failed with ${response.status}`);
+  if (!response.ok) throw new Error(`${path} failed with ${response.status}`);
   return response.json();
+}
+
+async function fetchDashboard() {
+  const dashboard = await fetchJson("/workflow/dashboard");
+  if (dashboard) return dashboard;
+
+  const recordsPayload = await fetchJson("/workflow/records");
+  const records = Array.isArray(recordsPayload) ? recordsPayload : recordsPayload?.records || recordsPayload?.items || [];
+  if (records.length) return dashboardFromRecords(records);
+
+  return EMPTY_DASHBOARD;
 }
 
 async function loadDashboard() {
@@ -96,9 +109,10 @@ async function loadDashboard() {
   if (status) status.textContent = "Loading operating dashboard...";
 
   try {
-    const data = mergeDashboard(await fetchDashboard());
+    const raw = await fetchDashboard();
+    const data = mergeDashboard(raw);
     renderDashboard(data);
-    if (status) status.textContent = data === EMPTY_DASHBOARD ? "Dashboard ready for workflow data." : "Dashboard loaded.";
+    if (status) status.textContent = raw === EMPTY_DASHBOARD ? "Dashboard ready for workflow data." : "Dashboard loaded.";
   } catch (error) {
     console.error("[operating-dashboard] load failed", error);
     renderDashboard(EMPTY_DASHBOARD);
@@ -149,5 +163,5 @@ function renderItem(item) {
   return `<div class="ops-item">${content}</div>`;
 }
 
-window.IndiCareOperatingDashboard = Object.freeze({ loadDashboard, renderDashboard });
+window.IndiCareOperatingDashboard = Object.freeze({ loadDashboard, renderDashboard, dashboardFromRecords });
 loadDashboard();
