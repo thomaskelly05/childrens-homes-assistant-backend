@@ -1,4 +1,5 @@
 import { childWorkspaceMenu } from "./care-hub-child-context.js";
+import { createCareHubAction } from "./care-hub-actions.js";
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'\"]/g, (char) => ({
@@ -64,6 +65,53 @@ function recordDate(record = {}) {
   return firstText(record, ["created_at", "updated_at", "note_date", "record_date", "event_datetime", "incident_datetime", "appointment_datetime"], "");
 }
 
+function actionTypeForLabel(sectionId, label) {
+  const text = String(label || "").toLowerCase();
+  if (text.includes("safeguarding")) return "safeguarding_concern";
+  if (text.includes("risk")) return "risk_update";
+  if (text.includes("manager")) return "manager_review";
+  if (text.includes("incident")) return "incident";
+  if (text.includes("medication")) return "medication_follow_up";
+  if (text.includes("appointment") || text.includes("health")) return "health_follow_up";
+  if (text.includes("overdue")) return "overdue_review";
+  if (text.includes("owner") || text.includes("assign")) return "assign_owner";
+  if (sectionId === "feeling-safe") return "risk_update";
+  if (sectionId === "significant-moments") return "manager_review";
+  return "follow_up";
+}
+
+function bindQuickActions(target, { child, sectionId }) {
+  target.querySelectorAll("[data-quick-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const original = button.textContent;
+      const type = button.dataset.quickAction || actionTypeForLabel(sectionId, original);
+      button.disabled = true;
+      button.textContent = "Creating action...";
+
+      try {
+        const action = await createCareHubAction({
+          type,
+          title: original,
+          child_id: child?.id,
+          child_name: child?.name || child?.full_name || child?.display_name || "",
+          section_id: sectionId,
+          priority: ["safeguarding_concern", "risk_update", "reg40_decision", "medication_error"].includes(type) ? "high" : "medium",
+        });
+        button.textContent = "Action created";
+        window.dispatchEvent(new CustomEvent("indicare:refresh-dashboard", { detail: action }));
+      } catch (error) {
+        console.error("[child-workspace-renderer] quick action failed", error);
+        button.textContent = "Could not create action";
+      } finally {
+        window.setTimeout(() => {
+          button.textContent = original;
+          button.disabled = false;
+        }, 1800);
+      }
+    });
+  });
+}
+
 function renderRecord(record = {}) {
   const title = firstText(record, ["title", "summary", "presentation", "record_type", "incident_type", "contact_type"], "Record");
   const body = firstText(record, ["body", "summary", "presentation", "details", "note", "action_taken", "outcome"]);
@@ -93,7 +141,7 @@ function renderSectionCards(section) {
 function renderQuickActions(sectionId) {
   const actions = {
     "daily-life": ["New daily note", "Record mood", "Add achievement"],
-    "significant-moments": ["Record incident", "Manager review", "Create follow-up"],
+    "significant-moments": ["Record incident", "Manager review", "Create follow-up", "Safeguarding concern"],
     "health-wellbeing": ["Medication record", "Appointment outcome", "Health follow-up"],
     "feeling-safe": ["Update risk", "Safeguarding concern", "Safety plan action"],
     keywork: ["New keywork session", "Set goal", "Record reflection"],
@@ -102,7 +150,7 @@ function renderQuickActions(sectionId) {
 
   return `
     <div class="ops-quick-actions" aria-label="Quick actions">
-      ${actions.map((action) => `<button type="button" class="yp-button">${escapeHtml(action)}</button>`).join("")}
+      ${actions.map((action) => `<button type="button" class="yp-button" data-quick-action="${escapeHtml(actionTypeForLabel(sectionId, action))}">${escapeHtml(action)}</button>`).join("")}
     </div>
   `;
 }
@@ -135,7 +183,7 @@ function renderSignificantMoments(section, records) {
   const highConcern = records.filter((record) => String(firstText(record, ["safeguarding_follow_up", "category", "incident_type"], "")).toLowerCase().includes("safeguard"));
   return `
     ${renderQuickActions("significant-moments")}
-    <div class="ops-alert-strip">
+    <div class="ops-alert-strip ops-alert-strip-safeguarding">
       <article><span>All moments</span><strong>${records.length}</strong></article>
       <article><span>Safeguarding follow-up</span><strong>${highConcern.length}</strong></article>
       <article><span>Manager review</span><strong>${records.filter((r) => r.manager_review_needed || r.workflow?.manager_review_needed).length}</strong></article>
@@ -256,6 +304,8 @@ export async function renderChildWorkspaceSection({ target, child, sectionId = "
       </section>
     `;
   }
+
+  bindQuickActions(target, { child, sectionId: section.id });
   return true;
 }
 
