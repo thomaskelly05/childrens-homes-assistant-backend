@@ -1,0 +1,41 @@
+import { bootYoungPeopleShell } from "./boot.js";
+import { runYoungPeopleShellReadinessChecks } from "./readiness.js";
+
+function modularShellEnabled() {
+  const params = new URLSearchParams(window.location.search);
+  return (
+    params.get("modular_shell") === "1" ||
+    document.body?.dataset?.modularShell === "true" ||
+    window.localStorage?.getItem("indicare.modularYoungPeopleShell") === "true"
+  );
+}
+
+async function start() {
+  if (!modularShellEnabled()) return;
+
+  document.body.dataset.modularShellActive = "true";
+
+  if (window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__) return;
+  window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__ = true;
+
+  try {
+    await bootYoungPeopleShell();
+
+    try {
+      runYoungPeopleShellReadinessChecks();
+    } catch (e) {
+      console.warn("[young-people-shell/modular-entry] readiness checks failed to run", e);
+    }
+
+  } catch (error) {
+    window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__ = false;
+    document.body.dataset.modularShellActive = "false";
+    console.error("[young-people-shell/modular-entry] boot failed", error);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", start, { once: true });
+} else {
+  start();
+}
