@@ -1,5 +1,7 @@
 import { bootYoungPeopleShell } from "./boot.js";
+import "./diagnostics.js";
 import { runYoungPeopleShellReadinessChecks } from "./readiness.js";
+import { runYoungPeopleShellSmokeTest } from "./smoke-test.js";
 
 function safeLocalStorageFlag(key) {
   try {
@@ -9,13 +11,20 @@ function safeLocalStorageFlag(key) {
   }
 }
 
+function queryFlag(name) {
+  return new URLSearchParams(window.location.search).get(name) === "1";
+}
+
+function legacyShellForced() {
+  return queryFlag("legacy_shell") || document.body?.dataset?.legacyShell === "true";
+}
+
 function modularShellEnabled() {
-  const params = new URLSearchParams(window.location.search);
-  return (
-    params.get("modular_shell") === "1" ||
-    document.body?.dataset?.modularShell === "true" ||
-    safeLocalStorageFlag("indicare.modularYoungPeopleShell")
-  );
+  return !legacyShellForced();
+}
+
+function autoSmokeEnabled() {
+  return queryFlag("smoke_shell") || safeLocalStorageFlag("indicare.smokeYoungPeopleShell");
 }
 
 async function start() {
@@ -33,6 +42,16 @@ async function start() {
       runYoungPeopleShellReadinessChecks();
     } catch (e) {
       console.warn("[young-people-shell/modular-entry] readiness checks failed to run", e);
+    }
+
+    window.IndiCareYoungPeopleSmokeTest = Object.freeze({ runYoungPeopleShellSmokeTest });
+
+    if (autoSmokeEnabled()) {
+      try {
+        await runYoungPeopleShellSmokeTest();
+      } catch (e) {
+        console.warn("[young-people-shell/modular-entry] smoke test failed to run", e);
+      }
     }
   } catch (error) {
     window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__ = false;
