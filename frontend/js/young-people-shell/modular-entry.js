@@ -10,13 +10,20 @@ function safeLocalStorageFlag(key) {
   }
 }
 
+function queryFlag(name) {
+  return new URLSearchParams(window.location.search).get(name) === "1";
+}
+
 function modularShellEnabled() {
-  const params = new URLSearchParams(window.location.search);
   return (
-    params.get("modular_shell") === "1" ||
+    queryFlag("modular_shell") ||
     document.body?.dataset?.modularShell === "true" ||
     safeLocalStorageFlag("indicare.modularYoungPeopleShell")
   );
+}
+
+function autoSmokeEnabled() {
+  return queryFlag("smoke_shell") || safeLocalStorageFlag("indicare.smokeYoungPeopleShell");
 }
 
 async function start() {
@@ -37,6 +44,14 @@ async function start() {
     }
 
     window.IndiCareYoungPeopleSmokeTest = Object.freeze({ runYoungPeopleShellSmokeTest });
+
+    if (autoSmokeEnabled()) {
+      try {
+        await runYoungPeopleShellSmokeTest();
+      } catch (e) {
+        console.warn("[young-people-shell/modular-entry] smoke test failed to run", e);
+      }
+    }
   } catch (error) {
     window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__ = false;
     document.body.dataset.modularShellActive = "false";
