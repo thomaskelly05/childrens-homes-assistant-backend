@@ -85,6 +85,14 @@ export function childWorkspaceHref(childId, workspace = "about") {
   return `/young-people-shell${params}#${encodeURIComponent(workspace)}`;
 }
 
+export function embeddedChildWorkspaceSrc(childId, workspace = "about") {
+  const id = normaliseId(childId);
+  const params = new URLSearchParams();
+  if (id) params.set("young_person_id", id);
+  params.set("embedded", "1");
+  return `/young-people-shell?${params.toString()}#${encodeURIComponent(workspace)}`;
+}
+
 window.IndiCareCareHubChildContext = Object.freeze({
   loadCareHubChildren,
   childWorkspaceMenu,
@@ -92,4 +100,5 @@ window.IndiCareCareHubChildContext = Object.freeze({
   selectedChild,
   setSelectedChildId,
   childWorkspaceHref,
+  embeddedChildWorkspaceSrc,
 });
