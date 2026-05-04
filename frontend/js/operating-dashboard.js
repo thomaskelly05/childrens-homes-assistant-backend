@@ -29,6 +29,8 @@ const EMPTY_DASHBOARD = Object.freeze({
   voice: [],
 });
 
+let currentDashboard = EMPTY_DASHBOARD;
+
 function byId(id) {
   return document.getElementById(id);
 }
@@ -48,12 +50,16 @@ function normaliseItems(items = []) {
   return items.map((item) => {
     if (typeof item === "string") return { title: item, body: "", priority: "normal" };
     return {
+      id: item.id || item.sourceRecordId || item.title || item.name || item.label || "",
       title: item.title || item.name || item.label || "Untitled item",
       body: item.body || item.summary || item.description || item.detail || "",
       priority: item.priority || item.status || "normal",
       owner: item.owner || item.assignee || "",
       due: item.due || item.due_date || item.deadline || "",
       href: item.href || item.url || "",
+      status: item.status || "open",
+      sourceRecordId: item.sourceRecordId || item.record_id || "",
+      sourceRecordType: item.sourceRecordType || item.record_type || "",
     };
   });
 }
@@ -73,10 +79,11 @@ function mergeDashboard(data = {}) {
   };
 }
 
-async function fetchJson(path) {
+async function fetchJson(path, options = {}) {
   const response = await fetch(path, {
     credentials: "include",
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", ...(options.headers || {}) },
+    ...options,
   });
 
   if (response.status === 404) return null;
@@ -90,7 +97,15 @@ async function fetchJson(path) {
   }
 
   if (!response.ok) throw new Error(`${path} failed with ${response.status}`);
-  return response.json();
+  return response.headers.get("content-type")?.includes("application/json") ? response.json() : {};
+}
+
+async function postWorkflow(path, payload = {}) {
+  return fetchJson(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 }
 
 async function fetchDashboard() {
@@ -121,22 +136,24 @@ async function loadDashboard() {
 }
 
 function renderDashboard(data) {
+  currentDashboard = data;
   byId("opsPendingApprovals").textContent = data.pending_approvals ?? 0;
   byId("opsActionsDue").textContent = data.actions_due ?? 0;
   byId("opsSafeguardingAlerts").textContent = data.safeguarding_alerts ?? 0;
   byId("opsInspectionGaps").textContent = data.inspection_gaps ?? 0;
 
-  renderList("opsTodayList", data.today);
-  renderList("opsLifecycleList", data.lifecycle);
-  renderList("opsApprovalsList", data.approvals, "No records are waiting for manager approval.");
-  renderList("opsActionsList", data.actions, "No open actions are currently due.");
-  renderList("opsSafeguardingList", data.safeguarding, "No safeguarding or Reg 40 alerts are currently open.");
-  renderList("opsRegList", data.reg, "No Reg 44 or Reg 45 actions are currently due.");
-  renderList("opsEvidenceList", data.evidence, "No SCCIF evidence gaps are currently loaded.");
-  renderList("opsVoiceList", data.voice, "No children’s voice or outcome gaps are currently loaded.");
+  renderList("opsTodayList", data.today, "Nothing urgent to show.", "today");
+  renderList("opsLifecycleList", data.lifecycle, "No lifecycle items loaded.", "lifecycle");
+  renderList("opsApprovalsList", data.approvals, "No records are waiting for manager approval.", "approval");
+  renderList("opsActionsList", data.actions, "No open actions are currently due.", "action");
+  renderList("opsSafeguardingList", data.safeguarding, "No safeguarding or Reg 40 alerts are currently open.", "action");
+  renderList("opsRegList", data.reg, "No Reg 44 or Reg 45 actions are currently due.", "action");
+  renderList("opsEvidenceList", data.evidence, "No SCCIF evidence gaps are currently loaded.", "evidence");
+  renderList("opsVoiceList", data.voice, "No children’s voice or outcome gaps are currently loaded.", "action");
+  bindWorkflowControls();
 }
 
-function renderList(id, items, emptyText = "Nothing to show.") {
+function renderList(id, items, emptyText = "Nothing to show.", mode = "item") {
   const el = byId(id);
   if (!el) return;
   const normalised = normaliseItems(items);
@@ -145,10 +162,32 @@ function renderList(id, items, emptyText = "Nothing to show.") {
     return;
   }
 
-  el.innerHTML = normalised.map(renderItem).join("");
+  el.innerHTML = normalised.map((item) => renderItem(item, mode)).join("");
 }
 
-function renderItem(item) {
+function renderWorkflowControls(item, mode) {
+  if (mode === "approval") {
+    return `
+      <div class="ops-item-controls">
+        <button type="button" class="yp-button yp-button-primary" data-workflow-action="approve" data-item-id="${escapeHtml(item.id)}">Approve</button>
+        <button type="button" class="yp-button" data-workflow-action="request_changes" data-item-id="${escapeHtml(item.id)}">Request changes</button>
+      </div>
+    `;
+  }
+
+  if (mode === "action") {
+    return `
+      <div class="ops-item-controls">
+        <button type="button" class="yp-button yp-button-primary" data-workflow-action="complete_action" data-item-id="${escapeHtml(item.id)}">Complete</button>
+        <button type="button" class="yp-button" data-workflow-action="start_action" data-item-id="${escapeHtml(item.id)}">In progress</button>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function renderItem(item, mode = "item") {
   const meta = [item.owner ? `Owner: ${item.owner}` : "", item.due ? `Due: ${item.due}` : ""].filter(Boolean).join(" · ");
   const content = `
     <div class="ops-item-main">
@@ -159,8 +198,78 @@ function renderItem(item) {
     <span class="ops-priority ops-priority-${escapeHtml(item.priority)}">${escapeHtml(item.priority)}</span>
   `;
 
-  if (item.href) return `<a class="ops-item" href="${escapeHtml(item.href)}">${content}</a>`;
-  return `<div class="ops-item">${content}</div>`;
+  const controls = renderWorkflowControls(item, mode);
+  const inner = `${content}${controls}`;
+  if (item.href && !controls) return `<a class="ops-item" href="${escapeHtml(item.href)}">${inner}</a>`;
+  return `<div class="ops-item" data-mode="${escapeHtml(mode)}" data-item-id="${escapeHtml(item.id)}">${inner}</div>`;
+}
+
+function findWorkflowItem(id) {
+  const sections = ["approvals", "actions", "safeguarding", "reg", "voice"];
+  for (const section of sections) {
+    const found = normaliseItems(currentDashboard[section]).find((item) => String(item.id) === String(id));
+    if (found) return found;
+  }
+  return null;
+}
+
+async function handleWorkflowAction(action, itemId) {
+  const status = byId("opsStatus");
+  const item = findWorkflowItem(itemId);
+  if (!item) return;
+
+  if (status) status.textContent = "Updating workflow...";
+
+  try {
+    await postWorkflow(`/workflow/${action}`, { item_id: itemId, item });
+    await loadDashboard();
+  } catch (error) {
+    console.warn("[operating-dashboard] workflow action fallback", error);
+    applyLocalWorkflowUpdate(action, itemId);
+    if (status) status.textContent = "Updated locally. Backend workflow endpoint not yet available.";
+  }
+}
+
+function applyLocalWorkflowUpdate(action, itemId) {
+  const removeFrom = (items = []) => normaliseItems(items).filter((item) => String(item.id) !== String(itemId));
+  const updateStatus = (items = [], status) => normaliseItems(items).map((item) => String(item.id) === String(itemId) ? { ...item, status, priority: status } : item);
+
+  if (["approve", "request_changes"].includes(action)) {
+    currentDashboard = {
+      ...currentDashboard,
+      approvals: removeFrom(currentDashboard.approvals),
+      pending_approvals: Math.max(0, Number(currentDashboard.pending_approvals || 0) - 1),
+    };
+  }
+
+  if (action === "complete_action") {
+    currentDashboard = {
+      ...currentDashboard,
+      actions: removeFrom(currentDashboard.actions),
+      safeguarding: removeFrom(currentDashboard.safeguarding),
+      reg: removeFrom(currentDashboard.reg),
+      voice: removeFrom(currentDashboard.voice),
+      actions_due: Math.max(0, Number(currentDashboard.actions_due || 0) - 1),
+    };
+  }
+
+  if (action === "start_action") {
+    currentDashboard = {
+      ...currentDashboard,
+      actions: updateStatus(currentDashboard.actions, "in_progress"),
+      safeguarding: updateStatus(currentDashboard.safeguarding, "in_progress"),
+      reg: updateStatus(currentDashboard.reg, "in_progress"),
+      voice: updateStatus(currentDashboard.voice, "in_progress"),
+    };
+  }
+
+  renderDashboard(currentDashboard);
+}
+
+function bindWorkflowControls() {
+  document.querySelectorAll("[data-workflow-action]").forEach((button) => {
+    button.addEventListener("click", () => handleWorkflowAction(button.dataset.workflowAction, button.dataset.itemId));
+  });
 }
 
 window.IndiCareOperatingDashboard = Object.freeze({ loadDashboard, renderDashboard, dashboardFromRecords });
