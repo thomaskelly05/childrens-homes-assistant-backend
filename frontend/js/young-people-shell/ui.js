@@ -3,12 +3,12 @@ export function byId(id) {
 }
 
 export function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>'"]/g, (char) => ({
+  return String(value ?? "").replace(/[&<>'\"]/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
     "'": "&#39;",
-    '"': "&quot;",
+    '\"': "&quot;",
   })[char]);
 }
 
@@ -26,6 +26,63 @@ export function toggleHidden(id, hidden = true) {
   if (!node) return;
   node.classList.toggle("hidden", Boolean(hidden));
   node.setAttribute("aria-hidden", hidden ? "true" : "false");
+}
+
+export function normaliseError(error) {
+  const status = error?.status || error?.body?.status || null;
+  const body = error?.body;
+  const rawMessage = typeof body === "string"
+    ? body
+    : body?.detail || body?.error || body?.message || error?.message || "Something went wrong.";
+
+  if (status === 401) {
+    return {
+      title: "Please sign in again",
+      message: "Your session has expired. Sign in again, then return to this page.",
+      action: "Sign in",
+      status,
+    };
+  }
+
+  if (status === 403) {
+    return {
+      title: "Access restricted",
+      message: "You do not have permission to view this information. Contact a manager or administrator if this seems wrong.",
+      action: "Try again",
+      status,
+    };
+  }
+
+  if (status === 404) {
+    return {
+      title: "Information not found",
+      message: "This record area could not be found for the selected young person.",
+      action: "Retry",
+      status,
+    };
+  }
+
+  if (String(rawMessage).toLowerCase().includes("timed out")) {
+    return {
+      title: "Connection timed out",
+      message: "The request took too long. Check the connection and try again.",
+      action: "Retry",
+      status,
+    };
+  }
+
+  return {
+    title: "Could not load this area",
+    message: typeof rawMessage === "string" ? rawMessage : JSON.stringify(rawMessage),
+    action: "Retry",
+    status,
+  };
+}
+
+export function bindErrorRetry(handler) {
+  const button = byId("ypErrorRetry");
+  if (!button || typeof handler !== "function") return;
+  button.addEventListener("click", handler, { once: true });
 }
 
 export function setActiveTabButton(tab) {
@@ -68,16 +125,17 @@ export function renderEmpty(title = "No records yet.", body = "When records are 
   `;
 }
 
-export function renderError(error, title = "Could not load this area") {
+export function renderError(error, title = "") {
   const list = byId("ypRecordsList");
   if (!list) return;
-  const detail = typeof error?.body === "string"
-    ? error.body
-    : error?.body?.detail || error?.message || "Something went wrong.";
+  const details = normaliseError(error);
+  const safeTitle = title || details.title;
+
   list.innerHTML = `
-    <div class="yp-error-card">
-      <h3>${escapeHtml(title)}</h3>
-      <p>${escapeHtml(typeof detail === "string" ? detail : JSON.stringify(detail))}</p>
+    <div class="yp-error-card" role="alert">
+      <h3>${escapeHtml(safeTitle)}</h3>
+      <p>${escapeHtml(details.message)}</p>
+      <button id="ypErrorRetry" type="button" class="yp-button yp-button-primary">${escapeHtml(details.action)}</button>
     </div>
   `;
 }
