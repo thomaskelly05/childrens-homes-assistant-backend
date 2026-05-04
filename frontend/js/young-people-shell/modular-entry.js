@@ -1,4 +1,5 @@
 import { bootYoungPeopleShell } from "./boot.js";
+import "./diagnostics.js";
 import { runYoungPeopleShellReadinessChecks } from "./readiness.js";
 import { runYoungPeopleShellSmokeTest } from "./smoke-test.js";
 
