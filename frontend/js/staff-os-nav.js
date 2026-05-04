@@ -16,13 +16,7 @@
     "/terms",
   ]);
 
-  const ROLE_GROUPS = Object.freeze({
-    staff: new Set(["staff", "support_worker", "key_worker", "senior", "senior_staff"]),
-    manager: new Set(["manager", "registered_manager", "deputy_manager", "home_manager"]),
-    provider: new Set(["ri", "responsible_individual", "provider_admin", "admin", "administrator", "super_admin", "superadmin", "founder"]),
-  });
-
-  const NAV_LINKS = [
+  const FALLBACK_NAV_LINKS = [
     { href: "/my-profile", title: "My Profile", subtitle: "My start page", roles: ["staff", "manager", "provider"] },
     { href: "/young-people-shell", title: "Care OS", subtitle: "Children's home workspace", roles: ["staff", "manager", "provider"] },
     { href: "/young-people", title: "Young people", subtitle: "Profiles and records", roles: ["staff", "manager", "provider"] },
@@ -30,19 +24,25 @@
     { href: "/documents-hub", title: "Documents", subtitle: "Files and evidence", roles: ["staff", "manager", "provider"] },
     { href: "/academy", title: "Academy", subtitle: "Learning and evidence", roles: ["staff", "manager", "provider"] },
     { href: "/assistant", title: "Assistant", subtitle: "Guidance and summaries", roles: ["staff", "manager", "provider"] },
-    { href: "/quality-hub", title: "Quality", subtitle: "Audit and assurance", roles: ["manager", "provider"] },
-    { href: "/os-dashboard", title: "Dashboard", subtitle: "Oversight and trends", roles: ["manager", "provider"] },
-    { href: "/rostering", title: "Rostering", subtitle: "Staffing and shifts", roles: ["manager", "provider"] },
-    { href: "/staff-profiles", title: "Staff Hub", subtitle: "Team oversight", roles: ["manager", "provider"] },
-    { href: "/admin-users", title: "Admin", subtitle: "Users and access", roles: ["provider"] },
-    { href: "/founder-hq", title: "Founder HQ", subtitle: "Platform control", roles: ["provider"] },
   ];
 
-  const RESTRICTED_PATHS = NAV_LINKS.reduce((acc, item) => {
+  const fallbackRestrictedPaths = FALLBACK_NAV_LINKS.reduce((acc, item) => {
     acc[item.href] = item.roles || [];
     acc[`${item.href}.html`] = item.roles || [];
     return acc;
   }, {});
+
+  function permissions() {
+    return window.IndiCarePermissions || {};
+  }
+
+  function navLinks() {
+    return permissions().NAV_LINKS || FALLBACK_NAV_LINKS;
+  }
+
+  function restrictedPaths() {
+    return permissions().RESTRICTED_PATHS || fallbackRestrictedPaths;
+  }
 
   function currentPath() {
     return window.location.pathname.replace(/\/$/, "") || "/";
@@ -52,22 +52,16 @@
     return PUBLIC_PATHS.has(currentPath());
   }
 
-  function normaliseRole(role = "") {
-    const value = String(role || "").trim().toLowerCase();
-    if (ROLE_GROUPS.provider.has(value)) return "provider";
-    if (ROLE_GROUPS.manager.has(value)) return "manager";
-    return "staff";
-  }
-
   function currentUser() {
     return window.auth?.getStoredUser?.() || {};
   }
 
   function currentRoleGroup() {
-    return normaliseRole(currentUser().role);
+    return permissions().currentRoleGroup?.() || "staff";
   }
 
   function roleCanAccess(allowed = [], roleGroup = currentRoleGroup()) {
+    if (permissions().roleCanAccess) return permissions().roleCanAccess(allowed, roleGroup);
     if (!Array.isArray(allowed) || allowed.length === 0) return true;
     return allowed.includes(roleGroup);
   }
@@ -93,7 +87,7 @@
 
   function enforceRoleAccess() {
     const path = currentPath();
-    const allowed = RESTRICTED_PATHS[path];
+    const allowed = restrictedPaths()[path];
     const roleGroup = currentRoleGroup();
     if (allowed && !roleCanAccess(allowed, roleGroup)) {
       showAccessDenied(roleGroup);
@@ -105,6 +99,11 @@
 
   async function requirePageAuth() {
     if (isPublicPage()) return true;
+    if (window.IndiCareRouteGuard?.enforceAuth) {
+      const ok = await window.IndiCareRouteGuard.enforceAuth();
+      if (!ok) return false;
+      return enforceRoleAccess();
+    }
     if (!window.auth || typeof window.auth.requireAuth !== "function") {
       loginRedirect();
       return false;
@@ -186,7 +185,7 @@
     links.setAttribute("aria-label", "IndiCare OS navigation");
     const path = currentPath();
     const roleGroup = currentRoleGroup();
-    for (const item of NAV_LINKS) {
+    for (const item of navLinks()) {
       if (!roleCanAccess(item.roles, roleGroup)) continue;
       const link = makeLink(item.href, item.title, item.subtitle);
       if (path === item.href || path === `${item.href}.html`) link.setAttribute("aria-current", "page");
@@ -218,7 +217,7 @@
   function addSidebarLink(container, href, title, subtitle) {
     if (!container) return;
     if ([...container.querySelectorAll("a")].some((link) => link.getAttribute("href") === href)) return;
-    const allowed = RESTRICTED_PATHS[href];
+    const allowed = restrictedPaths()[href];
     if (allowed && !roleCanAccess(allowed)) return;
     const link = document.createElement("a");
     link.href = href;
@@ -246,7 +245,7 @@
     const roleGroup = currentRoleGroup();
     document.querySelectorAll("a[href]").forEach((link) => {
       const href = link.getAttribute("href")?.replace(/\/$/, "");
-      const allowed = RESTRICTED_PATHS[href];
+      const allowed = restrictedPaths()[href];
       if (allowed && !roleCanAccess(allowed, roleGroup)) {
         link.setAttribute("hidden", "hidden");
         link.setAttribute("aria-hidden", "true");
