@@ -23,6 +23,7 @@ function sectionEndpoint(childId, sectionId) {
     "feeling-safe": `/young-people/${encodeURIComponent(childId)}/risk`,
     "support-plans": `/young-people/${encodeURIComponent(childId)}/support-plans`,
     "health-wellbeing": `/young-people/${encodeURIComponent(childId)}/health`,
+    "therapeutic-services": `/young-people/${encodeURIComponent(childId)}/therapeutic-services`,
     learning: `/young-people/${encodeURIComponent(childId)}/education`,
     relationships: `/young-people/${encodeURIComponent(childId)}/family`,
     keywork: `/young-people/${encodeURIComponent(childId)}/keywork`,
@@ -51,7 +52,7 @@ async function fetchSectionData(childId, sectionId) {
 function normaliseRecords(data) {
   if (Array.isArray(data)) return data;
   if (!data || typeof data !== "object") return [];
-  return data.items || data.records || data.data || data.daily_notes || data.health_records || data.education_records || data.incidents || data.actions || data.sessions || [];
+  return data.items || data.records || data.data || data.daily_notes || data.health_records || data.education_records || data.incidents || data.actions || data.sessions || data.supports || data.services || [];
 }
 
 function firstText(record, keys, fallback = "No detail recorded yet.") {
@@ -63,7 +64,7 @@ function firstText(record, keys, fallback = "No detail recorded yet.") {
 }
 
 function recordDate(record = {}) {
-  return firstText(record, ["created_at", "updated_at", "note_date", "record_date", "session_date", "event_datetime", "incident_datetime", "appointment_datetime"], "");
+  return firstText(record, ["created_at", "updated_at", "note_date", "record_date", "session_date", "referral_date", "assessment_date", "event_datetime", "incident_datetime", "appointment_datetime"], "");
 }
 
 function actionTypeForLabel(sectionId, label) {
@@ -74,11 +75,16 @@ function actionTypeForLabel(sectionId, label) {
   if (text.includes("incident")) return "incident";
   if (text.includes("medication")) return "medication_follow_up";
   if (text.includes("appointment") || text.includes("health")) return "health_follow_up";
+  if (text.includes("professional") || text.includes("external")) return "professional_input";
+  if (text.includes("referral")) return "therapeutic_referral";
+  if (text.includes("assessment")) return "therapeutic_assessment";
+  if (text.includes("family")) return "family_work";
   if (text.includes("overdue")) return "overdue_review";
   if (text.includes("owner") || text.includes("assign")) return "assign_owner";
   if (text.includes("session")) return "therapeutic_session";
   if (text.includes("goal") || text.includes("progress")) return "progress_review";
   if (text.includes("reflection")) return "therapeutic_reflection";
+  if (sectionId === "therapeutic-services") return "professional_input";
   if (sectionId === "feeling-safe") return "risk_update";
   if (sectionId === "significant-moments") return "manager_review";
   if (sectionId === "keywork") return "therapeutic_session";
@@ -114,8 +120,8 @@ function bindQuickActions(target, { child, sectionId }) {
 }
 
 function renderRecord(record = {}) {
-  const title = firstText(record, ["title", "summary", "presentation", "record_type", "incident_type", "contact_type", "session_focus"], "Record");
-  const body = firstText(record, ["body", "summary", "presentation", "details", "note", "action_taken", "outcome", "reflection", "progress_note"]);
+  const title = firstText(record, ["title", "summary", "presentation", "record_type", "incident_type", "contact_type", "session_focus", "service_name", "professional_name"], "Record");
+  const body = firstText(record, ["body", "summary", "presentation", "details", "note", "action_taken", "outcome", "reflection", "progress_note", "recommendations", "assessment_summary"]);
   const date = recordDate(record);
   return `<article class="ops-record-preview"><strong>${escapeHtml(title)}</strong><p>${escapeHtml(body)}</p>${date ? `<small>${escapeHtml(date)}</small>` : ""}</article>`;
 }
@@ -129,6 +135,7 @@ function renderQuickActions(sectionId) {
     "daily-life": ["New daily note", "Record mood", "Add achievement"],
     "significant-moments": ["Record incident", "Manager review", "Create follow-up", "Safeguarding concern"],
     "health-wellbeing": ["Medication record", "Appointment outcome", "Health follow-up"],
+    "therapeutic-services": ["New referral", "Invite professional", "Add assessment", "Family work update", "Review impact"],
     "feeling-safe": ["Update risk", "Safeguarding concern", "Safety plan action"],
     keywork: ["Record therapeutic session", "Set goal", "Record reflection", "Review progress"],
     "progress-reviews": ["Update goal", "Add evidence", "Review progress"],
@@ -153,6 +160,41 @@ function renderHealthWellbeing(section, records, data) {
   return `${renderQuickActions("health-wellbeing")}<div class="ops-alert-strip"><article><span>Health records</span><strong>${records.length}</strong></article><article><span>Medication profiles</span><strong>${Array.isArray(profiles) ? profiles.length : 0}</strong></article><article><span>Medication records</span><strong>${Array.isArray(meds) ? meds.length : 0}</strong></article></div><div class="ops-tool-layout"><section class="ops-tool-main"><h4>Health and wellbeing updates</h4><div class="ops-record-preview-list">${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No health records yet</h4><p>Appointments, health observations and wellbeing updates will appear here.</p></div>`}</div></section><aside class="ops-tool-side"><h4>Health areas</h4>${renderSectionCards(section)}</aside></div>`;
 }
 
+function renderTherapeuticServices(child, section, records, data) {
+  const supports = records;
+  const outcomes = outcomeProgressForChild(child?.id).filter((item) => ["emotional_wellbeing", "health", "relationships", "voice", "safety"].includes(item.domain));
+  const active = supports.filter((support) => !["closed", "ended"].includes(String(support.status || "active").toLowerCase()));
+  const invited = data?.external_invites || data?.invites || [];
+  return `${renderQuickActions("therapeutic-services")}
+    <div class="ops-alert-strip">
+      <article><span>Active supports</span><strong>${active.length}</strong></article>
+      <article><span>Professional invites</span><strong>${Array.isArray(invited) ? invited.length : 0}</strong></article>
+      <article><span>Linked outcomes</span><strong>${outcomes.length}</strong></article>
+    </div>
+    <div class="ops-tool-layout">
+      <section class="ops-tool-main">
+        <h4>Therapeutic support and services</h4>
+        <div class="ops-section-card-grid">
+          <article class="ops-section-card"><strong>Referral information</strong><p>Reason for referral, presenting needs, risks, what has already been tried, desired outcomes and child voice.</p></article>
+          <article class="ops-section-card"><strong>Assessment</strong><p>Professional assessment, formulation, recommendations and agreed focus of work.</p></article>
+          <article class="ops-section-card"><strong>Working with the child</strong><p>Sessions, engagement, adaptations, communication needs and progress markers.</p></article>
+          <article class="ops-section-card"><strong>Working with family and professionals</strong><p>Family involvement, professional guidance, staff implementation and review of effectiveness.</p></article>
+        </div>
+        <div class="ops-record-preview-list">
+          ${supports.length ? supports.slice(0, 8).map((support) => `<article class="ops-record-preview"><strong>${escapeHtml(firstText(support, ["service_name", "professional_name", "title"], "Therapeutic support"))}</strong><p>${escapeHtml(firstText(support, ["reason", "assessment_summary", "focus", "recommendations", "summary"], "Support information recorded."))}</p><span class="ops-priority ops-priority-${escapeHtml(String(support.status || "active").toLowerCase())}">${escapeHtml(support.status || "active")}</span>${recordDate(support) ? `<small>${escapeHtml(recordDate(support))}</small>` : ""}</article>`).join("") : `<div class="ops-empty-state"><h4>No therapeutic services recorded yet</h4><p>Add referral information, professional input, assessment summary and impact notes here. External professional link flow can connect to this section.</p></div>`}
+        </div>
+      </section>
+      <aside class="ops-tool-side">
+        <h4>Impact and external input</h4>
+        <div class="ops-section-card-grid">
+          <article class="ops-section-card"><strong>Invite professional</strong><p>Generate a time-limited professional input request linked to this child and service.</p></article>
+          <article class="ops-section-card"><strong>How we use guidance</strong><p>Record what staff changed after professional advice and whether it helped.</p></article>
+        </div>
+        <div class="ops-outcome-grid">${outcomes.map((outcome) => `<article class="ops-outcome-card"><strong>${escapeHtml(outcome.label || OUTCOME_DOMAINS[outcome.domain] || outcome.domain)}</strong><p><b>Goal:</b> ${escapeHtml(outcome.goal)}</p><span class="ops-priority ops-priority-${escapeHtml(outcome.progress || "not_started")}">${escapeHtml(String(outcome.progress || "not_started").replaceAll("_", " "))}</span><small>${Number(outcome.evidence_count || 0)} linked evidence item${Number(outcome.evidence_count || 0) === 1 ? "" : "s"}</small></article>`).join("")}</div>
+      </aside>
+    </div>`;
+}
+
 function renderFeelingSafe(section, records) {
   return `${renderQuickActions("feeling-safe")}<div class="ops-tool-layout"><section class="ops-tool-main"><h4>Risks, patterns and protective factors</h4><div class="ops-section-card-grid"><article class="ops-section-card ops-risk-card"><strong>Known risks</strong><p>Track risks, patterns and triggers clearly.</p></article><article class="ops-section-card ops-positive-card"><strong>Protective factors</strong><p>Record what helps the child feel safe.</p></article><article class="ops-section-card"><strong>Safety planning</strong><p>Keep support plans current and actionable.</p></article></div><div class="ops-record-preview-list">${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No risk records yet</h4><p>Risks, safeguarding concerns, protective factors and safety plans will appear here.</p></div>`}</div></section><aside class="ops-tool-side"><h4>Evidence focus</h4>${renderSectionCards(section)}</aside></div>`;
 }
@@ -175,6 +217,7 @@ function renderSectionBody(section, records, data, child) {
   if (section.id === "daily-life") return renderDailyLife(section, records);
   if (section.id === "significant-moments") return renderSignificantMoments(section, records);
   if (section.id === "health-wellbeing") return renderHealthWellbeing(section, records, data);
+  if (section.id === "therapeutic-services") return renderTherapeuticServices(child, section, records, data);
   if (section.id === "feeling-safe") return renderFeelingSafe(section, records);
   if (section.id === "keywork") return renderTherapeuticEngagement(child, section, records);
   if (section.id === "progress-reviews") return renderProgressReviews(child, section, records);
@@ -185,10 +228,8 @@ export async function renderChildWorkspaceSection({ target, child, sectionId = "
   if (!target) return false;
   const section = findChildSection(sectionId);
   if (!section) return false;
-
   const childName = child?.name || child?.full_name || child?.display_name || "selected child";
   target.innerHTML = `<section class="ops-child-workspace-section"><header class="ops-child-section-header"><p class="ops-eyebrow">${escapeHtml(childName)}</p><h3>${escapeHtml(section.label)}</h3><p>Loading ${escapeHtml(section.label.toLowerCase())}...</p></header></section>`;
-
   try {
     const data = await fetchSectionData(child?.id, section.id);
     const records = normaliseRecords(data);
@@ -197,7 +238,6 @@ export async function renderChildWorkspaceSection({ target, child, sectionId = "
     console.warn("[child-workspace-renderer] section load failed", error);
     target.innerHTML = `<section class="ops-child-workspace-section"><header class="ops-child-section-header"><p class="ops-eyebrow">${escapeHtml(childName)}</p><h3>${escapeHtml(section.label)}</h3><p>${escapeHtml((section.sections || []).join(" · "))}</p></header>${renderSectionBody(section, [], null, child)}<div class="ops-empty-state"><h4>Backend not connected yet</h4><p>This section layout is ready while the endpoint is being connected.</p></div></section>`;
   }
-
   bindQuickActions(target, { child, sectionId: section.id });
   return true;
 }
