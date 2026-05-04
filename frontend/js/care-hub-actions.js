@@ -1,3 +1,4 @@
+import { saveEvidenceEntry } from "./sccif-outcomes-engine.js";
 import { persistWorkflowDecision } from "./workflow-audit.js";
 
 const LOCAL_ACTIONS_KEY = "indicare.careHub.actions.v1";
@@ -106,6 +107,18 @@ export async function createCareHubAction(input = {}) {
     },
   });
 
+  saveEvidenceEntry({
+    child_id: action.child_id,
+    child_name: action.child_name,
+    source_id: action.id,
+    source_type: "care_hub_action",
+    action_id: action.id,
+    actionType: action.type,
+    sectionId: action.section_id,
+    title: action.title,
+    summary: action.body,
+  });
+
   window.dispatchEvent(new CustomEvent("indicare:care-hub-action-created", { detail: action }));
   return action;
 }
@@ -127,6 +140,20 @@ export async function updateCareHubAction(actionId, patch = {}) {
     before,
     after,
   });
+
+  if (after) {
+    saveEvidenceEntry({
+      child_id: after.child_id,
+      child_name: after.child_name,
+      source_id: after.id,
+      source_type: "care_hub_action_update",
+      action_id: after.id,
+      actionType: after.type,
+      sectionId: after.section_id,
+      title: `${after.title} ${patch.status || "updated"}`,
+      summary: `Action status changed to ${patch.status || "updated"}.`,
+    });
+  }
 
   window.dispatchEvent(new CustomEvent("indicare:care-hub-action-updated", { detail: after }));
   return after;
