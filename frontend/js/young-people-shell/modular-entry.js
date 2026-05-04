@@ -12,6 +12,8 @@ function modularShellEnabled() {
 async function start() {
   if (!modularShellEnabled()) return;
 
+  document.body.dataset.modularShellActive = "true";
+
   if (window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__) return;
   window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__ = true;
 
@@ -19,6 +21,7 @@ async function start() {
     await bootYoungPeopleShell();
   } catch (error) {
     window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__ = false;
+    document.body.dataset.modularShellActive = "false";
     console.error("[young-people-shell/modular-entry] boot failed", error);
   }
 }
