@@ -1,6 +1,7 @@
 import { assertYoungPeopleShellContract } from "./contract.js";
+import { loadTabData } from "./data-loader.js";
 import { state, initialiseStateGuards } from "./state.js";
-import { setActiveTabButton, setStatus, showAssistantPanel, showRecordsPanel, updateTabCopy } from "./ui.js";
+import { renderError, renderLoading, setActiveTabButton, setStatus, showAssistantPanel, showRecordsPanel, updateTabCopy } from "./ui.js";
 
 const TAB_COPY = Object.freeze({
   daily: { title: "Daily notes", subtitle: "Load and record daily life information for this young person." },
@@ -17,20 +18,40 @@ function currentYoungPersonId() {
   return params.get("young_person_id") || params.get("youngPersonId") || params.get("id") || document.body?.dataset?.youngPersonId || null;
 }
 
-function setCurrentTab(tab = "daily") {
+async function loadCurrentTab(tab = state.currentSection || "daily") {
+  if (tab === "assistant") {
+    showAssistantPanel();
+    setStatus("Assistant ready.");
+    return true;
+  }
+
+  if (!state.youngPersonId) {
+    setStatus("Select a young person to begin.");
+    return false;
+  }
+
+  showRecordsPanel();
+  renderLoading();
+  setStatus("Loading...");
+
+  try {
+    await loadTabData(tab, state.youngPersonId);
+    setStatus("Loaded.");
+    return true;
+  } catch (error) {
+    renderError(error);
+    setStatus("Could not load this area.");
+    return false;
+  }
+}
+
+async function setCurrentTab(tab = "daily") {
   const safeTab = TAB_COPY[tab] ? tab : "daily";
   state.currentSection = safeTab;
   state.activeSection = safeTab;
   setActiveTabButton(safeTab);
   updateTabCopy(safeTab, TAB_COPY);
-
-  if (safeTab === "assistant") {
-    showAssistantPanel();
-    setStatus("Assistant ready.");
-  } else {
-    showRecordsPanel();
-  }
-
+  await loadCurrentTab(safeTab);
   return safeTab;
 }
 
@@ -47,18 +68,19 @@ function bindSelector() {
     const id = selector.value || null;
     state.youngPersonId = id;
     if (id) document.body.dataset.youngPersonId = id;
+    loadCurrentTab(state.currentSection || "daily");
   });
 }
 
-export function bootYoungPeopleShell() {
+export async function bootYoungPeopleShell() {
   if (!assertYoungPeopleShellContract({ warnOnly: true })) return false;
   initialiseStateGuards();
   state.youngPersonId = currentYoungPersonId();
   bindTabs();
   bindSelector();
-  setCurrentTab(state.currentSection || "daily");
-  setStatus(state.youngPersonId ? "Care Hub ready." : "Select a young person to begin.");
+  await setCurrentTab(state.currentSection || "daily");
+  if (!state.youngPersonId) setStatus("Select a young person to begin.");
   return true;
 }
 
-window.IndiCareYoungPeopleBoot = Object.freeze({ bootYoungPeopleShell, setCurrentTab });
+window.IndiCareYoungPeopleBoot = Object.freeze({ bootYoungPeopleShell, setCurrentTab, loadCurrentTab });
