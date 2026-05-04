@@ -3,61 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Operating Dashboard | IndiCare OS</title>
-  <meta name="robots" content="noindex,nofollow" />
-  <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <title>Care Hub OS | IndiCare OS</title>
   <link rel="stylesheet" href="/css/operating-dashboard.css" />
 </head>
 <body class="indicare-care-hub-body">
+  <div id="careHubSidebar"></div>
+
   <main class="ops-shell">
     <header class="ops-header">
-      <div>
-        <p class="yp-eyebrow">IndiCare OS</p>
-        <h1>Operating Dashboard</h1>
-        <p>One place for records, approvals, actions, safeguarding alerts, quality checks and inspection readiness.</p>
-      </div>
-      <nav class="ops-actions" aria-label="Dashboard navigation">
-        <a class="yp-button yp-button-primary" href="/staff-profile">Staff profile</a>
-        <a class="yp-button" href="/young-people-shell">Young people</a>
-        <a class="yp-button" href="/quality-hub">Quality</a>
-        <a class="yp-button" href="/safeguarding-hub">Safeguarding</a>
-      </nav>
+      <h1>Care Hub OS</h1>
     </header>
 
-    <section class="ops-priority-strip" aria-label="Priority overview">
-      <article><span>Pending approvals</span><strong id="opsPendingApprovals">—</strong></article>
-      <article><span>Actions due</span><strong id="opsActionsDue">—</strong></article>
-      <article><span>Safeguarding alerts</span><strong id="opsSafeguardingAlerts">—</strong></article>
-      <article><span>Inspection gaps</span><strong id="opsInspectionGaps">—</strong></article>
-    </section>
-
-    <section id="opsStatus" class="yp-status yp-status-soft" role="status" aria-live="polite">Loading operating dashboard…</section>
+    <section id="opsStatus">Loading…</section>
 
     <section class="ops-grid ops-grid-main">
-      <article class="ops-card">
-        <header><h2>Today’s command centre</h2><p>What managers and senior staff need to deal with first.</p></header>
-        <div id="opsTodayList" class="ops-list"></div>
-      </article>
-
-      <article class="ops-card">
-        <header><h2>Record lifecycle</h2><p>Draft → submit → review → action → follow-up → sign-off → evidence.</p></header>
-        <div id="opsLifecycleList" class="ops-list"></div>
-      </article>
+      <div id="opsTodayList" class="ops-card"></div>
+      <div id="opsLifecycleList" class="ops-card"></div>
     </section>
 
     <section class="ops-grid ops-grid-three">
-      <article class="ops-card"><header><h2>Manager approvals</h2></header><div id="opsApprovalsList" class="ops-list"></div></article>
-      <article class="ops-card"><header><h2>Open actions</h2></header><div id="opsActionsList" class="ops-list"></div></article>
-      <article class="ops-card"><header><h2>Safeguarding & Reg 40</h2></header><div id="opsSafeguardingList" class="ops-list"></div></article>
-    </section>
-
-    <section class="ops-grid ops-grid-three">
-      <article class="ops-card"><header><h2>Reg 44 / Reg 45</h2></header><div id="opsRegList" class="ops-list"></div></article>
-      <article class="ops-card"><header><h2>SCCIF evidence map</h2></header><div id="opsEvidenceList" class="ops-list"></div></article>
-      <article class="ops-card"><header><h2>Children’s voice & outcomes</h2></header><div id="opsVoiceList" class="ops-list"></div></article>
+      <div id="opsApprovalsList" class="ops-card"></div>
+      <div id="opsActionsList" class="ops-card"></div>
+      <div id="opsSafeguardingList" class="ops-card"></div>
     </section>
   </main>
 
+  <script type="module">
+    import "/js/care-hub-sidebar.js";
+    window.IndiCareCareHubSidebar?.bindCareHubSidebar?.();
+  </script>
   <script type="module" src="/js/operating-dashboard.js"></script>
 </body>
 </html>
