@@ -5,71 +5,220 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>My Profile | IndiCare OS</title>
   <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f6f7f9;
+      color: #10201f;
+    }
+    .profile-shell {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .profile-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .eyebrow {
+      margin: 0 0 6px;
+      color: #55706d;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    h1 {
+      margin: 0;
+      font-size: 34px;
+    }
+    .muted {
+      margin: 8px 0 0;
+      color: #55706d;
+    }
+    .top-actions,
+    .os-navigation {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .nav-link,
+    .button-link {
+      padding: 10px 14px;
+      border: 1px solid #cfd8d6;
+      border-radius: 12px;
+      text-decoration: none;
+      color: #163b3a;
+      background: white;
+      font-weight: 700;
+    }
+    .button-link.primary,
+    .nav-link.primary {
+      background: #163b3a;
+      color: white;
+      border-color: #163b3a;
+    }
+    .nav-panel,
+    .card {
+      background: white;
+      border: 1px solid #dfe7e5;
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .nav-panel {
+      margin-bottom: 18px;
+    }
+    .nav-panel h2,
+    .card h2 {
+      margin-top: 0;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .metric {
+      background: white;
+      border: 1px solid #dfe7e5;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .metric span {
+      color: #55706d;
+      font-size: 13px;
+    }
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 20px;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .half-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    ul, ol { line-height: 1.55; }
+    #staffProfileError { color: #b00020; margin-bottom: 12px; }
+    @media (max-width: 900px) {
+      .profile-header,
+      .two-col,
+      .three-col,
+      .half-col,
+      .metric-grid {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+      .profile-header { display: block; }
+      .top-actions { margin-top: 14px; }
+    }
+  </style>
 </head>
 
-<body style="margin:0;font-family:system-ui;background:#f6f7f9;color:#10201f;">
-  <main style="max-width:1180px;margin:0 auto;padding:24px;">
-    <header style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px;">
+<body>
+  <main class="profile-shell">
+    <header class="profile-header">
       <section>
-        <p style="margin:0 0 6px;color:#55706d;text-transform:uppercase;letter-spacing:.08em;font-size:12px;">IndiCare OS</p>
-        <h1 id="staffProfileName" style="margin:0;font-size:34px;">My Profile</h1>
-        <p style="margin:8px 0 0;color:#55706d;">Your personal workspace for training, induction, supervision, appraisal, evidence and next actions.</p>
+        <p class="eyebrow">IndiCare OS</p>
+        <h1 id="staffProfileName">My Profile</h1>
+        <p class="muted">Your personal start page for training, induction, supervision, appraisal, evidence, actions, and access to the wider operating system.</p>
       </section>
-      <nav style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="/young-people-shell" style="padding:10px 14px;border:1px solid #cfd8d6;border-radius:12px;text-decoration:none;color:#163b3a;background:white;">Back to OS</a>
-        <a href="/academy" style="padding:10px 14px;border:1px solid #cfd8d6;border-radius:12px;text-decoration:none;color:#163b3a;background:white;">Academy</a>
+      <nav class="top-actions" aria-label="Profile actions">
+        <a class="button-link primary" href="/my-profile">My profile</a>
+        <a class="button-link" href="/academy">Academy</a>
+        <a class="button-link" href="/assistant">Assistant</a>
+        <button id="logoutBtn" class="button-link" type="button">Sign out</button>
       </nav>
     </header>
 
-    <div id="staffProfileError" style="color:#b00020;margin-bottom:12px;"></div>
-
-    <section style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px;">
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:16px;padding:16px;"><span style="color:#55706d;font-size:13px;">Role</span><strong id="staffProfileRole" style="display:block;margin-top:8px;font-size:20px;">—</strong></article>
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:16px;padding:16px;"><span style="color:#55706d;font-size:13px;">Status</span><strong id="staffProfileStatus" style="display:block;margin-top:8px;font-size:20px;">—</strong></article>
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:16px;padding:16px;"><span style="color:#55706d;font-size:13px;">Current stage</span><strong id="staffProfileStage" style="display:block;margin-top:8px;font-size:20px;">—</strong></article>
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:16px;padding:16px;"><span style="color:#55706d;font-size:13px;">Priority score</span><strong id="staffProfileScore" style="display:block;margin-top:8px;font-size:20px;">—</strong></article>
+    <section class="nav-panel" aria-labelledby="osNavTitle">
+      <h2 id="osNavTitle">Open IndiCare OS</h2>
+      <p class="muted">Use your profile as the safe landing hub, then move into the area you need.</p>
+      <nav class="os-navigation" aria-label="Main IndiCare navigation">
+        <a class="nav-link primary" href="/young-people-shell">Children's home OS</a>
+        <a class="nav-link" href="/young-people">Young people</a>
+        <a class="nav-link" href="/ai-notes">AI notes</a>
+        <a class="nav-link" href="/documents-hub">Documents</a>
+        <a class="nav-link" href="/safeguarding-hub">Safeguarding</a>
+        <a class="nav-link" href="/quality-hub">Quality</a>
+        <a class="nav-link" href="/os-dashboard">Dashboard</a>
+        <a class="nav-link" href="/rostering">Rostering</a>
+        <a class="nav-link" href="/journal">Journal</a>
+        <a class="nav-link" href="/supervision">Supervision</a>
+        <a class="nav-link" href="/staff-profiles">Staff profiles</a>
+        <a class="nav-link" href="/admin-users">Admin users</a>
+        <a class="nav-link" href="/founder-hq">Founder HQ</a>
+      </nav>
     </section>
 
-    <section style="display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-bottom:18px;">
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
-        <h2 style="margin-top:0;">What I need to know now</h2>
-        <ul id="staffTodayList" style="line-height:1.55;"></ul>
+    <div id="staffProfileError"></div>
+
+    <section class="metric-grid" aria-label="Staff profile summary">
+      <article class="metric"><span>Role</span><strong id="staffProfileRole">—</strong></article>
+      <article class="metric"><span>Status</span><strong id="staffProfileStatus">—</strong></article>
+      <article class="metric"><span>Current stage</span><strong id="staffProfileStage">—</strong></article>
+      <article class="metric"><span>Priority score</span><strong id="staffProfileScore">—</strong></article>
+    </section>
+
+    <section class="two-col">
+      <article class="card">
+        <h2>What I need to know now</h2>
+        <ul id="staffTodayList"></ul>
       </article>
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
-        <h2 style="margin-top:0;">Important dates</h2>
-        <ul id="staffDatesList" style="line-height:1.55;"></ul>
+      <article class="card">
+        <h2>Important dates</h2>
+        <ul id="staffDatesList"></ul>
       </article>
     </section>
 
-    <section style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px;">
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;"><h2 style="margin-top:0;">My training</h2><ul id="staffTrainingList"></ul></article>
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;"><h2 style="margin-top:0;">My supervision</h2><div id="staffSupervisionCard"></div></article>
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;"><h2 style="margin-top:0;">My evidence</h2><div id="staffEvidenceCard"></div></article>
+    <section class="three-col">
+      <article class="card"><h2>My training</h2><ul id="staffTrainingList"></ul></article>
+      <article class="card"><h2>My supervision</h2><div id="staffSupervisionCard"></div></article>
+      <article class="card"><h2>My evidence</h2><div id="staffEvidenceCard"></div></article>
     </section>
 
-    <section style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:18px;">
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
-        <h2 style="margin-top:0;">Lifecycle pathway</h2>
-        <ol id="staffLifecyclePath" style="line-height:1.7;"></ol>
+    <section class="half-col">
+      <article class="card">
+        <h2>Lifecycle pathway</h2>
+        <ol id="staffLifecyclePath"></ol>
       </article>
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
-        <h2 style="margin-top:0;">Manager actions</h2>
-        <ul id="staffManagerActions" style="line-height:1.55;"></ul>
+      <article class="card">
+        <h2>Manager actions</h2>
+        <ul id="staffManagerActions"></ul>
       </article>
     </section>
 
-    <section style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
-        <h2 style="margin-top:0;">Learning needs</h2>
-        <ul id="staffLearningNeeds" style="line-height:1.55;"></ul>
+    <section class="half-col">
+      <article class="card">
+        <h2>Learning needs</h2>
+        <ul id="staffLearningNeeds"></ul>
       </article>
-      <article style="background:white;border:1px solid #dfe7e5;border-radius:18px;padding:18px;">
-        <h2 style="margin-top:0;">Recommended modules</h2>
-        <ul id="staffRecommendedModules" style="line-height:1.55;"></ul>
+      <article class="card">
+        <h2>Recommended modules</h2>
+        <ul id="staffRecommendedModules"></ul>
       </article>
     </section>
   </main>
 
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
   <script src="/js/staff-profile.js"></script>
 </body>
 </html>
