@@ -20,12 +20,7 @@ function legacyShellForced() {
 }
 
 function modularShellEnabled() {
-  if (legacyShellForced()) return false;
-  return (
-    queryFlag("modular_shell") ||
-    document.body?.dataset?.modularShell === "true" ||
-    safeLocalStorageFlag("indicare.modularYoungPeopleShell")
-  );
+  return !legacyShellForced();
 }
 
 function autoSmokeEnabled() {
