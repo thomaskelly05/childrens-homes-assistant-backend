@@ -4,6 +4,7 @@ import { assertYoungPeopleShellContract } from "./contract.js";
 import { loadTabData, loadYoungPeople } from "./data-loader.js";
 import { state, initialiseStateGuards } from "./state.js";
 import {
+  bindErrorRetry,
   escapeHtml,
   renderError,
   renderLoading,
@@ -113,7 +114,7 @@ async function populateYoungPeopleSelector() {
   }
 }
 
-async function loadCurrentTab(tab = state.currentSection || "daily") {
+async function loadCurrentTab(tab = state.currentSection || "daily", options = {}) {
   if (tab === "assistant") {
     showAssistantPanel();
     setStatus("Assistant ready.");
@@ -126,28 +127,29 @@ async function loadCurrentTab(tab = state.currentSection || "daily") {
   }
 
   showRecordsPanel();
-  renderLoading();
-  setStatus("Loading...");
+  renderLoading(options.force ? "Retrying and getting the latest information." : "Getting the latest information.");
+  setStatus(options.force ? "Retrying..." : "Loading...");
 
   try {
-    await loadTabData(tab, state.youngPersonId);
+    await loadTabData(tab, state.youngPersonId, options);
     renderRecords(recordsForTab(tab), tab);
     setStatus("Loaded.");
     return true;
   } catch (error) {
     renderError(error);
+    bindErrorRetry(() => loadCurrentTab(tab, { force: true }));
     setStatus("Could not load this area.");
     return false;
   }
 }
 
-async function setCurrentTab(tab = "daily") {
+async function setCurrentTab(tab = "daily", options = {}) {
   const safeTab = TAB_COPY[tab] ? tab : "daily";
   state.currentSection = safeTab;
   state.activeSection = safeTab;
   setActiveTabButton(safeTab);
   updateTabCopy(safeTab, TAB_COPY);
-  await loadCurrentTab(safeTab);
+  await loadCurrentTab(safeTab, options);
   return safeTab;
 }
 
@@ -163,7 +165,7 @@ function bindSelector() {
   selector.addEventListener("change", () => {
     const id = setYoungPersonId(selector.value);
     updateSelectedPersonText(id);
-    loadCurrentTab(state.currentSection || "daily");
+    loadCurrentTab(state.currentSection || "daily", { force: true });
   });
 }
 
