@@ -1,0 +1,98 @@
+import importlib
+
+from fastapi import FastAPI
+
+ROUTERS = """
+routers.auth_routes
+routers.mfa_routes
+routers.passkey_routes
+routers.legal_acceptance_routes
+routers.debug_health_routes
+routers.security_routes
+routers.frontend_compat
+routers.young_people_shell_item_compat_routes
+routers.young_people_safe_routes
+routers.account_routes
+routers.admin_routes
+routers.founder_ai_routes
+routers.admin_user_routes
+routers.billing_routes
+routers.ai_notes_routes
+routers.ai_note_templates_routes
+routers.ai_note_export_routes
+routers.assistant_general_routes
+routers.assistant_os_routes
+routers.young_people_assistant_routes
+routers.operational_intelligence_routes
+routers.inspection_os_routes
+routers.rm_dashboard_routes
+routers.live_alerts_routes
+routers.os_modules_routes
+routers.assistant_partner_api
+routers.chat_routes
+routers.document_library_routes
+routers.dashboard_routes
+routers.documents_routes
+routers.handover_routes
+routers.monthly_reviews_routes
+routers.ofsted_ai_report_routes
+routers.ofsted_pack_routes
+routers.reports_routes
+routers.risk_routes
+routers.staff_journal_routes
+routers.supervision_routes
+routers.tasks_routes
+routers.actions_routes
+routers.visibility_routes
+routers.document_rules_routes
+routers.document_ai_review_routes
+routers.document_ai_routes
+routers.manager_routes
+routers.home_inspection_compat_routes
+routers.young_people_profile_routes
+routers.child_experience_intelligence_routes
+routers.young_people_daily_notes_routes
+routers.young_people_incidents_routes
+routers.young_people_health_routes
+routers.young_people_education_routes
+routers.young_people_family_routes
+routers.young_people_keywork_routes
+routers.young_people_plans_routes
+routers.young_people_risk_routes
+routers.young_people_chronology_routes
+routers.young_people_calendar_routes
+routers.young_people_appointments_routes
+routers.young_people_compliance_routes
+routers.young_people_standards_routes
+routers.young_people_handover_routes
+routers.young_people_reports_routes
+routers.young_people_photo_routes
+routers.young_people_statutory_documents_routes
+routers.workflow_review_routes
+routers.command_centre_routes
+routers.events_routes
+routers.evidence_routes
+routers.qa_routes
+routers.exports_routes
+routers.rostering_routes
+routers.academy_routes
+routers.academy_intelligence_routes
+routers.staff_profile_routes
+routers.staff_today_routes
+""".split()
+
+
+def include_router(app: FastAPI, module_path: str) -> None:
+    module = importlib.import_module(module_path)
+    router = getattr(module, "router", None)
+    compat_router = getattr(module, "compat_router", None)
+    if router is None:
+        raise RuntimeError(f"No router found in {module_path}")
+    app.include_router(router)
+    if compat_router is not None:
+        app.include_router(compat_router)
+
+
+def include_routers(app: FastAPI, routers: list[str] | None = None) -> None:
+    for route in routers or ROUTERS:
+        include_router(app, route)
