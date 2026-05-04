@@ -15,21 +15,11 @@ function queryFlag(name) {
   return new URLSearchParams(window.location.search).get(name) === "1";
 }
 
-function legacyShellForced() {
-  return queryFlag("legacy_shell") || document.body?.dataset?.legacyShell === "true";
-}
-
-function modularShellEnabled() {
-  return !legacyShellForced();
-}
-
 function autoSmokeEnabled() {
   return queryFlag("smoke_shell") || safeLocalStorageFlag("indicare.smokeYoungPeopleShell");
 }
 
 async function start() {
-  if (!modularShellEnabled()) return;
-
   document.body.dataset.modularShellActive = "true";
 
   if (window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__) return;
