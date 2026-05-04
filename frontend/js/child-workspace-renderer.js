@@ -1,5 +1,6 @@
 import { childWorkspaceMenu } from "./care-hub-child-context.js";
 import { createCareHubAction } from "./care-hub-actions.js";
+import { outcomeProgressForChild, OUTCOME_DOMAINS } from "./sccif-outcomes-engine.js";
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'\"]/g, (char) => ({
@@ -145,6 +146,7 @@ function renderQuickActions(sectionId) {
     "health-wellbeing": ["Medication record", "Appointment outcome", "Health follow-up"],
     "feeling-safe": ["Update risk", "Safeguarding concern", "Safety plan action"],
     keywork: ["New keywork session", "Set goal", "Record reflection"],
+    "progress-reviews": ["Update goal", "Add evidence", "Review progress"],
     "child-next-steps": ["Create action", "Assign owner", "Review overdue"],
   }[sectionId] || ["Create record", "Add follow-up", "Review evidence"];
 
@@ -159,105 +161,42 @@ function renderDailyLife(section, records) {
   return `
     ${renderQuickActions("daily-life")}
     <div class="ops-tool-layout">
-      <section class="ops-tool-main">
-        <h4>Daily life timeline</h4>
-        <div class="ops-timeline">
-          ${records.length ? records.slice(0, 8).map((record) => `
-            <article class="ops-timeline-item">
-              <time>${escapeHtml(recordDate(record) || "Recent")}</time>
-              <strong>${escapeHtml(firstText(record, ["shift_type", "title", "summary"], "Daily note"))}</strong>
-              <p>${escapeHtml(firstText(record, ["presentation", "summary", "positives", "young_person_voice"]))}</p>
-            </article>
-          `).join("") : `<div class="ops-empty-state"><h4>No daily notes yet</h4><p>Daily notes, routines, mood, activities and achievements will appear here.</p></div>`}
-        </div>
-      </section>
-      <aside class="ops-tool-side">
-        <h4>What to look for</h4>
-        ${renderSectionCards(section)}
-      </aside>
+      <section class="ops-tool-main"><h4>Daily life timeline</h4><div class="ops-timeline">${records.length ? records.slice(0, 8).map((record) => `<article class="ops-timeline-item"><time>${escapeHtml(recordDate(record) || "Recent")}</time><strong>${escapeHtml(firstText(record, ["shift_type", "title", "summary"], "Daily note"))}</strong><p>${escapeHtml(firstText(record, ["presentation", "summary", "positives", "young_person_voice"]))}</p></article>`).join("") : `<div class="ops-empty-state"><h4>No daily notes yet</h4><p>Daily notes, routines, mood, activities and achievements will appear here.</p></div>`}</div></section>
+      <aside class="ops-tool-side"><h4>What to look for</h4>${renderSectionCards(section)}</aside>
     </div>
   `;
 }
 
 function renderSignificantMoments(section, records) {
   const highConcern = records.filter((record) => String(firstText(record, ["safeguarding_follow_up", "category", "incident_type"], "")).toLowerCase().includes("safeguard"));
-  return `
-    ${renderQuickActions("significant-moments")}
-    <div class="ops-alert-strip ops-alert-strip-safeguarding">
-      <article><span>All moments</span><strong>${records.length}</strong></article>
-      <article><span>Safeguarding follow-up</span><strong>${highConcern.length}</strong></article>
-      <article><span>Manager review</span><strong>${records.filter((r) => r.manager_review_needed || r.workflow?.manager_review_needed).length}</strong></article>
-    </div>
-    <div class="ops-record-preview-list ops-incident-list">
-      ${records.length ? records.slice(0, 8).map((record) => `
-        <article class="ops-record-preview ops-incident-preview">
-          <span class="ops-priority ops-priority-high">review</span>
-          <strong>${escapeHtml(firstText(record, ["title", "incident_type", "category"], "Significant moment"))}</strong>
-          <p>${escapeHtml(firstText(record, ["summary", "staff_response", "outcome"]))}</p>
-          ${recordDate(record) ? `<small>${escapeHtml(recordDate(record))}</small>` : ""}
-        </article>
-      `).join("") : `<div class="ops-empty-state"><h4>No significant moments recorded</h4><p>Behaviour events, interventions, repairs and safety concerns will appear here.</p></div>`}
-    </div>
-  `;
+  return `${renderQuickActions("significant-moments")}<div class="ops-alert-strip ops-alert-strip-safeguarding"><article><span>All moments</span><strong>${records.length}</strong></article><article><span>Safeguarding follow-up</span><strong>${highConcern.length}</strong></article><article><span>Manager review</span><strong>${records.filter((r) => r.manager_review_needed || r.workflow?.manager_review_needed).length}</strong></article></div><div class="ops-record-preview-list ops-incident-list">${records.length ? records.slice(0, 8).map((record) => `<article class="ops-record-preview ops-incident-preview"><span class="ops-priority ops-priority-high">review</span><strong>${escapeHtml(firstText(record, ["title", "incident_type", "category"], "Significant moment"))}</strong><p>${escapeHtml(firstText(record, ["summary", "staff_response", "outcome"]))}</p>${recordDate(record) ? `<small>${escapeHtml(recordDate(record))}</small>` : ""}</article>`).join("") : `<div class="ops-empty-state"><h4>No significant moments recorded</h4><p>Behaviour events, interventions, repairs and safety concerns will appear here.</p></div>`}</div>`;
 }
 
 function renderHealthWellbeing(section, records, data) {
   const profiles = data?.medication_profiles || data?.profiles || [];
   const meds = data?.medication_records || data?.administrations || [];
-  return `
-    ${renderQuickActions("health-wellbeing")}
-    <div class="ops-alert-strip">
-      <article><span>Health records</span><strong>${records.length}</strong></article>
-      <article><span>Medication profiles</span><strong>${Array.isArray(profiles) ? profiles.length : 0}</strong></article>
-      <article><span>Medication records</span><strong>${Array.isArray(meds) ? meds.length : 0}</strong></article>
-    </div>
-    <div class="ops-tool-layout">
-      <section class="ops-tool-main">
-        <h4>Health and wellbeing updates</h4>
-        <div class="ops-record-preview-list">
-          ${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No health records yet</h4><p>Appointments, health observations and wellbeing updates will appear here.</p></div>`}
-        </div>
-      </section>
-      <aside class="ops-tool-side"><h4>Health areas</h4>${renderSectionCards(section)}</aside>
-    </div>
-  `;
+  return `${renderQuickActions("health-wellbeing")}<div class="ops-alert-strip"><article><span>Health records</span><strong>${records.length}</strong></article><article><span>Medication profiles</span><strong>${Array.isArray(profiles) ? profiles.length : 0}</strong></article><article><span>Medication records</span><strong>${Array.isArray(meds) ? meds.length : 0}</strong></article></div><div class="ops-tool-layout"><section class="ops-tool-main"><h4>Health and wellbeing updates</h4><div class="ops-record-preview-list">${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No health records yet</h4><p>Appointments, health observations and wellbeing updates will appear here.</p></div>`}</div></section><aside class="ops-tool-side"><h4>Health areas</h4>${renderSectionCards(section)}</aside></div>`;
 }
 
 function renderFeelingSafe(section, records) {
-  return `
-    ${renderQuickActions("feeling-safe")}
-    <div class="ops-tool-layout">
-      <section class="ops-tool-main">
-        <h4>Risks, patterns and protective factors</h4>
-        <div class="ops-section-card-grid">
-          <article class="ops-section-card ops-risk-card"><strong>Known risks</strong><p>Track risks, patterns and triggers clearly.</p></article>
-          <article class="ops-section-card ops-positive-card"><strong>Protective factors</strong><p>Record what helps the child feel safe.</p></article>
-          <article class="ops-section-card"><strong>Safety planning</strong><p>Keep support plans current and actionable.</p></article>
-        </div>
-        <div class="ops-record-preview-list">
-          ${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No risk records yet</h4><p>Risks, safeguarding concerns, protective factors and safety plans will appear here.</p></div>`}
-        </div>
-      </section>
-      <aside class="ops-tool-side"><h4>Evidence focus</h4>${renderSectionCards(section)}</aside>
-    </div>
-  `;
+  return `${renderQuickActions("feeling-safe")}<div class="ops-tool-layout"><section class="ops-tool-main"><h4>Risks, patterns and protective factors</h4><div class="ops-section-card-grid"><article class="ops-section-card ops-risk-card"><strong>Known risks</strong><p>Track risks, patterns and triggers clearly.</p></article><article class="ops-section-card ops-positive-card"><strong>Protective factors</strong><p>Record what helps the child feel safe.</p></article><article class="ops-section-card"><strong>Safety planning</strong><p>Keep support plans current and actionable.</p></article></div><div class="ops-record-preview-list">${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No risk records yet</h4><p>Risks, safeguarding concerns, protective factors and safety plans will appear here.</p></div>`}</div></section><aside class="ops-tool-side"><h4>Evidence focus</h4>${renderSectionCards(section)}</aside></div>`;
+}
+
+function renderProgressReviews(child, section, records) {
+  const outcomes = outcomeProgressForChild(child?.id);
+  return `${renderQuickActions("progress-reviews")}<div class="ops-alert-strip"><article><span>Outcome domains</span><strong>${outcomes.length}</strong></article><article><span>Linked evidence</span><strong>${outcomes.reduce((sum, item) => sum + Number(item.evidence_count || 0), 0)}</strong></article><article><span>Reviews</span><strong>${records.length}</strong></article></div><div class="ops-outcome-grid">${outcomes.map((outcome) => `<article class="ops-outcome-card"><strong>${escapeHtml(outcome.label || OUTCOME_DOMAINS[outcome.domain] || outcome.domain)}</strong><p><b>Baseline:</b> ${escapeHtml(outcome.baseline)}</p><p><b>Goal:</b> ${escapeHtml(outcome.goal)}</p><span class="ops-priority ops-priority-${escapeHtml(outcome.progress || "not_started")}">${escapeHtml(String(outcome.progress || "not_started").replaceAll("_", " "))}</span><small>${Number(outcome.evidence_count || 0)} linked evidence item${Number(outcome.evidence_count || 0) === 1 ? "" : "s"}</small></article>`).join("")}</div><div class="ops-record-preview-list">${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No review records yet</h4><p>Review preparation, outcomes and next steps will appear here.</p></div>`}</div>`;
 }
 
 function renderDefaultSection(section, records) {
-  return `
-    ${renderQuickActions(section.id)}
-    ${renderSectionCards(section)}
-    <div class="ops-record-preview-list">
-      ${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No records yet</h4><p>Records for ${escapeHtml(section.label.toLowerCase())} will appear here.</p></div>`}
-    </div>
-  `;
+  return `${renderQuickActions(section.id)}${renderSectionCards(section)}<div class="ops-record-preview-list">${records.length ? records.slice(0, 6).map(renderRecord).join("") : `<div class="ops-empty-state"><h4>No records yet</h4><p>Records for ${escapeHtml(section.label.toLowerCase())} will appear here.</p></div>`}</div>`;
 }
 
-function renderSectionBody(section, records, data) {
+function renderSectionBody(section, records, data, child) {
   if (section.id === "daily-life") return renderDailyLife(section, records);
   if (section.id === "significant-moments") return renderSignificantMoments(section, records);
   if (section.id === "health-wellbeing") return renderHealthWellbeing(section, records, data);
   if (section.id === "feeling-safe") return renderFeelingSafe(section, records);
+  if (section.id === "progress-reviews") return renderProgressReviews(child, section, records);
   return renderDefaultSection(section, records);
 }
 
@@ -267,42 +206,15 @@ export async function renderChildWorkspaceSection({ target, child, sectionId = "
   if (!section) return false;
 
   const childName = child?.name || child?.full_name || child?.display_name || "selected child";
-  target.innerHTML = `
-    <section class="ops-child-workspace-section">
-      <header class="ops-child-section-header">
-        <p class="ops-eyebrow">${escapeHtml(childName)}</p>
-        <h3>${escapeHtml(section.label)}</h3>
-        <p>Loading ${escapeHtml(section.label.toLowerCase())}...</p>
-      </header>
-    </section>
-  `;
+  target.innerHTML = `<section class="ops-child-workspace-section"><header class="ops-child-section-header"><p class="ops-eyebrow">${escapeHtml(childName)}</p><h3>${escapeHtml(section.label)}</h3><p>Loading ${escapeHtml(section.label.toLowerCase())}...</p></header></section>`;
 
   try {
     const data = await fetchSectionData(child?.id, section.id);
     const records = normaliseRecords(data);
-    target.innerHTML = `
-      <section class="ops-child-workspace-section">
-        <header class="ops-child-section-header">
-          <p class="ops-eyebrow">${escapeHtml(childName)}</p>
-          <h3>${escapeHtml(section.label)}</h3>
-          <p>${escapeHtml((section.sections || []).join(" · "))}</p>
-        </header>
-        ${renderSectionBody(section, records, data)}
-      </section>
-    `;
+    target.innerHTML = `<section class="ops-child-workspace-section"><header class="ops-child-section-header"><p class="ops-eyebrow">${escapeHtml(childName)}</p><h3>${escapeHtml(section.label)}</h3><p>${escapeHtml((section.sections || []).join(" · "))}</p></header>${renderSectionBody(section, records, data, child)}</section>`;
   } catch (error) {
     console.warn("[child-workspace-renderer] section load failed", error);
-    target.innerHTML = `
-      <section class="ops-child-workspace-section">
-        <header class="ops-child-section-header">
-          <p class="ops-eyebrow">${escapeHtml(childName)}</p>
-          <h3>${escapeHtml(section.label)}</h3>
-          <p>${escapeHtml((section.sections || []).join(" · "))}</p>
-        </header>
-        ${renderSectionBody(section, [], null)}
-        <div class="ops-empty-state"><h4>Backend not connected yet</h4><p>This section layout is ready while the endpoint is being connected.</p></div>
-      </section>
-    `;
+    target.innerHTML = `<section class="ops-child-workspace-section"><header class="ops-child-section-header"><p class="ops-eyebrow">${escapeHtml(childName)}</p><h3>${escapeHtml(section.label)}</h3><p>${escapeHtml((section.sections || []).join(" · "))}</p></header>${renderSectionBody(section, [], null, child)}<div class="ops-empty-state"><h4>Backend not connected yet</h4><p>This section layout is ready while the endpoint is being connected.</p></div></section>`;
   }
 
   bindQuickActions(target, { child, sectionId: section.id });
