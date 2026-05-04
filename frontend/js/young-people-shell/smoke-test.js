@@ -47,6 +47,7 @@ export async function runYoungPeopleShellSmokeTest() {
 
   checks.push(result("Assistant send available", Boolean(window.IndiCareYoungPeopleAssistant?.sendAssistantMessage), "assistant module handle"));
   checks.push(result("Composer open available", Boolean(window.IndiCareYoungPeopleComposer?.openComposer), "composer module handle"));
+  checks.push(result("Diagnostics available", Boolean(window.IndiCareYoungPeopleDiagnostics?.getYoungPeopleShellDiagnostics), "diagnostics module handle"));
 
   if (window.IndiCareYoungPeopleComposer?.openComposer && window.IndiCareYoungPeopleComposer?.closeComposer) {
     const opened = window.IndiCareYoungPeopleComposer.openComposer("daily_note");
