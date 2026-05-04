@@ -46,6 +46,8 @@ PUBLIC_PREFIXES = (
     "/mfa-setup.html",
     "/mfa-recovery",
     "/mfa-recovery.html",
+    "/access-denied",
+    "/access-denied.html",
     "/forgot-password",
     "/privacy",
     "/support",
