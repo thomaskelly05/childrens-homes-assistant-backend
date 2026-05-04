@@ -14,11 +14,17 @@ function result(name, passed, detail = "") {
   return { name, passed: Boolean(passed), detail };
 }
 
+function legacyScriptLoaded() {
+  return [...document.scripts].some((script) => (script.src || "").includes("/js/young-people-shell.js"));
+}
+
 export async function runYoungPeopleShellSmokeTest() {
   const checks = [];
 
   const readiness = runYoungPeopleShellReadinessChecks();
   checks.push(result("Readiness passed", readiness.passed, readiness.checkedAt));
+  checks.push(result("Modular active flag", document.body?.dataset?.modularShellActive === "true", document.body?.dataset?.modularShellActive || "not set"));
+  checks.push(result("Legacy shell not loaded", !legacyScriptLoaded(), legacyScriptLoaded() ? "legacy script present" : "legacy script absent"));
 
   const selectorReady = await waitFor(() => {
     const selector = document.getElementById("ypSelector");
