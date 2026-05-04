@@ -1,5 +1,6 @@
 import { bootYoungPeopleShell } from "./boot.js";
 import { runYoungPeopleShellReadinessChecks } from "./readiness.js";
+import { runYoungPeopleShellSmokeTest } from "./smoke-test.js";
 
 function safeLocalStorageFlag(key) {
   try {
@@ -34,6 +35,8 @@ async function start() {
     } catch (e) {
       console.warn("[young-people-shell/modular-entry] readiness checks failed to run", e);
     }
+
+    window.IndiCareYoungPeopleSmokeTest = Object.freeze({ runYoungPeopleShellSmokeTest });
   } catch (error) {
     window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__ = false;
     document.body.dataset.modularShellActive = "false";
