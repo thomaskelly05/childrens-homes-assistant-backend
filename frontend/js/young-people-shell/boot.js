@@ -1,3 +1,4 @@
+import { bindAssistant } from "./assistant.js";
 import { assertYoungPeopleShellContract } from "./contract.js";
 import { loadTabData } from "./data-loader.js";
 import { state, initialiseStateGuards } from "./state.js";
@@ -98,6 +99,7 @@ export async function bootYoungPeopleShell() {
   state.youngPersonId = currentYoungPersonId();
   bindTabs();
   bindSelector();
+  bindAssistant();
   await setCurrentTab(state.currentSection || "daily");
   if (!state.youngPersonId) setStatus("Select a young person to begin.");
   return true;
