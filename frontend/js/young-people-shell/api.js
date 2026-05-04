@@ -1,6 +1,55 @@
+const DEFAULT_TIMEOUT_MS = 20_000;
+
 export function youngPersonPath(youngPersonId, suffix = "") {
   if (!youngPersonId) throw new Error("No young person selected.");
   return `/young-people/${encodeURIComponent(youngPersonId)}${suffix}`;
+}
+
+function getCookie(name) {
+  return document.cookie
+    .split("; ")
+    .map((part) => part.split("="))
+    .find(([key]) => decodeURIComponent(key || "") === name)?.[1] || "";
+}
+
+function getCsrfToken() {
+  if (typeof window.getCsrfToken === "function") return window.getCsrfToken() || "";
+  const cookie = getCookie("indicare_csrf");
+  if (cookie) return decodeURIComponent(cookie);
+  return document.querySelector('meta[name="csrf-token"]')?.content || "";
+}
+
+function needsCsrf(method) {
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+}
+
+function authRedirect(status) {
+  const current = encodeURIComponent(window.location.pathname + window.location.search);
+  if (status === 401) window.location.replace(`/login?next=${current}`);
+  if (status === 403) window.location.replace(`/access-denied?blocked=${current}`);
+}
+
+async function readBody(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) return response.json().catch(() => null);
+  return response.text().catch(() => "");
+}
+
+function errorMessage(method, path, response, body) {
+  if (body && typeof body === "object") {
+    return body.detail || body.error || body.message || `${method} ${path} failed with ${response.status}`;
+  }
+  if (typeof body === "string" && body.trim()) return body.trim();
+  return `${method} ${path} failed with ${response.status}`;
+}
+
+function buildHeaders(method, headers = {}) {
+  const safeHeaders = { Accept: "application/json", ...headers };
+  const token = getCsrfToken();
+  if (needsCsrf(method) && token && !safeHeaders["X-CSRF-Token"]) {
+    safeHeaders["X-CSRF-Token"] = token;
+  }
+  return safeHeaders;
 }
 
 export async function ypApiRequest(path, options = {}) {
@@ -8,42 +57,55 @@ export async function ypApiRequest(path, options = {}) {
     return window.apiRequest(path, options);
   }
 
-  const response = await fetch(path, {
-    ...options,
-    credentials: "include",
-  });
+  const method = String(options.method || "GET").toUpperCase();
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), options.timeoutMs || DEFAULT_TIMEOUT_MS);
 
-  if (response.status === 401) {
-    const next = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.replace(`/login?next=${next}`);
-    return null;
+  try {
+    const response = await fetch(path, {
+      ...options,
+      method,
+      credentials: "include",
+      headers: buildHeaders(method, options.headers || {}),
+      signal: options.signal || controller.signal,
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      authRedirect(response.status);
+      return null;
+    }
+
+    const body = await readBody(response);
+
+    if (!response.ok) {
+      const error = new Error(errorMessage(method, path, response, body));
+      error.status = response.status;
+      error.body = body;
+      error.path = path;
+      throw error;
+    }
+
+    return body || {};
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("The request timed out. Please check your connection and try again.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
-
-  if (response.status === 403) {
-    const blocked = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.replace(`/access-denied?blocked=${blocked}`);
-    return null;
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-  const data = contentType.includes("application/json") ? await response.json().catch(() => null) : null;
-
-  if (!response.ok) {
-    throw new Error(data?.detail || data?.error || `Request failed with ${response.status}`);
-  }
-
-  return data;
 }
 
-export function ypApiGet(path) {
-  return ypApiRequest(path);
+export function ypApiGet(path, options = {}) {
+  return ypApiRequest(path, options);
 }
 
-export function ypApiPost(path, payload = {}) {
+export function ypApiPost(path, payload = {}, options = {}) {
   return ypApiRequest(path, {
+    ...options,
     method: "POST",
     body: JSON.stringify(payload),
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
   });
 }
 
@@ -54,18 +116,19 @@ export async function ypAssistantStream(payload = {}, handlers = {}) {
     headers: {
       Accept: "text/event-stream",
       "Content-Type": "application/json",
-      ...(window.getCsrfToken?.() ? { "X-CSRF-Token": window.getCsrfToken() } : {}),
+      ...(getCsrfToken() ? { "X-CSRF-Token": getCsrfToken() } : {}),
     },
     body: JSON.stringify(payload),
   });
 
   if (response.status === 401 || response.status === 403) {
-    await ypApiRequest("/assistant/os/young-people/stream", { method: "GET" });
+    authRedirect(response.status);
     return;
   }
 
   if (!response.ok || !response.body) {
-    throw new Error(`Assistant stream failed with ${response.status}`);
+    const body = await readBody(response);
+    throw new Error(errorMessage("POST", "/assistant/os/young-people/stream", response, body));
   }
 
   const reader = response.body.getReader();
