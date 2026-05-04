@@ -1,3 +1,4 @@
+import { assertYoungPeopleShellContract } from "./contract.js";
 import { state, initialiseStateGuards } from "./state.js";
 import { setActiveTabButton, setStatus, showAssistantPanel, showRecordsPanel, updateTabCopy } from "./ui.js";
 
@@ -50,12 +51,14 @@ function bindSelector() {
 }
 
 export function bootYoungPeopleShell() {
+  if (!assertYoungPeopleShellContract({ warnOnly: true })) return false;
   initialiseStateGuards();
   state.youngPersonId = currentYoungPersonId();
   bindTabs();
   bindSelector();
   setCurrentTab(state.currentSection || "daily");
   setStatus(state.youngPersonId ? "Care Hub ready." : "Select a young person to begin.");
+  return true;
 }
 
 window.IndiCareYoungPeopleBoot = Object.freeze({ bootYoungPeopleShell, setCurrentTab });
