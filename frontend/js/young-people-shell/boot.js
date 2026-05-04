@@ -1,14 +1,16 @@
 import { bindAssistant } from "./assistant.js";
 import { bindComposer } from "./composer.js";
 import { assertYoungPeopleShellContract } from "./contract.js";
-import { loadTabData } from "./data-loader.js";
+import { loadTabData, loadYoungPeople } from "./data-loader.js";
 import { state, initialiseStateGuards } from "./state.js";
 import {
+  escapeHtml,
   renderError,
   renderLoading,
   renderRecords,
   setActiveTabButton,
   setStatus,
+  setText,
   showAssistantPanel,
   showRecordsPanel,
   updateTabCopy,
@@ -24,9 +26,41 @@ const TAB_COPY = Object.freeze({
   assistant: { title: "Assistant", subtitle: "Ask IndiCare about this young person." },
 });
 
+function normaliseId(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "null" || raw === "undefined") return null;
+  return raw;
+}
+
 function currentYoungPersonId() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("young_person_id") || params.get("youngPersonId") || params.get("id") || document.body?.dataset?.youngPersonId || null;
+  return normaliseId(params.get("young_person_id") || params.get("youngPersonId") || params.get("id") || document.body?.dataset?.youngPersonId || null);
+}
+
+function youngPersonName(person) {
+  const first = person?.first_name || person?.firstName || "";
+  const last = person?.last_name || person?.lastName || "";
+  const combined = `${first} ${last}`.trim();
+  return person?.name || person?.full_name || person?.display_name || combined || `Young person ${person?.id ?? ""}`.trim();
+}
+
+function setYoungPersonId(id) {
+  const youngPersonId = normaliseId(id);
+  state.youngPersonId = youngPersonId;
+
+  if (youngPersonId) {
+    document.body.dataset.youngPersonId = youngPersonId;
+    const shell = document.getElementById("ypShell");
+    if (shell) shell.dataset.youngPersonId = youngPersonId;
+  }
+
+  return youngPersonId;
+}
+
+function updateSelectedPersonText(youngPersonId) {
+  const selected = (state.youngPeople || []).find((person) => String(person?.id || person?.young_person_id) === String(youngPersonId));
+  setText("ypPersonName", selected ? youngPersonName(selected) : youngPersonId ? `Young person ${youngPersonId}` : "Young People Care Hub");
+  setText("ypPersonMeta", youngPersonId ? "Care Hub open" : "Select a young person to begin.");
 }
 
 function recordsForTab(tab) {
@@ -37,6 +71,46 @@ function recordsForTab(tab) {
   if (tab === "incidents") return state.incidentRecords || [];
   if (tab === "medication") return [...(state.medicationProfiles || []), ...(state.medicationRecords || [])];
   return [];
+}
+
+async function populateYoungPeopleSelector() {
+  const selector = document.getElementById("ypSelector");
+  if (!selector) return;
+
+  selector.disabled = true;
+  selector.innerHTML = '<option value="">Loading young people...</option>';
+
+  try {
+    const people = await loadYoungPeople();
+    if (!people.length) {
+      selector.innerHTML = '<option value="">No young people found</option>';
+      setYoungPersonId(null);
+      updateSelectedPersonText(null);
+      return;
+    }
+
+    selector.innerHTML = people
+      .map((person) => {
+        const id = normaliseId(person?.id || person?.young_person_id);
+        if (!id) return "";
+        return `<option value="${escapeHtml(id)}">${escapeHtml(youngPersonName(person))}</option>`;
+      })
+      .join("");
+
+    const requestedId = currentYoungPersonId();
+    const firstId = normaliseId(people[0]?.id || people[0]?.young_person_id);
+    const selectedId = requestedId || firstId;
+    setYoungPersonId(selectedId);
+    selector.value = selectedId || "";
+    updateSelectedPersonText(selectedId);
+  } catch (error) {
+    console.error("[young-people-shell/boot] selector load failed", error);
+    selector.innerHTML = '<option value="">Current young person</option>';
+    setYoungPersonId(currentYoungPersonId());
+    updateSelectedPersonText(state.youngPersonId);
+  } finally {
+    selector.disabled = false;
+  }
 }
 
 async function loadCurrentTab(tab = state.currentSection || "daily") {
@@ -87,9 +161,8 @@ function bindSelector() {
   const selector = document.getElementById("ypSelector");
   if (!selector) return;
   selector.addEventListener("change", () => {
-    const id = selector.value || null;
-    state.youngPersonId = id;
-    if (id) document.body.dataset.youngPersonId = id;
+    const id = setYoungPersonId(selector.value);
+    updateSelectedPersonText(id);
     loadCurrentTab(state.currentSection || "daily");
   });
 }
@@ -97,11 +170,11 @@ function bindSelector() {
 export async function bootYoungPeopleShell() {
   if (!assertYoungPeopleShellContract({ warnOnly: true })) return false;
   initialiseStateGuards();
-  state.youngPersonId = currentYoungPersonId();
   bindTabs();
   bindSelector();
   bindAssistant();
   bindComposer();
+  await populateYoungPeopleSelector();
   await setCurrentTab(state.currentSection || "daily");
   if (!state.youngPersonId) setStatus("Select a young person to begin.");
   return true;
