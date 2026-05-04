@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Professional Input | IndiCare</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#0057B8" />
+  <link rel="stylesheet" href="/css/operating-dashboard.css" />
+</head>
+<body class="professional-input-body" data-app-origin="https://app.indicare.co.uk">
+  <main class="ops-shell professional-input-shell">
+    <section class="ops-screen-card professional-input-card">
+      <header>
+        <p class="ops-eyebrow">Professional input</p>
+        <h1>Therapeutic Support & Services</h1>
+        <p id="professionalInviteIntro">Loading invite...</p>
+      </header>
+      <section id="professionalInviteStatus" class="ops-status" role="status" aria-live="polite"></section>
+      <form id="professionalInputForm" class="professional-input-form hidden">
+        <label class="ops-field"><span>Your name / role</span><input name="submitted_by" required /></label>
+        <label class="ops-field"><span>Assessment summary</span><textarea name="assessment_summary" rows="4" required></textarea></label>
+        <label class="ops-field"><span>Recommendations</span><textarea name="recommendations" rows="4" required></textarea></label>
+        <label class="ops-field"><span>Work with the child</span><textarea name="work_with_child" rows="3"></textarea></label>
+        <label class="ops-field"><span>Work with family / network</span><textarea name="work_with_family" rows="3"></textarea></label>
+        <label class="ops-field"><span>Guidance for staff</span><textarea name="staff_guidance" rows="4"></textarea></label>
+        <label class="ops-field"><span>Impact view</span><textarea name="impact_view" rows="3"></textarea></label>
+        <button type="submit" class="yp-button yp-button-primary">Submit input</button>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="/js/professional-input.js"></script>
+</body>
+</html>
