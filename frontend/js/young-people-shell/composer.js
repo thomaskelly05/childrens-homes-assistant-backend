@@ -11,6 +11,7 @@ import {
   setComposerTitle,
   setStatus,
 } from "./ui.js";
+import { evidenceForRecordType } from "../workflow-contract.js";
 
 const COMPOSER_DEFS = Object.freeze({
   daily_note: {
@@ -137,6 +138,39 @@ function normaliseEducationPayload(payload, status) {
   return payload;
 }
 
+function lifecycleStateForStatus(status) {
+  return status === "submitted" ? "submitted" : "draft";
+}
+
+function workflowPayload(recordType, status, payload) {
+  const evidence = evidenceForRecordType(recordType);
+  const actionTypes = status === "submitted" ? [...(evidence.defaultActions || [])] : [];
+
+  if (recordType === "incident") {
+    const safeguardingText = String(payload.safeguarding_follow_up || "").trim();
+    const followUpText = String(payload.follow_up_required || "").trim().toLowerCase();
+    if (safeguardingText) actionTypes.push("safeguarding_follow_up");
+    if (safeguardingText || followUpText.includes("yes")) actionTypes.push("reg40_decision");
+  }
+
+  return {
+    lifecycle_state: lifecycleStateForStatus(status),
+    workflow_status: status,
+    record_type: recordType,
+    evidence_mapping: {
+      sccif: evidence.sccif || [],
+      quality_standards: evidence.quality || [],
+    },
+    action_intents: [...new Set(actionTypes)].map((type) => ({
+      type,
+      source: "record_submission",
+      status: "open",
+    })),
+    manager_review_needed: status === "submitted",
+    evidence_bank_ready: status === "submitted",
+  };
+}
+
 function collectPayload(status) {
   const payload = { status, workflow_status: status };
   byId("ypComposerFields")?.querySelectorAll("input, textarea, select").forEach((field) => {
@@ -156,7 +190,10 @@ function collectPayload(status) {
     payload.link_quality_standards = true;
   }
 
-  return payload;
+  return {
+    ...payload,
+    workflow: workflowPayload(state.composerRecordType, status, payload),
+  };
 }
 
 export function openComposer(type) {
@@ -206,7 +243,7 @@ export async function saveComposer(status = "draft") {
     clearYoungPeopleDataCache(youngPersonId);
     const refreshTab = definition.refreshTab || state.currentSection || "daily";
     closeComposer();
-    setStatus(status === "draft" ? "Draft saved." : "Sent for review.");
+    setStatus(status === "draft" ? "Draft saved." : "Sent for review and added to workflow.");
     window.IndiCareYoungPeopleBoot?.setCurrentTab?.(refreshTab);
     return true;
   } catch (error) {
