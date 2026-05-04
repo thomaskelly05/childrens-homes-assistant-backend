@@ -14,16 +14,98 @@
     "/terms",
   ]);
 
+  const ROLE_GROUPS = Object.freeze({
+    staff: new Set(["staff", "support_worker", "key_worker", "senior", "senior_staff"]),
+    manager: new Set(["manager", "registered_manager", "deputy_manager", "home_manager"]),
+    provider: new Set(["ri", "responsible_individual", "provider_admin", "admin", "administrator", "super_admin", "superadmin", "founder"]),
+  });
+
   const NAV_LINKS = [
-    ["/my-profile", "My Profile", "My start page"],
-    ["/young-people-shell", "Care OS", "Children's home workspace"],
-    ["/young-people", "Young people", "Profiles and records"],
-    ["/safeguarding-hub", "Safeguarding", "Risk and safety"],
-    ["/quality-hub", "Quality", "Audit and assurance"],
-    ["/documents-hub", "Documents", "Files and evidence"],
-    ["/academy", "Academy", "Learning and evidence"],
-    ["/assistant", "Assistant", "Guidance and summaries"],
+    {
+      href: "/my-profile",
+      title: "My Profile",
+      subtitle: "My start page",
+      roles: ["staff", "manager", "provider"],
+    },
+    {
+      href: "/young-people-shell",
+      title: "Care OS",
+      subtitle: "Children's home workspace",
+      roles: ["staff", "manager", "provider"],
+    },
+    {
+      href: "/young-people",
+      title: "Young people",
+      subtitle: "Profiles and records",
+      roles: ["staff", "manager", "provider"],
+    },
+    {
+      href: "/safeguarding-hub",
+      title: "Safeguarding",
+      subtitle: "Risk and safety",
+      roles: ["staff", "manager", "provider"],
+    },
+    {
+      href: "/documents-hub",
+      title: "Documents",
+      subtitle: "Files and evidence",
+      roles: ["staff", "manager", "provider"],
+    },
+    {
+      href: "/academy",
+      title: "Academy",
+      subtitle: "Learning and evidence",
+      roles: ["staff", "manager", "provider"],
+    },
+    {
+      href: "/assistant",
+      title: "Assistant",
+      subtitle: "Guidance and summaries",
+      roles: ["staff", "manager", "provider"],
+    },
+    {
+      href: "/quality-hub",
+      title: "Quality",
+      subtitle: "Audit and assurance",
+      roles: ["manager", "provider"],
+    },
+    {
+      href: "/os-dashboard",
+      title: "Dashboard",
+      subtitle: "Oversight and trends",
+      roles: ["manager", "provider"],
+    },
+    {
+      href: "/rostering",
+      title: "Rostering",
+      subtitle: "Staffing and shifts",
+      roles: ["manager", "provider"],
+    },
+    {
+      href: "/staff-profiles",
+      title: "Staff Hub",
+      subtitle: "Team oversight",
+      roles: ["manager", "provider"],
+    },
+    {
+      href: "/admin-users",
+      title: "Admin",
+      subtitle: "Users and access",
+      roles: ["provider"],
+    },
+    {
+      href: "/founder-hq",
+      title: "Founder HQ",
+      subtitle: "Platform control",
+      roles: ["provider"],
+    },
   ];
+
+  const RESTRICTED_PATHS = NAV_LINKS.reduce((acc, item) => {
+    acc[item.href] = item.roles || [];
+    acc[`${item.href}.html`] = item.roles || [];
+    return acc;
+  }, {});
 
   function currentPath() {
     return window.location.pathname.replace(/\/$/, "") || "/";
@@ -33,9 +115,53 @@
     return PUBLIC_PATHS.has(currentPath());
   }
 
+  function normaliseRole(role = "") {
+    const value = String(role || "").trim().toLowerCase();
+
+    if (ROLE_GROUPS.provider.has(value)) return "provider";
+    if (ROLE_GROUPS.manager.has(value)) return "manager";
+    return "staff";
+  }
+
+  function currentUser() {
+    return window.auth?.getStoredUser?.() || {};
+  }
+
+  function currentRoleGroup() {
+    return normaliseRole(currentUser().role);
+  }
+
+  function roleCanAccess(allowed = [], roleGroup = currentRoleGroup()) {
+    if (!Array.isArray(allowed) || allowed.length === 0) return true;
+    return allowed.includes(roleGroup);
+  }
+
   function loginRedirect() {
     const next = encodeURIComponent(window.location.pathname + window.location.search);
     window.location.replace(`/login?next=${next}`);
+  }
+
+  function showAccessDenied(roleGroup) {
+    const banner = document.getElementById("indicareAccessDenied") || document.createElement("div");
+    banner.id = "indicareAccessDenied";
+    banner.className = "indicare-status-banner warning";
+    banner.style.cssText = "margin:16px auto;max-width:1180px;position:relative;z-index:10;";
+    banner.innerHTML = `<strong>Access limited.</strong> This area is not available for your current role (${roleGroup}).`;
+    document.body.prepend(banner);
+  }
+
+  function enforceRoleAccess() {
+    const path = currentPath();
+    const allowed = RESTRICTED_PATHS[path];
+    const roleGroup = currentRoleGroup();
+
+    if (allowed && !roleCanAccess(allowed, roleGroup)) {
+      showAccessDenied(roleGroup);
+      window.setTimeout(() => window.location.replace("/my-profile"), 900);
+      return false;
+    }
+
+    return true;
   }
 
   async function requirePageAuth() {
@@ -47,7 +173,9 @@
     }
 
     try {
-      return await window.auth.requireAuth();
+      const ok = await window.auth.requireAuth();
+      if (!ok) return false;
+      return enforceRoleAccess();
     } catch (error) {
       const banner = document.getElementById("indicareAuthError") || document.createElement("div");
       banner.id = "indicareAuthError";
@@ -163,6 +291,19 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      .indicare-global-nav-role {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #e8f1ef;
+        color: #163b3a;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+      }
       .indicare-global-nav-button {
         border: 1px solid #d7e1de;
         border-radius: 12px;
@@ -211,19 +352,25 @@
     links.setAttribute("aria-label", "IndiCare OS navigation");
 
     const path = currentPath();
-    for (const [href, title, subtitle] of NAV_LINKS) {
-      const link = makeLink(href, title, subtitle);
-      if (path === href || path === `${href}.html`) link.setAttribute("aria-current", "page");
+    const roleGroup = currentRoleGroup();
+    for (const item of NAV_LINKS) {
+      if (!roleCanAccess(item.roles, roleGroup)) continue;
+      const link = makeLink(item.href, item.title, item.subtitle);
+      if (path === item.href || path === `${item.href}.html`) link.setAttribute("aria-current", "page");
       links.appendChild(link);
     }
 
     const actions = document.createElement("div");
     actions.className = "indicare-global-nav-actions";
 
-    const storedUser = window.auth?.getStoredUser?.() || {};
+    const storedUser = currentUser();
     const user = document.createElement("span");
     user.className = "indicare-global-nav-user";
     user.textContent = storedUser.email || storedUser.role || "Signed in";
+
+    const role = document.createElement("span");
+    role.className = "indicare-global-nav-role";
+    role.textContent = roleGroup;
 
     const logout = document.createElement("button");
     logout.className = "indicare-global-nav-button";
@@ -232,6 +379,7 @@
     logout.addEventListener("click", () => window.auth?.logout?.());
 
     actions.appendChild(user);
+    actions.appendChild(role);
     actions.appendChild(logout);
     nav.appendChild(brand);
     nav.appendChild(links);
@@ -242,6 +390,9 @@
   function addSidebarLink(container, href, title, subtitle) {
     if (!container) return;
     if ([...container.querySelectorAll("a")].some((link) => link.getAttribute("href") === href)) return;
+
+    const allowed = RESTRICTED_PATHS[href];
+    if (allowed && !roleCanAccess(allowed)) return;
 
     const link = document.createElement("a");
     link.href = href;
@@ -266,6 +417,18 @@
     link.appendChild(strong);
     link.appendChild(small);
     container.appendChild(link);
+  }
+
+  function filterExistingLinksByRole() {
+    const roleGroup = currentRoleGroup();
+    document.querySelectorAll("a[href]").forEach((link) => {
+      const href = link.getAttribute("href")?.replace(/\/$/, "");
+      const allowed = RESTRICTED_PATHS[href];
+      if (allowed && !roleCanAccess(allowed, roleGroup)) {
+        link.setAttribute("hidden", "hidden");
+        link.setAttribute("aria-hidden", "true");
+      }
+    });
   }
 
   async function loadStaffAlert() {
@@ -309,6 +472,7 @@
   async function boot() {
     const ok = await requirePageAuth();
     if (!ok) return;
+    filterExistingLinksByRole();
     injectTopNav();
     loadStaffAlert();
   }
