@@ -7,10 +7,18 @@
     }
   }
 
+  function queryFlag(name) {
+    return new URLSearchParams(window.location.search).get(name) === "1";
+  }
+
+  function legacyShellForced() {
+    return queryFlag("legacy_shell") || document.body?.dataset?.legacyShell === "true";
+  }
+
   function modularShellEnabled() {
-    const params = new URLSearchParams(window.location.search);
+    if (legacyShellForced()) return false;
     return (
-      params.get("modular_shell") === "1" ||
+      queryFlag("modular_shell") ||
       document.body?.dataset?.modularShell === "true" ||
       safeLocalStorageFlag("indicare.modularYoungPeopleShell")
     );

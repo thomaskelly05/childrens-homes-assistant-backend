@@ -14,11 +14,17 @@ function result(name, passed, detail = "") {
   return { name, passed: Boolean(passed), detail };
 }
 
+function legacyScriptLoaded() {
+  return [...document.scripts].some((script) => (script.src || "").includes("/js/young-people-shell.js"));
+}
+
 export async function runYoungPeopleShellSmokeTest() {
   const checks = [];
 
   const readiness = runYoungPeopleShellReadinessChecks();
   checks.push(result("Readiness passed", readiness.passed, readiness.checkedAt));
+  checks.push(result("Modular active flag", document.body?.dataset?.modularShellActive === "true", document.body?.dataset?.modularShellActive || "not set"));
+  checks.push(result("Legacy shell not loaded", !legacyScriptLoaded(), legacyScriptLoaded() ? "legacy script present" : "legacy script absent"));
 
   const selectorReady = await waitFor(() => {
     const selector = document.getElementById("ypSelector");
@@ -41,6 +47,19 @@ export async function runYoungPeopleShellSmokeTest() {
 
   checks.push(result("Assistant send available", Boolean(window.IndiCareYoungPeopleAssistant?.sendAssistantMessage), "assistant module handle"));
   checks.push(result("Composer open available", Boolean(window.IndiCareYoungPeopleComposer?.openComposer), "composer module handle"));
+  checks.push(result("Diagnostics available", Boolean(window.IndiCareYoungPeopleDiagnostics?.getYoungPeopleShellDiagnostics), "diagnostics module handle"));
+
+  if (window.IndiCareYoungPeopleComposer?.openComposer && window.IndiCareYoungPeopleComposer?.closeComposer) {
+    const opened = window.IndiCareYoungPeopleComposer.openComposer("daily_note");
+    const composer = document.getElementById("ypComposer");
+    const fields = document.getElementById("ypComposerFields");
+    checks.push(result("Composer can open", opened && composer && !composer.classList.contains("hidden"), composer ? composer.getAttribute("aria-hidden") : "missing"));
+    checks.push(result("Composer renders fields", Boolean(fields && fields.querySelectorAll("input, textarea, select").length > 0), fields ? `${fields.querySelectorAll("input, textarea, select").length} field(s)` : "missing"));
+    window.IndiCareYoungPeopleComposer.closeComposer();
+    checks.push(result("Composer can close", composer && composer.classList.contains("hidden"), composer ? composer.getAttribute("aria-hidden") : "missing"));
+  } else {
+    checks.push(result("Composer open/close smoke", false, "composer handle incomplete"));
+  }
 
   const passed = checks.every((item) => item.passed);
   const report = { passed, checks, checkedAt: new Date().toISOString() };
