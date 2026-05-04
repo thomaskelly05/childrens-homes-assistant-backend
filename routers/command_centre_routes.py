@@ -3,12 +3,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from auth.current_user import get_current_user
 from db.connection import get_db
 
 router = APIRouter(prefix="/command-centre", tags=["Command Centre"])
+
+PROVIDER_LEVEL_ROLES = {"admin", "provider_admin", "super_admin", "superadmin", "administrator", "ri", "responsible_individual", "regional_manager"}
 
 
 def _safe_int(value: Any) -> int | None:
@@ -24,10 +26,35 @@ def _role(current_user: dict[str, Any]) -> str:
     return str(current_user.get("role") or "").strip().lower()
 
 
+def _allowed_home_ids(current_user: dict[str, Any]) -> set[int]:
+    values = current_user.get("allowed_home_ids") or current_user.get("allowedHomeIds") or []
+    allowed: set[int] = set()
+    if isinstance(values, list):
+        for value in values:
+            parsed = _safe_int(value)
+            if parsed is not None:
+                allowed.add(parsed)
+    home_id = _safe_int(current_user.get("home_id") or current_user.get("homeId"))
+    if home_id is not None:
+        allowed.add(home_id)
+    return allowed
+
+
 def _home_id(current_user: dict[str, Any], requested_home_id: int | None) -> int | None:
+    role = _role(current_user)
+    if role in PROVIDER_LEVEL_ROLES:
+        return requested_home_id if requested_home_id else _safe_int(current_user.get("home_id"))
+
+    allowed = _allowed_home_ids(current_user)
     if requested_home_id:
+        if requested_home_id not in allowed:
+            raise HTTPException(status_code=403, detail="Access denied")
         return requested_home_id
-    return _safe_int(current_user.get("home_id"))
+
+    if len(allowed) == 1:
+        return next(iter(allowed))
+
+    return _safe_int(current_user.get("home_id") or current_user.get("homeId"))
 
 
 def _home_filter_sql(home_id: int | None, table_alias: str = "") -> tuple[str, tuple[Any, ...]]:
@@ -64,56 +91,38 @@ def get_command_centre(
     with conn.cursor() as cur:
         summary = {}
 
-        summary.update(_fetch_one(
-            cur,
-            f"""
+        summary.update(_fetch_one(cur, f"""
             SELECT COUNT(*)::int AS open_tasks
             FROM tasks
             WHERE COALESCE(status, 'pending') NOT IN ('completed', 'done', 'closed')
             {task_filter}
-            """,
-            task_params,
-        ))
+        """, task_params))
 
-        summary.update(_fetch_one(
-            cur,
-            f"""
+        summary.update(_fetch_one(cur, f"""
             SELECT COUNT(*)::int AS overdue_tasks
             FROM tasks
             WHERE COALESCE(status, 'pending') NOT IN ('completed', 'done', 'closed')
               AND due_at IS NOT NULL
               AND due_at < NOW()
             {task_filter}
-            """,
-            task_params,
-        ))
+        """, task_params))
 
-        summary.update(_fetch_one(
-            cur,
-            f"""
+        summary.update(_fetch_one(cur, f"""
             SELECT COUNT(*)::int AS children_in_home
             FROM young_people
             WHERE COALESCE(placement_status, 'active') NOT IN ('discharged', 'closed')
             {yp_filter}
-            """,
-            yp_params,
-        ))
+        """, yp_params))
 
-        summary.update(_fetch_one(
-            cur,
-            f"""
+        summary.update(_fetch_one(cur, f"""
             SELECT COUNT(*)::int AS active_admissions
             FROM admissions
             WHERE COALESCE(status, 'referral_received') NOT IN ('closed', 'declined')
             {admission_filter}
-            """,
-            admission_params,
-        ))
+        """, admission_params))
 
-        tasks = _fetch_all(
-            cur,
-            f"""
-            SELECT id, title, status, priority, source, home_id, admission_id, due_at, created_at
+        tasks = _fetch_all(cur, f"""
+            SELECT id, title, status, priority, source, home_id, young_person_id, admission_id, due_at, created_at
             FROM tasks
             WHERE COALESCE(status, 'pending') NOT IN ('completed', 'done', 'closed')
             {task_filter}
@@ -127,13 +136,9 @@ def get_command_centre(
                 due_at ASC NULLS LAST,
                 created_at DESC
             LIMIT 30
-            """,
-            task_params,
-        )
+        """, task_params)
 
-        admissions = _fetch_all(
-            cur,
-            f"""
+        admissions = _fetch_all(cur, f"""
             SELECT id, home_id, young_person_id, status, placing_authority,
                    social_worker_name, legal_status, admission_date, created_at
             FROM admissions
@@ -141,19 +146,11 @@ def get_command_centre(
             {admission_filter}
             ORDER BY created_at DESC
             LIMIT 20
-            """,
-            admission_params,
-        )
+        """, admission_params)
 
-        incident_home_clause = ""
-        incident_params: tuple[Any, ...] = ()
-        if active_home_id is not None:
-            incident_home_clause = " AND yp.home_id = %s"
-            incident_params = (active_home_id,)
-
-        incidents_needing_review = _fetch_all(
-            cur,
-            f"""
+        incident_home_clause = " AND yp.home_id = %s" if active_home_id is not None else ""
+        incident_params = (active_home_id,) if active_home_id is not None else ()
+        incidents_needing_review = _fetch_all(cur, f"""
             SELECT i.id, i.young_person_id, yp.home_id, yp.first_name, yp.last_name,
                    i.incident_type, i.severity, i.manager_review_status, i.created_at
             FROM incidents i
@@ -163,19 +160,11 @@ def get_command_centre(
               {incident_home_clause}
             ORDER BY i.created_at DESC
             LIMIT 20
-            """,
-            incident_params,
-        )
+        """, incident_params)
 
-        risk_home_clause = ""
-        risk_params: tuple[Any, ...] = ()
-        if active_home_id is not None:
-            risk_home_clause = " AND yp.home_id = %s"
-            risk_params = (active_home_id,)
-
-        high_risks = _fetch_all(
-            cur,
-            f"""
+        risk_home_clause = " AND yp.home_id = %s" if active_home_id is not None else ""
+        risk_params = (active_home_id,) if active_home_id is not None else ()
+        high_risks = _fetch_all(cur, f"""
             SELECT r.id, r.young_person_id, yp.home_id, yp.first_name, yp.last_name,
                    r.title, r.category, r.severity, r.likelihood, r.review_date, r.status
             FROM risk_assessments r
@@ -187,13 +176,9 @@ def get_command_centre(
               {risk_home_clause}
             ORDER BY r.review_date ASC NULLS LAST, r.created_at DESC
             LIMIT 20
-            """,
-            risk_params,
-        )
+        """, risk_params)
 
-        compliance_due = _fetch_all(
-            cur,
-            f"""
+        compliance_due = _fetch_all(cur, """
             SELECT * FROM (
                 SELECT yp.home_id, yp.id AS young_person_id, yp.first_name, yp.last_name,
                        'risk_review' AS type, r.id AS item_id,
@@ -224,29 +209,15 @@ def get_command_centre(
               AND (%s IS NULL OR home_id = %s)
             ORDER BY due_date ASC
             LIMIT 30
-            """,
-            (active_home_id, active_home_id),
-        )
+        """, (active_home_id, active_home_id))
 
     alerts = []
     for task in tasks[:10]:
         if task.get("priority") in {"high", "critical"} or task.get("due_at"):
-            alerts.append({
-                "type": "task",
-                "level": task.get("priority") or "normal",
-                "title": task.get("title"),
-                "detail": f"Source: {task.get('source') or 'task'}",
-                "task_id": task.get("id"),
-            })
+            alerts.append({"type": "task", "level": task.get("priority") or "normal", "title": task.get("title"), "detail": f"Source: {task.get('source') or 'task'}", "task_id": task.get("id")})
 
     for incident in incidents_needing_review[:10]:
-        alerts.append({
-            "type": "incident_review",
-            "level": incident.get("severity") or "medium",
-            "title": "Incident needs manager review",
-            "young_person_name": " ".join([str(incident.get("first_name") or ""), str(incident.get("last_name") or "")]).strip(),
-            "incident_id": incident.get("id"),
-        })
+        alerts.append({"type": "incident_review", "level": incident.get("severity") or "medium", "title": "Incident needs manager review", "young_person_name": " ".join([str(incident.get("first_name") or ""), str(incident.get("last_name") or "")]).strip(), "incident_id": incident.get("id")})
 
     return {
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -271,16 +242,8 @@ def get_command_centre(
     }
 
 
-def _next_best_actions(
-    role: str,
-    tasks: list[dict[str, Any]],
-    incidents: list[dict[str, Any]],
-    risks: list[dict[str, Any]],
-    compliance: list[dict[str, Any]],
-    admissions: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
+def _next_best_actions(role: str, tasks: list[dict[str, Any]], incidents: list[dict[str, Any]], risks: list[dict[str, Any]], compliance: list[dict[str, Any]], admissions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
-
     if incidents and role in {"admin", "provider_admin", "manager", "registered_manager"}:
         actions.append({"priority": "high", "title": "Review open incidents", "count": len(incidents), "href": "/incidents"})
     if tasks:
@@ -291,5 +254,4 @@ def _next_best_actions(
         actions.append({"priority": "high", "title": "Clear compliance due items", "count": len(compliance), "href": "/compliance"})
     if admissions:
         actions.append({"priority": "medium", "title": "Progress active admissions", "count": len(admissions), "href": "/admissions"})
-
     return actions[:8]
