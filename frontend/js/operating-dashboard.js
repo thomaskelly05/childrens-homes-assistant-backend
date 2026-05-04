@@ -1,3 +1,11 @@
+import {
+  childWorkspaceHref,
+  childWorkspaceMenu,
+  loadCareHubChildren,
+  selectedChild,
+  selectedChildId,
+  setSelectedChildId,
+} from "./care-hub-child-context.js";
 import { CARE_HUB_NAVIGATION, findCareHubSection } from "./care-hub-navigation.js";
 import { dashboardFromRecords } from "./workflow-engine.js";
 
@@ -97,6 +105,72 @@ function ensureCareHubScreenShell() {
   shell.appendChild(wrapper);
 }
 
+function renderChildWorkspaceScreen(screen, section) {
+  screen.innerHTML = `
+    <section class="ops-screen-card ops-child-context-card">
+      <header>
+        <p class="ops-eyebrow">Children</p>
+        <h2>${escapeHtml(section.label)}</h2>
+        <p>${escapeHtml(section.description || "")}</p>
+      </header>
+      <div id="opsChildSelectorMount" class="ops-child-selector-card">
+        <p class="muted">Loading children…</p>
+      </div>
+    </section>
+  `;
+
+  loadCareHubChildren().then((children) => {
+    const mount = byId("opsChildSelectorMount");
+    if (!mount) return;
+    const chosen = selectedChild(children) || children[0] || null;
+    if (chosen && !selectedChildId()) setSelectedChildId(chosen.id);
+
+    if (!children.length) {
+      mount.innerHTML = `
+        <div class="ops-empty-state">
+          <h3>No children loaded yet</h3>
+          <p>Add or connect young people records to begin child-centred work.</p>
+          <a class="yp-button yp-button-primary" href="/young-people/new">Add New Child</a>
+        </div>
+      `;
+      return;
+    }
+
+    const current = chosen || selectedChild(children);
+    const childName = current?.name || "selected child";
+    mount.innerHTML = `
+      <label class="ops-field">
+        <span>Choose child</span>
+        <select id="opsSelectedChild">
+          ${children.map((child) => `<option value="${escapeHtml(child.id)}" ${String(child.id) === String(current?.id) ? "selected" : ""}>${escapeHtml(child.name)}</option>`).join("")}
+        </select>
+      </label>
+      <div class="ops-child-summary">
+        <h3>${escapeHtml(childName)}</h3>
+        <p>Open a therapeutic area below, or move into the full child workspace.</p>
+        <a class="yp-button yp-button-primary" href="${escapeHtml(childWorkspaceHref(current?.id || "", "about"))}">Open full child workspace</a>
+      </div>
+      <div class="ops-menu-grid ops-child-menu-grid">
+        ${childWorkspaceMenu().map((item) => `
+          <a class="ops-menu-card" href="${escapeHtml(childWorkspaceHref(current?.id || "", item.id))}">
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml((item.sections || []).slice(0, 4).join(" · "))}</span>
+          </a>
+        `).join("")}
+      </div>
+    `;
+
+    byId("opsSelectedChild")?.addEventListener("change", (event) => {
+      setSelectedChildId(event.target.value);
+      renderChildWorkspaceScreen(screen, section);
+    });
+  }).catch((error) => {
+    console.error("[operating-dashboard] child context failed", error);
+    const mount = byId("opsChildSelectorMount");
+    if (mount) mount.innerHTML = `<p class="muted">Could not load children right now.</p>`;
+  });
+}
+
 function renderActiveScreen() {
   const section = findCareHubSection(activeSectionId()) || CARE_HUB_NAVIGATION[0];
   const title = byId("opsScreenTitle");
@@ -107,34 +181,25 @@ function renderActiveScreen() {
   if (!screen) return;
 
   if (section.id === "today") {
-    screen.innerHTML = `
-      <section class="ops-flow-panel">
-        <h2>Today in the Care Hub</h2>
-        <p>Start with what needs attention, then move into the child, home, team or quality area that needs action.</p>
-      </section>
-    `;
+    screen.innerHTML = `<section class="ops-flow-panel"><h2>Today in the Care Hub</h2><p>Start with what needs attention, then move into the child, home, team or quality area that needs action.</p></section>`;
     byId("opsDashboardWidgets")?.classList.remove("hidden");
     return;
   }
 
   byId("opsDashboardWidgets")?.classList.add("hidden");
+
+  if (section.id === "children") {
+    renderChildWorkspaceScreen(screen, section);
+    return;
+  }
+
   screen.innerHTML = `
     <section class="ops-screen-card">
-      <header>
-        <p class="ops-eyebrow">Care Hub OS</p>
-        <h2>${escapeHtml(section.label)}</h2>
-        <p>${escapeHtml(section.description || "")}</p>
-      </header>
+      <header><p class="ops-eyebrow">Care Hub OS</p><h2>${escapeHtml(section.label)}</h2><p>${escapeHtml(section.description || "")}</p></header>
       <div class="ops-menu-grid">
-        ${(section.children || []).map((child) => `
-          <a class="ops-menu-card" href="${escapeHtml(child.href || `#${child.id}`)}">
-            <strong>${escapeHtml(child.label)}</strong>
-            ${child.sections?.length ? `<span>${escapeHtml(child.sections.slice(0, 4).join(" · "))}</span>` : ""}
-          </a>
-        `).join("")}
+        ${(section.children || []).map((child) => `<a class="ops-menu-card" href="${escapeHtml(child.href || `#${child.id}`)}"><strong>${escapeHtml(child.label)}</strong>${child.sections?.length ? `<span>${escapeHtml(child.sections.slice(0, 4).join(" · "))}</span>` : ""}</a>`).join("")}
       </div>
-    </section>
-  `;
+    </section>`;
 }
 
 function normaliseItems(items = []) {
