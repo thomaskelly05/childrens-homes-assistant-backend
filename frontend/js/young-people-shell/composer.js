@@ -1,4 +1,5 @@
 import { ypApiPost, youngPersonPath } from "./api.js";
+import { clearYoungPeopleDataCache } from "./data-loader.js";
 import { state } from "./state.js";
 import {
   byId,
@@ -202,6 +203,7 @@ export async function saveComposer(status = "draft") {
 
   try {
     await ypApiPost(youngPersonPath(youngPersonId, definition.endpoint), collectPayload(status));
+    clearYoungPeopleDataCache(youngPersonId);
     const refreshTab = definition.refreshTab || state.currentSection || "daily";
     closeComposer();
     setStatus(status === "draft" ? "Draft saved." : "Sent for review.");
