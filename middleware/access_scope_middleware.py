@@ -35,6 +35,7 @@ PUBLIC_PREFIXES = (
     "/health",
     "/security/status",
     "/security/alerts",
+    "/auth",
     "/login",
     "/login.html",
     "/oslogin",
@@ -45,6 +46,10 @@ PUBLIC_PREFIXES = (
     "/mfa-setup.html",
     "/mfa-recovery",
     "/mfa-recovery.html",
+    "/forgot-password",
+    "/privacy",
+    "/support",
+    "/terms",
     "/css",
     "/js",
     "/assets",
@@ -53,18 +58,53 @@ PUBLIC_PREFIXES = (
 )
 
 SENSITIVE_PREFIXES = (
+    "/my-profile",
+    "/staff-profile.html",
     "/young-people",
+    "/childrens-home-os",
     "/visibility/young-people",
+    "/assistant",
     "/assistant/os",
     "/os/intelligence",
     "/reports",
     "/documents",
+    "/documents-hub",
     "/exports",
+    "/safeguarding-hub",
+    "/academy",
+    "/quality-hub",
+    "/os-dashboard",
+    "/staff-dashboard",
+    "/manager-dashboard",
+    "/ri-dashboard",
+    "/provider-dashboard",
+    "/rostering",
+    "/staff-profiles",
+    "/admin-users",
+    "/founder-hq",
 )
 
 ADMIN_ROLES = {"admin", "administrator", "super_admin", "superadmin", "founder", "owner"}
 PROVIDER_ROLES = ADMIN_ROLES | {"provider", "provider_admin", "director", "responsible_individual", "ri"}
-MANAGER_ROLES = PROVIDER_ROLES | {"registered_manager", "manager", "deputy_manager"}
+MANAGER_ROLES = PROVIDER_ROLES | {"registered_manager", "manager", "deputy_manager", "home_manager"}
+STAFF_ROLES = MANAGER_ROLES | {"staff", "support_worker", "key_worker", "senior", "senior_staff"}
+
+ROLE_PROTECTED_PREFIXES: tuple[tuple[str, set[str]], ...] = (
+    ("/admin-users", PROVIDER_ROLES),
+    ("/founder-hq", PROVIDER_ROLES),
+    ("/admin", PROVIDER_ROLES),
+    ("/founder", PROVIDER_ROLES),
+    ("/quality-hub", MANAGER_ROLES),
+    ("/os-dashboard", MANAGER_ROLES),
+    ("/staff-dashboard", MANAGER_ROLES),
+    ("/manager-dashboard", MANAGER_ROLES),
+    ("/ri-dashboard", MANAGER_ROLES),
+    ("/provider-dashboard", MANAGER_ROLES),
+    ("/rostering", MANAGER_ROLES),
+    ("/staff-profiles", MANAGER_ROLES),
+    ("/qa", MANAGER_ROLES),
+    ("/exports", MANAGER_ROLES),
+)
 
 
 def _safe_int(value: Any) -> int | None:
@@ -172,6 +212,13 @@ def _child_home_provider(young_person_id: int) -> tuple[int | None, int | None]:
     return None, None
 
 
+def _matching_role_protection(path: str) -> tuple[str, set[str]] | None:
+    for prefix, allowed_roles in ROLE_PROTECTED_PREFIXES:
+        if path == prefix or path.startswith(f"{prefix}/") or path.startswith(f"{prefix}."):
+            return prefix, allowed_roles
+    return None
+
+
 def _deny(request: Request, user: dict[str, Any] | None, reason: str, resource: str, resource_id: Any) -> JSONResponse:
     logger.warning(
         "access_denied reason=%s user_id=%s role=%s resource=%s resource_id=%s path=%s ip=%s",
@@ -207,6 +254,9 @@ class AccessScopeMiddleware(BaseHTTPMiddleware):
 
         needs_user = path.startswith(SENSITIVE_PREFIXES)
         matched_resource: tuple[str, int] | None = None
+        role_protection = _matching_role_protection(path)
+        if role_protection:
+            needs_user = True
 
         for pattern in CHILD_PATTERNS:
             match = pattern.match(path)
@@ -241,6 +291,12 @@ class AccessScopeMiddleware(BaseHTTPMiddleware):
         role = _normalise_role(user.get("role"))
         user_home_id = _safe_int(user.get("home_id"))
         user_provider_id = _safe_int(user.get("provider_id"))
+
+        if role_protection:
+            protected_prefix, allowed_roles = role_protection
+            if role not in allowed_roles:
+                return _deny(request, user, "role_not_allowed", protected_prefix, role)
+            _log_sensitive(request, user, "role_area", protected_prefix)
 
         if matched_resource:
             resource, resource_id = matched_resource
