@@ -2,9 +2,13 @@ APP_SHELL_STYLES = [
     '<link rel="stylesheet" href="/css/indicare-app-shell.css" />',
 ]
 
+# Keep global frontend boot order explicit and centralised.
+# Page HTML should not manually include these shared shell scripts.
 APP_SHELL_SCRIPTS = [
     '<script src="/js/api.js"></script>',
     '<script src="/js/auth.js"></script>',
+    '<script src="/js/core/permissions.js"></script>',
+    '<script src="/js/core/route-guard.js"></script>',
     '<script src="/js/staff-os-nav.js"></script>',
 ]
 
