@@ -103,14 +103,26 @@ export function showAssistantPanel() {
   toggleHidden("ypRecordsPanel", true);
 }
 
+function skeletonCard(index = 0) {
+  return `
+    <article class="yp-record-card yp-skeleton-card" aria-hidden="true" style="--yp-skeleton-delay: ${index * 80}ms">
+      <span class="yp-skeleton-line yp-skeleton-title"></span>
+      <span class="yp-skeleton-line"></span>
+      <span class="yp-skeleton-line yp-skeleton-short"></span>
+      <div class="yp-record-meta">
+        <span class="yp-skeleton-pill"></span>
+        <span class="yp-skeleton-pill yp-skeleton-pill-short"></span>
+      </div>
+    </article>
+  `;
+}
+
 export function renderLoading(message = "Getting the latest information.") {
   const list = byId("ypRecordsList");
   if (!list) return;
   list.innerHTML = `
-    <div class="yp-empty-card">
-      <h3>Loading…</h3>
-      <p>${escapeHtml(message)}</p>
-    </div>
+    <div class="sr-only" role="status" aria-live="polite">${escapeHtml(message)}</div>
+    ${[0, 1, 2].map((index) => skeletonCard(index)).join("")}
   `;
 }
 
