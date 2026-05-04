@@ -1,7 +1,16 @@
 import { assertYoungPeopleShellContract } from "./contract.js";
 import { loadTabData } from "./data-loader.js";
 import { state, initialiseStateGuards } from "./state.js";
-import { renderError, renderLoading, setActiveTabButton, setStatus, showAssistantPanel, showRecordsPanel, updateTabCopy } from "./ui.js";
+import {
+  renderError,
+  renderLoading,
+  renderRecords,
+  setActiveTabButton,
+  setStatus,
+  showAssistantPanel,
+  showRecordsPanel,
+  updateTabCopy,
+} from "./ui.js";
 
 const TAB_COPY = Object.freeze({
   daily: { title: "Daily notes", subtitle: "Load and record daily life information for this young person." },
@@ -16,6 +25,16 @@ const TAB_COPY = Object.freeze({
 function currentYoungPersonId() {
   const params = new URLSearchParams(window.location.search);
   return params.get("young_person_id") || params.get("youngPersonId") || params.get("id") || document.body?.dataset?.youngPersonId || null;
+}
+
+function recordsForTab(tab) {
+  if (tab === "daily") return state.dailyRecords || [];
+  if (tab === "health") return state.healthRecords || [];
+  if (tab === "education") return state.educationRecords || [];
+  if (tab === "family") return state.familyRecords || [];
+  if (tab === "incidents") return state.incidentRecords || [];
+  if (tab === "medication") return [...(state.medicationProfiles || []), ...(state.medicationRecords || [])];
+  return [];
 }
 
 async function loadCurrentTab(tab = state.currentSection || "daily") {
@@ -36,6 +55,7 @@ async function loadCurrentTab(tab = state.currentSection || "daily") {
 
   try {
     await loadTabData(tab, state.youngPersonId);
+    renderRecords(recordsForTab(tab), tab);
     setStatus("Loaded.");
     return true;
   } catch (error) {
