@@ -22,7 +22,7 @@ function renderChildItems(children = []) {
   return `
     <div class="care-hub-nav-children">
       ${children.map((child) => `
-        <a href="${escapeHtml(child.href || `#${child.id}`)}" data-care-hub-child="${escapeHtml(child.id)}">
+        <a href="${escapeHtml(child.href || `#${child.id}`)}">
           ${escapeHtml(child.label)}
         </a>
       `).join("")}
@@ -37,11 +37,7 @@ export function renderCareHubSidebar(target = document.getElementById("careHubSi
   target.innerHTML = `
     <aside class="care-hub-sidebar" aria-label="Care Hub OS navigation">
       <div class="care-hub-sidebar-brand">
-        <span class="care-hub-mark">IC</span>
-        <div>
-          <strong>Care Hub OS</strong>
-          <small>Therapeutic operating system</small>
-        </div>
+        <img src="/assets/indicare-logo.svg" alt="IndiCare" class="care-hub-logo" />
       </div>
 
       <nav class="care-hub-nav">
@@ -49,9 +45,8 @@ export function renderCareHubSidebar(target = document.getElementById("careHubSi
           const selected = item.id === active;
           return `
             <section class="care-hub-nav-section ${selected ? "active" : ""}">
-              <a class="care-hub-nav-link" href="${escapeHtml(item.href || `#${item.id}`)}" data-care-hub-section="${escapeHtml(item.id)}" aria-current="${selected ? "page" : "false"}">
+              <a class="care-hub-nav-link" href="${escapeHtml(item.href || `#${item.id}`)}">
                 <span>${escapeHtml(item.label)}</span>
-                <small>${escapeHtml(item.description || "")}</small>
               </a>
               ${selected ? renderChildItems(item.children || []) : ""}
             </section>
