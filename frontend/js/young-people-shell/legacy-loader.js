@@ -1,10 +1,18 @@
 (() => {
+  function safeLocalStorageFlag(key) {
+    try {
+      return window.localStorage?.getItem(key) === "true";
+    } catch (_) {
+      return false;
+    }
+  }
+
   function modularShellEnabled() {
     const params = new URLSearchParams(window.location.search);
     return (
       params.get("modular_shell") === "1" ||
       document.body?.dataset?.modularShell === "true" ||
-      window.localStorage?.getItem("indicare.modularYoungPeopleShell") === "true"
+      safeLocalStorageFlag("indicare.modularYoungPeopleShell")
     );
   }
 
