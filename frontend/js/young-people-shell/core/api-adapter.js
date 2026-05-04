@@ -87,6 +87,125 @@ const FALLBACK_RECORD_ROUTES = Object.freeze({
   },
 });
 
+const RECORD_ENDPOINTS = Object.freeze({
+  daily_note: {
+    list: "/young-people/:youngPersonId/daily-notes",
+    create: "/young-people/:youngPersonId/daily-notes",
+    get: "/young-people/daily-notes/:recordId",
+    update: "/young-people/daily-notes/:recordId",
+    replace: "/young-people/daily-notes/:recordId",
+    delete: "/young-people/daily-notes/:recordId/archive",
+    deleteMethod: "POST",
+  },
+  incident: {
+    list: "/young-people/:youngPersonId/incidents",
+    create: "/young-people/:youngPersonId/incidents",
+    get: "/young-people/incidents/:recordId",
+    update: "/young-people/incidents/:recordId",
+    replace: "/young-people/incidents/:recordId",
+    delete: "/young-people/incidents/:recordId/archive",
+    deleteMethod: "POST",
+  },
+  health_record: {
+    list: "/young-people/:youngPersonId/health",
+    create: "/young-people/:youngPersonId/health-records",
+    get: "/young-people/health-records/:recordId",
+    update: "/young-people/health-records/:recordId",
+    replace: "/young-people/health-records/:recordId",
+  },
+  medication_record: {
+    list: "/young-people/:youngPersonId/medication-records",
+    create: "/young-people/:youngPersonId/medication-records",
+    get: "/young-people/medication-records/:recordId",
+    update: "/young-people/medication-records/:recordId",
+    replace: "/young-people/medication-records/:recordId",
+  },
+  education_record: {
+    list: "/young-people/:youngPersonId/education",
+    create: "/young-people/:youngPersonId/education-records",
+    get: "/young-people/education-records/:recordId",
+    update: "/young-people/education-records/:recordId",
+    replace: "/young-people/education-records/:recordId",
+  },
+  family_contact: {
+    list: "/young-people/:youngPersonId/family",
+    create: "/young-people/:youngPersonId/family/records",
+    get: "/young-people/family/records/:recordId",
+    update: "/young-people/family/records/:recordId",
+    replace: "/young-people/family/records/:recordId",
+  },
+  keywork: {
+    list: "/young-people/:youngPersonId/keywork",
+    create: "/young-people/:youngPersonId/keywork",
+    get: "/young-people/keywork/:recordId",
+    update: "/young-people/keywork/:recordId",
+    replace: "/young-people/keywork/:recordId",
+  },
+  risk: {
+    list: "/young-people/:youngPersonId/risk",
+    create: "/young-people/:youngPersonId/risk-assessments",
+    get: "/young-people/risk-assessments/:recordId",
+    update: "/young-people/risk-assessments/:recordId",
+    replace: "/young-people/risk-assessments/:recordId",
+  },
+  support_plan: {
+    list: "/young-people/:youngPersonId/plans",
+    create: "/young-people/:youngPersonId/plans",
+    get: "/young-people/plans/:recordId",
+    update: "/young-people/plans/:recordId",
+    replace: "/young-people/plans/:recordId",
+  },
+  appointment: {
+    list: "/young-people/:youngPersonId/appointments",
+    create: "/young-people/:youngPersonId/appointments",
+    get: "/young-people/appointments/:recordId",
+    update: "/young-people/appointments/:recordId",
+    replace: "/young-people/appointments/:recordId",
+  },
+  chronology_event: {
+    list: "/young-people/:youngPersonId/timeline",
+    create: "/young-people/:youngPersonId/timeline",
+    get: "/young-people/timeline/:recordId",
+    update: "/young-people/timeline/:recordId",
+    replace: "/young-people/timeline/:recordId",
+  },
+  timeline: {
+    list: "/young-people/:youngPersonId/timeline",
+    create: "/young-people/:youngPersonId/timeline",
+    get: "/young-people/timeline/:recordId",
+    update: "/young-people/timeline/:recordId",
+    replace: "/young-people/timeline/:recordId",
+  },
+  safeguarding_record: {
+    list: "/young-people/:youngPersonId/safeguarding",
+    create: "/young-people/:youngPersonId/safeguarding",
+    get: "/young-people/safeguarding/:recordId",
+    update: "/young-people/safeguarding/:recordId",
+    replace: "/young-people/safeguarding/:recordId",
+  },
+  missing_episode: {
+    list: "/young-people/:youngPersonId/missing-episodes",
+    create: "/young-people/:youngPersonId/missing-episodes",
+    get: "/young-people/missing-episodes/:recordId",
+    update: "/young-people/missing-episodes/:recordId",
+    replace: "/young-people/missing-episodes/:recordId",
+  },
+  statutory_document: {
+    list: "/young-people/:youngPersonId/statutory-documents",
+    create: "/young-people/:youngPersonId/statutory-documents",
+    get: "/young-people/statutory-documents/:recordId",
+    update: "/young-people/statutory-documents/:recordId",
+    replace: "/young-people/statutory-documents/:recordId",
+  },
+  handover_record: {
+    list: "/young-people/:youngPersonId/handover",
+    create: "/young-people/:youngPersonId/handover",
+    get: "/young-people/handover/:recordId",
+    update: "/young-people/handover/:recordId",
+    replace: "/young-people/handover/:recordId",
+  },
+});
+
 const FALLBACK_RECORD_LABELS = Object.freeze({
   support_plan: "Support plan",
   risk: "Risk assessment",
@@ -161,7 +280,11 @@ function getIds(ids = {}) {
     ids.homeId ?? ids.currentHomeId ?? ids.selectedHomeId
   );
 
-  return { youngPersonId, homeId };
+  const recordId = normaliseId(
+    ids.recordId ?? ids.id ?? ids.source_id ?? ids.sourceId
+  );
+
+  return { youngPersonId, homeId, recordId };
 }
 
 function resolveScope(ids = {}) {
@@ -191,6 +314,10 @@ function routeRequiresHome(route = "") {
   return route.includes(":homeId");
 }
 
+function routeRequiresRecord(route = "") {
+  return route.includes(":recordId") || route.includes(":id");
+}
+
 function resolveRecordType(recordType) {
   const type = normaliseRecordType(recordType);
 
@@ -200,21 +327,40 @@ function resolveRecordType(recordType) {
 
   const contract = getRecordContract(type) || null;
   const fallbackConfig = getFallbackRouteConfig(type);
+  const endpointConfig = RECORD_ENDPOINTS[type] || null;
 
-  if (!contract && !fallbackConfig) {
+  if (!contract && !fallbackConfig && !endpointConfig) {
     throw new Error(`No record contract found for: ${type}`);
   }
 
-  return { type, contract, fallbackConfig };
+  return { type, contract, fallbackConfig, endpointConfig };
 }
 
 function hydrateRoute(route = "", ids = {}) {
-  const { youngPersonId, homeId } = getIds(ids);
+  const { youngPersonId, homeId, recordId } = getIds(ids);
 
   return route
     .replaceAll(":youngPersonId", encodeURIComponent(youngPersonId))
     .replaceAll(":childId", encodeURIComponent(youngPersonId))
-    .replaceAll(":homeId", encodeURIComponent(homeId));
+    .replaceAll(":homeId", encodeURIComponent(homeId))
+    .replaceAll(":recordId", encodeURIComponent(recordId))
+    .replaceAll(":id", encodeURIComponent(recordId));
+}
+
+function assertRouteIds(route = "", ids = {}, label = "Record") {
+  const { youngPersonId, homeId, recordId } = getIds(ids);
+
+  if (routeRequiresYoungPerson(route) && !youngPersonId) {
+    throw new Error(`${label} requires youngPersonId`);
+  }
+
+  if (routeRequiresHome(route) && !homeId) {
+    throw new Error(`${label} requires homeId`);
+  }
+
+  if (routeRequiresRecord(route) && !recordId) {
+    throw new Error(`${label} requires recordId`);
+  }
 }
 
 function unwrapListResponse(response, recordType) {
@@ -294,14 +440,7 @@ function buildRecordUrl(recordType, ids = {}, query = {}) {
     const fallbackRoute = getFallbackRoute(type, ids);
 
     if (fallbackRoute) {
-      if (routeRequiresYoungPerson(fallbackRoute) && !youngPersonId) {
-        throw new Error(`${contract?.label || getFallbackLabel(type)} requires youngPersonId`);
-      }
-
-      if (routeRequiresHome(fallbackRoute) && !homeId) {
-        throw new Error(`${contract?.label || getFallbackLabel(type)} requires homeId`);
-      }
-
+      assertRouteIds(fallbackRoute, ids, contract?.label || getFallbackLabel(type));
       baseUrl = hydrateRoute(fallbackRoute, ids);
     }
   }
@@ -315,21 +454,55 @@ function buildRecordUrl(recordType, ids = {}, query = {}) {
   return `${baseUrl}${buildQuery(query)}`;
 }
 
-function buildRecordItemUrl(recordType, ids = {}, recordId = "") {
+function buildRecordActionUrl(recordType, action, ids = {}, query = {}) {
+  const { type, contract, endpointConfig } = resolveRecordType(recordType);
+  const label = contract?.label || getFallbackLabel(type);
+  const route = endpointConfig?.[action] || null;
+
+  if (route) {
+    const hydratedIds = {
+      ...ids,
+      recordId: ids.recordId ?? ids.id ?? ids.source_id ?? ids.sourceId,
+    };
+    assertRouteIds(route, hydratedIds, label);
+    return `${hydrateRoute(route, hydratedIds)}${buildQuery(query)}`;
+  }
+
+  if (action === "list" || action === "create") {
+    return buildRecordUrl(type, ids, query);
+  }
+
+  return buildRecordItemUrl(type, ids, ids.recordId ?? ids.id, query);
+}
+
+function buildRecordItemUrl(recordType, ids = {}, recordId = "", query = {}) {
   const type = normaliseRecordType(recordType);
-  const base = buildRecordUrl(type, ids);
   const id = normaliseId(recordId ?? ids.recordId ?? ids.id);
 
   if (!id) {
     throw new Error(`${getRecordLabel(type) || getFallbackLabel(type)} requires recordId`);
   }
 
-  return `${base}/${encodeURIComponent(id)}`;
+  const base = buildRecordUrl(type, ids);
+  return `${base}/${encodeURIComponent(id)}${buildQuery(query)}`;
+}
+
+function getActionMethod(recordType, action, fallback) {
+  const type = normaliseRecordType(recordType);
+  const config = RECORD_ENDPOINTS[type] || {};
+  return config[`${action}Method`] || fallback;
+}
+
+function idsWithRecordId(ids = {}, recordId = "") {
+  return {
+    ...ids,
+    recordId: recordId || ids.recordId || ids.id,
+  };
 }
 
 export async function listRecords(recordType, ids = {}, query = {}) {
   const type = normaliseRecordType(recordType);
-  const url = buildRecordUrl(type, ids, query);
+  const url = buildRecordActionUrl(type, "list", ids, query);
   const response = await apiSend(url, "GET", null, { skipCache: true });
   const rows = unwrapListResponse(response, type);
 
@@ -338,7 +511,7 @@ export async function listRecords(recordType, ids = {}, query = {}) {
 
 export async function listRawRecords(recordType, ids = {}, query = {}) {
   const type = normaliseRecordType(recordType);
-  const url = buildRecordUrl(type, ids, query);
+  const url = buildRecordActionUrl(type, "list", ids, query);
   const response = await apiSend(url, "GET", null, { skipCache: true });
 
   return unwrapListResponse(response, type);
@@ -346,14 +519,14 @@ export async function listRawRecords(recordType, ids = {}, query = {}) {
 
 export async function getRecord(recordType, ids = {}, recordId = "") {
   const type = normaliseRecordType(recordType);
-  const url = buildRecordItemUrl(type, ids, recordId);
+  const url = buildRecordActionUrl(type, "get", idsWithRecordId(ids, recordId));
   const response = await apiSend(url, "GET", null, { skipCache: true });
   return normaliseRecord(unwrapSingleResponse(response), type);
 }
 
 export async function getRawRecord(recordType, ids = {}, recordId = "") {
   const type = normaliseRecordType(recordType);
-  const url = buildRecordItemUrl(type, ids, recordId);
+  const url = buildRecordActionUrl(type, "get", idsWithRecordId(ids, recordId));
   const response = await apiSend(url, "GET", null, { skipCache: true });
 
   return unwrapSingleResponse(response);
@@ -361,9 +534,10 @@ export async function getRawRecord(recordType, ids = {}, recordId = "") {
 
 export async function createRecord(recordType, ids = {}, payload = {}) {
   const type = normaliseRecordType(recordType);
-  const url = buildRecordUrl(type, ids);
+  const url = buildRecordActionUrl(type, "create", ids);
+  const listUrl = buildRecordActionUrl(type, "list", ids);
   const response = await apiSend(url, "POST", payload, {
-    invalidatePrefixes: [url],
+    invalidatePrefixes: [listUrl, url],
   });
 
   return normaliseRecord(unwrapSingleResponse(response), type);
@@ -371,9 +545,10 @@ export async function createRecord(recordType, ids = {}, payload = {}) {
 
 export async function updateRecord(recordType, ids = {}, recordId = "", payload = {}) {
   const type = normaliseRecordType(recordType);
-  const url = buildRecordItemUrl(type, ids, recordId);
-  const listUrl = buildRecordUrl(type, ids);
-  const response = await apiSend(url, "PATCH", payload, {
+  const scopedIds = idsWithRecordId(ids, recordId);
+  const url = buildRecordActionUrl(type, "update", scopedIds);
+  const listUrl = buildRecordActionUrl(type, "list", ids);
+  const response = await apiSend(url, getActionMethod(type, "update", "PATCH"), payload, {
     invalidatePrefixes: [listUrl],
   });
 
@@ -382,9 +557,10 @@ export async function updateRecord(recordType, ids = {}, recordId = "", payload 
 
 export async function replaceRecord(recordType, ids = {}, recordId = "", payload = {}) {
   const type = normaliseRecordType(recordType);
-  const url = buildRecordItemUrl(type, ids, recordId);
-  const listUrl = buildRecordUrl(type, ids);
-  const response = await apiSend(url, "PUT", payload, {
+  const scopedIds = idsWithRecordId(ids, recordId);
+  const url = buildRecordActionUrl(type, "replace", scopedIds);
+  const listUrl = buildRecordActionUrl(type, "list", ids);
+  const response = await apiSend(url, getActionMethod(type, "replace", "PUT"), payload, {
     invalidatePrefixes: [listUrl],
   });
 
@@ -393,9 +569,10 @@ export async function replaceRecord(recordType, ids = {}, recordId = "", payload
 
 export async function deleteRecord(recordType, ids = {}, recordId = "") {
   const type = normaliseRecordType(recordType);
-  const url = buildRecordItemUrl(type, ids, recordId);
-  const listUrl = buildRecordUrl(type, ids);
-  const response = await apiSend(url, "DELETE", null, {
+  const scopedIds = idsWithRecordId(ids, recordId);
+  const url = buildRecordActionUrl(type, "delete", scopedIds);
+  const listUrl = buildRecordActionUrl(type, "list", ids);
+  const response = await apiSend(url, getActionMethod(type, "delete", "DELETE"), null, {
     invalidatePrefixes: [listUrl],
   });
 
@@ -411,7 +588,7 @@ export async function listSectionRecords(section, ids = {}, query = {}) {
 
   const fallbackType = normaliseRecordType(section);
 
-  if (fallbackType && getFallbackRouteConfig(fallbackType)) {
+  if (fallbackType && (getFallbackRouteConfig(fallbackType) || RECORD_ENDPOINTS[fallbackType])) {
     return listRecords(fallbackType, ids, query);
   }
 
@@ -427,7 +604,7 @@ export async function listRawSectionRecords(section, ids = {}, query = {}) {
 
   const fallbackType = normaliseRecordType(section);
 
-  if (fallbackType && getFallbackRouteConfig(fallbackType)) {
+  if (fallbackType && (getFallbackRouteConfig(fallbackType) || RECORD_ENDPOINTS[fallbackType])) {
     return listRawRecords(fallbackType, ids, query);
   }
 
@@ -443,7 +620,7 @@ export async function createSectionRecord(section, ids = {}, payload = {}) {
 
   const fallbackType = normaliseRecordType(section);
 
-  if (fallbackType && getFallbackRouteConfig(fallbackType)) {
+  if (fallbackType && (getFallbackRouteConfig(fallbackType) || RECORD_ENDPOINTS[fallbackType])) {
     return createRecord(fallbackType, ids, payload);
   }
 
@@ -472,7 +649,7 @@ export async function getAssistantContext(ids = {}, query = {}) {
 
   if (youngPersonId) {
     return apiSend(
-      `/young-people/${encodeURIComponent(youngPersonId)}/assistant/context${params}`,
+      `/assistant/os/context/${encodeURIComponent(youngPersonId)}${params}`,
       "GET",
       null,
       { skipCache: true }
