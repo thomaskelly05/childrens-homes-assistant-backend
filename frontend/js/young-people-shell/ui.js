@@ -88,6 +88,95 @@ export function updateTabCopy(tab, copyMap = {}) {
   setText("ypRecordsSubtitle", copy.subtitle);
 }
 
+function firstText(record, keys, fallback = "Untitled record") {
+  for (const key of keys) {
+    const value = record?.[key];
+    if (value !== undefined && value !== null && String(value).trim()) return String(value).trim();
+  }
+  return fallback;
+}
+
+function formatDateLike(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: String(value).includes("T") ? "2-digit" : undefined,
+    minute: String(value).includes("T") ? "2-digit" : undefined,
+  });
+}
+
+export function renderRecordCard(record, tab = "records") {
+  const title = firstText(record, [
+    "title",
+    "summary",
+    "presentation",
+    "behaviour_summary",
+    "pre_contact_presentation",
+    "incident_type",
+    "record_type",
+    "contact_type",
+    "attendance_status",
+  ]);
+
+  const body = firstText(record, [
+    "presentation",
+    "summary",
+    "behaviour_update",
+    "positives",
+    "behaviour_summary",
+    "learning_engagement",
+    "issue_raised",
+    "action_taken",
+    "achievement_note",
+    "pre_contact_presentation",
+    "post_contact_presentation",
+    "child_voice",
+    "concerns",
+    "staff_response",
+    "actions_required",
+    "outcome",
+    "next_steps",
+    "young_person_voice",
+  ], "No further detail recorded.");
+
+  const date = firstText(record, [
+    "note_date",
+    "event_datetime",
+    "incident_datetime",
+    "record_date",
+    "contact_datetime",
+    "created_at",
+    "updated_at",
+  ], "");
+
+  const status = firstText(record, ["status", "workflow_status", "approval_status"], "");
+
+  return `
+    <article class="yp-record-card" data-tab="${escapeHtml(tab)}">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(body)}</p>
+      <div class="yp-record-meta">
+        ${date ? `<span class="yp-chip">${escapeHtml(formatDateLike(date))}</span>` : ""}
+        ${status ? `<span class="yp-chip">${escapeHtml(status)}</span>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+export function renderRecords(records, tab = "records") {
+  const list = byId("ypRecordsList");
+  if (!list) return;
+  if (!Array.isArray(records) || records.length === 0) {
+    renderEmpty("No records yet.");
+    return;
+  }
+  list.innerHTML = records.map((record) => renderRecordCard(record, tab)).join("");
+}
+
 export function appendAssistantMessage(role, text) {
   const box = byId("ypAssistantMessages");
   if (!box) return null;
