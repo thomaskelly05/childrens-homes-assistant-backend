@@ -57,6 +57,8 @@ def get_page_routes() -> dict[str, list[str]]:
         "/oslogin.html": frontend("oslogin.html"),
         "/access-denied": frontend("access-denied.html"),
         "/access-denied.html": frontend("access-denied.html"),
+        "/care-os": frontend("care-os.html"),
+        "/care-os.html": frontend("care-os.html"),
         "/journal": frontend("journal.html"),
         "/journal.html": frontend("journal.html"),
         "/supervision": frontend("supervision.html"),
@@ -68,8 +70,9 @@ def get_page_routes() -> dict[str, list[str]]:
         "/young-people-page": frontend("young-people.html"),
         "/young-people-page.html": frontend("young-people.html"),
         "/young-people-shell": frontend("young-people-shell.html"),
-        "/childrens-home-os": frontend("young-people-shell.html"),
-        "/childrens-home-os.html": frontend("young-people-shell.html"),
+        "/young-people-shell.html": frontend("young-people-shell.html"),
+        "/childrens-home-os": frontend("care-os.html"),
+        "/childrens-home-os.html": frontend("care-os.html"),
         "/os-dashboard": frontend("os-dashboard.html"),
         "/os-dashboard.html": frontend("os-dashboard.html"),
         "/documents-hub": frontend("documents-hub.html"),
@@ -119,15 +122,12 @@ def register_frontend_routes(app: FastAPI) -> None:
     for route_path, paths in get_page_routes().items():
         register_file_route(app, route_path, paths, "page")
 
-    @app.get("/young-people-shell.html")
-    def legacy_login_default_to_profile():
-        return RedirectResponse(url="/my-profile", status_code=302)
-
     @app.get("/command")
     @app.get("/command.html")
     @app.get("/home")
-    def redirect_to_assistant():
-        return RedirectResponse(url="/assistant", status_code=302)
+    @app.get("/home.html")
+    def redirect_to_care_os():
+        return RedirectResponse(url="/care-os", status_code=302)
 
     @app.get("/ai-notes.css")
     def ai_notes_css():
