@@ -9,6 +9,7 @@ routers.passkey_routes
 routers.legal_acceptance_routes
 routers.debug_health_routes
 routers.security_routes
+routers.notifications_routes
 routers.frontend_compat
 routers.young_people_shell_item_compat_routes
 routers.young_people_safe_routes
