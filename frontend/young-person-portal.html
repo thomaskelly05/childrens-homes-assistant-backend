@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My IndiCare Space</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#0057B8" />
+  <link rel="stylesheet" href="/css/young-person-portal.css" />
+</head>
+<body class="yp-portal-body" data-app-origin="https://app.indicare.co.uk">
+  <main class="yp-portal-shell">
+    <header class="yp-portal-header">
+      <p>My IndiCare Space</p>
+      <h1>How are things today?</h1>
+      <span id="ypPortalStatus">Choose something below.</span>
+    </header>
+
+    <section class="yp-child-picker">
+      <label>
+        <span>Who is using this?</span>
+        <select id="ypChildId">
+          <option value="demo-child">Demo young person</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="yp-portal-grid" aria-label="Young person options">
+      <button class="yp-tile" data-panel="feelings"><strong>My feelings</strong><span>Tell us how you feel</span></button>
+      <button class="yp-tile" data-panel="voice"><strong>My voice</strong><span>Say what matters</span></button>
+      <button class="yp-tile" data-panel="plans"><strong>My plans</strong><span>What helps me</span></button>
+      <button class="yp-tile" data-panel="memories"><strong>My memories</strong><span>Good moments</span></button>
+      <button class="yp-tile" data-panel="activities"><strong>Activities</strong><span>Things I want to do</span></button>
+      <button class="yp-tile" data-panel="family"><strong>Family plan</strong><span>People important to me</span></button>
+    </section>
+
+    <section id="ypPanel" class="yp-panel" aria-live="polite"></section>
+  </main>
+
+  <script type="module" src="/js/young-person-portal-ui.js"></script>
+</body>
+</html>
