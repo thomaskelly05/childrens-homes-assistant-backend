@@ -14,6 +14,8 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)],
 )
 
+PROVIDER_LEVEL_ROLES = {"admin", "provider_admin", "regional_manager", "registered_manager", "manager"}
+
 
 def _safe_int(value: Any) -> int | None:
     try:
@@ -33,7 +35,46 @@ def _role(current_user: dict[str, Any]) -> str:
 
 
 def _can_manage_tasks(current_user: dict[str, Any]) -> bool:
-    return _role(current_user) in {"admin", "provider_admin", "regional_manager", "registered_manager", "manager"}
+    return _role(current_user) in PROVIDER_LEVEL_ROLES
+
+
+def _allowed_home_ids(current_user: dict[str, Any]) -> set[int]:
+    values = current_user.get("allowed_home_ids") or current_user.get("allowedHomeIds") or []
+    allowed: set[int] = set()
+    if isinstance(values, list):
+        for value in values:
+            parsed = _safe_int(value)
+            if parsed is not None:
+                allowed.add(parsed)
+    home_id = _safe_int(current_user.get("home_id") or current_user.get("homeId"))
+    if home_id is not None:
+        allowed.add(home_id)
+    return allowed
+
+
+def _assert_home_access(current_user: dict[str, Any], home_id: int | None) -> None:
+    if home_id is None:
+        return
+    if _can_manage_tasks(current_user):
+        return
+    if home_id not in _allowed_home_ids(current_user):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
+def _effective_home_id(current_user: dict[str, Any], requested_home_id: int | None) -> int | None:
+    if requested_home_id is not None:
+        _assert_home_access(current_user, requested_home_id)
+        return requested_home_id
+    if _can_manage_tasks(current_user):
+        return None
+    allowed = _allowed_home_ids(current_user)
+    if len(allowed) == 1:
+        return next(iter(allowed))
+    return _safe_int(current_user.get("home_id") or current_user.get("homeId"))
+
+
+def _assert_task_access(current_user: dict[str, Any], task: dict[str, Any]) -> None:
+    _assert_home_access(current_user, _safe_int(task.get("home_id")))
 
 
 @router.get("/")
@@ -48,14 +89,17 @@ def get_tasks(
     filters = []
     params: list[Any] = []
 
-    if home_id is not None:
+    scoped_home_id = _effective_home_id(current_user, home_id)
+    if scoped_home_id is not None:
         filters.append("home_id = %s")
-        params.append(home_id)
+        params.append(scoped_home_id)
 
     if mine:
         filters.append("assigned_to = %s")
         params.append(_current_user_id(current_user))
     elif assigned_to is not None:
+        if not _can_manage_tasks(current_user) and assigned_to != _current_user_id(current_user):
+            raise HTTPException(status_code=403, detail="Access denied")
         filters.append("assigned_to = %s")
         params.append(assigned_to)
 
@@ -76,6 +120,7 @@ def get_tasks(
                 priority,
                 source,
                 home_id,
+                young_person_id,
                 admission_id,
                 assigned_to,
                 due_at,
@@ -117,21 +162,29 @@ def create_task(
     conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
+    home_id = _safe_int(payload.get("home_id")) or _safe_int(current_user.get("home_id") or current_user.get("homeId"))
+    _assert_home_access(current_user, home_id)
+
+    assigned_to = _safe_int(payload.get("assigned_to"))
+    if assigned_to is not None and not _can_manage_tasks(current_user) and assigned_to != _current_user_id(current_user):
+        raise HTTPException(status_code=403, detail="Only managers can assign tasks to other staff")
+
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
             INSERT INTO tasks (
-                title, home_id, admission_id, assigned_to, due_at,
+                title, home_id, young_person_id, admission_id, assigned_to, due_at,
                 source, priority, status, created_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, COALESCE(%s, 'pending'), NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, 'pending'), NOW())
             RETURNING *
             """,
             (
                 payload.get("title"),
-                payload.get("home_id"),
+                home_id,
+                payload.get("young_person_id"),
                 payload.get("admission_id"),
-                payload.get("assigned_to"),
+                assigned_to,
                 payload.get("due_at"),
                 payload.get("source") or "manual",
                 payload.get("priority") or "normal",
@@ -155,9 +208,16 @@ def update_task(
         existing = cur.fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Task not found")
+        _assert_task_access(current_user, dict(existing))
 
         if payload.get("assigned_to") is not None and not _can_manage_tasks(current_user):
             raise HTTPException(status_code=403, detail="Only managers can reassign tasks")
+
+        if payload.get("home_id") is not None:
+            target_home_id = _safe_int(payload.get("home_id"))
+            _assert_home_access(current_user, target_home_id)
+        else:
+            target_home_id = None
 
         new_status = payload.get("status")
         completed = existing.get("completed")
@@ -172,6 +232,9 @@ def update_task(
             SET title = COALESCE(%s, title),
                 status = COALESCE(%s, status),
                 completed = COALESCE(%s, completed),
+                home_id = COALESCE(%s, home_id),
+                young_person_id = COALESCE(%s, young_person_id),
+                admission_id = COALESCE(%s, admission_id),
                 assigned_to = COALESCE(%s, assigned_to),
                 due_at = COALESCE(%s, due_at),
                 priority = COALESCE(%s, priority),
@@ -183,6 +246,9 @@ def update_task(
                 payload.get("title"),
                 new_status,
                 completed,
+                target_home_id,
+                payload.get("young_person_id"),
+                payload.get("admission_id"),
                 payload.get("assigned_to"),
                 payload.get("due_at"),
                 payload.get("priority"),
@@ -204,13 +270,7 @@ def assign_task(
 ):
     if not _can_manage_tasks(current_user):
         raise HTTPException(status_code=403, detail="Only managers can assign tasks")
-
-    return update_task(
-        task_id,
-        {"assigned_to": payload.get("assigned_to"), "status": payload.get("status") or "pending"},
-        conn=conn,
-        current_user=current_user,
-    )
+    return update_task(task_id, {"assigned_to": payload.get("assigned_to"), "status": payload.get("status") or "pending"}, conn=conn, current_user=current_user)
 
 
 @router.post("/{task_id}/complete")
@@ -231,8 +291,9 @@ def escalate_overdue_tasks(
     if not _can_manage_tasks(current_user):
         raise HTTPException(status_code=403, detail="Only managers can escalate overdue tasks")
 
-    home_clause = "AND home_id = %s" if home_id is not None else ""
-    params = (home_id,) if home_id is not None else ()
+    scoped_home_id = _effective_home_id(current_user, home_id)
+    home_clause = "AND home_id = %s" if scoped_home_id is not None else ""
+    params = (scoped_home_id,) if scoped_home_id is not None else ()
 
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
