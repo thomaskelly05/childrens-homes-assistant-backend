@@ -11,10 +11,9 @@ from services.predictive_risk_service import PredictiveRiskService
 class RealtimeAlertsService:
     """Real-time alert layer for IndiCare.
 
-    This service turns proactive and predictive intelligence into active alerts
-    that can be shown in the workspace, acknowledged, escalated and audited.
-    It is schema-aware: if a persistent alert table exists, it uses it; otherwise
-    it returns generated live alerts safely without failing the workspace.
+    Turns proactive and predictive intelligence into active alerts that can be
+    shown, acknowledged, escalated and audited. If persistent alert tables do
+    not exist yet, generated live alerts are still returned safely.
     """
 
     def __init__(self) -> None:
@@ -24,23 +23,24 @@ class RealtimeAlertsService:
     def active_alerts(self, *, current_user: dict[str, Any], days: int = 30, home_id: int | None = None) -> dict[str, Any]:
         resolved_home_id = home_id or self._current_home_id(current_user)
         generated = self.proactive.build_alerts(current_user=current_user, days=days, home_id=resolved_home_id)
-        alerts = generated.get("alerts") or []
-        persistent = self._read_persistent_alerts(home_id=resolved_home_id)
-        all_alerts = self._dedupe(persistent + [self._normalise_generated_alert(a, resolved_home_id) for a in alerts])
-        all_alerts = sorted(all_alerts, key=lambda item: self._level_score(item.get("level")), reverse=True)
+        generated_alerts = [self._normalise_generated_alert(alert, resolved_home_id) for alert in generated.get("alerts") or []]
+        persistent_alerts = self._read_persistent_alerts(home_id=resolved_home_id)
+        alerts = self._dedupe(persistent_alerts + generated_alerts)
+        alerts = sorted(alerts, key=lambda item: self._level_score(item.get("level")), reverse=True)
         return {
             "ok": True,
             "home_id": resolved_home_id,
-            "summary": self._summary(all_alerts),
-            "alerts": all_alerts,
+            "summary": self._summary(alerts),
+            "alerts": alerts,
             "source": "realtime_alerts",
         }
 
     def child_alerts(self, *, young_person_id: int, current_user: dict[str, Any], days: int = 30) -> dict[str, Any]:
         predictive = self.predictive.child_risk(young_person_id=young_person_id, current_user=current_user, days=days)
         risk = predictive.get("risk") or {}
-        alerts = [
-            {
+        alerts = []
+        for idx, signal in enumerate(risk.get("signals") or []):
+            alerts.append({
                 "id": f"predictive-child-{young_person_id}-{idx}",
                 "level": signal.get("level") or "low",
                 "category": "predictive_child_risk",
@@ -52,9 +52,7 @@ class RealtimeAlertsService:
                 "young_person_id": young_person_id,
                 "status": "active",
                 "source": "predictive_risk",
-            }
-            for idx, signal in enumerate(risk.get("signals") or [])
-        ]
+            })
         return {
             "ok": True,
             "young_person_id": young_person_id,
@@ -99,9 +97,11 @@ class RealtimeAlertsService:
             if not table:
                 return []
             cols = self._columns(conn, table)
-            select_cols = [c for c in ["id", "level", "category", "title", "message", "why", "recommended_action", "home_id", "young_person_id", "status", "created_at"] if c in cols]
+            wanted = ["id", "level", "category", "title", "message", "why", "recommended_action", "home_id", "young_person_id", "status", "created_at"]
+            select_cols = [column for column in wanted if column in cols]
             if not select_cols:
                 return []
+            quoted_cols = ", ".join([f'"{column}"' for column in select_cols])
             where = []
             params: list[Any] = []
             if "status" in cols:
@@ -110,11 +110,9 @@ class RealtimeAlertsService:
                 where.append("home_id = %s")
                 params.append(home_id)
             where_sql = "WHERE " + " AND ".join(where) if where else ""
+            query = f'SELECT {quoted_cols} FROM public."{table}" {where_sql} ORDER BY created_at DESC NULLS LAST LIMIT 50'
             with conn.cursor() as cur:
-                cur.execute(
-                    f'SELECT {", ".join([f"\"{c}\"" for c in select_cols])} FROM public."{table}" {where_sql} ORDER BY created_at DESC NULLS LAST LIMIT 50',
-                    tuple(params),
-                )
+                cur.execute(query, tuple(params))
                 return [dict(row) for row in cur.fetchall()]
         except Exception:
             return []
@@ -157,7 +155,7 @@ class RealtimeAlertsService:
             "low": len([a for a in alerts if a.get("level") == "low"]),
         }
 
-    def _insert_action_log(self, conn, table: str, alert_id: str, action: str, current_user: dict[str, Any], comment: str | None) -> None:
+    def _insert_action_log(self, conn: Any, table: str, alert_id: str, action: str, current_user: dict[str, Any], comment: str | None) -> None:
         cols = self._columns(conn, table)
         payload = {
             "alert_id": alert_id,
@@ -173,7 +171,7 @@ class RealtimeAlertsService:
         values = {key: value for key, value in payload.items() if key in cols and value is not None}
         if not values:
             return
-        col_sql = ", ".join(f'"{key}"' for key in values)
+        col_sql = ", ".join([f'"{key}"' for key in values])
         placeholders = []
         params = []
         for value in values.values():
@@ -208,7 +206,7 @@ class RealtimeAlertsService:
         except Exception:
             return None
 
-    def _first_existing_table(self, conn, names: list[str]) -> str | None:
+    def _first_existing_table(self, conn: Any, names: list[str]) -> str | None:
         with conn.cursor() as cur:
             for name in names:
                 cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s) AS exists", (name,))
@@ -218,7 +216,7 @@ class RealtimeAlertsService:
                     return name
         return None
 
-    def _columns(self, conn, table_name: str) -> set[str]:
+    def _columns(self, conn: Any, table_name: str) -> set[str]:
         with conn.cursor() as cur:
             cur.execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s", (table_name,))
             return {str(row["column_name"] if isinstance(row, dict) else row[0]) for row in cur.fetchall()}
