@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IndiCare Workspace</title>
+  <link rel="stylesheet" href="/css/indicare-workspace.css" />
+</head>
+<body>
+  <div class="app-shell" data-app="indicare-workspace">
+    <aside class="sidebar" aria-label="IndiCare navigation">
+      <div class="brand-block">
+        <div class="brand-mark">IC</div>
+        <div>
+          <p class="eyebrow">IndiCare</p>
+          <h1>Children's Home Workspace</h1>
+        </div>
+      </div>
+
+      <nav class="workspace-nav" id="workspace-nav">
+        <button class="nav-item active" data-view="home">Home dashboard</button>
+        <button class="nav-item" data-view="child">Child journey</button>
+        <button class="nav-item" data-view="daily">Daily recording</button>
+        <button class="nav-item" data-view="incidents">Incidents</button>
+        <button class="nav-item" data-view="safeguarding">Safeguarding</button>
+        <button class="nav-item" data-view="missing">Missing from care</button>
+        <button class="nav-item" data-view="documents">Documents</button>
+        <button class="nav-item" data-view="staff">Staff work life</button>
+        <button class="nav-item" data-view="rota">Rota & handover</button>
+        <button class="nav-item" data-view="reg45">Reg 44 / 45</button>
+        <button class="nav-item" data-view="ofsted">Ofsted readiness</button>
+        <button class="nav-item" data-view="assistant">AI assistant</button>
+      </nav>
+
+      <div class="sidebar-note">
+        <strong>North star</strong>
+        <span>Understand children better, respond safer, record clearer, lead stronger.</span>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Live workspace prototype</p>
+          <h2 id="view-title">Home dashboard</h2>
+          <p id="view-subtitle">A calm, child-centred command centre for the day.</p>
+        </div>
+        <div class="topbar-actions">
+          <select id="role-switch" aria-label="Role view">
+            <option value="rsw">Residential support worker</option>
+            <option value="senior">Senior RSW</option>
+            <option value="manager" selected>Registered manager</option>
+            <option value="ri">Responsible individual</option>
+            <option value="auditor">Auditor</option>
+          </select>
+          <button class="primary-action" id="new-record-button">Create record</button>
+        </div>
+      </header>
+
+      <section class="status-strip" id="status-strip" aria-label="Workspace status"></section>
+
+      <section class="workspace-grid">
+        <div class="workspace-main" id="workspace-main"></div>
+        <aside class="assistant-panel" aria-label="IndiCare Assistant">
+          <div class="assistant-card">
+            <div class="assistant-heading">
+              <span class="assistant-dot"></span>
+              <div>
+                <p class="eyebrow">IndiCare Assistant</p>
+                <h3>Evidence-led support</h3>
+              </div>
+            </div>
+            <div id="assistant-suggestions" class="assistant-suggestions"></div>
+            <textarea id="assistant-input" placeholder="Ask about risk, handover, Ofsted evidence or recording quality..."></textarea>
+            <button class="secondary-action" id="assistant-run">Generate support note</button>
+            <div id="assistant-output" class="assistant-output"></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-modal-title">
+    <form class="record-modal" id="record-form">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Config-driven form</p>
+          <h2 id="record-modal-title">Create care record</h2>
+        </div>
+        <button type="button" class="icon-button" id="close-modal" aria-label="Close">×</button>
+      </div>
+      <div id="record-form-fields" class="form-fields"></div>
+      <div class="modal-actions">
+        <button type="button" class="secondary-action" id="save-draft">Save draft</button>
+        <button type="submit" class="primary-action">Submit for review</button>
+      </div>
+    </form>
+  </div>
+
+  <script type="module" src="/js/indicare-workspace/main.js"></script>
+</body>
+</html>

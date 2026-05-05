@@ -80,6 +80,7 @@ routers.academy_routes
 routers.academy_intelligence_routes
 routers.staff_profile_routes
 routers.staff_today_routes
+routers.workspace_routes
 """.split()
 
 
