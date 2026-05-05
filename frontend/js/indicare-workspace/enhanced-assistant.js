@@ -5,11 +5,11 @@ const assistantSuggestions = document.querySelector("#assistant-suggestions");
 
 const DEFAULT_CHILD_ID = 1;
 
-if (assistantSuggestions) {
+if (assistantSuggestions && !document.querySelector(".assistant-intelligence-controls")) {
   const controls = document.createElement("div");
   controls.className = "assistant-intelligence-controls";
   controls.innerHTML = `
-    <button type="button" data-intelligence="knowledge">Ask with sources</button>
+    <button type="button" data-intelligence="ask">Ask with citations</button>
     <button type="button" data-intelligence="ofsted">Ofsted summary</button>
     <button type="button" data-intelligence="reg45">Reg 45 draft</button>
     <button type="button" data-intelligence="child">Analyse child</button>
@@ -21,7 +21,7 @@ if (assistantSuggestions) {
     const button = event.target.closest("button[data-intelligence]");
     if (!button) return;
     const mode = button.dataset.intelligence;
-    if (mode === "knowledge") return runKnowledgeQuery();
+    if (mode === "ask") return runUnifiedAssistant();
     if (mode === "ofsted") return runInspectionBrief();
     if (mode === "reg45") return runReg45Draft();
     if (mode === "child") return runChildAnalysis();
@@ -30,43 +30,41 @@ if (assistantSuggestions) {
 }
 
 if (assistantButton) {
+  assistantButton.textContent = "Ask with citations";
   assistantButton.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
-    runSmartAssistant();
+    runUnifiedAssistant();
   }, true);
 }
 
-async function runSmartAssistant() {
-  const question = valueOrDefault(assistantInput?.value, "What should I know from the documents and records?");
-  setAssistantOutput("Thinking with documents first...");
+async function runUnifiedAssistant() {
+  const question = valueOrDefault(assistantInput?.value, "What should I know from the approved documents and records?");
+  setAssistantOutput("Searching approved documents first...");
 
   const knowledge = await postJson("/assistant/os/knowledge", {
     question,
     young_person_id: DEFAULT_CHILD_ID,
+    limit: 8,
   });
+
+  if (knowledge?.safeguarding_signal?.flagged) {
+    renderKnowledgeResponse(knowledge, { emphasiseSafeguarding: true });
+    return;
+  }
 
   if (knowledge?.citations?.length) {
     renderKnowledgeResponse(knowledge);
     return;
   }
 
+  setAssistantOutput("No approved document source found. Falling back to general workspace reasoning...");
   const reason = await postJson("/assistant/os/reason", {
     question,
     young_person_id: DEFAULT_CHILD_ID,
   });
 
   renderReasonResponse(reason, knowledge);
-}
-
-async function runKnowledgeQuery() {
-  const question = valueOrDefault(assistantInput?.value, "What do the documents say about this child or home?");
-  setAssistantOutput("Searching documents for cited evidence...");
-  const data = await postJson("/assistant/os/knowledge", {
-    question,
-    young_person_id: DEFAULT_CHILD_ID,
-  });
-  renderKnowledgeResponse(data);
 }
 
 async function runInspectionBrief() {
@@ -76,7 +74,7 @@ async function runInspectionBrief() {
   const sections = Object.values(data.inspection_sections || {});
   assistantOutput.innerHTML = `
     <h3>Ofsted Summary</h3>
-    <p class="confidence">${escapeHtml(data.disclaimer || "Draft support only.")}</p>
+    <p class="confidence">${escapeHtml(data.disclaimer || "Draft support only. Verify source records before use.")}</p>
     <p>${escapeHtml(data.headline || "Inspection brief generated.")}</p>
     ${sections.map(section => `
       <article class="assistant-citation-card">
@@ -94,7 +92,7 @@ async function runReg45Draft() {
   if (!data?.ok) return renderError(data?.detail || data?.error || "Could not generate Reg 45 draft.");
   assistantOutput.innerHTML = `
     <h3>Regulation 45 Draft</h3>
-    <p class="confidence">${escapeHtml(data.disclaimer || "Draft support only.")}</p>
+    <p class="confidence">${escapeHtml(data.disclaimer || "Draft support only. Registered manager must verify and approve.")}</p>
     ${Object.entries(data.sections || {}).map(([key, value]) => `
       <article class="assistant-citation-card">
         <h4>${humanise(key)}</h4>
@@ -110,7 +108,7 @@ async function runChildAnalysis() {
   if (!data?.ok) return renderError(data?.detail || data?.error || "Could not analyse child evidence.");
   assistantOutput.innerHTML = `
     <h3>Child Analysis</h3>
-    <p class="confidence">${escapeHtml(data.disclaimer || "Draft support only.")}</p>
+    <p class="confidence">${escapeHtml(data.disclaimer || "Draft support only. Verify before use.")}</p>
     <p>${escapeHtml(data.headline || "Child analysis generated.")}</p>
     ${Object.values(data.inspection_sections || {}).map(section => `
       <article class="assistant-citation-card">
@@ -145,17 +143,26 @@ async function runProactiveAssistant() {
       ${homeGaps.concat(childGaps).length ? `<ul>${homeGaps.concat(childGaps).map(g => `<li><strong>${escapeHtml(g.area || "Gap")}:</strong> ${escapeHtml(g.gap || "Review required")}</li>`).join("")}</ul>` : `<p>No obvious evidence gaps returned by the current evidence engine.</p>`}
     </article>
     ${renderActions(actions)}
-    ${knowledge?.citations?.length ? renderCitationSection(knowledge.citations) : `<p class="confidence">No extra document citations were found for the proactive query.</p>`}
+    ${knowledge?.citations?.length ? renderCitationSection(knowledge.citations) : `<p class="confidence">No extra approved document citations were found for the proactive query.</p>`}
   `;
 }
 
-function renderKnowledgeResponse(data) {
+function renderKnowledgeResponse(data, options = {}) {
   if (!data?.ok) return renderError(data?.answer || data?.detail || "Knowledge search failed.");
+  const safeguarding = data.safeguarding_signal?.flagged ? `
+    <div class="warning-banner">
+      <strong>Safeguarding-sensitive question</strong><br />
+      ${escapeHtml(data.safeguarding_signal.message || "Follow safeguarding procedure and verify source records.")}
+    </div>
+  ` : "";
   assistantOutput.innerHTML = `
     <h3>Answer with sources</h3>
+    ${safeguarding}
     <p class="confidence">Confidence: ${escapeHtml(data.confidence || "unknown")}</p>
     <p>${escapeHtml(data.answer || "No answer returned.")}</p>
     ${renderCitationSection(data.citations || [])}
+    ${data.unapproved_source_count ? `<p class="confidence">${escapeHtml(data.unapproved_source_count)} unapproved possible source(s) were found but not used as evidence.</p>` : ""}
+    ${!data.citations?.length ? `<p class="confidence">The assistant did not rely on uncited information for this answer.</p>` : ""}
   `;
 }
 
@@ -163,19 +170,20 @@ function renderReasonResponse(data, knowledge) {
   if (!data) return renderError("Assistant did not return a response.");
   assistantOutput.innerHTML = `
     <h3>Assistant response</h3>
+    <div class="warning-banner"><strong>No approved document citation found.</strong><br />Treat this as general support only and verify against records before acting.</div>
     <p>${escapeHtml(data.answer || data.response || data.message || "No answer returned.")}</p>
-    ${knowledge?.answer ? `<p class="confidence">Document search: ${escapeHtml(knowledge.answer)}</p>` : ""}
+    ${knowledge?.answer ? `<p class="confidence">Document search result: ${escapeHtml(knowledge.answer)}</p>` : ""}
   `;
 }
 
 function renderCitationSection(citations) {
-  if (!citations.length) return `<h4>Sources</h4><p class="confidence">No document source was found for this answer.</p>`;
+  if (!citations.length) return `<h4>Sources</h4><p class="confidence">No approved document source was found for this answer.</p>`;
   return `
     <h4>Sources</h4>
     ${citations.map(citation => `
       <article class="assistant-citation-card">
         <strong>${escapeHtml(citation.title || "Untitled document")}</strong>
-        <p>${escapeHtml((citation.excerpt || "").slice(0, 700))}</p>
+        <p>${escapeHtml((citation.excerpt || "").slice(0, 900))}</p>
         <small>Document #${escapeHtml(citation.document_id || "?")} · ${escapeHtml(citation.document_type || "document")} · Status: ${escapeHtml(citation.approval_status || "unknown")}</small>
       </article>
     `).join("")}
