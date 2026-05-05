@@ -10,6 +10,7 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 CARE_OS_PATH = "/os-command"
+WORKSPACE_FILE = "indicare-workspace.html"
 LEGACY_CARE_OS_PATHS = {
     "/young-people-shell",
     "/young-people-shell.html",
@@ -29,6 +30,7 @@ def serve_html(path: str):
         html = html.replace('const DEFAULT_REDIRECT = "/young-people-shell.html";', 'const DEFAULT_REDIRECT = "/os-command";')
         html = html.replace('const DEFAULT_REDIRECT = "/young-people-shell";', 'const DEFAULT_REDIRECT = "/os-command";')
         html = html.replace('const DEFAULT_REDIRECT = "/care-os";', 'const DEFAULT_REDIRECT = "/os-command";')
+        html = html.replace('const DEFAULT_REDIRECT = "/os-dashboard";', 'const DEFAULT_REDIRECT = "/os-command";')
     return HTMLResponse(inject_app_shell(html))
 
 
@@ -49,6 +51,10 @@ def register_file_route(app: FastAPI, route_path: str, paths: list[str], name_pr
 
 def frontend(file_name: str) -> list[str]:
     return [os.path.join(FRONTEND_DIR, file_name)]
+
+
+def workspace() -> list[str]:
+    return frontend(WORKSPACE_FILE)
 
 
 def component(file_name: str) -> list[str]:
@@ -73,18 +79,41 @@ def get_page_routes() -> dict[str, list[str]]:
         "/oslogin.html": frontend("oslogin.html"),
         "/access-denied": frontend("access-denied.html"),
         "/access-denied.html": frontend("access-denied.html"),
-        "/care-os": frontend("care-os.html"),
-        "/care-os.html": frontend("care-os.html"),
-        "/os-command": frontend("os-command.html"),
-        "/os-command.html": frontend("os-command.html"),
-        "/os-child": frontend("os-child.html"),
-        "/os-child.html": frontend("os-child.html"),
-        "/os-risk": frontend("os-risk.html"),
-        "/os-risk.html": frontend("os-risk.html"),
-        "/os-safeguarding": frontend("os-safeguarding.html"),
-        "/os-safeguarding.html": frontend("os-safeguarding.html"),
-        "/os-ofsted": frontend("os-ofsted.html"),
-        "/os-ofsted.html": frontend("os-ofsted.html"),
+
+        # New primary operating workspace. These legacy operating routes now all
+        # serve the rebuilt IndiCare workspace rather than old fragmented pages.
+        "/care-os": workspace(),
+        "/care-os.html": workspace(),
+        "/os-command": workspace(),
+        "/os-command.html": workspace(),
+        "/os-child": workspace(),
+        "/os-child.html": workspace(),
+        "/os-risk": workspace(),
+        "/os-risk.html": workspace(),
+        "/os-safeguarding": workspace(),
+        "/os-safeguarding.html": workspace(),
+        "/os-ofsted": workspace(),
+        "/os-ofsted.html": workspace(),
+        "/young-people": workspace(),
+        "/young-people.html": workspace(),
+        "/young-people-page": workspace(),
+        "/young-people-page.html": workspace(),
+        "/os-dashboard": workspace(),
+        "/os-dashboard.html": workspace(),
+        "/documents-hub": workspace(),
+        "/documents-hub.html": workspace(),
+        "/safeguarding-hub": workspace(),
+        "/safeguarding-hub.html": workspace(),
+        "/quality-hub": workspace(),
+        "/quality-hub.html": workspace(),
+        "/staff-dashboard": workspace(),
+        "/manager-dashboard": workspace(),
+        "/ri-dashboard": workspace(),
+        "/provider-dashboard": workspace(),
+        "/rostering": workspace(),
+        "/rostering.html": workspace(),
+
+        # Standalone legacy/support pages kept available.
         "/tasks-ui": frontend("tasks-ui.html"),
         "/tasks-ui.html": frontend("tasks-ui.html"),
         "/notifications-ui": frontend("notifications-ui.html"),
@@ -95,24 +124,6 @@ def get_page_routes() -> dict[str, list[str]]:
         "/supervision.html": frontend("supervision.html"),
         "/ai-notes": frontend("ai-note.html"),
         "/ai-note.html": frontend("ai-note.html"),
-        "/young-people": frontend("young-people.html"),
-        "/young-people.html": frontend("young-people.html"),
-        "/young-people-page": frontend("young-people.html"),
-        "/young-people-page.html": frontend("young-people.html"),
-        "/os-dashboard": frontend("os-dashboard.html"),
-        "/os-dashboard.html": frontend("os-dashboard.html"),
-        "/documents-hub": frontend("documents-hub.html"),
-        "/documents-hub.html": frontend("documents-hub.html"),
-        "/safeguarding-hub": frontend("safeguarding-hub.html"),
-        "/safeguarding-hub.html": frontend("safeguarding-hub.html"),
-        "/quality-hub": frontend("quality-hub.html"),
-        "/quality-hub.html": frontend("quality-hub.html"),
-        "/staff-dashboard": frontend("os-dashboard.html"),
-        "/manager-dashboard": frontend("os-dashboard.html"),
-        "/ri-dashboard": frontend("os-dashboard.html"),
-        "/provider-dashboard": frontend("os-dashboard.html"),
-        "/rostering": frontend("rostering.html"),
-        "/rostering.html": frontend("rostering.html"),
         "/founder-hq": frontend("founder-hq.html"),
         "/founder-hq.html": frontend("founder-hq.html"),
         "/admin-users": frontend("admin-users.html"),
