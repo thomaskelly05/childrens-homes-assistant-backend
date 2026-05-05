@@ -39,7 +39,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("X-Frame-Options", "DENY")
+        # Care OS intentionally embeds first-party modules inside the same-origin app shell.
+        # DENY breaks the operating-system layout; SAMEORIGIN keeps third-party framing blocked.
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'self'")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()")
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
