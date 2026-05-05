@@ -1,0 +1,9 @@
+.alert {border-left:4px solid;padding:10px;margin-bottom:10px;border-radius:6px;background:#fff;}
+.alert.critical{border-color:#d32f2f;background:#fff5f5}
+.alert.high{border-color:#f57c00;background:#fff8f1}
+.alert.medium{border-color:#fbc02d;background:#fffde7}
+.alert.low{border-color:#388e3c;background:#f1f8f4}
+.metric-card{background:#fff;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.hero-card{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:10px;padding:16px;margin-bottom:12px}
+.score-pill{background:#eef3ff;padding:6px 10px;border-radius:20px;font-size:12px}
+.record-card{background:#fff;border-radius:10px;padding:12px;margin-bottom:10px}
