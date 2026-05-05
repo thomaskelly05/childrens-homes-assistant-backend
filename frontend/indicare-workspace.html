@@ -6,6 +6,7 @@
   <title>IndiCare Workspace</title>
   <link rel="stylesheet" href="/css/indicare-workspace.css" />
   <link rel="stylesheet" href="/css/workspace-enhancements.css" />
+  <link rel="stylesheet" href="/css/workspace-redesign.css" />
 </head>
 <body>
   <div class="app-shell" data-app="indicare-workspace">
@@ -18,26 +19,56 @@
         </div>
       </div>
       <nav class="workspace-nav" id="workspace-nav">
-        <button class="nav-item active" data-view="home">Home dashboard</button>
-        <button class="nav-item" data-view="alerts">Alerts</button>
-        <button class="nav-item" data-view="mobile">Mobile staff</button>
-        <button class="nav-item" data-view="intelligence">Home intelligence</button>
-        <button class="nav-item" data-view="provider">Provider dashboard</button>
-        <button class="nav-item" data-view="knowledge">Knowledge (documents)</button>
-        <button class="nav-item" data-view="child">Child journey</button>
-        <button class="nav-item" data-view="daily">Daily recording</button>
-        <button class="nav-item" data-view="incidents">Incidents</button>
-        <button class="nav-item" data-view="safeguarding">Safeguarding</button>
-        <button class="nav-item" data-view="missing">Missing from care</button>
-        <button class="nav-item" data-view="documents">Documents</button>
-        <button class="nav-item" data-view="review">Manager review</button>
-        <button class="nav-item" data-view="staff">Staff work life</button>
-        <button class="nav-item" data-view="staff-profile">My staff profile</button>
-        <button class="nav-item" data-view="settings">Settings</button>
-        <button class="nav-item" data-view="rota">Rota & handover</button>
-        <button class="nav-item" data-view="reg45">Reg 44 / 45</button>
-        <button class="nav-item" data-view="ofsted">Ofsted readiness</button>
-        <button class="nav-item" data-view="assistant">AI assistant</button>
+        <details class="nav-section" open>
+          <summary>Today</summary>
+          <div class="nav-section-body">
+            <button class="nav-item active" data-view="home">Home dashboard</button>
+            <button class="nav-item" data-view="alerts">Alerts</button>
+            <button class="nav-item" data-view="mobile">Mobile staff</button>
+          </div>
+        </details>
+        <details class="nav-section" open>
+          <summary>Care recording</summary>
+          <div class="nav-section-body">
+            <button class="nav-item" data-view="daily">Daily recording</button>
+            <button class="nav-item" data-view="incidents">Incidents</button>
+            <button class="nav-item" data-view="safeguarding">Safeguarding</button>
+            <button class="nav-item" data-view="missing">Missing from care</button>
+            <button class="nav-item" data-view="documents">Documents</button>
+          </div>
+        </details>
+        <details class="nav-section">
+          <summary>Children</summary>
+          <div class="nav-section-body">
+            <button class="nav-item" data-view="child">Child journey</button>
+            <button class="nav-item" data-view="knowledge">Knowledge (documents)</button>
+          </div>
+        </details>
+        <details class="nav-section">
+          <summary>Management</summary>
+          <div class="nav-section-body">
+            <button class="nav-item" data-view="intelligence">Home intelligence</button>
+            <button class="nav-item" data-view="provider">Provider dashboard</button>
+            <button class="nav-item" data-view="review">Manager review</button>
+            <button class="nav-item" data-view="reg45">Reg 44 / 45</button>
+            <button class="nav-item" data-view="ofsted">Ofsted readiness</button>
+          </div>
+        </details>
+        <details class="nav-section">
+          <summary>Workforce</summary>
+          <div class="nav-section-body">
+            <button class="nav-item" data-view="staff">Staff work life</button>
+            <button class="nav-item" data-view="staff-profile">My staff profile</button>
+            <button class="nav-item" data-view="rota">Rota & handover</button>
+          </div>
+        </details>
+        <details class="nav-section">
+          <summary>System</summary>
+          <div class="nav-section-body">
+            <button class="nav-item" data-view="assistant">AI assistant</button>
+            <button class="nav-item" data-view="settings">Settings</button>
+          </div>
+        </details>
       </nav>
       <div class="sidebar-note"><strong>North star</strong><span>Understand children better, respond safer, record clearer, lead stronger.</span></div>
     </aside>
@@ -84,6 +115,7 @@
 
   <script type="module" src="/js/indicare-workspace/main.js"></script>
   <script type="module" src="/js/indicare-workspace/workspace-view-controller.js"></script>
+  <script type="module" src="/js/indicare-workspace/record-workflows.js"></script>
   <script type="module" src="/js/indicare-workspace/enhanced-assistant.js"></script>
   <script type="module" src="/js/indicare-workspace/proactive-alerts.js"></script>
   <script type="module" src="/js/indicare-workspace/mobile-staff.js"></script>
