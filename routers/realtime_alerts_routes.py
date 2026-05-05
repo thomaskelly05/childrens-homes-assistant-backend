@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends
 
@@ -12,10 +12,15 @@ router = APIRouter(prefix="/alerts", tags=["realtime-alerts"])
 service = RealtimeAlertsService()
 
 
+@router.get("/health")
+def alerts_health() -> dict[str, Any]:
+    return {"ok": True, "service": "realtime-alerts"}
+
+
 @router.get("/active")
 def active_alerts(
     days: int = 30,
-    home_id: int | None = None,
+    home_id: Optional[int] = None,
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     return service.active_alerts(current_user=current_user, days=days, home_id=home_id)
@@ -33,7 +38,7 @@ def child_alerts(
 @router.post("/{alert_id}/acknowledge")
 def acknowledge_alert(
     alert_id: str,
-    payload: dict[str, Any] | None = None,
+    payload: Optional[dict[str, Any]] = None,
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     comment = (payload or {}).get("comment")
@@ -43,7 +48,7 @@ def acknowledge_alert(
 @router.post("/{alert_id}/escalate")
 def escalate_alert(
     alert_id: str,
-    payload: dict[str, Any] | None = None,
+    payload: Optional[dict[str, Any]] = None,
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     comment = (payload or {}).get("comment")
