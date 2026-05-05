@@ -23,6 +23,7 @@ routers.ai_note_templates_routes
 routers.ai_note_export_routes
 routers.assistant_general_routes
 routers.assistant_os_routes
+routers.assistant_intelligence_routes
 routers.young_people_assistant_routes
 routers.operational_intelligence_routes
 routers.inspection_os_routes
@@ -82,6 +83,7 @@ routers.staff_profile_routes
 routers.staff_today_routes
 routers.workspace_routes
 routers.workspace_review_routes
+routers.workspace_ofsted_evidence_routes
 """.split()
 
 
