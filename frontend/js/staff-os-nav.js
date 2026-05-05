@@ -17,64 +17,58 @@
   ]);
 
   const FALLBACK_NAV_LINKS = [
-    { href: "/my-profile", title: "My Profile", subtitle: "My start page", roles: ["staff", "manager", "provider"] },
-    { href: "/young-people-shell", title: "Care OS", subtitle: "Children's home workspace", roles: ["staff", "manager", "provider"] },
-    { href: "/young-people", title: "Young people", subtitle: "Profiles and records", roles: ["staff", "manager", "provider"] },
-    { href: "/safeguarding-hub", title: "Safeguarding", subtitle: "Risk and safety", roles: ["staff", "manager", "provider"] },
-    { href: "/documents-hub", title: "Documents", subtitle: "Files and evidence", roles: ["staff", "manager", "provider"] },
-    { href: "/academy", title: "Academy", subtitle: "Learning and evidence", roles: ["staff", "manager", "provider"] },
-    { href: "/assistant", title: "Assistant", subtitle: "Guidance and summaries", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os", title: "Care OS", subtitle: "Main workspace", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#young-people", title: "Young people", subtitle: "Profiles and records", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#safeguarding", title: "Safeguarding", subtitle: "Risk and safety", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#documents", title: "Documents", subtitle: "Files and evidence", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#academy", title: "Academy", subtitle: "Learning and evidence", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#assistant", title: "Assistant", subtitle: "Guidance and summaries", roles: ["staff", "manager", "provider"] },
   ];
 
   const fallbackRestrictedPaths = FALLBACK_NAV_LINKS.reduce((acc, item) => {
-    acc[item.href] = item.roles || [];
-    acc[`${item.href}.html`] = item.roles || [];
+    const path = item.href.split("#")[0];
+    acc[path] = item.roles || [];
+    acc[`${path}.html`] = item.roles || [];
     return acc;
   }, {});
 
-  function permissions() {
-    return window.IndiCarePermissions || {};
-  }
+  function permissions() { return window.IndiCarePermissions || {}; }
 
   function navLinks() {
-    return permissions().NAV_LINKS || FALLBACK_NAV_LINKS;
+    const links = permissions().NAV_LINKS || FALLBACK_NAV_LINKS;
+    return links.map((item) => {
+      const href = String(item.href || "");
+      if (href === "/young-people-shell" || href === "/young-people-shell.html" || href === "/childrens-home-os") return { ...item, href: "/care-os", title: "Care OS" };
+      const map = {
+        "/young-people": "/care-os#young-people",
+        "/safeguarding-hub": "/care-os#safeguarding",
+        "/documents-hub": "/care-os#documents",
+        "/academy": "/care-os#academy",
+        "/assistant": "/care-os#assistant",
+        "/quality-hub": "/care-os#quality",
+        "/journal": "/care-os#journal",
+        "/supervision": "/care-os#supervision",
+        "/ai-notes": "/care-os#ai-notes",
+        "/ai-note": "/care-os#ai-notes",
+        "/rostering": "/care-os#rostering",
+        "/staff-profiles": "/care-os#staff",
+        "/admin-users": "/care-os#admin",
+        "/founder-hq": "/care-os#founder",
+        "/os-dashboard": "/care-os#intelligence",
+      };
+      return map[href] ? { ...item, href: map[href] } : item;
+    });
   }
 
-  function restrictedPaths() {
-    return permissions().RESTRICTED_PATHS || fallbackRestrictedPaths;
-  }
-
-  function currentPath() {
-    return window.location.pathname.replace(/\/$/, "") || "/";
-  }
-
-  function isPublicPage() {
-    return PUBLIC_PATHS.has(currentPath());
-  }
-
-  function currentUser() {
-    return window.auth?.getStoredUser?.() || {};
-  }
-
-  function currentRoleGroup() {
-    return permissions().currentRoleGroup?.() || "staff";
-  }
-
-  function roleCanAccess(allowed = [], roleGroup = currentRoleGroup()) {
-    if (permissions().roleCanAccess) return permissions().roleCanAccess(allowed, roleGroup);
-    if (!Array.isArray(allowed) || allowed.length === 0) return true;
-    return allowed.includes(roleGroup);
-  }
-
-  function loginRedirect() {
-    const next = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.replace(`/login?next=${next}`);
-  }
-
-  function accessDeniedRedirect() {
-    const blocked = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.replace(`/access-denied?blocked=${blocked}`);
-  }
+  function restrictedPaths() { return permissions().RESTRICTED_PATHS || fallbackRestrictedPaths; }
+  function currentPath() { return window.location.pathname.replace(/\/$/, "") || "/"; }
+  function isEmbeddedMode() { try { return new URLSearchParams(window.location.search).get("embedded") === "1" || window.self !== window.top; } catch (_) { return false; } }
+  function isPublicPage() { return PUBLIC_PATHS.has(currentPath()); }
+  function currentUser() { return window.auth?.getStoredUser?.() || {}; }
+  function currentRoleGroup() { return permissions().currentRoleGroup?.() || "staff"; }
+  function roleCanAccess(allowed = [], roleGroup = currentRoleGroup()) { if (permissions().roleCanAccess) return permissions().roleCanAccess(allowed, roleGroup); if (!Array.isArray(allowed) || allowed.length === 0) return true; return allowed.includes(roleGroup); }
+  function loginRedirect() { window.location.replace(`/login?next=${encodeURIComponent("/care-os")}`); }
+  function accessDeniedRedirect() { const blocked = encodeURIComponent(window.location.pathname + window.location.search); window.location.replace(`/access-denied?blocked=${blocked}`); }
 
   function showAccessDenied(roleGroup) {
     const banner = document.getElementById("indicareAccessDenied") || document.createElement("div");
@@ -104,15 +98,9 @@
       if (!ok) return false;
       return enforceRoleAccess();
     }
-    if (!window.auth || typeof window.auth.requireAuth !== "function") {
-      loginRedirect();
-      return false;
-    }
-    try {
-      const ok = await window.auth.requireAuth();
-      if (!ok) return false;
-      return enforceRoleAccess();
-    } catch (error) {
+    if (!window.auth || typeof window.auth.requireAuth !== "function") { loginRedirect(); return false; }
+    try { const ok = await window.auth.requireAuth(); if (!ok) return false; return enforceRoleAccess(); }
+    catch (error) {
       const banner = document.getElementById("indicareAuthError") || document.createElement("div");
       banner.id = "indicareAuthError";
       banner.textContent = error?.message || "You need to sign in to continue.";
@@ -131,12 +119,7 @@
     strong.textContent = title;
     strong.className = "indicare-global-nav-title";
     link.appendChild(strong);
-    if (subtitle) {
-      const small = document.createElement("small");
-      small.textContent = subtitle;
-      small.className = "indicare-global-nav-subtitle";
-      link.appendChild(small);
-    }
+    if (subtitle) { const small = document.createElement("small"); small.textContent = subtitle; small.className = "indicare-global-nav-subtitle"; link.appendChild(small); }
     return link;
   }
 
@@ -162,11 +145,7 @@
     document.head.appendChild(style);
   }
 
-  function shouldSkipTopNav() {
-    if (isPublicPage()) return true;
-    if (document.body?.dataset?.skipGlobalNav === "true") return true;
-    return Boolean(document.querySelector(".indicare-global-nav"));
-  }
+  function shouldSkipTopNav() { if (isPublicPage()) return true; if (isEmbeddedMode()) return true; if (document.body?.dataset?.skipGlobalNav === "true") return true; return Boolean(document.querySelector(".indicare-global-nav")); }
 
   function injectTopNav() {
     if (shouldSkipTopNav()) return;
@@ -175,7 +154,7 @@
     nav.className = "indicare-global-nav";
     nav.setAttribute("role", "banner");
     const brand = document.createElement("a");
-    brand.href = "/my-profile";
+    brand.href = "/care-os";
     brand.className = "indicare-global-nav-brand";
     brand.style.textDecoration = "none";
     brand.style.color = "inherit";
@@ -188,7 +167,8 @@
     for (const item of navLinks()) {
       if (!roleCanAccess(item.roles, roleGroup)) continue;
       const link = makeLink(item.href, item.title, item.subtitle);
-      if (path === item.href || path === `${item.href}.html`) link.setAttribute("aria-current", "page");
+      const linkPath = String(item.href || "").split("#")[0];
+      if (path === linkPath || path === `${linkPath}.html`) link.setAttribute("aria-current", "page");
       links.appendChild(link);
     }
     const actions = document.createElement("div");
@@ -205,94 +185,34 @@
     logout.type = "button";
     logout.textContent = "Sign out";
     logout.addEventListener("click", () => window.auth?.logout?.());
-    actions.appendChild(user);
-    actions.appendChild(role);
-    actions.appendChild(logout);
-    nav.appendChild(brand);
-    nav.appendChild(links);
-    nav.appendChild(actions);
-    document.body.prepend(nav);
+    actions.appendChild(user); actions.appendChild(role); actions.appendChild(logout);
+    nav.appendChild(brand); nav.appendChild(links); nav.appendChild(actions); document.body.prepend(nav);
   }
 
   function addSidebarLink(container, href, title, subtitle) {
-    if (!container) return;
+    if (!container || isEmbeddedMode()) return;
     if ([...container.querySelectorAll("a")].some((link) => link.getAttribute("href") === href)) return;
-    const allowed = restrictedPaths()[href];
-    if (allowed && !roleCanAccess(allowed)) return;
-    const link = document.createElement("a");
-    link.href = href;
-    link.style.display = "block";
-    link.style.padding = "12px 14px";
-    link.style.marginTop = "8px";
-    link.style.border = "1px solid rgba(255,255,255,.16)";
-    link.style.borderRadius = "14px";
-    link.style.textDecoration = "none";
-    link.style.color = "inherit";
-    const strong = document.createElement("span");
-    strong.textContent = title;
-    strong.style.display = "block";
-    strong.style.fontWeight = "700";
-    const small = document.createElement("small");
-    small.textContent = subtitle;
-    small.style.display = "block";
-    small.style.opacity = ".75";
-    link.appendChild(strong);
-    link.appendChild(small);
-    container.appendChild(link);
+    const allowed = restrictedPaths()[href]; if (allowed && !roleCanAccess(allowed)) return;
+    const link = document.createElement("a"); link.href = href; link.style.display = "block"; link.style.padding = "12px 14px"; link.style.marginTop = "8px"; link.style.border = "1px solid rgba(255,255,255,.16)"; link.style.borderRadius = "14px"; link.style.textDecoration = "none"; link.style.color = "inherit";
+    const strong = document.createElement("span"); strong.textContent = title; strong.style.display = "block"; strong.style.fontWeight = "700";
+    const small = document.createElement("small"); small.textContent = subtitle; small.style.display = "block"; small.style.opacity = ".75";
+    link.appendChild(strong); link.appendChild(small); container.appendChild(link);
   }
 
   function filterExistingLinksByRole() {
     const roleGroup = currentRoleGroup();
-    document.querySelectorAll("a[href]").forEach((link) => {
-      const href = link.getAttribute("href")?.replace(/\/$/, "");
-      const allowed = restrictedPaths()[href];
-      if (allowed && !roleCanAccess(allowed, roleGroup)) {
-        link.setAttribute("hidden", "hidden");
-        link.setAttribute("aria-hidden", "true");
-      }
-    });
+    document.querySelectorAll("a[href]").forEach((link) => { const href = link.getAttribute("href")?.replace(/\/$/, ""); const allowed = restrictedPaths()[href]; if (allowed && !roleCanAccess(allowed, roleGroup)) { link.setAttribute("hidden", "hidden"); link.setAttribute("aria-hidden", "true"); } });
   }
 
   async function loadStaffAlert() {
+    if (isEmbeddedMode()) return;
     const footer = document.querySelector(".yp-sidebar-footer");
     if (!footer) return;
+    addSidebarLink(footer, "/care-os", "Care OS", "Main workspace");
     addSidebarLink(footer, "/my-profile", "My Profile", "Training, supervision and actions");
     addSidebarLink(footer, "/staff-profiles", "Staff Hub", "Team learning and oversight");
-    try {
-      const res = await fetch("/staff/me", { credentials: "include" });
-      const json = await res.json();
-      const data = json.data || {};
-      const intelligence = ((data.academy || {}).intelligence) || {};
-      const score = intelligence.priority_score || 0;
-      const needs = intelligence.learning_needs || [];
-      const actions = data.manager_actions || [];
-      if (document.getElementById("staffAttentionCard")) return;
-      const card = document.createElement("div");
-      card.id = "staffAttentionCard";
-      card.style.marginTop = "10px";
-      card.style.padding = "12px";
-      card.style.borderRadius = "14px";
-      card.style.background = "rgba(255,255,255,.08)";
-      card.style.fontSize = "13px";
-      const title = document.createElement("strong");
-      title.textContent = "My attention score: " + score;
-      const details = document.createElement("span");
-      details.textContent = needs.length + " learning needs | " + actions.length + " actions";
-      details.style.display = "block";
-      card.appendChild(title);
-      card.appendChild(details);
-      footer.appendChild(card);
-    } catch (_) {}
   }
 
-  async function boot() {
-    const ok = await requirePageAuth();
-    if (!ok) return;
-    filterExistingLinksByRole();
-    injectTopNav();
-    loadStaffAlert();
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
+  async function boot() { if (isEmbeddedMode()) document.body.classList.add("embedded-mode"); const ok = await requirePageAuth(); if (!ok) return; filterExistingLinksByRole(); injectTopNav(); loadStaffAlert(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();
