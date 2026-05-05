@@ -5,37 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <title>IndiCare OS | Young People Care Hub</title>
-  <meta
-    name="description"
-    content="IndiCare OS Young People Care Hub for residential children’s homes. Daily notes, care records and IndiCare Assistant in one calm workspace."
-  />
+  <meta name="description" content="IndiCare OS Young People Care Hub for residential children’s homes." />
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#20443f" />
-  <meta name="application-name" content="IndiCare OS" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="csrf-token" content="" />
+  <meta name="theme-color" content="#003b96" />
 
   <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <link rel="stylesheet" href="/css/indicare-os.css" />
 </head>
 
-<body
-  class="indicare-care-hub-body"
-  data-young-person-id=""
-  data-home-id=""
-  data-provider-id=""
->
-  <a class="sr-only sr-only-focusable" href="#ypContent">Skip to main content</a>
-
-  <noscript>
-    <div class="yp-noscript" role="alert">
-      IndiCare OS works best with JavaScript enabled.
-    </div>
-  </noscript>
+<body class="indicare-care-hub-body" data-young-person-id="" data-home-id="" data-provider-id="">
 
   <main id="ypShell" class="yp-shell" data-workspace="young-people-shell">
+
     <header id="ypHeader" class="yp-header">
       <div class="yp-brand">
-        <div class="yp-brand-mark" aria-hidden="true">IC</div>
+        <div class="yp-brand-mark">IC</div>
         <div>
           <p class="yp-eyebrow">IndiCare OS</p>
           <h1 id="ypPersonName">Young People Care Hub</h1>
@@ -44,49 +28,21 @@
       </div>
 
       <div class="yp-header-actions">
-        <label class="yp-selector-wrap" for="ypSelector">
-          <span>Young person</span>
-          <select id="ypSelector" class="yp-selector">
-            <option value="">Loading…</option>
-          </select>
-        </label>
-
-        <div id="ypStatus" class="yp-status" role="status" aria-live="polite">
-          Loading…
-        </div>
-
-        <a class="yp-button yp-button-ghost" href="/ai-note.html">I-Notes</a>
-        <a class="yp-button yp-button-ghost" href="/rostering.html">Rostering</a>
+        <select id="ypSelector" class="yp-selector"></select>
+        <div id="ypStatus" class="yp-status">Loading…</div>
       </div>
     </header>
 
     <section class="yp-hero">
       <div>
         <p class="yp-eyebrow">Children’s home workspace</p>
-        <h2>Calm records, joined-up care, safer decisions.</h2>
-        <p>
-          View daily life, health, education, family time, incidents, medication and assistant support from one child-centred hub.
-        </p>
-      </div>
-
-      <div class="yp-hero-cards" aria-label="Workspace summary">
-        <div class="yp-hero-card">
-          <strong id="ypSummaryDaily">—</strong>
-          <span>Daily notes</span>
-        </div>
-        <div class="yp-hero-card">
-          <strong id="ypSummaryHealth">—</strong>
-          <span>Health</span>
-        </div>
-        <div class="yp-hero-card">
-          <strong id="ypSummaryEducation">—</strong>
-          <span>Education</span>
-        </div>
+        <h2>Calm records, safer decisions, full visibility.</h2>
+        <p>Everything about this young person in one operating system.</p>
       </div>
     </section>
 
-    <nav id="ypTabs" class="yp-tabs" aria-label="Young person record areas">
-      <button type="button" class="active" data-tab="daily">Daily notes</button>
+    <nav id="ypTabs" class="yp-tabs">
+      <button type="button" class="active" data-tab="daily">Daily</button>
       <button type="button" data-tab="health">Health</button>
       <button type="button" data-tab="education">Education</button>
       <button type="button" data-tab="family">Family</button>
@@ -96,114 +52,45 @@
     </nav>
 
     <section id="ypContent" class="yp-content">
-      <section id="ypRecordsPanel" class="yp-panel" aria-labelledby="ypRecordsTitle">
+
+      <section id="ypRecordsPanel" class="yp-panel">
         <div class="yp-panel-head">
           <div>
-            <p class="yp-eyebrow">Care records</p>
-            <h2 id="ypRecordsTitle">Daily notes</h2>
-            <p id="ypRecordsSubtitle">
-              Load and record daily life information for this young person.
-            </p>
-          </div>
-
-          <div class="yp-actions" aria-label="Create record">
-            <button type="button" class="yp-button yp-button-primary" data-composer-type="daily_note">
-              New daily note
-            </button>
-            <button type="button" class="yp-button" data-composer-type="health_record">
-              Health record
-            </button>
-            <button type="button" class="yp-button" data-composer-type="education_record">
-              Education record
-            </button>
-            <button type="button" class="yp-button" data-composer-type="family_record">
-              Family record
-            </button>
-            <button type="button" class="yp-button" data-composer-type="incident">
-              Incident
-            </button>
+            <h2 id="ypRecordsTitle">Records</h2>
+            <p id="ypRecordsSubtitle">All activity and care logs</p>
           </div>
         </div>
 
-        <div id="ypRecordsList" class="yp-record-list" aria-live="polite">
-          <div class="yp-empty-card">
-            <h3>Opening Care Hub…</h3>
-            <p>Records will appear here shortly.</p>
-          </div>
-        </div>
+        <div id="ypRecordsList" class="yp-record-list"></div>
       </section>
 
-      <section id="ypAssistantPanel" class="yp-panel hidden" aria-labelledby="ypAssistantTitle">
-        <div class="yp-panel-head">
-          <div>
-            <p class="yp-eyebrow">IndiCare Assistant</p>
-            <h2 id="ypAssistantTitle">Ask about this young person</h2>
-            <p>
-              Use the assistant for summaries, recording support, safeguarding checks and next steps.
-            </p>
-          </div>
-        </div>
-
-        <div id="ypAssistantMessages" class="yp-assistant-messages" role="log" aria-live="polite"></div>
-
-        <div class="yp-assistant-input-row">
-          <label class="sr-only" for="ypAssistantInput">Ask IndiCare</label>
-          <textarea
-            id="ypAssistantInput"
-            rows="4"
-            placeholder="Ask about this young person…"
-          ></textarea>
-          <button id="ypAssistantSend" class="yp-button yp-button-primary" type="button">
-            Send
-          </button>
-        </div>
-
-        <div id="ypAssistantStatus" class="yp-status yp-status-soft" role="status" aria-live="polite">
-          Assistant ready.
-        </div>
+      <section id="ypAssistantPanel" class="yp-panel hidden">
+        <h2 id="ypAssistantTitle">Assistant</h2>
+        <div id="ypAssistantMessages"></div>
+        <textarea id="ypAssistantInput"></textarea>
+        <button id="ypAssistantSend">Send</button>
+        <div id="ypAssistantStatus"></div>
       </section>
+
     </section>
+
   </main>
 
-  <section id="ypComposer" class="yp-composer hidden" aria-hidden="true">
-    <div id="ypComposerBackdrop" class="yp-composer-backdrop" aria-hidden="true"></div>
-
-    <div
-      id="ypComposerDialog"
-      class="yp-composer-dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ypComposerTitle"
-    >
-      <header class="yp-composer-header">
-        <div>
-          <p class="yp-eyebrow">Record with care</p>
-          <h2 id="ypComposerTitle">New record</h2>
-          <p id="ypComposerSubtitle">Write clearly, kindly and professionally.</p>
-        </div>
-
-        <button id="ypComposerClose" class="yp-button yp-button-ghost" type="button">
-          Close
-        </button>
-      </header>
-
-      <form id="ypComposerForm" class="yp-composer-form" action="javascript:void(0)" method="dialog">
-        <div id="ypComposerFields" class="yp-composer-fields"></div>
-
-        <div class="yp-composer-actions">
-          <button id="ypComposerSaveDraft" class="yp-button" type="button">
-            Save draft
-          </button>
-          <button id="ypComposerSubmit" class="yp-button yp-button-primary" type="button">
-            Send for review
-          </button>
-        </div>
+  <section id="ypComposer" class="yp-composer hidden">
+    <div id="ypComposerBackdrop"></div>
+    <div id="ypComposerDialog">
+      <h2 id="ypComposerTitle"></h2>
+      <p id="ypComposerSubtitle"></p>
+      <form id="ypComposerForm">
+        <div id="ypComposerFields"></div>
+        <button id="ypComposerSaveDraft"></button>
+        <button id="ypComposerSubmit"></button>
       </form>
-
-      <div id="ypComposerStatus" class="yp-status yp-status-soft" role="status" aria-live="polite"></div>
+      <div id="ypComposerStatus"></div>
     </div>
   </section>
 
   <script type="module" src="/js/young-people-shell/modular-entry.js"></script>
+  <script src="/js/indicare-os.js"></script>
 </body>
 </html>
