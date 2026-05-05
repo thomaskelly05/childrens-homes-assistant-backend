@@ -1,6 +1,9 @@
 import importlib
+import logging
 
 from fastapi import FastAPI
+
+logger = logging.getLogger(__name__)
 
 ROUTERS = """
 routers.auth_routes
@@ -92,6 +95,17 @@ routers.workspace_review_routes
 routers.workspace_ofsted_evidence_routes
 """.split()
 
+# Core auth/security/frontend routes should still fail loudly because the app is
+# not safe or usable without them. Feature routes can fail without stopping boot.
+REQUIRED_ROUTERS = {
+    "routers.auth_routes",
+    "routers.debug_health_routes",
+    "routers.frontend_compat",
+    "routers.security_routes",
+}
+
+FAILED_ROUTERS: list[dict[str, str]] = []
+
 
 def include_router(app: FastAPI, module_path: str) -> None:
     module = importlib.import_module(module_path)
@@ -105,5 +119,17 @@ def include_router(app: FastAPI, module_path: str) -> None:
 
 
 def include_routers(app: FastAPI, routers: list[str] | None = None) -> None:
+    FAILED_ROUTERS.clear()
     for route in routers or ROUTERS:
-        include_router(app, route)
+        try:
+            include_router(app, route)
+        except Exception as exc:
+            FAILED_ROUTERS.append({"router": route, "error": repr(exc)})
+            logger.exception("Failed to load router %s", route)
+            if route in REQUIRED_ROUTERS:
+                raise
+
+
+# Useful for debug health routes or Render logs.
+def get_failed_routers() -> list[dict[str, str]]:
+    return FAILED_ROUTERS
