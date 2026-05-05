@@ -1,16 +1,24 @@
 from __future__ import annotations
 
-import traceback
+import os
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from auth.current_user import get_current_user
+from auth.permissions import require_admin
 from db.connection import get_db, get_db_connection, release_db_connection
 
-
 router = APIRouter(prefix="/debug", tags=["debug-health"])
+
+
+def _debug_enabled() -> bool:
+    env = os.getenv("ENV", os.getenv("APP_ENV", "development")).lower()
+    return env not in {"production", "prod"} and os.getenv("ENABLE_DEBUG_ROUTES", "false").lower() == "true"
+
+
+def _require_debug_enabled() -> None:
+    if not _debug_enabled():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
 
 def safe_type(value: Any) -> str:
@@ -26,44 +34,34 @@ def serialise_row(row: Any) -> Any:
 
 
 @router.get("/health")
-async def debug_get_health():
-    return {
-        "ok": True,
-        "method": "GET",
-        "message": "Debug GET health route is reachable.",
-    }
+async def debug_get_health(current_user=Depends(require_admin)):
+    _require_debug_enabled()
+    return {"ok": True, "method": "GET", "message": "Debug GET health route is reachable."}
 
 
 @router.post("/echo")
-async def debug_echo(request: Request):
+async def debug_echo(request: Request, current_user=Depends(require_admin)):
+    _require_debug_enabled()
     try:
         body = await request.json()
     except Exception:
         body = None
-
-    return {
-        "ok": True,
-        "message": "Echo route reached without auth/db dependencies.",
-        "body": body,
-    }
+    return {"ok": True, "message": "Echo route reached.", "body": body}
 
 
 @router.post("/manual-health")
-async def debug_manual_health(request: Request):
+async def debug_manual_health(request: Request, current_user=Depends(require_admin)):
+    _require_debug_enabled()
     conn = None
-
     try:
         try:
             body = await request.json()
         except Exception:
             body = None
-
         conn = get_db_connection()
-
         with conn.cursor() as cur:
             cur.execute("SELECT 1 AS ok")
             db_row = cur.fetchone()
-
         return {
             "ok": True,
             "method": "POST",
@@ -73,109 +71,42 @@ async def debug_manual_health(request: Request):
             "conn_closed": bool(getattr(conn, "closed", True)),
             "db_row": serialise_row(db_row),
         }
-
-    except Exception as error:
-        traceback.print_exc()
-        return JSONResponse(
-            status_code=500,
-            content={
-                "ok": False,
-                "error_type": type(error).__name__,
-                "error": str(error),
-                "traceback": traceback.format_exc(),
-            },
-        )
-
+    except Exception:
+        raise HTTPException(status_code=500, detail="Debug health check failed")
     finally:
         if conn is not None:
             release_db_connection(conn)
 
-@router.post("/daily-note-create-test")
-async def debug_daily_note_create_test(request: Request):
-    from services.young_person_daily_notes_service import YoungPersonDailyNotesService
-    from services.young_people_linking_service import YoungPeopleLinkingService
-    from db.connection import get_db_connection, release_db_connection
-
-    conn = None
-
-    try:
-        body = await request.json()
-        conn = get_db_connection()
-
-        result = YoungPersonDailyNotesService.create_daily_note(
-            conn,
-            young_person_id=int(body.get("young_person_id") or 1001),
-            payload=body.get("payload") or {},
-            author_id=int(body.get("author_id") or 1),
-            linking_service=YoungPeopleLinkingService,
-        )
-
-        return {
-            "ok": True,
-            "result": result,
-        }
-
-    except Exception as error:
-        import traceback
-        traceback.print_exc()
-        return JSONResponse(
-            status_code=500,
-            content={
-                "ok": False,
-                "error_type": type(error).__name__,
-                "error": str(error),
-                "traceback": traceback.format_exc(),
-            },
-        )
-
-    finally:
-        if conn is not None:
-            release_db_connection(conn)
 
 @router.post("/post-health")
 async def debug_post_health(
     request: Request,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_admin),
     conn=Depends(get_db),
 ):
+    _require_debug_enabled()
     try:
         try:
             body = await request.json()
         except Exception:
             body = None
-
         with conn.cursor() as cur:
             cur.execute("SELECT 1 AS ok")
             db_check = cur.fetchone()
-
         return {
             "ok": True,
             "method": "POST",
             "message": "Debug POST health route is reachable.",
             "body": body,
-            "current_user_type": safe_type(current_user),
             "current_user": {
                 "id": current_user.get("id"),
-                "user_id": current_user.get("user_id"),
-                "email": current_user.get("email"),
                 "role": current_user.get("role"),
                 "home_id": current_user.get("home_id"),
                 "provider_id": current_user.get("provider_id"),
-                "allowed_home_ids": current_user.get("allowed_home_ids"),
             },
             "conn_type": safe_type(conn),
             "conn_closed": bool(getattr(conn, "closed", True)),
             "db_check": serialise_row(db_check),
         }
-
-    except Exception as error:
-        traceback.print_exc()
-        return JSONResponse(
-            status_code=500,
-            content={
-                "ok": False,
-                "error_type": type(error).__name__,
-                "error": str(error),
-                "traceback": traceback.format_exc(),
-            },
-        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Debug post health failed")
