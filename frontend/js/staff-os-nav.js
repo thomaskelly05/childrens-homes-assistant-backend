@@ -17,18 +17,18 @@
   ]);
 
   const FALLBACK_NAV_LINKS = [
-    { href: "/my-profile", title: "My Profile", subtitle: "My start page", roles: ["staff", "manager", "provider"] },
-    { href: "/young-people-shell", title: "Care OS", subtitle: "Children's home workspace", roles: ["staff", "manager", "provider"] },
-    { href: "/young-people", title: "Young people", subtitle: "Profiles and records", roles: ["staff", "manager", "provider"] },
-    { href: "/safeguarding-hub", title: "Safeguarding", subtitle: "Risk and safety", roles: ["staff", "manager", "provider"] },
-    { href: "/documents-hub", title: "Documents", subtitle: "Files and evidence", roles: ["staff", "manager", "provider"] },
-    { href: "/academy", title: "Academy", subtitle: "Learning and evidence", roles: ["staff", "manager", "provider"] },
-    { href: "/assistant", title: "Assistant", subtitle: "Guidance and summaries", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os", title: "Care OS", subtitle: "Main workspace", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#young-people", title: "Young people", subtitle: "Profiles and records", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#safeguarding", title: "Safeguarding", subtitle: "Risk and safety", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#documents", title: "Documents", subtitle: "Files and evidence", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#academy", title: "Academy", subtitle: "Learning and evidence", roles: ["staff", "manager", "provider"] },
+    { href: "/care-os#assistant", title: "Assistant", subtitle: "Guidance and summaries", roles: ["staff", "manager", "provider"] },
   ];
 
   const fallbackRestrictedPaths = FALLBACK_NAV_LINKS.reduce((acc, item) => {
-    acc[item.href] = item.roles || [];
-    acc[`${item.href}.html`] = item.roles || [];
+    const path = item.href.split("#")[0];
+    acc[path] = item.roles || [];
+    acc[`${path}.html`] = item.roles || [];
     return acc;
   }, {});
 
@@ -37,7 +37,23 @@
   }
 
   function navLinks() {
-    return permissions().NAV_LINKS || FALLBACK_NAV_LINKS;
+    const links = permissions().NAV_LINKS || FALLBACK_NAV_LINKS;
+    return links.map((item) => {
+      const href = String(item.href || "");
+      if (href === "/young-people-shell" || href === "/young-people-shell.html" || href === "/childrens-home-os") return { ...item, href: "/care-os", title: "Care OS" };
+      if (["/young-people", "/safeguarding-hub", "/documents-hub", "/academy", "/assistant", "/quality-hub"].includes(href)) {
+        const map = {
+          "/young-people": "/care-os#young-people",
+          "/safeguarding-hub": "/care-os#safeguarding",
+          "/documents-hub": "/care-os#documents",
+          "/academy": "/care-os#academy",
+          "/assistant": "/care-os#assistant",
+          "/quality-hub": "/care-os#quality",
+        };
+        return { ...item, href: map[href] };
+      }
+      return item;
+    });
   }
 
   function restrictedPaths() {
@@ -46,6 +62,14 @@
 
   function currentPath() {
     return window.location.pathname.replace(/\/$/, "") || "/";
+  }
+
+  function isEmbeddedMode() {
+    try {
+      return new URLSearchParams(window.location.search).get("embedded") === "1" || window.self !== window.top;
+    } catch (_) {
+      return false;
+    }
   }
 
   function isPublicPage() {
@@ -67,7 +91,7 @@
   }
 
   function loginRedirect() {
-    const next = encodeURIComponent(window.location.pathname + window.location.search);
+    const next = encodeURIComponent("/care-os");
     window.location.replace(`/login?next=${next}`);
   }
 
@@ -164,6 +188,7 @@
 
   function shouldSkipTopNav() {
     if (isPublicPage()) return true;
+    if (isEmbeddedMode()) return true;
     if (document.body?.dataset?.skipGlobalNav === "true") return true;
     return Boolean(document.querySelector(".indicare-global-nav"));
   }
@@ -175,7 +200,7 @@
     nav.className = "indicare-global-nav";
     nav.setAttribute("role", "banner");
     const brand = document.createElement("a");
-    brand.href = "/my-profile";
+    brand.href = "/care-os";
     brand.className = "indicare-global-nav-brand";
     brand.style.textDecoration = "none";
     brand.style.color = "inherit";
@@ -188,7 +213,8 @@
     for (const item of navLinks()) {
       if (!roleCanAccess(item.roles, roleGroup)) continue;
       const link = makeLink(item.href, item.title, item.subtitle);
-      if (path === item.href || path === `${item.href}.html`) link.setAttribute("aria-current", "page");
+      const linkPath = String(item.href || "").split("#")[0];
+      if (path === linkPath || path === `${linkPath}.html`) link.setAttribute("aria-current", "page");
       links.appendChild(link);
     }
     const actions = document.createElement("div");
@@ -215,7 +241,7 @@
   }
 
   function addSidebarLink(container, href, title, subtitle) {
-    if (!container) return;
+    if (!container || isEmbeddedMode()) return;
     if ([...container.querySelectorAll("a")].some((link) => link.getAttribute("href") === href)) return;
     const allowed = restrictedPaths()[href];
     if (allowed && !roleCanAccess(allowed)) return;
@@ -254,8 +280,10 @@
   }
 
   async function loadStaffAlert() {
+    if (isEmbeddedMode()) return;
     const footer = document.querySelector(".yp-sidebar-footer");
     if (!footer) return;
+    addSidebarLink(footer, "/care-os", "Care OS", "Main workspace");
     addSidebarLink(footer, "/my-profile", "My Profile", "Training, supervision and actions");
     addSidebarLink(footer, "/staff-profiles", "Staff Hub", "Team learning and oversight");
     try {
@@ -286,6 +314,7 @@
   }
 
   async function boot() {
+    if (isEmbeddedMode()) document.body.classList.add("embedded-mode");
     const ok = await requirePageAuth();
     if (!ok) return;
     filterExistingLinksByRole();
