@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IndiCare Workspace</title>
   <link rel="stylesheet" href="/css/indicare-workspace.css" />
+  <link rel="stylesheet" href="/css/workspace-enhancements.css" />
 </head>
 <body>
   <div class="app-shell" data-app="indicare-workspace">
@@ -18,6 +19,7 @@
       </div>
       <nav class="workspace-nav" id="workspace-nav">
         <button class="nav-item active" data-view="home">Home dashboard</button>
+        <button class="nav-item" data-view="mobile">Mobile staff</button>
         <button class="nav-item" data-view="intelligence">Home intelligence</button>
         <button class="nav-item" data-view="provider">Provider dashboard</button>
         <button class="nav-item" data-view="child">Child journey</button>
@@ -71,14 +73,18 @@
 
   <div class="modal-backdrop hidden" id="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-modal-title">
     <form class="record-modal" id="record-form">
-      <div class="modal-header"><div><p class="eyebrow">Config-driven form</p><h2 id="record-modal-title">Create care record</h2></div><button type="button" class="icon-button" id="close-modal" aria-label="Close">x</button></div>
+      <div class="modal-header"><div><p class="eyebrow">Config-driven smart form</p><h2 id="record-modal-title">Create care record</h2></div><button type="button" class="icon-button" id="close-modal" aria-label="Close">x</button></div>
       <div id="record-form-fields" class="form-fields"></div>
+      <div id="smart-form-guidance" class="smart-form-guidance"></div>
       <div class="modal-actions"><button type="button" class="secondary-action" id="save-draft">Save draft</button><button type="submit" class="primary-action">Submit for review</button></div>
     </form>
   </div>
 
   <script type="module" src="/js/indicare-workspace/main.js"></script>
+  <script type="module" src="/js/indicare-workspace/workspace-view-controller.js"></script>
   <script type="module" src="/js/indicare-workspace/enhanced-assistant.js"></script>
   <script type="module" src="/js/indicare-workspace/proactive-alerts.js"></script>
+  <script type="module" src="/js/indicare-workspace/mobile-staff.js"></script>
+  <script type="module" src="/js/indicare-workspace/smart-forms.js"></script>
 </body>
 </html>
