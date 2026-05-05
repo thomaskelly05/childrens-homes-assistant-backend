@@ -1,4 +1,6 @@
 // IndiCare OS runtime enhancements
+// Safe enhancement layer: it must not restructure the Young People Shell until
+// the modular shell has finished booting and bound its required DOM contract.
 (function () {
   function qs(sel, root) { return (root || document).querySelector(sel); }
   function qsa(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
@@ -6,24 +8,67 @@
   const OS = {
     selectedCard: null,
     selectedRecord: null,
+    started: false,
+    maxBootWaitMs: 12000,
   };
+
+  const REQUIRED_SHELL_IDS = [
+    'ypShell',
+    'ypHeader',
+    'ypSelector',
+    'ypStatus',
+    'ypTabs',
+    'ypContent',
+    'ypRecordsPanel',
+    'ypRecordsTitle',
+    'ypRecordsSubtitle',
+    'ypRecordsList',
+    'ypAssistantPanel',
+    'ypAssistantTitle',
+    'ypAssistantMessages',
+    'ypAssistantInput',
+    'ypAssistantSend',
+    'ypAssistantStatus',
+    'ypComposer',
+    'ypComposerBackdrop',
+    'ypComposerDialog',
+    'ypComposerTitle',
+    'ypComposerSubtitle',
+    'ypComposerClose',
+    'ypComposerForm',
+    'ypComposerFields',
+    'ypComposerSaveDraft',
+    'ypComposerSubmit',
+    'ypComposerStatus',
+  ];
+
+  function shellContractReady() {
+    return REQUIRED_SHELL_IDS.every(id => document.getElementById(id));
+  }
+
+  function shellBooted() {
+    return window.__INDICARE_YOUNG_PEOPLE_SHELL_BOOTED__ === true;
+  }
 
   function injectSidebar() {
     const shell = qs('#ypShell');
     if (!shell || shell.dataset.icOsReady === 'true') return;
-    shell.dataset.icOsReady = 'true';
 
     const header = qs('#ypHeader');
     const hero = qs('.yp-hero');
     const tabs = qs('#ypTabs');
     const content = qs('#ypContent');
 
+    if (!header || !tabs || !content) return;
+
+    shell.dataset.icOsReady = 'true';
+
     const workspace = document.createElement('div');
     workspace.className = 'ic-os-workspace';
 
     if (hero) workspace.appendChild(hero);
-    if (tabs) workspace.appendChild(tabs);
-    if (content) workspace.appendChild(content);
+    workspace.appendChild(tabs);
+    workspace.appendChild(content);
 
     const sidebar = document.createElement('aside');
     sidebar.className = 'ic-os-sidebar';
@@ -39,13 +84,13 @@
 
       <nav class="ic-os-nav" aria-label="IndiCare OS navigation">
         <div class="ic-os-nav-section">Child OS</div>
-        <button data-os-tab="daily"><span class="ic-os-nav-icon">N</span>Daily notes</button>
-        <button data-os-tab="incidents"><span class="ic-os-nav-icon">!</span>Incidents</button>
-        <button data-os-tab="health"><span class="ic-os-nav-icon">H</span>Health</button>
-        <button data-os-tab="education"><span class="ic-os-nav-icon">E</span>Education</button>
-        <button data-os-tab="family"><span class="ic-os-nav-icon">F</span>Family</button>
-        <button data-os-tab="medication"><span class="ic-os-nav-icon">M</span>Medication</button>
-        <button data-os-tab="assistant"><span class="ic-os-nav-icon">AI</span>Assistant</button>
+        <button type="button" data-os-tab="daily"><span class="ic-os-nav-icon">N</span>Daily notes</button>
+        <button type="button" data-os-tab="incidents"><span class="ic-os-nav-icon">!</span>Incidents</button>
+        <button type="button" data-os-tab="health"><span class="ic-os-nav-icon">H</span>Health</button>
+        <button type="button" data-os-tab="education"><span class="ic-os-nav-icon">E</span>Education</button>
+        <button type="button" data-os-tab="family"><span class="ic-os-nav-icon">F</span>Family</button>
+        <button type="button" data-os-tab="medication"><span class="ic-os-nav-icon">M</span>Medication</button>
+        <button type="button" data-os-tab="assistant"><span class="ic-os-nav-icon">AI</span>Assistant</button>
 
         <div class="ic-os-nav-section">Home OS</div>
         <a href="/rostering.html"><span class="ic-os-nav-icon">R</span>Rostering</a>
@@ -58,10 +103,7 @@
       </div>
     `;
 
-    shell.innerHTML = '';
-    shell.appendChild(sidebar);
-    if (header) shell.appendChild(header);
-    shell.appendChild(workspace);
+    shell.replaceChildren(sidebar, header, workspace);
 
     qsa('[data-os-tab]', sidebar).forEach(btn => {
       btn.addEventListener('click', () => {
@@ -94,7 +136,8 @@
 
   function enhanceRecordCards() {
     const list = qs('#ypRecordsList');
-    if (!list) return;
+    if (!list || list.dataset.icOsObserver === 'true') return;
+    list.dataset.icOsObserver = 'true';
 
     function decorate() {
       qsa('.yp-record-card', list).forEach(card => {
@@ -195,14 +238,14 @@
       <div class="ic-os-detail-block ic-os-detail-block-wide"><strong>Summary</strong><p>${escapeHtml(record.body || 'No further detail recorded.')}</p></div>
       <div class="ic-os-detail-block"><strong>Young person</strong><p>${escapeHtml(record.youngPersonName)}</p></div>
       <div class="ic-os-detail-block"><strong>Section</strong><p>${escapeHtml(record.section)}</p></div>
-      <div class="ic-os-detail-block"><strong>Status and dates</strong><p>${escapeHtml(record.meta.join(' · ') || 'No status recorded')}</p></div>
+      <div class="ic-os-detail-block"><strong>Status and dates</strong><p>${escapeHtml(record.meta.join(' - ') || 'No status recorded')}</p></div>
       <div class="ic-os-detail-block"><strong>Linked actions</strong><p>No linked actions yet. Use Add action to create follow-up.</p></div>
       <div class="ic-os-detail-block"><strong>Evidence</strong><p>Ready to link to SCCIF, report evidence or manager review.</p></div>
       <div class="ic-os-detail-block"><strong>Audit trail</strong><p>Opened in IndiCare OS. Full audit trail can be wired to backend record events next.</p></div>
     `;
 
     qs('#icDetailTitle', host).textContent = record.title;
-    qs('#icDetailMeta', host).textContent = record.meta.join(' · ');
+    qs('#icDetailMeta', host).textContent = record.meta.join(' - ');
     qs('#icDetailType', host).textContent = `${record.section} record`;
     host.classList.add('open');
   }
@@ -271,7 +314,7 @@
     const record = extractRecord(card);
     openDrawer(
       'Link evidence',
-      `Prepare this record for quality, manager review or Ofsted evidence.`,
+      'Prepare this record for quality, manager review or Ofsted evidence.',
       `
         <form class="ic-os-form" id="icEvidenceForm">
           <label><span>Evidence category</span><select name="category"><option>Child lived experience</option><option>Safeguarding</option><option>Health and wellbeing</option><option>Education</option><option>Leadership and management</option><option>Workforce</option></select></label>
@@ -319,6 +362,8 @@
 
   function bindTabSync() {
     qsa('#ypTabs [data-tab]').forEach(button => {
+      if (button.dataset.icOsTabSync === 'true') return;
+      button.dataset.icOsTabSync = 'true';
       button.addEventListener('click', () => syncActiveSidebarTab(button.dataset.tab || 'daily'));
     });
   }
@@ -328,15 +373,42 @@
   }
 
   function start() {
+    if (OS.started) return;
+    if (!shellContractReady()) {
+      console.warn('[indicare-os] Shell contract not ready. OS enhancement skipped to avoid redirect bounce.');
+      return;
+    }
+
+    OS.started = true;
     document.body.classList.add('indicare-os-body');
     injectSidebar();
     bindTabSync();
     enhanceRecordCards();
   }
 
+  function waitForBoot(startedAt) {
+    const elapsed = Date.now() - startedAt;
+
+    if (shellBooted() && shellContractReady()) {
+      start();
+      return;
+    }
+
+    if (elapsed > OS.maxBootWaitMs) {
+      console.warn('[indicare-os] Young People Shell did not report booted in time. Leaving original page intact.');
+      return;
+    }
+
+    window.setTimeout(() => waitForBoot(startedAt), 100);
+  }
+
+  function ready() {
+    waitForBoot(Date.now());
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, { once: true });
+    document.addEventListener('DOMContentLoaded', ready, { once: true });
   } else {
-    start();
+    ready();
   }
 })();
