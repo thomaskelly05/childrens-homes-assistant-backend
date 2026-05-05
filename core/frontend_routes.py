@@ -9,11 +9,26 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
+CARE_OS_PATH = "/care-os"
+LEGACY_CARE_OS_PATHS = {
+    "/young-people-shell",
+    "/young-people-shell.html",
+    "/childrens-home-os",
+    "/childrens-home-os.html",
+    "/command",
+    "/command.html",
+    "/home",
+    "/home.html",
+}
 
 
 def serve_html(path: str):
     with open(path, encoding="utf-8") as file:
-        return HTMLResponse(inject_app_shell(file.read()))
+        html = file.read()
+    if os.path.basename(path) == "login.html":
+        html = html.replace('const DEFAULT_REDIRECT = "/young-people-shell.html";', 'const DEFAULT_REDIRECT = "/care-os";')
+        html = html.replace('const DEFAULT_REDIRECT = "/young-people-shell";', 'const DEFAULT_REDIRECT = "/care-os";')
+    return HTMLResponse(inject_app_shell(html))
 
 
 def serve_from(paths: list[str], error: str = "Page not found"):
@@ -69,10 +84,6 @@ def get_page_routes() -> dict[str, list[str]]:
         "/young-people.html": frontend("young-people.html"),
         "/young-people-page": frontend("young-people.html"),
         "/young-people-page.html": frontend("young-people.html"),
-        "/young-people-shell": frontend("young-people-shell.html"),
-        "/young-people-shell.html": frontend("young-people-shell.html"),
-        "/childrens-home-os": frontend("care-os.html"),
-        "/childrens-home-os.html": frontend("care-os.html"),
         "/os-dashboard": frontend("os-dashboard.html"),
         "/os-dashboard.html": frontend("os-dashboard.html"),
         "/documents-hub": frontend("documents-hub.html"),
@@ -119,15 +130,16 @@ def register_frontend_routes(app: FastAPI) -> None:
     def root():
         return RedirectResponse(url="/login", status_code=302)
 
-    for route_path, paths in get_page_routes().items():
-        register_file_route(app, route_path, paths, "page")
+    for legacy_path in sorted(LEGACY_CARE_OS_PATHS):
+        def redirect_legacy(path=legacy_path):
+            return RedirectResponse(url=CARE_OS_PATH, status_code=302)
+        redirect_legacy.__name__ = f"redirect_legacy_{legacy_path.strip('/').replace('-', '_').replace('.', '_')}"
+        app.get(legacy_path)(redirect_legacy)
 
-    @app.get("/command")
-    @app.get("/command.html")
-    @app.get("/home")
-    @app.get("/home.html")
-    def redirect_to_care_os():
-        return RedirectResponse(url="/care-os", status_code=302)
+    for route_path, paths in get_page_routes().items():
+        if route_path in LEGACY_CARE_OS_PATHS:
+            continue
+        register_file_route(app, route_path, paths, "page")
 
     @app.get("/ai-notes.css")
     def ai_notes_css():
