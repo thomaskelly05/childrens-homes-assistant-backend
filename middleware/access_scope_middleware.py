@@ -84,10 +84,14 @@ SENSITIVE_PREFIXES = (
     "/staff-profiles",
     "/admin-users",
     "/founder-hq",
+    "/tasks",
+    "/admissions",
+    "/command-centre",
+    "/automation",
 )
 
 ADMIN_ROLES = {"admin", "administrator", "super_admin", "superadmin", "founder", "owner"}
-PROVIDER_ROLES = ADMIN_ROLES | {"provider", "provider_admin", "director", "responsible_individual", "ri"}
+PROVIDER_ROLES = ADMIN_ROLES | {"provider", "provider_admin", "director", "responsible_individual", "ri", "regional_manager"}
 MANAGER_ROLES = PROVIDER_ROLES | {"registered_manager", "manager", "deputy_manager", "home_manager"}
 STAFF_ROLES = MANAGER_ROLES | {"staff", "support_worker", "key_worker", "senior", "senior_staff"}
 
@@ -106,6 +110,10 @@ ROLE_PROTECTED_PREFIXES: tuple[tuple[str, set[str]], ...] = (
     ("/staff-profiles", MANAGER_ROLES),
     ("/qa", MANAGER_ROLES),
     ("/exports", MANAGER_ROLES),
+    ("/command-centre", STAFF_ROLES),
+    ("/tasks", STAFF_ROLES),
+    ("/admissions", MANAGER_ROLES),
+    ("/automation", MANAGER_ROLES),
 )
 
 
@@ -131,11 +139,9 @@ def _extract_token(request: Request) -> str | None:
     cookie_token = (request.cookies.get(auth_settings.session_cookie_name) or "").strip()
     if cookie_token:
         return cookie_token
-
     auth = request.headers.get("authorization") or ""
     if auth.lower().startswith("bearer "):
         return auth[7:].strip()
-
     return None
 
 
@@ -144,15 +150,12 @@ def _load_user(user_id: int) -> dict[str, Any] | None:
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT id, email, role, home_id, provider_id, is_active, archived
                 FROM users
                 WHERE id = %s
                 LIMIT 1
-                """,
-                (user_id,),
-            )
+            """, (user_id,))
             row = cur.fetchone()
             if not row:
                 return None
@@ -169,19 +172,15 @@ def _current_user_from_request(request: Request) -> dict[str, Any] | None:
     token = _extract_token(request)
     if not token:
         return None
-
     payload = decode_session_token(token)
     if not payload:
         return None
-
     user_id = _safe_int(payload.get("sub"))
     if not user_id:
         return None
-
     user = _load_user(user_id)
     if not user or user.get("archived") is True or user.get("is_active") is False:
         return None
-
     return user
 
 
@@ -197,10 +196,7 @@ def _child_home_provider(young_person_id: int) -> tuple[int | None, int | None]:
         with conn.cursor() as cur:
             for table in ("young_people", "children", "young_persons"):
                 try:
-                    cur.execute(
-                        f'SELECT home_id, provider_id FROM public."{table}" WHERE id = %s LIMIT 1',
-                        (young_person_id,),
-                    )
+                    cur.execute(f'SELECT home_id, provider_id FROM public."{table}" WHERE id = %s LIMIT 1', (young_person_id,))
                     row = cur.fetchone()
                     if row:
                         if isinstance(row, dict):
@@ -302,7 +298,6 @@ class AccessScopeMiddleware(BaseHTTPMiddleware):
 
         if matched_resource:
             resource, resource_id = matched_resource
-
             if resource == "child":
                 child_home_id, child_provider_id = _child_home_provider(resource_id)
                 if role not in PROVIDER_ROLES and child_home_id not in _allowed_home_ids(user):
@@ -310,12 +305,10 @@ class AccessScopeMiddleware(BaseHTTPMiddleware):
                 if role in PROVIDER_ROLES and child_provider_id and user_provider_id and child_provider_id != user_provider_id and role not in ADMIN_ROLES:
                     return _deny(request, user, "child_provider_mismatch", resource, resource_id)
                 _log_sensitive(request, user, resource, resource_id)
-
             if resource == "home":
                 if role not in PROVIDER_ROLES and resource_id != user_home_id:
                     return _deny(request, user, "home_mismatch", resource, resource_id)
                 _log_sensitive(request, user, resource, resource_id)
-
             if resource == "provider":
                 if role not in ADMIN_ROLES and resource_id != user_provider_id:
                     return _deny(request, user, "provider_mismatch", resource, resource_id)
