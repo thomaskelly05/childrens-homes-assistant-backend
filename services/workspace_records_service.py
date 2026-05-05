@@ -15,13 +15,7 @@ RECORD_TABLES = {
 
 
 class WorkspaceRecordsService:
-    """Small compatibility layer for workspace record lists and creation.
-
-    The real database schema may vary between deployments. This service detects
-    existing tables/columns and writes only fields that exist. If no matching
-    table exists, it returns a safe mock-style response instead of crashing the
-    workspace.
-    """
+    """Schema-aware workspace records and manager review service."""
 
     def list_records(self, *, record_type: str, current_user: dict[str, Any], young_person_id: int | None = None, limit: int = 20) -> dict[str, Any]:
         table = self._table_for(record_type)
@@ -31,7 +25,7 @@ class WorkspaceRecordsService:
         try:
             conn = get_db_connection()
             cols = self._columns(conn, table)
-            select_cols = [c for c in ["id", "title", "summary", "content", "body", "notes", "mood", "incident_type", "status", "created_at", "updated_at", "young_person_id", "home_id", "created_by"] if c in cols]
+            select_cols = [c for c in ["id", "title", "summary", "content", "body", "notes", "mood", "incident_type", "status", "created_at", "updated_at", "young_person_id", "home_id", "created_by", "reviewed_by", "reviewed_at", "manager_comment"] if c in cols]
             if not select_cols:
                 return {"ok": True, "record_type": record_type, "records": []}
             where = []
@@ -58,6 +52,17 @@ class WorkspaceRecordsService:
             if conn is not None:
                 release_db_connection(conn)
 
+    def review_queue(self, *, current_user: dict[str, Any], limit: int = 50) -> dict[str, Any]:
+        all_records: list[dict[str, Any]] = []
+        for record_type in RECORD_TABLES:
+            result = self.list_records(record_type=record_type, current_user=current_user, limit=limit)
+            for record in result.get("records") or []:
+                status = str(record.get("status") or "").lower()
+                if "review" in status or status in {"draft", "submitted", "pending", ""}:
+                    all_records.append(record)
+        all_records.sort(key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""), reverse=True)
+        return {"ok": True, "records": all_records[:limit], "summary": {"total": len(all_records[:limit])}}
+
     def create_record(self, *, record_type: str, payload: dict[str, Any], current_user: dict[str, Any]) -> dict[str, Any]:
         table = self._table_for(record_type)
         if not table:
@@ -81,13 +86,12 @@ class WorkspaceRecordsService:
                 else:
                     placeholders.append("%s")
                     params.append(value)
-            return_sql = "id" if "id" in cols else None
             query = f'INSERT INTO public."{table}" ({col_sql}) VALUES ({", ".join(placeholders)})'
-            if return_sql:
+            if "id" in cols:
                 query += ' RETURNING "id"'
             with conn.cursor() as cur:
                 cur.execute(query, tuple(params))
-                row = cur.fetchone() if return_sql else None
+                row = cur.fetchone() if "id" in cols else None
             conn.commit()
             record_id = row.get("id") if isinstance(row, dict) and row else row[0] if row else None
             return {"ok": True, "record_type": record_type, "table": table, "id": record_id}
@@ -98,6 +102,87 @@ class WorkspaceRecordsService:
         finally:
             if conn is not None:
                 release_db_connection(conn)
+
+    def review_record(self, *, record_type: str, record_id: int, action: str, comment: str | None, current_user: dict[str, Any]) -> dict[str, Any]:
+        table = self._table_for(record_type)
+        if not table:
+            return {"ok": False, "error": "No matching table found for this record type."}
+        action_status = {"approve": "approved", "request_changes": "changes_requested", "reject": "rejected"}.get(action, action)
+        conn = None
+        try:
+            conn = get_db_connection()
+            cols = self._columns(conn, table)
+            updates: dict[str, Any] = {}
+            if "status" in cols:
+                updates["status"] = action_status
+            if "manager_comment" in cols:
+                updates["manager_comment"] = comment
+            elif "notes" in cols and comment:
+                updates["notes"] = comment
+            if "reviewed_by" in cols:
+                updates["reviewed_by"] = self._current_user_id(current_user)
+            if "reviewed_at" in cols:
+                updates["reviewed_at"] = "NOW()"
+            if "updated_at" in cols:
+                updates["updated_at"] = "NOW()"
+            if not updates:
+                return {"ok": False, "error": "No compatible review columns found."}
+            set_sql = []
+            params = []
+            for key, value in updates.items():
+                if value == "NOW()":
+                    set_sql.append(f'"{key}" = NOW()')
+                else:
+                    set_sql.append(f'"{key}" = %s')
+                    params.append(value)
+            params.append(record_id)
+            with conn.cursor() as cur:
+                cur.execute(f'UPDATE public."{table}" SET {", ".join(set_sql)} WHERE id = %s', tuple(params))
+            self._insert_review_log(conn, record_type, record_id, action_status, comment, current_user)
+            conn.commit()
+            return {"ok": True, "record_type": record_type, "id": record_id, "status": action_status}
+        except Exception as exc:
+            if conn is not None:
+                conn.rollback()
+            return {"ok": False, "error": repr(exc)}
+        finally:
+            if conn is not None:
+                release_db_connection(conn)
+
+    def _insert_review_log(self, conn: Any, record_type: str, record_id: int, action: str, comment: str | None, current_user: dict[str, Any]) -> None:
+        table = self._first_existing_table(conn, ["manager_review_log", "record_review_log", "audit_log", "leadership_oversight_log"])
+        if not table:
+            return
+        cols = self._columns(conn, table)
+        payload = {
+            "record_type": record_type,
+            "record_id": record_id,
+            "action": action,
+            "status": action,
+            "comment": comment,
+            "notes": comment,
+            "user_id": self._current_user_id(current_user),
+            "home_id": self._current_home_id(current_user),
+            "metadata": {"source": "workspace_records_service"},
+            "created_at": "NOW()",
+        }
+        values = {key: value for key, value in payload.items() if key in cols and value is not None}
+        if not values:
+            return
+        col_sql = ", ".join([f'"{key}"' for key in values])
+        placeholders = []
+        params = []
+        for value in values.values():
+            if value == "NOW()":
+                placeholders.append("NOW()")
+            elif isinstance(value, (dict, list)):
+                placeholders.append("%s::jsonb")
+                params.append(json.dumps(value))
+            else:
+                placeholders.append("%s")
+                params.append(value)
+        with conn.cursor() as cur:
+            cur.execute(f'INSERT INTO public."{table}" ({col_sql}) VALUES ({", ".join(placeholders)})', tuple(params))
 
     def _values_for_insert(self, record_type: str, payload: dict[str, Any], current_user: dict[str, Any], cols: set[str]) -> dict[str, Any]:
         base = {
@@ -133,6 +218,10 @@ class WorkspaceRecordsService:
             "mood": row.get("mood"),
             "young_person_id": row.get("young_person_id"),
             "home_id": row.get("home_id"),
+            "created_by": row.get("created_by"),
+            "reviewed_by": row.get("reviewed_by"),
+            "reviewed_at": row.get("reviewed_at"),
+            "manager_comment": row.get("manager_comment"),
             "created_at": row.get("created_at"),
             "updated_at": row.get("updated_at"),
             "content": content,
@@ -154,6 +243,16 @@ class WorkspaceRecordsService:
         finally:
             if conn is not None:
                 release_db_connection(conn)
+        return None
+
+    def _first_existing_table(self, conn: Any, names: list[str]) -> str | None:
+        with conn.cursor() as cur:
+            for name in names:
+                cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s) AS exists", (name,))
+                row = cur.fetchone()
+                exists = row.get("exists") if isinstance(row, dict) else row and row[0]
+                if exists:
+                    return name
         return None
 
     def _columns(self, conn: Any, table: str) -> set[str]:
