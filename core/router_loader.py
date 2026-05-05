@@ -26,6 +26,7 @@ routers.assistant_os_routes
 routers.assistant_os_knowledge_routes
 routers.assistant_intelligence_routes
 routers.manager_intelligence_routes
+routers.proactive_intelligence_routes
 routers.young_people_assistant_routes
 routers.operational_intelligence_routes
 routers.inspection_os_routes
