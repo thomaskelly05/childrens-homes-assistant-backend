@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +9,7 @@ from psycopg2.extras import RealDictCursor
 from auth.dependencies import get_current_user
 from db.connection import get_db
 
+logger = logging.getLogger("indicare.notifications")
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 
@@ -27,6 +29,22 @@ def _current_user_id(current_user: dict[str, Any]) -> int:
     return user_id
 
 
+def _rollback(conn) -> None:
+    try:
+        conn.rollback()
+    except Exception:
+        pass
+
+
+def _notifications_unavailable_response(limit: int = 50) -> dict[str, Any]:
+    return {
+        "items": [],
+        "limit": limit,
+        "available": False,
+        "message": "Notifications are not available yet. Run the notifications migration to enable this module.",
+    }
+
+
 @router.get("")
 def list_notifications(
     unread_only: bool = False,
@@ -36,37 +54,42 @@ def list_notifications(
 ):
     user_id = _current_user_id(current_user)
     safe_limit = max(1, min(int(limit or 50), 100))
-
     unread_clause = "AND read_at IS NULL" if unread_only else ""
 
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            f"""
-            SELECT
-                id,
-                title,
-                body,
-                notification_type,
-                priority,
-                href,
-                source,
-                source_ref_type,
-                source_ref_id,
-                home_id,
-                young_person_id,
-                read_at,
-                dismissed_at,
-                created_at
-            FROM notifications
-            WHERE user_id = %s
-              AND dismissed_at IS NULL
-              {unread_clause}
-            ORDER BY created_at DESC
-            LIMIT %s
-            """,
-            (user_id, safe_limit),
-        )
-        return {"items": cur.fetchall(), "limit": safe_limit}
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                SELECT
+                    id,
+                    title,
+                    body,
+                    body AS message,
+                    notification_type,
+                    priority,
+                    href,
+                    source,
+                    source_ref_type,
+                    source_ref_id,
+                    home_id,
+                    young_person_id,
+                    read_at,
+                    dismissed_at,
+                    created_at
+                FROM notifications
+                WHERE user_id = %s
+                  AND dismissed_at IS NULL
+                  {unread_clause}
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (user_id, safe_limit),
+            )
+            return {"items": cur.fetchall(), "limit": safe_limit, "available": True}
+    except Exception as exc:
+        _rollback(conn)
+        logger.warning("notifications_unavailable user_id=%s error=%s", user_id, exc)
+        return _notifications_unavailable_response(safe_limit)
 
 
 @router.get("/unread-count")
@@ -75,19 +98,24 @@ def unread_count(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     user_id = _current_user_id(current_user)
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT COUNT(*)::int AS count
-            FROM notifications
-            WHERE user_id = %s
-              AND read_at IS NULL
-              AND dismissed_at IS NULL
-            """,
-            (user_id,),
-        )
-        row = cur.fetchone() or {"count": 0}
-        return {"count": row.get("count", 0)}
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*)::int AS count
+                FROM notifications
+                WHERE user_id = %s
+                  AND read_at IS NULL
+                  AND dismissed_at IS NULL
+                """,
+                (user_id,),
+            )
+            row = cur.fetchone() or {"count": 0}
+            return {"count": row.get("count", 0), "available": True}
+    except Exception as exc:
+        _rollback(conn)
+        logger.warning("notification_count_unavailable user_id=%s error=%s", user_id, exc)
+        return {"count": 0, "available": False}
 
 
 @router.post("/{notification_id}/read")
@@ -97,21 +125,28 @@ def mark_notification_read(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     user_id = _current_user_id(current_user)
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            UPDATE notifications
-            SET read_at = COALESCE(read_at, NOW())
-            WHERE id = %s AND user_id = %s AND dismissed_at IS NULL
-            RETURNING *
-            """,
-            (notification_id, user_id),
-        )
-        row = cur.fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Notification not found")
-        conn.commit()
-        return {"ok": True, "notification": row}
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE notifications
+                SET read_at = COALESCE(read_at, NOW())
+                WHERE id = %s AND user_id = %s AND dismissed_at IS NULL
+                RETURNING *
+                """,
+                (notification_id, user_id),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Notification not found")
+            conn.commit()
+            return {"ok": True, "notification": row}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _rollback(conn)
+        logger.warning("notification_mark_read_failed user_id=%s notification_id=%s error=%s", user_id, notification_id, exc)
+        return {"ok": False, "available": False, "detail": "Notifications are not available yet."}
 
 
 @router.post("/mark-all-read")
@@ -120,21 +155,26 @@ def mark_all_read(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     user_id = _current_user_id(current_user)
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            UPDATE notifications
-            SET read_at = COALESCE(read_at, NOW())
-            WHERE user_id = %s
-              AND read_at IS NULL
-              AND dismissed_at IS NULL
-            RETURNING id
-            """,
-            (user_id,),
-        )
-        rows = cur.fetchall()
-        conn.commit()
-        return {"ok": True, "updated": len(rows)}
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE notifications
+                SET read_at = COALESCE(read_at, NOW())
+                WHERE user_id = %s
+                  AND read_at IS NULL
+                  AND dismissed_at IS NULL
+                RETURNING id
+                """,
+                (user_id,),
+            )
+            rows = cur.fetchall()
+            conn.commit()
+            return {"ok": True, "updated": len(rows)}
+    except Exception as exc:
+        _rollback(conn)
+        logger.warning("notification_mark_all_failed user_id=%s error=%s", user_id, exc)
+        return {"ok": False, "updated": 0, "available": False}
 
 
 @router.post("/{notification_id}/dismiss")
@@ -144,18 +184,25 @@ def dismiss_notification(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     user_id = _current_user_id(current_user)
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            UPDATE notifications
-            SET dismissed_at = COALESCE(dismissed_at, NOW())
-            WHERE id = %s AND user_id = %s
-            RETURNING *
-            """,
-            (notification_id, user_id),
-        )
-        row = cur.fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Notification not found")
-        conn.commit()
-        return {"ok": True, "notification": row}
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE notifications
+                SET dismissed_at = COALESCE(dismissed_at, NOW())
+                WHERE id = %s AND user_id = %s
+                RETURNING *
+                """,
+                (notification_id, user_id),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Notification not found")
+            conn.commit()
+            return {"ok": True, "notification": row}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _rollback(conn)
+        logger.warning("notification_dismiss_failed user_id=%s notification_id=%s error=%s", user_id, notification_id, exc)
+        return {"ok": False, "available": False, "detail": "Notifications are not available yet."}
