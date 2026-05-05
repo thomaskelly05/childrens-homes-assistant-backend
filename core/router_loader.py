@@ -23,6 +23,7 @@ routers.ai_note_templates_routes
 routers.ai_note_export_routes
 routers.assistant_general_routes
 routers.assistant_os_routes
+routers.assistant_os_knowledge_routes
 routers.assistant_intelligence_routes
 routers.young_people_assistant_routes
 routers.operational_intelligence_routes
