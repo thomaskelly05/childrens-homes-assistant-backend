@@ -69,8 +69,6 @@ def get_page_routes() -> dict[str, list[str]]:
         "/young-people.html": frontend("young-people.html"),
         "/young-people-page": frontend("young-people.html"),
         "/young-people-page.html": frontend("young-people.html"),
-        "/young-people-shell": frontend("young-people-shell.html"),
-        "/young-people-shell.html": frontend("young-people-shell.html"),
         "/childrens-home-os": frontend("care-os.html"),
         "/childrens-home-os.html": frontend("care-os.html"),
         "/os-dashboard": frontend("os-dashboard.html"),
@@ -119,15 +117,17 @@ def register_frontend_routes(app: FastAPI) -> None:
     def root():
         return RedirectResponse(url="/login", status_code=302)
 
-    for route_path, paths in get_page_routes().items():
-        register_file_route(app, route_path, paths, "page")
-
+    @app.get("/young-people-shell")
+    @app.get("/young-people-shell.html")
     @app.get("/command")
     @app.get("/command.html")
     @app.get("/home")
     @app.get("/home.html")
     def redirect_to_care_os():
         return RedirectResponse(url="/care-os", status_code=302)
+
+    for route_path, paths in get_page_routes().items():
+        register_file_route(app, route_path, paths, "page")
 
     @app.get("/ai-notes.css")
     def ai_notes_css():
