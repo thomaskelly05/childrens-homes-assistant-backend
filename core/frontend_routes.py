@@ -9,7 +9,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
-CARE_OS_PATH = "/care-os"
+CARE_OS_PATH = "/os-command"
 LEGACY_CARE_OS_PATHS = {
     "/young-people-shell",
     "/young-people-shell.html",
@@ -26,8 +26,9 @@ def serve_html(path: str):
     with open(path, encoding="utf-8") as file:
         html = file.read()
     if os.path.basename(path) == "login.html":
-        html = html.replace('const DEFAULT_REDIRECT = "/young-people-shell.html";', 'const DEFAULT_REDIRECT = "/care-os";')
-        html = html.replace('const DEFAULT_REDIRECT = "/young-people-shell";', 'const DEFAULT_REDIRECT = "/care-os";')
+        html = html.replace('const DEFAULT_REDIRECT = "/young-people-shell.html";', 'const DEFAULT_REDIRECT = "/os-command";')
+        html = html.replace('const DEFAULT_REDIRECT = "/young-people-shell";', 'const DEFAULT_REDIRECT = "/os-command";')
+        html = html.replace('const DEFAULT_REDIRECT = "/care-os";', 'const DEFAULT_REDIRECT = "/os-command";')
     return HTMLResponse(inject_app_shell(html))
 
 
@@ -74,6 +75,16 @@ def get_page_routes() -> dict[str, list[str]]:
         "/access-denied.html": frontend("access-denied.html"),
         "/care-os": frontend("care-os.html"),
         "/care-os.html": frontend("care-os.html"),
+        "/os-command": frontend("os-command.html"),
+        "/os-command.html": frontend("os-command.html"),
+        "/os-child": frontend("os-child.html"),
+        "/os-child.html": frontend("os-child.html"),
+        "/os-risk": frontend("os-risk.html"),
+        "/os-risk.html": frontend("os-risk.html"),
+        "/os-safeguarding": frontend("os-safeguarding.html"),
+        "/os-safeguarding.html": frontend("os-safeguarding.html"),
+        "/os-ofsted": frontend("os-ofsted.html"),
+        "/os-ofsted.html": frontend("os-ofsted.html"),
         "/tasks-ui": frontend("tasks-ui.html"),
         "/tasks-ui.html": frontend("tasks-ui.html"),
         "/notifications-ui": frontend("notifications-ui.html"),
