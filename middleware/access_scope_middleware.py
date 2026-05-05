@@ -88,6 +88,7 @@ SENSITIVE_PREFIXES = (
     "/admissions",
     "/command-centre",
     "/automation",
+    "/notifications",
 )
 
 ADMIN_ROLES = {"admin", "administrator", "super_admin", "superadmin", "founder", "owner"}
@@ -112,6 +113,7 @@ ROLE_PROTECTED_PREFIXES: tuple[tuple[str, set[str]], ...] = (
     ("/exports", MANAGER_ROLES),
     ("/command-centre", STAFF_ROLES),
     ("/tasks", STAFF_ROLES),
+    ("/notifications", STAFF_ROLES),
     ("/admissions", MANAGER_ROLES),
     ("/automation", MANAGER_ROLES),
 )
