@@ -33,6 +33,7 @@ routers.proactive_intelligence_routes
 routers.provider_intelligence_routes
 routers.predictive_risk_routes
 routers.realtime_alerts_routes
+routers.workspace_records_routes
 routers.young_people_assistant_routes
 routers.operational_intelligence_routes
 routers.inspection_os_routes
@@ -95,8 +96,6 @@ routers.workspace_review_routes
 routers.workspace_ofsted_evidence_routes
 """.split()
 
-# Core auth/security/frontend routes should still fail loudly because the app is
-# not safe or usable without them. Feature routes can fail without stopping boot.
 REQUIRED_ROUTERS = {
     "routers.auth_routes",
     "routers.debug_health_routes",
@@ -130,6 +129,5 @@ def include_routers(app: FastAPI, routers: list[str] | None = None) -> None:
                 raise
 
 
-# Useful for debug health routes or Render logs.
 def get_failed_routers() -> list[dict[str, str]]:
     return FAILED_ROUTERS
