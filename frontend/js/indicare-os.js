@@ -3,11 +3,16 @@
   function qs(sel, root) { return (root || document).querySelector(sel); }
   function qsa(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
 
+  const OS = {
+    selectedCard: null,
+    selectedRecord: null,
+  };
+
   function injectSidebar() {
     const shell = qs('#ypShell');
-    if (!shell) return;
+    if (!shell || shell.dataset.icOsReady === 'true') return;
+    shell.dataset.icOsReady = 'true';
 
-    // wrap existing content into workspace area
     const header = qs('#ypHeader');
     const hero = qs('.yp-hero');
     const tabs = qs('#ypTabs');
@@ -20,7 +25,6 @@
     if (tabs) workspace.appendChild(tabs);
     if (content) workspace.appendChild(content);
 
-    // build sidebar
     const sidebar = document.createElement('aside');
     sidebar.className = 'ic-os-sidebar';
 
@@ -34,41 +38,58 @@
       </div>
 
       <nav class="ic-os-nav" aria-label="IndiCare OS navigation">
-        <div class="ic-os-nav-section">Child</div>
-        <button data-os-tab="daily"><span class="ic-os-nav-icon">📝</span>Daily notes</button>
-        <button data-os-tab="incidents"><span class="ic-os-nav-icon">⚠️</span>Incidents</button>
-        <button data-os-tab="health"><span class="ic-os-nav-icon">🩺</span>Health</button>
-        <button data-os-tab="education"><span class="ic-os-nav-icon">🎓</span>Education</button>
-        <button data-os-tab="family"><span class="ic-os-nav-icon">👪</span>Family</button>
-        <button data-os-tab="medication"><span class="ic-os-nav-icon">💊</span>Medication</button>
-        <button data-os-tab="assistant"><span class="ic-os-nav-icon">🤖</span>Assistant</button>
+        <div class="ic-os-nav-section">Child OS</div>
+        <button data-os-tab="daily"><span class="ic-os-nav-icon">N</span>Daily notes</button>
+        <button data-os-tab="incidents"><span class="ic-os-nav-icon">!</span>Incidents</button>
+        <button data-os-tab="health"><span class="ic-os-nav-icon">H</span>Health</button>
+        <button data-os-tab="education"><span class="ic-os-nav-icon">E</span>Education</button>
+        <button data-os-tab="family"><span class="ic-os-nav-icon">F</span>Family</button>
+        <button data-os-tab="medication"><span class="ic-os-nav-icon">M</span>Medication</button>
+        <button data-os-tab="assistant"><span class="ic-os-nav-icon">AI</span>Assistant</button>
 
-        <div class="ic-os-nav-section">System</div>
-        <a href="/rostering.html"><span class="ic-os-nav-icon">📅</span>Rostering</a>
-        <a href="/documents-hub.html"><span class="ic-os-nav-icon">📁</span>Documents</a>
-        <a href="/staff-portal.html"><span class="ic-os-nav-icon">👥</span>Staff</a>
+        <div class="ic-os-nav-section">Home OS</div>
+        <a href="/rostering.html"><span class="ic-os-nav-icon">R</span>Rostering</a>
+        <a href="/documents-hub.html"><span class="ic-os-nav-icon">D</span>Documents</a>
+        <a href="/staff-portal.html"><span class="ic-os-nav-icon">S</span>Staff</a>
       </nav>
 
       <div class="ic-os-sidebar-footer">
-        IndiCare OS · Safer care through better records
+        IndiCare OS<br />Safer care through better records.
       </div>
     `;
 
-    // recompose grid
     shell.innerHTML = '';
     shell.appendChild(sidebar);
     if (header) shell.appendChild(header);
     shell.appendChild(workspace);
 
-    // bind sidebar to existing tabs
     qsa('[data-os-tab]', sidebar).forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-os-tab');
         const target = qs(`#ypTabs [data-tab="${tab}"]`);
         if (target) target.click();
-        qsa('[data-os-tab]', sidebar).forEach(b => b.classList.toggle('active', b === btn));
+        syncActiveSidebarTab(tab);
       });
     });
+
+    syncActiveSidebarTab(qs('#ypTabs .active')?.dataset?.tab || 'daily');
+  }
+
+  function syncActiveSidebarTab(tab) {
+    qsa('[data-os-tab]').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-os-tab') === tab);
+    });
+  }
+
+  function currentContext() {
+    const selector = qs('#ypSelector');
+    const selectedText = selector?.selectedOptions?.[0]?.textContent?.trim() || '';
+    const activeTab = qs('#ypTabs .active')?.dataset?.tab || '';
+    return {
+      youngPersonId: document.body?.dataset?.youngPersonId || qs('#ypShell')?.dataset?.youngPersonId || selector?.value || '',
+      youngPersonName: selectedText || qs('#ypPersonName')?.textContent?.trim() || 'Selected young person',
+      section: activeTab || 'daily',
+    };
   }
 
   function enhanceRecordCards() {
@@ -79,38 +100,52 @@
       qsa('.yp-record-card', list).forEach(card => {
         if (card.dataset.icEnhanced) return;
         card.dataset.icEnhanced = 'true';
-
-        // make focusable
         card.setAttribute('tabindex', '0');
         card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', `Open ${qs('h3', card)?.textContent || 'record'}`);
 
-        // add actions footer
         const actions = document.createElement('div');
         actions.className = 'ic-record-actions';
         actions.innerHTML = `
           <button type="button" data-action="open">Open</button>
-          <button type="button" data-action="edit">Edit</button>
+          <button type="button" data-action="create-action">Add action</button>
+          <button type="button" data-action="link-evidence">Link evidence</button>
           <button type="button" data-action="assistant">Ask Assistant</button>
         `;
         card.appendChild(actions);
 
-        // click to open detail
-        const open = () => openDetailFromCard(card);
         card.addEventListener('click', (e) => {
-          const act = e.target.closest('[data-action]');
-          if (act && act.dataset.action !== 'open') return; // only open on card or open button
-          open();
+          const action = e.target.closest('[data-action]')?.dataset?.action || 'open';
+          if (action === 'open') return openDetailFromCard(card);
+          if (action === 'create-action') return openActionBuilder(card);
+          if (action === 'link-evidence') return openEvidenceBuilder(card);
+          if (action === 'assistant') return sendRecordToAssistant(card);
         });
+
         card.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openDetailFromCard(card);
+          }
         });
       });
     }
 
-    // initial + observe
     decorate();
     const mo = new MutationObserver(decorate);
     mo.observe(list, { childList: true, subtree: true });
+  }
+
+  function extractRecord(card) {
+    const ctx = currentContext();
+    return {
+      title: qs('h3', card)?.textContent?.trim() || 'Record',
+      body: qs('p', card)?.textContent?.trim() || '',
+      meta: qsa('.yp-chip', card).map(n => n.textContent.trim()).filter(Boolean),
+      section: ctx.section,
+      youngPersonId: ctx.youngPersonId,
+      youngPersonName: ctx.youngPersonName,
+    };
   }
 
   function ensureDetailHost() {
@@ -121,14 +156,18 @@
     host.id = 'icRecordDetail';
     host.className = 'ic-os-record-detail';
     host.innerHTML = `
-      <div class="ic-os-record-detail-panel" role="dialog" aria-modal="true">
+      <div class="ic-os-record-detail-panel" role="dialog" aria-modal="true" aria-labelledby="icDetailTitle">
         <div class="ic-os-record-detail-head">
           <div>
-            <p class="yp-eyebrow">Record</p>
+            <p class="yp-eyebrow" id="icDetailType">Record</p>
             <h2 id="icDetailTitle">Record</h2>
             <p id="icDetailMeta"></p>
           </div>
-          <button id="icDetailClose" class="yp-button">Close</button>
+          <div class="ic-detail-head-actions">
+            <button id="icDetailAssistant" class="yp-button yp-button-primary" type="button">Ask Assistant</button>
+            <button id="icDetailAction" class="yp-button" type="button">Add action</button>
+            <button id="icDetailClose" class="yp-button" type="button">Close</button>
+          </div>
         </div>
         <div class="ic-os-record-detail-grid" id="icDetailGrid"></div>
       </div>
@@ -136,28 +175,152 @@
     document.body.appendChild(host);
 
     qs('#icDetailClose', host).addEventListener('click', () => host.classList.remove('open'));
+    qs('#icDetailAssistant', host).addEventListener('click', () => OS.selectedCard && sendRecordToAssistant(OS.selectedCard));
+    qs('#icDetailAction', host).addEventListener('click', () => OS.selectedCard && openActionBuilder(OS.selectedCard));
     host.addEventListener('click', (e) => { if (e.target === host) host.classList.remove('open'); });
 
     return host;
   }
 
   function openDetailFromCard(card) {
-    const host = ensureDetailHost();
-    const title = qs('h3', card)?.textContent || 'Record';
-    const body = qs('p', card)?.textContent || '';
-    const chips = qsa('.yp-chip', card).map(n => n.textContent).join(' · ');
+    OS.selectedCard = card;
+    OS.selectedRecord = extractRecord(card);
+    qsa('.yp-record-card').forEach(item => item.classList.toggle('ic-record-open', item === card));
 
+    const record = OS.selectedRecord;
+    const host = ensureDetailHost();
     const grid = qs('#icDetailGrid', host);
+
     grid.innerHTML = `
-      <div class="ic-os-detail-block"><strong>Summary</strong>${escapeHtml(body)}</div>
-      <div class="ic-os-detail-block"><strong>Meta</strong>${escapeHtml(chips)}</div>
-      <div class="ic-os-detail-block"><strong>Actions</strong>Open · Edit · Link to risk · Add follow-up</div>
+      <div class="ic-os-detail-block ic-os-detail-block-wide"><strong>Summary</strong><p>${escapeHtml(record.body || 'No further detail recorded.')}</p></div>
+      <div class="ic-os-detail-block"><strong>Young person</strong><p>${escapeHtml(record.youngPersonName)}</p></div>
+      <div class="ic-os-detail-block"><strong>Section</strong><p>${escapeHtml(record.section)}</p></div>
+      <div class="ic-os-detail-block"><strong>Status and dates</strong><p>${escapeHtml(record.meta.join(' · ') || 'No status recorded')}</p></div>
+      <div class="ic-os-detail-block"><strong>Linked actions</strong><p>No linked actions yet. Use Add action to create follow-up.</p></div>
+      <div class="ic-os-detail-block"><strong>Evidence</strong><p>Ready to link to SCCIF, report evidence or manager review.</p></div>
+      <div class="ic-os-detail-block"><strong>Audit trail</strong><p>Opened in IndiCare OS. Full audit trail can be wired to backend record events next.</p></div>
     `;
 
-    qs('#icDetailTitle', host).textContent = title;
-    qs('#icDetailMeta', host).textContent = chips;
-
+    qs('#icDetailTitle', host).textContent = record.title;
+    qs('#icDetailMeta', host).textContent = record.meta.join(' · ');
+    qs('#icDetailType', host).textContent = `${record.section} record`;
     host.classList.add('open');
+  }
+
+  function ensureDrawerHost() {
+    let host = qs('#icOsDrawer');
+    if (host) return host;
+    host = document.createElement('section');
+    host.id = 'icOsDrawer';
+    host.className = 'ic-os-drawer';
+    host.innerHTML = `
+      <div class="ic-os-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="icDrawerTitle">
+        <header class="ic-os-drawer-head">
+          <div>
+            <p class="yp-eyebrow" id="icDrawerEyebrow">IndiCare OS</p>
+            <h2 id="icDrawerTitle">Action</h2>
+            <p id="icDrawerSubtitle"></p>
+          </div>
+          <button class="yp-button" type="button" id="icDrawerClose">Close</button>
+        </header>
+        <div id="icDrawerBody" class="ic-os-drawer-body"></div>
+      </div>
+    `;
+    document.body.appendChild(host);
+    qs('#icDrawerClose', host).addEventListener('click', () => host.classList.remove('open'));
+    host.addEventListener('click', e => { if (e.target === host) host.classList.remove('open'); });
+    return host;
+  }
+
+  function openDrawer(title, subtitle, body, eyebrow) {
+    const host = ensureDrawerHost();
+    qs('#icDrawerTitle', host).textContent = title;
+    qs('#icDrawerSubtitle', host).textContent = subtitle || '';
+    qs('#icDrawerEyebrow', host).textContent = eyebrow || 'IndiCare OS';
+    qs('#icDrawerBody', host).innerHTML = body;
+    host.classList.add('open');
+  }
+
+  function openActionBuilder(card) {
+    OS.selectedCard = card;
+    const record = extractRecord(card);
+    openDrawer(
+      'Create linked action',
+      `Linked to: ${record.title}`,
+      `
+        <form class="ic-os-form" id="icActionForm">
+          <label><span>Action required</span><textarea name="action" rows="4">Follow up: ${escapeHtml(record.title)}</textarea></label>
+          <label><span>Owner</span><input name="owner" placeholder="Staff member or manager" /></label>
+          <label><span>Due date</span><input name="due" type="date" /></label>
+          <label><span>Priority</span><select name="priority"><option>Routine</option><option>Important</option><option>Urgent safeguarding</option><option>Manager review</option></select></label>
+          <button class="yp-button yp-button-primary" type="submit">Save linked action</button>
+        </form>
+        <div class="ic-os-save-note" id="icActionSaveNote"></div>
+      `,
+      'Action OS'
+    );
+    qs('#icActionForm')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      qs('#icActionSaveNote').textContent = 'Action captured locally in the OS layer. Backend persistence can be connected to the tasks/actions router next.';
+      markCardWithBadge(card, 'Action drafted');
+    });
+  }
+
+  function openEvidenceBuilder(card) {
+    OS.selectedCard = card;
+    const record = extractRecord(card);
+    openDrawer(
+      'Link evidence',
+      `Prepare this record for quality, manager review or Ofsted evidence.`,
+      `
+        <form class="ic-os-form" id="icEvidenceForm">
+          <label><span>Evidence category</span><select name="category"><option>Child lived experience</option><option>Safeguarding</option><option>Health and wellbeing</option><option>Education</option><option>Leadership and management</option><option>Workforce</option></select></label>
+          <label><span>Evidence note</span><textarea rows="5">${escapeHtml(record.title)} shows...</textarea></label>
+          <label><span>Review destination</span><select><option>Manager review</option><option>SCCIF evidence</option><option>Reg 45</option><option>Quality audit</option></select></label>
+          <button class="yp-button yp-button-primary" type="submit">Save evidence link</button>
+        </form>
+        <div class="ic-os-save-note" id="icEvidenceSaveNote"></div>
+      `,
+      'Evidence OS'
+    );
+    qs('#icEvidenceForm')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      qs('#icEvidenceSaveNote').textContent = 'Evidence link captured locally in the OS layer. Backend persistence can be connected to evidence/inspection routers next.';
+      markCardWithBadge(card, 'Evidence linked');
+    });
+  }
+
+  function markCardWithBadge(card, text) {
+    const meta = qs('.yp-record-meta', card) || card;
+    const badge = document.createElement('span');
+    badge.className = 'yp-chip ic-os-live-chip';
+    badge.textContent = text;
+    meta.appendChild(badge);
+  }
+
+  function sendRecordToAssistant(card) {
+    const record = extractRecord(card);
+    const assistantTab = qs('#ypTabs [data-tab="assistant"]');
+    if (assistantTab) assistantTab.click();
+    syncActiveSidebarTab('assistant');
+
+    const input = qs('#ypAssistantInput');
+    if (input) {
+      input.value = `Review this ${record.section} record for ${record.youngPersonName}.\n\nTitle: ${record.title}\n\nSummary: ${record.body}\n\nPlease identify safeguarding concerns, follow-up actions, evidence value and manager oversight needs.`;
+      input.focus();
+    }
+
+    const status = qs('#ypAssistantStatus');
+    if (status) status.textContent = 'Record context loaded. Press Send to ask IndiCare Assistant.';
+
+    const detail = qs('#icRecordDetail');
+    if (detail) detail.classList.remove('open');
+  }
+
+  function bindTabSync() {
+    qsa('#ypTabs [data-tab]').forEach(button => {
+      button.addEventListener('click', () => syncActiveSidebarTab(button.dataset.tab || 'daily'));
+    });
   }
 
   function escapeHtml(s) {
@@ -167,6 +330,7 @@
   function start() {
     document.body.classList.add('indicare-os-body');
     injectSidebar();
+    bindTabSync();
     enhanceRecordCards();
   }
 
