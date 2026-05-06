@@ -3,80 +3,71 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IndiCare | Child-centred Care OS</title>
+  <title>IndiCare | i-Docs Care OS</title>
   <link rel="stylesheet" href="/css/indicare-workspace.css" />
   <link rel="stylesheet" href="/css/indicare-blue-os.css" />
 </head>
 <body>
-  <div class="app-shell premium-os-shell" data-app="indicare-workspace">
-    <aside class="sidebar" aria-label="IndiCare navigation">
+  <div class="app-shell premium-os-shell i-docs-shell" data-app="indicare-workspace">
+    <aside class="sidebar" aria-label="IndiCare i-Docs navigation">
       <div class="brand-block">
-        <div class="brand-mark">IC</div>
+        <div class="brand-mark">iD</div>
         <div>
           <p class="eyebrow">IndiCare</p>
-          <h1>Child-centred Care OS</h1>
+          <h1>i-Docs Care OS</h1>
         </div>
       </div>
 
       <nav class="workspace-nav" id="workspace-nav">
         <details class="nav-section" open>
-          <summary>Operational care</summary>
+          <summary>Child workspace</summary>
           <div class="nav-section-body">
-            <button class="nav-item active" data-view="today-child">Today for children</button>
-            <button class="nav-item" data-view="daily">Daily recording</button>
-            <button class="nav-item" data-view="incidents">Incidents</button>
-            <button class="nav-item" data-view="safeguarding">Safeguarding</button>
-            <button class="nav-item" data-view="missing">Missing from care</button>
-            <button class="nav-item" data-view="handover">Shift handover</button>
+            <button class="nav-item active" data-view="child-overview">Child overview</button>
+            <button class="nav-item" data-view="child-timeline">Memory stream</button>
+            <button class="nav-item" data-view="child-file">i-Docs library</button>
           </div>
         </details>
 
         <details class="nav-section" open>
-          <summary>Children</summary>
+          <summary>Record in i-Docs</summary>
           <div class="nav-section-body">
-            <button class="nav-item" data-view="child-life">Child's world</button>
-            <button class="nav-item" data-view="my-voice">Voice & identity</button>
-            <button class="nav-item" data-view="child-timeline">Memory stream</button>
-            <button class="nav-item" data-view="child-file">Documents OS</button>
-            <button class="nav-item" data-view="knowledge">Plans & evidence</button>
+            <button class="nav-item" data-doc-workflow="daily">Daily record</button>
+            <button class="nav-item" data-doc-workflow="incident">Incident record</button>
+            <button class="nav-item" data-doc-workflow="safeguarding">Safeguarding record</button>
+            <button class="nav-item" data-doc-workflow="missing">Missing from care</button>
+            <button class="nav-item" data-doc-workflow="direct_work">Direct work</button>
+            <button class="nav-item" data-doc-workflow="voice">Child voice</button>
           </div>
         </details>
 
-        <details class="nav-section">
+        <details class="nav-section" open>
           <summary>Governance</summary>
           <div class="nav-section-body">
-            <button class="nav-item" data-view="review">Manager review queue</button>
-            <button class="nav-item" data-view="intelligence">Home intelligence</button>
-            <button class="nav-item" data-view="reg45">Reg 45</button>
-            <button class="nav-item" data-view="ofsted">Inspection readiness</button>
+            <button class="nav-item" data-view="child-file" data-doc-filter="submitted_for_review">Awaiting review</button>
+            <button class="nav-item" data-view="child-file" data-doc-filter="approved">Approved evidence</button>
+            <button class="nav-item" data-view="child-file" data-doc-filter="archived">Archive</button>
           </div>
         </details>
       </nav>
 
       <div class="sidebar-note">
-        <strong>Core workflow</strong>
-        <span>Click → Write → IndiCare AI improves → Submit → Manager review → Approve → Archive → Retrieve.</span>
+        <strong>i-Docs workflow</strong>
+        <span>Choose child → open i‑Doc → write → AI improves → submit → manager reviews → approve/archive → retrieve by date.</span>
       </div>
     </aside>
 
     <main class="main-panel main-panel-no-topbar">
-      <section class="os-command-centre" aria-label="Workspace command centre">
+      <section class="os-command-centre" aria-label="i-Docs command centre">
         <div>
-          <p class="eyebrow">Operational command centre</p>
-          <h2 id="view-title">What do children need today?</h2>
-          <p id="view-subtitle">Start with the child, understand the context, record naturally, and let IndiCare connect chronology, safeguarding and evidence automatically.</p>
+          <p class="eyebrow">i-Docs operating workspace</p>
+          <h2 id="view-title">Choose your home and young person</h2>
+          <p id="view-subtitle">The OS opens after a home and child are selected. Every record, form and plan opens through i‑Docs.</p>
         </div>
 
         <div class="os-command-actions">
-          <select id="role-switch" aria-label="Role view">
-            <option value="rsw">Residential support worker</option>
-            <option value="senior">Senior RSW</option>
-            <option value="manager" selected>Registered manager</option>
-            <option value="ri">Responsible individual</option>
-          </select>
-
-          <button class="secondary-action" id="refresh-workspace-button">Refresh workspace</button>
-          <button class="primary-action" id="new-record-button">Create record</button>
+          <button class="secondary-action" id="change-child-button">Change child</button>
+          <button class="secondary-action" id="open-doc-library-button">i-Docs library</button>
+          <button class="primary-action" id="new-record-button">New i‑Doc</button>
         </div>
       </section>
 
@@ -88,68 +79,13 @@
     </main>
   </div>
 
-  <div class="modal-backdrop hidden" id="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-modal-title">
-    <form class="record-modal" id="record-form">
-      <div class="modal-header">
-        <div>
-          <p class="eyebrow">Universal record engine</p>
-          <h2 id="record-modal-title">Create care record</h2>
-        </div>
-
-        <button type="button" class="icon-button" id="close-modal" aria-label="Close">×</button>
-      </div>
-
-      <div class="context-bar premium-context-bar">
-        <div class="context-block child-context">
-          <label>Current child</label>
-          <div class="child-summary" id="active-child-summary">
-            <strong>No child selected</strong>
-            <span>Select a child to link chronology, safeguarding and plans automatically.</span>
-          </div>
-        </div>
-
-        <div class="context-block">
-          <label>Workflow</label>
-          <div class="child-summary">
-            <strong>Draft → AI → Review</strong>
-            <span>Records stay editable with version history and manager oversight.</span>
-          </div>
-        </div>
-      </div>
-
-      <div id="record-form-fields" class="form-fields"></div>
-      <div id="smart-form-guidance" class="smart-form-guidance"></div>
-
-      <div class="modal-actions">
-        <button type="button" class="secondary-action" id="save-draft">Save draft</button>
-        <button type="button" class="secondary-action" id="improve-with-ai">Improve with AI</button>
-        <button type="submit" class="primary-action">Submit for review</button>
-      </div>
-    </form>
-  </div>
-
   <script type="module" src="/js/indicare-workspace/context-store.js"></script>
-  <script type="module" src="/js/indicare-workspace/context-bar.js"></script>
-  <script type="module" src="/js/indicare-workspace/checkin-child-first.js"></script>
-  <script type="module" src="/js/indicare-workspace/records-api-ui.js"></script>
   <script type="module" src="/js/indicare-workspace/indicare-document-processor.js"></script>
-  <script type="module" src="/js/indicare-workspace/care-loop-engine.js"></script>
-  <script type="module" src="/js/indicare-workspace/outcome-engine.js"></script>
-  <script type="module" src="/js/indicare-workspace/child-evidence-engine.js"></script>
-  <script type="module" src="/js/indicare-workspace/child-intelligence-engine.js"></script>
-  <script type="module" src="/js/indicare-workspace/today-for-child.js"></script>
-  <script type="module" src="/js/indicare-workspace/child-journey-experience.js"></script>
+  <script type="module" src="/js/indicare-workspace/checkin-child-first.js"></script>
   <script type="module" src="/js/indicare-workspace/child-digital-file.js"></script>
-  <script type="module" src="/js/indicare-workspace/child-life-ecosystem.js"></script>
-  <script type="module" src="/js/indicare-workspace/child-understanding-hub.js"></script>
   <script type="module" src="/js/indicare-workspace/child-timeline.js"></script>
-  <script type="module" src="/js/indicare-workspace/live-care-intelligence.js"></script>
-  <script type="module" src="/js/indicare-workspace/inspection-command-centre.js"></script>
-  <script type="module" src="/js/indicare-workspace/trust-governance.js"></script>
-  <script type="module" src="/js/indicare-workspace/manager-oversight.js"></script>
-  <script type="module" src="/js/indicare-workspace/proactive-alerts.js"></script>
-  <script type="module" src="/js/indicare-workspace/knowledge-view.js"></script>
-  <script type="module" src="/js/indicare-workspace/alerts-view.js"></script>
+  <script type="module" src="/js/indicare-workspace/universal-doc-os-actions.js"></script>
+  <script type="module" src="/js/indicare-workspace/i-docs-os-shell.js"></script>
   <script type="module" src="/js/indicare-workspace/contextual-care-copilot.js"></script>
 </body>
 </html>
