@@ -1,0 +1,128 @@
+/* Enterprise login gateway overrides.
+   Loaded after page-level styles through the app shell so the login screen uses
+   the full viewport rather than a constrained centred layout. */
+
+body:has(.signin-card) {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body:has(.signin-card) .page {
+  width: 100%;
+  min-height: 100vh;
+  display: block;
+}
+
+body:has(.signin-card) .shell {
+  width: 100vw;
+  max-width: none;
+  min-height: 100vh;
+  grid-template-columns: minmax(0, 1.18fr) minmax(480px, 0.82fr);
+}
+
+body:has(.signin-card) .brand-panel {
+  min-height: 100vh;
+  padding: clamp(2.5rem, 6vw, 7.5rem);
+}
+
+body:has(.signin-card) .brand-panel::before {
+  inset: clamp(1rem, 2vw, 2.5rem);
+}
+
+body:has(.signin-card) .brand-content {
+  max-width: 760px;
+}
+
+body:has(.signin-card) .brand-title {
+  max-width: 13ch;
+  font-size: clamp(3.2rem, 5.8vw, 6.5rem);
+}
+
+body:has(.signin-card) .brand-copy {
+  max-width: 68ch;
+  font-size: clamp(1.05rem, 1.2vw, 1.2rem);
+}
+
+body:has(.signin-card) .feature-list {
+  max-width: 760px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+body:has(.signin-card) .feature-card {
+  grid-template-columns: 1fr;
+}
+
+body:has(.signin-card) .form-panel {
+  min-height: 100vh;
+  justify-content: stretch;
+  align-items: stretch;
+  padding: clamp(1.25rem, 3vw, 3rem);
+}
+
+body:has(.signin-card) .signin-card {
+  width: 100%;
+  max-width: none;
+  min-height: calc(100vh - clamp(2.5rem, 6vw, 6rem));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.75rem, 3.2vw, 3.2rem);
+}
+
+body:has(.signin-card) .passkey-panel {
+  border-width: 1px;
+  box-shadow: 0 18px 38px rgba(24, 53, 127, 0.10);
+}
+
+body:has(.signin-card) .security-note::before {
+  content: "Enterprise controls enabled: ";
+  font-weight: 900;
+  color: #244f38;
+}
+
+body:has(.signin-card) #enterpriseSecurityBadges {
+  margin-top: 1rem !important;
+}
+
+@media (max-width: 1180px) {
+  body:has(.signin-card) .shell {
+    grid-template-columns: 1fr;
+  }
+
+  body:has(.signin-card) .brand-panel,
+  body:has(.signin-card) .form-panel {
+    min-height: auto;
+  }
+
+  body:has(.signin-card) .brand-panel {
+    padding: 2rem 1.25rem 1rem;
+  }
+
+  body:has(.signin-card) .form-panel {
+    padding: 1rem 1.25rem 2rem;
+  }
+
+  body:has(.signin-card) .signin-card {
+    min-height: auto;
+  }
+
+  body:has(.signin-card) .feature-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  body:has(.signin-card) .brand-title {
+    font-size: clamp(2.35rem, 13vw, 3.4rem);
+    max-width: none;
+  }
+
+  body:has(.signin-card) .shell {
+    width: 100%;
+  }
+
+  body:has(.signin-card) .signin-card {
+    border-radius: 24px;
+  }
+}
