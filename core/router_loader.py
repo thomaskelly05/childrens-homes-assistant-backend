@@ -16,6 +16,7 @@ routers.notifications_routes
 routers.frontend_compat
 routers.young_people_shell_item_compat_routes
 routers.young_people_safe_routes
+routers.home_selector_routes
 routers.account_routes
 routers.admin_routes
 routers.founder_ai_routes
@@ -34,6 +35,7 @@ routers.provider_intelligence_routes
 routers.predictive_risk_routes
 routers.realtime_alerts_routes
 routers.workspace_records_routes
+routers.child_documents_routes
 routers.young_people_assistant_routes
 routers.operational_intelligence_routes
 routers.inspection_os_routes
