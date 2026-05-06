@@ -2,9 +2,15 @@
   const DEFAULT_REDIRECT = "/os-command";
   const REDIRECT_GUARD_KEY = "indicare_login_redirect_guard";
   const RECENT_GUARD_MS = 4500;
+  const LOGIN_PATHS = new Set(["/", "/login", "/login.html", "/oslogin", "/oslogin.html"]);
 
   function qs(id) {
     return document.getElementById(id);
+  }
+
+  function isLoginPage() {
+    const path = window.location.pathname.replace(/\/$/, "") || "/";
+    return LOGIN_PATHS.has(path) && Boolean(qs("loginForm") || qs("passkeyBtn") || document.querySelector(".signin-card"));
   }
 
   function safeNextUrl() {
@@ -196,6 +202,7 @@
   }
 
   function init() {
+    if (!isLoginPage()) return;
     const passkeyBtn = qs("passkeyBtn");
     const passkeyForm = qs("passkeyForm");
     const form = qs("loginForm");

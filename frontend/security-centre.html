@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare OS | Security Centre</title>
+  <meta name="description" content="Manage active sessions, devices, passkeys and account security for IndiCare OS." />
+  <meta name="theme-color" content="#18357f" />
+  <style>
+    :root {
+      --bg: #eef4fb;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #5b6c84;
+      --line: #dbe5f2;
+      --primary: #18357f;
+      --primary2: #2354c7;
+      --good: #1f7a4f;
+      --warn: #8a5600;
+      --bad: #9f1239;
+      --shadow: 0 24px 70px rgba(15,23,42,.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top left, rgba(35,84,199,.12), transparent 30%), linear-gradient(135deg, #f8fbff, var(--bg));
+    }
+    button, input { font: inherit; }
+    a { color: var(--primary); font-weight: 800; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .page { width: min(1260px, 100%); margin: 0 auto; padding: clamp(1rem, 4vw, 3rem); }
+    .hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: end; margin-bottom: 1.5rem; }
+    .eyebrow { color: var(--primary2); font-size: .82rem; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+    h1 { margin: .45rem 0 .55rem; font-size: clamp(2.2rem, 5vw, 4.5rem); line-height: .96; letter-spacing: -.055em; }
+    .lead { margin: 0; max-width: 70ch; color: var(--muted); line-height: 1.7; }
+    .actions { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: flex-end; }
+    .btn { min-height: 44px; border-radius: 14px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 900; padding: .75rem 1rem; cursor: pointer; }
+    .btn-primary { border: 0; color: #fff; background: linear-gradient(135deg, var(--primary2), var(--primary)); box-shadow: 0 12px 24px rgba(24,53,127,.20); }
+    .btn-danger { border-color: rgba(159,18,57,.20); color: var(--bad); background: #fff7f9; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
+    .card { grid-column: span 12; background: rgba(255,255,255,.92); border: 1px solid rgba(15,23,42,.08); border-radius: 24px; box-shadow: var(--shadow); padding: clamp(1rem, 2.5vw, 1.5rem); }
+    .card-third { grid-column: span 4; }
+    .card-half { grid-column: span 6; }
+    .card h2 { margin: 0 0 .5rem; font-size: 1.15rem; }
+    .card p { margin: 0; color: var(--muted); line-height: 1.55; }
+    .metric { font-size: 2.1rem; font-weight: 950; margin-top: .75rem; }
+    .status { min-height: 1.5rem; color: var(--muted); margin: .75rem 0 0; }
+    .status.error { color: var(--bad); }
+    .status.success { color: var(--good); }
+    .session-list { display: grid; gap: .8rem; margin-top: 1rem; }
+    .session { display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: center; padding: 1rem; border: 1px solid var(--line); border-radius: 18px; background: #fbfdff; }
+    .session-title { font-weight: 950; margin-bottom: .25rem; }
+    .session-meta { color: var(--muted); font-size: .9rem; line-height: 1.45; }
+    .pill { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .55rem; border-radius: 999px; font-size: .78rem; font-weight: 850; margin: .35rem .35rem 0 0; background: #eef8f2; color: #244f38; border: 1px solid rgba(31,122,79,.12); }
+    .pill-warn { background: #fff7e8; color: var(--warn); border-color: rgba(138,86,0,.14); }
+    .pill-bad { background: #fff0f3; color: var(--bad); border-color: rgba(159,18,57,.14); }
+    .empty { padding: 1.25rem; border-radius: 18px; background: #f8fbff; color: var(--muted); border: 1px dashed var(--line); text-align: center; }
+    @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } .actions { justify-content: flex-start; } .card-third, .card-half { grid-column: span 12; } .session { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Enterprise security centre</div>
+        <h1>Protect your IndiCare access.</h1>
+        <p class="lead">Review active sessions, revoke devices you do not recognise, and manage the security controls that protect children’s home records.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/os-command">Back to workspace</a>
+        <button class="btn btn-primary" id="refreshSecurityBtn" type="button">Refresh</button>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="Security summary">
+      <article class="card card-third">
+        <h2>Active sessions</h2>
+        <p>Signed-in browser/device sessions for your account.</p>
+        <div class="metric" id="activeSessionCount">—</div>
+      </article>
+      <article class="card card-third">
+        <h2>Passkey protection</h2>
+        <p>Passkeys should be your primary sign-in method.</p>
+        <div class="metric" id="passkeyStatus">—</div>
+      </article>
+      <article class="card card-third">
+        <h2>MFA status</h2>
+        <p>Multi-factor verification protects sensitive actions.</p>
+        <div class="metric" id="mfaStatus">—</div>
+      </article>
+
+      <article class="card card-half">
+        <h2>Active sessions and devices</h2>
+        <p>Revoke any session you do not recognise. If unsure, use “revoke all other sessions”.</p>
+        <div class="status" id="sessionStatus" role="status" aria-live="polite"></div>
+        <div class="session-list" id="sessionList"></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:1rem;">
+          <button class="btn btn-danger" id="revokeAllBtn" type="button">Revoke all other sessions</button>
+        </div>
+      </article>
+
+      <article class="card card-half">
+        <h2>Security guidance</h2>
+        <p>Use these controls when working with sensitive safeguarding and care information.</p>
+        <div class="session-list">
+          <div class="session"><div><div class="session-title">Use passkeys first</div><div class="session-meta">Face ID, Touch ID, Windows Hello, fingerprint, or hardware keys reduce password and phishing risk.</div></div></div>
+          <div class="session"><div><div class="session-title">Lock shared devices</div><div class="session-meta">Never leave children’s records visible on screen. Revoke sessions from shared or lost devices immediately.</div></div></div>
+          <div class="session"><div><div class="session-title">Step up before sensitive actions</div><div class="session-meta">Exports, deletions, security changes, and safeguarding actions should require fresh verification.</div></div></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const sessionList = document.getElementById("sessionList");
+      const sessionStatus = document.getElementById("sessionStatus");
+      const activeSessionCount = document.getElementById("activeSessionCount");
+      const passkeyStatus = document.getElementById("passkeyStatus");
+      const mfaStatus = document.getElementById("mfaStatus");
+      const revokeAllBtn = document.getElementById("revokeAllBtn");
+      const refreshBtn = document.getElementById("refreshSecurityBtn");
+
+      function setStatus(message, type = "") {
+        sessionStatus.textContent = message || "";
+        sessionStatus.className = `status ${type}`.trim();
+      }
+
+      function formatDate(value) {
+        if (!value) return "Unknown";
+        try { return new Date(value).toLocaleString("en-GB"); } catch (_) { return String(value); }
+      }
+
+      function renderSessions(sessions) {
+        sessionList.innerHTML = "";
+        if (!Array.isArray(sessions) || sessions.length === 0) {
+          sessionList.innerHTML = '<div class="empty">No active sessions found.</div>';
+          activeSessionCount.textContent = "0";
+          return;
+        }
+        const active = sessions.filter((item) => !item.revoked_at);
+        activeSessionCount.textContent = String(active.length);
+        sessions.forEach((session) => {
+          const item = document.createElement("div");
+          item.className = "session";
+          const revoked = Boolean(session.revoked_at);
+          item.innerHTML = `
+            <div>
+              <div class="session-title">${session.user_agent || "Unknown device"}</div>
+              <div class="session-meta">IP: ${session.ip_address || "Unknown"}<br>Created: ${formatDate(session.created_at)}<br>Last seen: ${formatDate(session.last_seen_at)}</div>
+              <span class="pill ${revoked ? "pill-bad" : ""}">${revoked ? "Revoked" : "Active"}</span>
+              ${session.trusted_device ? '<span class="pill">Trusted device</span>' : '<span class="pill pill-warn">Untrusted device</span>'}
+              ${session.mfa_verified ? '<span class="pill">MFA verified</span>' : '<span class="pill pill-warn">MFA unknown</span>'}
+              ${session.passkey_authenticated ? '<span class="pill">Passkey</span>' : '<span class="pill pill-warn">Password/session</span>'}
+            </div>
+            <div>${revoked ? "" : '<button class="btn btn-danger" type="button">Revoke</button>'}</div>
+          `;
+          const button = item.querySelector("button");
+          if (button) {
+            button.addEventListener("click", async () => {
+              if (!confirm("Revoke this session? The device may need to sign in again.")) return;
+              try {
+                await window.auth.revokeSession(session.session_id);
+                setStatus("Session revoked.", "success");
+                await loadSecurityCentre();
+              } catch (error) {
+                setStatus(error?.message || "Could not revoke session.", "error");
+              }
+            });
+          }
+          sessionList.appendChild(item);
+        });
+      }
+
+      async function loadSecurityCentre() {
+        setStatus("Loading security information...");
+        try {
+          const ok = await window.auth.requireAuth();
+          if (!ok) return;
+          const user = window.auth.getStoredUser() || {};
+          passkeyStatus.textContent = user.has_passkeys ? "On" : "Set up";
+          mfaStatus.textContent = user.mfa_verified ? "Verified" : (user.mfa_enabled ? "Required" : "Set up");
+          const data = await window.auth.listSessions();
+          renderSessions(data?.sessions || []);
+          setStatus("Security information loaded.", "success");
+        } catch (error) {
+          setStatus(error?.message || "Could not load security centre.", "error");
+        }
+      }
+
+      revokeAllBtn.addEventListener("click", async () => {
+        if (!confirm("Revoke all other sessions? Other devices will need to sign in again.")) return;
+        try {
+          await window.auth.revokeAllOtherSessions();
+          setStatus("Other sessions revoked.", "success");
+          await loadSecurityCentre();
+        } catch (error) {
+          setStatus(error?.message || "Could not revoke sessions.", "error");
+        }
+      });
+      refreshBtn.addEventListener("click", loadSecurityCentre);
+      document.addEventListener("DOMContentLoaded", loadSecurityCentre);
+    })();
+  </script>
+</body>
+</html>
