@@ -10,6 +10,7 @@ createLiveWorkspaceStatus();
 loadLiveTherapeuticOrchestration();
 loadOutcomeStorytelling();
 loadCareCopilotChat();
+loadLiveChildProfile();
 enhanceReportsNavigation();
 enhanceNavigation();
 watchWorkspaceTransitions();
@@ -28,6 +29,7 @@ function createLiveWorkspaceStatus() {
     <div class="os-live-pill">Inspection evidence connected</div>
     <div class="os-live-pill">Child voice monitoring active</div>
     <div class="os-live-pill">Care Copilot ready</div>
+    <div class="os-live-pill">Live child profile active</div>
   `;
 }
 
@@ -46,6 +48,12 @@ function loadOutcomeStorytelling() {
 function loadCareCopilotChat() {
   import('./contextual-care-copilot.js').catch(() => {
     if (statusStrip) statusStrip.innerHTML += `<div class="os-live-pill">Care Copilot warming up</div>`;
+  });
+}
+
+function loadLiveChildProfile() {
+  import('./live-child-profile.js').catch(() => {
+    if (statusStrip) statusStrip.innerHTML += `<div class="os-live-pill">Child profile warming up</div>`;
   });
 }
 
