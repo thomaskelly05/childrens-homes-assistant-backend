@@ -21,6 +21,7 @@ def create_session_token(
     expires_seconds: int | None = None,
     mfa_verified: bool = False,
     remember: bool = False,
+    session_id: str | None = None,
 ) -> str:
     now = datetime.now(timezone.utc)
     expires_delta = (
@@ -37,6 +38,7 @@ def create_session_token(
         "nbf": int(now.timestamp()),
         "exp": int(expires_at.timestamp()),
         "jti": secrets.token_urlsafe(16),
+        "sid": session_id or secrets.token_urlsafe(24),
         "mfa_verified": bool(mfa_verified),
         "remember": bool(remember),
     }
