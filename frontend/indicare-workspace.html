@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/css/indicare-workspace.css" />
   <link rel="stylesheet" href="/css/workspace-enhancements.css" />
   <link rel="stylesheet" href="/css/workspace-redesign.css" />
+  <link rel="stylesheet" href="/css/premium-care-os.css" />
 </head>
 <body>
   <div class="app-shell" data-app="indicare-workspace">
@@ -20,7 +21,7 @@
         <details class="nav-section" open>
           <summary>Children</summary>
           <div class="nav-section-body">
-            <button class="nav-item active" data-view="child-file">Today for this child</button>
+            <button class="nav-item active" data-view="today-child">Today for this child</button>
             <button class="nav-item" data-view="child-life">Child's world</button>
             <button class="nav-item" data-view="child-timeline">Story timeline</button>
             <button class="nav-item" data-view="daily">Daily recording</button>
@@ -33,6 +34,7 @@
         <details class="nav-section" open>
           <summary>Child file</summary>
           <div class="nav-section-body">
+            <button class="nav-item" data-view="child-file">Digital child file</button>
             <button class="nav-item" data-view="documents">Plans & documents</button>
             <button class="nav-item" data-view="knowledge">Knowledge from documents</button>
             <button class="nav-item" data-view="child">Understanding hub</button>
@@ -43,6 +45,7 @@
           <summary>Home</summary>
           <div class="nav-section-body">
             <button class="nav-item" data-view="home">Home overview</button>
+            <button class="nav-item" data-view="care-intelligence">Live care intelligence</button>
             <button class="nav-item" data-view="alerts">Safeguarding & alerts</button>
             <button class="nav-item" data-view="rota">Shifts & handover</button>
             <button class="nav-item" data-view="mobile">Mobile staff view</button>
@@ -132,10 +135,12 @@
   <script type="module" src="/js/indicare-workspace/outcome-engine.js"></script>
   <script type="module" src="/js/indicare-workspace/child-evidence-engine.js"></script>
   <script type="module" src="/js/indicare-workspace/child-intelligence-engine.js"></script>
+  <script type="module" src="/js/indicare-workspace/today-for-child.js"></script>
   <script type="module" src="/js/indicare-workspace/child-digital-file.js"></script>
   <script type="module" src="/js/indicare-workspace/child-life-ecosystem.js"></script>
   <script type="module" src="/js/indicare-workspace/child-understanding-hub.js"></script>
   <script type="module" src="/js/indicare-workspace/child-timeline.js"></script>
+  <script type="module" src="/js/indicare-workspace/live-care-intelligence.js"></script>
   <script type="module" src="/js/indicare-workspace/manager-oversight.js"></script>
   <script type="module" src="/js/indicare-workspace/enhanced-assistant.js"></script>
   <script type="module" src="/js/indicare-workspace/proactive-alerts.js"></script>
