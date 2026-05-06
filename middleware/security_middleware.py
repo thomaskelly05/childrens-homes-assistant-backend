@@ -11,6 +11,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from auth.tokens import decode_session_token
+from routers.auth_routes import settings as auth_settings
+from services.audit_event_service import record_audit_event
+
 logger = logging.getLogger("indicare.security")
 
 SENSITIVE_PREFIXES = (
@@ -54,6 +58,22 @@ def _is_static_path(path: str) -> bool:
     return path.startswith(("/css", "/js", "/assets", "/components")) or path == "/favicon.ico"
 
 
+def _safe_actor_from_request(request: Request) -> dict:
+    token = (request.cookies.get(auth_settings.session_cookie_name) or "").strip()
+    if not token:
+        auth = request.headers.get("authorization") or ""
+        if auth.lower().startswith("bearer "):
+            token = auth[7:].strip()
+    payload = decode_session_token(token) if token else None
+    if not payload:
+        return {}
+    try:
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
+        return {}
+    return {"id": user_id}
+
+
 class CsrfProtectionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
@@ -70,6 +90,14 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
                 request.method,
                 path,
                 request.client.host if request.client else None,
+            )
+            record_audit_event(
+                event_type="security.csrf_blocked",
+                action="csrf_blocked",
+                outcome="blocked",
+                request=request,
+                actor=_safe_actor_from_request(request),
+                metadata={"path": path, "method": request.method},
             )
             return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
 
@@ -123,8 +151,9 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
         finally:
             duration_ms = round((time.perf_counter() - start) * 1000, 2)
             status_code = getattr(response, "status_code", 500)
+            should_audit = path.startswith(SENSITIVE_PREFIXES) or status_code >= 400
 
-            if path.startswith(SENSITIVE_PREFIXES) or status_code >= 400:
+            if should_audit:
                 logger.info(
                     "audit_event request_id=%s method=%s path=%s status=%s duration_ms=%s ip=%s user_agent=%s",
                     request_id,
@@ -134,6 +163,16 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
                     duration_ms,
                     request.client.host if request.client else None,
                     request.headers.get("user-agent", ""),
+                )
+                record_audit_event(
+                    event_type="http.request",
+                    action=f"{request.method} {path}",
+                    outcome="success" if status_code < 400 else "failure",
+                    request=request,
+                    actor=_safe_actor_from_request(request),
+                    resource_type="http_path",
+                    resource_id=path,
+                    metadata={"status_code": status_code, "duration_ms": duration_ms},
                 )
 
             if response is not None:
