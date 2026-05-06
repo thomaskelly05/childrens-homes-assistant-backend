@@ -330,7 +330,7 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
         _safe_session_reset(request)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Session could not be created")
 
-    token = create_session_token(user["id"])
+    token = create_session_token(user["id"], mfa_verified=not mfa_pending, remember=remember)
     _set_session_cookie(response, token, remember=remember)
     _set_csrf_cookie(response, csrf_token, remember=remember)
     _clear_failures(_client_ip(request), email)
@@ -341,7 +341,7 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
     if mfa_pending:
         return {"ok": True, "authenticated": False, "message": "Password accepted. MFA required." if mfa_enabled else "Password accepted. MFA setup required.", "mfa_required": True, "mfa_enabled": mfa_enabled, "mfa_setup_required": not mfa_enabled, "mfa_mandatory": force_mfa, "mfa_pending": True, "user": _session_user_payload(user, billing)}
 
-    return {"ok": True, "authenticated": True, "message": "Signed in", "mfa_required": False, "mfa_enabled": False, "mfa_mandatory": False, "mfa_pending": False, "user": _session_user_payload(user, billing)}
+    return {"ok": True, "authenticated": True, "message": "Signed in", "mfa_required": False, "mfa_enabled": mfa_enabled, "mfa_mandatory": False, "mfa_pending": False, "user": _session_user_payload(user, billing)}
 
 @router.post("/logout")
 def logout(request: Request, response: Response):
@@ -367,6 +367,20 @@ def check_auth(request: Request, authorization: str | None = Header(default=None
             pending_user_id = int(pending_user_id) if pending_user_id is not None else None
         except (TypeError, ValueError):
             pending_user_id = None
+
+        mfa_enabled = False
+        role = None
+        email = request.session.get("pending_mfa_email")
+        if pending_user_id is not None:
+            try:
+                pending_user = _get_user_by_id(conn, pending_user_id)
+                role = pending_user.get("role") if pending_user else None
+                email = pending_user.get("email") if pending_user else email
+                mfa_row = _get_mfa_safe(pending_user_id)
+                mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+            except Exception:
+                mfa_enabled = False
+
         expires_in_seconds = None
         try:
             login_at = int(request.session.get("login_at") or 0)
@@ -374,7 +388,18 @@ def check_auth(request: Request, authorization: str | None = Header(default=None
                 expires_in_seconds = max(0, settings.cookie_max_age_short - int(_now() - login_at))
         except Exception:
             expires_in_seconds = None
-        return {"authenticated": False, "mfa_pending": True, "mfa_enabled": True, "mfa_verified": False, "user_id": pending_user_id, "expires_in_seconds": expires_in_seconds}
+        return {
+            "authenticated": False,
+            "mfa_pending": True,
+            "mfa_required": True,
+            "mfa_enabled": mfa_enabled,
+            "mfa_setup_required": not mfa_enabled,
+            "mfa_mandatory": _mfa_required_for_role(role),
+            "mfa_verified": False,
+            "user_id": pending_user_id,
+            "email": email,
+            "expires_in_seconds": expires_in_seconds,
+        }
 
     user, user_id = _get_session_user_from_request(request, conn, authorization, raise_on_missing=False)
     if not user or user_id is None or user.get("archived") is True or user.get("is_active") is False:
