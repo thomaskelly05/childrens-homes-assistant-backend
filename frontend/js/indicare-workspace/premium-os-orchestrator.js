@@ -7,6 +7,7 @@ root.classList.add('premium-os-active');
 
 removeLegacyChrome();
 createLiveWorkspaceStatus();
+loadLiveTherapeuticOrchestration();
 enhanceNavigation();
 watchWorkspaceTransitions();
 
@@ -24,6 +25,14 @@ function createLiveWorkspaceStatus() {
     <div class="os-live-pill">Inspection evidence connected</div>
     <div class="os-live-pill">Child voice monitoring active</div>
   `;
+}
+
+function loadLiveTherapeuticOrchestration() {
+  import('./live-therapeutic-orchestration.js').catch(() => {
+    if (statusStrip) {
+      statusStrip.innerHTML += `<div class="os-live-pill">Live orchestration warming up</div>`;
+    }
+  });
 }
 
 function enhanceNavigation() {
@@ -58,7 +67,7 @@ function improveEmptyStates(workspace) {
     state.dataset.upgraded = 'true';
     state.innerHTML = `
       <div class="empty-state-premium">
-        <div class="empty-state-icon">💚</div>
+        <div class="empty-state-icon">Care</div>
         <div>${state.innerHTML}</div>
       </div>
     `;
