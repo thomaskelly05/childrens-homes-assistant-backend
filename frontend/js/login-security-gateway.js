@@ -2,7 +2,11 @@
   const DEFAULT_REDIRECT = "/os-command";
   const REDIRECT_GUARD_KEY = "indicare_login_redirect_guard";
   const RECENT_GUARD_MS = 4500;
+  const PASSKEY_PROMPT_WATCHDOG_MS = 90000;
   const LOGIN_PATHS = new Set(["/", "/login", "/login.html", "/oslogin", "/oslogin.html"]);
+  let passkeyInFlight = false;
+  let passwordInFlight = false;
+  let passkeyWatchdog = null;
 
   function qs(id) {
     return document.getElementById(id);
@@ -70,6 +74,24 @@
     setText(loginBtn, isBusy && mode === "password" ? "Signing in..." : "Sign in with password");
   }
 
+  function resetPasskeyPromptState(message, type) {
+    passkeyInFlight = false;
+    if (passkeyWatchdog) {
+      clearTimeout(passkeyWatchdog);
+      passkeyWatchdog = null;
+    }
+    setBusy(false, "passkey");
+    if (message) setStatus(message, type);
+  }
+
+  function startPasskeyWatchdog() {
+    if (passkeyWatchdog) clearTimeout(passkeyWatchdog);
+    passkeyWatchdog = setTimeout(() => {
+      if (!passkeyInFlight) return;
+      resetPasskeyPromptState("Passkey check timed out. Try again or use password fallback.", "error");
+    }, PASSKEY_PROMPT_WATCHDOG_MS);
+  }
+
   function emailValue() {
     const email = qs("email");
     const value = String(email?.value || "").trim().toLowerCase();
@@ -121,37 +143,58 @@
 
   async function handlePasskey(event) {
     event?.preventDefault?.();
+    event?.stopImmediatePropagation?.();
+    if (passkeyInFlight) {
+      setStatus("Passkey check already open. Complete it or cancel on your device.");
+      return;
+    }
     const email = emailValue();
     if (!email) return;
     if (!window.auth?.beginPasskeyLogin) {
       setStatus("Passkey sign-in is not ready. Use password fallback.", "error");
       return;
     }
+    passkeyInFlight = true;
     setBusy(true, "passkey");
-    setStatus("Opening your device passkey check...");
+    startPasskeyWatchdog();
+    setStatus("Opening Face ID, Touch ID, Windows Hello or your device passkey check...");
     try {
       const result = await window.auth.beginPasskeyLogin(email);
+      passkeyInFlight = false;
+      if (passkeyWatchdog) {
+        clearTimeout(passkeyWatchdog);
+        passkeyWatchdog = null;
+      }
       setStatus("Passkey accepted. Redirecting...", "success");
       redirectAfterAuth(result);
     } catch (error) {
-      setStatus(error?.message || "Passkey sign-in failed. Use password fallback if needed.", "error");
-    } finally {
-      setBusy(false, "passkey");
+      const message = String(error?.message || "").toLowerCase();
+      const userCancelled = message.includes("cancel") || message.includes("notallowed") || message.includes("not allowed") || message.includes("abort");
+      resetPasskeyPromptState(
+        userCancelled ? "Passkey check cancelled. Try again or use password fallback." : (error?.message || "Passkey sign-in failed. Use password fallback if needed."),
+        "error",
+      );
     }
   }
 
   async function handlePassword(event) {
     event?.preventDefault?.();
+    if (passwordInFlight || passkeyInFlight) return;
+    passwordInFlight = true;
     const email = emailValue();
     const password = qs("password");
     const rememberMe = qs("rememberMe");
-    if (!email) return;
+    if (!email) {
+      passwordInFlight = false;
+      return;
+    }
     if (!password?.value) {
       if (password) {
         password.setAttribute("aria-invalid", "true");
         password.focus();
       }
       setStatus("Enter your password or use passkey sign-in.", "error");
+      passwordInFlight = false;
       return;
     }
     password.setAttribute("aria-invalid", "false");
@@ -168,6 +211,7 @@
     } catch (error) {
       setStatus(error?.message || "Sign-in failed.", "error");
     } finally {
+      passwordInFlight = false;
       setBusy(false, "password");
     }
   }
@@ -175,12 +219,26 @@
   function bindPasswordToggle() {
     const toggle = qs("togglePassword");
     const password = qs("password");
-    if (!toggle || !password) return;
+    if (!toggle || !password || toggle.dataset.indicareBound === "1") return;
+    toggle.dataset.indicareBound = "1";
     toggle.addEventListener("click", () => {
       const show = password.type === "password";
       password.type = show ? "text" : "password";
       toggle.textContent = show ? "Hide" : "Show";
       toggle.setAttribute("aria-pressed", String(show));
+    });
+  }
+
+  function bindStickyPromptResets() {
+    window.addEventListener("pageshow", () => {
+      if (passkeyInFlight) resetPasskeyPromptState("Passkey check reset. Try again when ready.");
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && passkeyInFlight) {
+        setTimeout(() => {
+          if (passkeyInFlight) resetPasskeyPromptState("Passkey check reset. Try again when ready.");
+        }, 800);
+      }
     });
   }
 
@@ -201,19 +259,33 @@
     if (header) header.appendChild(badges);
   }
 
-  function init() {
-    if (!isLoginPage()) return;
+  function bindExclusiveLoginHandlers() {
     const passkeyBtn = qs("passkeyBtn");
     const passkeyForm = qs("passkeyForm");
     const form = qs("loginForm");
-    if (passkeyForm) passkeyForm.addEventListener("submit", handlePasskey);
-    if (passkeyBtn) passkeyBtn.addEventListener("click", handlePasskey);
-    if (form) form.addEventListener("submit", handlePassword);
+    if (passkeyForm && passkeyForm.dataset.indicareGatewayBound !== "1") {
+      passkeyForm.dataset.indicareGatewayBound = "1";
+      passkeyForm.addEventListener("submit", handlePasskey, true);
+    }
+    if (passkeyBtn && passkeyBtn.dataset.indicareGatewayBound !== "1") {
+      passkeyBtn.dataset.indicareGatewayBound = "1";
+      passkeyBtn.addEventListener("click", handlePasskey, true);
+    }
+    if (form && form.dataset.indicareGatewayBound !== "1") {
+      form.dataset.indicareGatewayBound = "1";
+      form.addEventListener("submit", handlePassword, true);
+    }
+  }
+
+  function init() {
+    if (!isLoginPage()) return;
+    bindExclusiveLoginHandlers();
     bindPasswordToggle();
+    bindStickyPromptResets();
     injectSecurityBadges();
     bootExistingSession();
   }
 
   document.addEventListener("DOMContentLoaded", init);
-  window.indicareLoginGateway = { init, handlePasskey, handlePassword };
+  window.indicareLoginGateway = { init, handlePasskey, handlePassword, resetPasskeyPromptState };
 })();
