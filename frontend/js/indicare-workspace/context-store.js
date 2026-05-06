@@ -1,11 +1,13 @@
 const STORAGE_KEY = "indicare.workspace.context";
 
 const defaultContext = {
-  homeId: "1",
-  homeName: "Main home",
-  childId: "1",
-  childName: "Selected child",
+  homeId: "",
+  homeName: "Select home",
+  childId: "",
+  childName: "Select child",
   childSummary: "Choose a child to make records, plans and evidence part of their journey.",
+  childRiskLevel: "",
+  childPlacementStatus: "",
 };
 
 window.IndiCareContext = {
@@ -22,5 +24,10 @@ window.IndiCareContext = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent("indicare:context-change", { detail: updated }));
     return updated;
+  },
+  clear() {
+    localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent("indicare:context-change", { detail: { ...defaultContext } }));
+    return { ...defaultContext };
   },
 };
