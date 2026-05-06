@@ -22,6 +22,7 @@
     { href: "/care-os#safeguarding", title: "Safeguarding", subtitle: "Risk and safety", roles: ["staff", "manager", "provider"] },
     { href: "/care-os#documents", title: "Documents", subtitle: "Files and evidence", roles: ["staff", "manager", "provider"] },
     { href: "/care-os#assistant", title: "Assistant", subtitle: "Guidance and summaries", roles: ["staff", "manager", "provider"] },
+    { href: "/security-centre", title: "Security Centre", subtitle: "Sessions and devices", roles: ["staff", "manager", "provider"] },
   ];
 
   const fallbackRestrictedPaths = FALLBACK_NAV_LINKS.reduce((acc, item) => {
@@ -157,6 +158,7 @@
     if (!footer) return;
     addSidebarLink(footer, "/care-os", "Care OS", "Main workspace");
     addSidebarLink(footer, "/my-profile", "My Profile", "Training, supervision and actions");
+    addSidebarLink(footer, "/security-centre", "Security Centre", "Sessions, passkeys and devices");
     addSidebarLink(footer, "/staff-profiles", "Staff Hub", "Team learning and oversight");
   }
 
