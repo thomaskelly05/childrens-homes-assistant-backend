@@ -9,6 +9,7 @@ ROUTERS = """
 routers.auth_routes
 routers.mfa_routes
 routers.passkey_routes
+routers.session_security_routes
 routers.legal_acceptance_routes
 routers.debug_health_routes
 routers.security_routes
@@ -98,6 +99,8 @@ routers.workspace_ofsted_evidence_routes
 
 REQUIRED_ROUTERS = {
     "routers.auth_routes",
+    "routers.mfa_routes",
+    "routers.session_security_routes",
     "routers.debug_health_routes",
     "routers.frontend_compat",
     "routers.security_routes",
