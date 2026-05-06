@@ -9,9 +9,10 @@
   <link rel="stylesheet" href="/css/workspace-redesign.css" />
   <link rel="stylesheet" href="/css/premium-care-os.css" />
   <link rel="stylesheet" href="/css/mobile-care-experience.css" />
+  <link rel="stylesheet" href="/css/million-dollar-care-os.css" />
 </head>
 <body>
-  <div class="app-shell" data-app="indicare-workspace">
+  <div class="app-shell premium-os-shell" data-app="indicare-workspace">
     <aside class="sidebar" aria-label="IndiCare navigation">
       <div class="brand-block">
         <div class="brand-mark">IC</div>
@@ -23,6 +24,7 @@
           <summary>Children</summary>
           <div class="nav-section-body">
             <button class="nav-item active" data-view="today-child">Today for this child</button>
+            <button class="nav-item" data-view="my-voice">My voice & journey</button>
             <button class="nav-item" data-view="child-life">Child's world</button>
             <button class="nav-item" data-view="child-timeline">Story timeline</button>
             <button class="nav-item" data-view="daily">Daily recording</button>
@@ -90,14 +92,14 @@
       <div class="sidebar-note"><strong>North star</strong><span>Start with the child. Record what happened, what it meant, what adults did, and what changed.</span></div>
     </aside>
 
-    <main class="main-panel">
-      <header class="topbar">
+    <main class="main-panel main-panel-no-topbar">
+      <section class="os-command-centre" aria-label="Workspace command centre">
         <div>
           <p class="eyebrow">Child-first workspace</p>
           <h2 id="view-title">Check in to the home</h2>
           <p id="view-subtitle">Confirm the adult, home and child before recording care.</p>
         </div>
-        <div class="topbar-actions">
+        <div class="os-command-actions">
           <select id="role-switch" aria-label="Role view">
             <option value="rsw">Residential support worker</option>
             <option value="senior">Senior RSW</option>
@@ -108,7 +110,7 @@
           <button class="secondary-action" id="refresh-workspace-button">Refresh</button>
           <button class="primary-action" id="new-record-button">Create record</button>
         </div>
-      </header>
+      </section>
 
       <section class="status-strip" id="status-strip" aria-label="Workspace status"></section>
       <section class="workspace-grid">
@@ -144,6 +146,7 @@
   <script type="module" src="/js/indicare-workspace/child-evidence-engine.js"></script>
   <script type="module" src="/js/indicare-workspace/child-intelligence-engine.js"></script>
   <script type="module" src="/js/indicare-workspace/today-for-child.js"></script>
+  <script type="module" src="/js/indicare-workspace/child-journey-experience.js"></script>
   <script type="module" src="/js/indicare-workspace/child-digital-file.js"></script>
   <script type="module" src="/js/indicare-workspace/child-life-ecosystem.js"></script>
   <script type="module" src="/js/indicare-workspace/child-understanding-hub.js"></script>
@@ -158,5 +161,6 @@
   <script type="module" src="/js/indicare-workspace/mobile-staff.js"></script>
   <script type="module" src="/js/indicare-workspace/knowledge-view.js"></script>
   <script type="module" src="/js/indicare-workspace/alerts-view.js"></script>
+  <script type="module" src="/js/indicare-workspace/premium-os-orchestrator.js"></script>
 </body>
 </html>
