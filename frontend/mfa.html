@@ -21,24 +21,17 @@
       --radius: 22px;
       --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
     }
-
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       font-family: Inter, system-ui, sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(35,72,165,.08), transparent 22%),
-        linear-gradient(135deg, #f8fbfe 0%, var(--bg) 100%);
+      background: radial-gradient(circle at top left, rgba(35,72,165,.08), transparent 22%), linear-gradient(135deg, #f8fbfe 0%, var(--bg) 100%);
       color: var(--text);
       display: grid;
       place-items: center;
       padding: 24px;
     }
-
     .card {
       width: 100%;
       max-width: 460px;
@@ -48,137 +41,34 @@
       box-shadow: var(--shadow);
       padding: 28px;
     }
-
-    .eyebrow {
-      font-size: .82rem;
-      font-weight: 800;
-      color: var(--primary);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      margin-bottom: 10px;
-    }
-
-    h1 {
-      margin: 0 0 10px;
-      font-size: 1.8rem;
-      line-height: 1.1;
-    }
-
-    p {
-      margin: 0 0 16px;
-      color: var(--muted);
-      line-height: 1.65;
-    }
-
-    form {
-      display: grid;
-      gap: 14px;
-      margin-top: 16px;
-    }
-
-    label {
-      font-size: .92rem;
-      font-weight: 700;
-      display: block;
-      margin-bottom: 8px;
-    }
-
+    .eyebrow { font-size: .82rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+    h1 { margin: 0 0 10px; font-size: 1.8rem; line-height: 1.1; }
+    p { margin: 0 0 16px; color: var(--muted); line-height: 1.65; }
+    form { display: grid; gap: 14px; margin-top: 16px; }
+    label { font-size: .92rem; font-weight: 700; display: block; margin-bottom: 8px; }
     input {
-      width: 100%;
-      min-height: 50px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      font: inherit;
-      color: var(--text);
-      background: #fff;
-      letter-spacing: .14em;
-      font-size: 1.1rem;
-      text-align: center;
+      width: 100%; min-height: 50px; padding: 12px 14px; border: 1px solid var(--border);
+      border-radius: 14px; font: inherit; color: var(--text); background: #fff;
+      letter-spacing: .14em; font-size: 1.1rem; text-align: center;
     }
-
-    input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: var(--focus-ring);
-    }
-
-    input[aria-invalid="true"] {
-      border-color: var(--error);
-    }
-
+    input:focus { outline: none; border-color: var(--primary); box-shadow: var(--focus-ring); }
+    input[aria-invalid="true"] { border-color: var(--error); }
     button {
-      min-height: 52px;
-      border: none;
-      border-radius: 14px;
+      min-height: 52px; border: none; border-radius: 14px;
       background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-      color: #fff;
-      font: inherit;
-      font-weight: 800;
-      cursor: pointer;
+      color: #fff; font: inherit; font-weight: 800; cursor: pointer;
     }
-
-    button:disabled {
-      opacity: .7;
-      cursor: not-allowed;
-    }
-
-    .secondary {
-      display: inline-block;
-      margin-top: 16px;
-      color: var(--primary);
-      font-weight: 700;
-      text-decoration: none;
-    }
-
-    .secondary:hover {
-      text-decoration: underline;
-    }
-
-    .status {
-      min-height: 22px;
-      margin-top: 14px;
-      font-size: .94rem;
-      line-height: 1.5;
-    }
-
-    .status.error {
-      color: var(--error);
-    }
-
-    .status.success {
-      color: var(--success);
-    }
-
-    .helper {
-      margin-top: 18px;
-      padding: 14px;
-      border-radius: 14px;
-      background: #effaf3;
-      color: var(--success);
-      font-size: .9rem;
-      line-height: 1.6;
-    }
-
-    .footer-actions {
-      margin-top: 14px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
+    button:disabled { opacity: .7; cursor: not-allowed; }
+    .secondary { display: inline-block; margin-top: 16px; color: var(--primary); font-weight: 700; text-decoration: none; }
+    .status { min-height: 22px; margin-top: 14px; font-size: .94rem; line-height: 1.5; }
+    .status.error { color: var(--error); }
+    .status.success { color: var(--success); }
+    .helper { margin-top: 18px; padding: 14px; border-radius: 14px; background: #effaf3; color: var(--success); font-size: .9rem; line-height: 1.6; }
+    .footer-actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
     .ghost {
-      min-height: 44px;
-      padding: 0 14px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--text);
-      font-weight: 700;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border);
+      background: #fff; color: var(--text); font-weight: 700; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center;
     }
   </style>
 </head>
@@ -186,24 +76,13 @@
   <main class="card">
     <div class="eyebrow">Secure access</div>
     <h1>Verify your sign-in</h1>
-    <p>Enter the 6-digit code from your authenticator app to continue.</p>
+    <p>Enter the 6-digit code from your authenticator app to continue securely into IndiCare OS.</p>
 
     <form id="mfaForm" novalidate>
       <div>
         <label for="code">Authentication code</label>
-        <input
-          id="code"
-          name="code"
-          type="text"
-          inputmode="numeric"
-          autocomplete="one-time-code"
-          maxlength="6"
-          placeholder="123456"
-          required
-          aria-invalid="false"
-        />
+        <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" required aria-invalid="false" />
       </div>
-
       <button id="verifyBtn" type="submit">Verify</button>
     </form>
 
@@ -213,10 +92,11 @@
 
     <div class="footer-actions">
       <button id="logoutBtn" class="ghost" type="button">Sign out</button>
+      <button id="retryBtn" class="ghost" type="button">Reset MFA flow</button>
     </div>
 
     <div class="helper">
-      Access remains restricted until multi-factor verification is completed.
+      If verification becomes stuck, use “Reset MFA flow” to safely restart the authentication process.
     </div>
   </main>
 
@@ -224,11 +104,24 @@
   <script src="/js/auth.js"></script>
   <script>
     (function () {
+      const DEFAULT_REDIRECT = "/os-command";
+      const MFA_REDIRECT_GUARD = "indicare_mfa_redirect_guard";
       const form = document.getElementById("mfaForm");
       const code = document.getElementById("code");
       const verifyBtn = document.getElementById("verifyBtn");
       const statusEl = document.getElementById("status");
       const logoutBtn = document.getElementById("logoutBtn");
+      const retryBtn = document.getElementById("retryBtn");
+      let verifyInFlight = false;
+
+      function safeRedirect() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const next = params.get("next") || params.get("redirect");
+          if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+        } catch (_) {}
+        return DEFAULT_REDIRECT;
+      }
 
       function setStatus(message, type = "") {
         statusEl.textContent = message || "";
@@ -240,11 +133,19 @@
         verifyBtn.disabled = isLoading;
         code.disabled = isLoading;
         logoutBtn.disabled = isLoading;
+        retryBtn.disabled = isLoading;
         verifyBtn.textContent = isLoading ? "Verifying..." : "Verify";
       }
 
       function setCodeError(hasError) {
         code.setAttribute("aria-invalid", hasError ? "true" : "false");
+      }
+
+      function clearMfaGuards() {
+        try {
+          sessionStorage.removeItem(MFA_REDIRECT_GUARD);
+          sessionStorage.removeItem("indicare_login_redirect_guard");
+        } catch (_) {}
       }
 
       async function boot() {
@@ -257,16 +158,19 @@
           const state = await window.auth.validateSession();
 
           if (!state) {
+            clearMfaGuards();
             window.location.replace("/login");
             return;
           }
 
           if (state.mfa_pending) {
+            setStatus("Multi-factor verification required.");
             return;
           }
 
           if (state.authenticated && state.mfa_verified) {
-            window.location.replace("/assistant");
+            clearMfaGuards();
+            window.location.replace(safeRedirect());
             return;
           }
 
@@ -275,19 +179,24 @@
             return;
           }
 
+          clearMfaGuards();
           window.location.replace("/login");
         } catch (_) {
+          clearMfaGuards();
           window.location.replace("/login");
         }
       }
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (verifyInFlight) return;
+        verifyInFlight = true;
 
         const value = code.value.replace(/\s+/g, "").trim();
         setCodeError(false);
 
         if (!value) {
+          verifyInFlight = false;
           setCodeError(true);
           setStatus("Please enter your authentication code.", "error");
           code.focus();
@@ -295,7 +204,7 @@
         }
 
         setLoading(true);
-        setStatus("Checking your code...");
+        setStatus("Checking your code securely...");
 
         try {
           const data = await window.auth.verifyMfaCode(value);
@@ -306,14 +215,16 @@
 
           await window.auth.validateSession();
 
+          clearMfaGuards();
           setStatus("Verification successful. Redirecting...", "success");
-          window.location.replace("/assistant");
+          window.location.replace(safeRedirect());
         } catch (error) {
           setCodeError(true);
           setStatus(error?.message || "Verification failed.", "error");
           code.focus();
           code.select();
         } finally {
+          verifyInFlight = false;
           setLoading(false);
         }
       });
@@ -323,8 +234,17 @@
         setCodeError(false);
       });
 
+      retryBtn.addEventListener("click", async () => {
+        clearMfaGuards();
+        setStatus("Resetting MFA flow...");
+        setTimeout(() => {
+          window.location.replace("/login");
+        }, 350);
+      });
+
       logoutBtn.addEventListener("click", async () => {
         try {
+          clearMfaGuards();
           if (window.auth && typeof window.auth.logoutUser === "function") {
             await window.auth.logoutUser();
             return;
@@ -332,6 +252,12 @@
         } catch (_) {}
 
         window.location.replace("/login");
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && !verifyInFlight) {
+          code.focus();
+        }
       });
 
       boot();
