@@ -227,6 +227,35 @@ def revoke_user_sessions(user_id: int, *, except_session_id: str | None = None, 
             release_db_connection(conn)
 
 
+def set_trusted_device(session_id: str, trusted: bool) -> bool:
+    if not session_id:
+        return False
+    ensure_session_table()
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE user_sessions
+                SET trusted_device = %s, last_seen_at = NOW()
+                WHERE session_id = %s AND revoked_at IS NULL
+                """,
+                (bool(trusted), session_id),
+            )
+            changed = cur.rowcount > 0
+        conn.commit()
+        return changed
+    except Exception:
+        if conn and not conn.closed:
+            conn.rollback()
+        logger.warning("Failed to set trusted device", exc_info=True)
+        return False
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
+
+
 def list_user_sessions(user_id: int) -> list[dict[str, Any]]:
     ensure_session_table()
     conn = None
