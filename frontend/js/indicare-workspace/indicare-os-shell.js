@@ -10,6 +10,21 @@ const SYSTEM_LAYERS = [
   { key: "provider", title: "Provider", text: "Provider-level evidence, quality assurance, inspection readiness, governance and learning." },
 ];
 
+const FEATURE_REGISTRY = [
+  { key: "daily", layer: "Young person", title: "Daily lived experience", action: "daily", text: "Write the child’s day, voice, adult response, reflection, outcome and actions in Narrative OS." },
+  { key: "incident", layer: "Young person", title: "Incident / behaviour as communication", action: "incident", text: "Record what happened, what came before, emotional meaning, response, repair and learning." },
+  { key: "safeguarding", layer: "Young person", title: "Safeguarding", action: "safeguarding", text: "Capture concern, immediate protection, notifications, child voice, outcome and follow-up." },
+  { key: "missing", layer: "Young person", title: "Missing from care", action: "missing", text: "Record missing episodes, locations, associates, return-home work, learning and plan update." },
+  { key: "direct_work", layer: "Young person", title: "Direct work", action: "direct_work", text: "Therapeutic session record with purpose, voice, learning, outcome and next session." },
+  { key: "voice", layer: "Young person", title: "Child voice", action: "voice", text: "Capture wishes, feelings, communication, refusal, choice and what changed afterwards." },
+  { key: "documents", layer: "Young person", title: "Documents", view: "child-file", text: "Placement plans, care plans, risk assessments, BSPs, health, education and identity documents." },
+  { key: "timeline", layer: "Young person", title: "Memory stream", view: "child-timeline", text: "Chronology, records, document changes, approvals, comments and operational memory." },
+  { key: "home-overview", layer: "Home", title: "Home operating picture", view: "home-overview", text: "Children, records, safeguarding, governance, documents and inspection readiness in the home." },
+  { key: "provider-overview", layer: "Provider", title: "Provider oversight", view: "provider-overview", text: "Reg 44/45, SCCIF, safeguarding themes, QA, leadership and learning across homes." },
+  { key: "inspection", layer: "Provider", title: "Inspection evidence", view: "provider-overview", text: "SCCIF, Ofsted and Children’s Homes Regulations evidence generated from normal operational work." },
+  { key: "system-map", layer: "System", title: "IndiCare system map", view: "system-map", text: "See how young person, home and provider workflows operate as one system." },
+];
+
 const HOME_INTELLIGENCE_CARDS = [
   ["Children", "Young people selected through the opening gate and connected to operational memory."],
   ["Safeguarding", "Recent safeguarding activity, missing episodes, contextual risks and oversight pressure."],
@@ -30,6 +45,7 @@ function bootIndiCareOsShell() {
     openHomeOverview,
     openProviderOverview,
     openSystemMap,
+    openFeatureRegistry,
     renderStatusStrip,
   };
 }
@@ -54,6 +70,33 @@ function bindShellNavigation() {
       setActive(viewButton);
       window.renderChildDetailsLanding?.();
       return;
+    }
+    if (view === "home-overview") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setActive(viewButton);
+      openHomeOverview();
+      return;
+    }
+    if (view === "provider-overview") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setActive(viewButton);
+      openProviderOverview();
+      return;
+    }
+    if (view === "system-map") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setActive(viewButton);
+      openSystemMap();
+      return;
+    }
+    if (view === "feature-registry") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setActive(viewButton);
+      openFeatureRegistry();
     }
   }, true);
 }
@@ -95,7 +138,7 @@ async function openHomeOverview() {
       <button class="primary-action" onclick="window.renderWorkspaceGate?.()">Change home / child</button>
     </section>
     <section class="card-grid">${renderHomeMetric("Homes", (homes?.homes || homes?.items || []).length, "Available through live homes endpoint")}${renderHomeMetric("Young people", visibleChildren.length, "Visible in current home context")}${renderHomeMetric("Narrative OS", "Live", "Universal document and record processor")}${renderHomeMetric("Memory", "Live", "Operational memory powers child workspace")}</section>
-    <section class="panel"><div class="section-header-row"><div><p class="eyebrow">Home operating areas</p><h3>All aspects of the home inside one OS</h3></div></div><div class="document-grid">${HOME_INTELLIGENCE_CARDS.map(([title, text]) => `<article class="life-area-card"><h4>${escapeHtml(title)}</h4><p>${escapeHtml(text)}</p></article>`).join("")}</div></section>
+    <section class="panel"><div class="section-header-row"><div><p class="eyebrow">Home operating areas</p><h3>All aspects of the home inside one OS</h3></div><button class="secondary-action" onclick="window.IndiCareOS.openFeatureRegistry()">View all features</button></div><div class="document-grid">${HOME_INTELLIGENCE_CARDS.map(([title, text]) => `<article class="life-area-card"><h4>${escapeHtml(title)}</h4><p>${escapeHtml(text)}</p></article>`).join("")}</div></section>
     <section class="panel"><div class="section-header-row"><div><p class="eyebrow">Children in this home</p><h3>Open child workspace</h3></div></div><div class="young-person-photo-grid">${visibleChildren.map(renderChildShortcut).join("") || `<div class="empty-state">No young people returned for this home yet.</div>`}</div></section>
   `;
   shellMain.querySelectorAll("[data-shell-child]").forEach((button) => button.addEventListener("click", () => {
@@ -122,10 +165,32 @@ function openProviderOverview() {
 function openSystemMap() {
   setHeader("IndiCare system map", "Young person, home and provider workflows wrapped in one therapeutic operating system.");
   shellMain.innerHTML = `
-    <section class="hero-card"><div><p class="eyebrow">One unified system</p><h3>IndiCare operating model</h3><p>The OS starts with home and young person selection, then all work happens through operational memory, Narrative OS, chronology, governance and archive retrieval.</p></div></section>
+    <section class="hero-card"><div><p class="eyebrow">One unified system</p><h3>IndiCare operating model</h3><p>The OS starts with home and young person selection, then all work happens through operational memory, Narrative OS, chronology, governance and archive retrieval.</p></div><button class="primary-action" onclick="window.IndiCareOS.openFeatureRegistry()">View feature registry</button></section>
     <section class="document-grid">${SYSTEM_LAYERS.map((layer) => `<article class="life-area-card"><span class="mini-tag">${escapeHtml(layer.key)}</span><h4>${escapeHtml(layer.title)}</h4><p>${escapeHtml(layer.text)}</p></article>`).join("")}</section>
     <section class="panel"><p class="eyebrow">Core lifecycle</p><h3>Universal IndiCare workflow</h3><div class="record-lifecycle-strip"><span class="lifecycle-pill active">Click</span><span class="lifecycle-pill active">Write</span><span class="lifecycle-pill active">AI improves</span><span class="lifecycle-pill active">Submit</span><span class="lifecycle-pill active">Manager review</span><span class="lifecycle-pill active">Approve</span><span class="lifecycle-pill active">Archive</span><span class="lifecycle-pill active">Retrieve</span></div></section>
   `;
+}
+
+function openFeatureRegistry() {
+  setHeader("IndiCare feature registry", "All built capabilities are being wrapped into one operating system rather than left as separate legacy pages.");
+  const groups = groupBy(FEATURE_REGISTRY, "layer");
+  shellMain.innerHTML = `
+    <section class="hero-card"><div><p class="eyebrow">System consolidation</p><h3>Existing features brought alive in one OS</h3><p>These are the active operating areas for young person, home, provider, governance, safeguarding, inspection and Narrative OS work.</p></div></section>
+    ${Object.entries(groups).map(([layer, features]) => `<section class="panel"><div class="section-header-row"><div><p class="eyebrow">${escapeHtml(layer)} layer</p><h3>${escapeHtml(layer)} features</h3></div></div><div class="document-grid">${features.map(renderFeatureCard).join("")}</div></section>`).join("")}
+  `;
+  shellMain.querySelectorAll("[data-feature-action]").forEach((button) => button.addEventListener("click", () => {
+    const feature = FEATURE_REGISTRY.find((item) => item.key === button.dataset.featureAction);
+    if (feature?.action) window.openWorkspaceForm?.(feature.action, feature.action);
+    if (feature?.view === "child-file") document.querySelector("[data-view='child-file']")?.click();
+    if (feature?.view === "child-timeline") document.querySelector("[data-view='child-timeline']")?.click();
+    if (feature?.view === "home-overview") openHomeOverview();
+    if (feature?.view === "provider-overview") openProviderOverview();
+    if (feature?.view === "system-map") openSystemMap();
+  }));
+}
+
+function renderFeatureCard(feature) {
+  return `<article class="life-area-card feature-registry-card"><span class="mini-tag">${escapeHtml(feature.layer)}</span><h4>${escapeHtml(feature.title)}</h4><p>${escapeHtml(feature.text)}</p><button type="button" class="secondary-action" data-feature-action="${escapeHtml(feature.key)}">Open</button></article>`;
 }
 
 function renderChildShortcut(child) {
@@ -147,6 +212,15 @@ function setHeader(nextTitle, nextSubtitle) {
 function setActive(button) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
   button.classList.add("active");
+}
+
+function groupBy(items, key) {
+  return items.reduce((acc, item) => {
+    const group = item[key] || "Other";
+    acc[group] = acc[group] || [];
+    acc[group].push(item);
+    return acc;
+  }, {});
 }
 
 function context() {
