@@ -8,6 +8,8 @@ root.classList.add('premium-os-active');
 removeLegacyChrome();
 createLiveWorkspaceStatus();
 loadLiveTherapeuticOrchestration();
+loadOutcomeStorytelling();
+enhanceReportsNavigation();
 enhanceNavigation();
 watchWorkspaceTransitions();
 
@@ -33,6 +35,29 @@ function loadLiveTherapeuticOrchestration() {
       statusStrip.innerHTML += `<div class="os-live-pill">Live orchestration warming up</div>`;
     }
   });
+}
+
+function loadOutcomeStorytelling() {
+  import('./visual-outcome-storytelling.js').catch(() => {
+    if (statusStrip) {
+      statusStrip.innerHTML += `<div class="os-live-pill">Outcome storytelling warming up</div>`;
+    }
+  });
+}
+
+function enhanceReportsNavigation() {
+  if (!nav || nav.dataset.reportsEnhanced === 'true') return;
+  const reportsBody = [...nav.querySelectorAll('.nav-section')]
+    .find((section) => section.querySelector('summary')?.textContent?.trim() === 'Reports')
+    ?.querySelector('.nav-section-body');
+  if (!reportsBody || reportsBody.querySelector("[data-view='outcome-storytelling']")) return;
+
+  const button = document.createElement('button');
+  button.className = 'nav-item';
+  button.dataset.view = 'outcome-storytelling';
+  button.textContent = 'Outcome storytelling';
+  reportsBody.insertBefore(button, reportsBody.querySelector("[data-view='reg45']"));
+  nav.dataset.reportsEnhanced = 'true';
 }
 
 function enhanceNavigation() {
