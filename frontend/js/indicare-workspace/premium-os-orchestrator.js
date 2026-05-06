@@ -9,6 +9,7 @@ removeLegacyChrome();
 createLiveWorkspaceStatus();
 loadLiveTherapeuticOrchestration();
 loadOutcomeStorytelling();
+loadCareCopilotChat();
 enhanceReportsNavigation();
 enhanceNavigation();
 watchWorkspaceTransitions();
@@ -26,22 +27,25 @@ function createLiveWorkspaceStatus() {
     <div class="os-live-pill">Therapeutic workspace live</div>
     <div class="os-live-pill">Inspection evidence connected</div>
     <div class="os-live-pill">Child voice monitoring active</div>
+    <div class="os-live-pill">Care Copilot ready</div>
   `;
 }
 
 function loadLiveTherapeuticOrchestration() {
   import('./live-therapeutic-orchestration.js').catch(() => {
-    if (statusStrip) {
-      statusStrip.innerHTML += `<div class="os-live-pill">Live orchestration warming up</div>`;
-    }
+    if (statusStrip) statusStrip.innerHTML += `<div class="os-live-pill">Live orchestration warming up</div>`;
   });
 }
 
 function loadOutcomeStorytelling() {
   import('./visual-outcome-storytelling.js').catch(() => {
-    if (statusStrip) {
-      statusStrip.innerHTML += `<div class="os-live-pill">Outcome storytelling warming up</div>`;
-    }
+    if (statusStrip) statusStrip.innerHTML += `<div class="os-live-pill">Outcome storytelling warming up</div>`;
+  });
+}
+
+function loadCareCopilotChat() {
+  import('./contextual-care-copilot.js').catch(() => {
+    if (statusStrip) statusStrip.innerHTML += `<div class="os-live-pill">Care Copilot warming up</div>`;
   });
 }
 
