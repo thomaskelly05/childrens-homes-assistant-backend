@@ -79,6 +79,8 @@ def get_page_routes() -> dict[str, list[str]]:
         "/oslogin.html": frontend("oslogin.html"),
         "/access-denied": frontend("access-denied.html"),
         "/access-denied.html": frontend("access-denied.html"),
+        "/security-centre": frontend("security-centre.html"),
+        "/security-centre.html": frontend("security-centre.html"),
 
         # New primary operating workspace. These legacy operating routes now all
         # serve the rebuilt IndiCare workspace rather than old fragmented pages.
