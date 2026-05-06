@@ -1,5 +1,6 @@
 APP_SHELL_STYLES = [
     '<link rel="stylesheet" href="/css/indicare-app-shell.css" />',
+    '<link rel="stylesheet" href="/css/login-enterprise.css" />',
 ]
 
 # Keep global frontend boot order explicit and centralised.
@@ -10,6 +11,7 @@ APP_SHELL_SCRIPTS = [
     '<script src="/js/core/permissions.js"></script>',
     '<script src="/js/core/route-guard.js"></script>',
     '<script src="/js/staff-os-nav.js"></script>',
+    '<script src="/js/login-security-gateway.js"></script>',
 ]
 
 
