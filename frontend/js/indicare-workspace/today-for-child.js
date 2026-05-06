@@ -27,6 +27,11 @@ async function loadTodayForChild() {
   if (subtitle) subtitle.textContent = "A calm daily workspace for understanding, supporting and recording this child today.";
   if (!main) return;
 
+  if (!ctx.childId) {
+    main.innerHTML = `<div class="panel empty-state">Select a child to load their live journey, records, plans and care intelligence.</div>`;
+    return;
+  }
+
   main.innerHTML = `<div class="panel">Preparing today's child-centred workspace...</div>`;
 
   const records = await fetchAllRecords(ctx.childId);
@@ -41,7 +46,7 @@ async function loadTodayForChild() {
         <div>
           <p class="eyebrow">Today for this child</p>
           <h3>${escapeHtml(ctx.childName)}</h3>
-          <p>${escapeHtml(ctx.homeName || "Selected home")} • child-centred recording active</p>
+          <p>${escapeHtml(ctx.homeName || "Selected home")} • ${escapeHtml(ctx.childPlacementStatus || "active journey")} ${ctx.childRiskLevel ? `• Risk: ${escapeHtml(ctx.childRiskLevel)}` : ""}</p>
         </div>
       </div>
       <div class="today-status-card">
@@ -214,6 +219,6 @@ async function fetchAllRecords(childId) {
   return all;
 }
 
-function initials(name) { return String(name || "C").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
-function context() { return window.IndiCareContext?.get?.() || { childId: "1", childName: "Child A", homeName: "Main home" }; }
+function initials(name) { return String(name || "YP").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
+function context() { return window.IndiCareContext?.get?.() || { childId: "", childName: "Select child", homeName: "Select home" }; }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char])); }
