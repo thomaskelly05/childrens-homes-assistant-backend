@@ -20,69 +20,51 @@
 
       <nav class="workspace-nav" id="workspace-nav">
         <details class="nav-section" open>
-          <summary>Children</summary>
+          <summary>Operational care</summary>
           <div class="nav-section-body">
-            <button class="nav-item active" data-view="today-child">Today for this child</button>
-            <button class="nav-item" data-view="my-voice">My voice & journey</button>
-            <button class="nav-item" data-view="child-life">Child's world</button>
-            <button class="nav-item" data-view="child-timeline">Story timeline</button>
+            <button class="nav-item active" data-view="today-child">Today for children</button>
             <button class="nav-item" data-view="daily">Daily recording</button>
             <button class="nav-item" data-view="incidents">Incidents</button>
             <button class="nav-item" data-view="safeguarding">Safeguarding</button>
             <button class="nav-item" data-view="missing">Missing from care</button>
+            <button class="nav-item" data-view="handover">Shift handover</button>
           </div>
         </details>
 
         <details class="nav-section" open>
-          <summary>Child file</summary>
+          <summary>Children</summary>
           <div class="nav-section-body">
-            <button class="nav-item" data-view="child-file">Digital child file</button>
-            <button class="nav-item" data-view="documents">Plans & documents</button>
-            <button class="nav-item" data-view="knowledge">Knowledge from documents</button>
-            <button class="nav-item" data-view="child">Understanding hub</button>
+            <button class="nav-item" data-view="child-life">Child's world</button>
+            <button class="nav-item" data-view="my-voice">Voice & identity</button>
+            <button class="nav-item" data-view="child-timeline">Memory stream</button>
+            <button class="nav-item" data-view="child-file">Live child documents</button>
+            <button class="nav-item" data-view="knowledge">Plans & evidence</button>
           </div>
         </details>
 
         <details class="nav-section">
-          <summary>Home</summary>
+          <summary>Governance</summary>
           <div class="nav-section-body">
-            <button class="nav-item" data-view="home">Home overview</button>
-            <button class="nav-item" data-view="care-intelligence">Live care intelligence</button>
-            <button class="nav-item" data-view="alerts">Safeguarding & alerts</button>
-            <button class="nav-item" data-view="rota">Shifts & handover</button>
-          </div>
-        </details>
-
-        <details class="nav-section">
-          <summary>Reports</summary>
-          <div class="nav-section-body">
-            <button class="nav-item" data-view="intelligence">Manager oversight</button>
-            <button class="nav-item" data-view="review">Review queue</button>
-            <button class="nav-item" data-view="reg45">Reg 44 / 45</button>
-            <button class="nav-item" data-view="ofsted">Inspection mode</button>
-          </div>
-        </details>
-
-        <details class="nav-section">
-          <summary>AI</summary>
-          <div class="nav-section-body">
-            <button class="nav-item" data-view="assistant">Care co-pilot</button>
+            <button class="nav-item" data-view="review">Manager review queue</button>
+            <button class="nav-item" data-view="intelligence">Home intelligence</button>
+            <button class="nav-item" data-view="reg45">Reg 45</button>
+            <button class="nav-item" data-view="ofsted">Inspection readiness</button>
           </div>
         </details>
       </nav>
 
       <div class="sidebar-note">
-        <strong>North star</strong>
-        <span>Start with the child. Record what happened, what it meant, what adults did, and what changed.</span>
+        <strong>Core workflow</strong>
+        <span>Click → Write → IndiCare AI improves → Submit → Manager review → Approve → Archive → Retrieve.</span>
       </div>
     </aside>
 
     <main class="main-panel main-panel-no-topbar">
       <section class="os-command-centre" aria-label="Workspace command centre">
         <div>
-          <p class="eyebrow">Child-first workspace</p>
-          <h2 id="view-title">Check in to the home</h2>
-          <p id="view-subtitle">Confirm the adult on shift, select the child, and continue into the therapeutic workspace.</p>
+          <p class="eyebrow">Operational command centre</p>
+          <h2 id="view-title">What do children need today?</h2>
+          <p id="view-subtitle">Start with the child, understand the context, record naturally, and let IndiCare connect chronology, safeguarding and evidence automatically.</p>
         </div>
 
         <div class="os-command-actions">
@@ -93,35 +75,15 @@
             <option value="ri">Responsible individual</option>
           </select>
 
-          <button class="secondary-action" id="refresh-workspace-button">Refresh</button>
+          <button class="secondary-action" id="refresh-workspace-button">Refresh workspace</button>
           <button class="primary-action" id="new-record-button">Create record</button>
         </div>
       </section>
 
       <section class="status-strip" id="status-strip" aria-label="Workspace status"></section>
 
-      <section class="workspace-grid">
+      <section class="workspace-grid single-column-grid">
         <div class="workspace-main" id="workspace-main"></div>
-
-        <aside class="assistant-panel" aria-label="IndiCare Assistant">
-          <div class="assistant-card">
-            <div class="assistant-heading">
-              <span class="assistant-dot"></span>
-              <div>
-                <p class="eyebrow">IndiCare Assistant</p>
-                <h3>Care co-pilot</h3>
-              </div>
-            </div>
-
-            <div id="assistant-suggestions" class="assistant-suggestions"></div>
-
-            <textarea id="assistant-input" placeholder="Ask about this child, safeguarding, emotional wellbeing, routines, chronology, incidents, direct work, Ofsted evidence or recording quality..."></textarea>
-
-            <button class="primary-action" id="assistant-run">Ask Copilot</button>
-
-            <div id="assistant-output" class="assistant-output"></div>
-          </div>
-        </aside>
       </section>
     </main>
   </div>
@@ -130,11 +92,29 @@
     <form class="record-modal" id="record-form">
       <div class="modal-header">
         <div>
-          <p class="eyebrow">Child-centred recording</p>
+          <p class="eyebrow">Universal record engine</p>
           <h2 id="record-modal-title">Create care record</h2>
         </div>
 
         <button type="button" class="icon-button" id="close-modal" aria-label="Close">×</button>
+      </div>
+
+      <div class="context-bar premium-context-bar">
+        <div class="context-block child-context">
+          <label>Current child</label>
+          <div class="child-summary" id="active-child-summary">
+            <strong>No child selected</strong>
+            <span>Select a child to link chronology, safeguarding and plans automatically.</span>
+          </div>
+        </div>
+
+        <div class="context-block">
+          <label>Workflow</label>
+          <div class="child-summary">
+            <strong>Draft → AI → Review</strong>
+            <span>Records stay editable with version history and manager oversight.</span>
+          </div>
+        </div>
       </div>
 
       <div id="record-form-fields" class="form-fields"></div>
@@ -142,6 +122,7 @@
 
       <div class="modal-actions">
         <button type="button" class="secondary-action" id="save-draft">Save draft</button>
+        <button type="button" class="secondary-action" id="improve-with-ai">Improve with AI</button>
         <button type="submit" class="primary-action">Submit for review</button>
       </div>
     </form>
@@ -165,9 +146,9 @@
   <script type="module" src="/js/indicare-workspace/inspection-command-centre.js"></script>
   <script type="module" src="/js/indicare-workspace/trust-governance.js"></script>
   <script type="module" src="/js/indicare-workspace/manager-oversight.js"></script>
-  <script type="module" src="/js/indicare-workspace/enhanced-assistant.js"></script>
   <script type="module" src="/js/indicare-workspace/proactive-alerts.js"></script>
   <script type="module" src="/js/indicare-workspace/knowledge-view.js"></script>
   <script type="module" src="/js/indicare-workspace/alerts-view.js"></script>
+  <script type="module" src="/js/indicare-workspace/contextual-care-copilot.js"></script>
 </body>
 </html>
