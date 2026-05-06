@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import logging
+import os
+import secrets
 import time
 import uuid
 from typing import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 logger = logging.getLogger("indicare.security")
 
@@ -23,6 +25,17 @@ SENSITIVE_PREFIXES = (
     "/billing",
     "/reports",
     "/documents",
+    "/exports",
+    "/security",
+)
+
+CSRF_EXEMPT_PREFIXES = (
+    "/auth/login",
+    "/auth/logout",
+    "/auth/check",
+    "/auth/passkeys/authenticate/options",
+    "/auth/passkeys/authenticate/verify",
+    "/health",
 )
 
 SKIP_PATHS = (
@@ -30,26 +43,64 @@ SKIP_PATHS = (
     "/css",
     "/js",
     "/assets",
+    "/components",
     "/favicon.ico",
 )
+
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _is_static_path(path: str) -> bool:
+    return path.startswith(("/css", "/js", "/assets", "/components")) or path == "/favicon.ico"
+
+
+class CsrfProtectionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        path = request.url.path
+        if request.method.upper() not in UNSAFE_METHODS:
+            return await call_next(request)
+        if any(path.startswith(prefix) for prefix in CSRF_EXEMPT_PREFIXES):
+            return await call_next(request)
+
+        expected = str(request.session.get("csrf_token") or "")
+        supplied = str(request.headers.get("x-csrf-token") or "")
+        if not expected or not supplied or not secrets.compare_digest(expected, supplied):
+            logger.warning(
+                "csrf_blocked method=%s path=%s ip=%s",
+                request.method,
+                path,
+                request.client.host if request.client else None,
+            )
+            return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
+
+        return await call_next(request)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
+        path = request.url.path
 
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        # Care OS intentionally embeds first-party modules inside the same-origin app shell.
-        # DENY breaks the operating-system layout; SAMEORIGIN keeps third-party framing blocked.
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
-        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'self'")
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; "
+            "img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline'; connect-src 'self'",
+        )
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()")
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
-        response.headers.setdefault("Cache-Control", "no-store")
 
-        if request.url.scheme == "https":
+        if _is_static_path(path):
+            response.headers.setdefault("Cache-Control", "public, max-age=3600")
+        else:
+            response.headers.setdefault("Cache-Control", "no-store")
+            response.headers.setdefault("Pragma", "no-cache")
+
+        if request.url.scheme == "https" or os.getenv("FORCE_HSTS", "true").lower() == "true":
             response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 
         return response
@@ -62,6 +113,7 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+        request.state.request_id = request_id
         start = time.perf_counter()
         response: Response | None = None
 
