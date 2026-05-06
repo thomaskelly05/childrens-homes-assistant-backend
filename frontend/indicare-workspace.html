@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IndiCare | i-Docs Care OS</title>
+  <title>IndiCare | Therapeutic Care OS</title>
   <link rel="stylesheet" href="/css/indicare-workspace.css" />
   <link rel="stylesheet" href="/css/indicare-blue-os.css" />
 </head>
 <body>
-  <div class="app-shell premium-os-shell i-docs-shell" data-app="indicare-workspace">
-    <aside class="sidebar" aria-label="IndiCare i-Docs navigation">
+  <div class="app-shell premium-os-shell indicare-os-shell" data-app="indicare-workspace">
+    <aside class="sidebar" aria-label="IndiCare navigation">
       <div class="brand-block">
-        <div class="brand-mark">iD</div>
+        <div class="brand-mark">IC</div>
         <div>
           <p class="eyebrow">IndiCare</p>
-          <h1>i-Docs Care OS</h1>
+          <h1>Therapeutic Care OS</h1>
         </div>
       </div>
 
@@ -24,12 +24,12 @@
           <div class="nav-section-body">
             <button class="nav-item active" data-view="child-overview">Child overview</button>
             <button class="nav-item" data-view="child-timeline">Memory stream</button>
-            <button class="nav-item" data-view="child-file">i-Docs library</button>
+            <button class="nav-item" data-view="child-file">Documents</button>
           </div>
         </details>
 
         <details class="nav-section" open>
-          <summary>Record in i-Docs</summary>
+          <summary>Record in IndiCare</summary>
           <div class="nav-section-body">
             <button class="nav-item" data-doc-workflow="daily">Daily record</button>
             <button class="nav-item" data-doc-workflow="incident">Incident record</button>
@@ -51,23 +51,23 @@
       </nav>
 
       <div class="sidebar-note">
-        <strong>i-Docs workflow</strong>
-        <span>Choose child → open i‑Doc → write → AI improves → submit → manager reviews → approve/archive → retrieve by date.</span>
+        <strong>IndiCare workflow</strong>
+        <span>Choose child → write in Narrative OS → AI improves → submit → manager reviews → approve/archive → retrieve by date.</span>
       </div>
     </aside>
 
     <main class="main-panel main-panel-no-topbar">
-      <section class="os-command-centre" aria-label="i-Docs command centre">
+      <section class="os-command-centre" aria-label="IndiCare command centre">
         <div>
-          <p class="eyebrow">i-Docs operating workspace</p>
+          <p class="eyebrow">IndiCare operating workspace</p>
           <h2 id="view-title">Choose your home and young person</h2>
-          <p id="view-subtitle">The OS opens after a home and child are selected. Every record, form and plan opens through i‑Docs.</p>
+          <p id="view-subtitle">The OS opens after a home and child are selected. Every record, form and plan opens through the IndiCare Narrative OS.</p>
         </div>
 
         <div class="os-command-actions">
           <button class="secondary-action" id="change-child-button">Change child</button>
-          <button class="secondary-action" id="open-doc-library-button">i-Docs library</button>
-          <button class="primary-action" id="new-record-button">New i‑Doc</button>
+          <button class="secondary-action" id="open-doc-library-button">Documents</button>
+          <button class="primary-action" id="new-record-button">New record</button>
         </div>
       </section>
 
@@ -85,7 +85,7 @@
   <script type="module" src="/js/indicare-workspace/child-digital-file.js"></script>
   <script type="module" src="/js/indicare-workspace/child-timeline.js"></script>
   <script type="module" src="/js/indicare-workspace/universal-doc-os-actions.js"></script>
-  <script type="module" src="/js/indicare-workspace/i-docs-os-shell.js"></script>
+  <script type="module" src="/js/indicare-workspace/indicare-os-shell.js"></script>
   <script type="module" src="/js/indicare-workspace/contextual-care-copilot.js"></script>
 </body>
 </html>
