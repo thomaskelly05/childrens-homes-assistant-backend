@@ -11,6 +11,7 @@ from auth.tokens import decode_session_token
 from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
 from db.mfa_db import get_user_mfa  # Backwards-compat export for test monkeypatches
+from services.session_security_service import is_session_revoked, touch_session
 
 logger = logging.getLogger(__name__)
 
@@ -135,11 +136,14 @@ def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
         raise _service_unavailable("Billing system unavailable") from exc
 
 
-def _decode_user_id_from_token(token: str) -> int:
+def _decode_session_payload(token: str) -> dict[str, Any]:
     payload = decode_session_token(token)
     if not payload:
         raise _unauthorised("Invalid or expired session")
+    return payload
 
+
+def _decode_user_id_from_payload(payload: dict[str, Any]) -> int:
     raw_user_id = payload.get("sub")
     if raw_user_id is None:
         raise _unauthorised("Invalid session payload")
@@ -148,6 +152,14 @@ def _decode_user_id_from_token(token: str) -> int:
         return int(raw_user_id)
     except (TypeError, ValueError) as exc:
         raise _unauthorised("Invalid session subject") from exc
+
+
+def _enforce_session_state(payload: dict[str, Any]) -> None:
+    session_id = payload.get("sid")
+    if session_id and is_session_revoked(str(session_id)):
+        raise _unauthorised("Session has been revoked")
+    if session_id:
+        touch_session(str(session_id))
 
 
 def _load_active_user(conn: Any, user_id: int) -> dict[str, Any]:
@@ -218,7 +230,9 @@ def get_current_user(
     if not token:
         raise _unauthorised("Not authenticated")
 
-    user_id = _decode_user_id_from_token(token)
+    payload = _decode_session_payload(token)
+    _enforce_session_state(payload)
+    user_id = _decode_user_id_from_payload(payload)
     user = _load_active_user(conn, user_id)
 
     role = _normalise_role(user.get("role"))
