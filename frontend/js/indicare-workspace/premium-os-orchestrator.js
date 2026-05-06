@@ -11,6 +11,8 @@ loadLiveTherapeuticOrchestration();
 loadOutcomeStorytelling();
 loadCareCopilotChat();
 loadLiveChildProfile();
+loadChildLifeModel();
+enhanceChildNavigation();
 enhanceReportsNavigation();
 enhanceNavigation();
 watchWorkspaceTransitions();
@@ -55,6 +57,27 @@ function loadLiveChildProfile() {
   import('./live-child-profile.js').catch(() => {
     if (statusStrip) statusStrip.innerHTML += `<div class="os-live-pill">Child profile warming up</div>`;
   });
+}
+
+function loadChildLifeModel() {
+  import('./child-life-model.js').catch(() => {
+    if (statusStrip) statusStrip.innerHTML += `<div class="os-live-pill">Child life model warming up</div>`;
+  });
+}
+
+function enhanceChildNavigation() {
+  if (!nav || nav.dataset.childEnhanced === 'true') return;
+  const childBody = [...nav.querySelectorAll('.nav-section')]
+    .find((section) => section.querySelector('summary')?.textContent?.trim() === 'Children')
+    ?.querySelector('.nav-section-body');
+  if (!childBody || childBody.querySelector("[data-view='child-life-model']")) return;
+
+  const button = document.createElement('button');
+  button.className = 'nav-item';
+  button.dataset.view = 'child-life-model';
+  button.textContent = 'Whole life model';
+  childBody.insertBefore(button, childBody.querySelector("[data-view='child-life']"));
+  nav.dataset.childEnhanced = 'true';
 }
 
 function enhanceReportsNavigation() {
