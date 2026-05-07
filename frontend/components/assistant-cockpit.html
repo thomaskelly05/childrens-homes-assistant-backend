@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare Intelligence</title>
   <meta name="theme-color" content="#ffffff" />
+  <link rel="stylesheet" href="/css/assistant-design-system.css" />
   <link rel="stylesheet" href="/css/assistant-cockpit.css" />
   <link rel="stylesheet" href="/css/assistant-professional-renderer.css" />
 </head>
@@ -20,8 +21,8 @@
       </div>
 
       <div class="ic-sidebar-actions">
-        <button id="newChat" class="ic-new-chat" type="button">New chat</button>
-        <button id="toggleTheme" class="ic-secondary-btn" type="button">Dark mode</button>
+        <button id="newChat" class="ic-btn-primary" type="button">New chat</button>
+        <button id="toggleTheme" class="ic-btn-secondary" type="button">Dark mode</button>
       </div>
 
       <nav class="ic-app-nav" aria-label="Assistant apps">
@@ -68,9 +69,9 @@
         </div>
 
         <div class="ic-top-actions">
-          <button id="copyConversation" class="ic-header-btn" type="button">Copy</button>
-          <button id="exportConversation" class="ic-header-btn" type="button">Export</button>
-          <button id="clearConversation" class="ic-header-btn" type="button">Clear</button>
+          <button id="copyConversation" class="ic-btn-secondary" type="button">Copy</button>
+          <button id="exportConversation" class="ic-btn-secondary" type="button">Export</button>
+          <button id="clearConversation" class="ic-btn-secondary" type="button">Clear</button>
 
           <div class="ic-user">
             <div id="icUserAvatar" class="ic-avatar">IC</div>
@@ -87,26 +88,37 @@
           <div class="ic-empty-mark">IC</div>
           <h2>ChatGPT-style AI for children’s residential care.</h2>
           <p id="workspaceDescription">Start a conversation, create a project folder that remembers its chats and documents, or open Templates for ready-made residential care workflows.</p>
+        </div>
 
-          <div class="ic-mode-grid" aria-label="Assistant specialist modes">
-            <button type="button" data-mode="ofsted">Ofsted Lead</button>
-            <button type="button" data-mode="safeguarding">Safeguarding</button>
-            <button type="button" data-mode="records">Recording QA</button>
-            <button type="button" data-mode="practice">Practice Encyclopaedia</button>
-          </div>
+        <div id="projectHome" class="ic-project-home hidden" aria-label="Project home">
+          <section class="ic-project-hero ic-card">
+            <span class="ic-surface-pill">Project</span>
+            <h2 id="projectHomeTitle">Project</h2>
+            <p id="projectHomeSummary">Project memory will appear here as you chat and upload files.</p>
+          </section>
 
-          <div class="ic-starters" aria-label="Suggested prompts">
-            <button type="button" onclick="quick('ofsted')">Prepare Ofsted evidence</button>
-            <button type="button" onclick="quick('reg45')">Build a Reg 45 summary</button>
-            <button type="button" onclick="quick('quality')">Review recording quality</button>
-            <button type="button" onclick="quick('threshold')">Analyse safeguarding threshold</button>
-            <button type="button" onclick="quick('incident')">Draft an incident record</button>
-            <button type="button" onclick="quick('missing')">Missing-from-care record</button>
-          </div>
+          <section class="ic-project-grid">
+            <article class="ic-project-card ic-card">
+              <h3>Continue conversation</h3>
+              <div id="projectRecentChats" class="ic-project-list"></div>
+            </article>
+            <article class="ic-project-card ic-card">
+              <h3>Uploaded files</h3>
+              <div id="projectFiles" class="ic-project-list"></div>
+            </article>
+            <article class="ic-project-card ic-card">
+              <h3>Suggested actions</h3>
+              <div id="projectActions" class="ic-project-actions"></div>
+            </article>
+            <article class="ic-project-card ic-card">
+              <h3>Pinned outputs</h3>
+              <div id="projectPinned" class="ic-project-list"></div>
+            </article>
+          </section>
         </div>
 
         <div id="templateWorkspace" class="ic-template-workspace hidden" aria-label="Templates workspace">
-          <div class="ic-template-hero">
+          <div class="ic-template-hero ic-card">
             <div>
               <span class="ic-surface-pill">Templates</span>
               <h2>Choose a residential care template</h2>
@@ -134,12 +146,9 @@
         <div class="ic-composer">
           <div class="ic-input-row">
             <label class="ic-upload-label" for="upload" title="Attach document">+</label>
-
             <input id="upload" type="file" accept=".pdf,.docx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json" hidden />
-
             <textarea id="input" placeholder="Message IndiCare..." rows="1"></textarea>
-
-            <button id="send" type="button" aria-label="Send message">↑</button>
+            <button id="send" class="ic-btn-primary" type="button" aria-label="Send message">↑</button>
           </div>
         </div>
       </div>
@@ -148,17 +157,17 @@
     <aside class="ic-evidence" aria-label="Project memory and sources">
       <div class="ic-evidence-header">
         <h2>Project memory</h2>
-        <button id="toggleEvidence" class="ic-collapse-btn" type="button">Hide</button>
+        <button id="toggleEvidence" class="ic-btn-secondary" type="button">Hide</button>
       </div>
 
       <div class="ic-workspace-intel">
-        <article class="ic-citation">
+        <article class="ic-card">
           <small>Current project</small>
           <strong id="memoryProjectTitle">Standalone chat</strong>
           <p id="memoryProjectSummary">Create a project to keep related conversations and uploads together.</p>
           <span class="ic-rel">Private project memory</span>
         </article>
-        <article class="ic-citation">
+        <article class="ic-card">
           <small>Documents</small>
           <strong id="memoryDocumentCount">No project files yet</strong>
           <p>Upload documents inside a project to reuse them as context in that project.</p>
@@ -171,23 +180,15 @@
   </div>
 
   <div id="settingsModal" class="ic-modal hidden" aria-hidden="true">
-    <div class="ic-modal-card">
+    <div class="ic-modal-card ic-card">
       <div class="ic-modal-header">
         <h3>Assistant settings</h3>
         <button id="closeSettings" type="button">×</button>
       </div>
 
       <div class="ic-settings-grid">
-        <label>
-          <span>Name</span>
-          <input id="settingsName" type="text" placeholder="Your name" />
-        </label>
-
-        <label>
-          <span>Role</span>
-          <input id="settingsRole" type="text" placeholder="Registered manager" />
-        </label>
-
+        <label><span>Name</span><input id="settingsName" type="text" placeholder="Your name" /></label>
+        <label><span>Role</span><input id="settingsRole" type="text" placeholder="Registered manager" /></label>
         <label>
           <span>Default mode</span>
           <select id="settingsDefaultMode">
@@ -200,7 +201,7 @@
       </div>
 
       <div class="ic-modal-actions">
-        <button id="saveSettings" class="ic-new-chat" type="button">Save settings</button>
+        <button id="saveSettings" class="ic-btn-primary" type="button">Save settings</button>
       </div>
     </div>
   </div>
@@ -209,5 +210,6 @@
   <script src="/js/assistant-professional-renderer.js"></script>
   <script src="/js/assistant-workspaces.js"></script>
   <script src="/js/assistant-templates.js"></script>
+  <script src="/js/assistant-project-store.js"></script>
 </body>
 </html>
