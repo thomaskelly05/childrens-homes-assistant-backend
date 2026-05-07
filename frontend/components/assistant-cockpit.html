@@ -18,11 +18,25 @@
         </div>
       </div>
 
-      <button id="newChat" class="ic-new-chat" type="button">New chat</button>
+      <div class="ic-sidebar-actions">
+        <button id="newChat" class="ic-new-chat" type="button">New chat</button>
+        <button id="toggleTheme" class="ic-secondary-btn" type="button">Dark mode</button>
+      </div>
+
       <input id="search" class="ic-search" type="text" placeholder="Search chats" />
 
       <div class="ic-section-label">Chats</div>
       <div id="history" class="ic-history"></div>
+
+      <div class="ic-sidebar-footer">
+        <button id="openSettings" class="ic-settings-trigger" type="button">
+          <span id="icUserAvatarSidebar" class="ic-sidebar-avatar">IC</span>
+          <span>
+            <strong id="icUserNameSidebar">Assistant user</strong>
+            <small id="icUserRoleSidebar">Standalone</small>
+          </span>
+        </button>
+      </div>
     </aside>
 
     <main class="ic-main">
@@ -31,11 +45,17 @@
           <div class="ic-surface-pill">Standalone assistant</div>
           <h1>How can I help?</h1>
         </div>
-        <div class="ic-user">
-          <div id="icUserAvatar" class="ic-avatar">IC</div>
-          <div>
-            <strong id="icUserName">Assistant user</strong><br />
-            <span id="icUserRole" class="ic-brand-sub">Standalone</span>
+
+        <div class="ic-top-actions">
+          <button id="copyConversation" class="ic-header-btn" type="button">Copy</button>
+          <button id="clearConversation" class="ic-header-btn" type="button">Clear</button>
+
+          <div class="ic-user">
+            <div id="icUserAvatar" class="ic-avatar">IC</div>
+            <div>
+              <strong id="icUserName">Assistant user</strong><br />
+              <span id="icUserRole" class="ic-brand-sub">Standalone</span>
+            </div>
           </div>
         </div>
       </header>
@@ -59,11 +79,15 @@
 
       <div class="ic-composer-dock">
         <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button" aria-label="Remove attached document">×</button></div>
+
         <div class="ic-composer">
           <div class="ic-input-row">
             <label class="ic-upload-label" for="upload" title="Attach document">+</label>
+
             <input id="upload" type="file" accept=".pdf,.docx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json" hidden />
-            <textarea id="input" placeholder="Ask IndiCare..." rows="1"></textarea>
+
+            <textarea id="input" placeholder="Message IndiCare..." rows="1"></textarea>
+
             <button id="send" type="button" aria-label="Send message">↑</button>
           </div>
         </div>
@@ -71,9 +95,38 @@
     </main>
 
     <aside class="ic-evidence" aria-label="Sources and citations">
-      <h2>Sources</h2>
+      <div class="ic-evidence-header">
+        <h2>Sources</h2>
+        <button id="toggleEvidence" class="ic-collapse-btn" type="button">Hide</button>
+      </div>
+
       <div class="ic-evidence-list" id="standaloneSourceList"></div>
     </aside>
+  </div>
+
+  <div id="settingsModal" class="ic-modal hidden" aria-hidden="true">
+    <div class="ic-modal-card">
+      <div class="ic-modal-header">
+        <h3>Assistant settings</h3>
+        <button id="closeSettings" type="button">×</button>
+      </div>
+
+      <div class="ic-settings-grid">
+        <label>
+          <span>Name</span>
+          <input id="settingsName" type="text" placeholder="Your name" />
+        </label>
+
+        <label>
+          <span>Role</span>
+          <input id="settingsRole" type="text" placeholder="Registered manager" />
+        </label>
+      </div>
+
+      <div class="ic-modal-actions">
+        <button id="saveSettings" class="ic-new-chat" type="button">Save settings</button>
+      </div>
+    </div>
   </div>
 
   <script src="/js/assistant-standalone-cockpit.js"></script>
