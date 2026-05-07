@@ -20,9 +20,19 @@
 
       <nav class="workspace-nav" id="workspace-nav">
         <details class="nav-section" open>
-          <summary>Child workspace</summary>
+          <summary>Start</summary>
           <div class="nav-section-body">
             <button class="nav-item active" data-view="child-overview">Child overview</button>
+            <button class="nav-item" data-view="home-overview">Home overview</button>
+            <button class="nav-item" data-view="provider-overview">Provider overview</button>
+            <button class="nav-item" data-view="system-map">System map</button>
+            <button class="nav-item" data-view="feature-registry">Feature registry</button>
+          </div>
+        </details>
+
+        <details class="nav-section" open>
+          <summary>Child workspace</summary>
+          <div class="nav-section-body">
             <button class="nav-item" data-view="child-timeline">Memory stream</button>
             <button class="nav-item" data-view="child-file">Documents</button>
           </div>
@@ -80,6 +90,7 @@
   </div>
 
   <script type="module" src="/js/indicare-workspace/context-store.js"></script>
+  <script type="module" src="/js/indicare-workspace/context-fabric-engine.js"></script>
   <script type="module" src="/js/indicare-workspace/indicare-document-processor.js"></script>
   <script type="module" src="/js/indicare-workspace/checkin-child-first.js"></script>
   <script type="module" src="/js/indicare-workspace/child-digital-file.js"></script>
