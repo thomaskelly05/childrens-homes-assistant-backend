@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/css/assistant-design-system.css" />
   <link rel="stylesheet" href="/css/assistant-cockpit.css" />
   <link rel="stylesheet" href="/css/assistant-professional-renderer.css" />
+  <link rel="stylesheet" href="/css/indicare-suite.css" />
 </head>
 <body>
   <div class="ic-cockpit ic-standalone-assistant" id="icCockpit" data-assistant-surface="standalone">
@@ -16,8 +17,14 @@
         <div class="ic-logo">IC</div>
         <div>
           <div class="ic-brand-title">IndiCare</div>
-          <div class="ic-brand-sub">Intelligence</div>
+          <div class="ic-brand-sub">Intelligence Suite</div>
         </div>
+      </div>
+
+      <div class="ic-suite-switcher" aria-label="IndiCare standalone products">
+        <button class="active" type="button" data-suite-view="intelligence">Intelligence</button>
+        <button type="button" data-suite-view="docs">DOCS</button>
+        <button type="button" data-suite-view="notes">Notes</button>
       </div>
 
       <div class="ic-sidebar-actions">
@@ -37,7 +44,7 @@
           <button id="newWorkspace" class="ic-small-action" type="button">+</button>
         </div>
         <select id="workspaceSelect" class="ic-project-select" aria-label="Select project"></select>
-        <div class="ic-project-note" id="workspaceMiniSummary">Project memory is private to this assistant.</div>
+        <div class="ic-project-note" id="workspaceMiniSummary">Project memory is private to this standalone assistant.</div>
       </section>
 
       <section id="templateSidebar" class="ic-sidebar-panel" data-sidebar-panel="templates">
@@ -84,13 +91,13 @@
       </header>
 
       <section id="assistantPanel" class="ic-content panel panel-assistant">
-        <div id="empty" class="ic-empty-state">
+        <div id="empty" class="ic-empty-state" data-suite-panel="intelligence">
           <div class="ic-empty-mark">IC</div>
           <h2>ChatGPT-style AI for children’s residential care.</h2>
           <p id="workspaceDescription">Start a conversation, create a project folder that remembers its chats and documents, or open Templates for ready-made residential care workflows.</p>
         </div>
 
-        <div id="projectHome" class="ic-project-home hidden" aria-label="Project home">
+        <div id="projectHome" class="ic-project-home hidden" aria-label="Project home" data-suite-panel="intelligence">
           <section class="ic-project-hero ic-card">
             <span class="ic-surface-pill">Project</span>
             <h2 id="projectHomeTitle">Project</h2>
@@ -117,7 +124,7 @@
           </section>
         </div>
 
-        <div id="templateWorkspace" class="ic-template-workspace hidden" aria-label="Templates workspace">
+        <div id="templateWorkspace" class="ic-template-workspace hidden" aria-label="Templates workspace" data-suite-panel="intelligence">
           <div class="ic-template-hero ic-card">
             <div>
               <span class="ic-surface-pill">Templates</span>
@@ -128,10 +135,83 @@
           <div id="templateGrid" class="ic-template-grid"></div>
         </div>
 
-        <div id="messages" class="messages hidden"></div>
+        <div id="indicareDocs" class="ic-suite-panel hidden" data-suite-panel="docs" aria-label="IndiCare DOCS">
+          <section class="ic-card ic-docs-hero">
+            <span class="ic-surface-pill">IndiCare DOCS</span>
+            <h2>AI-native writing for children’s homes.</h2>
+            <p>Write incident records, safeguarding reviews, chronologies, Reg 45 evidence and Ofsted-ready documents in a cleaner, residential-care focused alternative to Word.</p>
+            <div class="ic-suite-actions">
+              <button class="ic-btn-primary" type="button" data-doc-template="incident">Incident Record</button>
+              <button class="ic-btn-secondary" type="button" data-doc-template="chronology">Chronology</button>
+              <button class="ic-btn-secondary" type="button" data-doc-template="reg45">Reg 45 Evidence</button>
+            </div>
+          </section>
+
+          <section class="ic-docs-layout">
+            <aside class="ic-card ic-docs-rail">
+              <h3>Residential templates</h3>
+              <button type="button" data-doc-template="incident">Incident record</button>
+              <button type="button" data-doc-template="missing">Missing-from-care review</button>
+              <button type="button" data-doc-template="safeguarding">Safeguarding review</button>
+              <button type="button" data-doc-template="ofsted">Ofsted evidence</button>
+              <button type="button" data-doc-template="reg45">Reg 45 report</button>
+              <button type="button" data-doc-template="supervision">Supervision reflection</button>
+            </aside>
+
+            <article class="ic-card ic-doc-editor-shell">
+              <div class="ic-doc-toolbar">
+                <button type="button" data-doc-command="improve">Improve wording</button>
+                <button type="button" data-doc-command="factual">Make factual</button>
+                <button type="button" data-doc-command="childVoice">Add child voice</button>
+                <button type="button" data-doc-command="safeguarding">Review safeguarding</button>
+                <button type="button" data-doc-command="chronology">Extract chronology</button>
+              </div>
+              <div id="indicareDocEditor" class="ic-doc-editor" contenteditable="true" spellcheck="true">
+                <h1>Untitled IndiCare document</h1>
+                <p>Start writing, choose a template, or paste existing recording. Highlight any section and use the AI tools above.</p>
+              </div>
+            </article>
+          </section>
+        </div>
+
+        <div id="indicareNotes" class="ic-suite-panel hidden" data-suite-panel="notes" aria-label="IndiCare Notes">
+          <section class="ic-card ic-docs-hero">
+            <span class="ic-surface-pill">IndiCare Notes</span>
+            <h2>Transcribe, structure and improve notes.</h2>
+            <p>Bring I-Notes and transcription into one place: dictate incidents, handovers, supervision reflections and meetings, then turn them into professional residential-care records.</p>
+            <div class="ic-suite-actions">
+              <button id="startTranscribe" class="ic-btn-primary" type="button">Start recording</button>
+              <button id="stopTranscribe" class="ic-btn-secondary" type="button">Stop</button>
+              <button type="button" class="ic-btn-secondary" data-note-transform="incident">Turn into incident record</button>
+            </div>
+          </section>
+
+          <section class="ic-docs-layout">
+            <aside class="ic-card ic-docs-rail">
+              <h3>Turn transcript into</h3>
+              <button type="button" data-note-transform="incident">Incident record</button>
+              <button type="button" data-note-transform="handover">Handover</button>
+              <button type="button" data-note-transform="supervision">Supervision note</button>
+              <button type="button" data-note-transform="safeguarding">Safeguarding concern</button>
+              <button type="button" data-note-transform="chronology">Chronology</button>
+            </aside>
+
+            <article class="ic-card ic-doc-editor-shell">
+              <div class="ic-doc-toolbar">
+                <button type="button" data-note-command="clean">Clean transcript</button>
+                <button type="button" data-note-command="structure">Structure note</button>
+                <button type="button" data-note-command="summary">Summarise</button>
+                <button type="button" data-note-command="actions">Extract actions</button>
+              </div>
+              <textarea id="indicareTranscript" class="ic-transcript-area" placeholder="Record audio or paste transcript here..."></textarea>
+            </article>
+          </section>
+        </div>
+
+        <div id="messages" class="messages hidden" data-suite-panel="intelligence"></div>
       </section>
 
-      <div class="ic-composer-dock" id="composerDock">
+      <div class="ic-composer-dock" id="composerDock" data-suite-panel="intelligence">
         <div id="dropHint" class="ic-drop-hint hidden">Drop documents here to analyse them</div>
         <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button" aria-label="Remove attached document">×</button></div>
 
@@ -213,5 +293,6 @@
   <script src="/js/assistant-project-store.js"></script>
   <script src="/js/assistant-document-engine.js"></script>
   <script src="/js/assistant-operational-engines.js"></script>
+  <script src="/js/indicare-suite.js"></script>
 </body>
 </html>
