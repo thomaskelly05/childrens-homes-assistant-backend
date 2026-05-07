@@ -303,10 +303,22 @@
     const lines = String(chunk || "").split("\n");
     let event = "message";
     const data = [];
+
     for (const line of lines) {
-      if (line.startsWith("event:")) event = line.slice(6).trim();
-      if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
+      if (line.startsWith("event:")) {
+        event = line.slice(6).trim();
+        continue;
+      }
+
+      if (line.startsWith("data:")) {
+        let payload = line.slice(5);
+        // SSE permits one separator space after "data:". Remove only that
+        // separator and preserve any real token whitespace from the stream.
+        if (payload.startsWith(" ")) payload = payload.slice(1);
+        data.push(payload);
+      }
     }
+
     return { event, data: data.join("\n") };
   }
 
