@@ -25,8 +25,6 @@
       <nav class="ic-nav" aria-label="Standalone assistant workspace">
         <button id="navAssistant" class="active" type="button">Assistant</button>
         <button id="navLibrary" type="button">Knowledge library</button>
-        <button id="navManager" class="hidden" type="button">Manager tools</button>
-        <button id="navAdmin" class="hidden" type="button">Admin tools</button>
       </nav>
 
       <div class="ic-section-label">Conversations</div>
@@ -120,8 +118,8 @@
                 </article>
                 <article class="ic-event" style="--dot:#34d399">
                   <div class="ic-event-time">Conversations</div>
-                  <div class="ic-event-title">Your conversation history loads from your account</div>
-                  <div class="ic-event-text">Existing conversations appear in the sidebar once the assistant runtime loads.</div>
+                  <div class="ic-event-title">Conversation history loads from your account</div>
+                  <div class="ic-event-text">Standalone assistant conversations are isolated from OS operational workspaces.</div>
                 </article>
               </div>
             </section>
@@ -159,9 +157,6 @@
         </div>
       </section>
 
-      <section id="managerPanel" class="ic-content panel hidden"></section>
-      <section id="adminPanel" class="ic-content panel hidden"></section>
-
       <div class="ic-composer-dock">
         <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button">×</button></div>
         <div class="ic-composer">
@@ -188,31 +183,10 @@
         <button type="button">Documents</button>
         <button type="button">Regulations</button>
       </div>
-      <div class="ic-evidence-list" id="standaloneSourceList">
-        <article class="ic-citation"><small>Standalone boundary</small><strong>No OS records loaded</strong><p>This assistant page does not show live child, home, chronology or safeguarding workspace records.</p><span class="ic-rel">Privacy boundary</span></article>
-        <article class="ic-citation"><small>Document-aware mode</small><strong>Upload or library sources</strong><p>Attach a document or search your approved library to ground responses in available material.</p><span class="ic-rel">Available when provided</span></article>
-        <article class="ic-citation"><small>Regulatory answers</small><strong>Quote, name and label sources</strong><p>When regulations are requested, the assistant should name the regulation and clearly separate quoted wording from explanation.</p><span class="ic-rel">Answer policy</span></article>
-      </div>
+      <div class="ic-evidence-list" id="standaloneSourceList"></div>
     </aside>
   </div>
 
-  <script src="/js/assistant.js"></script>
-  <script>
-    window.addEventListener('DOMContentLoaded', function () {
-      var first = localStorage.getItem('first_name') || 'there';
-      var last = localStorage.getItem('last_name') || '';
-      var full = [first, last].filter(Boolean).join(' ').trim();
-      var welcome = document.getElementById('welcomeTitle');
-      if (welcome) welcome.textContent = 'Good afternoon, ' + first + '.';
-      var user = document.getElementById('icUserName');
-      if (user) user.textContent = full || 'Assistant user';
-      var avatar = document.getElementById('icUserAvatar');
-      if (avatar) avatar.textContent = ((first[0] || 'I') + (last[0] || 'C')).toUpperCase();
-      try {
-        localStorage.removeItem('indicare_workspace_context');
-        localStorage.removeItem('indicare_context_state');
-      } catch (_) {}
-    });
-  </script>
+  <script src="/js/assistant-standalone-cockpit.js"></script>
 </body>
 </html>
