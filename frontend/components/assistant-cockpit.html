@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare Assistant</title>
+  <meta name="theme-color" content="#020617" />
+  <link rel="stylesheet" href="/css/assistant-cockpit.css" />
+</head>
+<body>
+  <div class="ic-cockpit" id="icCockpit">
+    <aside class="ic-sidebar">
+      <div class="ic-brand">
+        <div class="ic-logo">IC</div>
+        <div>
+          <div class="ic-brand-title">IndiCare OS</div>
+          <div class="ic-brand-sub">Assistant</div>
+        </div>
+      </div>
+
+      <button id="newChat" class="ic-new-chat" type="button">New conversation</button>
+      <input id="search" class="ic-search" type="text" placeholder="Search conversations" />
+
+      <div class="ic-section-label">Workspace</div>
+      <nav class="ic-nav" aria-label="Assistant workspace">
+        <button id="navAssistant" class="active" type="button">Assistant</button>
+        <button id="navYoungPeople" type="button">Young people</button>
+        <button id="navLibrary" type="button">Library</button>
+        <button id="navManager" type="button">Manager</button>
+        <button id="navAdmin" type="button">Admin</button>
+      </nav>
+
+      <div class="ic-section-label">Conversations</div>
+      <div id="history" class="ic-history"></div>
+
+      <div class="ic-workflow">
+        <small>Active workflow</small>
+        <strong>Safeguarding Review</strong>
+        <div class="ic-brand-sub">Home 1 • Child C1</div>
+        <div class="ic-progress"><span></span></div>
+      </div>
+    </aside>
+
+    <main class="ic-main">
+      <header class="ic-top">
+        <div>
+          <div class="ic-surface-pill">● Operational Copilot</div>
+        </div>
+        <input class="ic-global-search" type="text" placeholder="Search homes, children, chronology, actions..." />
+        <div class="ic-user">
+          <div>
+            <strong id="icUserName">Thomas Kelly</strong><br />
+            <span class="ic-brand-sub">Admin</span>
+          </div>
+          <div class="ic-avatar">TK</div>
+        </div>
+      </header>
+
+      <section id="assistantPanel" class="ic-content panel panel-assistant">
+        <div id="empty" class="ic-dashboard">
+          <div class="ic-kpis">
+            <article class="ic-kpi red">
+              <div class="ic-kpi-label">High Priority Alerts</div>
+              <div class="ic-kpi-value">6</div>
+              <div class="ic-kpi-sub">Require immediate attention</div>
+            </article>
+            <article class="ic-kpi amber">
+              <div class="ic-kpi-label">Chronology Gaps</div>
+              <div class="ic-kpi-value">3</div>
+              <div class="ic-kpi-sub">Need review</div>
+            </article>
+            <article class="ic-kpi violet">
+              <div class="ic-kpi-label">Unresolved Actions</div>
+              <div class="ic-kpi-value">12</div>
+              <div class="ic-kpi-sub">Across 4 homes</div>
+            </article>
+            <article class="ic-kpi blue">
+              <div class="ic-kpi-label">Inspection Risk</div>
+              <div class="ic-kpi-value">High</div>
+              <div class="ic-kpi-sub">2 upcoming inspections</div>
+            </article>
+          </div>
+
+          <section class="ic-hero">
+            <div class="ic-hero-head">
+              <div>
+                <div class="ic-surface-pill">✦ IndiCare Assistant</div>
+                <h1 id="welcomeTitle">Good afternoon, Tom</h1>
+                <p id="welcomeText">Here is your operational overview and priority intelligence.</p>
+              </div>
+              <button class="ic-quick-button" type="button">Customise</button>
+            </div>
+            <div class="ic-card-grid">
+              <article class="ic-mini-card"><span>Safeguarding Escalations</span><strong>4</strong><a>View all</a></article>
+              <article class="ic-mini-card"><span>Chronology Integrity</span><strong>3</strong><a>Review</a></article>
+              <article class="ic-mini-card"><span>Inspection Readiness</span><strong>68%</strong><a>Improve</a></article>
+              <article class="ic-mini-card"><span>Provider Risk</span><strong>2</strong><a>Analyse</a></article>
+            </div>
+          </section>
+
+          <div class="ic-lower">
+            <section class="ic-panel">
+              <div class="ic-panel-head">
+                <h2>Chronology Timeline</h2>
+                <button class="ic-quick-button" type="button">Filter</button>
+              </div>
+              <div class="ic-timeline">
+                <article class="ic-event" style="--dot:#f87171">
+                  <div class="ic-event-time">21 May 2024 • 14:30 <span class="ic-badge">Safeguarding Concern</span></div>
+                  <div class="ic-event-title">Police involvement at Home 1</div>
+                  <div class="ic-event-text">Police attended following missing episode. Child returned home safely.</div>
+                </article>
+                <article class="ic-event" style="--dot:#60a5fa">
+                  <div class="ic-event-time">20 May 2024 • 19:15</div>
+                  <div class="ic-event-title">Return from respite</div>
+                  <div class="ic-event-text">Child returned from planned respite at Home 2.</div>
+                </article>
+                <article class="ic-event" style="--dot:#fbbf24">
+                  <div class="ic-event-time">18 May 2024 • 11:00 <span class="ic-badge">Allegation</span></div>
+                  <div class="ic-event-title">Allegation reported by staff</div>
+                  <div class="ic-event-text">Allegation of inappropriate language by staff member.</div>
+                </article>
+                <article class="ic-event" style="--dot:#34d399">
+                  <div class="ic-event-time">15 May 2024 • 16:45</div>
+                  <div class="ic-event-title">Health appointment attended</div>
+                  <div class="ic-event-text">Routine CAMHS appointment attended.</div>
+                </article>
+              </div>
+            </section>
+
+            <section class="ic-panel">
+              <div class="ic-panel-head"><h2>AI Operational Summary</h2></div>
+              <ul class="ic-summary-list">
+                <li>4 safeguarding escalations in the last 14 days.</li>
+                <li>Chronology shows increased police involvement.</li>
+                <li>Missing episode frequency has increased.</li>
+                <li>Unresolved actions may impact inspection readiness.</li>
+              </ul>
+              <div class="ic-priority">
+                <div><span>1</span>Review outstanding safeguarding escalations</div>
+                <div><span>2</span>Address chronology gaps in May 2024</div>
+                <div><span>3</span>Complete overdue actions</div>
+                <div><span>4</span>Prepare for upcoming inspection risk</div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div id="messages" class="messages hidden"></div>
+      </section>
+
+      <div class="ic-composer-dock">
+        <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button">×</button></div>
+        <div class="ic-composer">
+          <div class="ic-input-row">
+            <textarea id="input" placeholder="Ask anything about children, homes, safeguarding, inspections..."></textarea>
+            <button id="send" type="button">→</button>
+          </div>
+          <div class="ic-quick">
+            <label class="ic-upload-label" for="upload">Attach evidence</label>
+            <input id="upload" type="file" hidden />
+            <button type="button" onclick="quick('policy')">Search homes</button>
+            <button type="button" onclick="quick('chronology')">Summarise chronology</button>
+            <button type="button" onclick="quick('incident')">Create action</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="ic-evidence">
+      <h2>Evidence & Citations</h2>
+      <div class="ic-tabs">
+        <button class="active" type="button">Citations 12</button>
+        <button type="button">Chronology Links</button>
+        <button type="button">Documents</button>
+      </div>
+      <div class="ic-evidence-list">
+        <article class="ic-citation"><small>Incident Report</small><strong>Police involvement report</strong><p>Police attended following report of child missing from the home.</p><span class="ic-rel">High relevance</span></article>
+        <article class="ic-citation"><small>Staff Report</small><strong>Missing episode report</strong><p>Child left the home without permission at approximately 21:00.</p><span class="ic-rel">High relevance</span></article>
+        <article class="ic-citation"><small>Case Note</small><strong>Return from respite</strong><p>Child returned from respite placement. No concerns raised.</p><span class="ic-rel">Medium relevance</span></article>
+        <article class="ic-citation"><small>Allegation Record</small><strong>Allegation of inappropriate language</strong><p>Staff member alleged to have used inappropriate language.</p><span class="ic-rel">High relevance</span></article>
+      </div>
+    </aside>
+  </div>
+
+  <script src="/js/assistant.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      var name = localStorage.getItem('first_name') || 'Tom';
+      var welcome = document.getElementById('welcomeTitle');
+      if (welcome) welcome.textContent = 'Good afternoon, ' + name + '.';
+      var user = document.getElementById('icUserName');
+      if (user) user.textContent = name === 'Tom' ? 'Thomas Kelly' : name;
+    });
+  </script>
+</body>
+</html>
