@@ -45,6 +45,7 @@ routers.inspection_os_routes
 routers.rm_dashboard_routes
 routers.live_alerts_routes
 routers.os_modules_routes
+routers.os_shell_api_routes
 routers.assistant_partner_api
 routers.chat_routes
 routers.document_library_routes
