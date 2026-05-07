@@ -3,6 +3,7 @@ const SESSION_KEY = "indicare.os.operational.session.v1";
 let liveContext = null;
 let operationalSession = loadSession();
 let activeView = "dashboard";
+let activeChildId = null;
 
 bootLiveHydrator();
 
@@ -73,6 +74,14 @@ async function hydrateLiveContext() {
 }
 
 function handleLiveNavigation(event) {
+  const childOpen = event.target.closest?.("[data-open-child]");
+  if (childOpen) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    renderYoungPersonProfile(childOpen.dataset.openChild);
+    return;
+  }
+
   const button = event.target.closest?.("[data-sp-view]");
   if (!button) return;
   const view = button.dataset.spView;
@@ -95,13 +104,14 @@ function handleLaunchFlow(event) {
   const refresh = event.target.closest?.("[data-refresh-live]");
   if (refresh) {
     event.preventDefault();
-    hydrateLiveContext().then(() => activeView === "dashboard" && (operationalSession?.homeId || operationalSession?.homeName) ? renderLiveDashboard() : renderLaunchExperience(operationalSession?.homeId ? "children" : "home"));
+    hydrateLiveContext().then(() => activeChildId ? renderYoungPersonProfile(activeChildId) : activeView === "dashboard" && (operationalSession?.homeId || operationalSession?.homeName) ? renderLiveDashboard() : renderLaunchExperience(operationalSession?.homeId ? "children" : "home"));
     return;
   }
   const reset = event.target.closest?.("[data-reset-session]");
   if (reset) {
     event.preventDefault();
     operationalSession = null;
+    activeChildId = null;
     localStorage.removeItem(SESSION_KEY);
     window.IndiCareOperationalSession = null;
     renderLaunchExperience();
@@ -143,6 +153,7 @@ function handleLaunchFlow(event) {
 }
 
 function renderLaunchExperience(step = "home") {
+  activeChildId = null;
   activeView = "dashboard";
   setActive("dashboard");
   const ctx = liveContext || normaliseContext({});
@@ -198,10 +209,11 @@ function childSelectionCard(child, selected) {
   const name = childName(child);
   const risk = child.risk || child.summary_risk_level || child.risk_level || "Risk not set";
   const isSelected = selected.has(id);
-  return `<article class="os-child-select ${isSelected ? "selected" : ""}" data-toggle-child="${escapeHtml(id)}"><div class="sp-child-avatar">${escapeHtml(initials(name))}</div><div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(child.placement_status || child.status || "Active placement")}</p></div><span class="sp-status ${/high|medium|watch/i.test(String(risk)) ? "submitted-for-review" : "approved"}">${escapeHtml(risk)}</span><dl><div><dt>Home</dt><dd>${escapeHtml(child.home_name || child.home || operationalSession?.homeName || "Selected home")}</dd></div><div><dt>Admission</dt><dd>${escapeHtml(formatDate(child.admission_date) || "Not set")}</dd></div></dl><button class="sp-open-btn">${isSelected ? "Selected" : "Select"}</button></article>`;
+  return `<article class="os-child-select ${isSelected ? "selected" : ""}" data-toggle-child="${escapeHtml(id)}"><div class="sp-child-avatar">${escapeHtml(initials(name))}</div><div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(child.placement_status || child.status || "Active placement")}</p></div><span class="sp-status ${riskClass(risk)}">${escapeHtml(risk)}</span><dl><div><dt>Home</dt><dd>${escapeHtml(child.home_name || child.home || operationalSession?.homeName || "Selected home")}</dd></div><div><dt>Admission</dt><dd>${escapeHtml(formatDate(child.admission_date) || "Not set")}</dd></div></dl><button class="sp-open-btn">${isSelected ? "Selected" : "Select"}</button></article>`;
 }
 
 function renderLiveDashboard() {
+  activeChildId = null;
   activeView = "dashboard";
   setActive("dashboard");
   const ctx = filterContextBySession(liveContext || normaliseContext({}));
@@ -212,36 +224,97 @@ function renderLiveDashboard() {
 }
 
 function renderLiveChildren() {
+  activeChildId = null;
   activeView = "children";
-  const children = filterContextBySession(liveContext || normaliseContext({})).children;
-  main().innerHTML = `<section class="sp-page-head"><div><h1>Young People Records</h1><p>Young people loaded from the backend for this operational session.</p></div><button class="sp-secondary" data-refresh-live>Refresh</button></section>${children.length ? `<section class="sp-children-grid">${children.map(childCard).join("")}</section>` : emptyState("No young people returned for this operational session.")}`;
+  setActive("children");
+  const ctx = filterContextBySession(liveContext || normaliseContext({}));
+  const children = ctx.children;
+  const totalRecords = ctx.documents.length;
+  const safeguarding = ctx.safeguarding.length;
+  const chronology = ctx.chronology.length;
+  main().innerHTML = `
+    <section class="sp-page-head"><div><h1>Young People Records</h1><p>A live SharePoint-style record hub for the young people in ${escapeHtml(operationalSession?.homeName || "this operational session")}.</p></div><button class="sp-secondary" data-refresh-live>Refresh</button></section>
+    <section class="yp-overview-strip">
+      ${compactMetric("Young people", children.length, "Selected/live")}
+      ${compactMetric("Records", totalRecords, "Linked records")}
+      ${compactMetric("Chronology", chronology, "Timeline entries")}
+      ${compactMetric("Safeguarding", safeguarding, "Open/context items", safeguarding ? "amber" : "green")}
+    </section>
+    ${children.length ? `<section class="yp-record-layout"><aside class="yp-roster"><div class="sp-card-head"><h2>Young people</h2><span>${children.length}</span></div>${children.map(rosterRow).join("")}</aside><section class="yp-record-list">${children.map(childRecordTile).join("")}</section></section>` : emptyState("No young people returned for this operational session.")}`;
+}
+
+function renderYoungPersonProfile(childId) {
+  activeView = "children";
+  activeChildId = childId;
+  setActive("children");
+  const ctx = liveContext || normaliseContext({});
+  const child = ctx.children.find((item) => childKey(item) === String(childId));
+  if (!child) {
+    main().innerHTML = `<section class="sp-page-head"><div><button class="sp-back" data-sp-view="children">‹ Back to young people</button><h1>Young person not found</h1><p>The selected young person was not returned by the live backend context.</p></div><button class="sp-secondary" data-refresh-live>Refresh</button></section>${emptyState("No matching young person exists in the current live session context.")}`;
+    return;
+  }
+  const scoped = scopeForChild(child);
+  const name = childName(child);
+  const risk = child.risk || child.summary_risk_level || child.risk_level || "Not set";
+  main().innerHTML = `
+    <section class="yp-profile-hero">
+      <div class="yp-profile-title">
+        <button class="sp-back" data-sp-view="children">‹ Back to Young People</button>
+        <div class="yp-profile-identity"><div class="sp-child-avatar">${escapeHtml(initials(name))}</div><div><span>Young person record</span><h1>${escapeHtml(name)}</h1><p>${escapeHtml(child.home_name || child.home || operationalSession?.homeName || "Current home")} · ${escapeHtml(child.placement_status || child.status || "Active placement")}</p></div></div>
+      </div>
+      <div class="yp-profile-actions"><button class="sp-secondary" data-refresh-live>Refresh</button><button class="sp-primary" disabled>New record</button></div>
+    </section>
+    <section class="yp-profile-grid">
+      <section class="yp-profile-main">
+        <section class="yp-overview-strip">
+          ${compactMetric("Risk", risk, "Current risk level", riskClass(risk) === "submitted-for-review" ? "amber" : "green")}
+          ${compactMetric("Records", scoped.documents.length, "Linked records")}
+          ${compactMetric("Chronology", scoped.chronology.length, "Timeline entries")}
+          ${compactMetric("Safeguarding", scoped.safeguarding.length, "Linked items", scoped.safeguarding.length ? "amber" : "green")}
+        </section>
+        <section class="sp-card"><div class="sp-card-head"><h2>Profile summary</h2><button disabled>Open full profile</button></div>${profileSummary(child)}</section>
+        <section class="sp-card"><div class="sp-card-head"><h2>Live records</h2><button data-sp-view="docs">Open all records →</button></div>${documentsTable(scoped.documents)}</section>
+        <section class="sp-card"><div class="sp-card-head"><h2>Chronology</h2><button data-sp-view="chronology">Open chronology →</button></div>${chronologyList(scoped.chronology)}</section>
+      </section>
+      <aside class="yp-profile-side">
+        <section class="sp-card"><h2>Safeguarding context</h2>${safeguardingList(scoped.safeguarding)}</section>
+        <section class="sp-card"><h2>Key details</h2>${keyDetails(child)}</section>
+        <section class="sp-card"><h2>Record areas</h2><div class="yp-action-list">${recordArea("Daily notes", scoped.documents)}${recordArea("Incidents", scoped.documents, /incident/i)}${recordArea("Direct work", scoped.documents, /direct|key work/i)}${recordArea("Missing episodes", scoped.documents, /missing/i)}${recordArea("Education / health / family", scoped.documents, /education|health|family|contact/i)}</div></section>
+        <section class="sp-card"><h2>Assistant context</h2><p>IndiCare AI can now see this young person's live records, chronology and safeguarding context when the backend returns them. It must not invent missing details.</p></section>
+      </aside>
+    </section>`;
 }
 
 function renderLiveDocs() {
+  activeChildId = null;
   activeView = "docs";
   const documents = filterContextBySession(liveContext || normaliseContext({})).documents;
   main().innerHTML = `<section class="sp-page-head"><div><h1>Records</h1><p>Documents and records loaded from the backend. Creation/editing is the next build step after the shell and Start Shift flow are stable.</p></div><button class="sp-primary" disabled>New record</button></section><section class="sp-card">${documentsTable(documents)}</section>`;
 }
 
 function renderLiveChronology() {
+  activeChildId = null;
   activeView = "chronology";
   const chronology = filterContextBySession(liveContext || normaliseContext({})).chronology;
   main().innerHTML = `<section class="sp-page-head"><div><h1>Chronology</h1><p>Recent chronology entries from your database.</p></div><button class="sp-secondary" data-refresh-live>Refresh</button></section><section class="sp-card">${chronologyList(chronology)}</section>`;
 }
 
 function renderLiveSafeguarding() {
+  activeChildId = null;
   activeView = "safeguarding";
   const safeguarding = filterContextBySession(liveContext || normaliseContext({})).safeguarding;
   main().innerHTML = `<section class="sp-page-head"><div><h1>Safeguarding</h1><p>Safeguarding records, alerts and risk items loaded from the backend.</p></div><button class="sp-secondary" data-refresh-live>Refresh</button></section><section class="sp-card">${safeguardingList(safeguarding)}</section>`;
 }
 
 function renderLiveReviews() {
+  activeChildId = null;
   activeView = "reviews";
   const records = filterContextBySession(liveContext || normaliseContext({})).documents.filter((record) => /review|submitted|pending|draft|changes/i.test(String(record.status || "")));
   main().innerHTML = `<section class="sp-page-head"><div><h1>Reviews</h1><p>Records requiring staff or manager action.</p></div><button class="sp-secondary" data-refresh-live>Refresh</button></section><section class="sp-card">${documentsTable(records)}</section>`;
 }
 
 function renderWorkInProgress(title, message) {
+  activeChildId = null;
   activeView = title.toLowerCase();
   main().innerHTML = `<section class="sp-page-head"><div><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></div></section>${emptyState("This section is intentionally empty until its real backend data and workflows are connected.")}`;
 }
@@ -260,16 +333,65 @@ function normaliseContext(payload) {
 function filterContextBySession(ctx) {
   const selected = new Set((operationalSession?.selectedChildren || []).map(String));
   const children = selected.size ? ctx.children.filter((child) => selected.has(childKey(child))) : ctx.children;
+  const scoped = scopeForChildren(children, ctx);
+  return { ...ctx, children, documents: scoped.documents, chronology: scoped.chronology, safeguarding: scoped.safeguarding };
+}
+
+function scopeForChild(child) {
+  return scopeForChildren([child], liveContext || normaliseContext({}));
+}
+
+function scopeForChildren(children, ctx) {
   const ids = new Set(children.map(childKey));
   const names = new Set(children.map((child) => childName(child).toLowerCase()));
-  const filterByChild = (item) => !ids.size || ids.has(String(item.young_person_id || item.child_id || item.childId || item.youngPersonId || "")) || names.has(String(item.childName || item.child_name || item.young_person_name || "").toLowerCase());
-  return { ...ctx, children, documents: ctx.documents.filter(filterByChild), chronology: ctx.chronology.filter(filterByChild), safeguarding: ctx.safeguarding.filter(filterByChild) };
+  const filterByChild = (item) => !ids.size || ids.has(String(item.young_person_id || item.child_id || item.childId || item.youngPersonId || item.child || "")) || names.has(String(item.childName || item.child_name || item.young_person_name || item.name || "").toLowerCase());
+  return { documents: ctx.documents.filter(filterByChild), chronology: ctx.chronology.filter(filterByChild), safeguarding: ctx.safeguarding.filter(filterByChild) };
+}
+
+function rosterRow(child) {
+  const id = childKey(child);
+  const name = childName(child);
+  const risk = child.risk || child.summary_risk_level || child.risk_level || "Not set";
+  return `<button class="yp-roster-row" data-open-child="${escapeHtml(id)}"><span class="sp-child-avatar">${escapeHtml(initials(name))}</span><span><strong>${escapeHtml(name)}</strong><small>${escapeHtml(child.placement_status || child.status || "Active placement")}</small></span><em class="sp-status ${riskClass(risk)}">${escapeHtml(risk)}</em></button>`;
+}
+
+function childRecordTile(child) {
+  const id = childKey(child);
+  const name = childName(child);
+  const scoped = scopeForChild(child);
+  const risk = child.risk || child.summary_risk_level || child.risk_level || "Not set";
+  return `<article class="yp-record-tile"><div class="yp-record-top"><div class="sp-child-avatar">${escapeHtml(initials(name))}</div><div><h2>${escapeHtml(name)}</h2><p>${escapeHtml(child.home_name || child.home || operationalSession?.homeName || "Current home")}</p></div><span class="sp-status ${riskClass(risk)}">${escapeHtml(risk)}</span></div><div class="yp-record-metrics">${smallStat("Records", scoped.documents.length)}${smallStat("Chronology", scoped.chronology.length)}${smallStat("Safeguarding", scoped.safeguarding.length)}</div><dl><div><dt>Status</dt><dd>${escapeHtml(child.status || child.placement_status || "Active")}</dd></div><div><dt>Key worker</dt><dd>${escapeHtml(child.key_worker || child.keyWorker || child.key_worker_name || "Not set")}</dd></div></dl><footer><button class="sp-primary" data-open-child="${escapeHtml(id)}">Open record</button><button class="sp-secondary" data-sp-view="docs">Records</button></footer></article>`;
 }
 
 function childCard(child) {
+  const id = childKey(child);
   const name = childName(child);
   const risk = child.risk || child.summary_risk_level || child.risk_level || "Not set";
-  return `<article class="sp-child-card"><div class="sp-child-avatar">${escapeHtml(initials(name))}</div><div><h2>${escapeHtml(name)}</h2><p>${escapeHtml(child.placement_status || child.status || "Active placement")}</p></div><span class="sp-status ${/high|medium|watch/i.test(String(risk)) ? "submitted-for-review" : "approved"}">${escapeHtml(risk)}</span><dl><div><dt>Home</dt><dd>${escapeHtml(child.home_name || child.home || child.home_id || "Current home")}</dd></div><div><dt>Key worker</dt><dd>${escapeHtml(child.key_worker || child.keyWorker || child.key_worker_name || "Not set")}</dd></div><div><dt>Admission</dt><dd>${escapeHtml(formatDate(child.admission_date) || "Not set")}</dd></div><div><dt>Status</dt><dd>${escapeHtml(child.status || child.placement_status || "Active")}</dd></div></dl><footer><button class="sp-open-btn" data-sp-view="docs">Records</button><button class="sp-open-btn" data-sp-view="chronology">Chronology</button></footer></article>`;
+  return `<article class="sp-child-card"><div class="sp-child-avatar">${escapeHtml(initials(name))}</div><div><h2>${escapeHtml(name)}</h2><p>${escapeHtml(child.placement_status || child.status || "Active placement")}</p></div><span class="sp-status ${riskClass(risk)}">${escapeHtml(risk)}</span><dl><div><dt>Home</dt><dd>${escapeHtml(child.home_name || child.home || child.home_id || "Current home")}</dd></div><div><dt>Key worker</dt><dd>${escapeHtml(child.key_worker || child.keyWorker || child.key_worker_name || "Not set")}</dd></div><div><dt>Admission</dt><dd>${escapeHtml(formatDate(child.admission_date) || "Not set")}</dd></div><div><dt>Status</dt><dd>${escapeHtml(child.status || child.placement_status || "Active")}</dd></div></dl><footer><button class="sp-open-btn" data-open-child="${escapeHtml(id)}">Open record</button><button class="sp-open-btn" data-sp-view="chronology">Chronology</button></footer></article>`;
+}
+
+function profileSummary(child) {
+  const rows = [
+    ["Preferred name", child.preferred_name || child.name || child.full_name],
+    ["Legal/full name", child.full_name || child.legal_name || child.name],
+    ["Date of birth", formatDate(child.date_of_birth || child.dob)],
+    ["Admission date", formatDate(child.admission_date || child.placement_start_date)],
+    ["Placement status", child.placement_status || child.status],
+    ["Key worker", child.key_worker || child.keyWorker || child.key_worker_name],
+  ];
+  return `<div class="yp-detail-grid">${rows.map(([label, value]) => detailCell(label, value || "Not set")).join("")}</div>`;
+}
+
+function keyDetails(child) {
+  const rows = [
+    ["Home", child.home_name || child.home || operationalSession?.homeName],
+    ["Risk level", child.risk || child.summary_risk_level || child.risk_level],
+    ["Care status", child.care_status || child.legal_status],
+    ["Social worker", child.social_worker || child.social_worker_name],
+    ["Education", child.education_status || child.school || child.education],
+    ["Health", child.health_summary || child.health_status],
+  ];
+  return `<div class="yp-key-list">${rows.map(([label, value]) => `<p><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not set")}</strong></p>`).join("")}</div>`;
 }
 
 function documentsTable(documents) {
@@ -306,6 +428,11 @@ function isChildInHome(child, home) {
   return String(child.home_id || child.homeId || child.home || child.home_name || "") === String(home.id || home.home_id || home.name || home.home_name || "") || String(child.home_name || child.home || "") === String(homeName(home));
 }
 
+function compactMetric(label, value, sub, tone = "blue") { return `<article class="yp-compact-metric ${tone}"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span><small>${escapeHtml(sub)}</small></article>`; }
+function smallStat(label, value) { return `<p><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></p>`; }
+function detailCell(label, value) { return `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not set")}</strong></article>`; }
+function recordArea(label, docs, pattern = null) { const count = pattern ? docs.filter((doc) => pattern.test(String(doc.type || doc.record_type || doc.title || doc.category || ""))).length : docs.length; return `<button type="button" disabled><strong>${escapeHtml(label)}</strong><span>${count} live record${count === 1 ? "" : "s"}</span></button>`; }
+function riskClass(value) { return /high|medium|watch|amber|red|significant/i.test(String(value || "")) ? "submitted-for-review" : "approved"; }
 function homeKey(home) { return String(home?.id || home?.home_id || home?.name || home?.home_name || "home"); }
 function homeName(home) { return home?.name || home?.home_name || home?.title || "Selected home"; }
 function childKey(child) { return String(child.id || child.young_person_id || child.child_id || child.youngPersonId || childName(child)); }
