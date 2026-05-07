@@ -8,7 +8,48 @@
   const THEME_KEY = "indicare_assistant_theme";
   const USER_PROFILE_KEY = "indicare_assistant_user_profile";
   const EVIDENCE_COLLAPSED_KEY = "indicare_assistant_sources_collapsed";
+  const MODE_KEY = "indicare_assistant_default_mode";
   const MAX_HISTORY_ITEMS = 12;
+
+  const MODES = {
+    ofsted: {
+      label: "Ofsted Lead",
+      instruction: "Operate as an Ofsted lead for children's residential care. Focus on SCCIF judgement areas, Quality Standards, leadership oversight, evidence quality, impact, gaps, inspection questions and improvement actions. Always separate evidence from professional interpretation.",
+    },
+    safeguarding: {
+      label: "Safeguarding",
+      instruction: "Operate as a safeguarding-aware residential care assistant. Focus on immediate safety, professional curiosity, risk indicators, notifications, recording quality, manager/DSL review and proportionate next steps. Do not make final threshold decisions.",
+    },
+    records: {
+      label: "Recording QA",
+      instruction: "Operate as a recording quality assurance assistant. Focus on factuality, chronology, child-centred language, missing evidence, judgemental wording, staff response, young person's voice, management oversight and follow-up actions.",
+    },
+    practice: {
+      label: "Practice Encyclopaedia",
+      instruction: "Operate as a children's residential care encyclopaedia. Explain residential practice, trauma-informed care, relational practice, key work, behaviour support, safeguarding, regulation and inspection expectations in clear British English with practical examples.",
+    },
+  };
+
+  const COMMANDS = {
+    "/ofsted": "Review this through an Ofsted inspection lens. Identify evidence, impact, gaps, leadership oversight, relevant Quality Standards and likely inspector questions: ",
+    "/safeguarding": "Analyse this safeguarding concern. Separate facts from concerns, identify missing information, immediate actions, manager/DSL review points and recording implications: ",
+    "/recording": "Review and improve this record for factual, child-centred, non-judgemental residential care recording. Highlight missing evidence and provide a paste-ready improved version: ",
+    "/reg45": "Create a Regulation 45 style quality-of-care summary from this information, covering strengths, concerns, impact, evidence gaps and improvement actions: ",
+    "/chronology": "Create a clear factual chronology from this information. Include dates/times where known, event summaries, risks, actions taken and missing details: ",
+  };
+
+  const QUICK_PROMPTS = {
+    policy: "Summarise this policy or guidance for children's home staff. Include key duties, practice implications, risks, evidence expectations and manager oversight points: ",
+    incident: "Turn these rough notes into a clear, factual incident record. Include missing information, safeguarding considerations and manager review points: ",
+    risk: "Create a structured risk summary covering concerns, triggers, protective factors, staff actions, missing evidence and review recommendations: ",
+    handover: "Write a concise shift handover from this information. Include what happened, current risks, support offered, follow-up needed and manager awareness: ",
+    chronology: "Create a factual chronology from this information. Separate known facts from missing detail: ",
+    ofsted: "Prepare an Ofsted evidence summary from this information. Identify what this evidences, impact for children, gaps, leadership oversight and likely inspection questions: ",
+    reg45: "Build a Regulation 45 summary from this information. Cover quality of care, safeguarding, leadership oversight, evidence of impact, shortfalls and improvement actions: ",
+    quality: "Review the quality of this recording. Identify judgemental language, missing evidence, missing child voice, unclear actions and provide improved wording: ",
+    threshold: "Analyse whether this information suggests safeguarding threshold concerns. Do not make a final decision. Identify indicators, missing information, immediate actions and who should review: ",
+    missing: "Create a missing-from-care record from this information. Include chronology, staff actions, notifications, return details, safeguarding considerations, missing information and manager review: ",
+  };
 
   const $ = (id) => document.getElementById(id);
 
@@ -19,7 +60,8 @@
     isStreaming: false,
     isUploading: false,
     theme: "light",
-    userProfile: { name: "Assistant user", role: "Standalone" },
+    currentMode: "ofsted",
+    userProfile: { name: "Assistant user", role: "Standalone", defaultMode: "ofsted" },
   };
 
   function escapeHtml(value) {
@@ -73,6 +115,10 @@
     } catch (_) {}
   }
 
+  function modeInstruction() {
+    return MODES[state.currentMode]?.instruction || MODES.ofsted.instruction;
+  }
+
   function standaloneSystemPrefix() {
     const profile = state.userProfile || {};
     const roleLine = profile.role ? `User role context: ${profile.role}.` : "";
@@ -85,6 +131,10 @@
       "Use British English and professional children's residential care language.",
       "Do not make final safeguarding, legal, clinical, employment, or regulatory decisions. Frame actions for staff or manager review.",
       "If answering about regulations or statutory guidance, name the source and clearly separate quoted wording from explanation where relevant.",
+      "Always separate known facts, professional interpretation, missing evidence and recommended review actions where relevant.",
+      "When the answer relates to Ofsted, include evidence, impact, gaps and leadership oversight.",
+      "When the answer relates to records, use factual, non-judgemental, child-centred wording.",
+      modeInstruction(),
       roleLine,
     ].filter(Boolean).join("\n");
   }
@@ -104,8 +154,10 @@
     state.userProfile = storedProfile || {
       name: [first, last].filter(Boolean).join(" ").trim() || "Assistant user",
       role,
+      defaultMode: localStorage.getItem(MODE_KEY) || "ofsted",
     };
-
+    state.currentMode = state.userProfile.defaultMode || localStorage.getItem(MODE_KEY) || "ofsted";
+    if (!MODES[state.currentMode]) state.currentMode = "ofsted";
     state.theme = localStorage.getItem(THEME_KEY) || "light";
   }
 
@@ -124,6 +176,7 @@
       id: makeId("standalone"),
       title: "New chat",
       surface: SURFACE,
+      mode: state.currentMode,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       messages: [],
@@ -153,20 +206,36 @@
     const lines = linked.split("\n");
     let html = "";
     let inList = false;
+    let inOrdered = false;
 
     for (const line of lines) {
       if (/^\s*[-*•]\s+/.test(line)) {
+        if (inOrdered) { html += "</ol>"; inOrdered = false; }
         if (!inList) { html += "<ul>"; inList = true; }
         html += `<li>${line.replace(/^\s*[-*•]\s+/, "")}</li>`;
         continue;
       }
+      if (/^\s*\d+[.)]\s+/.test(line)) {
+        if (inList) { html += "</ul>"; inList = false; }
+        if (!inOrdered) { html += "<ol>"; inOrdered = true; }
+        html += `<li>${line.replace(/^\s*\d+[.)]\s+/, "")}</li>`;
+        continue;
+      }
       if (inList) { html += "</ul>"; inList = false; }
+      if (inOrdered) { html += "</ol>"; inOrdered = false; }
       if (/^#{1,3}\s+/.test(line)) html += `<h3>${line.replace(/^#{1,3}\s+/, "")}</h3>`;
+      else if (/^[A-Z][A-Za-z\s/&-]{2,}:$/.test(line.trim())) html += `<h3>${line.trim().replace(/:$/, "")}</h3>`;
       else if (line.trim()) html += `<p>${line}</p>`;
       else html += "<br>";
     }
     if (inList) html += "</ul>";
+    if (inOrdered) html += "</ol>";
     return html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  }
+
+  function messageActions(role, index) {
+    if (role !== "assistant") return "";
+    return `<div class="ic-message-actions"><button type="button" data-copy-message="${index}">Copy</button><button type="button" data-followup="professional">Make professional</button><button type="button" data-followup="shorter">Shorten</button><button type="button" data-followup="manager">Manager summary</button></div>`;
   }
 
   function messageElement(message, index) {
@@ -179,6 +248,7 @@
         <div class="block">
           <div class="msg">${renderMarkdownLite(message.content)}</div>
           ${pending}
+          ${messageActions(role, index)}
         </div>
       </div>`;
   }
@@ -239,6 +309,7 @@
     if (!combined.length) {
       list.innerHTML = `
         <article class="ic-citation"><small>Boundary</small><strong>No OS records loaded</strong><p>This standalone assistant only uses what is typed or attached in this chat.</p><span class="ic-rel">Standalone</span></article>
+        <article class="ic-citation"><small>Mode</small><strong>${escapeHtml(MODES[state.currentMode]?.label || "Ofsted Lead")}</strong><p>${escapeHtml(modeInstruction()).slice(0, 220)}...</p><span class="ic-rel">Active mode</span></article>
         <article class="ic-citation"><small>Documents</small><strong>Upload PDF, DOCX or TXT</strong><p>Documents are extracted by the server and used as standalone chat context only.</p><span class="ic-rel">Upload ready</span></article>`;
       return;
     }
@@ -259,6 +330,7 @@
     const conversation = ensureConversation();
     conversation.messages.push({ role, content: String(content || ""), createdAt: new Date().toISOString(), ...(extra || {}) });
     conversation.updatedAt = new Date().toISOString();
+    conversation.mode = state.currentMode;
     if (role === "user" && (!conversation.title || conversation.title === "New chat")) conversation.title = conversationTitleFrom(content);
     saveState();
     renderHistory();
@@ -387,6 +459,7 @@
           conversation_id: conversation.id,
           history: buildHistoryForApi(conversation),
           assistant_surface: SURFACE,
+          assistant_mode: state.currentMode,
           document_name: state.attachedDocument?.name || null,
           document_text: state.attachedDocument?.text || null,
         }),
@@ -441,7 +514,9 @@
   }
 
   function openConversation(id) {
+    const conversation = state.conversations.find((item) => item.id === id);
     state.activeConversationId = id;
+    if (conversation?.mode && MODES[conversation.mode]) setMode(conversation.mode, false);
     saveState();
     renderHistory();
     renderMessages();
@@ -484,42 +559,46 @@
 
   async function copyConversation() {
     const conversation = activeConversation();
-    if (!conversation || !conversation.messages.length) {
-      showToast("Nothing to copy");
-      return;
-    }
-    const text = conversation.messages
-      .filter((message) => !message.pending)
-      .map((message) => `${message.role === "user" ? "User" : "IndiCare"}:\n${message.content}`)
-      .join("\n\n");
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast("Conversation copied");
-    } catch (_) {
-      showToast("Copy failed");
-    }
+    if (!conversation || !conversation.messages.length) { showToast("Nothing to copy"); return; }
+    const text = conversation.messages.filter((message) => !message.pending).map((message) => `${message.role === "user" ? "User" : "IndiCare"}:\n${message.content}`).join("\n\n");
+    try { await navigator.clipboard.writeText(text); showToast("Conversation copied"); } catch (_) { showToast("Copy failed"); }
   }
 
-  function quick(type) {
-    const prompts = {
-      policy: "Summarise this policy or guidance for children's home staff: ",
-      incident: "Turn these rough notes into a clear, factual incident record: ",
-      risk: "Create a structured risk summary covering concerns, triggers, protective factors and staff actions: ",
-      handover: "Write a concise shift handover from this information: ",
-      chronology: "Create a factual chronology from this information: ",
-    };
+  async function copyMessage(index) {
+    const conversation = activeConversation();
+    const message = conversation?.messages?.[index];
+    if (!message) return;
+    try { await navigator.clipboard.writeText(message.content); showToast("Response copied"); } catch (_) { showToast("Copy failed"); }
+  }
+
+  function insertPrompt(text) {
     const input = $("input");
     if (!input) return;
-    input.value = prompts[type] || "Help me with: ";
+    input.value = text;
     input.focus();
     input.dispatchEvent(new Event("input"));
   }
 
+  function quick(type) {
+    insertPrompt(QUICK_PROMPTS[type] || "Help me with: ");
+  }
+
+  function applyCommand(command) {
+    insertPrompt(COMMANDS[command] || `${command} `);
+  }
+
+  function followUp(type) {
+    const prompts = {
+      professional: "Rewrite the previous response in a more professional, child-centred and inspection-ready style.",
+      shorter: "Shorten the previous response while keeping the key safeguarding, evidence and action points.",
+      manager: "Turn the previous response into a concise manager summary with oversight actions and evidence gaps.",
+    };
+    insertPrompt(prompts[type] || "Continue from the previous response.");
+  }
+
   function filterHistory(query) {
     const q = String(query || "").toLowerCase();
-    document.querySelectorAll("#history .item").forEach((item) => {
-      item.style.display = item.textContent.toLowerCase().includes(q) ? "" : "none";
-    });
+    document.querySelectorAll("#history .item").forEach((item) => { item.style.display = item.textContent.toLowerCase().includes(q) ? "" : "none"; });
   }
 
   function initialsFromName(name) {
@@ -537,6 +616,25 @@
     ["icUserAvatar", "icUserAvatarSidebar"].forEach((id) => { if ($(id)) $(id).textContent = initials; });
     if ($("settingsName")) $("settingsName").value = name;
     if ($("settingsRole")) $("settingsRole").value = role;
+    if ($("settingsDefaultMode")) $("settingsDefaultMode").value = state.userProfile.defaultMode || state.currentMode || "ofsted";
+  }
+
+  function setMode(mode, persist) {
+    state.currentMode = MODES[mode] ? mode : "ofsted";
+    if ($("currentModeLabel")) $("currentModeLabel").textContent = MODES[state.currentMode].label;
+    document.querySelectorAll("[data-mode]").forEach((button) => button.classList.toggle("active", button.getAttribute("data-mode") === state.currentMode));
+    if (persist) {
+      state.userProfile.defaultMode = state.currentMode;
+      localStorage.setItem(MODE_KEY, state.currentMode);
+      localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(state.userProfile));
+      showToast(`${MODES[state.currentMode].label} mode`);
+    }
+    const conversation = activeConversation();
+    if (conversation) {
+      conversation.mode = state.currentMode;
+      saveState();
+    }
+    renderSources(activeConversation()?.sources || []);
   }
 
   function setTheme(theme) {
@@ -563,8 +661,11 @@
   function saveSettings() {
     const name = String($("settingsName")?.value || "").trim() || "Assistant user";
     const role = String($("settingsRole")?.value || "").trim() || "Standalone";
-    state.userProfile = { name, role };
+    const defaultMode = String($("settingsDefaultMode")?.value || state.currentMode || "ofsted");
+    state.userProfile = { name, role, defaultMode: MODES[defaultMode] ? defaultMode : "ofsted" };
     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(state.userProfile));
+    localStorage.setItem(MODE_KEY, state.userProfile.defaultMode);
+    setMode(state.userProfile.defaultMode, false);
     hydrateUser();
     closeSettings();
     showToast("Settings saved");
@@ -595,29 +696,33 @@
     $("clearConversation")?.addEventListener("click", clearCurrentConversation);
     $("toggleEvidence")?.addEventListener("click", toggleEvidence);
 
-    $("settingsModal")?.addEventListener("click", (event) => {
-      if (event.target === $("settingsModal")) closeSettings();
+    document.querySelectorAll("[data-mode]").forEach((button) => button.addEventListener("click", () => setMode(button.getAttribute("data-mode"), true)));
+    document.querySelectorAll("[data-command]").forEach((button) => button.addEventListener("click", () => applyCommand(button.getAttribute("data-command"))));
+
+    $("messages")?.addEventListener("click", (event) => {
+      const copy = event.target.closest("[data-copy-message]");
+      const follow = event.target.closest("[data-followup]");
+      if (copy) copyMessage(Number(copy.getAttribute("data-copy-message")));
+      if (follow) followUp(follow.getAttribute("data-followup"));
     });
+
+    $("settingsModal")?.addEventListener("click", (event) => { if (event.target === $("settingsModal")) closeSettings(); });
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeSettings();
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        newConversation();
-      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); newConversation(); }
     });
 
     $("input")?.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-      }
+      if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); }
     });
 
     $("input")?.addEventListener("input", (event) => {
       const target = event.target;
       target.style.height = "auto";
       target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
+      const value = target.value.trim();
+      if (COMMANDS[value]) applyCommand(value);
     });
 
     $("history")?.addEventListener("click", (event) => {
@@ -636,6 +741,7 @@
     setTheme(state.theme);
     hydrateUser();
     bindEvents();
+    setMode(state.currentMode, false);
     setEvidenceCollapsed(localStorage.getItem(EVIDENCE_COLLAPSED_KEY) === "true");
     renderHistory();
     renderMessages();

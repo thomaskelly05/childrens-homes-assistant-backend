@@ -11,6 +11,7 @@ ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 CARE_OS_PATH = "/os-command"
 WORKSPACE_FILE = "indicare-workspace.html"
+COMMAND_SHELL_FILE = "os-command.html"
 LEGACY_CARE_OS_PATHS = {
     "/young-people-shell",
     "/young-people-shell.html",
@@ -57,6 +58,10 @@ def workspace() -> list[str]:
     return frontend(WORKSPACE_FILE)
 
 
+def command_shell() -> list[str]:
+    return frontend(COMMAND_SHELL_FILE)
+
+
 def component(file_name: str) -> list[str]:
     return [os.path.join(COMPONENTS_DIR, file_name)]
 
@@ -82,38 +87,40 @@ def get_page_routes() -> dict[str, list[str]]:
         "/security-centre": frontend("security-centre.html"),
         "/security-centre.html": frontend("security-centre.html"),
 
-        # New primary operating workspace. These legacy operating routes now all
-        # serve the rebuilt IndiCare workspace rather than old fragmented pages.
-        "/care-os": workspace(),
-        "/care-os.html": workspace(),
-        "/os-command": workspace(),
-        "/os-command.html": workspace(),
-        "/os-child": workspace(),
-        "/os-child.html": workspace(),
-        "/os-risk": workspace(),
-        "/os-risk.html": workspace(),
-        "/os-safeguarding": workspace(),
-        "/os-safeguarding.html": workspace(),
-        "/os-ofsted": workspace(),
-        "/os-ofsted.html": workspace(),
-        "/young-people": workspace(),
-        "/young-people.html": workspace(),
-        "/young-people-page": workspace(),
-        "/young-people-page.html": workspace(),
-        "/os-dashboard": workspace(),
-        "/os-dashboard.html": workspace(),
-        "/documents-hub": workspace(),
-        "/documents-hub.html": workspace(),
-        "/safeguarding-hub": workspace(),
-        "/safeguarding-hub.html": workspace(),
-        "/quality-hub": workspace(),
-        "/quality-hub.html": workspace(),
-        "/staff-dashboard": workspace(),
-        "/manager-dashboard": workspace(),
-        "/ri-dashboard": workspace(),
-        "/provider-dashboard": workspace(),
-        "/rostering": workspace(),
-        "/rostering.html": workspace(),
+        # Primary blue-and-white SharePoint-style operating shell.
+        "/os-command": command_shell(),
+        "/os-command.html": command_shell(),
+
+        # Other operating routes can still fall back to the wider workspace until
+        # each one is migrated into the new shell.
+        "/care-os": command_shell(),
+        "/care-os.html": command_shell(),
+        "/os-child": command_shell(),
+        "/os-child.html": command_shell(),
+        "/os-risk": command_shell(),
+        "/os-risk.html": command_shell(),
+        "/os-safeguarding": command_shell(),
+        "/os-safeguarding.html": command_shell(),
+        "/os-ofsted": command_shell(),
+        "/os-ofsted.html": command_shell(),
+        "/young-people": command_shell(),
+        "/young-people.html": command_shell(),
+        "/young-people-page": command_shell(),
+        "/young-people-page.html": command_shell(),
+        "/os-dashboard": command_shell(),
+        "/os-dashboard.html": command_shell(),
+        "/documents-hub": command_shell(),
+        "/documents-hub.html": command_shell(),
+        "/safeguarding-hub": command_shell(),
+        "/safeguarding-hub.html": command_shell(),
+        "/quality-hub": command_shell(),
+        "/quality-hub.html": command_shell(),
+        "/staff-dashboard": command_shell(),
+        "/manager-dashboard": command_shell(),
+        "/ri-dashboard": command_shell(),
+        "/provider-dashboard": command_shell(),
+        "/rostering": command_shell(),
+        "/rostering.html": command_shell(),
 
         # Standalone legacy/support pages kept available.
         "/tasks-ui": frontend("tasks-ui.html"),

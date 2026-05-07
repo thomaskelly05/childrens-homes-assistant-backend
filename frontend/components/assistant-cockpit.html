@@ -6,6 +6,7 @@
   <title>IndiCare Assistant</title>
   <meta name="theme-color" content="#ffffff" />
   <link rel="stylesheet" href="/css/assistant-cockpit.css" />
+  <link rel="stylesheet" href="/css/assistant-professional-renderer.css" />
 </head>
 <body>
   <div class="ic-cockpit ic-standalone-assistant" id="icCockpit" data-assistant-surface="standalone">
@@ -53,6 +54,7 @@
 
         <div class="ic-top-actions">
           <button id="copyConversation" class="ic-header-btn" type="button">Copy</button>
+          <button id="exportConversation" class="ic-header-btn" type="button">Export</button>
           <button id="clearConversation" class="ic-header-btn" type="button">Clear</button>
 
           <div class="ic-user">
@@ -91,7 +93,8 @@
         <div id="messages" class="messages hidden"></div>
       </section>
 
-      <div class="ic-composer-dock">
+      <div class="ic-composer-dock" id="composerDock">
+        <div id="dropHint" class="ic-drop-hint hidden">Drop documents here to analyse them</div>
         <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button" aria-label="Remove attached document">×</button></div>
 
         <div id="suggestionChips" class="ic-suggestion-chips" aria-label="Quick assistant actions">
@@ -162,5 +165,6 @@
   </div>
 
   <script src="/js/assistant-standalone-cockpit.js"></script>
+  <script src="/js/assistant-professional-renderer.js"></script>
 </body>
 </html>
