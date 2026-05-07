@@ -14,6 +14,7 @@
     activeConversationId: null,
     attachedDocument: null,
     isStreaming: false,
+    isUploading: false,
   };
 
   function escapeHtml(value) {
@@ -226,7 +227,7 @@
     if (!clean.length) {
       list.innerHTML = `
         <article class="ic-citation"><small>Boundary</small><strong>No OS records loaded</strong><p>This standalone assistant only uses what is typed or attached in this chat.</p><span class="ic-rel">Standalone</span></article>
-        <article class="ic-citation"><small>Documents</small><strong>Attach text-based files</strong><p>TXT, MD, CSV and JSON files can be read in-browser. PDF and DOCX support should be handled by the backend upload pipeline next.</p><span class="ic-rel">Upload ready</span></article>
+        <article class="ic-citation"><small>Documents</small><strong>Upload PDF, DOCX or TXT</strong><p>Documents are extracted by the server and used as standalone chat context only.</p><span class="ic-rel">Upload ready</span></article>
       `;
       return;
     }
@@ -296,19 +297,52 @@
     return { event, data: data.join("\n") };
   }
 
-  async function readAttachedFile(file) {
+  async function readAttachedFileInBrowser(file) {
     if (!file) return null;
     const readable = /^(text\/|application\/json)/.test(file.type || "") || /\.(txt|md|csv|json)$/i.test(file.name || "");
-    if (!readable) {
-      return { name: file.name, text: "", unsupported: true };
-    }
+    if (!readable) return null;
     const text = await file.text();
-    return { name: file.name, text: text.slice(0, 16000), unsupported: false };
+    return { name: file.name, text: text.slice(0, 16000), unsupported: false, extractedBy: "browser" };
+  }
+
+  async function uploadDocumentToServer(file) {
+    const form = new FormData();
+    form.append("file", file);
+
+    const response = await fetch("/chat/upload", {
+      method: "POST",
+      credentials: "include",
+      headers: csrfHeaders("POST"),
+      body: form,
+    });
+
+    if (!response.ok) {
+      const fallback = await response.json().catch(() => ({}));
+      throw new Error(fallback.detail || `Upload failed with status ${response.status}`);
+    }
+
+    const payload = await response.json();
+    return {
+      name: payload.filename || file.name,
+      text: String(payload.text || "").slice(0, 60000),
+      preview: payload.preview || "",
+      unsupported: false,
+      extractedBy: "server",
+    };
+  }
+
+  function setDocumentPill(text, busy) {
+    const doc = $("doc");
+    const docText = $("docText");
+    if (!doc || !docText) return;
+    doc.classList.add("show");
+    docText.textContent = text;
+    doc.classList.toggle("is-busy", !!busy);
   }
 
   function clearAttachment() {
     state.attachedDocument = null;
-    $("doc")?.classList.remove("show");
+    $("doc")?.classList.remove("show", "is-busy");
     if ($("docText")) $("docText").textContent = "";
     if ($("upload")) $("upload").value = "";
   }
@@ -316,17 +350,30 @@
   async function handleUpload(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    state.attachedDocument = await readAttachedFile(file);
-    $("doc")?.classList.add("show");
-    if ($("docText")) {
-      $("docText").textContent = state.attachedDocument.unsupported
-        ? `${file.name} attached - paste text or use supported upload handling`
-        : file.name;
+
+    state.isUploading = true;
+    setDocumentPill(`Reading ${file.name}...`, true);
+
+    try {
+      state.attachedDocument = await uploadDocumentToServer(file);
+      setDocumentPill(`${state.attachedDocument.name} ready`, false);
+    } catch (serverError) {
+      console.warn("Server document upload failed, trying browser extraction", serverError);
+      const browserDocument = await readAttachedFileInBrowser(file);
+      if (browserDocument) {
+        state.attachedDocument = browserDocument;
+        setDocumentPill(`${browserDocument.name} ready`, false);
+      } else {
+        state.attachedDocument = { name: file.name, text: "", unsupported: true, error: serverError.message };
+        setDocumentPill(`${file.name} could not be read`, false);
+      }
+    } finally {
+      state.isUploading = false;
     }
   }
 
   async function sendMessage() {
-    if (state.isStreaming) return;
+    if (state.isStreaming || state.isUploading) return;
     const input = $("input");
     if (!input) return;
 
@@ -335,14 +382,8 @@
 
     clearStandaloneContext();
     const conversation = ensureConversation();
-    const attachmentBlock = state.attachedDocument?.text
-      ? `\n\nATTACHED DOCUMENT (${state.attachedDocument.name}):\n${state.attachedDocument.text}`
-      : state.attachedDocument?.unsupported
-        ? `\n\nThe user attached ${state.attachedDocument.name}, but this browser runtime could not read the file content directly. Ask the user to paste the relevant content unless backend document extraction is available.`
-        : "";
-
     const userText = raw || `Please review the attached document: ${state.attachedDocument?.name || "document"}`;
-    const apiMessage = `${standaloneSystemPrefix()}\n\nUSER REQUEST:\n${userText}${attachmentBlock}`;
+    const apiMessage = `${standaloneSystemPrefix()}\n\nUSER REQUEST:\n${userText}`;
 
     appendMessage("user", userText);
     input.value = "";
@@ -364,6 +405,8 @@
           conversation_id: conversation.id,
           history: buildHistoryForApi(conversation),
           assistant_surface: SURFACE,
+          document_name: state.attachedDocument?.name || null,
+          document_text: state.attachedDocument?.text || null,
         }),
       });
 
