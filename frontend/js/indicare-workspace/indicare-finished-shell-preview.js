@@ -1,4 +1,5 @@
 const PREVIEW_STATE_KEY = "indicare.finished.shell.preview";
+const DEFAULT_FINISHED_SHELL = true;
 
 const demoChild = {
   name: "Jamie",
@@ -30,7 +31,12 @@ bootFinishedShellPreview();
 
 function bootFinishedShellPreview() {
   addPreviewButton();
-  if (localStorage.getItem(PREVIEW_STATE_KEY) === "on") renderFinishedShellPreview();
+  const disabled = localStorage.getItem(PREVIEW_STATE_KEY) === "off";
+  if (DEFAULT_FINISHED_SHELL && !disabled) {
+    window.requestAnimationFrame(renderFinishedShellPreview);
+  } else if (localStorage.getItem(PREVIEW_STATE_KEY) === "on") {
+    renderFinishedShellPreview();
+  }
   window.IndiCareFinishedShellPreview = { open: renderFinishedShellPreview, close: closePreview };
 }
 
@@ -41,7 +47,7 @@ function addPreviewButton() {
   button.id = "finished-preview-button";
   button.className = "secondary-action preview-action";
   button.type = "button";
-  button.textContent = "Preview finished OS";
+  button.textContent = "Finished OS";
   button.addEventListener("click", renderFinishedShellPreview);
   actions.prepend(button);
 }
@@ -53,8 +59,8 @@ function renderFinishedShellPreview() {
   const title = document.getElementById("view-title");
   const subtitle = document.getElementById("view-subtitle");
   const status = document.getElementById("status-strip");
-  if (title) title.textContent = "IndiCare finished product preview";
-  if (subtitle) subtitle.textContent = "A visual shell of the finished Therapeutic Care OS before full data wiring is completed.";
+  if (title) title.textContent = "IndiCare Therapeutic Care OS";
+  if (subtitle) subtitle.textContent = "The finished operating shell: home, child, memory stream, documents, AI, safeguarding and governance in one workspace.";
   if (status) status.innerHTML = renderPreviewRibbon();
   if (!main) return;
 
@@ -68,7 +74,7 @@ function renderFinishedShellPreview() {
         </div>
         <div class="finished-hero-actions">
           <button type="button" class="primary-action" data-preview-action="open-doc">Open Narrative OS</button>
-          <button type="button" class="secondary-action" data-preview-action="exit">Exit preview</button>
+          <button type="button" class="secondary-action" data-preview-action="live-data">Use live data shell</button>
         </div>
       </header>
 
@@ -129,7 +135,7 @@ function renderFinishedShellPreview() {
       </section>
     </section>`;
 
-  main.querySelectorAll("[data-preview-action='exit']").forEach((button) => button.addEventListener("click", closePreview));
+  main.querySelectorAll("[data-preview-action='live-data']").forEach((button) => button.addEventListener("click", closePreview));
   main.querySelectorAll("[data-preview-action='open-doc']").forEach((button) => button.addEventListener("click", renderNarrativePreview));
 }
 
@@ -137,7 +143,7 @@ function renderNarrativePreview() {
   const main = document.getElementById("workspace-main");
   const title = document.getElementById("view-title");
   const subtitle = document.getElementById("view-subtitle");
-  if (title) title.textContent = "IndiCare Narrative OS preview";
+  if (title) title.textContent = "IndiCare Narrative OS";
   if (subtitle) subtitle.textContent = "The finished writing environment: not Word, not Google Docs — therapeutic operational narration.";
   if (!main) return;
   main.innerHTML = `
@@ -172,7 +178,7 @@ function renderNarrativePreview() {
 }
 
 function closePreview() {
-  localStorage.removeItem(PREVIEW_STATE_KEY);
+  localStorage.setItem(PREVIEW_STATE_KEY, "off");
   document.body.classList.remove("finished-os-preview-active");
   window.renderWorkspaceGate?.();
 }
