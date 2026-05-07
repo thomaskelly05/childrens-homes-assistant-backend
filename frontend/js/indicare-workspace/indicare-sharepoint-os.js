@@ -1,11 +1,11 @@
 const DOCS_KEY = "indicare.basic.docs.v1";
 
 const recentDocsSeed = [
-  ["Daily Lived Experience Record", "Jordan A.", "Daily Record", "Draft", "20 May 2025 10:15"],
-  ["Incident Record", "Tyler S.", "Incident", "Under Review", "20 May 2025 09:47"],
-  ["Direct Work Record", "Jordan A.", "Direct Work", "Approved", "19 May 2025 16:30"],
-  ["Safeguarding Concern", "Casey L.", "Safeguarding", "Under Review", "19 May 2025 14:22"],
-  ["Missing From Care Report", "Tyler S.", "Missing From Care", "Draft", "19 May 2025 11:05"],
+  ["seed_daily_jordan", "daily-lived-experience", "Daily Lived Experience Record", "Jordan A.", "Daily Record", "Draft", "20 May 2025 10:15"],
+  ["seed_incident_tyler", "incident-behaviour-communication", "Incident Record", "Tyler S.", "Incident", "Under Review", "20 May 2025 09:47"],
+  ["seed_direct_jordan", "direct-work-session", "Direct Work Record", "Jordan A.", "Direct Work", "Approved", "19 May 2025 16:30"],
+  ["seed_safeguarding_casey", "safeguarding-concern", "Safeguarding Concern", "Casey L.", "Safeguarding", "Under Review", "19 May 2025 14:22"],
+  ["seed_missing_tyler", "missing-from-care", "Missing From Care Report", "Tyler S.", "Missing From Care", "Draft", "19 May 2025 11:05"],
 ];
 
 bootSharePointShell();
@@ -98,8 +98,10 @@ function createDocumentFromTemplate(templateId) {
 }
 
 function openDocument(documentId) {
-  const doc = getDocs().find((item) => item.id === documentId);
+  let doc = getDocs().find((item) => item.id === documentId);
+  if (!doc) doc = seedDocs().find((item) => item.id === documentId);
   if (!doc) return;
+  upsertDocument(doc);
   window.__activeIndiCareDocId = documentId;
   renderDocumentEditor(doc);
 }
@@ -122,30 +124,31 @@ function saveDocument(statusValue) {
 }
 
 function renderReviewsView() {
-  const docs = getDocs().filter((doc) => doc.status === "submitted_for_review");
+  const docs = getDocs().filter((doc) => doc.status === "submitted_for_review" || doc.status === "Under Review");
   main().innerHTML = `<section class="sp-page-head"><div><h1>Reviews</h1><p>Documents submitted for manager review.</p></div></section><section class="sp-card">${documentsTable(docs.length ? docs : seedDocs().filter((doc) => /review/i.test(doc.status)), true)}</section>`;
 }
 function renderChronologyView() { main().innerHTML = `<section class="sp-page-head"><div><h1>Chronology</h1><p>Basic chronology snapshot for Riverdale House.</p></div></section><section class="sp-card">${chronologyList()}</section>`; }
 function renderSafeguardingView() { main().innerHTML = `<section class="sp-page-head"><div><h1>Safeguarding</h1><p>Open safeguarding alerts and related documents.</p></div></section>${safeguardingPanel()}<section class="sp-card">${documentsTable(seedDocs().filter((doc) => /Safeguarding|Incident|Missing/.test(doc.title)))}</section>`; }
 
-function updateDocumentStatus(documentId, statusValue) { const doc = getDocs().find((item) => item.id === documentId); if (!doc) return; upsertDocument({ ...doc, status: statusValue, updatedAt: new Date().toISOString() }); renderReviewsView(); }
+function updateDocumentStatus(documentId, statusValue) { const doc = getDocs().find((item) => item.id === documentId) || seedDocs().find((item) => item.id === documentId); if (!doc) return; upsertDocument({ ...doc, status: statusValue, updatedAt: new Date().toISOString() }); renderReviewsView(); }
 function activeDocument() { return getDocs().find((doc) => doc.id === window.__activeIndiCareDocId); }
-function upsertDocument(doc) { const docs = getDocs(); const index = docs.findIndex((item) => item.id === doc.id); if (index >= 0) docs[index] = doc; else docs.unshift(doc); localStorage.setItem(DOCS_KEY, JSON.stringify(docs)); }
+function upsertDocument(doc) { const docs = getDocs().filter((item) => item.id !== doc.id); docs.unshift(doc); localStorage.setItem(DOCS_KEY, JSON.stringify(docs)); }
 function getTemplates() { return window.IndiCareDocTemplates?.all?.() || []; }
 function getTemplate(templateId) { return window.IndiCareDocTemplates?.get?.(templateId) || getTemplates().find((template) => template.id === templateId) || { id: "record", title: "Record", sections: [] }; }
 function navButton(label, view, active = false) { const icons = { Dashboard: "▦", Children: "♙", Homes: "⌂", "IndiCare Docs": "▤", Chronology: "◴", Safeguarding: "◇", Reviews: "☑", Workforce: "♧", Reports: "▥", Settings: "⚙" }; return `<button class="${active ? "active" : ""}" data-sp-view="${view}"><span>${icons[label] || "•"}</span>${label}</button>`; }
 function priorityCard(icon, number, label, link, tone = "blue") { return `<article class="sp-priority ${tone}"><span>${icon}</span><strong>${number}</strong><p>${label}</p><a>${link} →</a></article>`; }
-function documentsTable(docs, reviewMode = false) { return `<table class="sp-table"><thead><tr><th>Document</th><th>Child</th><th>Type</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead><tbody>${docs.map((doc) => `<tr><td>${escapeHtml(doc.title || doc[0])}</td><td>${escapeHtml(doc.childName || doc[1])}</td><td>${escapeHtml(doc.type || doc[2])}</td><td>${status(doc.status || doc[3])}</td><td>${escapeHtml(doc.updated || doc[4] || formatDate(doc.updatedAt))}</td><td><button class="sp-open-btn" ${doc.id ? `data-open-document-id="${escapeHtml(doc.id)}"` : ""}>Open</button>${reviewMode && doc.id ? ` <button class="sp-open-btn" data-approve-doc="${escapeHtml(doc.id)}">Approve</button>` : ""}<button class="sp-kebab">⋮</button></td></tr>`).join("")}</tbody></table>`; }
+function documentsTable(docs, reviewMode = false) { return `<table class="sp-table"><thead><tr><th>Document</th><th>Child</th><th>Type</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead><tbody>${docs.map((doc) => `<tr><td>${escapeHtml(doc.title || doc[2])}</td><td>${escapeHtml(doc.childName || doc[3])}</td><td>${escapeHtml(doc.type || doc[4])}</td><td>${status(doc.status || doc[5])}</td><td>${escapeHtml(doc.updated || doc[6] || formatDate(doc.updatedAt))}</td><td><button class="sp-open-btn" data-open-document-id="${escapeHtml(doc.id || doc[0])}">Open</button>${reviewMode ? ` <button class="sp-open-btn" data-approve-doc="${escapeHtml(doc.id || doc[0])}">Approve</button>` : ""}<button class="sp-kebab">⋮</button></td></tr>`).join("")}</tbody></table>`; }
 function safeguardingPanel() { return `<section class="sp-card"><div class="sp-card-head"><h2>Safeguarding alerts</h2><button>View all →</button></div><article class="sp-alert"><span></span><div><b>Low Risk</b><strong>Safeguarding concern reported for Tyler S.</strong><small>Reported on 20 May 2025</small></div><i>›</i></article></section>`; }
 function chronologyPanel() { return `<section class="sp-card"><div class="sp-card-head"><h2>Chronology snapshot</h2><button>View full chronology →</button></div>${chronologyList()}</section>`; }
 function chronologyList() { return `<div class="sp-timeline"><h3>Today</h3>${timelineItem("10:15", "Daily record submitted", "Jordan A. by Sarah M.")}${timelineItem("09:30", "School attendance recorded", "Jordan A.")}<h3>Yesterday</h3>${timelineItem("16:45", "Football session completed", "Jordan A.", "amber")}${timelineItem("14:20", "Family call completed", "Jordan A.", "purple")}${timelineItem("09:10", "Medication administered", "Jordan A.")}</div>`; }
 function timelineItem(time, title, detail, tone = "blue") { return `<div class="sp-time-item ${tone}"><time>${time}</time><span></span><div><strong>${title}</strong><small>${detail}</small></div></div>`; }
 function miniRows(rows, overdue = false) { return `<div class="sp-mini-rows">${rows.map(([a,b,c]) => `<p><span>${a}</span><strong>${b}</strong><em class="${overdue ? "overdue" : ""}">${c}</em></p>`).join("")}</div>`; }
-function seedDocs() { return recentDocsSeed.map(([title, childName, type, status, updated]) => ({ title, childName, type, status, updated })); }
-function getDocs() { try { const docs = JSON.parse(localStorage.getItem(DOCS_KEY) || "[]"); return Array.isArray(docs) ? docs.map((doc) => ({ ...doc, type: doc.type || doc.category || doc.templateId || "Record", updated: doc.updatedAt ? new Date(doc.updatedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : doc.updated || "Today" })) : []; } catch { return []; } }
+function seedDocs() { return recentDocsSeed.map(([id, templateId, title, childName, type, status, updated]) => ({ id, templateId, title, childName, homeName: "Riverdale House", type, status, updated, updatedAt: updated, content: {} })); }
+function getDocs() { try { const docs = JSON.parse(localStorage.getItem(DOCS_KEY) || "[]"); return Array.isArray(docs) ? docs.map((doc) => ({ ...doc, type: doc.type || doc.category || doc.templateId || "Record", updated: doc.updatedAt ? safeDate(doc.updatedAt) : doc.updated || "Today" })) : []; } catch { return []; } }
 function status(value) { const key = String(value || "Draft").toLowerCase().replaceAll("_", "-").replaceAll(" ", "-"); const label = titleCase(String(value || "Draft").replaceAll("_", " ")); return `<span class="sp-status ${key}">${escapeHtml(label)}</span>`; }
 function setActiveNav(view) { document.querySelectorAll("[data-sp-view]").forEach((button) => button.classList.toggle("active", button.dataset.spView === view)); }
 function titleCase(value) { return String(value || "").replace(/\b\w/g, (c) => c.toUpperCase()); }
-function formatDate(value) { return value ? new Date(value).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : "Today"; }
+function safeDate(value) { const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }); }
+function formatDate(value) { return value ? safeDate(value) : "Today"; }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char])); }
 function main() { return document.getElementById("sp-main"); }
