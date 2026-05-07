@@ -143,6 +143,201 @@
 
 .ic-doc-editor p { max-width: 760px; }
 
+.ic-doc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--ic-border);
+  border-radius: 16px;
+  margin: 12px 0;
+}
+
+.ic-doc-table th,
+.ic-doc-table td {
+  border-bottom: 1px solid var(--ic-border);
+  padding: 11px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.ic-doc-table th {
+  color: var(--ic-muted);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  background: color-mix(in srgb, var(--ic-panel) 76%, var(--ic-bg));
+}
+
+.ic-doc-table tr:last-child td { border-bottom: 0; }
+
+.ic-op-block {
+  position: relative;
+  border: 1px solid var(--ic-border);
+  border-left: 4px solid var(--ic-blue);
+  background: color-mix(in srgb, var(--ic-panel) 92%, var(--ic-bg));
+  border-radius: 18px;
+  padding: 18px;
+  margin: 18px 0;
+  box-shadow: var(--ic-shadow-soft);
+  transition: border-color var(--ic-transition), box-shadow var(--ic-transition), transform var(--ic-transition);
+}
+
+.ic-op-block:hover {
+  border-color: rgba(9,105,255,.32);
+  box-shadow: 0 14px 34px rgba(15,23,42,.08);
+}
+
+.ic-op-block h2 {
+  margin: 0 0 10px;
+  font-size: 1.08rem;
+  letter-spacing: -.025em;
+}
+
+.ic-op-block p,
+.ic-op-block li { color: var(--ic-text); }
+
+.ic-op-block::after {
+  content: attr(data-block-label);
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--ic-muted);
+  font-size: .68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.ic-op-block-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  opacity: .72;
+}
+
+.ic-op-block:hover .ic-op-block-tools { opacity: 1; }
+
+.ic-op-block-tools button,
+.ic-inline-ai-popover button,
+.ic-memory-action-row button {
+  border: 1px solid var(--ic-border);
+  background: var(--ic-panel);
+  color: var(--ic-muted);
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: .72rem;
+  font-weight: 850;
+}
+
+.ic-op-block-tools button:hover,
+.ic-inline-ai-popover button:hover,
+.ic-memory-action-row button:hover {
+  background: var(--ic-blue-soft);
+  border-color: rgba(9,105,255,.28);
+  color: var(--ic-blue);
+}
+
+.ic-block-quality {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.ic-block-quality span,
+.ic-doc-citation,
+.ic-timeline-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--ic-border);
+  background: var(--ic-panel);
+  color: var(--ic-muted);
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: .68rem;
+  font-weight: 850;
+}
+
+.ic-doc-citation::before { content: "↗"; color: var(--ic-blue); }
+.ic-timeline-ref::before { content: "•"; color: var(--ic-blue); }
+
+.ic-inline-ai-popover {
+  position: fixed;
+  z-index: 2500;
+  display: none;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid var(--ic-border);
+  border-radius: 999px;
+  background: var(--ic-panel);
+  box-shadow: 0 18px 44px rgba(15,23,42,.16);
+}
+
+.ic-inline-ai-popover.visible { display: flex; }
+
+.ic-slash-menu {
+  position: fixed;
+  z-index: 2600;
+  display: none;
+  width: 280px;
+  padding: 8px;
+  border: 1px solid var(--ic-border);
+  border-radius: 18px;
+  background: var(--ic-panel);
+  box-shadow: 0 18px 44px rgba(15,23,42,.16);
+}
+
+.ic-slash-menu.visible { display: grid; gap: 4px; }
+
+.ic-slash-menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ic-text);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: left;
+  font-weight: 850;
+}
+
+.ic-slash-menu button small {
+  display: block;
+  color: var(--ic-muted);
+  font-weight: 650;
+  margin-top: 2px;
+}
+
+.ic-slash-menu button:hover {
+  background: var(--ic-blue-soft);
+  color: var(--ic-blue);
+}
+
+.ic-memory-strip {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+.ic-memory-chip-row,
+.ic-memory-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.ic-memory-chip {
+  border: 1px solid var(--ic-border);
+  background: color-mix(in srgb, var(--ic-blue-soft) 74%, var(--ic-panel));
+  color: var(--ic-blue);
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: .72rem;
+  font-weight: 850;
+}
+
 .ic-transcript-area {
   width: 100%;
   min-height: 56vh;
