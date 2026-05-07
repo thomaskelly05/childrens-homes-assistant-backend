@@ -3,37 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare Assistant</title>
+  <title>IndiCare Intelligence</title>
   <meta name="theme-color" content="#ffffff" />
   <link rel="stylesheet" href="/css/assistant-cockpit.css" />
   <link rel="stylesheet" href="/css/assistant-professional-renderer.css" />
 </head>
 <body>
   <div class="ic-cockpit ic-standalone-assistant" id="icCockpit" data-assistant-surface="standalone">
-    <aside class="ic-sidebar" aria-label="Conversation history">
+    <aside class="ic-sidebar" aria-label="Assistant navigation">
       <div class="ic-brand">
         <div class="ic-logo">IC</div>
         <div>
           <div class="ic-brand-title">IndiCare</div>
-          <div class="ic-brand-sub">Children's residential encyclopaedia</div>
+          <div class="ic-brand-sub">Intelligence</div>
         </div>
-      </div>
-
-      <div class="ic-mode-card" aria-label="Assistant mode">
-        <span>Mode</span>
-        <strong id="currentModeLabel">Ofsted Lead</strong>
-      </div>
-
-      <div class="ic-workspace-card" aria-label="Assistant workspace">
-        <span>Workspace</span>
-        <select id="workspaceSelect" aria-label="Select workspace"></select>
-        <button id="newWorkspace" type="button">New workspace</button>
       </div>
 
       <div class="ic-sidebar-actions">
         <button id="newChat" class="ic-new-chat" type="button">New chat</button>
         <button id="toggleTheme" class="ic-secondary-btn" type="button">Dark mode</button>
       </div>
+
+      <nav class="ic-app-nav" aria-label="Assistant apps">
+        <button class="active" type="button" data-app-view="chat">Chat</button>
+        <button type="button" data-app-view="projects">Projects</button>
+        <button type="button" data-app-view="templates">Templates</button>
+      </nav>
+
+      <section id="projectSidebar" class="ic-sidebar-panel active" data-sidebar-panel="projects">
+        <div class="ic-section-row">
+          <div class="ic-section-label">Projects</div>
+          <button id="newWorkspace" class="ic-small-action" type="button">+</button>
+        </div>
+        <select id="workspaceSelect" class="ic-project-select" aria-label="Select project"></select>
+        <div class="ic-project-note" id="workspaceMiniSummary">Project memory is private to this assistant.</div>
+      </section>
+
+      <section id="templateSidebar" class="ic-sidebar-panel" data-sidebar-panel="templates">
+        <div class="ic-section-label">Templates</div>
+        <div class="ic-template-list" id="templateList"></div>
+      </section>
 
       <input id="search" class="ic-search" type="text" placeholder="Search chats" />
 
@@ -54,8 +63,8 @@
     <main class="ic-main">
       <header class="ic-top">
         <div>
-          <div class="ic-surface-pill" id="workspacePill">Ofsted lead assistant</div>
-          <h1 id="workspaceTitle">What do you need to evidence, understand or improve?</h1>
+          <div class="ic-surface-pill" id="workspacePill">Standalone AI workspace</div>
+          <h1 id="workspaceTitle">What can I help with?</h1>
         </div>
 
         <div class="ic-top-actions">
@@ -76,8 +85,8 @@
       <section id="assistantPanel" class="ic-content panel panel-assistant">
         <div id="empty" class="ic-empty-state">
           <div class="ic-empty-mark">IC</div>
-          <h2>The children’s residential encyclopaedia, Ofsted lead and professional drafting assistant.</h2>
-          <p id="workspaceDescription">Ask about safeguarding, quality standards, Ofsted evidence, leadership oversight, recording quality or uploaded documents. This standalone assistant does not load live OS records.</p>
+          <h2>ChatGPT-style AI for children’s residential care.</h2>
+          <p id="workspaceDescription">Start a conversation, create a project folder that remembers its chats and documents, or open Templates for ready-made residential care workflows.</p>
 
           <div class="ic-mode-grid" aria-label="Assistant specialist modes">
             <button type="button" data-mode="ofsted">Ofsted Lead</button>
@@ -94,6 +103,17 @@
             <button type="button" onclick="quick('incident')">Draft an incident record</button>
             <button type="button" onclick="quick('missing')">Missing-from-care record</button>
           </div>
+        </div>
+
+        <div id="templateWorkspace" class="ic-template-workspace hidden" aria-label="Templates workspace">
+          <div class="ic-template-hero">
+            <div>
+              <span class="ic-surface-pill">Templates</span>
+              <h2>Choose a residential care template</h2>
+              <p>Templates open as guided prompts inside the conversation. They do not store young people or home records.</p>
+            </div>
+          </div>
+          <div id="templateGrid" class="ic-template-grid"></div>
         </div>
 
         <div id="messages" class="messages hidden"></div>
@@ -125,10 +145,25 @@
       </div>
     </main>
 
-    <aside class="ic-evidence" aria-label="Sources and citations">
+    <aside class="ic-evidence" aria-label="Project memory and sources">
       <div class="ic-evidence-header">
-        <h2>Sources</h2>
+        <h2>Project memory</h2>
         <button id="toggleEvidence" class="ic-collapse-btn" type="button">Hide</button>
+      </div>
+
+      <div class="ic-workspace-intel">
+        <article class="ic-citation">
+          <small>Current project</small>
+          <strong id="memoryProjectTitle">Standalone chat</strong>
+          <p id="memoryProjectSummary">Create a project to keep related conversations and uploads together.</p>
+          <span class="ic-rel">Private project memory</span>
+        </article>
+        <article class="ic-citation">
+          <small>Documents</small>
+          <strong id="memoryDocumentCount">No project files yet</strong>
+          <p>Upload documents inside a project to reuse them as context in that project.</p>
+          <span class="ic-rel">Files</span>
+        </article>
       </div>
 
       <div class="ic-evidence-list" id="standaloneSourceList"></div>
@@ -173,5 +208,6 @@
   <script src="/js/assistant-standalone-cockpit.js"></script>
   <script src="/js/assistant-professional-renderer.js"></script>
   <script src="/js/assistant-workspaces.js"></script>
+  <script src="/js/assistant-templates.js"></script>
 </body>
 </html>
