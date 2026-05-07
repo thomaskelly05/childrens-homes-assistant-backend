@@ -218,13 +218,26 @@
     `).join("");
   }
 
+  function normaliseDocumentSource(document) {
+    if (!document || !document.name) return null;
+    const excerpt = document.preview || document.text || "Uploaded document attached to this standalone assistant chat.";
+    return {
+      type: "Uploaded document",
+      title: document.name,
+      excerpt: String(excerpt || "").slice(0, 280),
+      citation_ref: document.extractedBy === "server" ? "server extracted" : "browser extracted",
+    };
+  }
+
   function renderSources(sources) {
     const list = $("standaloneSourceList");
     if (!list) return;
 
     const clean = Array.isArray(sources) ? sources.filter(Boolean) : [];
+    const documentSource = normaliseDocumentSource(state.attachedDocument);
+    const combined = documentSource ? [documentSource, ...clean] : clean;
 
-    if (!clean.length) {
+    if (!combined.length) {
       list.innerHTML = `
         <article class="ic-citation"><small>Boundary</small><strong>No OS records loaded</strong><p>This standalone assistant only uses what is typed or attached in this chat.</p><span class="ic-rel">Standalone</span></article>
         <article class="ic-citation"><small>Documents</small><strong>Upload PDF, DOCX or TXT</strong><p>Documents are extracted by the server and used as standalone chat context only.</p><span class="ic-rel">Upload ready</span></article>
@@ -232,7 +245,7 @@
       return;
     }
 
-    list.innerHTML = clean.map((source, index) => {
+    list.innerHTML = combined.map((source, index) => {
       const title = source.title || source.label || source.document_title || source.name || `Source ${index + 1}`;
       const type = source.type || source.source_type || source.record_type || "Source";
       const excerpt = source.excerpt || source.summary || source.text || source.description || "Source returned by assistant runtime.";
@@ -302,7 +315,7 @@
     const readable = /^(text\/|application\/json)/.test(file.type || "") || /\.(txt|md|csv|json)$/i.test(file.name || "");
     if (!readable) return null;
     const text = await file.text();
-    return { name: file.name, text: text.slice(0, 16000), unsupported: false, extractedBy: "browser" };
+    return { name: file.name, text: text.slice(0, 16000), preview: text.slice(0, 1200), unsupported: false, extractedBy: "browser" };
   }
 
   async function uploadDocumentToServer(file) {
@@ -345,6 +358,7 @@
     $("doc")?.classList.remove("show", "is-busy");
     if ($("docText")) $("docText").textContent = "";
     if ($("upload")) $("upload").value = "";
+    renderSources(activeConversation()?.sources || []);
   }
 
   async function handleUpload(event) {
@@ -353,6 +367,7 @@
 
     state.isUploading = true;
     setDocumentPill(`Reading ${file.name}...`, true);
+    renderSources(activeConversation()?.sources || []);
 
     try {
       state.attachedDocument = await uploadDocumentToServer(file);
@@ -364,11 +379,12 @@
         state.attachedDocument = browserDocument;
         setDocumentPill(`${browserDocument.name} ready`, false);
       } else {
-        state.attachedDocument = { name: file.name, text: "", unsupported: true, error: serverError.message };
+        state.attachedDocument = { name: file.name, text: "", preview: serverError.message, unsupported: true, error: serverError.message, extractedBy: "failed" };
         setDocumentPill(`${file.name} could not be read`, false);
       }
     } finally {
       state.isUploading = false;
+      renderSources(activeConversation()?.sources || []);
     }
   }
 
