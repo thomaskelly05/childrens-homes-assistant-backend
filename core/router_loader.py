@@ -27,6 +27,7 @@ routers.ai_notes_routes
 routers.ai_note_templates_routes
 routers.ai_note_export_routes
 routers.assistant_general_routes
+routers.standalone_assistant_library_routes
 routers.assistant_os_routes
 routers.assistant_os_knowledge_routes
 routers.assistant_intelligence_routes
