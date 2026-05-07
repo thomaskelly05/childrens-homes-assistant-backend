@@ -18,14 +18,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/assistant/general", tags=["General Assistant"])
 ui_router = APIRouter(tags=["Assistant UI"])
 
+MAX_GENERAL_MESSAGE_CHARS = 80000
+MAX_GENERAL_DOCUMENT_CHARS = 60000
+
 
 class GeneralAssistantRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
-    message: str = Field(..., min_length=1, max_length=3000)
+    message: str = Field(..., min_length=1, max_length=MAX_GENERAL_MESSAGE_CHARS)
     response_mode: str | None = "balanced"
     history: list[dict[str, Any]] | None = None
     conversation_id: str | None = None
+    assistant_surface: str | None = "standalone"
+    document_text: str | None = None
+    document_name: str | None = None
 
 
 def _safe_user_id(current_user: dict[str, Any]) -> int:
@@ -33,6 +39,30 @@ def _safe_user_id(current_user: dict[str, Any]) -> int:
     if user_id is None:
         raise HTTPException(status_code=401, detail="Authentication required.")
     return user_id
+
+
+def _clip(value: str | None, limit: int) -> str | None:
+    clean = safe_string(value)
+    if not clean:
+        return None
+    return clean[:limit]
+
+
+def _message_with_document(payload: GeneralAssistantRequest) -> str:
+    message = safe_string(payload.message)
+    document_text = _clip(payload.document_text, MAX_GENERAL_DOCUMENT_CHARS)
+    document_name = safe_string(payload.document_name) or "uploaded document"
+
+    if not document_text:
+        return message
+
+    return (
+        f"{message}\n\n"
+        "USER-SUPPLIED DOCUMENT CONTEXT:\n"
+        f"Document name: {document_name}\n"
+        "Use this document only as user-provided context for this standalone assistant chat.\n\n"
+        f"{document_text}"
+    )
 
 
 def _sse_message(data: str) -> str:
@@ -87,6 +117,7 @@ async def stream_general_assistant(
     user_id = _safe_user_id(current_user)
     history = normalise_history(payload.history, max_items=12, max_chars=2200)
     conversation_id = safe_string(payload.conversation_id) or f"general-{user_id}"
+    message = _message_with_document(payload)
 
     async def _stream():
         sources: list[dict[str, Any]] = []
@@ -102,6 +133,8 @@ async def stream_general_assistant(
         assistant_context: dict[str, Any] = {
             "guidance_only": True,
             "history_items_loaded": len(history),
+            "document_attached": bool(payload.document_text),
+            "document_name": safe_string(payload.document_name) or None,
         }
         suggested_actions: list[dict[str, Any]] = []
         safeguarding: dict[str, Any] = {}
@@ -109,7 +142,7 @@ async def stream_general_assistant(
 
         try:
             async for item in generate_general_assistant_stream(
-                message=payload.message,
+                message=message,
                 history=history,
                 response_mode=payload.response_mode or "balanced",
                 user_id=user_id,
@@ -142,7 +175,12 @@ async def stream_general_assistant(
                     if isinstance(item.get("assistant_scope"), dict):
                         assistant_scope = item.get("assistant_scope") or assistant_scope
                     if isinstance(item.get("assistant_context"), dict):
-                        assistant_context = item.get("assistant_context") or assistant_context
+                        assistant_context = {
+                            **assistant_context,
+                            **(item.get("assistant_context") or {}),
+                            "document_attached": bool(payload.document_text),
+                            "document_name": safe_string(payload.document_name) or None,
+                        }
                     if isinstance(item.get("suggested_actions"), list):
                         suggested_actions = [
                             action
