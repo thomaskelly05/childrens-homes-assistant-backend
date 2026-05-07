@@ -15,6 +15,14 @@
     { key: "reflection", className: "ic-pro-section--reflection", match: /reflection|reflective|trauma-informed|relational|child.?s voice|young person.?s voice/i },
   ];
 
+  const FOLLOW_UP_PROMPTS = {
+    regenerate: "Regenerate your previous response with clearer structure, stronger evidence separation and professional children's residential care language.",
+    ofsted: "Convert your previous response into an Ofsted-ready evidence summary. Include evidence, impact, gaps, leadership oversight and likely inspector questions.",
+    chronology: "Convert your previous response into a factual chronology. Include times/dates where known, events, actions taken, risk points and missing information.",
+    handover: "Convert your previous response into a concise shift handover with current risks, support offered, follow-up tasks and management awareness.",
+    qa: "Review your previous response for recording quality. Improve factuality, child-centred language, chronology, missing evidence and management oversight.",
+  };
+
   function $(id) {
     return document.getElementById(id);
   }
@@ -86,8 +94,24 @@
     messageNode.dataset.professionalEnhanced = "true";
   }
 
+  function enhanceMessageActions() {
+    document.querySelectorAll(".wrap.assistant .ic-message-actions").forEach((actions) => {
+      if (actions.dataset.enhanced === "true") return;
+      actions.insertAdjacentHTML("beforeend", `
+        <button type="button" data-pro-followup="regenerate">Regenerate</button>
+        <button type="button" data-pro-followup="ofsted">Ofsted-ready</button>
+        <button type="button" data-pro-followup="chronology">Chronology</button>
+        <button type="button" data-pro-followup="handover">Handover</button>
+        <button type="button" data-pro-followup="qa">QA review</button>
+        <button type="button" data-edit-response>Edit</button>
+      `);
+      actions.dataset.enhanced = "true";
+    });
+  }
+
   function enhanceAllMessages() {
     document.querySelectorAll(".wrap.assistant .msg").forEach(enhanceAssistantMessage);
+    enhanceMessageActions();
   }
 
   function conversationText() {
@@ -101,23 +125,43 @@
       .join("\n\n");
   }
 
-  function exportConversation() {
+  function exportConversation(format) {
     const text = conversationText();
     if (!text.trim()) {
       showLocalToast("Nothing to export");
       return;
     }
 
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    if (format === "html") {
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>IndiCare Assistant Export</title><style>body{font-family:Arial,sans-serif;line-height:1.55;padding:32px;color:#071a3a}pre{white-space:pre-wrap;font-family:inherit}</style></head><body><h1>IndiCare Assistant Export</h1><pre>${escapeHtml(text)}</pre></body></html>`;
+      downloadBlob(html, "text/html;charset=utf-8", "html");
+      showLocalToast("HTML exported");
+      return;
+    }
+
+    downloadBlob(text, "text/plain;charset=utf-8", "txt");
+    showLocalToast("Conversation exported");
+  }
+
+  function downloadBlob(content, type, extension) {
+    const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `indicare-assistant-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `indicare-assistant-${new Date().toISOString().slice(0, 10)}.${extension}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    showLocalToast("Conversation exported");
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   function showLocalToast(text) {
@@ -128,6 +172,46 @@
     toast.textContent = text;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 1800);
+  }
+
+  function setComposerPrompt(text) {
+    const input = $("input");
+    if (!input) return;
+    input.value = text;
+    input.focus();
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function wireResponseEnhancements() {
+    $("messages")?.addEventListener("click", (event) => {
+      const follow = event.target.closest("[data-pro-followup]");
+      const edit = event.target.closest("[data-edit-response]");
+
+      if (follow) {
+        const key = follow.getAttribute("data-pro-followup");
+        setComposerPrompt(FOLLOW_UP_PROMPTS[key] || FOLLOW_UP_PROMPTS.regenerate);
+      }
+
+      if (edit) {
+        const wrap = edit.closest(".wrap.assistant");
+        const msg = wrap?.querySelector(".msg");
+        if (!msg) return;
+        toggleEditableMessage(msg);
+      }
+    });
+  }
+
+  function toggleEditableMessage(msg) {
+    if (msg.getAttribute("contenteditable") === "true") {
+      msg.setAttribute("contenteditable", "false");
+      msg.classList.remove("ic-editing-response");
+      showLocalToast("Edits kept on page");
+      return;
+    }
+    msg.setAttribute("contenteditable", "true");
+    msg.classList.add("ic-editing-response");
+    msg.focus();
+    showLocalToast("Editing response");
   }
 
   function wireDropUpload() {
@@ -158,7 +242,18 @@
   }
 
   function wireExports() {
-    $("exportConversation")?.addEventListener("click", exportConversation);
+    $("exportConversation")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (event.shiftKey) exportConversation("html");
+      else exportConversation("txt");
+    });
+  }
+
+  function wirePasteText() {
+    $("input")?.addEventListener("paste", (event) => {
+      const text = event.clipboardData?.getData("text/plain") || "";
+      if (text.length > 2500) showLocalToast("Large text pasted");
+    });
   }
 
   function observeMessages() {
@@ -172,6 +267,8 @@
   function init() {
     wireExports();
     wireDropUpload();
+    wireResponseEnhancements();
+    wirePasteText();
     observeMessages();
   }
 

@@ -24,6 +24,12 @@
         <strong id="currentModeLabel">Ofsted Lead</strong>
       </div>
 
+      <div class="ic-workspace-card" aria-label="Assistant workspace">
+        <span>Workspace</span>
+        <select id="workspaceSelect" aria-label="Select workspace"></select>
+        <button id="newWorkspace" type="button">New workspace</button>
+      </div>
+
       <div class="ic-sidebar-actions">
         <button id="newChat" class="ic-new-chat" type="button">New chat</button>
         <button id="toggleTheme" class="ic-secondary-btn" type="button">Dark mode</button>
@@ -48,8 +54,8 @@
     <main class="ic-main">
       <header class="ic-top">
         <div>
-          <div class="ic-surface-pill">Ofsted lead assistant</div>
-          <h1>What do you need to evidence, understand or improve?</h1>
+          <div class="ic-surface-pill" id="workspacePill">Ofsted lead assistant</div>
+          <h1 id="workspaceTitle">What do you need to evidence, understand or improve?</h1>
         </div>
 
         <div class="ic-top-actions">
@@ -71,7 +77,7 @@
         <div id="empty" class="ic-empty-state">
           <div class="ic-empty-mark">IC</div>
           <h2>The children’s residential encyclopaedia, Ofsted lead and professional drafting assistant.</h2>
-          <p>Ask about safeguarding, quality standards, Ofsted evidence, leadership oversight, recording quality or uploaded documents. This standalone assistant does not load live OS records.</p>
+          <p id="workspaceDescription">Ask about safeguarding, quality standards, Ofsted evidence, leadership oversight, recording quality or uploaded documents. This standalone assistant does not load live OS records.</p>
 
           <div class="ic-mode-grid" aria-label="Assistant specialist modes">
             <button type="button" data-mode="ofsted">Ofsted Lead</button>
@@ -166,5 +172,6 @@
 
   <script src="/js/assistant-standalone-cockpit.js"></script>
   <script src="/js/assistant-professional-renderer.js"></script>
+  <script src="/js/assistant-workspaces.js"></script>
 </body>
 </html>
