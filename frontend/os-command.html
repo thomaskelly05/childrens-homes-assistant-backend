@@ -1,31 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en-GB">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>IndiCare OS – Command Centre</title>
-<link rel="stylesheet" href="/css/indicare-os-base.css" />
-<link rel="stylesheet" href="/css/os-command.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IndiCare OS | Docs Command Centre</title>
+  <link rel="stylesheet" href="/css/indicare-finished-shell.css" />
 </head>
-<body>
-<div class="ic-os">
-<aside class="ic-side">
-<div class="ic-brand"><div class="ic-mark">IC</div><div><h1>INDICARE</h1><p>Children's Home OS</p></div></div>
-<nav class="ic-nav">
-<div class="ic-nav-title">Core</div>
-<a href="/os-command" class="active">Command Centre<span>Live overview</span></a>
-<a href="/os-child">Child OS<span>Care records</span></a>
-<a href="/os-risk">Risk OS<span>Risk & behaviour</span></a>
-<a href="/os-safeguarding">Safeguarding<span>Protection</span></a>
-<a href="/os-ofsted">Ofsted<span>Inspection</span></a>
-</nav>
-</aside>
-<header class="ic-top">
-<div><h2>Command Centre</h2><p>Live priorities and home overview</p></div>
-<div class="ic-top-actions"><div class="ic-pill"><span class="ic-dot"></span>Live</div></div>
-</header>
-<main class="ic-main" id="app"></main>
-</div>
-<script src="/js/os-command.js"></script>
+<body class="finished-os-preview-active indic-dark-os-active os-command-route">
+  <main class="os-command-fullscreen">
+    <div class="workspace-main" id="workspace-main"></div>
+  </main>
+
+  <script type="module" src="/js/indicare-workspace/indicare-runtime-state.js"></script>
+  <script type="module" src="/js/indicare-workspace/indicare-event-bus.js"></script>
+  <script type="module" src="/js/indicare-workspace/indicare-doc-templates.js"></script>
+  <script type="module" src="/js/indicare-workspace/indicare-finished-shell-preview.js"></script>
 </body>
 </html>
