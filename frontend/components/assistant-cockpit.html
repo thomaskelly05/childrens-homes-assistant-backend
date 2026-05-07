@@ -4,141 +4,53 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare Assistant</title>
-  <meta name="theme-color" content="#020617" />
+  <meta name="theme-color" content="#ffffff" />
   <link rel="stylesheet" href="/css/assistant-cockpit.css" />
 </head>
 <body>
   <div class="ic-cockpit ic-standalone-assistant" id="icCockpit" data-assistant-surface="standalone">
-    <aside class="ic-sidebar">
+    <aside class="ic-sidebar" aria-label="Conversation history">
       <div class="ic-brand">
         <div class="ic-logo">IC</div>
         <div>
-          <div class="ic-brand-title">IndiCare Assistant</div>
-          <div class="ic-brand-sub">Standalone workspace</div>
+          <div class="ic-brand-title">IndiCare</div>
+          <div class="ic-brand-sub">Children's homes assistant</div>
         </div>
       </div>
 
-      <button id="newChat" class="ic-new-chat" type="button">New conversation</button>
-      <input id="search" class="ic-search" type="text" placeholder="Search conversations" />
+      <button id="newChat" class="ic-new-chat" type="button">New chat</button>
+      <input id="search" class="ic-search" type="text" placeholder="Search chats" />
 
-      <div class="ic-section-label">Assistant</div>
-      <nav class="ic-nav" aria-label="Standalone assistant workspace">
-        <button id="navAssistant" class="active" type="button">Assistant</button>
-        <button id="navLibrary" type="button">Knowledge library</button>
-      </nav>
-
-      <div class="ic-section-label">Conversations</div>
+      <div class="ic-section-label">Chats</div>
       <div id="history" class="ic-history"></div>
-
-      <div class="ic-workflow">
-        <small>Standalone mode</small>
-        <strong>External assistant</strong>
-        <div class="ic-brand-sub">No home, child or OS operational context is loaded on this page.</div>
-        <div class="ic-progress"><span style="width:100%"></span></div>
-      </div>
     </aside>
 
     <main class="ic-main">
       <header class="ic-top">
         <div>
-          <div class="ic-surface-pill">● Standalone Assistant</div>
+          <div class="ic-surface-pill">Standalone assistant</div>
+          <h1>How can I help?</h1>
         </div>
-        <input class="ic-global-search" id="assistantSearch" type="text" placeholder="Search conversations, documents and assistant outputs..." />
         <div class="ic-user">
+          <div id="icUserAvatar" class="ic-avatar">IC</div>
           <div>
             <strong id="icUserName">Assistant user</strong><br />
             <span id="icUserRole" class="ic-brand-sub">Standalone</span>
           </div>
-          <div id="icUserAvatar" class="ic-avatar">IC</div>
         </div>
       </header>
 
       <section id="assistantPanel" class="ic-content panel panel-assistant">
-        <div id="empty" class="ic-dashboard">
-          <div class="ic-kpis">
-            <article class="ic-kpi blue">
-              <div class="ic-kpi-label">Assistant Mode</div>
-              <div class="ic-kpi-value">External</div>
-              <div class="ic-kpi-sub">No OS operational memory</div>
-            </article>
-            <article class="ic-kpi violet">
-              <div class="ic-kpi-label">Document Support</div>
-              <div class="ic-kpi-value">On</div>
-              <div class="ic-kpi-sub">Use uploaded or library material</div>
-            </article>
-            <article class="ic-kpi amber">
-              <div class="ic-kpi-label">Regulatory Answers</div>
-              <div class="ic-kpi-value">Cited</div>
-              <div class="ic-kpi-sub">Quote and label regulations when used</div>
-            </article>
-            <article class="ic-kpi red">
-              <div class="ic-kpi-label">OS Context</div>
-              <div class="ic-kpi-value">Off</div>
-              <div class="ic-kpi-sub">No child or home data shown</div>
-            </article>
-          </div>
+        <div id="empty" class="ic-empty-state">
+          <div class="ic-empty-mark">IC</div>
+          <h2>Ask about children’s home practice, records, safeguarding, Ofsted evidence or uploaded documents.</h2>
+          <p>This assistant does not load live OS records unless you provide them in this chat.</p>
 
-          <section class="ic-hero">
-            <div class="ic-hero-head">
-              <div>
-                <div class="ic-surface-pill">✦ IndiCare Assistant</div>
-                <h1 id="welcomeTitle">Good afternoon.</h1>
-                <p id="welcomeText">Ask for drafting, policy support, regulation explanations, document summaries and everyday practice guidance.</p>
-              </div>
-              <button id="openSettings" class="ic-quick-button" type="button">Settings</button>
-            </div>
-            <div class="ic-card-grid">
-              <button class="ic-mini-card" type="button" onclick="quick('policy')"><span>Search policy</span><strong>Find</strong><a>Summarise guidance</a></button>
-              <button class="ic-mini-card" type="button" onclick="quick('incident')"><span>Draft record</span><strong>Write</strong><a>Clear factual wording</a></button>
-              <button class="ic-mini-card" type="button" onclick="quick('risk')"><span>Risk summary</span><strong>Build</strong><a>Structure risks and actions</a></button>
-              <button class="ic-mini-card" type="button" onclick="quick('handover')"><span>Handover</span><strong>Prepare</strong><a>Concise shift summary</a></button>
-            </div>
-          </section>
-
-          <div class="ic-lower">
-            <section class="ic-panel">
-              <div class="ic-panel-head">
-                <h2>How this assistant works</h2>
-              </div>
-              <div class="ic-timeline">
-                <article class="ic-event" style="--dot:#60a5fa">
-                  <div class="ic-event-time">Standalone boundary</div>
-                  <div class="ic-event-title">No OS child/home data</div>
-                  <div class="ic-event-text">This page does not load active home, child, chronology or safeguarding workspace data.</div>
-                </article>
-                <article class="ic-event" style="--dot:#8b5cf6">
-                  <div class="ic-event-time">Documents</div>
-                  <div class="ic-event-title">Use uploaded or library documents</div>
-                  <div class="ic-event-text">Attach a document or search the library where your account has permission.</div>
-                </article>
-                <article class="ic-event" style="--dot:#fbbf24">
-                  <div class="ic-event-time">Regulations</div>
-                  <div class="ic-event-title">Quote and label regulation sources</div>
-                  <div class="ic-event-text">When asked about regulations, responses should quote the relevant wording and name the regulation or guidance.</div>
-                </article>
-                <article class="ic-event" style="--dot:#34d399">
-                  <div class="ic-event-time">Conversations</div>
-                  <div class="ic-event-title">Conversation history loads from your account</div>
-                  <div class="ic-event-text">Standalone assistant conversations are isolated from OS operational workspaces.</div>
-                </article>
-              </div>
-            </section>
-
-            <section class="ic-panel">
-              <div class="ic-panel-head"><h2>Useful starting points</h2></div>
-              <ul class="ic-summary-list">
-                <li>Explain a regulation and quote the relevant wording.</li>
-                <li>Turn rough notes into a professional record.</li>
-                <li>Summarise a policy or attached document.</li>
-                <li>Draft an email, handover, report or reflective note.</li>
-              </ul>
-              <div class="ic-priority">
-                <div><span>1</span>Ask: “Explain Regulation 12 and quote the relevant wording.”</div>
-                <div><span>2</span>Ask: “Turn these notes into a factual incident record.”</div>
-                <div><span>3</span>Ask: “Summarise this policy for RSW practice.”</div>
-                <div><span>4</span>Ask: “Create a manager-ready action summary.”</div>
-              </div>
-            </section>
+          <div class="ic-starters" aria-label="Suggested prompts">
+            <button type="button" onclick="quick('incident')">Draft an incident record</button>
+            <button type="button" onclick="quick('handover')">Write a handover</button>
+            <button type="button" onclick="quick('risk')">Create a risk summary</button>
+            <button type="button" onclick="quick('policy')">Summarise a policy</button>
           </div>
         </div>
 
@@ -148,7 +60,7 @@
       <section id="libraryPanel" class="ic-content panel hidden">
         <div class="ic-panel">
           <div class="ic-panel-head"><h2>Knowledge library</h2></div>
-          <p class="ic-brand-sub">Approved documents and policy material available to this standalone assistant.</p>
+          <p class="ic-brand-sub">Approved documents and policy material available to this assistant.</p>
           <div id="libraryList" class="ic-evidence-list"></div>
           <div id="libraryViewer" class="ic-panel" style="margin-top:14px;">
             <h2>Select a document</h2>
@@ -158,31 +70,20 @@
       </section>
 
       <div class="ic-composer-dock">
-        <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button">×</button></div>
+        <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button" aria-label="Remove attached document">×</button></div>
         <div class="ic-composer">
           <div class="ic-input-row">
-            <textarea id="input" placeholder="Ask the standalone assistant about policy, drafting, regulations or documents..."></textarea>
-            <button id="send" type="button">→</button>
-          </div>
-          <div class="ic-quick">
-            <label class="ic-upload-label" for="upload">Attach document</label>
+            <label class="ic-upload-label" for="upload" title="Attach document">+</label>
             <input id="upload" type="file" hidden />
-            <button type="button" onclick="quick('policy')">Search policy</button>
-            <button type="button" onclick="quick('risk')">Create risk summary</button>
-            <button type="button" onclick="quick('incident')">Draft record</button>
-            <button type="button" onclick="quick('handover')">Write handover</button>
+            <textarea id="input" placeholder="Ask IndiCare..." rows="1"></textarea>
+            <button id="send" type="button" aria-label="Send message">↑</button>
           </div>
         </div>
       </div>
     </main>
 
-    <aside class="ic-evidence">
-      <h2>Sources & Citations</h2>
-      <div class="ic-tabs">
-        <button class="active" type="button">Sources</button>
-        <button type="button">Documents</button>
-        <button type="button">Regulations</button>
-      </div>
+    <aside class="ic-evidence" aria-label="Sources and citations">
+      <h2>Sources</h2>
       <div class="ic-evidence-list" id="standaloneSourceList"></div>
     </aside>
   </div>
