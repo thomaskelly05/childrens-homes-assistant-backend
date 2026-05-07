@@ -1,8 +1,10 @@
 /* IndiCare Suite standalone interaction layer
    Powers Intelligence / DOCS / Notes switching, DOCS templates,
-   operational blocks, inline AI actions and transcript conversion. */
+   operational blocks, inline AI actions, shared memory and timeline hooks. */
 
 (function () {
+  const MEMORY_KEY = 'indicare_suite_operational_memory';
+
   const DOC_TEMPLATES = {
     incident: {
       title: 'Incident Record',
@@ -92,6 +94,110 @@
 
   function $(id) { return document.getElementById(id); }
 
+  function loadMemory() {
+    try {
+      return JSON.parse(localStorage.getItem(MEMORY_KEY)) || defaultMemory();
+    } catch {
+      return defaultMemory();
+    }
+  }
+
+  function defaultMemory() {
+    return {
+      themes: [],
+      timeline: [],
+      docs: [],
+      notes: [],
+      suggestions: [],
+      updatedAt: Date.now()
+    };
+  }
+
+  function saveMemory(memory) {
+    memory.updatedAt = Date.now();
+    localStorage.setItem(MEMORY_KEY, JSON.stringify(memory));
+    renderMemoryStrip(memory);
+  }
+
+  function addMemoryEntry(type, title, text) {
+    const memory = loadMemory();
+    const themes = detectThemes(text);
+    themes.forEach((theme) => {
+      if (!memory.themes.includes(theme)) memory.themes.unshift(theme);
+    });
+    memory.themes = memory.themes.slice(0, 10);
+
+    if (type === 'doc') memory.docs.unshift({ title, text: text.slice(0, 900), createdAt: Date.now() });
+    if (type === 'note') memory.notes.unshift({ title, text: text.slice(0, 900), createdAt: Date.now() });
+
+    extractTimeline(text).forEach((event) => memory.timeline.unshift(event));
+    memory.timeline = memory.timeline.slice(0, 25);
+    memory.suggestions = buildSuggestions(memory);
+    saveMemory(memory);
+  }
+
+  function detectThemes(text) {
+    const lower = (text || '').toLowerCase();
+    const found = [];
+    const map = {
+      'Safeguarding': ['safeguarding', 'risk', 'harm', 'exploitation'],
+      'Missing from care': ['missing', 'absent', 'police'],
+      'Chronology': ['chronology', 'timeline', 'sequence'],
+      'Child voice': ['child voice', 'wishes', 'feelings', 'said'],
+      'Leadership oversight': ['manager', 'oversight', 'review', 'audit'],
+      'Ofsted evidence': ['ofsted', 'quality standard', 'sccif', 'inspection'],
+      'Reflective practice': ['reflection', 'trauma', 'relational', 'co-regulation']
+    };
+    Object.entries(map).forEach(([label, terms]) => {
+      if (terms.some((term) => lower.includes(term))) found.push(label);
+    });
+    return found.length ? found : ['Residential care practice'];
+  }
+
+  function extractTimeline(text) {
+    const lines = (text || '').split(/\n|\./).map((line) => line.trim()).filter(Boolean);
+    return lines
+      .filter((line) => /\b\d{1,2}:\d{2}\b|\b\d{1,2}[/-]\d{1,2}/.test(line))
+      .slice(0, 8)
+      .map((line) => ({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), text: line.slice(0, 240), createdAt: Date.now() }));
+  }
+
+  function buildSuggestions(memory) {
+    const suggestions = ['Create project summary'];
+    if (memory.themes.includes('Missing from care') || memory.themes.includes('Chronology')) suggestions.unshift('Generate chronology');
+    if (memory.themes.includes('Safeguarding')) suggestions.unshift('Review safeguarding concerns');
+    if (memory.themes.includes('Ofsted evidence')) suggestions.unshift('Prepare inspection evidence summary');
+    if (memory.themes.includes('Child voice')) suggestions.unshift('Check child voice evidence');
+    return [...new Set(suggestions)].slice(0, 5);
+  }
+
+  function renderMemoryStrip(memory = loadMemory()) {
+    const projectHome = $('projectHomeSummary');
+    const memorySummary = $('memoryProjectSummary');
+    const text = memory.themes.length
+      ? `Shared memory: ${memory.themes.slice(0, 5).join(', ')}. ${memory.timeline.length} timeline item${memory.timeline.length === 1 ? '' : 's'} captured.`
+      : 'Project memory will appear here as you chat, write DOCS and capture Notes.';
+
+    if (projectHome) projectHome.textContent = text;
+    if (memorySummary) memorySummary.textContent = text;
+
+    document.querySelectorAll('.ic-memory-strip').forEach((node) => node.remove());
+    const target = $('memoryProjectSummary')?.closest('.ic-card');
+    if (!target) return;
+
+    const strip = document.createElement('div');
+    strip.className = 'ic-memory-strip';
+    strip.innerHTML = `
+      <div class="ic-memory-chip-row">
+        ${memory.themes.slice(0, 6).map((theme) => `<span class="ic-memory-chip">${escapeHtml(theme)}</span>`).join('') || '<span class="ic-memory-chip">No shared memory yet</span>'}
+      </div>
+      <div class="ic-memory-action-row">
+        ${memory.suggestions.slice(0, 4).map((action) => `<button type="button" data-memory-action="${escapeHtml(action)}">${escapeHtml(action)}</button>`).join('')}
+      </div>
+    `;
+    target.appendChild(strip);
+  }
+
   function showSuite(view) {
     document.querySelectorAll('[data-suite-view]').forEach((button) => {
       button.classList.toggle('active', button.dataset.suiteView === view);
@@ -131,6 +237,7 @@
     showSuite('docs');
     editor.focus();
     decorateBlocks();
+    addMemoryEntry('doc', template.title, editor.innerText || '');
   }
 
   function selectedText() {
@@ -142,9 +249,15 @@
     const input = $('input');
     if (!input) return;
     showSuite('intelligence');
-    input.value = prompt;
+    input.value = `${buildMemoryContext()}\n\n${prompt}`.trim();
     input.focus();
     input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function buildMemoryContext() {
+    const memory = loadMemory();
+    if (!memory.themes.length && !memory.timeline.length) return '';
+    return `Shared project memory:\nThemes: ${memory.themes.slice(0, 8).join(', ') || 'none yet'}\nRecent timeline: ${memory.timeline.slice(0, 5).map((item) => item.text).join(' | ') || 'none yet'}`;
   }
 
   function runDocCommand(command) {
@@ -159,6 +272,7 @@
       safeguarding: 'Review this text for safeguarding considerations, missing information and manager oversight. Do not make final decisions.',
       chronology: 'Extract a clear chronology from this text using Date/Time → Event → Staff action → Outcome.'
     };
+    addMemoryEntry('doc', 'DOCS working draft', source);
     sendToIntelligence(`${prompts[command] || 'Review this text.'}\n\nText to review:\n${source}`);
   }
 
@@ -169,6 +283,7 @@
       if (transcript) transcript.focus();
       return;
     }
+    addMemoryEntry('note', `Notes transcript: ${type}`, text);
     const instruction = NOTE_TRANSFORMS[type] || NOTE_TRANSFORMS.incident;
     sendToIntelligence(`${instruction}\n\nTranscript:\n${text}`);
   }
@@ -177,6 +292,7 @@
     const transcript = $('indicareTranscript');
     const text = transcript ? transcript.value.trim() : '';
     if (!text) return;
+    addMemoryEntry('note', `Notes command: ${command}`, text);
     const prompts = {
       clean: 'Clean this transcript. Remove filler, repetition and fragments while preserving meaning.',
       structure: 'Structure this transcript into a professional residential care note.',
@@ -188,17 +304,35 @@
 
   function decorateBlocks() {
     document.querySelectorAll('.ic-op-block').forEach((block) => {
-      if (block.dataset.decorated === 'true') return;
-      block.dataset.decorated = 'true';
-      const tools = document.createElement('div');
-      tools.className = 'ic-op-block-tools';
-      tools.innerHTML = `
-        <button type="button" data-block-command="improve">Improve</button>
-        <button type="button" data-block-command="qa">QA</button>
-        <button type="button" data-block-command="chronology">Chronology</button>
-      `;
-      block.prepend(tools);
+      block.dataset.blockLabel = block.dataset.icBlock || 'block';
+      if (block.dataset.decorated !== 'true') {
+        block.dataset.decorated = 'true';
+        const tools = document.createElement('div');
+        tools.className = 'ic-op-block-tools';
+        tools.innerHTML = `
+          <button type="button" data-block-command="improve">Improve</button>
+          <button type="button" data-block-command="qa">QA</button>
+          <button type="button" data-block-command="chronology">Chronology</button>
+        `;
+        block.prepend(tools);
+      }
+      updateBlockQuality(block);
     });
+  }
+
+  function updateBlockQuality(block) {
+    const old = block.querySelector('.ic-block-quality');
+    if (old) old.remove();
+    const text = block.innerText.toLowerCase();
+    const quality = document.createElement('div');
+    quality.className = 'ic-block-quality';
+    const chips = [];
+    if (!/said|voice|feel|wishes/.test(text)) chips.push('child voice?');
+    if (!/time|date|chronology|\d{1,2}:\d{2}/.test(text)) chips.push('timeline?');
+    if (/risk|missing|harm|police|safeguarding/.test(text)) chips.push('safeguarding');
+    if (/manager|review|oversight/.test(text)) chips.push('oversight');
+    quality.innerHTML = chips.slice(0, 4).map((chip) => `<span>${chip}</span>`).join('');
+    if (chips.length) block.appendChild(quality);
   }
 
   function runBlockCommand(block, command) {
@@ -208,6 +342,7 @@
       qa: 'Review this operational block for factuality, chronology, child voice, safeguarding completeness and professionalism.',
       chronology: 'Extract chronology entries from this operational block.'
     };
+    addMemoryEntry('doc', `DOCS block: ${block.dataset.icBlock || 'block'}`, text);
     sendToIntelligence(`${prompts[command] || 'Review this block.'}\n\nBlock content:\n${text}`);
   }
 
@@ -238,6 +373,7 @@
           text += event.results[i][0].transcript;
         }
         transcript.value = `${transcript.value}\n${text}`.trim();
+        addMemoryEntry('note', 'Live transcript', transcript.value);
       };
       recognition.start();
       start.textContent = 'Recording...';
@@ -267,11 +403,74 @@
     document.addEventListener('mouseout', () => tip.classList.remove('visible'));
   }
 
+  function bindInlinePopover() {
+    const popover = document.createElement('div');
+    popover.className = 'ic-inline-ai-popover';
+    popover.innerHTML = `
+      <button type="button" data-doc-command="improve">Improve</button>
+      <button type="button" data-doc-command="factual">Factual</button>
+      <button type="button" data-doc-command="childVoice">Child voice</button>
+      <button type="button" data-doc-command="safeguarding">Safeguarding</button>
+    `;
+    document.body.appendChild(popover);
+
+    document.addEventListener('selectionchange', () => {
+      const text = selectedText();
+      const selection = window.getSelection();
+      if (!text || !selection || selection.rangeCount === 0) {
+        popover.classList.remove('visible');
+        return;
+      }
+      const editor = $('indicareDocEditor');
+      if (!editor || !editor.contains(selection.anchorNode)) return;
+      const rect = selection.getRangeAt(0).getBoundingClientRect();
+      popover.style.left = `${rect.left}px`;
+      popover.style.top = `${Math.max(10, rect.top - 48)}px`;
+      popover.classList.add('visible');
+    });
+  }
+
+  function bindSlashMenu() {
+    const editor = $('indicareDocEditor');
+    if (!editor) return;
+    const menu = document.createElement('div');
+    menu.className = 'ic-slash-menu';
+    menu.innerHTML = Object.entries(DOC_TEMPLATES).map(([key, template]) => `
+      <button type="button" data-insert-template="${key}">${template.title}<small>Insert operational structure</small></button>
+    `).join('');
+    document.body.appendChild(menu);
+
+    editor.addEventListener('keyup', (event) => {
+      if (event.key !== '/') return;
+      const rect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
+      if (!rect) return;
+      menu.style.left = `${rect.left}px`;
+      menu.style.top = `${rect.bottom + 8}px`;
+      menu.classList.add('visible');
+    });
+
+    document.addEventListener('click', (event) => {
+      const insert = event.target.closest('[data-insert-template]');
+      if (insert) {
+        applyDocTemplate(insert.dataset.insertTemplate);
+        menu.classList.remove('visible');
+      } else if (!event.target.closest('.ic-slash-menu')) {
+        menu.classList.remove('visible');
+      }
+    });
+  }
+
   function bind() {
     document.addEventListener('click', (event) => {
       const suite = event.target.closest('[data-suite-view]');
       if (suite) {
         showSuite(suite.dataset.suiteView);
+        return;
+      }
+
+      const memoryAction = event.target.closest('[data-memory-action]');
+      if (memoryAction) {
+        sendToIntelligence(memoryAction.dataset.memoryAction);
         return;
       }
 
@@ -307,16 +506,28 @@
 
     const editor = $('indicareDocEditor');
     if (editor) {
-      editor.addEventListener('input', decorateBlocks);
+      editor.addEventListener('input', () => {
+        decorateBlocks();
+        addMemoryEntry('doc', 'DOCS working draft', editor.innerText || '');
+      });
     }
   }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+  }
+
+  window.IndiCareSuiteMemory = { loadMemory, saveMemory, addMemoryEntry, buildMemoryContext };
 
   window.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('ic-suite-rail-compact');
     bind();
     bindVoiceButtons();
     bindFloatingTips();
+    bindInlinePopover();
+    bindSlashMenu();
     decorateBlocks();
+    renderMemoryStrip();
     showSuite(localStorage.getItem('indicare_suite_view') || 'intelligence');
   });
 })();
