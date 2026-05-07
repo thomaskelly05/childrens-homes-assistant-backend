@@ -41,6 +41,7 @@ function bootIndiCareOsShell() {
   bindGlobalButtons();
   renderStatusStrip();
   window.addEventListener("indicare:context-change", renderStatusStrip);
+  window.addEventListener("indicare:context-fabric-update", renderStatusStrip);
   window.IndiCareOS = {
     openHomeOverview,
     openProviderOverview,
@@ -117,12 +118,19 @@ function bindGlobalButtons() {
 function renderStatusStrip() {
   if (!statusStrip) return;
   const ctx = context();
-  const hasChild = Boolean(ctx.childId);
+  const fabric = window.IndiCareContextFabric?.get?.() || {};
+  const signals = fabric.signals || {};
+  const governance = fabric.governance || {};
+  const hasChild = Boolean(ctx.childId || fabric.child?.id);
+  const nextAction = signals.nextAction || "Select a child to begin.";
   statusStrip.innerHTML = `
-    <article class="status-pill ${hasChild ? "active" : "pending"}"><strong>${escapeHtml(ctx.homeName || "Select home")}</strong><span>Home context</span></article>
-    <article class="status-pill ${hasChild ? "active" : "pending"}"><strong>${escapeHtml(ctx.childName || "Select child")}</strong><span>Young person</span></article>
-    <article class="status-pill"><strong>IndiCare Narrative OS</strong><span>Universal writing surface</span></article>
-    <article class="status-pill"><strong>Operational Memory</strong><span>Records, documents and evidence connected</span></article>
+    <article class="status-pill ${hasChild ? "active" : "pending"}"><strong>${escapeHtml(ctx.homeName || fabric.home?.name || "Select home")}</strong><span>Home context</span></article>
+    <article class="status-pill ${hasChild ? "active" : "pending"}"><strong>${escapeHtml(ctx.childName || fabric.child?.name || "Select child")}</strong><span>Young person</span></article>
+    <article class="status-pill"><strong>${escapeHtml(humanise(signals.emotionalState || "building picture"))}</strong><span>Emotional state</span></article>
+    <article class="status-pill ${riskClass(signals.riskState)}"><strong>${escapeHtml(humanise(signals.riskState || "unknown"))}</strong><span>Risk state</span></article>
+    <article class="status-pill ${signals.childVoiceGap ? "warning" : "active"}"><strong>${signals.childVoiceGap ? "Needs voice" : "Voice monitored"}</strong><span>Child voice</span></article>
+    <article class="status-pill ${governance.awaitingReview ? "warning" : "active"}"><strong>${escapeHtml(governance.awaitingReview || 0)}</strong><span>Awaiting review</span></article>
+    <article class="status-pill wide"><strong>Next action</strong><span>${escapeHtml(nextAction)}</span></article>
   `;
 }
 
@@ -242,6 +250,17 @@ function displayName(child) {
 
 function initials(name) {
   return String(name || "YP").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function riskClass(value) {
+  const risk = String(value || "").toLowerCase();
+  if (["high", "critical", "urgent"].includes(risk)) return "danger";
+  if (["medium", "moderate", "elevated"].includes(risk)) return "warning";
+  return "active";
+}
+
+function humanise(value) {
+  return String(value || "").replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
 function escapeHtml(value) {
