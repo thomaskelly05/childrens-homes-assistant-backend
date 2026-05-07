@@ -6,6 +6,7 @@
   <title>IndiCare Assistant</title>
   <meta name="theme-color" content="#ffffff" />
   <link rel="stylesheet" href="/css/assistant-cockpit.css" />
+  <link rel="stylesheet" href="/css/assistant-professional-renderer.css" />
 </head>
 <body>
   <div class="ic-cockpit ic-standalone-assistant" id="icCockpit" data-assistant-surface="standalone">
@@ -14,8 +15,13 @@
         <div class="ic-logo">IC</div>
         <div>
           <div class="ic-brand-title">IndiCare</div>
-          <div class="ic-brand-sub">Children's homes assistant</div>
+          <div class="ic-brand-sub">Children's residential encyclopaedia</div>
         </div>
+      </div>
+
+      <div class="ic-mode-card" aria-label="Assistant mode">
+        <span>Mode</span>
+        <strong id="currentModeLabel">Ofsted Lead</strong>
       </div>
 
       <div class="ic-sidebar-actions">
@@ -42,12 +48,13 @@
     <main class="ic-main">
       <header class="ic-top">
         <div>
-          <div class="ic-surface-pill">Standalone assistant</div>
-          <h1>How can I help?</h1>
+          <div class="ic-surface-pill">Ofsted lead assistant</div>
+          <h1>What do you need to evidence, understand or improve?</h1>
         </div>
 
         <div class="ic-top-actions">
           <button id="copyConversation" class="ic-header-btn" type="button">Copy</button>
+          <button id="exportConversation" class="ic-header-btn" type="button">Export</button>
           <button id="clearConversation" class="ic-header-btn" type="button">Clear</button>
 
           <div class="ic-user">
@@ -63,22 +70,40 @@
       <section id="assistantPanel" class="ic-content panel panel-assistant">
         <div id="empty" class="ic-empty-state">
           <div class="ic-empty-mark">IC</div>
-          <h2>Ask about children’s home practice, records, safeguarding, Ofsted evidence or uploaded documents.</h2>
-          <p>This assistant does not load live OS records unless you provide them in this chat.</p>
+          <h2>The children’s residential encyclopaedia, Ofsted lead and professional drafting assistant.</h2>
+          <p>Ask about safeguarding, quality standards, Ofsted evidence, leadership oversight, recording quality or uploaded documents. This standalone assistant does not load live OS records.</p>
+
+          <div class="ic-mode-grid" aria-label="Assistant specialist modes">
+            <button type="button" data-mode="ofsted">Ofsted Lead</button>
+            <button type="button" data-mode="safeguarding">Safeguarding</button>
+            <button type="button" data-mode="records">Recording QA</button>
+            <button type="button" data-mode="practice">Practice Encyclopaedia</button>
+          </div>
 
           <div class="ic-starters" aria-label="Suggested prompts">
+            <button type="button" onclick="quick('ofsted')">Prepare Ofsted evidence</button>
+            <button type="button" onclick="quick('reg45')">Build a Reg 45 summary</button>
+            <button type="button" onclick="quick('quality')">Review recording quality</button>
+            <button type="button" onclick="quick('threshold')">Analyse safeguarding threshold</button>
             <button type="button" onclick="quick('incident')">Draft an incident record</button>
-            <button type="button" onclick="quick('handover')">Write a handover</button>
-            <button type="button" onclick="quick('risk')">Create a risk summary</button>
-            <button type="button" onclick="quick('policy')">Summarise a policy</button>
+            <button type="button" onclick="quick('missing')">Missing-from-care record</button>
           </div>
         </div>
 
         <div id="messages" class="messages hidden"></div>
       </section>
 
-      <div class="ic-composer-dock">
+      <div class="ic-composer-dock" id="composerDock">
+        <div id="dropHint" class="ic-drop-hint hidden">Drop documents here to analyse them</div>
         <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button" aria-label="Remove attached document">×</button></div>
+
+        <div id="suggestionChips" class="ic-suggestion-chips" aria-label="Quick assistant actions">
+          <button type="button" data-command="/ofsted">/ofsted</button>
+          <button type="button" data-command="/safeguarding">/safeguarding</button>
+          <button type="button" data-command="/recording">/recording</button>
+          <button type="button" data-command="/reg45">/reg45</button>
+          <button type="button" data-command="/chronology">/chronology</button>
+        </div>
 
         <div class="ic-composer">
           <div class="ic-input-row">
@@ -121,6 +146,16 @@
           <span>Role</span>
           <input id="settingsRole" type="text" placeholder="Registered manager" />
         </label>
+
+        <label>
+          <span>Default mode</span>
+          <select id="settingsDefaultMode">
+            <option value="ofsted">Ofsted Lead</option>
+            <option value="safeguarding">Safeguarding</option>
+            <option value="records">Recording QA</option>
+            <option value="practice">Practice Encyclopaedia</option>
+          </select>
+        </label>
       </div>
 
       <div class="ic-modal-actions">
@@ -130,5 +165,6 @@
   </div>
 
   <script src="/js/assistant-standalone-cockpit.js"></script>
+  <script src="/js/assistant-professional-renderer.js"></script>
 </body>
 </html>
