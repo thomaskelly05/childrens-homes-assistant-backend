@@ -1,13 +1,16 @@
+import { createRecord } from "../young-people-shell/core/api-adapter.js";
+
 const RECORD_TYPES = [
   { id: "daily_note", label: "Daily note", help: "Child-centred daily lived experience record." },
   { id: "incident", label: "Incident", help: "Factual incident record with actions and follow-up." },
-  { id: "direct_work", label: "Direct work", help: "Key work, wishes and feelings or direct session record." },
+  { id: "keywork", label: "Direct work / key work", help: "Key work, wishes and feelings or direct session record." },
   { id: "missing_episode", label: "Missing episode", help: "Missing from care episode and return discussion record." },
-  { id: "health_education_family", label: "Education / health / family", help: "Education, health, family time or professional contact record." },
-  { id: "safeguarding_concern", label: "Safeguarding concern", help: "Concern record requiring manager oversight." },
+  { id: "education_record", label: "Education record", help: "Education, learning, school or attendance record." },
+  { id: "health_record", label: "Health record", help: "Health appointment, wellbeing or medical update." },
+  { id: "family_contact", label: "Family contact", help: "Family time, communication or contact record." },
+  { id: "safeguarding_record", label: "Safeguarding concern", help: "Concern record requiring manager oversight." },
 ];
 
-const SAVE_ENDPOINTS = ["/api/records", "/api/documents", "/api/children/documents"];
 let activeDraft = null;
 let autosaveTimer = null;
 
@@ -59,11 +62,17 @@ function handleEditorClicks(event) {
 function handleEditorInput(event) {
   const field = event.target.closest?.("[data-record-field]");
   if (!field || !activeDraft) return;
-  activeDraft.fields[field.dataset.recordField] = field.value;
+  if (field.dataset.recordField === "young_person_id") {
+    activeDraft.young_person_id = field.value;
+    const child = editorContext().children.find((item) => childKey(item) === field.value);
+    activeDraft.child_name = child ? childName(child) : "";
+  } else {
+    activeDraft.fields[field.dataset.recordField] = field.value;
+  }
   activeDraft.updated_at = new Date().toISOString();
   setEditorState("Unsaved changes", "amber");
   clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(() => saveDraft("draft", true), 900);
+  autosaveTimer = setTimeout(() => saveDraft("draft", true), 1200);
 }
 
 function renderRecordTypePicker() {
@@ -77,7 +86,7 @@ function renderRecordTypePicker() {
         <button class="sp-back" type="button" data-sp-view="children">‹ Back to Young People</button>
         <span class="record-kicker">Phase 4 · Record editor</span>
         <h1>Create a record</h1>
-        <p>Choose the type of live operational record you need to write. No demo data is used.</p>
+        <p>Choose the type of live operational record you need to write. This uses the existing young-people record API contracts.</p>
       </div>
     </section>
     <section class="record-type-grid">
@@ -143,7 +152,7 @@ function renderEditor() {
       <aside class="record-context-panel">
         <section class="sp-card"><h2>Recording guidance</h2><p>Use factual, child-centred language. Avoid judgemental phrasing. Separate what was seen/heard from opinion or analysis.</p></section>
         <section class="sp-card"><h2>Draft status</h2><div class="record-field-list compact"><p><span>Status</span><strong>${escapeHtml(activeDraft.status)}</strong></p><p><span>Backend save</span><strong data-save-status>Waiting</strong></p><p><span>Updated</span><strong>${escapeHtml(formatDate(activeDraft.updated_at))}</strong></p></div></section>
-        <section class="sp-card"><h2>Chronology and safeguarding</h2><p>When the backend save endpoint is connected, submitted records should create linked chronology events and safeguarding flags where required.</p></section>
+        <section class="sp-card"><h2>Existing API contract</h2><p>This editor now uses <strong>young-people-shell/core/api-adapter.js</strong> and its configured record routes instead of creating duplicate endpoints.</p></section>
         <section class="sp-card"><h2>Assistant support</h2><p>Use IndiCare AI to improve wording or check whether the record is factual, complete and child-centred before submission.</p></section>
       </aside>
     </section>`;
@@ -166,30 +175,28 @@ async function saveDraft(status, quiet = false) {
   const child = editorContext().children.find((item) => childKey(item) === selected);
   activeDraft.child_name = child ? childName(child) : activeDraft.child_name;
   const payload = buildPayload(activeDraft);
-  setEditorState(status === "submitted_for_review" ? "Submitting..." : "Saving draft...", "blue");
-  setSaveStatus("Trying backend endpoints");
-  for (const endpoint of SAVE_ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json", Accept: "application/json", ...csrfHeaders("POST") },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error(`${response.status}`);
-      const saved = await safeJson(response);
-      activeDraft.id = saved?.id || saved?.record_id || activeDraft.id;
-      setEditorState(status === "submitted_for_review" ? "Submitted for review" : "Draft saved", "green");
-      setSaveStatus(`Saved to ${endpoint}`);
-      window.dispatchEvent(new CustomEvent("indicare:refresh-live-os"));
-      return;
-    } catch (error) {
-      // Try next endpoint. If all fail, show an honest not-saved state.
-    }
+  const ids = { youngPersonId: activeDraft.young_person_id, homeId: window.IndiCareOperationalSession?.homeId || "" };
+
+  if (!ids.youngPersonId) {
+    setEditorState("Cannot save without young person", "amber");
+    setSaveStatus("Select a young person first");
+    return;
   }
-  setEditorState("Not saved to backend", "amber");
-  setSaveStatus("No working create-record endpoint found");
-  if (!quiet) alert("This draft was not saved because no backend create-record endpoint accepted it yet.");
+
+  setEditorState(status === "submitted_for_review" ? "Submitting..." : "Saving draft...", "blue");
+  setSaveStatus("Using existing young people record API");
+
+  try {
+    const saved = await createRecord(activeDraft.record_type, ids, payload);
+    activeDraft.id = saved?.id || saved?.record_id || activeDraft.id;
+    setEditorState(status === "submitted_for_review" ? "Submitted for review" : "Draft saved", "green");
+    setSaveStatus("Saved through existing record API");
+    window.dispatchEvent(new CustomEvent("indicare:refresh-live-os"));
+  } catch (error) {
+    setEditorState("Not saved to backend", "amber");
+    setSaveStatus(error?.message || "Existing record API rejected the save");
+    if (!quiet) alert(`This draft was not saved: ${error?.message || "record API rejected the save"}`);
+  }
 }
 
 function buildPayload(draft) {
@@ -203,6 +210,12 @@ function buildPayload(draft) {
     home_name: draft.home_name,
     content: draft.fields,
     summary: draft.fields.summary,
+    description: draft.fields.summary,
+    notes: draft.fields.observations,
+    child_voice: draft.fields.child_voice,
+    actions_taken: draft.fields.actions_taken,
+    safeguarding_notes: draft.fields.safeguarding,
+    manager_comments: draft.fields.manager_review,
     safeguarding_flag: Boolean(draft.fields.safeguarding?.trim()),
   };
 }
@@ -226,15 +239,6 @@ function setSaveStatus(text) {
   if (target) target.textContent = text;
 }
 
-function csrfHeaders(method) {
-  const headers = {};
-  if (!["POST", "PUT", "PATCH", "DELETE"].includes(String(method || "GET").toUpperCase())) return headers;
-  const match = document.cookie.match(/(?:^|;\s*)(?:__Host-indicare_csrf|indicare_csrf)=([^;]+)/);
-  if (match) headers["X-CSRF-Token"] = decodeURIComponent(match[1]);
-  return headers;
-}
-
-async function safeJson(response) { try { return await response.json(); } catch { return null; } }
 function childKey(child) { return String(child.id || child.young_person_id || child.child_id || child.youngPersonId || childName(child)); }
 function childName(child) { return child.name || child.full_name || child.preferred_name || child.young_person_name || [child.first_name, child.last_name].filter(Boolean).join(" ") || "Young person"; }
 function arrayFrom(value) { if (Array.isArray(value)) return value; if (value && Array.isArray(value.items)) return value.items; if (value && Array.isArray(value.results)) return value.results; if (value && Array.isArray(value.data)) return value.data; return []; }
