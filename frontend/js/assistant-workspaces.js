@@ -65,11 +65,7 @@
   }
 
   function readJson(key, fallback) {
-    try {
-      return JSON.parse(localStorage.getItem(key) || "");
-    } catch (_) {
-      return fallback;
-    }
+    try { return JSON.parse(localStorage.getItem(key) || ""); } catch (_) { return fallback; }
   }
 
   function writeJson(key, value) {
@@ -86,9 +82,7 @@
     setTimeout(() => toast.remove(), 1800);
   }
 
-  function nowIso() {
-    return new Date().toISOString();
-  }
+  function nowIso() { return new Date().toISOString(); }
 
   function normaliseWorkspace(workspace) {
     return {
@@ -128,9 +122,7 @@
     return Array.isArray(items) ? items : [];
   }
 
-  function saveConversations(items) {
-    writeJson(CONVERSATIONS_KEY, items);
-  }
+  function saveConversations(items) { writeJson(CONVERSATIONS_KEY, items); }
 
   function attachCurrentConversationToWorkspace(workspaceId) {
     const activeConversationId = localStorage.getItem(ACTIVE_CONVERSATION_KEY);
@@ -141,6 +133,12 @@
     conversation.workspaceId = conversation.workspaceId || workspaceId;
     conversation.updatedAt = nowIso();
     saveConversations(conversations);
+  }
+
+  function workspaceMemorySummary(workspace) {
+    const conversations = allConversations().filter((item) => item.workspaceId === workspace.id);
+    const docs = Array.isArray(workspace.documents) ? workspace.documents.length : 0;
+    return `${workspace.name}: ${workspace.description} Conversations: ${conversations.length}. Documents: ${docs}.`;
   }
 
   function setWorkspace(workspaceId, options) {
@@ -156,6 +154,7 @@
       description: workspace.description,
       mode: workspace.mode,
       promptPrefix: workspace.promptPrefix,
+      memorySummary: workspaceMemorySummary(workspace),
     }));
 
     const select = $("workspaceSelect");
@@ -226,22 +225,6 @@
       .replace(/'/g, "&#039;");
   }
 
-  function interceptPromptBeforeSend() {
-    const send = $("send");
-    const input = $("input");
-    if (!send || !input) return;
-
-    document.addEventListener("click", (event) => {
-      if (!event.target.closest("#send")) return;
-      const workspace = activeWorkspace(loadWorkspaces());
-      if (!workspace || !input.value.trim()) return;
-      if (input.dataset.workspaceContextApplied === "true") return;
-      input.value = `${workspace.promptPrefix}\n\n${input.value}`;
-      input.dataset.workspaceContextApplied = "true";
-      setTimeout(() => { input.dataset.workspaceContextApplied = "false"; }, 1200);
-    }, true);
-  }
-
   function watchHistoryChanges() {
     const history = $("history");
     if (!history) return;
@@ -267,7 +250,6 @@
     renderWorkspaceSelect();
     bind();
     watchHistoryChanges();
-    interceptPromptBeforeSend();
     const workspace = activeWorkspace(loadWorkspaces());
     if (workspace) setTimeout(() => filterConversationHistory(workspace.id), 120);
   }
