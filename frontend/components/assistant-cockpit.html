@@ -57,24 +57,12 @@
         <div id="messages" class="messages hidden"></div>
       </section>
 
-      <section id="libraryPanel" class="ic-content panel hidden">
-        <div class="ic-panel">
-          <div class="ic-panel-head"><h2>Knowledge library</h2></div>
-          <p class="ic-brand-sub">Approved documents and policy material available to this assistant.</p>
-          <div id="libraryList" class="ic-evidence-list"></div>
-          <div id="libraryViewer" class="ic-panel" style="margin-top:14px;">
-            <h2>Select a document</h2>
-            <p class="ic-brand-sub">Open a policy or document from the list to read it here.</p>
-          </div>
-        </div>
-      </section>
-
       <div class="ic-composer-dock">
         <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button" aria-label="Remove attached document">×</button></div>
         <div class="ic-composer">
           <div class="ic-input-row">
             <label class="ic-upload-label" for="upload" title="Attach document">+</label>
-            <input id="upload" type="file" hidden />
+            <input id="upload" type="file" accept=".pdf,.docx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json" hidden />
             <textarea id="input" placeholder="Ask IndiCare..." rows="1"></textarea>
             <button id="send" type="button" aria-label="Send message">↑</button>
           </div>
