@@ -1,6 +1,5 @@
-/* Standalone IndiCare Assistant cockpit runtime.
-   This file intentionally uses only /assistant/general/stream and does not load
-   child, home, chronology or OS workspace context. */
+/* Standalone IndiCare Assistant runtime.
+   Uses /assistant/general/stream and deliberately does not load OS child/home context. */
 
 (function () {
   const SURFACE = "standalone";
@@ -53,6 +52,28 @@
     return next;
   }
 
+  function clearStandaloneContext() {
+    try {
+      localStorage.removeItem("indicare_workspace_context");
+      localStorage.removeItem("indicare_context_state");
+      sessionStorage.removeItem("indicare_workspace_context");
+      sessionStorage.removeItem("indicare_context_state");
+    } catch (_) {}
+  }
+
+  function standaloneSystemPrefix() {
+    return [
+      "STANDALONE ASSISTANT BOUNDARY:",
+      "This request is from /assistant, the standalone assistant surface.",
+      "Do not use, infer, or claim access to any live IndiCare OS young person, home, chronology, placement, safeguarding, inspection, or operational record data.",
+      "Use only what the user writes in this conversation or what they attach/paste into this chat.",
+      "If evidence is missing, say what is not visible rather than filling gaps.",
+      "Use British English and professional children's residential care language.",
+      "Do not make final safeguarding, legal, clinical, employment, or regulatory decisions. Frame actions for staff or manager review.",
+      "If answering about regulations or statutory guidance, name the source and clearly separate quoted wording from explanation where relevant.",
+    ].join("\n");
+  }
+
   function loadState() {
     state.conversations = safeJsonParse(localStorage.getItem(STORAGE_KEY), []);
     if (!Array.isArray(state.conversations)) state.conversations = [];
@@ -64,23 +85,18 @@
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.conversations.slice(0, 80)));
-    if (state.activeConversationId) {
-      localStorage.setItem(ACTIVE_KEY, state.activeConversationId);
-    }
+    if (state.activeConversationId) localStorage.setItem(ACTIVE_KEY, state.activeConversationId);
+    else localStorage.removeItem(ACTIVE_KEY);
   }
 
   function activeConversation() {
-    if (!state.activeConversationId) return null;
     return state.conversations.find((conversation) => conversation.id === state.activeConversationId) || null;
   }
 
-  function ensureConversation() {
-    let conversation = activeConversation();
-    if (conversation) return conversation;
-
-    conversation = {
+  function createConversation() {
+    const conversation = {
       id: makeId("standalone"),
-      title: "New conversation",
+      title: "New chat",
       surface: SURFACE,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -90,8 +106,11 @@
     state.conversations.unshift(conversation);
     state.activeConversationId = conversation.id;
     saveState();
-    renderHistory();
     return conversation;
+  }
+
+  function ensureConversation() {
+    return activeConversation() || createConversation();
   }
 
   function conversationTitleFrom(text) {
@@ -99,16 +118,13 @@
       .replace(/[^\p{L}\p{N}\s'-]/gu, " ")
       .replace(/\s+/g, " ")
       .trim();
-    if (!clean) return "New conversation";
-    return clean.split(" ").slice(0, 6).join(" ");
+    if (!clean) return "New chat";
+    return clean.split(" ").slice(0, 7).join(" ");
   }
 
   function setChatActive(active) {
-    const root = $("icCockpit");
-    if (!root) return;
-    root.classList.toggle("ic-chat-active", !!active);
-    const messages = $("messages");
-    if (messages) messages.classList.toggle("hidden", !active);
+    $("icCockpit")?.classList.toggle("ic-chat-active", !!active);
+    $("messages")?.classList.toggle("hidden", !active);
   }
 
   function renderMarkdownLite(text) {
@@ -118,12 +134,12 @@
     let inList = false;
 
     for (const line of lines) {
-      if (/^\s*[-*]\s+/.test(line)) {
+      if (/^\s*[-*•]\s+/.test(line)) {
         if (!inList) {
           html += "<ul>";
           inList = true;
         }
-        html += `<li>${line.replace(/^\s*[-*]\s+/, "")}</li>`;
+        html += `<li>${line.replace(/^\s*[-*•]\s+/, "")}</li>`;
         continue;
       }
 
@@ -148,12 +164,13 @@
   function messageElement(message, index) {
     const role = message.role === "user" ? "user" : "assistant";
     const label = role === "user" ? "You" : "IC";
+    const pending = message.pending ? '<div class="meta">Writing...</div>' : "";
     return `
       <div class="wrap ${role}" data-message-index="${index}">
         <div class="avatar">${label}</div>
         <div class="block">
           <div class="msg">${renderMarkdownLite(message.content)}</div>
-          ${message.pending ? '<div class="meta">Writing...</div>' : ''}
+          ${pending}
         </div>
       </div>
     `;
@@ -164,7 +181,7 @@
     const messages = $("messages");
     if (!messages) return;
 
-    if (!conversation || conversation.messages.length === 0) {
+    if (!conversation || !conversation.messages.length) {
       messages.innerHTML = "";
       setChatActive(false);
       return;
@@ -172,7 +189,10 @@
 
     setChatActive(true);
     messages.innerHTML = conversation.messages.map(messageElement).join("");
-    messages.scrollTop = messages.scrollHeight;
+    requestAnimationFrame(() => {
+      messages.scrollIntoView({ block: "end" });
+      messages.scrollTop = messages.scrollHeight;
+    });
   }
 
   function renderHistory() {
@@ -180,15 +200,15 @@
     if (!history) return;
 
     if (!state.conversations.length) {
-      history.innerHTML = '<div class="ic-brand-sub">No conversations yet.</div>';
+      history.innerHTML = '<div class="ic-brand-sub">No chats yet.</div>';
       return;
     }
 
     history.innerHTML = state.conversations.map((conversation) => `
-      <div class="item ${conversation.id === state.activeConversationId ? "active" : ""}" data-conversation-id="${conversation.id}">
+      <div class="item ${conversation.id === state.activeConversationId ? "active" : ""}">
         <div class="row">
           <button class="mainbtn" type="button" data-open-conversation="${conversation.id}">
-            <div class="ttl">${escapeHtml(conversation.title || "Conversation")}</div>
+            <div class="ttl">${escapeHtml(conversation.title || "Chat")}</div>
           </button>
           <button class="mini" type="button" data-rename-conversation="${conversation.id}" title="Rename">✎</button>
           <button class="mini danger" type="button" data-delete-conversation="${conversation.id}" title="Delete">×</button>
@@ -205,9 +225,8 @@
 
     if (!clean.length) {
       list.innerHTML = `
-        <article class="ic-citation"><small>Standalone boundary</small><strong>No OS records loaded</strong><p>This assistant page does not show live child, home, chronology or safeguarding workspace records.</p><span class="ic-rel">Privacy boundary</span></article>
-        <article class="ic-citation"><small>Document-aware mode</small><strong>Upload or library sources</strong><p>Attach a document or search your approved library to ground responses in available material.</p><span class="ic-rel">Available when provided</span></article>
-        <article class="ic-citation"><small>Regulatory answers</small><strong>Quote, name and label sources</strong><p>When regulations are requested, the assistant should name the regulation and clearly separate quoted wording from explanation.</p><span class="ic-rel">Answer policy</span></article>
+        <article class="ic-citation"><small>Boundary</small><strong>No OS records loaded</strong><p>This standalone assistant only uses what is typed or attached in this chat.</p><span class="ic-rel">Standalone</span></article>
+        <article class="ic-citation"><small>Documents</small><strong>Attach text-based files</strong><p>TXT, MD, CSV and JSON files can be read in-browser. PDF and DOCX support should be handled by the backend upload pipeline next.</p><span class="ic-rel">Upload ready</span></article>
       `;
       return;
     }
@@ -244,7 +263,7 @@
       ...(extra || {}),
     });
     conversation.updatedAt = new Date().toISOString();
-    if (role === "user" && (!conversation.title || conversation.title === "New conversation")) {
+    if (role === "user" && (!conversation.title || conversation.title === "New chat")) {
       conversation.title = conversationTitleFrom(content);
     }
     saveState();
@@ -266,41 +285,44 @@
     renderMessages();
   }
 
-  function clearStandaloneContext() {
-    try {
-      localStorage.removeItem("indicare_workspace_context");
-      localStorage.removeItem("indicare_context_state");
-      sessionStorage.removeItem("indicare_workspace_context");
-      sessionStorage.removeItem("indicare_context_state");
-    } catch (_) {}
-  }
-
-  function standaloneSystemPrefix() {
-    return [
-      "STANDALONE ASSISTANT BOUNDARY:",
-      "This request is from /assistant, the standalone external assistant surface.",
-      "Do not use or infer any child, home, chronology, inspection dashboard, placement, or OS operational record context unless the user has explicitly provided that information in this chat or an uploaded document.",
-      "If answering about regulations or statutory guidance, name the source, quote relevant wording where appropriate, and clearly label quotes separately from explanation.",
-      "Use British English and professional children’s residential care language.",
-    ].join("\n");
+  function parseSse(chunk) {
+    const lines = String(chunk || "").split("\n");
+    let event = "message";
+    const data = [];
+    for (const line of lines) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
+    }
+    return { event, data: data.join("\n") };
   }
 
   async function readAttachedFile(file) {
     if (!file) return null;
-    const allowedText = /^(text\/|application\/json)/.test(file.type || "") || /\.(txt|md|csv|json)$/i.test(file.name || "");
-    if (!allowedText) {
-      return {
-        name: file.name,
-        text: "",
-        unsupported: true,
-      };
+    const readable = /^(text\/|application\/json)/.test(file.type || "") || /\.(txt|md|csv|json)$/i.test(file.name || "");
+    if (!readable) {
+      return { name: file.name, text: "", unsupported: true };
     }
     const text = await file.text();
-    return {
-      name: file.name,
-      text: text.slice(0, 12000),
-      unsupported: false,
-    };
+    return { name: file.name, text: text.slice(0, 16000), unsupported: false };
+  }
+
+  function clearAttachment() {
+    state.attachedDocument = null;
+    $("doc")?.classList.remove("show");
+    if ($("docText")) $("docText").textContent = "";
+    if ($("upload")) $("upload").value = "";
+  }
+
+  async function handleUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    state.attachedDocument = await readAttachedFile(file);
+    $("doc")?.classList.add("show");
+    if ($("docText")) {
+      $("docText").textContent = state.attachedDocument.unsupported
+        ? `${file.name} attached - paste text or use supported upload handling`
+        : file.name;
+    }
   }
 
   async function sendMessage() {
@@ -316,7 +338,7 @@
     const attachmentBlock = state.attachedDocument?.text
       ? `\n\nATTACHED DOCUMENT (${state.attachedDocument.name}):\n${state.attachedDocument.text}`
       : state.attachedDocument?.unsupported
-        ? `\n\nThe user attached ${state.attachedDocument.name}, but the browser could not read this file directly. Ask them to paste relevant text or use supported upload handling.`
+        ? `\n\nThe user attached ${state.attachedDocument.name}, but this browser runtime could not read the file content directly. Ask the user to paste the relevant content unless backend document extraction is available.`
         : "";
 
     const userText = raw || `Please review the attached document: ${state.attachedDocument?.name || "document"}`;
@@ -329,6 +351,7 @@
     const assistantIndex = appendMessage("assistant", "", { pending: true });
     let assistantText = "";
     state.isStreaming = true;
+    $("send")?.setAttribute("disabled", "disabled");
 
     try {
       const response = await fetch("/assistant/general/stream", {
@@ -340,12 +363,11 @@
           response_mode: "balanced",
           conversation_id: conversation.id,
           history: buildHistoryForApi(conversation),
+          assistant_surface: SURFACE,
         }),
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error(`Assistant request failed with status ${response.status}`);
-      }
+      if (!response.ok || !response.body) throw new Error(`Assistant request failed with status ${response.status}`);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -361,16 +383,16 @@
         for (const part of parts) {
           const parsed = parseSse(part);
           if (!parsed) continue;
+          if (parsed.event === "done" || parsed.event === "progress") continue;
 
-          if (parsed.event === "done") continue;
           if (parsed.event === "meta") {
             const meta = safeJsonParse(parsed.data, {});
             const sources = Array.isArray(meta.sources) ? meta.sources : [];
             conversation.sources = sources;
             renderSources(sources);
+            saveState();
             continue;
           }
-          if (parsed.event === "progress") continue;
 
           if (parsed.data) {
             assistantText += parsed.data;
@@ -383,43 +405,21 @@
       clearAttachment();
     } catch (error) {
       console.error(error);
-      updateMessage(
-        assistantIndex,
-        "Sorry, I could not reach the standalone assistant just now. Please try again.",
-        { pending: false }
-      );
+      updateMessage(assistantIndex, "Sorry, I could not reach the assistant just now. Please try again.", { pending: false });
     } finally {
       state.isStreaming = false;
+      $("send")?.removeAttribute("disabled");
+      input.focus();
     }
-  }
-
-  function parseSse(chunk) {
-    const lines = String(chunk || "").split("\n");
-    let event = "message";
-    const data = [];
-    for (const line of lines) {
-      if (line.startsWith("event:")) event = line.slice(6).trim();
-      if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
-    }
-    return { event, data: data.join("\n") };
   }
 
   function newConversation() {
-    const conversation = {
-      id: makeId("standalone"),
-      title: "New conversation",
-      surface: SURFACE,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      messages: [],
-      sources: [],
-    };
-    state.conversations.unshift(conversation);
-    state.activeConversationId = conversation.id;
-    saveState();
+    createConversation();
+    clearAttachment();
     renderHistory();
     renderMessages();
     renderSources([]);
+    $("input")?.focus();
   }
 
   function openConversation(id) {
@@ -432,9 +432,7 @@
 
   function deleteConversation(id) {
     state.conversations = state.conversations.filter((conversation) => conversation.id !== id);
-    if (state.activeConversationId === id) {
-      state.activeConversationId = state.conversations[0]?.id || null;
-    }
+    if (state.activeConversationId === id) state.activeConversationId = state.conversations[0]?.id || null;
     saveState();
     renderHistory();
     renderMessages();
@@ -444,7 +442,7 @@
   function renameConversation(id) {
     const conversation = state.conversations.find((item) => item.id === id);
     if (!conversation) return;
-    const title = prompt("Conversation title", conversation.title || "Conversation");
+    const title = prompt("Chat title", conversation.title || "Chat");
     if (!title) return;
     conversation.title = title.trim();
     conversation.updatedAt = new Date().toISOString();
@@ -452,37 +450,13 @@
     renderHistory();
   }
 
-  function clearAttachment() {
-    state.attachedDocument = null;
-    const doc = $("doc");
-    const docText = $("docText");
-    const upload = $("upload");
-    if (doc) doc.classList.remove("show");
-    if (docText) docText.textContent = "";
-    if (upload) upload.value = "";
-  }
-
-  async function handleUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    state.attachedDocument = await readAttachedFile(file);
-    const doc = $("doc");
-    const docText = $("docText");
-    if (doc) doc.classList.add("show");
-    if (docText) {
-      docText.textContent = state.attachedDocument.unsupported
-        ? `${file.name} attached - paste text for best results`
-        : file.name;
-    }
-  }
-
   function quick(type) {
     const prompts = {
-      policy: "Search policy and guidance for: ",
+      policy: "Summarise this policy or guidance for children's home staff: ",
       incident: "Turn these rough notes into a clear, factual incident record: ",
-      risk: "Create a structured risk summary covering risks, triggers, protective factors and actions for: ",
-      handover: "Write a concise handover summary for: ",
-      chronology: "Create a factual chronology-style summary from this information: ",
+      risk: "Create a structured risk summary covering concerns, triggers, protective factors and staff actions: ",
+      handover: "Write a concise shift handover from this information: ",
+      chronology: "Create a factual chronology from this information: ",
     };
     const input = $("input");
     if (!input) return;
@@ -491,11 +465,19 @@
     input.dispatchEvent(new Event("input"));
   }
 
+  function filterHistory(query) {
+    const q = String(query || "").toLowerCase();
+    document.querySelectorAll("#history .item").forEach((item) => {
+      item.style.display = item.textContent.toLowerCase().includes(q) ? "" : "none";
+    });
+  }
+
   function bindEvents() {
     $("send")?.addEventListener("click", sendMessage);
     $("newChat")?.addEventListener("click", newConversation);
     $("clearDoc")?.addEventListener("click", clearAttachment);
     $("upload")?.addEventListener("change", handleUpload);
+    $("search")?.addEventListener("input", (event) => filterHistory(event.target.value));
 
     $("input")?.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {
@@ -518,42 +500,16 @@
       if (del) deleteConversation(del.getAttribute("data-delete-conversation"));
       if (rename) renameConversation(rename.getAttribute("data-rename-conversation"));
     });
-
-    $("assistantSearch")?.addEventListener("input", (event) => {
-      const q = String(event.target.value || "").toLowerCase();
-      document.querySelectorAll("#history .item").forEach((item) => {
-        item.style.display = item.textContent.toLowerCase().includes(q) ? "" : "none";
-      });
-    });
-
-    $("search")?.addEventListener("input", (event) => {
-      const q = String(event.target.value || "").toLowerCase();
-      document.querySelectorAll("#history .item").forEach((item) => {
-        item.style.display = item.textContent.toLowerCase().includes(q) ? "" : "none";
-      });
-    });
   }
 
   function hydrateUser() {
-    const first = localStorage.getItem("first_name") || "there";
+    const first = localStorage.getItem("first_name") || "Assistant";
     const last = localStorage.getItem("last_name") || "";
     const role = localStorage.getItem("role") || "Standalone";
     const full = [first, last].filter(Boolean).join(" ").trim();
-    const welcome = $("welcomeTitle");
-    if (welcome) welcome.textContent = `Good ${timeOfDay()}, ${first}.`;
-    const user = $("icUserName");
-    if (user) user.textContent = full || "Assistant user";
-    const userRole = $("icUserRole");
-    if (userRole) userRole.textContent = role;
-    const avatar = $("icUserAvatar");
-    if (avatar) avatar.textContent = ((first[0] || "I") + (last[0] || "C")).toUpperCase();
-  }
-
-  function timeOfDay() {
-    const h = new Date().getHours();
-    if (h < 12) return "morning";
-    if (h < 18) return "afternoon";
-    return "evening";
+    if ($("icUserName")) $("icUserName").textContent = full || "Assistant user";
+    if ($("icUserRole")) $("icUserRole").textContent = role;
+    if ($("icUserAvatar")) $("icUserAvatar").textContent = ((first[0] || "I") + (last[0] || "C")).toUpperCase();
   }
 
   function init() {
