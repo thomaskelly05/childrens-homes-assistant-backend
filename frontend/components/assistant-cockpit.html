@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/css/assistant-cockpit.css" />
   <link rel="stylesheet" href="/css/assistant-professional-renderer.css" />
   <link rel="stylesheet" href="/css/indicare-suite.css" />
+  <link rel="stylesheet" href="/css/indicare-clean-assistant.css" />
 </head>
 <body>
   <div class="ic-cockpit ic-standalone-assistant" id="icCockpit" data-assistant-surface="standalone">
@@ -22,47 +23,24 @@
       </div>
 
       <div class="ic-suite-switcher" aria-label="IndiCare AI workspaces">
-        <button class="active" type="button" data-suite-view="intelligence">Chat</button>
-        <button type="button" data-suite-view="docs">DOCS</button>
+        <button class="active" type="button" data-suite-view="intelligence">Assistant</button>
+        <button type="button" data-suite-view="provider">Provider Overview</button>
         <button type="button" data-suite-view="notes">Notes</button>
+        <button type="button" data-suite-view="docs">DOCS</button>
+        <button type="button" data-suite-view="workflows">Workflows</button>
+        <button type="button" data-suite-view="alerts">Alerts</button>
       </div>
 
       <div class="ic-sidebar-actions">
-        <button id="newChat" class="ic-btn-primary" type="button">New chat</button>
-        <button id="toggleTheme" class="ic-btn-secondary" type="button">Dark mode</button>
+        <button id="newChat" class="ic-btn-primary" type="button">＋ New chat</button>
       </div>
-
-      <nav class="ic-app-nav" aria-label="Assistant apps">
-        <button class="active" type="button" data-app-view="chat">Chat</button>
-        <button type="button" data-app-view="projects">Projects</button>
-        <button type="button" data-app-view="templates">Templates</button>
-      </nav>
-
-      <section id="projectSidebar" class="ic-sidebar-panel active" data-sidebar-panel="projects">
-        <div class="ic-section-row">
-          <div class="ic-section-label">Projects</div>
-          <button id="newWorkspace" class="ic-small-action" type="button">+</button>
-        </div>
-        <select id="workspaceSelect" class="ic-project-select" aria-label="Select project"></select>
-        <div class="ic-project-note" id="workspaceMiniSummary">Project memory is private to IndiCare AI.</div>
-      </section>
-
-      <section id="templateSidebar" class="ic-sidebar-panel" data-sidebar-panel="templates">
-        <div class="ic-section-label">Templates</div>
-        <div class="ic-template-list" id="templateList"></div>
-      </section>
-
-      <input id="search" class="ic-search" type="text" placeholder="Search chats" />
-
-      <div class="ic-section-label">Chats</div>
-      <div id="history" class="ic-history"></div>
 
       <div class="ic-sidebar-footer">
         <button id="openSettings" class="ic-settings-trigger" type="button">
           <span id="icUserAvatarSidebar" class="ic-sidebar-avatar">AI</span>
           <span>
-            <strong id="icUserNameSidebar">Assistant user</strong>
-            <small id="icUserRoleSidebar">IndiCare AI</small>
+            <strong id="icUserNameSidebar">Tom</strong>
+            <small id="icUserRoleSidebar">Professional plan</small>
           </span>
         </button>
       </div>
@@ -70,21 +48,15 @@
 
     <main class="ic-main">
       <header class="ic-top">
-        <div>
-          <div class="ic-surface-pill" id="workspacePill">IndiCare AI workspace</div>
-          <h1 id="workspaceTitle">What can I help with?</h1>
-        </div>
+        <div></div>
 
         <div class="ic-top-actions">
-          <button id="copyConversation" class="ic-btn-secondary" type="button">Copy</button>
-          <button id="exportConversation" class="ic-btn-secondary" type="button">Export</button>
-          <button id="clearConversation" class="ic-btn-secondary" type="button">Clear</button>
+          <button id="icNotificationTrigger" class="ic-btn-secondary" type="button">Notifications</button>
 
           <div class="ic-user">
-            <div id="icUserAvatar" class="ic-avatar">AI</div>
+            <div id="icUserAvatar" class="ic-avatar">T</div>
             <div>
-              <strong id="icUserName">Assistant user</strong><br />
-              <span id="icUserRole" class="ic-brand-sub">IndiCare AI</span>
+              <strong id="icUserName">Tom</strong>
             </div>
           </div>
         </div>
@@ -93,8 +65,35 @@
       <section id="assistantPanel" class="ic-content panel panel-assistant">
         <div id="empty" class="ic-empty-state" data-suite-panel="intelligence">
           <div class="ic-empty-mark">AI</div>
-          <h2>ChatGPT-style AI for children’s residential care.</h2>
-          <p id="workspaceDescription">Ask IndiCare AI anything, create a project folder that remembers its chats and documents, or open Templates for ready-made residential care workflows.</p>
+          <h2>Good afternoon, Tom</h2>
+          <p id="workspaceDescription">How can I help with your residential care work today?</p>
+
+          <div class="ic-quick-starts">
+            <button type="button" data-command="Create a professional incident record with chronology.">
+              <strong>Write an incident record</strong>
+              <span>Create a professional incident record with chronology.</span>
+            </button>
+
+            <button type="button" data-command="Improve this recording using professional and trauma-informed language.">
+              <strong>Improve a recording</strong>
+              <span>Strengthen language, analysis and safeguarding.</span>
+            </button>
+
+            <button type="button" data-command="Extract a chronology from these notes or documents.">
+              <strong>Extract chronology</strong>
+              <span>Build a clear chronology from notes or documents.</span>
+            </button>
+
+            <button type="button" data-command="Review safeguarding concerns and highlight key actions.">
+              <strong>Review safeguarding</strong>
+              <span>Analyse concerns and highlight key actions.</span>
+            </button>
+
+            <button type="button" data-command="Review inspection readiness and identify evidence gaps.">
+              <strong>Inspection readiness</strong>
+              <span>Check readiness and identify evidence gaps.</span>
+            </button>
+          </div>
         </div>
 
         <div id="messages" class="messages hidden" data-suite-panel="intelligence"></div>
@@ -110,12 +109,11 @@
           <button type="button" data-command="/recording">/recording</button>
           <button type="button" data-command="/reg45">/reg45</button>
           <button type="button" data-command="/chronology">/chronology</button>
-          <button type="button" data-workflow-run="chat_to_doc">Create DOC</button>
         </div>
 
         <div class="ic-composer">
           <div class="ic-input-row">
-            <label class="ic-upload-label" for="upload" title="Attach document">+</label>
+            <label class="ic-upload-label" for="upload" title="Attach document">＋</label>
             <input id="upload" type="file" accept=".pdf,.docx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json" hidden />
             <textarea id="input" placeholder="Message IndiCare AI..." rows="1"></textarea>
             <button id="send" class="ic-btn-primary" type="button" aria-label="Send message">↑</button>
