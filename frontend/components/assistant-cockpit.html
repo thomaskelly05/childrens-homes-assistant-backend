@@ -19,17 +19,17 @@
       </div>
 
       <div class="ic-suite-switcher" aria-label="IndiCare AI workspaces">
-        <button class="active" type="button" data-suite-view="intelligence"></button>
-        <button type="button" data-suite-view="notes"></button>
-        <button type="button" data-suite-view="docs"></button>
+        <button class="active" type="button" data-suite-view="intelligence" aria-label="Assistant" title="Assistant">AI</button>
+        <button type="button" data-suite-view="notes" aria-label="Notes" title="Notes">N</button>
+        <button type="button" data-suite-view="docs" aria-label="DOCS" title="DOCS">D</button>
       </div>
 
       <div class="ic-sidebar-actions">
-        <button id="newChat" class="ic-btn-primary" type="button"></button>
+        <button id="newChat" class="ic-btn-primary" type="button" aria-label="New chat" title="New chat">+</button>
       </div>
 
       <div class="ic-sidebar-footer">
-        <button id="openSettings" class="ic-settings-trigger" type="button">
+        <button id="openSettings" class="ic-settings-trigger" type="button" aria-label="Settings" title="Settings">
           <span id="icUserAvatarSidebar" class="ic-sidebar-avatar">AI</span>
         </button>
       </div>
@@ -38,13 +38,10 @@
     <main class="ic-main">
       <header class="ic-top">
         <div></div>
-
         <div class="ic-top-actions">
           <div class="ic-user">
             <div id="icUserAvatar" class="ic-avatar">AI</div>
-            <div>
-              <strong id="icUserName">Assistant user</strong>
-            </div>
+            <div><strong id="icUserName">Assistant user</strong></div>
           </div>
         </div>
       </header>
@@ -56,21 +53,10 @@
           <p id="workspaceDescription">Residential care intelligence, recording support and operational assistance in one calm workspace.</p>
 
           <div class="ic-quick-starts">
-            <button type="button" data-command="Create a professional incident record with chronology.">
-              <strong>Incident record</strong>
-            </button>
-
-            <button type="button" data-command="Improve this recording using professional and trauma-informed language.">
-              <strong>Improve recording</strong>
-            </button>
-
-            <button type="button" data-command="Extract a chronology from these notes or documents.">
-              <strong>Extract chronology</strong>
-            </button>
-
-            <button type="button" data-command="Review safeguarding concerns and highlight key actions.">
-              <strong>Review safeguarding</strong>
-            </button>
+            <button type="button" data-command="Create a professional incident record with chronology."><strong>Incident record</strong></button>
+            <button type="button" data-command="Improve this recording using professional and trauma-informed language."><strong>Improve recording</strong></button>
+            <button type="button" data-command="Extract a chronology from these notes or documents."><strong>Extract chronology</strong></button>
+            <button type="button" data-command="Review safeguarding concerns and highlight key actions."><strong>Review safeguarding</strong></button>
           </div>
         </div>
 
@@ -86,7 +72,7 @@
 
         <div class="ic-composer">
           <div class="ic-input-row">
-            <label class="ic-upload-label" for="upload" title="Attach document">＋</label>
+            <label class="ic-upload-label" for="upload" title="Attach document">+</label>
             <input id="upload" type="file" accept=".pdf,.docx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json" hidden />
             <textarea id="input" placeholder="Message IndiCare AI..." rows="1"></textarea>
             <button id="send" class="ic-btn-primary" type="button" aria-label="Send message">↑</button>
@@ -102,9 +88,7 @@
         <h3>IndiCare AI settings</h3>
         <button id="closeSettings" type="button">×</button>
       </div>
-
       <div class="ic-settings-grid"></div>
-
       <div class="ic-modal-actions">
         <button id="saveSettings" class="ic-btn-primary ic-profile-save-primary" type="button">Save settings</button>
       </div>
