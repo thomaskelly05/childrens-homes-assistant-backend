@@ -39,7 +39,7 @@
         <button id="openSettings" class="ic-settings-trigger" type="button">
           <span id="icUserAvatarSidebar" class="ic-sidebar-avatar">AI</span>
           <span>
-            <strong id="icUserNameSidebar">Tom</strong>
+            <strong id="icUserNameSidebar">Assistant user</strong>
             <small id="icUserRoleSidebar">Professional plan</small>
           </span>
         </button>
@@ -54,9 +54,9 @@
           <button id="icNotificationTrigger" class="ic-btn-secondary" type="button">Notifications</button>
 
           <div class="ic-user">
-            <div id="icUserAvatar" class="ic-avatar">T</div>
+            <div id="icUserAvatar" class="ic-avatar">AI</div>
             <div>
-              <strong id="icUserName">Tom</strong>
+              <strong id="icUserName">Assistant user</strong>
             </div>
           </div>
         </div>
@@ -65,8 +65,8 @@
       <section id="assistantPanel" class="ic-content panel panel-assistant">
         <div id="empty" class="ic-empty-state" data-suite-panel="intelligence">
           <div class="ic-empty-mark">AI</div>
-          <h2>Good afternoon, Tom</h2>
-          <p id="workspaceDescription">How can I help with your residential care work today?</p>
+          <h2>Welcome to IndiCare AI</h2>
+          <p id="workspaceDescription">Residential care intelligence, recording support and operational assistance in one calm workspace.</p>
 
           <div class="ic-quick-starts">
             <button type="button" data-command="Create a professional incident record with chronology.">
@@ -139,13 +139,10 @@
         <button id="closeSettings" type="button">×</button>
       </div>
 
-      <div class="ic-settings-grid">
-        <label><span>Name</span><input id="settingsName" type="text" placeholder="Your name" /></label>
-        <label><span>Role</span><input id="settingsRole" type="text" placeholder="Registered manager" /></label>
-      </div>
+      <div class="ic-settings-grid"></div>
 
       <div class="ic-modal-actions">
-        <button id="saveSettings" class="ic-btn-primary" type="button">Save settings</button>
+        <button id="saveSettings" class="ic-btn-primary ic-profile-save-primary" type="button">Save settings</button>
       </div>
     </div>
   </div>
@@ -172,5 +169,6 @@
   <script src="/js/indicare-notification-centre.js"></script>
   <script src="/js/indicare-workflow-orchestrator.js"></script>
   <script src="/js/indicare-provider-overview.js"></script>
+  <script src="/js/indicare-profile-onboarding.js"></script>
 </body>
 </html>
