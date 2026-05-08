@@ -1,0 +1,443 @@
+/* IndiCare AI clean assistant shell
+   Final UI pass: calm, minimal, assistant-first and not dashboard-heavy.
+*/
+
+:root {
+  --ic-clean-bg: #ffffff;
+  --ic-clean-soft: #f7f9fc;
+  --ic-clean-border: #e6edf6;
+  --ic-clean-text: #0f1f3a;
+  --ic-clean-muted: #65748b;
+  --ic-clean-blue: #0b6fff;
+  --ic-clean-blue-soft: #edf5ff;
+  --ic-clean-shadow: 0 18px 50px rgba(15, 31, 58, .08);
+}
+
+body {
+  background: var(--ic-clean-bg) !important;
+  color: var(--ic-clean-text) !important;
+}
+
+.ic-cockpit.ic-standalone-assistant {
+  background: var(--ic-clean-bg) !important;
+}
+
+.ic-main {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+}
+
+.ic-sidebar {
+  background: #ffffff !important;
+  border-right: 1px solid var(--ic-clean-border) !important;
+  box-shadow: none !important;
+  padding: 18px 14px !important;
+}
+
+.ic-brand {
+  gap: 10px !important;
+  margin-bottom: 30px !important;
+}
+
+.ic-logo,
+.ic-empty-mark,
+.ic-avatar,
+.ic-sidebar-avatar {
+  background: linear-gradient(135deg, #0b6fff, #7aa8ff) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 28px rgba(11, 111, 255, .22) !important;
+}
+
+.ic-brand-title {
+  font-size: 1rem !important;
+  font-weight: 850 !important;
+  letter-spacing: -.02em !important;
+}
+
+.ic-brand-sub {
+  color: var(--ic-clean-muted) !important;
+}
+
+.ic-suite-switcher {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 6px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  margin: 12px 0 20px !important;
+}
+
+.ic-suite-switcher button,
+.ic-app-nav button,
+.ic-sidebar-actions button,
+.ic-settings-trigger {
+  min-height: 42px !important;
+  border-radius: 14px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+  box-shadow: none !important;
+}
+
+.ic-suite-switcher button:hover,
+.ic-suite-switcher button.active,
+.ic-app-nav button:hover,
+.ic-app-nav button.active {
+  background: var(--ic-clean-blue-soft) !important;
+  color: var(--ic-clean-blue) !important;
+}
+
+.ic-sidebar-actions {
+  display: grid !important;
+  gap: 6px !important;
+  margin-bottom: 16px !important;
+}
+
+#toggleTheme,
+.ic-app-nav,
+#projectSidebar,
+#templateSidebar,
+.ic-section-label,
+#history,
+#search,
+.ic-tier-panel,
+.ic-sidebar-footer .ic-brand-sub {
+  display: none !important;
+}
+
+.ic-sidebar-footer {
+  margin-top: auto !important;
+  border-top: 1px solid var(--ic-clean-border) !important;
+  padding-top: 12px !important;
+}
+
+.ic-settings-trigger {
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  box-shadow: 0 10px 30px rgba(15, 31, 58, .04) !important;
+}
+
+.ic-top {
+  border-bottom: 0 !important;
+  background: transparent !important;
+  padding: 20px 28px 0 !important;
+}
+
+.ic-top h1,
+#workspaceTitle {
+  display: none !important;
+}
+
+.ic-surface-pill,
+#workspacePill,
+.ic-live-status {
+  display: none !important;
+}
+
+.ic-top-actions {
+  gap: 8px !important;
+}
+
+.ic-top-actions > button:not(#icNotificationTrigger),
+#copyConversation,
+#exportConversation,
+#clearConversation {
+  display: none !important;
+}
+
+.ic-global-search-trigger,
+#icNotificationTrigger {
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  color: #334155 !important;
+  border-radius: 999px !important;
+  min-height: 38px !important;
+  padding: 0 13px !important;
+  box-shadow: 0 8px 24px rgba(15, 31, 58, .045) !important;
+  font-weight: 750 !important;
+}
+
+.ic-user {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ic-content.panel-assistant,
+#assistantPanel {
+  max-width: 1040px !important;
+  margin: 0 auto !important;
+  padding: clamp(42px, 8vh, 110px) 24px 160px !important;
+  background: transparent !important;
+}
+
+.ic-empty-state {
+  min-height: auto !important;
+  display: grid !important;
+  justify-items: center !important;
+  align-content: start !important;
+  text-align: center !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.ic-empty-mark {
+  width: 70px !important;
+  height: 70px !important;
+  border-radius: 22px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 1.4rem !important;
+  font-weight: 900 !important;
+  margin-bottom: 26px !important;
+}
+
+.ic-empty-state h2 {
+  max-width: 720px !important;
+  margin: 0 !important;
+  color: var(--ic-clean-text) !important;
+  font-size: clamp(2.1rem, 4.2vw, 3.4rem) !important;
+  line-height: 1.04 !important;
+  letter-spacing: -.07em !important;
+  font-weight: 850 !important;
+}
+
+.ic-empty-state p {
+  max-width: 560px !important;
+  margin: 14px auto 0 !important;
+  color: var(--ic-clean-muted) !important;
+  line-height: 1.65 !important;
+  font-size: .98rem !important;
+}
+
+.ic-quick-starts {
+  width: min(940px, 100%) !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  margin-top: 64px !important;
+}
+
+.ic-quick-starts button {
+  min-height: 150px !important;
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  border-radius: 20px !important;
+  padding: 18px !important;
+  box-shadow: 0 14px 42px rgba(15, 31, 58, .055) !important;
+}
+
+.ic-quick-starts button:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(11, 111, 255, .25) !important;
+  background: #fbfdff !important;
+}
+
+.ic-quick-starts strong {
+  color: var(--ic-clean-text) !important;
+  font-size: .95rem !important;
+}
+
+.ic-quick-starts span {
+  color: var(--ic-clean-muted) !important;
+}
+
+.ic-composer-dock {
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 28px !important;
+  width: min(760px, calc(100vw - 360px)) !important;
+  transform: translateX(-50%) !important;
+  z-index: 1200 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.ic-composer {
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  border-radius: 24px !important;
+  box-shadow: var(--ic-clean-shadow) !important;
+  padding: 12px !important;
+}
+
+.ic-input-row {
+  align-items: flex-end !important;
+  gap: 10px !important;
+}
+
+#input {
+  min-height: 56px !important;
+  max-height: 180px !important;
+  padding: 16px 8px !important;
+  font-size: 1rem !important;
+  background: transparent !important;
+}
+
+.ic-upload-label,
+#send {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+}
+
+#send {
+  background: var(--ic-clean-blue) !important;
+  box-shadow: 0 10px 25px rgba(11, 111, 255, .25) !important;
+}
+
+#suggestionChips {
+  justify-content: center !important;
+  gap: 8px !important;
+  margin: 0 0 10px !important;
+  overflow: hidden !important;
+}
+
+#suggestionChips button {
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  color: #334155 !important;
+  border-radius: 999px !important;
+  padding: 8px 11px !important;
+  font-size: .78rem !important;
+  box-shadow: 0 8px 22px rgba(15,31,58,.04) !important;
+}
+
+.ic-evidence {
+  background: #fff !important;
+  border-left: 1px solid var(--ic-clean-border) !important;
+  box-shadow: none !important;
+  padding: 18px 14px !important;
+}
+
+.ic-evidence-header h2 {
+  font-size: .98rem !important;
+}
+
+.ic-evidence-list .ic-card,
+.ic-evidence .ic-card,
+.ic-proactive-dock,
+.ic-ops-centre {
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  border-radius: 18px !important;
+}
+
+.ic-ops-centre {
+  display: none !important;
+}
+
+body.ic-show-workflows .ic-ops-centre,
+#messages:not(.hidden) ~ .ic-ops-centre {
+  display: block !important;
+}
+
+.ic-proactive-dock {
+  padding: 0 !important;
+  margin-top: 12px !important;
+}
+
+.ic-proactive-head {
+  padding: 12px 14px !important;
+  border-bottom: 1px solid var(--ic-clean-border) !important;
+}
+
+.ic-proactive-list {
+  display: grid !important;
+  gap: 6px !important;
+  padding: 10px !important;
+}
+
+.ic-proactive-list button {
+  border: 0 !important;
+  background: transparent !important;
+  text-align: left !important;
+  color: #334155 !important;
+  padding: 8px !important;
+  border-radius: 10px !important;
+}
+
+.ic-proactive-list button:hover {
+  background: var(--ic-clean-blue-soft) !important;
+  color: var(--ic-clean-blue) !important;
+}
+
+.ic-provider-shell,
+.ic-suite-panel {
+  padding-bottom: 120px !important;
+}
+
+.ic-notification-panel,
+.ic-search-panel,
+.ic-workflow-card {
+  border: 1px solid var(--ic-clean-border) !important;
+  background: rgba(255,255,255,.98) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 70px rgba(15,31,58,.16) !important;
+}
+
+.ic-onboarding-tip,
+.ic-governance-dock,
+.ic-tier-toast {
+  border-radius: 18px !important;
+  box-shadow: 0 18px 50px rgba(15,31,58,.12) !important;
+}
+
+@media (max-width: 1180px) {
+  .ic-composer-dock {
+    width: min(760px, calc(100vw - 300px)) !important;
+  }
+
+  .ic-quick-starts {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .ic-sidebar {
+    width: 74px !important;
+  }
+
+  .ic-brand-title,
+  .ic-brand-sub,
+  .ic-suite-switcher button,
+  .ic-sidebar-actions button,
+  .ic-sidebar-footer strong,
+  .ic-evidence {
+    display: none !important;
+  }
+
+  .ic-composer-dock {
+    width: calc(100vw - 110px) !important;
+    left: calc(50% + 34px) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .ic-content.panel-assistant,
+  #assistantPanel {
+    padding: 58px 18px 170px !important;
+  }
+
+  .ic-empty-state h2 {
+    font-size: 2rem !important;
+  }
+
+  .ic-quick-starts {
+    grid-template-columns: 1fr !important;
+    margin-top: 32px !important;
+  }
+
+  .ic-composer-dock {
+    left: 50% !important;
+    width: calc(100vw - 28px) !important;
+    bottom: 78px !important;
+  }
+}
