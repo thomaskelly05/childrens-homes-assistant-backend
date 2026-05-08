@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
-router = APIRouter(tags=['OS Command'])
+from db.connection import get_db_connection, release_db_connection
+
+router = APIRouter(prefix='/api', tags=['OS Command'])
 
 Priority = Literal['critical', 'high', 'medium', 'low', 'info']
 Status = Literal['open', 'in_progress', 'waiting', 'completed', 'dismissed', 'void']
@@ -21,15 +23,97 @@ class CurrentUser:
     role: str = 'staff'
 
 
-async def get_current_user() -> CurrentUser:
-    raise HTTPException(status_code=500, detail='Wire get_current_user() to your auth system')
+async def get_current_user(request: Request) -> CurrentUser:
+    """Temporary OS auth bridge.
+
+    Production should replace this with the app's real authenticated user dependency.
+    For local/demo use, pass X-User-Id, X-Provider-Id and X-Role headers.
+    """
+    raw_user_id = request.headers.get('x-user-id') or request.headers.get('x-demo-user-id') or '1'
+    raw_provider_id = request.headers.get('x-provider-id')
+    role = request.headers.get('x-role') or 'manager'
+
+    try:
+        user_id = int(raw_user_id)
+        provider_id = int(raw_provider_id) if raw_provider_id else None
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail='Invalid OS user headers') from exc
+
+    return CurrentUser(id=user_id, provider_id=provider_id, role=role)
+
+
+class _AcquireConnection:
+    def __init__(self):
+        self._conn = None
+        self._adapter: PsycopgConnectionAdapter | None = None
+
+    async def __aenter__(self):
+        self._conn = get_db_connection()
+        self._adapter = PsycopgConnectionAdapter(self._conn)
+        return self._adapter
+
+    async def __aexit__(self, exc_type, exc, tb):
+        if self._conn is None:
+            return
+        try:
+            if exc_type is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
+        finally:
+            release_db_connection(self._conn)
+
+
+class PsycopgPoolAdapter:
+    def acquire(self):
+        return _AcquireConnection()
+
+
+class PsycopgConnectionAdapter:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def _sql(self, sql: str) -> str:
+        # The OS routers were written in asyncpg style. Convert simple positional
+        # placeholders for this repo's existing psycopg2 pool.
+        converted = sql
+        for index in range(1, 51):
+            converted = converted.replace(f'${index}', '%s')
+        return converted
+
+    async def fetch(self, sql: str, *params: Any) -> list[dict[str, Any]]:
+        with self.conn.cursor() as cur:
+            cur.execute(self._sql(sql), params)
+            rows = cur.fetchall()
+            return [dict(row) for row in rows]
+
+    async def fetchrow(self, sql: str, *params: Any) -> dict[str, Any] | None:
+        with self.conn.cursor() as cur:
+            cur.execute(self._sql(sql), params)
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+    async def fetchval(self, sql: str, *params: Any):
+        with self.conn.cursor() as cur:
+            cur.execute(self._sql(sql), params)
+            row = cur.fetchone()
+            if row is None:
+                return None
+            if isinstance(row, dict):
+                return next(iter(row.values()))
+            return row[0]
+
+    async def execute(self, sql: str, *params: Any):
+        with self.conn.cursor() as cur:
+            cur.execute(self._sql(sql), params)
+            return cur.rowcount
+
+
+_OS_POOL = PsycopgPoolAdapter()
 
 
 def get_pool(request: Request):
-    pool = getattr(request.app.state, 'db_pool', None)
-    if pool is None:
-        raise HTTPException(status_code=500, detail='Database pool not configured')
-    return pool
+    return _OS_POOL
 
 
 class CommandItem(BaseModel):
@@ -93,13 +177,15 @@ async def get_os_command(
     pool = get_pool(request)
 
     async with pool.acquire() as conn:
+        await conn.execute("select set_config('app.user_id', %s, true)", str(user.id))
         summary_rows = await conn.fetch(
-            'SELECT * FROM public.vw_os_command_summary WHERE ($1::int4 IS NULL OR home_id = $1)',
+            'SELECT * FROM public.vw_os_command_summary WHERE (%s::int4 IS NULL OR home_id = %s)',
+            home_id,
             home_id,
         )
 
         item_rows = await conn.fetch(
-            'SELECT * FROM public.os_command_live_feed($1, $2, $3, $4, $5)',
+            'SELECT * FROM public.os_command_live_feed(%s, %s, %s, %s, %s)',
             home_id,
             young_person_id,
             domain,
@@ -122,8 +208,9 @@ async def capture_feed_item(
     pool = get_pool(request)
 
     async with pool.acquire() as conn:
+        await conn.execute("select set_config('app.user_id', %s, true)", str(user.id))
         item_id = await conn.fetchval(
-            'SELECT public.os_command_capture_feed_item($1, $2)',
+            'SELECT public.os_command_capture_feed_item(%s, %s)',
             feed_id,
             user.id,
         )
@@ -141,8 +228,9 @@ async def update_command_item(
     pool = get_pool(request)
 
     async with pool.acquire() as conn:
+        await conn.execute("select set_config('app.user_id', %s, true)", str(user.id))
         exists = await conn.fetchrow(
-            'SELECT id FROM public.os_command_items WHERE id = $1',
+            'SELECT id FROM public.os_command_items WHERE id = %s',
             item_id,
         )
 
@@ -152,14 +240,17 @@ async def update_command_item(
         await conn.execute(
             '''
             UPDATE public.os_command_items
-            SET status = $2,
-                completed_by = CASE WHEN $2 = 'completed' THEN $3 ELSE completed_by END,
-                dismissed_by = CASE WHEN $2 = 'dismissed' THEN $3 ELSE dismissed_by END
-            WHERE id = $1
+            SET status = %s,
+                completed_by = CASE WHEN %s = 'completed' THEN %s ELSE completed_by END,
+                dismissed_by = CASE WHEN %s = 'dismissed' THEN %s ELSE dismissed_by END
+            WHERE id = %s
             ''',
-            item_id,
+            payload.status,
             payload.status,
             user.id,
+            payload.status,
+            user.id,
+            item_id,
         )
 
         if payload.decision:
@@ -170,7 +261,7 @@ async def update_command_item(
                   decision,
                   rationale,
                   decided_by
-                ) VALUES ($1, $2, $3, $4)
+                ) VALUES (%s, %s, %s, %s)
                 ''',
                 item_id,
                 payload.decision,
