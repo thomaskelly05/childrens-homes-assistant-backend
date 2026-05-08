@@ -16,29 +16,21 @@
     <aside class="ic-sidebar" aria-label="IndiCare AI navigation">
       <div class="ic-brand">
         <div class="ic-logo">AI</div>
-        <div>
-          <div class="ic-brand-title">IndiCare AI</div>
-          <div class="ic-brand-sub">Residential care assistant</div>
-        </div>
       </div>
 
       <div class="ic-suite-switcher" aria-label="IndiCare AI workspaces">
-        <button class="active" type="button" data-suite-view="intelligence">Assistant</button>
-        <button type="button" data-suite-view="notes">Notes</button>
-        <button type="button" data-suite-view="docs">DOCS</button>
+        <button class="active" type="button" data-suite-view="intelligence"></button>
+        <button type="button" data-suite-view="notes"></button>
+        <button type="button" data-suite-view="docs"></button>
       </div>
 
       <div class="ic-sidebar-actions">
-        <button id="newChat" class="ic-btn-primary" type="button">＋ New chat</button>
+        <button id="newChat" class="ic-btn-primary" type="button"></button>
       </div>
 
       <div class="ic-sidebar-footer">
         <button id="openSettings" class="ic-settings-trigger" type="button">
           <span id="icUserAvatarSidebar" class="ic-sidebar-avatar">AI</span>
-          <span>
-            <strong id="icUserNameSidebar">Assistant user</strong>
-            <small id="icUserRoleSidebar">Professional plan</small>
-          </span>
         </button>
       </div>
     </aside>
@@ -65,23 +57,19 @@
 
           <div class="ic-quick-starts">
             <button type="button" data-command="Create a professional incident record with chronology.">
-              <strong>Write an incident record</strong>
-              <span>Create a professional incident record with chronology.</span>
+              <strong>Incident record</strong>
             </button>
 
             <button type="button" data-command="Improve this recording using professional and trauma-informed language.">
-              <strong>Improve a recording</strong>
-              <span>Strengthen language, analysis and safeguarding.</span>
+              <strong>Improve recording</strong>
             </button>
 
             <button type="button" data-command="Extract a chronology from these notes or documents.">
               <strong>Extract chronology</strong>
-              <span>Build a clear chronology from notes or documents.</span>
             </button>
 
             <button type="button" data-command="Review safeguarding concerns and highlight key actions.">
               <strong>Review safeguarding</strong>
-              <span>Analyse concerns and highlight key actions.</span>
             </button>
           </div>
         </div>
@@ -90,9 +78,6 @@
       </section>
 
       <div class="ic-composer-dock" id="composerDock" data-suite-panel="intelligence">
-        <div id="dropHint" class="ic-drop-hint hidden">Drop documents here to analyse them</div>
-        <div id="doc" class="doc-pill"><span id="docText"></span><button id="clearDoc" type="button" aria-label="Remove attached document">×</button></div>
-
         <div id="suggestionChips" class="ic-suggestion-chips" aria-label="Quick assistant actions">
           <button type="button" data-command="/incident">/incident</button>
           <button type="button" data-command="/safeguarding">/safeguarding</button>
@@ -136,5 +121,6 @@
   <script src="/js/indicare-suite.js"></script>
   <script src="/js/indicare-command-onboarding.js"></script>
   <script src="/js/indicare-profile-onboarding.js"></script>
+  <script src="/js/indicare-clean-layout-guard.js"></script>
 </body>
 </html>
