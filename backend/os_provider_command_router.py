@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from .os_command_router import CurrentUser, get_current_user, get_pool
 
-router = APIRouter(tags=['OS Provider Command Centre'])
+router = APIRouter(prefix='/api', tags=['OS Provider Command Centre'])
 
 
 class ProviderCommandCentreRow(BaseModel):
