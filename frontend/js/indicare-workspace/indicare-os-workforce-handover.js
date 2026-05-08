@@ -2,6 +2,7 @@ const WORKFORCE_STATE = {
   renderedSignature: "",
   tasks: [],
   handoverItems: [],
+  openableRows: [],
 };
 
 bootWorkforceHandoverIntegration();
@@ -21,6 +22,7 @@ function enhanceWorkforceView() {
   const signature = main.innerHTML.slice(0, 500);
   if (WORKFORCE_STATE.renderedSignature === signature) return;
   WORKFORCE_STATE.renderedSignature = signature;
+  WORKFORCE_STATE.openableRows = [];
   renderWorkforceOperationalView(main);
 }
 
@@ -87,6 +89,7 @@ function normaliseTask(item = {}) {
     child_name: item.child_name || item.young_person_name || item.childName || "",
     priority: item.priority || item.severity || item.risk_level || "normal",
     type: item.type || item.record_type || item.category || "task",
+    raw: item,
   };
 }
 
@@ -103,6 +106,7 @@ function normaliseHandoverItem(item = {}) {
     status: item.status || item.review_status || "recorded",
     severity: item.severity || item.risk_level || item.significance || "",
     child_name: item.child_name || item.young_person_name || item.childName || "",
+    raw: item,
   };
 }
 
@@ -112,12 +116,12 @@ function isImportantForHandover(item) {
 
 function handoverList(items) {
   if (!items.length) return emptyState("No handover-significant records returned from the current live context.");
-  return `<div class="handover-list">${items.map((item) => `<article class="handover-item"><span>${escapeHtml(formatDate(item.date))}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.child_name ? `${item.child_name} · ${item.summary}` : item.summary)}</p><em class="sp-status ${statusClass(item.status)}">${escapeHtml(displayType(item.status || item.type))}</em></article>`).join("")}</div>`;
+  return `<div class="handover-list">${items.map((item) => { const index = registerOpenable(item.raw || item); return `<article class="handover-item" data-open-workforce-row="${index}" role="button" tabindex="0"><span>${escapeHtml(formatDate(item.date))}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.child_name ? `${item.child_name} · ${item.summary}` : item.summary)}</p><em class="sp-status ${statusClass(item.status)}">${escapeHtml(displayType(item.status || item.type))}</em></article>`; }).join("")}</div>`;
 }
 
 function taskTable(tasks) {
   if (!tasks.length) return emptyState("No live tasks, actions or review reminders were returned for this operational context.");
-  return `<table class="sp-table"><thead><tr><th>Task</th><th>Young person</th><th>Owner</th><th>Status</th><th>Due</th></tr></thead><tbody>${tasks.map((task) => `<tr><td>${escapeHtml(task.title)}</td><td>${escapeHtml(task.child_name || "—")}</td><td>${escapeHtml(task.owner)}</td><td>${statusBadge(task.status)}</td><td>${escapeHtml(formatDate(task.due_date))}</td></tr>`).join("")}</tbody></table>`;
+  return `<table class="sp-table"><thead><tr><th>Task</th><th>Young person</th><th>Owner</th><th>Status</th><th>Due</th><th>Action</th></tr></thead><tbody>${tasks.map((task) => { const index = registerOpenable(task.raw || task); return `<tr data-open-workforce-row="${index}"><td>${escapeHtml(task.title)}</td><td>${escapeHtml(task.child_name || "—")}</td><td>${escapeHtml(task.owner)}</td><td>${statusBadge(task.status)}</td><td>${escapeHtml(formatDate(task.due_date))}</td><td><button class="sp-open-btn" data-open-workforce-row="${index}" type="button">Open</button></td></tr>`; }).join("")}</tbody></table>`;
 }
 
 function staffWorkload(staff, tasks) {
@@ -132,11 +136,11 @@ function staffWorkload(staff, tasks) {
 
 function overdueRecording(records, tasks) {
   const rows = [
-    ...records.map((item) => ({ title: item.title || item.summary || "Record review", status: item.status || "review", date: item.updated_at || item.created_at })),
-    ...tasks.filter(isOverdue).map((item) => ({ title: item.title, status: item.status, date: item.due_date })),
+    ...records.map((item) => ({ ...item, title: item.title || item.summary || "Record review", status: item.status || "review", date: item.updated_at || item.created_at, raw: item })),
+    ...tasks.filter(isOverdue).map((item) => ({ ...item, title: item.title, status: item.status, date: item.due_date, raw: item.raw || item })),
   ];
   if (!rows.length) return emptyState("No overdue or review records returned in this context.");
-  return `<div class="sp-mini-rows">${rows.slice(0, 10).map((row) => `<p><span>${escapeHtml(formatDate(row.date))}</span><strong>${escapeHtml(row.title)}</strong><em>${escapeHtml(displayType(row.status))}</em></p>`).join("")}</div>`;
+  return `<div class="sp-mini-rows">${rows.slice(0, 10).map((row) => { const index = registerOpenable(row.raw || row); return `<p data-open-workforce-row="${index}" role="button" tabindex="0"><span>${escapeHtml(formatDate(row.date))}</span><strong>${escapeHtml(row.title)}</strong><em>${escapeHtml(displayType(row.status))}</em></p>`; }).join("")}</div>`;
 }
 
 function notificationList({ overdue, dueSoon, reviews, safeguarding }) {
@@ -150,10 +154,24 @@ function notificationList({ overdue, dueSoon, reviews, safeguarding }) {
 }
 
 function handleWorkforceClicks(event) {
+  const openRow = event.target.closest?.("[data-open-workforce-row]");
+  if (openRow) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const item = WORKFORCE_STATE.openableRows[Number(openRow.dataset.openWorkforceRow)];
+    if (item) window.dispatchEvent(new CustomEvent("indicare:open-record", { detail: item }));
+    return;
+  }
   if (event.target.closest?.("[data-open-ai-handover]")) {
     event.preventDefault();
     openAssistantWithPrompt("Draft a shift handover from the current Workforce page. Include young people, safeguarding, incidents, overdue records, tasks, staff actions and what the next shift must know. Use only the live OS context.");
   }
+}
+
+function registerOpenable(item) {
+  const index = WORKFORCE_STATE.openableRows.length;
+  WORKFORCE_STATE.openableRows.push(item);
+  return index;
 }
 
 function openAssistantWithPrompt(prompt) {
@@ -168,8 +186,8 @@ function openAssistantWithPrompt(prompt) {
 }
 
 function scopedContext() {
-  const raw = window.IndiCareLiveContext || {};
-  const context = {
+  const raw = window.IndiCareScopedOSContext || window.IndiCareLiveContext || {};
+  return {
     children: arrayFrom(raw.children || raw.items || raw.young_people || raw.youngPeople),
     documents: arrayFrom(raw.documents || raw.records || raw.recordings),
     chronology: arrayFrom(raw.chronology || raw.timeline || raw.events),
@@ -177,13 +195,6 @@ function scopedContext() {
     workforce: arrayFrom(raw.workforce || raw.staff || raw.users),
     tasks: arrayFrom(raw.tasks || raw.actions || raw.reminders),
   };
-  const selected = new Set((window.IndiCareOperationalSession?.selectedChildren || []).map(String));
-  if (!selected.size) return context;
-  const children = context.children.filter((child) => selected.has(childKey(child)));
-  const ids = new Set(children.map(childKey));
-  const names = new Set(children.map((child) => childName(child).toLowerCase()));
-  const filterByChild = (item) => !ids.size || ids.has(String(item.young_person_id || item.child_id || item.childId || item.youngPersonId || item.child || "")) || names.has(String(item.childName || item.child_name || item.young_person_name || item.name || "").toLowerCase());
-  return { ...context, children, documents: context.documents.filter(filterByChild), chronology: context.chronology.filter(filterByChild), safeguarding: context.safeguarding.filter(filterByChild), tasks: context.tasks.filter(filterByChild) };
 }
 
 function isOverdue(task) {
@@ -207,8 +218,6 @@ function rowId(item) { return String(item.id || item.record_id || item.document_
 function statusClass(value) { return /high|critical|open|overdue|escalated|returned|rejected|submitted|pending/i.test(String(value || "")) ? "submitted-for-review" : "approved"; }
 function statusBadge(value) { return `<span class="sp-status ${statusClass(value)}">${escapeHtml(displayType(value || "open"))}</span>`; }
 function displayType(type) { return String(type || "record").replaceAll("_", " ").replaceAll("-", " "); }
-function childKey(child) { return String(child.id || child.young_person_id || child.child_id || child.youngPersonId || childName(child)); }
-function childName(child) { return child.name || child.full_name || child.preferred_name || child.young_person_name || [child.first_name, child.last_name].filter(Boolean).join(" ") || "Young person"; }
 function arrayFrom(value) { if (Array.isArray(value)) return value; if (value && Array.isArray(value.items)) return value.items; if (value && Array.isArray(value.results)) return value.results; if (value && Array.isArray(value.data)) return value.data; return []; }
 function formatDate(value) { if (!value) return "Not set"; const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }); }
 function emptyState(message) { return `<div class="sp-empty-state"><strong>No live data yet</strong><p>${escapeHtml(message)}</p></div>`; }
