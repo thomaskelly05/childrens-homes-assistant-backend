@@ -116,6 +116,7 @@ backend.os_command_manager_review_router
 backend.os_command_wellbeing_router
 backend.os_provider_command_router
 backend.os_command_network_router
+backend.os_command_care_recording_router
 """.split()
 
 REQUIRED_ROUTERS = {
