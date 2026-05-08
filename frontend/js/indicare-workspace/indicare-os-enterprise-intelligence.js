@@ -1,19 +1,30 @@
-import { getOsContext, getOperationalSession, scopeContextToSession, recordType, displayType, formatDate, escapeHtml, isHighPriority } from './indicare-os-context.js';
+import { getOsContext, getOperationalSession, scopeContextToSession, recordType, escapeHtml, isHighPriority } from './indicare-os-context.js';
 
 const INTEL_STATE = {
   signature: '',
   openable: [],
+  renderQueued: false,
 };
 
 bootEnterpriseIntelligence();
 
 function bootEnterpriseIntelligence() {
   document.addEventListener('click', handleClicks, true);
-  window.addEventListener('indicare:os-context-ready', () => renderEnterpriseIntel({ force: true }));
-  window.addEventListener('indicare:refresh-live-os', () => renderEnterpriseIntel({ force: true }));
-  const observer = new MutationObserver(() => renderEnterpriseIntel());
-  observer.observe(document.body, { childList: true, subtree: true });
-  renderEnterpriseIntel({ force: true });
+  document.addEventListener('click', (event) => {
+    if (event.target.closest?.('[data-sp-view], [data-launch-session], [data-reset-session]')) scheduleEnterpriseIntel({ force: true });
+  }, true);
+  window.addEventListener('indicare:os-context-ready', () => scheduleEnterpriseIntel({ force: true }));
+  window.addEventListener('indicare:refresh-live-os', () => scheduleEnterpriseIntel({ force: true }));
+  scheduleEnterpriseIntel({ force: true });
+}
+
+function scheduleEnterpriseIntel(options = {}) {
+  if (INTEL_STATE.renderQueued) return;
+  INTEL_STATE.renderQueued = true;
+  window.requestAnimationFrame(() => {
+    INTEL_STATE.renderQueued = false;
+    renderEnterpriseIntel(options);
+  });
 }
 
 function renderEnterpriseIntel({ force = false } = {}) {
@@ -49,18 +60,9 @@ function renderEnterpriseIntel({ force = false } = {}) {
         ${metricTile('Placement stability', metrics.stabilityScore + '%', 'Higher means fewer live risk indicators', metrics.stabilityScore >= 75 ? 'green' : metrics.stabilityScore >= 50 ? 'amber' : 'red')}
       </section>
       <section class="os-intel-layout">
-        <article class="os-intel-panel">
-          <div class="sp-card-head compact"><h2>Safeguarding heatmap</h2><span>${heatmap.length}</span></div>
-          ${heatmapList(heatmap)}
-        </article>
-        <article class="os-intel-panel">
-          <div class="sp-card-head compact"><h2>Trend signals</h2><span>${trends.length}</span></div>
-          ${trendList(trends)}
-        </article>
-        <article class="os-intel-panel">
-          <div class="sp-card-head compact"><h2>Manager command signals</h2><span>${pressure.length}</span></div>
-          ${pressureList(pressure)}
-        </article>
+        <article class="os-intel-panel"><div class="sp-card-head compact"><h2>Safeguarding heatmap</h2><span>${heatmap.length}</span></div>${heatmapList(heatmap)}</article>
+        <article class="os-intel-panel"><div class="sp-card-head compact"><h2>Trend signals</h2><span>${trends.length}</span></div>${trendList(trends)}</article>
+        <article class="os-intel-panel"><div class="sp-card-head compact"><h2>Manager command signals</h2><span>${pressure.length}</span></div>${pressureList(pressure)}</article>
       </section>
     </section>`;
 
@@ -86,14 +88,13 @@ function buildMetrics(context) {
 
 function buildTrends(context) {
   const all = allRecords(context);
-  const buckets = [
+  return [
     trend('Incidents', all.filter((item) => /incident|restraint|aggression|damage|assault/i.test(`${recordType(item)} ${item.title || ''} ${item.summary || ''}`))),
     trend('Missing from home', all.filter((item) => /missing|return discussion/i.test(`${recordType(item)} ${item.title || ''} ${item.summary || ''}`))),
     trend('Safeguarding', all.filter((item) => /safeguarding|risk|concern|exploitation/i.test(`${recordType(item)} ${item.title || ''} ${item.summary || ''}`))),
     trend('Recording review', all.filter((item) => /submitted|pending|changes|returned|review/i.test(`${item.status || ''} ${item.workflow_status || ''} ${item.manager_review_status || ''}`))),
     trend('Health and wellbeing', all.filter((item) => /health|wellbeing|medication|medical|camhs/i.test(`${recordType(item)} ${item.title || ''} ${item.summary || ''}`))),
-  ];
-  return buckets.filter((item) => item.count > 0);
+  ].filter((item) => item.count > 0);
 }
 
 function trend(label, rows) {
@@ -105,7 +106,7 @@ function trend(label, rows) {
 
 function buildSafeguardingHeatmap(context) {
   const children = context.children || [];
-  const rows = children.map((child) => {
+  return children.map((child) => {
     const name = child.name || child.full_name || child.preferred_name || child.young_person_name || 'Young person';
     const linked = allRecords(context).filter((item) => linkedToChild(item, child));
     const safeguarding = linked.filter((item) => /safeguarding|risk|concern|missing|incident/i.test(`${recordType(item)} ${item.title || ''} ${item.summary || ''}`));
@@ -114,7 +115,6 @@ function buildSafeguardingHeatmap(context) {
     const score = open.length * 3 + high.length * 5;
     return { child, name, score, open: open.length, high: high.length, latest: safeguarding.sort(newestRecord)[0] };
   }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 8);
-  return rows;
 }
 
 function buildManagerPressure(context, metrics) {
@@ -155,24 +155,9 @@ function handleClicks(event) {
   }
 }
 
-function registerOpenable(record) {
-  const index = INTEL_STATE.openable.length;
-  INTEL_STATE.openable.push(record);
-  return index;
-}
-
-function allRecords(context) {
-  return [...arrayFrom(context.documents), ...arrayFrom(context.chronology), ...arrayFrom(context.safeguarding), ...arrayFrom(context.tasks), ...arrayFrom(context.reports)];
-}
-
-function linkedToChild(record, child) {
-  const id = String(record.young_person_id || record.child_id || record.childId || record.youngPersonId || '');
-  const name = String(record.child_name || record.young_person_name || record.childName || '').toLowerCase();
-  const childId = String(child.id || child.young_person_id || child.child_id || child.youngPersonId || '');
-  const childName = String(child.name || child.full_name || child.preferred_name || child.young_person_name || '').toLowerCase();
-  return (id && id === childId) || (name && name === childName);
-}
-
+function registerOpenable(record) { const index = INTEL_STATE.openable.length; INTEL_STATE.openable.push(record); return index; }
+function allRecords(context) { return [...arrayFrom(context.documents), ...arrayFrom(context.chronology), ...arrayFrom(context.safeguarding), ...arrayFrom(context.tasks), ...arrayFrom(context.reports)]; }
+function linkedToChild(record, child) { const id = String(record.young_person_id || record.child_id || record.childId || record.youngPersonId || ''); const name = String(record.child_name || record.young_person_name || record.childName || '').toLowerCase(); const childId = String(child.id || child.young_person_id || child.child_id || child.youngPersonId || ''); const resolvedName = String(child.name || child.full_name || child.preferred_name || child.young_person_name || '').toLowerCase(); return (id && id === childId) || (name && name === resolvedName); }
 function closed(item) { return /closed|resolved|approved|complete|archived/i.test(String(item.status || item.workflow_status || item.manager_review_status || '')); }
 function itemDate(item) { return Date.parse(item.updated_at || item.created_at || item.occurred_at || item.event_datetime || item.session_date || 0); }
 function withinDays(date, days) { return Number.isFinite(date) && Date.now() - date <= days * 24 * 60 * 60 * 1000; }

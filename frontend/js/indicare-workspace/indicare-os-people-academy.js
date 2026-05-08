@@ -13,35 +13,48 @@ const ACADEMY = [
   { id: 'manager-review-quality', title: 'Manager Review & Quality Assurance', category: 'Leadership', duration: '40 mins', level: 'Manager', description: 'How to review records, request amendments and evidence management oversight.' },
 ];
 
-const PEOPLE_STATE = { adults: [] };
+const PEOPLE_STATE = { adults: [], signature: '', renderQueued: false };
 
 bootPeopleAcademy();
 
 function bootPeopleAcademy() {
-  window.addEventListener('indicare:os-context-ready', renderEnhancements);
-  window.addEventListener('indicare:refresh-live-os', renderEnhancements);
+  window.addEventListener('indicare:os-context-ready', () => scheduleRender({ force: true }));
+  window.addEventListener('indicare:refresh-live-os', () => scheduleRender({ force: true }));
   document.addEventListener('click', handleClicks, true);
-  const observer = new MutationObserver(() => renderEnhancements());
-  observer.observe(document.body, { childList: true, subtree: true });
-  renderEnhancements();
+  document.addEventListener('click', (event) => {
+    if (event.target.closest?.('[data-sp-view], [data-launch-session], [data-reset-session]')) scheduleRender({ force: true });
+  }, true);
+  scheduleRender({ force: true });
 }
 
-function renderEnhancements() {
-  renderAdultsPanel();
+function scheduleRender(options = {}) {
+  if (PEOPLE_STATE.renderQueued) return;
+  PEOPLE_STATE.renderQueued = true;
+  window.requestAnimationFrame(() => {
+    PEOPLE_STATE.renderQueued = false;
+    renderEnhancements(options);
+  });
+}
+
+function renderEnhancements({ force = false } = {}) {
+  renderAdultsPanel({ force });
   renderAcademyPanel();
 }
 
-function renderAdultsPanel() {
+function renderAdultsPanel({ force = false } = {}) {
   const main = document.getElementById('sp-main');
   if (!main) return;
   const title = main.querySelector('.sp-page-head h1')?.textContent?.trim();
   if (title !== 'Dashboard') return;
 
-  const existing = main.querySelector('[data-os-adults-panel]');
   const context = scopeContextToSession(getOsContext(), getOperationalSession());
   const adults = buildAdults(context);
+  const signature = `${adults.length}:${adults.map((adult) => `${adult.name}:${adult.role}:${adult.lastActive}`).join('|')}`;
+  if (!force && PEOPLE_STATE.signature === signature && main.querySelector('[data-os-adults-panel]')) return;
+  PEOPLE_STATE.signature = signature;
   PEOPLE_STATE.adults = adults;
 
+  const existing = main.querySelector('[data-os-adults-panel]');
   const html = `
     <section class="sp-card" data-os-adults-panel>
       <div class="sp-card-head">
