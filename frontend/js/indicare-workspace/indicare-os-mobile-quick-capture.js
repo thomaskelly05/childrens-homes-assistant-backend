@@ -2,15 +2,17 @@ import { apiSend } from "../young-people-shell/core/api.js";
 import { getOsContext, getOperationalSession, scopeContextToSession, childKey, childName, escapeHtml } from "./indicare-os-context.js";
 
 const QUICK_TYPES = [
-  { id: "incident", label: "Incident", workspace: "incident", prompt: "What happened? Include who, where, when, staff response and immediate safety actions." },
+  { id: "incident", label: "Incident", workspace: "safeguarding", prompt: "What happened? Include who, where, when, staff response and immediate safety actions." },
   { id: "safeguarding", label: "Safeguarding", workspace: "safeguarding", prompt: "What is the concern, immediate safety action, who has been informed, and what happens next?" },
-  { id: "handover", label: "Handover", workspace: "handover_item", prompt: "What does the next shift need to know? Include risk, action and manager oversight." },
+  { id: "handover", label: "Handover", workspace: "handover", prompt: "What does the next shift need to know? Include risk, action and manager oversight." },
   { id: "welfare", label: "Welfare check", workspace: "health", prompt: "Record presentation, wellbeing, voice of the child and any action needed." },
   { id: "medication", label: "Medication note", workspace: "health", prompt: "Record medication context, consent/refusal, presentation, side effects and action needed." },
   { id: "daily", label: "Daily note", workspace: "daily", prompt: "Capture the key daily update, child voice, positives, wellbeing and actions required." },
 ];
 
 const QUEUE_KEY = "indicare.os.quickCapture.queue";
+const FAILED_WORKSPACE_KEY = "indicare.os.quickCapture.failedWorkspaces";
+const FAILED_WORKSPACE_TTL = 10 * 60 * 1000;
 
 const QUICK_STATE = {
   open: false,
@@ -19,6 +21,7 @@ const QUICK_STATE = {
   recognition: null,
   syncing: false,
   queue: readQueue(),
+  failedWorkspaces: readFailedWorkspaces(),
 };
 
 bootQuickCapture();
@@ -28,11 +31,9 @@ function bootQuickCapture() {
   ensurePanel();
   document.addEventListener("click", handleClicks, true);
   document.addEventListener("submit", handleSubmit, true);
-  window.addEventListener("online", () => syncQueue());
+  window.addEventListener("online", () => syncQueue({ manual: false }));
   window.addEventListener("indicare:os-context-ready", renderPanel);
-  new MutationObserver(() => ensureLauncher()).observe(document.body, { childList: true, subtree: true });
   updateLauncherBadge();
-  if (navigator.onLine !== false && QUICK_STATE.queue.length) syncQueue();
 }
 
 function ensureLauncher() {
@@ -81,50 +82,24 @@ function renderPanel() {
         <button type="button" data-ai-cleanup>AI cleanup</button>
         <button type="submit" class="primary">Save</button>
       </div>
-      <p class="os-quick-hint">Saves through workspace-records where the backend table exists. If the connection fails, the draft is queued locally and retried.</p>
+      <p class="os-quick-hint">Quick captures save into supported workspace buckets. The original capture type is kept in metadata for chronology and safeguarding review.</p>
     </form>`;
   updateLauncherBadge();
 }
 
 function queueBanner() {
   if (!QUICK_STATE.queue.length) return "";
-  return `<section class="os-quick-sync-banner"><div><strong>${QUICK_STATE.queue.length} offline capture${QUICK_STATE.queue.length === 1 ? "" : "s"}</strong><span>${QUICK_STATE.syncing ? "Syncing now..." : "Waiting to sync to workspace-records."}</span></div><button type="button" data-sync-quick-captures>${QUICK_STATE.syncing ? "Syncing" : "Sync"}</button></section>`;
+  return `<section class="os-quick-sync-banner"><div><strong>${QUICK_STATE.queue.length} offline capture${QUICK_STATE.queue.length === 1 ? "" : "s"}</strong><span>${QUICK_STATE.syncing ? "Syncing now..." : "Queued safely. Press Sync when backend is healthy."}</span></div><button type="button" data-sync-quick-captures>${QUICK_STATE.syncing ? "Syncing" : "Sync"}</button></section>`;
 }
 
 function handleClicks(event) {
-  if (event.target.closest?.("[data-open-quick-capture]")) {
-    event.preventDefault();
-    QUICK_STATE.open = true;
-    renderPanel();
-    return;
-  }
-  if (event.target.closest?.("[data-close-quick-capture]")) {
-    event.preventDefault();
-    QUICK_STATE.open = false;
-    renderPanel();
-    return;
-  }
-  if (event.target.closest?.("[data-sync-quick-captures]")) {
-    event.preventDefault();
-    syncQueue();
-    return;
-  }
+  if (event.target.closest?.("[data-open-quick-capture]")) { event.preventDefault(); QUICK_STATE.open = true; renderPanel(); return; }
+  if (event.target.closest?.("[data-close-quick-capture]")) { event.preventDefault(); QUICK_STATE.open = false; renderPanel(); return; }
+  if (event.target.closest?.("[data-sync-quick-captures]")) { event.preventDefault(); syncQueue({ manual: true }); return; }
   const typeButton = event.target.closest?.("[data-quick-type]");
-  if (typeButton) {
-    event.preventDefault();
-    QUICK_STATE.type = QUICK_TYPES.find((type) => type.id === typeButton.dataset.quickType) || QUICK_TYPES[0];
-    renderPanel();
-    return;
-  }
-  if (event.target.closest?.("[data-start-dictation]")) {
-    event.preventDefault();
-    toggleDictation();
-    return;
-  }
-  if (event.target.closest?.("[data-ai-cleanup]")) {
-    event.preventDefault();
-    openAssistantForCleanup();
-  }
+  if (typeButton) { event.preventDefault(); QUICK_STATE.type = QUICK_TYPES.find((type) => type.id === typeButton.dataset.quickType) || QUICK_TYPES[0]; renderPanel(); return; }
+  if (event.target.closest?.("[data-start-dictation]")) { event.preventDefault(); toggleDictation(); return; }
+  if (event.target.closest?.("[data-ai-cleanup]")) { event.preventDefault(); openAssistantForCleanup(); }
 }
 
 async function handleSubmit(event) {
@@ -137,7 +112,7 @@ async function handleSubmit(event) {
   const context = scopeContextToSession(getOsContext(), getOperationalSession());
   const child = context.children.find((item) => childKey(item) === youngPersonId);
   const payload = buildPayload(note, child);
-  const capture = { id: crypto?.randomUUID?.() || String(Date.now()), workspace: QUICK_STATE.type.workspace, payload, createdAt: new Date().toISOString(), attempts: 0 };
+  const capture = { id: crypto?.randomUUID?.() || String(Date.now()), workspace: QUICK_STATE.type.workspace, captureType: QUICK_STATE.type.id, payload, createdAt: new Date().toISOString(), attempts: 0 };
   const submit = form.querySelector('button[type="submit"]');
   submit.disabled = true;
   submit.textContent = "Saving...";
@@ -146,13 +121,13 @@ async function handleSubmit(event) {
     window.dispatchEvent(new CustomEvent("indicare:refresh-live-os"));
     QUICK_STATE.open = false;
     renderPanel();
-    window.dispatchEvent(new CustomEvent("indicare:open-record", { detail: { ...payload, id: response.id, record_type: QUICK_STATE.type.workspace, type: QUICK_STATE.type.workspace } }));
+    window.dispatchEvent(new CustomEvent("indicare:open-record", { detail: { ...payload, id: response.id, record_type: capture.workspace, type: capture.workspace } }));
   } catch (error) {
     enqueueCapture(capture, error);
     form.note.value = "";
     QUICK_STATE.open = false;
     renderPanel();
-    alert("Connection or backend save failed, so the capture has been saved offline and will retry automatically.");
+    alert("The capture was saved offline because the backend save failed. It will not be retried automatically if that workspace is currently failing.");
   } finally {
     submit.disabled = false;
     submit.textContent = "Save";
@@ -160,9 +135,16 @@ async function handleSubmit(event) {
 }
 
 async function saveCapture(capture) {
-  const response = await apiSend(`/workspace-records/${encodeURIComponent(capture.workspace)}`, "POST", capture.payload, { invalidatePrefixes: ["/workspace-records", "/api/os/context"] });
-  if (response?.ok === false) throw new Error(response.error || response.detail || "Quick capture failed");
-  return response;
+  if (workspaceFailedRecently(capture.workspace)) throw new Error(`Workspace ${capture.workspace} is temporarily unavailable`);
+  try {
+    const response = await apiSend(`/workspace-records/${encodeURIComponent(capture.workspace)}`, "POST", capture.payload, { invalidatePrefixes: ["/workspace-records", "/api/os/context"], timeoutMs: 8000 });
+    if (response?.ok === false) throw new Error(response.error || response.detail || "Quick capture failed");
+    clearWorkspaceFailure(capture.workspace);
+    return response;
+  } catch (error) {
+    markWorkspaceFailed(capture.workspace, error);
+    throw error;
+  }
 }
 
 function enqueueCapture(capture, error) {
@@ -171,8 +153,9 @@ function enqueueCapture(capture, error) {
   updateLauncherBadge();
 }
 
-async function syncQueue() {
+async function syncQueue({ manual = false } = {}) {
   if (QUICK_STATE.syncing || !QUICK_STATE.queue.length) return;
+  if (!manual && QUICK_STATE.queue.some((capture) => workspaceFailedRecently(capture.workspace))) return;
   QUICK_STATE.syncing = true;
   renderPanel();
   const remaining = [];
@@ -191,24 +174,15 @@ async function syncQueue() {
   if (!remaining.length) window.dispatchEvent(new CustomEvent("indicare:refresh-live-os"));
 }
 
-function readQueue() {
-  try {
-    return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function persistQueue() {
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(QUICK_STATE.queue.slice(0, 50)));
-}
-
-function updateLauncherBadge() {
-  const badge = document.querySelector("[data-quick-queue-badge]");
-  if (!badge) return;
-  badge.textContent = QUICK_STATE.queue.length ? String(QUICK_STATE.queue.length) : "";
-  badge.style.display = QUICK_STATE.queue.length ? "grid" : "none";
-}
+function readQueue() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]").map((capture) => normaliseQueuedCapture(capture)); } catch { return []; } }
+function persistQueue() { localStorage.setItem(QUEUE_KEY, JSON.stringify(QUICK_STATE.queue.slice(0, 50))); }
+function readFailedWorkspaces() { try { return JSON.parse(localStorage.getItem(FAILED_WORKSPACE_KEY) || "{}"); } catch { return {}; } }
+function persistFailedWorkspaces() { localStorage.setItem(FAILED_WORKSPACE_KEY, JSON.stringify(QUICK_STATE.failedWorkspaces)); }
+function markWorkspaceFailed(workspace, error) { QUICK_STATE.failedWorkspaces[workspace] = { at: Date.now(), message: error?.message || "Workspace failed" }; persistFailedWorkspaces(); }
+function clearWorkspaceFailure(workspace) { delete QUICK_STATE.failedWorkspaces[workspace]; persistFailedWorkspaces(); }
+function workspaceFailedRecently(workspace) { const failure = QUICK_STATE.failedWorkspaces[workspace]; if (!failure) return false; if (Date.now() - failure.at > FAILED_WORKSPACE_TTL) { clearWorkspaceFailure(workspace); return false; } return true; }
+function normaliseQueuedCapture(capture) { const workspace = capture.workspace === "incident" || capture.workspace === "missing" ? "safeguarding" : capture.workspace === "handover_item" ? "handover" : capture.workspace; return { ...capture, workspace, captureType: capture.captureType || capture.payload?.content?.capture_type || workspace }; }
+function updateLauncherBadge() { const badge = document.querySelector("[data-quick-queue-badge]"); if (!badge) return; badge.textContent = QUICK_STATE.queue.length ? String(QUICK_STATE.queue.length) : ""; badge.style.display = QUICK_STATE.queue.length ? "grid" : "none"; }
 
 function buildPayload(note, child) {
   const session = getOperationalSession();
@@ -219,7 +193,8 @@ function buildPayload(note, child) {
     summary_text: note,
     description: note,
     notes: note,
-    content: { quick_capture: true, capture_type: QUICK_STATE.type.id, note, captured_from: "mobile_quick_capture" },
+    category: QUICK_STATE.type.id,
+    content: { quick_capture: true, capture_type: QUICK_STATE.type.id, workspace_bucket: QUICK_STATE.type.workspace, note, captured_from: "mobile_quick_capture" },
     status: "draft",
     workflow_status: "draft",
     manager_review_status: "draft",
@@ -230,62 +205,11 @@ function buildPayload(note, child) {
     child_voice: /said|told|asked|felt|wants|wishes/i.test(note) ? note : "",
     young_person_voice: /said|told|asked|felt|wants|wishes/i.test(note) ? note : "",
     actions_required: extractAction(note),
-    safeguarding_flag: /safeguarding|risk|missing|police|social worker|injury|harm|exploitation/i.test(note),
+    safeguarding_flag: /safeguarding|risk|missing|police|social worker|injury|harm|exploitation|incident/i.test(note + " " + QUICK_STATE.type.id),
   };
 }
 
-function extractAction(note) {
-  const match = note.match(/(?:next|action|follow up|manager|inform|call|review)[^.!?]*(?:[.!?]|$)/i);
-  return match ? match[0] : "Review quick capture and complete full record if required.";
-}
-
-function toggleDictation() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Voice dictation is not available in this browser yet.");
-    return;
-  }
-  if (QUICK_STATE.recording && QUICK_STATE.recognition) {
-    QUICK_STATE.recognition.stop();
-    QUICK_STATE.recording = false;
-    renderPanel();
-    return;
-  }
-  const textarea = document.querySelector('#ic-quick-capture-panel textarea[name="note"]');
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-GB";
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.onresult = (event) => {
-    const text = [...event.results].map((result) => result[0].transcript).join(" ");
-    if (textarea) textarea.value = text;
-  };
-  recognition.onend = () => {
-    QUICK_STATE.recording = false;
-    renderPanel();
-  };
-  QUICK_STATE.recognition = recognition;
-  QUICK_STATE.recording = true;
-  recognition.start();
-  renderPanel();
-}
-
-function openAssistantForCleanup() {
-  const textarea = document.querySelector('#ic-quick-capture-panel textarea[name="note"]');
-  const note = textarea?.value?.trim();
-  if (!note) return;
-  document.querySelector(".sp-ai-bubble")?.click();
-  setTimeout(() => {
-    const input = document.getElementById("ic-assistant-input");
-    if (!input) return;
-    input.value = `Turn this quick ${QUICK_STATE.type.label} note into a calm, factual residential children's home record. Do not invent facts. Keep child voice separate if present. Note: ${note}`;
-    document.getElementById("ic-send-assistant")?.click();
-  }, 160);
-}
-
-window.IndiCareQuickCapture = {
-  open: () => { QUICK_STATE.open = true; renderPanel(); },
-  close: () => { QUICK_STATE.open = false; renderPanel(); },
-  sync: syncQueue,
-  queue: () => QUICK_STATE.queue,
-};
+function extractAction(note) { const match = note.match(/(?:next|action|follow up|manager|inform|call|review)[^.!?]*(?:[.!?]|$)/i); return match ? match[0] : "Review quick capture and complete full record if required."; }
+function toggleDictation() { const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SpeechRecognition) { alert("Voice dictation is not available in this browser yet."); return; } if (QUICK_STATE.recording && QUICK_STATE.recognition) { QUICK_STATE.recognition.stop(); QUICK_STATE.recording = false; renderPanel(); return; } const textarea = document.querySelector('#ic-quick-capture-panel textarea[name="note"]'); const recognition = new SpeechRecognition(); recognition.lang = "en-GB"; recognition.continuous = true; recognition.interimResults = true; recognition.onresult = (event) => { const text = [...event.results].map((result) => result[0].transcript).join(" "); if (textarea) textarea.value = text; }; recognition.onend = () => { QUICK_STATE.recording = false; renderPanel(); }; QUICK_STATE.recognition = recognition; QUICK_STATE.recording = true; recognition.start(); renderPanel(); }
+function openAssistantForCleanup() { const textarea = document.querySelector('#ic-quick-capture-panel textarea[name="note"]'); const note = textarea?.value?.trim(); if (!note) return; document.querySelector(".sp-ai-bubble")?.click(); setTimeout(() => { const input = document.getElementById("ic-assistant-input"); if (!input) return; input.value = `Turn this quick ${QUICK_STATE.type.label} note into a calm, factual residential children's home record. Do not invent facts. Keep child voice separate if present. Note: ${note}`; document.getElementById("ic-send-assistant")?.click(); }, 160); }
+window.IndiCareQuickCapture = { open: () => { QUICK_STATE.open = true; renderPanel(); }, close: () => { QUICK_STATE.open = false; renderPanel(); }, sync: syncQueue, queue: () => QUICK_STATE.queue };
