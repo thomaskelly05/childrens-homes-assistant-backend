@@ -106,6 +106,18 @@ routers.staff_today_routes
 routers.workspace_routes
 routers.workspace_review_routes
 routers.workspace_ofsted_evidence_routes
+backend.os_command_router
+backend.os_command_shift_router
+backend.os_command_risk_router
+backend.os_command_inspection_router
+backend.os_command_patterns_router
+backend.os_command_chronology_intelligence_router
+backend.os_command_manager_review_router
+backend.os_command_wellbeing_router
+backend.os_provider_command_router
+backend.os_command_network_router
+backend.os_command_care_recording_router
+backend.os_command_young_person_workspace_router
 """.split()
 
 REQUIRED_ROUTERS = {
