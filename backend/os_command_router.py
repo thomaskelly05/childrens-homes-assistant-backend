@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from db.connection import get_db_connection, release_db_connection
 
-router = APIRouter(tags=['OS Command'])
+router = APIRouter(prefix='/api', tags=['OS Command'])
 
 Priority = Literal['critical', 'high', 'medium', 'low', 'info']
 Status = Literal['open', 'in_progress', 'waiting', 'completed', 'dismissed', 'void']
