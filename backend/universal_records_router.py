@@ -4,8 +4,8 @@ import datetime
 import decimal
 from typing import Any
 
-from fastapi import APIRouter, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, Query, HTTPException, Request
+from pydantic import BaseModel, Field
 
 from db.connection import get_db_connection, release_db_connection
 
@@ -16,6 +16,41 @@ class UniversalRecordSearchResponse(BaseModel):
     records: list[dict[str, Any]]
     total: int
     status: str = 'ok'
+
+
+class UniversalRecordCreateRequest(BaseModel):
+    source_table: str = 'universal_manual_records'
+    source_id: str | None = None
+    record_type: str
+    record_category: str | None = None
+    entity_type: str = 'child'
+    provider_id: int | None = None
+    home_id: int | None = None
+    young_person_id: int | None = None
+    staff_id: int | None = None
+    adult_id: int | None = None
+    title: str
+    summary: str | None = None
+    narrative: str | None = None
+    child_voice: str | None = None
+    staff_reflection: str | None = None
+    staff_analysis: str | None = None
+    therapeutic_analysis: str | None = None
+    status: str = 'submitted'
+    priority: str = 'normal'
+    risk_level: str = 'low'
+    review_state: str = 'not_required'
+    safeguarding_relevant: bool = False
+    inspection_relevant: bool = True
+    chronology_visible: bool = True
+    manager_review_required: bool = False
+    restricted: bool = False
+    sccif_area: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    occurred_at: datetime.datetime | None = None
+    due_at: datetime.datetime | None = None
+    created_by: int | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 def serialise(value: Any) -> Any:
@@ -74,6 +109,127 @@ def function_exists(cursor: Any, function_name: str) -> bool:
     return bool(row.get('exists') if isinstance(row, dict) else row[0])
 
 
+@router.post('', status_code=201)
+async def create_universal_record(payload: UniversalRecordCreateRequest, request: Request):
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            if not relation_exists(cursor, 'universal_records'):
+                raise HTTPException(status_code=503, detail='Universal records schema is not installed')
+
+            source_id = payload.source_id or f"manual:{datetime.datetime.utcnow().isoformat()}"
+            created_by = payload.created_by
+            if created_by is None:
+                try:
+                    created_by = int(request.headers.get('X-User-Id') or 0) or None
+                except Exception:
+                    created_by = None
+
+            raw_snapshot = payload.model_dump(mode='json')
+            if function_exists(cursor, 'universal_record_upsert'):
+                cursor.execute(
+                    '''
+                    SELECT public.universal_record_upsert(
+                      %s,%s,%s,%s,%s::ur_entity_type,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb
+                    )
+                    ''',
+                    (
+                        payload.source_table,
+                        source_id,
+                        payload.record_type,
+                        payload.record_category,
+                        payload.entity_type,
+                        payload.provider_id,
+                        payload.home_id,
+                        payload.young_person_id,
+                        payload.staff_id,
+                        payload.adult_id,
+                        payload.title,
+                        payload.summary,
+                        payload.narrative,
+                        payload.child_voice,
+                        payload.staff_reflection,
+                        payload.staff_analysis,
+                        payload.therapeutic_analysis,
+                        payload.status,
+                        payload.priority,
+                        payload.risk_level,
+                        payload.review_state,
+                        payload.safeguarding_relevant,
+                        payload.inspection_relevant,
+                        payload.chronology_visible,
+                        payload.manager_review_required,
+                        payload.restricted,
+                        payload.sccif_area,
+                        payload.tags,
+                        payload.occurred_at,
+                        payload.due_at,
+                        created_by,
+                        payload.metadata,
+                        raw_snapshot,
+                    ),
+                )
+                row = cursor.fetchone()
+                record_id = str(row[0] if row and not isinstance(row, dict) else row.get('universal_record_upsert'))
+            else:
+                cursor.execute(
+                    '''
+                    INSERT INTO public.universal_records (
+                      source_table, source_id, record_type, record_category, entity_type,
+                      provider_id, home_id, young_person_id, staff_id, adult_id,
+                      title, summary, narrative, child_voice, staff_reflection, staff_analysis, therapeutic_analysis,
+                      status, priority, risk_level, review_state,
+                      safeguarding_relevant, inspection_relevant, chronology_visible, manager_review_required, restricted,
+                      sccif_area, tags, occurred_at, due_at, created_by, metadata, raw_snapshot
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb)
+                    RETURNING id
+                    ''',
+                    (
+                        payload.source_table, source_id, payload.record_type, payload.record_category, payload.entity_type,
+                        payload.provider_id, payload.home_id, payload.young_person_id, payload.staff_id, payload.adult_id,
+                        payload.title, payload.summary, payload.narrative, payload.child_voice, payload.staff_reflection, payload.staff_analysis, payload.therapeutic_analysis,
+                        payload.status, payload.priority, payload.risk_level, payload.review_state,
+                        payload.safeguarding_relevant, payload.inspection_relevant, payload.chronology_visible, payload.manager_review_required, payload.restricted,
+                        payload.sccif_area, payload.tags, payload.occurred_at, payload.due_at, created_by, payload.metadata, raw_snapshot,
+                    ),
+                )
+                row = cursor.fetchone()
+                record_id = str(row[0] if row and not isinstance(row, dict) else row.get('id'))
+
+            if relation_exists(cursor, 'universal_record_audit_events'):
+                cursor.execute(
+                    '''
+                    INSERT INTO public.universal_record_audit_events (record_id, source_table, source_id, event_type, event_summary, actor_id, ip_address, user_agent, after_snapshot)
+                    VALUES (%s::uuid, %s, %s, 'created', 'Record created from IndiCare OS', %s, %s, %s, %s::jsonb)
+                    ''',
+                    (
+                        record_id,
+                        payload.source_table,
+                        source_id,
+                        created_by,
+                        request.client.host if request.client else None,
+                        request.headers.get('user-agent'),
+                        raw_snapshot,
+                    ),
+                )
+
+            conn.commit()
+            return {'id': record_id, 'source_table': payload.source_table, 'source_id': source_id, 'status': 'created'}
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=str(error))
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
+
+
 @router.get('/search', response_model=UniversalRecordSearchResponse)
 async def search_universal_records(
     q: str | None = Query(default=None),
@@ -107,23 +263,7 @@ async def search_universal_records(
                       %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
                     )
                     ''',
-                    (
-                        q,
-                        provider_id,
-                        home_id,
-                        young_person_id,
-                        staff_id,
-                        record_type,
-                        category,
-                        status,
-                        risk_level,
-                        safeguarding,
-                        manager_review,
-                        date_from,
-                        date_to,
-                        limit,
-                        offset,
-                    ),
+                    (q, provider_id, home_id, young_person_id, staff_id, record_type, category, status, risk_level, safeguarding, manager_review, date_from, date_to, limit, offset),
                 )
                 records = rows_to_dicts(cursor, cursor.fetchall())
             else:
@@ -186,76 +326,35 @@ async def get_universal_record(record_id: str):
             if not rows:
                 return {'record': None, 'status': 'not_found'}
             record = rows[0]
-
             links: list[dict[str, Any]] = []
             comments: list[dict[str, Any]] = []
             attachments: list[dict[str, Any]] = []
             audit: list[dict[str, Any]] = []
             quality: list[dict[str, Any]] = []
-
             if relation_exists(cursor, 'universal_record_links'):
-                cursor.execute(
-                    '''
-                    SELECT l.*, r.title AS target_title, r.record_type AS target_record_type
-                    FROM public.universal_record_links l
-                    LEFT JOIN public.universal_records r ON r.id = l.target_record_id
-                    WHERE l.source_record_id::text = %s OR l.target_record_id::text = %s
-                    ORDER BY l.created_at DESC
-                    LIMIT 100
-                    ''',
-                    (record_id, record_id),
-                )
+                cursor.execute('SELECT l.*, r.title AS target_title, r.record_type AS target_record_type FROM public.universal_record_links l LEFT JOIN public.universal_records r ON r.id = l.target_record_id WHERE l.source_record_id::text = %s OR l.target_record_id::text = %s ORDER BY l.created_at DESC LIMIT 100', (record_id, record_id))
                 links = rows_to_dicts(cursor, cursor.fetchall())
-
             if relation_exists(cursor, 'universal_record_comments'):
                 cursor.execute('SELECT * FROM public.universal_record_comments WHERE record_id::text = %s ORDER BY created_at DESC LIMIT 100', (record_id,))
                 comments = rows_to_dicts(cursor, cursor.fetchall())
-
             if relation_exists(cursor, 'universal_record_attachments'):
                 cursor.execute('SELECT * FROM public.universal_record_attachments WHERE record_id::text = %s ORDER BY uploaded_at DESC LIMIT 100', (record_id,))
                 attachments = rows_to_dicts(cursor, cursor.fetchall())
-
             if relation_exists(cursor, 'universal_record_audit_events'):
                 cursor.execute('SELECT * FROM public.universal_record_audit_events WHERE record_id::text = %s OR (source_table = %s AND source_id = %s) ORDER BY created_at DESC LIMIT 100', (record_id, record.get('source_table'), record.get('source_id')))
                 audit = rows_to_dicts(cursor, cursor.fetchall())
-
             if relation_exists(cursor, 'therapeutic_record_quality_checks'):
                 cursor.execute('SELECT * FROM public.therapeutic_record_quality_checks WHERE record_id::text = %s ORDER BY checked_at DESC LIMIT 20', (record_id,))
                 quality = rows_to_dicts(cursor, cursor.fetchall())
-
-            return {
-                'record': record,
-                'links': links,
-                'comments': comments,
-                'attachments': attachments,
-                'audit': audit,
-                'quality_checks': quality,
-                'status': 'ok',
-            }
+            return {'record': record, 'links': links, 'comments': comments, 'attachments': attachments, 'audit': audit, 'quality_checks': quality, 'status': 'ok'}
     finally:
         if conn is not None:
             release_db_connection(conn)
 
 
 @router.get('/child/{young_person_id}/journey')
-async def get_child_journey(
-    young_person_id: int,
-    q: str | None = Query(default=None),
-    category: str | None = Query(default=None),
-    record_type: str | None = Query(default=None),
-    date_from: datetime.datetime | None = Query(default=None),
-    date_to: datetime.datetime | None = Query(default=None),
-    limit: int = Query(default=250, ge=1, le=1000),
-):
-    result = await search_universal_records(
-        q=q,
-        young_person_id=young_person_id,
-        category=category,
-        record_type=record_type,
-        date_from=date_from,
-        date_to=date_to,
-        limit=limit,
-    )
+async def get_child_journey(young_person_id: int, q: str | None = Query(default=None), category: str | None = Query(default=None), record_type: str | None = Query(default=None), date_from: datetime.datetime | None = Query(default=None), date_to: datetime.datetime | None = Query(default=None), limit: int = Query(default=250, ge=1, le=1000)):
+    result = await search_universal_records(q=q, young_person_id=young_person_id, category=category, record_type=record_type, date_from=date_from, date_to=date_to, limit=limit)
     return {'journey': result.records if isinstance(result, UniversalRecordSearchResponse) else result.get('records', []), 'status': 'ok'}
 
 
@@ -299,9 +398,7 @@ async def get_therapeutic_forms(record_type: str | None = Query(default=None), a
                 return {'templates': [], 'status': 'missing_schema'}
             cursor.execute(
                 '''
-                SELECT
-                  t.*,
-                  COALESCE(jsonb_agg(to_jsonb(f) ORDER BY f.display_order) FILTER (WHERE f.id IS NOT NULL), '[]'::jsonb) AS fields
+                SELECT t.*, COALESCE(jsonb_agg(to_jsonb(f) ORDER BY f.display_order) FILTER (WHERE f.id IS NOT NULL), '[]'::jsonb) AS fields
                 FROM public.therapeutic_form_templates t
                 LEFT JOIN public.therapeutic_form_fields f ON f.template_id = t.id
                 WHERE t.active = true
