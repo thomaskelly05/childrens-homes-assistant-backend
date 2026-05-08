@@ -10,11 +10,15 @@ const QUICK_TYPES = [
   { id: "daily", label: "Daily note", workspace: "daily", prompt: "Capture the key daily update, child voice, positives, wellbeing and actions required." },
 ];
 
+const QUEUE_KEY = "indicare.os.quickCapture.queue";
+
 const QUICK_STATE = {
   open: false,
   type: QUICK_TYPES[0],
   recording: false,
   recognition: null,
+  syncing: false,
+  queue: readQueue(),
 };
 
 bootQuickCapture();
@@ -24,8 +28,11 @@ function bootQuickCapture() {
   ensurePanel();
   document.addEventListener("click", handleClicks, true);
   document.addEventListener("submit", handleSubmit, true);
+  window.addEventListener("online", () => syncQueue());
   window.addEventListener("indicare:os-context-ready", renderPanel);
   new MutationObserver(() => ensureLauncher()).observe(document.body, { childList: true, subtree: true });
+  updateLauncherBadge();
+  if (navigator.onLine !== false && QUICK_STATE.queue.length) syncQueue();
 }
 
 function ensureLauncher() {
@@ -35,8 +42,9 @@ function ensureLauncher() {
   button.type = "button";
   button.className = "os-mobile-capture-button";
   button.dataset.openQuickCapture = "true";
-  button.innerHTML = `<span>＋</span><strong>Quick capture</strong>`;
+  button.innerHTML = `<span>＋</span><strong>Quick capture</strong><em data-quick-queue-badge></em>`;
   document.body.appendChild(button);
+  updateLauncherBadge();
 }
 
 function ensurePanel() {
@@ -61,6 +69,7 @@ function renderPanel() {
       <div><span>Mobile operations</span><strong>Quick capture</strong><small>${escapeHtml(getOperationalSession()?.homeName || "No home selected")}</small></div>
       <button type="button" data-close-quick-capture>×</button>
     </header>
+    ${queueBanner()}
     <section class="os-quick-types">
       ${QUICK_TYPES.map((type) => `<button type="button" class="${QUICK_STATE.type.id === type.id ? "active" : ""}" data-quick-type="${escapeHtml(type.id)}"><strong>${escapeHtml(type.label)}</strong><span>${escapeHtml(type.workspace)}</span></button>`).join("")}
     </section>
@@ -72,8 +81,14 @@ function renderPanel() {
         <button type="button" data-ai-cleanup>AI cleanup</button>
         <button type="submit" class="primary">Save</button>
       </div>
-      <p class="os-quick-hint">Saves through workspace-records where the backend table exists, then refreshes OS context and routes into IndiCare Docs.</p>
+      <p class="os-quick-hint">Saves through workspace-records where the backend table exists. If the connection fails, the draft is queued locally and retried.</p>
     </form>`;
+  updateLauncherBadge();
+}
+
+function queueBanner() {
+  if (!QUICK_STATE.queue.length) return "";
+  return `<section class="os-quick-sync-banner"><div><strong>${QUICK_STATE.queue.length} offline capture${QUICK_STATE.queue.length === 1 ? "" : "s"}</strong><span>${QUICK_STATE.syncing ? "Syncing now..." : "Waiting to sync to workspace-records."}</span></div><button type="button" data-sync-quick-captures>${QUICK_STATE.syncing ? "Syncing" : "Sync"}</button></section>`;
 }
 
 function handleClicks(event) {
@@ -87,6 +102,11 @@ function handleClicks(event) {
     event.preventDefault();
     QUICK_STATE.open = false;
     renderPanel();
+    return;
+  }
+  if (event.target.closest?.("[data-sync-quick-captures]")) {
+    event.preventDefault();
+    syncQueue();
     return;
   }
   const typeButton = event.target.closest?.("[data-quick-type]");
@@ -117,22 +137,77 @@ async function handleSubmit(event) {
   const context = scopeContextToSession(getOsContext(), getOperationalSession());
   const child = context.children.find((item) => childKey(item) === youngPersonId);
   const payload = buildPayload(note, child);
+  const capture = { id: crypto?.randomUUID?.() || String(Date.now()), workspace: QUICK_STATE.type.workspace, payload, createdAt: new Date().toISOString(), attempts: 0 };
   const submit = form.querySelector('button[type="submit"]');
   submit.disabled = true;
   submit.textContent = "Saving...";
   try {
-    const response = await apiSend(`/workspace-records/${encodeURIComponent(QUICK_STATE.type.workspace)}`, "POST", payload, { invalidatePrefixes: ["/workspace-records", "/api/os/context"] });
-    if (response?.ok === false) throw new Error(response.error || response.detail || "Quick capture failed");
+    const response = await saveCapture(capture);
     window.dispatchEvent(new CustomEvent("indicare:refresh-live-os"));
     QUICK_STATE.open = false;
     renderPanel();
     window.dispatchEvent(new CustomEvent("indicare:open-record", { detail: { ...payload, id: response.id, record_type: QUICK_STATE.type.workspace, type: QUICK_STATE.type.workspace } }));
   } catch (error) {
-    alert(error?.message || "Unable to save quick capture.");
+    enqueueCapture(capture, error);
+    form.note.value = "";
+    QUICK_STATE.open = false;
+    renderPanel();
+    alert("Connection or backend save failed, so the capture has been saved offline and will retry automatically.");
   } finally {
     submit.disabled = false;
     submit.textContent = "Save";
   }
+}
+
+async function saveCapture(capture) {
+  const response = await apiSend(`/workspace-records/${encodeURIComponent(capture.workspace)}`, "POST", capture.payload, { invalidatePrefixes: ["/workspace-records", "/api/os/context"] });
+  if (response?.ok === false) throw new Error(response.error || response.detail || "Quick capture failed");
+  return response;
+}
+
+function enqueueCapture(capture, error) {
+  QUICK_STATE.queue.unshift({ ...capture, lastError: error?.message || "Save failed" });
+  persistQueue();
+  updateLauncherBadge();
+}
+
+async function syncQueue() {
+  if (QUICK_STATE.syncing || !QUICK_STATE.queue.length) return;
+  QUICK_STATE.syncing = true;
+  renderPanel();
+  const remaining = [];
+  for (const capture of QUICK_STATE.queue) {
+    try {
+      await saveCapture({ ...capture, attempts: (capture.attempts || 0) + 1 });
+    } catch (error) {
+      remaining.push({ ...capture, attempts: (capture.attempts || 0) + 1, lastError: error?.message || "Sync failed" });
+    }
+  }
+  QUICK_STATE.queue = remaining;
+  QUICK_STATE.syncing = false;
+  persistQueue();
+  updateLauncherBadge();
+  renderPanel();
+  if (!remaining.length) window.dispatchEvent(new CustomEvent("indicare:refresh-live-os"));
+}
+
+function readQueue() {
+  try {
+    return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function persistQueue() {
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(QUICK_STATE.queue.slice(0, 50)));
+}
+
+function updateLauncherBadge() {
+  const badge = document.querySelector("[data-quick-queue-badge]");
+  if (!badge) return;
+  badge.textContent = QUICK_STATE.queue.length ? String(QUICK_STATE.queue.length) : "";
+  badge.style.display = QUICK_STATE.queue.length ? "grid" : "none";
 }
 
 function buildPayload(note, child) {
@@ -144,12 +219,7 @@ function buildPayload(note, child) {
     summary_text: note,
     description: note,
     notes: note,
-    content: {
-      quick_capture: true,
-      capture_type: QUICK_STATE.type.id,
-      note,
-      captured_from: "mobile_quick_capture",
-    },
+    content: { quick_capture: true, capture_type: QUICK_STATE.type.id, note, captured_from: "mobile_quick_capture" },
     status: "draft",
     workflow_status: "draft",
     manager_review_status: "draft",
@@ -216,4 +286,6 @@ function openAssistantForCleanup() {
 window.IndiCareQuickCapture = {
   open: () => { QUICK_STATE.open = true; renderPanel(); },
   close: () => { QUICK_STATE.open = false; renderPanel(); },
+  sync: syncQueue,
+  queue: () => QUICK_STATE.queue,
 };
