@@ -53,6 +53,12 @@ class UniversalRecordCreateRequest(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class UniversalRecordReviewRequest(BaseModel):
+    action: str = Field(pattern='^(approve|return|comment|require_review)$')
+    comment: str | None = None
+    reviewed_by: int | None = None
+
+
 def serialise(value: Any) -> Any:
     if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
         return value.isoformat()
@@ -109,6 +115,15 @@ def function_exists(cursor: Any, function_name: str) -> bool:
     return bool(row.get('exists') if isinstance(row, dict) else row[0])
 
 
+def actor_id_from_request(request: Request, fallback: int | None = None) -> int | None:
+    if fallback is not None:
+        return fallback
+    try:
+        return int(request.headers.get('X-User-Id') or 0) or None
+    except Exception:
+        return None
+
+
 @router.post('', status_code=201)
 async def create_universal_record(payload: UniversalRecordCreateRequest, request: Request):
     conn = None
@@ -119,13 +134,7 @@ async def create_universal_record(payload: UniversalRecordCreateRequest, request
                 raise HTTPException(status_code=503, detail='Universal records schema is not installed')
 
             source_id = payload.source_id or f"manual:{datetime.datetime.utcnow().isoformat()}"
-            created_by = payload.created_by
-            if created_by is None:
-                try:
-                    created_by = int(request.headers.get('X-User-Id') or 0) or None
-                except Exception:
-                    created_by = None
-
+            created_by = actor_id_from_request(request, payload.created_by)
             raw_snapshot = payload.model_dump(mode='json')
             if function_exists(cursor, 'universal_record_upsert'):
                 cursor.execute(
@@ -135,39 +144,12 @@ async def create_universal_record(payload: UniversalRecordCreateRequest, request
                     )
                     ''',
                     (
-                        payload.source_table,
-                        source_id,
-                        payload.record_type,
-                        payload.record_category,
-                        payload.entity_type,
-                        payload.provider_id,
-                        payload.home_id,
-                        payload.young_person_id,
-                        payload.staff_id,
-                        payload.adult_id,
-                        payload.title,
-                        payload.summary,
-                        payload.narrative,
-                        payload.child_voice,
-                        payload.staff_reflection,
-                        payload.staff_analysis,
-                        payload.therapeutic_analysis,
-                        payload.status,
-                        payload.priority,
-                        payload.risk_level,
-                        payload.review_state,
-                        payload.safeguarding_relevant,
-                        payload.inspection_relevant,
-                        payload.chronology_visible,
-                        payload.manager_review_required,
-                        payload.restricted,
-                        payload.sccif_area,
-                        payload.tags,
-                        payload.occurred_at,
-                        payload.due_at,
-                        created_by,
-                        payload.metadata,
-                        raw_snapshot,
+                        payload.source_table, source_id, payload.record_type, payload.record_category, payload.entity_type,
+                        payload.provider_id, payload.home_id, payload.young_person_id, payload.staff_id, payload.adult_id,
+                        payload.title, payload.summary, payload.narrative, payload.child_voice, payload.staff_reflection, payload.staff_analysis, payload.therapeutic_analysis,
+                        payload.status, payload.priority, payload.risk_level, payload.review_state,
+                        payload.safeguarding_relevant, payload.inspection_relevant, payload.chronology_visible, payload.manager_review_required, payload.restricted,
+                        payload.sccif_area, payload.tags, payload.occurred_at, payload.due_at, created_by, payload.metadata, raw_snapshot,
                     ),
                 )
                 row = cursor.fetchone()
@@ -204,15 +186,7 @@ async def create_universal_record(payload: UniversalRecordCreateRequest, request
                     INSERT INTO public.universal_record_audit_events (record_id, source_table, source_id, event_type, event_summary, actor_id, ip_address, user_agent, after_snapshot)
                     VALUES (%s::uuid, %s, %s, 'created', 'Record created from IndiCare OS', %s, %s, %s, %s::jsonb)
                     ''',
-                    (
-                        record_id,
-                        payload.source_table,
-                        source_id,
-                        created_by,
-                        request.client.host if request.client else None,
-                        request.headers.get('user-agent'),
-                        raw_snapshot,
-                    ),
+                    (record_id, payload.source_table, source_id, created_by, request.client.host if request.client else None, request.headers.get('user-agent'), raw_snapshot),
                 )
 
             conn.commit()
@@ -230,23 +204,117 @@ async def create_universal_record(payload: UniversalRecordCreateRequest, request
             release_db_connection(conn)
 
 
+@router.post('/record/{record_id}/review')
+async def review_universal_record(record_id: str, payload: UniversalRecordReviewRequest, request: Request):
+    conn = None
+    try:
+        conn = get_db_connection()
+        actor_id = actor_id_from_request(request, payload.reviewed_by)
+        with conn.cursor() as cursor:
+            if not relation_exists(cursor, 'universal_records'):
+                raise HTTPException(status_code=503, detail='Universal records schema is not installed')
+            cursor.execute('SELECT * FROM public.universal_records WHERE id::text = %s LIMIT 1', (record_id,))
+            before_rows = rows_to_dicts(cursor, cursor.fetchall())
+            if not before_rows:
+                raise HTTPException(status_code=404, detail='Record not found')
+            before = before_rows[0]
+
+            if payload.action == 'approve':
+                cursor.execute(
+                    '''
+                    UPDATE public.universal_records
+                    SET status = 'approved', review_state = 'completed', manager_review_required = false,
+                        reviewed_by = %s, reviewed_at = now(), updated_by = %s, updated_at = now()
+                    WHERE id::text = %s
+                    RETURNING *
+                    ''',
+                    (actor_id, actor_id, record_id),
+                )
+                event_type = 'approved'
+                event_summary = payload.comment or 'Record approved by manager'
+                comment_type = 'manager_approval'
+            elif payload.action == 'return':
+                cursor.execute(
+                    '''
+                    UPDATE public.universal_records
+                    SET status = 'returned', review_state = 'returned', manager_review_required = true,
+                        reviewed_by = %s, reviewed_at = now(), updated_by = %s, updated_at = now()
+                    WHERE id::text = %s
+                    RETURNING *
+                    ''',
+                    (actor_id, actor_id, record_id),
+                )
+                event_type = 'returned'
+                event_summary = payload.comment or 'Record returned for amendment'
+                comment_type = 'manager_return'
+            elif payload.action == 'require_review':
+                cursor.execute(
+                    '''
+                    UPDATE public.universal_records
+                    SET review_state = 'required', manager_review_required = true,
+                        updated_by = %s, updated_at = now()
+                    WHERE id::text = %s
+                    RETURNING *
+                    ''',
+                    (actor_id, record_id),
+                )
+                event_type = 'review_required'
+                event_summary = payload.comment or 'Manager review required'
+                comment_type = 'review_required'
+            else:
+                cursor.execute('SELECT * FROM public.universal_records WHERE id::text = %s', (record_id,))
+                event_type = 'commented'
+                event_summary = payload.comment or 'Manager comment added'
+                comment_type = 'manager_comment'
+
+            after = rows_to_dicts(cursor, cursor.fetchall())[0]
+
+            if payload.comment and relation_exists(cursor, 'universal_record_comments'):
+                cursor.execute(
+                    '''
+                    INSERT INTO public.universal_record_comments (record_id, comment_type, body, created_by)
+                    VALUES (%s::uuid, %s, %s, %s)
+                    ''',
+                    (record_id, comment_type, payload.comment, actor_id),
+                )
+
+            if relation_exists(cursor, 'universal_record_audit_events'):
+                cursor.execute(
+                    '''
+                    INSERT INTO public.universal_record_audit_events (record_id, source_table, source_id, event_type, event_summary, before_snapshot, after_snapshot, actor_id, ip_address, user_agent)
+                    VALUES (%s::uuid, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s)
+                    ''',
+                    (
+                        record_id,
+                        after.get('source_table'),
+                        after.get('source_id'),
+                        event_type,
+                        event_summary,
+                        before,
+                        after,
+                        actor_id,
+                        request.client.host if request.client else None,
+                        request.headers.get('user-agent'),
+                    ),
+                )
+            conn.commit()
+            return {'record': after, 'status': event_type}
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception as error:
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail=str(error))
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
+
+
 @router.get('/search', response_model=UniversalRecordSearchResponse)
 async def search_universal_records(
-    q: str | None = Query(default=None),
-    provider_id: int | None = Query(default=None),
-    home_id: int | None = Query(default=None),
-    young_person_id: int | None = Query(default=None),
-    staff_id: int | None = Query(default=None),
-    record_type: str | None = Query(default=None),
-    category: str | None = Query(default=None),
-    status: str | None = Query(default=None),
-    risk_level: str | None = Query(default=None),
-    safeguarding: bool | None = Query(default=None),
-    manager_review: bool | None = Query(default=None),
-    date_from: datetime.datetime | None = Query(default=None),
-    date_to: datetime.datetime | None = Query(default=None),
-    limit: int = Query(default=100, ge=1, le=500),
-    offset: int = Query(default=0, ge=0),
+    q: str | None = Query(default=None), provider_id: int | None = Query(default=None), home_id: int | None = Query(default=None), young_person_id: int | None = Query(default=None), staff_id: int | None = Query(default=None), record_type: str | None = Query(default=None), category: str | None = Query(default=None), status: str | None = Query(default=None), risk_level: str | None = Query(default=None), safeguarding: bool | None = Query(default=None), manager_review: bool | None = Query(default=None), date_from: datetime.datetime | None = Query(default=None), date_to: datetime.datetime | None = Query(default=None), limit: int = Query(default=100, ge=1, le=500), offset: int = Query(default=0, ge=0),
 ):
     conn = None
     try:
@@ -254,17 +322,8 @@ async def search_universal_records(
         with conn.cursor() as cursor:
             if not relation_exists(cursor, 'universal_records'):
                 return {'records': [], 'total': 0, 'status': 'missing_schema'}
-
             if function_exists(cursor, 'universal_record_search'):
-                cursor.execute(
-                    '''
-                    SELECT *
-                    FROM public.universal_record_search(
-                      %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
-                    )
-                    ''',
-                    (q, provider_id, home_id, young_person_id, staff_id, record_type, category, status, risk_level, safeguarding, manager_review, date_from, date_to, limit, offset),
-                )
+                cursor.execute('SELECT * FROM public.universal_record_search(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', (q, provider_id, home_id, young_person_id, staff_id, record_type, category, status, risk_level, safeguarding, manager_review, date_from, date_to, limit, offset))
                 records = rows_to_dicts(cursor, cursor.fetchall())
             else:
                 where = []
@@ -301,7 +360,6 @@ async def search_universal_records(
                 params.extend([limit, offset])
                 cursor.execute(sql, tuple(params))
                 records = rows_to_dicts(cursor, cursor.fetchall())
-
             cursor.execute('SELECT count(*) FROM public.universal_records')
             row = cursor.fetchone()
             total = int(row.get('count') if isinstance(row, dict) else row[0])
