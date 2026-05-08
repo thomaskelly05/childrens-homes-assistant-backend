@@ -103,20 +103,15 @@
   }
 
   function defaultMemory() {
-    return {
-      themes: [],
-      timeline: [],
-      docs: [],
-      notes: [],
-      suggestions: [],
-      updatedAt: Date.now()
-    };
+    return { themes: [], timeline: [], docs: [], notes: [], suggestions: [], alerts: [], updatedAt: Date.now() };
   }
 
   function saveMemory(memory) {
     memory.updatedAt = Date.now();
+    memory.alerts = buildAlerts(memory);
     localStorage.setItem(MEMORY_KEY, JSON.stringify(memory));
     renderMemoryStrip(memory);
+    renderTimelineDock(memory);
   }
 
   function addMemoryEntry(type, title, text) {
@@ -157,9 +152,14 @@
   function extractTimeline(text) {
     const lines = (text || '').split(/\n|\./).map((line) => line.trim()).filter(Boolean);
     return lines
-      .filter((line) => /\b\d{1,2}:\d{2}\b|\b\d{1,2}[/-]\d{1,2}/.test(line))
+      .filter((line) => /\b\d{1,2}:\d{2}\b|\b\d{1,2}[/-]\d{1,2}/.test(line) || /missing|police|incident|safeguarding|manager|review|risk/i.test(line))
       .slice(0, 8)
-      .map((line) => ({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), text: line.slice(0, 240), createdAt: Date.now() }));
+      .map((line) => ({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+        text: line.slice(0, 240),
+        severity: /police|harm|exploitation|self-harm|injury/i.test(line) ? 'high' : /missing|risk|safeguarding|incident/i.test(line) ? 'medium' : 'low',
+        createdAt: Date.now()
+      }));
   }
 
   function buildSuggestions(memory) {
@@ -168,7 +168,20 @@
     if (memory.themes.includes('Safeguarding')) suggestions.unshift('Review safeguarding concerns');
     if (memory.themes.includes('Ofsted evidence')) suggestions.unshift('Prepare inspection evidence summary');
     if (memory.themes.includes('Child voice')) suggestions.unshift('Check child voice evidence');
+    if (memory.alerts?.length) suggestions.unshift('Review timeline alerts');
     return [...new Set(suggestions)].slice(0, 5);
+  }
+
+  function buildAlerts(memory) {
+    const alerts = [];
+    const corpus = [...memory.timeline.map((e) => e.text), ...memory.docs.map((d) => d.text), ...memory.notes.map((n) => n.text)].join(' ').toLowerCase();
+    const safeguardingHits = (corpus.match(/safeguarding|risk|harm|missing|police|exploitation/g) || []).length;
+    if (safeguardingHits >= 3) alerts.push('Repeated safeguarding-linked themes identified.');
+    if ((corpus.match(/missing/g) || []).length >= 2) alerts.push('Missing-from-care theme appears more than once.');
+    if ((corpus.match(/police/g) || []).length >= 1) alerts.push('Police involvement referenced in the workspace.');
+    if (/not recorded|unclear|unknown|missing information/.test(corpus)) alerts.push('Possible recording or chronology gaps identified.');
+    if (/manager|oversight|review/.test(corpus)) alerts.push('Leadership oversight is referenced; consider checking follow-up actions.');
+    return alerts.slice(0, 5);
   }
 
   function renderMemoryStrip(memory = loadMemory()) {
@@ -180,6 +193,11 @@
 
     if (projectHome) projectHome.textContent = text;
     if (memorySummary) memorySummary.textContent = text;
+
+    const title = $('timelineSummaryTitle');
+    const summary = $('timelineSummaryText');
+    if (title) title.textContent = memory.timeline.length ? `${memory.timeline.length} event${memory.timeline.length === 1 ? '' : 's'} captured` : 'No chronology yet';
+    if (summary) summary.textContent = memory.alerts?.[0] || 'DOCS, Notes and chats will build a live operational timeline here.';
 
     document.querySelectorAll('.ic-memory-strip').forEach((node) => node.remove());
     const target = $('memoryProjectSummary')?.closest('.ic-card');
@@ -196,6 +214,39 @@
       </div>
     `;
     target.appendChild(strip);
+  }
+
+  function renderTimelineDock(memory = loadMemory()) {
+    const alerts = $('suiteTimelineAlerts');
+    const list = $('suiteTimelineList');
+    if (alerts) {
+      alerts.innerHTML = (memory.alerts || []).slice(0, 4).map((alert) => `<button type="button" data-memory-action="${escapeHtml(alert)}">${escapeHtml(alert)}</button>`).join('') || '<span>No alerts yet</span>';
+    }
+    if (list) {
+      list.innerHTML = memory.timeline.slice(0, 8).map((event) => `
+        <button type="button" class="ic-timeline-mini-event ${escapeHtml(event.severity || 'low')}" data-memory-action="Review this timeline event: ${escapeHtml(event.text)}">
+          <span>${escapeHtml(event.severity || 'low')}</span>
+          <strong>${escapeHtml(event.text)}</strong>
+        </button>
+      `).join('') || '<p class="ic-muted-mini">Timeline will appear as DOCS, Notes and chats mention dates, incidents, safeguarding or reviews.</p>';
+    }
+  }
+
+  async function hydrateTimelineFromApi() {
+    const workspaceSelect = $('workspaceSelect');
+    const projectId = workspaceSelect?.value;
+    if (!projectId || projectId === 'standalone') return;
+    try {
+      const response = await fetch(`/standalone-timeline/projects/${encodeURIComponent(projectId)}/summary`, { credentials: 'include' });
+      if (!response.ok) return;
+      const data = await response.json();
+      const memory = loadMemory();
+      if (data?.analysis?.alerts?.length) memory.alerts = [...new Set([...(data.analysis.alerts || []), ...(memory.alerts || [])])].slice(0, 6);
+      if (data?.summary && !memory.themes.includes('Timeline intelligence')) memory.themes.unshift('Timeline intelligence');
+      saveMemory(memory);
+    } catch {
+      // Local shared memory remains the fallback when API/project context is unavailable.
+    }
   }
 
   function showSuite(view) {
@@ -257,7 +308,7 @@
   function buildMemoryContext() {
     const memory = loadMemory();
     if (!memory.themes.length && !memory.timeline.length) return '';
-    return `Shared project memory:\nThemes: ${memory.themes.slice(0, 8).join(', ') || 'none yet'}\nRecent timeline: ${memory.timeline.slice(0, 5).map((item) => item.text).join(' | ') || 'none yet'}`;
+    return `Shared project memory:\nThemes: ${memory.themes.slice(0, 8).join(', ') || 'none yet'}\nAlerts: ${(memory.alerts || []).slice(0, 4).join(' | ') || 'none yet'}\nRecent timeline: ${memory.timeline.slice(0, 5).map((item) => item.text).join(' | ') || 'none yet'}`;
   }
 
   function runDocCommand(command) {
@@ -511,13 +562,16 @@
         addMemoryEntry('doc', 'DOCS working draft', editor.innerText || '');
       });
     }
+
+    const workspaceSelect = $('workspaceSelect');
+    if (workspaceSelect) workspaceSelect.addEventListener('change', hydrateTimelineFromApi);
   }
 
   function escapeHtml(value) {
     return String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
   }
 
-  window.IndiCareSuiteMemory = { loadMemory, saveMemory, addMemoryEntry, buildMemoryContext };
+  window.IndiCareSuiteMemory = { loadMemory, saveMemory, addMemoryEntry, buildMemoryContext, hydrateTimelineFromApi };
 
   window.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('ic-suite-rail-compact');
@@ -528,6 +582,8 @@
     bindSlashMenu();
     decorateBlocks();
     renderMemoryStrip();
+    renderTimelineDock();
+    hydrateTimelineFromApi();
     showSuite(localStorage.getItem('indicare_suite_view') || 'intelligence');
   });
 })();

@@ -1,3 +1,5 @@
+import { apiGet, apiSend } from "../young-people-shell/core/api.js";
+
 const REVIEW_QUEUE_URL = "/workspace-records/review/queue";
 const LIFECYCLE_STATE = {
   reviewsLoadedForMarkup: "",
@@ -47,9 +49,8 @@ function renderReviewQueueLoading(main) {
 
 async function loadReviewQueue(main) {
   try {
-    const response = await fetch(REVIEW_QUEUE_URL, { credentials: "include", headers: { Accept: "application/json" } });
-    const payload = await safeJson(response);
-    if (!response.ok || payload?.ok === false) throw new Error(payload?.error || payload?.detail || `Review queue failed (${response.status})`);
+    const payload = await apiGet(REVIEW_QUEUE_URL, { skipCache: true });
+    if (payload?.ok === false) throw new Error(payload?.error || payload?.detail || "Review queue failed");
     const records = arrayFrom(payload.records || payload.items || payload.data);
     LIFECYCLE_STATE.lastReviewRecords = records;
     renderReviewQueue(main, records, payload.summary || {});
@@ -106,14 +107,8 @@ async function runLifecycleAction(record, action, button) {
     : `/workspace-records/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}/review`;
   const body = action === "submit" ? { comment: "Submitted from IndiCare OS." } : { action, comment: `Actioned from IndiCare OS: ${action}` };
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json", Accept: "application/json", ...csrfHeaders("POST") },
-      body: JSON.stringify(body),
-    });
-    const payload = await safeJson(response);
-    if (!response.ok || payload?.ok === false) throw new Error(payload?.error || payload?.detail || `Lifecycle action failed (${response.status})`);
+    const payload = await apiSend(url, "POST", body, { invalidatePrefixes: [REVIEW_QUEUE_URL, "/workspace-records"] });
+    if (payload?.ok === false) throw new Error(payload?.error || payload?.detail || "Lifecycle action failed");
     button.textContent = "Done";
     window.dispatchEvent(new CustomEvent("indicare:refresh-live-os"));
     const main = document.getElementById("sp-main");
@@ -144,6 +139,4 @@ function metric(label, value, sub, tone = "blue") { return `<article class="yp-c
 function statusBadge(value) { const key = String(value || "").toLowerCase().replaceAll("_", "-").replaceAll(" ", "-"); return `<span class="sp-status ${escapeHtml(key)}">${escapeHtml(displayType(value || "draft"))}</span>`; }
 function arrayFrom(value) { if (Array.isArray(value)) return value; if (value && Array.isArray(value.items)) return value.items; if (value && Array.isArray(value.results)) return value.results; if (value && Array.isArray(value.data)) return value.data; return []; }
 function formatDate(value) { if (!value) return "Not set"; const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }); }
-async function safeJson(response) { try { return await response.json(); } catch { return null; } }
-function csrfHeaders(method) { const headers = {}; if (!["POST", "PUT", "PATCH", "DELETE"].includes(String(method || "GET").toUpperCase())) return headers; const match = document.cookie.match(/(?:^|;\s*)(?:__Host-indicare_csrf|indicare_csrf)=([^;]+)/); if (match) headers["X-CSRF-Token"] = decodeURIComponent(match[1]); return headers; }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char])); }
