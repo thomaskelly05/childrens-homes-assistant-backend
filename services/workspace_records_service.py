@@ -6,11 +6,22 @@ from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
 
+# Keep this aligned to the exported IndiCare schema. The service still works
+# schema-safely: it selects the first table that actually exists in the DB.
 RECORD_TABLES = {
-    "daily": ["daily_records", "daily_notes", "young_people_daily_notes"],
+    "daily": ["daily_notes", "daily_records", "young_people_daily_notes"],
     "incident": ["incidents", "incident_records", "young_people_incidents"],
-    "safeguarding": ["safeguarding_records", "safeguarding_concerns", "safeguarding"],
+    "safeguarding": ["safeguarding_records", "safeguarding_concerns", "safeguarding_flags", "safeguarding"],
     "missing": ["missing_episodes", "missing_from_care"],
+    "keywork": ["keywork_sessions"],
+    "direct_work": ["keywork_sessions", "direct_work_plan_sessions"],
+    "handover": ["handover_records"],
+    "handover_item": ["handover_items"],
+    "support_plan": ["support_plans", "behaviour_support_plans"],
+    "health": ["wellbeing_checks", "medication_records", "medication_profiles"],
+    "education": ["education_attendance_sessions", "pep_meetings"],
+    "family_contact": ["contact_arrangements", "communications_log", "young_person_contacts"],
+    "review_meeting": ["review_meetings"],
 }
 
 LIFECYCLE_STATUSES = {
@@ -23,13 +34,20 @@ LIFECYCLE_STATUSES = {
     "rejected",
 }
 
+STATUS_COLUMNS = ("status", "workflow_status", "manager_review_status", "approval_status")
+REVIEW_COMMENT_COLUMNS = ("manager_comment", "manager_review_comment", "review_comment", "notes")
+REVIEWED_BY_COLUMNS = ("reviewed_by", "approved_by", "returned_by")
+REVIEWED_AT_COLUMNS = ("reviewed_at", "approved_at", "returned_at")
+CREATED_BY_COLUMNS = ("created_by", "author_id", "worker_id", "staff_id", "generated_by")
+
 
 class WorkspaceRecordsService:
     """Schema-aware universal record lifecycle service.
 
-    This deliberately works with existing tables where possible rather than creating
-    duplicate record systems. It supports the IndiCare lifecycle:
-    draft -> AI improved -> submitted -> reviewed -> approved -> archived.
+    This deliberately works with the existing IndiCare schema where possible
+    rather than creating duplicate record systems. It supports lifecycle actions
+    across tables that expose either `status`, `workflow_status`,
+    `manager_review_status` or `approval_status`.
     """
 
     def list_records(self, *, record_type: str, current_user: dict[str, Any], young_person_id: int | None = None, include_archived: bool = False, limit: int = 20) -> dict[str, Any]:
@@ -42,7 +60,7 @@ class WorkspaceRecordsService:
             cols = self._columns(conn, table)
             select_cols = self._select_cols(cols)
             if not select_cols:
-                return {"ok": True, "record_type": record_type, "records": []}
+                return {"ok": True, "record_type": record_type, "table": table, "records": []}
             where = []
             params: list[Any] = []
             if young_person_id and "young_person_id" in cols:
@@ -52,11 +70,15 @@ class WorkspaceRecordsService:
             if home_id and "home_id" in cols:
                 where.append("home_id = %s")
                 params.append(home_id)
-            if not include_archived and "status" in cols:
-                where.append("COALESCE(status, '') <> 'archived'")
+            if not include_archived:
+                status_col = self._status_col(cols)
+                if status_col:
+                    where.append(f"COALESCE(\"{status_col}\", '') <> 'archived'")
+                if "archived" in cols:
+                    where.append("COALESCE(archived, false) = false")
             params.append(max(1, min(limit, 100)))
             where_sql = "WHERE " + " AND ".join(where) if where else ""
-            order_col = "updated_at" if "updated_at" in cols else "created_at" if "created_at" in cols else "id"
+            order_col = self._first_col(cols, ["updated_at", "last_edited_at", "created_at", "id"]) or "id"
             quoted_cols = ", ".join([f'"{c}"' for c in select_cols])
             query = f'SELECT {quoted_cols} FROM public."{table}" {where_sql} ORDER BY "{order_col}" DESC NULLS LAST LIMIT %s'
             with conn.cursor() as cur:
@@ -103,7 +125,7 @@ class WorkspaceRecordsService:
             result = self.list_records(record_type=record_type, current_user=current_user, include_archived=False, limit=limit)
             for record in result.get("records") or []:
                 status = str(record.get("status") or "").lower()
-                if "review" in status or status in {"draft", "submitted", "pending", "changes_requested", "ai_improved", ""}:
+                if "review" in status or status in {"draft", "submitted", "pending", "changes_requested", "ai_improved", "not_required", ""}:
                     all_records.append(record)
         all_records.sort(key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""), reverse=True)
         return {"ok": True, "records": all_records[:limit], "summary": {"total": len(all_records[:limit])}}
@@ -130,7 +152,7 @@ class WorkspaceRecordsService:
             conn.commit()
             record_id = row.get("id") if isinstance(row, dict) and row else row[0] if row else None
             self._log_action_safe(record_type, record_id, "created", payload.get("manager_comment") or payload.get("comment"), current_user)
-            return {"ok": True, "record_type": record_type, "table": table, "id": record_id, "status": values.get("status")}
+            return {"ok": True, "record_type": record_type, "table": table, "id": record_id, "status": values.get(self._status_col(cols) or "status")}
         except Exception as exc:
             if conn is not None:
                 conn.rollback()
@@ -159,7 +181,7 @@ class WorkspaceRecordsService:
             self._apply_updates(conn, table, record_id, updates)
             self._insert_review_log(conn, record_type, record_id, "edited", payload.get("comment"), current_user)
             conn.commit()
-            return {"ok": True, "record_type": record_type, "id": record_id, "status": updates.get("status") or existing.get("status")}
+            return {"ok": True, "record_type": record_type, "id": record_id, "status": updates.get(self._status_col(cols) or "status") or existing.get(self._status_col(cols) or "status")}
         except Exception as exc:
             if conn is not None:
                 conn.rollback()
@@ -205,16 +227,21 @@ class WorkspaceRecordsService:
                 return {"ok": False, "error": "Record not found."}
             self._insert_version(conn, table, record_type, record_id, existing, f"before_{action_status}", current_user)
             updates: dict[str, Any] = {}
-            if "status" in cols:
-                updates["status"] = action_status
-            if "manager_comment" in cols:
-                updates["manager_comment"] = comment
-            elif "notes" in cols and comment:
-                updates["notes"] = comment
-            if "reviewed_by" in cols and action_status in {"approved", "changes_requested", "rejected", "archived"}:
-                updates["reviewed_by"] = self._current_user_id(current_user)
-            if "reviewed_at" in cols and action_status in {"approved", "changes_requested", "rejected", "archived"}:
-                updates["reviewed_at"] = "NOW()"
+            status_col = self._status_col(cols)
+            if status_col:
+                updates[status_col] = action_status
+            if action_status == "archived" and "archived" in cols:
+                updates["archived"] = True
+            comment_col = self._first_col(cols, REVIEW_COMMENT_COLUMNS)
+            if comment_col and comment:
+                updates[comment_col] = comment
+            if action_status in {"approved", "changes_requested", "rejected", "archived"}:
+                by_col = self._first_col(cols, REVIEWED_BY_COLUMNS)
+                at_col = self._first_col(cols, REVIEWED_AT_COLUMNS)
+                if by_col:
+                    updates[by_col] = self._current_user_id(current_user)
+                if at_col:
+                    updates[at_col] = "NOW()"
             if "updated_at" in cols:
                 updates["updated_at"] = "NOW()"
             if not updates:
@@ -235,7 +262,7 @@ class WorkspaceRecordsService:
         conn = None
         try:
             conn = get_db_connection()
-            table = self._first_existing_table(conn, ["record_versions", "record_version_history", "audit_log", "manager_review_log"])
+            table = self._first_existing_table(conn, ["record_versions", "record_version_history", "daily_notes_versions", "manager_review_log", "record_workflow_events", "audit_log"])
             if not table:
                 return {"ok": True, "record_type": record_type, "record_id": record_id, "versions": []}
             cols = self._columns(conn, table)
@@ -247,6 +274,9 @@ class WorkspaceRecordsService:
                 params.append(record_type)
             if "record_id" in cols:
                 where.append("record_id = %s")
+                params.append(record_id)
+            elif "daily_note_id" in cols and record_type == "daily":
+                where.append("daily_note_id = %s")
                 params.append(record_id)
             if not where:
                 return {"ok": True, "record_type": record_type, "record_id": record_id, "versions": []}
@@ -263,22 +293,67 @@ class WorkspaceRecordsService:
                 release_db_connection(conn)
 
     def _select_cols(self, cols: set[str]) -> list[str]:
-        return [c for c in ["id", "title", "summary", "content", "body", "notes", "mood", "incident_type", "status", "created_at", "updated_at", "young_person_id", "home_id", "created_by", "reviewed_by", "reviewed_at", "manager_comment"] if c in cols]
+        preferred = [
+            "id", "title", "summary", "summary_text", "content", "body", "notes", "description", "mood", "presentation",
+            "activities", "education_update", "health_update", "family_update", "behaviour_update", "young_person_voice",
+            "child_voice", "staff_response", "child_response", "outcome", "actions_taken", "actions_required", "topic",
+            "purpose", "reflective_analysis", "actions_agreed", "incident_type", "severity", "significance", "priority",
+            "status", "workflow_status", "manager_review_status", "approval_status", "archived", "created_at", "updated_at",
+            "last_edited_at", "submitted_at", "reviewed_at", "approved_at", "returned_at", "young_person_id", "home_id",
+            "provider_id", "created_by", "author_id", "worker_id", "staff_id", "generated_by", "reviewed_by", "approved_by",
+            "manager_comment", "manager_review_comment", "review_comment", "review_reason", "handover_date", "session_date",
+            "incident_datetime", "start_datetime", "return_datetime", "review_date", "due_date", "meeting_date",
+        ]
+        return [c for c in preferred if c in cols]
 
     def _values_for_insert(self, record_type: str, payload: dict[str, Any], current_user: dict[str, Any], cols: set[str]) -> dict[str, Any]:
-        status = payload.get("status") or "submitted_for_review"
+        status = payload.get("status") or payload.get("workflow_status") or "draft"
+        content = payload.get("content") if isinstance(payload.get("content"), dict) else payload
         base = {
             "title": payload.get("title") or self._title_for(record_type, payload),
-            "summary": payload.get("summary") or payload.get("what_happened") or payload.get("description"),
-            "content": payload,
-            "body": payload.get("what_happened") or payload.get("description") or payload.get("notes"),
+            "topic": payload.get("topic") or payload.get("title") or self._title_for(record_type, payload),
+            "summary": payload.get("summary") or payload.get("what_happened") or payload.get("description") or payload.get("notes"),
+            "summary_text": payload.get("summary_text") or payload.get("summary") or payload.get("notes"),
+            "description": payload.get("description") or payload.get("what_happened") or payload.get("summary"),
+            "content": content,
+            "body": payload.get("what_happened") or payload.get("description") or payload.get("notes") or payload.get("summary"),
             "notes": payload.get("notes") or payload.get("staff_response"),
             "mood": payload.get("mood"),
+            "presentation": payload.get("presentation"),
+            "activities": payload.get("activities"),
+            "education_update": payload.get("education_update"),
+            "health_update": payload.get("health_update"),
+            "family_update": payload.get("family_update"),
+            "behaviour_update": payload.get("behaviour_update"),
+            "young_person_voice": payload.get("young_person_voice") or payload.get("child_voice"),
+            "child_voice": payload.get("child_voice") or payload.get("young_person_voice"),
+            "staff_response": payload.get("staff_response") or payload.get("adult_response"),
+            "outcome": payload.get("outcome"),
+            "actions_taken": payload.get("actions_taken"),
+            "actions_required": payload.get("actions_required") or payload.get("actions_taken"),
+            "purpose": payload.get("purpose"),
+            "reflective_analysis": payload.get("reflective_analysis") or payload.get("observations"),
+            "actions_agreed": payload.get("actions_agreed") or payload.get("actions_taken"),
             "incident_type": payload.get("incident_type") or payload.get("type"),
+            "severity": payload.get("severity"),
+            "significance": payload.get("significance"),
+            "priority": payload.get("priority"),
             "status": status,
+            "workflow_status": status,
+            "manager_review_status": payload.get("manager_review_status") or status,
+            "approval_status": payload.get("approval_status") or status,
             "young_person_id": self._safe_int(payload.get("young_person_id")),
             "home_id": self._safe_int(payload.get("home_id")) or self._current_home_id(current_user),
+            "provider_id": self._current_provider_id(current_user),
             "created_by": self._current_user_id(current_user),
+            "author_id": self._current_user_id(current_user),
+            "worker_id": self._current_user_id(current_user),
+            "staff_id": self._current_user_id(current_user),
+            "generated_by": self._current_user_id(current_user),
+            "note_date": payload.get("note_date") or "CURRENT_DATE",
+            "session_date": payload.get("session_date") or "CURRENT_DATE",
+            "handover_date": payload.get("handover_date") or "CURRENT_DATE",
+            "shift_type": payload.get("shift_type") or "day",
             "created_at": "NOW()",
             "updated_at": "NOW()",
         }
@@ -286,16 +361,38 @@ class WorkspaceRecordsService:
 
     def _values_for_update(self, payload: dict[str, Any], cols: set[str]) -> dict[str, Any]:
         content = payload.get("content") if isinstance(payload.get("content"), dict) else {k: v for k, v in payload.items() if k not in {"comment", "manager_comment"}}
+        status = payload.get("status") or payload.get("workflow_status")
         base = {
             "title": payload.get("title"),
+            "topic": payload.get("topic") or payload.get("title"),
             "summary": payload.get("summary") or payload.get("what_happened") or payload.get("description"),
+            "summary_text": payload.get("summary_text") or payload.get("summary") or payload.get("notes"),
+            "description": payload.get("description") or payload.get("what_happened") or payload.get("summary"),
             "content": content,
             "body": payload.get("what_happened") or payload.get("description") or payload.get("notes"),
             "notes": payload.get("notes") or payload.get("staff_response"),
-            "mood": payload.get("mood"),
+            "presentation": payload.get("presentation"),
+            "activities": payload.get("activities"),
+            "education_update": payload.get("education_update"),
+            "health_update": payload.get("health_update"),
+            "family_update": payload.get("family_update"),
+            "behaviour_update": payload.get("behaviour_update"),
+            "young_person_voice": payload.get("young_person_voice") or payload.get("child_voice"),
+            "child_voice": payload.get("child_voice") or payload.get("young_person_voice"),
+            "staff_response": payload.get("staff_response") or payload.get("adult_response"),
+            "outcome": payload.get("outcome"),
+            "actions_taken": payload.get("actions_taken"),
+            "actions_required": payload.get("actions_required") or payload.get("actions_taken"),
+            "reflective_analysis": payload.get("reflective_analysis") or payload.get("observations"),
+            "actions_agreed": payload.get("actions_agreed") or payload.get("actions_taken"),
             "incident_type": payload.get("incident_type") or payload.get("type"),
-            "status": payload.get("status"),
+            "status": status,
+            "workflow_status": status,
+            "manager_review_status": payload.get("manager_review_status") or status,
+            "approval_status": payload.get("approval_status") or status,
             "manager_comment": payload.get("manager_comment") or payload.get("comment"),
+            "manager_review_comment": payload.get("manager_review_comment") or payload.get("manager_comment") or payload.get("comment"),
+            "review_comment": payload.get("review_comment") or payload.get("manager_comment") or payload.get("comment"),
         }
         return {key: value for key, value in base.items() if key in cols and value is not None}
 
@@ -306,22 +403,29 @@ class WorkspaceRecordsService:
                 content = json.loads(content)
             except Exception:
                 content = {"text": content}
+        if not isinstance(content, dict):
+            content = {}
+        status_col = self._status_col(set(row.keys()))
         return {
             "id": row.get("id"),
             "record_type": record_type,
-            "title": row.get("title") or row.get("incident_type") or self._title_for(record_type, row),
-            "summary": row.get("summary") or row.get("body") or row.get("notes") or (content.get("what_happened") if isinstance(content, dict) else None),
-            "status": row.get("status"),
+            "title": row.get("title") or row.get("topic") or row.get("incident_type") or self._title_for(record_type, row),
+            "summary": row.get("summary") or row.get("summary_text") or row.get("body") or row.get("description") or row.get("notes") or row.get("actions_taken") or row.get("purpose") or row.get("reflective_analysis") or (content.get("what_happened") if isinstance(content, dict) else None),
+            "status": row.get(status_col) if status_col else row.get("status"),
+            "workflow_status": row.get("workflow_status"),
             "mood": row.get("mood"),
+            "severity": row.get("severity") or row.get("significance") or row.get("priority"),
             "young_person_id": row.get("young_person_id"),
             "home_id": row.get("home_id"),
-            "created_by": row.get("created_by"),
-            "reviewed_by": row.get("reviewed_by"),
-            "reviewed_at": row.get("reviewed_at"),
-            "manager_comment": row.get("manager_comment"),
+            "provider_id": row.get("provider_id"),
+            "created_by": row.get("created_by") or row.get("author_id") or row.get("worker_id") or row.get("staff_id") or row.get("generated_by"),
+            "reviewed_by": row.get("reviewed_by") or row.get("approved_by"),
+            "reviewed_at": row.get("reviewed_at") or row.get("approved_at"),
+            "manager_comment": row.get("manager_comment") or row.get("manager_review_comment") or row.get("review_comment"),
             "created_at": row.get("created_at"),
-            "updated_at": row.get("updated_at"),
-            "content": content,
+            "updated_at": row.get("updated_at") or row.get("last_edited_at"),
+            "occurred_at": row.get("incident_datetime") or row.get("start_datetime") or row.get("session_date") or row.get("handover_date") or row.get("meeting_date"),
+            "content": content or {k: v for k, v in row.items() if k not in {"id", "created_at", "updated_at"}},
         }
 
     def _improve_content(self, content: dict[str, Any]) -> dict[str, Any]:
@@ -359,11 +463,11 @@ class WorkspaceRecordsService:
         set_sql = []
         params = []
         for key, value in updates.items():
-            if value == "NOW()":
-                set_sql.append(f'"{key}" = NOW()')
+            if value in {"NOW()", "CURRENT_DATE"}:
+                set_sql.append(f'"{key}" = {value}')
             elif isinstance(value, (dict, list)):
                 set_sql.append(f'"{key}" = %s::jsonb')
-                params.append(json.dumps(value))
+                params.append(json.dumps(value, default=str))
             else:
                 set_sql.append(f'"{key}" = %s')
                 params.append(value)
@@ -372,13 +476,14 @@ class WorkspaceRecordsService:
             cur.execute(f'UPDATE public."{table}" SET {", ".join(set_sql)} WHERE id = %s', tuple(params))
 
     def _insert_version(self, conn: Any, source_table: str, record_type: str, record_id: int, record_snapshot: dict[str, Any], reason: str, current_user: dict[str, Any]) -> None:
-        table = self._first_existing_table(conn, ["record_versions", "record_version_history"])
+        table = self._first_existing_table(conn, ["record_versions", "record_version_history", "daily_notes_versions"])
         if not table:
             return
         cols = self._columns(conn, table)
         payload = {
             "record_type": record_type,
             "record_id": record_id,
+            "daily_note_id": record_id if record_type == "daily" else None,
             "source_table": source_table,
             "snapshot": record_snapshot,
             "content": record_snapshot,
@@ -396,19 +501,23 @@ class WorkspaceRecordsService:
             cur.execute(f'INSERT INTO public."{table}" ({col_sql}) VALUES ({", ".join(placeholders)})', tuple(params))
 
     def _insert_review_log(self, conn: Any, record_type: str, record_id: int, action: str, comment: str | None, current_user: dict[str, Any]) -> None:
-        table = self._first_existing_table(conn, ["manager_review_log", "record_review_log", "audit_log", "leadership_oversight_log"])
+        table = self._first_existing_table(conn, ["manager_review_log", "record_review_log", "record_workflow_events", "audit_log", "leadership_oversight_log"])
         if not table:
             return
         cols = self._columns(conn, table)
         payload = {
             "record_type": record_type,
             "record_id": record_id,
+            "source_id": record_id,
             "action": action,
             "status": action,
+            "workflow_status": action,
             "comment": comment,
             "notes": comment,
             "user_id": self._current_user_id(current_user),
+            "created_by": self._current_user_id(current_user),
             "home_id": self._current_home_id(current_user),
+            "provider_id": self._current_provider_id(current_user),
             "metadata": {"source": "workspace_records_service"},
             "created_at": "NOW()",
         }
@@ -439,8 +548,8 @@ class WorkspaceRecordsService:
         placeholders: list[str] = []
         params: list[Any] = []
         for value in values:
-            if value == "NOW()":
-                placeholders.append("NOW()")
+            if value in {"NOW()", "CURRENT_DATE"}:
+                placeholders.append(value)
             elif isinstance(value, (dict, list)):
                 placeholders.append("%s::jsonb")
                 params.append(json.dumps(value, default=str))
@@ -482,8 +591,31 @@ class WorkspaceRecordsService:
             cur.execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s", (table,))
             return {str(row["column_name"] if isinstance(row, dict) else row[0]) for row in cur.fetchall()}
 
+    def _status_col(self, cols: set[str]) -> str | None:
+        return self._first_col(cols, STATUS_COLUMNS)
+
+    def _first_col(self, cols: set[str], names: Any) -> str | None:
+        for name in names:
+            if name in cols:
+                return name
+        return None
+
     def _title_for(self, record_type: str, payload: dict[str, Any]) -> str:
-        labels = {"daily": "Daily record", "incident": "Incident record", "safeguarding": "Safeguarding concern", "missing": "Missing episode"}
+        labels = {
+            "daily": "Daily record",
+            "incident": "Incident record",
+            "safeguarding": "Safeguarding concern",
+            "missing": "Missing episode",
+            "keywork": "Keywork session",
+            "direct_work": "Direct work session",
+            "handover": "Shift handover",
+            "handover_item": "Handover item",
+            "support_plan": "Support plan",
+            "health": "Health record",
+            "education": "Education record",
+            "family_contact": "Family contact",
+            "review_meeting": "Review meeting",
+        }
         return labels.get(record_type, "Care record")
 
     def _safe_int(self, value: Any) -> int | None:
@@ -495,6 +627,9 @@ class WorkspaceRecordsService:
 
     def _current_home_id(self, current_user: dict[str, Any]) -> int | None:
         return self._safe_int(current_user.get("home_id") or current_user.get("selected_home_id") or current_user.get("default_home_id"))
+
+    def _current_provider_id(self, current_user: dict[str, Any]) -> int | None:
+        return self._safe_int(current_user.get("provider_id") or current_user.get("organisation_id") or current_user.get("org_id"))
 
     def _current_user_id(self, current_user: dict[str, Any]) -> int | None:
         return self._safe_int(current_user.get("id") or current_user.get("user_id") or current_user.get("sub"))
