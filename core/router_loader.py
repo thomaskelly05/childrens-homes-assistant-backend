@@ -106,6 +106,7 @@ routers.staff_today_routes
 routers.workspace_routes
 routers.workspace_review_routes
 routers.workspace_ofsted_evidence_routes
+backend.os_runtime_compat_router
 backend.os_command_router
 backend.os_command_shift_router
 backend.os_command_risk_router
