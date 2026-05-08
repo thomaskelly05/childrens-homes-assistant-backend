@@ -24,8 +24,6 @@ const WORKSPACE_RECORD_TYPE_MAP = Object.freeze({
   safeguarding: "safeguarding",
   missing_episode: "missing",
   missing: "missing",
-  keywork: "keywork",
-  direct_work: "keywork",
 });
 
 const ROUTER_STATE = {
@@ -44,7 +42,7 @@ function bootRecordRouter() {
     if (event.detail) openRecord(event.detail);
   });
   document.addEventListener("click", handleRouterClicks, true);
-  window.IndiCareOSRecordRouter = { openRecord, resolveRecord, hydrateRecord };
+  window.IndiCareOSRecordRouter = { openRecord, resolveRecord, hydrateRecord, toWorkspaceType };
 }
 
 async function handleRouterClicks(event) {
@@ -110,6 +108,7 @@ async function openRecord(record) {
   const title = fullRecord.title || fullRecord.summary || fullRecord.name || "IndiCare document";
   const type = fullRecord.record_type || fullRecord.type || record.record_type || record.type || "record";
   const status = fullRecord.status || fullRecord.review_status || "recorded";
+  const lifecycleAvailable = Boolean(workspaceType && id && hydrated.workspaceBacked !== false);
 
   main.innerHTML = `
     <section class="record-view-hero indicare-doc-hero">
@@ -120,7 +119,7 @@ async function openRecord(record) {
         <p>${escapeHtml(child ? childName(child) : fullRecord.child_name || fullRecord.young_person_name || "Young person not linked")} · ${escapeHtml(displayType(type))} · ${statusBadge(status)}</p>
       </div>
       <div class="record-view-actions">
-        ${workspaceType && id ? `<button class="sp-secondary" data-router-doc-action="submit" data-doc-type="${escapeHtml(workspaceType)}" data-doc-id="${escapeHtml(id)}" type="button">Submit</button><button class="sp-secondary" data-router-doc-action="request_changes" data-doc-type="${escapeHtml(workspaceType)}" data-doc-id="${escapeHtml(id)}" type="button">Request changes</button><button class="sp-primary" data-router-doc-action="approve" data-doc-type="${escapeHtml(workspaceType)}" data-doc-id="${escapeHtml(id)}" type="button">Approve</button>` : `<button class="sp-secondary" disabled type="button">Lifecycle unavailable</button>`}
+        ${lifecycleAvailable ? `<button class="sp-secondary" data-router-doc-action="submit" data-doc-type="${escapeHtml(workspaceType)}" data-doc-id="${escapeHtml(id)}" type="button">Submit</button><button class="sp-secondary" data-router-doc-action="request_changes" data-doc-type="${escapeHtml(workspaceType)}" data-doc-id="${escapeHtml(id)}" type="button">Request changes</button><button class="sp-primary" data-router-doc-action="approve" data-doc-type="${escapeHtml(workspaceType)}" data-doc-id="${escapeHtml(id)}" type="button">Approve</button>` : `<button class="sp-secondary" disabled type="button">Lifecycle unavailable for this record type</button>`}
       </div>
     </section>
     <section class="record-view-grid">
@@ -150,7 +149,7 @@ async function hydrateRecord(record) {
   const workspaceType = toWorkspaceType(record.record_type || record.type);
   const id = recordKey(record);
   if (!workspaceType || !id) {
-    return { record, sourceLabel: "live context", message: "Opened from live OS context because no workspace-records type/id mapping was available." };
+    return { record, sourceLabel: "live context", workspaceBacked: false, message: "Opened from live OS context because this record type is not currently backed by /workspace-records." };
   }
   try {
     const data = await apiGet(`/workspace-records/${encodeURIComponent(workspaceType)}/${encodeURIComponent(id)}`, { skipCache: true });
@@ -159,10 +158,11 @@ async function hydrateRecord(record) {
     return {
       record: { ...record, ...fullRecord, record_type: fullRecord.record_type || record.record_type || workspaceType, type: fullRecord.type || fullRecord.record_type || record.type || workspaceType },
       sourceLabel: "workspace-records",
+      workspaceBacked: true,
       message: "Document hydrated through the existing workspace-records lifecycle service.",
     };
   } catch (error) {
-    return { record, sourceLabel: "live context fallback", message: `Could not hydrate through workspace-records: ${error?.message || "unknown error"}. Showing live OS context fields instead.` };
+    return { record, sourceLabel: "live context fallback", workspaceBacked: false, message: `Could not hydrate through workspace-records: ${error?.message || "unknown error"}. Showing live OS context fields instead.` };
   }
 }
 
@@ -180,6 +180,10 @@ async function runWorkflowAction(button) {
   const action = button.dataset.routerDocAction;
   const type = button.dataset.docType;
   const id = button.dataset.docId;
+  if (!toWorkspaceType(type)) {
+    alert("This record type is not currently supported by the workspace lifecycle backend.");
+    return;
+  }
   const comment = action === "request_changes" ? prompt("What changes are needed?") : "Actioned from IndiCare OS.";
   if (action === "request_changes" && comment === null) return;
   const oldText = button.textContent;
