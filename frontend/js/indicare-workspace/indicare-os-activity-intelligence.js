@@ -16,17 +16,30 @@ const ACTIVITY_STATE = {
   renderedSignature: "",
   openableItems: [],
   recentItems: [],
+  renderQueued: false,
 };
 
 bootActivityIntelligence();
 
 function bootActivityIntelligence() {
   document.addEventListener("click", handleActivityClicks, true);
-  window.addEventListener("indicare:os-context-ready", () => enhanceDashboardActivity({ force: true }));
-  window.addEventListener("indicare:refresh-live-os", () => enhanceDashboardActivity({ force: true }));
-  const observer = new MutationObserver(() => enhanceDashboardActivity());
-  observer.observe(document.body, { childList: true, subtree: true });
-  enhanceDashboardActivity();
+  window.addEventListener("indicare:os-context-ready", () => scheduleEnhance({ force: true }));
+  window.addEventListener("indicare:refresh-live-os", () => scheduleEnhance({ force: true }));
+  document.addEventListener("click", (event) => {
+    if (event.target.closest?.("[data-sp-view], [data-launch-session], [data-reset-session]")) {
+      scheduleEnhance({ force: true });
+    }
+  }, true);
+  scheduleEnhance({ force: true });
+}
+
+function scheduleEnhance(options = {}) {
+  if (ACTIVITY_STATE.renderQueued) return;
+  ACTIVITY_STATE.renderQueued = true;
+  window.requestAnimationFrame(() => {
+    ACTIVITY_STATE.renderQueued = false;
+    enhanceDashboardActivity(options);
+  });
 }
 
 function enhanceDashboardActivity({ force = false } = {}) {
@@ -201,34 +214,10 @@ function highPriorityRecord(record, status = "", kind = "") {
   return isHighPriority(record) || /high|critical|red|urgent|overdue|changes_requested|returned|submitted_for_review|pending/i.test(`${status} ${kind} ${record.severity || ""} ${record.risk_level || ""} ${record.priority || ""}`);
 }
 
-function newestFirst(a, b) {
-  return Date.parse(b.when || 0) - Date.parse(a.when || 0);
-}
+function newestFirst(a, b) { return Date.parse(b.when || 0) - Date.parse(a.when || 0); }
+function dedupe(items) { const seen = new Set(); return items.filter((item) => { const record = item.record || item; const key = `${recordType(record)}:${recordKey(record)}:${item.title || item.body || record.title || record.summary}`; if (seen.has(key)) return false; seen.add(key); return true; }); }
+function initials(value) { return String(value || "YP").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "YP"; }
+function cssEscape(value) { return String(value || "").replace(/[^a-zA-Z0-9_-]/g, "\\$&"); }
+function emptyState(message) { return `<div class="sp-empty-state"><strong>No live data yet</strong><p>${escapeHtml(message)}</p></div>`; }
 
-function dedupe(items) {
-  const seen = new Set();
-  return items.filter((item) => {
-    const record = item.record || item;
-    const key = `${recordType(record)}:${recordKey(record)}:${item.title || item.body || record.title || record.summary}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function initials(value) {
-  return String(value || "YP").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "YP";
-}
-
-function cssEscape(value) {
-  return String(value || "").replace(/[^a-zA-Z0-9_-]/g, "\\$&");
-}
-
-function emptyState(message) {
-  return `<div class="sp-empty-state"><strong>No live data yet</strong><p>${escapeHtml(message)}</p></div>`;
-}
-
-window.IndiCareOSActivityIntelligence = {
-  refresh: () => enhanceDashboardActivity({ force: true }),
-  getRecent: () => ACTIVITY_STATE.recentItems,
-};
+window.IndiCareOSActivityIntelligence = { refresh: () => enhanceDashboardActivity({ force: true }), getRecent: () => ACTIVITY_STATE.recentItems };
