@@ -9,9 +9,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
+CSS_DIR = os.path.join(FRONTEND_DIR, "css")
 CARE_OS_PATH = "/os-command"
 WORKSPACE_FILE = "indicare-workspace.html"
-COMMAND_SHELL_FILE = "os-command.html"
+COMMAND_SHELL_FILE = "os-command-runtime.html"
+LEGACY_COMMAND_SHELL_FILE = "os-command.html"
 LEGACY_CARE_OS_PATHS = {
     "/young-people-shell",
     "/young-people-shell.html",
@@ -59,7 +61,11 @@ def workspace() -> list[str]:
 
 
 def command_shell() -> list[str]:
-    return frontend(COMMAND_SHELL_FILE)
+    # Prefer the new stable runtime shell. Keep the old shell as a safe fallback.
+    return [
+        os.path.join(FRONTEND_DIR, COMMAND_SHELL_FILE),
+        os.path.join(FRONTEND_DIR, LEGACY_COMMAND_SHELL_FILE),
+    ]
 
 
 def component(file_name: str) -> list[str]:
@@ -87,7 +93,7 @@ def get_page_routes() -> dict[str, list[str]]:
         "/security-centre": frontend("security-centre.html"),
         "/security-centre.html": frontend("security-centre.html"),
 
-        # Primary blue-and-white SharePoint-style operating shell.
+        # Primary full-height IndiCare OS runtime shell.
         "/os-command": command_shell(),
         "/os-command.html": command_shell(),
 
@@ -175,6 +181,10 @@ def register_frontend_routes(app: FastAPI) -> None:
         if route_path in LEGACY_CARE_OS_PATHS:
             continue
         register_file_route(app, route_path, paths, "page")
+
+    @app.get("/css/indicare-os-design-system.css")
+    def indicare_os_design_system_css():
+        return FileResponse(os.path.join(CSS_DIR, "indicare-os-design-system.css"))
 
     @app.get("/ai-notes.css")
     def ai_notes_css():
