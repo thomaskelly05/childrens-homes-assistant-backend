@@ -5,40 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare AI</title>
   <meta name="theme-color" content="#ffffff" />
-  <link rel="stylesheet" href="/css/assistant-design-system.css" />
-  <link rel="stylesheet" href="/css/assistant-cockpit.css" />
-  <link rel="stylesheet" href="/css/assistant-professional-renderer.css" />
-  <link rel="stylesheet" href="/css/indicare-suite.css" />
-  <link rel="stylesheet" href="/css/indicare-clean-assistant.css" />
+  <link rel="stylesheet" href="/css/assistant-shell-only.css" />
 </head>
 <body>
   <div class="ic-cockpit ic-standalone-assistant" id="icCockpit" data-assistant-surface="standalone">
     <aside class="ic-sidebar" aria-label="IndiCare AI navigation">
       <div class="ic-brand">
         <div class="ic-logo">AI</div>
+        <div class="ic-brand-copy">
+          <strong>IndiCare AI</strong>
+          <span>Residential children’s home assistant</span>
+        </div>
       </div>
 
-      <div class="ic-suite-switcher" aria-label="IndiCare AI workspaces">
-        <button class="active" type="button" data-suite-view="intelligence" aria-label="Assistant" title="Assistant">AI</button>
-        <button type="button" data-suite-view="notes" aria-label="Notes" title="Notes">N</button>
-        <button type="button" data-suite-view="docs" aria-label="DOCS" title="DOCS">D</button>
-      </div>
+      <div class="ic-sidebar-scroll">
+        <div class="ic-sidebar-section">
+          <button id="newChat" class="ic-btn-primary" type="button" aria-label="New conversation" title="New conversation">New conversation</button>
+        </div>
 
-      <div class="ic-sidebar-actions">
-        <button id="newChat" class="ic-btn-primary" type="button" aria-label="New chat" title="New chat">+</button>
+        <div class="ic-sidebar-section">
+          <div class="ic-sidebar-label">Apps</div>
+          <div class="ic-suite-switcher" aria-label="IndiCare AI apps">
+            <button class="active" type="button" data-suite-view="intelligence" aria-label="IndiCare AI" title="IndiCare AI">
+              <span class="ic-nav-dot"></span><span>IndiCare AI</span>
+            </button>
+            <button type="button" data-suite-view="notes" aria-label="I-Notes" title="I-Notes">
+              <span class="ic-nav-dot notes"></span><span>I-Notes</span>
+            </button>
+            <button type="button" data-suite-view="docs" aria-label="IndiCare Docs" title="IndiCare Docs">
+              <span class="ic-nav-dot docs"></span><span>IndiCare Docs</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="ic-sidebar-section">
+          <div class="ic-sidebar-label">Projects</div>
+          <div class="ic-project-row">
+            <select id="workspaceSelect" aria-label="Project"></select>
+            <button id="newWorkspace" type="button" title="New project" aria-label="New project">+</button>
+          </div>
+        </div>
+
+        <div class="ic-sidebar-section">
+          <div class="ic-sidebar-label">Conversations</div>
+          <div id="history" class="history"></div>
+        </div>
       </div>
 
       <div class="ic-sidebar-footer">
         <button id="openSettings" class="ic-settings-trigger" type="button" aria-label="Settings" title="Settings">
           <span id="icUserAvatarSidebar" class="ic-sidebar-avatar">AI</span>
+          <span>
+            <strong id="icUserNameSidebar">IndiCare AI</strong>
+            <small id="icUserRoleSidebar">Children’s home assistant</small>
+          </span>
         </button>
       </div>
     </aside>
 
     <main class="ic-main">
       <header class="ic-top">
-        <div></div>
+        <div class="ic-top-title">
+          <strong id="workspaceTitle">IndiCare AI</strong>
+          <span id="currentModeLabel">Residential children’s home AI assistant</span>
+        </div>
         <div class="ic-top-actions">
+          <button class="ic-nav-btn active" type="button" data-mode="ofsted">Ofsted</button>
+          <button class="ic-nav-btn" type="button" data-mode="safeguarding">Safeguarding</button>
+          <button class="ic-nav-btn" type="button" data-mode="records">Recording</button>
+          <button class="ic-nav-btn" type="button" data-mode="practice">Practice</button>
           <div class="ic-user">
             <div id="icUserAvatar" class="ic-avatar">AI</div>
             <div><strong id="icUserName">Assistant user</strong></div>
@@ -49,25 +84,123 @@
       <section id="assistantPanel" class="ic-content panel panel-assistant">
         <div id="empty" class="ic-empty-state" data-suite-panel="intelligence">
           <div class="ic-empty-mark">AI</div>
-          <h2>Welcome to IndiCare AI</h2>
-          <p id="workspaceDescription">Residential care intelligence, recording support and operational assistance in one calm workspace.</p>
+          <h2>How can IndiCare AI help?</h2>
+          <p id="workspaceDescription">A residential children’s home AI assistant for recording, safeguarding, Ofsted preparation, practice guidance, policy work and professional documents.</p>
 
           <div class="ic-quick-starts">
-            <button type="button" data-command="Create a professional incident record with chronology."><strong>Incident record</strong></button>
-            <button type="button" data-command="Improve this recording using professional and trauma-informed language."><strong>Improve recording</strong></button>
-            <button type="button" data-command="Extract a chronology from these notes or documents."><strong>Extract chronology</strong></button>
-            <button type="button" data-command="Review safeguarding concerns and highlight key actions."><strong>Review safeguarding</strong></button>
+            <button type="button" data-command="Create a professional incident record with chronology.">
+              <strong>Incident record</strong><span>Turn rough notes into a factual, child-centred record.</span>
+            </button>
+            <button type="button" data-command="Improve this recording using professional and trauma-informed language.">
+              <strong>Improve recording</strong><span>Strengthen wording, evidence, chronology and tone.</span>
+            </button>
+            <button type="button" data-command="Extract a chronology from these notes or documents.">
+              <strong>Extract chronology</strong><span>Pull dates, events, risks, actions and gaps together.</span>
+            </button>
+            <button type="button" data-command="Review safeguarding concerns and highlight key actions.">
+              <strong>Review safeguarding</strong><span>Identify concerns, missing information and review actions.</span>
+            </button>
           </div>
         </div>
 
         <div id="messages" class="messages hidden" data-suite-panel="intelligence"></div>
+
+        <section class="ic-suite-page hidden" data-suite-panel="docs" aria-label="IndiCare Docs">
+          <div class="ic-suite-header">
+            <h1>IndiCare Docs</h1>
+            <p>Create, improve and quality-check residential children’s home documents with shared project memory.</p>
+          </div>
+          <div class="ic-suite-grid">
+            <aside class="ic-card">
+              <h2>Templates</h2>
+              <p>Start from a structured residential care document.</p>
+              <div class="ic-template-list">
+                <button type="button" data-doc-template="incident">Incident Record</button>
+                <button type="button" data-doc-template="missing">Missing-from-Care Review</button>
+                <button type="button" data-doc-template="safeguarding">Safeguarding Review</button>
+                <button type="button" data-doc-template="chronology">Chronology</button>
+                <button type="button" data-doc-template="ofsted">Ofsted Evidence</button>
+                <button type="button" data-doc-template="reg45">Regulation 45</button>
+                <button type="button" data-doc-template="supervision">Supervision Reflection</button>
+              </div>
+              <hr />
+              <h3>Project memory</h3>
+              <p id="memoryProjectSummary">Project memory will appear here as you chat, write DOCS and capture Notes.</p>
+            </aside>
+            <div class="ic-card">
+              <div class="ic-doc-toolbar">
+                <button type="button" data-doc-command="improve">Improve</button>
+                <button type="button" data-doc-command="factual">Make factual</button>
+                <button type="button" data-doc-command="childVoice">Child voice</button>
+                <button type="button" data-doc-command="safeguarding">Safeguarding review</button>
+                <button type="button" data-doc-command="chronology">Extract chronology</button>
+              </div>
+              <div id="indicareDocEditor" class="ic-doc-editor" contenteditable="true" role="textbox" aria-label="IndiCare Docs editor">
+                <h1>Untitled document</h1>
+                <p>Start writing, paste notes, or choose a template. Select any text to use inline AI actions.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ic-suite-page hidden" data-suite-panel="notes" aria-label="I-Notes">
+          <div class="ic-suite-header">
+            <h1>I-Notes</h1>
+            <p>Capture voice or typed notes and turn them into professional residential care records, handovers, chronologies and safeguarding reviews.</p>
+          </div>
+          <div class="ic-suite-grid">
+            <aside class="ic-card">
+              <h2>Transform notes</h2>
+              <p>Send the transcript to IndiCare AI using a care-specific structure.</p>
+              <div class="ic-transform-list">
+                <button type="button" data-note-transform="incident">Incident record</button>
+                <button type="button" data-note-transform="handover">Handover</button>
+                <button type="button" data-note-transform="supervision">Supervision</button>
+                <button type="button" data-note-transform="safeguarding">Safeguarding</button>
+                <button type="button" data-note-transform="chronology">Chronology</button>
+              </div>
+              <hr />
+              <h3>Shared memory</h3>
+              <p id="projectHomeSummary">Project memory will appear here as you capture notes.</p>
+            </aside>
+            <div class="ic-card">
+              <div class="ic-note-toolbar">
+                <button id="startTranscribe" type="button">Start recording</button>
+                <button id="stopTranscribe" type="button">Stop</button>
+                <button type="button" data-note-command="clean">Clean transcript</button>
+                <button type="button" data-note-command="structure">Structure</button>
+                <button type="button" data-note-command="summary">Summary</button>
+                <button type="button" data-note-command="actions">Actions</button>
+              </div>
+              <textarea id="indicareTranscript" class="ic-notes-textarea" placeholder="Type, paste or dictate notes here..."></textarea>
+            </div>
+          </div>
+        </section>
       </section>
 
+      <aside class="ic-right-drawer" aria-label="IndiCare AI evidence, memory and timeline">
+        <div class="ic-sidebar-label">Evidence</div>
+        <div id="standaloneSourceList"></div>
+        <hr />
+        <div class="ic-sidebar-label">Timeline</div>
+        <h3 id="timelineSummaryTitle">No chronology yet</h3>
+        <p id="timelineSummaryText" class="ic-muted-mini">DOCS, Notes and chats will build a live operational timeline here.</p>
+        <div id="suiteTimelineAlerts"></div>
+        <div id="suiteTimelineList"></div>
+      </aside>
+
       <div class="ic-composer-dock" id="composerDock" data-suite-panel="intelligence">
+        <div id="doc" class="ic-document-pill">
+          <span id="docText"></span>
+          <button id="clearDoc" type="button" aria-label="Remove document">×</button>
+        </div>
+
         <div id="suggestionChips" class="ic-suggestion-chips" aria-label="Quick assistant actions">
           <button type="button" data-command="/incident">/incident</button>
           <button type="button" data-command="/safeguarding">/safeguarding</button>
           <button type="button" data-command="/chronology">/chronology</button>
+          <button type="button" data-command="/reg45">/reg45</button>
+          <button type="button" data-command="/ofsted">/ofsted</button>
         </div>
 
         <div class="ic-composer">
@@ -88,23 +221,27 @@
         <h3>IndiCare AI settings</h3>
         <button id="closeSettings" type="button">×</button>
       </div>
-      <div class="ic-settings-grid"></div>
+      <div class="ic-settings-grid">
+        <label>Name <input id="settingsName" type="text" placeholder="Your name" /></label>
+        <label>Role <input id="settingsRole" type="text" placeholder="Your role" /></label>
+        <label>Default mode
+          <select id="settingsDefaultMode">
+            <option value="ofsted">Ofsted Lead</option>
+            <option value="safeguarding">Safeguarding</option>
+            <option value="records">Recording QA</option>
+            <option value="practice">Practice Encyclopaedia</option>
+          </select>
+        </label>
+      </div>
       <div class="ic-modal-actions">
+        <button id="toggleTheme" class="ic-btn-secondary" type="button">Dark mode</button>
         <button id="saveSettings" class="ic-btn-primary ic-profile-save-primary" type="button">Save settings</button>
       </div>
     </div>
   </div>
 
   <script src="/js/assistant-standalone-cockpit.js"></script>
-  <script src="/js/assistant-professional-renderer.js"></script>
   <script src="/js/assistant-workspaces.js"></script>
-  <script src="/js/assistant-templates.js"></script>
-  <script src="/js/assistant-project-store.js"></script>
-  <script src="/js/assistant-document-engine.js"></script>
-  <script src="/js/assistant-operational-engines.js"></script>
   <script src="/js/indicare-suite.js"></script>
-  <script src="/js/indicare-command-onboarding.js"></script>
-  <script src="/js/indicare-profile-onboarding.js"></script>
-  <script src="/js/indicare-clean-layout-guard.js"></script>
 </body>
 </html>
