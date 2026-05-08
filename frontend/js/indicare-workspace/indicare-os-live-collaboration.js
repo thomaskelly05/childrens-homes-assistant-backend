@@ -1,6 +1,6 @@
 import { getOsContext, getOperationalSession, scopeContextToSession, escapeHtml, formatDate, recordType } from './indicare-os-context.js';
 
-const LIVE_STATE = { panelOpen: false, activeRoom: 'shift', messages: [], presence: [], renderedSignature: '' };
+const LIVE_STATE = { panelOpen: false, activeRoom: 'shift', messages: [], presence: [], renderedSignature: '', renderQueued: false };
 const ROOMS = [
   { id: 'shift', label: 'Shift room', description: 'Daily running, handover and immediate operational messages.' },
   { id: 'safeguarding', label: 'Safeguarding', description: 'Escalations, concerns and manager oversight.' },
@@ -14,12 +14,24 @@ function bootLiveCollaboration() {
   hydrateLocalState();
   document.addEventListener('click', handleClicks, true);
   document.addEventListener('keydown', handleKeys, true);
-  window.addEventListener('indicare:os-context-ready', () => { rebuildPresence(); renderDashboardCollaboration({ force: true }); renderPanel(); });
-  window.addEventListener('indicare:refresh-live-os', () => { rebuildPresence(); renderDashboardCollaboration({ force: true }); renderPanel(); });
+  document.addEventListener('submit', handleSubmit, true);
+  document.addEventListener('click', (event) => {
+    if (event.target.closest?.('[data-sp-view], [data-launch-session], [data-reset-session]')) scheduleDashboardCollaboration({ force: true });
+  }, true);
+  window.addEventListener('indicare:os-context-ready', () => { rebuildPresence(); scheduleDashboardCollaboration({ force: true }); renderPanel(); });
+  window.addEventListener('indicare:refresh-live-os', () => { rebuildPresence(); scheduleDashboardCollaboration({ force: true }); renderPanel(); });
   window.addEventListener('indicare:open-record', (event) => seedRecordDiscussion(event.detail));
-  new MutationObserver(() => renderDashboardCollaboration()).observe(document.body, { childList: true, subtree: true });
   rebuildPresence();
-  renderDashboardCollaboration({ force: true });
+  scheduleDashboardCollaboration({ force: true });
+}
+
+function scheduleDashboardCollaboration(options = {}) {
+  if (LIVE_STATE.renderQueued) return;
+  LIVE_STATE.renderQueued = true;
+  window.requestAnimationFrame(() => {
+    LIVE_STATE.renderQueued = false;
+    renderDashboardCollaboration(options);
+  });
 }
 
 function hydrateLocalState() { try { LIVE_STATE.messages = JSON.parse(localStorage.getItem('indicare.os.live.messages') || '[]'); } catch { LIVE_STATE.messages = []; } }
@@ -88,8 +100,8 @@ function handleClicks(event) {
 }
 
 function handleKeys(event) { const form = event.target.closest?.('[data-live-compose]'); if (!form || event.key !== 'Enter' || event.shiftKey) return; event.preventDefault(); submitMessage(form); }
-document.addEventListener('submit', (event) => { const form = event.target.closest?.('[data-live-compose]'); if (!form) return; event.preventDefault(); submitMessage(form); }, true);
-function submitMessage(form) { const text = form.querySelector('textarea')?.value?.trim(); if (!text) return; LIVE_STATE.messages.unshift({ id: crypto?.randomUUID?.() || String(Date.now()), room: LIVE_STATE.activeRoom, author: 'Current user', role: 'Operational user', text, createdAt: new Date().toISOString() }); persistMessages(); form.querySelector('textarea').value = ''; renderPanel(); renderDashboardCollaboration({ force: true }); }
+function handleSubmit(event) { const form = event.target.closest?.('[data-live-compose]'); if (!form) return; event.preventDefault(); submitMessage(form); }
+function submitMessage(form) { const text = form.querySelector('textarea')?.value?.trim(); if (!text) return; LIVE_STATE.messages.unshift({ id: crypto?.randomUUID?.() || String(Date.now()), room: LIVE_STATE.activeRoom, author: 'Current user', role: 'Operational user', text, createdAt: new Date().toISOString() }); persistMessages(); form.querySelector('textarea').value = ''; renderPanel(); scheduleDashboardCollaboration({ force: true }); }
 function fillTemplate(type) { const input = document.querySelector('#ic-os-live-collab-panel [data-live-compose] textarea'); if (!input) return; input.value = type === 'safeguarding' ? 'Safeguarding escalation:\nYoung person:\nConcern:\nImmediate safety actions:\nWho has been informed:\nNext review/action:' : 'Handover update:\nYoung person/home area:\nWhat happened:\nRisk/need:\nAction for next shift:\nManager oversight required:'; input.focus(); }
 function seedRecordDiscussion(record) { if (!record) return; LIVE_STATE.activeRoom = /safeguarding|missing|incident|risk/i.test(recordType(record)) ? 'safeguarding' : /review|submitted|pending|changes/i.test(`${record.status || ''} ${record.workflow_status || ''}`) ? 'review' : 'shift'; }
 function presenceList() { return LIVE_STATE.presence.length ? `<div class="os-presence-list">${LIVE_STATE.presence.slice(0, 6).map((person) => `<p><span class="os-presence-dot"></span><strong>${escapeHtml(person.name)}</strong><small>${escapeHtml(person.role)} · ${escapeHtml(person.status)}</small></p>`).join('')}</div>` : emptyMini('No live workforce presence was returned by the current OS context.'); }
