@@ -18,6 +18,7 @@ const RAIL_STATE = {
   lastSignature: "",
   activeRecord: null,
   openableRows: [],
+  renderQueued: false,
 };
 
 bootContextRail();
@@ -25,17 +26,29 @@ bootContextRail();
 function bootContextRail() {
   ensureRail();
   document.addEventListener("click", handleRailClicks, true);
-  window.addEventListener("indicare:os-context-ready", () => renderRail({ force: true }));
-  window.addEventListener("indicare:refresh-live-os", () => renderRail({ force: true }));
+  document.addEventListener("click", (event) => {
+    if (event.target.closest?.("[data-sp-view], [data-launch-session], [data-reset-session], [data-open-child]")) {
+      scheduleRail({ force: true });
+    }
+  }, true);
+  window.addEventListener("indicare:os-context-ready", () => scheduleRail({ force: true }));
+  window.addEventListener("indicare:refresh-live-os", () => scheduleRail({ force: true }));
   window.addEventListener("indicare:open-record", (event) => {
     if (event.detail) {
       RAIL_STATE.activeRecord = event.detail;
-      setTimeout(() => renderRail({ force: true }), 180);
+      scheduleRail({ force: true });
     }
   });
-  const observer = new MutationObserver(() => renderRail());
-  observer.observe(document.body, { childList: true, subtree: true });
-  renderRail({ force: true });
+  scheduleRail({ force: true });
+}
+
+function scheduleRail(options = {}) {
+  if (RAIL_STATE.renderQueued) return;
+  RAIL_STATE.renderQueued = true;
+  window.requestAnimationFrame(() => {
+    RAIL_STATE.renderQueued = false;
+    renderRail(options);
+  });
 }
 
 function ensureRail() {
@@ -116,12 +129,7 @@ function buildReviewItems(context, child, active) {
 }
 
 function buildActions(context, child, active) {
-  const records = [
-    ...(active ? [active] : []),
-    ...context.tasks,
-    ...context.safeguarding,
-    ...context.documents,
-  ].filter((record) => !child || linkedToChild(record, child));
+  const records = [...(active ? [active] : []), ...context.tasks, ...context.safeguarding, ...context.documents].filter((record) => !child || linkedToChild(record, child));
   const actions = [];
   if (records.some((record) => /submitted_for_review|submitted|pending/i.test(`${record.status || ""} ${record.workflow_status || ""}`))) actions.push(["Manager review", "Review submitted records and approve or request changes.", "reviews"]);
   if (records.some((record) => /changes_requested|returned|rejected/i.test(`${record.status || ""} ${record.workflow_status || ""}`))) actions.push(["Amend returned record", "Update the record and resubmit for manager review.", "docs"]);
@@ -166,30 +174,10 @@ function handleRailClicks(event) {
   }
 }
 
-function registerOpenable(record) {
-  const index = RAIL_STATE.openableRows.length;
-  RAIL_STATE.openableRows.push(record);
-  return index;
-}
+function registerOpenable(record) { const index = RAIL_STATE.openableRows.length; RAIL_STATE.openableRows.push(record); return index; }
+function linkedToChild(record, child) { const id = String(record.young_person_id || record.child_id || record.childId || record.youngPersonId || ""); const name = String(record.child_name || record.young_person_name || record.childName || "").toLowerCase(); return childKey(child) === id || childName(child).toLowerCase() === name; }
+function initials(value) { return String(value || "YP").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "YP"; }
+function cssEscape(value) { return String(value || "").replace(/[^a-zA-Z0-9_-]/g, "\\$&"); }
+function emptyMini(message) { return `<div class="os-rail-empty">${escapeHtml(message)}</div>`; }
 
-function linkedToChild(record, child) {
-  const id = String(record.young_person_id || record.child_id || record.childId || record.youngPersonId || "");
-  const name = String(record.child_name || record.young_person_name || record.childName || "").toLowerCase();
-  return childKey(child) === id || childName(child).toLowerCase() === name;
-}
-
-function initials(value) {
-  return String(value || "YP").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "YP";
-}
-
-function cssEscape(value) {
-  return String(value || "").replace(/[^a-zA-Z0-9_-]/g, "\\$&");
-}
-
-function emptyMini(message) {
-  return `<div class="os-rail-empty">${escapeHtml(message)}</div>`;
-}
-
-window.IndiCareOSContextRail = {
-  refresh: () => renderRail({ force: true }),
-};
+window.IndiCareOSContextRail = { refresh: () => renderRail({ force: true }) };
