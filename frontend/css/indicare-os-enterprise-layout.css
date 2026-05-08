@@ -1,0 +1,340 @@
+body.sharepoint-os-body {
+  overflow: hidden;
+  background: #f3f6fb !important;
+}
+
+.sp-os-shell {
+  grid-template-columns: 230px minmax(0, 1fr);
+}
+
+.sp-sidebar {
+  border-right: 1px solid rgba(15, 76, 129, .08);
+  box-shadow: none;
+}
+
+.sp-brand,
+.sp-topbar {
+  height: 72px;
+}
+
+.sp-brand {
+  padding: 16px 18px;
+}
+
+.sp-brand strong {
+  font-size: 1.15rem;
+}
+
+.sp-brand span {
+  font-size: .7rem;
+}
+
+.sp-nav {
+  padding: 18px 10px;
+}
+
+.sp-nav button {
+  min-height: 46px;
+  border-radius: 12px;
+  font-size: .92rem;
+}
+
+.sp-app {
+  background: #f3f6fb;
+}
+
+.sp-topbar {
+  grid-template-columns: 56px minmax(280px, 520px) 1fr;
+  gap: 12px;
+  padding: 0 18px;
+  box-shadow: 0 1px 0 rgba(15, 76, 129, .08);
+}
+
+.sp-search {
+  height: 42px;
+  border-radius: 12px;
+  box-shadow: none;
+  border: 1px solid rgba(15, 76, 129, .12);
+}
+
+.sp-main {
+  padding: 22px 22px 140px;
+}
+
+.sp-page-head {
+  margin-bottom: 14px;
+}
+
+.sp-page-head h1 {
+  font-size: 2rem;
+  letter-spacing: -.06em;
+}
+
+.sp-dashboard-grid {
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+}
+
+.sp-right-content {
+  gap: 12px;
+}
+
+.sp-card {
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 24px rgba(15,23,42,.04);
+}
+
+.sp-card-head {
+  margin-bottom: 10px;
+}
+
+.sp-card-head h2 {
+  font-size: 1rem;
+}
+
+.sp-card p {
+  font-size: .9rem;
+}
+
+.os-launch {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.os-launch::before {
+  inset: -22px -22px auto -22px;
+  height: 220px;
+  background: linear-gradient(135deg, #0b4fb3 0%, #075fd1 56%, #dcecff 100%);
+}
+
+.os-launch-hero {
+  min-height: 220px;
+  padding: 28px;
+  border-radius: 20px;
+  align-content: start;
+  background: linear-gradient(135deg, rgba(5,22,55,.86), rgba(7,95,209,.68));
+}
+
+.os-launch-kicker {
+  min-height: 26px;
+  font-size: .68rem;
+}
+
+.os-launch-hero h1 {
+  max-width: 760px;
+  margin: 10px 0 12px;
+  font-size: clamp(2rem, 3vw, 3.5rem);
+  line-height: .98;
+  letter-spacing: -.09em;
+}
+
+.os-launch-hero p {
+  max-width: 760px;
+  font-size: .95rem;
+  line-height: 1.55;
+}
+
+.os-launch-identity {
+  margin-top: 18px;
+}
+
+.os-launch-pulse {
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.os-launch-metric {
+  min-height: 104px;
+  padding: 16px;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.os-launch-metric strong {
+  font-size: 2rem;
+}
+
+.os-launch-steps {
+  margin-top: 4px;
+}
+
+.os-step {
+  min-height: 56px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: .88rem;
+}
+
+.os-home-grid,
+.os-child-select-grid,
+.sp-children-grid {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+
+.os-home-card,
+.os-child-select,
+.sp-child-card {
+  border-radius: 18px;
+}
+
+.sp-priority-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sp-priority {
+  min-height: 126px;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: none;
+}
+
+.sp-priority strong {
+  font-size: 1.7rem;
+}
+
+.sp-doc-top {
+  top: -12px;
+  margin: 0;
+  border-radius: 16px;
+}
+
+.sp-doc-editor-grid {
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+.sp-doc-paper {
+  border-radius: 16px;
+}
+
+.sp-doc-section {
+  border-radius: 14px;
+}
+
+.sp-ai-bubble {
+  width: 320px;
+  right: 18px;
+  bottom: 18px;
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(7,95,209,.22);
+}
+
+.os-mobile-capture-button {
+  right: 18px;
+  bottom: 118px;
+}
+
+.os-quick-capture-panel,
+.os-live-panel {
+  right: 18px;
+  bottom: 182px;
+}
+
+.os-live-collab-card,
+.os-enterprise-intel,
+.os-productivity-card {
+  border-radius: 18px;
+}
+
+.os-intel-layout,
+.os-live-grid {
+  grid-template-columns: repeat(3, minmax(0,1fr));
+}
+
+.os-intel-panel,
+.os-live-summary,
+.os-live-latest,
+.os-live-presence {
+  min-height: 100%;
+}
+
+@media (min-width: 1500px) {
+  .sp-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr) 420px;
+  }
+
+  .sp-main {
+    padding-inline: 28px;
+  }
+
+  .os-launch {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .sp-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-right-content {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .os-launch {
+    grid-template-columns: 1fr;
+  }
+
+  .os-launch-pulse {
+    grid-template-columns: repeat(4, minmax(0,1fr));
+  }
+
+  .os-intel-layout,
+  .os-live-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .sp-os-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-sidebar {
+    display: none;
+  }
+
+  .sp-main {
+    padding: 16px 16px 180px;
+  }
+
+  .sp-topbar {
+    grid-template-columns: 48px 1fr;
+    padding: 12px 14px;
+  }
+
+  .sp-search {
+    height: 40px;
+  }
+
+  .sp-top-actions {
+    grid-column: 1/-1;
+  }
+
+  .os-launch::before {
+    height: 180px;
+  }
+
+  .os-launch-hero {
+    min-height: auto;
+    padding: 22px;
+  }
+
+  .os-launch-hero h1 {
+    font-size: 2.1rem;
+  }
+
+  .os-launch-pulse,
+  .sp-priority-grid,
+  .os-launch-steps,
+  .sp-right-content {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-ai-bubble {
+    width: calc(100vw - 24px);
+    right: 12px;
+    bottom: 12px;
+  }
+}
