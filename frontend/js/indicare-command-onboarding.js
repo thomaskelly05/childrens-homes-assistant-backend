@@ -1,33 +1,10 @@
-/* IndiCare AI command + onboarding layer
-   Adds ChatGPT-style quick starts, slash commands and calm first-run guidance.
-   Reuses existing composer, workflows, suite switcher and search overlay.
+/* IndiCare AI command layer
+   Slash commands only. Quick-start cards are now owned by assistant-cockpit.html
+   so this file must not inject duplicate homepage cards.
 */
 
 (function () {
-  const SEEN_KEY = 'indicare_ai_onboarding_seen';
-
-  const QUICK_STARTS = [
-    {
-      title: 'Write an incident record',
-      text: 'Create a professional incident record with chronology, child voice, staff actions and management oversight.',
-      prompt: 'Help me create a professional incident record. Ask me for the key details if anything is missing.'
-    },
-    {
-      title: 'Improve a recording',
-      text: 'Make wording factual, professional, trauma-informed and suitable for children’s residential care.',
-      prompt: 'Improve this recording so it is factual, professional, trauma-informed and suitable for children’s residential care.'
-    },
-    {
-      title: 'Extract chronology',
-      text: 'Turn notes into Date/Time → Event → Action → Outcome.',
-      prompt: 'Extract a clear chronology using Date/Time → Event → Action → Outcome.'
-    },
-    {
-      title: 'Review safeguarding',
-      text: 'Check for concerns, missing information, risk analysis and follow-up actions.',
-      prompt: 'Review this for safeguarding considerations, missing information, risk analysis and follow-up actions.'
-    }
-  ];
+  const SEEN_KEY = 'indicare_ai_command_tip_seen';
 
   const COMMANDS = [
     { key: 'incident', label: 'Incident record', prompt: 'Help me create a professional incident record. Ask me for the key details if anything is missing.' },
@@ -50,54 +27,16 @@
     const style = document.createElement('style');
     style.id = 'icCommandOnboardingStyles';
     style.textContent = `
-      .ic-quick-starts {
-        width: min(760px, 100%);
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-        margin: 22px auto 0;
-      }
-
-      .ic-quick-starts button {
-        border: 1px solid var(--ic-border);
-        background: var(--ic-panel);
-        color: var(--ic-text);
-        border-radius: 18px;
-        padding: 14px;
-        text-align: left;
-        box-shadow: 0 8px 24px rgba(15,23,42,.045);
-        transition: transform var(--ic-transition), border-color var(--ic-transition), background var(--ic-transition);
-      }
-
-      .ic-quick-starts button:hover {
-        transform: translateY(-2px);
-        border-color: rgba(9,105,255,.28);
-        background: color-mix(in srgb, var(--ic-blue-soft) 42%, var(--ic-panel));
-      }
-
-      .ic-quick-starts strong {
-        display: block;
-        font-size: .92rem;
-        margin-bottom: 5px;
-      }
-
-      .ic-quick-starts span {
-        display: block;
-        color: var(--ic-muted);
-        font-size: .78rem;
-        line-height: 1.45;
-      }
-
       .ic-command-menu {
         position: fixed;
         z-index: 3600;
         width: min(420px, calc(100vw - 28px));
         display: none;
         padding: 8px;
-        border: 1px solid var(--ic-border);
+        border: 1px solid var(--ic-clean-border, #e6edf6);
         border-radius: 20px;
-        background: var(--ic-panel);
-        box-shadow: 0 20px 60px rgba(15,23,42,.18);
+        background: #fff;
+        box-shadow: 0 20px 60px rgba(15,23,42,.16);
       }
 
       .ic-command-menu.visible { display: grid; gap: 4px; }
@@ -105,7 +44,7 @@
       .ic-command-menu button {
         border: 0;
         background: transparent;
-        color: var(--ic-text);
+        color: var(--ic-clean-text, #0f1f3a);
         border-radius: 14px;
         padding: 11px 12px;
         text-align: left;
@@ -114,8 +53,8 @@
 
       .ic-command-menu button:hover,
       .ic-command-menu button.active {
-        background: var(--ic-blue-soft);
-        color: var(--ic-blue);
+        background: var(--ic-clean-blue-soft, #edf5ff);
+        color: var(--ic-clean-blue, #0b6fff);
       }
 
       .ic-onboarding-tip {
@@ -127,21 +66,16 @@
         width: min(540px, calc(100vw - 28px));
         display: none;
         padding: 14px 16px;
-        border: 1px solid var(--ic-border);
+        border: 1px solid var(--ic-clean-border, #e6edf6);
         border-radius: 20px;
-        background: var(--ic-panel);
-        box-shadow: 0 18px 44px rgba(15,23,42,.14);
+        background: #fff;
+        box-shadow: 0 18px 44px rgba(15,23,42,.12);
       }
 
       .ic-onboarding-tip.visible { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .ic-onboarding-tip strong { display: block; font-size: .9rem; }
-      .ic-onboarding-tip span { display: block; color: var(--ic-muted); font-size: .78rem; margin-top: 2px; }
-      .ic-onboarding-tip button { border: 0; background: transparent; color: var(--ic-muted); font-size: 1.2rem; }
-
-      @media (max-width: 760px) {
-        .ic-quick-starts { grid-template-columns: 1fr; }
-        .ic-onboarding-tip { bottom: 76px; }
-      }
+      .ic-onboarding-tip span { display: block; color: var(--ic-clean-muted, #65748b); font-size: .78rem; margin-top: 2px; }
+      .ic-onboarding-tip button { border: 0; background: transparent; color: var(--ic-clean-muted, #65748b); font-size: 1.2rem; }
     `;
     document.head.appendChild(style);
   }
@@ -152,23 +86,6 @@
     input.value = prompt;
     input.focus();
     input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  function addQuickStarts() {
-    const empty = $('empty');
-    if (!empty || $('icQuickStarts')) return;
-
-    const grid = document.createElement('div');
-    grid.id = 'icQuickStarts';
-    grid.className = 'ic-quick-starts';
-    grid.innerHTML = QUICK_STARTS.map((item) => `
-      <button type="button" data-quick-prompt="${escapeHtml(item.prompt)}">
-        <strong>${escapeHtml(item.title)}</strong>
-        <span>${escapeHtml(item.text)}</span>
-      </button>
-    `).join('');
-
-    empty.appendChild(grid);
   }
 
   function ensureCommandMenu() {
@@ -236,12 +153,6 @@
 
   function bind() {
     document.addEventListener('click', (event) => {
-      const quick = event.target.closest('[data-quick-prompt]');
-      if (quick) {
-        setPrompt(quick.dataset.quickPrompt || '');
-        return;
-      }
-
       const command = event.target.closest('[data-command-key]');
       if (command) {
         runCommand(command.dataset.commandKey);
@@ -284,7 +195,6 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     injectStyles();
-    addQuickStarts();
     ensureCommandMenu();
     bind();
     setTimeout(onboardingTip, 900);
