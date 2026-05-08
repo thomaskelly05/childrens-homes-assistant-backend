@@ -24,6 +24,71 @@ const WORKSPACE_RECORD_TYPE_MAP = Object.freeze({
   safeguarding: "safeguarding",
   missing_episode: "missing",
   missing: "missing",
+  keywork: "keywork",
+  keywork_session: "keywork",
+  direct_work: "direct_work",
+  direct_work_session: "direct_work",
+  handover: "handover",
+  handover_record: "handover",
+  handover_item: "handover_item",
+  support_plan: "support_plan",
+  health_record: "health",
+  health: "health",
+  education_record: "education",
+  education: "education",
+  family_contact: "family_contact",
+  contact: "family_contact",
+  review_meeting: "review_meeting",
+});
+
+const SCHEMA_SECTIONS = Object.freeze({
+  daily: [
+    section("Daily lived experience", [["Presentation", "presentation"], ["Activities", "activities"], ["Behaviour / support", "behaviour_update"], ["Positive progress", "positives"]]),
+    section("Education, health and family", [["Education", "education_update"], ["Health", "health_update"], ["Family / relationships", "family_update"]]),
+    section("Voice and actions", [["Young person voice", "young_person_voice", "child_voice"], ["Actions required", "actions_required", "actions_taken"]]),
+  ],
+  incident: [
+    section("Incident account", [["Incident type", "incident_type"], ["Antecedent", "antecedent"], ["What happened", "description", "summary", "body"], ["Severity", "severity", "significance"]]),
+    section("Response and repair", [["Staff response", "staff_response"], ["Child response", "child_response"], ["Restorative follow-up", "restorative_follow_up"], ["Actions", "actions_taken", "actions_required"]]),
+    section("Analysis", [["Young person voice", "child_voice", "young_person_voice"], ["Trauma-informed formulation", "trauma_informed_formulation"], ["Safeguarding", "safeguarding_notes"]]),
+  ],
+  keywork: [
+    section("Session", [["Topic", "topic"], ["Purpose", "purpose"], ["Summary", "summary", "description"], ["Participation", "participation_level"], ["Session rating", "session_rating"]]),
+    section("Reflection and actions", [["Young person voice", "young_person_voice", "child_voice"], ["Reflective analysis", "reflective_analysis"], ["Actions agreed", "actions_agreed", "actions_required"]]),
+  ],
+  direct_work: [
+    section("Direct work", [["Topic", "topic"], ["Purpose / goal", "purpose"], ["What was completed", "summary", "description"], ["Young person voice", "young_person_voice", "child_voice"]]),
+    section("Impact", [["Reflection / analysis", "reflective_analysis"], ["Next steps", "actions_agreed", "actions_required"]]),
+  ],
+  missing: [
+    section("Missing episode", [["Start", "start_datetime"], ["Return", "return_datetime"], ["Circumstances", "description", "summary"], ["Actions taken", "actions_taken"]]),
+    section("Return and safeguarding", [["Return discussion", "return_discussion"], ["Young person voice", "child_voice", "young_person_voice"], ["Safeguarding analysis", "safeguarding_notes"], ["Notifications", "notifications"]]),
+  ],
+  safeguarding: [
+    section("Concern", [["Risk level", "risk_level", "severity"], ["Concern details", "description", "summary"], ["Immediate actions", "actions_taken"], ["Notifications", "notifications"]]),
+    section("Oversight", [["Young person voice", "young_person_voice", "child_voice"], ["Manager oversight", "manager_comment", "manager_review_comment", "review_comment"], ["Next review", "review_date", "due_date"]]),
+  ],
+  education: [
+    section("Education", [["Summary", "summary"], ["Education update", "education_update"], ["Young person voice", "young_person_voice", "child_voice"], ["Actions required", "actions_required", "actions_taken"]]),
+  ],
+  health: [
+    section("Health and wellbeing", [["Summary", "summary"], ["Health update", "health_update"], ["Medication update", "medication_update"], ["Young person voice", "young_person_voice", "child_voice"], ["Actions required", "actions_required", "actions_taken"]]),
+  ],
+  family_contact: [
+    section("Family contact", [["Summary", "summary"], ["What happened", "description"], ["Young person voice", "young_person_voice", "child_voice"], ["Family / network update", "family_update"], ["Actions required", "actions_required", "actions_taken"]]),
+  ],
+  handover: [
+    section("Shift handover", [["Summary", "summary", "summary_text"], ["Shift type", "shift_type"], ["Handover date", "handover_date"], ["Actions required", "actions_required", "actions_taken"]]),
+  ],
+  handover_item: [
+    section("Handover item", [["Summary", "summary", "description"], ["Priority", "priority"], ["Status", "status", "workflow_status"], ["Actions required", "actions_required", "actions_taken"]]),
+  ],
+  support_plan: [
+    section("Support plan", [["Summary", "summary"], ["Purpose", "purpose"], ["Actions", "actions_required", "actions_agreed"], ["Review date", "review_date", "due_date"]]),
+  ],
+  review_meeting: [
+    section("Review meeting", [["Summary", "summary"], ["Meeting date", "meeting_date"], ["Young person voice", "young_person_voice", "child_voice"], ["Actions agreed", "actions_agreed", "actions_required"]]),
+  ],
 });
 
 const ROUTER_STATE = {
@@ -33,6 +98,8 @@ const ROUTER_STATE = {
 };
 
 bootRecordRouter();
+
+function section(title, rows) { return { title, rows }; }
 
 function bootRecordRouter() {
   document.addEventListener("indicare:open-record", (event) => {
@@ -107,7 +174,7 @@ async function openRecord(record) {
 
   const title = fullRecord.title || fullRecord.summary || fullRecord.name || "IndiCare document";
   const type = fullRecord.record_type || fullRecord.type || record.record_type || record.type || "record";
-  const status = fullRecord.status || fullRecord.review_status || "recorded";
+  const status = fullRecord.status || fullRecord.workflow_status || fullRecord.review_status || "recorded";
   const lifecycleAvailable = Boolean(workspaceType && id && hydrated.workspaceBacked !== false);
 
   main.innerHTML = `
@@ -124,7 +191,7 @@ async function openRecord(record) {
     </section>
     <section class="record-view-grid">
       <article class="record-paper indicare-doc-paper">
-        <section class="record-section"><h2>Document content</h2>${recordBody(fullRecord)}</section>
+        ${schemaDocumentSections(fullRecord, workspaceType || toWorkspaceType(type))}
         <section class="record-section"><h2>Document details</h2>${recordDetails(fullRecord)}</section>
         <section class="record-section"><h2>Review, audit and version position</h2>${reviewState(fullRecord)}</section>
       </article>
@@ -204,11 +271,36 @@ async function runWorkflowAction(button) {
   }
 }
 
+function schemaDocumentSections(record, type) {
+  const sections = SCHEMA_SECTIONS[type] || [];
+  const schemaHtml = sections.map((item) => schemaSection(record, item)).filter(Boolean).join("");
+  const fallback = recordBody(record);
+  return schemaHtml || `<section class="record-section"><h2>Document content</h2>${fallback}</section>`;
+}
+
+function schemaSection(record, sectionDef) {
+  const rows = sectionDef.rows.map(([label, ...keys]) => {
+    const value = firstValue(record, keys);
+    return value ? `<p><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatValue(value))}</strong></p>` : "";
+  }).filter(Boolean).join("");
+  if (!rows) return "";
+  return `<section class="record-section"><h2>${escapeHtml(sectionDef.title)}</h2><div class="record-field-list schema-doc-fields">${rows}</div></section>`;
+}
+
+function firstValue(record, keys) {
+  const content = record.content && typeof record.content === "object" ? record.content : {};
+  for (const key of keys) {
+    const value = record[key] ?? content[key];
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return "";
+}
+
 function buildAssistantDocument(record, source, child) {
   return {
     title: record.title || record.summary || record.name || "IndiCare document",
     type: record.record_type || record.type || "record",
-    status: record.status || record.review_status || "recorded",
+    status: record.status || record.workflow_status || record.review_status || "recorded",
     child_name: child ? childName(child) : record.child_name || record.young_person_name || "",
     source: source.sourceLabel,
     visible_content: `${recordBodyText(record)}\n\n${JSON.stringify(record.content || record.details || {}, null, 2)}`.slice(0, 10000),
@@ -224,16 +316,16 @@ function recordBody(record) {
 }
 
 function recordBodyText(record) {
-  return [record.body, record.content, record.narrative, record.description, record.notes, record.summary].find((item) => typeof item === "string" && item.trim()) || "";
+  return [record.body, record.narrative, record.description, record.notes, record.summary, record.summary_text].find((item) => typeof item === "string" && item.trim()) || "";
 }
 
 function recordDetails(record) {
-  const rows = [["Type", record.record_type || record.type], ["Status", record.status || record.review_status], ["Created", formatDate(record.created_at)], ["Updated", formatDate(record.updated_at)], ["Author", record.author_name || record.created_by_name || record.staff_name || record.created_by], ["Home", record.home_name || record.home || record.home_id]];
+  const rows = [["Type", record.record_type || record.type], ["Status", record.status || record.workflow_status || record.manager_review_status || record.review_status], ["Created", formatDate(record.created_at)], ["Updated", formatDate(record.updated_at || record.last_edited_at)], ["Author", record.author_name || record.created_by_name || record.staff_name || record.created_by || record.author_id || record.worker_id], ["Home", record.home_name || record.home || record.home_id]];
   return fieldList(rows);
 }
 
 function reviewState(record) {
-  const rows = [["Review status", record.review_status || record.status], ["Submitted", formatDate(record.submitted_at)], ["Reviewed by", record.reviewed_by_name || record.manager_name || record.approved_by_name], ["Reviewed", formatDate(record.reviewed_at || record.approved_at)], ["Manager comments", record.manager_comments || record.manager_comment || record.review_comments || record.comments]];
+  const rows = [["Review status", record.manager_review_status || record.review_status || record.workflow_status || record.status], ["Submitted", formatDate(record.submitted_at)], ["Reviewed by", record.reviewed_by_name || record.manager_name || record.approved_by_name || record.reviewed_by || record.approved_by], ["Reviewed", formatDate(record.reviewed_at || record.approved_at || record.returned_at)], ["Manager comments", record.manager_comments || record.manager_comment || record.manager_review_comment || record.review_comments || record.review_comment || record.comments]];
   return fieldList(rows);
 }
 
