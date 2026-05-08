@@ -248,12 +248,27 @@
           <span class="ic-rel">Private project memory</span>
         </article>
         <article class="ic-card">
+          <small>Timeline</small>
+          <strong id="timelineSummaryTitle">No chronology yet</strong>
+          <p id="timelineSummaryText">DOCS, Notes and chats will build a live operational timeline here.</p>
+          <span class="ic-rel">Chronology intelligence</span>
+        </article>
+        <article class="ic-card">
           <small>Documents</small>
           <strong id="memoryDocumentCount">No project files yet</strong>
           <p>Upload documents inside a project to reuse them as context in that project.</p>
           <span class="ic-rel">Files</span>
         </article>
       </div>
+
+      <section class="ic-card ic-live-timeline" aria-label="Live operational timeline">
+        <div class="ic-evidence-header">
+          <h2>Live timeline</h2>
+          <button class="ic-btn-secondary" type="button" data-memory-action="Generate chronology">Use</button>
+        </div>
+        <div id="suiteTimelineAlerts" class="ic-timeline-alerts"></div>
+        <div id="suiteTimelineList" class="ic-timeline-list-compact"></div>
+      </section>
 
       <div class="ic-evidence-list" id="standaloneSourceList"></div>
     </aside>
