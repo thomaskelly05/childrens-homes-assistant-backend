@@ -97,122 +97,6 @@
           <p id="workspaceDescription">Ask IndiCare AI anything, create a project folder that remembers its chats and documents, or open Templates for ready-made residential care workflows.</p>
         </div>
 
-        <div id="projectHome" class="ic-project-home hidden" aria-label="Project home" data-suite-panel="intelligence">
-          <section class="ic-project-hero ic-card">
-            <span class="ic-surface-pill">Project</span>
-            <h2 id="projectHomeTitle">Project</h2>
-            <p id="projectHomeSummary">Project memory will appear here as you chat and upload files.</p>
-          </section>
-
-          <section class="ic-project-grid">
-            <article class="ic-project-card ic-card">
-              <h3>Continue conversation</h3>
-              <div id="projectRecentChats" class="ic-project-list"></div>
-            </article>
-            <article class="ic-project-card ic-card">
-              <h3>Uploaded files</h3>
-              <div id="projectFiles" class="ic-project-list"></div>
-            </article>
-            <article class="ic-project-card ic-card">
-              <h3>Suggested actions</h3>
-              <div id="projectActions" class="ic-project-actions"></div>
-            </article>
-            <article class="ic-project-card ic-card">
-              <h3>Pinned outputs</h3>
-              <div id="projectPinned" class="ic-project-list"></div>
-            </article>
-          </section>
-        </div>
-
-        <div id="templateWorkspace" class="ic-template-workspace hidden" aria-label="Templates workspace" data-suite-panel="intelligence">
-          <div class="ic-template-hero ic-card">
-            <div>
-              <span class="ic-surface-pill">Templates</span>
-              <h2>Choose a residential care template</h2>
-              <p>Templates open as guided prompts inside the conversation. They do not store young people or home records.</p>
-            </div>
-          </div>
-          <div id="templateGrid" class="ic-template-grid"></div>
-        </div>
-
-        <div id="indicareDocs" class="ic-suite-panel hidden" data-suite-panel="docs" aria-label="IndiCare DOCS">
-          <section class="ic-card ic-docs-hero">
-            <span class="ic-surface-pill">IndiCare DOCS</span>
-            <h2>AI-native writing for children’s homes.</h2>
-            <p>Write incident records, safeguarding reviews, chronologies, Reg 45 evidence and Ofsted-ready documents in a cleaner, residential-care focused alternative to Word.</p>
-            <div class="ic-suite-actions">
-              <button class="ic-btn-primary" type="button" data-doc-template="incident">Incident Record</button>
-              <button class="ic-btn-secondary" type="button" data-doc-template="chronology">Chronology</button>
-              <button class="ic-btn-secondary" type="button" data-doc-template="reg45">Reg 45 Evidence</button>
-            </div>
-          </section>
-
-          <section class="ic-docs-layout">
-            <aside class="ic-card ic-docs-rail">
-              <h3>Residential templates</h3>
-              <button type="button" data-doc-template="incident">Incident record</button>
-              <button type="button" data-doc-template="missing">Missing-from-care review</button>
-              <button type="button" data-doc-template="safeguarding">Safeguarding review</button>
-              <button type="button" data-doc-template="ofsted">Ofsted evidence</button>
-              <button type="button" data-doc-template="reg45">Reg 45 report</button>
-              <button type="button" data-doc-template="supervision">Supervision reflection</button>
-            </aside>
-
-            <article class="ic-card ic-doc-editor-shell">
-              <div class="ic-doc-toolbar">
-                <button type="button" data-doc-command="improve">Improve wording</button>
-                <button type="button" data-doc-command="factual">Make factual</button>
-                <button type="button" data-doc-command="childVoice">Add child voice</button>
-                <button type="button" data-doc-command="safeguarding">Review safeguarding</button>
-                <button type="button" data-doc-command="chronology">Extract chronology</button>
-                <button type="button" data-workflow-run="doc_to_chronology">Send to timeline</button>
-                <button type="button" data-workflow-run="doc_to_safeguarding">Safeguarding workflow</button>
-              </div>
-              <div id="indicareDocEditor" class="ic-doc-editor" contenteditable="true" spellcheck="true">
-                <h1>Untitled IndiCare document</h1>
-                <p>Start writing, choose a template, or paste existing recording. Highlight any section and use the AI tools above.</p>
-              </div>
-            </article>
-          </section>
-        </div>
-
-        <div id="indicareNotes" class="ic-suite-panel hidden" data-suite-panel="notes" aria-label="IndiCare Notes">
-          <section class="ic-card ic-docs-hero">
-            <span class="ic-surface-pill">IndiCare Notes</span>
-            <h2>Transcribe, structure and improve notes.</h2>
-            <p>Bring I-Notes and transcription into one place: dictate incidents, handovers, supervision reflections and meetings, then turn them into professional residential-care records.</p>
-            <div class="ic-suite-actions">
-              <button id="startTranscribe" class="ic-btn-primary" type="button">Start recording</button>
-              <button id="stopTranscribe" class="ic-btn-secondary" type="button">Stop</button>
-              <button type="button" class="ic-btn-secondary" data-note-transform="incident">Turn into incident record</button>
-              <button type="button" class="ic-btn-secondary" data-workflow-run="note_to_chronology">Send to timeline</button>
-            </div>
-          </section>
-
-          <section class="ic-docs-layout">
-            <aside class="ic-card ic-docs-rail">
-              <h3>Turn transcript into</h3>
-              <button type="button" data-note-transform="incident">Incident record</button>
-              <button type="button" data-note-transform="handover">Handover</button>
-              <button type="button" data-note-transform="supervision">Supervision note</button>
-              <button type="button" data-note-transform="safeguarding">Safeguarding concern</button>
-              <button type="button" data-note-transform="chronology">Chronology</button>
-              <button type="button" data-workflow-run="note_to_incident">Incident workflow</button>
-              <button type="button" data-workflow-run="note_to_chronology">Chronology workflow</button>
-            </aside>
-
-            <article class="ic-card ic-doc-editor-shell">
-              <div class="ic-doc-toolbar">
-                <button type="button" data-note-command="clean">Clean transcript</button>
-                <button type="button" data-note-command="structure">Structure note</button>
-                <button type="button" data-note-command="summary">Summarise</button>
-                <button type="button" data-note-command="actions">Extract actions</button>
-              </div>
-              <textarea id="indicareTranscript" class="ic-transcript-area" placeholder="Record audio or paste transcript here..."></textarea>
-            </article>
-          </section>
-        </div>
-
         <div id="messages" class="messages hidden" data-suite-panel="intelligence"></div>
       </section>
 
@@ -246,36 +130,6 @@
         <button id="toggleEvidence" class="ic-btn-secondary" type="button">Hide</button>
       </div>
 
-      <div class="ic-workspace-intel">
-        <article class="ic-card">
-          <small>Current project</small>
-          <strong id="memoryProjectTitle">Standalone chat</strong>
-          <p id="memoryProjectSummary">Create a project to keep related conversations and uploads together.</p>
-          <span class="ic-rel">Private project memory</span>
-        </article>
-        <article class="ic-card">
-          <small>Timeline</small>
-          <strong id="timelineSummaryTitle">No chronology yet</strong>
-          <p id="timelineSummaryText">DOCS, Notes and chats will build a live operational timeline here.</p>
-          <span class="ic-rel">Chronology intelligence</span>
-        </article>
-        <article class="ic-card">
-          <small>Documents</small>
-          <strong id="memoryDocumentCount">No project files yet</strong>
-          <p>Upload documents inside a project to reuse them as context in that project.</p>
-          <span class="ic-rel">Files</span>
-        </article>
-      </div>
-
-      <section class="ic-card ic-live-timeline" aria-label="Live operational timeline">
-        <div class="ic-evidence-header">
-          <h2>Live timeline</h2>
-          <button class="ic-btn-secondary" type="button" data-memory-action="Generate chronology">Use</button>
-        </div>
-        <div id="suiteTimelineAlerts" class="ic-timeline-alerts"></div>
-        <div id="suiteTimelineList" class="ic-timeline-list-compact"></div>
-      </section>
-
       <div class="ic-evidence-list" id="standaloneSourceList"></div>
     </aside>
   </div>
@@ -290,15 +144,6 @@
       <div class="ic-settings-grid">
         <label><span>Name</span><input id="settingsName" type="text" placeholder="Your name" /></label>
         <label><span>Role</span><input id="settingsRole" type="text" placeholder="Registered manager" /></label>
-        <label>
-          <span>Default mode</span>
-          <select id="settingsDefaultMode">
-            <option value="ofsted">Ofsted Lead</option>
-            <option value="safeguarding">Safeguarding</option>
-            <option value="records">Recording QA</option>
-            <option value="practice">Practice Encyclopaedia</option>
-          </select>
-        </label>
       </div>
 
       <div class="ic-modal-actions">
@@ -317,5 +162,8 @@
   <script src="/js/indicare-suite.js"></script>
   <script src="/js/indicare-tier-access.js"></script>
   <script src="/js/indicare-workflow-intelligence.js"></script>
+  <script src="/js/indicare-operational-search.js"></script>
+  <script src="/js/indicare-proactive-suggestions.js"></script>
+  <script src="/js/indicare-mobile-shift-mode.js"></script>
 </body>
 </html>
