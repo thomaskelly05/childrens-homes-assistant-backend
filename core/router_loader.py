@@ -33,6 +33,7 @@ routers.standalone_enterprise_intelligence_routes
 routers.standalone_timeline_routes
 routers.standalone_tier_routes
 routers.standalone_workflow_routes
+routers.standalone_search_routes
 routers.assistant_os_routes
 routers.assistant_os_knowledge_routes
 routers.assistant_intelligence_routes
