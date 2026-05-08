@@ -1,6 +1,7 @@
 const CHRONOLOGY_STATE = {
   timelineRows: [],
   safeguardingRows: [],
+  openableRows: [],
   renderedSignature: "",
 };
 
@@ -30,6 +31,7 @@ function enhanceChronologyAndSafeguardingViews() {
   const signature = `${title}:${main.innerHTML.slice(0, 500)}`;
   if (CHRONOLOGY_STATE.renderedSignature === signature) return;
   CHRONOLOGY_STATE.renderedSignature = signature;
+  CHRONOLOGY_STATE.openableRows = [];
   if (title === "Chronology") renderOsChronology(main);
   if (title === "Safeguarding") renderOsSafeguarding(main);
 }
@@ -94,7 +96,8 @@ function handleChronologyClicks(event) {
   const row = event.target.closest?.("[data-open-chrono-row]");
   if (row) {
     event.preventDefault();
-    const item = CHRONOLOGY_STATE.timelineRows[Number(row.dataset.openChronoRow)] || CHRONOLOGY_STATE.safeguardingRows[Number(row.dataset.openChronoRow)];
+    event.stopImmediatePropagation();
+    const item = CHRONOLOGY_STATE.openableRows[Number(row.dataset.openChronoRow)];
     if (item) openTimelineRecord(item);
     return;
   }
@@ -113,11 +116,14 @@ function openTimelineRecord(item) {
   const documents = normalisedContext().documents;
   const id = rowId(item);
   const type = rowType(item);
-  const match = documents.find((doc) => rowId(doc) === id || (rowId(doc) && rowId(doc) === String(item.source_id || item.record_id || "")) || (rowType(doc) === type && (doc.title || doc.summary) === item.title));
-  if (!match) return;
-  window.dispatchEvent(new CustomEvent("indicare:open-record", { detail: match }));
-  const openButton = [...document.querySelectorAll("[data-open-live-record]")].find((button) => button.textContent.trim().toLowerCase() === "open");
-  if (openButton) openButton.click();
+  const match = documents.find((doc) => rowId(doc) === id || (rowId(doc) && rowId(doc) === String(item.source_id || item.record_id || item.document_id || "")) || (rowType(doc) === type && (doc.title || doc.summary) === item.title));
+  window.dispatchEvent(new CustomEvent("indicare:open-record", { detail: match || item }));
+}
+
+function registerOpenableRow(item) {
+  const index = CHRONOLOGY_STATE.openableRows.length;
+  CHRONOLOGY_STATE.openableRows.push(item);
+  return index;
 }
 
 function openAssistantWithPrompt(prompt) {
@@ -188,22 +194,23 @@ function isHighPriority(item) {
 
 function timelineList(rows) {
   if (!rows.length) return emptyState("No chronology or linked records returned from the database for this context.");
-  return `<div class="sp-timeline chronology-live-list">${rows.map((item, index) => timelineItem(item, index)).join("")}</div>`;
+  return `<div class="sp-timeline chronology-live-list">${rows.map((item) => timelineItem(item)).join("")}</div>`;
 }
 
 function timelineMiniList(rows, emptyMessage) {
   if (!rows.length) return emptyState(emptyMessage);
-  return `<div class="sp-mini-rows">${rows.map((item, index) => `<p data-open-chrono-row="${index}" role="button" tabindex="0"><span>${escapeHtml(formatDate(item.date))}</span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(displayType(rowType(item)))}</em></p>`).join("")}</div>`;
+  return `<div class="sp-mini-rows">${rows.map((item) => { const index = registerOpenableRow(item); return `<p data-open-chrono-row="${index}" role="button" tabindex="0"><span>${escapeHtml(formatDate(item.date))}</span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(displayType(rowType(item)))}</em></p>`; }).join("")}</div>`;
 }
 
-function timelineItem(item, index) {
+function timelineItem(item) {
   const tone = isHighPriority(item) ? "amber" : "blue";
+  const index = registerOpenableRow(item);
   return `<div class="sp-time-item ${tone}" data-open-chrono-row="${index}" role="button" tabindex="0"><time>${escapeHtml(formatDate(item.date))}</time><span></span><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.child_name ? `${item.child_name} · ${item.summary}` : item.summary)}</small><em class="sp-status ${statusClass(item.status)}">${escapeHtml(displayType(item.status || "recorded"))}</em></div></div>`;
 }
 
 function safeguardingCaseList(rows) {
   if (!rows.length) return emptyState("No safeguarding items returned from the database for this context.");
-  return `<div class="safeguarding-case-list">${rows.map((item, index) => `<article class="safeguarding-case-card" data-open-chrono-row="${index}" role="button" tabindex="0"><div><span>${escapeHtml(displayType(rowType(item)))}</span><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.summary)}</p></div><dl><div><dt>Young person</dt><dd>${escapeHtml(item.child_name || "Not linked")}</dd></div><div><dt>Status</dt><dd>${escapeHtml(displayType(item.status || "recorded"))}</dd></div><div><dt>Severity</dt><dd>${escapeHtml(item.severity || "Not set")}</dd></div><div><dt>Date</dt><dd>${escapeHtml(formatDate(item.date))}</dd></div></dl></article>`).join("")}</div>`;
+  return `<div class="safeguarding-case-list">${rows.map((item) => { const index = registerOpenableRow(item); return `<article class="safeguarding-case-card" data-open-chrono-row="${index}" role="button" tabindex="0"><div><span>${escapeHtml(displayType(rowType(item)))}</span><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.summary)}</p></div><dl><div><dt>Young person</dt><dd>${escapeHtml(item.child_name || "Not linked")}</dd></div><div><dt>Status</dt><dd>${escapeHtml(displayType(item.status || "recorded"))}</dd></div><div><dt>Severity</dt><dd>${escapeHtml(item.severity || "Not set")}</dd></div><div><dt>Date</dt><dd>${escapeHtml(formatDate(item.date))}</dd></div></dl></article>`; }).join("")}</div>`;
 }
 
 function managerOversight(rows) {
@@ -219,14 +226,8 @@ function escalationPrompts(rows) {
 }
 
 function scopedContext() {
-  const context = normalisedContext();
-  const selected = new Set((window.IndiCareOperationalSession?.selectedChildren || []).map(String));
-  if (!selected.size) return context;
-  const children = context.children.filter((child) => selected.has(childKey(child)));
-  const ids = new Set(children.map(childKey));
-  const names = new Set(children.map((child) => childName(child).toLowerCase()));
-  const filterByChild = (item) => !ids.size || ids.has(String(item.young_person_id || item.child_id || item.childId || item.youngPersonId || item.child || "")) || names.has(String(item.childName || item.child_name || item.young_person_name || item.name || "").toLowerCase());
-  return { ...context, children, documents: context.documents.filter(filterByChild), chronology: context.chronology.filter(filterByChild), safeguarding: context.safeguarding.filter(filterByChild) };
+  const context = window.IndiCareScopedOSContext || normalisedContext();
+  return { ...context, documents: arrayFrom(context.documents), chronology: arrayFrom(context.chronology), safeguarding: arrayFrom(context.safeguarding), children: arrayFrom(context.children) };
 }
 
 function normalisedContext() {
@@ -258,8 +259,6 @@ function rowType(item) { return String(item.type || item.record_type || item.cat
 function rowId(item) { return String(item.id || item.record_id || item.document_id || item.uuid || item.source_id || ""); }
 function statusClass(value) { return /high|critical|open|overdue|escalated|returned|rejected/i.test(String(value || "")) ? "submitted-for-review" : "approved"; }
 function displayType(type) { return String(type || "record").replaceAll("_", " ").replaceAll("-", " "); }
-function childKey(child) { return String(child.id || child.young_person_id || child.child_id || child.youngPersonId || childName(child)); }
-function childName(child) { return child.name || child.full_name || child.preferred_name || child.young_person_name || [child.first_name, child.last_name].filter(Boolean).join(" ") || "Young person"; }
 function arrayFrom(value) { if (Array.isArray(value)) return value; if (value && Array.isArray(value.items)) return value.items; if (value && Array.isArray(value.results)) return value.results; if (value && Array.isArray(value.data)) return value.data; return []; }
 function formatDate(value) { if (!value) return "Not set"; const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }); }
 function emptyState(message) { return `<div class="sp-empty-state"><strong>No live data yet</strong><p>${escapeHtml(message)}</p></div>`; }
