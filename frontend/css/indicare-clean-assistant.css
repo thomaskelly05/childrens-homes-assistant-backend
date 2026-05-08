@@ -60,8 +60,6 @@ body * {
 .ic-brand > div:not(.ic-logo),
 .ic-brand-title,
 .ic-brand-sub,
-.ic-suite-switcher button,
-.ic-sidebar-actions button,
 .ic-sidebar-footer strong,
 .ic-sidebar-footer small,
 .ic-evidence,
@@ -117,32 +115,45 @@ body * {
   box-shadow: none !important;
 }
 
+.ic-suite-switcher button,
+.ic-sidebar-actions button {
+  width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 1px solid var(--ic-clean-border) !important;
+  border-radius: 15px !important;
+  background: #fff !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-size: .78rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  cursor: pointer !important;
+}
+
+.ic-suite-switcher button.active,
+.ic-suite-switcher button:hover {
+  background: var(--ic-clean-blue-soft) !important;
+  color: var(--ic-clean-blue) !important;
+  border-color: transparent !important;
+}
+
+.ic-sidebar-actions button {
+  background: var(--ic-clean-blue) !important;
+  color: #fff !important;
+  border-color: var(--ic-clean-blue) !important;
+  font-size: 1.08rem !important;
+}
+
 .ic-suite-switcher::before,
 .ic-suite-switcher::after,
 .ic-sidebar-actions::before {
-  content: '';
-  width: 42px;
-  height: 42px;
-  border-radius: 15px;
-  display: block;
-  background: #fff;
-  border: 1px solid var(--ic-clean-border);
-}
-
-.ic-suite-switcher::before {
-  background: var(--ic-clean-blue-soft);
-  border-color: transparent;
-}
-
-.ic-sidebar-actions::before {
-  content: '+';
-  color: #fff;
-  display: grid;
-  place-items: center;
-  background: var(--ic-clean-blue);
-  border-color: var(--ic-clean-blue);
-  font-weight: 900;
-  font-size: 1.1rem;
+  content: none !important;
+  display: none !important;
 }
 
 .ic-sidebar-footer {
@@ -163,6 +174,7 @@ body * {
   display: grid !important;
   place-items: center !important;
   box-shadow: none !important;
+  cursor: pointer !important;
 }
 
 .ic-top {
@@ -401,6 +413,13 @@ body * {
     width: 60px !important;
     min-width: 60px !important;
     padding-inline: 8px !important;
+  }
+
+  .ic-suite-switcher button,
+  .ic-sidebar-actions button,
+  .ic-settings-trigger {
+    width: 40px !important;
+    height: 40px !important;
   }
 
   .ic-composer-dock {
