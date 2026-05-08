@@ -1,6 +1,7 @@
-/* IndiCare AI platform bridge.
+/* IndiCare AI tool bridge.
    Connects existing profile, notifications, command palette, search, QA and timeline APIs
-   into the single standalone assistant shell without changing assistant runtime wiring. */
+   into the single standalone assistant shell without changing assistant runtime wiring.
+   Product framing: ChatGPT-style AI tools for adults working in residential children's homes. */
 (function () {
   const PROFILE_KEY = "indicare_assistant_user_profile";
   const MODE_KEY = "indicare_assistant_default_mode";
@@ -52,6 +53,7 @@
   function putInComposer(text) {
     const input = $("input");
     if (!input) return;
+    document.querySelector('[data-suite-view="intelligence"]')?.click();
     input.value = String(text || "").trim();
     input.focus();
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -79,7 +81,6 @@
         else node.textContent = profile.initials || initials(displayName, user.email);
       });
     } catch (error) {
-      // Profile is nice-to-have. The assistant should still work if account profile fails.
       console.warn("Profile bridge unavailable", error);
     }
   }
@@ -99,8 +100,8 @@
       notifications.id = "openNotifications";
       notifications.className = "ic-nav-btn ic-top-tool";
       notifications.type = "button";
-      notifications.innerHTML = `Notifications <span id="notificationBadge" class="ic-badge hidden">0</span>`;
-      notifications.title = "Notifications";
+      notifications.innerHTML = `Updates <span id="notificationBadge" class="ic-badge hidden">0</span>`;
+      notifications.title = "Updates and follow-ups";
       actions.insertBefore(notifications, actions.children[1] || null);
 
       const profile = document.createElement("a");
@@ -117,7 +118,7 @@
       link.id = "sidebarProfileLink";
       link.className = "ic-sidebar-profile-link";
       link.href = "/my-profile";
-      link.textContent = "Manage profile and password";
+      link.textContent = "Profile, photo and password";
       sidebarFooter.appendChild(link);
     }
   }
@@ -128,7 +129,7 @@
       drawer.id = "notificationsDrawer";
       drawer.className = "ic-floating-panel hidden";
       drawer.innerHTML = `
-        <div class="ic-floating-head"><div><strong>Notifications</strong><span>Operational alerts and follow-ups</span></div><button type="button" data-close-panel="notificationsDrawer">×</button></div>
+        <div class="ic-floating-head"><div><strong>Updates</strong><span>Helpful reminders, review prompts and follow-ups</span></div><button type="button" data-close-panel="notificationsDrawer">×</button></div>
         <div class="ic-floating-actions"><button type="button" id="markAllNotificationsRead">Mark all read</button><button type="button" id="refreshNotifications">Refresh</button></div>
         <div id="notificationList" class="ic-floating-list"><p class="ic-muted-mini">Loading...</p></div>
       `;
@@ -141,7 +142,7 @@
       palette.className = "ic-command-overlay hidden";
       palette.innerHTML = `
         <div class="ic-command-card" role="dialog" aria-label="Command palette">
-          <div class="ic-command-search"><input id="commandSearch" type="text" placeholder="Search commands, conversations, projects and intelligence..." autocomplete="off" /><button type="button" data-close-panel="commandPalette">×</button></div>
+          <div class="ic-command-search"><input id="commandSearch" type="text" placeholder="Search tools, conversations, projects, templates and reviews..." autocomplete="off" /><button type="button" data-close-panel="commandPalette">×</button></div>
           <div id="commandResults" class="ic-command-results"></div>
         </div>
       `;
@@ -163,17 +164,17 @@
       const list = $("notificationList");
       if (!list) return;
       if (!data.available) {
-        list.innerHTML = `<p class="ic-muted-mini">${escapeHtml(data.message || "Notifications are not available yet.")}</p>`;
+        list.innerHTML = `<p class="ic-muted-mini">${escapeHtml(data.message || "Updates are not available yet.")}</p>`;
         return;
       }
       if (!items.length) {
-        list.innerHTML = `<p class="ic-muted-mini">No notifications right now.</p>`;
+        list.innerHTML = `<p class="ic-muted-mini">No updates right now.</p>`;
         return;
       }
       list.innerHTML = items.map((item) => `
         <article class="ic-notification ${item.read_at ? "read" : "unread"}">
-          <small>${escapeHtml(item.priority || item.notification_type || "notification")}</small>
-          <strong>${escapeHtml(item.title || "Notification")}</strong>
+          <small>${escapeHtml(item.priority || item.notification_type || "update")}</small>
+          <strong>${escapeHtml(item.title || "Update")}</strong>
           <p>${escapeHtml(item.body || item.message || "")}</p>
           <div class="ic-notification-actions">
             ${item.href ? `<a href="${escapeHtml(item.href)}">Open</a>` : ""}
@@ -184,29 +185,18 @@
       `).join("");
     } catch (error) {
       const list = $("notificationList");
-      if (list) list.innerHTML = `<p class="ic-muted-mini">Notifications could not be loaded.</p>`;
-      console.warn("Notifications unavailable", error);
+      if (list) list.innerHTML = `<p class="ic-muted-mini">Updates could not be loaded.</p>`;
+      console.warn("Updates unavailable", error);
     }
   }
 
   async function loadQaSummary() {
-    try {
-      const data = await api("/qa/dashboard");
-      return data;
-    } catch (_) {
-      return null;
-    }
+    try { return await api("/qa/dashboard"); } catch (_) { return null; }
   }
-
   async function loadTimelineSummary() {
     const projectId = activeProjectId();
-    try {
-      return await api(`/standalone-timeline/projects/${encodeURIComponent(projectId)}/summary`);
-    } catch (_) {
-      return null;
-    }
+    try { return await api(`/standalone-timeline/projects/${encodeURIComponent(projectId)}/summary`); } catch (_) { return null; }
   }
-
   async function operationalSearch(query) {
     const projectId = activeProjectId();
     return api("/standalone-search/operational", {
@@ -218,28 +208,32 @@
   const COMMANDS = [
     { id: "profile", title: "Open My Profile", subtitle: "Profile picture, password and settings", run: () => { window.location.href = "/my-profile"; } },
     { id: "new-chat", title: "New conversation", subtitle: "Start a fresh IndiCare AI chat", run: () => $("newChat")?.click() },
-    { id: "notes", title: "Open I-Notes", subtitle: "Capture and structure notes", run: () => document.querySelector('[data-suite-view="notes"]')?.click() },
-    { id: "docs", title: "Open IndiCare Docs", subtitle: "Create policies, chronologies and evidence packs", run: () => document.querySelector('[data-suite-view="docs"]')?.click() },
-    { id: "ai", title: "Open IndiCare AI", subtitle: "Return to assistant chat", run: () => document.querySelector('[data-suite-view="intelligence"]')?.click() },
-    { id: "notifications", title: "Open notifications", subtitle: "Alerts and follow-ups", run: () => openNotifications() },
-    { id: "qa", title: "QA dashboard summary", subtitle: "Pull review, document and follow-up quality data", run: async () => insertQaPrompt() },
-    { id: "timeline", title: "Timeline summary", subtitle: "Summarise project chronology intelligence", run: async () => insertTimelinePrompt() },
-    { id: "safeguarding", title: "Safeguarding review", subtitle: "Prompt: review facts, concerns and actions", run: () => putInComposer("Review this safeguarding concern. Separate facts, concerns, missing information, immediate actions, manager/DSL review and recording implications:") },
-    { id: "incident", title: "Incident record", subtitle: "Prompt: create a professional incident record", run: () => putInComposer("Create a professional incident record with chronology, staff actions, outcome, safeguarding considerations and manager review:") },
-    { id: "chronology", title: "Extract chronology", subtitle: "Prompt: build a factual chronology", run: () => putInComposer("Extract a factual chronology. Use Date/Time → Event → Staff action → Outcome → Missing information:") },
-    { id: "ofsted", title: "Ofsted evidence summary", subtitle: "Prompt: evidence, impact, gaps and leadership oversight", run: () => putInComposer("Prepare an Ofsted evidence summary. Include evidence seen, impact for children, gaps, leadership oversight and likely inspector questions:") },
+    { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant for children’s home practice", run: () => document.querySelector('[data-suite-view="intelligence"]')?.click() },
+    { id: "notes", title: "I-Notes", subtitle: "Note, transcribe, clean up and review with AI", run: () => document.querySelector('[data-suite-view="notes"]')?.click() },
+    { id: "docs", title: "IndiCare Docs", subtitle: "Template documents with AI review and rewriting", run: () => document.querySelector('[data-suite-view="docs"]')?.click() },
+    { id: "updates", title: "Open updates", subtitle: "Helpful reminders and follow-ups", run: () => openNotifications() },
+    { id: "qa", title: "AI review dashboard", subtitle: "Review quality, follow-ups and document issues", run: async () => insertQaPrompt() },
+    { id: "timeline", title: "Chronology summary", subtitle: "Summarise project chronology intelligence", run: async () => insertTimelinePrompt() },
+    { id: "safeguarding", title: "Safeguarding review", subtitle: "Review facts, concerns and actions", run: () => putInComposer("Review this safeguarding concern. Separate facts, concerns, missing information, immediate actions, manager/DSL review and recording implications:") },
+    { id: "incident", title: "Incident record", subtitle: "Create a professional incident record", run: () => putInComposer("Create a professional incident record with chronology, staff actions, outcome, safeguarding considerations and manager review:") },
+    { id: "chronology", title: "Extract chronology", subtitle: "Build a factual chronology", run: () => putInComposer("Extract a factual chronology. Use Date/Time → Event → Staff action → Outcome → Missing information:") },
+    { id: "ofsted", title: "Ofsted evidence summary", subtitle: "Evidence, impact, gaps and leadership oversight", run: () => putInComposer("Prepare an Ofsted evidence summary. Include evidence seen, impact for children, gaps, leadership oversight and likely inspector questions:") },
+    { id: "note-clean", title: "Clean notes", subtitle: "Clean rough notes or transcript", run: () => { document.querySelector('[data-suite-view="notes"]')?.click(); document.querySelector('[data-note-command="clean"]')?.focus(); } },
+    { id: "doc-incident", title: "Incident template", subtitle: "Open IndiCare Docs with the incident template", run: () => { document.querySelector('[data-suite-view="docs"]')?.click(); document.querySelector('[data-doc-template="incident"]')?.click(); } },
+    { id: "doc-safeguarding", title: "Safeguarding template", subtitle: "Open IndiCare Docs with safeguarding review", run: () => { document.querySelector('[data-suite-view="docs"]')?.click(); document.querySelector('[data-doc-template="safeguarding"]')?.click(); } },
+    { id: "doc-reg45", title: "Regulation 45 template", subtitle: "Open IndiCare Docs with Regulation 45 evidence", run: () => { document.querySelector('[data-suite-view="docs"]')?.click(); document.querySelector('[data-doc-template="reg45"]')?.click(); } },
   ];
 
   async function insertQaPrompt() {
     const data = await loadQaSummary();
-    if (!data) { showToast("QA dashboard is unavailable."); return; }
-    putInComposer(`Review this QA dashboard and identify priorities, risks, leadership oversight and next actions:\n\n${JSON.stringify(data, null, 2)}`);
+    if (!data) { showToast("AI review data is unavailable."); return; }
+    putInComposer(`Review this quality and follow-up summary for a children’s home. Identify recording/document issues, priorities, risks, manager oversight and next actions:\n\n${JSON.stringify(data, null, 2)}`);
   }
 
   async function insertTimelinePrompt() {
     const data = await loadTimelineSummary();
-    if (!data) { showToast("Timeline summary is unavailable for this project."); return; }
-    putInComposer(`Summarise this project timeline intelligence. Identify chronology themes, safeguarding patterns, gaps and next actions:\n\n${JSON.stringify(data, null, 2)}`);
+    if (!data) { showToast("Chronology summary is unavailable for this project."); return; }
+    putInComposer(`Summarise this project chronology. Identify themes, safeguarding patterns, gaps and suggested next actions:\n\n${JSON.stringify(data, null, 2)}`);
   }
 
   async function renderCommandResults(query) {
@@ -254,7 +248,7 @@
     `).join("");
 
     if (q.length >= 2) {
-      html += `<div class="ic-command-section">Operational search</div>`;
+      html += `<div class="ic-command-section">Project search</div>`;
       try {
         const data = await operationalSearch(q);
         const items = data.results || data.items || [];
@@ -265,10 +259,10 @@
             return `<button type="button" class="ic-command-item" data-search-result="${index}" data-search-text="${escapeHtml(`${title}\n${body}`)}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(body).slice(0, 180)}</span></button>`;
           }).join("");
         } else {
-          html += `<p class="ic-muted-mini">No operational search results.</p>`;
+          html += `<p class="ic-muted-mini">No project search results.</p>`;
         }
       } catch (error) {
-        html += `<p class="ic-muted-mini">Operational search is unavailable for this account/project.</p>`;
+        html += `<p class="ic-muted-mini">Project search is unavailable for this account/project.</p>`;
       }
     }
 
@@ -280,17 +274,10 @@
     if (!palette) return;
     palette.classList.remove("hidden");
     const input = $("commandSearch");
-    if (input) {
-      input.value = "";
-      input.focus();
-    }
+    if (input) { input.value = ""; input.focus(); }
     renderCommandResults("");
   }
-
-  function closePanel(id) {
-    $(id)?.classList.add("hidden");
-  }
-
+  function closePanel(id) { $(id)?.classList.add("hidden"); }
   function openNotifications() {
     const drawer = $("notificationsDrawer");
     if (!drawer) return;
@@ -315,7 +302,7 @@
       const searchResult = target.closest("[data-search-text]");
       if (searchResult) {
         closePanel("commandPalette");
-        putInComposer(`Use this operational search result as context and help me analyse it:\n\n${searchResult.getAttribute("data-search-text")}`);
+        putInComposer(`Use this project search result as context and help me analyse it:\n\n${searchResult.getAttribute("data-search-text")}`);
         return;
       }
       const read = target.closest("[data-read-notification]");
@@ -328,11 +315,9 @@
       if (dismiss) {
         await api(`/notifications/${dismiss.getAttribute("data-dismiss-notification")}/dismiss`, { method: "POST" }).catch(() => null);
         refreshNotifications();
-        return;
       }
     });
 
-    $("commandSearch")?.addEventListener("input", (event) => renderCommandResults(event.target.value));
     document.addEventListener("input", (event) => {
       if (event.target?.id === "commandSearch") renderCommandResults(event.target.value);
     });
@@ -353,8 +338,8 @@
   async function refreshTimelinePanel() {
     const data = await loadTimelineSummary();
     if (!data) return;
-    if ($("timelineSummaryTitle")) $("timelineSummaryTitle").textContent = `${data.eventCount || 0} timeline event${Number(data.eventCount || 0) === 1 ? "" : "s"}`;
-    if ($("timelineSummaryText")) $("timelineSummaryText").textContent = data.summary || "Timeline intelligence is available for this project.";
+    if ($("timelineSummaryTitle")) $("timelineSummaryTitle").textContent = `${data.eventCount || 0} chronology item${Number(data.eventCount || 0) === 1 ? "" : "s"}`;
+    if ($("timelineSummaryText")) $("timelineSummaryText").textContent = data.summary || "Chronology review is available for this project.";
     const alerts = data.analysis?.alerts || [];
     const alertNode = $("suiteTimelineAlerts");
     if (alertNode && alerts.length) alertNode.innerHTML = alerts.slice(0, 5).map((alert) => `<button type="button" data-command-id="timeline">${escapeHtml(alert)}</button>`).join("");
