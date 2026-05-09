@@ -84,3 +84,20 @@ def memory_prompt_context(
             limit=limit,
         ),
     }
+
+
+@router.get("/insights")
+def operational_memory_insights(
+    project_id: str | None = Query(default=None),
+    home_id: int | None = Query(default=None),
+    young_person_id: int | None = Query(default=None),
+    limit: int = Query(default=80, ge=10, le=200),
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    return service.operational_insights(
+        current_user=current_user,
+        project_id=project_id,
+        home_id=home_id,
+        young_person_id=young_person_id,
+        limit=limit,
+    )
