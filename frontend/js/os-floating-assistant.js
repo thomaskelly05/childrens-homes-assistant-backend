@@ -57,6 +57,71 @@
     return { scope, provider_id: providerId, home_id: homeId, young_person_id: youngPersonId, staff_id: staffId, adult_id: adultId, current_page: path };
   }
 
+  function buildExistingAssistantRequest(text, ctx) {
+    const commonContext = {
+      current_view: ctx.current_page,
+      current_section: location.hash?.replace('#', '') || 'os',
+      home_id: ctx.home_id,
+      provider_id: ctx.provider_id,
+      access_level: ctx.scope === 'provider' ? 'provider' : ctx.scope,
+      allowed_home_ids: ctx.home_id ? [ctx.home_id] : [],
+    };
+
+    if (ctx.scope === 'child' && ctx.young_person_id) {
+      return {
+        url: '/assistant/os/young-people/stream',
+        body: {
+          message: text,
+          response_mode: 'deep',
+          context: {
+            ...commonContext,
+            scope: 'young_person',
+            young_person_id: ctx.young_person_id,
+            current_view: ctx.current_page,
+            current_section: location.hash?.replace('#', '') || 'child_workspace',
+          },
+          history: recentHistory(),
+        },
+      };
+    }
+
+    if (ctx.scope === 'provider' || /reg 45|provider|ceo|ri\b|responsible individual/i.test(text)) {
+      return {
+        url: '/assistant/os/quality/stream',
+        body: {
+          message: text,
+          response_mode: 'deep',
+          context: {
+            ...commonContext,
+            scope: 'quality',
+            access_level: 'provider',
+          },
+          history: recentHistory(),
+        },
+      };
+    }
+
+    return {
+      url: '/assistant/os/home/stream',
+      body: {
+        message: text,
+        response_mode: 'deep',
+        context: {
+          ...commonContext,
+          scope: 'home',
+        },
+        history: recentHistory(),
+      },
+    };
+  }
+
+  function recentHistory() {
+    return state.messages
+      .filter((m) => !m.loading && !m.error)
+      .slice(-8)
+      .map((m) => ({ role: m.role, content: m.text }));
+  }
+
   function render() {
     let root = document.getElementById(ROOT_ID);
     if (!root) {
@@ -70,7 +135,7 @@
       <section class="os-ai-modal ${state.open ? 'open' : ''}" role="dialog" aria-modal="true" aria-label="IndiCare OS Assistant">
         <div class="os-ai-main">
           <header class="os-ai-head">
-            <div><div class="os-ai-title">IndiCare OS Assistant</div><div class="os-ai-subtitle">All-knowing operational assistant across records, reviews, safeguarding, home and provider intelligence</div></div>
+            <div><div class="os-ai-title">IndiCare OS Assistant</div><div class="os-ai-subtitle">Connected to your existing OS assistant, context builder, evidence index and streaming intelligence</div></div>
             <button class="os-ai-close" type="button" data-os-ai-close>×</button>
           </header>
           <div class="os-ai-thread" data-os-ai-thread>${renderThread()}</div>
@@ -96,9 +161,9 @@
   }
 
   function renderSource(source) {
-    const title = source.title || source.record_type || source.type || 'Source';
-    const meta = source.created_at || source.starts_at || source.status || '';
-    return `<div class="os-ai-source"><strong>${esc(source.type || 'source')}</strong> · ${esc(title)}${meta ? `<br><small>${esc(meta)}</small>` : ''}</div>`;
+    const title = source.label || source.title || source.document_title || source.record_type || source.type || 'Source';
+    const meta = source.created_at || source.starts_at || source.status || source.citation_ref || '';
+    return `<div class="os-ai-source"><strong>${esc(source.type || source.source_type || 'source')}</strong> · ${esc(title)}${meta ? `<br><small>${esc(meta)}</small>` : ''}</div>`;
   }
 
   function renderRail() {
@@ -112,7 +177,7 @@
         <div><strong>Page:</strong> ${esc(ctx.current_page)}</div>
       </div></div>
       <div class="os-ai-card"><h4>Suggested prompts</h4>${PROMPTS.map((p) => `<button class="os-ai-prompt" type="button" data-os-ai-prompt="${esc(p)}">${esc(p)}</button>`).join('')}</div>
-      <div class="os-ai-card"><h4>Can answer from</h4><span class="os-ai-pill">Records</span><span class="os-ai-pill">Chronology</span><span class="os-ai-pill">Tasks</span><span class="os-ai-pill">Evidence</span><span class="os-ai-pill">Calendar</span><span class="os-ai-pill">Connect</span><span class="os-ai-pill">Safeguarding</span><span class="os-ai-pill">Provider</span></div>
+      <div class="os-ai-card"><h4>Wired into existing assistant</h4><span class="os-ai-pill">Streaming AI</span><span class="os-ai-pill">Runtime context</span><span class="os-ai-pill">Evidence index</span><span class="os-ai-pill">Sources</span><span class="os-ai-pill">Reports</span><span class="os-ai-pill">Security</span></div>
     `;
   }
 
@@ -136,29 +201,83 @@
     ask(text);
   }
 
+  async function streamExistingAssistant(text, ctx) {
+    const target = buildExistingAssistantRequest(text, ctx);
+    const res = await fetch(target.url, {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-User-Id': qs().get('user_id') || '1', 'X-Role': qs().get('role') || 'manager' },
+      body: JSON.stringify(target.body),
+    });
+    if (!res.ok || !res.body) throw new Error(await res.text());
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let answer = '';
+    let sources = [];
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const chunks = buffer.split('\n\n');
+      buffer = chunks.pop() || '';
+      for (const chunk of chunks) {
+        if (!chunk.trim()) continue;
+        const eventName = (chunk.match(/^event:\s*(.+)$/m) || [])[1];
+        const dataLines = chunk.split('\n').filter((line) => line.startsWith('data:')).map((line) => line.replace(/^data:\s?/, ''));
+        const data = dataLines.join('\n');
+        if (eventName === 'done' || data === '[DONE]') continue;
+        if (eventName === 'meta') {
+          try {
+            const meta = JSON.parse(data);
+            sources = meta.sources || meta.evidence_index || sources;
+          } catch {}
+          continue;
+        }
+        if (eventName === 'progress') continue;
+        if (data) {
+          answer += data;
+          updateLoadingMessage(answer, sources);
+        }
+      }
+    }
+    return { answer: answer.trim(), sources };
+  }
+
+  function updateLoadingMessage(text, sources = []) {
+    const last = state.messages[state.messages.length - 1];
+    if (last && last.loading) {
+      last.text = text || 'Thinking across the OS...';
+      last.sources = sources;
+      render();
+    }
+  }
+
   async function ask(text) {
     if (state.busy) return;
     state.open = true;
     state.messages.push({ role: 'user', text, sources: [] });
-    state.messages.push({ role: 'assistant', text: 'Thinking across the OS records, chronology, evidence, tasks, calendar and Connect activity...', sources: [], loading: true });
+    state.messages.push({ role: 'assistant', text: 'Connecting to the existing OS Assistant stream...', sources: [], loading: true });
     state.busy = true;
     render();
     try {
       const ctx = detectContext();
-      const res = await fetch('/api/os-assistant/ask', {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-User-Id': qs().get('user_id') || '1', 'X-Role': qs().get('role') || 'manager' },
-        body: JSON.stringify({ message: text, ...ctx })
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      let data;
+      try {
+        data = await streamExistingAssistant(text, ctx);
+      } catch (streamError) {
+        const fallback = await fetch('/api/os-assistant/ask', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-User-Id': qs().get('user_id') || '1', 'X-Role': qs().get('role') || 'manager' },
+          body: JSON.stringify({ message: text, ...ctx })
+        });
+        if (!fallback.ok) throw streamError;
+        const json = await fallback.json();
+        data = { answer: json.answer, sources: json.sources || [] };
+      }
       state.messages.pop();
       state.messages.push({ role: 'assistant', text: data.answer || 'I could not produce an answer from the OS data.', sources: data.sources || [] });
-      if (Array.isArray(data.suggested_questions)) {
-        data.suggested_questions.slice(0, 5).forEach((q) => { if (!PROMPTS.includes(q)) PROMPTS.push(q); });
-      }
     } catch (error) {
       state.messages.pop();
-      state.messages.push({ role: 'assistant', text: 'I could not reach the OS Assistant endpoint. Check that the assistant bridge router is loaded and the database schema is available.\n\n' + error.message, sources: [], error: true });
+      state.messages.push({ role: 'assistant', text: 'I could not reach the existing OS Assistant stream. Check the assistant routes and authentication for this user.\n\n' + error.message, sources: [], error: true });
     } finally {
       state.busy = false;
       render();
