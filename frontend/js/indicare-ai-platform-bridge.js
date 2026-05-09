@@ -278,6 +278,7 @@
     loadScript("/js/indicare-presence-context.js", "data-indicare-presence-context");
     loadScript("/js/indicare-ambient-intelligence.js", "data-indicare-ambient-intelligence");
     loadScript("/js/indicare-voice-companion.js", "data-indicare-voice-companion");
+    loadScript("/js/indicare-voice-transcription-bridge.js", "data-indicare-voice-transcription-bridge");
     loadScript("/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake");
     setInterval(refreshUpdates, 60000);
   });
