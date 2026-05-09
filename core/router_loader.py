@@ -111,6 +111,10 @@ backend.os_runtime_compat_router
 backend.os_schema_audit_router
 backend.os_record_viewer_router
 backend.universal_records_router
+backend.indicare_connect_router
+backend.indicare_connect_calendar_router
+backend.indicare_connect_join_router
+backend.indicare_connect_realtime_router
 backend.os_command_router
 backend.os_command_shift_router
 backend.os_command_risk_router
