@@ -173,6 +173,7 @@
   const COMMANDS = [
     { id: "profile", title: "Open My Profile", subtitle: "Profile picture, password and settings", run: () => { window.location.href = "/my-profile"; } },
     { id: "devices", title: "Set up devices", subtitle: "Microphone and camera access for Hey IndiCare", run: () => window.IndiCareDevicePermissions?.open?.() },
+    { id: "voice-setup", title: "Voice setup", subtitle: "Set up voice capture and confirmed speaker label", run: () => window.IndiCareVoiceSetup?.open?.() },
     { id: "new-chat", title: "New conversation", subtitle: "Start a fresh IndiCare AI chat", run: () => $("newChat")?.click() },
     { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant for children's home practice", run: () => openApp("intelligence") },
     { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => document.getElementById("voiceOrb")?.click() },
@@ -276,9 +277,12 @@
     loadScript("/js/indicare-mail-shell.js", "data-indicare-mail-shell");
     loadScript("/js/indicare-web-conversation.js", "data-indicare-web-conversation");
     loadScript("/js/indicare-presence-context.js", "data-indicare-presence-context");
+    loadScript("/js/indicare-conversation-continuity.js", "data-indicare-conversation-continuity");
     loadScript("/js/indicare-ambient-intelligence.js", "data-indicare-ambient-intelligence");
     loadScript("/js/indicare-voice-companion.js", "data-indicare-voice-companion");
     loadScript("/js/indicare-voice-transcription-bridge.js", "data-indicare-voice-transcription-bridge");
+    loadScript("/js/indicare-alive-voice-layer.js", "data-indicare-alive-voice-layer");
+    loadScript("/js/indicare-voice-setup.js", "data-indicare-voice-setup");
     loadScript("/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake");
     setInterval(refreshUpdates, 60000);
   });

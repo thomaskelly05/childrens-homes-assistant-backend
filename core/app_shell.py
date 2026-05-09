@@ -22,6 +22,8 @@ OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/reg44-report-reader-workspace.js"></script>',
     '<script src="/js/os-child-workspace-tabs.js"></script>',
     '<script src="/js/os-therapeutic-record-creator.js"></script>',
+    '<script src="/js/indicare-connected-care-experience.js"></script>',
+    '<script src="/js/indicare-workspace-groups.js"></script>',
 ]
 
 
