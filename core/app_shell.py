@@ -24,6 +24,10 @@ OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/os-therapeutic-record-creator.js"></script>',
     '<script src="/js/indicare-connected-care-experience.js"></script>',
     '<script src="/js/indicare-workspace-groups.js"></script>',
+    '<script src="/js/daily-living-workspace-refinement.js"></script>',
+    '<script src="/js/chronology-visual-timeline.js"></script>',
+    '<script src="/js/oversight-intelligence-dashboard.js"></script>',
+    '<script src="/js/indicare-production-readiness-bridge.js"></script>',
 ]
 
 
