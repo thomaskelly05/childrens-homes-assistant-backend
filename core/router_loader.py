@@ -28,6 +28,7 @@ routers.ai_notes_routes
 routers.ai_note_templates_routes
 routers.ai_note_export_routes
 routers.assistant_general_routes
+routers.assistant_web_routes
 routers.standalone_assistant_library_routes
 routers.standalone_intelligence_routes
 routers.standalone_enterprise_intelligence_routes
@@ -111,12 +112,16 @@ backend.os_runtime_compat_router
 backend.os_schema_audit_router
 backend.os_record_viewer_router
 backend.universal_records_router
+backend.universal_document_intelligence_router
 backend.indicare_connect_router
 backend.indicare_connect_calendar_router
 backend.indicare_connect_join_router
 backend.indicare_connect_realtime_router
 backend.indicare_connect_groups_router
 backend.os_assistant_bridge_router
+backend.reg44_report_reader_router
+backend.reg44_document_ingestion_router
+backend.reg44_trend_engine_router
 backend.os_command_router
 backend.os_command_shift_router
 backend.os_command_risk_router
