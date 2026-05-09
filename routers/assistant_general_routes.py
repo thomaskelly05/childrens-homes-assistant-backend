@@ -12,11 +12,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from auth.current_user import get_current_user
 from services.assistant_general_service import generate_general_assistant_stream
 from services.assistant_security import normalise_history, safe_int, safe_string
+from services.indicare_ai_orchestrator_service import IndiCareAIOrchestratorService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assistant/general", tags=["General Assistant"])
 ui_router = APIRouter(tags=["Assistant UI"])
+orchestrator_service = IndiCareAIOrchestratorService()
 
 MAX_GENERAL_MESSAGE_CHARS = 80000
 MAX_GENERAL_DOCUMENT_CHARS = 60000
@@ -32,6 +34,10 @@ class GeneralAssistantRequest(BaseModel):
     assistant_surface: str | None = "standalone"
     document_text: str | None = None
     document_name: str | None = None
+    project_id: str | None = None
+    young_person_id: int | None = None
+    home_id: int | None = None
+    use_orchestrator: bool | None = True
 
 
 def _safe_user_id(current_user: dict[str, Any]) -> int:
@@ -63,14 +69,47 @@ Do not make final safeguarding, legal, clinical, employment or regulatory decisi
 When useful, separate facts, interpretation, missing information and next steps.
 Never abruptly end. Close with one natural continuation, such as a helpful next step, a gentle question, or an offer to structure the next part together.
 If live web context is supplied, use it naturally. Do not sound like a search results page; explain what you found and keep the conversation going.
+If orchestrated IndiCare context is supplied, use it as the assistant's brain. Do not expose raw JSON. Be clear if context is limited or unavailable.
 """.strip()
 
 
-def _message_with_document(payload: GeneralAssistantRequest) -> str:
+def _orchestrator_context(payload: GeneralAssistantRequest, current_user: dict[str, Any]) -> dict[str, Any] | None:
+    if payload.use_orchestrator is False:
+        return None
+    message = safe_string(payload.message)
+    if not message or "INDICARE AI ORCHESTRATED BRAIN CONTEXT" in message:
+        return None
+    try:
+        return orchestrator_service.build_context(
+            question=message[:12000],
+            current_user=current_user,
+            project_id=safe_string(payload.project_id) or safe_string(payload.conversation_id) or "standalone",
+            young_person_id=payload.young_person_id,
+            home_id=payload.home_id,
+            limit=8,
+        )
+    except Exception:
+        logger.exception("IndiCare AI orchestrator context failed")
+        return None
+
+
+def _message_with_document(payload: GeneralAssistantRequest, current_user: dict[str, Any]) -> tuple[str, dict[str, Any] | None]:
     message = safe_string(payload.message)
     document_text = _clip(payload.document_text, MAX_GENERAL_DOCUMENT_CHARS)
     document_name = safe_string(payload.document_name) or "uploaded document"
-    parts = [_conversation_presence_prefix(), "", message]
+    orchestrated = _orchestrator_context(payload, current_user)
+    parts = [_conversation_presence_prefix()]
+
+    if orchestrated and orchestrated.get("prompt_context"):
+        parts.extend([
+            "",
+            str(orchestrated.get("prompt_context"))[:45000],
+            "",
+            "USER'S CURRENT MESSAGE:",
+            message,
+        ])
+    else:
+        parts.extend(["", message])
 
     if document_text:
         parts.extend([
@@ -82,7 +121,7 @@ def _message_with_document(payload: GeneralAssistantRequest) -> str:
             document_text,
         ])
 
-    return "\n".join(parts)
+    return "\n".join(parts), orchestrated
 
 
 def _sse_message(data: str) -> str:
@@ -91,7 +130,7 @@ def _sse_message(data: str) -> str:
 
 
 def _sse_event(event: str, payload: Any) -> str:
-    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
 
 
 def _sse_done() -> str:
@@ -137,7 +176,7 @@ async def stream_general_assistant(
     user_id = _safe_user_id(current_user)
     history = normalise_history(payload.history, max_items=12, max_chars=2200)
     conversation_id = safe_string(payload.conversation_id) or f"general-{user_id}"
-    message = _message_with_document(payload)
+    message, orchestrated_context = _message_with_document(payload, current_user)
 
     async def _stream():
         sources: list[dict[str, Any]] = []
@@ -146,9 +185,9 @@ async def stream_general_assistant(
         assistant_scope: dict[str, Any] = {
             "assistant_mode": "general",
             "assistant_surface": "standalone",
-            "scope": "public_guidance_only",
-            "scope_type": "public_guidance_only",
-            "internal_data_access": False,
+            "scope": "indicare_ai_standalone_tools",
+            "scope_type": "indicare_ai_standalone_tools",
+            "internal_data_access": bool(orchestrated_context),
         }
         assistant_context: dict[str, Any] = {
             "guidance_only": True,
@@ -156,6 +195,10 @@ async def stream_general_assistant(
             "document_attached": bool(payload.document_text),
             "document_name": safe_string(payload.document_name) or None,
             "conversation_presence": True,
+            "orchestrator_enabled": bool(orchestrated_context),
+            "orchestrator_project_id": (orchestrated_context or {}).get("project_id"),
+            "orchestrator_surface": (orchestrated_context or {}).get("surface"),
+            "orchestrator_sources": (orchestrated_context or {}).get("sources", []),
         }
         suggested_actions: list[dict[str, Any]] = []
         safeguarding: dict[str, Any] = {}
@@ -194,7 +237,7 @@ async def stream_general_assistant(
                     if isinstance(item.get("explainability"), dict):
                         explainability = item.get("explainability") or {}
                     if isinstance(item.get("assistant_scope"), dict):
-                        assistant_scope = item.get("assistant_scope") or assistant_scope
+                        assistant_scope = {**assistant_scope, **(item.get("assistant_scope") or {})}
                     if isinstance(item.get("assistant_context"), dict):
                         assistant_context = {
                             **assistant_context,
@@ -202,6 +245,10 @@ async def stream_general_assistant(
                             "document_attached": bool(payload.document_text),
                             "document_name": safe_string(payload.document_name) or None,
                             "conversation_presence": True,
+                            "orchestrator_enabled": bool(orchestrated_context),
+                            "orchestrator_project_id": (orchestrated_context or {}).get("project_id"),
+                            "orchestrator_surface": (orchestrated_context or {}).get("surface"),
+                            "orchestrator_sources": (orchestrated_context or {}).get("sources", []),
                         }
                     if isinstance(item.get("suggested_actions"), list):
                         suggested_actions = [
