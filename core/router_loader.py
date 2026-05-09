@@ -23,6 +23,7 @@ routers.admin_routes
 routers.founder_ai_routes
 routers.admin_user_routes
 routers.billing_routes
+routers.indicare_mail_routes
 routers.ai_notes_routes
 routers.ai_note_templates_routes
 routers.ai_note_export_routes
@@ -110,6 +111,10 @@ backend.os_runtime_compat_router
 backend.os_schema_audit_router
 backend.os_record_viewer_router
 backend.universal_records_router
+backend.indicare_connect_router
+backend.indicare_connect_calendar_router
+backend.indicare_connect_join_router
+backend.indicare_connect_realtime_router
 backend.os_command_router
 backend.os_command_shift_router
 backend.os_command_risk_router
