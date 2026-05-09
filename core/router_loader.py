@@ -23,6 +23,7 @@ routers.admin_routes
 routers.founder_ai_routes
 routers.admin_user_routes
 routers.billing_routes
+routers.indicare_mail_routes
 routers.ai_notes_routes
 routers.ai_note_templates_routes
 routers.ai_note_export_routes
