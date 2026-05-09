@@ -1,4 +1,4 @@
-/* IndiCare AI bridge: profile, updates, command palette, project search, product upgrades, Mail, Voice and Web loaders. */
+/* IndiCare AI bridge: profile, updates, command palette, project search, product upgrades, Mail, Voice, Web and Presence loaders. */
 (function () {
   const PROFILE_KEY = "indicare_assistant_user_profile";
   const MODE_KEY = "indicare_assistant_default_mode";
@@ -37,10 +37,7 @@
     return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   }
 
-  function activeProjectId() {
-    return $("workspaceSelect")?.value || localStorage.getItem(ACTIVE_WORKSPACE_KEY) || "standalone";
-  }
-
+  function activeProjectId() { return $("workspaceSelect")?.value || localStorage.getItem(ACTIVE_WORKSPACE_KEY) || "standalone"; }
   function openApp(view) { document.querySelector(`[data-suite-view="${view}"]`)?.click(); }
 
   function putInComposer(text) {
@@ -88,7 +85,7 @@
       voice.id = "openVoiceCompanion";
       voice.className = "ic-nav-btn ic-top-tool";
       voice.type = "button";
-      voice.textContent = "Voice";
+      voice.textContent = "Hey IndiCare";
       voice.title = "Talk to IndiCare AI";
       actions.insertBefore(voice, actions.children[1] || null);
 
@@ -129,7 +126,7 @@
       const palette = document.createElement("div");
       palette.id = "commandPalette";
       palette.className = "ic-command-overlay hidden";
-      palette.innerHTML = `<div class="ic-command-card" role="dialog" aria-label="Command palette"><div class="ic-command-search"><input id="commandSearch" type="text" placeholder="Search tools, conversations, projects, templates, mail, web and reviews..." autocomplete="off" /><button type="button" data-close-panel="commandPalette">×</button></div><div id="commandResults" class="ic-command-results"></div></div>`;
+      palette.innerHTML = `<div class="ic-command-card" role="dialog" aria-label="Command palette"><div class="ic-command-search"><input id="commandSearch" type="text" placeholder="Search tools, conversations, projects, templates, mail, web, context and reviews..." autocomplete="off" /><button type="button" data-close-panel="commandPalette">×</button></div><div id="commandResults" class="ic-command-results"></div></div>`;
       document.body.appendChild(palette);
     }
   }
@@ -169,8 +166,9 @@
     { id: "profile", title: "Open My Profile", subtitle: "Profile picture, password and settings", run: () => { window.location.href = "/my-profile"; } },
     { id: "new-chat", title: "New conversation", subtitle: "Start a fresh IndiCare AI chat", run: () => $("newChat")?.click() },
     { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant for children's home practice", run: () => openApp("intelligence") },
-    { id: "voice", title: "Talk to IndiCare", subtitle: "Open the British voice companion", run: () => document.getElementById("voiceOrb")?.click() },
+    { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => document.getElementById("voiceOrb")?.click() },
     { id: "web", title: "Ask with web search", subtitle: "Use Tavily for current information", run: () => putInComposer("Search the web and answer conversationally: ") },
+    { id: "presence", title: "Use IndiCare context", subtitle: "Timeline, proactive intelligence and Connect context", run: () => putInComposer("What patterns, risks, unresolved actions or follow-ups should I be aware of?") },
     { id: "notes", title: "I-Notes", subtitle: "Note, transcribe, clean up and review with AI", run: () => openApp("notes") },
     { id: "docs", title: "IndiCare Docs", subtitle: "Template documents with AI review and rewriting", run: () => openApp("docs") },
     { id: "mail", title: "IndiCare Mail", subtitle: "Internal and external AI-native mail", run: () => openApp("mail") },
@@ -264,7 +262,9 @@
     loadScript("/js/indicare-ai-product-upgrades.js", "data-indicare-product-upgrades");
     loadScript("/js/indicare-mail-shell.js", "data-indicare-mail-shell");
     loadScript("/js/indicare-web-conversation.js", "data-indicare-web-conversation");
+    loadScript("/js/indicare-presence-context.js", "data-indicare-presence-context");
     loadScript("/js/indicare-voice-companion.js", "data-indicare-voice-companion");
+    loadScript("/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake");
     setInterval(refreshUpdates, 60000);
   });
 })();
