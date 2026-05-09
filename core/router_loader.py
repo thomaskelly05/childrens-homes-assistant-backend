@@ -119,6 +119,7 @@ backend.indicare_connect_groups_router
 backend.os_assistant_bridge_router
 backend.reg44_report_reader_router
 backend.reg44_document_ingestion_router
+backend.reg44_trend_engine_router
 backend.os_command_router
 backend.os_command_shift_router
 backend.os_command_risk_router
