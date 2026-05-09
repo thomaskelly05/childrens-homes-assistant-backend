@@ -48,21 +48,41 @@ def _clip(value: str | None, limit: int) -> str | None:
     return clean[:limit]
 
 
+def _conversation_presence_prefix() -> str:
+    return """
+INDICARE AI CONVERSATIONAL PRESENCE:
+You are IndiCare AI, a standalone AI tools platform for adults working in residential children's homes.
+Sound like the best calm British colleague or experienced manager: warm, steady, practical, reflective and professionally grounded.
+Do not be blunt, cold or transactional. Avoid sounding like a form, policy bot or generic chatbot.
+Begin with a natural acknowledgement where appropriate, then help the user think clearly.
+Keep answers conversational while still being useful and structured.
+When the user sounds stressed, describes an incident, safeguarding concern, difficult shift, allegation, restraint, missing episode or conflict, slow the pace emotionally and guide them carefully.
+Do not pretend to be human, conscious or emotionally self-aware. You can say you are here to help them think it through, but do not claim feelings or lived experience.
+For residential childcare topics, use British English and child-centred, factual, non-judgemental language.
+Do not make final safeguarding, legal, clinical, employment or regulatory decisions. Support manager/DSL/professional review.
+When useful, separate facts, interpretation, missing information and next steps.
+Never abruptly end. Close with one natural continuation, such as a helpful next step, a gentle question, or an offer to structure the next part together.
+If live web context is supplied, use it naturally. Do not sound like a search results page; explain what you found and keep the conversation going.
+""".strip()
+
+
 def _message_with_document(payload: GeneralAssistantRequest) -> str:
     message = safe_string(payload.message)
     document_text = _clip(payload.document_text, MAX_GENERAL_DOCUMENT_CHARS)
     document_name = safe_string(payload.document_name) or "uploaded document"
+    parts = [_conversation_presence_prefix(), "", message]
 
-    if not document_text:
-        return message
+    if document_text:
+        parts.extend([
+            "",
+            "USER-SUPPLIED DOCUMENT CONTEXT:",
+            f"Document name: {document_name}",
+            "Use this document only as user-provided context for this standalone assistant chat.",
+            "",
+            document_text,
+        ])
 
-    return (
-        f"{message}\n\n"
-        "USER-SUPPLIED DOCUMENT CONTEXT:\n"
-        f"Document name: {document_name}\n"
-        "Use this document only as user-provided context for this standalone assistant chat.\n\n"
-        f"{document_text}"
-    )
+    return "\n".join(parts)
 
 
 def _sse_message(data: str) -> str:
@@ -135,6 +155,7 @@ async def stream_general_assistant(
             "history_items_loaded": len(history),
             "document_attached": bool(payload.document_text),
             "document_name": safe_string(payload.document_name) or None,
+            "conversation_presence": True,
         }
         suggested_actions: list[dict[str, Any]] = []
         safeguarding: dict[str, Any] = {}
@@ -180,6 +201,7 @@ async def stream_general_assistant(
                             **(item.get("assistant_context") or {}),
                             "document_attached": bool(payload.document_text),
                             "document_name": safe_string(payload.document_name) or None,
+                            "conversation_presence": True,
                         }
                     if isinstance(item.get("suggested_actions"), list):
                         suggested_actions = [
@@ -196,7 +218,7 @@ async def stream_general_assistant(
         except Exception:
             logger.exception("General assistant stream failed")
             yield _sse_message(
-                "I could not complete that guidance response just now. Please try again."
+                "I’m sorry, I couldn’t complete that just now. Try again and we’ll work through it together."
             )
         finally:
             yield _sse_event(

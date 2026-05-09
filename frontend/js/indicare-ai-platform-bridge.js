@@ -1,4 +1,4 @@
-/* IndiCare AI bridge: profile, updates, command palette, project search, product upgrades and Mail loader. */
+/* IndiCare AI bridge: profile, updates, command palette, project search, product upgrades, Mail, Voice, Web and Presence loaders. */
 (function () {
   const PROFILE_KEY = "indicare_assistant_user_profile";
   const MODE_KEY = "indicare_assistant_default_mode";
@@ -37,13 +37,8 @@
     return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   }
 
-  function activeProjectId() {
-    return $("workspaceSelect")?.value || localStorage.getItem(ACTIVE_WORKSPACE_KEY) || "standalone";
-  }
-
-  function openApp(view) {
-    document.querySelector(`[data-suite-view="${view}"]`)?.click();
-  }
+  function activeProjectId() { return $("workspaceSelect")?.value || localStorage.getItem(ACTIVE_WORKSPACE_KEY) || "standalone"; }
+  function openApp(view) { document.querySelector(`[data-suite-view="${view}"]`)?.click(); }
 
   function putInComposer(text) {
     openApp("intelligence");
@@ -65,7 +60,6 @@
       localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: displayName, role, defaultMode: profile.assistant_default_mode || "ofsted", tone: profile.assistant_tone || "professional", image }));
       localStorage.setItem(MODE_KEY, profile.assistant_default_mode || "ofsted");
       if (image) localStorage.setItem(PROFILE_IMAGE_KEY, image);
-
       ["icUserName", "icUserNameSidebar"].forEach((id) => { if ($(id)) $(id).textContent = displayName; });
       if ($("icUserRoleSidebar")) $("icUserRoleSidebar").textContent = role;
       ["icUserAvatar", "icUserAvatarSidebar"].forEach((id) => {
@@ -73,9 +67,7 @@
         if (!node) return;
         node.innerHTML = image ? `<img src="${image}" alt="${esc(displayName)}" />` : esc(profile.initials || initials(displayName, user.email));
       });
-    } catch (error) {
-      console.warn("IndiCare profile unavailable", error);
-    }
+    } catch (error) { console.warn("IndiCare profile unavailable", error); }
   }
 
   function installShellButtons() {
@@ -89,21 +81,28 @@
       command.title = "Command palette";
       actions.insertBefore(command, actions.firstChild);
 
+      const voice = document.createElement("button");
+      voice.id = "openVoiceCompanion";
+      voice.className = "ic-nav-btn ic-top-tool";
+      voice.type = "button";
+      voice.textContent = "Hey IndiCare";
+      voice.title = "Talk to IndiCare AI";
+      actions.insertBefore(voice, actions.children[1] || null);
+
       const updates = document.createElement("button");
       updates.id = "openNotifications";
       updates.className = "ic-nav-btn ic-top-tool";
       updates.type = "button";
       updates.innerHTML = `Updates <span id="notificationBadge" class="ic-badge hidden">0</span>`;
-      actions.insertBefore(updates, actions.children[1] || null);
+      actions.insertBefore(updates, actions.children[2] || null);
 
       const profile = document.createElement("a");
       profile.id = "openProfile";
       profile.className = "ic-nav-btn ic-top-tool ic-link-tool";
       profile.href = "/my-profile";
       profile.textContent = "Profile";
-      actions.insertBefore(profile, actions.children[2] || null);
+      actions.insertBefore(profile, actions.children[3] || null);
     }
-
     const footer = document.querySelector(".ic-sidebar-footer");
     if (footer && !$("sidebarProfileLink")) {
       const link = document.createElement("a");
@@ -123,12 +122,11 @@
       drawer.innerHTML = `<div class="ic-floating-head"><div><strong>Updates</strong><span>Helpful reminders, review prompts and follow-ups</span></div><button type="button" data-close-panel="notificationsDrawer">×</button></div><div class="ic-floating-actions"><button type="button" id="markAllNotificationsRead">Mark all read</button><button type="button" id="refreshNotifications">Refresh</button></div><div id="notificationList" class="ic-floating-list"><p class="ic-muted-mini">Loading...</p></div>`;
       document.body.appendChild(drawer);
     }
-
     if (!$("commandPalette")) {
       const palette = document.createElement("div");
       palette.id = "commandPalette";
       palette.className = "ic-command-overlay hidden";
-      palette.innerHTML = `<div class="ic-command-card" role="dialog" aria-label="Command palette"><div class="ic-command-search"><input id="commandSearch" type="text" placeholder="Search tools, conversations, projects, templates, mail and reviews..." autocomplete="off" /><button type="button" data-close-panel="commandPalette">×</button></div><div id="commandResults" class="ic-command-results"></div></div>`;
+      palette.innerHTML = `<div class="ic-command-card" role="dialog" aria-label="Command palette"><div class="ic-command-search"><input id="commandSearch" type="text" placeholder="Search tools, conversations, projects, templates, mail, web, context and reviews..." autocomplete="off" /><button type="button" data-close-panel="commandPalette">×</button></div><div id="commandResults" class="ic-command-results"></div></div>`;
       document.body.appendChild(palette);
     }
   }
@@ -138,46 +136,26 @@
     try {
       const count = await api("/notifications/unread-count");
       const value = Number(count.count || 0);
-      if (badge) {
-        badge.textContent = String(value);
-        badge.classList.toggle("hidden", value <= 0);
-      }
+      if (badge) { badge.textContent = String(value); badge.classList.toggle("hidden", value <= 0); }
       const data = await api("/notifications?limit=30");
       const items = data.items || [];
       const list = $("notificationList");
       if (!list) return;
-      if (!data.available) {
-        list.innerHTML = `<p class="ic-muted-mini">${esc(data.message || "Updates are not available yet.")}</p>`;
-        return;
-      }
-      if (!items.length) {
-        list.innerHTML = '<p class="ic-muted-mini">No updates right now.</p>';
-        return;
-      }
+      if (!data.available) { list.innerHTML = `<p class="ic-muted-mini">${esc(data.message || "Updates are not available yet.")}</p>`; return; }
+      if (!items.length) { list.innerHTML = '<p class="ic-muted-mini">No updates right now.</p>'; return; }
       list.innerHTML = items.map((item) => `<article class="ic-notification ${item.read_at ? "read" : "unread"}"><small>${esc(item.priority || item.notification_type || "update")}</small><strong>${esc(item.title || "Update")}</strong><p>${esc(item.body || item.message || "")}</p><div class="ic-notification-actions">${item.href ? `<a href="${esc(item.href)}">Open</a>` : ""}<button type="button" data-read-notification="${item.id}">Mark read</button><button type="button" data-dismiss-notification="${item.id}">Dismiss</button></div></article>`).join("");
-    } catch (_) {
-      if ($("notificationList")) $("notificationList").innerHTML = '<p class="ic-muted-mini">Updates could not be loaded.</p>';
-    }
+    } catch (_) { if ($("notificationList")) $("notificationList").innerHTML = '<p class="ic-muted-mini">Updates could not be loaded.</p>'; }
   }
 
-  async function loadQaSummary() {
-    try { return await api("/qa/dashboard"); } catch (_) { return null; }
-  }
-
-  async function loadTimelineSummary() {
-    try { return await api(`/standalone-timeline/projects/${encodeURIComponent(activeProjectId())}/summary`); } catch (_) { return null; }
-  }
-
-  async function projectSearch(query) {
-    return api("/standalone-search/operational", { method: "POST", body: JSON.stringify({ project_id: activeProjectId(), query, limit: 12 }) });
-  }
+  async function loadQaSummary() { try { return await api("/qa/dashboard"); } catch (_) { return null; } }
+  async function loadTimelineSummary() { try { return await api(`/standalone-timeline/projects/${encodeURIComponent(activeProjectId())}/summary`); } catch (_) { return null; } }
+  async function projectSearch(query) { return api("/standalone-search/operational", { method: "POST", body: JSON.stringify({ project_id: activeProjectId(), query, limit: 12 }) }); }
 
   async function insertQaPrompt() {
     const data = await loadQaSummary();
     if (!data) return;
     putInComposer(`Review this quality and follow-up summary for a children's home. Identify recording/document issues, priorities, risks, manager oversight and next actions:\n\n${JSON.stringify(data, null, 2)}`);
   }
-
   async function insertTimelinePrompt() {
     const data = await loadTimelineSummary();
     if (!data) return;
@@ -188,6 +166,9 @@
     { id: "profile", title: "Open My Profile", subtitle: "Profile picture, password and settings", run: () => { window.location.href = "/my-profile"; } },
     { id: "new-chat", title: "New conversation", subtitle: "Start a fresh IndiCare AI chat", run: () => $("newChat")?.click() },
     { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant for children's home practice", run: () => openApp("intelligence") },
+    { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => document.getElementById("voiceOrb")?.click() },
+    { id: "web", title: "Ask with web search", subtitle: "Use Tavily for current information", run: () => putInComposer("Search the web and answer conversationally: ") },
+    { id: "presence", title: "Use IndiCare context", subtitle: "Timeline, proactive intelligence and Connect context", run: () => putInComposer("What patterns, risks, unresolved actions or follow-ups should I be aware of?") },
     { id: "notes", title: "I-Notes", subtitle: "Note, transcribe, clean up and review with AI", run: () => openApp("notes") },
     { id: "docs", title: "IndiCare Docs", subtitle: "Template documents with AI review and rewriting", run: () => openApp("docs") },
     { id: "mail", title: "IndiCare Mail", subtitle: "Internal and external AI-native mail", run: () => openApp("mail") },
@@ -204,7 +185,6 @@
     const q = String(query || "").trim().toLowerCase();
     const local = COMMANDS.filter((cmd) => !q || `${cmd.title} ${cmd.subtitle} ${cmd.id}`.toLowerCase().includes(q));
     let html = local.map((cmd) => `<button type="button" class="ic-command-item" data-command-id="${cmd.id}"><strong>${esc(cmd.title)}</strong><span>${esc(cmd.subtitle)}</span></button>`).join("");
-
     if (q.length >= 2) {
       html += '<div class="ic-command-section">Project search</div>';
       try {
@@ -215,9 +195,7 @@
           const body = item.summary || item.text || item.excerpt || item.content || "";
           return `<button type="button" class="ic-command-item" data-search-text="${esc(`${title}\n${body}`)}"><strong>${esc(title)}</strong><span>${esc(body).slice(0, 180)}</span></button>`;
         }).join("") : '<p class="ic-muted-mini">No project search results.</p>';
-      } catch (_) {
-        html += '<p class="ic-muted-mini">Project search is unavailable.</p>';
-      }
+      } catch (_) { html += '<p class="ic-muted-mini">Project search is unavailable.</p>'; }
     }
     results.innerHTML = html || '<p class="ic-muted-mini">No commands found.</p>';
   }
@@ -230,7 +208,6 @@
     if (input) { input.value = ""; input.focus(); }
     renderCommands("");
   }
-
   function closePanel(id) { $(id)?.classList.add("hidden"); }
   function openUpdates() { const drawer = $("notificationsDrawer"); if (drawer) { drawer.classList.toggle("hidden"); if (!drawer.classList.contains("hidden")) refreshUpdates(); } }
 
@@ -255,6 +232,7 @@
       const target = event.target;
       if (target.closest("#openCommandPalette")) return openCommandPalette();
       if (target.closest("#openNotifications")) return openUpdates();
+      if (target.closest("#openVoiceCompanion")) return document.getElementById("voiceOrb")?.click();
       const close = target.closest("[data-close-panel]");
       if (close) return closePanel(close.getAttribute("data-close-panel"));
       const commandNode = target.closest("[data-command-id]");
@@ -265,12 +243,8 @@
         return;
       }
       const search = target.closest("[data-search-text]");
-      if (search) {
-        closePanel("commandPalette");
-        putInComposer(`Use this project search result as context and help me analyse it:\n\n${search.getAttribute("data-search-text")}`);
-      }
+      if (search) { closePanel("commandPalette"); putInComposer(`Use this project search result as context and help me analyse it:\n\n${search.getAttribute("data-search-text")}`); }
     });
-
     document.addEventListener("input", (event) => { if (event.target?.id === "commandSearch") renderCommands(event.target.value); });
     document.addEventListener("keydown", (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openCommandPalette(); }
@@ -287,6 +261,10 @@
     refreshTimelinePanel();
     loadScript("/js/indicare-ai-product-upgrades.js", "data-indicare-product-upgrades");
     loadScript("/js/indicare-mail-shell.js", "data-indicare-mail-shell");
+    loadScript("/js/indicare-web-conversation.js", "data-indicare-web-conversation");
+    loadScript("/js/indicare-presence-context.js", "data-indicare-presence-context");
+    loadScript("/js/indicare-voice-companion.js", "data-indicare-voice-companion");
+    loadScript("/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake");
     setInterval(refreshUpdates, 60000);
   });
 })();
