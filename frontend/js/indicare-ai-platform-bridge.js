@@ -1,4 +1,4 @@
-/* IndiCare AI bridge: profile, updates, command palette, project search, product upgrades, Mail, Voice, Web and Presence loaders. */
+/* IndiCare AI bridge: profile, updates, command palette, project search, product upgrades, Mail, Voice, Web, Presence, Ambient and Device loaders. */
 (function () {
   const PROFILE_KEY = "indicare_assistant_user_profile";
   const MODE_KEY = "indicare_assistant_default_mode";
@@ -89,19 +89,27 @@
       voice.title = "Talk to IndiCare AI";
       actions.insertBefore(voice, actions.children[1] || null);
 
+      const devices = document.createElement("button");
+      devices.id = "openDevicePermissions";
+      devices.className = "ic-nav-btn ic-top-tool";
+      devices.type = "button";
+      devices.textContent = "Devices";
+      devices.title = "Microphone and camera setup";
+      actions.insertBefore(devices, actions.children[2] || null);
+
       const updates = document.createElement("button");
       updates.id = "openNotifications";
       updates.className = "ic-nav-btn ic-top-tool";
       updates.type = "button";
       updates.innerHTML = `Updates <span id="notificationBadge" class="ic-badge hidden">0</span>`;
-      actions.insertBefore(updates, actions.children[2] || null);
+      actions.insertBefore(updates, actions.children[3] || null);
 
       const profile = document.createElement("a");
       profile.id = "openProfile";
       profile.className = "ic-nav-btn ic-top-tool ic-link-tool";
       profile.href = "/my-profile";
       profile.textContent = "Profile";
-      actions.insertBefore(profile, actions.children[3] || null);
+      actions.insertBefore(profile, actions.children[4] || null);
     }
     const footer = document.querySelector(".ic-sidebar-footer");
     if (footer && !$("sidebarProfileLink")) {
@@ -164,9 +172,11 @@
 
   const COMMANDS = [
     { id: "profile", title: "Open My Profile", subtitle: "Profile picture, password and settings", run: () => { window.location.href = "/my-profile"; } },
+    { id: "devices", title: "Set up devices", subtitle: "Microphone and camera access for Hey IndiCare", run: () => window.IndiCareDevicePermissions?.open?.() },
     { id: "new-chat", title: "New conversation", subtitle: "Start a fresh IndiCare AI chat", run: () => $("newChat")?.click() },
     { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant for children's home practice", run: () => openApp("intelligence") },
     { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => document.getElementById("voiceOrb")?.click() },
+    { id: "awareness", title: "IndiCare Awareness", subtitle: "Things IndiCare thinks you should know", run: () => document.getElementById("openAmbientIntelligence")?.click() },
     { id: "web", title: "Ask with web search", subtitle: "Use Tavily for current information", run: () => putInComposer("Search the web and answer conversationally: ") },
     { id: "presence", title: "Use IndiCare context", subtitle: "Timeline, proactive intelligence and Connect context", run: () => putInComposer("What patterns, risks, unresolved actions or follow-ups should I be aware of?") },
     { id: "notes", title: "I-Notes", subtitle: "Note, transcribe, clean up and review with AI", run: () => openApp("notes") },
@@ -232,6 +242,7 @@
       const target = event.target;
       if (target.closest("#openCommandPalette")) return openCommandPalette();
       if (target.closest("#openNotifications")) return openUpdates();
+      if (target.closest("#openDevicePermissions")) return window.IndiCareDevicePermissions?.open?.();
       if (target.closest("#openVoiceCompanion")) return document.getElementById("voiceOrb")?.click();
       const close = target.closest("[data-close-panel]");
       if (close) return closePanel(close.getAttribute("data-close-panel"));
@@ -259,11 +270,15 @@
     hydrateProfile();
     refreshUpdates();
     refreshTimelinePanel();
+    loadScript("/js/indicare-assistant-mode-switch.js", "data-indicare-assistant-mode-switch");
+    loadScript("/js/indicare-device-permissions.js", "data-indicare-device-permissions");
     loadScript("/js/indicare-ai-product-upgrades.js", "data-indicare-product-upgrades");
     loadScript("/js/indicare-mail-shell.js", "data-indicare-mail-shell");
     loadScript("/js/indicare-web-conversation.js", "data-indicare-web-conversation");
     loadScript("/js/indicare-presence-context.js", "data-indicare-presence-context");
+    loadScript("/js/indicare-ambient-intelligence.js", "data-indicare-ambient-intelligence");
     loadScript("/js/indicare-voice-companion.js", "data-indicare-voice-companion");
+    loadScript("/js/indicare-voice-transcription-bridge.js", "data-indicare-voice-transcription-bridge");
     loadScript("/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake");
     setInterval(refreshUpdates, 60000);
   });

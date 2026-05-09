@@ -1,10 +1,9 @@
 /* IndiCare Presence Context
-   Reuses existing timeline, proactive intelligence, operational memory, Connect,
-   assistant library, document library and knowledge routes.
-   This is for IndiCare AI as a standalone tools platform, not an OS shell.
+   Calls the backend IndiCare AI orchestrator so the standalone AI tools platform
+   uses one server-side brain instead of stitching knowledge together in the browser.
 */
 (function () {
-  const PRESENCE_PREFIX = "INDICARE EXISTING PLATFORM CONTEXT";
+  const PRESENCE_PREFIX = "INDICARE AI ORCHESTRATED BRAIN CONTEXT";
   const ACTIVE_WORKSPACE_KEY = "indicare_assistant_active_workspace";
 
   const $ = (id) => document.getElementById(id);
@@ -41,69 +40,7 @@
   function looksLikeContextQuestion(text) {
     const q = String(text || "").toLowerCase();
     if (!q || q.includes(PRESENCE_PREFIX.toLowerCase())) return false;
-    return /(remember|memory|ongoing|previous|before|earlier|pattern|trend|timeline|chronology|risk|safeguarding|action|follow[- ]?up|unresolved|connect|message|meeting|channel|what have we missed|what's changed|what has changed|same issue|again|recently|over time|knowledge|policy|policies|procedure|folder|library|template|document|guidance|brain|what do we know|what does indicare know)/i.test(q);
-  }
-
-  async function safeFetch(label, fn) {
-    try {
-      const data = await fn();
-      return { label, ok: true, data };
-    } catch (error) {
-      return { label, ok: false, error: String(error && error.message ? error.message : error) };
-    }
-  }
-
-  function compact(value, limit) {
-    return JSON.stringify(value || {}, null, 2).slice(0, limit || 5000);
-  }
-
-  function buildKnowledgeQuestion(text) {
-    return String(text || "").slice(0, 500);
-  }
-
-  async function gatherContext(text) {
-    const projectId = activeProjectId();
-    const knowledgeQuestion = buildKnowledgeQuestion(text);
-    const results = await Promise.all([
-      safeFetch("timeline_summary", () => api(`/standalone-timeline/projects/${encodeURIComponent(projectId)}/summary`)),
-      safeFetch("proactive_alerts", () => api("/intelligence/proactive?days=30")),
-      safeFetch("connect_channels", () => api("/api/connect/channels?limit=20")),
-      safeFetch("assistant_library", () => api("/assistant/library/items")),
-      safeFetch("document_library", () => api(`/documents/library?q=${encodeURIComponent(knowledgeQuestion)}&approval_status=approved`)),
-      safeFetch("knowledge_base", () => api("/assistant/os/knowledge", {
-        method: "POST",
-        body: JSON.stringify({ question: knowledgeQuestion, limit: 8 }),
-      })),
-    ]);
-
-    const lines = [
-      `${PRESENCE_PREFIX}:`,
-      "Use this existing IndiCare AI tool-platform context naturally and carefully. It may be partial. Do not pretend certainty if data is missing.",
-      "This is for IndiCare AI as a standalone tools platform for residential childcare professionals, not as an OS replacement.",
-      "Respond like a calm British residential children's home colleague: warm, reflective, practical and conversational.",
-      "Use knowledge/document/library context as the assistant's brain. Use timeline/proactive/Connect context for continuity, patterns and follow-ups.",
-      "Keep the conversation going with one useful next step or question.",
-      "",
-      `Active project/workspace: ${projectId}`,
-      `User request: ${text}`,
-    ];
-
-    results.forEach((result) => {
-      lines.push("", `Context source: ${result.label}`);
-      if (!result.ok) {
-        lines.push("Unavailable or not configured.");
-      } else {
-        const limit = result.label === "assistant_library" ? 3500 : 6000;
-        lines.push(compact(result.data, limit));
-      }
-    });
-
-    lines.push(
-      "",
-      "Now answer the user using the context above where relevant. Do not expose raw JSON. Summarise naturally, identify knowledge, patterns, actions or gaps if present, and make it feel like an ongoing conversation."
-    );
-
-    return lines.join("\n");
+    return /(remember|memory|ongoing|previous|before|earlier|pattern|trend|timeline|chronology|risk|safeguarding|action|follow[- ]?up|unresolved|connect|message|meeting|channel|what have we missed|what's changed|what has changed|same issue|again|recently|over time|knowledge|policy|policies|procedure|folder|library|template|document|guidance|brain|what do we know|what does indicare know|context|orchestrator)/i.test(q);
   }
 
   function toast(text) {
@@ -114,6 +51,24 @@
     node.textContent = text;
     document.body.appendChild(node);
     setTimeout(() => node.remove(), 2200);
+  }
+
+  async function gatherContext(text) {
+    const data = await api("/assistant/orchestrator/context", {
+      method: "POST",
+      body: JSON.stringify({
+        question: String(text || "").slice(0, 12000),
+        project_id: activeProjectId(),
+        limit: 8,
+      }),
+    });
+    if (data && data.prompt_context) return data.prompt_context;
+    return [
+      `${PRESENCE_PREFIX}:`,
+      "The backend orchestrator returned limited context. Answer conversationally and be clear that context may be incomplete.",
+      "",
+      `User request: ${text}`,
+    ].join("\n");
   }
 
   function installSendInterceptor() {
@@ -129,7 +84,7 @@
 
       event.preventDefault();
       event.stopImmediatePropagation();
-      toast("I’m checking IndiCare’s knowledge and context...");
+      toast("I’m checking IndiCare’s orchestrated brain...");
 
       try {
         input.value = await gatherContext(text);
@@ -154,7 +109,7 @@
     chip.id = "indicarePresenceStatus";
     chip.type = "button";
     chip.textContent = "Brain: IndiCare";
-    chip.title = "Uses knowledge folders, documents, timeline, proactive intelligence and Connect context when relevant";
+    chip.title = "Uses the backend orchestrator: knowledge folders, documents, timeline, proactive intelligence and Connect context";
     chip.addEventListener("click", () => {
       const input = $("input");
       if (!input) return;
