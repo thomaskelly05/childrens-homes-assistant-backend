@@ -8,6 +8,15 @@
   let currentFolder = "inbox";
   let currentThreadId = null;
 
+  function loadCss() {
+    if (document.querySelector('link[data-indicare-mail-css="true"]')) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "/css/indicare-mail-shell.css";
+    link.dataset.indicareMailCss = "true";
+    document.head.appendChild(link);
+  }
+
   function csrfToken() {
     const match = document.cookie.match(/(?:^|;\s*)(?:__Host-indicare_csrf|indicare_csrf)=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : "";
@@ -360,6 +369,7 @@
   }
 
   window.addEventListener("DOMContentLoaded", () => {
+    loadCss();
     installNav();
     installPanel();
     bind();

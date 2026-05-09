@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import smtplib
 import ssl
@@ -7,7 +8,7 @@ from email.message import EmailMessage
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from psycopg2.extras import RealDictCursor
 
 from auth.session_user import get_current_user
@@ -344,12 +345,12 @@ def create_message(
                     payload.parent_message_id,
                     user_id,
                     sender,
-                    __import__("json").dumps(to),
-                    __import__("json").dumps(cc),
-                    __import__("json").dumps(bcc),
+                    json.dumps(to),
+                    json.dumps(cc),
+                    json.dumps(bcc),
                     payload.subject.strip(),
                     payload.body.strip(),
-                    __import__("json").dumps(ai_flags),
+                    json.dumps(ai_flags),
                     payload.related_project_id,
                     payload.related_young_person_id,
                     external_status,
