@@ -16,6 +16,7 @@ APP_SHELL_SCRIPTS = [
 
 OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script>window.IndiCareOSBoot=function(){try{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;}catch(e){console.warn("OS boot bridge failed",e);}};window.IndiCareOSBoot();</script>',
+    '<script src="/js/indicare-connect-realtime.js"></script>',
     '<script src="/js/os-child-workspace-tabs.js"></script>',
     '<script src="/js/os-therapeutic-record-creator.js"></script>',
 ]
