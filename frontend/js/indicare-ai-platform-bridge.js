@@ -1,4 +1,4 @@
-/* IndiCare AI bridge: profile, updates, command palette, project search, product upgrades, Mail, Voice, Web, Presence, Ambient and Device loaders. */
+/* IndiCare AI bridge: safe shell loader for standalone assistant tools. */
 (function () {
   const PROFILE_KEY = "indicare_assistant_user_profile";
   const MODE_KEY = "indicare_assistant_default_mode";
@@ -7,6 +7,9 @@
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+  const safe = (label, fn) => {
+    try { return fn(); } catch (error) { console.warn(`IndiCare bridge skipped ${label}`, error); return null; }
+  };
 
   function csrfToken() {
     const match = document.cookie.match(/(?:^|;\s*)(?:__Host-indicare_csrf|indicare_csrf)=([^;]+)/);
@@ -24,7 +27,11 @@
 
   async function api(url, options) {
     const method = options?.method || "GET";
-    const response = await fetch(url, { credentials: "include", ...(options || {}), headers: { ...headers(method), ...(options?.headers || {}) } });
+    const response = await fetch(url, {
+      credentials: "include",
+      ...(options || {}),
+      headers: { ...headers(method), ...(options?.headers || {}) },
+    });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.detail || payload.message || `Request failed: ${response.status}`);
     return payload;
@@ -37,8 +44,13 @@
     return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   }
 
-  function activeProjectId() { return $("workspaceSelect")?.value || localStorage.getItem(ACTIVE_WORKSPACE_KEY) || "standalone"; }
-  function openApp(view) { document.querySelector(`[data-suite-view="${view}"]`)?.click(); }
+  function activeProjectId() {
+    return $("workspaceSelect")?.value || localStorage.getItem(ACTIVE_WORKSPACE_KEY) || "standalone";
+  }
+
+  function openApp(view) {
+    document.querySelector(`[data-suite-view="${view}"]`)?.click();
+  }
 
   function putInComposer(text) {
     openApp("intelligence");
@@ -67,43 +79,29 @@
         if (!node) return;
         node.innerHTML = image ? `<img src="${image}" alt="${esc(displayName)}" />` : esc(profile.initials || initials(displayName, user.email));
       });
-    } catch (error) { console.warn("IndiCare profile unavailable", error); }
+    } catch (error) {
+      console.warn("IndiCare profile unavailable", error);
+    }
   }
 
   function installShellButtons() {
     const actions = document.querySelector(".ic-top-actions");
     if (actions && !$("openCommandPalette")) {
-      const command = document.createElement("button");
-      command.id = "openCommandPalette";
-      command.className = "ic-nav-btn ic-top-tool";
-      command.type = "button";
-      command.textContent = "⌘K";
-      command.title = "Command palette";
-      actions.insertBefore(command, actions.firstChild);
-
-      const voice = document.createElement("button");
-      voice.id = "openVoiceCompanion";
-      voice.className = "ic-nav-btn ic-top-tool";
-      voice.type = "button";
-      voice.textContent = "Hey IndiCare";
-      voice.title = "Talk to IndiCare AI";
-      actions.insertBefore(voice, actions.children[1] || null);
-
-      const devices = document.createElement("button");
-      devices.id = "openDevicePermissions";
-      devices.className = "ic-nav-btn ic-top-tool";
-      devices.type = "button";
-      devices.textContent = "Devices";
-      devices.title = "Microphone and camera setup";
-      actions.insertBefore(devices, actions.children[2] || null);
-
-      const updates = document.createElement("button");
-      updates.id = "openNotifications";
-      updates.className = "ic-nav-btn ic-top-tool";
-      updates.type = "button";
-      updates.innerHTML = `Updates <span id="notificationBadge" class="ic-badge hidden">0</span>`;
-      actions.insertBefore(updates, actions.children[3] || null);
-
+      const buttons = [
+        ["openCommandPalette", "⌘K", "Command palette"],
+        ["openVoiceCompanion", "Hey IndiCare", "Talk to IndiCare AI"],
+        ["openDevicePermissions", "Devices", "Microphone and camera setup"],
+        ["openNotifications", "Updates", "Helpful reminders, review prompts and follow-ups"],
+      ];
+      buttons.forEach(([id, text, title], index) => {
+        const button = document.createElement("button");
+        button.id = id;
+        button.className = "ic-nav-btn ic-top-tool";
+        button.type = "button";
+        button.title = title;
+        button.innerHTML = id === "openNotifications" ? `Updates <span id="notificationBadge" class="ic-badge hidden">0</span>` : text;
+        actions.insertBefore(button, actions.children[index] || null);
+      });
       const profile = document.createElement("a");
       profile.id = "openProfile";
       profile.className = "ic-nav-btn ic-top-tool ic-link-tool";
@@ -144,15 +142,26 @@
     try {
       const count = await api("/notifications/unread-count");
       const value = Number(count.count || 0);
-      if (badge) { badge.textContent = String(value); badge.classList.toggle("hidden", value <= 0); }
+      if (badge) {
+        badge.textContent = String(value);
+        badge.classList.toggle("hidden", value <= 0);
+      }
       const data = await api("/notifications?limit=30");
       const items = data.items || [];
       const list = $("notificationList");
       if (!list) return;
-      if (!data.available) { list.innerHTML = `<p class="ic-muted-mini">${esc(data.message || "Updates are not available yet.")}</p>`; return; }
-      if (!items.length) { list.innerHTML = '<p class="ic-muted-mini">No updates right now.</p>'; return; }
+      if (!data.available) {
+        list.innerHTML = `<p class="ic-muted-mini">${esc(data.message || "Updates are not available yet.")}</p>`;
+        return;
+      }
+      if (!items.length) {
+        list.innerHTML = '<p class="ic-muted-mini">No updates right now.</p>';
+        return;
+      }
       list.innerHTML = items.map((item) => `<article class="ic-notification ${item.read_at ? "read" : "unread"}"><small>${esc(item.priority || item.notification_type || "update")}</small><strong>${esc(item.title || "Update")}</strong><p>${esc(item.body || item.message || "")}</p><div class="ic-notification-actions">${item.href ? `<a href="${esc(item.href)}">Open</a>` : ""}<button type="button" data-read-notification="${item.id}">Mark read</button><button type="button" data-dismiss-notification="${item.id}">Dismiss</button></div></article>`).join("");
-    } catch (_) { if ($("notificationList")) $("notificationList").innerHTML = '<p class="ic-muted-mini">Updates could not be loaded.</p>'; }
+    } catch (_) {
+      if ($("notificationList")) $("notificationList").innerHTML = '<p class="ic-muted-mini">Updates could not be loaded.</p>';
+    }
   }
 
   async function loadQaSummary() { try { return await api("/qa/dashboard"); } catch (_) { return null; } }
@@ -161,13 +170,12 @@
 
   async function insertQaPrompt() {
     const data = await loadQaSummary();
-    if (!data) return;
-    putInComposer(`Review this quality and follow-up summary for a children's home. Identify recording/document issues, priorities, risks, manager oversight and next actions:\n\n${JSON.stringify(data, null, 2)}`);
+    if (data) putInComposer(`Review this quality and follow-up summary for a children's home. Identify recording/document issues, priorities, risks, manager oversight and next actions:\n\n${JSON.stringify(data, null, 2)}`);
   }
+
   async function insertTimelinePrompt() {
     const data = await loadTimelineSummary();
-    if (!data) return;
-    putInComposer(`Summarise this project chronology. Identify themes, safeguarding patterns, gaps and suggested next actions:\n\n${JSON.stringify(data, null, 2)}`);
+    if (data) putInComposer(`Summarise this project chronology. Identify themes, safeguarding patterns, gaps and suggested next actions:\n\n${JSON.stringify(data, null, 2)}`);
   }
 
   const COMMANDS = [
@@ -176,8 +184,8 @@
     { id: "voice-setup", title: "Voice setup", subtitle: "Set up voice capture and confirmed speaker label", run: () => window.IndiCareVoiceSetup?.open?.() },
     { id: "new-chat", title: "New conversation", subtitle: "Start a fresh IndiCare AI chat", run: () => $("newChat")?.click() },
     { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant for children's home practice", run: () => openApp("intelligence") },
-    { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => document.getElementById("voiceOrb")?.click() },
-    { id: "awareness", title: "IndiCare Awareness", subtitle: "Things IndiCare thinks you should know", run: () => document.getElementById("openAmbientIntelligence")?.click() },
+    { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => $("voiceOrb")?.click() },
+    { id: "awareness", title: "IndiCare Awareness", subtitle: "Things IndiCare thinks you should know", run: () => $("openAmbientIntelligence")?.click() },
     { id: "web", title: "Ask with web search", subtitle: "Use Tavily for current information", run: () => putInComposer("Search the web and answer conversationally: ") },
     { id: "presence", title: "Use IndiCare context", subtitle: "Timeline, proactive intelligence and Connect context", run: () => putInComposer("What patterns, risks, unresolved actions or follow-ups should I be aware of?") },
     { id: "notes", title: "I-Notes", subtitle: "Note, transcribe, clean up and review with AI", run: () => openApp("notes") },
@@ -187,7 +195,7 @@
     { id: "timeline", title: "Chronology summary", subtitle: "Summarise project chronology intelligence", run: insertTimelinePrompt },
     { id: "incident", title: "Incident record", subtitle: "Create a professional incident record", run: () => putInComposer("Create a professional incident record with chronology, staff actions, outcome, safeguarding considerations and manager review:") },
     { id: "safeguarding", title: "Safeguarding review", subtitle: "Review facts, concerns and actions", run: () => putInComposer("Review this safeguarding concern. Separate facts, concerns, missing information, immediate actions, manager/DSL review and recording implications:") },
-    { id: "mail-compose", title: "Compose email", subtitle: "Open IndiCare Mail composer", run: () => { openApp("mail"); setTimeout(() => document.getElementById("mailCompose")?.click(), 150); } },
+    { id: "mail-compose", title: "Compose email", subtitle: "Open IndiCare Mail composer", run: () => { openApp("mail"); setTimeout(() => $("mailCompose")?.click(), 150); } },
   ];
 
   async function renderCommands(query) {
@@ -219,8 +227,15 @@
     if (input) { input.value = ""; input.focus(); }
     renderCommands("");
   }
+
   function closePanel(id) { $(id)?.classList.add("hidden"); }
-  function openUpdates() { const drawer = $("notificationsDrawer"); if (drawer) { drawer.classList.toggle("hidden"); if (!drawer.classList.contains("hidden")) refreshUpdates(); } }
+
+  function openUpdates() {
+    const drawer = $("notificationsDrawer");
+    if (!drawer) return;
+    drawer.classList.toggle("hidden");
+    if (!drawer.classList.contains("hidden")) refreshUpdates();
+  }
 
   async function refreshTimelinePanel() {
     const data = await loadTimelineSummary();
@@ -229,22 +244,26 @@
     if ($("timelineSummaryText")) $("timelineSummaryText").textContent = data.summary || "Chronology review is available for this project.";
   }
 
-  function loadScript(src, marker) {
-    if (document.querySelector(`script[${marker}="true"]`)) return;
-    const script = document.createElement("script");
-    script.src = src;
-    script.defer = true;
-    script.setAttribute(marker, "true");
-    document.body.appendChild(script);
+  function loadScript(src, marker, delay) {
+    window.setTimeout(() => safe(`load ${src}`, () => {
+      if (document.querySelector(`script[${marker}="true"]`)) return;
+      const script = document.createElement("script");
+      script.src = src;
+      script.defer = true;
+      script.async = false;
+      script.setAttribute(marker, "true");
+      script.onerror = () => console.warn(`Optional IndiCare script failed: ${src}`);
+      document.body.appendChild(script);
+    }), delay || 0);
   }
 
   function bind() {
-    document.addEventListener("click", async (event) => {
+    document.addEventListener("click", async (event) => safe("document click", async () => {
       const target = event.target;
       if (target.closest("#openCommandPalette")) return openCommandPalette();
       if (target.closest("#openNotifications")) return openUpdates();
       if (target.closest("#openDevicePermissions")) return window.IndiCareDevicePermissions?.open?.();
-      if (target.closest("#openVoiceCompanion")) return document.getElementById("voiceOrb")?.click();
+      if (target.closest("#openVoiceCompanion")) return $("voiceOrb")?.click();
       const close = target.closest("[data-close-panel]");
       if (close) return closePanel(close.getAttribute("data-close-panel"));
       const commandNode = target.closest("[data-command-id]");
@@ -255,35 +274,50 @@
         return;
       }
       const search = target.closest("[data-search-text]");
-      if (search) { closePanel("commandPalette"); putInComposer(`Use this project search result as context and help me analyse it:\n\n${search.getAttribute("data-search-text")}`); }
-    });
-    document.addEventListener("input", (event) => { if (event.target?.id === "commandSearch") renderCommands(event.target.value); });
-    document.addEventListener("keydown", (event) => {
+      if (search) {
+        closePanel("commandPalette");
+        putInComposer(`Use this project search result as context and help me analyse it:\n\n${search.getAttribute("data-search-text")}`);
+      }
+    }));
+    document.addEventListener("input", (event) => safe("command input", () => { if (event.target?.id === "commandSearch") renderCommands(event.target.value); }));
+    document.addEventListener("keydown", (event) => safe("keyboard shortcut", () => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openCommandPalette(); }
       if (event.key === "Escape") { closePanel("commandPalette"); closePanel("notificationsDrawer"); }
-    });
+    }));
   }
 
-  window.addEventListener("DOMContentLoaded", () => {
-    installShellButtons();
-    installPanels();
-    bind();
-    hydrateProfile();
-    refreshUpdates();
-    refreshTimelinePanel();
-    loadScript("/js/indicare-assistant-mode-switch.js", "data-indicare-assistant-mode-switch");
-    loadScript("/js/indicare-device-permissions.js", "data-indicare-device-permissions");
-    loadScript("/js/indicare-ai-product-upgrades.js", "data-indicare-product-upgrades");
-    loadScript("/js/indicare-mail-shell.js", "data-indicare-mail-shell");
-    loadScript("/js/indicare-web-conversation.js", "data-indicare-web-conversation");
-    loadScript("/js/indicare-presence-context.js", "data-indicare-presence-context");
-    loadScript("/js/indicare-conversation-continuity.js", "data-indicare-conversation-continuity");
-    loadScript("/js/indicare-ambient-intelligence.js", "data-indicare-ambient-intelligence");
-    loadScript("/js/indicare-voice-companion.js", "data-indicare-voice-companion");
-    loadScript("/js/indicare-voice-transcription-bridge.js", "data-indicare-voice-transcription-bridge");
-    loadScript("/js/indicare-alive-voice-layer.js", "data-indicare-alive-voice-layer");
-    loadScript("/js/indicare-voice-setup.js", "data-indicare-voice-setup");
-    loadScript("/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake");
-    setInterval(refreshUpdates, 60000);
-  });
+  function boot() {
+    if (window.__indicareAiBridgeBooted) return;
+    window.__indicareAiBridgeBooted = true;
+    safe("install shell buttons", installShellButtons);
+    safe("install panels", installPanels);
+    safe("bind bridge", bind);
+    safe("hydrate profile", hydrateProfile);
+    safe("refresh updates", refreshUpdates);
+    safe("refresh timeline", refreshTimelinePanel);
+
+    const optionalScripts = [
+      ["/js/indicare-assistant-mode-switch.js", "data-indicare-assistant-mode-switch", 50],
+      ["/js/indicare-device-permissions.js", "data-indicare-device-permissions", 100],
+      ["/js/indicare-ai-product-upgrades.js", "data-indicare-product-upgrades", 150],
+      ["/js/indicare-mail-shell.js", "data-indicare-mail-shell", 200],
+      ["/js/indicare-web-conversation.js", "data-indicare-web-conversation", 250],
+      ["/js/indicare-presence-context.js", "data-indicare-presence-context", 300],
+      ["/js/indicare-conversation-continuity.js", "data-indicare-conversation-continuity", 350],
+      ["/js/indicare-ambient-intelligence.js", "data-indicare-ambient-intelligence", 400],
+      ["/js/indicare-voice-companion.js", "data-indicare-voice-companion", 450],
+      ["/js/indicare-voice-transcription-bridge.js", "data-indicare-voice-transcription-bridge", 500],
+      ["/js/indicare-alive-voice-layer.js", "data-indicare-alive-voice-layer", 650],
+      ["/js/indicare-voice-setup.js", "data-indicare-voice-setup", 900],
+      ["/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake", 1000],
+    ];
+    optionalScripts.forEach(([src, marker, delay]) => loadScript(src, marker, delay));
+    window.setInterval(() => safe("refresh updates interval", refreshUpdates), 60000);
+  }
+
+  if (document.readyState === "complete") {
+    window.setTimeout(boot, 0);
+  } else {
+    window.addEventListener("load", boot, { once: true });
+  }
 })();
