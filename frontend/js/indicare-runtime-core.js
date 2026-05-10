@@ -15,7 +15,7 @@
   ];
 
   const state = {
-    version: '1.0.0',
+    version: '1.1.0',
     ready: false,
     mode: 'idle',
     listening: false,
@@ -26,13 +26,24 @@
     patched: new Set(),
     observers: [],
     intervals: [],
+    timeouts: [],
+    controllers: [],
     lastError: null,
+    stream: {
+      active: false,
+      controller: null,
+      currentMessageNode: null,
+      tokenCount: 0,
+      startedAt: null,
+      lastTokenAt: null
+    },
     audio: {
       context: null,
       analyser: null,
       stream: null,
       raf: 0,
-      level: 0
+      level: 0,
+      smoothed: 0
     }
   };
 
@@ -50,7 +61,8 @@
       speaking: state.speaking,
       interrupted: state.interrupted,
       chatStarted: state.chatStarted,
-      audioLevel: state.audio.level,
+      streamActive: state.stream.active,
+      audioLevel: state.audio.smoothed,
       lastError: state.lastError ? String(state.lastError.message || state.lastError) : null
     };
   }
@@ -64,6 +76,15 @@
       emit('error', { label, error: String(error?.message || error) });
       return null;
     }
+  }
+
+  function runtimeTimeout(fn, delay) {
+    const id = window.setTimeout(() => {
+      state.timeouts = state.timeouts.filter((item) => item !== id);
+      fn();
+    }, delay);
+    state.timeouts.push(id);
+    return id;
   }
 
   function setMode(mode) {
@@ -88,7 +109,7 @@
   }
 
   function clearMode(delay) {
-    window.setTimeout(() => setMode('idle'), delay || 0);
+    runtimeTimeout(() => setMode('idle'), delay || 0);
   }
 
   function ensureConversationExperience() {
@@ -108,6 +129,16 @@
     }
   }
 
+  function interrupt(reason) {
+    if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel();
+    if (state.stream.controller) state.stream.controller.abort(reason || 'user_interrupted');
+    state.stream.active = false;
+    state.stream.controller = null;
+    setMode('interrupted');
+    emit('interrupt', { reason: reason || 'user_interrupted' });
+    clearMode(450);
+  }
+
   function patchSpeechSynthesis() {
     if (!window.speechSynthesis || state.patched.has('speechSynthesis')) return;
     const originalSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis);
@@ -116,6 +147,7 @@
       setMode('speaking');
       if (utterance && !utterance.__indicareRuntimePatched) {
         utterance.__indicareRuntimePatched = true;
+        utterance.addEventListener('start', () => setMode('speaking'));
         utterance.addEventListener('end', () => clearMode(500));
         utterance.addEventListener('error', () => clearMode(300));
       }
@@ -132,12 +164,13 @@
   function startAudioAnalysis(stream) {
     safe('audio analysis', () => {
       if (!stream || state.audio.stream === stream || !window.AudioContext && !window.webkitAudioContext) return;
-      stopAudioAnalysis();
+      stopAudioAnalysis(false);
       const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
       const context = new AudioContextCtor();
       const source = context.createMediaStreamSource(stream);
       const analyser = context.createAnalyser();
       analyser.fftSize = 128;
+      analyser.smoothingTimeConstant = 0.72;
       source.connect(analyser);
       state.audio.context = context;
       state.audio.analyser = analyser;
@@ -147,22 +180,31 @@
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((sum, value) => sum + value, 0) / Math.max(1, data.length);
         state.audio.level = Math.min(1, avg / 128);
-        document.documentElement.style.setProperty('--ic-audio-level', state.audio.level.toFixed(3));
+        state.audio.smoothed = state.audio.smoothed * 0.78 + state.audio.level * 0.22;
+        document.documentElement.style.setProperty('--ic-audio-level', state.audio.smoothed.toFixed(3));
+        document.documentElement.style.setProperty('--ic-orb-scale', (1 + state.audio.smoothed * 0.09).toFixed(3));
+        document.documentElement.style.setProperty('--ic-orb-glow', (0.25 + state.audio.smoothed * 0.55).toFixed(3));
         state.audio.raf = window.requestAnimationFrame(tick);
       };
       tick();
     });
   }
 
-  function stopAudioAnalysis() {
+  function stopAudioAnalysis(stopTracks) {
     if (state.audio.raf) cancelAnimationFrame(state.audio.raf);
     state.audio.raf = 0;
+    if (stopTracks && state.audio.stream) {
+      state.audio.stream.getTracks?.().forEach((track) => track.stop());
+    }
     if (state.audio.context) state.audio.context.close?.().catch?.(() => null);
     state.audio.context = null;
     state.audio.analyser = null;
     state.audio.stream = null;
     state.audio.level = 0;
+    state.audio.smoothed = 0;
     document.documentElement.style.setProperty('--ic-audio-level', '0');
+    document.documentElement.style.setProperty('--ic-orb-scale', '1');
+    document.documentElement.style.setProperty('--ic-orb-glow', '0.25');
   }
 
   function patchMediaDevices() {
@@ -200,6 +242,14 @@
         return safe('voice request', () => originalRequest.apply(this, args));
       };
     }
+    const originalStop = companion.stop || companion.stopListening;
+    if (typeof originalStop === 'function' && !companion.stop) {
+      companion.stop = function runtimeStop(...args) {
+        stopAudioAnalysis(false);
+        clearMode(0);
+        return safe('voice stop', () => originalStop.apply(this, args));
+      };
+    }
     const originalSpeak = companion.speak;
     if (typeof originalSpeak === 'function') {
       companion.speak = async function runtimeSpeak(...args) {
@@ -219,6 +269,13 @@
       permissions.open = function runtimePermissionsOpen(...args) {
         setMode('listening');
         return safe('device permissions open', () => originalOpen.apply(this, args));
+      };
+    }
+    const originalRequest = permissions.request;
+    if (typeof originalRequest === 'function') {
+      permissions.request = async function runtimePermissionsRequest(...args) {
+        setMode('listening');
+        return originalRequest.apply(this, args);
       };
     }
     permissions.__indicareRuntimePatched = true;
@@ -262,12 +319,49 @@
     return true;
   }
 
+  function streamStart(targetNode) {
+    streamCancel('new_stream');
+    state.stream.active = true;
+    state.stream.controller = new AbortController();
+    state.stream.currentMessageNode = targetNode || null;
+    state.stream.tokenCount = 0;
+    state.stream.startedAt = Date.now();
+    state.stream.lastTokenAt = Date.now();
+    setMode('thinking');
+    emit('stream:start');
+    return state.stream.controller;
+  }
+
+  function streamAppend(token, targetNode) {
+    const node = targetNode || state.stream.currentMessageNode;
+    if (node && typeof token === 'string') node.textContent += token;
+    state.stream.tokenCount += 1;
+    state.stream.lastTokenAt = Date.now();
+    if (state.stream.tokenCount > 1) setMode('speaking');
+    emit('stream:token', { token, tokenCount: state.stream.tokenCount });
+  }
+
+  function streamFinish() {
+    state.stream.active = false;
+    state.stream.controller = null;
+    clearMode(650);
+    emit('stream:finish');
+  }
+
+  function streamCancel(reason) {
+    if (state.stream.controller) state.stream.controller.abort(reason || 'cancelled');
+    state.stream.active = false;
+    state.stream.controller = null;
+    emit('stream:cancel', { reason: reason || 'cancelled' });
+  }
+
   function patchFetchFallback() {
     if (!window.fetch || state.patched.has('fetchFallback')) return;
     const original = window.fetch.bind(window);
     window.fetch = async function indicareRuntimeFetch(input, init) {
       const url = typeof input === 'string' ? input : input?.url || '';
       const isAssistantStream = /\/assistant\/general\/stream/.test(url);
+      if (isAssistantStream) setMode('thinking');
       try {
         const response = await original(input, init);
         if (isAssistantStream && response.status >= 500) {
@@ -276,6 +370,8 @@
           try { payload = bodyText ? JSON.parse(bodyText) : null; } catch (_) { payload = null; }
           const fallback = await safeAssistantFallback(payload);
           appendAssistantFallback(fallback.answer || fallback.response || fallback.message);
+          setMode('speaking');
+          clearMode(1800);
           return new Response(JSON.stringify({ ok: true, safe_mode: true, fallback_rendered: true, answer: fallback.answer }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
@@ -286,6 +382,8 @@
         if (isAssistantStream) {
           const fallback = await safeAssistantFallback(null);
           appendAssistantFallback(fallback.answer || fallback.response || fallback.message);
+          setMode('speaking');
+          clearMode(1800);
           return new Response(JSON.stringify({ ok: true, safe_mode: true, fallback_rendered: true, answer: fallback.answer }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
@@ -303,17 +401,22 @@
       const send = event.target.closest('#send, .send-btn');
       const voice = event.target.closest('#openVoiceCompanion, #voiceOrb, .voice-trigger, .mic-btn');
       const devices = event.target.closest('#openDevicePermissions');
+      const stop = event.target.closest('[data-indicare-stop], #voiceStop, .stop-generating');
+      if (stop) interrupt('user_stop');
       if (send) {
         const input = document.querySelector('#input, textarea');
         if (String(input?.value || '').trim()) {
           markChatStarted();
           setMode('thinking');
-          window.setTimeout(() => {
+          runtimeTimeout(() => {
             if (state.mode === 'thinking') setMode('speaking');
           }, 1500);
         }
       }
       if (voice || devices) setMode('listening');
+    }, true);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') interrupt('escape_key');
     }, true);
     document.addEventListener('input', (event) => {
       if (event.target?.matches?.('#input, textarea')) {
@@ -327,14 +430,20 @@
     if (state.patched.has('messageObserver')) return;
     const messages = document.querySelector('#messages, .messages');
     if (!messages) return;
+    let scheduled = false;
     const observer = new MutationObserver(() => {
-      if (messages.children.length) markChatStarted();
-      messages.scrollTop = messages.scrollHeight;
-      const latest = messages.lastElementChild;
-      if (latest?.classList?.contains('assistant')) {
-        setMode('speaking');
-        clearMode(2200);
-      }
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        if (messages.children.length) markChatStarted();
+        messages.scrollTop = messages.scrollHeight;
+        const latest = messages.lastElementChild;
+        if (latest?.classList?.contains('assistant')) {
+          setMode('speaking');
+          clearMode(2200);
+        }
+      });
     });
     observer.observe(messages, { childList: true, subtree: true, characterData: true });
     state.observers.push(observer);
@@ -343,10 +452,17 @@
 
   function handleViewport() {
     if (state.patched.has('viewport')) return;
+    let raf = 0;
     const update = () => {
-      const vv = window.visualViewport;
-      const height = vv?.height || window.innerHeight;
-      document.documentElement.style.setProperty('--ic-viewport-height', `${height}px`);
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const vv = window.visualViewport;
+        const height = vv?.height || window.innerHeight;
+        const offsetTop = vv?.offsetTop || 0;
+        document.documentElement.style.setProperty('--ic-viewport-height', `${height}px`);
+        document.documentElement.style.setProperty('--ic-viewport-offset-top', `${offsetTop}px`);
+      });
     };
     update();
     window.visualViewport?.addEventListener('resize', update);
@@ -360,7 +476,8 @@
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         clearMode(0);
-        stopAudioAnalysis();
+        stopAudioAnalysis(false);
+        streamCancel('page_hidden');
       }
     });
     window.addEventListener('beforeunload', () => cleanup());
@@ -381,9 +498,14 @@
   function cleanup() {
     state.observers.forEach((observer) => observer.disconnect());
     state.intervals.forEach((id) => clearInterval(id));
+    state.timeouts.forEach((id) => clearTimeout(id));
+    state.controllers.forEach((controller) => controller.abort?.('cleanup'));
     state.observers = [];
     state.intervals = [];
-    stopAudioAnalysis();
+    state.timeouts = [];
+    state.controllers = [];
+    streamCancel('cleanup');
+    stopAudioAnalysis(false);
   }
 
   function init() {
@@ -404,7 +526,7 @@
     emit('ready');
   }
 
-  window.IndiCareRuntimeCore = {
+  const core = {
     version: state.version,
     init,
     snapshot,
@@ -413,17 +535,37 @@
     setSpeaking: () => setMode('speaking'),
     setInterrupted: () => setMode('interrupted'),
     clearState: () => clearMode(0),
+    interrupt,
     markChatStarted,
     safeAssistantFallback,
     appendAssistantFallback,
-    cleanup
+    cleanup,
+    voice: {
+      listen: () => setMode('listening'),
+      speak: (text) => {
+        if (!text || !window.SpeechSynthesisUtterance || !window.speechSynthesis) return false;
+        const utterance = new SpeechSynthesisUtterance(String(text));
+        utterance.lang = 'en-GB';
+        utterance.rate = 0.92;
+        window.speechSynthesis.speak(utterance);
+        return true;
+      },
+      stop: () => interrupt('voice_stop')
+    },
+    stream: {
+      start: streamStart,
+      appendToken: streamAppend,
+      finish: streamFinish,
+      cancel: streamCancel
+    }
   };
 
+  window.IndiCareRuntimeCore = core;
   window.IndiCareConversationExperience = window.IndiCareConversationExperience || {
-    setListening: () => setMode('listening'),
-    setThinking: () => setMode('thinking'),
-    setSpeaking: () => setMode('speaking'),
-    clearState: () => clearMode(0)
+    setListening: core.setListening,
+    setThinking: core.setThinking,
+    setSpeaking: core.setSpeaking,
+    clearState: core.clearState
   };
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {

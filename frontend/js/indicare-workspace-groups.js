@@ -70,6 +70,7 @@
   }
 
   function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
+  function sel(value) { return window.CSS?.escape ? CSS.escape(String(value)) : String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&'); }
   function childWorkspace() { return document.getElementById('child-workspace') || document.querySelector('[data-child-workspace]') || document.querySelector('main'); }
   function selectedChildName() { const p = window.state?.selectedChild?.profile || {}; return p.name || [p.first_name, p.last_name].filter(Boolean).join(' ') || 'the selected child'; }
 
@@ -108,7 +109,7 @@
   }
 
   function openTab(key) {
-    const tab = document.querySelector(`[data-child-tab="${CSS.escape(key)}"]`);
+    const tab = document.querySelector(`[data-child-tab="${sel(key)}"]`);
     if (tab) tab.click();
   }
 
