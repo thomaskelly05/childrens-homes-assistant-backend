@@ -12,9 +12,9 @@ APP_SHELL_SCRIPTS = [
     '<script src="/js/login-security-gateway.js"></script>',
 ]
 
-# The OS command runtime is a full-screen application shell. It must not inherit
-# the older global app-shell CSS or login/staff navigation scripts because those
-# files are shared across legacy pages and can override the OS layout.
+# The OS command runtime is its own full-screen application shell.
+# Keep this list deliberately small and stable. Additional layers should be
+# added one at a time after verification, never as a large bundle.
 OS_COMMAND_CORE_SCRIPTS = [
     '<script src="/js/api.js"></script>',
     '<script src="/js/auth.js"></script>',
@@ -23,20 +23,25 @@ OS_COMMAND_CORE_SCRIPTS = [
 ]
 
 OS_COMMAND_RUNTIME_SCRIPTS = [
+    '<script src="/js/indicare-runtime-safe.js"></script>',
     '<script src="/js/indicare-runtime-safety.js"></script>',
     '<script>window.IndiCareSafe?.run("OS boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;});</script>',
-    '<script src="/js/indicare-connect-realtime.js"></script>',
     '<script src="/js/os-floating-assistant.js"></script>',
+    '<script src="/js/os-therapeutic-record-creator.js"></script>',
+]
+
+OS_COMMAND_OPTIONAL_ENHANCEMENTS = [
     '<script src="/js/document-intelligence-upload.js"></script>',
     '<script src="/js/reg44-report-reader-workspace.js"></script>',
     '<script src="/js/os-child-workspace-tabs.js"></script>',
-    '<script src="/js/os-therapeutic-record-creator.js"></script>',
     '<script src="/js/indicare-connected-care-experience.js"></script>',
     '<script src="/js/indicare-workspace-groups.js"></script>',
     '<script src="/js/daily-living-workspace-refinement.js"></script>',
     '<script src="/js/chronology-visual-timeline.js"></script>',
     '<script src="/js/oversight-intelligence-dashboard.js"></script>',
     '<script src="/js/indicare-production-readiness-bridge.js"></script>',
+    '<script src="/js/os-contextual-navigation.js"></script>',
+    '<script src="/js/os-command-ui-bridge.js"></script>',
 ]
 
 
