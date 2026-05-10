@@ -84,6 +84,17 @@
     }
   }
 
+  function installCss(href, marker) {
+    safe(`load css ${href}`, () => {
+      if (document.querySelector(`link[${marker}="true"]`)) return;
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      link.setAttribute(marker, "true");
+      document.head.appendChild(link);
+    });
+  }
+
   function installShellButtons() {
     const actions = document.querySelector(".ic-top-actions");
     if (actions && !$("openCommandPalette")) {
@@ -184,7 +195,7 @@
     { id: "voice-setup", title: "Voice setup", subtitle: "Set up voice capture and confirmed speaker label", run: () => window.IndiCareVoiceSetup?.open?.() },
     { id: "new-chat", title: "New conversation", subtitle: "Start a fresh IndiCare AI chat", run: () => $("newChat")?.click() },
     { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant for children's home practice", run: () => openApp("intelligence") },
-    { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => $("voiceOrb")?.click() },
+    { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => window.IndiCareVoiceCompanion?.open?.() || $("voiceOrb")?.click() },
     { id: "awareness", title: "IndiCare Awareness", subtitle: "Things IndiCare thinks you should know", run: () => $("openAmbientIntelligence")?.click() },
     { id: "web", title: "Ask with web search", subtitle: "Use Tavily for current information", run: () => putInComposer("Search the web and answer conversationally: ") },
     { id: "presence", title: "Use IndiCare context", subtitle: "Timeline, proactive intelligence and Connect context", run: () => putInComposer("What patterns, risks, unresolved actions or follow-ups should I be aware of?") },
@@ -193,7 +204,7 @@
     { id: "mail", title: "IndiCare Mail", subtitle: "Internal and external AI-native mail", run: () => openApp("mail") },
     { id: "qa", title: "AI review dashboard", subtitle: "Review quality, follow-ups and document issues", run: insertQaPrompt },
     { id: "timeline", title: "Chronology summary", subtitle: "Summarise project chronology intelligence", run: insertTimelinePrompt },
-    { id: "incident", title: "Incident record", subtitle: "Create a professional incident record", run: () => putInComposer("Create a professional incident record with chronology, staff actions, outcome, safeguarding considerations and manager review:") },
+    { id: "incident", title: "Incident record", subtitle: "Create a professional incident record with chronology, staff actions, outcome, safeguarding considerations and manager review", run: () => putInComposer("Create a professional incident record with chronology, staff actions, outcome, safeguarding considerations and manager review:") },
     { id: "safeguarding", title: "Safeguarding review", subtitle: "Review facts, concerns and actions", run: () => putInComposer("Review this safeguarding concern. Separate facts, concerns, missing information, immediate actions, manager/DSL review and recording implications:") },
     { id: "mail-compose", title: "Compose email", subtitle: "Open IndiCare Mail composer", run: () => { openApp("mail"); setTimeout(() => $("mailCompose")?.click(), 150); } },
   ];
@@ -263,7 +274,7 @@
       if (target.closest("#openCommandPalette")) return openCommandPalette();
       if (target.closest("#openNotifications")) return openUpdates();
       if (target.closest("#openDevicePermissions")) return window.IndiCareDevicePermissions?.open?.();
-      if (target.closest("#openVoiceCompanion")) return $("voiceOrb")?.click();
+      if (target.closest("#openVoiceCompanion")) return window.IndiCareVoiceCompanion?.open?.() || $("voiceOrb")?.click();
       const close = target.closest("[data-close-panel]");
       if (close) return closePanel(close.getAttribute("data-close-panel"));
       const commandNode = target.closest("[data-command-id]");
@@ -289,6 +300,7 @@
   function boot() {
     if (window.__indicareAiBridgeBooted) return;
     window.__indicareAiBridgeBooted = true;
+    installCss("/css/indicare-conversational-experience.css", "data-indicare-conversational-css");
     safe("install shell buttons", installShellButtons);
     safe("install panels", installPanels);
     safe("bind bridge", bind);
@@ -297,16 +309,18 @@
     safe("refresh timeline", refreshTimelinePanel);
 
     const optionalScripts = [
-      ["/js/indicare-assistant-mode-switch.js", "data-indicare-assistant-mode-switch", 50],
-      ["/js/indicare-device-permissions.js", "data-indicare-device-permissions", 100],
-      ["/js/indicare-ai-product-upgrades.js", "data-indicare-product-upgrades", 150],
-      ["/js/indicare-mail-shell.js", "data-indicare-mail-shell", 200],
-      ["/js/indicare-web-conversation.js", "data-indicare-web-conversation", 250],
-      ["/js/indicare-presence-context.js", "data-indicare-presence-context", 300],
-      ["/js/indicare-conversation-continuity.js", "data-indicare-conversation-continuity", 350],
-      ["/js/indicare-ambient-intelligence.js", "data-indicare-ambient-intelligence", 400],
-      ["/js/indicare-voice-companion.js", "data-indicare-voice-companion", 450],
-      ["/js/indicare-voice-transcription-bridge.js", "data-indicare-voice-transcription-bridge", 500],
+      ["/js/indicare-runtime-core.js", "data-indicare-runtime-core", 10],
+      ["/js/indicare-conversational-experience.js", "data-indicare-conversational-experience", 45],
+      ["/js/indicare-assistant-mode-switch.js", "data-indicare-assistant-mode-switch", 70],
+      ["/js/indicare-device-permissions.js", "data-indicare-device-permissions", 110],
+      ["/js/indicare-ai-product-upgrades.js", "data-indicare-product-upgrades", 160],
+      ["/js/indicare-mail-shell.js", "data-indicare-mail-shell", 210],
+      ["/js/indicare-web-conversation.js", "data-indicare-web-conversation", 260],
+      ["/js/indicare-presence-context.js", "data-indicare-presence-context", 310],
+      ["/js/indicare-conversation-continuity.js", "data-indicare-conversation-continuity", 360],
+      ["/js/indicare-ambient-intelligence.js", "data-indicare-ambient-intelligence", 410],
+      ["/js/indicare-voice-companion.js", "data-indicare-voice-companion", 460],
+      ["/js/indicare-voice-transcription-bridge.js", "data-indicare-voice-transcription-bridge", 560],
       ["/js/indicare-alive-voice-layer.js", "data-indicare-alive-voice-layer", 650],
       ["/js/indicare-voice-setup.js", "data-indicare-voice-setup", 900],
       ["/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake", 1000],
