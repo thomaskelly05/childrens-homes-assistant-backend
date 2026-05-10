@@ -5,96 +5,74 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>IndiCare AI Suite</title>
   <style>
-    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a;height:100vh;display:grid;grid-template-columns:260px 1fr}.sidebar{background:#0f172a;color:#fff;padding:18px;display:flex;flex-direction:column;gap:14px}.brand{font-size:20px;font-weight:800}.brand small{display:block;color:#94a3b8;font-size:12px;margin-top:4px}.navbtn{border:0;background:#1e293b;color:#fff;padding:14px;border-radius:12px;text-align:left;cursor:pointer;font-weight:600}.navbtn.active{background:#2563eb}.main{display:flex;flex-direction:column;height:100vh}.top{padding:18px 24px;border-bottom:1px solid #e5e7eb;background:#fff}.workspace{flex:1;overflow:auto;padding:24px}.panel{display:none}.panel.active{display:block}.chat{height:62vh;border:1px solid #e5e7eb;border-radius:18px;background:#fff;padding:18px;overflow:auto}.composer{display:flex;gap:12px;margin-top:16px}.composer textarea{flex:1;padding:16px;border-radius:14px;border:1px solid #cbd5e1}.composer button{padding:0 22px;border:0;background:#2563eb;color:#fff;border-radius:14px;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:22px}.editor{height:70vh;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:24px;overflow:auto}.transcript{height:55vh;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:24px;overflow:auto}.intel{display:grid;grid-template-columns:1.4fr .6fr;gap:18px}.intelpanel{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:20px;min-height:300px}.meeting{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:18px;margin-top:12px}@media(max-width:900px){body{grid-template-columns:1fr}.sidebar{flex-direction:row;overflow:auto}.intel{grid-template-columns:1fr}}
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fafc;color:#0f172a;height:100vh;display:grid;grid-template-columns:268px 1fr}.sidebar{background:#0f172a;color:#fff;padding:18px;display:flex;flex-direction:column;gap:14px;min-height:100vh}.brand{font-size:20px;font-weight:850;letter-spacing:-.02em}.brand small{display:block;color:#94a3b8;font-size:12px;margin-top:4px;line-height:1.4}.navbtn{border:0;background:#1e293b;color:#fff;padding:14px;border-radius:14px;text-align:left;cursor:pointer;font-weight:700;display:flex;justify-content:space-between;gap:10px}.navbtn small{color:#cbd5e1;font-weight:600}.navbtn.active{background:#2563eb}.main{display:flex;flex-direction:column;height:100vh;min-width:0}.top{padding:18px 24px;border-bottom:1px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px}.top h2{margin:0;font-size:24px}.top p{margin:4px 0 0;color:#64748b}.top-actions{display:flex;gap:10px}.pill{border:1px solid #e2e8f0;background:#fff;border-radius:999px;padding:9px 13px;font-weight:700}.workspace{flex:1;overflow:auto;padding:24px}.panel{display:none}.panel.active{display:block}.shell{display:grid;gap:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:20px;box-shadow:0 8px 24px rgba(15,23,42,.04)}.card h3{margin:0 0 10px}.muted{color:#64748b}.btn{border:0;background:#2563eb;color:#fff;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.btn.secondary{background:#f1f5f9;color:#0f172a}.btn.danger{background:#fee2e2;color:#991b1b}.chat-shell{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}.chat{height:62vh;border:1px solid #e5e7eb;border-radius:18px;background:#fff;padding:18px;overflow:auto}.message{max-width:760px;margin:0 0 14px;padding:14px 16px;border-radius:16px;background:#f1f5f9}.message.ai{background:#eef2ff}.composer{display:flex;gap:12px;margin-top:16px}.composer textarea{flex:1;padding:16px;border-radius:16px;border:1px solid #cbd5e1;min-height:58px;resize:vertical}.composer button{padding:0 22px;border:0;background:#2563eb;color:#fff;border-radius:16px;font-weight:800}.connect-layout{display:grid;grid-template-columns:240px minmax(0,1fr) 320px;gap:18px}.channel{padding:12px;border-radius:12px;background:#f8fafc;margin-bottom:8px;font-weight:750}.channel.active{background:#dbeafe;color:#1d4ed8}.thread{height:58vh;overflow:auto}.post{border:1px solid #e5e7eb;border-radius:16px;padding:14px;margin-bottom:12px;background:#fff}.doc-shell{display:grid;grid-template-columns:220px minmax(0,1fr) 300px;gap:18px}.doc-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.editor{height:68vh;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:38px;overflow:auto;line-height:1.75}.editor:focus,.transcript:focus{outline:2px solid #93c5fd}.notes-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px}.recorder{background:linear-gradient(135deg,#111827,#312e81);color:#fff;border-radius:22px;padding:24px}.wave{height:80px;border-radius:16px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 4px,transparent 4px 13px);margin:18px 0}.transcript{height:46vh;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:24px;overflow:auto;line-height:1.7}.intel{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}.intel-hero{background:radial-gradient(circle at top left,#1d4ed8,#020617 60%);color:#fff;border-radius:24px;padding:24px}.intelpanel{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:20px;min-height:260px}.timeline li{margin-bottom:12px}.status{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;background:#ecfeff;color:#155e75;font-weight:750;font-size:12px}@media(max-width:1100px){.chat-shell,.connect-layout,.doc-shell,.notes-layout,.intel{grid-template-columns:1fr}}@media(max-width:800px){body{grid-template-columns:1fr}.sidebar{min-height:auto;flex-direction:row;overflow:auto}.navbtn{white-space:nowrap}.top{display:block}.workspace{padding:14px}}
   </style>
 </head>
 <body>
   <aside class="sidebar">
     <div class="brand">IndiCare AI Suite<small>Assistant, Connect, Docs, I-Notes & Intelligence</small></div>
-    <button class="navbtn active" data-app="assistant">💬 Assistant</button>
-    <button class="navbtn" data-app="connect">👥 Connect</button>
-    <button class="navbtn" data-app="docs">📄 Docs</button>
-    <button class="navbtn" data-app="notes">🎙️ I-Notes</button>
-    <button class="navbtn" data-app="intelligence">🧠 Intelligence</button>
+    <button class="navbtn active" data-app="assistant">💬 Assistant <small>ChatGPT</small></button>
+    <button class="navbtn" data-app="connect">👥 Connect <small>Teams</small></button>
+    <button class="navbtn" data-app="docs">📄 Docs <small>Google Docs</small></button>
+    <button class="navbtn" data-app="notes">🎙️ I-Notes <small>Beam</small></button>
+    <button class="navbtn" data-app="intelligence">🧠 Intelligence <small>Grok</small></button>
   </aside>
 
   <main class="main">
     <div class="top">
-      <h2 id="title">Assistant</h2>
-      <p id="subtitle">ChatGPT-style operational AI for children’s homes.</p>
+      <div><h2 id="title">Assistant</h2><p id="subtitle">ChatGPT-style operational AI for children’s homes.</p></div>
+      <div class="top-actions"><button class="pill">New</button><button class="pill">Upload</button><button class="pill">Settings</button></div>
     </div>
 
     <div class="workspace">
       <section class="panel active" id="assistant-panel">
-        <div class="chat" id="messages">
-          <h3>Assistant Workspace</h3>
-          <p>This is now a dedicated conversational workspace instead of a shared generic tab.</p>
-        </div>
-        <div class="composer">
-          <textarea placeholder="Message Assistant..."></textarea>
-          <button>Send</button>
+        <div class="chat-shell">
+          <div>
+            <div class="chat" id="messages">
+              <div class="message ai"><strong>Assistant</strong><p>I can help draft, rewrite, reflect, analyse records, prepare Ofsted evidence and think through safeguarding or practice questions.</p></div>
+              <div class="message"><strong>You</strong><p>Ask anything about the home, recording, policy, practice or documents.</p></div>
+            </div>
+            <div class="composer"><textarea id="assistantInput" placeholder="Message Assistant..."></textarea><button id="assistantSend">Send</button></div>
+          </div>
+          <aside class="card">
+            <h3>Assistant tools</h3>
+            <button class="btn secondary">Improve recording</button><br><br>
+            <button class="btn secondary">Draft incident record</button><br><br>
+            <button class="btn secondary">Safeguarding review</button><br><br>
+            <button class="btn secondary">Ofsted evidence</button>
+          </aside>
         </div>
       </section>
 
       <section class="panel" id="connect-panel">
-        <div class="grid">
-          <div class="card">
-            <h3>Channels</h3>
-            <p>Residential Team</p>
-            <p>Safeguarding</p>
-            <p>Leadership</p>
-          </div>
-          <div class="card">
-            <h3>Actions</h3>
-            <ul>
-              <li>Review safeguarding chronology</li>
-              <li>Prepare handover</li>
-              <li>Update risk plan</li>
-            </ul>
-          </div>
+        <div class="connect-layout">
+          <aside class="card"><h3>Teams</h3><div class="channel active"># Residential Team</div><div class="channel"># Safeguarding</div><div class="channel"># Leadership</div><div class="channel"># Night Staff</div><hr><button class="btn">Start meeting</button></aside>
+          <main class="card"><h3>Residential Team</h3><p class="muted">Teams-style channel with posts, replies, summaries and AI actions.</p><div class="thread"><div class="post"><strong>Morning handover</strong><p>Three actions identified: update chronology, confirm appointment transport, review bedtime support plan.</p><button class="btn secondary">Summarise</button> <button class="btn secondary">Extract actions</button></div><div class="post"><strong>Safeguarding update</strong><p>New concern logged. AI can prepare a concise manager briefing and chronology prompt.</p><button class="btn secondary">Create briefing</button></div></div><div class="composer"><textarea placeholder="Message the team..."></textarea><button>Send</button></div></main>
+          <aside class="card"><h3>Meetings & actions</h3><p><span class="status">Live notes ready</span></p><ul><li>Morning handover, 09:00</li><li>Safeguarding review, 14:30</li><li>Team debrief, 20:00</li></ul><button class="btn">Create action log</button></aside>
         </div>
-        <div class="meeting"><strong>Morning Handover</strong><p>AI meeting summary with extracted actions and concerns.</p></div>
-        <div class="meeting"><strong>Safeguarding Review</strong><p>Risk indicators and follow-up recommendations.</p></div>
       </section>
 
       <section class="panel" id="docs-panel">
-        <div class="editor" contenteditable="true">
-          <h1>Untitled Document</h1>
-          <p>This is a dedicated Docs workspace.</p>
-          <p>Draft incident reports, placement plans, chronologies and Ofsted evidence with AI assistance.</p>
+        <div class="doc-shell">
+          <aside class="card"><h3>Documents</h3><p>Incident record</p><p>Placement plan</p><p>Chronology</p><p>Reg 45 evidence</p><hr><button class="btn">New document</button></aside>
+          <main><div class="doc-toolbar"><button class="btn secondary">File</button><button class="btn secondary">Edit</button><button class="btn secondary">Insert</button><button class="btn secondary">AI rewrite</button><button class="btn secondary">Comment</button><button class="btn secondary">Share</button></div><div class="editor" contenteditable="true"><h1>Untitled Document</h1><p>This is a Google Docs-style AI workspace.</p><p>Draft incident reports, placement plans, chronologies, supervision notes and Ofsted evidence. Select text and use AI rewrite, factual check, child voice, safeguarding review or chronology extraction.</p></div></main>
+          <aside class="card"><h3>AI document coach</h3><button class="btn secondary">Make factual</button><br><br><button class="btn secondary">Improve tone</button><br><br><button class="btn secondary">Check child voice</button><br><br><button class="btn secondary">Extract actions</button></aside>
         </div>
       </section>
 
       <section class="panel" id="notes-panel">
-        <div class="grid">
-          <div class="card">
-            <h3>Recording</h3>
-            <button>Start Recording</button>
-            <button>Stop</button>
-          </div>
-          <div class="card">
-            <h3>Transforms</h3>
-            <p>Incident Record</p>
-            <p>Chronology</p>
-            <p>Handover</p>
-          </div>
+        <div class="notes-layout">
+          <main><div class="recorder"><h3>I-Notes Recorder</h3><p>Beam-style transcription for supervision, handover, incidents and reflective notes.</p><div class="wave"></div><button class="btn">Start recording</button> <button class="btn danger">Stop</button></div><div class="transcript" contenteditable="true"><p><strong>Transcript</strong></p><p>Speak, paste or type notes here. I-Notes will clean, structure and transform them into records.</p></div></main>
+          <aside class="card"><h3>Transforms</h3><button class="btn secondary">Incident record</button><br><br><button class="btn secondary">Handover</button><br><br><button class="btn secondary">Chronology</button><br><br><button class="btn secondary">Supervision note</button><hr><h3>AI extraction</h3><ul><li>Actions</li><li>Risks</li><li>Child voice</li><li>Manager review</li></ul></aside>
         </div>
-        <div class="transcript" contenteditable="true">Transcript workspace...</div>
       </section>
 
       <section class="panel" id="intelligence-panel">
-        <div class="intel">
-          <div class="intelpanel">
-            <h3>Reasoning Workspace</h3>
-            <p>Analyse chronology, safeguarding concerns, patterns, operational risks and evidence gaps.</p>
-          </div>
-          <div class="intelpanel">
-            <h3>Evidence & Timeline</h3>
-            <ul>
-              <li>Repeated missing-from-home episodes</li>
-              <li>Gap in chronology</li>
-              <li>Inspection evidence missing</li>
-            </ul>
+        <div class="shell">
+          <div class="intel-hero"><h2>Intelligence AI</h2><p>Tesla/Grok-style reasoning cockpit for patterns, chronology, evidence, risk and operational insight.</p></div>
+          <div class="intel">
+            <main class="intelpanel"><h3>Reasoning workspace</h3><p>Ask Intelligence to analyse complex situations, compare options, inspect evidence gaps and build operational plans.</p><div class="composer"><textarea placeholder="Ask Intelligence to reason through something..."></textarea><button>Analyse</button></div></main>
+            <aside class="intelpanel"><h3>Evidence graph</h3><ul class="timeline"><li>Missing chronology entry</li><li>Repeated safeguarding theme</li><li>Unclear manager oversight</li><li>Inspection evidence gap</li></ul><button class="btn">Generate insight report</button></aside>
           </div>
         </div>
       </section>
@@ -102,8 +80,9 @@
   </main>
 
 <script>
-const apps={assistant:['Assistant','ChatGPT-style operational AI for children’s homes.'],connect:['Connect','Teams-style collaboration workspace.'],docs:['Docs','AI-native document workspace.'],notes:['I-Notes','Voice and transcription workspace.'],intelligence:['Intelligence','Reasoning and operational analysis workspace.']};
+const apps={assistant:['Assistant','ChatGPT-style operational AI for children’s homes.'],connect:['Connect','Teams-style collaboration, channels, meetings and actions.'],docs:['Docs','Google Docs-style AI document editor.'],notes:['I-Notes','Beam-style voice notes, transcription and AI transforms.'],intelligence:['Intelligence','Grok/Tesla-style reasoning and operational analysis cockpit.']};
 document.querySelectorAll('.navbtn').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const app=btn.dataset.app;document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById(app+'-panel').classList.add('active');document.getElementById('title').textContent=apps[app][0];document.getElementById('subtitle').textContent=apps[app][1];};});
+document.getElementById('assistantSend')?.addEventListener('click',()=>{const input=document.getElementById('assistantInput');const box=document.getElementById('messages');if(!input.value.trim())return;box.insertAdjacentHTML('beforeend',`<div class="message"><strong>You</strong><p>${input.value.replace(/[<>]/g,'')}</p></div><div class="message ai"><strong>Assistant</strong><p>I’m ready to help structure this using the IndiCare AI Suite backend.</p></div>`);input.value='';box.scrollTop=box.scrollHeight;});
 </script>
 </body>
 </html>
