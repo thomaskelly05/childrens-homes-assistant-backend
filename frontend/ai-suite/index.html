@@ -11,31 +11,37 @@
   <link rel="stylesheet" href="/ai-suite/chatgpt-design-guard.css" />
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; }
-    body.indicare-ai-suite { display: grid; grid-template-columns: 280px minmax(0, 1fr); }
+    body.indicare-ai-suite { display: grid; grid-template-columns: 280px minmax(0, 1fr); background:#fff; }
     .ai-suite-root { display: contents; }
-    .ai-suite-sidebar { background: var(--ai-sidebar, #f9f9f9); border-right: 1px solid var(--ai-border, rgba(0,0,0,.1)); height: 100dvh; display: flex; flex-direction: column; padding: 12px; gap: 12px; }
-    .ai-suite-brand { display: flex; gap: 10px; align-items: center; padding: 8px; }
-    .ai-suite-logo { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, #2563eb, #14b8a6); color: #fff; font-weight: 800; }
+    .ai-suite-sidebar { background: var(--ai-sidebar, #f8fafc); border-right: 1px solid var(--ai-border, rgba(0,0,0,.08)); height: 100dvh; display: flex; flex-direction: column; padding: 12px; gap: 12px; }
+    .ai-suite-brand { display: flex; gap: 10px; align-items: center; padding: 10px 8px; }
+    .ai-suite-logo { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, #2563eb, #14b8a6); color: #fff; font-weight: 800; }
     .ai-suite-brand strong { display: block; font-size: 14px; color: var(--ai-text, #111827); }
     .ai-suite-brand span { display: block; font-size: 12px; color: var(--ai-muted, #6b7280); }
-    .ai-suite-new-chat { border: 1px solid var(--ai-border, rgba(0,0,0,.1)); background: var(--ai-bg, #fff); color: var(--ai-text, #111827); border-radius: 12px; padding: 11px 12px; font-weight: 650; text-align: left; cursor: pointer; }
+    .ai-suite-new-chat { border: 1px solid var(--ai-border, rgba(0,0,0,.1)); background: #fff; color: var(--ai-text, #111827); border-radius: 12px; padding: 11px 12px; font-weight: 650; text-align: left; cursor: pointer; }
     .ai-suite-sidebar-section { color: var(--ai-muted, #6b7280); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 8px 8px 2px; font-weight: 750; }
-    .ai-suite-side-link { border: 0; width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; background: transparent; color: var(--ai-text, #111827); border-radius: 10px; padding: 10px 9px; cursor: pointer; font-size: 14px; }
-    .ai-suite-side-link.active, .ai-suite-side-link:hover { background: var(--ai-bg-soft, #f7f7f8); }
+    .ai-suite-side-link { border: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 9px; text-align: left; background: transparent; color: var(--ai-text, #111827); border-radius: 10px; padding: 11px 10px; cursor: pointer; font-size: 14px; }
+    .ai-suite-side-link span { display:flex; align-items:center; gap:9px; }
+    .ai-suite-side-link small { font-size:11px; opacity:.65; }
+    .ai-suite-side-link.active, .ai-suite-side-link:hover { background: var(--ai-bg-soft, #eef2ff); }
     .ai-suite-dot { width: 8px; height: 8px; border-radius: 999px; background: #14b8a6; }
     .ai-suite-conversations { flex: 1; overflow: auto; min-height: 0; }
-    .ai-suite-profile { display: flex; gap: 9px; align-items: center; padding: 10px 8px; border-radius: 12px; color: var(--ai-text, #111827); }
+    .ai-suite-profile { display: flex; gap: 9px; align-items: center; padding: 10px 8px; border-radius: 12px; color: var(--ai-text, #111827); text-decoration:none; }
     .ai-suite-profile-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--ai-bg-soft, #f7f7f8); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
-    .ai-suite-chat-surface { height: 100dvh; min-width: 0; display: flex; flex-direction: column; position: relative; background: var(--ai-bg, #fff); }
-    .ai-suite-mobile-header { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; flex: 0 0 auto; }
+    .ai-suite-chat-surface { height: 100dvh; min-width: 0; display: flex; flex-direction: column; position: relative; background: #fff; }
+    .ai-suite-mobile-header { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; flex: 0 0 auto; border-bottom:1px solid rgba(0,0,0,.05); }
     .ai-suite-mobile-header strong { font-size: 15px; color: var(--ai-text, #111827); }
     .ai-suite-mobile-header span { display: block; font-size: 12px; color: var(--ai-muted, #6b7280); }
     .ai-suite-menu, .ai-suite-voice { border: 0; background: var(--ai-bg-soft, #f7f7f8); color: var(--ai-text, #111827); border-radius: 999px; width: 38px; height: 38px; cursor: pointer; }
     .ai-suite-voice { background: linear-gradient(135deg, #2563eb, #14b8a6); color: white; font-weight: 800; }
-    .ai-suite-app-switcher { flex: 0 0 auto; max-width: 760px; width: calc(100% - 32px); margin: 0 auto; }
+    .ai-suite-app-switcher { flex: 0 0 auto; max-width: 920px; width: calc(100% - 32px); margin: 14px auto 0; display:flex; gap:10px; flex-wrap:wrap; }
+    .ai-suite-app-pill { border:1px solid rgba(0,0,0,.08); background:#fff; border-radius:999px; padding:10px 16px; cursor:pointer; font-weight:600; }
+    .ai-suite-app-pill.active { background:#111827; color:#fff; }
     .ai-suite-conversation { flex: 1 1 auto; min-height: 0; position: relative; display: flex; flex-direction: column; }
     .assistant-empty { flex: 1 1 auto; display: grid; place-items: center; text-align: center; padding: 20px 20px 150px; }
-    .assistant-empty-inner { max-width: 680px; }
+    .assistant-empty-inner { max-width: 760px; }
+    .assistant-title { font-size:48px; margin:0 0 14px; letter-spacing:-2px; }
+    .assistant-subtitle { font-size:18px; line-height:1.7; color:#64748b; }
     .messages.hidden { display: none; }
     .composer-dock { flex: 0 0 auto; }
     @media (max-width: 768px) {
@@ -43,7 +49,6 @@
       .ai-suite-sidebar { position: fixed; inset: 0 auto 0 0; width: min(84vw, 320px); z-index: 60; transform: translateX(-105%); transition: transform .18s ease; box-shadow: 18px 0 50px rgba(0,0,0,.18); }
       body.ai-sidebar-open .ai-suite-sidebar { transform: translateX(0); }
       .ai-suite-chat-surface { height: var(--ic-viewport-height, 100dvh); min-height: var(--ic-viewport-height, 100dvh); }
-      .ai-suite-mobile-header { padding-top: env(safe-area-inset-top, 0px); height: calc(52px + env(safe-area-inset-top, 0px)); }
     }
   </style>
 </head>
@@ -52,16 +57,16 @@
     <aside class="ai-suite-sidebar" aria-label="IndiCare AI Suite navigation">
       <div class="ai-suite-brand">
         <div class="ai-suite-logo">AI</div>
-        <div><strong>IndiCare AI</strong><span>AI Suite</span></div>
+        <div><strong>IndiCare AI Suite</strong><span>Assistant, Connect, Docs, I-Notes and Intelligence</span></div>
       </div>
       <button id="newChat" class="ai-suite-new-chat" type="button">New conversation</button>
-      <div class="ai-suite-sidebar-section">Apps</div>
+      <div class="ai-suite-sidebar-section">Workspace apps</div>
       <nav>
-        <button class="ai-suite-side-link active" data-ai-suite-app="intelligence" type="button"><span class="ai-suite-dot"></span> IndiCare AI</button>
-        <button class="ai-suite-side-link" data-ai-suite-app="notes" type="button"><span class="ai-suite-dot" style="background:#8b5cf6"></span> I-Notes</button>
-        <button class="ai-suite-side-link" data-ai-suite-app="docs" type="button"><span class="ai-suite-dot" style="background:#f59e0b"></span> IndiCare Docs</button>
-        <button class="ai-suite-side-link" data-ai-suite-app="connect" type="button"><span class="ai-suite-dot" style="background:#0ea5e9"></span> Connect</button>
-        <button class="ai-suite-side-link" data-ai-suite-app="mail" type="button"><span class="ai-suite-dot" style="background:#10b981"></span> Mail</button>
+        <button class="ai-suite-side-link active" data-ai-suite-app="assistant" type="button"><span><span class="ai-suite-dot"></span> Assistant</span><small>Chat</small></button>
+        <button class="ai-suite-side-link" data-ai-suite-app="connect" type="button"><span><span class="ai-suite-dot" style="background:#0ea5e9"></span> Connect</span><small>Teams</small></button>
+        <button class="ai-suite-side-link" data-ai-suite-app="docs" type="button"><span><span class="ai-suite-dot" style="background:#f59e0b"></span> Docs</span><small>Writer</small></button>
+        <button class="ai-suite-side-link" data-ai-suite-app="notes" type="button"><span><span class="ai-suite-dot" style="background:#8b5cf6"></span> I-Notes</span><small>Voice</small></button>
+        <button class="ai-suite-side-link" data-ai-suite-app="intelligence" type="button"><span><span class="ai-suite-dot" style="background:#10b981"></span> Intelligence</span><small>Reasoning</small></button>
       </nav>
       <div class="ai-suite-sidebar-section">Conversations</div>
       <div id="conversationList" class="ai-suite-conversations"></div>
@@ -72,23 +77,23 @@
       <section class="ai-suite-chat-surface" aria-label="IndiCare AI Suite">
         <header class="ai-suite-mobile-header">
           <button class="ai-suite-menu" type="button" data-ai-sidebar-toggle aria-label="Open menu">☰</button>
-          <div><strong id="aiSuiteTitle">IndiCare AI</strong><span id="aiSuiteSubtitle">AI Suite</span></div>
+          <div><strong id="aiSuiteTitle">Assistant</strong><span id="aiSuiteSubtitle">Everyday AI support</span></div>
           <button class="ai-suite-voice" type="button" id="aiSuiteVoiceButton" aria-label="Open voice">AI</button>
         </header>
 
         <nav class="ai-suite-app-switcher" aria-label="IndiCare AI Suite apps">
-          <button type="button" class="ai-suite-app-pill active" data-ai-suite-app="intelligence">Chat</button>
-          <button type="button" class="ai-suite-app-pill" data-ai-suite-app="notes">Notes</button>
-          <button type="button" class="ai-suite-app-pill" data-ai-suite-app="docs">Docs</button>
+          <button type="button" class="ai-suite-app-pill active" data-ai-suite-app="assistant">Assistant</button>
           <button type="button" class="ai-suite-app-pill" data-ai-suite-app="connect">Connect</button>
-          <button type="button" class="ai-suite-app-pill" data-ai-suite-app="mail">Mail</button>
+          <button type="button" class="ai-suite-app-pill" data-ai-suite-app="docs">Docs</button>
+          <button type="button" class="ai-suite-app-pill" data-ai-suite-app="notes">I-Notes</button>
+          <button type="button" class="ai-suite-app-pill" data-ai-suite-app="intelligence">Intelligence</button>
         </nav>
 
         <div class="ai-suite-conversation" id="aiSuiteConversation">
           <div class="assistant-empty" id="empty">
             <div class="assistant-empty-inner">
-              <h1 class="assistant-title">How can IndiCare help?</h1>
-              <p class="assistant-subtitle">Chat, write notes, draft documents, manage messages and use Connect from one conversational AI workspace.</p>
+              <h1 class="assistant-title">How can the Assistant help?</h1>
+              <p class="assistant-subtitle">ChatGPT-style support for safeguarding, recording, meetings, documents, voice notes and operational thinking in children’s homes.</p>
             </div>
           </div>
           <div id="messages" class="messages hidden" aria-live="polite"></div>
@@ -96,16 +101,11 @@
 
         <div class="composer-dock">
           <div class="composer-shell">
-            <div class="quickbar starter-chips">
-              <button class="chip" type="button" data-ai-suite-prompt="Create a clear note from this: ">Clean up notes</button>
-              <button class="chip" type="button" data-ai-suite-prompt="Draft a professional document about: ">Draft document</button>
-              <button class="chip" type="button" data-ai-suite-prompt="Summarise this conversation and extract actions: ">Summarise</button>
-              <button class="chip" type="button" data-ai-suite-prompt="Draft a clear email about: ">Draft email</button>
-            </div>
+            <div class="quickbar starter-chips"></div>
             <div class="modern-composer composer-card">
               <div class="composer-row input-row">
                 <button id="attach" class="attach-btn" type="button" aria-label="Attach">+</button>
-                <textarea id="input" rows="1" placeholder="Message IndiCare AI"></textarea>
+                <textarea id="input" rows="1" placeholder="Message the Assistant"></textarea>
                 <button id="send" class="send-btn" type="button" aria-label="Send">↑</button>
               </div>
             </div>
