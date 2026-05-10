@@ -1,5 +1,6 @@
 /* IndiCare AI Suite Loader
    Automatically loads the isolated AI Suite shell/runtime on /assistant.
+   The design guard is loaded last so ChatGPT-style AI Suite CSS wins.
 */
 (function () {
   if (window.__indicareAiSuiteLoader) return;
@@ -7,7 +8,8 @@
 
   const CSS_ASSETS = [
     '/ai-suite/indicare-ai-suite.css',
-    '/ai-suite/chatgpt-mobile-shell.css'
+    '/ai-suite/chatgpt-mobile-shell.css',
+    '/ai-suite/chatgpt-design-guard.css'
   ];
 
   const JS_ASSETS = [
@@ -46,8 +48,26 @@
     });
   }
 
+  function markLegacyStyles() {
+    Array.from(document.querySelectorAll('link[rel="stylesheet"]')).forEach((link) => {
+      const href = link.getAttribute('href') || '';
+      if (!href.includes('/ai-suite/') && /assistant|dashboard|os|app|platform|care|timeline|chronology/i.test(href)) {
+        link.dataset.aiSuiteLegacyCss = 'true';
+      }
+    });
+  }
+
+  function reassertAiSuiteCss() {
+    // Move AI Suite CSS links to the end of <head> so they keep cascade priority.
+    CSS_ASSETS.forEach((href) => {
+      const link = document.querySelector(`link[data-ai-suite-css="${href}"]`);
+      if (link) document.head.appendChild(link);
+    });
+  }
+
   async function boot() {
     ensureBodyClass();
+    markLegacyStyles();
 
     CSS_ASSETS.forEach(loadCss);
 
@@ -56,6 +76,10 @@
     }
 
     window.IndiCareAISuite?.boot?.();
+
+    reassertAiSuiteCss();
+    setTimeout(reassertAiSuiteCss, 500);
+    setTimeout(reassertAiSuiteCss, 1500);
 
     document.body?.classList.add('indicare-ai-suite-loaded');
 
