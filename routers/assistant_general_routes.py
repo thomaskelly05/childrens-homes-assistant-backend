@@ -169,7 +169,12 @@ def _assistant_component_path() -> Path:
 
 
 def _inject_ofsted_ui_patch(html: str) -> str:
-    return html
+    recovery_script = '<script defer src="/frontend/ai-suite/indicare-orb-projects.js"></script>'
+    if "indicare-orb-projects.js" in html:
+        return html
+    if "</body>" in html:
+        return html.replace("</body>", f"{recovery_script}\n</body>")
+    return f"{html}\n{recovery_script}"
 
 
 @ui_router.get("/assistant", response_class=HTMLResponse)
