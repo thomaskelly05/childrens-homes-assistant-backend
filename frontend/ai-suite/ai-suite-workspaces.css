@@ -1,0 +1,255 @@
+/* Rich AI Suite app workspaces + conversational orb */
+
+.ai-suite-workspace-panel {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  max-width: 980px;
+  width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 14px 0 130px;
+}
+
+body[data-ai-suite-active-app="notes"] .ai-suite-workspace-panel[data-ai-workspace="notes"],
+body[data-ai-suite-active-app="docs"] .ai-suite-workspace-panel[data-ai-workspace="docs"],
+body[data-ai-suite-active-app="connect"] .ai-suite-workspace-panel[data-ai-workspace="connect"],
+body[data-ai-suite-active-app="mail"] .ai-suite-workspace-panel[data-ai-workspace="mail"] {
+  display: grid;
+}
+
+body[data-ai-suite-active-app="notes"] #empty,
+body[data-ai-suite-active-app="docs"] #empty,
+body[data-ai-suite-active-app="connect"] #empty,
+body[data-ai-suite-active-app="mail"] #empty,
+body[data-ai-suite-active-app="notes"] #messages,
+body[data-ai-suite-active-app="docs"] #messages,
+body[data-ai-suite-active-app="connect"] #messages,
+body[data-ai-suite-active-app="mail"] #messages {
+  display: none !important;
+}
+
+.ai-suite-workspace-card {
+  min-height: 0;
+  border: 1px solid var(--ai-border, rgba(0,0,0,.1));
+  background: var(--ai-bg, #fff);
+  border-radius: 24px;
+  box-shadow: 0 10px 34px rgba(15, 23, 42, .06);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.theme-dark .ai-suite-workspace-card,
+body.theme-dark .ai-suite-workspace-card {
+  box-shadow: none;
+}
+
+.ai-suite-workspace-head {
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid var(--ai-border, rgba(0,0,0,.1));
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ai-suite-workspace-head h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -.03em;
+  color: var(--ai-text, #111827);
+}
+
+.ai-suite-workspace-head p {
+  margin: 5px 0 0;
+  color: var(--ai-muted, #6b7280);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.ai-suite-workspace-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ai-suite-workspace-actions button,
+.ai-suite-mini-action {
+  border: 1px solid var(--ai-border, rgba(0,0,0,.1));
+  background: var(--ai-bg-soft, #f7f7f8);
+  color: var(--ai-text, #111827);
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ai-suite-workspace-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.ai-suite-tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-suite-tool-list button {
+  text-align: left;
+  border: 1px solid var(--ai-border, rgba(0,0,0,.1));
+  background: var(--ai-bg-soft, #f7f7f8);
+  color: var(--ai-text, #111827);
+  border-radius: 14px;
+  padding: 11px 12px;
+  cursor: pointer;
+}
+
+.ai-suite-tool-list strong { display: block; font-size: 13.5px; }
+.ai-suite-tool-list span { display: block; margin-top: 3px; color: var(--ai-muted, #6b7280); font-size: 12px; line-height: 1.35; }
+
+.ai-suite-editor,
+.ai-suite-textarea {
+  width: 100%;
+  min-height: 340px;
+  resize: vertical;
+  border: 1px solid var(--ai-border, rgba(0,0,0,.1));
+  background: var(--ai-bg-soft, #f7f7f8);
+  color: var(--ai-text, #111827);
+  border-radius: 18px;
+  padding: 16px;
+  font: inherit;
+  line-height: 1.6;
+  outline: none;
+}
+
+.ai-suite-editor {
+  overflow: auto;
+}
+
+.ai-suite-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--ai-muted, #6b7280);
+}
+
+.ai-suite-thread-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-suite-thread {
+  border: 1px solid var(--ai-border, rgba(0,0,0,.1));
+  background: var(--ai-bg-soft, #f7f7f8);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.ai-suite-thread strong { display: block; color: var(--ai-text, #111827); font-size: 14px; }
+.ai-suite-thread p { color: var(--ai-muted, #6b7280); margin: 5px 0 0; font-size: 13px; line-height: 1.4; }
+
+.ic-conversation-stage.ai-suite-orb-stage {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 45;
+}
+
+.ai-suite-orb-stage .ic-cgi-orb-wrap {
+  pointer-events: auto;
+}
+
+.ai-suite-voice-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  display: none;
+  place-items: center;
+  background: radial-gradient(circle at 50% 28%, rgba(37,99,235,.16), transparent 32%), rgba(255,255,255,.72);
+  backdrop-filter: blur(18px);
+}
+
+body.theme-dark .ai-suite-voice-panel {
+  background: radial-gradient(circle at 50% 28%, rgba(45,212,191,.12), transparent 32%), rgba(33,33,33,.72);
+}
+
+body.ic-voice-mode-open .ai-suite-voice-panel {
+  display: grid;
+}
+
+.ai-suite-voice-card {
+  text-align: center;
+  color: var(--ai-text, #111827);
+  padding: 210px 24px 24px;
+}
+
+.ai-suite-voice-card h2 {
+  margin: 0 0 8px;
+  font-size: clamp(24px, 4vw, 38px);
+  letter-spacing: -.04em;
+}
+
+.ai-suite-voice-card p {
+  margin: 0 auto;
+  max-width: 38ch;
+  color: var(--ai-muted, #6b7280);
+  line-height: 1.5;
+}
+
+.ai-suite-voice-close {
+  margin-top: 22px;
+  border: 1px solid var(--ai-border, rgba(0,0,0,.1));
+  background: var(--ai-bg, #fff);
+  color: var(--ai-text, #111827);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .ai-suite-workspace-panel {
+    width: calc(100% - 20px);
+    padding: 8px 0 118px;
+  }
+
+  .ai-suite-workspace-card {
+    border-radius: 22px;
+  }
+
+  .ai-suite-workspace-head {
+    display: block;
+    padding: 15px;
+  }
+
+  .ai-suite-workspace-actions {
+    justify-content: flex-start;
+    margin-top: 12px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  .ai-suite-workspace-actions::-webkit-scrollbar { display: none; }
+
+  .ai-suite-workspace-body {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .ai-suite-tool-list {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .ai-suite-tool-list::-webkit-scrollbar { display: none; }
+  .ai-suite-tool-list button { min-width: 190px; }
+  .ai-suite-editor, .ai-suite-textarea { min-height: 260px; }
+}
