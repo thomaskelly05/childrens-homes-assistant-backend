@@ -4,112 +4,65 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IndiCare OS | Children’s Homes Operating System</title>
-  <link rel="stylesheet" href="/css/indicare-os-design-system.css" />
   <style>
     :root{--ic-bg:#f7f9fc;--ic-panel:#fff;--ic-soft:#f8fafc;--ic-border:#e2e8f0;--ic-text:#0f172a;--ic-muted:#64748b;--ic-blue:#4f46e5;--ic-green:#16a34a;--ic-red:#e11d48;--ic-orange:#f97316;--ic-purple:#7c3aed;--ic-radius:18px;--ic-shadow:0 16px 46px rgba(15,23,42,.08)}
-    *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--ic-bg);color:var(--ic-text);overflow-x:hidden}.os-shell{min-height:100vh;display:grid;grid-template-columns:216px minmax(0,1fr);grid-template-rows:64px minmax(0,1fr) 86px}.os-sidebar{grid-row:1/4;background:#fff;border-right:1px solid var(--ic-border);display:flex;flex-direction:column;min-height:100vh;position:sticky;top:0}.os-brand{height:64px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--ic-border);font-weight:950;font-size:22px;color:#3730a3}.os-brand-mark{width:28px;height:28px;border-radius:999px;background:conic-gradient(from 40deg,#4f46e5,#22c55e,#4f46e5)}.os-nav{padding:14px 10px;overflow:auto}.os-nav-title{font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.07em;color:var(--ic-muted);margin:12px 10px 8px}.os-nav-button{width:100%;border:0;background:transparent;border-radius:10px;padding:10px 11px;margin:2px 0;display:flex;align-items:center;gap:10px;text-align:left;color:#334155;font-weight:780}.os-nav-button:hover,.os-nav-button.active{background:#eef2ff;color:#3730a3}.os-nav-icon{width:19px;text-align:center;color:inherit}.os-minimise{margin:12px 20px 16px;border:1px solid var(--ic-border);border-radius:10px;background:#fff;padding:10px;font-weight:800;color:#334155}.os-topbar{grid-column:2;display:flex;align-items:center;justify-content:space-between;gap:16px;background:#fff;border-bottom:1px solid var(--ic-border);padding:0 24px;position:sticky;top:0;z-index:40}.os-top-left{display:flex;align-items:center;gap:16px;flex:1}.os-new{border:0;border-radius:10px;background:#4f46e5;color:#fff;font-weight:900;padding:11px 18px}.os-search{width:min(420px,42vw);border:1px solid var(--ic-border);border-radius:11px;padding:11px 14px;font:inherit;background:#fff}.os-top-actions{display:flex;align-items:center;gap:18px}.os-top-link{font-weight:850;color:#0f172a}.os-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;margin-left:3px}.os-user{display:flex;align-items:center;gap:10px;border-left:1px solid var(--ic-border);padding-left:18px}.os-avatar{width:36px;height:36px;border-radius:999px;background:#4ade80;color:#166534;display:grid;place-items:center;font-weight:950}.os-main{grid-column:2;display:grid;grid-template-columns:minmax(0,1fr) 276px;gap:16px;padding:16px 16px 104px}.os-content{display:grid;gap:12px}.os-profile-card,.os-card,.os-insight-rail,.os-continuity-card{background:#fff;border:1px solid var(--ic-border);border-radius:var(--ic-radius);box-shadow:0 10px 30px rgba(15,23,42,.04)}.os-profile-card{display:grid;grid-template-columns:1fr 150px 170px 160px auto;align-items:center;gap:16px;padding:16px}.os-child-head{display:flex;align-items:center;gap:14px}.os-child-photo{width:58px;height:58px;border-radius:999px;background:linear-gradient(135deg,#dbeafe,#dcfce7);display:grid;place-items:center;font-size:26px}.os-child-name{font-size:18px;font-weight:950}.os-child-meta{color:var(--ic-muted);font-size:13px;margin-top:4px}.os-profile-field{border-left:1px solid var(--ic-border);padding-left:16px}.os-profile-field span{display:block;color:var(--ic-muted);font-size:12px;font-weight:850}.os-profile-field strong{display:block;margin-top:4px}.os-button{border:1px solid var(--ic-border);background:#fff;border-radius:10px;padding:10px 13px;font-weight:900;color:#0f172a}.os-card{padding:14px}.os-card h3{font-size:17px;margin:0 0 14px}.os-glance-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.os-glance{border:1px solid var(--ic-border);border-radius:12px;padding:14px;min-height:116px;background:linear-gradient(135deg,#fff,#f8fafc)}.os-glance.blue{border-color:#bfdbfe;background:linear-gradient(135deg,#fff,#eff6ff)}.os-glance.green{border-color:#bbf7d0;background:linear-gradient(135deg,#fff,#f0fdf4)}.os-glance.purple{border-color:#ddd6fe;background:linear-gradient(135deg,#fff,#f5f3ff)}.os-glance.orange{border-color:#fed7aa;background:linear-gradient(135deg,#fff,#fff7ed)}.os-glance.red{border-color:#fecdd3;background:linear-gradient(135deg,#fff,#fff1f2)}.os-glance small{font-weight:850}.os-glance strong{display:block;font-size:22px;margin:13px 0 4px}.os-glance p{margin:0;color:#475569;font-size:13px}.os-tabs{display:flex;gap:22px;border-bottom:1px solid var(--ic-border);padding:0 14px}.os-tab{border:0;background:transparent;padding:14px 0 12px;font-weight:850;color:#475569}.os-tab.active{color:#4f46e5;border-bottom:2px solid #4f46e5}.os-timeline{padding:8px 14px 14px}.os-timeline-row{display:grid;grid-template-columns:46px 80px 1fr auto;gap:14px;align-items:center;border-bottom:1px solid var(--ic-border);padding:13px 0}.os-timeline-row:last-child{border-bottom:0}.os-dot{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;color:#fff;font-weight:950}.os-dot.blue{background:#4f46e5}.os-dot.orange{background:#f97316}.os-dot.green{background:#22c55e}.os-dot.sky{background:#60a5fa}.os-dot.purple{background:#8b5cf6}.os-time{color:#475569;font-size:13px}.os-record-title{font-weight:900}.os-record-text{color:#475569;font-size:13px;margin-top:4px}.os-chip{display:inline-flex;align-items:center;border-radius:999px;background:#f1f5f9;color:#475569;font-size:12px;padding:6px 10px}.os-view-full{width:100%;border:1px solid var(--ic-border);background:#fff;border-radius:10px;padding:12px;text-align:left;font-weight:850;color:#1e293b}.os-right{display:grid;gap:14px;align-content:start}.os-insight-rail{overflow:hidden}.os-insight-section{padding:16px;border-bottom:1px solid var(--ic-border)}.os-insight-section:last-child{border-bottom:0}.os-insight-section h3,.os-insight-section h4{margin:0 0 12px}.os-tags{display:flex;gap:6px;flex-wrap:wrap}.os-tag{border-radius:999px;background:#eef2ff;color:#4338ca;padding:6px 9px;font-size:12px;font-weight:800}.os-mini-trend{height:32px;border-bottom:2px solid #22c55e;border-radius:50%;margin-top:6px}.os-check{display:flex;gap:8px;align-items:center;color:#334155;margin:9px 0;font-size:13px}.os-check:before{content:'✓';width:16px;height:16px;border-radius:999px;background:#dcfce7;color:#15803d;display:grid;place-items:center;font-size:11px}.os-assistant-card{background:linear-gradient(135deg,#fff,#eef2ff);border:1px solid #c7d2fe;border-radius:14px;padding:14px}.os-continuity{position:fixed;left:216px;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-top:1px solid var(--ic-border);padding:12px 16px;display:grid;grid-template-columns:220px repeat(4,1fr) 1.75fr;gap:12px;z-index:50}.os-continuity-card{padding:13px;display:flex;gap:12px;align-items:center;box-shadow:none}.os-continuity-icon{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:#eef2ff;color:#4338ca;font-weight:950}.os-continuity-card strong{display:block;font-size:13px}.os-continuity-card span{display:block;color:#475569;font-size:12px;margin-top:3px}.workspace-view{display:none}.workspace-view.active{display:block}.child-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.child-card{text-align:left;border:1px solid var(--ic-border);background:#fff;border-radius:14px;padding:14px}.child-card.active{outline:3px solid #c7d2fe}.care-launcher{left:236px!important;bottom:104px!important}.assistant-bubble,[data-assistant-bubble]{bottom:104px!important}@media(max-width:1180px){.os-shell{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}.os-sidebar{position:relative;grid-row:auto;min-height:auto}.os-main{grid-column:1;grid-template-columns:1fr}.os-topbar{grid-column:1}.os-profile-card{grid-template-columns:1fr}.os-profile-field{border-left:0;border-top:1px solid var(--ic-border);padding:12px 0 0}.os-glance-grid{grid-template-columns:1fr 1fr}.os-right{order:2}.os-continuity{left:0;grid-template-columns:1fr 1fr;position:static}.care-launcher{left:14px!important;bottom:14px!important}}@media(max-width:720px){.os-glance-grid,.os-continuity{grid-template-columns:1fr}.os-topbar{flex-wrap:wrap;height:auto;padding:12px}.os-search{width:100%}.os-main{padding:12px}.os-timeline-row{grid-template-columns:38px 1fr}.os-time,.os-chip{display:none}}
+    *{box-sizing:border-box}html,body{min-height:100%;margin:0;background:var(--ic-bg)!important}body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ic-text);overflow-x:hidden}.os-shell{min-height:100vh;display:grid;grid-template-columns:216px minmax(0,1fr);grid-template-rows:64px minmax(0,1fr) 86px}.os-sidebar{grid-row:1/4;background:#fff;border-right:1px solid var(--ic-border);display:flex;flex-direction:column;min-height:100vh;position:sticky;top:0;z-index:20}.os-main{grid-column:2;display:grid;grid-template-columns:minmax(0,1fr) 276px;gap:16px;padding:16px 16px 104px;align-items:start}.workspace-view.active{display:block!important}.workspace-view{display:none}.child-list{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.child-card{display:block!important;text-align:left;border:1px solid var(--ic-border);background:#fff;border-radius:14px;padding:14px;cursor:pointer;font-weight:700}.child-card:hover{border-color:#4f46e5;background:#eef2ff}.os-card,.os-profile-card,.os-insight-rail,.os-continuity-card{background:#fff;border:1px solid var(--ic-border);border-radius:var(--ic-radius);box-shadow:0 10px 30px rgba(15,23,42,.04)}
   </style>
 </head>
 <body data-indicare-os-runtime="true">
-  <div class="os-shell">
-    <aside class="os-sidebar ic-rail" aria-label="IndiCare navigation">
-      <div class="os-brand"><span class="os-brand-mark"></span><span>IndiCare</span></div>
-      <nav class="os-nav">
-        <div class="os-nav-title">Young people</div>
-        <button class="os-nav-button ic-nav-button active" data-view="young-people"><span class="os-nav-icon">⌂</span><span>Overview</span></button>
-        <button class="os-nav-button" data-child-tab="journey"><span class="os-nav-icon">◌</span><span>Child Journey</span></button>
-        <button class="os-nav-button" data-record-action="daily_note"><span class="os-nav-icon">▣</span><span>Daily Living</span></button>
-        <button class="os-nav-button" data-child-tab="education"><span class="os-nav-icon">◇</span><span>Education</span></button>
-        <button class="os-nav-button" data-child-tab="health"><span class="os-nav-icon">♡</span><span>Health</span></button>
-        <button class="os-nav-button" data-child-tab="family"><span class="os-nav-icon">♧</span><span>Family Time</span></button>
-        <button class="os-nav-button" data-record-action="keywork"><span class="os-nav-icon">♧</span><span>Key Work</span></button>
-        <button class="os-nav-button" data-record-action="child_voice"><span class="os-nav-icon">☷</span><span>Child Voice</span></button>
-        <button class="os-nav-button" data-child-tab="journey"><span class="os-nav-icon">▤</span><span>Chronology</span></button>
-        <button class="os-nav-button" data-view="safeguarding"><span class="os-nav-icon">♢</span><span>Safeguarding</span></button>
-        <button class="os-nav-button" data-child-tab="plans"><span class="os-nav-icon">□</span><span>Plans & Reviews</span></button>
-        <button class="os-nav-button" data-child-tab="documents"><span class="os-nav-icon">▱</span><span>Documents</span></button>
-        <button class="os-nav-button" data-assistant-prompt="Summarise trusted relationships and relational practice for this child."><span class="os-nav-icon">♧</span><span>Relationships</span></button>
-        <div class="os-nav-title">Other areas</div>
-        <button class="os-nav-button" data-record-action="daily_note"><span class="os-nav-icon">⊕</span><span>Recording</span></button>
-        <button class="os-nav-button ic-nav-button" data-view="safeguarding"><span class="os-nav-icon">◈</span><span>Safeguarding</span></button>
-        <button class="os-nav-button ic-nav-button" data-view="overview"><span class="os-nav-icon">◎</span><span>Oversight</span></button>
-        <button class="os-nav-button ic-nav-button" data-view="inspection"><span class="os-nav-icon">▦</span><span>Governance</span></button>
-        <button class="os-nav-button ic-nav-button" data-view="provider"><span class="os-nav-icon">⌂</span><span>Provider</span></button>
-        <button class="os-nav-button ic-nav-button" data-view="network"><span class="os-nav-icon">⌘</span><span>Network</span></button>
-        <button class="os-nav-button" data-assistant-prompt="Help me understand current priorities across the OS."><span class="os-nav-icon">✦</span><span>Assistant</span></button>
-      </nav>
-      <button class="os-minimise" type="button">≪ Minimise</button>
-    </aside>
-
-    <header class="os-topbar">
-      <div class="os-top-left"><button class="os-new" type="button" data-record-action="daily_note">＋ New</button><input class="os-search" placeholder="Search IndiCare..." /></div>
-      <div class="os-top-actions"><span class="os-top-link">Tasks <span class="os-badge" id="task-count">0</span></span><span class="os-top-link">Alerts <span class="os-badge" id="alert-count">0</span></span><span class="os-top-link" data-assistant-prompt="Open assistant for this workspace.">✦ Assistant</span><div class="os-user"><div><strong id="user-name">Thomas Kelly</strong><br><small>Unit Manager</small></div><span class="os-avatar">TK</span></div></div>
-    </header>
-
-    <main class="os-main" id="workspace">
-      <section class="os-content">
-        <section class="os-profile-card">
-          <div class="os-child-head"><div class="os-child-photo">👤</div><div><div class="os-child-name" id="child-name">Select a young person</div><div class="os-child-meta" id="child-meta">Open a child to see their live therapeutic workspace.</div></div></div>
-          <div class="os-profile-field"><span>Home</span><strong id="child-home">—</strong></div>
-          <div class="os-profile-field"><span>Key Worker</span><strong id="child-key-worker">—</strong></div>
-          <div class="os-profile-field"><span>Placement</span><strong id="child-placement">—</strong></div>
-          <button class="os-button" type="button" id="view-full-profile">View Full Profile</button>
-        </section>
-
-        <section class="workspace-view active" id="view-young-people" data-home-dashboard="true">
-          <section class="os-card"><h3>Young people</h3><div class="child-list" id="young-people-list"><div class="ic-empty">Loading young people...</div></div></section>
-          <section class="os-card" id="child-workspace-card"><h3>Today at a glance</h3><div class="os-glance-grid"><div class="os-glance blue"><small>Wellbeing</small><strong id="glance-wellbeing">Steady</strong><p>Updated from chronology.</p></div><div class="os-glance green"><small>Positive Moments</small><strong id="glance-positive">0</strong><p>Today</p></div><div class="os-glance purple"><small>Incidents</small><strong id="glance-incidents">0</strong><p>Recent records</p></div><div class="os-glance orange"><small>Unresolved Actions</small><strong id="glance-actions">0</strong><p>Require attention</p></div><div class="os-glance red"><small>Safeguarding</small><strong id="glance-safeguarding">Monitor</strong><p>Open concerns</p></div></div></section>
-          <section class="os-card"><div id="child-workspace" data-child-workspace="true"><div class="ic-empty">Select a young person to open their workspace.</div></div></section>
-        </section>
-
-        <section class="workspace-view" id="view-overview" data-home-dashboard="true"><section class="os-card"><h3>Operational dashboard</h3><div id="provider-matrix"></div></section><section class="os-card"><h3>Immediate command queue</h3><div id="command-list"></div></section><section class="os-card"><h3>Care recording feed</h3><div id="care-list"></div></section></section>
-        <section class="workspace-view" id="view-safeguarding"><section class="os-card"><h3>Safeguarding intelligence board</h3><div id="safeguarding-board"></div></section><section class="os-card"><h3>Chronology intelligence</h3><div id="chronology-board"></div></section></section>
-        <section class="workspace-view" id="view-inspection"><section class="os-card"><h3>Governance and Ofsted readiness</h3><div id="inspection-board"></div></section></section>
-        <section class="workspace-view" id="view-provider" data-provider-dashboard="true"><section class="os-card"><h3>Provider command centre</h3><div id="provider-board"></div></section></section>
-        <section class="workspace-view" id="view-network"><section class="os-card"><h3>Safeguarding network mapping</h3><div id="network-board"></div></section></section>
-        <section class="workspace-view" id="view-placements"><section class="os-card"><h3>Placement stability</h3><div id="placements-board"></div></section></section>
-        <section class="workspace-view" id="view-workforce"><section class="os-card"><h3>Workforce wellbeing</h3><div id="workforce-board"></div></section></section>
-      </section>
-
-      <aside class="os-right">
-        <section class="os-insight-rail"><div class="os-insight-section"><h3>Context & Insights</h3></div><div class="os-insight-section"><h4>Recent Themes</h4><div class="os-tags" id="recent-themes"><span class="os-tag">Continuity</span><span class="os-tag">Wellbeing</span></div></div><div class="os-insight-section"><h4>Emotional Trend</h4><strong id="emotional-trend">Steady</strong><div class="os-mini-trend"></div></div><div class="os-insight-section"><h4>What Helps</h4><div id="what-helps"><div class="os-check">Structured routine</div><div class="os-check">One-to-one time</div></div></div><div class="os-insight-section"><h4>Open Callbacks <span class="os-badge" id="callback-count">0</span></h4><div id="open-callbacks">No open callbacks loaded.</div></div><div class="os-insight-section"><h4>Safeguarding Insights</h4><p id="safeguarding-insight">No urgent safeguarding insight loaded.</p><button class="os-button" type="button" data-view-target="safeguarding">View Safeguarding</button></div></section>
-        <section class="os-assistant-card"><strong>✦ Assistant Insight</strong><p id="assistant-insight">Select a young person to see contextual assistant insight.</p><button class="os-button" type="button" data-assistant-prompt="Summarise this workspace and what adults should know today.">Ask Assistant</button></section>
-      </aside>
-    </main>
-
-    <section class="os-continuity" aria-label="Continuity and actions"><article class="os-continuity-card"><div class="os-continuity-icon">☷</div><div><strong>Continuity & Actions</strong><span>Across all areas</span></div></article><article class="os-continuity-card"><div class="os-continuity-icon">⚑</div><div><strong>Unresolved Actions</strong><span id="strip-actions">0 require attention</span></div></article><article class="os-continuity-card"><div class="os-continuity-icon">◇</div><div><strong>Safeguarding Concerns</strong><span id="strip-safeguarding">0 active</span></div></article><article class="os-continuity-card"><div class="os-continuity-icon">◌</div><div><strong>Callbacks</strong><span id="strip-callbacks">0 open</span></div></article><article class="os-continuity-card"><div class="os-continuity-icon">▣</div><div><strong>Upcoming Reviews</strong><span id="strip-reviews">0 this month</span></div></article><article class="os-continuity-card"><div class="os-continuity-icon">♧</div><div><strong>What Adults Should Know</strong><span id="strip-adults-know">Select a young person to load context.</span></div></article></section>
-  </div>
-
-  <script>
-    window.state = window.state || { selectedChild: null, activeView: 'young-people', children: [] };
-    const qs = new URLSearchParams(location.search);
-    const headers = {'X-User-Id': qs.get('user_id') || '1', 'X-Role': qs.get('role') || 'manager'};
-    const el = (id) => document.getElementById(id);
-    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    const listFrom = (payload, ...keys) => { if (Array.isArray(payload)) return payload; for (const key of keys) if (Array.isArray(payload?.[key])) return payload[key]; return []; };
-    const empty = (text) => `<div class="ic-empty">${esc(text)}</div>`;
-    async function api(path, fallback){ try{ const r = await fetch(path,{credentials:'include',headers}); if(!r.ok) throw new Error(`${r.status}`); return await r.json(); } catch(error){ console.warn('OS API failed', path, error); return fallback; } }
-    function switchView(view){ document.querySelectorAll('.workspace-view').forEach((node)=>node.classList.toggle('active', node.id === `view-${view}`)); document.querySelectorAll('.ic-nav-button[data-view]').forEach((btn)=>btn.classList.toggle('active', btn.dataset.view === view)); window.state.activeView = view; window.IndiCareContextualNavigation?.render?.(view); }
-    function renderChildren(children){ window.state.children = children; const target = el('young-people-list'); if(!target) return; target.innerHTML = children.length ? children.map((p)=>{ const id = p.young_person_id || p.id; const name = p.display_name || p.preferred_name || [p.first_name,p.last_name].filter(Boolean).join(' ') || 'Young person'; return `<button class="child-card" type="button" data-child-id="${esc(id)}"><div class="child-name">${esc(name)}</div><div class="child-meta">Home ${esc(p.home_id || '')} · Age ${esc(p.age || '')} · ${esc(p.placement_status || 'placement')}</div></button>`; }).join('') : empty('No young people found yet.'); target.querySelectorAll('[data-child-id]').forEach((button)=>button.addEventListener('click',()=>openChild(button.dataset.childId))); }
-    function updateProfile(data){ const p = data?.profile || {}; const name = p.display_name || p.preferred_name || [p.first_name,p.last_name].filter(Boolean).join(' ') || p.name || 'Young person'; el('child-name').textContent = name; el('child-meta').textContent = `${p.age ? p.age + ' years · ' : ''}${p.date_of_birth ? 'DOB ' + p.date_of_birth + ' · ' : ''}${p.gender || ''}`; el('child-home').textContent = p.home_name || p.home || (p.home_id ? `Home ${p.home_id}` : '—'); el('child-key-worker').textContent = p.key_worker_name || p.key_worker || '—'; el('child-placement').textContent = p.placement_status || '—'; el('glance-positive').textContent = p.positive_moments_today || p.positive_count || 0; el('glance-incidents').textContent = p.incident_count || p.incidents_today || 0; el('glance-actions').textContent = p.open_commands || p.unresolved_actions || 0; el('glance-safeguarding').textContent = p.safeguarding_state || p.summary_risk_level || 'Monitor'; el('callback-count').textContent = p.open_callbacks || 0; el('strip-actions').textContent = `${p.open_commands || p.unresolved_actions || 0} require attention`; el('strip-safeguarding').textContent = `${p.high_safeguarding_patterns || p.safeguarding_concerns || 0} active`; el('strip-callbacks').textContent = `${p.open_callbacks || 0} open`; el('strip-reviews').textContent = `${p.upcoming_reviews || 0} this month`; el('strip-adults-know').textContent = p.what_adults_should_know || 'Context will build as records are added.'; el('assistant-insight').textContent = p.assistant_insight || `${name}'s context is ready for reflective support.`; }
-    function renderChildWorkspace(data){ updateProfile(data); window.state.selectedChild = data; window.IndiCareOSCommandUIBridge?.upgradeChildWorkspace?.(true); if (!window.IndiCareOSCommandUIBridge) { const root = el('child-workspace'); const timeline = listFrom(data,'timeline','events'); root.innerHTML = `<div data-child-tab-view="journey">${timeline.length ? timeline.map((t)=>`<div class="os-timeline-row"><span class="os-dot blue">•</span><span class="os-time">${esc(t.occurred_at || t.created_at || '')}</span><div><div class="os-record-title">${esc(t.title || t.event_title || 'Record')}</div><div class="os-record-text">${esc(t.summary || t.event_summary || '')}</div></div><span class="os-chip">${esc(t.record_type || 'record')}</span></div>`).join('') : empty('No timeline records yet.')}</div>`; } }
-    async function openChild(id){ const data = await api(`/api/os-command/young-person/${encodeURIComponent(id)}/workspace`, null); if(data) renderChildWorkspace(data); }
-    async function loadAll(){ const [youngPeople, overview, care, patterns, network] = await Promise.all([api('/api/os-command/young-people',{young_people:[]}), api('/api/os-command/provider-command-centre',{home_matrix:[],command_centre:[]}), api('/api/os-command/care-recording?limit=20',{records:[]}), api('/api/os-command/safeguarding-patterns',{patterns:[]}), api('/api/os-command/safeguarding-network',{alerts:[]})]); renderChildren(listFrom(youngPeople,'young_people','children','items','results')); el('provider-matrix').innerHTML = listFrom(overview,'home_matrix').length ? listFrom(overview,'home_matrix').map((h)=>`<div class="os-continuity-card"><div class="os-continuity-icon">⌂</div><div><strong>Home ${esc(h.home_id || 'All')}</strong><span>${esc(h.matrix_state || h.readiness_state || 'Monitor')}</span></div></div>`).join('') : empty('No provider matrix loaded yet.'); el('care-list').innerHTML = listFrom(care,'records','items').length ? listFrom(care,'records','items').slice(0,8).map((r)=>`<div class="os-timeline-row"><span class="os-dot green">✓</span><span class="os-time">${esc(r.occurred_at || '')}</span><div><div class="os-record-title">${esc(r.title || r.record_type)}</div><div class="os-record-text">${esc(r.summary || r.narrative || '')}</div></div><span class="os-chip">${esc(r.record_type || 'record')}</span></div>`).join('') : empty('No care records loaded yet.'); el('safeguarding-board').innerHTML = listFrom(patterns,'patterns','items').length ? listFrom(patterns,'patterns','items').map((p)=>`<div class="os-continuity-card"><div class="os-continuity-icon">◇</div><div><strong>${esc(p.title || 'Pattern')}</strong><span>${esc(p.summary || '')}</span></div></div>`).join('') : empty('No safeguarding patterns loaded.'); el('alert-count').textContent = listFrom(network,'alerts').length; window.loadAll = loadAll; }
-    document.querySelectorAll('[data-view]').forEach((button)=>button.addEventListener('click',()=>switchView(button.dataset.view)));
-    document.querySelectorAll('[data-view-target]').forEach((button)=>button.addEventListener('click',()=>switchView(button.dataset.viewTarget)));
-    document.querySelectorAll('[data-record-action]').forEach((button)=>button.addEventListener('click',()=>window.IndiCareConnectedCare?.newRecord?.(button.dataset.recordAction)));
-    document.querySelectorAll('[data-assistant-prompt]').forEach((button)=>button.addEventListener('click',()=>{ window.IndiCareOSAssistant?.open?.(); window.IndiCareOSAssistant?.ask?.(button.dataset.assistantPrompt); }));
-    document.querySelectorAll('[data-child-tab]').forEach((button)=>button.addEventListener('click',()=>{ switchView('young-people'); document.querySelector(`[data-os-ui-tab="${button.dataset.childTab}"]`)?.click(); }));
-    loadAll();
-  </script>
-  <script src="/js/indicare-runtime-safety.js"></script>
-  <script src="/js/os-floating-assistant.js"></script>
-  <script src="/js/indicare-connected-care-experience.js"></script>
-  <script src="/js/os-child-workspace-tabs.js"></script>
-  <script src="/js/chronology-visual-timeline.js"></script>
-  <script src="/js/oversight-intelligence-dashboard.js"></script>
-  <script src="/js/indicare-production-readiness-bridge.js"></script>
-  <script src="/js/os-command-ui-bridge.js"></script>
-  <script src="/js/os-contextual-navigation.js"></script>
+<div class="os-shell">
+<aside class="os-sidebar">
+<div class="os-brand" style="height:64px;display:flex;align-items:center;padding:0 20px;font-weight:900;font-size:24px;color:#4338ca">IndiCare</div>
+<nav class="os-nav" style="padding:14px">
+<button class="os-nav-button active" data-view="young-people">Overview</button>
+</nav>
+</aside>
+<header class="os-topbar" style="grid-column:2;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#fff;border-bottom:1px solid var(--ic-border)">
+<div style="display:flex;gap:12px;align-items:center"><button class="os-new" style="background:#4f46e5;color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:800">+ New</button><input class="os-search" placeholder="Search IndiCare..." style="width:340px;border:1px solid var(--ic-border);border-radius:12px;padding:12px"></div>
+<div><strong>Thomas Kelly</strong></div>
+</header>
+<main class="os-main">
+<section class="os-content" style="display:grid;gap:14px">
+<section class="workspace-view active" id="view-young-people">
+<section class="os-card" style="padding:16px">
+<h3>Young People</h3>
+<div class="child-list" id="young-people-list">
+<button class="child-card" type="button"><div>Aisha</div><small>Home 1 · Age 14</small></button>
+<button class="child-card" type="button"><div>Liam</div><small>Home 1 · Age 16</small></button>
+<button class="child-card" type="button"><div>Ella</div><small>Home 2 · Age 15</small></button>
+</div>
+</section>
+<section class="os-card" style="padding:16px;min-height:420px">
+<h3>Connected Care Workspace</h3>
+<div id="child-workspace" style="padding:24px;border:1px dashed var(--ic-border);border-radius:16px;background:#f8fafc">
+Select a young person to open their therapeutic workspace.
+</div>
+</section>
+</section>
+</section>
+<aside class="os-right" style="display:grid;gap:14px">
+<section class="os-card" style="padding:16px"><strong>Children in operational view</strong><div style="font-size:42px;font-weight:900;color:#2563eb">5</div></section>
+<section class="os-card" style="padding:16px"><strong>Positive engagement indicators</strong><div style="font-size:42px;font-weight:900;color:#16a34a">5</div></section>
+</aside>
+</main>
+<section class="os-continuity" style="position:fixed;left:216px;right:0;bottom:0;background:#fff;border-top:1px solid var(--ic-border);padding:14px;display:grid;grid-template-columns:repeat(6,1fr);gap:10px;z-index:50">
+<div class="os-continuity-card" style="padding:12px">Continuity & Actions</div>
+<div class="os-continuity-card" style="padding:12px">Unresolved Actions</div>
+<div class="os-continuity-card" style="padding:12px">Safeguarding Concerns</div>
+<div class="os-continuity-card" style="padding:12px">Callbacks</div>
+<div class="os-continuity-card" style="padding:12px">Upcoming Reviews</div>
+<div class="os-continuity-card" style="padding:12px">What Adults Should Know</div>
+</section>
+</div>
+<script>
+window.addEventListener('DOMContentLoaded',()=>{
+const workspace=document.getElementById('child-workspace');
+document.querySelectorAll('.child-card').forEach(card=>{
+card.addEventListener('click',()=>{
+workspace.innerHTML='<h2 style="margin-top:0">'+card.querySelector('div').textContent+'</h2><p>Therapeutic chronology, safeguarding insight, education, health, routines and connected care records will load here.</p>';
+});
+});
+});
+</script>
 </body>
 </html>
