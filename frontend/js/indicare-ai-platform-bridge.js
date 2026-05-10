@@ -49,6 +49,10 @@
   }
 
   function openApp(view) {
+    if (window.IndiCareAISuite?.setActiveApp) {
+      window.IndiCareAISuite.setActiveApp(view);
+      return;
+    }
     document.querySelector(`[data-suite-view="${view}"]`)?.click();
   }
 
@@ -143,7 +147,7 @@
       const palette = document.createElement("div");
       palette.id = "commandPalette";
       palette.className = "ic-command-overlay hidden";
-      palette.innerHTML = `<div class="ic-command-card" role="dialog" aria-label="Command palette"><div class="ic-command-search"><input id="commandSearch" type="text" placeholder="Search tools, conversations, projects, templates, mail, web, context and reviews..." autocomplete="off" /><button type="button" data-close-panel="commandPalette">×</button></div><div id="commandResults" class="ic-command-results"></div></div>`;
+      palette.innerHTML = `<div class="ic-command-card" role="dialog" aria-label="Command palette"><div class="ic-command-search"><input id="commandSearch" type="text" placeholder="Search chats, notes, docs, connect, mail, memory and context..." autocomplete="off" /><button type="button" data-close-panel="commandPalette">×</button></div><div id="commandResults" class="ic-command-results"></div></div>`;
       document.body.appendChild(palette);
     }
   }
@@ -175,38 +179,19 @@
     }
   }
 
-  async function loadQaSummary() { try { return await api("/qa/dashboard"); } catch (_) { return null; } }
-  async function loadTimelineSummary() { try { return await api(`/standalone-timeline/projects/${encodeURIComponent(activeProjectId())}/summary`); } catch (_) { return null; } }
-  async function projectSearch(query) { return api("/standalone-search/operational", { method: "POST", body: JSON.stringify({ project_id: activeProjectId(), query, limit: 12 }) }); }
-
-  async function insertQaPrompt() {
-    const data = await loadQaSummary();
-    if (data) putInComposer(`Review this quality and follow-up summary for a children's home. Identify recording/document issues, priorities, risks, manager oversight and next actions:\n\n${JSON.stringify(data, null, 2)}`);
-  }
-
-  async function insertTimelinePrompt() {
-    const data = await loadTimelineSummary();
-    if (data) putInComposer(`Summarise this project chronology. Identify themes, safeguarding patterns, gaps and suggested next actions:\n\n${JSON.stringify(data, null, 2)}`);
-  }
-
   const COMMANDS = [
     { id: "profile", title: "Open My Profile", subtitle: "Profile picture, password and settings", run: () => { window.location.href = "/my-profile"; } },
     { id: "devices", title: "Set up devices", subtitle: "Microphone and camera access for Hey IndiCare", run: () => window.IndiCareDevicePermissions?.open?.() },
     { id: "voice-setup", title: "Voice setup", subtitle: "Set up voice capture and confirmed speaker label", run: () => window.IndiCareVoiceSetup?.open?.() },
     { id: "new-chat", title: "New conversation", subtitle: "Start a fresh IndiCare AI chat", run: () => $("newChat")?.click() },
-    { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant for children's home practice", run: () => openApp("intelligence") },
-    { id: "voice", title: "Hey IndiCare", subtitle: "Open the British voice companion", run: () => window.IndiCareVoiceCompanion?.open?.() || $("voiceOrb")?.click() },
-    { id: "awareness", title: "IndiCare Awareness", subtitle: "Things IndiCare thinks you should know", run: () => $("openAmbientIntelligence")?.click() },
-    { id: "web", title: "Ask with web search", subtitle: "Use Tavily for current information", run: () => putInComposer("Search the web and answer conversationally: ") },
-    { id: "presence", title: "Use IndiCare context", subtitle: "Timeline, proactive intelligence and Connect context", run: () => putInComposer("What patterns, risks, unresolved actions or follow-ups should I be aware of?") },
-    { id: "notes", title: "I-Notes", subtitle: "Note, transcribe, clean up and review with AI", run: () => openApp("notes") },
-    { id: "docs", title: "IndiCare Docs", subtitle: "Template documents with AI review and rewriting", run: () => openApp("docs") },
-    { id: "mail", title: "IndiCare Mail", subtitle: "Internal and external AI-native mail", run: () => openApp("mail") },
-    { id: "qa", title: "AI review dashboard", subtitle: "Review quality, follow-ups and document issues", run: insertQaPrompt },
-    { id: "timeline", title: "Chronology summary", subtitle: "Summarise project chronology intelligence", run: insertTimelinePrompt },
-    { id: "incident", title: "Incident record", subtitle: "Create a professional incident record with chronology, staff actions, outcome, safeguarding considerations and manager review", run: () => putInComposer("Create a professional incident record with chronology, staff actions, outcome, safeguarding considerations and manager review:") },
-    { id: "safeguarding", title: "Safeguarding review", subtitle: "Review facts, concerns and actions", run: () => putInComposer("Review this safeguarding concern. Separate facts, concerns, missing information, immediate actions, manager/DSL review and recording implications:") },
-    { id: "mail-compose", title: "Compose email", subtitle: "Open IndiCare Mail composer", run: () => { openApp("mail"); setTimeout(() => $("mailCompose")?.click(), 150); } },
+    { id: "ai", title: "IndiCare AI", subtitle: "ChatGPT-style assistant", run: () => openApp("intelligence") },
+    { id: "voice", title: "Hey IndiCare", subtitle: "Open voice mode", run: () => window.IndiCareVoiceCompanion?.open?.() || $("voiceOrb")?.click() },
+    { id: "notes", title: "I-Notes", subtitle: "Capture, clean up and summarise notes", run: () => openApp("notes") },
+    { id: "docs", title: "Docs", subtitle: "Draft, rewrite and review documents", run: () => openApp("docs") },
+    { id: "connect", title: "Connect", subtitle: "Meetings, collaboration and continuity", run: () => openApp("connect") },
+    { id: "mail", title: "Mail", subtitle: "Draft, summarise and respond to mail", run: () => openApp("mail") },
+    { id: "memory", title: "Memory", subtitle: "Use remembered context and continuity", run: () => putInComposer("Use my saved context and continuity to help with this: ") },
+    { id: "web", title: "Ask with web search", subtitle: "Use current information", run: () => putInComposer("Search the web and answer conversationally: ") },
   ];
 
   async function renderCommands(query) {
@@ -214,20 +199,7 @@
     if (!results) return;
     const q = String(query || "").trim().toLowerCase();
     const local = COMMANDS.filter((cmd) => !q || `${cmd.title} ${cmd.subtitle} ${cmd.id}`.toLowerCase().includes(q));
-    let html = local.map((cmd) => `<button type="button" class="ic-command-item" data-command-id="${cmd.id}"><strong>${esc(cmd.title)}</strong><span>${esc(cmd.subtitle)}</span></button>`).join("");
-    if (q.length >= 2) {
-      html += '<div class="ic-command-section">Project search</div>';
-      try {
-        const data = await projectSearch(q);
-        const items = data.results || data.items || [];
-        html += items.length ? items.slice(0, 8).map((item, index) => {
-          const title = item.title || item.record_type || item.type || `Result ${index + 1}`;
-          const body = item.summary || item.text || item.excerpt || item.content || "";
-          return `<button type="button" class="ic-command-item" data-search-text="${esc(`${title}\n${body}`)}"><strong>${esc(title)}</strong><span>${esc(body).slice(0, 180)}</span></button>`;
-        }).join("") : '<p class="ic-muted-mini">No project search results.</p>';
-      } catch (_) { html += '<p class="ic-muted-mini">Project search is unavailable.</p>'; }
-    }
-    results.innerHTML = html || '<p class="ic-muted-mini">No commands found.</p>';
+    results.innerHTML = local.map((cmd) => `<button type="button" class="ic-command-item" data-command-id="${cmd.id}"><strong>${esc(cmd.title)}</strong><span>${esc(cmd.subtitle)}</span></button>`).join("") || '<p class="ic-muted-mini">No commands found.</p>';
   }
 
   function openCommandPalette() {
@@ -246,13 +218,6 @@
     if (!drawer) return;
     drawer.classList.toggle("hidden");
     if (!drawer.classList.contains("hidden")) refreshUpdates();
-  }
-
-  async function refreshTimelinePanel() {
-    const data = await loadTimelineSummary();
-    if (!data) return;
-    if ($("timelineSummaryTitle")) $("timelineSummaryTitle").textContent = `${data.eventCount || 0} chronology item${Number(data.eventCount || 0) === 1 ? "" : "s"}`;
-    if ($("timelineSummaryText")) $("timelineSummaryText").textContent = data.summary || "Chronology review is available for this project.";
   }
 
   function loadScript(src, marker, delay) {
@@ -282,12 +247,6 @@
         const command = COMMANDS.find((cmd) => cmd.id === commandNode.getAttribute("data-command-id"));
         closePanel("commandPalette");
         if (command) await command.run();
-        return;
-      }
-      const search = target.closest("[data-search-text]");
-      if (search) {
-        closePanel("commandPalette");
-        putInComposer(`Use this project search result as context and help me analyse it:\n\n${search.getAttribute("data-search-text")}`);
       }
     }));
     document.addEventListener("input", (event) => safe("command input", () => { if (event.target?.id === "commandSearch") renderCommands(event.target.value); }));
@@ -300,13 +259,16 @@
   function boot() {
     if (window.__indicareAiBridgeBooted) return;
     window.__indicareAiBridgeBooted = true;
+
+    document.body?.classList.add("indicare-ai-suite");
+    document.documentElement?.setAttribute("data-product-surface", "ai-suite");
+
     installCss("/css/indicare-conversational-experience.css", "data-indicare-conversational-css");
     safe("install shell buttons", installShellButtons);
     safe("install panels", installPanels);
     safe("bind bridge", bind);
     safe("hydrate profile", hydrateProfile);
     safe("refresh updates", refreshUpdates);
-    safe("refresh timeline", refreshTimelinePanel);
 
     const optionalScripts = [
       ["/js/indicare-runtime-core.js", "data-indicare-runtime-core", 10],
@@ -324,6 +286,7 @@
       ["/js/indicare-alive-voice-layer.js", "data-indicare-alive-voice-layer", 650],
       ["/js/indicare-voice-setup.js", "data-indicare-voice-setup", 900],
       ["/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake", 1000],
+      ["/ai-suite/indicare-ai-suite-loader.js", "data-indicare-ai-suite-loader", 1120],
     ];
     optionalScripts.forEach(([src, marker, delay]) => loadScript(src, marker, delay));
     window.setInterval(() => safe("refresh updates interval", refreshUpdates), 60000);
