@@ -1,0 +1,138 @@
+/* IndiCare AI Suite ChatGPT Design Guard
+   Final-priority guard to stop legacy dashboard/OS CSS from changing /assistant.
+*/
+
+html[data-product-surface="ai-suite"],
+html[data-product-surface="ai-suite"] body {
+  overscroll-behavior: none;
+  background: var(--ai-bg, #ffffff) !important;
+}
+
+html[data-product-surface="ai-suite"] body.indicare-ai-suite * {
+  box-sizing: border-box;
+}
+
+html[data-product-surface="ai-suite"] body.indicare-ai-suite {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: normal;
+}
+
+/* Hard-disable OS/dashboard surfaces inside the AI Suite. */
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .os-topbar,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .dashboard-grid,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .dashboard-card,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .metric-card,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .timeline-grid,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .chronology-grid,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .care-dashboard,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .care-workspace,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .connected-care-workspace,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .operational-dashboard,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .operational-dashboard-grid,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .record-dashboard,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .record-grid,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .compliance-dashboard,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite [data-ai-suite-hidden="true"],
+html[data-product-surface="ai-suite"] body.indicare-ai-suite [data-os-module],
+html[data-product-surface="ai-suite"] body.indicare-ai-suite [data-care-module],
+html[data-product-surface="ai-suite"] body.indicare-ai-suite [data-operational-grid] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Ensure the assistant is one clean conversation column. */
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .main-shell {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+}
+
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .panel-assistant {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .assistant-layout,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .assistant-empty,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite #messages,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .messages {
+  min-width: 0 !important;
+}
+
+/* ChatGPT-like top chrome: small, calm, never dashboard-like. */
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .topbar,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite header.topbar {
+  border-bottom-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .topbar button,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .ic-top-tool,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .ic-nav-btn {
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+/* Remove heavy SaaS card styling from AI app surfaces. */
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .card,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .panel-card,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .surface-card,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .workspace-card {
+  box-shadow: none !important;
+  border-color: var(--ai-border, rgba(0,0,0,.1)) !important;
+  background: transparent !important;
+}
+
+/* Composer always wins. */
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .composer-dock {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .modern-composer,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .composer-card {
+  outline: none !important;
+}
+
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .modern-composer:focus-within,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite .composer-card:focus-within {
+  border-color: color-mix(in srgb, var(--ai-text, #111827) 20%, transparent) !important;
+}
+
+/* Voice button remains only a button until voice mode opens. */
+html[data-product-surface="ai-suite"] body.indicare-ai-suite:not(.ic-voice-mode-open) .ic-conversation-stage::before,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite:not(.ic-voice-mode-open) .ic-conversation-stage::after,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite:not(.ic-voice-mode-open) .ic-cgi-caption,
+html[data-product-surface="ai-suite"] body.indicare-ai-suite:not(.ic-voice-mode-open) .ic-cgi-wave {
+  opacity: 0 !important;
+}
+
+/* Mobile should have only the conversation scroll and composer expansion. */
+@media (max-width: 768px) {
+  html[data-product-surface="ai-suite"],
+  html[data-product-surface="ai-suite"] body.indicare-ai-suite {
+    height: var(--ic-viewport-height, 100dvh) !important;
+    min-height: var(--ic-viewport-height, 100dvh) !important;
+    overflow: hidden !important;
+    position: fixed;
+    width: 100%;
+  }
+
+  html[data-product-surface="ai-suite"] body.indicare-ai-suite .main-shell,
+  html[data-product-surface="ai-suite"] body.indicare-ai-suite .panel-assistant,
+  html[data-product-surface="ai-suite"] body.indicare-ai-suite .assistant-layout {
+    height: var(--ic-viewport-height, 100dvh) !important;
+    max-height: var(--ic-viewport-height, 100dvh) !important;
+  }
+
+  html[data-product-surface="ai-suite"] body.indicare-ai-suite #messages,
+  html[data-product-surface="ai-suite"] body.indicare-ai-suite .messages {
+    overscroll-behavior: contain;
+  }
+
+  html[data-product-surface="ai-suite"] body.indicare-ai-suite .composer-dock {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
