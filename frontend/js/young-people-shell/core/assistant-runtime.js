@@ -24,8 +24,6 @@ import {
   detectAssistantIntents,
   detectRetrievalMode as detectRetrievalModeFromHelpers,
   detectOutputMode as detectOutputModeFromHelpers,
-<<<<<<< HEAD
-=======
 } from "../assistant/helpers.js";
 import {
   inferAssistantAnalysisLens,
@@ -41,7 +39,6 @@ import {
   daysFromNow,
   isDueSoon,
   normaliseToken,
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
 } from "./helpers.js";
 
 const RETRIEVAL_MODE = {
@@ -78,49 +75,6 @@ const MAX_API_CHRONOLOGY_ITEMS = 30;
 const MAX_API_SUMMARY_EXCERPT = 280;
 const MAX_LOCAL_ACTIONS = 30;
 
-function cleanText(value) {
-  if (value === null || value === undefined) return "";
-  return String(value).trim();
-}
-
-function arrayify(value) {
-  if (Array.isArray(value)) return value;
-  if (value === null || value === undefined || value === "") return [];
-  return [value];
-}
-
-function unique(values = []) {
-  return [...new Set(arrayify(values).filter(Boolean))];
-}
-
-function parseDateValue(value) {
-  const time = Date.parse(value || "");
-  return Number.isNaN(time) ? 0 : time;
-}
-
-function nowTs() {
-  return Date.now();
-}
-
-function daysFromNow(value) {
-  const ts = parseDateValue(value);
-  if (!ts) return null;
-  return Math.round((ts - nowTs()) / (1000 * 60 * 60 * 24));
-}
-
-function isDueSoon(value, withinDays = 7) {
-  const days = daysFromNow(value);
-  return days !== null && days >= 0 && days <= withinDays;
-}
-
-function normaliseToken(value = "") {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
-}
-
 function makeActionId(parts = []) {
   return parts
     .map((item) => normaliseToken(item))
@@ -135,13 +89,11 @@ function buildCitationRef(item = {}) {
 }
 
 function getScopeLabel(scope) {
-  if (scope === "home") return "home";
-  if (scope === "quality") return "quality";
-  return "child";
+  return normaliseScope(scope, "child");
 }
 
 function getSectionLabel(section) {
-  return section || "workspace";
+  return normaliseSection(section, "workspace");
 }
 
 function getSelectedPersonSummary() {
@@ -184,50 +136,12 @@ function inferAnalysisLens({
   role = state.userRole || "staff",
   intent = ASSISTANT_INTENT.summary,
 } = {}) {
-<<<<<<< HEAD
-  const safeRole = String(role || "staff").toLowerCase();
-  const safeSection = String(section || "").toLowerCase();
-  const safeIntent = String(intent || "summary").toLowerCase();
-
-  if (
-    /safeguarding|risk|missing/.test(safeSection) ||
-    safeIntent === ASSISTANT_INTENT.risk
-  ) {
-    return "safeguarding";
-  }
-
-  if (
-    scope === "quality" ||
-    safeIntent === ASSISTANT_INTENT.quality ||
-    safeIntent === ASSISTANT_INTENT.compliance ||
-    /quality|compliance|reg44|reg45|ofsted|inspection/.test(safeSection)
-  ) {
-    return safeRole === "ri" || safeRole === "admin" ? "quality" : "inspection";
-  }
-
-  if (
-    safeIntent === ASSISTANT_INTENT.management ||
-    ["manager", "registered_manager", "deputy_manager"].includes(safeRole) ||
-    /manager|team|supervision|home-dashboard/.test(safeSection)
-  ) {
-    return "manager";
-  }
-
-  if (safeIntent === ASSISTANT_INTENT.handover) {
-    return "shift";
-  }
-
-  if (scope === "child") return "child_centred";
-  if (scope === "home") return "operational";
-  return "general";
-=======
   return inferAssistantAnalysisLens({
     scope,
     section,
     role,
     intent,
   });
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
 }
 
 export function buildAssistantContext() {
@@ -452,10 +366,6 @@ function buildSystemPrompt(context, options = {}) {
       : "Use the full scoped children’s home record set for this request, not just the visible page.",
     "Answer from the records and evidence provided.",
     "Do not invent missing facts.",
-    "Only cite records that have a valid record_type and record_id/source_id.",
-    "Never output empty citations like [daily_note:] or [record:].",
-    "If a point is supported only by uncitable context, say the evidence is visible but not directly citable from the current scope.",
-    "If evidence is missing in a domain, say so clearly.",
     "Citations must appear throughout the answer, not only at the end.",
     "Use short inline citations like [record_type:record_id].",
     "Where useful, identify: what is evidenced, what pattern is emerging, what creates risk, what is missing, and what action should follow.",
@@ -472,7 +382,6 @@ function dedupeEvidence(items = []) {
       item.source_id || item.id || "",
       item.date || "",
       item.title || "",
-      cleanText(item.summary || "").slice(0, 80),
     ].join("::");
 
     if (seen.has(key)) return false;
@@ -519,32 +428,6 @@ function normaliseEvidenceInput(input = {}) {
   }
 
   return dedupeEvidence(evidence);
-}
-
-function hasValidRecordId(item = {}) {
-  const recordType = cleanText(item.record_type || item.type || "");
-  const recordId =
-    item.source_id ??
-    item.record_id ??
-    item.id ??
-    null;
-
-  return Boolean(recordType) && recordId !== null && recordId !== undefined && String(recordId).trim() !== "";
-}
-
-function splitEvidenceByCitationValidity(evidence = []) {
-  const citable = [];
-  const contextual = [];
-
-  for (const item of evidence) {
-    if (hasValidRecordId(item)) {
-      citable.push(item);
-    } else {
-      contextual.push(item);
-    }
-  }
-
-  return { citable, contextual };
 }
 
 async function resolveScopeBundle(options = {}) {
@@ -623,7 +506,7 @@ function filterEvidenceByScope(
     });
   }
 
-  if (scope === "quality" && context.access_level === "provider") {
+  if (isProviderWideScope(scope) && context.access_level === "provider") {
     const allowed = new Set(
       arrayify(context.allowed_home_ids).map((item) => String(item))
     );
@@ -802,13 +685,9 @@ function buildQueryProfile(message = "", intent = ASSISTANT_INTENT.unknown) {
                 ? "management"
                 : intent === ASSISTANT_INTENT.handover
                   ? "handover"
-<<<<<<< HEAD
-                  : "general",
-=======
                   : /morning brief/.test(text)
                     ? "morning_brief"
                     : "general",
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
     wants_dates:
       intent === ASSISTANT_INTENT.factual_lookup ||
       intent === ASSISTANT_INTENT.chronology ||
@@ -857,13 +736,6 @@ function scoreEvidence(
   }
 
   if (queryProfile.focus === "chronology" && item.date) score += 2;
-<<<<<<< HEAD
-  if (queryProfile.focus === "compliance" && item.record_type === "compliance_item") score += 5;
-  if (queryProfile.focus === "risk" && (item.record_type === "risk" || item.tags?.includes("safeguarding"))) score += 5;
-  if (queryProfile.focus === "handover" && ["daily_note", "incident", "appointment", "handover_record"].includes(item.record_type)) score += 4;
-  if (queryProfile.focus === "quality" && ["compliance_item", "audit", "manager_action", "document"].includes(item.record_type)) score += 4;
-  if (queryProfile.focus === "management" && ["task", "manager_action", "incident", "compliance_item"].includes(item.record_type)) score += 4;
-=======
 
   if (
     queryProfile.focus === "compliance" &&
@@ -937,7 +809,6 @@ function scoreEvidence(
   ) {
     score += 4;
   }
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
 
   return score;
 }
@@ -1023,7 +894,7 @@ function buildChronology(evidence = [], limit = 100) {
       record_id: item.source_id || item.id || null,
       section: item.section || "",
       tags: item.tags || [],
-      citation_ref: hasValidRecordId(item) ? buildCitationRef(item) : null,
+      citation_ref: buildCitationRef(item),
     }));
 }
 
@@ -1167,32 +1038,16 @@ function assessEvidenceSufficiency(evidence = []) {
   };
 }
 
-<<<<<<< HEAD
-function buildCitationRef(item = {}) {
-  const recordType = cleanText(item.record_type || "record");
-  const recordId =
-    item.source_id ??
-    item.id ??
-    item.record_id ??
-    "unknown";
-
-  return `${recordType}:${recordId}`;
-}
-
-=======
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
 function makeSource(item = {}, evidenceKind = "direct") {
-  const citable = hasValidRecordId(item);
-
   return {
     type: item.record_type || "record",
     label: item.title || "Record",
     excerpt: cleanText(item.summary || "").slice(0, MAX_API_SUMMARY_EXCERPT),
     section: item.section || "",
     record_type: item.record_type || null,
-    record_id: citable ? (item.source_id || item.id || null) : null,
-    citation_ref: citable ? buildCitationRef(item) : null,
-    evidence_kind: citable ? evidenceKind : "context_only",
+    record_id: item.source_id || item.id || null,
+    citation_ref: buildCitationRef(item),
+    evidence_kind: evidenceKind,
     title: item.title || "Record",
     description: cleanText(item.summary || "").slice(0, MAX_API_SUMMARY_EXCERPT),
     created_at: item.date || null,
@@ -1207,12 +1062,11 @@ function buildEvidenceSummaryLines(evidence = [], limit = 5) {
   }
 
   return top.map((item) => {
-    const citation = hasValidRecordId(item) ? `[${buildCitationRef(item)}]` : "[uncited-context]";
     const bits = [
       item.title || "Record",
       item.summary || "",
       item.date ? `(${item.date})` : "",
-      citation,
+      `[${buildCitationRef(item)}]`,
     ].filter(Boolean);
 
     return `• ${bits.join(" - ")}`;
@@ -1221,12 +1075,11 @@ function buildEvidenceSummaryLines(evidence = [], limit = 5) {
 
 function buildChronologyLines(chronology = [], limit = 8) {
   const lines = chronology.slice(0, limit).map((item) => {
-    const citation = item.citation_ref ? `[${item.citation_ref}]` : "[uncited-context]";
     const bits = [
       item.date || "",
       item.title || "Record",
       item.summary || "",
-      citation,
+      `[${item.citation_ref || buildCitationRef(item)}]`,
     ].filter(Boolean);
     return `• ${bits.join(" - ")}`;
   });
@@ -1281,8 +1134,6 @@ function buildOperationalActions(
   const actions = [];
 
   for (const item of evidence) {
-    if (!hasValidRecordId(item)) continue;
-
     const recordType = item.record_type || "record";
     const recordId = item.source_id || item.id || item.record_id || null;
     const dueDate =
@@ -1439,7 +1290,6 @@ function buildOperationalActions(
   }
 
   const recentIncidents = evidence.filter((item) => {
-    if (!hasValidRecordId(item)) return false;
     if (item.record_type !== "incident") return false;
     const days = daysFromNow(item.date);
     return days !== null && days >= -30;
@@ -1467,7 +1317,6 @@ function buildOperationalActions(
   }
 
   const recentMissing = evidence.filter((item) => {
-    if (!hasValidRecordId(item)) return false;
     if (item.record_type !== "missing_episode") return false;
     const days = daysFromNow(item.date);
     return days !== null && days >= -60;
@@ -1550,7 +1399,7 @@ function inferSuggestedActions(
     }
   }
 
-  if (context.scope === "quality") {
+  if (isProviderWideScope(context.scope)) {
     actions.push({ type: "draft_summary", label: "Draft quality summary" });
     actions.push({ type: "create_task", label: "Create action list" });
     actions.push({ type: "draft_note", label: "Draft RI summary" });
@@ -1594,14 +1443,9 @@ function buildFallbackReply(message, context, runtime = {}) {
   const topConcerns = getTopConcerns(evidence);
   const confidence = runtime.evidence_sufficiency?.confidence || "low";
   const operationalActions = runtime.operational_actions || [];
-<<<<<<< HEAD
-  const actionSummary = runtime.operational_action_summary || summariseOperationalActions(operationalActions);
-  const contextualEvidenceCount = runtime.contextual_evidence_count || 0;
-=======
   const actionSummary =
     runtime.operational_action_summary ||
     summariseOperationalActions(operationalActions);
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
 
   if (/morning brief/.test(text)) {
     return {
@@ -1615,14 +1459,9 @@ function buildFallbackReply(message, context, runtime = {}) {
         `• Operational actions: ${actionSummary.total}`,
         `• Critical actions: ${actionSummary.critical}`,
         `• Evidence confidence: ${confidence}`,
-        contextualEvidenceCount ? `• Additional uncited contextual items in scope: ${contextualEvidenceCount}` : "",
         "",
         "What matters this morning:",
         ...buildEvidenceSummaryLines(evidence, 3),
-<<<<<<< HEAD
-        ...(facts.next_appointment && hasValidRecordId(facts.next_appointment)
-          ? ["", `Next appointment: ${facts.next_appointment.title || "Appointment"} (${facts.next_appointment.date || "date not set"}) [${buildCitationRef(facts.next_appointment)}]`]
-=======
         ...(facts.next_appointment
           ? [
               "",
@@ -1631,7 +1470,6 @@ function buildFallbackReply(message, context, runtime = {}) {
           : []),
         ...(topConcerns.length
           ? ["", "Key concerns:", ...topConcerns.map((item) => `• ${item}`)]
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
           : []),
         ...(operationalActions.length
           ? [
@@ -1642,7 +1480,7 @@ function buildFallbackReply(message, context, runtime = {}) {
                 .map((item) => `• ${item.title} [${item.citation_ref || "action"}]`),
             ]
           : []),
-      ].filter(Boolean).join("\n"),
+      ].join("\n"),
       suggested_actions: [
         { type: "draft_summary", label: "Draft morning summary" },
         { type: "create_task", label: "Create action list" },
@@ -1691,38 +1529,16 @@ function buildFallbackReply(message, context, runtime = {}) {
         `Evidence reviewed: ${evidenceSummary.total} item(s).`,
         `Operational actions: ${actionSummary.total}.`,
         `Confidence: ${confidence}.`,
-<<<<<<< HEAD
-        contextualEvidenceCount ? `Additional uncited contextual items in scope: ${contextualEvidenceCount}.` : "",
-      ].filter(Boolean).join("\n"),
-      suggested_actions: [{ type: "draft_summary", label: "Draft chronology summary" }],
-=======
       ].join("\n"),
       suggested_actions: [
         { type: "draft_summary", label: "Draft chronology summary" },
       ],
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
     };
   }
 
   if (/when was|what date|last incident|next appointment|latest/.test(text)) {
     const lines = [];
 
-<<<<<<< HEAD
-    if (facts.latest_incident && hasValidRecordId(facts.latest_incident)) {
-      lines.push(`Latest incident: ${facts.latest_incident.title || "Incident"} (${facts.latest_incident.date || "date not set"}) [${buildCitationRef(facts.latest_incident)}]`);
-    }
-
-    if (facts.latest_missing_episode && hasValidRecordId(facts.latest_missing_episode)) {
-      lines.push(`Latest missing episode: ${facts.latest_missing_episode.title || "Missing episode"} (${facts.latest_missing_episode.date || "date not set"}) [${buildCitationRef(facts.latest_missing_episode)}]`);
-    }
-
-    if (facts.next_appointment && hasValidRecordId(facts.next_appointment)) {
-      lines.push(`Next appointment: ${facts.next_appointment.title || "Appointment"} (${facts.next_appointment.date || "date not set"}) [${buildCitationRef(facts.next_appointment)}]`);
-    }
-
-    if (!lines.length) {
-      lines.push("No matching dated and citable record is currently visible in the scoped evidence set.");
-=======
     if (facts.latest_incident) {
       lines.push(
         `Latest incident: ${facts.latest_incident.title || "Incident"} (${facts.latest_incident.date || "date not set"}) [${buildCitationRef(facts.latest_incident)}]`
@@ -1745,7 +1561,6 @@ function buildFallbackReply(message, context, runtime = {}) {
       lines.push(
         "No matching dated record is currently visible in the scoped evidence set."
       );
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
     }
 
     return {
@@ -1847,20 +1662,15 @@ function buildFallbackReply(message, context, runtime = {}) {
         `Operational actions: ${actionSummary.total}`,
         `Critical actions: ${actionSummary.critical}`,
         `Evidence confidence: ${confidence}`,
-        contextualEvidenceCount ? `Additional uncited contextual items in scope: ${contextualEvidenceCount}` : "",
         ...buildEvidenceSummaryLines(evidence, 5),
-      ].filter(Boolean).join("\n"),
+      ].join("\n"),
       suggested_actions: [{ type: "draft_summary", label: "Draft summary" }],
     };
   }
 
   return {
     answer: [
-<<<<<<< HEAD
-      "I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality and oversight.",
-=======
       "I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality, inspection readiness and oversight.",
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
       "",
       "Try asking me to:",
       "• give a full summary",
@@ -1874,8 +1684,7 @@ function buildFallbackReply(message, context, runtime = {}) {
       `Scoped evidence count: ${evidenceSummary.total}`,
       `Operational actions: ${actionSummary.total}`,
       `Evidence confidence: ${confidence}`,
-      contextualEvidenceCount ? `Additional uncited contextual items in scope: ${contextualEvidenceCount}` : "",
-    ].filter(Boolean).join("\n"),
+    ].join("\n"),
     suggested_actions: [
       { type: "draft_summary", label: "Draft summary" },
       { type: "draft_note", label: "Draft wording" },
@@ -1960,10 +1769,10 @@ function buildAssistantContextMeta(context, runtime = {}) {
     key_concerns: getTopConcerns(evidence),
     chronology: chronology.slice(0, 50),
     facts: {
-      latest_incident: facts.latest_incident && hasValidRecordId(facts.latest_incident) ? facts.latest_incident : null,
-      latest_missing_episode: facts.latest_missing_episode && hasValidRecordId(facts.latest_missing_episode) ? facts.latest_missing_episode : null,
-      latest_family_contact: facts.latest_family_contact && hasValidRecordId(facts.latest_family_contact) ? facts.latest_family_contact : null,
-      next_appointment: facts.next_appointment && hasValidRecordId(facts.next_appointment) ? facts.next_appointment : null,
+      latest_incident: facts.latest_incident || null,
+      latest_missing_episode: facts.latest_missing_episode || null,
+      latest_family_contact: facts.latest_family_contact || null,
+      next_appointment: facts.next_appointment || null,
     },
     evidence_sufficiency: sufficiency,
     triangulation,
@@ -2024,28 +1833,10 @@ function buildAssistantContextMeta(context, runtime = {}) {
       strengths_count: careDomains.strengths.length,
       compliance_count: careDomains.compliance.length,
     },
-    contextual_evidence_count: runtime.contextual_evidence_count || 0,
   };
 }
 
 function sanitiseEvidenceForApi(evidence = []) {
-<<<<<<< HEAD
-  return evidence
-    .filter((item) => hasValidRecordId(item))
-    .slice(0, MAX_API_EVIDENCE_ITEMS)
-    .map((item) => ({
-      date: item.date || "",
-      title: item.title || "",
-      summary: cleanText(item.summary || "").slice(0, MAX_API_SUMMARY_EXCERPT),
-      record_type: item.record_type || "",
-      source_id: item.source_id || item.id || null,
-      section: item.section || "",
-      tags: Array.isArray(item.tags) ? item.tags.slice(0, 20) : [],
-      significance: item.significance || "",
-      child_voice: cleanText(item.child_voice || "").slice(0, MAX_API_SUMMARY_EXCERPT),
-      citation_ref: buildCitationRef(item),
-    }));
-=======
   return evidence.slice(0, MAX_API_EVIDENCE_ITEMS).map((item) => ({
     date: item.date || "",
     title: item.title || "",
@@ -2061,22 +1852,18 @@ function sanitiseEvidenceForApi(evidence = []) {
     ),
     citation_ref: buildCitationRef(item),
   }));
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
 }
 
 function sanitiseChronologyForApi(chronology = []) {
-  return chronology
-    .filter((item) => item.citation_ref)
-    .slice(0, MAX_API_CHRONOLOGY_ITEMS)
-    .map((item) => ({
-      date: item.date || "",
-      title: item.title || "",
-      summary: cleanText(item.summary || "").slice(0, MAX_API_SUMMARY_EXCERPT),
-      record_type: item.record_type || "",
-      record_id: item.record_id || null,
-      section: item.section || "",
-      citation_ref: item.citation_ref,
-    }));
+  return chronology.slice(0, MAX_API_CHRONOLOGY_ITEMS).map((item) => ({
+    date: item.date || "",
+    title: item.title || "",
+    summary: cleanText(item.summary || "").slice(0, MAX_API_SUMMARY_EXCERPT),
+    record_type: item.record_type || "",
+    record_id: item.record_id || null,
+    section: item.section || "",
+    citation_ref: item.citation_ref || buildCitationRef(item),
+  }));
 }
 
 function sanitiseOperationalActionsForApi(actions = []) {
@@ -2132,16 +1919,14 @@ export async function buildAssistantEvidenceContext(options = {}) {
       ? filterEvidenceBySection(dateFiltered, context.section)
       : dateFiltered;
 
-  const { citable, contextual } = splitEvidenceByCitationValidity(filtered);
-
   const queryProfile = buildQueryProfile(message, intent);
-  const ranked = sortEvidence(citable, queryProfile, context);
-  const chronology = buildChronology(citable, 100);
+  const ranked = sortEvidence(filtered, queryProfile, context);
+  const chronology = buildChronology(filtered, 100);
   const summary = summariseEvidence(ranked);
-  const facts = extractFacts(citable);
-  const careDomains = buildCareDomains(citable);
-  const triangulation = buildTriangulationSummary(citable);
-  const evidenceSufficiency = assessEvidenceSufficiency(citable);
+  const facts = extractFacts(filtered);
+  const careDomains = buildCareDomains(filtered);
+  const triangulation = buildTriangulationSummary(filtered);
+  const evidenceSufficiency = assessEvidenceSufficiency(filtered);
   const operationalActions = buildOperationalActions(ranked, context);
   const operationalActionSummary =
     summariseOperationalActions(operationalActions);
@@ -2162,7 +1947,6 @@ export async function buildAssistantEvidenceContext(options = {}) {
     evidence_sufficiency: evidenceSufficiency,
     operational_actions: operationalActions,
     operational_action_summary: operationalActionSummary,
-    contextual_evidence_count: contextual.length,
     system_prompt: buildSystemPrompt(context, {
       intent,
       retrieval_mode: retrievalMode,
@@ -2186,11 +1970,7 @@ export async function buildMorningBriefContext(options = {}) {
     ...options,
     message: options.message || "morning brief",
     intent: ASSISTANT_INTENT.handover,
-<<<<<<< HEAD
-    output_mode: OUTPUT_MODE.children_home_handover_template,
-=======
     output_mode: OUTPUT_MODE.morning_brief,
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
     analysis_lens: "shift",
   });
 
@@ -2287,7 +2067,6 @@ export async function runAssistantMessage(message, options = {}) {
     summary,
     operational_actions,
     operational_action_summary,
-    contextual_evidence_count,
   } = runtime;
 
   if (!state.assistantMeta || typeof state.assistantMeta !== "object") {
@@ -2329,15 +2108,12 @@ export async function runAssistantMessage(message, options = {}) {
       operational_actions: operational_action_summary.total,
       critical_actions: operational_action_summary.critical,
       analysis_lens: context.analysis_lens,
-      contextual_evidence_count,
     },
   });
 
   const useApi = options.useApi === true;
-  const apiEvidence = sanitiseEvidenceForApi(evidence);
-  const apiChronology = sanitiseChronologyForApi(chronology);
 
-  if (useApi && typeof fetch === "function" && apiEvidence.length) {
+  if (useApi && typeof fetch === "function") {
     try {
       const streamPayload = {
           message: cleanText(message),
@@ -2355,7 +2131,6 @@ export async function runAssistantMessage(message, options = {}) {
             use_children_home_language: true,
             avoid_generic_policy_filler: true,
             evidence_first: true,
-            forbid_empty_citations: true,
           },
           inspection_framework: {
             reference_children_homes_regulations: true,
@@ -2368,8 +2143,8 @@ export async function runAssistantMessage(message, options = {}) {
           output_mode,
           date_range,
           system_prompt,
-          evidence: apiEvidence,
-          chronology: apiChronology,
+          evidence: sanitiseEvidenceForApi(evidence),
+          chronology: sanitiseChronologyForApi(chronology),
           facts,
           care_domains: {
             presentation_count: care_domains.presentation.length,
@@ -2448,12 +2223,7 @@ export async function runAssistantMessage(message, options = {}) {
             confidence: evidence_sufficiency.confidence,
             operational_action_count: operational_action_summary.total,
             critical_action_count: operational_action_summary.critical,
-<<<<<<< HEAD
-            contextual_evidence_count,
-            ...data.runtime,
-=======
             ...mergedPayload.runtime,
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
           },
           explainability: {
             scope: context.scope,
@@ -2467,18 +2237,10 @@ export async function runAssistantMessage(message, options = {}) {
               mergedPayload.explainability?.reasoning_summary ||
               `This answer used an evidence-led children’s home reasoning approach with a ${context.analysis_lens} lens.`,
             evidence_summary:
-<<<<<<< HEAD
-              data.explainability?.evidence_summary ||
-              `${evidence.length} citable evidence item(s) were reviewed with ${evidence_sufficiency.confidence} confidence.`,
-            key_concerns: getTopConcerns(evidence),
-            contextual_evidence_count,
-            ...data.explainability,
-=======
               mergedPayload.explainability?.evidence_summary ||
               `${evidence.length} evidence item(s) were reviewed with ${evidence_sufficiency.confidence} confidence.`,
             key_concerns: getTopConcerns(evidence),
             ...mergedPayload.explainability,
->>>>>>> 99a67dc6fada9aac9012bb142df68a1192e08084
           },
           assistant_scope:
             mergedPayload.assistant_scope ||
@@ -2516,7 +2278,6 @@ export async function runAssistantMessage(message, options = {}) {
       confidence: evidence_sufficiency.confidence,
       operational_action_count: operational_action_summary.total,
       critical_action_count: operational_action_summary.critical,
-      contextual_evidence_count,
     },
     explainability: {
       scope: context.scope,
@@ -2530,9 +2291,8 @@ export async function runAssistantMessage(message, options = {}) {
       reasoning_summary:
         `Fallback residential OS response used. It was framed through a ${context.analysis_lens} reasoning lens.`,
       evidence_summary:
-        `${evidence.length} citable evidence item(s) were reviewed with ${evidence_sufficiency.confidence} confidence.`,
+        `${evidence.length} evidence item(s) were reviewed with ${evidence_sufficiency.confidence} confidence.`,
       key_concerns: getTopConcerns(evidence),
-      contextual_evidence_count,
     },
     assistant_scope: buildAssistantScopeMeta(context, runtime),
     assistant_context: buildAssistantContextMeta(context, runtime),
