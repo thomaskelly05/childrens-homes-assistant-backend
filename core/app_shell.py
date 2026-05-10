@@ -12,6 +12,16 @@ APP_SHELL_SCRIPTS = [
     '<script src="/js/login-security-gateway.js"></script>',
 ]
 
+# The OS command runtime is a full-screen application shell. It must not inherit
+# the older global app-shell CSS or login/staff navigation scripts because those
+# files are shared across legacy pages and can override the OS layout.
+OS_COMMAND_CORE_SCRIPTS = [
+    '<script src="/js/api.js"></script>',
+    '<script src="/js/auth.js"></script>',
+    '<script src="/js/core/permissions.js"></script>',
+    '<script src="/js/core/route-guard.js"></script>',
+]
+
 OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safety.js"></script>',
     '<script>window.IndiCareSafe?.run("OS boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;});</script>',
@@ -41,18 +51,23 @@ def _inject_once(html: str, snippets: list[str], marker: str) -> str:
 
 def _looks_like_os_command_runtime(html: str) -> bool:
     checks = [
-        'child-workspace',
-        'IndiCare',
-        'data-child-workspace',
-        'os-command',
-        'Connected care workspace'
+        'data-indicare-os-runtime="true"',
+        "child-workspace",
+        "IndiCare OS",
+        "data-child-workspace",
+        "os-command",
+        "Connected care workspace",
     ]
     return any(check in html for check in checks)
 
 
 def inject_app_shell(html: str) -> str:
-    html = _inject_once(html, APP_SHELL_STYLES, '</head>')
     if _looks_like_os_command_runtime(html):
-        html = _inject_once(html, OS_COMMAND_RUNTIME_SCRIPTS, '</body>')
-    html = _inject_once(html, APP_SHELL_SCRIPTS, '</body>')
+        html = html.replace("<body", '<body data-skip-global-nav="true"', 1) if "data-skip-global-nav" not in html else html
+        html = _inject_once(html, OS_COMMAND_CORE_SCRIPTS, "</body>")
+        html = _inject_once(html, OS_COMMAND_RUNTIME_SCRIPTS, "</body>")
+        return html
+
+    html = _inject_once(html, APP_SHELL_STYLES, "</head>")
+    html = _inject_once(html, APP_SHELL_SCRIPTS, "</body>")
     return html
