@@ -62,6 +62,11 @@ def fake_state():
 
 @pytest.fixture()
 def client(monkeypatch, fake_state):
+    async def _bypass_csrf_dispatch(self, request, call_next):
+        return await call_next(request)
+
+    monkeypatch.setattr(app_module.CSRFMiddleware, "dispatch", _bypass_csrf_dispatch)
+
     # -----------------------------
     # App startup / shutdown mocks
     # -----------------------------
@@ -69,6 +74,7 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(app_module, "close_db_pool", lambda: None)
     monkeypatch.setattr(app_module, "init_legal_acceptance_table", lambda: None)
     monkeypatch.setattr(app_module, "init_mfa_tables", lambda: None)
+    monkeypatch.setattr(app_module, "init_passkeys_table", lambda: None)
 
     # -----------------------------
     # Health DB mocks
@@ -103,6 +109,11 @@ def client(monkeypatch, fake_state):
         "create_session_token",
         lambda user_id: f"test-token-{user_id}",
     )
+    monkeypatch.setattr(
+        mfa_routes,
+        "create_session_token",
+        lambda user_id: f"test-token-{user_id}",
+    )
 
     def fake_decode_session_token(token):
         if token == f"test-token-{TEST_USER_ID}":
@@ -112,6 +123,7 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(auth_routes, "decode_session_token", fake_decode_session_token)
     monkeypatch.setattr(app_module, "decode_session_token", fake_decode_session_token)
     monkeypatch.setattr(current_user_module, "decode_session_token", fake_decode_session_token)
+    monkeypatch.setattr(mfa_routes, "decode_session_token", fake_decode_session_token)
 
     # -----------------------------
     # Fake DB dependency for routes
@@ -202,11 +214,17 @@ def client(monkeypatch, fake_state):
         fake_state["totp_secret"] = totp_secret
         fake_state["mfa_enabled"] = False
 
-    def fake_enable_user_mfa(user_id):
+    def fake_enable_user_mfa(user_id, secret=None):
+        if secret:
+            fake_state["totp_secret"] = secret
         fake_state["mfa_enabled"] = True
 
     def fake_update_last_verified(user_id):
         fake_state["mfa_verified"] = True
+
+    def fake_save_recovery_codes(user_id, recovery_codes):
+        fake_state["recovery_codes"] = list(recovery_codes)
+        return list(recovery_codes)
 
     def fake_generate_and_store_recovery_codes(user_id, count=8):
         codes = [f"CODE-{i}" for i in range(1, count + 1)]
@@ -232,12 +250,15 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(mfa_routes, "upsert_user_mfa_secret", fake_upsert_user_mfa_secret)
     monkeypatch.setattr(mfa_routes, "enable_user_mfa", fake_enable_user_mfa)
     monkeypatch.setattr(mfa_routes, "update_last_verified", fake_update_last_verified)
+    monkeypatch.setattr(mfa_routes, "save_recovery_codes", fake_save_recovery_codes)
     monkeypatch.setattr(mfa_routes, "generate_and_store_recovery_codes", fake_generate_and_store_recovery_codes)
     monkeypatch.setattr(mfa_routes, "count_unused_recovery_codes", fake_count_unused_recovery_codes)
     monkeypatch.setattr(mfa_routes, "use_recovery_code", fake_use_recovery_code)
     monkeypatch.setattr(mfa_routes, "log_auth_event", lambda **kwargs: None)
+    monkeypatch.setattr(mfa_routes, "user_has_passkeys", lambda user_id: False)
 
     monkeypatch.setattr(auth_routes, "log_auth_event", lambda **kwargs: None)
+    monkeypatch.setattr(auth_routes, "user_has_passkeys", lambda user_id: False)
 
     # -----------------------------
     # Legal acceptance mocks

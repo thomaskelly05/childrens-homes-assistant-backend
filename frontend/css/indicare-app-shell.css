@@ -1,0 +1,142 @@
+:root {
+  --indicare-shell-bg: #f6f8fb;
+  --indicare-shell-panel: #ffffff;
+  --indicare-shell-ink: #10201f;
+  --indicare-shell-muted: #55706d;
+  --indicare-shell-brand: #163b3a;
+  --indicare-shell-brand-soft: #e8f1ef;
+  --indicare-shell-border: #dfe7e5;
+  --indicare-shell-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --indicare-shell-radius: 18px;
+}
+
+html {
+  background: var(--indicare-shell-bg);
+}
+
+body:not([data-skip-global-nav="true"]) {
+  background: var(--indicare-shell-bg);
+  color: var(--indicare-shell-ink);
+}
+
+.indicare-page-shell,
+main:not(.yp-shell):not(.page):not(.form-panel) {
+  max-width: 1240px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.indicare-global-nav + main,
+.indicare-global-nav + .page,
+.indicare-global-nav + .profile-shell {
+  margin-top: 0;
+}
+
+.indicare-app-card,
+.indicare-app-panel,
+section.indicare-card-ready {
+  background: var(--indicare-shell-panel);
+  border: 1px solid var(--indicare-shell-border);
+  border-radius: var(--indicare-shell-radius);
+  box-shadow: var(--indicare-shell-shadow);
+}
+
+.indicare-status-banner {
+  border-radius: 16px;
+  border: 1px solid var(--indicare-shell-border);
+  padding: 12px 14px;
+  background: #fff;
+  color: var(--indicare-shell-ink);
+}
+
+.indicare-status-banner.warning {
+  background: #fff7e6;
+  border-color: #efd28a;
+  color: #5d4300;
+}
+
+.indicare-status-banner.error {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #9f1239;
+}
+
+.indicare-status-banner.success {
+  background: #ecfdf3;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.indicare-section-title {
+  margin: 0 0 8px;
+  color: var(--indicare-shell-ink);
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: -0.03em;
+}
+
+.indicare-section-copy {
+  margin: 0;
+  color: var(--indicare-shell-muted);
+  line-height: 1.65;
+}
+
+.indicare-grid-2,
+.indicare-grid-3,
+.indicare-grid-4 {
+  display: grid;
+  gap: 16px;
+}
+
+.indicare-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.indicare-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.indicare-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.indicare-button,
+button.indicare-button,
+a.indicare-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--indicare-shell-border);
+  background: #fff;
+  color: var(--indicare-shell-brand);
+  text-decoration: none;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.indicare-button.primary,
+button.indicare-button.primary,
+a.indicare-button.primary {
+  background: var(--indicare-shell-brand);
+  color: #fff;
+  border-color: var(--indicare-shell-brand);
+}
+
+input, select, textarea {
+  font: inherit;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  border-radius: 12px;
+  border: 1px solid var(--indicare-shell-border);
+}
+
+@media (max-width: 900px) {
+  .indicare-grid-2,
+  .indicare-grid-3,
+  .indicare-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  main:not(.yp-shell):not(.page):not(.form-panel) {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}

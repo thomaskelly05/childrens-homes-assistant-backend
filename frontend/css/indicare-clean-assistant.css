@@ -1,0 +1,466 @@
+/* IndiCare AI clean assistant shell
+   Minimal, assistant-first and deliberately uncluttered.
+*/
+
+:root {
+  --ic-clean-bg: #ffffff;
+  --ic-clean-soft: #f8fafc;
+  --ic-clean-border: #e8eef6;
+  --ic-clean-text: #111827;
+  --ic-clean-muted: #6b7280;
+  --ic-clean-blue: #0b6fff;
+  --ic-clean-blue-soft: #edf5ff;
+  --ic-clean-shadow: 0 18px 55px rgba(15, 31, 58, .09);
+}
+
+html,
+body {
+  min-height: 100%;
+  background: #fff !important;
+  color: var(--ic-clean-text) !important;
+}
+
+body * {
+  box-sizing: border-box;
+}
+
+.ic-cockpit.ic-standalone-assistant {
+  min-height: 100vh !important;
+  display: grid !important;
+  grid-template-columns: 72px minmax(0, 1fr) !important;
+  background: #fff !important;
+}
+
+.ic-main {
+  min-height: 100vh !important;
+  display: grid !important;
+  grid-template-rows: auto 1fr auto !important;
+  background: #fff !important;
+}
+
+.ic-sidebar {
+  width: 72px !important;
+  min-width: 72px !important;
+  background: #fff !important;
+  border-right: 1px solid var(--ic-clean-border) !important;
+  box-shadow: none !important;
+  padding: 18px 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.ic-brand {
+  display: flex !important;
+  justify-content: center !important;
+  margin: 0 0 18px !important;
+}
+
+.ic-brand > div:not(.ic-logo),
+.ic-brand-title,
+.ic-brand-sub,
+.ic-sidebar-footer strong,
+.ic-sidebar-footer small,
+.ic-evidence,
+.ic-app-nav,
+#projectSidebar,
+#templateSidebar,
+.ic-section-label,
+#history,
+#search,
+#toggleTheme,
+.ic-tier-panel,
+.ic-proactive-dock,
+.ic-ops-centre,
+.ic-live-status,
+.ic-global-search-trigger,
+#icNotificationTrigger,
+#copyConversation,
+#exportConversation,
+#clearConversation {
+  display: none !important;
+}
+
+.ic-logo,
+.ic-empty-mark,
+.ic-avatar,
+.ic-sidebar-avatar {
+  background: linear-gradient(135deg, #0b6fff, #7aa8ff) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 26px rgba(11, 111, 255, .20) !important;
+}
+
+.ic-logo,
+.ic-sidebar-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 13px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: .82rem !important;
+  font-weight: 900 !important;
+}
+
+.ic-suite-switcher,
+.ic-sidebar-actions {
+  width: 100% !important;
+  display: grid !important;
+  justify-items: center !important;
+  gap: 12px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ic-suite-switcher button,
+.ic-sidebar-actions button {
+  width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 1px solid var(--ic-clean-border) !important;
+  border-radius: 15px !important;
+  background: #fff !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-size: .78rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  cursor: pointer !important;
+}
+
+.ic-suite-switcher button.active,
+.ic-suite-switcher button:hover {
+  background: var(--ic-clean-blue-soft) !important;
+  color: var(--ic-clean-blue) !important;
+  border-color: transparent !important;
+}
+
+.ic-sidebar-actions button {
+  background: var(--ic-clean-blue) !important;
+  color: #fff !important;
+  border-color: var(--ic-clean-blue) !important;
+  font-size: 1.08rem !important;
+}
+
+.ic-suite-switcher::before,
+.ic-suite-switcher::after,
+.ic-sidebar-actions::before {
+  content: none !important;
+  display: none !important;
+}
+
+.ic-sidebar-footer {
+  margin-top: auto !important;
+  width: 100% !important;
+  border: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  justify-items: center !important;
+}
+
+.ic-settings-trigger {
+  width: 42px !important;
+  height: 42px !important;
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.ic-top {
+  min-height: 72px !important;
+  border: 0 !important;
+  background: #fff !important;
+  padding: 20px 38px 0 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: flex-start !important;
+}
+
+.ic-top h1,
+#workspaceTitle,
+.ic-surface-pill,
+#workspacePill {
+  display: none !important;
+}
+
+.ic-top-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.ic-user {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: var(--ic-clean-text) !important;
+  font-size: .86rem !important;
+}
+
+.ic-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 999px !important;
+  font-size: .82rem !important;
+}
+
+#assistantPanel.ic-content.panel-assistant,
+.ic-content.panel-assistant {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: calc(100vh - 160px) !important;
+  margin: 0 !important;
+  padding: 0 24px 160px !important;
+  background: transparent !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.ic-empty-state {
+  width: min(820px, 100%) !important;
+  min-height: auto !important;
+  display: grid !important;
+  justify-items: center !important;
+  align-content: center !important;
+  text-align: center !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.ic-empty-mark {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 21px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 1.2rem !important;
+  font-weight: 900 !important;
+  margin: 0 0 24px !important;
+}
+
+.ic-empty-state h2 {
+  max-width: 760px !important;
+  margin: 0 !important;
+  color: var(--ic-clean-text) !important;
+  font-size: clamp(2.5rem, 5vw, 4.7rem) !important;
+  line-height: .96 !important;
+  letter-spacing: -.085em !important;
+  font-weight: 850 !important;
+}
+
+.ic-empty-state p {
+  max-width: 560px !important;
+  margin: 18px auto 0 !important;
+  color: var(--ic-clean-muted) !important;
+  line-height: 1.55 !important;
+  font-size: 1rem !important;
+}
+
+.ic-quick-starts,
+#icQuickStarts {
+  width: min(760px, 100%) !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 34px auto 0 !important;
+  padding: 0 !important;
+}
+
+.ic-quick-starts button,
+#icQuickStarts button {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  height: 42px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  color: #334155 !important;
+  border-radius: 999px !important;
+  padding: 0 14px !important;
+  box-shadow: none !important;
+  text-align: center !important;
+  font-size: .84rem !important;
+  line-height: 1 !important;
+  overflow: hidden !important;
+}
+
+.ic-quick-starts button:hover,
+#icQuickStarts button:hover {
+  transform: none !important;
+  border-color: rgba(11,111,255,.24) !important;
+  background: var(--ic-clean-blue-soft) !important;
+  color: var(--ic-clean-blue) !important;
+}
+
+.ic-quick-starts strong,
+#icQuickStarts strong {
+  display: inline !important;
+  margin: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+.ic-quick-starts span,
+#icQuickStarts span {
+  display: none !important;
+}
+
+.ic-composer-dock {
+  position: fixed !important;
+  left: calc(50% + 36px) !important;
+  right: auto !important;
+  bottom: 34px !important;
+  width: min(820px, calc(100vw - 160px)) !important;
+  transform: translateX(-50%) !important;
+  z-index: 1200 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.ic-composer {
+  width: 100% !important;
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  border-radius: 28px !important;
+  box-shadow: var(--ic-clean-shadow) !important;
+  padding: 12px !important;
+}
+
+.ic-input-row {
+  align-items: flex-end !important;
+  gap: 10px !important;
+}
+
+#input {
+  min-height: 58px !important;
+  max-height: 180px !important;
+  padding: 17px 8px !important;
+  font-size: 1rem !important;
+  background: transparent !important;
+  color: var(--ic-clean-text) !important;
+}
+
+.ic-upload-label,
+#send {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  border-radius: 15px !important;
+}
+
+#send {
+  background: var(--ic-clean-blue) !important;
+  box-shadow: 0 10px 25px rgba(11, 111, 255, .25) !important;
+}
+
+#suggestionChips {
+  display: flex !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  margin: 0 0 10px !important;
+  overflow: hidden !important;
+}
+
+#suggestionChips button {
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  color: #334155 !important;
+  border-radius: 999px !important;
+  padding: 8px 11px !important;
+  font-size: .78rem !important;
+  box-shadow: none !important;
+}
+
+.ic-modal-card,
+.ic-command-menu,
+.ic-onboarding-card {
+  border: 1px solid var(--ic-clean-border) !important;
+  background: #fff !important;
+  box-shadow: 0 24px 70px rgba(15,31,58,.14) !important;
+}
+
+@media (max-width: 900px) {
+  .ic-cockpit.ic-standalone-assistant {
+    grid-template-columns: 60px minmax(0, 1fr) !important;
+  }
+
+  .ic-sidebar {
+    width: 60px !important;
+    min-width: 60px !important;
+    padding-inline: 8px !important;
+  }
+
+  .ic-suite-switcher button,
+  .ic-sidebar-actions button,
+  .ic-settings-trigger {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .ic-composer-dock {
+    left: calc(50% + 30px) !important;
+    width: calc(100vw - 96px) !important;
+  }
+
+  .ic-empty-state h2 {
+    font-size: clamp(2.2rem, 7vw, 3.5rem) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .ic-cockpit.ic-standalone-assistant {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ic-sidebar {
+    display: none !important;
+  }
+
+  .ic-top {
+    padding: 16px 18px 0 !important;
+  }
+
+  #assistantPanel.ic-content.panel-assistant,
+  .ic-content.panel-assistant {
+    padding: 20px 18px 170px !important;
+  }
+
+  .ic-empty-state h2 {
+    font-size: 2.3rem !important;
+  }
+
+  .ic-quick-starts {
+    margin-top: 26px !important;
+  }
+
+  .ic-composer-dock {
+    left: 50% !important;
+    width: calc(100vw - 28px) !important;
+    bottom: 20px !important;
+  }
+}

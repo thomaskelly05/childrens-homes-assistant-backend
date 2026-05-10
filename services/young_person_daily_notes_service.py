@@ -8,6 +8,31 @@ from fastapi import HTTPException
 from services.os_sync_hooks import archive_after_status_change, sync_after_save
 
 
+def _row_get(row: Any, key: str, index: int | None = None, default: Any = None) -> Any:
+    if row is None:
+        return default
+    if isinstance(row, dict):
+        return row.get(key, default)
+    if index is not None:
+        try:
+            return row[index]
+        except Exception:
+            return default
+    return default
+
+
+def _returned_id(row: Any, *, label: str = "record") -> int:
+    value = _row_get(row, "id", 0)
+
+    if value is None:
+        raise HTTPException(
+            status_code=500,
+            detail=f"{label} operation did not return an id",
+        )
+
+    return int(value)
+
+
 class YoungPersonDailyNotesService:
     @staticmethod
     def now_utc() -> datetime:
@@ -20,16 +45,22 @@ class YoungPersonDailyNotesService:
     @staticmethod
     def normalise_workflow_status(value: str | None) -> str:
         v = (value or "").strip().lower()
-        if v in {"draft", "submitted", "approved", "returned", "reviewed", "completed", "archived"}:
+        if v in {
+            "draft",
+            "submitted",
+            "approved",
+            "returned",
+            "reviewed",
+            "completed",
+            "archived",
+        }:
             return v
         return "draft"
 
     @staticmethod
     def workflow_display_status(value: str | None) -> str:
         v = YoungPersonDailyNotesService.normalise_workflow_status(value)
-        if v == "reviewed":
-            return "approved"
-        return v
+        return "approved" if v == "reviewed" else v
 
     @staticmethod
     def ensure_young_person_exists(conn, young_person_id: int) -> dict[str, Any]:
@@ -44,9 +75,19 @@ class YoungPersonDailyNotesService:
                 (young_person_id,),
             )
             row = cur.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Young person not found")
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Young person not found")
+
+        if isinstance(row, dict):
             return row
+
+        return {
+            "id": _row_get(row, "id", 0),
+            "home_id": _row_get(row, "home_id", 1),
+            "first_name": _row_get(row, "first_name", 2),
+            "last_name": _row_get(row, "last_name", 3),
+        }
 
     @staticmethod
     def fetch_daily_note_select_sql(where_sql: str) -> str:
@@ -89,7 +130,49 @@ class YoungPersonDailyNotesService:
         """
 
     @staticmethod
+    def _normalise_daily_note_db_row(row: Any) -> dict[str, Any]:
+        if isinstance(row, dict):
+            return row
+
+        keys = [
+            "id",
+            "young_person_id",
+            "home_id",
+            "note_date",
+            "shift_type",
+            "mood",
+            "presentation",
+            "activities",
+            "education_update",
+            "health_update",
+            "family_update",
+            "behaviour_update",
+            "young_person_voice",
+            "positives",
+            "actions_required",
+            "significance",
+            "workflow_status",
+            "manager_review_comment",
+            "approved_by",
+            "approved_at",
+            "returned_at",
+            "submitted_at",
+            "last_edited_at",
+            "author_id",
+            "created_at",
+            "updated_at",
+            "author_first_name",
+            "author_last_name",
+            "approved_by_first_name",
+            "approved_by_last_name",
+        ]
+
+        return {key: _row_get(row, key, index) for index, key in enumerate(keys)}
+
+    @staticmethod
     def transform_daily_note_row(row: dict[str, Any]) -> dict[str, Any]:
+        row = YoungPersonDailyNotesService._normalise_daily_note_db_row(row)
+
         author_name = YoungPersonDailyNotesService.full_name(
             row.get("author_first_name"),
             row.get("author_last_name"),
@@ -108,7 +191,9 @@ class YoungPersonDailyNotesService:
             row.get("behaviour_update"),
             row.get("actions_required"),
         ]
-        summary = " | ".join([str(x).strip() for x in summary_parts if x and str(x).strip()])
+        summary = " | ".join(
+            [str(x).strip() for x in summary_parts if x and str(x).strip()]
+        )
 
         return {
             "id": row.get("id"),
@@ -155,13 +240,17 @@ class YoungPersonDailyNotesService:
     def fetch_daily_note_by_id(conn, daily_note_id: int) -> dict[str, Any]:
         with conn.cursor() as cur:
             cur.execute(
-                YoungPersonDailyNotesService.fetch_daily_note_select_sql("WHERE dn.id = %s LIMIT 1"),
+                YoungPersonDailyNotesService.fetch_daily_note_select_sql(
+                    "WHERE dn.id = %s LIMIT 1"
+                ),
                 (daily_note_id,),
             )
             row = cur.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Daily note not found")
-            return row
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Daily note not found")
+
+        return YoungPersonDailyNotesService._normalise_daily_note_db_row(row)
 
     @staticmethod
     def build_daily_note_summary(
@@ -223,11 +312,7 @@ class YoungPersonDailyNotesService:
         return f"{shift} daily note - {date_part}"
 
     @staticmethod
-    def _run_os_sync_after_save(
-        conn,
-        *,
-        daily_note_id: int,
-    ) -> None:
+    def _run_os_sync_after_save(conn, *, daily_note_id: int) -> None:
         try:
             note = YoungPersonDailyNotesService.get_daily_note(conn, daily_note_id)
             sync_after_save(
@@ -252,6 +337,7 @@ class YoungPersonDailyNotesService:
               AND LOWER(COALESCE(dn.workflow_status, 'draft')) NOT IN ('completed', 'archived')
             ORDER BY dn.note_date DESC, dn.created_at DESC, dn.id DESC
         """
+
         if archived:
             where_sql = """
                 WHERE dn.young_person_id = %s
@@ -265,7 +351,8 @@ class YoungPersonDailyNotesService:
                 (young_person_id,),
             )
             rows = cur.fetchall() or []
-            return [YoungPersonDailyNotesService.transform_daily_note_row(r) for r in rows]
+
+        return [YoungPersonDailyNotesService.transform_daily_note_row(r) for r in rows]
 
     @staticmethod
     def get_daily_note(conn, daily_note_id: int) -> dict[str, Any]:
@@ -282,17 +369,24 @@ class YoungPersonDailyNotesService:
         linking_service,
     ) -> dict[str, Any]:
         now = YoungPersonDailyNotesService.now_utc()
-        person = YoungPersonDailyNotesService.ensure_young_person_exists(conn, young_person_id)
+        person = YoungPersonDailyNotesService.ensure_young_person_exists(
+            conn,
+            young_person_id,
+        )
 
         note_date = payload.get("note_date") or payload.get("recorded_at")
         if not note_date:
             raise HTTPException(status_code=400, detail="note_date is required")
 
-        young_person_voice = payload.get("young_person_voice")
-        if young_person_voice is None:
-            young_person_voice = payload.get("child_voice")
+        shift_type = payload.get("shift_type")
+        if not shift_type:
+            raise HTTPException(status_code=400, detail="shift_type is required")
 
+        young_person_voice = payload.get("young_person_voice") or payload.get(
+            "child_voice"
+        )
         home_id = payload.get("home_id") or person.get("home_id")
+
         workflow_status = YoungPersonDailyNotesService.normalise_workflow_status(
             payload.get("workflow_status")
         )
@@ -300,7 +394,7 @@ class YoungPersonDailyNotesService:
         db_payload = {
             "home_id": home_id,
             "note_date": note_date,
-            "shift_type": payload.get("shift_type"),
+            "shift_type": shift_type,
             "mood": payload.get("mood"),
             "presentation": payload.get("presentation"),
             "activities": payload.get("activities"),
@@ -311,7 +405,7 @@ class YoungPersonDailyNotesService:
             "young_person_voice": young_person_voice,
             "positives": payload.get("positives"),
             "actions_required": payload.get("actions_required"),
-            "significance": payload.get("significance"),
+            "significance": payload.get("significance") or "medium",
             "workflow_status": workflow_status,
             "manager_review_comment": payload.get("manager_review_comment"),
             "approved_by": payload.get("approved_by"),
@@ -388,8 +482,13 @@ class YoungPersonDailyNotesService:
                 ),
             )
             created = cur.fetchone()
-            daily_note_id = created["id"]
 
+        daily_note_id = _returned_id(created, label="Daily note insert")
+        conn.commit()
+
+        workflow_result = None
+
+        try:
             workflow_result = linking_service.process_record_event(
                 conn=conn,
                 young_person_id=young_person_id,
@@ -397,7 +496,10 @@ class YoungPersonDailyNotesService:
                 source_id=daily_note_id,
                 event_type="created",
                 title=payload.get("title")
-                or YoungPersonDailyNotesService.build_daily_note_title(payload.get("shift_type"), note_date),
+                or YoungPersonDailyNotesService.build_daily_note_title(
+                    shift_type,
+                    note_date,
+                ),
                 summary=YoungPersonDailyNotesService.build_daily_note_summary(
                     presentation=payload.get("presentation"),
                     activities=payload.get("activities"),
@@ -422,26 +524,27 @@ class YoungPersonDailyNotesService:
                     actions_required=payload.get("actions_required"),
                 ),
                 category="daily_note",
-                subcategory=payload.get("shift_type") or "daily_note",
+                subcategory=shift_type or "daily_note",
                 significance=payload.get("significance") or "medium",
                 due_date=note_date,
                 owner_id=db_payload["author_id"],
                 created_by=db_payload["author_id"],
                 workflow={
                     "link_chronology": bool(payload.get("link_to_chronology", True)),
-                    "create_task": bool(payload.get("create_follow_up_task", False))
-                    or bool(payload.get("actions_required")),
+                    "create_task": bool(payload.get("create_follow_up_task", False)),
                     "manager_review": bool(payload.get("manager_review_needed", False))
                     or workflow_status in {"submitted", "approved"},
                     "safeguarding": bool(payload.get("safeguarding_concern", False)),
                     "link_support_plans": bool(payload.get("link_to_support_plans", False)),
                     "link_monthly_reviews": bool(payload.get("link_monthly_reviews", False)),
-                    "link_quality_standards": bool(payload.get("link_quality_standards", True)),
+                    "link_quality_standards": bool(
+                        payload.get("link_quality_standards", True)
+                    ),
                 },
                 metadata={
                     "severity": payload.get("significance") or "medium",
                     "workflow_status": workflow_status,
-                    "shift_type": payload.get("shift_type"),
+                    "shift_type": shift_type,
                     "note_date": note_date,
                     "quality_standards": ["quality_and_purpose_of_care"]
                     if payload.get("link_quality_standards", True)
@@ -452,9 +555,19 @@ class YoungPersonDailyNotesService:
                     "judgement_areas": ["experiences_and_progress"],
                 },
             )
+            conn.commit()
+        except Exception as error:
+            conn.rollback()
+            workflow_result = {
+                "ok": False,
+                "warning": "Daily note saved, but linking workflow failed.",
+                "error": str(error),
+            }
 
-        conn.commit()
-        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+        YoungPersonDailyNotesService._run_os_sync_after_save(
+            conn,
+            daily_note_id=daily_note_id,
+        )
 
         return {
             "message": "Daily note created successfully",
@@ -483,9 +596,29 @@ class YoungPersonDailyNotesService:
         update_data.pop("title", None)
         update_data.pop("narrative", None)
 
+        ui_only_fields = {
+            "create_follow_up_task",
+            "link_to_chronology",
+            "link_to_support_plans",
+            "manager_review_needed",
+            "safeguarding_concern",
+            "link_monthly_reviews",
+            "link_quality_standards",
+            "journey_stage",
+            "what_is_child_communicating",
+            "what_helped",
+            "what_did_adults_learn",
+            "what_needs_to_change",
+        }
+
+        for key in ui_only_fields:
+            update_data.pop(key, None)
+
         if "workflow_status" in update_data and update_data["workflow_status"] is not None:
-            update_data["workflow_status"] = YoungPersonDailyNotesService.normalise_workflow_status(
-                update_data["workflow_status"]
+            update_data["workflow_status"] = (
+                YoungPersonDailyNotesService.normalise_workflow_status(
+                    update_data["workflow_status"]
+                )
             )
 
         now = YoungPersonDailyNotesService.now_utc()
@@ -516,10 +649,15 @@ class YoungPersonDailyNotesService:
             conn.rollback()
             raise HTTPException(status_code=404, detail="Daily note not found")
 
+        updated_id = _returned_id(row, label="Daily note update")
         conn.commit()
-        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
 
-        return {"message": "Daily note updated successfully", "id": row["id"]}
+        YoungPersonDailyNotesService._run_os_sync_after_save(
+            conn,
+            daily_note_id=daily_note_id,
+        )
+
+        return {"message": "Daily note updated successfully", "id": updated_id}
 
     @staticmethod
     def submit_daily_note(
@@ -548,8 +686,13 @@ class YoungPersonDailyNotesService:
             )
             updated = cur.fetchone()
 
-            transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+        updated_id = _returned_id(updated, label="Daily note submit")
+        conn.commit()
 
+        transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+        workflow_result = None
+
+        try:
             workflow_result = linking_service.process_record_event(
                 conn=conn,
                 young_person_id=row["young_person_id"],
@@ -585,14 +728,24 @@ class YoungPersonDailyNotesService:
                     "judgement_areas": ["experiences_and_progress"],
                 },
             )
+            conn.commit()
+        except Exception as error:
+            conn.rollback()
+            workflow_result = {
+                "ok": False,
+                "warning": "Daily note submitted, but linking workflow failed.",
+                "error": str(error),
+            }
 
-        conn.commit()
-        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+        YoungPersonDailyNotesService._run_os_sync_after_save(
+            conn,
+            daily_note_id=daily_note_id,
+        )
 
         return {
             "ok": True,
             "status": "submitted",
-            "id": updated["id"],
+            "id": updated_id,
             "workflow": workflow_result,
         }
 
@@ -625,8 +778,13 @@ class YoungPersonDailyNotesService:
             )
             updated = cur.fetchone()
 
-            transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+        updated_id = _returned_id(updated, label="Daily note approve")
+        conn.commit()
 
+        transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+        workflow_result = None
+
+        try:
             workflow_result = linking_service.process_record_event(
                 conn=conn,
                 young_person_id=row["young_person_id"],
@@ -663,14 +821,24 @@ class YoungPersonDailyNotesService:
                     "manager_review_comment": review_note,
                 },
             )
+            conn.commit()
+        except Exception as error:
+            conn.rollback()
+            workflow_result = {
+                "ok": False,
+                "warning": "Daily note approved, but linking workflow failed.",
+                "error": str(error),
+            }
 
-        conn.commit()
-        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+        YoungPersonDailyNotesService._run_os_sync_after_save(
+            conn,
+            daily_note_id=daily_note_id,
+        )
 
         return {
             "ok": True,
             "status": "approved",
-            "id": updated["id"],
+            "id": updated_id,
             "workflow": workflow_result,
         }
 
@@ -702,8 +870,13 @@ class YoungPersonDailyNotesService:
             )
             updated = cur.fetchone()
 
-            transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+        updated_id = _returned_id(updated, label="Daily note return")
+        conn.commit()
 
+        transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+        workflow_result = None
+
+        try:
             workflow_result = linking_service.process_record_event(
                 conn=conn,
                 young_person_id=row["young_person_id"],
@@ -737,14 +910,24 @@ class YoungPersonDailyNotesService:
                     "manager_review_comment": review_note,
                 },
             )
+            conn.commit()
+        except Exception as error:
+            conn.rollback()
+            workflow_result = {
+                "ok": False,
+                "warning": "Daily note returned, but linking workflow failed.",
+                "error": str(error),
+            }
 
-        conn.commit()
-        YoungPersonDailyNotesService._run_os_sync_after_save(conn, daily_note_id=daily_note_id)
+        YoungPersonDailyNotesService._run_os_sync_after_save(
+            conn,
+            daily_note_id=daily_note_id,
+        )
 
         return {
             "ok": True,
             "status": "returned",
-            "id": updated["id"],
+            "id": updated_id,
             "review_note": review_note or "",
             "workflow": workflow_result,
         }
@@ -774,8 +957,13 @@ class YoungPersonDailyNotesService:
             )
             updated = cur.fetchone()
 
-            transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+        updated_id = _returned_id(updated, label="Daily note archive")
+        conn.commit()
 
+        transformed = YoungPersonDailyNotesService.transform_daily_note_row(row)
+        workflow_result = None
+
+        try:
             workflow_result = linking_service.process_record_event(
                 conn=conn,
                 young_person_id=row["young_person_id"],
@@ -807,8 +995,14 @@ class YoungPersonDailyNotesService:
                     "note_date": str(row.get("note_date")) if row.get("note_date") else None,
                 },
             )
-
-        conn.commit()
+            conn.commit()
+        except Exception as error:
+            conn.rollback()
+            workflow_result = {
+                "ok": False,
+                "warning": "Daily note archived, but linking workflow failed.",
+                "error": str(error),
+            }
 
         try:
             archive_after_status_change(
@@ -822,6 +1016,6 @@ class YoungPersonDailyNotesService:
         return {
             "ok": True,
             "status": "archived",
-            "id": updated["id"],
+            "id": updated_id,
             "workflow": workflow_result,
         }

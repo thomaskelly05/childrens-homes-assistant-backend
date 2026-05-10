@@ -14,6 +14,26 @@ class YoungPersonFamilyService:
         return datetime.utcnow()
 
     @staticmethod
+    def _meaningful_text(value: Any) -> str | None:
+        text = str(value or "").strip()
+        if not text:
+            return None
+
+        normalised = text.lower().strip().rstrip(".")
+        if normalised in {"none", "no", "n/a", "na", "nil", "nothing", "not applicable"}:
+            return None
+
+        return text
+
+    @staticmethod
+    def _truthy_follow_up(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+
+        normalised = str(value or "").strip().lower().rstrip(".")
+        return normalised not in {"", "false", "no", "none", "n/a", "na", "nil", "0", "not applicable"}
+
+    @staticmethod
     def ensure_young_person_exists(conn, young_person_id: int) -> dict[str, Any]:
         with conn.cursor() as cur:
             cur.execute(
@@ -101,7 +121,6 @@ class YoungPersonFamilyService:
                 recorded_by_name=record.get("created_by_name"),
             )
         except Exception:
-            # Keep the source record write successful even if OS sync fails.
             pass
 
     @staticmethod
@@ -330,6 +349,9 @@ class YoungPersonFamilyService:
         now = YoungPersonFamilyService.now_utc()
         YoungPersonFamilyService.ensure_young_person_exists(conn, young_person_id)
 
+        concerns = YoungPersonFamilyService._meaningful_text(payload.get("concerns"))
+        follow_up_required = YoungPersonFamilyService._truthy_follow_up(payload.get("follow_up_required"))
+
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -363,7 +385,7 @@ class YoungPersonFamilyService:
                     payload.get("post_contact_presentation"),
                     payload.get("child_voice"),
                     payload.get("concerns"),
-                    payload.get("follow_up_required", False),
+                    follow_up_required,
                     payload.get("created_by") or actor_user_id,
                     now,
                     now,
@@ -379,8 +401,8 @@ class YoungPersonFamilyService:
                 source_id=record_id,
                 event_type="created",
                 title=payload.get("contact_person") or "Family contact",
-                summary=payload.get("child_voice") or payload.get("post_contact_presentation") or payload.get("concerns") or "Family contact recorded",
-                narrative=payload.get("child_voice") or payload.get("post_contact_presentation") or payload.get("concerns") or "Family contact recorded",
+                summary=payload.get("child_voice") or payload.get("post_contact_presentation") or concerns or "Family contact recorded",
+                narrative=payload.get("child_voice") or payload.get("post_contact_presentation") or concerns or "Family contact recorded",
                 category="family",
                 subcategory=payload.get("contact_type") or "family_contact",
                 significance="medium",
@@ -389,20 +411,20 @@ class YoungPersonFamilyService:
                 created_by=payload.get("created_by") or actor_user_id,
                 workflow={
                     "link_chronology": True,
-                    "create_task": bool(payload.get("follow_up_required") or payload.get("concerns")),
+                    "create_task": bool(follow_up_required or concerns),
                     "manager_review": False,
-                    "safeguarding": bool(payload.get("concerns")),
+                    "safeguarding": bool(concerns),
                     "link_support_plans": True,
                     "link_monthly_reviews": True,
                     "link_quality_standards": True,
                 },
                 metadata={
                     "severity": "medium",
-                    "workflow_status": "recorded",
+                    "workflow_status": payload.get("workflow_status") or payload.get("status") or "recorded",
                     "quality_standards": ["positive_relationships", "wishes_and_feelings"],
                     "standards_rationale": "Linked from family contact workflow",
                     "evidence_strength": "medium",
-                    "response_actions": payload.get("concerns"),
+                    "response_actions": concerns,
                     "judgement_areas": ["experiences_and_progress"],
                 },
             )

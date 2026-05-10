@@ -6,6 +6,13 @@ import {
   evaluateRecordSuggestions,
   mergeSuggestionLists,
 } from "../core/rules-client.js";
+import {
+  normaliseRecord as normaliseDisplayRecord,
+  buildRecordDisplayMeta,
+} from "../core/record-normaliser.js";
+import {
+  normaliseRecordType as normaliseContractRecordType,
+} from "../core/contracts.js";
 
 /* ------------------------- local helper replacements ------------------------- */
 
@@ -79,14 +86,14 @@ function showSuggestionsPanelSafe(suggestions = [], meta = {}) {
     if (!panel || !body) return;
 
     if (title) {
-      title.textContent = suggestions.length
-        ? `Suggested follow-ups`
-        : "Suggestions";
+      title.textContent = suggestions.length ? "Suggested follow-ups" : "Suggestions";
     }
 
     if (subtitle) {
       const bits = [];
-      if (meta.source_record_type) bits.push(String(meta.source_record_type).replaceAll("_", " "));
+      if (meta.source_record_type) {
+        bits.push(String(meta.source_record_type).replaceAll("_", " "));
+      }
       if (meta.source_record_id) bits.push(`Source #${meta.source_record_id}`);
       if (meta.scope) bits.push(`Scope: ${meta.scope}`);
       subtitle.textContent = bits.join(" • ");
@@ -108,16 +115,10 @@ function showSuggestionsPanelSafe(suggestions = [], meta = {}) {
           ${suggestions
             .map((item, index) => {
               const titleText =
-                item.title ||
-                item.label ||
-                item.name ||
-                `Suggestion ${index + 1}`;
+                item.title || item.label || item.name || `Suggestion ${index + 1}`;
 
               const description =
-                item.description ||
-                item.summary ||
-                item.reason ||
-                "";
+                item.description || item.summary || item.reason || "";
 
               const actionType =
                 item.action_type ||
@@ -134,7 +135,9 @@ function showSuggestionsPanelSafe(suggestions = [], meta = {}) {
                         ? `<div class="record-row-summary">${escapeHtml(String(description))}</div>`
                         : ""
                     }
-                    <div class="record-row-meta">${escapeHtml(String(actionType).replaceAll("_", " "))}</div>
+                    <div class="record-row-meta">${escapeHtml(
+                      String(actionType).replaceAll("_", " ")
+                    )}</div>
                   </div>
                 </article>
               `;
@@ -203,6 +206,7 @@ const RECORD_CONFIG = {
   medication_record: { label: "Medication record" },
   communication: { label: "Communication" },
   document: { label: "Document" },
+  statutory_document: { label: "Statutory document" },
   therapy: { label: "Therapy" },
   team: { label: "Team item" },
   supervision: { label: "Supervision" },
@@ -213,6 +217,7 @@ const RECORD_CONFIG = {
   notification: { label: "Notification" },
   shift_log: { label: "Shift log" },
   handover: { label: "Handover" },
+  handover_record: { label: "Handover record" },
   finance: { label: "Finance item" },
   home_notification: { label: "Home notification" },
   operational_notification: { label: "Operational notification" },
@@ -247,59 +252,76 @@ function firstDefined(...values) {
 
 /* ---------------------------- route resolution --------------------------- */
 
-function buildScopedDetailUrl(recordType, id) {
+function buildScopedDetailUrl(recordType, id, item = {}) {
   const childBase = getChildScopedBase();
   const homeBase = getHomeScopedBase();
   const scope = getCurrentScope();
 
+  const youngPersonId =
+    item.young_person_id ||
+    item.child_id ||
+    state.selectedYoungPerson?.id ||
+    state.currentYoungPersonId ||
+    state.youngPersonId;
+
+  const homeId = item.home_id || state.currentHomeId || state.homeId;
+
+  const childPrefix = youngPersonId ? `${childBase}/${youngPersonId}` : childBase;
+  const homePrefix = homeId ? `${homeBase}/${homeId}` : homeBase;
+
   const childRoutes = {
-    daily_note: `${childBase}/daily-notes/${id}`,
-    incident: `${childBase}/incidents/${id}`,
-    support_plan: `${childBase}/plans/${id}`,
-    risk: `${childBase}/risks/${id}`,
-    appointment: `${childBase}/appointments/${id}`,
-    health_record: `${childBase}/health-records/${id}`,
-    education_record: `${childBase}/education-records/${id}`,
-    family_contact: `${childBase}/family-contact-records/${id}`,
-    keywork: `${childBase}/keywork/${id}`,
-    report: `${childBase}/reports/${id}`,
-    chronology_event: `${childBase}/chronology/${id}`,
-    compliance_item: `${childBase}/compliance/${id}`,
-    safeguarding_record: `${childBase}/safeguarding-records/${id}`,
-    missing_episode: `${childBase}/missing-episodes/${id}`,
-    task: `${childBase}/tasks/${id}`,
-    achievement_record: `${childBase}/achievements/${id}`,
-    medication_profile: `${childBase}/medication-profiles/${id}`,
-    medication_record: `${childBase}/medication-records/${id}`,
-    communication: `${childBase}/communications/${id}`,
-    document: `${childBase}/documents/${id}`,
-    therapy: `${childBase}/therapy/${id}`,
+    daily_note: `${childPrefix}/daily-notes/${id}`,
+    incident: `${childPrefix}/incidents/${id}`,
+    support_plan: `${childPrefix}/plans/${id}`,
+    risk: `${childPrefix}/risk/${id}`,
+    appointment: `${childPrefix}/appointments/${id}`,
+    health_record: `${childPrefix}/health/${id}`,
+    education_record: `${childPrefix}/education/${id}`,
+    family_contact: `${childPrefix}/family/${id}`,
+    keywork: `${childPrefix}/keywork/${id}`,
+    report: `${childPrefix}/reports/${id}`,
+    chronology_event: `${childPrefix}/timeline/${id}`,
+    compliance_item: `${childPrefix}/compliance/${id}`,
+    safeguarding_record: `${childPrefix}/safeguarding/${id}`,
+    missing_episode: `${childPrefix}/missing-episodes/${id}`,
+    task: `${childPrefix}/tasks/${id}`,
+    achievement_record: `${childPrefix}/achievements/${id}`,
+    medication_profile: `${childPrefix}/medication-records/${id}`,
+    medication_record: `${childPrefix}/medication-records/${id}`,
+    communication: `${childPrefix}/communications/${id}`,
+    document: `${childPrefix}/documents/${id}`,
+    statutory_document: `${childPrefix}/statutory-documents/${id}`,
+    therapy: `${childPrefix}/therapy/${id}`,
+    handover: `${childPrefix}/handover/${id}`,
+    handover_record: `${childPrefix}/handover/${id}`,
   };
 
   const homeRoutes = {
-    daily_note: `${homeBase}/daily-notes/${id}`,
-    incident: `${homeBase}/incidents/${id}`,
-    support_plan: `${homeBase}/plans/${id}`,
-    risk: `${homeBase}/risks/${id}`,
-    appointment: `${homeBase}/appointments/${id}`,
-    task: `${homeBase}/tasks/${id}`,
-    manager_action: `${homeBase}/manager-actions/${id}`,
-    communication: `${homeBase}/communications/${id}`,
-    document: `${homeBase}/documents/${id}`,
-    therapy: `${homeBase}/therapy/${id}`,
-    team: `${homeBase}/team/${id}`,
-    supervision: `${homeBase}/supervisions/${id}`,
-    compliance: `${homeBase}/compliance/${id}`,
-    compliance_item: `${homeBase}/compliance/${id}`,
-    audit: `${homeBase}/audits/${id}`,
-    report: `${homeBase}/reports/${id}`,
-    handover: `${homeBase}/handover/${id}`,
-    shift_log: `${homeBase}/shift-logs/${id}`,
-    onboarding: `${homeBase}/onboarding/${id}`,
-    notification: `${homeBase}/notifications/${id}`,
-    home_notification: `${homeBase}/home-notifications/${id}`,
-    operational_notification: `${homeBase}/operational-notifications/${id}`,
-    finance: `${homeBase}/finance/${id}`,
+    daily_note: `${homePrefix}/daily-notes/${id}`,
+    incident: `${homePrefix}/incidents/${id}`,
+    support_plan: `${homePrefix}/plans/${id}`,
+    risk: `${homePrefix}/risks/${id}`,
+    appointment: `${homePrefix}/appointments/${id}`,
+    task: `${homePrefix}/tasks/${id}`,
+    manager_action: `${homePrefix}/manager-actions/${id}`,
+    communication: `${homePrefix}/communications/${id}`,
+    document: `${homePrefix}/documents/${id}`,
+    statutory_document: `${homePrefix}/statutory-documents/${id}`,
+    therapy: `${homePrefix}/therapy/${id}`,
+    team: `${homePrefix}/team/${id}`,
+    supervision: `${homePrefix}/supervisions/${id}`,
+    compliance: `${homePrefix}/compliance/${id}`,
+    compliance_item: `${homePrefix}/compliance/${id}`,
+    audit: `${homePrefix}/audits/${id}`,
+    report: `${homePrefix}/reports/${id}`,
+    handover: `${homePrefix}/handover/${id}`,
+    handover_record: `${homePrefix}/handover/${id}`,
+    shift_log: `${homePrefix}/shift-logs/${id}`,
+    onboarding: `${homePrefix}/onboarding/${id}`,
+    notification: `${homePrefix}/notifications/${id}`,
+    home_notification: `${homePrefix}/home-notifications/${id}`,
+    operational_notification: `${homePrefix}/operational-notifications/${id}`,
+    finance: `${homePrefix}/finance/${id}`,
   };
 
   if (scope === "child") {
@@ -309,88 +331,100 @@ function buildScopedDetailUrl(recordType, id) {
   return homeRoutes[recordType] || childRoutes[recordType] || null;
 }
 
-function buildScopedWorkflowUrl(recordType, id, action) {
+function buildScopedWorkflowUrl(recordType, id, action, item = {}) {
   const childBase = getChildScopedBase();
   const homeBase = getHomeScopedBase();
   const scope = getCurrentScope();
 
+  const youngPersonId =
+    item.young_person_id ||
+    item.child_id ||
+    state.selectedYoungPerson?.id ||
+    state.currentYoungPersonId ||
+    state.youngPersonId;
+
+  const homeId = item.home_id || state.currentHomeId || state.homeId;
+
+  const childPrefix = youngPersonId ? `${childBase}/${youngPersonId}` : childBase;
+  const homePrefix = homeId ? `${homeBase}/${homeId}` : homeBase;
+
   const childActions = {
     daily_note: {
-      submit: `${childBase}/daily-notes/${id}/submit`,
-      approve: `${childBase}/daily-notes/${id}/approve`,
-      return: `${childBase}/daily-notes/${id}/return`,
-      archive: `${childBase}/daily-notes/${id}/archive`,
+      submit: `${childPrefix}/daily-notes/${id}/submit`,
+      approve: `${childPrefix}/daily-notes/${id}/approve`,
+      return: `${childPrefix}/daily-notes/${id}/return`,
+      archive: `${childPrefix}/daily-notes/${id}/archive`,
     },
     incident: {
-      submit: `${childBase}/incidents/${id}/submit`,
-      approve: `${childBase}/incidents/${id}/approve`,
-      return: `${childBase}/incidents/${id}/return`,
-      archive: `${childBase}/incidents/${id}/archive`,
+      submit: `${childPrefix}/incidents/${id}/submit`,
+      approve: `${childPrefix}/incidents/${id}/approve`,
+      return: `${childPrefix}/incidents/${id}/return`,
+      archive: `${childPrefix}/incidents/${id}/archive`,
     },
     support_plan: {
-      submit: `${childBase}/plans/${id}/submit`,
-      approve: `${childBase}/plans/${id}/approve`,
-      return: `${childBase}/plans/${id}/return`,
-      archive: `${childBase}/plans/${id}/archive`,
+      submit: `${childPrefix}/plans/${id}/submit`,
+      approve: `${childPrefix}/plans/${id}/approve`,
+      return: `${childPrefix}/plans/${id}/return`,
+      archive: `${childPrefix}/plans/${id}/archive`,
     },
     risk: {
-      submit: `${childBase}/risks/${id}/submit`,
-      approve: `${childBase}/risks/${id}/approve`,
-      return: `${childBase}/risks/${id}/return`,
-      archive: `${childBase}/risks/${id}/archive`,
+      submit: `${childPrefix}/risk/${id}/submit`,
+      approve: `${childPrefix}/risk/${id}/approve`,
+      return: `${childPrefix}/risk/${id}/return`,
+      archive: `${childPrefix}/risk/${id}/archive`,
     },
     appointment: {
-      approve: `${childBase}/appointments/${id}/complete`,
-      return: `${childBase}/appointments/${id}/cancel`,
+      approve: `${childPrefix}/appointments/${id}/complete`,
+      return: `${childPrefix}/appointments/${id}/cancel`,
     },
     keywork: {
-      submit: `${childBase}/keywork/${id}/submit`,
-      approve: `${childBase}/keywork/${id}/approve`,
-      return: `${childBase}/keywork/${id}/return`,
-      archive: `${childBase}/keywork/${id}/archive`,
+      submit: `${childPrefix}/keywork/${id}/submit`,
+      approve: `${childPrefix}/keywork/${id}/approve`,
+      return: `${childPrefix}/keywork/${id}/return`,
+      archive: `${childPrefix}/keywork/${id}/archive`,
     },
     safeguarding_record: {
-      submit: `${childBase}/safeguarding-records/${id}/submit`,
-      approve: `${childBase}/safeguarding-records/${id}/approve`,
-      return: `${childBase}/safeguarding-records/${id}/return`,
-      archive: `${childBase}/safeguarding-records/${id}/archive`,
+      submit: `${childPrefix}/safeguarding/${id}/submit`,
+      approve: `${childPrefix}/safeguarding/${id}/approve`,
+      return: `${childPrefix}/safeguarding/${id}/return`,
+      archive: `${childPrefix}/safeguarding/${id}/archive`,
     },
     missing_episode: {
-      submit: `${childBase}/missing-episodes/${id}/submit`,
-      approve: `${childBase}/missing-episodes/${id}/approve`,
-      return: `${childBase}/missing-episodes/${id}/return`,
-      archive: `${childBase}/missing-episodes/${id}/archive`,
+      submit: `${childPrefix}/missing-episodes/${id}/submit`,
+      approve: `${childPrefix}/missing-episodes/${id}/approve`,
+      return: `${childPrefix}/missing-episodes/${id}/return`,
+      archive: `${childPrefix}/missing-episodes/${id}/archive`,
     },
   };
 
   const homeActions = {
     daily_note: {
-      submit: `${homeBase}/daily-notes/${id}/submit`,
-      approve: `${homeBase}/daily-notes/${id}/approve`,
-      return: `${homeBase}/daily-notes/${id}/return`,
-      archive: `${homeBase}/daily-notes/${id}/archive`,
+      submit: `${homePrefix}/daily-notes/${id}/submit`,
+      approve: `${homePrefix}/daily-notes/${id}/approve`,
+      return: `${homePrefix}/daily-notes/${id}/return`,
+      archive: `${homePrefix}/daily-notes/${id}/archive`,
     },
     incident: {
-      submit: `${homeBase}/incidents/${id}/submit`,
-      approve: `${homeBase}/incidents/${id}/approve`,
-      return: `${homeBase}/incidents/${id}/return`,
-      archive: `${homeBase}/incidents/${id}/archive`,
+      submit: `${homePrefix}/incidents/${id}/submit`,
+      approve: `${homePrefix}/incidents/${id}/approve`,
+      return: `${homePrefix}/incidents/${id}/return`,
+      archive: `${homePrefix}/incidents/${id}/archive`,
     },
     support_plan: {
-      submit: `${homeBase}/plans/${id}/submit`,
-      approve: `${homeBase}/plans/${id}/approve`,
-      return: `${homeBase}/plans/${id}/return`,
-      archive: `${homeBase}/plans/${id}/archive`,
+      submit: `${homePrefix}/plans/${id}/submit`,
+      approve: `${homePrefix}/plans/${id}/approve`,
+      return: `${homePrefix}/plans/${id}/return`,
+      archive: `${homePrefix}/plans/${id}/archive`,
     },
     risk: {
-      submit: `${homeBase}/risks/${id}/submit`,
-      approve: `${homeBase}/risks/${id}/approve`,
-      return: `${homeBase}/risks/${id}/return`,
-      archive: `${homeBase}/risks/${id}/archive`,
+      submit: `${homePrefix}/risks/${id}/submit`,
+      approve: `${homePrefix}/risks/${id}/approve`,
+      return: `${homePrefix}/risks/${id}/return`,
+      archive: `${homePrefix}/risks/${id}/archive`,
     },
     appointment: {
-      approve: `${homeBase}/appointments/${id}/complete`,
-      return: `${homeBase}/appointments/${id}/cancel`,
+      approve: `${homePrefix}/appointments/${id}/complete`,
+      return: `${homePrefix}/appointments/${id}/cancel`,
     },
   };
 
@@ -405,108 +439,28 @@ function buildScopedWorkflowUrl(recordType, id, action) {
 /* --------------------------- record type normalise ----------------------- */
 
 export function normaliseRecordType(item = {}) {
-  const raw = lower(
+  if (typeof item === "string") {
+    return normaliseContractRecordType(item);
+  }
+
+  return normaliseContractRecordType(
     item.record_type ||
+      item.type ||
       item.primary_record_type ||
       item.source_table ||
       item.event_type ||
       item.category ||
-      item.type ||
       ""
   );
-
-  const map = {
-    plan: "support_plan",
-    support_plans: "support_plan",
-    support_plan: "support_plan",
-    daily_notes: "daily_note",
-    daily_note: "daily_note",
-    incidents: "incident",
-    incident: "incident",
-    risk_assessment: "risk",
-    risk_assessments: "risk",
-    risks: "risk",
-    risk: "risk",
-    health_records: "health_record",
-    health_record: "health_record",
-    education_records: "education_record",
-    education_record: "education_record",
-    family_contact_records: "family_contact",
-    family_contact_record: "family_contact",
-    family_contact: "family_contact",
-    contact: "family_contact",
-    keywork_sessions: "keywork",
-    keywork_session: "keywork",
-    keywork: "keywork",
-    ai_generated_reports: "report",
-    reports: "report",
-    report: "report",
-    chronology_events: "chronology_event",
-    chronology_event: "chronology_event",
-    compliance_items: "compliance_item",
-    compliance_item: "compliance_item",
-    young_person_appointments: "appointment",
-    appointments: "appointment",
-    appointment: "appointment",
-    safeguarding_records: "safeguarding_record",
-    safeguarding_record: "safeguarding_record",
-    missing_episodes: "missing_episode",
-    missing_episode: "missing_episode",
-    tasks: "task",
-    task: "task",
-    achievement_records: "achievement_record",
-    achievement_record: "achievement_record",
-    medication_profiles: "medication_profile",
-    medication_profile: "medication_profile",
-    medication_records: "medication_record",
-    medication_record: "medication_record",
-    communications: "communication",
-    communication: "communication",
-    documents: "document",
-    document: "document",
-    therapy_records: "therapy",
-    therapeutic_services: "therapy",
-    therapy_sessions: "therapy",
-    therapy: "therapy",
-    team_items: "team",
-    staff: "team",
-    team: "team",
-    supervisions: "supervision",
-    supervision_sessions: "supervision",
-    supervision: "supervision",
-    audits: "audit",
-    audit: "audit",
-    compliance: "compliance",
-    manager_actions: "manager_action",
-    manager_action: "manager_action",
-    onboarding: "onboarding",
-    onboarding_programmes: "onboarding",
-    onboarding_plans: "onboarding",
-    notifications: "notification",
-    notification: "notification",
-    home_notifications: "home_notification",
-    operational_notifications: "operational_notification",
-    shift_logs: "shift_log",
-    shift_log: "shift_log",
-    handover: "handover",
-    handovers: "handover",
-    petty_cash_transactions: "finance",
-    purchase_requests: "finance",
-    allowance_payments: "finance",
-    young_person_financial_transactions: "finance",
-    finance: "finance",
-  };
-
-  return map[raw] || raw;
 }
 
 /* ------------------------------ record ids ------------------------------- */
 
 export function getRecordId(item = {}) {
   return firstDefined(
+    item.id,
     item.record_id,
     item.source_id,
-    item.id,
     item.incident_id,
     item.task_id,
     item.document_id,
@@ -515,16 +469,18 @@ export function getRecordId(item = {}) {
 }
 
 export function getRecordUrl(item = {}) {
-  const type = normaliseRecordType(item);
-  const id = getRecordId(item);
+  const normalised = item?.raw ? item : normaliseDisplayRecord(item);
+  const type = normalised.type || normaliseRecordType(item);
+  const id = getRecordId(normalised) || getRecordId(normalised.raw || item);
   if (!id) return null;
-  return buildScopedDetailUrl(type, id);
+  return buildScopedDetailUrl(type, id, normalised.raw || item);
 }
 
 /* ----------------------------- drawer content ---------------------------- */
 
 function buildSubtitle(type, item = {}, detail = {}) {
   const dateValue = firstDefined(
+    item.date,
     item.event_datetime,
     item.start_datetime,
     item.contact_datetime,
@@ -537,6 +493,7 @@ function buildSubtitle(type, item = {}, detail = {}) {
     item.note_date,
     item.incident_datetime,
     item.created_at,
+    detail.date,
     detail.event_datetime,
     detail.start_datetime,
     detail.contact_datetime,
@@ -550,8 +507,8 @@ function buildSubtitle(type, item = {}, detail = {}) {
   );
 
   const status = firstDefined(
-    item.workflow_status,
     item.status,
+    item.workflow_status,
     item.approval_status,
     detail.workflow_status,
     detail.status,
@@ -597,6 +554,7 @@ function detailObjectFromResponse(data = {}) {
     data.medication_record ||
     data.communication ||
     data.document ||
+    data.statutory_document ||
     data.therapy ||
     data.team ||
     data.supervision ||
@@ -606,6 +564,8 @@ function detailObjectFromResponse(data = {}) {
     data.notification ||
     data.home_notification ||
     data.operational_notification ||
+    data.handover ||
+    data.handover_record ||
     data.item ||
     data.record ||
     data
@@ -623,6 +583,80 @@ function renderRichEmptyState(title, message) {
     </div>
   `;
 }
+
+const DRAWER_HIDDEN_KEYS = new Set([
+  "id",
+  "young_person_id",
+  "home_id",
+  "provider_id",
+  "created_by",
+  "updated_by",
+  "_local_only",
+  "raw",
+]);
+
+const DRAWER_PRIORITY_FIELDS = {
+  daily_note: [
+    "presentation",
+    "activities",
+    "young_person_voice",
+    "behaviour_update",
+    "actions_required",
+    "positives",
+  ],
+  incident: [
+    "description",
+    "antecedent",
+    "presentation",
+    "child_voice",
+    "staff_response",
+    "outcome",
+    "actions_taken",
+  ],
+  health_record: ["summary", "child_voice", "outcome", "professional_name", "next_action_date"],
+  education_record: [
+    "learning_engagement",
+    "behaviour_summary",
+    "child_voice",
+    "achievement_note",
+    "action_taken",
+    "issue_raised",
+  ],
+  family_contact: [
+    "pre_contact_presentation",
+    "post_contact_presentation",
+    "child_voice",
+    "concerns",
+    "follow_up_required",
+  ],
+  keywork: ["purpose", "summary", "child_voice", "reflective_analysis", "actions_agreed"],
+  safeguarding_record: [
+    "concern_details",
+    "disclosure_details",
+    "immediate_action_taken",
+    "referral_details",
+    "outcome",
+  ],
+  missing_episode: [
+    "trigger_factors",
+    "push_pull_factors",
+    "actions_taken",
+    "child_voice",
+    "outcome",
+  ],
+  medication_profile: ["medication_name", "dosage", "route", "frequency", "prn_guidance", "notes"],
+  medication_record: [
+    "medication_name",
+    "dose",
+    "status",
+    "scheduled_time",
+    "administered_time",
+    "refusal_reason",
+    "omission_reason",
+    "error_details",
+  ],
+  handover_record: ["shift", "summary", "risks", "actions_required", "handover_notes"],
+};
 
 function renderObjectValue(value) {
   if (value === null || value === undefined || value === "") return "—";
@@ -643,23 +677,47 @@ function renderObjectValue(value) {
   return escapeHtml(String(value));
 }
 
-function renderDetailRows(detail = {}) {
-  const rows = Object.entries(detail).filter(
+function detailRows(detail = {}) {
+  return Object.entries(detail).filter(
     ([key, value]) =>
-      ![
-        "id",
-        "young_person_id",
-        "home_id",
-        "created_by",
-        "updated_by",
-        "_local_only",
-      ].includes(key) &&
-      value !== null &&
-      value !== "" &&
-      value !== undefined
+      !DRAWER_HIDDEN_KEYS.has(key) && value !== null && value !== "" && value !== undefined
   );
+}
 
-  if (!rows.length) {
+function splitDetailRows(type, detail = {}) {
+  const rows = detailRows(detail);
+  const preferred = DRAWER_PRIORITY_FIELDS[type] || [];
+  if (!preferred.length) {
+    return { primaryRows: rows, supportingRows: [] };
+  }
+
+  const preferredSet = new Set(preferred);
+  const sortedPrimaryRows = preferred
+    .map((field) => rows.find(([key]) => key === field))
+    .filter(Boolean);
+  const supportingRows = rows.filter(([key]) => !preferredSet.has(key));
+  return { primaryRows: sortedPrimaryRows, supportingRows };
+}
+
+function renderRowsBlock(rows = []) {
+  if (!rows.length) return "";
+  return rows
+    .map(
+      ([key, value]) => `
+        <div class="drawer-detail-row">
+          <div class="drawer-detail-key">${escapeHtml(prettifyKey(key))}</div>
+          <div class="drawer-detail-value">${renderObjectValue(value)}</div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderDetailRows(type, detail = {}) {
+  const { primaryRows, supportingRows } = splitDetailRows(type, detail);
+  const combinedRows = [...primaryRows, ...supportingRows];
+
+  if (!combinedRows.length) {
     return `
       <div class="drawer-detail-list">
         <div class="drawer-detail-row">
@@ -672,24 +730,34 @@ function renderDetailRows(detail = {}) {
 
   return `
     <div class="drawer-detail-list">
-      ${rows
-        .map(
-          ([key, value]) => `
-            <div class="drawer-detail-row">
-              <div class="drawer-detail-key">${escapeHtml(prettifyKey(key))}</div>
-              <div class="drawer-detail-value">${renderObjectValue(value)}</div>
-            </div>
-          `
-        )
-        .join("")}
+      ${
+        primaryRows.length
+          ? `
+        <section class="drawer-detail-group drawer-detail-group--primary">
+          <h4>Key details</h4>
+          ${renderRowsBlock(primaryRows)}
+        </section>
+      `
+          : ""
+      }
+      ${
+        supportingRows.length
+          ? `
+        <section class="drawer-detail-group">
+          <h4>Additional detail</h4>
+          ${renderRowsBlock(supportingRows)}
+        </section>
+      `
+          : ""
+      }
     </div>
   `;
 }
 
-function renderDrawerSection(detail = {}) {
+function renderDrawerSection(type, detail = {}) {
   return `
     <section class="drawer-content-card">
-      ${renderDetailRows(detail)}
+      ${renderDetailRows(type, detail)}
     </section>
   `;
 }
@@ -716,13 +784,14 @@ export function closeDrawer() {
 }
 
 function setDrawerButtons(type) {
-  const id = getRecordId(state.activeRecordItem || {});
+  const active = state.activeRecordItem || {};
+  const id = getRecordId(active);
   const hasWorkflow = Boolean(
     id &&
-      (buildScopedWorkflowUrl(type, id, "submit") ||
-        buildScopedWorkflowUrl(type, id, "approve") ||
-        buildScopedWorkflowUrl(type, id, "return") ||
-        buildScopedWorkflowUrl(type, id, "archive"))
+      (buildScopedWorkflowUrl(type, id, "submit", active) ||
+        buildScopedWorkflowUrl(type, id, "approve", active) ||
+        buildScopedWorkflowUrl(type, id, "return", active) ||
+        buildScopedWorkflowUrl(type, id, "archive", active))
   );
 
   els.drawerActions?.classList.toggle("hidden", !hasWorkflow);
@@ -731,19 +800,19 @@ function setDrawerButtons(type) {
 
   els.drawerSubmitBtn?.classList.toggle(
     "hidden",
-    !buildScopedWorkflowUrl(type, id, "submit")
+    !buildScopedWorkflowUrl(type, id, "submit", active)
   );
   els.drawerApproveBtn?.classList.toggle(
     "hidden",
-    !buildScopedWorkflowUrl(type, id, "approve")
+    !buildScopedWorkflowUrl(type, id, "approve", active)
   );
   els.drawerReturnBtn?.classList.toggle(
     "hidden",
-    !buildScopedWorkflowUrl(type, id, "return")
+    !buildScopedWorkflowUrl(type, id, "return", active)
   );
   els.drawerArchiveBtn?.classList.toggle(
     "hidden",
-    !buildScopedWorkflowUrl(type, id, "archive")
+    !buildScopedWorkflowUrl(type, id, "archive", active)
   );
 
   if (type === "appointment") {
@@ -797,12 +866,16 @@ function shouldShowSuggestionsForType(type) {
     "task",
     "communication",
     "document",
+    "statutory_document",
     "therapy",
     "supervision",
     "audit",
     "compliance",
     "compliance_item",
     "manager_action",
+    "handover",
+    "handover_record",
+    "medication_record",
   ].includes(type);
 }
 
@@ -813,16 +886,19 @@ async function fetchRecordDetail(url) {
     throw new Error("No detail URL available for this record.");
   }
 
-  return apiGet(url);
+  return apiGet(url, { skipCache: true });
 }
 
 /* ------------------------------ public api ------------------------------- */
 
 export async function openRecordDetail(item) {
-  const type = normaliseRecordType(item);
-  const url = getRecordUrl(item);
+  const normalised = normaliseDisplayRecord(item);
+  const meta = buildRecordDisplayMeta(normalised);
+  const type = normalised.type || normaliseRecordType(item);
+  const rawItem = normalised.raw || item;
+  const url = getRecordUrl(normalised);
 
-  state.activeRecordItem = item;
+  state.activeRecordItem = normalised;
   state.activeRecordType = type;
 
   openDrawer();
@@ -830,13 +906,7 @@ export async function openRecordDetail(item) {
   setDrawerWorkflowBusy(false);
 
   if (els.drawerTitle) {
-    els.drawerTitle.textContent =
-      item.title ||
-      item.name ||
-      item.staff_member ||
-      item.young_person_name ||
-      RECORD_CONFIG[type]?.label ||
-      "Details";
+    els.drawerTitle.textContent = meta.title || RECORD_CONFIG[type]?.label || "Details";
   }
 
   if (els.drawerSubtitle) {
@@ -855,31 +925,32 @@ export async function openRecordDetail(item) {
   }
 
   try {
-    if (!url || item?._local_only) {
+    if (!url || rawItem?._local_only) {
       const fallbackDetail = {
-        ...item,
-        detail_status: item?._local_only ? "local_preview" : "preview_only",
-        detail_note: item?._local_only
+        ...rawItem,
+        detail_status: rawItem?._local_only ? "local_preview" : "preview_only",
+        detail_note: rawItem?._local_only
           ? "This record is currently stored locally because no live endpoint was available."
-          : "This item does not yet have a dedicated detail endpoint.",
+          : "This item is being shown from the normalised record data.",
       };
 
       if (els.drawerTitle) {
         els.drawerTitle.textContent =
-          item.title ||
-          item.name ||
-          item.staff_member ||
-          item.young_person_name ||
+          meta.title ||
+          rawItem.title ||
+          rawItem.name ||
+          rawItem.staff_member ||
+          rawItem.young_person_name ||
           RECORD_CONFIG[type]?.label ||
           "Details";
       }
 
       if (els.drawerSubtitle) {
-        els.drawerSubtitle.textContent = buildSubtitle(type, item, fallbackDetail);
+        els.drawerSubtitle.textContent = buildSubtitle(type, normalised, fallbackDetail);
       }
 
       if (els.drawerBody) {
-        els.drawerBody.innerHTML = renderDrawerSection(fallbackDetail);
+        els.drawerBody.innerHTML = renderDrawerSection(type, fallbackDetail);
       }
 
       hideSuggestionsPanelSafe();
@@ -891,7 +962,7 @@ export async function openRecordDetail(item) {
 
     if (els.drawerTitle) {
       els.drawerTitle.textContent =
-        item.title ||
+        meta.title ||
         detail.title ||
         detail.name ||
         detail.incident_type ||
@@ -903,15 +974,15 @@ export async function openRecordDetail(item) {
     }
 
     if (els.drawerSubtitle) {
-      els.drawerSubtitle.textContent = buildSubtitle(type, item, detail);
+      els.drawerSubtitle.textContent = buildSubtitle(type, normalised, detail);
     }
 
     if (els.drawerBody) {
-      els.drawerBody.innerHTML = renderDrawerSection(detail);
+      els.drawerBody.innerHTML = renderDrawerSection(type, detail);
     }
 
     if (shouldShowSuggestionsForType(type)) {
-      const suggestionRecord = buildSuggestionContext(type, detail, item);
+      const suggestionRecord = buildSuggestionContext(type, detail, rawItem);
       const suggestions = mergeSuggestionLists(
         evaluateRecordSuggestions(suggestionRecord)
       );
@@ -929,15 +1000,23 @@ export async function openRecordDetail(item) {
       hideSuggestionsPanelSafe();
     }
   } catch (error) {
+    const fallbackDetail = {
+      ...rawItem,
+      detail_status: "loaded_from_normalised_record",
+      detail_note:
+        "The detail endpoint was unavailable, so IndiCare displayed the normalised record data instead.",
+    };
+
+    if (els.drawerTitle) {
+      els.drawerTitle.textContent = meta.title || RECORD_CONFIG[type]?.label || "Details";
+    }
+
     if (els.drawerSubtitle) {
-      els.drawerSubtitle.textContent = "Unable to load";
+      els.drawerSubtitle.textContent = buildSubtitle(type, normalised, fallbackDetail);
     }
 
     if (els.drawerBody) {
-      els.drawerBody.innerHTML = renderRichEmptyState(
-        "Record unavailable",
-        error.message || "Failed to load record details."
-      );
+      els.drawerBody.innerHTML = renderDrawerSection(type, fallbackDetail);
     }
 
     hideSuggestionsPanelSafe();
@@ -957,7 +1036,7 @@ export async function runDrawerWorkflow(action) {
     throw new Error("No record ID is available.");
   }
 
-  const url = buildScopedWorkflowUrl(type, id, action);
+  const url = buildScopedWorkflowUrl(type, id, action, item.raw || item);
 
   if (!url) {
     throw new Error(`No workflow action is configured for "${action}".`);
@@ -987,7 +1066,7 @@ export function bindRecordDrawerEvents({ onEdit, onWorkflowComplete } = {}) {
 
   els.drawerEditBtn?.addEventListener("click", () => {
     if (!state.activeRecordItem || !state.activeRecordType) return;
-    onEdit?.(state.activeRecordType, state.activeRecordItem);
+    onEdit?.(state.activeRecordType, state.activeRecordItem.raw || state.activeRecordItem);
   });
 
   const handleWorkflowAction = async (action) => {

@@ -1,0 +1,285 @@
+/* =========================================================
+   IndiCare Academy
+   Inline Training Centre styles
+   This lets the Academy sit inside the existing IndiCare
+   workspace before the full standalone flow is finished.
+========================================================= */
+
+.academy-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.academy-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.academy-grid--stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.academy-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.academy-panel,
+.academy-stat-card,
+.academy-row-card {
+  background: #ffffff;
+  border: 1px solid #d9e1ea;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(22, 32, 42, 0.06);
+}
+
+.academy-panel__header,
+.academy-panel__body {
+  padding: 20px;
+}
+
+.academy-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e7edf3;
+}
+
+.academy-panel__title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #16202a;
+}
+
+.academy-panel__subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #5e6a79;
+}
+
+.academy-stat-card {
+  padding: 20px;
+}
+
+.academy-stat-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #5e6a79;
+}
+
+.academy-stat-card__value {
+  margin-top: 12px;
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 800;
+  color: #16202a;
+}
+
+.academy-stat-card__meta {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #5e6a79;
+}
+
+.academy-row-card {
+  padding: 16px;
+}
+
+.academy-row-card__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #16202a;
+}
+
+.academy-row-card__meta {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #5e6a79;
+}
+
+.academy-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.academy-empty-state {
+  padding: 24px;
+  border: 1px dashed #c8d3df;
+  border-radius: 14px;
+  background: #f8fafc;
+  text-align: center;
+  font-size: 14px;
+  color: #5e6a79;
+}
+
+.academy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.academy-button:hover {
+  transform: translateY(-1px);
+}
+
+.academy-button--ghost {
+  color: #2563eb;
+  background: transparent;
+}
+
+.academy-button--ghost:hover {
+  background: #eaf1ff;
+}
+
+.academy-button--primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.academy-button--primary:hover {
+  background: #1d4ed8;
+}
+
+.academy-button--secondary {
+  background: #ffffff;
+  color: #16202a;
+  border-color: #c8d3df;
+}
+
+.academy-button--secondary:hover {
+  background: #f8fafc;
+}
+
+.academy-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.academy-badge--neutral {
+  background: #eef2f7;
+  color: #475569;
+}
+
+.academy-badge--success {
+  background: #e8f7ed;
+  color: #15803d;
+}
+
+.academy-badge--warning {
+  background: #fff7e8;
+  color: #b45309;
+}
+
+.academy-badge--danger {
+  background: #feecec;
+  color: #b91c1c;
+}
+
+.academy-badge--primary {
+  background: #eaf1ff;
+  color: #1d4ed8;
+}
+
+/* Optional table styles for later screens */
+.academy-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.academy-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.academy-table th,
+.academy-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #e7edf3;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.academy-table th {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #5e6a79;
+  background: #f8fafc;
+}
+
+/* Progress styles for qualification cards later */
+.academy-progress {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7edf3;
+}
+
+.academy-progress__bar {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: #2563eb;
+  transition: width 200ms ease;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .academy-grid--stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .academy-grid--two,
+  .academy-grid--stats {
+    grid-template-columns: 1fr;
+  }
+
+  .academy-panel__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .academy-panel__header,
+  .academy-panel__body,
+  .academy-stat-card {
+    padding: 16px;
+  }
+
+  .academy-button {
+    width: 100%;
+  }
+}

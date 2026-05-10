@@ -24,14 +24,34 @@ function getCurrentScope() {
 }
 
 function getHomeId() {
-  return (
+  const toSafeHomeId = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  const preferredHomeId = toSafeHomeId(
     state.readinessSelectedHomeId ||
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    state.selectedYoungPerson?.home_id ||
-    null
+      state.homeId ||
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      state.selectedYoungPerson?.home_id ||
+      null
   );
+
+  const allowedHomeIds = Array.isArray(state.allowedHomeIds)
+    ? state.allowedHomeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    : [];
+
+  if (allowedHomeIds.length) {
+    if (preferredHomeId && allowedHomeIds.includes(preferredHomeId)) {
+      return preferredHomeId;
+    }
+    return allowedHomeIds[0];
+  }
+
+  return preferredHomeId;
 }
 
 function getScopeEntityId() {
@@ -181,6 +201,7 @@ function getRowDate(item = {}) {
     item.action_at ||
     item.task_due_date ||
     item.action_due_date ||
+    item.task_created_at ||
     item.created_at ||
     item.updated_at ||
     ""
@@ -254,8 +275,10 @@ function buildFallbackInspectionData(homeId) {
         overdue_actions: 2,
         critical_actions: 1,
         open_lines_of_enquiry: 3,
-        top_actions_summary: "Two overdue actions and one safeguarding-linked improvement priority.",
-        top_concerns: "Return interview follow-up and evidence freshness remain the main pressure points.",
+        top_actions_summary:
+          "Two overdue actions and one safeguarding-linked improvement priority.",
+        top_concerns:
+          "Return interview follow-up and evidence freshness remain the main pressure points.",
         scored_at: minusDays(1),
       },
     ],
@@ -284,7 +307,7 @@ function buildFallbackInspectionData(homeId) {
       top_concerns:
         "Return interviews and action follow-up remain the strongest pressure points.",
       top_actions_text:
-        "Close overdue return-interview actions and tighten evidence freshness in safeguarding oversight.",
+        "Close overdue safeguarding-linked actions and refresh stale evidence in oversight.",
       narrative_summary:
         "The home shows stable care and warm relationships, with most pressure sitting in follow-up discipline rather than core care quality.",
       strengths_summary:
@@ -292,6 +315,7 @@ function buildFallbackInspectionData(homeId) {
       concerns_summary:
         "Some actions remain overdue and evidence is not always refreshed quickly enough.",
       scored_at: minusDays(1),
+      next_action_due_date: plusDays(2),
     },
     sections: [
       {
@@ -1333,7 +1357,7 @@ function renderInspectionDetail({
       <div class="overview-stats-grid">
         ${renderStatCard("Overall band", formatBand(topBand), `Score ${formatNumber(topScore)}`, getGradeTone(topBand))}
         ${renderStatCard("Confidence", formatNumber(confidenceScore), "Inspection confidence", getConfidenceTone(confidenceScore))}
-        ${renderStatCard("Open actions", detail.open_actions || 0, `${detail.overdue_actions || 0} overdue`, Number(detail.overdue_actions || 0) > 0 ? "warning" : "muted")}
+        ${renderStatCard("Open actions", detail.open_actions || actions.length || 0, `${detail.overdue_actions || 0} overdue`, Number(detail.overdue_actions || 0) > 0 ? "warning" : "muted")}
         ${renderStatCard("Critical actions", detail.critical_actions || 0, `${detail.open_lines_of_enquiry || 0} open lines of enquiry`, Number(detail.critical_actions || 0) > 0 ? "warning" : "muted")}
       </div>
 
@@ -1439,16 +1463,20 @@ function getInspectionEndpoints(homeId) {
 
   return {
     ...base,
-    homeCards: base.homeCards || "/inspection/ui/home-cards",
-    homeHeader: base.homeHeader || `/inspection/ui/homes/${base.homeId}/header`,
-    sectionPanels: base.sectionPanels || `/inspection/ui/homes/${base.homeId}/sections`,
-    reasons: base.reasons || `/inspection/ui/homes/${base.homeId}/reasons`,
-    actions: base.actions || `/inspection/ui/homes/${base.homeId}/actions`,
-    tasks: base.tasks || `/inspection/ui/homes/${base.homeId}/tasks`,
-    briefing: base.briefing || `/inspection/ui/homes/${base.homeId}/briefing`,
-    prep72h: base.prep72h || `/inspection/ui/homes/${base.homeId}/prep-72h`,
-    refreshCycle: base.refreshCycle || base.refresh || null,
-    syncTasks: base.syncTasks || base.sync || null,
+
+    // official config-backed endpoints
+    homeCards: "/inspection/ui/home-cards",
+    homeHeader: `/inspection/ui/homes/${base.homeId}/header`,
+    sectionPanels: `/inspection/ui/homes/${base.homeId}/sections`,
+    reasons: `/inspection/ui/homes/${base.homeId}/reasons`,
+    actions: `/inspection/ui/homes/${base.homeId}/actions`,
+    tasks: `/inspection/ui/homes/${base.homeId}/tasks`,
+    briefing: `/inspection/ui/homes/${base.homeId}/briefing`,
+    prep72h: `/inspection/ui/homes/${base.homeId}/prep-72h`,
+
+    // optional actions
+    refreshCycle: `/inspection/ui/homes/${base.homeId}/refresh`,
+    syncTasks: `/inspection/ui/homes/${base.homeId}/sync-tasks`,
   };
 }
 
@@ -1477,7 +1505,12 @@ function getLegacyReadinessEndpoints() {
 
 /* ----------------------------- summary helpers ---------------------------- */
 
-function updateReadinessSummaryFromInspection(detail = {}, actions = [], tasks = [], isFallback = false) {
+function updateReadinessSummaryFromInspection(
+  detail = {},
+  actions = [],
+  tasks = [],
+  isFallback = false
+) {
   const nextDue =
     actions.find((item) => item.due_date)?.due_date ||
     tasks.find((item) => item.task_due_date)?.task_due_date ||
@@ -1563,7 +1596,8 @@ async function tryLoadInspectionReadiness() {
   const endpoints = getInspectionEndpoints(homeId);
   if (!endpoints) return null;
 
-  const safeRead = (url) => (url ? apiGet(url).catch(() => null) : Promise.resolve(null));
+  const safeRead = (url) =>
+    url ? apiGet(url).catch(() => null) : Promise.resolve(null);
 
   const [
     cardsRes,
@@ -1587,7 +1621,7 @@ async function tryLoadInspectionReadiness() {
 
   const cards = dedupeBy(
     normaliseApiRows(cardsRes),
-    (row) => `card:${row.home_id}:${row.scored_at || ""}`
+    (row) => `card:${row.home_id}:${row.scored_at || row.updated_at || ""}`
   );
 
   const selectedCard = chooseSelectedHome(cards);
@@ -1766,16 +1800,20 @@ async function loadLegacyReadiness() {
 function bindInspectionReadinessEvents(endpoints) {
   if (!els.viewContent || !endpoints) return;
 
-  els.viewContent.querySelectorAll("[data-readiness-home-card]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const homeId = Number(button.dataset.homeId || 0);
-      if (!homeId) return;
-      state.readinessSelectedHomeId = homeId;
-      await loadReadiness();
+  els.viewContent
+    .querySelectorAll("[data-readiness-home-card]")
+    .forEach((button) => {
+      button.addEventListener("click", async () => {
+        const homeId = Number(button.dataset.homeId || 0);
+        if (!homeId) return;
+        state.readinessSelectedHomeId = homeId;
+        await loadReadiness();
+      });
     });
-  });
 
-  const refreshButton = els.viewContent.querySelector("[data-readiness-refresh='true']");
+  const refreshButton = els.viewContent.querySelector(
+    "[data-readiness-refresh='true']"
+  );
   if (refreshButton && endpoints.refreshCycle) {
     refreshButton.addEventListener("click", async () => {
       refreshButton.disabled = true;
@@ -1784,8 +1822,9 @@ function bindInspectionReadinessEvents(endpoints) {
         await apiSend(endpoints.refreshCycle, "POST", {}, {
           invalidatePrefixes: [
             "/inspection/ui",
-            `/inspection/ui/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
-            `/inspection/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
+            `/inspection/ui/homes/${Number(
+              state.readinessSelectedHomeId || getHomeId()
+            )}`,
             "/homes/",
           ],
         });
@@ -1808,8 +1847,9 @@ function bindInspectionReadinessEvents(endpoints) {
         await apiSend(endpoints.syncTasks, "POST", {}, {
           invalidatePrefixes: [
             "/inspection/ui",
-            `/inspection/ui/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
-            `/inspection/homes/${Number(state.readinessSelectedHomeId || getHomeId())}`,
+            `/inspection/ui/homes/${Number(
+              state.readinessSelectedHomeId || getHomeId()
+            )}`,
             "/homes/",
             "/tasks",
           ],
@@ -1888,7 +1928,10 @@ export async function loadReadiness() {
   try {
     const inspectionData = await tryLoadInspectionReadiness();
 
-    if (inspectionData && (getCurrentScope() === "home" || getCurrentScope() === "quality")) {
+    if (
+      inspectionData &&
+      (getCurrentScope() === "home" || getCurrentScope() === "quality")
+    ) {
       els.viewContent.innerHTML = renderInspectionWorkspace(inspectionData);
 
       updateReadinessSummaryFromInspection(

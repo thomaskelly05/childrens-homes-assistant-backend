@@ -440,14 +440,11 @@ function renderWorkspace(payload) {
 }
 
 async function fetchAll(youngPersonId) {
-  const [medRes, marRes] = await Promise.all([
-    safeGet(`/young-people/${youngPersonId}/medication`),
-    safeGet(`/young-people/${youngPersonId}/medication-administrations`),
-  ]);
+  const healthBundle = await safeGet(`/young-people/${youngPersonId}/health`);
 
   const data = {
-    medications: pickItems(medRes, ["medications", "medication_records", "items"]).map(mapMedication),
-    administrations: pickItems(marRes, ["medication_administrations", "administrations", "items"]).map(mapMedicationAdministration),
+    medications: pickItems(healthBundle, ["medication_profiles", "medications", "items"]).map(mapMedication),
+    administrations: pickItems(healthBundle, ["medication_records", "medication_administrations", "administrations", "items"]).map(mapMedicationAdministration),
   };
 
   if (!hasUsableData(data)) return buildFallbackData();

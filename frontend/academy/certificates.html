@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy • Certificates</title>
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+
+  <body class="academy-page">
+    <div class="academy-layout">
+      <header class="academy-page-header">
+        <div class="academy-page-header__inner">
+          <div>
+            <div class="academy-page-header__eyebrow">IndiCare Academy</div>
+            <h1>Certificates</h1>
+            <p class="academy-page-header__subtitle">
+              View awarded certificates from completed learning, qualifications and assessed evidence.
+            </p>
+          </div>
+
+          <div class="academy-page-header__actions">
+            <a class="academy-button academy-button--ghost" href="/academy">
+              Back to Academy
+            </a>
+            <button
+              id="academyCertificatesRefreshBtn"
+              type="button"
+              class="academy-button academy-button--secondary"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="academy-page-main">
+        <div id="academyCertificatesError"></div>
+
+        <section class="academy-panel">
+          <div class="academy-panel__body">
+            <div class="academy-form-grid academy-grid academy-grid--two">
+              <div class="academy-form-row">
+                <label for="academyCertificatesSearchInput">Search certificates</label>
+                <input
+                  id="academyCertificatesSearchInput"
+                  class="academy-input"
+                  type="text"
+                  placeholder="Search by title or certificate number"
+                />
+              </div>
+
+              <div class="academy-form-row">
+                <label for="academyCertificatesTypeFilter">Certificate type</label>
+                <select id="academyCertificatesTypeFilter" class="academy-select">
+                  <option value="">All certificates</option>
+                  <option value="module">Module certificate</option>
+                  <option value="qualification">Qualification certificate</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="academy-toolbar" style="margin-top: 16px;">
+              <button
+                id="academyCertificatesApplyBtn"
+                type="button"
+                class="academy-button"
+              >
+                Apply filters
+              </button>
+
+              <button
+                id="academyCertificatesClearBtn"
+                type="button"
+                class="academy-button academy-button--ghost"
+              >
+                Clear filters
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 28px;">
+          <div class="academy-section__header">
+            <h2>My certificates</h2>
+            <p id="academyCertificatesCountText">
+              Loading certificates…
+            </p>
+          </div>
+
+          <div id="academyCertificatesList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Loading certificate records…</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-certificates.js"></script>
+    <script src="/js/academy-nav.js"></script>
+  </body>
+
+
+
+  
+</html>

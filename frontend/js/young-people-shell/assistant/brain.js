@@ -27,16 +27,16 @@ function parseDateValue(value) {
   return Number.isNaN(time) ? 0 : time;
 }
 
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function unique(items = []) {
-  return [...new Set((items || []).filter(Boolean))];
+  return [...new Set(safeArray(items).filter(Boolean))];
 }
 
 function limit(items = [], max = 6) {
-  return Array.isArray(items) ? items.slice(0, max) : [];
-}
-
-function safeArray(value) {
-  return Array.isArray(value) ? value : [];
+  return safeArray(items).slice(0, max);
 }
 
 function buildCitation(item = {}) {
@@ -45,6 +45,7 @@ function buildCitation(item = {}) {
 
 function formatDate(value) {
   if (!value) return "date not recorded";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -54,12 +55,14 @@ function formatDate(value) {
   });
 }
 
+function daysBetween(dateValue, now = Date.now()) {
+  const time = parseDateValue(dateValue);
+  if (!time) return null;
+  return Math.floor((now - time) / 86400000);
+}
+
 function getAnalysisLens(options = {}) {
-  return (
-    options?.context?.analysis_lens ||
-    options?.analysis_lens ||
-    "general"
-  );
+  return options?.context?.analysis_lens || options?.analysis_lens || "general";
 }
 
 function buildAssistantDataset(payload = {}, options = {}) {
@@ -98,12 +101,31 @@ function summariseEvidence(evidence = []) {
     high_priority: 0,
     critical_priority: 0,
     missing_episodes: 0,
+    records_last_24h: 0,
+    records_last_7d: 0,
+    records_last_30d: 0,
+    latest_record_date: null,
+    oldest_record_date: null,
   };
+
+  const dated = safeArray(evidence)
+    .filter((item) => item.date && parseDateValue(item.date))
+    .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date));
+
+  if (dated.length) {
+    summary.oldest_record_date = dated[0].date;
+    summary.latest_record_date = dated[dated.length - 1].date;
+  }
 
   for (const item of safeArray(evidence)) {
     const tags = safeArray(item.tags);
     const type = item.record_type || "";
     const urgency = item.urgency || "";
+    const age = daysBetween(item.date);
+
+    if (age !== null && age <= 1) summary.records_last_24h += 1;
+    if (age !== null && age <= 7) summary.records_last_7d += 1;
+    if (age !== null && age <= 30) summary.records_last_30d += 1;
 
     if (tags.includes("status:overdue")) summary.overdue += 1;
     if (tags.includes("safeguarding")) summary.safeguarding += 1;
@@ -121,6 +143,35 @@ function summariseEvidence(evidence = []) {
   return summary;
 }
 
+function resolveConfidence(evidence = [], summary = summariseEvidence(evidence)) {
+  if (!summary.total) {
+    return {
+      confidence: "low",
+      confidence_reason:
+        "No scoped evidence is currently visible, so the assistant cannot give a reliable evidence-led answer.",
+    };
+  }
+
+  if (summary.total >= 20 && summary.records_last_30d >= 5) {
+    return {
+      confidence: "high",
+      confidence_reason: `Based on ${summary.total} scoped records, including ${summary.records_last_30d} from the last 30 days.`,
+    };
+  }
+
+  if (summary.total >= 5) {
+    return {
+      confidence: "medium",
+      confidence_reason: `Based on ${summary.total} scoped records. Some areas may still need checking against the full record.`,
+    };
+  }
+
+  return {
+    confidence: "low",
+    confidence_reason: `Only ${summary.total} scoped record(s) are visible, so this should be treated as a limited view.`,
+  };
+}
+
 function extractKeyInsights(evidence = [], lens = "general") {
   const items = safeArray(evidence);
   const insights = [];
@@ -130,7 +181,8 @@ function extractKeyInsights(evidence = [], lens = "general") {
     insights.push({
       type: "safeguarding",
       level: "high",
-      message: "Safeguarding-linked evidence is present and should be actively reviewed.",
+      message:
+        "Safeguarding-linked evidence is present and should be actively reviewed.",
     });
   }
 
@@ -138,7 +190,8 @@ function extractKeyInsights(evidence = [], lens = "general") {
     insights.push({
       type: "overdue",
       level: "medium",
-      message: "There are overdue items that may affect oversight, compliance or follow-up.",
+      message:
+        "There are overdue items that may affect oversight, compliance or follow-up.",
     });
   }
 
@@ -146,7 +199,8 @@ function extractKeyInsights(evidence = [], lens = "general") {
     insights.push({
       type: "incidents",
       level: "medium",
-      message: "Incident patterns should be reviewed alongside planning, chronology and daily care.",
+      message:
+        "Incident patterns should be reviewed alongside planning, chronology and daily care.",
     });
   }
 
@@ -154,7 +208,8 @@ function extractKeyInsights(evidence = [], lens = "general") {
     insights.push({
       type: "tasks",
       level: "medium",
-      message: "There are open tasks that may need clearer ownership or timescales.",
+      message:
+        "There are open tasks that may need clearer ownership or timescales.",
     });
   }
 
@@ -162,7 +217,8 @@ function extractKeyInsights(evidence = [], lens = "general") {
     insights.push({
       type: "strengths",
       level: "positive",
-      message: "There is positive evidence of achievement or progress that should be recognised.",
+      message:
+        "There is positive evidence of achievement or progress that should be recognised.",
     });
   }
 
@@ -170,7 +226,8 @@ function extractKeyInsights(evidence = [], lens = "general") {
     insights.push({
       type: "manager",
       level: "high",
-      message: "Critical-priority records suggest a need for active management grip and review.",
+      message:
+        "Critical-priority records suggest a need for active management grip and review.",
     });
   }
 
@@ -178,7 +235,8 @@ function extractKeyInsights(evidence = [], lens = "general") {
     insights.push({
       type: "quality",
       level: "high",
-      message: "Compliance-linked records should be checked for completeness, drift and inspection exposure.",
+      message:
+        "Compliance-linked records should be checked for completeness, drift and inspection exposure.",
     });
   }
 
@@ -221,52 +279,69 @@ function scoreEvidence(item = {}, intent = INTENT.unknown, lens = "general") {
   if (tags.includes("handover_relevant")) score += 4;
 
   if (intent === INTENT.chronology && item.date) score += 6;
+
   if (
     intent === INTENT.risk &&
     ["incident", "risk_assessment", "missing_episode", "safeguarding_record"].includes(recordType)
   ) {
     score += 8;
   }
+
   if (
     intent === INTENT.safeguarding &&
     ["incident", "missing_episode", "safeguarding_record"].includes(recordType)
   ) {
     score += 10;
   }
+
   if (
     intent === INTENT.handover &&
     ["daily_note", "incident", "appointment", "task", "handover_record"].includes(recordType)
   ) {
     score += 8;
   }
+
   if (
     intent === INTENT.manager &&
     ["task", "manager_action", "compliance_item", "incident"].includes(recordType)
   ) {
     score += 7;
   }
+
   if (
     intent === INTENT.quality &&
     ["audit", "compliance_item", "document", "reg44_item", "reg45_item", "reg40_item"].includes(recordType)
   ) {
     score += 8;
   }
+
   if (
     intent === INTENT.reg45 &&
-    ["monthly_review", "incident", "achievement_record", "education_record", "health_record", "family_contact_record", "risk_assessment"].includes(recordType)
+    [
+      "monthly_review",
+      "incident",
+      "achievement_record",
+      "education_record",
+      "health_record",
+      "family_contact_record",
+      "risk_assessment",
+    ].includes(recordType)
   ) {
     score += 8;
   }
+
   if (intent === INTENT.factual && item.date) score += 5;
 
   if (lens === "safeguarding" && tags.includes("safeguarding")) score += 5;
   if (lens === "manager" && (tags.includes("open_task") || tags.includes("status:overdue"))) score += 4;
+
   if (
     (lens === "quality" || lens === "inspection") &&
     ["compliance_item", "document", "audit"].includes(recordType)
   ) {
     score += 5;
   }
+
   if (lens === "shift" && ["daily_note", "incident", "appointment", "task"].includes(recordType)) {
     score += 4;
   }
@@ -287,37 +362,20 @@ function rankEvidence(evidence = [], intent = INTENT.unknown, lens = "general") 
 function buildThemes(evidence = [], lens = "general") {
   const themes = [];
 
-  const safeguardingCount = evidence.filter((x) => safeArray(x.tags).includes("safeguarding")).length;
-  const overdueCount = evidence.filter((x) => safeArray(x.tags).includes("status:overdue")).length;
-  const missingCount = evidence.filter((x) => x.record_type === "missing_episode").length;
-  const incidentCount = evidence.filter((x) => x.record_type === "incident").length;
-  const taskCount = evidence.filter((x) => safeArray(x.tags).includes("open_task")).length;
-  const achievementCount = evidence.filter((x) => x.record_type === "achievement_record").length;
-  const complianceCount = evidence.filter((x) => x.record_type === "compliance_item").length;
+  const safeguardingCount = evidence.filter((item) => safeArray(item.tags).includes("safeguarding")).length;
+  const overdueCount = evidence.filter((item) => safeArray(item.tags).includes("status:overdue")).length;
+  const missingCount = evidence.filter((item) => item.record_type === "missing_episode").length;
+  const incidentCount = evidence.filter((item) => item.record_type === "incident").length;
+  const taskCount = evidence.filter((item) => safeArray(item.tags).includes("open_task")).length;
+  const achievementCount = evidence.filter((item) => item.record_type === "achievement_record").length;
+  const complianceCount = evidence.filter((item) => item.record_type === "compliance_item").length;
 
-  if (safeguardingCount > 0) {
-    themes.push("There are safeguarding-linked records that need active oversight.");
-  }
-
-  if (incidentCount > 0) {
-    themes.push("There are incident patterns that should be reviewed alongside daily care and planning.");
-  }
-
-  if (missingCount > 0) {
-    themes.push("Missing-from-care history should be considered when reviewing safety, triggers and disruption patterns.");
-  }
-
-  if (overdueCount > 0) {
-    themes.push("Some follow-up, compliance or review activity appears overdue.");
-  }
-
-  if (taskCount > 0) {
-    themes.push("There are active tasks that may require clearer ownership or timescales.");
-  }
-
-  if (achievementCount > 0) {
-    themes.push("There is positive evidence of progress or achievement that should be recognised in planning and review.");
-  }
+  if (safeguardingCount > 0) themes.push("There are safeguarding-linked records that need active oversight.");
+  if (incidentCount > 0) themes.push("There are incident patterns that should be reviewed alongside daily care and planning.");
+  if (missingCount > 0) themes.push("Missing-from-care history should be considered when reviewing safety, triggers and disruption patterns.");
+  if (overdueCount > 0) themes.push("Some follow-up, compliance or review activity appears overdue.");
+  if (taskCount > 0) themes.push("There are active tasks that may require clearer ownership or timescales.");
+  if (achievementCount > 0) themes.push("There is positive evidence of progress or achievement that should be recognised in planning and review.");
 
   if ((lens === "quality" || lens === "inspection") && complianceCount > 0) {
     themes.push("Compliance-related material should be checked for drift, sufficiency and inspection exposure.");
@@ -329,39 +387,34 @@ function buildThemes(evidence = [], lens = "general") {
 function buildStrengths(evidence = []) {
   const strengths = [];
 
-  const achievements = evidence.filter((x) => x.record_type === "achievement_record");
+  const achievements = evidence.filter((item) => item.record_type === "achievement_record");
   const positiveNotes = evidence.filter(
-    (x) =>
-      x.record_type === "daily_note" &&
-      /positive|settled|engaged|calm|achieved|enjoyed|proud|well/i.test(x.summary || "")
+    (item) =>
+      item.record_type === "daily_note" &&
+      /positive|settled|engaged|calm|achieved|enjoyed|proud|well/i.test(item.summary || "")
   );
   const education = evidence.filter(
-    (x) => x.record_type === "education_record" && /engagement|achievement|progress/i.test(x.summary || "")
+    (item) =>
+      item.record_type === "education_record" &&
+      /engagement|achievement|progress/i.test(item.summary || "")
   );
 
-  if (achievements.length) {
-    strengths.push("Achievements are recorded, which supports a strengths-based picture of progress.");
-  }
-
-  if (positiveNotes.length) {
-    strengths.push("Daily recording shows positive moments or settled presentation that can be built on.");
-  }
-
-  if (education.length) {
-    strengths.push("There is evidence of educational engagement or progress that should be reinforced.");
-  }
+  if (achievements.length) strengths.push("Achievements are recorded, which supports a strengths-based picture of progress.");
+  if (positiveNotes.length) strengths.push("Daily recording shows positive moments or settled presentation that can be built on.");
+  if (education.length) strengths.push("There is evidence of educational engagement or progress that should be reinforced.");
 
   return strengths;
 }
 
 function buildGaps(evidence = []) {
   const gaps = [];
-  const hasRisk = evidence.some((x) => x.record_type === "risk_assessment");
-  const hasPlan = evidence.some((x) => x.record_type === "support_plan");
-  const hasFamily = evidence.some((x) => x.record_type === "family_contact_record");
-  const hasHealth = evidence.some((x) => x.record_type === "health_record");
-  const hasEducation = evidence.some((x) => x.record_type === "education_record");
-  const hasChronology = evidence.some((x) => x.record_type === "chronology_event");
+
+  const hasRisk = evidence.some((item) => item.record_type === "risk_assessment");
+  const hasPlan = evidence.some((item) => item.record_type === "support_plan");
+  const hasFamily = evidence.some((item) => item.record_type === "family_contact_record");
+  const hasHealth = evidence.some((item) => item.record_type === "health_record");
+  const hasEducation = evidence.some((item) => item.record_type === "education_record");
+  const hasChronology = evidence.some((item) => item.record_type === "chronology_event");
 
   if (!hasRisk) gaps.push("No risk assessment is visible in the current evidence set.");
   if (!hasPlan) gaps.push("No support plan is visible in the current evidence set.");
@@ -376,10 +429,10 @@ function buildGaps(evidence = []) {
 function buildImmediateActions(evidence = [], lens = "general") {
   const actions = [];
 
-  const overdue = evidence.filter((x) => safeArray(x.tags).includes("status:overdue"));
-  const safeguarding = evidence.filter((x) => safeArray(x.tags).includes("safeguarding"));
+  const overdue = evidence.filter((item) => safeArray(item.tags).includes("status:overdue"));
+  const safeguarding = evidence.filter((item) => safeArray(item.tags).includes("safeguarding"));
   const appointments = evidence
-    .filter((x) => x.record_type === "appointment" && x.date)
+    .filter((item) => item.record_type === "appointment" && item.date)
     .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date));
 
   if (safeguarding.length) {
@@ -410,9 +463,10 @@ function buildImmediateActions(evidence = [], lens = "general") {
 
 function buildProfessionalEscalations(evidence = [], lens = "general") {
   const escalations = [];
-  const highRisk = evidence.filter((x) => ["high", "critical"].includes(x.urgency));
-  const police = evidence.filter((x) => safeArray(x.tags).includes("police_involved"));
-  const ofsted = evidence.filter((x) => safeArray(x.tags).includes("ofsted_notified"));
+
+  const highRisk = evidence.filter((item) => ["high", "critical"].includes(item.urgency));
+  const police = evidence.filter((item) => safeArray(item.tags).includes("police_involved"));
+  const ofsted = evidence.filter((item) => safeArray(item.tags).includes("ofsted_notified"));
 
   if (highRisk.length) {
     escalations.push("Manager review may be required where high-risk or critical records remain active or unresolved.");
@@ -433,23 +487,50 @@ function buildProfessionalEscalations(evidence = [], lens = "general") {
   return unique(escalations);
 }
 
+function buildSafeguardingDisclaimer(summary = {}) {
+  if (!summary.safeguarding && !summary.critical_priority && !summary.high_priority) return "";
+
+  return [
+    "Safeguarding note",
+    "This does not replace professional safeguarding judgement. If there is immediate risk of harm, staff must follow the home’s safeguarding procedure, management escalation route and emergency response process.",
+    "",
+  ].join("\n");
+}
+
+function recommendedRecordsToCreate(evidence = [], lens = "general") {
+  const gaps = buildGaps(evidence);
+  const recommendations = [];
+
+  if (gaps.some((gap) => /risk assessment/i.test(gap))) recommendations.push("Risk assessment review");
+  if (gaps.some((gap) => /support plan/i.test(gap))) recommendations.push("Support plan update");
+  if (evidence.some((item) => safeArray(item.tags).includes("safeguarding"))) recommendations.push("Safeguarding follow-up note");
+  if (evidence.some((item) => safeArray(item.tags).includes("status:overdue"))) recommendations.push("Management oversight note");
+  if (lens === "quality" || lens === "inspection") recommendations.push("Reg 45 evidence note");
+
+  return unique(recommendations).slice(0, 5);
+}
+
 function latestRecordOfType(evidence = [], type) {
-  return evidence
-    .filter((x) => x.record_type === type)
-    .sort((a, b) => parseDateValue(b.date) - parseDateValue(a.date))[0] || null;
+  return (
+    evidence
+      .filter((item) => item.record_type === type)
+      .sort((a, b) => parseDateValue(b.date) - parseDateValue(a.date))[0] || null
+  );
 }
 
 function nextAppointment(evidence = []) {
   const now = Date.now();
 
-  return evidence
-    .filter((x) => x.record_type === "appointment" && x.date)
-    .filter((x) => parseDateValue(x.date) >= now)
-    .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date))[0] || null;
+  return (
+    evidence
+      .filter((item) => item.record_type === "appointment" && item.date)
+      .filter((item) => parseDateValue(item.date) >= now)
+      .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date))[0] || null
+  );
 }
 
 function buildChildSummary(context = {}, evidence = []) {
-  const name = context.person?.name || "the young person";
+  const name = context.person?.name || context.young_person_name || "the young person";
   const latestIncident = latestRecordOfType(evidence, "incident");
   const latestDaily = latestRecordOfType(evidence, "daily_note");
   const nextAppt = nextAppointment(evidence);
@@ -458,12 +539,12 @@ function buildChildSummary(context = {}, evidence = []) {
     `${name} is currently viewed through the scoped records available to this workspace.`,
   ];
 
-  if (context.person?.placement_status) {
-    lines.push(`Placement status: ${context.person.placement_status}.`);
+  if (context.person?.placement_status || context.placement_status) {
+    lines.push(`Placement status: ${context.person?.placement_status || context.placement_status}.`);
   }
 
-  if (context.person?.risk) {
-    lines.push(`Current recorded risk level: ${context.person.risk}.`);
+  if (context.person?.risk || context.summary_risk_level) {
+    lines.push(`Current recorded risk level: ${context.person?.risk || context.summary_risk_level}.`);
   }
 
   if (latestDaily) {
@@ -482,19 +563,19 @@ function buildChildSummary(context = {}, evidence = []) {
 }
 
 function buildHomeSummary(context = {}, evidence = []) {
-  const name = context.home?.home_name || "the home";
+  const name = context.home?.home_name || context.home_name || "the home";
   const summary = summariseEvidence(evidence);
 
   return [
     `${name} is being reviewed using the currently scoped operational evidence.`,
     `There are ${summary.total} visible records in scope.`,
-    `Open or overdue activity, incidents, compliance and workforce pressures should be considered together rather than in isolation.`,
+    "Open or overdue activity, incidents, compliance and workforce pressures should be considered together rather than in isolation.",
   ].join(" ");
 }
 
 function buildChronologyText(evidence = [], max = 8) {
   const chronology = [...evidence]
-    .filter((x) => x.date)
+    .filter((item) => item.date)
     .sort((a, b) => parseDateValue(a.date) - parseDateValue(b.date))
     .slice(-max);
 
@@ -534,7 +615,26 @@ function buildFactualAnswer(question = "", evidence = []) {
   return "I can answer date-based questions from the currently scoped evidence, but I cannot see a direct match for that question yet.";
 }
 
+function buildNoEvidenceAnswer(context = {}) {
+  return [
+    "Overview",
+    context.scope === "child"
+      ? `I cannot see enough evidence for ${context.person?.name || context.young_person_name || "this young person"} to give a reliable answer.`
+      : `I cannot see enough evidence for ${context.home?.home_name || context.home_name || "this home"} to give a reliable answer.`,
+    "",
+    "What to check",
+    "- Confirm the correct young person, home or quality scope is selected.",
+    "- Confirm records have loaded successfully.",
+    "- Check whether the date range or selected section is too narrow.",
+    "- Add or review the core records before relying on an assistant summary.",
+  ].join("\n");
+}
+
 function buildSummaryAnswer(context = {}, evidence = [], lens = "general") {
+  const summary = summariseEvidence(evidence);
+
+  if (!summary.total) return buildNoEvidenceAnswer(context);
+
   const summaryIntro =
     context.scope === "child"
       ? buildChildSummary(context, evidence)
@@ -545,39 +645,47 @@ function buildSummaryAnswer(context = {}, evidence = [], lens = "general") {
   const gaps = buildGaps(evidence);
   const actions = buildImmediateActions(evidence, lens);
   const escalations = buildProfessionalEscalations(evidence, lens);
+  const recommended = recommendedRecordsToCreate(evidence, lens);
 
   return [
+    buildSafeguardingDisclaimer(summary),
     "Overview",
     summaryIntro,
     "",
     `Reasoning lens: ${lens}`,
+    `Evidence freshness: latest visible record ${summary.latest_record_date ? formatDate(summary.latest_record_date) : "not dated"}.`,
     "",
     "Key themes",
-    ...(themes.length ? themes.map((x) => `- ${x}`) : ["- No strong theme is visible from the current evidence set."]),
+    ...(themes.length ? themes.map((item) => `- ${item}`) : ["- No strong theme is visible from the current evidence set."]),
     "",
     "Strengths and positives",
-    ...(strengths.length ? strengths.map((x) => `- ${x}`) : ["- Positive or strengths-based evidence is limited in the currently visible records."]),
+    ...(strengths.length ? strengths.map((item) => `- ${item}`) : ["- Positive or strengths-based evidence is limited in the currently visible records."]),
     "",
     "Gaps or areas needing stronger evidence",
-    ...(gaps.length ? gaps.map((x) => `- ${x}`) : ["- No obvious evidence gap is visible from the currently scoped records."]),
+    ...(gaps.length ? gaps.map((item) => `- ${item}`) : ["- No obvious evidence gap is visible from the currently scoped records."]),
     "",
     "What staff should be doing right now",
-    ...actions.map((x) => `- ${x}`),
+    ...actions.map((item) => `- ${item}`),
     "",
     "Professional escalation to consider",
-    ...(escalations.length ? escalations.map((x) => `- ${x}`) : ["- No immediate escalation is clearly indicated by the currently visible evidence alone."]),
-  ].join("\n");
+    ...(escalations.length ? escalations.map((item) => `- ${item}`) : ["- No immediate escalation is clearly indicated by the currently visible evidence alone."]),
+    "",
+    "Recommended next record to create",
+    ...(recommended.length ? recommended.map((item) => `- ${item}`) : ["- No specific missing record type is strongly indicated by the current evidence."]),
+  ].filter(Boolean).join("\n");
 }
 
 function buildRiskAnswer(context = {}, evidence = [], lens = "safeguarding") {
+  const summary = summariseEvidence(evidence);
   const ranked = rankEvidence(evidence, INTENT.risk, lens).slice(0, 8);
   const actions = buildImmediateActions(evidence, lens);
 
   return [
+    buildSafeguardingDisclaimer(summary),
     "Risk overview",
     context.scope === "child"
-      ? `This risk view relates to ${context.person?.name || "the young person"} and uses only the currently scoped records.`
-      : `This risk view relates to ${context.home?.home_name || "the home"} and uses only the currently scoped records.`,
+      ? `This risk view relates to ${context.person?.name || context.young_person_name || "the young person"} and uses only the currently scoped records.`
+      : `This risk view relates to ${context.home?.home_name || context.home_name || "the home"} and uses only the currently scoped records.`,
     "",
     `Reasoning lens: ${lens}`,
     "",
@@ -587,8 +695,8 @@ function buildRiskAnswer(context = {}, evidence = [], lens = "safeguarding") {
       : ["- No high-priority risk evidence is visible in the current scope."]),
     "",
     "Immediate actions",
-    ...actions.map((x) => `- ${x}`),
-  ].join("\n");
+    ...actions.map((item) => `- ${item}`),
+  ].filter(Boolean).join("\n");
 }
 
 function buildHandoverAnswer(context = {}, evidence = [], lens = "shift") {
@@ -598,8 +706,8 @@ function buildHandoverAnswer(context = {}, evidence = [], lens = "shift") {
   return [
     "Residential handover",
     context.scope === "child"
-      ? `This handover is focused on ${context.person?.name || "the young person"}.`
-      : `This handover is focused on ${context.home?.home_name || "the home"}.`,
+      ? `This handover is focused on ${context.person?.name || context.young_person_name || "the young person"}.`
+      : `This handover is focused on ${context.home?.home_name || context.home_name || "the home"}.`,
     "",
     `Reasoning lens: ${lens}`,
     "",
@@ -614,7 +722,7 @@ function buildHandoverAnswer(context = {}, evidence = [], lens = "shift") {
       : "- No upcoming appointment is visible in the current scope.",
     "",
     "What staff should do next",
-    ...buildImmediateActions(evidence, lens).map((x) => `- ${x}`),
+    ...buildImmediateActions(evidence, lens).map((item) => `- ${item}`),
   ].join("\n");
 }
 
@@ -626,22 +734,22 @@ function buildManagerAnswer(context = {}, evidence = [], lens = "manager") {
   return [
     "Manager oversight brief",
     context.scope === "child"
-      ? `This oversight brief is scoped to ${context.person?.name || "the young person"}.`
-      : `This oversight brief is scoped to ${context.home?.home_name || "the home"}.`,
+      ? `This oversight brief is scoped to ${context.person?.name || context.young_person_name || "the young person"}.`
+      : `This oversight brief is scoped to ${context.home?.home_name || context.home_name || "the home"}.`,
     "",
     `Reasoning lens: ${lens}`,
     "",
     "Key oversight points",
     ...(insights.length
-      ? insights.map((x) => `- ${x.message}`)
+      ? insights.map((item) => `- ${item.message}`)
       : ["- No major management signal is visible from the current evidence set alone."]),
     "",
     "Management actions",
-    ...actions.map((x) => `- ${x}`),
+    ...actions.map((item) => `- ${item}`),
     "",
     "Escalation and scrutiny",
     ...(escalations.length
-      ? escalations.map((x) => `- ${x}`)
+      ? escalations.map((item) => `- ${item}`)
       : ["- No immediate escalation is clearly indicated by the visible evidence alone."]),
   ].join("\n");
 }
@@ -653,8 +761,8 @@ function buildQualityAnswer(context = {}, evidence = [], lens = "quality") {
   return [
     "Quality and inspection-readiness brief",
     context.scope === "child"
-      ? `This quality brief is scoped to ${context.person?.name || "the young person"}.`
-      : `This quality brief is scoped to ${context.home?.home_name || "the home"}.`,
+      ? `This quality brief is scoped to ${context.person?.name || context.young_person_name || "the young person"}.`
+      : `This quality brief is scoped to ${context.home?.home_name || context.home_name || "the home"}.`,
     "",
     `Reasoning lens: ${lens}`,
     "",
@@ -662,12 +770,13 @@ function buildQualityAnswer(context = {}, evidence = [], lens = "quality") {
     `Overdue items: ${summary.overdue}`,
     `Safeguarding-linked items: ${summary.safeguarding}`,
     `Compliance-linked items: ${summary.compliance}`,
+    `Latest visible record: ${summary.latest_record_date ? formatDate(summary.latest_record_date) : "not dated"}`,
     "",
     "Inspection and scrutiny themes",
-    ...buildThemes(evidence, lens).map((x) => `- ${x}`),
+    ...(buildThemes(evidence, lens).length ? buildThemes(evidence, lens).map((item) => `- ${item}`) : ["- No strong inspection theme is visible from the current evidence."]),
     "",
     "Evidence gaps",
-    ...(gaps.length ? gaps.map((x) => `- ${x}`) : ["- No obvious gap is visible from the current evidence set."]),
+    ...(gaps.length ? gaps.map((item) => `- ${item}`) : ["- No obvious gap is visible from the current evidence set."]),
   ].join("\n");
 }
 
@@ -679,27 +788,27 @@ function buildReg45Answer(context = {}, evidence = [], lens = "quality") {
   return [
     "Reg 45 review support",
     context.scope === "child"
-      ? `This Reg 45 support summary is scoped to ${context.person?.name || "the young person"} and should be read alongside the full reporting period.`
-      : `This Reg 45 support summary is scoped to ${context.home?.home_name || "the home"} and should be read alongside the full reporting period.`,
+      ? `This Reg 45 support summary is scoped to ${context.person?.name || context.young_person_name || "the young person"} and should be read alongside the full reporting period.`
+      : `This Reg 45 support summary is scoped to ${context.home?.home_name || context.home_name || "the home"} and should be read alongside the full reporting period.`,
     "",
     `Reasoning lens: ${lens}`,
     "",
     "Progress, experience and positives",
-    ...(strengths.length ? strengths.map((x) => `- ${x}`) : ["- Positive outcomes should be strengthened further in the visible evidence set."]),
+    ...(strengths.length ? strengths.map((item) => `- ${item}`) : ["- Positive outcomes should be strengthened further in the visible evidence set."]),
     "",
     "Themes requiring review",
-    ...(themes.length ? themes.map((x) => `- ${x}`) : ["- No strong review theme is visible from the current evidence alone."]),
+    ...(themes.length ? themes.map((item) => `- ${item}`) : ["- No strong review theme is visible from the current evidence alone."]),
     "",
     "Evidence gaps to address before finalising the report",
-    ...(gaps.length ? gaps.map((x) => `- ${x}`) : ["- No obvious evidence gap is visible from the current scope."]),
+    ...(gaps.length ? gaps.map((item) => `- ${item}`) : ["- No obvious evidence gap is visible from the current scope."]),
   ].join("\n");
 }
 
 function buildUnknownAnswer(context = {}, evidence = []) {
   return [
     context.scope === "child"
-      ? `I can help with ${context.person?.name || "this young person"} using the currently scoped children’s home records.`
-      : `I can help with ${context.home?.home_name || "this home"} using the currently scoped operational records.`,
+      ? `I can help with ${context.person?.name || context.young_person_name || "this young person"} using the currently scoped children’s home records.`
+      : `I can help with ${context.home?.home_name || context.home_name || "this home"} using the currently scoped operational records.`,
     "",
     "Try asking for:",
     "- a full overview",
@@ -716,35 +825,41 @@ function buildUnknownAnswer(context = {}, evidence = []) {
 function inferSuggestedActions(intent = INTENT.unknown, evidence = [], lens = "general") {
   const actions = [];
 
-  if ([INTENT.summary, INTENT.unknown].includes(intent)) {
-    actions.push("Draft summary");
-  }
+  if ([INTENT.summary, INTENT.unknown].includes(intent)) actions.push("Draft summary");
+  if ([INTENT.handover, INTENT.manager].includes(intent)) actions.push("Draft handover");
+  if ([INTENT.quality, INTENT.reg45].includes(intent)) actions.push("Build quality brief");
 
-  if ([INTENT.handover, INTENT.manager].includes(intent)) {
-    actions.push("Draft handover");
-  }
-
-  if ([INTENT.quality, INTENT.reg45].includes(intent)) {
-    actions.push("Build quality brief");
-  }
-
-  if (evidence.some((x) => safeArray(x.tags).includes("status:overdue"))) {
+  if (evidence.some((item) => safeArray(item.tags).includes("status:overdue"))) {
     actions.push("Review overdue items");
   }
 
-  if (evidence.some((x) => safeArray(x.tags).includes("safeguarding"))) {
+  if (evidence.some((item) => safeArray(item.tags).includes("safeguarding"))) {
     actions.push("Review safeguarding records");
   }
 
-  if (lens === "manager") {
-    actions.push("Check management actions");
-  }
-
-  if (lens === "quality" || lens === "inspection") {
-    actions.push("Check inspection readiness");
-  }
+  if (lens === "manager") actions.push("Check management actions");
+  if (lens === "quality" || lens === "inspection") actions.push("Check inspection readiness");
 
   return unique(actions).slice(0, 6);
+}
+
+function topSourcesFromEvidence(evidence = []) {
+  return limit(evidence, 8).map((item) => ({
+    id: item.id || item.source_id || null,
+    source_id: item.source_id || item.id || null,
+    record_id: item.record_id || item.source_id || item.id || null,
+    title: item.title || "Record",
+    summary: item.summary || "",
+    description: item.summary || "",
+    excerpt: item.summary || "",
+    citation: buildCitation(item),
+    citation_ref: item.citation_ref || buildCitation(item),
+    section: item.section || "",
+    record_type: item.record_type || "",
+    type: item.record_type || "",
+    date: item.date || null,
+    created_at: item.created_at || item.date || null,
+  }));
 }
 
 export function askAssistantBrain(question, payload = {}, options = {}) {
@@ -757,6 +872,9 @@ export function askAssistantBrain(question, payload = {}, options = {}) {
   });
 
   const context = options.context || {};
+  const summary = summariseEvidence(evidence);
+  const confidence = resolveConfidence(evidence, summary);
+
   let answer = "";
 
   switch (intent) {
@@ -795,18 +913,13 @@ export function askAssistantBrain(question, payload = {}, options = {}) {
     intent,
     analysis_lens: lens,
     evidence_count: evidence.length,
-    summary: summariseEvidence(evidence),
+    summary,
     insights: extractKeyInsights(evidence, lens),
     suggested_actions: inferSuggestedActions(intent, evidence, lens),
-    top_sources: limit(evidence, 8).map((item) => ({
-      title: item.title || "Record",
-      summary: item.summary || "",
-      citation: buildCitation(item),
-      citation_ref: item.citation_ref || buildCitation(item),
-      section: item.section || "",
-      record_type: item.record_type || "",
-      date: item.date || null,
-    })),
+    top_sources: topSourcesFromEvidence(evidence),
+    recommended_records: recommendedRecordsToCreate(evidence, lens),
+    confidence: confidence.confidence,
+    confidence_reason: confidence.confidence_reason,
   };
 }
 
@@ -841,23 +954,20 @@ export function buildReg45Support(question = "reg 45 review", payload = {}, opti
 export function buildFullAssistantPack(question, payload = {}, options = {}) {
   const dataset = buildAssistantDataset(payload, options);
   const brain = askAssistantBrain(question, payload, options);
+  const summary = summariseEvidence(dataset);
+  const confidence = resolveConfidence(dataset, summary);
 
   return {
     evidence_count: dataset.length,
-    top_sources: limit(dataset, 8).map((item) => ({
-      title: item.title || "Record",
-      summary: item.summary || "",
-      citation: buildCitation(item),
-      citation_ref: item.citation_ref || buildCitation(item),
-      section: item.section || "",
-      record_type: item.record_type || "",
-      date: item.date || null,
-    })),
-    brain_summary: summariseEvidence(dataset),
+    top_sources: topSourcesFromEvidence(dataset),
+    brain_summary: summary,
     brain_insights: extractKeyInsights(dataset, brain.analysis_lens),
     answer: brain.answer,
     intent: brain.intent,
     analysis_lens: brain.analysis_lens,
     suggested_actions: brain.suggested_actions,
+    recommended_records: recommendedRecordsToCreate(dataset, brain.analysis_lens),
+    confidence: confidence.confidence,
+    confidence_reason: confidence.confidence_reason,
   };
 }

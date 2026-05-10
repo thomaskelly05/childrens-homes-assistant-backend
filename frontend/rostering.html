@@ -1,87 +1,402 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare OS | Residential Workforce</title>
+  <title>IndiCare OS | Rostering</title>
+  <link rel="stylesheet" href="/css/os-unified.css" />
   <link rel="stylesheet" href="/css/rostering.css" />
 </head>
-<body>
-  <div class="rostering-shell">
-    <header class="rostering-topbar">
-      <div class="title-wrap">
-        <h1>IndiCare <span class="os-badge">OS</span></h1>
-        <p>Children's Residential Compliance & Rostering</p>
+<body class="os-unified-page">
+  <header class="os-topbar">
+    <a href="/young-people-shell.html" class="os-brand-button">
+      <span class="os-brand-mark">IC</span>
+      <span class="os-brand-copy">
+        <strong>IndiCare OS</strong>
+        <small>Children's residential operating system</small>
+      </span>
+    </a>
+
+    <nav class="os-topbar-nav" aria-label="Platform areas">
+      <a href="/young-people-shell.html" class="os-topbar-link">Shell</a>
+      <a href="/young-people.html" class="os-topbar-link">Gateway</a>
+      <a href="/ai-note.html" class="os-topbar-link">I-Notes</a>
+      <a href="/assistant" class="os-topbar-link">Assistant</a>
+      <a href="/rostering.html" class="os-topbar-link active" aria-current="page">Rostering</a>
+      <a href="/staff-portal.html" class="os-topbar-link">Staff portal</a>
+    </nav>
+
+    <div class="os-topbar-context">Rota, cover, approvals and safer staffing</div>
+  </header>
+
+  <main class="roster-shell">
+    <section class="roster-header-panel">
+      <div class="roster-header-main">
+        <div class="roster-header-copy">
+          <div class="eyebrow">Residential staffing operations</div>
+          <h1>Home rostering and safer staffing</h1>
+          <p>
+            Plan, publish and manage staffing for children's homes with clearer coverage,
+            safer staffing checks, open shifts, approvals, notifications, swaps,
+            attendance and day-to-day cover decisions.
+          </p>
+        </div>
+
+        <div class="roster-header-actions">
+          <button id="buildWeekBtn" class="secondary-btn" type="button">Build week template</button>
+          <button id="publishWeekBtn" class="primary-btn" type="button">Publish week</button>
+        </div>
       </div>
 
-      <div class="rostering-actions">
-        <div class="input-group">
-          <label>Home ID</label>
-          <input type="number" id="homeId" value="1" min="1" />
-        </div>
-        <div class="input-group">
-          <label>Week Commencing</label>
-          <input type="date" id="weekStart" />
-        </div>
-        <button id="loadWeekBtn">Sync</button>
-        <button id="buildWeekBtn">Auto-Gen Template</button>
-        <button id="publishWeekBtn" class="primary">Publish & SMS Notify</button>
-        <div class="secondary-actions">
-            <button id="payrollBtn" title="Export CSV">Payroll</button>
-            <button id="evidenceBtn" title="Compliance Pack">Evidence</button>
+      <div class="roster-control-grid">
+        <label class="control-field">
+          <span>Home ID</span>
+          <input id="homeIdInput" type="number" min="1" step="1" value="1" />
+        </label>
+
+        <label class="control-field">
+          <span>Week commencing</span>
+          <input id="weekStartInput" type="date" />
+        </label>
+
+        <label class="control-field">
+          <span>Selected day</span>
+          <input id="selectedDateInput" type="date" />
+        </label>
+
+        <div class="control-field control-field--wide">
+          <span>View</span>
+          <div class="view-toggle" role="tablist" aria-label="Rota view">
+            <button type="button" class="view-btn active" data-view="today" role="tab" aria-selected="true">Today</button>
+            <button type="button" class="view-btn" data-view="day" role="tab" aria-selected="false">Day</button>
+            <button type="button" class="view-btn" data-view="week" role="tab" aria-selected="false">Week</button>
+            <button type="button" class="view-btn" data-view="month" role="tab" aria-selected="false">Month</button>
+          </div>
         </div>
       </div>
+
+      <div class="roster-toolbar">
+        <div class="toolbar-left">
+          <button id="prevWeekBtn" class="secondary-btn" type="button">Previous</button>
+          <button id="todayBtn" class="secondary-btn" type="button">Today</button>
+          <button id="nextWeekBtn" class="secondary-btn" type="button">Next</button>
+          <button id="loadRosterBtn" class="secondary-btn" type="button">Refresh</button>
+        </div>
+
+        <div class="toolbar-right">
+          <button id="payrollBtn" class="ghost-btn" type="button">Payroll CSV</button>
+          <button id="evidenceBtn" class="ghost-btn" type="button">Evidence pack</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="summary-strip" aria-label="Roster summary">
+      <article class="summary-card">
+        <span class="summary-label">Publication</span>
+        <strong id="summaryPublication">Draft</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Coverage</span>
+        <strong id="summaryCoverage">0%</strong>
+      </article>
+
+      <article class="summary-card danger-card">
+        <span class="summary-label">Gaps</span>
+        <strong id="summaryGaps">0</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Agency / bank</span>
+        <strong id="summaryAgency">0</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Open shifts</span>
+        <strong id="summaryOpenShifts">0</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Approvals</span>
+        <strong id="summaryApprovals">0</strong>
+      </article>
+
+      <article class="summary-card danger-card">
+        <span class="summary-label">Safety alerts</span>
+        <strong id="summaryWarnings">0</strong>
+      </article>
+    </section>
+
+    <section class="roster-main-grid">
+      <aside class="roster-panel staff-panel">
+        <header class="panel-head">
+          <div>
+            <h2>Staff available</h2>
+            <p>Search, review suitability, manage leave and assign people into cover.</p>
+          </div>
+          <span class="pill" id="staffCountBadge">0 staff</span>
+        </header>
+
+        <label class="control-field">
+          <span>Search staff</span>
+          <input id="staffSearchInput" type="search" placeholder="Name, role, qualification, familiarity..." />
+        </label>
+
+        <div id="staffList" class="staff-list" aria-live="polite"></div>
+
+        <section class="inline-form-card">
+          <h3>Record leave or absence</h3>
+
+          <label class="control-field">
+            <span>Staff member</span>
+            <select id="leaveStaffSelect"></select>
+          </label>
+
+          <label class="control-field">
+            <span>Type</span>
+            <select id="leaveTypeSelect">
+              <option value="annual_leave">Annual leave</option>
+              <option value="sickness">Sickness</option>
+              <option value="compassionate_leave">Compassionate leave</option>
+              <option value="training">Training day</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+
+          <div class="inline-grid">
+            <label class="control-field">
+              <span>Start</span>
+              <input id="leaveStartInput" type="date" />
+            </label>
+            <label class="control-field">
+              <span>End</span>
+              <input id="leaveEndInput" type="date" />
+            </label>
+          </div>
+
+          <label class="control-field">
+            <span>Notes</span>
+            <textarea id="leaveNotesInput" rows="2" placeholder="Context for rota and handover..."></textarea>
+          </label>
+
+          <button id="createLeaveBtn" class="secondary-btn" type="button">Save leave</button>
+        </section>
+
+        <section class="inline-form-card">
+          <h3>Record unavailable dates</h3>
+
+          <label class="control-field">
+            <span>Staff member</span>
+            <select id="availabilityStaffSelect"></select>
+          </label>
+
+          <div class="inline-grid">
+            <label class="control-field">
+              <span>Start</span>
+              <input id="availabilityStartInput" type="date" />
+            </label>
+            <label class="control-field">
+              <span>End</span>
+              <input id="availabilityEndInput" type="date" />
+            </label>
+          </div>
+
+          <label class="control-field">
+            <span>Reason</span>
+            <input id="availabilityReasonInput" type="text" placeholder="Unavailable, college, study, personal..." />
+          </label>
+
+          <button id="saveAvailabilityBtn" class="secondary-btn" type="button">Save availability block</button>
+        </section>
+      </aside>
+
+      <section class="roster-panel board-panel">
+        <header class="panel-head">
+          <div>
+            <h2>Rota board</h2>
+            <p>Review daily, weekly and monthly cover with safer staffing and operational context.</p>
+          </div>
+        </header>
+
+        <div class="board-filters">
+          <label><input id="filterGapsOnly" type="checkbox" /> Gaps only</label>
+          <label><input id="filterAgencyOnly" type="checkbox" /> Agency / bank only</label>
+          <label><input id="filterOpenOnly" type="checkbox" /> Open shifts only</label>
+
+          <label class="control-field control-field--wide">
+            <span>Search shifts</span>
+            <input id="shiftSearchInput" type="search" placeholder="Shift type, role, staff, notes..." />
+          </label>
+        </div>
+
+        <div id="coverageBanner" class="coverage-banner" aria-live="polite"></div>
+        <div id="rotaBoard" class="rota-board" aria-live="polite"></div>
+      </section>
+
+      <aside class="roster-panel ops-panel">
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Live today</h2>
+              <p>Current and next staffing picture for the home.</p>
+            </div>
+          </header>
+          <div id="todayLivePanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Safety and coverage alerts</h2>
+              <p>Safer staffing, leadership, continuity and attendance concerns.</p>
+            </div>
+          </header>
+          <div id="warningPanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Approval queue</h2>
+              <p>Open shift claims, swaps and manager actions awaiting decisions.</p>
+            </div>
+          </header>
+          <div id="approvalPanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Open shifts and offers</h2>
+              <p>Visible cover opportunities, urgent gaps and offer activity.</p>
+            </div>
+          </header>
+          <div id="openShiftPanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Notifications</h2>
+              <p>Shift changes, acknowledgements and delivery status.</p>
+            </div>
+          </header>
+          <div id="notificationPanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Absence impact</h2>
+              <p>Where sickness, leave or unavailability are affecting cover.</p>
+            </div>
+          </header>
+          <div id="absencePanel" class="side-list"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Publish and contact log</h2>
+              <p>Publication history, contact activity and key rota actions.</p>
+            </div>
+          </header>
+          <div id="publishLogPanel" class="side-list"></div>
+        </section>
+
+        <section class="os-links-card">
+          <header class="panel-head">
+            <div>
+              <h2>Linked OS areas</h2>
+              <p>Move into connected operating system workflows.</p>
+            </div>
+          </header>
+
+          <nav class="os-link-list" aria-label="Linked operating areas">
+            <a href="/young-people-shell.html">Home dashboard</a>
+            <a href="/young-people-shell.html">Staff profiles</a>
+            <a href="/young-people-shell.html">Tasks and actions</a>
+            <a href="/young-people-shell.html">Handover</a>
+            <a href="/young-people-shell.html">Quality and Ofsted readiness</a>
+          </nav>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <div id="shiftDrawerBackdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>
+
+  <aside
+    id="shiftDrawer"
+    class="shift-drawer hidden"
+    aria-hidden="true"
+    aria-labelledby="shiftDrawerTitle"
+    role="dialog"
+    aria-modal="true"
+  >
+    <header class="shift-drawer-head">
+      <div>
+        <div class="eyebrow">Shift detail</div>
+        <h2 id="shiftDrawerTitle">Shift</h2>
+        <p id="shiftDrawerMeta">No shift selected.</p>
+      </div>
+      <button id="closeShiftDrawerBtn" class="secondary-btn" type="button">Close</button>
     </header>
 
-    <section class="summary-strip">
-      <div class="summary-card" id="stat-publication">
-        <span class="summary-label">Status</span>
-        <strong id="publicationStatus">Draft</strong>
-      </div>
-      <div class="summary-card danger-card" id="stat-warnings">
-        <span class="summary-label">Compliance Gaps</span>
-        <strong id="warningCount">0</strong>
-      </div>
-      <div class="summary-card" id="stat-agency">
-        <span class="summary-label">Agency Usage</span>
-        <strong id="agencyCount">0</strong>
-      </div>
-      <div class="summary-card" id="stat-attendance">
-        <span class="summary-label">Live Attendance</span>
-        <strong id="attendanceCount">0</strong>
-      </div>
-    </section>
+    <div class="shift-drawer-body">
+      <section class="drawer-block">
+        <h3>Coverage</h3>
+        <p id="shiftDrawerCoverage"></p>
+        <p id="shiftRequiredRoles"></p>
+        <p id="shiftDrawerNotes"></p>
+      </section>
 
-    <section class="rostering-main">
-      <aside class="staff-sidebar">
-        <div class="panel-head">
-          <h2>Staff Directory</h2>
-          <small>Drag to assign</small>
-        </div>
-        <div id="staffList"></div>
-      </aside>
+      <section class="drawer-block">
+        <h3>Assigned staff</h3>
+        <div id="shiftAssignmentList" class="drawer-list"></div>
+      </section>
 
-      <main class="rota-board-wrap">
-        <div id="warningPanel"></div>
-        <div id="rotaBoard"></div>
-      </main>
+      <section class="drawer-block">
+        <h3>Assign staff</h3>
+        <label class="control-field">
+          <span>Available staff</span>
+          <select id="shiftAssignStaffSelect"></select>
+        </label>
+        <button id="assignStaffBtn" class="primary-btn" type="button">Assign to shift</button>
+      </section>
 
-      <aside class="manager-sidebar">
-        <div class="panel-head">
-          <h2>Verified Logs</h2>
+      <section class="drawer-block">
+        <h3>Open shift and cover</h3>
+        <div class="drawer-row-actions">
+          <button id="markOpenShiftBtn" class="secondary-btn" type="button">Mark as open shift</button>
+          <button id="notifyEligibleStaffBtn" class="ghost-btn" type="button">Notify eligible staff</button>
         </div>
-        <div class="tabs">
-            <button class="tab-btn active">Attendance</button>
-        </div>
-        <div id="attendancePanel" class="side-list"></div>
+        <p id="shiftOpenState"></p>
+      </section>
 
-        <div class="panel-head top-gap">
-          <h2>SMS Gateway</h2>
+      <section class="drawer-block">
+        <h3>Claims and swaps</h3>
+        <div class="drawer-row-actions">
+          <button id="createMockClaimBtn" class="secondary-btn" type="button">Simulate claim</button>
+          <button id="createSwapRequestBtn" class="ghost-btn" type="button">Create swap request</button>
         </div>
-        <div id="smsPanel" class="side-list"></div>
-      </aside>
-    </section>
-  </div>
+        <p id="shiftClaimState"></p>
+      </section>
+
+      <section class="drawer-block">
+        <h3>Shift changes</h3>
+        <div class="drawer-row-actions">
+          <button id="sendChangeNoticeBtn" class="secondary-btn" type="button">Send change notice</button>
+        </div>
+        <p id="shiftChangeState"></p>
+      </section>
+
+      <section class="drawer-block">
+        <h3>Shift warnings</h3>
+        <div id="shiftWarnings" class="drawer-list"></div>
+      </section>
+    </div>
+  </aside>
 
   <script src="/js/rostering.js"></script>
 </body>

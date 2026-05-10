@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>IndiCare OS | Operational Intelligence Dashboard</title>
+  <meta name="description" content="Role-based operational intelligence for staff, managers, responsible individuals and providers." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="/css/os-dashboard.css" />
+</head>
+<body class="os-body">
+  <a class="skip-link" href="#mainContent">Skip to dashboard</a>
+
+  <main class="os-shell">
+    <aside class="os-sidebar" aria-label="Dashboard navigation">
+      <div class="os-brand">
+        <div class="os-logo">IC</div>
+        <div>
+          <p>IndiCare OS</p>
+          <h1>Control Centre</h1>
+        </div>
+      </div>
+
+      <nav class="os-role-nav" aria-label="Role views">
+        <button type="button" class="active" data-scope="staff"><strong>Staff</strong><span>Daily priorities</span></button>
+        <button type="button" data-scope="manager"><strong>Manager</strong><span>Home oversight</span></button>
+        <button type="button" data-scope="ri"><strong>RI</strong><span>Multi-home assurance</span></button>
+        <button type="button" data-scope="provider"><strong>Provider</strong><span>Whole organisation</span></button>
+      </nav>
+
+      <div class="os-sidebar-footer">
+        <a href="/young-people-shell">Young People OS</a>
+        <a href="/assistant">Standalone Assistant</a>
+        <p id="statusText" role="status" aria-live="polite">Loading…</p>
+      </div>
+    </aside>
+
+    <section id="mainContent" class="os-main">
+      <header class="os-hero">
+        <div>
+          <p class="eyebrow" id="roleEyebrow">Operational intelligence</p>
+          <h2 id="dashboardTitle">Staff daily view</h2>
+          <p id="dashboardSubtitle">What needs attention today, why it matters, and what to do next.</p>
+        </div>
+        <div class="os-controls">
+          <label for="daysSelect">Review window</label>
+          <select id="daysSelect">
+            <option value="7">7 days</option>
+            <option value="30" selected>30 days</option>
+            <option value="60">60 days</option>
+            <option value="90">90 days</option>
+          </select>
+          <button type="button" id="generateReportBtn">Generate inspection summary</button>
+        </div>
+      </header>
+
+      <section id="priorityStrip" class="priority-strip review" aria-label="Top priority">
+        <div>
+          <p class="eyebrow">Top priority</p>
+          <h3 id="priorityTitle">Loading intelligence…</h3>
+          <p id="prioritySummary">IndiCare is checking live records and current risk signals.</p>
+        </div>
+        <div class="risk-score">
+          <strong id="riskScore">—</strong>
+          <span>/100</span>
+        </div>
+      </section>
+
+      <section class="metric-grid" aria-label="Operational summary">
+        <article><span>Total evidence</span><strong id="metricTotal">—</strong><small>records in window</small></article>
+        <article><span>Incidents</span><strong id="metricIncidents">—</strong><small>behaviour / events</small></article>
+        <article><span>Safeguarding</span><strong id="metricSafeguarding">—</strong><small>concerns / action</small></article>
+        <article><span>High-risk homes</span><strong id="metricHighRisk">—</strong><small>leadership focus</small></article>
+      </section>
+
+      <section class="dashboard-grid">
+        <section class="panel critical-panel">
+          <div class="panel-head"><p class="eyebrow">Live alerts</p><h3>What needs attention now</h3></div>
+          <div id="alertsList" class="stack-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><p class="eyebrow">What to do next</p><h3>Recommended actions</h3></div>
+          <ol id="actionsList" class="action-list"></ol>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><p class="eyebrow">Emerging risks</p><h3>Predictive warnings</h3></div>
+          <div id="signalsList" class="stack-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><p class="eyebrow">Trend view</p><h3>Is risk increasing?</h3></div>
+          <div id="trendChart" class="trend-chart"></div>
+        </section>
+
+        <section class="panel wide-panel">
+          <div class="panel-head"><p class="eyebrow">Home risk heatmap</p><h3>Ranked homes by current risk</h3></div>
+          <div id="homesList" class="home-list"></div>
+        </section>
+
+        <section class="panel wide-panel">
+          <div class="panel-head"><p class="eyebrow">Inspection summary</p><h3>Ofsted / Reg 45 view</h3></div>
+          <div id="inspectionSummary" class="inspection-summary"></div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="reportDialog" class="report-dialog">
+    <form method="dialog">
+      <header>
+        <div><p class="eyebrow">Inspection-ready output</p><h2>IndiCare Inspection Summary</h2></div>
+        <button type="submit" aria-label="Close report">×</button>
+      </header>
+      <div id="reportBody" class="report-body"></div>
+      <footer>
+        <button type="button" id="copyReportBtn">Copy report</button>
+        <button type="button" id="printReportBtn">Print</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script src="/js/os-dashboard.js"></script>
+</body>
+</html>

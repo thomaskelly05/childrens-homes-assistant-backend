@@ -2,163 +2,286 @@
 <html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare — Children’s Home OS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <title>IndiCare OS | Children’s Home Care Hub</title>
+  <meta
+    name="description"
+    content="IndiCare OS is a child-centred operating system for residential children’s homes, supporting care records, handover, safeguarding, quality, staffing and AI-assisted oversight."
+  />
+  <meta name="theme-color" content="#f7f2ea" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="robots" content="noindex,nofollow" />
+
+  <link rel="preload" href="/css/young-people-shell.css" as="style" />
   <link rel="stylesheet" href="/css/young-people-shell.css" />
+  <link rel="stylesheet" href="/css/os-unified.css" />
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar">
+
+<body class="os-unified-page indicare-care-hub-body">
+  <a class="sr-only sr-only-focusable" href="#mainContent">Skip to main content</a>
+
+  <noscript>
+    <div class="noscript-banner" role="alert">
+      IndiCare OS works best with JavaScript enabled.
+    </div>
+  </noscript>
+
+  <header class="os-topbar" role="banner">
+    <a href="/young-people-shell.html" class="os-brand-button" aria-label="Go to IndiCare Care Hub">
+      <span class="os-brand-mark" aria-hidden="true">IC</span>
+      <span class="os-brand-copy">
+        <strong>IndiCare</strong>
+        <small>Children’s Home OS</small>
+      </span>
+    </a>
+
+    <nav class="os-topbar-nav" aria-label="Platform areas">
+      <a href="/young-people-shell.html" class="os-topbar-link">Care Hub</a>
+      <a href="/young-people.html" class="os-topbar-link active" aria-current="page">Gateway</a>
+      <a href="/ai-note.html" class="os-topbar-link">I-Notes</a>
+      <a href="/assistant" class="os-topbar-link">Assistant</a>
+      <a href="/rostering.html" class="os-topbar-link">Rostering</a>
+    </nav>
+
+    <div class="os-topbar-context">
+      <span>Young people gateway</span>
+    </div>
+  </header>
+
+  <div class="app-shell app-shell--gateway">
+    <aside class="sidebar" aria-label="Gateway navigation">
       <div class="brand">
-        <div class="brand-mark">I</div>
+        <div class="brand-mark" aria-hidden="true">I</div>
         <div>
           <div class="brand-title">IndiCare</div>
-          <div class="brand-subtitle">Children’s Home OS</div>
+          <div class="brand-subtitle">Child-centred care hub</div>
         </div>
       </div>
 
-      <nav class="nav">
-        <button class="nav-btn active" data-section="command-centre">Command Centre</button>
-        <button class="nav-btn" data-section="young-people">Young People</button>
-        <button class="nav-btn" data-section="handover">Handover</button>
-        <button class="nav-btn" data-section="manager-qa">Manager QA</button>
+      <div class="sidebar-block sidebar-block--intro">
+        <div class="eyebrow">Start safely</div>
+        <h2>Choose the right context</h2>
+        <p>Use the gateway to move from home oversight into the right child, handover, or manager review queue.</p>
+      </div>
+
+      <nav class="nav" aria-label="Gateway sections">
+        <button class="nav-btn active" type="button" data-section="command-centre">My Shift</button>
+        <button class="nav-btn" type="button" data-section="young-people">Young People</button>
+        <button class="nav-btn" type="button" data-section="handover">Handover</button>
+        <button class="nav-btn" type="button" data-section="manager-qa">Manager QA</button>
       </nav>
 
       <div class="sidebar-block">
-        <label class="label" for="youngPersonSelect">Selected young person</label>
-        <select id="youngPersonSelect" class="input"></select>
+        <label class="label" for="homeSelect">Home</label>
+        <select id="homeSelect" class="input">
+          <option value="">Choose a home</option>
+        </select>
       </div>
 
-      <div class="sidebar-block statusbar hidden" id="statusBar"></div>
+      <div class="sidebar-block">
+        <label class="label" for="youngPersonSelect">Young person</label>
+        <select id="youngPersonSelect" class="input">
+          <option value="">Choose a child</option>
+        </select>
+        <p class="field-hint">Select a home first, then open the child’s Care Hub.</p>
+      </div>
+
+      <div class="sidebar-actions">
+        <button class="btn primary" type="button" id="openCareHubBtn">Open Care Hub</button>
+        <button class="btn" type="button" id="refreshGatewayBtn">Refresh</button>
+      </div>
+
+      <div class="sidebar-block statusbar hidden" id="statusBar" role="status" aria-live="polite"></div>
     </aside>
 
-    <main class="main">
-      <header class="page-header">
+    <main class="main" id="mainContent">
+      <header class="page-header page-header--care">
         <div>
-          <h1 id="pageTitle">Command Centre</h1>
-          <p id="pageSubtitle">Shift-first oversight for children’s residential care</p>
+          <div class="eyebrow">Children’s residential care</div>
+          <h1 id="pageTitle">My Shift</h1>
+          <p id="pageSubtitle">A calm, practical starting point for daily care, handover, safeguarding, tasks and manager oversight.</p>
         </div>
+
         <div class="header-actions">
-          <button class="btn" id="quickEventBtn">Quick record</button>
-          <button class="btn primary" id="newPlanBtn">New plan</button>
+          <button class="btn" type="button" id="quickEventBtn">Record now</button>
+          <button class="btn primary" type="button" id="newPlanBtn">New plan</button>
         </div>
       </header>
 
+      <section class="safe-start-panel card" aria-labelledby="safeStartTitle">
+        <div>
+          <div class="eyebrow">Safe start</div>
+          <h2 id="safeStartTitle">Pick a home, then a child</h2>
+          <p>This prevents adults from landing in the wrong record and keeps the Care Hub focused on the correct child, home and safeguarding context.</p>
+        </div>
+
+        <div class="safe-start-steps">
+          <div class="safe-step">
+            <span>1</span>
+            <strong>Choose home</strong>
+          </div>
+          <div class="safe-step">
+            <span>2</span>
+            <strong>Choose child</strong>
+          </div>
+          <div class="safe-step">
+            <span>3</span>
+            <strong>Open Care Hub</strong>
+          </div>
+        </div>
+      </section>
+
       <section id="browseMode">
-        <!-- COMMAND CENTRE -->
-        <section class="section active" id="section-command-centre">
+        <section class="section active" id="section-command-centre" aria-labelledby="commandCentreTitle">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Shift overview</div>
+              <h2 id="commandCentreTitle">What needs attention today?</h2>
+            </div>
+          </div>
+
           <div class="grid metrics-grid" id="commandCentreMetrics"></div>
 
           <div class="grid two-col">
-            <div class="card">
+            <article class="card">
               <div class="card-title-row">
-                <h2 class="card-title">Live alerts</h2>
+                <div>
+                  <div class="eyebrow">Safety lens</div>
+                  <h2 class="card-title">Live alerts</h2>
+                </div>
               </div>
               <div id="commandCentreAlerts"></div>
-            </div>
+            </article>
 
-            <div class="card">
+            <article class="card">
               <div class="card-title-row">
-                <h2 class="card-title">Shift tasks</h2>
+                <div>
+                  <div class="eyebrow">Follow-through</div>
+                  <h2 class="card-title">Shift tasks</h2>
+                </div>
               </div>
               <div id="commandCentreTasks"></div>
-            </div>
+            </article>
           </div>
 
           <div class="grid two-col">
-            <div class="card">
+            <article class="card">
               <div class="card-title-row">
-                <h2 class="card-title">Medication due</h2>
+                <div>
+                  <div class="eyebrow">Health</div>
+                  <h2 class="card-title">Medication due</h2>
+                </div>
               </div>
               <div id="commandCentreMeds"></div>
-            </div>
+            </article>
 
-            <div class="card">
+            <article class="card">
               <div class="card-title-row">
-                <h2 class="card-title">Latest handover</h2>
+                <div>
+                  <div class="eyebrow">Continuity</div>
+                  <h2 class="card-title">Latest handover</h2>
+                </div>
               </div>
               <div id="commandCentreHandover"></div>
-            </div>
+            </article>
           </div>
         </section>
 
-        <!-- YOUNG PEOPLE -->
-        <section class="section" id="section-young-people">
-          <div class="person-hero card">
+        <section class="section" id="section-young-people" aria-labelledby="youngPeopleTitle">
+          <div class="section-heading">
             <div>
-              <h2 id="selectedYoungPersonName">—</h2>
-              <div class="hero-meta" id="selectedYoungPersonMeta">—</div>
+              <div class="eyebrow">Care Hub</div>
+              <h2 id="youngPeopleTitle">Young people</h2>
+              <p>Choose a child to view their care story, plans, timeline and reviews.</p>
+            </div>
+          </div>
+
+          <article class="person-hero card">
+            <div>
+              <div class="eyebrow">Selected child</div>
+              <h2 id="selectedYoungPersonName">No child selected</h2>
+              <div class="hero-meta" id="selectedYoungPersonMeta">Choose a home and child to begin.</div>
             </div>
             <div class="hero-badges" id="selectedYoungPersonBadges"></div>
+          </article>
+
+          <div class="subtabs" role="tablist" aria-label="Young person sections">
+            <button class="tab active" type="button" data-tab="overview" role="tab" aria-selected="true">Overview</button>
+            <button class="tab" type="button" data-tab="timeline" role="tab" aria-selected="false">Timeline</button>
+            <button class="tab" type="button" data-tab="plans" role="tab" aria-selected="false">Plans</button>
+            <button class="tab" type="button" data-tab="reviews" role="tab" aria-selected="false">Reviews</button>
           </div>
 
-          <div class="subtabs">
-            <button class="tab active" data-tab="overview">Overview</button>
-            <button class="tab" data-tab="timeline">Timeline</button>
-            <button class="tab" data-tab="plans">Plans</button>
-            <button class="tab" data-tab="reviews">Reviews</button>
-          </div>
-
-          <div class="panel active" id="tab-overview">
+          <div class="panel active" id="tab-overview" role="tabpanel">
             <div id="overviewContent"></div>
           </div>
 
-          <div class="panel" id="tab-timeline">
+          <div class="panel" id="tab-timeline" role="tabpanel">
             <div class="card toolbar-card">
               <div class="toolbar">
+                <label class="sr-only" for="timelineEventType">Filter timeline</label>
                 <select id="timelineEventType" class="input slim">
                   <option value="">All event types</option>
-                  <option value="daily_note">Daily note</option>
-                  <option value="incident">Incident</option>
+                  <option value="daily_note">Daily life note</option>
+                  <option value="incident">Important event</option>
                   <option value="health">Health</option>
                   <option value="education">Education</option>
-                  <option value="contact">Contact</option>
+                  <option value="contact">Family contact</option>
                   <option value="keywork">Key work</option>
                   <option value="missing_update">Missing update</option>
                   <option value="achievement">Achievement</option>
                 </select>
 
-                <button class="btn" id="createEventBtn">New event</button>
+                <button class="btn" type="button" id="createEventBtn">New timeline entry</button>
               </div>
             </div>
             <div id="timelineContent"></div>
           </div>
 
-          <div class="panel" id="tab-plans">
+          <div class="panel" id="tab-plans" role="tabpanel">
             <div class="card toolbar-card">
               <div class="toolbar">
-                <button class="btn primary" id="plansOpenCreateBtn">Create plan</button>
+                <button class="btn primary" type="button" id="plansOpenCreateBtn">Create plan</button>
               </div>
             </div>
             <div id="plansContent"></div>
           </div>
 
-          <div class="panel" id="tab-reviews">
+          <div class="panel" id="tab-reviews" role="tabpanel">
             <div id="reviewsContent"></div>
           </div>
         </section>
 
-        <!-- HANDOVER -->
-        <section class="section" id="section-handover">
-          <div class="card">
-            <h2 class="card-title">Shift handover</h2>
-            <p class="muted">Auto-drafted from recorded reality, incidents, medication and tasks.</p>
+        <section class="section" id="section-handover" aria-labelledby="handoverTitle">
+          <article class="card">
+            <div class="card-title-row">
+              <div>
+                <div class="eyebrow">Continuity of care</div>
+                <h2 class="card-title" id="handoverTitle">Shift handover</h2>
+              </div>
+            </div>
+            <p class="muted">Auto-drafted from recorded reality, incidents, medication, appointments and tasks.</p>
             <div id="handoverBoard"></div>
-          </div>
+          </article>
         </section>
 
-        <!-- MANAGER QA -->
-        <section class="section" id="section-manager-qa">
-          <div class="card">
-            <h2 class="card-title">Manager review queue</h2>
+        <section class="section" id="section-manager-qa" aria-labelledby="managerQaTitle">
+          <article class="card">
+            <div class="card-title-row">
+              <div>
+                <div class="eyebrow">Oversight</div>
+                <h2 class="card-title" id="managerQaTitle">Manager review queue</h2>
+              </div>
+            </div>
             <div id="managerQaContent"></div>
-          </div>
+          </article>
         </section>
       </section>
 
-      <section id="documentMode" class="hidden">
+      <section id="documentMode" class="hidden" aria-labelledby="docTitle">
         <div class="doc-header">
-          <button class="btn ghost" id="docBackBtn">← Back</button>
+          <button class="btn ghost" type="button" id="docBackBtn">← Back</button>
           <div>
             <h2 id="docTitle">Document</h2>
             <div class="muted" id="docMetaLine">—</div>
@@ -168,6 +291,11 @@
       </section>
     </main>
   </div>
+
+  <button id="assistantLauncher" class="assistant-fab" type="button" aria-label="Open IndiCare Assistant">
+    <span class="assistant-fab-icon" aria-hidden="true">✦</span>
+    <span class="assistant-fab-label">Ask IndiCare</span>
+  </button>
 
   <script src="/js/young-people-shell.js"></script>
 </body>

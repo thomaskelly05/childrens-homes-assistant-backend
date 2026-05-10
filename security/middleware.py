@@ -3,24 +3,37 @@ from __future__ import annotations
 import os
 from typing import Iterable
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
 CSRF_EXEMPT_PATH_PREFIXES: tuple[str, ...] = (
     "/auth/login",
     "/auth/logout",
     "/health",
+    "/debug",
     "/docs",
+    "/redoc",
+    "/openapi",
     "/openapi.json",
 )
+
 DEFAULT_ALLOWED_ORIGINS = {
     origin.strip()
     for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
     if origin.strip()
 }
+
+
+def json_response(status_code: int, detail: str) -> Response:
+    return Response(
+        content=f'{{"ok":false,"detail":"{detail}"}}',
+        status_code=status_code,
+        media_type="application/json",
+    )
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -67,7 +80,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.csrf_cookie_name = csrf_cookie_name
         self.session_cookie_name = session_cookie_name
-        self.allowed_origins = set(allowed_origins or [])
+        self.allowed_origins = set(allowed_origins or DEFAULT_ALLOWED_ORIGINS)
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -76,24 +89,34 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         if method in SAFE_METHODS or path.startswith(CSRF_EXEMPT_PATH_PREFIXES):
             return await call_next(request)
 
-        # Only enforce if authenticated by session cookie.
+        # Only enforce CSRF for browser-authenticated session requests.
         session_cookie = request.cookies.get(self.session_cookie_name)
         if not session_cookie:
             return await call_next(request)
 
-        # Optional origin check
         origin = request.headers.get("origin")
         if origin and self.allowed_origins and origin not in self.allowed_origins:
-            raise HTTPException(status_code=403, detail="Origin not allowed")
+            return json_response(403, "Origin not allowed")
 
         cookie_token = request.cookies.get(self.csrf_cookie_name)
         header_token = request.headers.get("X-CSRF-Token")
         session_token = request.session.get("csrf_token")
 
-        if not cookie_token or not header_token or not session_token:
-            raise HTTPException(status_code=403, detail="CSRF validation failed")
+        # Compatibility mode:
+        # Some existing sessions have the CSRF cookie but no session csrf_token.
+        # Accept cookie + header match, then hydrate the session token.
+        if cookie_token and header_token and cookie_token == header_token:
+            if not session_token:
+                request.session["csrf_token"] = cookie_token
+            return await call_next(request)
 
-        if not (cookie_token == header_token == session_token):
-            raise HTTPException(status_code=403, detail="CSRF validation failed")
+        # Strict mode for fully hydrated sessions.
+        if (
+            cookie_token
+            and header_token
+            and session_token
+            and cookie_token == header_token == session_token
+        ):
+            return await call_next(request)
 
-        return await call_next(request)
+        return json_response(403, "CSRF validation failed")

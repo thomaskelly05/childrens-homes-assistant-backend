@@ -203,6 +203,7 @@ def _normalise_sources(sources: Any) -> list[dict[str, Any]]:
                 "citation_ref",
             ]
         )
+
         if key in seen:
             continue
 
@@ -257,6 +258,7 @@ def _normalise_evidence_index(
                 "url",
             ]
         )
+
         if key in seen:
             continue
 
@@ -327,8 +329,16 @@ def _extract_suggested_actions(runtime: AssistantRuntimeContext | None) -> list[
         line = line.strip()
         if not line:
             continue
+
+        if line.startswith("-"):
+            line = line.lstrip("-").strip()
+
+        if line.startswith("*"):
+            line = line.lstrip("*").strip()
+
         if line.startswith("•"):
             line = line.lstrip("•").strip()
+
         if not line:
             continue
 
@@ -415,9 +425,20 @@ def _infer_output_overrides(
     ]
 
     if any(term in text for term in report_terms):
+        task_type = "summary"
+        output_type = "plain_response"
+
+        if "report" in text or "reg 45" in text or "reg45" in text:
+            task_type = "report"
+            output_type = "structured_report"
+
+        if "review pack" in text:
+            task_type = "report"
+            output_type = "structured_report"
+
         return {
-            "task_type": "report" if "report" in text or "reg 45" in text or "reg45" in text else "summary",
-            "output_type": "structured_report" if any(term in text for term in ["reg 45", "reg45", "report", "review pack"]) else "plain_response",
+            "task_type": task_type,
+            "output_type": output_type,
         }
 
     return {}
@@ -526,10 +547,13 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     response_stance = getattr(runtime, "response_stance", "practice_support")
 
     inferred_overrides = _infer_output_overrides(req.message, req.user_context)
+
     if inferred_overrides.get("task_type"):
         task_type = inferred_overrides["task_type"]
+
     if inferred_overrides.get("output_type"):
         output_type = inferred_overrides["output_type"]
+
     if inferred_overrides.get("response_stance"):
         response_stance = inferred_overrides["response_stance"]
 
@@ -555,6 +579,7 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         user_role_profile=user_role_profile,
         response_stance=response_stance,
     )
+
     regulation_payload = serialise_regulation_mapping(regulation_mapping)
     regulation_context_block = build_regulation_context_block(regulation_mapping)
 
@@ -643,3 +668,86 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
         regulation_mapping=regulation_mapping,
         regulation_payload=regulation_payload,
     )
+
+
+def build_assistant_prompt(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """
+    Backwards-compatible shim for older callers that expect
+    build_assistant_prompt(...) to return a dict.
+    """
+
+    request_obj = args[0] if args else None
+
+    message = kwargs.pop("message", None)
+    session_id = kwargs.pop("session_id", None)
+    history = kwargs.pop("history", None) or []
+    role = kwargs.pop("role", "residential care staff")
+    document_text = kwargs.pop("document_text", None)
+    document_name = kwargs.pop("document_name", None)
+    ld_lens = kwargs.pop("ld_lens", False)
+    training_mode = kwargs.pop("training_mode", False)
+    speed = kwargs.pop("speed", kwargs.pop("response_mode", "balanced"))
+    user_context = kwargs.pop("user_context", None) or {}
+    user_id = kwargs.pop("user_id", None)
+    scope = kwargs.pop("scope", None)
+
+    if message is None and request_obj is not None:
+        message = getattr(request_obj, "message", None)
+
+    if not message:
+        raise TypeError("build_assistant_prompt() missing required argument: 'message'")
+
+    if session_id is None:
+        session_id = f"orchestrator-{abs(hash(message))}"
+
+    merged_context = dict(user_context)
+
+    if user_id is not None:
+        merged_context.setdefault("user_id", user_id)
+
+    if scope is not None:
+        merged_context.setdefault("scope", scope)
+
+        if isinstance(scope, dict):
+            for key, value in scope.items():
+                merged_context.setdefault(key, value)
+
+    if kwargs:
+        merged_context.setdefault("_orchestrator_extra_kwargs", {})
+        merged_context["_orchestrator_extra_kwargs"].update(kwargs)
+
+    result = build_orchestrator_result(
+        OrchestratorRequest(
+            message=message,
+            session_id=session_id,
+            history=history,
+            role=role,
+            document_text=document_text,
+            document_name=document_name,
+            ld_lens=ld_lens,
+            training_mode=training_mode,
+            speed=speed,
+            user_context=merged_context,
+        )
+    )
+
+    return {
+        "prompt": result.user_message,
+        "context": merged_context,
+        "session_id": session_id,
+        "system_prompt": result.system_prompt,
+        "user_message": result.user_message,
+        "messages": result.messages,
+        "runtime": result.runtime_payload,
+        "runtime_payload": result.runtime_payload,
+        "runtime_model": result.runtime,
+        "sources": result.sources,
+        "selected_mode": result.selected_mode,
+        "trimmed_history": result.trimmed_history,
+        "trimmed_document_text": result.trimmed_document_text,
+        "response_plan": result.response_plan,
+        "guidance_plan": result.guidance_plan,
+        "model_plan": result.model_plan,
+        "regulation_mapping": result.regulation_mapping,
+        "regulation_payload": result.regulation_payload,
+    }

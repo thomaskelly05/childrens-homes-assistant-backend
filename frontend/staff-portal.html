@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IndiCare OS | Staff portal</title>
+  <link rel="stylesheet" href="/css/os-unified.css" />
+  <link rel="stylesheet" href="/css/rostering.css" />
+</head>
+<body class="os-unified-page">
+  <header class="os-topbar">
+    <a href="/young-people-shell.html" class="os-brand-button">
+      <span class="os-brand-mark">IC</span>
+      <span class="os-brand-copy">
+        <strong>IndiCare OS</strong>
+        <small>Children's residential operating system</small>
+      </span>
+    </a>
+
+    <nav class="os-topbar-nav" aria-label="Platform areas">
+      <a href="/young-people-shell.html" class="os-topbar-link">Shell</a>
+      <a href="/young-people.html" class="os-topbar-link">Gateway</a>
+      <a href="/ai-note.html" class="os-topbar-link">I-Notes</a>
+      <a href="/assistant" class="os-topbar-link">Assistant</a>
+      <a href="/rostering.html" class="os-topbar-link">Rostering</a>
+      <a href="/staff-portal.html" class="os-topbar-link active" aria-current="page">Staff portal</a>
+    </nav>
+
+    <div class="os-topbar-context">My shifts, open shifts and acknowledgements</div>
+  </header>
+
+  <main class="roster-shell">
+    <section class="roster-header-panel">
+      <div class="roster-header-main">
+        <div class="roster-header-copy">
+          <div class="eyebrow">Staff self-service</div>
+          <h1>My shifts and notifications</h1>
+          <p>
+            View your assigned shifts, claim open cover, request swaps, clock in and out,
+            and acknowledge rota changes in one place.
+          </p>
+        </div>
+
+        <div class="roster-header-actions">
+          <a href="/rostering.html" class="secondary-btn">Manager rota</a>
+        </div>
+      </div>
+
+      <div class="summary-strip" aria-label="Staff portal summary">
+        <article class="summary-card">
+          <span class="summary-label">Assigned shifts</span>
+          <strong id="staffSummaryAssigned">0</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Open shifts</span>
+          <strong id="staffSummaryOpen">0</strong>
+        </article>
+
+        <article class="summary-card danger-card">
+          <span class="summary-label">Need acknowledgement</span>
+          <strong id="staffSummaryAcks">0</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Pending requests</span>
+          <strong id="staffSummaryPending">0</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="roster-main-grid">
+      <aside class="roster-panel">
+        <header class="panel-head">
+          <div>
+            <h2>My profile</h2>
+            <p>Your live staff view and current status.</p>
+          </div>
+        </header>
+
+        <div id="staffProfileCard" class="inline-form-card">
+          <h3>Current staff member</h3>
+          <p id="staffProfileName">Loading...</p>
+          <p id="staffProfileMeta">Please wait.</p>
+        </div>
+
+        <section class="inline-form-card">
+          <h3>Quick help</h3>
+          <p>
+            Use this page to claim open shifts, request a swap, and confirm you have seen rota changes.
+          </p>
+        </section>
+      </aside>
+
+      <section class="roster-panel">
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>My assigned shifts</h2>
+              <p>Your upcoming shifts with attendance actions.</p>
+            </div>
+          </header>
+          <div id="myShifts" class="side-list" aria-live="polite"></div>
+        </section>
+
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>Open shifts available</h2>
+              <p>Claim extra cover if you are suitable and available.</p>
+            </div>
+          </header>
+          <div id="openShifts" class="side-list" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <aside class="roster-panel">
+        <section>
+          <header class="panel-head">
+            <div>
+              <h2>My notifications</h2>
+              <p>Changes, acknowledgements and requests.</p>
+            </div>
+          </header>
+          <div id="myNotifications" class="side-list" aria-live="polite"></div>
+        </section>
+
+        <section class="os-links-card">
+          <header class="panel-head">
+            <div>
+              <h2>Useful links</h2>
+              <p>Move between related areas of the OS.</p>
+            </div>
+          </header>
+
+          <nav class="os-link-list" aria-label="Staff portal linked areas">
+            <a href="/rostering.html">Manager rota</a>
+            <a href="/young-people-shell.html">Home dashboard</a>
+            <a href="/young-people-shell.html">Handover</a>
+            <a href="/ai-note.html">I-Notes</a>
+          </nav>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script src="/js/staff-portal.js"></script>
+</body>
+</html>

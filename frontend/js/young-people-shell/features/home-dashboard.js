@@ -1,28 +1,18 @@
-import { state } from "../state.js";
+import { state, resolveAccessibleHomeId } from "../state.js";
 import { els } from "../dom.js";
 import { apiGet } from "../core/api.js";
 import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
 function getHomeId() {
-  return (
-    state.homeId ||
-    state.selectedHomeId ||
-    state.readinessSelectedHomeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    state.selectedYoungPerson?.home_id ||
-    null
-  );
+  return resolveAccessibleHomeId();
 }
 
 function toArray(value, fallbacks = []) {
   if (Array.isArray(value)) return value;
-
   for (const fallback of fallbacks) {
     if (Array.isArray(fallback)) return fallback;
   }
-
   return [];
 }
 
@@ -35,12 +25,18 @@ function safeText(value, fallback = "") {
   return escapeHtml(String(value ?? fallback ?? ""));
 }
 
+function buildRecordPayloadAttr(item = {}) {
+  try {
+    return encodeURIComponent(JSON.stringify(item));
+  } catch {
+    return "";
+  }
+}
+
 function formatDate(value) {
   if (!value) return "No date";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -50,10 +46,8 @@ function formatDate(value) {
 
 function formatDateTime(value) {
   if (!value) return "No date";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -86,6 +80,8 @@ function getStatusTone(status = "") {
       "annual_leave",
       "vacant",
       "vacancy",
+      "inadequate",
+      "requires_improvement",
     ].includes(normalised)
   ) {
     return "danger";
@@ -109,6 +105,7 @@ function getStatusTone(status = "") {
       "received",
       "sent",
       "planned",
+      "good",
     ].includes(normalised)
   ) {
     return "warning";
@@ -117,7 +114,6 @@ function getStatusTone(status = "") {
   if (
     [
       "completed",
-      "good",
       "active",
       "booked",
       "compliant",
@@ -127,6 +123,9 @@ function getStatusTone(status = "") {
       "on_shift",
       "available",
       "confirmed",
+      "outstanding",
+      "resolved",
+      "closed",
     ].includes(normalised)
   ) {
     return "success";
@@ -153,46 +152,10 @@ function sortSoonestFirst(items = [], keys = []) {
   return [...items].sort((a, b) => {
     const aValue = keys.map((key) => a?.[key]).find(Boolean);
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
-
     const aTime = aValue ? toTime(aValue) : Number.POSITIVE_INFINITY;
     const bTime = bValue ? toTime(bValue) : Number.POSITIVE_INFINITY;
-
     return aTime - bTime;
   });
-}
-
-function hasUsableData(data) {
-  if (!data || typeof data !== "object") return false;
-
-  const candidateKeys = [
-    "items",
-    "young_people",
-    "records",
-    "team",
-    "staff",
-    "tasks",
-    "communications",
-    "documents",
-    "statutory_documents",
-    "supervisions",
-    "therapy",
-    "therapy_records",
-    "reports",
-    "monthly_reviews",
-    "compliance_items",
-    "inspection_home_cards",
-    "inspection_headers",
-    "inspection_actions",
-  ];
-
-  if (candidateKeys.some((key) => Array.isArray(data[key]) && data[key].length > 0)) {
-    return true;
-  }
-
-  if (data.summary && typeof data.summary === "object") return true;
-  if (data.home && typeof data.home === "object") return true;
-
-  return false;
 }
 
 function normaliseHomeSummary(data = {}) {
@@ -252,34 +215,19 @@ function normaliseTaskItems(data = {}) {
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "task",
-    title: item.title || item.task || "Task",
+    title: item.title || item.task_title || item.task || "Task",
     task: item.task || item.title || "Task",
     status: item.status || (item.completed ? "completed" : "open"),
     completed: Boolean(item.completed),
-    due_date: item.due_date || null,
-    assigned_role: item.assigned_role || "",
+    due_date: item.due_date || item.task_due_date || item.action_due_date || null,
+    assigned_role: item.assigned_role || item.owner_role || "",
     summary:
       item.summary ||
+      item.action_title ||
       item.notes ||
       item.description ||
       item.task ||
       "Task recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
-function normaliseCommunicationItems(data = {}) {
-  return toArray(data.items, [data.communications, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "communication",
-    title: item.title || item.contact_type || "Communication",
-    status: item.status || "recorded",
-    summary: item.summary || item.notes || "Communication logged.",
-    contact_datetime: item.contact_datetime || item.created_at || null,
-    communication_type: item.communication_type || item.contact_type || "",
-    organisation: item.organisation || "",
     created_at: item.created_at || null,
     updated_at: item.updated_at || null,
   }));
@@ -323,25 +271,6 @@ function normaliseSupervisionItems(data = {}) {
   }));
 }
 
-function normaliseTherapyItems(data = {}) {
-  return toArray(data.items, [data.therapy, data.therapy_records, data.records]).map((item) => ({
-    ...item,
-    id: item.id ?? item.record_id ?? item.source_id ?? null,
-    record_type: item.record_type || "therapy",
-    service_name: item.title || item.service_name || "Therapeutic input",
-    title: item.title || item.service_name || "Therapeutic input",
-    professional_name: item.professional_name || "",
-    status: item.status || "active",
-    session_date: item.session_date || item.created_at || null,
-    summary:
-      item.summary ||
-      item.notes ||
-      "Therapeutic input recorded.",
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null,
-  }));
-}
-
 function normaliseReportItems(data = {}) {
   return toArray(data.items, [data.reports, data.monthly_reviews, data.records]).map((item) => ({
     ...item,
@@ -379,12 +308,12 @@ function normaliseComplianceItems(data = {}) {
 }
 
 function normaliseInspectionCards(data = {}) {
-  return toArray(data.items, [data.inspection_home_cards, data.records]).map((item) => ({
+  return toArray(data.items, [data.inspection_scores, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.home_id ?? item.source_id ?? null,
     home_id: item.home_id ?? item.id ?? null,
-    record_type: item.record_type || "inspection_home_card",
-    title: item.home_name || "Inspection card",
+    record_type: item.record_type || "inspection_score",
+    title: item.home_name || "Inspection score",
     status: item.overall_band || "recorded",
     overall_score: item.overall_score ?? 0,
     confidence_score: item.confidence_score ?? 0,
@@ -392,13 +321,14 @@ function normaliseInspectionCards(data = {}) {
     overdue_actions: item.overdue_actions ?? 0,
     summary:
       item.summary ||
+      item.narrative_summary ||
       `${item.overall_band || "Band"} • Score ${item.overall_score ?? 0}`,
     updated_at: item.updated_at || item.created_at || null,
   }));
 }
 
 function normaliseInspectionActions(data = {}) {
-  return toArray(data.items, [data.inspection_actions, data.records]).map((item) => ({
+  return toArray(data.items, [data.inspection_improvement_actions, data.actions, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.source_id ?? null,
     record_type: item.record_type || "inspection_action",
@@ -422,7 +352,7 @@ function buildTopStats({
   openTasks = [],
   overdueItems = [],
   dueSupervisions = [],
-  recentCommunications = [],
+  recentDocuments = [],
   inspectionActions = [],
 }) {
   return [
@@ -451,9 +381,9 @@ function buildTopStats({
       tone: dueSupervisions.length ? "warning" : "muted",
     },
     {
-      label: "Recent comms",
-      value: recentCommunications.length,
-      note: "Latest liaison activity",
+      label: "Documents",
+      value: recentDocuments.length,
+      note: "Recent or review-sensitive records",
       tone: "muted",
     },
     {
@@ -584,7 +514,6 @@ function buildHomeKpis({
   tasks = [],
   documents = [],
   supervisions = [],
-  therapy = [],
   compliance = [],
   inspectionCards = [],
 }) {
@@ -628,12 +557,6 @@ function buildHomeKpis({
     supervisions.length > 0
       ? Math.round((completedSupervisions / supervisions.length) * 100)
       : 0;
-
-  const activeTherapy = therapy.filter((item) =>
-    ["active", "booked", "open", "completed"].includes(
-      String(item.status || "").toLowerCase().replaceAll(" ", "_")
-    )
-  ).length;
 
   const inspectionScore = inspectionCards[0]?.overall_score ?? 0;
 
@@ -691,12 +614,6 @@ function buildHomeKpis({
           ? "danger"
           : "muted",
     },
-    {
-      label: "Therapeutic input",
-      value: activeTherapy,
-      percent: Math.min(activeTherapy * 20, 100),
-      tone: activeTherapy > 0 ? "muted" : "warning",
-    },
   ];
 }
 
@@ -704,7 +621,6 @@ function buildMiniMetrics({
   openTasks = [],
   dueSupervisions = [],
   recentDocuments = [],
-  therapyItems = [],
   recentCommunications = [],
   inspectionActions = [],
 }) {
@@ -712,7 +628,6 @@ function buildMiniMetrics({
     { label: "Tasks", value: openTasks.length },
     { label: "Supervisions", value: dueSupervisions.length },
     { label: "Documents", value: recentDocuments.length },
-    { label: "Therapy", value: therapyItems.length },
     { label: "Comms", value: recentCommunications.length },
     { label: "Inspection", value: inspectionActions.length },
   ];
@@ -788,7 +703,6 @@ function renderRows(items = [], options = {}) {
             item?.staff_member ||
             item?.contact_person ||
             item?.document_type ||
-            item?.service_name ||
             item?.full_name ||
             "Record";
 
@@ -807,6 +721,7 @@ function renderRows(items = [], options = {}) {
           const status = item?.[statusKey] || "";
           const tone = getStatusTone(status);
           const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const recordPayload = buildRecordPayloadAttr(item);
 
           return `
             <article
@@ -815,6 +730,10 @@ function renderRows(items = [], options = {}) {
               data-record-id="${safeText(rowId)}"
               data-record-type="${safeText(recordType || item?.record_type || "")}"
               data-title="${safeText(title)}"
+              data-record-summary="${safeText(summary)}"
+              data-record-status="${safeText(status || "")}"
+              data-record-date="${safeText(item?.due_date || item?.updated_at || item?.created_at || "")}"
+              data-record-payload="${safeText(recordPayload)}"
               tabindex="0"
               role="button"
             >
@@ -919,42 +838,60 @@ function renderMiniChart(title, items = [], key = "value") {
   `;
 }
 
-function renderInspectionCards(cards = []) {
-  if (!cards.length) {
+async function fetchVisibility(homeId) {
+  if (!homeId) {
+    return {
+      signals: [],
+      highlights: [],
+      queues: { urgent: [], due_soon: [], monitor: [] },
+      counts: {},
+      pressures: {},
+    };
+  }
+  try {
+    return (await apiGet(`/visibility/homes/${homeId}`)) || {};
+  } catch {
+    return {
+      signals: [],
+      highlights: [],
+      queues: { urgent: [], due_soon: [], monitor: [] },
+      counts: {},
+      pressures: {},
+    };
+  }
+}
+
+function renderVisibilitySignals(signals = []) {
+  if (!signals.length) {
     return `
       <div class="empty-state">
-        <p>No inspection scorecards are available right now.</p>
+        <p>No high-priority home alerts are active right now.</p>
       </div>
     `;
   }
 
   return `
     <div class="record-list">
-      ${cards
-        .map(
-          (item) => `
+      ${signals
+        .slice(0, 6)
+        .map((signal) => {
+          const tone = getStatusTone(signal.severity || "medium");
+          return `
             <article class="record-row">
               <div class="record-row-main">
-                <div class="record-row-title">${safeText(item.title)}</div>
-                <div class="record-row-summary">${safeText(item.summary)}</div>
-                <div class="record-row-meta">
-                  ${safeText(
-                    [
-                      `Confidence ${item.confidence_score ?? 0}`,
-                      `${item.open_actions ?? 0} open actions`,
-                      `${item.overdue_actions ?? 0} overdue`,
-                    ].join(" • ")
-                  )}
-                </div>
+                <div class="record-row-title">${safeText(
+                  signal.title || "Visibility signal"
+                )}</div>
+                <div class="record-row-summary">${safeText(
+                  signal.description || "Requires management visibility."
+                )}</div>
               </div>
               <div class="record-row-side">
-                <span class="row-pill ${safeText(getStatusTone(item.status || ""))}">
-                  ${safeText(item.status || "recorded")}
-                </span>
+                <span class="row-pill ${tone}">${safeText(signal.count || 0)}</span>
               </div>
             </article>
-          `
-        )
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -965,11 +902,9 @@ function renderHomeDashboardHtml({
   topStats = [],
   operationalCounts = {},
   priorityItems = [],
-  recentCommunications = [],
+  recentDocuments = [],
   openTasks = [],
   dueSupervisions = [],
-  recentDocuments = [],
-  therapyItems = [],
   teamItems = [],
   progressCards = [],
   miniMetrics = [],
@@ -977,7 +912,7 @@ function renderHomeDashboardHtml({
   recentReports = [],
   inspectionCards = [],
   inspectionActions = [],
-  isFallback = false,
+  visibilitySignals = [],
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--home">
@@ -985,12 +920,7 @@ function renderHomeDashboardHtml({
         <div>
           <div class="eyebrow">Home dashboard</div>
           <h2>${safeText(homeName)}</h2>
-          <p>A live home-wide management view across children, staffing, communication, documents, therapy, inspection readiness and oversight.</p>
-          ${
-            isFallback
-              ? `<p class="overview-helper-text">Showing seeded preview data until live home routes are available.</p>`
-              : ""
-          }
+          <p>A live home-wide management view across children, staffing, documents, inspection readiness and oversight.</p>
         </div>
       </div>
 
@@ -1009,7 +939,7 @@ function renderHomeDashboardHtml({
           <div class="overview-section-card">
             <div class="overview-section-head">
               <h3>Operational picture</h3>
-              <p>The quickest view of workforce, actions, vacancies, inspection pressure and document review pressure.</p>
+              <p>The quickest view of staffing, actions, inspection pressure and document review pressure.</p>
             </div>
 
             <div class="record-list">
@@ -1019,9 +949,7 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Known vacancies across the home.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${
-                    operationalCounts.openVacancies > 0 ? "warning" : "muted"
-                  }">${safeText(operationalCounts.openVacancies)}</span>
+                  <span class="row-pill ${operationalCounts.openVacancies > 0 ? "warning" : "muted"}">${safeText(operationalCounts.openVacancies)}</span>
                 </div>
               </article>
 
@@ -1031,9 +959,7 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Staff currently off, sick or unavailable.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${
-                    operationalCounts.absentStaff > 0 ? "warning" : "muted"
-                  }">${safeText(operationalCounts.absentStaff)}</span>
+                  <span class="row-pill ${operationalCounts.absentStaff > 0 ? "warning" : "muted"}">${safeText(operationalCounts.absentStaff)}</span>
                 </div>
               </article>
 
@@ -1043,9 +969,7 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">High-severity or overdue compliance items.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${
-                    operationalCounts.urgentCompliance > 0 ? "danger" : "muted"
-                  }">${safeText(operationalCounts.urgentCompliance)}</span>
+                  <span class="row-pill ${operationalCounts.urgentCompliance > 0 ? "danger" : "muted"}">${safeText(operationalCounts.urgentCompliance)}</span>
                 </div>
               </article>
 
@@ -1055,9 +979,7 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Inspection readiness actions needing urgent focus.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${
-                    operationalCounts.urgentInspection > 0 ? "danger" : "muted"
-                  }">${safeText(operationalCounts.urgentInspection)}</span>
+                  <span class="row-pill ${operationalCounts.urgentInspection > 0 ? "danger" : "muted"}">${safeText(operationalCounts.urgentInspection)}</span>
                 </div>
               </article>
 
@@ -1067,9 +989,7 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Outstanding management and operational tasks.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${
-                    operationalCounts.openActions > 0 ? "warning" : "muted"
-                  }">${safeText(operationalCounts.openActions)}</span>
+                  <span class="row-pill ${operationalCounts.openActions > 0 ? "warning" : "muted"}">${safeText(operationalCounts.openActions)}</span>
                 </div>
               </article>
 
@@ -1079,9 +999,7 @@ function renderHomeDashboardHtml({
                   <div class="record-row-summary">Policies, statutory documents or records needing review.</div>
                 </div>
                 <div class="record-row-side">
-                  <span class="row-pill ${
-                    operationalCounts.docReviewsDue > 0 ? "warning" : "muted"
-                  }">${safeText(operationalCounts.docReviewsDue)}</span>
+                  <span class="row-pill ${operationalCounts.docReviewsDue > 0 ? "warning" : "muted"}">${safeText(operationalCounts.docReviewsDue)}</span>
                 </div>
               </article>
             </div>
@@ -1092,18 +1010,13 @@ function renderHomeDashboardHtml({
               <h3>Children in home</h3>
               <p>Current live children and headline placement context.</p>
             </div>
-
             ${renderRows(youngPeople, {
               emptyMessage: "No live child records found.",
               titleKey: "preferred_name",
               summaryKey: "home_name",
               recordType: "young_person",
               metaBuilder: (item) =>
-                [
-                  item.full_name || "",
-                  item.summary_risk_level ? `Risk ${item.summary_risk_level}` : "",
-                  item.placement_status || "",
-                ]
+                [item.full_name || "", item.summary_risk_level ? `Risk ${item.summary_risk_level}` : "", item.placement_status || ""]
                   .filter(Boolean)
                   .join(" • "),
               statusKey: "placement_status",
@@ -1112,42 +1025,16 @@ function renderHomeDashboardHtml({
 
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Recent communication</h3>
-              <p>Latest liaison with professionals, families and partner agencies.</p>
-            </div>
-
-            ${renderRows(recentCommunications, {
-              emptyMessage: "No recent communication records found.",
-              titleKey: "title",
-              summaryKey: "summary",
-              recordType: "communication",
-              metaBuilder: (item) =>
-                [
-                  item.organisation || "",
-                  item.communication_type || "",
-                  formatDateTime(item.contact_datetime || item.created_at),
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </div>
-
-          <div class="overview-section-card">
-            <div class="overview-section-head">
               <h3>Open tasks</h3>
               <p>Management and operational actions still needing completion.</p>
             </div>
-
             ${renderRows(openTasks, {
               emptyMessage: "No open tasks found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "task",
               metaBuilder: (item) =>
-                [
-                  item.assigned_role || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
+                [item.assigned_role || "", item.due_date ? `Due ${formatDate(item.due_date)}` : ""]
                   .filter(Boolean)
                   .join(" • "),
             })}
@@ -1158,7 +1045,6 @@ function renderHomeDashboardHtml({
               <h3>Team overview</h3>
               <p>Latest team and staffing context across the home.</p>
             </div>
-
             ${renderRows(teamItems, {
               emptyMessage: "No team updates found.",
               titleKey: "staff_member",
@@ -1174,18 +1060,34 @@ function renderHomeDashboardHtml({
               <h3>Inspection readiness</h3>
               <p>Current inspection scorecards and readiness position.</p>
             </div>
-
-            ${renderInspectionCards(inspectionCards)}
+            ${renderRows(inspectionCards, {
+              emptyMessage: "No inspection scorecards are available right now.",
+              titleKey: "title",
+              summaryKey: "summary",
+              recordType: "inspection_score",
+              metaBuilder: (item) =>
+                [`Confidence ${item.confidence_score ?? 0}`, `${item.open_actions ?? 0} open actions`, `${item.overdue_actions ?? 0} overdue`]
+                  .filter(Boolean)
+                  .join(" • "),
+              statusKey: "status",
+            })}
           </div>
         </section>
 
         <aside class="overview-side">
           <section class="overview-side-card">
             <div class="overview-section-head">
+              <h3>Visibility alerts</h3>
+              <p>Operational pressure surfaced from overdue, repeated and unresolved issues.</p>
+            </div>
+            ${renderVisibilitySignals(visibilitySignals)}
+          </section>
+
+          <section class="overview-side-card">
+            <div class="overview-section-head">
               <h3>Needs attention</h3>
               <p>The most urgent management issues across the home.</p>
             </div>
-
             ${renderPriorityList(priorityItems)}
           </section>
 
@@ -1196,18 +1098,13 @@ function renderHomeDashboardHtml({
               <h3>Inspection actions</h3>
               <p>Actions most likely to affect inspection confidence and readiness.</p>
             </div>
-
             ${renderRows(inspectionActions, {
               emptyMessage: "No open inspection actions found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "inspection_action",
               metaBuilder: (item) =>
-                [
-                  item.owner_user_name || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                  item.projected_section_band || "",
-                ]
+                [item.owner_user_name || "", item.due_date ? `Due ${formatDate(item.due_date)}` : "", item.projected_section_band || ""]
                   .filter(Boolean)
                   .join(" • "),
               statusKey: "priority",
@@ -1219,17 +1116,13 @@ function renderHomeDashboardHtml({
               <h3>Supervision due</h3>
               <p>Upcoming or overdue staff supervision and oversight.</p>
             </div>
-
             ${renderRows(dueSupervisions, {
               emptyMessage: "No supervision items are currently due.",
               titleKey: "staff_member",
               summaryKey: "summary",
               recordType: "supervision",
               metaBuilder: (item) =>
-                [
-                  item.role || "",
-                  item.due_date ? `Due ${formatDate(item.due_date)}` : "",
-                ]
+                [item.role || "", item.due_date ? `Due ${formatDate(item.due_date)}` : ""]
                   .filter(Boolean)
                   .join(" • "),
             })}
@@ -1240,38 +1133,13 @@ function renderHomeDashboardHtml({
               <h3>Documents</h3>
               <p>Recent uploads and review-sensitive records.</p>
             </div>
-
             ${renderRows(recentDocuments, {
               emptyMessage: "No documents found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "document",
               metaBuilder: (item) =>
-                [
-                  item.document_type || "",
-                  item.review_date ? `Review ${formatDate(item.review_date)}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" • "),
-            })}
-          </section>
-
-          <section class="overview-side-card">
-            <div class="overview-section-head">
-              <h3>Therapeutic services</h3>
-              <p>Recent therapeutic input, recommendations and follow-up.</p>
-            </div>
-
-            ${renderRows(therapyItems, {
-              emptyMessage: "No therapeutic service records found.",
-              titleKey: "service_name",
-              summaryKey: "summary",
-              recordType: "therapy",
-              metaBuilder: (item) =>
-                [
-                  item.professional_name || "",
-                  item.session_date ? formatDate(item.session_date) : "",
-                ]
+                [item.document_type || "", item.review_date ? `Review ${formatDate(item.review_date)}` : ""]
                   .filter(Boolean)
                   .join(" • "),
             })}
@@ -1282,17 +1150,13 @@ function renderHomeDashboardHtml({
               <h3>Recent reports</h3>
               <p>Latest home-level reports and review outputs.</p>
             </div>
-
             ${renderRows(recentReports, {
               emptyMessage: "No reports found.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "report",
               metaBuilder: (item) =>
-                [
-                  item.review_month ? formatDate(item.review_month) : "",
-                  item.status || "",
-                ]
+                [item.review_month ? formatDate(item.review_month) : "", item.status || ""]
                   .filter(Boolean)
                   .join(" • "),
             })}
@@ -1305,13 +1169,11 @@ function renderHomeDashboardHtml({
 
 function renderNoHomeContext() {
   if (!els.viewContent) return;
-
   els.viewContent.innerHTML = `
     <section class="overview-panel">
       ${renderEmptyState("A home ID is needed before the home dashboard can load.")}
     </section>
   `;
-
   updateWorkspaceSummaryStrip({
     today: "No home context",
     nextEvent: "No calendar loaded",
@@ -1322,7 +1184,6 @@ function renderNoHomeContext() {
 
 function renderLoadingState() {
   if (!els.viewContent) return;
-
   els.viewContent.innerHTML = `
     <section class="overview-panel">
       <div class="loading-state">
@@ -1333,7 +1194,6 @@ function renderLoadingState() {
       </div>
     </section>
   `;
-
   updateWorkspaceSummaryStrip({
     today: "Loading home view",
     nextEvent: "Checking upcoming activity",
@@ -1344,13 +1204,11 @@ function renderLoadingState() {
 
 function renderErrorState(message) {
   if (!els.viewContent) return;
-
   els.viewContent.innerHTML = `
     <section class="overview-panel">
       ${renderEmptyState(message || "The home dashboard could not be loaded.")}
     </section>
   `;
-
   updateWorkspaceSummaryStrip({
     today: "Home dashboard unavailable",
     nextEvent: "No event loaded",
@@ -1359,257 +1217,40 @@ function renderErrorState(message) {
   });
 }
 
-function buildFallbackData(homeId) {
-  const homeName =
-    state.currentUser?.home_name ||
-    state.currentUser?.homeName ||
-    `Home ${homeId}`;
-
-  const now = new Date();
-  const minusDays = (days, hour = 9, minute = 0) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - days);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString();
-  };
-  const dateOnly = (days) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
-  };
-
-  return {
-    summaryData: {
-      home: {
-        id: homeId,
-        name: homeName,
-        home_name: homeName,
-      },
-      summary: {
-        children_count: 3,
-        home_name: homeName,
-      },
-      young_people: [
-        {
-          id: 101,
-          preferred_name: "Jay",
-          full_name: "Jay Smith",
-          home_name: homeName,
-          placement_status: "active",
-          summary_risk_level: "medium",
-        },
-        {
-          id: 102,
-          preferred_name: "Amira",
-          full_name: "Amira Khan",
-          home_name: homeName,
-          placement_status: "active",
-          summary_risk_level: "high",
-        },
-        {
-          id: 103,
-          preferred_name: "Luca",
-          full_name: "Luca Brown",
-          home_name: homeName,
-          placement_status: "active",
-          summary_risk_level: "low",
-        },
-      ],
-    },
-    teamData: {
-      items: [
-        { id: 1, full_name: "Sarah Jones", role: "Registered Manager", status: "On shift" },
-        { id: 2, full_name: "Tom Patel", role: "Deputy Manager", status: "On shift" },
-        { id: 3, full_name: "Priya Shah", role: "Therapist", status: "Visiting professional" },
-        { id: 4, full_name: "Leah Brown", role: "Senior Residential Worker", status: "On shift" },
-      ],
-    },
-    taskData: {
-      items: [
-        {
-          id: 201,
-          title: "Complete fire drill log",
-          status: "open",
-          completed: false,
-          due_date: dateOnly(-1),
-        },
-        {
-          id: 202,
-          title: "Update rota gap cover",
-          status: "open",
-          completed: false,
-          due_date: dateOnly(1),
-        },
-      ],
-    },
-    communicationData: {
-      items: [
-        {
-          id: 301,
-          title: "IRO update",
-          summary: "Updated on progress and actions from recent review.",
-          contact_datetime: minusDays(1, 10, 30),
-          status: "Sent",
-          communication_type: "email",
-          organisation: "IRO",
-        },
-      ],
-    },
-    documentData: {
-      items: [
-        {
-          id: 401,
-          title: "Statement of Purpose",
-          document_type: "Governance",
-          summary: "Annual review due shortly.",
-          status: "review_due",
-          review_date: dateOnly(4),
-        },
-      ],
-    },
-    supervisionData: {
-      items: [
-        {
-          id: 501,
-          staff_member: "Ben Carter",
-          role: "Bank Staff",
-          status: "overdue",
-          due_date: dateOnly(-3),
-          summary: "Supervision overdue.",
-        },
-      ],
-    },
-    therapyData: {
-      items: [
-        {
-          id: 601,
-          title: "Clinical consultation",
-          service_name: "Clinical consultation",
-          professional_name: "Priya Shah",
-          status: "completed",
-          session_date: minusDays(5, 11, 0),
-          summary: "Practical recommendations shared with staff.",
-        },
-      ],
-    },
-    reportData: {
-      items: [
-        {
-          id: 701,
-          title: "Monthly home summary",
-          summary: "Summary of incidents, staffing and quality themes.",
-          review_month: "2026-03-01",
-          status: "completed",
-          created_at: minusDays(8, 9, 0),
-        },
-      ],
-    },
-    complianceData: {
-      items: [
-        {
-          id: 801,
-          title: "Regulation 44 visit due",
-          status: "overdue",
-          severity: "high",
-          due_date: dateOnly(-2),
-        },
-      ],
-    },
-    inspectionCardsData: {
-      items: [
-        {
-          id: homeId,
-          home_id: homeId,
-          home_name: homeName,
-          overall_band: "Good",
-          overall_score: 78,
-          confidence_score: 72,
-          open_actions: 4,
-          overdue_actions: 1,
-        },
-      ],
-    },
-    inspectionActionsData: {
-      items: [
-        {
-          id: 901,
-          action_title: "Tighten evidence for leadership oversight",
-          priority: "high",
-          due_date: dateOnly(3),
-          owner_user_name: "Sarah Jones",
-          projected_section_band: "good",
-          action_description: "Complete evidence against recent management audit actions.",
-        },
-      ],
-    },
-    isFallback: true,
-  };
-}
-
 async function fetchDataset(homeId) {
   const safeGet = (url) => apiGet(url).catch(() => null);
 
   const requests = [
     safeGet(`/homes/${homeId}/dashboard`),
     safeGet(`/homes/${homeId}/team`),
-    safeGet(`/homes/${homeId}/tasks`),
-    safeGet(`/homes/${homeId}/communications`),
     safeGet(`/homes/${homeId}/documents`),
     safeGet(`/homes/${homeId}/supervisions`),
-    safeGet(`/homes/${homeId}/therapy`),
     safeGet(`/homes/${homeId}/reports`),
-    safeGet(`/homes/${homeId}/compliance`),
-    safeGet(`/inspection/ui/home-cards`),
-    safeGet(`/inspection/ui/homes/${homeId}/actions`),
+    safeGet(`/homes/${homeId}/compliance-items`),
+    safeGet(`/homes/${homeId}/inspection-scores`),
+    safeGet(`/homes/${homeId}/inspection-improvement-actions`),
   ];
 
   const [
     summaryData,
     teamData,
-    taskData,
-    communicationData,
     documentData,
     supervisionData,
-    therapyData,
     reportData,
     complianceData,
     inspectionCardsData,
     inspectionActionsData,
   ] = await Promise.all(requests);
 
-  const responses = [
-    summaryData,
-    teamData,
-    taskData,
-    communicationData,
-    documentData,
-    supervisionData,
-    therapyData,
-    reportData,
-    complianceData,
-    inspectionCardsData,
-    inspectionActionsData,
-  ];
-
-  const hasLiveSuccess = responses.some(hasUsableData);
-
-  if (!hasLiveSuccess) {
-    return buildFallbackData(homeId);
-  }
-
   return {
     summaryData: summaryData || {},
     teamData: teamData || { items: [] },
-    taskData: taskData || { items: [] },
-    communicationData: communicationData || { items: [] },
     documentData: documentData || { items: [] },
     supervisionData: supervisionData || { items: [] },
-    therapyData: therapyData || { items: [] },
     reportData: reportData || { items: [] },
     complianceData: complianceData || { items: [] },
     inspectionCardsData: inspectionCardsData || { items: [] },
     inspectionActionsData: inspectionActionsData || { items: [] },
-    isFallback: false,
   };
 }
 
@@ -1626,20 +1267,21 @@ export async function loadHomeDashboard() {
   renderLoadingState();
 
   try {
+    const [dataset, visibility] = await Promise.all([
+      fetchDataset(homeId),
+      fetchVisibility(homeId),
+    ]);
+
     const {
       summaryData,
       teamData,
-      taskData,
-      communicationData,
       documentData,
       supervisionData,
-      therapyData,
       reportData,
       complianceData,
       inspectionCardsData,
       inspectionActionsData,
-      isFallback,
-    } = await fetchDataset(homeId);
+    } = dataset;
 
     const summary = normaliseHomeSummary(summaryData);
     const youngPeople = normaliseYoungPeople(summaryData);
@@ -1649,7 +1291,7 @@ export async function loadHomeDashboard() {
       "created_at",
     ]).slice(0, 12);
 
-    const taskItems = sortSoonestFirst(normaliseTaskItems(taskData), [
+    const taskItems = sortSoonestFirst(normaliseTaskItems(inspectionActionsData), [
       "due_date",
       "updated_at",
       "created_at",
@@ -1662,11 +1304,6 @@ export async function loadHomeDashboard() {
         String(item.status || "").toLowerCase().replaceAll(" ", "_")
       )
     );
-
-    const communicationItems = sortNewestFirst(
-      normaliseCommunicationItems(communicationData),
-      ["contact_datetime", "updated_at", "created_at"]
-    ).slice(0, 6);
 
     const documentItems = sortSoonestFirst(normaliseDocumentItems(documentData), [
       "review_date",
@@ -1694,12 +1331,6 @@ export async function loadHomeDashboard() {
       )
     );
 
-    const therapyItems = sortNewestFirst(normaliseTherapyItems(therapyData), [
-      "session_date",
-      "updated_at",
-      "created_at",
-    ]).slice(0, 6);
-
     const recentReports = sortNewestFirst(normaliseReportItems(reportData), [
       "created_at",
       "updated_at",
@@ -1718,11 +1349,7 @@ export async function loadHomeDashboard() {
     );
 
     const inspectionCards = sortNewestFirst(
-      normaliseInspectionCards(inspectionCardsData).filter(
-        (item) =>
-          Number(item.id) === Number(homeId) ||
-          Number(item.home_id) === Number(homeId)
-      ),
+      normaliseInspectionCards(inspectionCardsData),
       ["updated_at", "created_at"]
     ).slice(0, 1);
 
@@ -1742,7 +1369,7 @@ export async function loadHomeDashboard() {
       openTasks,
       overdueItems: [...overdueTasks, ...urgentCompliance, ...urgentInspection],
       dueSupervisions,
-      recentCommunications: communicationItems,
+      recentDocuments,
       inspectionActions,
     });
 
@@ -1766,7 +1393,6 @@ export async function loadHomeDashboard() {
       tasks: taskItems,
       documents: documentItems,
       supervisions: supervisionItems,
-      therapy: therapyItems,
       compliance: complianceItems,
       inspectionCards,
     });
@@ -1775,8 +1401,7 @@ export async function loadHomeDashboard() {
       openTasks,
       dueSupervisions,
       recentDocuments,
-      therapyItems,
-      recentCommunications: communicationItems,
+      recentCommunications: [],
       inspectionActions,
     });
 
@@ -1793,11 +1418,9 @@ export async function loadHomeDashboard() {
       topStats,
       operationalCounts,
       priorityItems,
-      recentCommunications: communicationItems,
+      recentDocuments,
       openTasks: openTasks.slice(0, 8),
       dueSupervisions: dueSupervisions.slice(0, 6),
-      recentDocuments,
-      therapyItems,
       teamItems,
       progressCards,
       miniMetrics,
@@ -1805,30 +1428,30 @@ export async function loadHomeDashboard() {
       recentReports,
       inspectionCards,
       inspectionActions,
-      isFallback,
+      visibilitySignals: toArray(visibility?.signals).slice(0, 6),
     });
 
     const nextDueSupervision = dueSupervisions[0];
     const nextInspectionAction = inspectionActions[0];
-    const latestCommunication = communicationItems[0];
     const todaySummary = `${youngPeople.length} children • ${openTasks.length} open actions`;
 
     updateWorkspaceSummaryStrip({
-      today: isFallback
-        ? `${todaySummary} • demo preview`
-        : todaySummary,
+      today: todaySummary,
       nextEvent: nextInspectionAction?.due_date
         ? `Inspection action due ${formatDate(nextInspectionAction.due_date)}`
         : nextDueSupervision?.due_date
         ? `Supervision due ${formatDate(nextDueSupervision.due_date)}`
         : "No immediate event loaded",
       lastRecord:
-        latestCommunication?.contact_datetime || latestCommunication?.created_at
-          ? `Latest comms ${formatDateTime(
-              latestCommunication.contact_datetime || latestCommunication.created_at
-            )}`
+        recentReports[0]?.created_at || recentReports[0]?.updated_at
+          ? `Latest report ${formatDateTime(recentReports[0].created_at || recentReports[0].updated_at)}`
           : "No recent home record loaded",
       openActions: `${openTasks.length} open • ${urgentCompliance.length + urgentInspection.length} urgent`,
+      pressure: toArray(visibility?.queues?.urgent).length
+        ? `${toArray(visibility?.queues?.urgent).length} management alerts`
+        : toNumber(visibility?.pressures?.total, 0)
+        ? `${toNumber(visibility?.pressures?.total, 0)} pressure score`
+        : "No active alerts",
     });
   } catch (error) {
     console.error("[home-dashboard] load failed", error);

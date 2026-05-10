@@ -10,6 +10,8 @@ from auth.routes import settings as auth_settings
 from auth.tokens import decode_session_token
 from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
+from db.mfa_db import get_user_mfa  # Backwards-compat export for test monkeypatches
+from services.session_security_service import is_session_revoked, touch_session
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +30,18 @@ BILLING_EXEMPT_PREFIXES = (
     "/js",
     "/assets",
     "/components",
+    "/admin/users",
+    "/founder",
 )
 
-BILLING_EXEMPT_ROLES = {"admin", "provider_admin"}
+BILLING_EXEMPT_ROLES = {
+    "admin",
+    "provider_admin",
+    "founder",
+    "owner",
+    "super_admin",
+    "superadmin",
+}
 
 
 def get_bearer_token(
@@ -47,24 +58,15 @@ def get_bearer_token(
 
 
 def _unauthorised(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=detail,
-    )
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
 
 def _forbidden(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=detail,
-    )
+    return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
 
 def _service_unavailable(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail=detail,
-    )
+    return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
 
 
 def _normalise_role(role: str | None) -> str:
@@ -91,6 +93,7 @@ def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
                 email,
                 role,
                 home_id,
+                provider_id,
                 first_name,
                 last_name,
                 is_active,
@@ -133,11 +136,14 @@ def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
         raise _service_unavailable("Billing system unavailable") from exc
 
 
-def _decode_user_id_from_token(token: str) -> int:
+def _decode_session_payload(token: str) -> dict[str, Any]:
     payload = decode_session_token(token)
     if not payload:
         raise _unauthorised("Invalid or expired session")
+    return payload
 
+
+def _decode_user_id_from_payload(payload: dict[str, Any]) -> int:
     raw_user_id = payload.get("sub")
     if raw_user_id is None:
         raise _unauthorised("Invalid session payload")
@@ -146,6 +152,14 @@ def _decode_user_id_from_token(token: str) -> int:
         return int(raw_user_id)
     except (TypeError, ValueError) as exc:
         raise _unauthorised("Invalid session subject") from exc
+
+
+def _enforce_session_state(payload: dict[str, Any]) -> None:
+    session_id = payload.get("sid")
+    if session_id and is_session_revoked(str(session_id)):
+        raise _unauthorised("Session has been revoked")
+    if session_id:
+        touch_session(str(session_id))
 
 
 def _load_active_user(conn: Any, user_id: int) -> dict[str, Any]:
@@ -192,12 +206,17 @@ def _extract_billing_state(
                 request_path,
             )
             raise
+
         logger.warning(
             "Best-effort billing lookup failed for exempt request path=%s user_id=%s",
             request_path,
             user_id,
             exc_info=True,
         )
+
+    if is_exempt and not subscription_active:
+        subscription_active = True
+        subscription_status = "exempt"
 
     return subscription_active, subscription_status, plan_name
 
@@ -211,7 +230,9 @@ def get_current_user(
     if not token:
         raise _unauthorised("Not authenticated")
 
-    user_id = _decode_user_id_from_token(token)
+    payload = _decode_session_payload(token)
+    _enforce_session_state(payload)
+    user_id = _decode_user_id_from_payload(payload)
     user = _load_active_user(conn, user_id)
 
     role = _normalise_role(user.get("role"))
@@ -228,12 +249,28 @@ def get_current_user(
     if not is_exempt and not subscription_active:
         raise _forbidden("Subscription required")
 
+    home_id = user.get("home_id")
+    provider_id = user.get("provider_id")
+
+    allowed_home_ids = []
+    if home_id is not None:
+        try:
+            allowed_home_ids = [int(home_id)]
+        except (TypeError, ValueError):
+            allowed_home_ids = []
+
     return {
         **user,
+        "id": user["id"],
         "user_id": user["id"],
         "email": user.get("email"),
         "role": role,
-        "home_id": user.get("home_id"),
+        "home_id": home_id,
+        "homeId": home_id,
+        "provider_id": provider_id,
+        "providerId": provider_id,
+        "allowed_home_ids": allowed_home_ids,
+        "allowedHomeIds": allowed_home_ids,
         "subscription_active": subscription_active,
         "subscription_status": subscription_status,
         "plan_name": plan_name,

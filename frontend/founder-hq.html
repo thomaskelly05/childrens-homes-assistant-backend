@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Founder HQ | IndiCare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="/css/os-unified.css" />
+  <link rel="stylesheet" href="/css/founder-hq.css" />
+</head>
+
+<body class="founder-hq-body">
+  <main class="founder-hq-shell">
+
+    <header class="founder-hq-hero">
+      <div>
+        <p class="founder-eyebrow">Private Founder Area</p>
+        <h1>Founder HQ</h1>
+        <p>
+          Your private AI leadership team for strategy, growth, funding, finance,
+          operations, product decisions and company execution.
+        </p>
+      </div>
+
+      <a class="founder-back-link" href="/index.html">Back to IndiCare</a>
+    </header>
+
+    <section class="founder-hq-layout">
+
+      <aside class="founder-sidebar">
+        <h2>AI Team</h2>
+
+        <button class="founder-mode is-active" data-founder-mode="strategy">
+          <strong>Strategy Advisor</strong>
+          <span>Direction, positioning and priorities</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="growth">
+          <strong>Growth & Sales</strong>
+          <span>Leads, outreach and demos</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="funding">
+          <strong>Funding</strong>
+          <span>Grants, impact and applications</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="finance">
+          <strong>Finance</strong>
+          <span>Pricing, forecasts and cashflow</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="operations">
+          <strong>Operations</strong>
+          <span>Systems, delivery and workload</span>
+        </button>
+
+        <button class="founder-mode" data-founder-mode="product">
+          <strong>Product & UX</strong>
+          <span>Features, workflows and user experience</span>
+        </button>
+      </aside>
+
+      <section class="founder-main">
+
+        <div class="founder-card founder-snapshot">
+          <div>
+            <p class="founder-eyebrow">Current Focus</p>
+            <h2 id="founderModeTitle">Strategy Advisor</h2>
+            <p id="founderModeDescription">
+              Ask for help deciding what IndiCare should focus on next.
+            </p>
+          </div>
+        </div>
+
+        <div class="founder-card">
+          <h3>Founder Quick Actions</h3>
+          <p>
+            Run high-impact actions instantly. These are designed to help move
+            IndiCare forward without losing the personal touch of real children’s homes.
+          </p>
+
+          <div class="founder-quick-actions">
+            <button data-founder-action="dashboard_brain">
+              🧭 Founder Dashboard Brain
+            </button>
+
+            <button data-founder-action="weekly_plan">
+              📅 Weekly Plan
+            </button>
+
+            <button data-founder-action="first_customers">
+              🧲 First 5 Customers
+            </button>
+
+            <button data-founder-action="pricing_model">
+              💰 Pricing Model
+            </button>
+
+            <button data-founder-action="funding_summary">
+              🏛️ Funding Summary
+            </button>
+
+            <button data-founder-action="product_focus">
+              🧠 Product Focus
+            </button>
+          </div>
+        </div>
+
+        <div class="founder-card">
+          <h3>Add Founder Data</h3>
+          <p>
+            Create tasks, leads and strategy notes that feed your Founder Dashboard Brain.
+          </p>
+
+          <div class="founder-create-grid">
+            <form id="founderTaskForm" class="founder-mini-form">
+              <h4>Add Task</h4>
+
+              <input
+                id="founderTaskTitle"
+                type="text"
+                placeholder="Task title"
+                autocomplete="off"
+              />
+
+              <select id="founderTaskPriority">
+                <option value="medium">Medium priority</option>
+                <option value="high">High priority</option>
+                <option value="low">Low priority</option>
+              </select>
+
+              <button type="submit">Save Task</button>
+            </form>
+
+            <form id="founderLeadForm" class="founder-mini-form">
+              <h4>Add Lead</h4>
+
+              <input
+                id="founderLeadOrg"
+                type="text"
+                placeholder="Organisation name"
+                autocomplete="off"
+              />
+
+              <input
+                id="founderLeadContact"
+                type="text"
+                placeholder="Contact name"
+                autocomplete="off"
+              />
+
+              <input
+                id="founderLeadEmail"
+                type="email"
+                placeholder="Email"
+                autocomplete="off"
+              />
+
+              <button type="submit">Save Lead</button>
+            </form>
+
+            <form id="founderNoteForm" class="founder-mini-form">
+              <h4>Add Strategy Note</h4>
+
+              <input
+                id="founderNoteTitle"
+                type="text"
+                placeholder="Note title"
+                autocomplete="off"
+              />
+
+              <textarea
+                id="founderNoteContent"
+                placeholder="Note content"
+              ></textarea>
+
+              <button type="submit">Save Note</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="founder-card founder-chat-card">
+          <div id="founderChatOutput" class="founder-chat-output">
+            <div class="founder-message founder-message-assistant">
+              <strong>Founder AI</strong>
+              <p>
+                I’ll help you run IndiCare like a founder, developer and care-sector leader.
+                I can support strategy, growth, funding, finance, product and operations.
+              </p>
+            </div>
+          </div>
+
+          <form id="founderAiForm" class="founder-ai-form">
+            <textarea
+              id="founderAiMessage"
+              rows="5"
+              placeholder="Example: What should I focus on this week to move IndiCare forward?"
+            ></textarea>
+
+            <div class="founder-form-actions">
+              <button type="button" id="founderClearBtn">
+                Clear
+              </button>
+
+              <button type="submit" class="primary">
+                Ask Founder AI
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="/js/founder-hq.js"></script>
+</body>
+</html>

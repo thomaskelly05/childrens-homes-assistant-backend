@@ -800,6 +800,15 @@ async function fetchAll(homeId) {
   };
 }
 
+async function fetchVisibility(homeId) {
+  if (!homeId) return SAFE_EMPTY;
+  try {
+    return (await apiGet(`/visibility/homes/${homeId}`)) || SAFE_EMPTY;
+  } catch {
+    return SAFE_EMPTY;
+  }
+}
+
 /* ------------------------------- selectors ------------------------------- */
 
 function buildUnreadNotifications(data) {
@@ -942,7 +951,10 @@ export async function loadCurrentView() {
   `;
 
   try {
-    const data = await fetchAll(homeId);
+    const [data, visibility] = await Promise.all([
+      fetchAll(homeId),
+      fetchVisibility(homeId),
+    ]);
 
     const unreadNotifications = buildUnreadNotifications(data);
     const overdueNotifications = buildOverdueNotifications(data);
@@ -986,6 +998,12 @@ export async function loadCurrentView() {
       openActions: topUrgent
         ? plainText(topUrgent.title)
         : `${activeOperationalNotifications.length} operational alerts`,
+      pressure: Array.isArray(visibility?.queues?.urgent) &&
+        visibility.queues.urgent.length
+        ? `${visibility.queues.urgent.length} management alerts`
+        : Number(visibility?.pressures?.total || 0)
+        ? `${Number(visibility.pressures.total)} pressure score`
+        : "No active alerts",
     });
 
     await onAssistantScopeChanged();

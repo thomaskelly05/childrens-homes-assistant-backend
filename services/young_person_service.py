@@ -3,26 +3,25 @@ from __future__ import annotations
 from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
-from services.young_people_service import (
-    add_alert,
-    add_contact,
-    create_young_person as legacy_create_young_person,
-    get_young_person_by_id as legacy_get_young_person_by_id,
-    update_young_person as legacy_update_young_person,
-    upsert_communication_profile,
-    upsert_education_profile,
-    upsert_formulation,
-    upsert_health_profile,
-    upsert_identity_profile,
-    upsert_legal_status,
-)
+from services import young_people_service as yp
 
 
 class YoungPersonService:
     @staticmethod
+    def _commit_or_rollback(conn, fn):
+        try:
+            result = fn()
+            conn.commit()
+            return result
+        except Exception:
+            conn.rollback()
+            raise
+
+    @staticmethod
     def list_young_people(
         *,
         home_id: int | None = None,
+        provider_id: int | None = None,
         include_archived: bool = False,
         search: str | None = "",
         sort_by: str = "last_name",
@@ -32,75 +31,17 @@ class YoungPersonService:
     ) -> list[dict[str, Any]]:
         conn = get_db_connection()
         try:
-            allowed_sort_fields = {
-                "first_name": "yp.first_name",
-                "last_name": "yp.last_name",
-                "preferred_name": "yp.preferred_name",
-                "placement_status": "yp.placement_status",
-                "summary_risk_level": "yp.summary_risk_level",
-                "created_at": "yp.created_at",
-                "updated_at": "yp.updated_at",
-            }
-
-            sort_column = allowed_sort_fields.get(sort_by, "yp.last_name")
-            sort_direction = "DESC" if str(sort_dir).lower() == "desc" else "ASC"
-
-            where_parts = ["1=1"]
-            values: list[Any] = []
-
-            if home_id is not None:
-                where_parts.append("yp.home_id = %s")
-                values.append(home_id)
-
-            if not include_archived:
-                where_parts.append("COALESCE(yp.archived, FALSE) = FALSE")
-
-            if search:
-                term = f"%{str(search).strip()}%"
-                where_parts.append(
-                    """
-                    (
-                        COALESCE(yp.first_name, '') ILIKE %s
-                        OR COALESCE(yp.last_name, '') ILIKE %s
-                        OR COALESCE(yp.preferred_name, '') ILIKE %s
-                    )
-                    """
-                )
-                values.extend([term, term, term])
-
-            values.extend([limit, offset])
-
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT
-                        yp.id,
-                        yp.home_id,
-                        yp.first_name,
-                        yp.last_name,
-                        yp.preferred_name,
-                        yp.date_of_birth,
-                        yp.gender,
-                        yp.ethnicity,
-                        yp.admission_date,
-                        yp.discharge_date,
-                        yp.placement_status,
-                        yp.primary_keyworker_id,
-                        yp.summary_risk_level,
-                        yp.photo_url,
-                        yp.archived,
-                        yp.created_at,
-                        yp.updated_at
-                    FROM young_people yp
-                    WHERE {' AND '.join(where_parts)}
-                    ORDER BY {sort_column} {sort_direction}, yp.id DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    values,
-                )
-                rows = cur.fetchall() or []
-
-            return [dict(row) for row in rows]
+            return yp.list_young_people(
+                conn,
+                home_id=home_id,
+                provider_id=provider_id,
+                include_archived=include_archived,
+                search=search or "",
+                sort_by=sort_by,
+                sort_dir=sort_dir,
+                limit=limit,
+                offset=offset,
+            )
         finally:
             release_db_connection(conn)
 
@@ -108,8 +49,7 @@ class YoungPersonService:
     def get_young_person_by_id(young_person_id: int) -> dict[str, Any] | None:
         conn = get_db_connection()
         try:
-            row = legacy_get_young_person_by_id(conn, young_person_id)
-            return dict(row) if row else None
+            return yp.get_young_person_by_id(conn, young_person_id)
         finally:
             release_db_connection(conn)
 
@@ -117,43 +57,24 @@ class YoungPersonService:
     def create_young_person(payload: dict[str, Any]) -> dict[str, Any]:
         conn = get_db_connection()
         try:
-            row = legacy_create_young_person(
+            return YoungPersonService._commit_or_rollback(
                 conn,
-                home_id=payload["home_id"],
-                first_name=payload["first_name"],
-                last_name=payload.get("last_name", ""),
-                preferred_name=payload.get("preferred_name", ""),
-                date_of_birth=payload.get("date_of_birth"),
-                gender=payload.get("gender", ""),
-                ethnicity=payload.get("ethnicity", ""),
-                nhs_number=payload.get("nhs_number", ""),
-                local_id_number=payload.get("local_id_number", ""),
-                admission_date=payload.get("admission_date"),
-                discharge_date=payload.get("discharge_date"),
-                placement_status=payload.get("placement_status", ""),
-                primary_keyworker_id=payload.get("primary_keyworker_id"),
-                summary_risk_level=payload.get("summary_risk_level", ""),
-                photo_url=payload.get("photo_url", ""),
-                archived=payload.get("archived", False),
+                lambda: yp.create_young_person(conn, **payload),
             )
-            conn.commit()
-            return dict(row) if row else {}
-        except Exception:
-            conn.rollback()
-            raise
         finally:
             release_db_connection(conn)
 
     @staticmethod
-    def update_young_person(young_person_id: int, payload: dict[str, Any]) -> dict[str, Any] | None:
+    def update_young_person(
+        young_person_id: int,
+        payload: dict[str, Any],
+    ) -> dict[str, Any] | None:
         conn = get_db_connection()
         try:
-            row = legacy_update_young_person(conn, young_person_id, payload)
-            conn.commit()
-            return dict(row) if row else None
-        except Exception:
-            conn.rollback()
-            raise
+            return YoungPersonService._commit_or_rollback(
+                conn,
+                lambda: yp.update_young_person(conn, young_person_id, payload),
+            )
         finally:
             release_db_connection(conn)
 
@@ -161,115 +82,20 @@ class YoungPersonService:
     def get_full_profile_bundle(young_person_id: int) -> dict[str, Any]:
         conn = get_db_connection()
         try:
-            person = legacy_get_young_person_by_id(conn, young_person_id)
-            if not person:
+            overview = yp.get_young_person_overview(conn, young_person_id)
+            if not overview:
                 return {}
 
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_communication_profile
-                    WHERE young_person_id = %s
-                    ORDER BY id DESC
-                    LIMIT 1
-                    """,
-                    (young_person_id,),
-                )
-                communication_profile = cur.fetchone()
-
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_education_profile
-                    WHERE young_person_id = %s
-                    ORDER BY id DESC
-                    LIMIT 1
-                    """,
-                    (young_person_id,),
-                )
-                education_profile = cur.fetchone()
-
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_health_profile
-                    WHERE young_person_id = %s
-                    ORDER BY id DESC
-                    LIMIT 1
-                    """,
-                    (young_person_id,),
-                )
-                health_profile = cur.fetchone()
-
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_identity_profile
-                    WHERE young_person_id = %s
-                    ORDER BY id DESC
-                    LIMIT 1
-                    """,
-                    (young_person_id,),
-                )
-                identity_profile = cur.fetchone()
-
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_legal_status
-                    WHERE young_person_id = %s
-                    ORDER BY id DESC
-                    LIMIT 1
-                    """,
-                    (young_person_id,),
-                )
-                legal_status = cur.fetchone()
-
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_formulations
-                    WHERE young_person_id = %s
-                    ORDER BY id DESC
-                    LIMIT 1
-                    """,
-                    (young_person_id,),
-                )
-                formulation = cur.fetchone()
-
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_contacts
-                    WHERE young_person_id = %s
-                    ORDER BY id DESC
-                    """,
-                    (young_person_id,),
-                )
-                contacts = cur.fetchall() or []
-
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_alerts
-                    WHERE young_person_id = %s
-                    ORDER BY created_at DESC, id DESC
-                    """,
-                    (young_person_id,),
-                )
-                alerts = cur.fetchall() or []
-
             return {
-                "young_person": dict(person),
-                "communication_profile": dict(communication_profile) if communication_profile else None,
-                "education_profile": dict(education_profile) if education_profile else None,
-                "health_profile": dict(health_profile) if health_profile else None,
-                "identity_profile": dict(identity_profile) if identity_profile else None,
-                "legal_status": dict(legal_status) if legal_status else None,
-                "formulation": dict(formulation) if formulation else None,
-                "contacts": [dict(x) for x in contacts],
-                "alerts": [dict(x) for x in alerts],
+                "young_person": overview.get("young_person"),
+                "communication_profile": overview.get("communication_profile"),
+                "education_profile": overview.get("education_profile"),
+                "health_profile": overview.get("health_profile"),
+                "identity_profile": overview.get("identity_profile"),
+                "legal_status": overview.get("legal_status"),
+                "formulation": overview.get("formulation"),
+                "contacts": overview.get("contacts") or [],
+                "alerts": overview.get("alerts") or [],
             }
         finally:
             release_db_connection(conn)
@@ -278,34 +104,37 @@ class YoungPersonService:
     def get_dashboard_counts(young_person_id: int) -> dict[str, int]:
         conn = get_db_connection()
         try:
-            with conn.cursor() as cur:
-                counts: dict[str, int] = {}
-
-                queries = {
-                    "daily_notes": "SELECT COUNT(*) AS c FROM daily_notes WHERE young_person_id = %s",
-                    "incidents": "SELECT COUNT(*) AS c FROM incidents WHERE young_person_id = %s",
-                    "risk_assessments": "SELECT COUNT(*) AS c FROM risk_assessments WHERE young_person_id = %s",
-                    "support_plans": "SELECT COUNT(*) AS c FROM support_plans WHERE young_person_id = %s",
-                    "health_records": "SELECT COUNT(*) AS c FROM health_records WHERE young_person_id = %s",
-                    "education_records": "SELECT COUNT(*) AS c FROM education_records WHERE young_person_id = %s",
-                    "family_contact_records": "SELECT COUNT(*) AS c FROM family_contact_records WHERE young_person_id = %s",
-                    "keywork_sessions": "SELECT COUNT(*) AS c FROM keywork_sessions WHERE young_person_id = %s",
-                }
-
-                for key, sql in queries.items():
-                    cur.execute(sql, (young_person_id,))
-                    row = cur.fetchone()
-                    counts[key] = int(row["c"] if row else 0)
-
-                return counts
+            overview = yp.get_young_person_overview(conn, young_person_id)
+            return {
+                "daily_notes": int(overview.get("daily_note_count") or 0),
+                "incidents": int(overview.get("incident_count") or 0),
+                "risk_assessments": int(overview.get("active_risk_count") or 0),
+                "support_plans": int(overview.get("active_support_plan_count") or 0),
+                "health_records": 0,
+                "education_records": 0,
+                "family_contact_records": 0,
+                "keywork_sessions": 0,
+            }
         finally:
             release_db_connection(conn)
 
     @staticmethod
-    def get_recent_activity(young_person_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    def get_recent_activity(
+        young_person_id: int,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
         conn = get_db_connection()
         try:
             with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT to_regclass('public.chronology_events') AS table_name
+                    """
+                )
+                table_row = cur.fetchone()
+                if not table_row or not table_row.get("table_name"):
+                    return []
+
                 cur.execute(
                     """
                     SELECT
@@ -323,13 +152,13 @@ class YoungPersonService:
                     ORDER BY event_datetime DESC, created_at DESC, id DESC
                     LIMIT %s
                     """,
-                    (young_person_id, limit),
+                    (young_person_id, max(1, min(int(limit or 20), 100))),
                 )
                 rows = cur.fetchall() or []
 
             return [
                 {
-                    "id": row["id"],
+                    "id": row.get("id"),
                     "title": row.get("title") or row.get("category") or "Activity",
                     "summary": row.get("summary") or "Recent activity",
                     "narrative": row.get("summary") or "Recent activity",
@@ -347,23 +176,7 @@ class YoungPersonService:
     def get_active_alerts(young_person_id: int) -> list[dict[str, Any]]:
         conn = get_db_connection()
         try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_alerts
-                    WHERE young_person_id = %s
-                      AND COALESCE(is_active, TRUE) = TRUE
-                    ORDER BY
-                        COALESCE(review_date, CURRENT_DATE) ASC,
-                        created_at DESC,
-                        id DESC
-                    """,
-                    (young_person_id,),
-                )
-                rows = cur.fetchall() or []
-
-            return [dict(row) for row in rows]
+            return yp.list_alerts(conn, young_person_id)
         finally:
             release_db_connection(conn)
 
@@ -376,7 +189,10 @@ class YoungPersonService:
         return {
             "young_person": person,
             "dashboard_counts": YoungPersonService.get_dashboard_counts(young_person_id),
-            "recent_activity": YoungPersonService.get_recent_activity(young_person_id, limit=20),
+            "recent_activity": YoungPersonService.get_recent_activity(
+                young_person_id,
+                limit=20,
+            ),
             "alerts": YoungPersonService.get_active_alerts(young_person_id),
         }
 
@@ -391,26 +207,13 @@ class YoungPersonService:
             "formulation": "young_person_formulations",
         }
 
-        table = table_map.get(section)
-        if not table:
+        table_name = table_map.get(section)
+        if not table_name:
             return None
 
         conn = get_db_connection()
         try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT *
-                    FROM {table}
-                    WHERE young_person_id = %s
-                    ORDER BY id DESC
-                    LIMIT 1
-                    """,
-                    (young_person_id,),
-                )
-                row = cur.fetchone()
-
-            return dict(row) if row else None
+            return yp.get_section(conn, young_person_id, table_name)
         finally:
             release_db_connection(conn)
 
@@ -423,36 +226,54 @@ class YoungPersonService:
     ) -> dict[str, Any]:
         conn = get_db_connection()
         try:
-            if section == "communication_profile":
-                row = upsert_communication_profile(conn, young_person_id=young_person_id, payload=data)
-            elif section == "education_profile":
-                row = upsert_education_profile(conn, young_person_id=young_person_id, payload=data)
-            elif section == "health_profile":
-                row = upsert_health_profile(conn, young_person_id=young_person_id, payload=data)
-            elif section == "identity_profile":
-                row = upsert_identity_profile(conn, young_person_id=young_person_id, payload=data)
-            elif section == "legal_status":
-                row = upsert_legal_status(
-                    conn,
-                    young_person_id=young_person_id,
-                    created_by=data.get("created_by"),
-                    payload=data,
-                )
-            elif section == "formulation":
-                row = upsert_formulation(
-                    conn,
-                    young_person_id=young_person_id,
-                    created_by=data.get("created_by"),
-                    payload=data,
-                )
-            else:
+            def run():
+                if section == "communication_profile":
+                    return yp.upsert_communication_profile(
+                        conn,
+                        young_person_id=young_person_id,
+                        payload=data,
+                    )
+
+                if section == "education_profile":
+                    return yp.upsert_education_profile(
+                        conn,
+                        young_person_id=young_person_id,
+                        payload=data,
+                    )
+
+                if section == "health_profile":
+                    return yp.upsert_health_profile(
+                        conn,
+                        young_person_id=young_person_id,
+                        payload=data,
+                    )
+
+                if section == "identity_profile":
+                    return yp.upsert_identity_profile(
+                        conn,
+                        young_person_id=young_person_id,
+                        payload=data,
+                    )
+
+                if section == "legal_status":
+                    return yp.upsert_legal_status(
+                        conn,
+                        young_person_id=young_person_id,
+                        created_by=data.get("created_by"),
+                        payload=data,
+                    )
+
+                if section == "formulation":
+                    return yp.upsert_formulation(
+                        conn,
+                        young_person_id=young_person_id,
+                        created_by=data.get("created_by"),
+                        payload=data,
+                    )
+
                 raise ValueError(f"Unsupported section: {section}")
 
-            conn.commit()
-            return dict(row) if row else {}
-        except Exception:
-            conn.rollback()
-            raise
+            return YoungPersonService._commit_or_rollback(conn, run)
         finally:
             release_db_connection(conn)
 
@@ -460,90 +281,57 @@ class YoungPersonService:
     def list_contacts(young_person_id: int) -> list[dict[str, Any]]:
         conn = get_db_connection()
         try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT *
-                    FROM young_person_contacts
-                    WHERE young_person_id = %s
-                    ORDER BY
-                        COALESCE(is_parental_responsibility_holder, FALSE) DESC,
-                        COALESCE(is_approved_contact, FALSE) DESC,
-                        full_name ASC,
-                        id DESC
-                    """,
-                    (young_person_id,),
-                )
-                rows = cur.fetchall() or []
-
-            return [dict(row) for row in rows]
+            return yp.list_contacts(conn, young_person_id)
         finally:
             release_db_connection(conn)
 
     @staticmethod
-    def create_contact(young_person_id: int, data: dict[str, Any]) -> dict[str, Any]:
+    def create_contact(
+        young_person_id: int,
+        data: dict[str, Any],
+    ) -> dict[str, Any]:
         conn = get_db_connection()
         try:
-            row = add_contact(conn, young_person_id=young_person_id, payload=data)
-            conn.commit()
-            return dict(row) if row else {}
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            release_db_connection(conn)
-
-    @staticmethod
-    def update_contact(contact_id: int, data: dict[str, Any]) -> dict[str, Any] | None:
-        conn = get_db_connection()
-        try:
-            data = dict(data)
-            if not data:
-                return None
-
-            set_parts = []
-            values = []
-
-            for field, value in data.items():
-                set_parts.append(f"{field} = %s")
-                values.append(value)
-
-            values.append(contact_id)
-
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    UPDATE young_person_contacts
-                    SET {", ".join(set_parts)}, updated_at = NOW()
-                    WHERE id = %s
-                    RETURNING *
-                    """,
-                    values,
-                )
-                row = cur.fetchone()
-
-            conn.commit()
-            return dict(row) if row else None
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            release_db_connection(conn)
-
-    @staticmethod
-    def create_alert(young_person_id: int, data: dict[str, Any]) -> dict[str, Any]:
-        conn = get_db_connection()
-        try:
-            row = add_alert(
+            return YoungPersonService._commit_or_rollback(
                 conn,
-                young_person_id=young_person_id,
-                created_by=data.get("created_by"),
-                payload=data,
+                lambda: yp.add_contact(
+                    conn,
+                    young_person_id=young_person_id,
+                    payload=data,
+                ),
             )
-            conn.commit()
-            return dict(row) if row else {}
-        except Exception:
-            conn.rollback()
-            raise
+        finally:
+            release_db_connection(conn)
+
+    @staticmethod
+    def update_contact(
+        contact_id: int,
+        data: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        conn = get_db_connection()
+        try:
+            return YoungPersonService._commit_or_rollback(
+                conn,
+                lambda: yp.update_contact(conn, contact_id, data),
+            )
+        finally:
+            release_db_connection(conn)
+
+    @staticmethod
+    def create_alert(
+        young_person_id: int,
+        data: dict[str, Any],
+    ) -> dict[str, Any]:
+        conn = get_db_connection()
+        try:
+            return YoungPersonService._commit_or_rollback(
+                conn,
+                lambda: yp.add_alert(
+                    conn,
+                    young_person_id=young_person_id,
+                    created_by=data.get("created_by"),
+                    payload=data,
+                ),
+            )
         finally:
             release_db_connection(conn)

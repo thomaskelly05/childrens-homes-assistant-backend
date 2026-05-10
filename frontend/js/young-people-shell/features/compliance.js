@@ -11,13 +11,35 @@ import {
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 
 function getHomeId() {
-  return (
+  const toSafeHomeId = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  const preferredHomeId = toSafeHomeId(
     state.readinessSelectedHomeId ||
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null
+      state.homeId ||
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      state.selectedYoungPerson?.home_id ||
+      state.selectedYoungPerson?.homeId ||
+      null
   );
+
+  const allowedHomeIds = Array.isArray(state.allowedHomeIds)
+    ? state.allowedHomeIds
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    : [];
+
+  if (allowedHomeIds.length) {
+    if (preferredHomeId && allowedHomeIds.includes(preferredHomeId)) {
+      return preferredHomeId;
+    }
+    return allowedHomeIds[0];
+  }
+
+  return preferredHomeId;
 }
 
 function toArray(value, fallbacks = []) {
@@ -150,6 +172,33 @@ function sortSoonestFirst(items = [], keys = []) {
     const bValue = keys.map((key) => b?.[key]).find(Boolean);
     return toTime(aValue) - toTime(bValue);
   });
+}
+
+function buildRecordPayloadAttr(item = {}) {
+  try {
+    return encodeURIComponent(JSON.stringify(item));
+  } catch {
+    return "";
+  }
+}
+
+function isOpenAttentionStatus(value = "") {
+  return [
+    "overdue",
+    "missing",
+    "review_due",
+    "due_soon",
+    "warning",
+    "attention",
+    "incomplete",
+    "expired",
+    "expiring",
+    "at_risk",
+    "open",
+    "in_progress",
+    "high",
+    "critical",
+  ].includes(normaliseToken(value));
 }
 
 function hasUsableData(data) {
@@ -311,12 +360,13 @@ function normaliseChildComplianceItems(data = {}) {
       "Child compliance item",
     document_type: item.document_type || item.type || "",
     review_date: item.review_date || item.due_date || null,
+    due_date: item.due_date || item.review_date || null,
     status: item.status || "active",
     summary:
       item.summary ||
       item.notes ||
-      (item.review_date
-        ? `Review due ${formatDate(item.review_date)}`
+      (item.review_date || item.due_date
+        ? `Review due ${formatDate(item.review_date || item.due_date)}`
         : "Child compliance item."),
     record_type: item.record_type || "child_compliance",
     updated_at: item.updated_at || item.created_at || null,
@@ -331,12 +381,13 @@ function normaliseDocumentItems(data = {}) {
     title: item.title || item.document_type || "Document",
     document_type: item.document_type || item.type || "",
     review_date: item.review_date || item.due_date || null,
+    due_date: item.due_date || item.review_date || null,
     status: item.status || "active",
     summary:
       item.summary ||
       item.notes ||
-      (item.review_date
-        ? `Review due ${formatDate(item.review_date)}`
+      (item.review_date || item.due_date
+        ? `Review due ${formatDate(item.review_date || item.due_date)}`
         : "Document record."),
     record_type: item.record_type || "document",
     updated_at: item.updated_at || item.created_at || null,
@@ -657,6 +708,7 @@ function renderRows(items = [], options = {}) {
           const status = item?.[statusKey] || "";
           const tone = getStatusTone(status);
           const rowId = item?.id || item?.record_id || item?.source_id || "";
+          const recordPayload = buildRecordPayloadAttr(item);
 
           return `
             <article
@@ -665,6 +717,18 @@ function renderRows(items = [], options = {}) {
               data-record-id="${safeText(rowId)}"
               data-record-type="${safeText(recordType || item?.record_type || "")}"
               data-title="${safeText(title)}"
+              data-record-summary="${safeText(summary)}"
+              data-record-status="${safeText(status || "")}"
+              data-record-date="${safeText(
+                item?.due_date ||
+                  item?.review_date ||
+                  item?.next_due_date ||
+                  item?.expiry_date ||
+                  item?.updated_at ||
+                  item?.created_at ||
+                  ""
+              )}"
+              data-record-payload="${safeText(recordPayload)}"
               tabindex="0"
               role="button"
             >
@@ -762,8 +826,8 @@ function buildPriorityItems({
       summary:
         item.summary ||
         item.notes ||
-        (item.review_date
-          ? `Review due ${formatDate(item.review_date)}`
+        (item.review_date || item.due_date
+          ? `Review due ${formatDate(item.review_date || item.due_date)}`
           : "Statutory paperwork is missing or overdue."),
     });
   });
@@ -774,8 +838,8 @@ function buildPriorityItems({
       summary:
         item.summary ||
         item.notes ||
-        (item.review_date
-          ? `Review due ${formatDate(item.review_date)}`
+        (item.review_date || item.due_date
+          ? `Review due ${formatDate(item.review_date || item.due_date)}`
           : "Home document requires attention."),
     });
   });
@@ -824,6 +888,7 @@ function renderComplianceDashboardHtml({
   inspectionActions = [],
   inspectionTasks = [],
   inspectionHeader = null,
+  isFallback = false,
 }) {
   return `
     <section class="overview-panel manager-dashboard manager-dashboard--compliance">
@@ -832,13 +897,16 @@ function renderComplianceDashboardHtml({
           <div class="eyebrow">Compliance</div>
           <h2>${safeText(homeName)}</h2>
           <p>
-            ${
-              safeText(
-                inspectionHeader?.top_concerns ||
-                  "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness."
-              )
-            }
+            ${safeText(
+              inspectionHeader?.top_concerns ||
+                "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness."
+            )}
           </p>
+          ${
+            isFallback
+              ? `<p class="overview-helper-text">Showing seeded preview data until live compliance endpoints are available.</p>`
+              : ""
+          }
         </div>
       </div>
 
@@ -930,6 +998,7 @@ function renderComplianceDashboardHtml({
                 [
                   item.supervisor || "",
                   item.next_due_date ? `Due ${formatDate(item.next_due_date)}` : "",
+                  item.due_date && !item.next_due_date ? `Due ${formatDate(item.due_date)}` : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -977,6 +1046,7 @@ function renderComplianceDashboardHtml({
                 [
                   item.document_type || "",
                   item.review_date ? `Due ${formatDate(item.review_date)}` : "",
+                  item.due_date && !item.review_date ? `Due ${formatDate(item.due_date)}` : "",
                   item.status || "",
                 ]
                   .filter(Boolean)
@@ -1033,6 +1103,7 @@ function renderComplianceDashboardHtml({
                 [
                   item.document_type || "",
                   item.review_date ? `Review ${formatDate(item.review_date)}` : "",
+                  item.due_date && !item.review_date ? `Due ${formatDate(item.due_date)}` : "",
                 ]
                   .filter(Boolean)
                   .join(" • "),
@@ -1054,6 +1125,7 @@ function renderComplianceDashboardHtml({
                 [
                   item.category || "",
                   item.review_date ? `Due ${formatDate(item.review_date)}` : "",
+                  item.due_date && !item.review_date ? `Due ${formatDate(item.due_date)}` : "",
                   item.updated_at ? formatDateTime(item.updated_at) : "",
                 ]
                   .filter(Boolean)
@@ -1369,11 +1441,7 @@ async function tryFetchInspectionComplianceData(homeId) {
 
   const safeGet = (url) => apiGet(url).catch(() => null);
 
-  const [
-    headerData,
-    actionsData,
-    tasksData,
-  ] = await Promise.all([
+  const [headerData, actionsData, tasksData] = await Promise.all([
     safeGet(inspectionUiEndpoints.homeHeader),
     safeGet(inspectionUiEndpoints.actions),
     safeGet(inspectionUiEndpoints.tasks),
@@ -1550,51 +1618,37 @@ export async function loadCompliance() {
 
     const childComplianceItems = sortSoonestFirst(
       normaliseChildComplianceItems(childComplianceData),
-      ["review_date", "updated_at", "created_at"]
+      ["review_date", "due_date", "updated_at", "created_at"]
     );
 
     const homeDocumentItems = sortSoonestFirst(
       normaliseDocumentItems(homeDocumentsData),
-      ["review_date", "updated_at", "created_at"]
+      ["review_date", "due_date", "updated_at", "created_at"]
     );
 
     const inspectionReadiness = sortSoonestFirst(
       normaliseInspectionReadinessItems(inspectionData),
       ["review_date", "due_date", "updated_at", "created_at"]
-    ).filter((item) =>
-      ["overdue", "missing", "review_due", "due_soon", "warning", "attention"].includes(
-        normaliseToken(item.status)
-      )
-    );
+    ).filter((item) => isOpenAttentionStatus(item.status));
 
     const overdueSupervisions = supervisionItems.filter((item) =>
-      ["overdue", "due", "due_soon", "review_due"].includes(
-        normaliseToken(item.status)
-      )
+      isOpenAttentionStatus(item.status)
     );
 
     const expiringTraining = trainingItems.filter((item) =>
-      ["due_soon", "overdue", "expired", "expiring"].includes(
-        normaliseToken(item.status)
-      )
+      isOpenAttentionStatus(item.status)
     );
 
     const outstandingProbations = [...probationItems, ...inductionItems].filter((item) =>
-      ["due", "due_soon", "overdue", "incomplete", "review_due"].includes(
-        normaliseToken(item.status)
-      )
+      isOpenAttentionStatus(item.status)
     );
 
     const overdueChildFiles = childComplianceItems.filter((item) =>
-      ["overdue", "missing", "review_due", "due_soon", "incomplete"].includes(
-        normaliseToken(item.status)
-      )
+      isOpenAttentionStatus(item.status)
     );
 
     const overdueHomeDocs = homeDocumentItems.filter((item) =>
-      ["overdue", "missing", "review_due", "due_soon", "incomplete"].includes(
-        normaliseToken(item.status)
-      )
+      isOpenAttentionStatus(item.status)
     );
 
     const topStats = buildTopStats({
@@ -1648,6 +1702,7 @@ export async function loadCompliance() {
       inspectionActions: inspectionActions.slice(0, 6),
       inspectionTasks: inspectionTasks.filter((item) => !item.completed).slice(0, 6),
       inspectionHeader,
+      isFallback,
     });
 
     updateWorkspaceSummaryStrip({

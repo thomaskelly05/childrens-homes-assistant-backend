@@ -11,17 +11,24 @@ export function escapeHtml(value) {
 // URL
 // ========================
 
+export function normaliseNumericId(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 export function getYoungPersonIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") || params.get("young_person_id");
-  return id ? Number(id) : null;
+  return normaliseNumericId(id);
 }
 
 export function setYoungPersonIdInUrl(id) {
   const url = new URL(window.location.href);
+  const safeId = normaliseNumericId(id);
 
-  if (id) {
-    url.searchParams.set("id", String(id));
+  if (safeId) {
+    url.searchParams.set("id", String(safeId));
     url.searchParams.delete("young_person_id");
   } else {
     url.searchParams.delete("id");
@@ -41,11 +48,17 @@ export function isValidDate(value) {
   return !Number.isNaN(date.getTime());
 }
 
+function toSafeDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function formatDate(value) {
   if (!value) return "—";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  const date = toSafeDate(value);
+  if (!date) return String(value);
 
   return date.toLocaleString("en-GB", {
     dateStyle: "medium",
@@ -56,8 +69,8 @@ export function formatDate(value) {
 export function formatDateTime(value) {
   if (!value) return "—";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  const date = toSafeDate(value);
+  if (!date) return String(value);
 
   return date.toLocaleString("en-GB", {
     day: "2-digit",
@@ -71,8 +84,8 @@ export function formatDateTime(value) {
 export function formatShortDate(value) {
   if (!value) return "—";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  const date = toSafeDate(value);
+  if (!date) return String(value);
 
   return date.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -84,8 +97,8 @@ export function formatShortDate(value) {
 export function formatTime(value) {
   if (!value) return "—";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  const date = toSafeDate(value);
+  if (!date) return String(value);
 
   return date.toLocaleTimeString("en-GB", {
     hour: "2-digit",
@@ -96,11 +109,18 @@ export function formatTime(value) {
 export function formatRelativeDate(value) {
   if (!value) return "—";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  const date = toSafeDate(value);
+  if (!date) return String(value);
 
   const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfTarget = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+
+  const diffMs = startOfTarget.getTime() - startOfToday.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) return "Today";
@@ -113,18 +133,18 @@ export function formatRelativeDate(value) {
 }
 
 export function daysBetween(fromValue, toValue = new Date()) {
-  if (!isValidDate(fromValue) || !isValidDate(toValue)) return null;
+  const from = toSafeDate(fromValue);
+  const to = toSafeDate(toValue);
 
-  const from = new Date(fromValue);
-  const to = new Date(toValue);
+  if (!from || !to) return null;
+
   const diff = to.getTime() - from.getTime();
-
   return Math.round(diff / (1000 * 60 * 60 * 24));
 }
 
 export function toDateInputValue(date) {
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime())) return "";
+  const d = toSafeDate(date);
+  if (!d) return "";
 
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -134,10 +154,8 @@ export function toDateInputValue(date) {
 }
 
 export function toDateTimeLocalValue(value) {
-  if (!value) return "";
-
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
+  const d = toSafeDate(value);
+  if (!d) return "";
 
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -204,7 +222,8 @@ export function getDisplayName(item = {}) {
     item.name ||
     item.staff_member ||
     item.fullName ||
-    "Young person"
+    item.title ||
+    "Record"
   );
 }
 
@@ -231,6 +250,11 @@ export function describePersonCard(item = {}) {
 export function normaliseImagePath(value = "") {
   const input = cleanText(value);
   if (!input) return "";
+
+  const lower = input.toLowerCase();
+  if (lower.endsWith("young_person_1.png")) {
+    return "";
+  }
 
   if (
     input.startsWith("http://") ||

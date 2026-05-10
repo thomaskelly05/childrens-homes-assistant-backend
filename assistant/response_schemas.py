@@ -3,6 +3,20 @@ from __future__ import annotations
 from typing import Any
 
 
+UNIVERSAL_AI_RECORDING_RULES = [
+    "Use only information provided in the visible record/context.",
+    "Do not invent facts, dates, names, events, outcomes, risks, or actions.",
+    "If evidence is missing, say what is not visible.",
+    "Separate facts from interpretation or professional judgement.",
+    "Use neutral, factual, defensible residential care language.",
+    "Do not make final safeguarding, clinical, legal, or regulatory decisions.",
+    "Use citations where record evidence is available, formatted as [record_type:record_id].",
+    "If a record has no ID, cite the record type and clearly state that the ID is not visible.",
+    "Make uncertainty visible rather than filling gaps.",
+    "Any suggested actions must be framed for staff/manager review.",
+]
+
+
 SCHEMAS = {
     "handover": {
         "title": "Shift Handover",
@@ -16,6 +30,7 @@ SCHEMAS = {
             "Health, medication, appointments, or routine issues",
             "What the next shift needs to know",
             "What needs monitoring, follow-up, or escalation",
+            "What is not visible / missing evidence",
         ],
         "style_notes": [
             "Keep it concise, clear, and practical.",
@@ -35,6 +50,7 @@ SCHEMAS = {
             "Outcome / current presentation",
             "Who was informed",
             "Recording, review, or follow-up required",
+            "What is not visible / missing evidence",
         ],
         "style_notes": [
             "Separate observation from interpretation.",
@@ -51,11 +67,14 @@ SCHEMAS = {
             "Event / information received",
             "Action taken",
             "Outcome / next step",
+            "Source / record reference",
         ],
         "style_notes": [
             "Keep entries sequential and concise.",
             "Focus on relevance and factual clarity.",
             "Avoid repeated narrative wording.",
+            "Use date/time order where dates are visible.",
+            "If dates are missing, state that clearly.",
         ],
     },
     "manager_update": {
@@ -68,11 +87,13 @@ SCHEMAS = {
             "Outstanding risks, contradictions, or gaps",
             "What may need management review",
             "Recommended next steps",
+            "What is not visible / missing evidence",
         ],
         "style_notes": [
             "Write with oversight and accountability in mind.",
             "Keep it concise and decision-useful.",
             "Make risk, uncertainty, and review points visible.",
+            "Recommendations must be for manager review, not final decisions.",
         ],
     },
     "support_plan": {
@@ -87,12 +108,14 @@ SCHEMAS = {
             "What staff should avoid",
             "What should be recorded",
             "What needs review",
+            "What is not visible / missing evidence",
         ],
         "style_notes": [
             "Make it child-specific, not generic.",
             "Use practical staff actions.",
             "Keep language clear and non-punitive.",
             "Include review points where relevant.",
+            "Do not invent triggers, patterns, or strategies that are not evidenced.",
         ],
     },
     "reflective_debrief": {
@@ -105,12 +128,14 @@ SCHEMAS = {
             "What may have shaped decision-making",
             "What may need more thought",
             "Possible learning / supervision points",
+            "Practical follow-up required",
         ],
         "style_notes": [
             "Do not over-analyse children.",
             "Keep the tone reflective but grounded.",
             "Support learning without blame.",
             "Do not let reflection replace practical follow-up where it is needed.",
+            "Avoid making unsupported conclusions about motives or intent.",
         ],
     },
     "safeguarding_note": {
@@ -123,12 +148,14 @@ SCHEMAS = {
             "Immediate actions taken",
             "Who was informed",
             "What needs to happen next",
+            "What is not visible / missing evidence",
         ],
         "style_notes": [
             "Stay factual and neutral.",
             "Do not make the final safeguarding decision.",
             "Keep escalation and recording clear.",
             "Avoid speculation.",
+            "If urgent harm or immediate safety is suggested, advise staff to follow the home safeguarding procedure and escalate to the appropriate manager/designated safeguarding lead immediately.",
         ],
     },
     "daily_log": {
@@ -143,11 +170,13 @@ SCHEMAS = {
             "Incidents or concerns",
             "Staff support provided",
             "End-of-day position / handover points",
+            "What is not visible / missing evidence",
         ],
         "style_notes": [
             "Keep the log factual and proportionate.",
             "Avoid over-writing.",
             "Make the child’s day visible without speculation.",
+            "Avoid judgemental, punitive, or emotive wording.",
         ],
     },
     "professional_rewrite": {
@@ -161,6 +190,7 @@ SCHEMAS = {
             "Keep the meaning anchored to the original content.",
             "Do not invent facts or outcomes.",
             "Use clear, professional, defensible language.",
+            "Preserve important uncertainty rather than making the wording sound more certain than the original evidence supports.",
         ],
     },
     "practical_response": {
@@ -170,11 +200,13 @@ SCHEMAS = {
             "What matters most here",
             "Suggested staff response / next steps",
             "What should be recorded / handed over / reviewed if relevant",
+            "What is not visible / missing evidence",
         ],
         "style_notes": [
             "Keep the answer practical and relevant.",
             "Do not become generic if the user has given specific details.",
             "Use headings only where they improve clarity.",
+            "Frame actions as staff/manager review points where professional judgement is required.",
         ],
     },
 }
@@ -206,26 +238,27 @@ def _safe_string(value: Any) -> str:
 
 
 def get_schema(schema_name: str) -> dict[str, Any] | None:
-    return SCHEMAS.get(schema_name)
+    return SCHEMAS.get(_safe_string(schema_name))
 
 
 def get_schema_for_mode(mode: str, safeguarding_level: str = "normal") -> dict[str, Any] | None:
     """
     Choose a schema from task mode and safeguarding level.
-    Safeguarding can override where helpful.
+    Safeguarding can override operational recording-style tasks.
     """
-    mode = _safe_string(mode)
+    safe_mode = _safe_string(mode)
+    safe_safeguarding_level = _safe_string(safeguarding_level).lower()
 
-    # Heightened safeguarding should override operational recording-style tasks
-    if safeguarding_level in {"heightened", "urgent"} and mode in {
+    if safe_safeguarding_level in {"heightened", "urgent"} and safe_mode in {
         "recording",
         "incident_summary",
         "practical",
         "general_practice",
+        "factual",
     }:
         return SCHEMAS.get("safeguarding_note")
 
-    schema_name = MODE_TO_SCHEMA.get(mode, "practical_response")
+    schema_name = MODE_TO_SCHEMA.get(safe_mode, "practical_response")
     return SCHEMAS.get(schema_name)
 
 
@@ -255,15 +288,36 @@ def schema_to_prompt_block(schema: dict[str, Any] | None) -> str:
         lines.append("")
         lines.append("Suggested sections:")
         for section in sections:
-            lines.append(f"• {section}")
+            safe_section = _safe_string(section)
+            if safe_section:
+                lines.append(f"• {safe_section}")
 
     if style_notes:
         lines.append("")
         lines.append("Style notes:")
         for note in style_notes:
-            lines.append(f"• {note}")
+            safe_note = _safe_string(note)
+            if safe_note:
+                lines.append(f"• {safe_note}")
 
     lines.append("")
-    lines.append("Use this structure flexibly. Keep the answer relevant to the actual request rather than forcing every section in.")
+    lines.append("Universal safety and evidence rules:")
+    for rule in UNIVERSAL_AI_RECORDING_RULES:
+        lines.append(f"• {rule}")
+
+    lines.append("")
+    lines.append(
+        "When summarising records, include a short 'What is not visible / missing evidence' section if relevant."
+    )
+    lines.append(
+        "When giving recommendations, phrase them as suggested follow-up for staff or manager review, not as final decisions."
+    )
+    lines.append(
+        "If the user asks for a conclusion that is not supported by the visible records, explain what evidence would be needed."
+    )
+    lines.append("")
+    lines.append(
+        "Use this structure flexibly. Keep the answer relevant to the actual request rather than forcing every section in."
+    )
 
     return "\n".join(lines).strip()

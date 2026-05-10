@@ -1,0 +1,179 @@
+from __future__ import annotations
+
+import logging
+import os
+import secrets
+import time
+import uuid
+from typing import Callable
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
+
+from auth.tokens import decode_session_token
+from routers.auth_routes import settings as auth_settings
+from services.audit_event_service import record_audit_event
+
+logger = logging.getLogger("indicare.security")
+
+SENSITIVE_PREFIXES = (
+    "/auth",
+    "/mfa",
+    "/passkeys",
+    "/young-people",
+    "/assistant",
+    "/os",
+    "/staff",
+    "/admin",
+    "/billing",
+    "/reports",
+    "/documents",
+    "/exports",
+    "/security",
+)
+
+CSRF_EXEMPT_PREFIXES = (
+    "/auth/login",
+    "/auth/logout",
+    "/auth/check",
+    "/auth/passkeys/authenticate/options",
+    "/auth/passkeys/authenticate/verify",
+    "/health",
+)
+
+SKIP_PATHS = (
+    "/health",
+    "/css",
+    "/js",
+    "/assets",
+    "/components",
+    "/favicon.ico",
+)
+
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _is_static_path(path: str) -> bool:
+    return path.startswith(("/css", "/js", "/assets", "/components")) or path == "/favicon.ico"
+
+
+def _safe_actor_from_request(request: Request) -> dict:
+    token = (request.cookies.get(auth_settings.session_cookie_name) or "").strip()
+    if not token:
+        auth = request.headers.get("authorization") or ""
+        if auth.lower().startswith("bearer "):
+            token = auth[7:].strip()
+    payload = decode_session_token(token) if token else None
+    if not payload:
+        return {}
+    try:
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
+        return {}
+    return {"id": user_id}
+
+
+class CsrfProtectionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        path = request.url.path
+        if request.method.upper() not in UNSAFE_METHODS:
+            return await call_next(request)
+        if any(path.startswith(prefix) for prefix in CSRF_EXEMPT_PREFIXES):
+            return await call_next(request)
+
+        expected = str(request.session.get("csrf_token") or "")
+        supplied = str(request.headers.get("x-csrf-token") or "")
+        if not expected or not supplied or not secrets.compare_digest(expected, supplied):
+            logger.warning(
+                "csrf_blocked method=%s path=%s ip=%s",
+                request.method,
+                path,
+                request.client.host if request.client else None,
+            )
+            record_audit_event(
+                event_type="security.csrf_blocked",
+                action="csrf_blocked",
+                outcome="blocked",
+                request=request,
+                actor=_safe_actor_from_request(request),
+                metadata={"path": path, "method": request.method},
+            )
+            return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
+
+        return await call_next(request)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        response = await call_next(request)
+        path = request.url.path
+
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; "
+            "img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline'; connect-src 'self'",
+        )
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()")
+        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+
+        if _is_static_path(path):
+            response.headers.setdefault("Cache-Control", "public, max-age=3600")
+        else:
+            response.headers.setdefault("Cache-Control", "no-store")
+            response.headers.setdefault("Pragma", "no-cache")
+
+        if request.url.scheme == "https" or os.getenv("FORCE_HSTS", "true").lower() == "true":
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+
+        return response
+
+
+class AuditLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        path = request.url.path
+        if path.startswith(SKIP_PATHS):
+            return await call_next(request)
+
+        request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+        request.state.request_id = request_id
+        start = time.perf_counter()
+        response: Response | None = None
+
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            duration_ms = round((time.perf_counter() - start) * 1000, 2)
+            status_code = getattr(response, "status_code", 500)
+            should_audit = path.startswith(SENSITIVE_PREFIXES) or status_code >= 400
+
+            if should_audit:
+                logger.info(
+                    "audit_event request_id=%s method=%s path=%s status=%s duration_ms=%s ip=%s user_agent=%s",
+                    request_id,
+                    request.method,
+                    path,
+                    status_code,
+                    duration_ms,
+                    request.client.host if request.client else None,
+                    request.headers.get("user-agent", ""),
+                )
+                record_audit_event(
+                    event_type="http.request",
+                    action=f"{request.method} {path}",
+                    outcome="success" if status_code < 400 else "failure",
+                    request=request,
+                    actor=_safe_actor_from_request(request),
+                    resource_type="http_path",
+                    resource_id=path,
+                    metadata={"status_code": status_code, "duration_ms": duration_ms},
+                )
+
+            if response is not None:
+                response.headers.setdefault("X-Request-ID", request_id)

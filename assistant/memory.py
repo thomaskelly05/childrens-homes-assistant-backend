@@ -39,12 +39,19 @@ def _normalise_role(role: str) -> str:
         return "User"
     return role.title() if role else ""
 
-
 def _normalise_session_id(session_id: str) -> int | None:
+    """
+    Only numeric conversation IDs are used for database-backed memory.
+
+    OS assistant session IDs like "young-person-1" or "home-2" should not
+    query the messages table directly because they are scoped assistant
+    session labels, not message conversation IDs.
+    """
     try:
         return int(session_id)
     except (TypeError, ValueError):
         return None
+
 
 
 def _cache_key(session_id: int, limit: int) -> str:

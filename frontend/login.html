@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IndiCare | Secure sign in</title>
+
+  <title>IndiCare OS | Secure sign in</title>
+
   <meta
     name="description"
-    content="Secure sign in to IndiCare, the professional digital workspace for children’s residential home teams."
+    content="Secure passkey-first sign in to IndiCare OS, the digital operating system for residential children’s homes."
   />
   <meta name="theme-color" content="#18357f" />
   <meta name="color-scheme" content="light" />
@@ -16,27 +18,36 @@
     :root {
       --bg-main: #eef4fb;
       --bg-soft: #f8fbff;
-      --panel: rgba(255, 255, 255, 0.94);
+      --panel: rgba(255, 255, 255, 0.95);
       --panel-solid: #ffffff;
+
       --text: #18263b;
       --text-strong: #0f172a;
       --text-muted: #5b6c84;
       --text-soft: #7b8aa0;
-      --border: rgba(15, 23, 42, 0.08);
-      --border-strong: #d6dfeb;
+
       --primary: #2348a5;
       --primary-strong: #18357f;
       --primary-soft: #e8effc;
+
       --success-bg: #eef8f1;
       --success-text: #2b4d39;
+      --warning-bg: #fff7e6;
+      --warning-text: #7a4b00;
       --error-text: #9f1239;
+
+      --border: rgba(15, 23, 42, 0.08);
+      --border-strong: #d6dfeb;
+
       --shadow-xl: 0 30px 80px rgba(15, 23, 42, 0.14);
       --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.08);
       --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.04);
+
       --radius-xl: 32px;
       --radius-lg: 22px;
       --radius-md: 16px;
       --radius-sm: 12px;
+
       --focus-ring: 0 0 0 4px rgba(35, 72, 165, 0.14);
       --max-width: 1380px;
     }
@@ -56,19 +67,15 @@
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(35, 72, 165, 0.08), transparent 24%),
-        radial-gradient(circle at bottom right, rgba(24, 53, 127, 0.08), transparent 24%),
+        radial-gradient(circle at top left, rgba(35, 72, 165, 0.09), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(24, 53, 127, 0.08), transparent 26%),
         linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-main) 100%);
-    }
-
-    img {
-      max-width: 100%;
-      display: block;
     }
 
     a {
       color: var(--primary);
       text-decoration: none;
+      font-weight: 700;
     }
 
     a:hover {
@@ -110,15 +117,15 @@
       position: absolute;
       inset: 2rem;
       border-radius: 36px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.12));
-      border: 1px solid rgba(255,255,255,0.45);
+      background: linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0.12));
+      border: 1px solid rgba(255,255,255,0.5);
       pointer-events: none;
     }
 
     .brand-content {
       position: relative;
       z-index: 1;
-      max-width: 640px;
+      max-width: 660px;
     }
 
     .brand-badge {
@@ -127,31 +134,30 @@
       gap: 0.8rem;
       padding: 0.6rem 0.95rem;
       border-radius: 999px;
-      background: rgba(255,255,255,0.86);
+      background: rgba(255,255,255,0.88);
       border: 1px solid var(--border);
       box-shadow: var(--shadow-sm);
       margin-bottom: 1.5rem;
       color: #32465f;
       font-size: 0.92rem;
-      font-weight: 700;
-      letter-spacing: 0.01em;
+      font-weight: 800;
     }
 
     .brand-badge__mark {
-      width: 1.7rem;
-      height: 1.7rem;
+      width: 1.8rem;
+      height: 1.8rem;
       border-radius: 999px;
       display: grid;
       place-items: center;
       background: var(--primary-soft);
       color: var(--primary);
       font-size: 0.78rem;
-      font-weight: 800;
+      font-weight: 900;
     }
 
     .brand-title {
       margin: 0 0 1rem;
-      max-width: 11ch;
+      max-width: 12ch;
       font-size: clamp(2.7rem, 4.5vw, 4.7rem);
       line-height: 0.97;
       letter-spacing: -0.045em;
@@ -160,8 +166,8 @@
 
     .brand-copy {
       margin: 0;
-      max-width: 52ch;
-      font-size: 1.05rem;
+      max-width: 55ch;
+      font-size: 1.06rem;
       line-height: 1.8;
       color: var(--text-muted);
     }
@@ -170,7 +176,7 @@
       margin-top: 2.2rem;
       display: grid;
       gap: 1rem;
-      max-width: 40rem;
+      max-width: 42rem;
     }
 
     .feature-card {
@@ -180,7 +186,7 @@
       align-items: start;
       padding: 1.05rem 1.1rem;
       border-radius: var(--radius-lg);
-      background: rgba(255,255,255,0.78);
+      background: rgba(255,255,255,0.8);
       border: 1px solid var(--border);
       box-shadow: var(--shadow-lg);
       backdrop-filter: blur(6px);
@@ -194,15 +200,15 @@
       place-items: center;
       background: var(--primary-soft);
       color: var(--primary);
-      font-size: 1rem;
-      font-weight: 800;
+      font-size: 0.95rem;
+      font-weight: 900;
       flex-shrink: 0;
     }
 
     .feature-card__title {
       margin: 0 0 0.28rem;
       font-size: 1rem;
-      color: var(--text);
+      color: var(--text-strong);
     }
 
     .feature-card__text {
@@ -225,11 +231,11 @@
       gap: 0.5rem;
       padding: 0.7rem 0.9rem;
       border-radius: 999px;
-      background: rgba(255,255,255,0.76);
+      background: rgba(255,255,255,0.78);
       border: 1px solid var(--border);
       color: #3a4e68;
       font-size: 0.9rem;
-      font-weight: 600;
+      font-weight: 700;
       box-shadow: var(--shadow-sm);
     }
 
@@ -246,14 +252,14 @@
       align-items: center;
       justify-content: center;
       padding: 2rem;
-      background: rgba(255,255,255,0.34);
+      background: rgba(255,255,255,0.38);
       backdrop-filter: blur(12px);
       border-left: 1px solid rgba(15, 23, 42, 0.05);
     }
 
     .signin-card {
       width: 100%;
-      max-width: 500px;
+      max-width: 510px;
       padding: 2rem;
       background: var(--panel);
       border: 1px solid var(--border);
@@ -262,7 +268,20 @@
     }
 
     .signin-header {
-      margin-bottom: 1.4rem;
+      margin-bottom: 1.35rem;
+    }
+
+    .signin-logo-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      display: grid;
+      place-items: center;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 900;
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
     }
 
     .signin-logo {
@@ -277,7 +296,7 @@
       margin-bottom: 0.65rem;
       color: var(--primary);
       font-size: 0.84rem;
-      font-weight: 800;
+      font-weight: 900;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
@@ -292,7 +311,7 @@
 
     .signin-subtitle {
       margin: 0;
-      max-width: 36ch;
+      max-width: 39ch;
       color: var(--text-muted);
       font-size: 0.98rem;
       line-height: 1.65;
@@ -315,7 +334,7 @@
       background: #e8effc;
       color: var(--primary);
       font-size: 0.78rem;
-      font-weight: 800;
+      font-weight: 900;
       letter-spacing: 0.04em;
       text-transform: uppercase;
       margin-bottom: 0.75rem;
@@ -325,7 +344,7 @@
       margin: 0 0 0.3rem;
       color: var(--text-strong);
       font-size: 1.08rem;
-      font-weight: 800;
+      font-weight: 900;
     }
 
     .passkey-copy {
@@ -343,7 +362,7 @@
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
       color: #fff;
       font-size: 1rem;
-      font-weight: 800;
+      font-weight: 900;
       letter-spacing: 0.01em;
       cursor: pointer;
       box-shadow: 0 16px 30px rgba(24, 53, 127, 0.22);
@@ -377,7 +396,7 @@
       margin: 1.25rem 0 1rem;
       color: var(--text-soft);
       font-size: 0.84rem;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
@@ -403,7 +422,7 @@
     .form-label {
       color: #233550;
       font-size: 0.93rem;
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .input-wrap {
@@ -449,7 +468,7 @@
       background: transparent;
       color: #5d6f87;
       font-size: 0.9rem;
-      font-weight: 700;
+      font-weight: 800;
       padding: 0.42rem 0.55rem;
       border-radius: 10px;
       cursor: pointer;
@@ -493,7 +512,7 @@
       background: #fff;
       color: var(--text-strong);
       font-size: 0.98rem;
-      font-weight: 800;
+      font-weight: 900;
       cursor: pointer;
       transition: border-color 0.18s ease, transform 0.18s ease;
     }
@@ -540,6 +559,17 @@
       color: var(--success-text);
       font-size: 0.92rem;
       line-height: 1.6;
+    }
+
+    .warning-note {
+      margin-top: 0.85rem;
+      padding: 0.85rem 0.95rem;
+      border-radius: 16px;
+      background: var(--warning-bg);
+      color: var(--warning-text);
+      font-size: 0.86rem;
+      line-height: 1.5;
+      border: 1px solid rgba(122, 75, 0, 0.1);
     }
 
     .card-footer {
@@ -634,6 +664,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="page">
     <div class="shell">
@@ -641,27 +672,27 @@
         <div class="brand-content">
           <div class="brand-badge">
             <span class="brand-badge__mark" aria-hidden="true">IC</span>
-            <span>IndiCare for Children’s Residential Homes</span>
+            <span>IndiCare OS for children’s residential homes</span>
           </div>
 
           <h1 id="page-title" class="brand-title">
-            Secure access for children’s home teams.
+            Safer access to the whole care operating system.
           </h1>
 
           <p class="brand-copy">
-            Sign in to a professional digital workspace built for safer
-            recording, stronger oversight, supervision, handovers, and
-            day-to-day operational practice.
+            Sign in to IndiCare OS: the joined-up workspace for child-centred records,
+            safeguarding oversight, home operations, training, compliance, quality,
+            Ofsted readiness, and AI-supported practice.
           </p>
 
           <div class="feature-list" aria-label="Platform strengths">
             <article class="feature-card">
               <div class="feature-card__icon" aria-hidden="true">01</div>
               <div>
-                <h2 class="feature-card__title">Structured daily practice</h2>
+                <h2 class="feature-card__title">One operating system for the home</h2>
                 <p class="feature-card__text">
-                  Keep handovers, records, supervision, and operational work
-                  clearer, more consistent, and easier to review.
+                  Bring daily notes, incidents, plans, risks, actions, documents, handovers,
+                  and manager oversight into one calm workspace.
                 </p>
               </div>
             </article>
@@ -669,10 +700,10 @@
             <article class="feature-card">
               <div class="feature-card__icon" aria-hidden="true">02</div>
               <div>
-                <h2 class="feature-card__title">Built for safeguarding-aware teams</h2>
+                <h2 class="feature-card__title">Evidence that stands up to inspection</h2>
                 <p class="feature-card__text">
-                  Designed to support professional care settings with secure
-                  access, accountability, and reliable oversight.
+                  Support stronger audit trails, clearer citations, better child voice,
+                  and quality assurance across Reg 44, Reg 45, and Ofsted preparation.
                 </p>
               </div>
             </article>
@@ -680,10 +711,10 @@
             <article class="feature-card">
               <div class="feature-card__icon" aria-hidden="true">03</div>
               <div>
-                <h2 class="feature-card__title">Modern secure sign-in</h2>
+                <h2 class="feature-card__title">Passkey-first secure sign-in</h2>
                 <p class="feature-card__text">
-                  Use passkeys for faster sign-in, while keeping password and
-                  authenticator app protection available as fallback.
+                  Use Face ID, Touch ID, fingerprint, or device screen lock first.
+                  Password and authenticator checks remain available as fallback.
                 </p>
               </div>
             </article>
@@ -692,15 +723,15 @@
           <div class="trust-strip" aria-label="Trust messages">
             <div class="trust-pill">
               <span class="trust-pill__dot" aria-hidden="true"></span>
-              <span>Built for professional care settings</span>
+              <span>Built around children’s home practice</span>
             </div>
             <div class="trust-pill">
               <span class="trust-pill__dot" aria-hidden="true"></span>
-              <span>Supports safer operational oversight</span>
+              <span>Supports safer recording and oversight</span>
             </div>
             <div class="trust-pill">
               <span class="trust-pill__dot" aria-hidden="true"></span>
-              <span>Passkey-ready secure access</span>
+              <span>Designed for passkeys and MFA</span>
             </div>
           </div>
         </div>
@@ -709,33 +740,23 @@
       <main class="form-panel">
         <div class="signin-card">
           <header class="signin-header">
-            <img src="/assets/logo.svg" alt="IndiCare logo" class="signin-logo" />
+            <div class="signin-logo-wrap" aria-hidden="true">IC</div>
+
             <div class="signin-eyebrow">Secure access</div>
-            <h2 class="signin-title">Sign in to IndiCare</h2>
+            <h2 class="signin-title">Sign in to IndiCare OS</h2>
             <p class="signin-subtitle">
-              Use your work account to continue securely.
+              Enter your work email, then use your passkey for the fastest and safest access.
             </p>
           </header>
 
           <section class="passkey-panel" aria-labelledby="passkey-title">
             <div class="passkey-kicker">Recommended</div>
-            <h3 id="passkey-title" class="passkey-title">Sign in with passkey</h3>
+            <h3 id="passkey-title" class="passkey-title">Continue with passkey</h3>
             <p class="passkey-copy">
-              Use Face ID, Touch ID, fingerprint, or your device screen lock for faster, more secure sign-in.
+              Use Face ID, Touch ID, fingerprint, Windows Hello, or your device screen lock.
+              This should be the normal way staff access IndiCare.
             </p>
 
-            <button class="passkey-button" id="passkeyBtn" type="button">
-              Sign in with passkey
-            </button>
-
-            <div class="passkey-note">
-              Works on supported devices and browsers. Password sign-in remains available below.
-            </div>
-          </section>
-
-          <div class="divider">Or use password</div>
-
-          <form class="signin-form" id="loginForm" novalidate>
             <div class="form-group">
               <label class="form-label" for="email">Work email address</label>
               <input
@@ -752,10 +773,22 @@
                 aria-describedby="emailHelp"
               />
               <span id="emailHelp" class="visually-hidden">
-                Enter the work email address linked to your account
+                Enter the work email address linked to your IndiCare account.
               </span>
             </div>
 
+            <button class="passkey-button" id="passkeyBtn" type="button">
+              Continue with passkey
+            </button>
+
+            <div class="passkey-note">
+              Passkeys reduce password risk and help protect sensitive children’s home records.
+            </div>
+          </section>
+
+          <div class="divider">Password fallback</div>
+
+          <form class="signin-form" id="loginForm" novalidate>
             <div class="form-group">
               <label class="form-label" for="password">Password</label>
               <div class="input-wrap">
@@ -766,7 +799,7 @@
                   type="password"
                   autocomplete="current-password"
                   spellcheck="false"
-                  placeholder="Enter your password"
+                  placeholder="Use password only if passkey is unavailable"
                   required
                 />
                 <button
@@ -796,19 +829,24 @@
             </button>
 
             <div class="status" id="loginStatus" aria-live="polite" role="status"></div>
+
             <div class="security-note">
-              Access is monitored for security, safeguarding, and governance purposes.
+              Access is monitored for security, safeguarding, audit, and governance purposes.
             </div>
           </form>
 
           <div class="reassurance">
-            IndiCare is designed to support professional practice, clear
-            recording, and safer operational oversight across children’s
-            residential care settings.
+            You are entering a professional care system. Keep information factual,
+            child-centred, proportionate, and respectful.
+          </div>
+
+          <div class="warning-note">
+            Shared devices should be locked when unattended. Do not leave children’s records
+            visible on screen.
           </div>
 
           <footer class="card-footer">
-            <span>© IndiCare</span>
+            <span>© 2026 IndiCare OS</span>
             <div class="footer-links">
               <a href="/privacy">Privacy</a>
               <a href="/support">Support</a>
@@ -835,33 +873,62 @@
       const rememberMe = document.getElementById("rememberMe");
 
       const LOGIN_REDIRECT_GUARD_KEY = "indicare_login_redirect_guard";
+      const DEFAULT_REDIRECT = "/young-people-shell.html";
 
       function setStatus(message, type = "") {
+        if (!loginStatus) return;
         loginStatus.textContent = message || "";
         loginStatus.classList.remove("is-error", "is-success");
         if (type) loginStatus.classList.add(type);
       }
 
-      function setLoading(isLoading) {
-        loginBtn.disabled = isLoading;
-        passkeyBtn.disabled = isLoading;
-        email.disabled = isLoading;
-        password.disabled = isLoading;
-        rememberMe.disabled = isLoading;
-        togglePassword.disabled = isLoading;
-        loginBtn.textContent = isLoading ? "Signing in..." : "Sign in with password";
-        passkeyBtn.textContent = isLoading ? "Please wait..." : "Sign in with passkey";
+      function setLoading(isLoading, mode = "password") {
+        if (loginBtn) loginBtn.disabled = isLoading;
+        if (passkeyBtn) passkeyBtn.disabled = isLoading;
+        if (email) email.disabled = isLoading;
+        if (password) password.disabled = isLoading;
+        if (rememberMe) rememberMe.disabled = isLoading;
+        if (togglePassword) togglePassword.disabled = isLoading;
+
+        if (loginBtn) {
+          loginBtn.textContent =
+            isLoading && mode === "password"
+              ? "Signing in..."
+              : "Sign in with password";
+        }
+
+        if (passkeyBtn) {
+          passkeyBtn.textContent =
+            isLoading && mode === "passkey"
+              ? "Checking passkey..."
+              : "Continue with passkey";
+        }
       }
 
       function clearFieldErrors() {
-        email.setAttribute("aria-invalid", "false");
-        password.setAttribute("aria-invalid", "false");
+        if (email) email.setAttribute("aria-invalid", "false");
+        if (password) password.setAttribute("aria-invalid", "false");
       }
 
       function showFieldError(field, message) {
-        field.setAttribute("aria-invalid", "true");
+        if (field) {
+          field.setAttribute("aria-invalid", "true");
+          field.focus();
+        }
         setStatus(message, "is-error");
-        field.focus();
+      }
+
+      function getRedirectTarget() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const next = params.get("next") || params.get("redirect");
+
+          if (next && next.startsWith("/") && !next.startsWith("//")) {
+            return next;
+          }
+        } catch (_) {}
+
+        return DEFAULT_REDIRECT;
       }
 
       function hasRecentRedirectGuard() {
@@ -888,6 +955,22 @@
         } catch (_) {}
       }
 
+      function goToMfaOrSetup(data) {
+        markRedirectGuard();
+
+        if (data && data.mfa_enabled === false) {
+          window.location.replace("/mfa-setup");
+          return;
+        }
+
+        window.location.replace("/mfa");
+      }
+
+      function goToWorkspace() {
+        markRedirectGuard();
+        window.location.replace(getRedirectTarget());
+      }
+
       async function bootExistingSession() {
         if (!window.auth || typeof window.auth.validateSession !== "function") {
           return;
@@ -900,6 +983,12 @@
         try {
           const state = await window.auth.validateSession();
 
+          if (state?.mfa_pending) {
+            setStatus("Security check required. Redirecting...", "is-success");
+            goToMfaOrSetup(state);
+            return;
+          }
+
           if (!state || !state.authenticated) {
             clearRedirectGuard();
             return;
@@ -910,135 +999,147 @@
             !["admin", "provider_admin"].includes(String(state.role || "").toLowerCase())
           ) {
             clearRedirectGuard();
-            setStatus("Your account does not currently have an active subscription.", "is-error");
+            setStatus(
+              "Your account does not currently have an active subscription.",
+              "is-error"
+            );
             return;
           }
 
-          setStatus("Existing session found. Redirecting...", "is-success");
-          setLoading(true);
-          markRedirectGuard();
-
           if (!state.mfa_enabled) {
+            setStatus("Security setup required. Redirecting...", "is-success");
+            markRedirectGuard();
             window.location.replace("/mfa-setup");
             return;
           }
 
           if (!state.mfa_verified) {
+            setStatus("Security check required. Redirecting...", "is-success");
+            markRedirectGuard();
             window.location.replace("/mfa");
             return;
           }
 
-          window.location.replace("/assistant");
+          setStatus("Existing session found. Opening IndiCare OS...", "is-success");
+          setLoading(true, "passkey");
+          goToWorkspace();
         } catch (_) {
           clearRedirectGuard();
           setLoading(false);
         }
       }
 
-      togglePassword.addEventListener("click", function () {
-        const isHidden = password.type === "password";
-        password.type = isHidden ? "text" : "password";
-        togglePassword.textContent = isHidden ? "Hide" : "Show";
-        togglePassword.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
-        togglePassword.setAttribute("aria-pressed", String(isHidden));
-      });
+      if (togglePassword) {
+        togglePassword.addEventListener("click", function () {
+          const isHidden = password.type === "password";
+          password.type = isHidden ? "text" : "password";
+          togglePassword.textContent = isHidden ? "Hide" : "Show";
+          togglePassword.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+          togglePassword.setAttribute("aria-pressed", String(isHidden));
+        });
+      }
 
-      passkeyBtn.addEventListener("click", async function () {
-        clearFieldErrors();
-        clearRedirectGuard();
-
-        const emailValue = email.value.trim();
-
-        if (!emailValue) {
-          showFieldError(email, "Enter your work email address to use passkey sign-in.");
-          return;
-        }
-
-        setLoading(true);
-        setStatus("Checking for your passkey...", "is-success");
-
-        try {
-          if (!window.auth || typeof window.auth.beginPasskeyLogin !== "function") {
-            throw new Error("Passkey sign-in is not available.");
-          }
-
-          const result = await window.auth.beginPasskeyLogin(emailValue);
-
-          setStatus(result?.message || "Passkey accepted. Redirecting...", "is-success");
-          markRedirectGuard();
-          window.location.replace("/assistant");
-        } catch (error) {
+      if (passkeyBtn) {
+        passkeyBtn.addEventListener("click", async function () {
+          clearFieldErrors();
           clearRedirectGuard();
-          setStatus(
-            error?.message || "Passkey sign-in could not be completed.",
-            "is-error"
-          );
-          email.focus();
-        } finally {
-          setLoading(false);
-        }
-      });
 
-      form.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        clearFieldErrors();
-        clearRedirectGuard();
+          const emailValue = email.value.trim();
 
-        const emailValue = email.value.trim();
-        const passwordValue = password.value;
-
-        if (!emailValue) {
-          showFieldError(email, "Please enter your work email address.");
-          return;
-        }
-
-        if (!passwordValue) {
-          showFieldError(password, "Please enter your password.");
-          return;
-        }
-
-        setLoading(true);
-        setStatus("Checking your details...");
-
-        try {
-          if (!window.auth || typeof window.auth.login !== "function") {
-            throw new Error("Login service is not available.");
-          }
-
-          const data = await window.auth.login({
-            email: emailValue,
-            password: passwordValue,
-            remember: rememberMe.checked
-          });
-
-          if (data?.mfa_pending || data?.mfa_required) {
-            setStatus("Password accepted. Redirecting to security check...", "is-success");
-            markRedirectGuard();
-
-            if (data.mfa_enabled) {
-              window.location.replace("/mfa");
-            } else {
-              window.location.replace("/mfa-setup");
-            }
+          if (!emailValue) {
+            showFieldError(email, "Enter your work email address to use passkey sign-in.");
             return;
           }
 
-          setStatus("Sign-in successful. Redirecting...", "is-success");
-          markRedirectGuard();
-          window.location.replace("/assistant");
-        } catch (error) {
-          clearRedirectGuard();
-          const message =
-            error && error.message
-              ? error.message
-              : "We could not sign you in. Please check your details and try again.";
+          setLoading(true, "passkey");
+          setStatus("Checking for your passkey...", "is-success");
 
-          setStatus(message, "is-error");
-          password.focus();
-        } finally {
-          setLoading(false);
-        }
-      });
+          try {
+            if (!window.auth || typeof window.auth.beginPasskeyLogin !== "function") {
+              throw new Error("Passkey sign-in is not available.");
+            }
+
+            const result = await window.auth.beginPasskeyLogin(emailValue);
+
+            setStatus(
+              result?.message || "Passkey accepted. Opening IndiCare OS...",
+              "is-success"
+            );
+
+            goToWorkspace();
+          } catch (error) {
+            clearRedirectGuard();
+
+            setStatus(
+              error?.message ||
+                "Passkey sign-in could not be completed. You can use password fallback below.",
+              "is-error"
+            );
+
+            if (email) email.focus();
+          } finally {
+            setLoading(false, "passkey");
+          }
+        });
+      }
+
+      if (form) {
+        form.addEventListener("submit", async function (event) {
+          event.preventDefault();
+          clearFieldErrors();
+          clearRedirectGuard();
+
+          const emailValue = email.value.trim();
+          const passwordValue = password.value;
+
+          if (!emailValue) {
+            showFieldError(email, "Please enter your work email address.");
+            return;
+          }
+
+          if (!passwordValue) {
+            showFieldError(password, "Please enter your password.");
+            return;
+          }
+
+          setLoading(true, "password");
+          setStatus("Checking your details...");
+
+          try {
+            if (!window.auth || typeof window.auth.login !== "function") {
+              throw new Error("Login service is not available.");
+            }
+
+            const data = await window.auth.login({
+              email: emailValue,
+              password: passwordValue,
+              remember: rememberMe.checked
+            });
+
+            if (data?.mfa_pending || data?.mfa_required) {
+              setStatus("Password accepted. Redirecting to security check...", "is-success");
+              goToMfaOrSetup(data);
+              return;
+            }
+
+            setStatus("Sign-in successful. Opening IndiCare OS...", "is-success");
+            goToWorkspace();
+          } catch (error) {
+            clearRedirectGuard();
+
+            const message =
+              error && error.message
+                ? error.message
+                : "We could not sign you in. Please check your details and try again.";
+
+            setStatus(message, "is-error");
+
+            if (password) password.focus();
+          } finally {
+            setLoading(false, "password");
+          }
+        });
+      }
 
       clearFieldErrors();
       bootExistingSession();

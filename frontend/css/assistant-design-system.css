@@ -1,0 +1,106 @@
+:root {
+  --ic-blue: #0969ff;
+  --ic-blue-soft: #eff6ff;
+  --ic-bg: #f5f7fb;
+  --ic-panel: #ffffff;
+  --ic-border: #dbe4f0;
+  --ic-text: #142033;
+  --ic-muted: #64748b;
+  --ic-radius: 18px;
+  --ic-radius-sm: 12px;
+  --ic-space-xs: 4px;
+  --ic-space-sm: 8px;
+  --ic-space-md: 14px;
+  --ic-space-lg: 20px;
+  --ic-space-xl: 28px;
+  --ic-shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --ic-transition: 180ms cubic-bezier(.2,.8,.2,1);
+  --ic-font: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--ic-font);
+  background: var(--ic-bg);
+  color: var(--ic-text);
+}
+
+.ic-card {
+  border: 1px solid var(--ic-border);
+  background: var(--ic-panel);
+  border-radius: var(--ic-radius);
+  box-shadow: var(--ic-shadow-soft);
+  padding: 18px;
+  transition:
+    background var(--ic-transition),
+    border-color var(--ic-transition),
+    transform var(--ic-transition),
+    box-shadow var(--ic-transition);
+}
+
+.ic-card:hover {
+  border-color: rgba(9,105,255,.22);
+}
+
+.ic-btn-primary,
+.ic-btn-secondary {
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 800;
+  transition:
+    background var(--ic-transition),
+    border-color var(--ic-transition),
+    color var(--ic-transition),
+    transform var(--ic-transition);
+}
+
+.ic-btn-primary {
+  border: 0;
+  background: var(--ic-blue);
+  color: #fff;
+}
+
+.ic-btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.ic-btn-secondary {
+  border: 1px solid var(--ic-border);
+  background: var(--ic-panel);
+  color: var(--ic-text);
+}
+
+.ic-btn-secondary:hover {
+  border-color: rgba(9,105,255,.25);
+  background: var(--ic-blue-soft);
+  color: var(--ic-blue);
+}
+
+.ic-ai-block {
+  border: 1px solid var(--ic-border);
+  background: var(--ic-panel);
+  border-radius: var(--ic-radius);
+  padding: 16px;
+  box-shadow: var(--ic-shadow-soft);
+}
+
+.ic-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.ic-empty-mark {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ic-blue-soft);
+  color: var(--ic-blue);
+  font-weight: 900;
+  font-size: 1.2rem;
+}

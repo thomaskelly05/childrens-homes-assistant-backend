@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from auth.dependencies import require_role
+from auth.permissions import require_role
 from db.connection import get_db
 
 router = APIRouter()

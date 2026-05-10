@@ -1,16 +1,11 @@
 import { state } from "../state.js";
 import { els } from "../dom.js";
-import { escapeHtml, getDisplayName } from "../core/utils.js";
-import {
-  getSectionTitle,
-  getSectionSubtitle,
-} from "../core/config.js";
+import { escapeHtml } from "../core/utils.js";
+import { normaliseRecord } from "../core/record-normaliser.js";
 import {
   ensureAssistantState,
   getAssistantMeta,
-  getCurrentPerson,
   getCurrentScope,
-  getCurrentSection,
   getPersonLabel,
   getHomeLabel,
   getScopeLabel,
@@ -48,12 +43,24 @@ function getEl(...candidates) {
   return null;
 }
 
-function normaliseAssistantMessages() {
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function safeObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+}
+
+function getAssistantHistory() {
   ensureAssistantState();
 
-  state.assistantMessages = Array.isArray(state.assistantMessages)
-    ? state.assistantMessages.map((entry) => cloneAssistantMessage(entry))
+  const main = Array.isArray(state.assistantMessages)
+    ? state.assistantMessages
     : [];
+
+  return main.map((entry) => cloneAssistantMessage(entry));
 }
 
 function renderInlineText(text = "") {
@@ -130,9 +137,7 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
 
   raw.replace(regex, (match, recordPayload, citationRef, offset) => {
     const before = raw.slice(lastIndex, offset);
-    if (before) {
-      parts.push(renderInlineText(before));
-    }
+    if (before) parts.push(renderInlineText(before));
 
     if (recordPayload) {
       try {
@@ -148,7 +153,8 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
         parts.push(renderInlineText(match));
       }
     } else if (citationRef) {
-      const source = sourceMap.get(String(citationRef || "").toLowerCase()) || null;
+      const source =
+        sourceMap.get(String(citationRef || "").toLowerCase()) || null;
       parts.push(renderCitationChip(citationRef, source));
     }
 
@@ -157,11 +163,42 @@ function renderParagraphWithCitations(text = "", sourceMap = new Map()) {
   });
 
   const tail = raw.slice(lastIndex);
-  if (tail) {
-    parts.push(renderInlineText(tail));
-  }
+  if (tail) parts.push(renderInlineText(tail));
 
   return parts.join("");
+}
+
+const ASSISTANT_SECTION_HEADINGS = new Set([
+  "overview",
+  "key themes",
+  "strengths and positives",
+  "gaps or areas needing stronger evidence",
+  "gaps or areas needing stronger evidence:",
+  "what staff should be doing right now",
+  "professional escalation to consider",
+  "risk overview",
+  "most relevant risk evidence",
+  "immediate actions",
+  "residential handover",
+  "what matters at the start of the shift",
+  "upcoming appointment",
+  "what staff should do next",
+  "manager oversight brief",
+  "key oversight points",
+  "management actions",
+  "escalation and scrutiny",
+  "quality and inspection-readiness brief",
+  "inspection and scrutiny themes",
+  "evidence gaps",
+  "reg 45 review support",
+  "progress, experience and positives",
+  "themes requiring review",
+  "evidence gaps to address before finalising the report",
+  "try asking for",
+]);
+
+function isAssistantHeading(line = "") {
+  return ASSISTANT_SECTION_HEADINGS.has(String(line || "").trim().toLowerCase());
 }
 
 function renderAssistantRichText(text = "") {
@@ -172,7 +209,9 @@ function renderAssistantRichText(text = "") {
 
   const flushList = () => {
     if (!listItems.length) return;
-    blocks.push(`<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
+    blocks.push(
+      `<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`
+    );
     listItems = [];
   };
 
@@ -184,6 +223,14 @@ function renderAssistantRichText(text = "") {
       continue;
     }
 
+    if (isAssistantHeading(trimmed)) {
+      flushList();
+      blocks.push(
+        `<h4 class="assistant-answer-heading">${escapeHtml(trimmed)}</h4>`
+      );
+      continue;
+    }
+
     if (/^[-*]\s+/.test(trimmed)) {
       listItems.push(
         renderParagraphWithCitations(trimmed.replace(/^[-*]\s+/, ""), sourceMap)
@@ -192,11 +239,11 @@ function renderAssistantRichText(text = "") {
     }
 
     if (/^\d+\.\s+/.test(trimmed)) {
-      flushList();
-      blocks.push(
-        `<p><strong>${renderParagraphWithCitations(
-          trimmed.replace(/^(\d+\.)\s+/, "$1 ")
-        )}</strong></p>`
+      listItems.push(
+        renderParagraphWithCitations(
+          trimmed.replace(/^\d+\.\s+/, ""),
+          sourceMap
+        )
       );
       continue;
     }
@@ -256,17 +303,8 @@ function renderMessageActions(actions = []) {
         `;
       }
 
-      const label =
-        action?.label ||
-        action?.title ||
-        action?.type ||
-        "Action";
-
-      const prompt =
-        action?.prompt ||
-        action?.label ||
-        action?.title ||
-        "";
+      const label = action?.label || action?.title || action?.type || "Action";
+      const prompt = action?.prompt || action?.label || action?.title || "";
 
       return `
         <button
@@ -320,7 +358,9 @@ function renderMessage(message = {}) {
         }
       </div>
       ${
-        role === "assistant" && Array.isArray(message.actions) && message.actions.length
+        role === "assistant" &&
+        Array.isArray(message.actions) &&
+        message.actions.length
           ? renderMessageActions(message.actions)
           : ""
       }
@@ -374,12 +414,8 @@ function renderMessageList(host, messages = []) {
 }
 
 function renderMessages() {
-  normaliseAssistantMessages();
-
-  renderMessageList(
-    getEl(els.assistantMessages, "assistantMessages"),
-    state.assistantMessages
-  );
+  const messages = getAssistantHistory();
+  renderMessageList(getEl(els.assistantMessages, "assistantMessages"), messages);
 }
 
 function renderScopeBadges() {
@@ -393,9 +429,7 @@ function renderScopeBadges() {
   const childBadge = getEl(els.scopeChildBadge, "scopeChildBadge");
   const shiftBadge = getEl(els.scopeShiftBadge, "scopeShiftBadge");
 
-  if (scopeBadge) {
-    scopeBadge.textContent = getScopeLabel();
-  }
+  if (scopeBadge) scopeBadge.textContent = getScopeLabel();
 
   if (homeBadge) {
     const showHome = scope !== "child";
@@ -434,9 +468,7 @@ function renderContextText() {
     return;
   }
 
-  const homeIds = Array.isArray(state.allowedHomeIds)
-    ? state.allowedHomeIds
-    : [];
+  const homeIds = Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : [];
 
   contextEl.textContent =
     state.userRole === "ri" || state.userRole === "admin"
@@ -444,18 +476,39 @@ function renderContextText() {
       : `${getHomeLabel()} • quality • ${section}`;
 }
 
+function getAssistantSources() {
+  const meta = getAssistantMeta() || {};
+  return [
+    ...safeArray(meta.sources),
+    ...safeArray(meta.top_sources),
+    ...safeArray(meta.runtime?.top_sources),
+    ...safeArray(meta.assistant_insight_pack?.top_sources),
+  ];
+}
+
 function renderSourcesHtml(sources = []) {
   if (!Array.isArray(sources) || !sources.length) {
     return `<p class="assistant-muted">No sources yet.</p>`;
   }
 
+  const seen = new Set();
+  const uniqueSources = sources.filter((source, index) => {
+    const ref = sourceCitationRef(source, index);
+    const key = String(ref || source?.id || source?.record_id || index);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   return `
     <div class="assistant-source-list assistant-source-list--simple">
-      ${sources
+      ${uniqueSources
         .map((source, index) => {
           const citationRef = sourceCitationRef(source, index);
+          const normalised = normaliseRecord(source, source?.record_type || source?.type || "");
           const title = escapeHtml(
-            source?.title ||
+            normalised.title ||
+              source?.title ||
               source?.label ||
               source?.document_title ||
               source?.name ||
@@ -463,10 +516,13 @@ function renderSourcesHtml(sources = []) {
           );
 
           const meta = [
-            source?.record_type || source?.type || "",
-            source?.section || "",
+            normalised.label || source?.record_type || source?.type || "",
+            normalised.section || source?.section || "",
             source?.evidence_kind || "",
-            source?.created_at
+            normalised.date
+              ? new Date(normalised.date).toLocaleDateString("en-GB")
+              : source?.date || "",
+            source?.created_at && !normalised.date
               ? new Date(source.created_at).toLocaleDateString("en-GB")
               : "",
           ]
@@ -476,7 +532,11 @@ function renderSourcesHtml(sources = []) {
 
           const description = escapeHtml(
             String(
-              source?.description || source?.excerpt || source?.summary || ""
+              normalised.summary ||
+                source?.description ||
+                source?.excerpt ||
+                source?.summary ||
+                ""
             ).slice(0, 220)
           );
 
@@ -487,21 +547,17 @@ function renderSourcesHtml(sources = []) {
               type="button"
               data-source-ref="${escapeHtml(citationRef)}"
               data-linked-record-id="${escapeHtml(
-                String(source?.record_id || source?.id || source?.source_id || "")
+                String(normalised.id || source?.record_id || source?.id || source?.source_id || "")
               )}"
               data-linked-record-type="${escapeHtml(
-                String(source?.record_type || source?.type || "")
+                String(normalised.type || source?.record_type || source?.type || "")
               )}"
             >
               <div class="assistant-source-row-top">
                 <strong>${title}</strong>
                 <span>${escapeHtml(citationRef)}</span>
               </div>
-              ${
-                meta
-                  ? `<div class="assistant-source-row-meta">${meta}</div>`
-                  : ""
-              }
+              ${meta ? `<div class="assistant-source-row-meta">${meta}</div>` : ""}
               ${
                 description
                   ? `<div class="assistant-source-row-text">${description}</div>`
@@ -516,18 +572,40 @@ function renderSourcesHtml(sources = []) {
 }
 
 function renderStandaloneSources() {
-  const html = renderSourcesHtml(getAssistantMeta().sources || []);
+  const html = renderSourcesHtml(getAssistantSources());
   const sourcesEl = getEl(els.assistantSources, "assistantSources");
   if (sourcesEl) sourcesEl.innerHTML = html;
 }
 
+function actionToPrompt(action = "") {
+  const label = String(action || "").trim();
+
+  const map = {
+    "Review safeguarding records":
+      "Review safeguarding records and tell me what needs action.",
+    "Draft handover": "Draft a residential handover for the next shift.",
+    "Build quality brief": "Build a quality and inspection-readiness brief.",
+    "Check inspection readiness":
+      "Check inspection readiness and highlight evidence gaps.",
+    "Review overdue items":
+      "Review overdue items and list what needs owner, action and timescale.",
+    "Check management actions":
+      "Check management actions and tell me what needs management oversight.",
+    "Draft summary": "Give me a full overview using the current evidence.",
+  };
+
+  return map[label] || label;
+}
+
 function renderSuggestedActions() {
   const meta = getAssistantMeta();
-  const actions = Array.isArray(meta.suggested_actions)
-    ? meta.suggested_actions
-    : [];
-  const host = getEl(els.assistantSuggestions, "assistantSuggestions");
+  const actions = [
+    ...safeArray(meta.suggested_actions),
+    ...safeArray(meta.actions),
+    ...safeArray(meta.runtime?.suggested_actions),
+  ];
 
+  const host = getEl(els.assistantSuggestions, "assistantSuggestions");
   if (!host) return;
 
   if (!actions.length) {
@@ -535,7 +613,18 @@ function renderSuggestedActions() {
     return;
   }
 
+  const seen = new Set();
+
   host.innerHTML = actions
+    .filter((action) => {
+      const label =
+        typeof action === "string"
+          ? action
+          : action?.label || action?.title || action?.type || "Action";
+      if (seen.has(label)) return false;
+      seen.add(label);
+      return true;
+    })
     .map((action) => {
       const label =
         typeof action === "string"
@@ -544,8 +633,8 @@ function renderSuggestedActions() {
 
       const prompt =
         typeof action === "string"
-          ? action
-          : action?.prompt || action?.label || action?.title || "";
+          ? actionToPrompt(action)
+          : action?.prompt || actionToPrompt(action?.label || action?.title || "");
 
       const actionType =
         typeof action === "string"
@@ -572,11 +661,29 @@ function renderSuggestedActions() {
     .join("");
 }
 
+function resolveEvidenceCount(meta = {}) {
+  const runtime = safeObject(meta.runtime);
+  const context = safeObject(meta.assistant_context);
+  const liveSummary = safeObject(meta.live_summary);
+  const brainSummary = safeObject(meta.brain_summary);
+
+  return (
+    runtime.evidence_count ||
+    meta.evidence_count ||
+    brainSummary.total ||
+    liveSummary.evidence_count ||
+    liveSummary.total ||
+    context?.evidence_summary?.total ||
+    safeArray(getAssistantSources()).length ||
+    0
+  );
+}
+
 function renderScopeSummary() {
   const host = getEl(els.assistantScopeSummary, "assistantScopeSummary");
   const meta = getAssistantMeta();
-  const runtime = meta.runtime || {};
-  const context = meta.assistant_context || {};
+  const runtime = safeObject(meta.runtime);
+  const context = safeObject(meta.assistant_context);
 
   const html = `
     <div class="assistant-scope-summary">
@@ -590,15 +697,24 @@ function renderScopeSummary() {
       </div>
       <div class="assistant-scope-summary-row">
         <span>Evidence</span>
-        <strong>${escapeHtml(String(runtime.evidence_count || context?.evidence_summary?.total || 0))}</strong>
+        <strong>${escapeHtml(String(resolveEvidenceCount(meta)))}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Mode</span>
-        <strong>${escapeHtml(String(runtime.output_mode || meta.output_mode || getCurrentScope()))}</strong>
+        <strong>${escapeHtml(
+          String(runtime.output_mode || meta.output_mode || getCurrentScope())
+        )}</strong>
       </div>
       <div class="assistant-scope-summary-row">
         <span>Lens</span>
-        <strong>${escapeHtml(String(runtime.analysis_lens || context.analysis_lens || "general"))}</strong>
+        <strong>${escapeHtml(
+          String(
+            runtime.analysis_lens ||
+              context.analysis_lens ||
+              meta.analysis_lens ||
+              "general"
+          )
+        )}</strong>
       </div>
     </div>
   `;
@@ -610,11 +726,7 @@ function renderRuntimeAndExplainability() {
   const meta = getAssistantMeta();
 
   if (els.assistantRuntime) {
-    els.assistantRuntime.textContent = JSON.stringify(
-      meta.runtime || {},
-      null,
-      2
-    );
+    els.assistantRuntime.textContent = JSON.stringify(meta.runtime || {}, null, 2);
   }
 
   if (els.assistantExplainability) {
@@ -644,12 +756,18 @@ function syncAssistantSendButtons() {
   const sending = Boolean(state.assistantSending);
 
   if (els.assistantSendBtn) els.assistantSendBtn.disabled = sending;
+
+  const modalSendBtn = qs("assistantModalSendBtn");
+  if (modalSendBtn) modalSendBtn.disabled = sending;
 }
 
 function syncAssistantInputs() {
   const disabled = Boolean(state.assistantSending);
 
   if (els.assistantInput) els.assistantInput.disabled = disabled;
+
+  const modalInput = qs("assistantModalInput");
+  if (modalInput) modalInput.disabled = disabled;
 }
 
 function scrollSourceIntoView(ref = "") {
@@ -678,16 +796,21 @@ async function openLinkedRecord(recordId = "", recordType = "") {
     const numericId = Number(recordId);
     const safeId = Number.isNaN(numericId) ? recordId : numericId;
 
-    state.activeRecordType = recordType || null;
-    state.activeRecordItem = {
-      id: safeId,
-      source_id: safeId,
-      record_id: safeId,
-      record_type: recordType || "",
-      title: "",
-    };
+    const normalised = normaliseRecord(
+      {
+        id: safeId,
+        source_id: safeId,
+        record_id: safeId,
+        record_type: recordType || "",
+        title: "",
+      },
+      recordType
+    );
 
-    await openRecordDetail(state.activeRecordItem);
+    state.activeRecordType = normalised.type || recordType || null;
+    state.activeRecordItem = normalised;
+
+    await openRecordDetail(normalised);
   } catch (error) {
     console.error("[assistant-ui] failed opening linked record", error);
   }
@@ -710,9 +833,7 @@ function bindCitationEvents() {
       const recordId = linkedRecord.getAttribute("data-linked-record-id") || "";
       const recordType =
         linkedRecord.getAttribute("data-linked-record-type") || "";
-      if (recordId) {
-        await openLinkedRecord(recordId, recordType);
-      }
+      if (recordId) await openLinkedRecord(recordId, recordType);
       return;
     }
 
@@ -750,6 +871,29 @@ export function refreshAssistantUi() {
   renderAllAssistantUi();
 }
 
+export function onAssistantScopeChanged(scope = null, section = null) {
+  try {
+    renderAllAssistantUi();
+
+    window.dispatchEvent(
+      new CustomEvent("indicare:assistant-scope-changed", {
+        detail: {
+          scope: scope || state.currentScope || "child",
+          section:
+            section ||
+            state.currentSection ||
+            state.activeSection ||
+            state.currentView ||
+            "",
+          timestamp: new Date().toISOString(),
+        },
+      })
+    );
+  } catch (error) {
+    console.warn("[assistant-ui] failed handling assistant scope change", error);
+  }
+}
+
 export function appendAssistantSystemMessage(text, extra = {}) {
   ensureAssistantState();
 
@@ -769,7 +913,13 @@ export function appendAssistantSystemMessage(text, extra = {}) {
     _streaming: Boolean(extra._streaming),
   });
 
+  if (!Array.isArray(state.assistantMessages)) state.assistantMessages = [];
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+
   state.assistantMessages.push(entry);
+  state.assistantModalMessages.push(cloneAssistantMessage(entry));
   renderAllAssistantUi();
 }
 
@@ -791,11 +941,18 @@ export function appendAssistantUserMessage(text, extra = {}) {
         : null,
   });
 
+  if (!Array.isArray(state.assistantMessages)) state.assistantMessages = [];
+  if (!Array.isArray(state.assistantModalMessages)) {
+    state.assistantModalMessages = [];
+  }
+
   state.assistantMessages.push(entry);
+  state.assistantModalMessages.push(cloneAssistantMessage(entry));
   renderAllAssistantUi();
 }
 
 export function clearAssistantMessages() {
   state.assistantMessages = [];
+  state.assistantModalMessages = [];
   renderAllAssistantUi();
 }

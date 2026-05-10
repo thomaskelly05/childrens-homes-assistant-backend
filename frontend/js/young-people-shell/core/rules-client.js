@@ -1313,6 +1313,122 @@ function rulesForSafeguarding(record = {}, context = {}) {
   return suggestions;
 }
 
+function rulesForTask(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+  const status = lower(record.status);
+  const priority = lower(record.priority);
+  const isOverdue = status === "overdue" || includesAny(record.status, ["overdue", "late"]);
+  const isOpen = !["completed", "closed", "done", "resolved"].includes(status);
+
+  if (isOpen && !cleanText(record.assigned_role) && !record.assigned_to_user_id) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Assign clear ownership",
+        description:
+          "This action does not yet have clear ownership. Assign a role or person to improve accountability.",
+        source_record_type: meta.source_record_type || "task",
+        source_record_id: meta.source_record_id,
+        priority: "high",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (isOpen && !cleanText(record.due_date)) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Set a due date",
+        description:
+          "This action is still open without a due date, which increases the chance of missed follow-through.",
+        source_record_type: meta.source_record_type || "task",
+        source_record_id: meta.source_record_id,
+        priority: "high",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (isOverdue || priority === "critical") {
+    suggestions.push(
+      buildEscalationSuggestion({
+        title: "Escalate overdue action",
+        description:
+          "This action appears overdue or critical. Escalate to management oversight and set immediate follow-up.",
+        source_record_type: meta.source_record_type || "task",
+        source_record_id: meta.source_record_id,
+        priority: "high",
+        metadata: meta,
+      })
+    );
+  }
+
+  if (isOpen && !cleanText(record.latest_update?.note || record.notes || record.note)) {
+    suggestions.push(
+      buildSuggestion({
+        title: "Add progress update",
+        description:
+          "Add a short progress update so the action trail shows what has happened since creation.",
+        record_type: "task",
+        action_type: "create_task",
+        priority: "medium",
+        source_record_type: meta.source_record_type || "task",
+        source_record_id: meta.source_record_id,
+        prefill: {
+          title: buildLinkedTitle("Follow-up update", record),
+          task_type: "follow_up",
+        },
+        metadata: meta,
+      })
+    );
+  }
+
+  return suggestions;
+}
+
+function rulesForManagerAction(record = {}, context = {}) {
+  const suggestions = [];
+  const meta = getSourceMeta(record, context);
+  const noteText = cleanText(record.note || record.summary);
+
+  if (!noteText || noteText.length < 24) {
+    suggestions.push(
+      buildImproveSuggestion({
+        title: "Strengthen management rationale",
+        description:
+          "This management action could be clearer on rationale, ownership, and expected outcome.",
+        source_record_type: meta.source_record_type || "manager_action",
+        source_record_id: meta.source_record_id,
+        priority: "high",
+        metadata: meta,
+      })
+    );
+  }
+
+  suggestions.push(
+    buildSuggestion({
+      title: "Create linked follow-through action",
+      description:
+        "Convert this management direction into a concrete task with due date and ownership.",
+      record_type: "task",
+      action_type: "create_task",
+      priority: "high",
+      source_record_type: meta.source_record_type || "manager_action",
+      source_record_id: meta.source_record_id,
+      prefill: {
+        title: buildLinkedTitle("Management follow-through", record),
+        task_type: "management",
+        task: noteText,
+        source_table: meta.source_record_type || "manager_actions",
+        source_id: meta.source_record_id,
+      },
+      metadata: meta,
+    })
+  );
+
+  return suggestions;
+}
+
 /* -----------------------------
    Public API
 ----------------------------- */
@@ -1338,6 +1454,8 @@ export function evaluateRecordSuggestions(record = {}, context = {}) {
   if (type === "appointment") return rulesForAppointment(record, context);
   if (type === "risk") return rulesForRisk(record, context);
   if (type === "safeguarding_record") return rulesForSafeguarding(record, context);
+  if (type === "task" || type === "action") return rulesForTask(record, context);
+  if (type === "manager_action") return rulesForManagerAction(record, context);
 
   return [];
 }

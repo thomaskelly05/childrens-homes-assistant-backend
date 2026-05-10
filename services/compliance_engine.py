@@ -42,6 +42,14 @@ def _coerce_date(value: date | datetime | str | None) -> date | None:
     return None
 
 
+def _read_row_value(row: Any, *, key: str, index: int) -> Any:
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row.get(key)
+    return row[index]
+
+
 @dataclass(slots=True)
 class ComplianceItemInput:
     young_person_id: int
@@ -86,7 +94,7 @@ class ComplianceEngine:
                 existing = cur.fetchone()
 
                 if existing:
-                    item_id = int(existing[0])
+                    item_id = int(_read_row_value(existing, key="id", index=0))
                     cur.execute(
                         """
                         UPDATE compliance_items
@@ -159,7 +167,7 @@ class ComplianceEngine:
                 )
                 row = cur.fetchone()
             conn.commit()
-            return int(row[0])
+            return int(_read_row_value(row, key="id", index=0))
         except Exception:
             if conn:
                 conn.rollback()

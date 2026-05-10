@@ -3,8 +3,13 @@ import os
 
 from psycopg2.pool import ThreadedConnectionPool
 from psycopg2.extras import RealDictCursor
+from sqlalchemy.orm import declarative_base
 
 logger = logging.getLogger(__name__)
+
+# Backwards compatibility for legacy SQLAlchemy models still imported by
+# auxiliary services and scripts.
+Base = declarative_base()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:

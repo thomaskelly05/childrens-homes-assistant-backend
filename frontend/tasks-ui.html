@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tasks | IndiCare Care OS</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7faf9;color:#10201f}.wrap{padding:20px}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}.head h1{margin:0;font-size:24px}.head p{margin:4px 0 0;color:#5f746f}.grid{display:grid;gap:12px}.card{background:#fff;border:1px solid #d8e4e0;border-radius:18px;padding:14px;box-shadow:0 12px 28px rgba(15,23,42,.06)}.card strong{display:block}.card p{margin:6px 0 0;color:#5f746f}.pill{display:inline-flex;border-radius:999px;padding:5px 9px;background:#eef6f4;color:#163b3a;font-size:12px;font-weight:800}.high,.critical{background:#fff1f2;border-color:#fecdd3}.medium,.warning{background:#fff7e6;border-color:#fde1a8}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button{border:1px solid #d8e4e0;background:#fff;border-radius:12px;padding:9px 11px;font-weight:800;cursor:pointer}.empty{color:#5f746f;font-weight:700}.error{background:#fff1f2;border-color:#fecdd3;color:#8a1230}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="head">
+      <div><h1>Tasks</h1><p>Assigned actions, overdue work and accountability across the home.</p></div>
+      <div class="toolbar"><button id="refreshBtn">Refresh</button></div>
+    </header>
+    <section id="tasksList" class="grid"><p class="empty">Loading tasks…</p></section>
+  </main>
+  <script>
+    async function loadTasks(){
+      const list=document.getElementById('tasksList');
+      try{
+        const res=await fetch('/tasks/my',{credentials:'include',headers:{Accept:'application/json'}});
+        if(res.status===401){window.top.location.replace('/login?next=/care-os#tasks');return}
+        const data=await res.json();
+        if(!res.ok)throw new Error(data.detail||'Tasks unavailable');
+        const tasks=Array.isArray(data)?data:(data.items||data.tasks||[]);
+        list.innerHTML='';
+        if(!tasks.length){list.innerHTML='<p class="empty">No tasks currently assigned.</p>';return}
+        tasks.forEach(t=>{const card=document.createElement('article');card.className='card '+(t.priority||'');card.innerHTML='<span class="pill">'+(t.status||'pending')+'</span><strong>'+escapeHtml(t.title||'Task')+'</strong><p>'+(t.due_at?'Due: '+escapeHtml(t.due_at):'No due date')+'</p>';list.appendChild(card)})
+      }catch(e){list.innerHTML='<article class="card error"><strong>Unable to load tasks</strong><p>'+escapeHtml(String(e.message||e))+'</p></article>'}
+    }
+    function escapeHtml(v){return String(v||'').replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
+    document.getElementById('refreshBtn').addEventListener('click',loadTasks);loadTasks();
+  </script>
+</body>
+</html>

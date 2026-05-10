@@ -5,13 +5,40 @@ import { escapeHtml } from "../core/utils.js";
 import { updateWorkspaceSummaryStrip } from "../ui/workspace-summary.js";
 import { buildInspectionUiEndpoints } from "../core/config.js";
 
+function getAllowedHomeIds() {
+  const rawIds = Array.isArray(state.allowedHomeIds) ? state.allowedHomeIds : [];
+  return rawIds
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item) && item > 0);
+}
+
 function getHomeId() {
-  return (
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    null
+  const preferredHomeId = Number(
+    state.readinessSelectedHomeId ||
+      state.homeId ||
+      state.selectedHomeId ||
+      state.currentUser?.home_id ||
+      state.currentUser?.homeId ||
+      state.selectedYoungPerson?.home_id ||
+      0
   );
+
+  const allowedHomeIds = getAllowedHomeIds();
+
+  if (allowedHomeIds.length) {
+    if (
+      Number.isFinite(preferredHomeId) &&
+      preferredHomeId > 0 &&
+      allowedHomeIds.includes(preferredHomeId)
+    ) {
+      return preferredHomeId;
+    }
+    return allowedHomeIds[0];
+  }
+
+  return Number.isFinite(preferredHomeId) && preferredHomeId > 0
+    ? preferredHomeId
+    : null;
 }
 
 function safeText(value, fallback = "") {
@@ -78,6 +105,9 @@ function getStatusTone(status = "") {
       "weak",
       "danger",
       "escalated",
+      "concern",
+      "gap",
+      "risk",
     ].includes(normalised)
   ) {
     return "danger";
@@ -94,6 +124,10 @@ function getStatusTone(status = "") {
       "requires_improvement",
       "attention",
       "medium",
+      "open",
+      "planned",
+      "draft",
+      "in_progress",
     ].includes(normalised)
   ) {
     return "warning";
@@ -109,6 +143,14 @@ function getStatusTone(status = "") {
       "secure",
       "complete",
       "completed",
+      "resolved",
+      "available",
+      "active",
+      "current",
+      "compliant",
+      "outstanding",
+      "strength",
+      "success",
     ].includes(normalised)
   ) {
     return "success";
@@ -144,6 +186,30 @@ function hasUsableData(data) {
   if (Array.isArray(data.tasks) && data.tasks.length > 0) return true;
   if (Array.isArray(data.safeguarding) && data.safeguarding.length > 0) return true;
   if (Array.isArray(data.reports) && data.reports.length > 0) return true;
+  if (Array.isArray(data.inspection_sections) && data.inspection_sections.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_section_scores) && data.inspection_section_scores.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_reasons) && data.inspection_reasons.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_score_reasons) && data.inspection_score_reasons.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_actions) && data.inspection_actions.length > 0)
+    return true;
+  if (Array.isArray(data.inspection_improvement_actions) && data.inspection_improvement_actions.length > 0)
+    return true;
+  if (Array.isArray(data.quality_audits) && data.quality_audits.length > 0) return true;
+  if (Array.isArray(data.quality_audit_findings) && data.quality_audit_findings.length > 0)
+    return true;
+  if (Array.isArray(data.quality_audit_actions) && data.quality_audit_actions.length > 0)
+    return true;
+  if (Array.isArray(data.reg44_visits) && data.reg44_visits.length > 0) return true;
+  if (Array.isArray(data.reg44_findings) && data.reg44_findings.length > 0) return true;
+  if (Array.isArray(data.reg44_actions) && data.reg44_actions.length > 0) return true;
+  if (Array.isArray(data.reg45_reviews) && data.reg45_reviews.length > 0) return true;
+  if (Array.isArray(data.reg45_actions) && data.reg45_actions.length > 0) return true;
+  if (Array.isArray(data.compliance_items) && data.compliance_items.length > 0) return true;
+  if (Array.isArray(data.inspection_scores) && data.inspection_scores.length > 0) return true;
   if (data.summary && typeof data.summary === "object") return true;
   return false;
 }
@@ -165,6 +231,8 @@ const JUDGEMENTS = Object.freeze([
       "placement plan",
       "progress",
       "wishes and feelings",
+      "experience",
+      "keywork",
     ],
   },
   {
@@ -182,6 +250,7 @@ const JUDGEMENTS = Object.freeze([
       "chronology",
       "safety",
       "behaviour",
+      "harm",
     ],
   },
   {
@@ -192,7 +261,9 @@ const JUDGEMENTS = Object.freeze([
       "leadership",
       "management",
       "reg 44",
+      "reg44",
       "reg 45",
+      "reg45",
       "audit",
       "quality",
       "supervision",
@@ -201,6 +272,8 @@ const JUDGEMENTS = Object.freeze([
       "staffing",
       "notifications",
       "oversight",
+      "manager",
+      "quality audit",
     ],
   },
 ]);
@@ -215,7 +288,12 @@ function normaliseEvidenceItems(data = {}) {
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "sccif_evidence",
     title: item.title || item.evidence_title || item.area || "Evidence item",
-    area: item.area || item.sccif_area || item.judgement_area || "",
+    area:
+      item.area ||
+      item.sccif_area ||
+      item.judgement_area ||
+      item.section_name ||
+      "",
     standard: item.standard || item.quality_standard || item.sub_area || "",
     source_type: item.source_type || item.evidence_source || "",
     status: item.status || item.strength || "recorded",
@@ -223,6 +301,7 @@ function normaliseEvidenceItems(data = {}) {
       item.summary ||
       item.description ||
       item.evidence_note ||
+      item.evidence_excerpt ||
       "Evidence item recorded.",
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
@@ -235,13 +314,19 @@ function normaliseGapItems(data = {}) {
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "sccif_gap",
     title: item.title || item.gap_title || "Evidence gap",
-    area: item.area || item.sccif_area || item.judgement_area || "",
+    area:
+      item.area ||
+      item.sccif_area ||
+      item.judgement_area ||
+      item.section_name ||
+      "",
     priority: item.priority || "",
     status: item.status || item.priority || "open",
     summary:
       item.summary ||
       item.description ||
       item.gap_reason ||
+      item.concerns_text ||
       "Evidence gap recorded.",
     due_date: item.due_date || null,
     owner_user_name: item.owner_user_name || item.owner || "",
@@ -256,16 +341,23 @@ function normaliseActionItems(data = {}) {
     id: item.id ?? item.record_id ?? item.source_id ?? null,
     record_type: item.record_type || "sccif_action",
     title: item.title || item.task || item.action_title || "Action",
-    area: item.area || item.sccif_area || item.judgement_area || "",
+    area:
+      item.area ||
+      item.sccif_area ||
+      item.judgement_area ||
+      item.section_name ||
+      "",
     priority: item.priority || "",
-    status: item.status || "open",
+    status: item.status || (item.completed ? "completed" : "open"),
     summary:
       item.summary ||
       item.description ||
       item.task ||
+      item.action_description ||
       "Action recorded.",
-    due_date: item.due_date || null,
-    owner_user_name: item.owner_user_name || item.owner || item.assigned_to || "",
+    due_date: item.due_date || item.task_due_date || item.action_due_date || null,
+    owner_user_name:
+      item.owner_user_name || item.owner || item.assigned_to || item.assigned_user_name || "",
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
   }));
@@ -280,7 +372,12 @@ function normaliseIncidentItems(data = {}) {
     severity: item.severity || "",
     status: item.status || "recorded",
     summary: item.summary || item.description || "Incident recorded.",
-    occurred_at: item.occurred_at || item.date || item.incident_datetime || item.created_at || null,
+    occurred_at:
+      item.occurred_at ||
+      item.date ||
+      item.incident_datetime ||
+      item.created_at ||
+      null,
   }));
 }
 
@@ -307,9 +404,125 @@ function normaliseReportItems(data = {}) {
     title: item.title || item.report_type || "Report",
     report_type: item.report_type || "",
     status: item.status || "completed",
-    summary: item.summary || item.notes || item.report_text || "Report recorded.",
+    summary:
+      item.summary ||
+      item.notes ||
+      item.report_text ||
+      "Report recorded.",
     created_at: item.created_at || item.updated_at || null,
     updated_at: item.updated_at || null,
+  }));
+}
+
+function buildEvidenceFromInspectionReadiness(readinessData = {}) {
+  const scores = toArray(readinessData?.inspection_section_scores, [
+    readinessData?.inspection_sections,
+    readinessData?.sections,
+    readinessData?.items,
+  ]);
+
+  const reasons = toArray(readinessData?.inspection_score_reasons, [
+    readinessData?.inspection_reasons,
+    readinessData?.reasons,
+  ]);
+
+  const sectionEvidence = scores.map((item) => ({
+    id: item.id ?? item.section_score_id ?? item.source_id ?? null,
+    record_type: "sccif_evidence",
+    title: item.section_name || item.title || "Inspection section evidence",
+    area: item.section_name || item.section_code || "",
+    standard: item.section_code || "",
+    source_type: "inspection_section",
+    status: item.score_band || item.status || "recorded",
+    summary:
+      item.summary_text ||
+      item.strengths_text ||
+      item.concerns_text ||
+      item.summary ||
+      "Inspection section evidence available.",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+
+  const reasonEvidence = reasons.map((item) => ({
+    id: item.id ?? item.source_id ?? null,
+    record_type: "sccif_evidence",
+    title: item.title || item.line_of_enquiry_name || "Inspection evidence",
+    area: item.section_name || item.section_code || "",
+    standard: item.reason_type || "",
+    source_type: item.source_table || "inspection_reason",
+    status: item.reason_type || "recorded",
+    summary:
+      item.description ||
+      item.evidence_excerpt ||
+      item.summary ||
+      "Inspection evidence available.",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
+  }));
+
+  return [...sectionEvidence, ...reasonEvidence];
+}
+
+function buildGapsFromInspectionReadiness(readinessData = {}) {
+  const reasons = toArray(readinessData?.inspection_score_reasons, [
+    readinessData?.inspection_reasons,
+    readinessData?.reasons,
+  ]);
+
+  return reasons
+    .filter((item) =>
+      ["concern", "gap", "weakness", "risk"].includes(
+        String(item.reason_type || "").toLowerCase().replaceAll(" ", "_")
+      )
+    )
+    .map((item) => ({
+      id: item.id ?? item.source_id ?? null,
+      record_type: "sccif_gap",
+      title: item.title || item.line_of_enquiry_name || "Evidence gap",
+      area: item.section_name || item.section_code || "",
+      priority: item.priority || "",
+      status: item.reason_type || "open",
+      summary:
+        item.description ||
+        item.evidence_excerpt ||
+        item.summary ||
+        "Evidence gap identified.",
+      due_date: item.due_date || null,
+      owner_user_name: item.owner_user_name || "",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    }));
+}
+
+function buildActionsFromInspectionReadiness(readinessData = {}) {
+  const actions = toArray(readinessData?.inspection_improvement_actions, [
+    readinessData?.inspection_actions,
+    readinessData?.actions,
+    readinessData?.inspection_tasks,
+    readinessData?.tasks,
+  ]);
+
+  return actions.map((item) => ({
+    id: item.id ?? item.action_id ?? item.task_id ?? item.source_id ?? null,
+    record_type: "sccif_action",
+    title: item.action_title || item.task_title || item.title || "Action",
+    area: item.section_name || item.section_code || item.area || "",
+    priority: item.priority || "",
+    status: item.status || (item.completed ? "completed" : "open"),
+    summary:
+      item.action_description ||
+      item.evidence_required ||
+      item.summary ||
+      "Action recorded.",
+    due_date: item.due_date || item.task_due_date || item.action_due_date || null,
+    owner_user_name:
+      item.owner_user_name ||
+      item.owner_staff_name ||
+      item.assigned_user_name ||
+      "",
+    updated_at: item.updated_at || item.created_at || null,
+    created_at: item.created_at || null,
   }));
 }
 
@@ -348,10 +561,22 @@ function matchJudgement(item = {}) {
   });
 
   if (bestScore <= 0) {
-    if (text.includes("safeguard") || text.includes("risk") || text.includes("missing")) {
+    if (
+      text.includes("safeguard") ||
+      text.includes("risk") ||
+      text.includes("missing") ||
+      text.includes("incident")
+    ) {
       return JUDGEMENTS[1];
     }
-    if (text.includes("manager") || text.includes("audit") || text.includes("training")) {
+    if (
+      text.includes("manager") ||
+      text.includes("audit") ||
+      text.includes("training") ||
+      text.includes("reg 44") ||
+      text.includes("reg 45") ||
+      text.includes("quality")
+    ) {
       return JUDGEMENTS[2];
     }
   }
@@ -394,7 +619,7 @@ function groupJudgementData({
 function pickStrengths(group) {
   return group.evidence
     .filter((item) =>
-      ["good", "strong", "effective", "ready", "reviewed", "secure"].includes(
+      ["good", "strong", "effective", "ready", "reviewed", "secure", "available", "success"].includes(
         String(item.status || "")
           .toLowerCase()
           .replaceAll(" ", "_")
@@ -444,21 +669,21 @@ function buildProposedWording(group) {
         .map((item) => item.title || item.area || "recorded practice")
         .slice(0, 2)
         .join(" and ")}.`
-    : `There is some evidence available within this area, but it is not yet consistently strong.`;
+    : "There is some evidence available within this area, but it is not yet consistently strong.";
 
   const gapLine = gaps.length
     ? `Areas requiring further work include ${gaps
         .map((item) => item.title || item.area || "evidence gaps")
         .slice(0, 2)
         .join(" and ")}.`
-    : `No major evidence gaps are currently surfacing within this area.`;
+    : "No major evidence gaps are currently surfacing within this area.";
 
   const actionLine = actions.length
     ? `Current follow-up work includes ${actions
         .map((item) => item.title || "action")
         .slice(0, 2)
         .join(" and ")}.`
-    : `There are no significant open actions currently mapped against this area.`;
+    : "There are no significant open actions currently mapped against this area.";
 
   return `${strengthLine} ${gapLine} ${actionLine}`;
 }
@@ -485,10 +710,10 @@ function deriveGrade(group) {
   const pressure = gapCount * 3 + actionCount * 2 + highRiskIncidents * 2 + openSafeguarding;
   const confidence = strongCount * 2 + Math.min(group.reports.length, 2);
 
-  if (pressure >= 8) return "Requires improvement";
   if (pressure >= 12) return "Inadequate";
-  if (confidence >= 5 && pressure <= 2) return "Good";
+  if (pressure >= 8) return "Requires improvement";
   if (confidence >= 7 && pressure === 0) return "Outstanding";
+  if (confidence >= 5 && pressure <= 2) return "Good";
   return "Requires improvement";
 }
 
@@ -644,7 +869,9 @@ function renderJudgementCards(groups = []) {
                 <div class="record-list">
                   <article class="record-row">
                     <div class="record-row-main">
-                      <div class="record-row-summary">${safeText(buildProposedWording(group))}</div>
+                      <div class="record-row-summary">${safeText(
+                        buildProposedWording(group)
+                      )}</div>
                     </div>
                   </article>
                 </div>
@@ -675,19 +902,25 @@ function renderJudgementCards(groups = []) {
                   <article class="record-row">
                     <div class="record-row-main">
                       <div class="record-row-title">Incidents</div>
-                      <div class="record-row-summary">${safeText(group.incidents.length)}</div>
+                      <div class="record-row-summary">${safeText(
+                        group.incidents.length
+                      )}</div>
                     </div>
                   </article>
                   <article class="record-row">
                     <div class="record-row-main">
                       <div class="record-row-title">Safeguarding</div>
-                      <div class="record-row-summary">${safeText(group.safeguarding.length)}</div>
+                      <div class="record-row-summary">${safeText(
+                        group.safeguarding.length
+                      )}</div>
                     </div>
                   </article>
                   <article class="record-row">
                     <div class="record-row-main">
                       <div class="record-row-title">Reports</div>
-                      <div class="record-row-summary">${safeText(group.reports.length)}</div>
+                      <div class="record-row-summary">${safeText(
+                        group.reports.length
+                      )}</div>
                     </div>
                   </article>
                 </div>
@@ -829,7 +1062,8 @@ function buildFallbackData(homeId) {
           area: "Overall experiences and progress of children and young people",
           status: "strong",
           source_type: "keywork",
-          summary: "Children’s wishes and feelings are reflected well in recent plans and sessions.",
+          summary:
+            "Children’s wishes and feelings are reflected well in recent plans and sessions.",
           updated_at: minusDays(1),
         },
         {
@@ -838,7 +1072,8 @@ function buildFallbackData(homeId) {
           area: "How well children and young people are helped and protected",
           status: "review_due",
           source_type: "chronology",
-          summary: "Core response is evident but management analysis is not always explicit.",
+          summary:
+            "Core response is evident but management analysis is not always explicit.",
           updated_at: minusDays(2),
         },
         {
@@ -847,7 +1082,8 @@ function buildFallbackData(homeId) {
           area: "The effectiveness of leaders and managers",
           status: "good",
           source_type: "report",
-          summary: "Recent review shows better analysis of trends and action planning.",
+          summary:
+            "Recent review shows better analysis of trends and action planning.",
           updated_at: minusDays(4),
         },
       ],
@@ -861,7 +1097,8 @@ function buildFallbackData(homeId) {
           priority: "high",
           status: "open",
           due_date: plusDays(3),
-          summary: "Evidence chain between incidents, returns and management oversight needs tightening.",
+          summary:
+            "Evidence chain between incidents, returns and management oversight needs tightening.",
         },
         {
           id: "gap-2",
@@ -870,7 +1107,8 @@ function buildFallbackData(homeId) {
           priority: "critical",
           status: "overdue",
           due_date: plusDays(1),
-          summary: "Some audit closures do not clearly evidence management challenge and impact.",
+          summary:
+            "Some audit closures do not clearly evidence management challenge and impact.",
         },
       ],
     },
@@ -882,7 +1120,8 @@ function buildFallbackData(homeId) {
           area: "How well children and young people are helped and protected",
           status: "open",
           due_date: plusDays(4),
-          summary: "Strengthen evidence trail for missing-from-care practice.",
+          summary:
+            "Strengthen evidence trail for missing-from-care practice.",
         },
         {
           id: "act-2",
@@ -890,7 +1129,8 @@ function buildFallbackData(homeId) {
           area: "The effectiveness of leaders and managers",
           status: "in_progress",
           due_date: plusDays(2),
-          summary: "Add clear analysis and management decision-making.",
+          summary:
+            "Add clear analysis and management decision-making.",
         },
       ],
     },
@@ -922,7 +1162,8 @@ function buildFallbackData(homeId) {
           title: "Monthly quality review",
           report_type: "Quality review",
           status: "completed",
-          summary: "Themes identified across incidents, staffing and oversight.",
+          summary:
+            "Themes identified across incidents, staffing and oversight.",
           created_at: minusDays(6),
         },
       ],
@@ -931,36 +1172,269 @@ function buildFallbackData(homeId) {
   };
 }
 
+function buildSummaryFromInspectionReadiness(readinessData = {}) {
+  const summary = readinessData?.summary || readinessData || {};
+  return {
+    title:
+      summary.title ||
+      summary.home_name ||
+      summary.name ||
+      "Judgement builder",
+    home_name: summary.home_name || "",
+    readiness_score:
+      summary.readiness_score ??
+      summary.overall_score ??
+      summary.evidence_score ??
+      0,
+    overall_band: summary.overall_band || "",
+  };
+}
+
 async function fetchDataset(homeId) {
   const endpoints = buildInspectionUiEndpoints(homeId);
   const safeGet = (url) => apiGet(url).catch(() => null);
 
   const requests = [
-    safeGet(endpoints.sccifEvidence),
-    safeGet(endpoints.readiness),
-    safeGet(endpoints.incidents),
-    safeGet(`${endpoints.base}/safeguarding`),
-    safeGet(`${endpoints.base}/reports`),
+    safeGet(endpoints.inspectionScores),
+    safeGet(endpoints.inspectionSectionScores),
+    safeGet(endpoints.inspectionScoreReasons),
+    safeGet(endpoints.inspectionImprovementActions),
+    safeGet(endpoints.qualityAudits),
+    safeGet(endpoints.qualityAuditFindings),
+    safeGet(endpoints.qualityAuditActions),
+    safeGet(endpoints.reg44Visits),
+    safeGet(endpoints.reg44Findings),
+    safeGet(endpoints.reg44Actions),
+    safeGet(endpoints.reg45Reviews),
+    safeGet(endpoints.reg45Actions),
+    safeGet(endpoints.complianceItems),
   ];
 
-  const [evidenceData, readinessData, incidentData, safeguardingData, reportData] =
-    await Promise.all(requests);
+  const [
+    inspectionScoresData,
+    inspectionSectionScoresData,
+    inspectionReasonsData,
+    inspectionActionsData,
+    qualityAuditsData,
+    qualityAuditFindingsData,
+    qualityAuditActionsData,
+    reg44VisitsData,
+    reg44FindingsData,
+    reg44ActionsData,
+    reg45ReviewsData,
+    reg45ActionsData,
+    complianceItemsData,
+  ] = await Promise.all(requests);
 
-  const responses = [evidenceData, readinessData, incidentData, safeguardingData, reportData];
+  const responses = [
+    inspectionScoresData,
+    inspectionSectionScoresData,
+    inspectionReasonsData,
+    inspectionActionsData,
+    qualityAuditsData,
+    qualityAuditFindingsData,
+    qualityAuditActionsData,
+    reg44VisitsData,
+    reg44FindingsData,
+    reg44ActionsData,
+    reg45ReviewsData,
+    reg45ActionsData,
+    complianceItemsData,
+  ];
+
   const hasLiveSuccess = responses.some(hasUsableData);
 
   if (!hasLiveSuccess) {
     return buildFallbackData(homeId);
   }
 
+  const readinessData = {
+    summary:
+      normaliseSummary(inspectionScoresData).summary ||
+      normaliseSummary(inspectionScoresData),
+    inspection_section_scores: toArray(
+      inspectionSectionScoresData?.inspection_section_scores,
+      [inspectionSectionScoresData?.items, inspectionSectionScoresData?.records]
+    ),
+    inspection_score_reasons: toArray(
+      inspectionReasonsData?.inspection_score_reasons,
+      [inspectionReasonsData?.items, inspectionReasonsData?.records]
+    ),
+    inspection_improvement_actions: toArray(
+      inspectionActionsData?.inspection_improvement_actions,
+      [inspectionActionsData?.items, inspectionActionsData?.records]
+    ),
+  };
+
+  const inspectionEvidence = buildEvidenceFromInspectionReadiness(readinessData);
+  const inspectionGaps = buildGapsFromInspectionReadiness(readinessData);
+  const inspectionActions = buildActionsFromInspectionReadiness(readinessData);
+
+  const reportItems = [
+    ...toArray(qualityAuditsData?.quality_audits, [qualityAuditsData?.items, qualityAuditsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      title: item.audit_title || item.title || "Quality audit",
+      report_type: "quality_audit",
+      status: item.status || item.overall_outcome || "completed",
+      summary:
+        item.summary ||
+        item.concerns ||
+        item.recommendations ||
+        "Quality audit recorded.",
+      created_at: item.audit_date || item.created_at || item.updated_at || null,
+      updated_at: item.updated_at || null,
+    })),
+    ...toArray(reg44VisitsData?.reg44_visits, [reg44VisitsData?.items, reg44VisitsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      title: "Reg 44 visit",
+      report_type: "reg44_visit",
+      status: "completed",
+      summary:
+        item.overall_summary ||
+        item.recommendations_summary ||
+        "Reg 44 visit recorded.",
+      created_at: item.visit_date || item.created_at || item.updated_at || null,
+      updated_at: item.updated_at || null,
+    })),
+    ...toArray(reg45ReviewsData?.reg45_reviews, [reg45ReviewsData?.items, reg45ReviewsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      title: "Reg 45 review",
+      report_type: "reg45_review",
+      status: item.review_status || "completed",
+      summary:
+        item.overall_quality_summary ||
+        item.action_plan_summary ||
+        "Reg 45 review recorded.",
+      created_at:
+        item.review_period_end || item.created_at || item.updated_at || null,
+      updated_at: item.updated_at || null,
+    })),
+  ];
+
+  const safeguardingItems = [
+    ...toArray(reg44FindingsData?.reg44_findings, [reg44FindingsData?.items, reg44FindingsData?.records])
+      .filter((item) =>
+        String(item.judgement_area || "")
+          .toLowerCase()
+          .replaceAll(" ", "_")
+          .includes("protected")
+      )
+      .map((item) => ({
+        id: item.id ?? null,
+        title: item.title || "Reg 44 safeguarding-related finding",
+        safeguarding_category: item.judgement_area || "Safeguarding",
+        status: item.requires_action ? "open" : "reviewed",
+        summary: item.finding_text || "Finding recorded.",
+        concern_datetime: item.created_at || null,
+      })),
+  ];
+
+  const incidentItems = [
+    ...inspectionGaps
+      .filter((item) => {
+        const area = String(item.area || "").toLowerCase();
+        return area.includes("helped") || area.includes("protected");
+      })
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        incident_type: item.area || "Inspection-linked risk",
+        severity: item.priority || item.status || "medium",
+        status: item.status || "recorded",
+        summary: item.summary,
+        occurred_at: item.updated_at || item.created_at || null,
+      })),
+  ];
+
+  const qualityEvidence = [
+    ...inspectionEvidence,
+    ...toArray(qualityAuditFindingsData?.quality_audit_findings, [qualityAuditFindingsData?.items, qualityAuditFindingsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      record_type: "sccif_evidence",
+      title: item.title || "Quality audit finding",
+      area: item.finding_type || "Leadership and management",
+      standard: "",
+      source_type: "quality_audit_finding",
+      status: item.priority || (item.action_required ? "warning" : "good"),
+      summary: item.details || "Audit finding recorded.",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+  ];
+
+  const qualityGaps = [
+    ...inspectionGaps,
+    ...toArray(reg44FindingsData?.reg44_findings, [reg44FindingsData?.items, reg44FindingsData?.records])
+      .filter((item) => item.requires_action)
+      .map((item) => ({
+        id: item.id ?? null,
+        record_type: "sccif_gap",
+        title: item.title || "Reg 44 finding",
+        area: item.judgement_area || "Leadership and management",
+        priority: item.priority || "medium",
+        status: item.finding_type || "open",
+        summary: item.finding_text || "Reg 44 finding recorded.",
+        due_date: null,
+        owner_user_name: "",
+        updated_at: item.updated_at || item.created_at || null,
+        created_at: item.created_at || null,
+      })),
+  ];
+
+  const qualityActions = [
+    ...inspectionActions,
+    ...toArray(qualityAuditActionsData?.quality_audit_actions, [qualityAuditActionsData?.items, qualityAuditActionsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      record_type: "sccif_action",
+      title: item.action_title || "Quality audit action",
+      area: "Leadership and management",
+      priority: item.priority || "",
+      status: item.status || "open",
+      summary:
+        item.action_description ||
+        item.completion_notes ||
+        "Quality audit action recorded.",
+      due_date: item.due_date || null,
+      owner_user_name: "",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+    ...toArray(reg44ActionsData?.reg44_actions, [reg44ActionsData?.items, reg44ActionsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      record_type: "sccif_action",
+      title: item.action_title || "Reg 44 action",
+      area: "Leadership and management",
+      priority: "",
+      status: item.status || "open",
+      summary: item.action_description || "Reg 44 action recorded.",
+      due_date: item.due_date || null,
+      owner_user_name: "",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+    ...toArray(reg45ActionsData?.reg45_actions, [reg45ActionsData?.items, reg45ActionsData?.records]).map((item) => ({
+      id: item.id ?? null,
+      record_type: "sccif_action",
+      title: item.action_title || "Reg 45 action",
+      area: "Leadership and management",
+      priority: item.priority || "",
+      status: item.status || "open",
+      summary: item.action_description || "Reg 45 action recorded.",
+      due_date: item.due_date || null,
+      owner_user_name: "",
+      updated_at: item.updated_at || item.created_at || null,
+      created_at: item.created_at || null,
+    })),
+  ];
+
   return {
-    summaryData: evidenceData || {},
-    evidenceData: evidenceData || { items: [] },
-    gapData: readinessData || { items: [] },
-    actionData: readinessData || { items: [] },
-    incidentData: incidentData || { items: [] },
-    safeguardingData: safeguardingData || { items: [] },
-    reportData: reportData || { items: [] },
+    summaryData: buildSummaryFromInspectionReadiness(readinessData),
+    evidenceData: { items: qualityEvidence },
+    gapData: { items: qualityGaps },
+    actionData: { items: qualityActions },
+    incidentData: { items: incidentItems },
+    safeguardingData: { items: safeguardingItems },
+    reportData: { items: reportItems },
     isFallback: false,
   };
 }
@@ -989,7 +1463,10 @@ export async function loadJudgementBuilder() {
       isFallback,
     } = await fetchDataset(homeId);
 
-    const summary = normaliseSummary(summaryData);
+    const summary =
+      typeof summaryData === "object" && !Array.isArray(summaryData)
+        ? summaryData
+        : normaliseSummary(summaryData);
 
     const evidenceItems = sortNewestFirst(normaliseEvidenceItems(evidenceData), [
       "updated_at",
@@ -1071,6 +1548,8 @@ export async function loadJudgementBuilder() {
     });
   } catch (error) {
     console.error("[judgement-builder] load failed", error);
-    renderErrorState(error?.message || "The judgement builder could not be loaded.");
+    renderErrorState(
+      error?.message || "The judgement builder could not be loaded."
+    );
   }
 }

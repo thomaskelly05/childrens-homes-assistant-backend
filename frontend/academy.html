@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy</title>
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+
+  <body class="academy-page">
+    <div class="academy-app">
+      <aside class="academy-sidebar">
+        <div class="academy-brand">
+          <div class="academy-brand__logo">IA</div>
+          <div class="academy-brand__text">
+            <div class="academy-brand__title">IndiCare Academy</div>
+            <div class="academy-brand__subtitle">
+              Training, qualifications and evidence
+            </div>
+          </div>
+        </div>
+
+        <nav class="academy-nav" id="academyNav">
+          <a href="/academy" class="academy-nav__item is-active">Dashboard</a>
+          <a href="/academy/module-list.html" class="academy-nav__item" data-nav="learning-catalogue">Learning Catalogue</a>
+          <a href="#academyMyLearningSection" class="academy-nav__item" data-nav="my-learning">My Learning</a>
+          <a href="#academyWorkbooksSection" class="academy-nav__item" data-nav="my-workbooks">My Workbooks</a>
+          <a href="/academy/qualification-list.html" class="academy-nav__item" data-nav="qualification-catalogue">Qualification Catalogue</a>
+          <a href="#academyMyQualificationsSection" class="academy-nav__item" data-nav="my-qualifications">My Qualifications</a>
+          <a href="/academy/evidence-portfolio.html" class="academy-nav__item" data-nav="evidence">Evidence Portfolio</a>
+          <a href="/academy/certificates.html" class="academy-nav__item" data-nav="certificates">Certificates</a>
+          <a href="#academyReviewQueueSection" class="academy-nav__item" data-nav="review-queue">Assessment Queue</a>
+          <a href="/academy/manager-compliance.html" class="academy-nav__item" data-nav="home-compliance">Manager Compliance</a>
+        </nav>
+      </aside>
+
+      <main class="academy-main">
+        <header class="academy-topbar">
+          <div class="academy-topbar__title-wrap">
+            <h1 class="academy-page-title">Academy Dashboard</h1>
+            <p class="academy-page-subtitle">
+              Learning, workbooks, qualifications, evidence and compliance in one place.
+            </p>
+          </div>
+
+          <div class="academy-topbar__actions">
+            <button
+              id="academyRefreshBtn"
+              class="academy-button academy-button--secondary"
+              type="button"
+            >
+              Refresh
+            </button>
+          </div>
+        </header>
+
+        <section class="academy-hero academy-panel">
+          <div class="academy-panel__body">
+            <div class="academy-hero__header">
+              <div>
+                <div class="academy-page-header__eyebrow">Learner overview</div>
+                <h2 class="academy-panel__title" id="academyCurrentUserName">Loading…</h2>
+                <p class="academy-panel__subtitle">
+                  Signed in as
+                  <span id="academyCurrentUserRole">user</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="academy-grid academy-grid--stats" style="margin-top: 20px;">
+              <section class="academy-stat-card">
+                <div class="academy-stat-card__label">Mandatory due</div>
+                <div class="academy-stat-card__value" id="academyStatMandatoryDue">0</div>
+                <div class="academy-stat-card__meta">
+                  Assigned learning items requiring completion.
+                </div>
+              </section>
+
+              <section class="academy-stat-card">
+                <div class="academy-stat-card__label">Overdue</div>
+                <div class="academy-stat-card__value" id="academyStatOverdue">0</div>
+                <div class="academy-stat-card__meta">
+                  Mandatory items that are now overdue.
+                </div>
+              </section>
+
+              <section class="academy-stat-card">
+                <div class="academy-stat-card__label">Workbooks active</div>
+                <div class="academy-stat-card__value" id="academyStatWorkbooks">0</div>
+                <div class="academy-stat-card__meta">
+                  Draft, submitted or under-review workbooks.
+                </div>
+              </section>
+
+              <section class="academy-stat-card">
+                <div class="academy-stat-card__label">Qualifications active</div>
+                <div class="academy-stat-card__value" id="academyStatQualifications">0</div>
+                <div class="academy-stat-card__meta">
+                  Current qualification enrolments in progress.
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <div id="academyListError" style="margin-top: 20px;"></div>
+
+        <section
+          id="academyModulesSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>Training modules</h2>
+            <p>
+              Core learning modules linked to standards, daily practice and evidence.
+            </p>
+          </div>
+          <div id="academyModulesList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Loading modules…</div>
+          </div>
+        </section>
+
+        <section
+          id="academyMyLearningSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>My learning</h2>
+            <p>
+              Assigned modules needing completion or review.
+            </p>
+          </div>
+          <div id="academyMyLearningList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Learning activity loads from the dashboard view.</div>
+          </div>
+        </section>
+
+        <section
+          id="academyQualificationsSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>Qualifications</h2>
+            <p>
+              Residential childcare qualifications, unit structure and linked evidence pathways.
+            </p>
+          </div>
+          <div id="academyQualificationsList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Loading qualifications…</div>
+          </div>
+        </section>
+
+        <section
+          id="academyMyQualificationsSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>My qualifications</h2>
+            <p>
+              Current qualification pathways and unit progress.
+            </p>
+          </div>
+          <div id="academyMyQualificationsList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Qualification activity loads from the dashboard view.</div>
+          </div>
+        </section>
+
+        <section
+          id="academyWorkbooksSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>My workbooks</h2>
+            <p>
+              Evidence workbooks and assessed submissions.
+            </p>
+          </div>
+          <div id="academyMyWorkbooksList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Workbook activity loads from the dashboard view.</div>
+          </div>
+        </section>
+
+        <section
+          id="academyEvidenceSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>Evidence portfolio</h2>
+            <p>
+              Evidence items, linked submissions and professional proof of practice.
+            </p>
+          </div>
+          <div class="academy-callout">
+            Open the dedicated Evidence Portfolio page from the sidebar to view and filter your evidence.
+          </div>
+        </section>
+
+        <section
+          id="academyCertificatesSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>Certificates</h2>
+            <p>
+              Completed learning and generated completion certificates.
+            </p>
+          </div>
+          <div class="academy-callout">
+            Open the dedicated Certificates page from the sidebar to view awarded certificates.
+          </div>
+        </section>
+
+        <section
+          id="academyReviewQueueSection"
+          class="academy-section"
+          style="margin-top: 28px;"
+        >
+          <div class="academy-section__header">
+            <h2>Assessment queue</h2>
+            <p>
+              Review queue for assessors, managers and quality leads.
+            </p>
+          </div>
+          <div id="academyReviewQueueList" class="academy-grid academy-grid--two">
+            <div class="academy-empty-state">Assessment queue loads for authorised roles.</div>
+          </div>
+        </section>
+
+        <section
+          id="academyComplianceSection"
+          class="academy-section"
+          style="margin-top: 28px; margin-bottom: 40px;"
+        >
+          <div class="academy-section__header">
+            <h2>Home compliance</h2>
+            <p>
+              Training, workbook and qualification compliance roll-up for the home.
+            </p>
+          </div>
+          <div class="academy-callout">
+            Open the dedicated Manager Compliance page from the sidebar for the full compliance dashboard.
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-list.js"></script>
+    <script src="/js/academy-dashboard.js"></script>
+    <script src="/js/academy-nav.js"></script>
+  </body>
+</html>

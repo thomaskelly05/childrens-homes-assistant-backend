@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IndiCare OS | Children’s Homes Operating System</title>
+  <style>
+    :root{--ic-bg:#f7f9fc;--ic-panel:#fff;--ic-soft:#f8fafc;--ic-border:#e2e8f0;--ic-text:#0f172a;--ic-muted:#64748b;--ic-blue:#4f46e5;--ic-green:#16a34a;--ic-red:#e11d48;--ic-orange:#f97316;--ic-purple:#7c3aed;--ic-radius:18px;--ic-shadow:0 16px 46px rgba(15,23,42,.08)}
+    *{box-sizing:border-box}html,body{min-height:100%;margin:0;background:var(--ic-bg)!important}body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ic-text);overflow-x:hidden}.os-shell{min-height:100vh;display:grid;grid-template-columns:216px minmax(0,1fr);grid-template-rows:64px minmax(0,1fr) 86px}.os-sidebar{grid-row:1/4;background:#fff;border-right:1px solid var(--ic-border);display:flex;flex-direction:column;min-height:100vh;position:sticky;top:0;z-index:20}.os-main{grid-column:2;display:grid;grid-template-columns:minmax(0,1fr) 276px;gap:16px;padding:16px 16px 104px;align-items:start}.workspace-view.active{display:block!important}.workspace-view{display:none}.child-list{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.child-card{display:block!important;text-align:left;border:1px solid var(--ic-border);background:#fff;border-radius:14px;padding:14px;cursor:pointer;font-weight:700}.child-card:hover{border-color:#4f46e5;background:#eef2ff}.os-card,.os-profile-card,.os-insight-rail,.os-continuity-card{background:#fff;border:1px solid var(--ic-border);border-radius:var(--ic-radius);box-shadow:0 10px 30px rgba(15,23,42,.04)}
+  </style>
+</head>
+<body data-indicare-os-runtime="true">
+<div class="os-shell">
+<aside class="os-sidebar">
+<div class="os-brand" style="height:64px;display:flex;align-items:center;padding:0 20px;font-weight:900;font-size:24px;color:#4338ca">IndiCare</div>
+<nav class="os-nav" style="padding:14px">
+<button class="os-nav-button active" data-view="young-people">Overview</button>
+</nav>
+</aside>
+<header class="os-topbar" style="grid-column:2;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#fff;border-bottom:1px solid var(--ic-border)">
+<div style="display:flex;gap:12px;align-items:center"><button class="os-new" style="background:#4f46e5;color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:800">+ New</button><input class="os-search" placeholder="Search IndiCare..." style="width:340px;border:1px solid var(--ic-border);border-radius:12px;padding:12px"></div>
+<div><strong>Thomas Kelly</strong></div>
+</header>
+<main class="os-main">
+<section class="os-content" style="display:grid;gap:14px">
+<section class="workspace-view active" id="view-young-people">
+<section class="os-card" style="padding:16px">
+<h3>Young People</h3>
+<div class="child-list" id="young-people-list">
+<button class="child-card" type="button"><div>Aisha</div><small>Home 1 · Age 14</small></button>
+<button class="child-card" type="button"><div>Liam</div><small>Home 1 · Age 16</small></button>
+<button class="child-card" type="button"><div>Ella</div><small>Home 2 · Age 15</small></button>
+</div>
+</section>
+<section class="os-card" style="padding:16px;min-height:420px">
+<h3>Connected Care Workspace</h3>
+<div id="child-workspace" style="padding:24px;border:1px dashed var(--ic-border);border-radius:16px;background:#f8fafc">
+Select a young person to open their therapeutic workspace.
+</div>
+</section>
+</section>
+</section>
+<aside class="os-right" style="display:grid;gap:14px">
+<section class="os-card" style="padding:16px"><strong>Children in operational view</strong><div style="font-size:42px;font-weight:900;color:#2563eb">5</div></section>
+<section class="os-card" style="padding:16px"><strong>Positive engagement indicators</strong><div style="font-size:42px;font-weight:900;color:#16a34a">5</div></section>
+</aside>
+</main>
+<section class="os-continuity" style="position:fixed;left:216px;right:0;bottom:0;background:#fff;border-top:1px solid var(--ic-border);padding:14px;display:grid;grid-template-columns:repeat(6,1fr);gap:10px;z-index:50">
+<div class="os-continuity-card" style="padding:12px">Continuity & Actions</div>
+<div class="os-continuity-card" style="padding:12px">Unresolved Actions</div>
+<div class="os-continuity-card" style="padding:12px">Safeguarding Concerns</div>
+<div class="os-continuity-card" style="padding:12px">Callbacks</div>
+<div class="os-continuity-card" style="padding:12px">Upcoming Reviews</div>
+<div class="os-continuity-card" style="padding:12px">What Adults Should Know</div>
+</section>
+</div>
+<script>
+window.addEventListener('DOMContentLoaded',()=>{
+const workspace=document.getElementById('child-workspace');
+document.querySelectorAll('.child-card').forEach(card=>{
+card.addEventListener('click',()=>{
+workspace.innerHTML='<h2 style="margin-top:0">'+card.querySelector('div').textContent+'</h2><p>Therapeutic chronology, safeguarding insight, education, health, routines and connected care records will load here.</p>';
+});
+});
+});
+</script>
+</body>
+</html>

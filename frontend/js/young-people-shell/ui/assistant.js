@@ -2,6 +2,7 @@ import { state, createAssistantMeta } from "../state.js";
 import { els } from "../dom.js";
 import { apiStreamAssistant } from "../core/api.js";
 import * as aiScrubber from "../core/ai-scrubber.js";
+import { askAssistantBrain } from "../assistant/brain.js";
 import {
   refreshAssistantUi,
   appendAssistantSystemMessage,
@@ -28,6 +29,7 @@ import {
   trimForOutbound,
   cloneAssistantMessage,
   mergeAssistantMeta,
+  resolveReg45DateRange,
 } from "../assistant/helpers.js";
 import {
   resolveAssistantScopeType,
@@ -38,8 +40,13 @@ import {
 
 let assistantEventsBound = false;
 let assistantPromptDelegatesBound = false;
+let activeAssistantRequestId = 0;
 
 const MAX_UI_PROMPTS = 8;
+
+function qs(id) {
+  return document.getElementById(id);
+}
 
 function getSelectedYoungPerson() {
   return state.selectedYoungPerson || state.youngPerson || null;
@@ -74,8 +81,28 @@ function syncAssistantUi() {
 }
 
 function setAssistantSending(flag) {
-  state.assistantSending = !!flag;
+  state.assistantSending = Boolean(flag);
   syncAssistantUi();
+}
+
+function getRequestSnapshot() {
+  return {
+    scope: getCurrentScope(),
+    section: getCurrentSection(),
+    youngPersonId: state.youngPersonId || null,
+    homeId: state.homeId || null,
+    providerId: state.providerId || null,
+  };
+}
+
+function snapshotMatches(snapshot = {}) {
+  return (
+    snapshot.scope === getCurrentScope() &&
+    snapshot.section === getCurrentSection() &&
+    snapshot.youngPersonId === (state.youngPersonId || null) &&
+    snapshot.homeId === (state.homeId || null) &&
+    snapshot.providerId === (state.providerId || null)
+  );
 }
 
 function replaceLastAssistantPlaceholder(text) {
@@ -84,10 +111,7 @@ function replaceLastAssistantPlaceholder(text) {
       ? text
       : extractStreamText(text) || "No assistant reply returned.";
 
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const lists = [state.assistantMessages || [], state.assistantModalMessages || []];
 
   lists.forEach((list) => {
     if (!list.length) {
@@ -122,10 +146,7 @@ function updateLastAssistantStreamingText(text) {
   const safeValue =
     typeof text === "string" ? text : extractStreamText(text) || "Thinking…";
 
-  const lists = [
-    state.assistantMessages || [],
-    state.assistantModalMessages || [],
-  ];
+  const lists = [state.assistantMessages || [], state.assistantModalMessages || []];
 
   lists.forEach((list) => {
     if (!list.length) return;
@@ -158,7 +179,7 @@ function addAssistantPlaceholder(intent = null) {
   });
 
   state.assistantMessages.push(entry);
-  state.assistantModalMessages.push({ ...entry });
+  state.assistantModalMessages.push(cloneAssistantMessage(entry));
   syncAssistantUi();
 }
 
@@ -169,11 +190,27 @@ function buildAssistantContextPayload(message = "") {
   const intent = detectAssistantIntent(message);
   const retrievalMode = detectRetrievalMode(message, intent);
   const outputMode = detectOutputMode(intent, message);
+
   const accessLevel = resolveAccessLevelForScope({
     scope,
     role: state.userRole || "staff",
   });
+
   const assistantType = getAssistantTypeForScope(scope);
+  const reg45Range = resolveReg45DateRange(message);
+
+  const reportingPeriodStart = reg45Range?.startDate
+    ? reg45Range.startDate.toISOString()
+    : null;
+
+  const reportingPeriodEnd = reg45Range?.endDate
+    ? reg45Range.endDate.toISOString()
+    : null;
+
+  const reportingPeriodInferred =
+    reg45Range && typeof reg45Range.inferred === "boolean"
+      ? reg45Range.inferred
+      : null;
 
   const allowedHomeIds =
     isProviderWideScope(scope) && accessLevel === "provider"
@@ -218,6 +255,7 @@ function buildAssistantContextPayload(message = "") {
     home_id:
       state.homeId ||
       person.home_id ||
+      person.homeId ||
       state.currentUser?.home_id ||
       state.currentUser?.homeId ||
       null,
@@ -256,6 +294,18 @@ function buildAssistantContextPayload(message = "") {
       scope === "quality" ||
       scope === "ofsted" ||
       scope === "reports",
+    reporting_period_start: reportingPeriodStart,
+    reporting_period_end: reportingPeriodEnd,
+    reporting_period_inferred: reportingPeriodInferred,
+    local_bundle_evidence_count:
+      state.assistantMeta?.evidence_count ||
+      state.assistantMeta?.brain_summary?.total ||
+      0,
+    local_bundle_last_updated:
+      state.assistantMeta?.last_updated ||
+      state.assistantMeta?.last_analysis_at ||
+      null,
+    local_confidence: state.assistantMeta?.confidence || null,
     suggested_prompts_ui_only: assistantPromptsForView(section, scope).slice(
       0,
       MAX_UI_PROMPTS
@@ -265,60 +315,69 @@ function buildAssistantContextPayload(message = "") {
 
 function buildSafeAssistantRequestPayload(payload) {
   const context = payload?.context || {};
+  const scope = String(context.scope || "child").toLowerCase();
+
+  const baseContext = {
+    scope,
+    home_id: context.home_id || null,
+    home_name: context.home_name || null,
+    current_view: context.current_view || null,
+    current_section: context.current_section || null,
+    shift_context: context.shift_context || null,
+    composer_record_type: context.composer_record_type || null,
+    record_type: context.record_type || null,
+    record_id: context.record_id || null,
+    start_date: context.start_date || context.reporting_period_start || null,
+    end_date: context.end_date || context.reporting_period_end || null,
+    reporting_period_start:
+      context.reporting_period_start || context.start_date || null,
+    reporting_period_end:
+      context.reporting_period_end || context.end_date || null,
+    reporting_period_inferred:
+      typeof context.reporting_period_inferred === "boolean"
+        ? context.reporting_period_inferred
+        : null,
+  };
+
+  let scopedContext = {};
+
+  if (scope === "home") {
+    scopedContext = {
+      ...baseContext,
+      scope: "home",
+      access_level: context.access_level || null,
+      allowed_home_ids: Array.isArray(context.allowed_home_ids)
+        ? context.allowed_home_ids
+        : [],
+      provider_id: context.provider_id || null,
+    };
+  } else if (scope === "quality" || scope === "ofsted") {
+    scopedContext = {
+      ...baseContext,
+      scope: "quality",
+      access_level: context.access_level || null,
+      allowed_home_ids: Array.isArray(context.allowed_home_ids)
+        ? context.allowed_home_ids
+        : [],
+      provider_id: context.provider_id || null,
+    };
+  } else {
+    scopedContext = {
+      ...baseContext,
+      scope: "young_person",
+      home_name: context.home_name || null,
+      young_person_id: context.young_person_id || null,
+      young_person_name: context.young_person_name || null,
+      placement_status: context.placement_status || null,
+      summary_risk_level: context.summary_risk_level || null,
+    };
+    delete scopedContext.home_id;
+  }
 
   return {
     message: trimForOutbound(payload?.message || ""),
     response_mode: payload?.response_mode || "balanced",
-    context: {
-      assistant_type: context.assistant_type || "young_people_os",
-      assistant_identity:
-        context.assistant_identity && typeof context.assistant_identity === "object"
-          ? context.assistant_identity
-          : null,
-      response_contract:
-        context.response_contract && typeof context.response_contract === "object"
-          ? context.response_contract
-          : null,
-      inspection_framework:
-        context.inspection_framework && typeof context.inspection_framework === "object"
-          ? context.inspection_framework
-          : null,
-      scope: context.scope || null,
-      scope_type: context.scope_type || null,
-      access_level: context.access_level || null,
-      provider_id: context.provider_id || null,
-      allowed_home_ids: Array.isArray(context.allowed_home_ids)
-        ? context.allowed_home_ids
-        : [],
-      current_view: context.current_view || null,
-      shift_context: context.shift_context || null,
-      young_person_id: context.young_person_id || null,
-      young_person_name: context.young_person_name || null,
-      home_id: context.home_id || null,
-      home_name: context.home_name || null,
-      placement_status: context.placement_status || null,
-      summary_risk_level: context.summary_risk_level || null,
-      composer_record_type: context.composer_record_type || null,
-      record_type: context.record_type || null,
-      record_id: context.record_id || null,
-      current_scope: context.current_scope || null,
-      current_section: context.current_section || null,
-      user_role: context.user_role || "staff",
-      assistant_intent: context.assistant_intent || "summary",
-      retrieval_mode: context.retrieval_mode || "whole_scope",
-      output_mode: context.output_mode || "answer",
-      whole_os_default: Boolean(context.whole_os_default),
-      section_only_requested: Boolean(context.section_only_requested),
-      use_whole_scope_records: Boolean(context.use_whole_scope_records),
-      ask_for_dates: Boolean(context.ask_for_dates),
-      ask_for_chronology: Boolean(context.ask_for_chronology),
-      ask_for_summary: Boolean(context.ask_for_summary),
-      ask_for_review_pack: Boolean(context.ask_for_review_pack),
-      ask_for_compliance_view: Boolean(context.ask_for_compliance_view),
-      suggested_prompts_ui_only: Array.isArray(context.suggested_prompts_ui_only)
-        ? context.suggested_prompts_ui_only.slice(0, MAX_UI_PROMPTS)
-        : [],
-    },
+    context: scopedContext,
   };
 }
 
@@ -398,6 +457,7 @@ function applyAssistantMeta(meta = {}) {
   mergeAssistantMeta({
     ...meta,
     sources: Array.isArray(meta.sources) ? meta.sources : undefined,
+    top_sources: Array.isArray(meta.top_sources) ? meta.top_sources : undefined,
     suggested_actions: Array.isArray(meta.suggested_actions)
       ? meta.suggested_actions
       : undefined,
@@ -415,6 +475,74 @@ async function answerLocallyForGreeting(question) {
 async function answerLocallyForUnknown(question) {
   appendAssistantUserMessage(question);
   appendAssistantSystemMessage(buildUnknownIntentPrompt());
+}
+
+function buildLocalBrainContext(contextPayload = {}) {
+  return {
+    scope: contextPayload.scope,
+    young_person_name: contextPayload.young_person_name,
+    home_name: contextPayload.home_name,
+    placement_status: contextPayload.placement_status,
+    summary_risk_level: contextPayload.summary_risk_level,
+    person: {
+      name: contextPayload.young_person_name,
+      placement_status: contextPayload.placement_status,
+      risk: contextPayload.summary_risk_level,
+    },
+    home: {
+      home_name: contextPayload.home_name,
+    },
+    analysis_lens:
+      contextPayload.output_mode ||
+      contextPayload.assistant_intent ||
+      "general",
+  };
+}
+
+function getBestLocalAssistantPayload() {
+  return (
+    state.assistantScopeBundle ||
+    state.assistantBundle ||
+    state.assistantDerivedState?.evidence ||
+    state.assistantEvidence ||
+    {}
+  );
+}
+
+function answerWithLocalBrain(question, contextPayload = {}, error = null) {
+  const brain = askAssistantBrain(question, getBestLocalAssistantPayload(), {
+    context: buildLocalBrainContext(contextPayload),
+    analysis_lens:
+      contextPayload.scope === "quality" || contextPayload.scope === "ofsted"
+        ? "quality"
+        : contextPayload.scope === "home"
+          ? "manager"
+          : "general",
+  });
+
+  applyAssistantMeta({
+    sources: brain.top_sources || [],
+    top_sources: brain.top_sources || [],
+    suggested_actions: brain.suggested_actions || [],
+    brain_summary: brain.summary || null,
+    brain_insights: brain.insights || [],
+    evidence_count: brain.evidence_count || 0,
+    confidence: brain.confidence || "low",
+    confidence_reason: brain.confidence_reason || "",
+    runtime: {
+      local_brain_fallback: true,
+      original_error: error?.message || null,
+      evidence_count: brain.evidence_count || 0,
+      output_mode: brain.intent || "local",
+      analysis_lens: brain.analysis_lens || "general",
+    },
+    explainability: {
+      reasoning_summary:
+        "This response was generated locally from the currently scoped IndiCare evidence because the streamed assistant was unavailable.",
+    },
+  });
+
+  return brain.answer;
 }
 
 export async function askAssistant(question) {
@@ -443,6 +571,9 @@ export async function askAssistant(question) {
     return;
   }
 
+  const requestId = ++activeAssistantRequestId;
+  const requestSnapshot = getRequestSnapshot();
+
   appendAssistantUserMessage(trimmed);
   addAssistantPlaceholder(intent);
   setAssistantSending(true);
@@ -466,6 +597,8 @@ export async function askAssistant(question) {
 
     await apiStreamAssistant(scrubbed.payload, {
       onMeta: (meta) => {
+        if (requestId !== activeAssistantRequestId || !snapshotMatches(requestSnapshot)) return;
+
         applyAssistantMeta({
           ...meta,
           runtime: {
@@ -478,16 +611,19 @@ export async function askAssistant(question) {
             allowed_home_ids: contextPayload.allowed_home_ids,
             provider_id: contextPayload.provider_id,
             ai_scrubber_enabled: scrubbed.meta?.enabled ?? false,
+            local_bundle_evidence_count:
+              contextPayload.local_bundle_evidence_count || 0,
+            local_bundle_last_updated:
+              contextPayload.local_bundle_last_updated || null,
           },
           explainability: {
             ...(meta?.explainability || {}),
             reasoning_summary:
               meta?.explainability?.reasoning_summary ||
               "This answer used an evidence-led children’s home reasoning approach.",
-            ai_scrubber:
-              scrubbed.meta?.enabled
-                ? "Client-side AI scrubber applied before outbound request."
-                : "Client-side AI scrubber not applied.",
+            ai_scrubber: scrubbed.meta?.enabled
+              ? "Client-side AI scrubber applied before outbound request."
+              : "Client-side AI scrubber not applied.",
           },
           assistant_context: {
             ...(meta?.assistant_context || {}),
@@ -510,14 +646,24 @@ export async function askAssistant(question) {
       },
       onProgress: () => {},
       onMessage: (streamedPayload) => {
+        if (requestId !== activeAssistantRequestId || !snapshotMatches(requestSnapshot)) return;
+
         const safeValue = extractStreamText(streamedPayload) || "Thinking…";
         const restored = restoreAssistantReplyTokens(
           safeValue,
           scrubbed.reverseMap
         );
+
         updateLastAssistantStreamingText(restored || "Thinking…");
       },
       onDone: (streamedPayload) => {
+        if (requestId !== activeAssistantRequestId || !snapshotMatches(requestSnapshot)) {
+          replaceLastAssistantPlaceholder(
+            "The assistant context changed while this answer was being generated. Please ask again in the current view."
+          );
+          return;
+        }
+
         const safeValue =
           extractStreamText(streamedPayload) || "No assistant reply returned.";
 
@@ -552,12 +698,19 @@ export async function askAssistant(question) {
       },
     });
   } catch (error) {
+    console.error("[assistant] streamed answer failed; using local brain fallback", error);
+
+    const contextPayload = buildAssistantContextPayload(trimmed);
+    const localAnswer = answerWithLocalBrain(trimmed, contextPayload, error);
+
     replaceLastAssistantPlaceholder(
-      error?.message || "The assistant could not answer right now."
+      localAnswer || error?.message || "The assistant could not answer right now."
     );
   } finally {
-    setAssistantSending(false);
-    syncAssistantUi();
+    if (requestId === activeAssistantRequestId) {
+      setAssistantSending(false);
+      syncAssistantUi();
+    }
   }
 }
 
@@ -576,10 +729,7 @@ export function closeAssistant() {
 export function clearAssistantMessages() {
   state.assistantMessages = [];
   state.assistantModalMessages = [];
-
-  if (state.assistantMeta && typeof state.assistantMeta === "object") {
-    state.assistantMeta = createAssistantMeta();
-  }
+  state.assistantMeta = createAssistantMeta();
 
   clearAssistantUiMessages?.();
   syncAssistantUi();
@@ -589,8 +739,7 @@ function handleQuickAction(actionId = "") {
   const id = String(actionId || "").trim();
   if (!id) return;
 
-  const router =
-    typeof window !== "undefined" ? window.handleQuickAction : null;
+  const router = typeof window !== "undefined" ? window.handleQuickAction : null;
 
   if (typeof router === "function") {
     router(id);
@@ -626,14 +775,13 @@ export function updateAssistantContext() {
 
   const scope = normaliseScope(getCurrentScope(), "child");
   const section = getCurrentSection();
+
   const accessLevel = resolveAccessLevelForScope({
     scope,
     role: state.userRole || "staff",
   });
 
-  const sectionLabel = String(section)
-    .replaceAll("_", " ")
-    .replaceAll("-", " ");
+  const sectionLabel = String(section).replaceAll("_", " ").replaceAll("-", " ");
 
   const contextSummary =
     scope === "child"
@@ -687,7 +835,9 @@ export function updateAssistantContext() {
             young_person_name: null,
             home_name: getHomeName(),
             allowed_home_ids:
-              accessLevel === "provider" ? getAllowedHomeIds() : [state.homeId].filter(Boolean),
+              accessLevel === "provider"
+                ? getAllowedHomeIds()
+                : [state.homeId].filter(Boolean),
             retrieval_default: "whole_scope",
             suggested_prompts: assistantPromptsForView(section, scope),
           };
@@ -734,11 +884,14 @@ export function bindAssistantEvents() {
     await askAssistant(question);
   });
 
-  els.assistantModalForm?.addEventListener("submit", async (event) => {
+  const modalForm = qs("assistantModalForm");
+  const modalInput = qs("assistantModalInput");
+
+  modalForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const question = els.assistantModalInput?.value || "";
-    if (els.assistantModalInput) {
-      els.assistantModalInput.value = "";
+    const question = modalInput?.value || "";
+    if (modalInput) {
+      modalInput.value = "";
     }
     await askAssistant(question);
   });

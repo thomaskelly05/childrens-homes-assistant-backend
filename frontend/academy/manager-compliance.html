@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy • Manager Compliance</title>
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+
+  <body class="academy-page">
+    <div class="academy-layout">
+      <header class="academy-page-header">
+        <div class="academy-page-header__inner">
+          <div>
+            <div class="academy-page-header__eyebrow">IndiCare Academy</div>
+            <h1 id="academyComplianceTitle">Home Training Compliance</h1>
+            <p id="academyComplianceSubtitle" class="academy-page-header__subtitle">
+              Oversight of training, workbooks, qualifications and review activity.
+            </p>
+          </div>
+
+          <div class="academy-page-header__actions">
+            <a class="academy-button academy-button--ghost" href="/academy">
+              Back to Academy
+            </a>
+            <button
+              id="academyComplianceRefreshBtn"
+              type="button"
+              class="academy-button academy-button--secondary"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="academy-page-main">
+        <div id="academyComplianceError"></div>
+
+        <section class="academy-panel">
+          <div class="academy-panel__body">
+            <div id="academyComplianceMeta" class="academy-chip-row"></div>
+
+            <div class="academy-grid academy-grid--stats" style="margin-top: 20px;">
+              <section class="academy-stat-card">
+                <div class="academy-stat-card__label">Active staff</div>
+                <div class="academy-stat-card__value" id="academyComplianceActiveStaff">0</div>
+                <div class="academy-stat-card__meta">Users counted in the home compliance view.</div>
+              </section>
+
+              <section class="academy-stat-card">
+                <div class="academy-stat-card__label">Mandatory assignments</div>
+                <div class="academy-stat-card__value" id="academyComplianceMandatoryAssignments">0</div>
+                <div class="academy-stat-card__meta">Mandatory training assigned across the home.</div>
+              </section>
+
+              <section class="academy-stat-card">
+                <div class="academy-stat-card__label">Completed mandatory</div>
+                <div class="academy-stat-card__value" id="academyComplianceCompletedMandatory">0</div>
+                <div class="academy-stat-card__meta">Mandatory assignments completed.</div>
+              </section>
+
+              <section class="academy-stat-card">
+                <div class="academy-stat-card__label">Overdue mandatory</div>
+                <div class="academy-stat-card__value" id="academyComplianceOverdueMandatory">0</div>
+                <div class="academy-stat-card__meta">Mandatory assignments now overdue.</div>
+              </section>
+            </div>
+
+            <div style="margin-top: 22px;">
+              <div class="academy-progress-track">
+                <div
+                  id="academyComplianceProgressBar"
+                  class="academy-progress-fill"
+                  style="width: 0%;"
+                ></div>
+              </div>
+              <div
+                id="academyComplianceProgressText"
+                class="academy-progress-text"
+                style="margin-top: 10px;"
+              >
+                0% compliant
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 28px;">
+          <div class="academy-section__header">
+            <h2>Workbook compliance</h2>
+            <p>Track workbook completion, submissions in review and overdue items.</p>
+          </div>
+
+          <div class="academy-grid academy-grid--stats">
+            <section class="academy-stat-card">
+              <div class="academy-stat-card__label">Workbook submissions</div>
+              <div class="academy-stat-card__value" id="academyComplianceWorkbookTotal">0</div>
+              <div class="academy-stat-card__meta">Total workbook submissions in the home.</div>
+            </section>
+
+            <section class="academy-stat-card">
+              <div class="academy-stat-card__label">Completed workbooks</div>
+              <div class="academy-stat-card__value" id="academyComplianceWorkbookCompleted">0</div>
+              <div class="academy-stat-card__meta">Accepted or completed workbook evidence.</div>
+            </section>
+
+            <section class="academy-stat-card">
+              <div class="academy-stat-card__label">In review</div>
+              <div class="academy-stat-card__value" id="academyComplianceWorkbookReview">0</div>
+              <div class="academy-stat-card__meta">Submitted or under-review workbooks.</div>
+            </section>
+
+            <section class="academy-stat-card">
+              <div class="academy-stat-card__label">Needing amendment</div>
+              <div class="academy-stat-card__value" id="academyComplianceWorkbookAmendment">0</div>
+              <div class="academy-stat-card__meta">Workbook submissions requiring resubmission.</div>
+            </section>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 28px;">
+          <div class="academy-section__header">
+            <h2>Qualification oversight</h2>
+            <p>See active Level 3 and Level 5 learning pathways.</p>
+          </div>
+
+          <div class="academy-grid academy-grid--stats">
+            <section class="academy-stat-card">
+              <div class="academy-stat-card__label">Total enrolments</div>
+              <div class="academy-stat-card__value" id="academyComplianceQualificationTotal">0</div>
+              <div class="academy-stat-card__meta">Current and historic qualification enrolments.</div>
+            </section>
+
+            <section class="academy-stat-card">
+              <div class="academy-stat-card__label">Level 3</div>
+              <div class="academy-stat-card__value" id="academyComplianceQualificationLevel3">0</div>
+              <div class="academy-stat-card__meta">Residential Childcare learner enrolments.</div>
+            </section>
+
+            <section class="academy-stat-card">
+              <div class="academy-stat-card__label">Level 5</div>
+              <div class="academy-stat-card__value" id="academyComplianceQualificationLevel5">0</div>
+              <div class="academy-stat-card__meta">Leadership and management learner enrolments.</div>
+            </section>
+
+            <section class="academy-stat-card">
+              <div class="academy-stat-card__label">Average completion</div>
+              <div class="academy-stat-card__value" id="academyComplianceQualificationProgress">0%</div>
+              <div class="academy-stat-card__meta">Average qualification completion across the home.</div>
+            </section>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 28px;">
+          <div class="academy-section__header">
+            <h2>Review queue</h2>
+            <p>Assessment work waiting for assessor or manager attention.</p>
+          </div>
+
+          <div id="academyComplianceReviewQueue" class="academy-stack">
+            <div class="academy-empty-state">Loading review queue…</div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 28px; margin-bottom: 40px;">
+          <div class="academy-section__header">
+            <h2>Standards coverage</h2>
+            <p>Linked evidence across Quality Standards and SCCIF domains.</p>
+          </div>
+
+          <div class="academy-grid academy-grid--two">
+            <div>
+              <h3 style="margin: 0 0 12px;">Quality Standards</h3>
+              <div id="academyComplianceQualityStandards" class="academy-stack">
+                <div class="academy-empty-state">Loading Quality Standards evidence…</div>
+              </div>
+            </div>
+
+            <div>
+              <h3 style="margin: 0 0 12px;">SCCIF domains</h3>
+              <div id="academyComplianceSccifDomains" class="academy-stack">
+                <div class="academy-empty-state">Loading SCCIF coverage…</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-manager-compliance.js"></script>
+  </body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Care OS | IndiCare</title>
+  <meta name="description" content="IndiCare Care OS container for children's home operations." />
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    :root{--ink:#10201f;--muted:#5f746f;--brand:#163b3a;--brand2:#0f2928;--soft:#eef6f4;--panel:#fff;--line:#d8e4e0;--amber:#fff7e6;--red:#fff1f2;--green:#edf8f1;--blue:#eff6ff;--shadow:0 14px 36px rgba(15,23,42,.08)}
+    *{box-sizing:border-box}html,body{height:100%}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f8f7;color:var(--ink);overflow:hidden}
+    .care-shell{display:grid;grid-template-columns:306px minmax(0,1fr);height:100vh;width:100vw;overflow:hidden}.care-side{background:linear-gradient(180deg,#0f201f,#163b3a);color:#fff;padding:20px;display:flex;flex-direction:column;gap:16px;height:100vh;overflow:auto;border-right:1px solid rgba(255,255,255,.08)}
+    .brand{display:flex;gap:12px;align-items:center;padding-bottom:4px}.mark{width:42px;height:42px;border-radius:14px;background:#fff;color:var(--brand);display:grid;place-items:center;font-weight:900}.brand h1{margin:0;font-size:18px}.brand p{margin:2px 0 0;color:rgba(255,255,255,.72);font-size:13px}.nav-group-title{margin:13px 0 2px;color:rgba(255,255,255,.55);font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .nav{display:grid;gap:7px}.nav a{color:#fff;text-decoration:none;padding:11px 12px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.055);transition:.15s ease}.nav a strong{display:block;font-size:14px}.nav a span{display:block;font-size:12px;color:rgba(255,255,255,.68);margin-top:2px}.nav a.active,.nav a:hover{background:#fff;color:var(--brand);transform:translateX(2px)}.nav a.active span,.nav a:hover span{color:#55706d}
+    .side-foot{margin-top:auto;font-size:12px;color:rgba(255,255,255,.65)}.side-foot button{margin-top:10px;width:100%;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;border-radius:12px;padding:10px;font-weight:800;cursor:pointer}.side-foot button:hover{background:rgba(255,255,255,.08)}
+    .care-main{height:100vh;min-width:0;display:flex;flex-direction:column;background:#f5f8f7;overflow:hidden}.topbar{height:74px;min-height:74px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 22px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.94);backdrop-filter:blur(12px);z-index:4}.topbar h2{margin:0;font-size:24px}.topbar p{margin:3px 0 0;color:var(--muted);font-size:13px}.top-actions{display:flex;align-items:center;gap:10px}.status-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border-radius:999px;background:var(--green);border:1px solid #cdebd8;font-weight:800;color:#245039;font-size:12px}.status-dot{width:8px;height:8px;border-radius:999px;background:#3f7f5c}.mini-btn{border:1px solid var(--line);background:#fff;color:var(--brand);border-radius:12px;padding:8px 10px;font-weight:900;cursor:pointer}.mini-btn:hover{background:var(--soft)}
+    .workspace{position:relative;flex:1;min-height:0;overflow:auto;padding:24px;background:#f5f8f7}.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}.page-head h1{margin:0;font-size:30px}.page-head p{margin:5px 0 0;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:var(--shadow)}.card span{display:block;color:var(--muted);font-size:13px;font-weight:800}.card strong{display:block;margin-top:6px;font-size:30px}.card small{display:block;margin-top:4px;color:var(--muted)}
+    .layout{display:grid;grid-template-columns:1.35fr .9fr;gap:18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px}.panel h2,.panel h3{margin:0 0 12px;font-size:20px}.stack{display:grid;gap:10px}.item{border:1px solid var(--line);border-radius:16px;padding:13px;background:#fbfdfc}.item.high,.item.critical{background:var(--red);border-color:#fecdd3}.item.warning,.item.medium{background:var(--amber);border-color:#fde1a8}.item.info{background:var(--blue);border-color:#bfdbfe}.item strong{display:block}.item p{margin:5px 0 0;color:var(--muted);font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.btn{border:none;background:var(--brand);color:#fff;border-radius:13px;padding:10px 13px;font-weight:900;cursor:pointer;text-decoration:none}.btn.secondary{background:#eef6f4;color:var(--brand);border:1px solid var(--line)}.btn.warning{background:#92400e}.empty{color:var(--muted);font-weight:700}.loader{min-height:420px;display:grid;place-items:center;color:var(--brand);font-weight:900}.spinner{width:30px;height:30px;margin:0 auto 12px;border-radius:999px;border:3px solid #d8e4e0;border-top-color:var(--brand);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.quick-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:var(--shadow)}.quick-card h3{margin:0 0 8px}.quick-card p{margin:0;color:var(--muted);font-size:13px}.badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:var(--soft);color:var(--brand);font-size:12px;font-weight:900;margin-bottom:10px}
+    @media(max-width:1080px){body{overflow:auto}.care-shell{display:block;height:auto;min-height:100vh}.care-side{height:auto;max-height:none}.care-main{height:auto;min-height:100vh}.workspace{min-height:720px}.nav{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.layout{grid-template-columns:1fr}.quick-grid{grid-template-columns:1fr}}
+    @media(max-width:640px){.nav{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.topbar{height:auto;align-items:flex-start;flex-direction:column}.workspace{padding:14px}.care-side{padding:16px}}
+  </style>
+</head>
+<body data-skip-global-nav="true">
+  <main class="care-shell">
+    <aside class="care-side" aria-label="Care OS navigation">
+      <div class="brand"><div class="mark">IC</div><div><h1>IndiCare Care OS</h1><p>One container for the home</p></div></div>
+      <nav class="nav" aria-label="Care OS modules">
+        <div class="nav-group-title">Today</div>
+        <a href="#command" class="active" data-module="command"><strong>Command Centre</strong><span>Live priorities and risk</span></a>
+        <a href="#intelligence" data-module="intelligence"><strong>Intelligence</strong><span>Trends and inspection view</span></a>
+        <a href="#tasks" data-module="tasks"><strong>Tasks</strong><span>Actions and accountability</span></a>
+        <a href="#notifications" data-module="notifications"><strong>Notifications</strong><span>Alerts and updates</span></a>
+        <div class="nav-group-title">Care records</div>
+        <a href="#young-people" data-module="young-people"><strong>Young People</strong><span>Profiles and records</span></a>
+        <a href="#journal" data-module="journal"><strong>Journal</strong><span>Daily recording</span></a>
+        <a href="#safeguarding" data-module="safeguarding"><strong>Safeguarding</strong><span>Risk and safety oversight</span></a>
+        <a href="#documents" data-module="documents"><strong>Documents</strong><span>Evidence and files</span></a>
+        <a href="#quality" data-module="quality"><strong>Quality</strong><span>Inspection readiness</span></a>
+        <div class="nav-group-title">Staff and operations</div>
+        <a href="#rostering" data-module="rostering"><strong>Rostering</strong><span>Shifts and staffing</span></a>
+        <a href="#supervision" data-module="supervision"><strong>Supervision</strong><span>Staff oversight</span></a>
+        <a href="#staff" data-module="staff"><strong>Staff Hub</strong><span>Profiles and team evidence</span></a>
+        <a href="#academy" data-module="academy"><strong>Academy</strong><span>Learning and compliance</span></a>
+        <div class="nav-group-title">AI and administration</div>
+        <a href="#assistant" data-module="assistant"><strong>Assistant</strong><span>Defensible AI support</span></a>
+        <a href="#ai-notes" data-module="ai-notes"><strong>AI Notes</strong><span>Structured note support</span></a>
+        <a href="#admin" data-module="admin"><strong>Admin Users</strong><span>Users and access</span></a>
+        <a href="#founder" data-module="founder"><strong>Founder HQ</strong><span>Organisation oversight</span></a>
+      </nav>
+      <div class="side-foot"><div id="careUser">Checking session…</div><button type="button" id="logoutBtn">Sign out</button></div>
+    </aside>
+    <section class="care-main">
+      <header class="topbar"><div><h2 id="moduleTitle">Command Centre</h2><p id="moduleSubtitle">What matters now, why it matters, and what to do next.</p></div><div class="top-actions"><button class="mini-btn" type="button" id="refreshModuleBtn">Refresh</button><div class="status-pill"><span class="status-dot"></span><span id="sessionStatus">Secure session</span></div></div></header>
+      <section id="workspace" class="workspace" aria-live="polite"></section>
+    </section>
+  </main>
+<script>
+(() => {
+  const modules={
+    command:{title:'Command Centre',subtitle:'Live priorities, alerts and next best actions.',api:'/command-centre',kind:'command'},
+    intelligence:{title:'Operational Intelligence',subtitle:'Trends, inspection readiness and risk overview.',kind:'coming',features:['Risk trend summaries','Inspection-ready oversight','Provider heatmaps']},
+    tasks:{title:'Tasks',subtitle:'Assigned actions, overdue work and accountability.',api:'/tasks/my',kind:'tasks'},
+    notifications:{title:'Notifications',subtitle:'Unread alerts, reminders and system updates.',api:'/notifications',kind:'notifications'},
+    'young-people':{title:'Young People',subtitle:'Profiles, records, risks, plans and chronology.',api:'/young-people',kind:'youngPeople'},
+    journal:{title:'Journal',subtitle:'Daily recording and staff observations.',kind:'coming',features:['Daily notes','Shift handover','Young person voice']},
+    safeguarding:{title:'Safeguarding',subtitle:'Risk, incidents and safety oversight.',kind:'coming',features:['High-risk plans','Incident oversight','Safeguarding actions']},
+    documents:{title:'Documents',subtitle:'Evidence, files and review items.',kind:'coming',features:['Placement plans','Document review','Evidence packs']},
+    quality:{title:'Quality',subtitle:'Inspection readiness and quality assurance.',kind:'coming',features:['Reg 45 view','Audit trail','Quality actions']},
+    rostering:{title:'Rostering',subtitle:'Shifts, staffing and home coverage.',kind:'coming',features:['Shift cover','Staff allocation','Safe staffing signals']},
+    supervision:{title:'Supervision',subtitle:'Staff supervision, actions and oversight.',kind:'coming',features:['Supervision actions','Reflective practice','Manager oversight']},
+    staff:{title:'Staff Hub',subtitle:'Staff profiles, learning and team evidence.',kind:'coming',features:['Training evidence','Staff profiles','Team compliance']},
+    academy:{title:'Academy',subtitle:'Learning, compliance and evidence.',kind:'coming',features:['Learning modules','Qualifications','Evidence portfolio']},
+    assistant:{title:'Assistant',subtitle:'Defensible AI support with evidence and citations.',kind:'assistant'},
+    'ai-notes':{title:'AI Notes',subtitle:'Structured note support and drafting.',kind:'coming',features:['Structured notes','Draft support','Evidence prompts']},
+    admin:{title:'Admin Users',subtitle:'Users, roles and access.',kind:'coming',features:['User management','Role access','Home permissions']},
+    founder:{title:'Founder HQ',subtitle:'Whole-system oversight.',kind:'coming',features:['Provider view','Growth oversight','System health']}
+  };
+  let currentModule='command';
+  const $=id=>document.getElementById(id);
+  const ws=$('workspace');
+  const esc=v=>String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  const arr=d=>Array.isArray(d)?d:Array.isArray(d?.items)?d.items:Array.isArray(d?.tasks)?d.tasks:Array.isArray(d?.data)?d.data:Array.isArray(d?.results)?d.results:[];
+  function setText(id,v){const el=$(id);if(el)el.textContent=v==null?'—':String(v)}
+  function head(m){setText('moduleTitle',m.title);setText('moduleSubtitle',m.subtitle)}
+  function loading(label){ws.innerHTML=`<div class="loader"><div><div class="spinner"></div>${esc(label||'Loading…')}</div></div>`}
+  async function getJson(url){try{const r=await fetch(url,{credentials:'include',headers:{Accept:'application/json'}});if(r.status===401){location.href='/login?next=/care-os';return null}const text=await r.text();let data={};try{data=JSON.parse(text)}catch{data={raw:text}}return{ok:r.ok,status:r.status,data}}catch(e){return{ok:false,status:0,data:{detail:String(e.message||e)}}}}
+  function card(label,value,small=''){return`<article class="card"><span>${esc(label)}</span><strong>${esc(value)}</strong>${small?`<small>${esc(small)}</small>`:''}</article>`}
+  function item(title,detail='',level=''){return`<div class="item ${esc(level)}"><strong>${esc(title)}</strong><p>${esc(detail)}</p></div>`}
+  function page(title,subtitle,body){ws.innerHTML=`<div class="page-head"><div><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div></div>${body}`}
+  function renderCommand(data){const s=data?.summary||{};const actions=data?.next_best_actions||[];const alerts=data?.alerts||[];page('Command Centre','Live priorities, alerts and next best actions.',`<div class="grid">${card('Open tasks',s.open_tasks??0,'requiring action')}${card('Overdue',s.overdue_tasks??0,'needs escalation')}${card('Incidents',s.incidents_needing_review??0,'awaiting review')}${card('Compliance',s.compliance_due??0,'due soon')}</div><div class="layout"><section class="panel"><h2>Next best actions</h2><div class="stack">${actions.length?actions.map(a=>item(a.title||'Review action',a.detail||(a.count!=null?`${a.count} item(s)`:''),a.priority)).join(''):item('System ready','No urgent actions are visible yet.','info')}</div></section><section class="panel"><h2>Live alerts</h2><div class="stack">${alerts.length?alerts.map(a=>item(a.title||'Alert',a.detail||a.young_person_name||'',a.level)).join(''):item('No live alerts','Everything looks stable.','info')}</div></section></div>`)}
+  function renderTasks(data){const tasks=arr(data);page('Tasks','Assigned actions, overdue work and accountability.',`<div class="grid">${card('Total',tasks.length)}${card('Open',tasks.filter(t=>!['completed','done','closed'].includes(String(t.status||'').toLowerCase())).length)}${card('High priority',tasks.filter(t=>['high','critical'].includes(String(t.priority||'').toLowerCase())).length)}${card('Overdue',tasks.filter(t=>t.due_at&&new Date(t.due_at)<new Date()).length)}</div><section class="panel"><h2>Task list</h2><div class="stack">${tasks.length?tasks.map(t=>item(t.title||'Task',`Status: ${t.status||'pending'}${t.due_at?' · Due: '+t.due_at:''}`,t.priority)).join(''):item('No tasks visible','Create tasks to make this module active.','info')}</div></section>`)}
+  function renderNotifications(data){const items=arr(data);page('Notifications','Unread alerts, reminders and system updates.',`<div class="grid">${card('Total',items.length)}${card('Unread',items.filter(n=>!n.read_at&&!n.read).length)}${card('High priority',items.filter(n=>['high','critical'].includes(String(n.priority||'').toLowerCase())).length)}${card('Available',data?.available===false?'No':'Yes')}</div><section class="panel"><h2>Notification feed</h2><div class="stack">${items.length?items.map(n=>item(n.title||'Notification',n.body||n.message||'',n.priority)).join(''):item('No notifications',data?.message||'There are no current notifications.','info')}</div></section>`)}
+  function renderYoungPeople(data){const people=arr(data);page('Young People','Profiles, records, risks, plans and chronology.',`<div class="grid">${card('Total',people.length)}${card('Active',people.filter(p=>String(p.placement_status||p.status||'active').toLowerCase()==='active').length)}${card('High risk',people.filter(p=>String(p.summary_risk_level||p.risk||'').toLowerCase().includes('high')).length)}${card('Records',people.length)}</div><section class="panel"><h2>Young people records</h2><div class="stack">${people.length?people.map(p=>item(p.preferred_name||[p.first_name,p.last_name].filter(Boolean).join(' ')||p.name||`Young person #${p.id||p.young_person_id||''}`,`Placement: ${p.placement_status||'active'}${p.summary_risk_level?' · Risk: '+p.summary_risk_level:''}`,String(p.summary_risk_level||'').toLowerCase())).join(''):item('No young people found','Add young people records to make this area live.','info')}</div></section>`)}
+  function renderComing(m){const feats=m.features||[];page(m.title,m.subtitle,`<div class="grid">${card('Status','Online')}${card('Mode','Care OS native')}${card('Errors','0')}${card('Next','Build-out')}</div><section class="panel"><h2>${esc(m.title)} is available in Care OS</h2><div class="stack">${item('Stable placeholder','This module no longer loads broken legacy pages. It is ready to be rebuilt natively in the OS.','info')}${feats.map(f=>item(f,'Planned native Care OS function.','')).join('')}</div></section>`)}
+  function renderAssistant(){page('Assistant','Defensible AI support with evidence and citations.',`<div class="grid">${card('Format','Defensible')}${card('Citations','Required')}${card('Safeguarding','On')}${card('Audit','Ready')}</div><section class="panel"><h2>Ask IndiCare</h2><div class="stack">${item('Assistant is wired into Care OS','Use the standalone assistant route only after the native chat panel is completed.','info')}${item('Output contract','Summary, Evidence, Analysis, Actions, Safeguarding / Risk, Recommendation.','')}</div></section>`)}
+  async function openModule(key){currentModule=key;const m=modules[key]||modules.command;head(m);document.querySelectorAll('[data-module]').forEach(a=>a.classList.toggle('active',a.dataset.module===key));history.replaceState(null,'','#'+key);if(m.api){loading('Loading '+m.title+'…');const res=await getJson(m.api);if(!res)return;if(!res.ok){renderComing({...m,features:[`${m.api} returned ${res.status}`,res.data?.detail||'Backend route needs stabilising']});return}if(m.kind==='command')return renderCommand(res.data);if(m.kind==='tasks')return renderTasks(res.data);if(m.kind==='notifications')return renderNotifications(res.data);if(m.kind==='youngPeople')return renderYoungPeople(res.data)}if(m.kind==='assistant')return renderAssistant();renderComing(m)}
+  async function requireCareAuth(){if(!window.auth||typeof window.auth.requireAuth!=='function'){location.href='/login?next=/care-os';return false}try{const ok=await window.auth.requireAuth();if(!ok)return false;const user=window.auth.getStoredUser?.()||{};setText('careUser',user.email||user.role||'Signed in');return true}catch(e){setText('sessionStatus',e.message||'Authentication issue');return false}}
+  document.querySelectorAll('[data-module]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();openModule(a.dataset.module||'command')}));
+  $('refreshModuleBtn')?.addEventListener('click',()=>openModule(currentModule));
+  $('logoutBtn')?.addEventListener('click',()=>window.auth?.logout?.());
+  document.addEventListener('DOMContentLoaded',async()=>{if(await requireCareAuth())openModule((location.hash||'#command').slice(1)||'command')});
+  window.IndiCareOpenModule=openModule;
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,39 @@
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from typing import Any
+
+
+@dataclass(slots=True)
+class ChronologyEventInput:
+    young_person_id: int
+    source_table: str
+    source_id: int
+    event_datetime: date | datetime | str | None = None
+    category: str = "record"
+    subcategory: str | None = None
+    title: str = "Record"
+    summary: str = "Record updated"
+    significance: str = "medium"
+    created_by: int | None = None
+    auto_generated: bool = True
+    is_visible: bool = True
+    metadata_json: dict[str, Any] | list[Any] | None = None
+    event_status: str | None = None
+    linked_standard: str | None = None
+    linked_judgement_area: str | None = None
+    linked_document_id: int | None = None
+    linked_review_id: int | None = None
+    linked_action_id: int | None = None
+    tags_json: list[str] | None = None
+    home_id: int | None = None
+    recorded_by_name: str | None = None
+    workflow_status: str | None = None
+    safeguarding_flag: bool = False
+    child_voice_present: bool = False
+    severity: str | None = None
+    primary_record_type: str | None = None
 
 
 class ChronologyWriter:
@@ -14,8 +46,9 @@ class ChronologyWriter:
     - does not hard fail on optional fields being missing
     """
 
-    def upsert_event(self, conn, payload: dict[str, Any]) -> dict[str, Any]:
-        prepared = self._prepare_payload(payload)
+    def upsert_event(self, conn, payload: dict[str, Any] | ChronologyEventInput) -> dict[str, Any]:
+        raw_payload = asdict(payload) if isinstance(payload, ChronologyEventInput) else payload
+        prepared = self._prepare_payload(raw_payload)
         event_id = self._upsert(conn, prepared)
         return {
             "ok": True,

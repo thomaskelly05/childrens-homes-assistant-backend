@@ -1,4 +1,4 @@
-const API_BASE = window.location.origin;
+const API_BASE = "";
 
 const GET_CACHE_MS = 30000;
 const REQUEST_TIMEOUT_MS = 20000;
@@ -28,30 +28,42 @@ function buildErrorMessage(response, data) {
 }
 
 const API_ROUTE_ALIASES = [
+  // Young people
   [/\/young-people\/(\d+)\/alerts$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/tasks$/, "/tasks?young_person_id=$1"],
+  [/\/young-people\/(\d+)\/actions$/, "/actions?young_person_id=$1&scope=child"],
+  [/\/young-people\/(\d+)\/visibility$/, "/visibility/young-people/$1"],
+
+  [/\/young-people\/(\d+)\/daily-notes$/, "/young-people/$1/daily-notes"],
+  [/\/young-people\/(\d+)\/daily-life$/, "/young-people/$1/daily-notes"],
+  [/\/young-people\/(\d+)\/profile$/, "/young-people/$1/profile"],
+  [/\/young-people\/(\d+)\/chronology$/, "/young-people/$1/timeline"],
+
   [/\/young-people\/(\d+)\/young-person-appointments$/, "/young-people/$1/appointments"],
-  [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/timeline?limit=12"],
+  [/\/young-people\/(\d+)\/handover-records$/, "/young-people/$1/handover"],
 
   [/\/young-people\/(\d+)\/health-records$/, "/young-people/$1/health"],
-  [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/health"],
-  [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/health"],
+  [/\/young-people\/(\d+)\/medication-profiles$/, "/young-people/$1/medication-records"],
+  [/\/young-people\/(\d+)\/medication-records$/, "/young-people/$1/medication-records"],
 
   [/\/young-people\/(\d+)\/education-records$/, "/young-people/$1/education"],
   [/\/young-people\/(\d+)\/achievements$/, "/young-people/$1/education"],
 
   [/\/young-people\/(\d+)\/family-contact-records$/, "/young-people/$1/family"],
 
-  [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/incidents"],
-  [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/incidents"],
-  [/\/young-people\/(\d+)\/safeguarding$/, "/young-people/$1/incidents"],
+  [/\/young-people\/(\d+)\/safeguarding-records$/, "/young-people/$1/safeguarding"],
+  [/\/young-people\/(\d+)\/safeguarding$/, "/young-people/$1/safeguarding"],
+  [/\/young-people\/(\d+)\/missing-episodes$/, "/young-people/$1/missing-episodes"],
 
-  [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/compliance"],
+  [/\/young-people\/(\d+)\/documents$/, "/young-people/$1/documents"],
+  [/\/young-people\/(\d+)\/statutory-documents$/, "/young-people/$1/statutory-documents"],
   [/\/young-people\/(\d+)\/approvals$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/manager-review$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/manager-actions$/, "/young-people/$1/compliance"],
   [/\/young-people\/(\d+)\/child-compliance$/, "/young-people/$1/compliance"],
 
-  [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/plans"],
+  [/\/young-people\/(\d+)\/risks$/, "/young-people/$1/risk"],
+  [/\/young-people\/(\d+)\/risk-assessments$/, "/young-people/$1/risk"],
 
   [/\/young-people\/(\d+)\/inspection-packs$/, "/young-people/$1/reports"],
   [/\/young-people\/(\d+)\/monthly-reviews$/, "/young-people/$1/reports"],
@@ -60,16 +72,50 @@ const API_ROUTE_ALIASES = [
   [/\/young-people\/(\d+)\/therapy$/, "/young-people/$1/health"],
   [/\/young-people\/(\d+)\/keywork$/, "/young-people/$1/keywork"],
 
+  // Homes - legacy operational routes
   [/\/homes\/(\d+)\/young-people$/, "/homes/$1/dashboard"],
-  [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/quality"],
-  [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance"],
+  [/\/homes\/(\d+)\/actions$/, "/actions?home_id=$1&scope=home"],
+  [/\/homes\/(\d+)\/tasks$/, "/tasks?home_id=$1&scope=home"],
+  [/\/homes\/(\d+)\/visibility$/, "/visibility/homes/$1"],
 
   [/\/homes\/(\d+)\/staff$/, "/homes/$1/team"],
   [/\/homes\/(\d+)\/staff-documents$/, "/homes/$1/staff-files"],
   [/\/homes\/(\d+)\/notifications$/, "/homes/$1/communications"],
-  [/\/homes\/(\d+)\/inspection-readiness$/, "/homes/$1/quality"],
-  [/\/homes\/(\d+)\/safeguarding$/, "/homes/$1/quality"],
-  [/\/homes\/(\d+)\/child-compliance$/, "/homes/$1/compliance"],
+  [/\/homes\/(\d+)\/safeguarding$/, "/homes/$1/safeguarding"],
+  [/\/homes\/(\d+)\/child-compliance$/, "/homes/$1/child-compliance"],
+
+  // Homes - older quality/ofsted/readiness URLs mapped to newer families
+  [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance-items"],
+  [/\/homes\/(\d+)\/inspection-readiness$/, "/homes/$1/inspection-improvement-actions"],
+  [/\/homes\/(\d+)\/quality$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/compliance$/, "/homes/$1/compliance-items"],
+  [/\/homes\/(\d+)\/dashboard$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/ofsted-dashboard$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/sccif-evidence$/, "/homes/$1/inspection-section-scores"],
+  [/\/homes\/(\d+)\/judgement-builder$/, "/homes/$1/inspection-lines-of-enquiry"],
+
+  // New inspection / quality families
+  [/\/homes\/(\d+)\/quality-audits$/, "/homes/$1/quality-audits"],
+  [/\/homes\/(\d+)\/quality-audit-findings$/, "/homes/$1/quality-audit-findings"],
+  [/\/homes\/(\d+)\/quality-audit-actions$/, "/homes/$1/quality-audit-actions"],
+
+  [/\/homes\/(\d+)\/compliance-items$/, "/homes/$1/compliance-items"],
+
+  [/\/homes\/(\d+)\/reg44-visits$/, "/homes/$1/reg44-visits"],
+  [/\/homes\/(\d+)\/reg44-findings$/, "/homes/$1/reg44-findings"],
+  [/\/homes\/(\d+)\/reg44-actions$/, "/homes/$1/reg44-actions"],
+
+  [/\/homes\/(\d+)\/reg45-reviews$/, "/homes/$1/reg45-reviews"],
+  [/\/homes\/(\d+)\/reg45-actions$/, "/homes/$1/reg45-actions"],
+
+  [/\/homes\/(\d+)\/inspection-scores$/, "/homes/$1/inspection-scores"],
+  [/\/homes\/(\d+)\/inspection-section-scores$/, "/homes/$1/inspection-section-scores"],
+  [/\/homes\/(\d+)\/inspection-score-reasons$/, "/homes/$1/inspection-score-reasons"],
+  [/\/homes\/(\d+)\/inspection-lines-of-enquiry$/, "/homes/$1/inspection-lines-of-enquiry"],
+  [/\/homes\/(\d+)\/inspection-improvement-actions$/, "/homes/$1/inspection-improvement-actions"],
+
+  [/\/homes\/(\d+)\/manager-review-queue$/, "/homes/$1/manager-review-queue"],
 ];
 
 function shouldResolveAlias(method = "GET") {
@@ -82,11 +128,13 @@ export function resolveApiUrl(url, method = "GET") {
   if (!shouldResolveAlias(method)) return url;
 
   const [pathname, queryString = ""] = url.split("?");
-  const suffix = queryString ? `?${queryString}` : "";
 
   for (const [pattern, replacement] of API_ROUTE_ALIASES) {
     if (pattern.test(pathname)) {
-      return pathname.replace(pattern, replacement) + suffix;
+      const rewritten = pathname.replace(pattern, replacement);
+      if (!queryString) return rewritten;
+      if (rewritten.includes("?")) return `${rewritten}&${queryString}`;
+      return `${rewritten}?${queryString}`;
     }
   }
 
@@ -178,7 +226,11 @@ function buildFetchConfig(method, options, headers) {
   return config;
 }
 
-function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Request timed out") {
+function createTimeoutSignal(
+  timeoutMs,
+  externalSignal,
+  timeoutMessage = "Request timed out"
+) {
   if (!timeoutMs && !externalSignal) {
     return { signal: undefined, cleanup: () => {} };
   }
@@ -190,7 +242,7 @@ function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Reques
     try {
       controller.abort(externalSignal?.reason);
     } catch {
-      // ignore
+      // Ignore abort errors.
     }
   };
 
@@ -210,7 +262,7 @@ function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Reques
         try {
           controller.abort();
         } catch {
-          // ignore
+          // Ignore abort errors.
         }
       }
     }, timeoutMs);
@@ -224,7 +276,7 @@ function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Reques
         try {
           externalSignal.removeEventListener("abort", abortFromExternal);
         } catch {
-          // ignore
+          // Ignore cleanup errors.
         }
       }
     },
@@ -234,13 +286,8 @@ function createTimeoutSignal(timeoutMs, externalSignal, timeoutMessage = "Reques
 function buildAbortMessage(signal, fallback = "Request timed out") {
   const reason = signal?.reason;
 
-  if (reason instanceof Error && reason.message) {
-    return reason.message;
-  }
-
-  if (typeof reason === "string" && reason.trim()) {
-    return reason.trim();
-  }
+  if (reason instanceof Error && reason.message) return reason.message;
+  if (typeof reason === "string" && reason.trim()) return reason.trim();
 
   return fallback;
 }
@@ -264,7 +311,10 @@ function invalidateCacheByPrefixes(prefixes = []) {
     return;
   }
 
-  const safePrefixes = prefixes.filter(Boolean);
+  const safePrefixes = prefixes
+    .filter(Boolean)
+    .map((prefix) => resolveApiUrl(prefix, "GET"));
+
   if (!safePrefixes.length) {
     clearApiCache();
     return;
@@ -322,9 +372,13 @@ function toArray(value) {
 
 function toIdArray(value) {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item));
+  return [
+    ...new Set(
+      value
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    ),
+  ];
 }
 
 async function apiGetSettled(urls = []) {
@@ -341,13 +395,19 @@ function mergeAssistantBundle(responses = []) {
   const bundle = {
     items: [],
     daily_notes: [],
+    daily_life: [],
     incidents: [],
+    safeguarding_records: [],
     tasks: [],
     health_records: [],
     education_records: [],
     family_contact_records: [],
+    family_contacts: [],
     appointments: [],
+    young_person_appointments: [],
     monthly_reviews: [],
+    handover_records: [],
+    handovers: [],
     chronology_events: [],
     risk_assessments: [],
     support_plans: [],
@@ -364,6 +424,7 @@ function mergeAssistantBundle(responses = []) {
     staffing: [],
     onboarding: [],
     training: [],
+    staff_training_records: [],
     probations: [],
     vacancies: [],
     pipeline: [],
@@ -373,6 +434,7 @@ function mergeAssistantBundle(responses = []) {
     maintenance: [],
     finance: [],
     medication: [],
+    medication_records: [],
     admissions: [],
     discharges: [],
     visitors: [],
@@ -393,82 +455,97 @@ function mergeAssistantBundle(responses = []) {
     homes: [],
   };
 
+  const mappings = [
+    ["daily_notes", "daily_notes"],
+    ["daily_life", "daily_notes"],
+    ["dailyNotes", "daily_notes"],
+    ["incidents", "incidents"],
+    ["home_incidents", "home_incidents"],
+    ["safeguarding_records", "safeguarding_records"],
+    ["safeguarding", "safeguarding_records"],
+    ["tasks", "tasks"],
+    ["health_records", "health_records"],
+    ["education_records", "education_records"],
+    ["family_contact_records", "family_contact_records"],
+    ["family_contacts", "family_contact_records"],
+    ["appointments", "appointments"],
+    ["young_person_appointments", "appointments"],
+    ["monthly_reviews", "monthly_reviews"],
+    ["handover_records", "handover_records"],
+    ["handover", "handover_records"],
+    ["handovers", "handover_records"],
+    ["timeline", "chronology_events"],
+    ["chronology_events", "chronology_events"],
+    ["risk", "risk_assessments"],
+    ["risk_assessments", "risk_assessments"],
+    ["risks", "risk_assessments"],
+    ["support_plans", "support_plans"],
+    ["compliance_items", "compliance_items"],
+    ["documents", "documents"],
+    ["statutory_documents", "statutory_documents"],
+    ["communications", "communications"],
+    ["therapy", "therapy"],
+    ["therapy_records", "therapy_records"],
+    ["team", "team"],
+    ["staff", "team"],
+    ["supervisions", "supervisions"],
+    ["reports", "reports"],
+    ["rota", "rota"],
+    ["onboarding", "onboarding"],
+    ["training", "training"],
+    ["staff_training_records", "training"],
+    ["probations", "probations"],
+    ["vacancies", "vacancies"],
+    ["pipeline", "pipeline"],
+    ["pipeline_candidates", "pipeline_candidates"],
+    ["shifts", "shifts"],
+    ["absences", "absences"],
+    ["maintenance", "maintenance"],
+    ["finance", "finance"],
+    ["medication", "medication"],
+    ["medication_records", "medication_records"],
+    ["admissions", "admissions"],
+    ["discharges", "discharges"],
+    ["visitors", "visitors"],
+    ["staff_files", "staff_files"],
+    ["audits", "audits"],
+    ["manager_actions", "manager_actions"],
+    ["reg40", "reg40"],
+    ["reg44", "reg44"],
+    ["reg45", "reg45"],
+    ["keywork", "keywork"],
+    ["transport", "transport"],
+    ["young_people", "young_people"],
+    ["alerts", "alerts"],
+  ];
+
   for (const response of responses) {
-    if (!response?.ok || !response.data || typeof response.data !== "object") continue;
+    if (!response?.ok || !response.data || typeof response.data !== "object") {
+      continue;
+    }
+
     const data = response.data;
 
     if (Array.isArray(data.items)) {
       pushUniqueByKey(bundle.items, data.items, recordKey);
     }
 
-    const mappings = [
-      ["daily_notes", bundle.daily_notes],
-      ["incidents", bundle.incidents],
-      ["home_incidents", bundle.home_incidents],
-      ["tasks", bundle.tasks],
-      ["health_records", bundle.health_records],
-      ["education_records", bundle.education_records],
-      ["family_contact_records", bundle.family_contact_records],
-      ["appointments", bundle.appointments],
-      ["monthly_reviews", bundle.monthly_reviews],
-      ["timeline", bundle.chronology_events],
-      ["chronology_events", bundle.chronology_events],
-      ["risk_assessments", bundle.risk_assessments],
-      ["risks", bundle.risk_assessments],
-      ["support_plans", bundle.support_plans],
-      ["compliance_items", bundle.compliance_items],
-      ["documents", bundle.documents],
-      ["statutory_documents", bundle.statutory_documents],
-      ["communications", bundle.communications],
-      ["therapy", bundle.therapy],
-      ["therapy_records", bundle.therapy_records],
-      ["team", bundle.team],
-      ["staff", bundle.team],
-      ["supervisions", bundle.supervisions],
-      ["reports", bundle.reports],
-      ["rota", bundle.rota],
-      ["onboarding", bundle.onboarding],
-      ["training", bundle.training],
-      ["probations", bundle.probations],
-      ["vacancies", bundle.vacancies],
-      ["pipeline", bundle.pipeline],
-      ["pipeline_candidates", bundle.pipeline_candidates],
-      ["shifts", bundle.shifts],
-      ["absences", bundle.absences],
-      ["maintenance", bundle.maintenance],
-      ["finance", bundle.finance],
-      ["medication", bundle.medication],
-      ["admissions", bundle.admissions],
-      ["discharges", bundle.discharges],
-      ["visitors", bundle.visitors],
-      ["staff_files", bundle.staff_files],
-      ["audits", bundle.audits],
-      ["manager_actions", bundle.manager_actions],
-      ["reg40", bundle.reg40],
-      ["reg44", bundle.reg44],
-      ["reg45", bundle.reg45],
-      ["keywork", bundle.keywork],
-      ["transport", bundle.transport],
-      ["young_people", bundle.young_people],
-      ["alerts", bundle.alerts],
-    ];
-
-    for (const [sourceKey, target] of mappings) {
+    for (const [sourceKey, targetKey] of mappings) {
       const items = toArray(data[sourceKey]);
       if (items.length) {
-        pushUniqueByKey(target, items, recordKey);
+        pushUniqueByKey(bundle[targetKey], items, recordKey);
       }
     }
 
     if (data.staffing) {
-      const staffingArray = Array.isArray(data.staffing) ? data.staffing : [data.staffing];
+      const staffingArray = Array.isArray(data.staffing)
+        ? data.staffing
+        : [data.staffing];
       pushUniqueByKey(bundle.staffing, staffingArray, recordKey);
     }
 
     if (data.home && typeof data.home === "object") {
-      if (!bundle.home) {
-        bundle.home = data.home;
-      }
+      if (!bundle.home) bundle.home = data.home;
       pushUniqueByKey(bundle.homes, [data.home], (item) => String(item?.id ?? ""));
     }
 
@@ -498,17 +575,19 @@ async function fetchHomeWideBundle(homeId) {
   if (!homeId) return [];
 
   const urls = [
-    `/homes/${homeId}/dashboard`,
+    `/homes/${homeId}/inspection-scores`,
+    `/homes/${homeId}/daily-notes`,
+    `/homes/${homeId}/appointments`,
     `/homes/${homeId}/team`,
     `/homes/${homeId}/tasks`,
     `/homes/${homeId}/communications`,
     `/homes/${homeId}/documents`,
     `/homes/${homeId}/supervisions`,
     `/homes/${homeId}/reports`,
-    `/homes/${homeId}/therapy`,
-    `/homes/${homeId}/compliance`,
-    `/homes/${homeId}/quality`,
-    `/homes/${homeId}/audits`,
+    `/homes/${homeId}/safeguarding`,
+    `/homes/${homeId}/compliance-items`,
+    `/homes/${homeId}/quality-audits`,
+    `/homes/${homeId}/inspection-improvement-actions`,
     `/homes/${homeId}/incidents`,
   ];
 
@@ -518,6 +597,7 @@ async function fetchHomeWideBundle(homeId) {
 function resolveAccessibleHomeIds(context = {}) {
   const accessLevel = String(context.access_level || "").toLowerCase();
   const scope = String(context.scope || context.current_scope || "child").toLowerCase();
+
   const homeId = Number(context.home_id);
   const allowedHomeIds = toIdArray(
     context.allowed_home_ids || context.allowedHomeIds || []
@@ -527,13 +607,8 @@ function resolveAccessibleHomeIds(context = {}) {
     return allowedHomeIds;
   }
 
-  if (Number.isFinite(homeId)) {
-    return [homeId];
-  }
-
-  if (allowedHomeIds.length) {
-    return [allowedHomeIds[0]];
-  }
+  if (Number.isFinite(homeId) && homeId > 0) return [homeId];
+  if (allowedHomeIds.length) return [allowedHomeIds[0]];
 
   return [];
 }
@@ -544,7 +619,9 @@ export async function fetchYoungPersonAssistantBundle(youngPersonId) {
   }
 
   const urls = [
+    `/young-people/${youngPersonId}/daily-notes`,
     `/young-people/${youngPersonId}/incidents`,
+    `/young-people/${youngPersonId}/safeguarding`,
     `/young-people/${youngPersonId}/tasks`,
     `/young-people/${youngPersonId}/health`,
     `/young-people/${youngPersonId}/education`,
@@ -552,9 +629,15 @@ export async function fetchYoungPersonAssistantBundle(youngPersonId) {
     `/young-people/${youngPersonId}/appointments`,
     `/young-people/${youngPersonId}/reports`,
     `/young-people/${youngPersonId}/timeline`,
+    `/young-people/${youngPersonId}/risk`,
     `/young-people/${youngPersonId}/plans`,
     `/young-people/${youngPersonId}/compliance`,
     `/young-people/${youngPersonId}/keywork`,
+    `/young-people/${youngPersonId}/missing-episodes`,
+    `/young-people/${youngPersonId}/medication-records`,
+    `/young-people/${youngPersonId}/documents`,
+    `/young-people/${youngPersonId}/statutory-documents`,
+    `/young-people/${youngPersonId}/handover`,
   ];
 
   const responses = await apiGetSettled(urls);
@@ -571,7 +654,9 @@ export async function fetchHomeAssistantBundle(context = {}) {
     return mergeAssistantBundle([]);
   }
 
-  const settledGroups = await Promise.all(homeIds.map((homeId) => fetchHomeWideBundle(homeId)));
+  const settledGroups = await Promise.all(
+    homeIds.map((homeId) => fetchHomeWideBundle(homeId))
+  );
   const merged = mergeAssistantBundle(settledGroups.flat());
 
   merged.scope_meta = {
@@ -591,7 +676,9 @@ export async function fetchQualityAssistantBundle(context = {}) {
     return mergeAssistantBundle([]);
   }
 
-  const settledGroups = await Promise.all(homeIds.map((homeId) => fetchHomeWideBundle(homeId)));
+  const settledGroups = await Promise.all(
+    homeIds.map((homeId) => fetchHomeWideBundle(homeId))
+  );
   const merged = mergeAssistantBundle(settledGroups.flat());
 
   merged.scope_meta = {
@@ -610,24 +697,11 @@ export async function fetchQualityAssistantBundle(context = {}) {
 }
 
 export async function fetchAssistantScopeBundle(context = {}) {
-  const scope =
-    context.scope ||
-    context.current_scope ||
-    context.scope_type ||
-    "child";
+  const scope = context.scope || context.current_scope || context.scope_type || "child";
+  const youngPersonId = context.young_person_id || context.person_id || null;
 
-  const youngPersonId =
-    context.young_person_id ||
-    context.person_id ||
-    null;
-
-  if (scope === "home") {
-    return fetchHomeAssistantBundle(context);
-  }
-
-  if (scope === "quality") {
-    return fetchQualityAssistantBundle(context);
-  }
+  if (scope === "home") return fetchHomeAssistantBundle(context);
+  if (scope === "quality") return fetchQualityAssistantBundle(context);
 
   if (scope === "ofsted") {
     return fetchQualityAssistantBundle({
@@ -635,8 +709,7 @@ export async function fetchAssistantScopeBundle(context = {}) {
       scope: "quality",
       current_scope: "quality",
       scope_type: "quality",
-      access_level:
-        String(context.access_level || "").toLowerCase() || "provider",
+      access_level: String(context.access_level || "").toLowerCase() || "provider",
     });
   }
 
@@ -700,7 +773,7 @@ export async function apiRequest(url, options = {}) {
       const error = new Error(buildErrorMessage(response, data));
       error.status = response.status;
       error.data = data;
-      error.url = `${API_BASE}${resolvedUrl}`;
+      error.url = resolvedUrl;
       error.originalUrl = url;
       throw error;
     }
@@ -740,55 +813,16 @@ export async function apiSend(url, method = "POST", body = null, options = {}) {
     ...options,
   });
 
-  if (Array.isArray(options.invalidatePrefixes) && options.invalidatePrefixes.length) {
+  if (
+    Array.isArray(options.invalidatePrefixes) &&
+    options.invalidatePrefixes.length
+  ) {
     invalidateCacheByPrefixes(options.invalidatePrefixes);
-  } else {
+  } else if (method !== "GET") {
     clearApiCache();
   }
 
   return response;
-}
-
-export async function syncInspectionTasks(homeId, payload = {}) {
-  if (!homeId) {
-    throw new Error("A homeId is required to sync inspection tasks.");
-  }
-
-  return apiSend(
-    `/homes/${homeId}/inspection-tasks/sync`,
-    "POST",
-    payload,
-    {
-      invalidatePrefixes: [
-        `/homes/${homeId}/quality`,
-        `/homes/${homeId}/compliance`,
-        `/homes/${homeId}/tasks`,
-        `/homes/${homeId}/dashboard`,
-        `/homes/${homeId}/inspection-readiness`,
-      ],
-    }
-  );
-}
-
-export async function refreshInspectionCycle(homeId, payload = {}) {
-  if (!homeId) {
-    throw new Error("A homeId is required to refresh the inspection cycle.");
-  }
-
-  return apiSend(
-    `/homes/${homeId}/inspection-cycle/refresh`,
-    "POST",
-    payload,
-    {
-      invalidatePrefixes: [
-        `/homes/${homeId}/quality`,
-        `/homes/${homeId}/compliance`,
-        `/homes/${homeId}/tasks`,
-        `/homes/${homeId}/dashboard`,
-        `/homes/${homeId}/inspection-readiness`,
-      ],
-    }
-  );
 }
 
 export function unwrapCreateResponse(recordType, response) {
@@ -797,63 +831,6 @@ export function unwrapCreateResponse(recordType, response) {
   const directKeys = ["item", "record", "data", recordType];
 
   for (const key of directKeys) {
-    if (response[key] && typeof response[key] === "object") {
-      return response[key];
-    }
-  }
-
-  const commonByType = {
-    daily_note: ["daily_note"],
-    incident: ["incident"],
-    support_plan: ["support_plan", "plan"],
-    risk: ["risk", "risk_assessment"],
-    health_record: ["health_record"],
-    education_record: ["education_record"],
-    family_contact: ["family_contact_record", "contact"],
-    keywork: ["keywork", "keywork_session"],
-    appointment: ["appointment", "young_person_appointment"],
-    achievement_record: ["achievement_record", "achievement"],
-    safeguarding_record: ["safeguarding_record"],
-    missing_episode: ["missing_episode"],
-    task: ["task"],
-    profile_identity: ["identity_profile", "young_person_identity_profile"],
-    profile_communication: ["communication_profile", "young_person_communication_profile"],
-    profile_education: ["education_profile", "young_person_education_profile"],
-    profile_health: ["health_profile", "young_person_health_profile"],
-    profile_legal: ["legal_status", "young_person_legal_status"],
-    profile_formulation: ["formulation", "young_person_formulation", "young_person_formulations"],
-    communication: ["communication"],
-    document: ["document"],
-    therapy: ["therapy"],
-    team: ["team"],
-    supervision: ["supervision"],
-    compliance: ["compliance", "compliance_item"],
-    audit: ["audit"],
-    rota: ["rota_shift", "rota"],
-    staffing: ["staffing", "staffing_snapshot"],
-    onboarding: ["onboarding"],
-    training: ["training_record", "training"],
-    probation: ["probation"],
-    vacancy: ["vacancy"],
-    pipeline: ["pipeline_candidate", "pipeline"],
-    shift: ["shift"],
-    absence: ["absence"],
-    maintenance: ["maintenance_item"],
-    finance: ["finance_item"],
-    medication: ["medication_item"],
-    admission: ["admission"],
-    discharge: ["discharge"],
-    visitor: ["visitor_log"],
-    staff_file: ["staff_file"],
-    manager_action: ["manager_action"],
-    reg40: ["reg40_item"],
-    reg44: ["reg44_item"],
-    reg45: ["reg45_item"],
-    transport: ["transport_log"],
-  };
-
-  const keys = commonByType[recordType] || [];
-  for (const key of keys) {
     if (response[key] && typeof response[key] === "object") {
       return response[key];
     }
@@ -874,7 +851,7 @@ export function buildSseContextFetch(url, payload, options = {}) {
     "Assistant request timed out"
   );
 
-  const request = fetch(`${API_BASE}${url}`, {
+  const request = fetch(url, {
     method: "POST",
     credentials: "include",
     signal,
@@ -934,16 +911,14 @@ function consumeSseBuffer(buffer, onEvent) {
 
 function resolveAssistantEndpoint(payload = {}) {
   const assistantType =
-    payload?.context?.assistant_type ||
-    payload?.assistant_type ||
-    null;
+    payload?.context?.assistant_type || payload?.assistant_type || null;
 
-  if (assistantType === "public") {
-    return "/assistant";
+  if (assistantType === "public" || assistantType === "general") {
+    return "/assistant/general/stream";
   }
 
   if (assistantType === "young_people_os") {
-    return "/young-people/assistant";
+    return "/assistant/os/young-people/stream";
   }
 
   const scope =
@@ -952,11 +927,14 @@ function resolveAssistantEndpoint(payload = {}) {
     payload?.context?.scope_type ||
     "child";
 
-  if (scope === "home") return "/home/assistant";
-  if (scope === "quality") return "/quality/assistant";
-  if (scope === "child" || scope === "young_person") return "/young-people/assistant";
+  if (scope === "home") return "/assistant/os/home/stream";
+  if (scope === "quality") return "/assistant/os/quality/stream";
+  if (scope === "ofsted") return "/assistant/os/quality/stream";
+  if (scope === "child" || scope === "young_person") {
+    return "/assistant/os/young-people/stream";
+  }
 
-  return "/assistant";
+  return "/assistant/os/young-people/stream";
 }
 
 function parseAssistantEventPayload(payloadValue = "") {
@@ -997,7 +975,11 @@ function parseAssistantEventPayload(payloadValue = "") {
 
 export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
   const endpoint = resolveAssistantEndpoint(payload);
-  const { request, cleanup, signal } = buildSseContextFetch(endpoint, payload, options);
+  const { request, cleanup, signal } = buildSseContextFetch(
+    endpoint,
+    payload,
+    options
+  );
 
   let response;
 
@@ -1101,6 +1083,7 @@ export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
       buffer = consumeSseBuffer(buffer, handleEvent);
     }
 
+    buffer += decoder.decode();
     if (buffer.trim()) {
       consumeSseBuffer(`${buffer}\n\n`, handleEvent);
     }
@@ -1115,7 +1098,7 @@ export async function apiStreamAssistant(payload, handlers = {}, options = {}) {
     try {
       reader.releaseLock();
     } catch {
-      // ignore
+      // Ignore release errors.
     }
   }
 }

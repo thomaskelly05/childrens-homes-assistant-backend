@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from db.connection import Base
 
 
 class YoungPerson(Base):

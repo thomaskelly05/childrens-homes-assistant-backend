@@ -228,7 +228,7 @@ window.YoungPersonFamilyWorkspace = (function () {
     showStatus("familySaveStatus", "Saving family contact record...");
 
     try {
-      await window.YoungPeopleShell.api("/young-people/family-contact-records", {
+      await window.YoungPeopleShell.api(`/young-people/${selectedYoungPerson.id}/family/records`, {
         method: "POST",
         body: JSON.stringify(payload)
       });

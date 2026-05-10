@@ -1,2765 +1,1656 @@
-import {
-  state,
-  resetComposerState,
-  getCurrentReadinessHomeId,
-} from "../state.js";
+import { state } from "../state.js";
 import { els } from "../dom.js";
-import { apiSend, unwrapCreateResponse } from "../core/api.js";
+import { createRecord, updateRecord } from "../core/api-adapter.js";
+import { normaliseRecordType } from "../core/contracts.js";
+import {
+  getRecordLabel,
+  getRecordPrimaryDateField,
+} from "../core/record-contracts.js";
 import {
   escapeHtml,
   toDateInputValue,
   toDateTimeLocalValue,
 } from "../core/utils.js";
-import * as rulesClient from "../core/rules-client.js";
 
-function cleanText(value) {
-  return String(value || "").trim();
-}
-
-function getCurrentScope() {
-  return state.currentScope || "child";
-}
-
-function getCurrentHomeId() {
-  return (
-    state.homeId ||
-    state.currentUser?.home_id ||
-    state.currentUser?.homeId ||
-    getCurrentReadinessHomeId() ||
-    null
-  );
-}
-
-function getScopeEntityId() {
-  if (getCurrentScope() === "child") {
-    return state.youngPersonId || null;
-  }
-  return getCurrentHomeId();
-}
-
-function requiresEntityId(recordType) {
-  const scope = getCurrentScope();
-
-  if (scope === "child") return true;
-
-  const homeScopedTypes = [
-    "task",
-    "risk",
-    "document",
-    "communication",
-    "therapy",
-    "team",
-    "supervision",
-    "manager_action",
-    "appointment",
-  ];
-
-  return homeScopedTypes.includes(recordType);
-}
-
-function buildScopePath(basePath = "") {
-  const scope = getCurrentScope();
-  const entityId = getScopeEntityId();
-
-  if (scope === "child") {
-    return basePath
-      .replace("{scope}", "young-people")
-      .replace("{id}", String(entityId || ""));
-  }
-
-  return basePath
-    .replace("{scope}", "homes")
-    .replace("{id}", String(entityId || ""));
-}
-
-const COMPOSER_CONFIG = {
-  daily_note: {
-    label: "Daily note",
-    createUrl: () => buildScopePath("/{scope}/{id}/daily-notes"),
-    updateUrl: (id) => `/young-people/daily-notes/${id}`,
-    updateMethod: "PATCH",
-    submitUrl: (id) => `/young-people/daily-notes/${id}/submit`,
-    scopes: ["child"],
-  },
-
-  incident: {
-    label: "Important event",
-    createUrl: () => buildScopePath("/{scope}/{id}/incidents"),
-    updateUrl: (id) => `/young-people/incidents/${id}`,
-    updateMethod: "PATCH",
-    submitUrl: (id) => `/young-people/incidents/${id}/submit`,
-    scopes: ["child"],
-  },
-
-  support_plan: {
-    label: "Support plan",
-    createUrl: () => buildScopePath("/{scope}/{id}/plans"),
-    updateUrl: (id) => `/young-people/plans/${id}`,
-    updateMethod: "PUT",
-    submitUrl: (id) => `/young-people/plans/${id}/submit`,
-    scopes: ["child"],
-  },
-
-  risk: {
-    label: "Risk assessment",
-    createUrl: () => buildScopePath("/{scope}/{id}/risks"),
-    updateUrl: (id) =>
-      getCurrentScope() === "child"
-        ? `/young-people/risks/${id}`
-        : `/homes/risks/${id}`,
-    updateMethod: "PUT",
-    submitUrl: (id) =>
-      getCurrentScope() === "child"
-        ? `/young-people/risks/${id}/submit`
-        : `/homes/risks/${id}/submit`,
-    scopes: ["child", "home", "quality", "ofsted"],
-  },
-
-  health_record: {
-    label: "Health record",
-    createUrl: () => buildScopePath("/{scope}/{id}/health-records"),
-    updateUrl: (id) => `/young-people/health-records/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child"],
-  },
-
-  education_record: {
-    label: "Education record",
-    createUrl: () => buildScopePath("/{scope}/{id}/education-records"),
-    updateUrl: (id) => `/young-people/education-records/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child"],
-  },
-
-  family_contact: {
-    label: "Family contact",
-    createUrl: () => buildScopePath("/{scope}/{id}/family-contact-records"),
-    updateUrl: (id) => `/young-people/family-contact-records/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child"],
-  },
-
-  keywork: {
-    label: "Keywork session",
-    createUrl: () => buildScopePath("/{scope}/{id}/keywork"),
-    updateUrl: (id) => `/young-people/keywork/${id}`,
-    updateMethod: "PATCH",
-    submitUrl: (id) => `/young-people/keywork/${id}/submit`,
-    scopes: ["child"],
-  },
-
-  appointment: {
-    label: "Appointment",
-    createUrl: () => buildScopePath("/{scope}/{id}/appointments"),
-    updateUrl: (id) =>
-      getCurrentScope() === "child"
-        ? `/young-people/appointments/${id}`
-        : `/homes/appointments/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child", "home", "quality", "ofsted"],
-  },
-
-  achievement_record: {
-    label: "Achievement",
-    createUrl: () => buildScopePath("/{scope}/{id}/achievements"),
-    updateUrl: (id) => `/young-people/achievements/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child"],
-  },
-
-  safeguarding_record: {
-    label: "Safeguarding record",
-    createUrl: () => buildScopePath("/{scope}/{id}/safeguarding-records"),
-    updateUrl: (id) => `/young-people/safeguarding-records/${id}`,
-    updateMethod: "PATCH",
-    submitUrl: (id) => `/young-people/safeguarding-records/${id}/submit`,
-    scopes: ["child"],
-  },
-
-  missing_episode: {
-    label: "Missing episode",
-    createUrl: () => buildScopePath("/{scope}/{id}/missing-episodes"),
-    updateUrl: (id) => `/young-people/missing-episodes/${id}`,
-    updateMethod: "PATCH",
-    submitUrl: (id) => `/young-people/missing-episodes/${id}/submit`,
-    scopes: ["child"],
-  },
-
-  task: {
-    label: "Task",
-    createUrl: () => buildScopePath("/{scope}/{id}/tasks"),
-    updateUrl: (id) =>
-      getCurrentScope() === "child"
-        ? `/young-people/tasks/${id}`
-        : `/homes/tasks/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child", "home", "quality", "ofsted"],
-  },
-
-  manager_action: {
-    label: "Manager action",
-    createUrl: () => buildScopePath("/{scope}/{id}/manager-actions"),
-    updateUrl: (id) =>
-      getCurrentScope() === "child"
-        ? `/young-people/manager-actions/${id}`
-        : `/homes/manager-actions/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child", "home", "quality", "ofsted"],
-  },
-
-  document: {
-    label: "Document",
-    createUrl: () => buildScopePath("/{scope}/{id}/documents"),
-    updateUrl: (id) =>
-      getCurrentScope() === "child"
-        ? `/young-people/documents/${id}`
-        : `/homes/documents/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child", "home", "quality", "ofsted"],
-  },
-
-  communication: {
-    label: "Professional communication",
-    createUrl: () => buildScopePath("/{scope}/{id}/communications"),
-    updateUrl: (id) =>
-      getCurrentScope() === "child"
-        ? `/young-people/communications/${id}`
-        : `/homes/communications/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child", "home", "quality", "ofsted"],
-  },
-
-  therapy: {
-    label: "Therapeutic services",
-    createUrl: () => buildScopePath("/{scope}/{id}/therapy"),
-    updateUrl: (id) => `/homes/therapy/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["child", "home", "quality", "ofsted"],
-  },
-
-  team: {
-    label: "Team and staffing",
-    createUrl: () => buildScopePath("/{scope}/{id}/team"),
-    updateUrl: (id) => `/homes/team/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["home", "quality", "ofsted"],
-  },
-
-  supervision: {
-    label: "Supervision and development",
-    createUrl: () => buildScopePath("/{scope}/{id}/supervisions"),
-    updateUrl: (id) => `/homes/supervisions/${id}`,
-    updateMethod: "PATCH",
-    scopes: ["home", "quality", "ofsted"],
-  },
-
-  profile_identity: {
-    label: "Identity profile",
-    createUrl: () => buildScopePath("/{scope}/{id}/identity-profile"),
-    updateUrl: () => buildScopePath("/{scope}/{id}/identity-profile"),
-    createMethod: "PUT",
-    updateMethod: "PUT",
-    singleton: true,
-    scopes: ["child"],
-  },
-
-  profile_communication: {
-    label: "Communication profile",
-    createUrl: () => buildScopePath("/{scope}/{id}/communication-profile"),
-    updateUrl: () => buildScopePath("/{scope}/{id}/communication-profile"),
-    createMethod: "PUT",
-    updateMethod: "PUT",
-    singleton: true,
-    scopes: ["child"],
-  },
-
-  profile_education: {
-    label: "Education profile",
-    createUrl: () => buildScopePath("/{scope}/{id}/education-profile"),
-    updateUrl: () => buildScopePath("/{scope}/{id}/education-profile"),
-    createMethod: "PUT",
-    updateMethod: "PUT",
-    singleton: true,
-    scopes: ["child"],
-  },
-
-  profile_health: {
-    label: "Health profile",
-    createUrl: () => buildScopePath("/{scope}/{id}/health-profile"),
-    updateUrl: () => buildScopePath("/{scope}/{id}/health-profile"),
-    createMethod: "PUT",
-    updateMethod: "PUT",
-    singleton: true,
-    scopes: ["child"],
-  },
-
-  profile_legal: {
-    label: "Legal status",
-    createUrl: () => buildScopePath("/{scope}/{id}/legal-status"),
-    updateUrl: () => buildScopePath("/{scope}/{id}/legal-status"),
-    createMethod: "PUT",
-    updateMethod: "PUT",
-    singleton: true,
-    scopes: ["child"],
-  },
-
-  profile_formulation: {
-    label: "Formulation",
-    createUrl: () => buildScopePath("/{scope}/{id}/formulations"),
-    updateUrl: () => buildScopePath("/{scope}/{id}/formulations"),
-    createMethod: "PUT",
-    updateMethod: "PUT",
-    singleton: true,
-    scopes: ["child"],
-  },
-};
-
-function isRecordAllowedInScope(recordType) {
-  const config = COMPOSER_CONFIG[recordType];
-  if (!config) return false;
-
-  return (config.scopes || ["child"]).includes(getCurrentScope());
-}
-
-function getComposerForm() {
-  return els.recordComposerForm || els.composerForm || null;
-}
-
-function getComposerFieldsHost() {
-  return els.recordComposerFields || els.composerFields || null;
-}
-
-function showComposerStatus(message) {
-  if (els.composerAutosaveStatus) {
-    els.composerAutosaveStatus.textContent = message || "Ready";
-  }
-}
-
-function getComposerMeta() {
-  if (!state.composerMeta || typeof state.composerMeta !== "object") {
-    state.composerMeta = {};
-  }
-  return state.composerMeta;
-}
-
-function resetComposerMeta() {
-  state.composerMeta = {};
-}
-
-function emitSuggestionsPanelShow(suggestions = [], context = {}) {
-  document.dispatchEvent(
-    new CustomEvent("indicared:suggestions-show", {
-      detail: { suggestions, context },
-    })
-  );
-}
-
-function emitSuggestionsPanelHide() {
-  document.dispatchEvent(
-    new CustomEvent("indicared:suggestions-hide")
-  );
-}
-
-function setComposerMetaFromItem(item = {}) {
-  state.composerMeta = {
-    source_record_type: item.source_record_type || "",
-    source_record_id: item.source_record_id || null,
-    suggestion_id: item.suggestion_id || null,
-    suggestion_priority: item.suggestion_priority || "",
-    suggestion_reason: item.suggestion_reason || "",
-    suggestion_record_type: item.suggestion_record_type || "",
-    suggestion_action_type: item.suggestion_action_type || "",
-    suggestion_metadata: item.suggestion_metadata || item.metadata || {},
-
-    improvement_prompt: item.improvement_prompt || "",
-    review_prompt: item.review_prompt || "",
-
-    inspection_score_id:
-      item.inspection_score_id ||
-      item.suggestion_metadata?.inspection_score_id ||
-      item.metadata?.inspection_score_id ||
-      null,
-    line_of_enquiry_id:
-      item.line_of_enquiry_id ||
-      item.suggestion_metadata?.line_of_enquiry_id ||
-      item.metadata?.line_of_enquiry_id ||
-      null,
-    linked_task_id:
-      item.linked_task_id ||
-      item.suggestion_metadata?.linked_task_id ||
-      item.metadata?.linked_task_id ||
-      null,
-    inspection_section:
-      item.inspection_section ||
-      item.projected_section_band ||
-      item.suggestion_metadata?.inspection_section ||
-      item.metadata?.inspection_section ||
-      "",
-    projected_section_band:
-      item.projected_section_band ||
-      item.suggestion_metadata?.projected_section_band ||
-      item.metadata?.projected_section_band ||
-      "",
-    recoverable_points_estimate:
-      item.recoverable_points_estimate ||
-      item.suggestion_metadata?.recoverable_points_estimate ||
-      item.metadata?.recoverable_points_estimate ||
-      "",
-  };
-}
-
-function getToday() {
+function today() {
   return toDateInputValue(new Date());
 }
 
-function getNowLocal() {
+function now() {
   return toDateTimeLocalValue(new Date());
 }
 
-function isSingletonComposerRecord(recordType) {
-  return Boolean(COMPOSER_CONFIG[recordType]?.singleton);
+function text(value = "") {
+  return escapeHtml(String(value ?? ""));
 }
 
-export function openComposer() {
-  state.composerOpen = true;
-  els.composerPanel?.classList.remove("hidden");
-  els.composerPanel?.setAttribute("aria-hidden", "false");
+const JOURNEY_OPTIONS = [
+  { value: "", label: "Not set" },
+  { value: "referral", label: "Referral" },
+  { value: "matching", label: "Matching" },
+  { value: "admission", label: "Admission" },
+  { value: "settling", label: "Settling in" },
+  { value: "living", label: "Living in the home" },
+  { value: "review", label: "Review" },
+  { value: "transition", label: "Transition" },
+  { value: "leaving", label: "Leaving placement" },
+  { value: "aftercare", label: "Aftercare" },
+];
+
+const STAFF_JOURNEY_OPTIONS = [
+  { value: "", label: "Not set" },
+  { value: "recruitment", label: "Recruitment" },
+  { value: "onboarding", label: "Onboarding" },
+  { value: "induction", label: "Induction" },
+  { value: "probation", label: "Probation" },
+  { value: "practice_development", label: "Practice development" },
+  { value: "supervision", label: "Supervision" },
+  { value: "training", label: "Training" },
+  { value: "wellbeing", label: "Wellbeing" },
+  { value: "performance", label: "Performance" },
+  { value: "exit", label: "Leaving / exit" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "submitted", label: "Submitted" },
+  { value: "approved", label: "Approved" },
+  { value: "completed", label: "Completed" },
+];
+
+const SHIFT_OPTIONS = [
+  { value: "day", label: "Day" },
+  { value: "late", label: "Late" },
+  { value: "night", label: "Night" },
+  { value: "sleep_in", label: "Sleep-in" },
+  { value: "waking_night", label: "Waking night" },
+];
+
+const SEVERITY_OPTIONS = [
+  { value: "", label: "Not specified" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+];
+
+const PRIORITY_OPTIONS = SEVERITY_OPTIONS;
+
+const APPROVAL_OPTIONS = [
+  { value: "not_required", label: "Not required" },
+  { value: "manager_review", label: "Manager review required" },
+  { value: "submitted", label: "Submitted for approval" },
+  { value: "approved", label: "Approved" },
+  { value: "returned", label: "Returned for changes" },
+];
+
+const COMMON_SPELLING_HINTS = [
+  ["teh", "the"],
+  ["recieve", "receive"],
+  ["seperate", "separate"],
+  ["behavour", "behaviour"],
+  ["occured", "occurred"],
+  ["definately", "definitely"],
+  ["acommodation", "accommodation"],
+  ["adress", "address"],
+  ["neccessary", "necessary"],
+  ["suport", "support"],
+  ["non compliant", "non-compliant"],
+];
+
+const CHILD_SCOPED_TYPES = new Set([
+  "daily_note",
+  "incident",
+  "keywork",
+  "risk",
+  "safeguarding_record",
+  "health_record",
+  "education_record",
+  "family_contact",
+  "appointment",
+  "medication_record",
+  "handover_record",
+  "document",
+  "statutory_document",
+  "support_plan",
+  "missing_episode",
+]);
+
+let composerSaveInProgress = false;
+
+function cleanId(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const textValue = String(value).trim();
+  if (!textValue || textValue === "null" || textValue === "undefined") return null;
+  return textValue;
 }
 
-export function closeComposer(reset = true) {
-  els.composerPanel?.classList.add("hidden");
-  els.composerPanel?.setAttribute("aria-hidden", "true");
-
-  if (!reset) return;
-
-  const fieldsHost = getComposerFieldsHost();
-
-  if (fieldsHost) {
-    fieldsHost.innerHTML = "";
+function firstId(...values) {
+  for (const value of values) {
+    const parsed = cleanId(value);
+    if (parsed) return parsed;
   }
-
-  if (els.composerAiFeedback) {
-    els.composerAiFeedback.textContent = "No AI review run yet.";
-  }
-
-  if (els.composerPrompts) {
-    els.composerPrompts.innerHTML = "";
-  }
-
-  showComposerStatus("Autosave ready");
-  autosaveBoundForKey = "";
-  resetComposerMeta();
-  resetComposerState();
+  return null;
 }
 
-function buildField(field) {
-  const label = field.label
-    ? `<label class="form-label" for="${escapeHtml(field.name)}">${escapeHtml(field.label)}</label>`
+function toNumberOrNull(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getDomYoungPersonId() {
+  const selectors = [
+    "[data-young-person-id]",
+    "[data-child-id]",
+    "[data-person-id]",
+    "[data-selected-young-person-id]",
+    "[data-current-young-person-id]",
+  ];
+
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    const value = firstId(
+      el?.dataset?.youngPersonId,
+      el?.dataset?.childId,
+      el?.dataset?.personId,
+      el?.dataset?.selectedYoungPersonId,
+      el?.dataset?.currentYoungPersonId,
+      el?.value
+    );
+    if (value) return value;
+  }
+
+  return null;
+}
+
+function getYoungPersonIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const queryValue = firstId(
+    params.get("young_person_id"),
+    params.get("youngPersonId"),
+    params.get("child_id"),
+    params.get("childId"),
+    params.get("person_id"),
+    params.get("personId"),
+    params.get("id")
+  );
+
+  if (queryValue) return queryValue;
+
+  const pathMatch = window.location.pathname.match(
+    /(?:young-people|children|child|person)[\/-](\d+)/i
+  );
+
+  return pathMatch?.[1] || null;
+}
+
+function getYoungPersonId() {
+  const app = document.getElementById("app");
+  const selector = document.getElementById("youngPersonSelect");
+
+  return firstId(
+    state.youngPersonId,
+    state.currentYoungPersonId,
+    state.personId,
+    state.currentPersonId,
+    state.selectedYoungPersonId,
+    state.selectedYoungPerson?.id,
+    state.selectedYoungPerson?.young_person_id,
+    state.youngPerson?.id,
+    state.youngPerson?.young_person_id,
+    state.activeYoungPerson?.id,
+    state.activeYoungPerson?.young_person_id,
+    state.currentYoungPerson?.id,
+    state.currentYoungPerson?.young_person_id,
+    state.context?.young_person_id,
+    state.context?.youngPersonId,
+    state.assistantContext?.young_person_id,
+    state.assistantContext?.youngPersonId,
+    app?.dataset?.youngPersonId,
+    app?.dataset?.childId,
+    app?.dataset?.personId,
+    document.body?.dataset?.youngPersonId,
+    document.body?.dataset?.childId,
+    document.body?.dataset?.personId,
+    selector?.value,
+    getDomYoungPersonId(),
+    getYoungPersonIdFromUrl(),
+    window.__INDICARE_CONTEXT__?.young_person_id,
+    window.__INDICARE_CONTEXT__?.youngPersonId,
+    window.__INDICARE_STATE__?.youngPersonId,
+    window.__INDICARE_STATE__?.selectedYoungPersonId
+  );
+}
+
+function getHomeId() {
+  return firstId(
+    state.homeId,
+    state.currentHomeId,
+    state.selectedHomeId,
+    state.readinessSelectedHomeId,
+    state.selectedYoungPerson?.home_id,
+    state.currentYoungPerson?.home_id,
+    state.youngPerson?.home_id,
+    state.currentUser?.home_id,
+    state.currentUser?.homeId,
+    state.context?.home_id,
+    state.context?.homeId,
+    document.getElementById("app")?.dataset?.homeId,
+    document.body?.dataset?.homeId,
+    window.__INDICARE_CONTEXT__?.home_id,
+    window.__INDICARE_CONTEXT__?.homeId,
+    window.__INDICARE_STATE__?.homeId
+  );
+}
+
+function getComposerForm() {
+  return (
+    els.composerForm ||
+    document.getElementById("recordComposerForm") ||
+    document.getElementById("composerForm") ||
+    document.querySelector("[data-composer-form]") ||
+    document.querySelector(".composer-panel form") ||
+    document.querySelector(".record-composer form")
+  );
+}
+
+function getComposerPanel() {
+  return (
+    els.composerPanel ||
+    els.recordComposerPage ||
+    document.getElementById("recordComposerPage") ||
+    document.getElementById("recordComposerPanel") ||
+    document.getElementById("composerPanel") ||
+    document.querySelector(".composer-panel") ||
+    document.querySelector(".record-composer")
+  );
+}
+
+function getRecordComposerPage() {
+  return document.getElementById("recordComposerPage") || getComposerPanel();
+}
+
+function getComposerFields() {
+  return (
+    document.getElementById("recordComposerFields") ||
+    els.composerFields ||
+    document.getElementById("composerFields") ||
+    document.querySelector("[data-composer-fields]") ||
+    getComposerForm()?.querySelector(".composer-fields")
+  );
+}
+
+function getRecordId(item = {}) {
+  return item.id || item.record_id || item.source_id || item.note_id || "";
+}
+
+function getInitialValue(item = {}, fieldName = "", fallback = "") {
+  const raw = item.raw && typeof item.raw === "object" ? item.raw : item;
+  return raw?.[fieldName] ?? item?.[fieldName] ?? fallback;
+}
+
+function field(f, item = {}) {
+  const fullClass = f.full ? "full" : "";
+  const required = f.required ? "required" : "";
+  const value = getInitialValue(item, f.name, f.value || "");
+
+  const description = f.desc
+    ? `<div class="description">${text(f.desc)}</div>`
     : "";
 
-  if (field.type === "textarea") {
-    return `
-      <div class="composer-field ${field.full ? "full" : ""}">
-        ${label}
-        <textarea
-          id="${escapeHtml(field.name)}"
-          name="${escapeHtml(field.name)}"
-          class="textarea-input"
-          rows="${field.rows || 5}"
-        >${escapeHtml(field.value || "")}</textarea>
-      </div>
-    `;
-  }
+  let control = "";
 
-  if (field.type === "select") {
-    return `
-      <div class="composer-field ${field.full ? "full" : ""}">
-        ${label}
-        <select id="${escapeHtml(field.name)}" name="${escapeHtml(field.name)}" class="select-input">
-          ${(field.options || [])
-            .map(
-              (option) => `
-                <option value="${escapeHtml(option.value)}" ${
-                  String(option.value) === String(field.value || "")
-                    ? "selected"
-                    : ""
-                }>
-                  ${escapeHtml(option.label)}
-                </option>
-              `
-            )
-            .join("")}
-        </select>
-      </div>
+  if (f.type === "textarea") {
+    control = `
+      <textarea
+        name="${text(f.name)}"
+        rows="${text(f.rows || 4)}"
+        ${required}
+        spellcheck="true"
+        autocomplete="on"
+        autocapitalize="sentences"
+        data-writing-aid="true"
+      >${text(value)}</textarea>
     `;
-  }
+  } else if (f.type === "select") {
+    control = `
+      <select name="${text(f.name)}" ${required}>
+        ${(f.options || [])
+          .map((o) => {
+            const selected = String(o.value) === String(value) ? "selected" : "";
+            return `<option value="${text(o.value)}" ${selected}>${text(o.label)}</option>`;
+          })
+          .join("")}
+      </select>
+    `;
+  } else if (f.type === "checkbox") {
+    const checked =
+      value === true ||
+      value === "true" ||
+      value === "on" ||
+      value === 1 ||
+      value === "1";
 
-  if (field.type === "checkbox") {
-    return `
-      <div class="composer-field ${field.full ? "full" : ""}">
-        <label class="checkbox-row" for="${escapeHtml(field.name)}">
-          <input
-            id="${escapeHtml(field.name)}"
-            name="${escapeHtml(field.name)}"
-            type="checkbox"
-            ${field.value ? "checked" : ""}
-          />
-          <span>${escapeHtml(field.label || field.name)}</span>
-        </label>
-      </div>
+    control = `
+      <label class="checkbox-field">
+        <input type="checkbox" name="${text(f.name)}" value="true" ${
+      checked ? "checked" : ""
+    } />
+        <span>${text(f.checkboxLabel || "Yes")}</span>
+      </label>
+    `;
+  } else {
+    control = `
+      <input
+        type="${text(f.type || "text")}"
+        name="${text(f.name)}"
+        value="${text(value)}"
+        ${required}
+        spellcheck="true"
+        autocomplete="on"
+        autocapitalize="sentences"
+        data-writing-aid="true"
+      />
     `;
   }
 
   return `
-    <div class="composer-field ${field.full ? "full" : ""}">
-      ${label}
-      <input
-        id="${escapeHtml(field.name)}"
-        name="${escapeHtml(field.name)}"
-        type="${escapeHtml(field.type || "text")}"
-        class="text-input"
-        value="${escapeHtml(field.value || "")}"
-      />
+    <div class="field ${fullClass}">
+      <div class="label">${text(f.label)}${f.required ? " *" : ""}</div>
+      ${description}
+      ${control}
     </div>
   `;
 }
 
-function renderSections(sections = []) {
-  return sections
-    .map(
-      (section) => `
-        <section class="composer-section">
-          <h3>${escapeHtml(section.title || "")}</h3>
-          ${section.subtitle ? `<p>${escapeHtml(section.subtitle)}</p>` : ""}
-          <div class="composer-grid">
-            ${(section.fields || []).map(buildField).join("")}
-          </div>
-        </section>
-      `
-    )
-    .join("");
-}
-
-function buildSection(title, fields, subtitle = "") {
-  return { title, subtitle, fields };
-}
-
-function fieldText(name, label, value = "", full = false) {
-  return { name, label, type: "text", value, full };
-}
-
-function fieldDate(name, label, value = "") {
-  return { name, label, type: "date", value };
-}
-
-function fieldDateTime(name, label, value = "") {
-  return { name, label, type: "datetime-local", value };
-}
-
-function fieldTextArea(name, label, value = "", full = true, rows = 5) {
-  return { name, label, type: "textarea", value, full, rows };
-}
-
-function fieldCheckbox(name, label, value = false) {
-  return { name, label, type: "checkbox", value };
-}
-
-function fieldSelect(name, label, value = "", options = [], full = false) {
-  return { name, label, type: "select", value, options, full };
-}
-
-function severityOptions() {
-  return [
-    { value: "", label: "Select..." },
-    { value: "low", label: "Low" },
-    { value: "medium", label: "Medium" },
-    { value: "high", label: "High" },
-    { value: "critical", label: "Critical" },
-  ];
-}
-
-function workflowOptions() {
-  return [
-    { value: "", label: "Select..." },
-    { value: "draft", label: "Draft" },
-    { value: "active", label: "Active" },
-    { value: "submitted", label: "Submitted" },
-    { value: "pending_review", label: "Pending review" },
-    { value: "approved", label: "Approved" },
-    { value: "returned", label: "Returned" },
-    { value: "completed", label: "Completed" },
-  ];
-}
-
-function taskTypeOptions() {
-  return [
-    { value: "", label: "Select..." },
-    { value: "general", label: "General" },
-    { value: "inspection_improvement", label: "Inspection improvement" },
-    { value: "handover", label: "Handover" },
-    { value: "compliance", label: "Compliance" },
-    { value: "safeguarding", label: "Safeguarding" },
-    { value: "quality_improvement", label: "Quality improvement" },
-  ];
-}
-
-function managerActionTypeOptions() {
-  return [
-    { value: "", label: "Select..." },
-    { value: "oversight", label: "Oversight" },
-    { value: "escalation", label: "Escalation" },
-    { value: "inspection_follow_up", label: "Inspection follow-up" },
-    { value: "quality_review", label: "Quality review" },
-    { value: "safeguarding", label: "Safeguarding" },
-  ];
-}
-
-function getSuggestionBannerHtml() {
-  const meta = getComposerMeta();
-  const bits = [];
-
-  if (meta.suggestion_action_type) {
-    bits.push(
-      `Action: ${String(meta.suggestion_action_type).replaceAll("_", " ")}`
-    );
-  }
-
-  if (meta.source_record_type) {
-    bits.push(
-      `Linked from ${String(meta.source_record_type).replaceAll("_", " ")}${
-        meta.source_record_id ? ` #${meta.source_record_id}` : ""
-      }`
-    );
-  }
-
-  if (meta.inspection_section) {
-    bits.push(
-      `Inspection section: ${String(meta.inspection_section).replaceAll("_", " ")}`
-    );
-  }
-
-  if (meta.projected_section_band) {
-    bits.push(
-      `Projected band: ${String(meta.projected_section_band).replaceAll("_", " ")}`
-    );
-  }
-
-  if (meta.recoverable_points_estimate) {
-    bits.push(`Potential impact: ${meta.recoverable_points_estimate}`);
-  }
-
-  const prompt =
-    meta.improvement_prompt ||
-    meta.review_prompt ||
-    meta.suggestion_reason ||
-    "";
-
-  if (!bits.length && !prompt) return "";
-
+function section(title, desc, fields, item = {}) {
   return `
-    <section class="composer-section">
-      <h3>Assistant context</h3>
-      ${bits.length ? `<p>${escapeHtml(bits.join(" • "))}</p>` : ""}
-      ${prompt ? `<div class="composer-prompt">${escapeHtml(prompt)}</div>` : ""}
+    <section class="section">
+      <h3>${text(title)}</h3>
+      <p class="section-desc">${text(desc)}</p>
+      <div class="composer-field-grid">
+        ${fields.map((f) => field(f, item)).join("")}
+      </div>
     </section>
   `;
 }
 
-function buildDailyNoteContent(item = {}) {
-  const today = getToday();
-
-  return {
-    title: item?.id ? "Edit daily note" : "New daily note",
-    subtitle: "Capture the day clearly, warmly and accurately.",
-    guidance:
-      "Write factually and child-centred. Separate what happened, how the young person presented, and what needs to happen next.",
-    prompts: [
-      "How did the young person present today?",
-      "What happened during the shift?",
-      "What positives stood out?",
-      "What needs follow-up?",
-    ],
-    sections: [
-      buildSection("Shift details", [
-        fieldDate("note_date", "Date", item.note_date || item.record_date || today),
-        fieldText("shift_type", "Shift type", item.shift_type || ""),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || "draft",
-          workflowOptions()
-        ),
-        fieldSelect(
-          "significance",
-          "Significance",
-          item.significance || "",
-          severityOptions()
-        ),
-      ]),
-      buildSection("Daily record", [
-        fieldTextArea("presentation", "Presentation", item.presentation || ""),
-        fieldTextArea("activities", "Activities", item.activities || ""),
-        fieldTextArea("education_update", "Education update", item.education_update || ""),
-        fieldTextArea("health_update", "Health update", item.health_update || ""),
-        fieldTextArea("family_update", "Family update", item.family_update || ""),
-        fieldTextArea("behaviour_update", "Behaviour update", item.behaviour_update || ""),
-      ]),
-      buildSection("Voice and follow-up", [
-        fieldTextArea(
-          "young_person_voice",
-          "Young person voice",
-          item.young_person_voice || item.child_voice || ""
-        ),
-        fieldTextArea("positives", "Positives", item.positives || ""),
-        fieldTextArea("actions_required", "Actions required", item.actions_required || ""),
-        fieldTextArea(
-          "manager_review_comment",
-          "Manager review comment",
-          item.manager_review_comment || ""
-        ),
-      ]),
-    ],
-  };
-}
-
-function buildIncidentContent(item = {}) {
-  const now = getNowLocal();
-
-  return {
-    title: item?.id ? "Edit important event" : "New important event",
-    subtitle: "Record a significant event clearly, safely and factually.",
-    guidance:
-      "Be factual, specific and clear. Include antecedent, response, outcome and follow-up. Avoid vague language.",
-    prompts: [
-      "What happened?",
-      "What led up to it?",
-      "How did staff respond?",
-      "What happened next and what follow-up is needed?",
-    ],
-    sections: [
-      buildSection("Incident details", [
-        fieldDateTime(
-          "incident_datetime",
-          "Incident date and time",
-          toDateTimeLocalValue(item.incident_datetime) || now
-        ),
-        fieldText("incident_type", "Incident type", item.incident_type || ""),
-        fieldText("location", "Location", item.location || ""),
-        fieldSelect("severity", "Severity", item.severity || "", severityOptions()),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || item.manager_review_status || "draft",
-          workflowOptions()
-        ),
-      ]),
-      buildSection("Event narrative", [
-        fieldTextArea("description", "Description", item.description || ""),
-        fieldTextArea("antecedent", "Antecedent", item.antecedent || ""),
-        fieldTextArea("staff_response", "Staff response", item.staff_response || ""),
-        fieldTextArea("child_response", "Child response", item.child_response || ""),
-        fieldTextArea("outcome", "Outcome", item.outcome || ""),
-      ]),
-      buildSection("Analysis and follow-up", [
-        fieldTextArea("presentation", "Presentation", item.presentation || ""),
-        fieldTextArea(
-          "trauma_informed_formulation",
-          "Trauma-informed formulation",
-          item.trauma_informed_formulation || ""
-        ),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldTextArea(
-          "restorative_follow_up",
-          "Restorative follow-up",
-          item.restorative_follow_up || ""
-        ),
-        fieldTextArea("actions_taken", "Actions taken", item.actions_taken || ""),
-        fieldCheckbox("injury_flag", "Injury", Boolean(item.injury_flag)),
-        fieldCheckbox(
-          "property_damage_flag",
-          "Property damage",
-          Boolean(item.property_damage_flag)
-        ),
-        fieldCheckbox("police_involved", "Police involved", Boolean(item.police_involved)),
-        fieldCheckbox("safeguarding_flag", "Safeguarding flag", Boolean(item.safeguarding_flag)),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-        fieldCheckbox("ofsted_notified", "Ofsted notified", Boolean(item.ofsted_notified)),
-        fieldCheckbox("requires_reg40", "Requires Reg 40", Boolean(item.requires_reg40)),
-      ]),
-    ],
-  };
-}
-
-function buildSupportPlanContent(item = {}) {
-  const today = getToday();
-
-  return {
-    title: item?.id ? "Edit support plan" : "New support plan",
-    subtitle: "Create practical guidance to support consistent care.",
-    guidance:
-      "Focus on what adults need to understand and do. Keep the plan practical, clear and strengths-based.",
-    prompts: [
-      "What is the presenting need?",
-      "What helps?",
-      "What are the triggers?",
-      "What should adults do consistently?",
-    ],
-    sections: [
-      buildSection("Plan details", [
-        fieldText("title", "Title", item.title || ""),
-        fieldText("plan_type", "Plan type", item.plan_type || ""),
-        fieldDate("start_date", "Start date", item.start_date || today),
-        fieldDate("review_date", "Review date", item.review_date || ""),
-        fieldText("status", "Status", item.status || "active"),
-        fieldText("approval_status", "Approval status", item.approval_status || ""),
-      ]),
-      buildSection("Plan content", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("presenting_need", "Presenting need", item.presenting_need || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldTextArea(
-          "proactive_strategies",
-          "Proactive strategies",
-          item.proactive_strategies || ""
-        ),
-        fieldTextArea("pace_guidance", "Pace guidance", item.pace_guidance || ""),
-        fieldTextArea("triggers", "Triggers", item.triggers || ""),
-        fieldTextArea("protective_factors", "Protective factors", item.protective_factors || ""),
-        fieldTextArea("review_comment", "Review comment", item.review_comment || ""),
-      ]),
-    ],
-  };
-}
-
-function buildRiskContent(item = {}) {
-  const today = getToday();
-  const scope = getCurrentScope();
-
-  return {
-    title: item?.id ? "Edit risk assessment" : "New risk assessment",
-    subtitle:
-      scope === "child"
-        ? "Record risks, early signs, protective factors and clear response actions."
-        : "Record service or oversight risks, controls and clear response actions.",
-    guidance:
-      "Describe the concern factually. Make sure triggers, warning signs, controls and response actions are usable by adults in practice.",
-    prompts: [
-      "What is the concern?",
-      "What are the triggers or warning signs?",
-      "What helps reduce risk?",
-      "What should adults do if risk rises?",
-    ],
-    sections: [
-      buildSection("Risk details", [
-        fieldText("title", "Title", item.title || ""),
-        fieldText("category", "Category", item.category || ""),
-        fieldSelect("severity", "Severity", item.severity || "", severityOptions()),
-        fieldText("likelihood", "Likelihood", item.likelihood || ""),
-        fieldText("status", "Status", item.status || "active"),
-        fieldText("approval_status", "Approval status", item.approval_status || ""),
-        fieldDate("review_date", "Review date", item.review_date || today),
-      ]),
-      buildSection("Risk analysis", [
-        fieldTextArea("concern_summary", "Concern summary", item.concern_summary || ""),
-        fieldTextArea("known_triggers", "Known triggers", item.known_triggers || ""),
-        fieldTextArea(
-          "early_warning_signs",
-          "Early warning signs",
-          item.early_warning_signs || ""
-        ),
-        fieldTextArea("contextual_factors", "Contextual factors", item.contextual_factors || ""),
-        fieldTextArea("current_controls", "Current controls", item.current_controls || ""),
-        fieldTextArea(
-          "deescalation_strategies",
-          "De-escalation strategies",
-          item.deescalation_strategies || ""
-        ),
-        fieldTextArea("response_actions", "Response actions", item.response_actions || ""),
-        fieldTextArea("child_views", "Child views", item.child_views || ""),
-        fieldTextArea("review_comment", "Review comment", item.review_comment || ""),
-      ]),
-    ],
-  };
-}
-
-function buildHealthRecordContent(item = {}) {
-  const now = getNowLocal();
-
-  return {
-    title: item?.id ? "Edit health record" : "New health record",
-    subtitle: "Record health events, professionals, outcomes and follow-up.",
-    guidance:
-      "Make the health event easy to understand later. Include professional involvement, outcome and next action.",
-    prompts: [
-      "What happened?",
-      "Who was involved?",
-      "What was the outcome?",
-      "Is follow-up needed?",
-    ],
-    sections: [
-      buildSection("Health event", [
-        fieldText("title", "Title", item.title || ""),
-        fieldText("record_type", "Record type", item.record_type || ""),
-        fieldDateTime(
-          "event_datetime",
-          "Date and time",
-          toDateTimeLocalValue(item.event_datetime) || now
-        ),
-        fieldText("professional_name", "Professional name", item.professional_name || ""),
-        fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || "draft",
-          workflowOptions()
-        ),
-      ]),
-      buildSection("Health summary", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("outcome", "Outcome", item.outcome || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-        fieldDate("next_action_date", "Next action date", item.next_action_date || ""),
-      ]),
-    ],
-  };
-}
-
-function buildEducationRecordContent(item = {}) {
-  const today = getToday();
-
-  return {
-    title: item?.id ? "Edit education record" : "New education record",
-    subtitle: "Record attendance, engagement, support and concerns.",
-    guidance:
-      "Keep the record practical. Show what happened, how the young person engaged, and what needs to happen next.",
-    prompts: [
-      "How did the young person engage?",
-      "Were there concerns or positives?",
-      "What action was taken?",
-      "Is further follow-up needed?",
-    ],
-    sections: [
-      buildSection("Education record", [
-        fieldDate("record_date", "Date", item.record_date || today),
-        fieldText("provision_name", "Provision name", item.provision_name || ""),
-        fieldText("attendance_status", "Attendance status", item.attendance_status || ""),
-        fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || "draft",
-          workflowOptions()
-        ),
-      ]),
-      buildSection("Education summary", [
-        fieldTextArea("learning_engagement", "Learning engagement", item.learning_engagement || ""),
-        fieldTextArea("behaviour_summary", "Behaviour summary", item.behaviour_summary || ""),
-        fieldTextArea("issue_raised", "Issue raised", item.issue_raised || ""),
-        fieldTextArea("action_taken", "Action taken", item.action_taken || ""),
-        fieldTextArea("professional_involved", "Professional involved", item.professional_involved || ""),
-        fieldTextArea("achievement_note", "Achievement note", item.achievement_note || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-      ]),
-    ],
-  };
-}
-
-function buildFamilyContactContent(item = {}) {
-  const now = getNowLocal();
-
-  return {
-    title: item?.id ? "Edit family contact" : "New family contact",
-    subtitle: "Record family contact, presentation, concerns and next steps.",
-    guidance:
-      "Make the impact of contact clear. Include how the young person presented before and after, and what adults need to hold in mind.",
-    prompts: [
-      "Who was involved?",
-      "How did the young person present before and after?",
-      "Were there concerns?",
-      "What follow-up is needed?",
-    ],
-    sections: [
-      buildSection("Contact details", [
-        fieldDateTime(
-          "contact_datetime",
-          "Date and time",
-          toDateTimeLocalValue(item.contact_datetime) || now
-        ),
-        fieldText("contact_type", "Contact type", item.contact_type || ""),
-        fieldText("contact_person", "Contact person", item.contact_person || ""),
-        fieldText("supervision_level", "Supervision level", item.supervision_level || ""),
-        fieldText("location", "Location", item.location || ""),
-        fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-        fieldSelect(
-          "workflow_status",
-          "Workflow status",
-          item.workflow_status || "draft",
-          workflowOptions()
-        ),
-      ]),
-      buildSection("Contact summary", [
-        fieldTextArea(
-          "pre_contact_presentation",
-          "Pre-contact presentation",
-          item.pre_contact_presentation || ""
-        ),
-        fieldTextArea(
-          "post_contact_presentation",
-          "Post-contact presentation",
-          item.post_contact_presentation || ""
-        ),
-        fieldTextArea("concerns", "Concerns", item.concerns || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-      ]),
-    ],
-  };
-}
-
-function buildKeyworkContent(item = {}) {
-  const today = getToday();
-
-  return {
-    title: item?.id ? "Edit keywork session" : "New keywork session",
-    subtitle: "Record direct work, reflection and agreed next steps.",
-    guidance:
-      "Show the topic, purpose, the young person’s contribution, your reflection, and what was agreed.",
-    prompts: [
-      "What was the topic?",
-      "What was discussed?",
-      "What did the young person say or show?",
-      "What was agreed next?",
-    ],
-    sections: [
-      buildSection("Keywork details", [
-        fieldDate("session_date", "Session date", item.session_date || today),
-        fieldText("topic", "Topic", item.topic || ""),
-        fieldTextArea("purpose", "Purpose", item.purpose || ""),
-        fieldText("status", "Status", item.status || ""),
-        fieldText("workflow_status", "Workflow status", item.workflow_status || item.status || "draft"),
-      ]),
-      buildSection("Session content", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldTextArea(
-          "reflective_analysis",
-          "Reflective analysis",
-          item.reflective_analysis || ""
-        ),
-        fieldTextArea("actions_agreed", "Actions agreed", item.actions_agreed || ""),
-        fieldDate("next_session_date", "Next session date", item.next_session_date || ""),
-        fieldTextArea(
-          "manager_review_comment",
-          "Manager review comment",
-          item.manager_review_comment || ""
-        ),
-      ]),
-    ],
-  };
-}
-
-function buildAppointmentContent(item = {}) {
-  const now = getNowLocal();
-
-  return {
-    title: item?.id ? "Edit appointment" : "New appointment",
-    subtitle: "Record appointments, purpose, preparation and follow-up.",
-    guidance:
-      "Make sure the appointment is easy to plan for and easy to review afterwards.",
-    prompts: [
-      "What is the appointment for?",
-      "Who is involved?",
-      "What preparation is needed?",
-      "What follow-up should happen?",
-    ],
-    sections: [
-      buildSection("Appointment details", [
-        fieldText("title", "Title", item.title || ""),
-        fieldText("appointment_type", "Appointment type", item.appointment_type || ""),
-        fieldDateTime("start_datetime", "Start", toDateTimeLocalValue(item.start_datetime) || now),
-        fieldDateTime("end_datetime", "End", toDateTimeLocalValue(item.end_datetime) || ""),
-        fieldText("location", "Location", item.location || ""),
-        fieldText("professional_name", "Professional name", item.professional_name || ""),
-        fieldText("professional_role", "Professional role", item.professional_role || ""),
-        fieldText("status", "Status", item.status || "planned"),
-      ]),
-      buildSection("Preparation and outcome", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("description", "Description", item.description || ""),
-        fieldTextArea("purpose", "Purpose", item.purpose || ""),
-        fieldTextArea("preparation_notes", "Preparation notes", item.preparation_notes || ""),
-        fieldTextArea("outcome_notes", "Outcome notes", item.outcome_notes || item.outcome || ""),
-        fieldTextArea("follow_up_actions", "Follow-up actions", item.follow_up_actions || ""),
-        fieldText("reminder_minutes_before", "Reminder minutes before", item.reminder_minutes_before || ""),
-      ]),
-    ],
-  };
-}
-
-function buildAchievementContent(item = {}) {
-  const today = getToday();
-
-  return {
-    title: item?.id ? "Edit achievement" : "New achievement",
-    subtitle: "Capture progress, strengths and success.",
-    guidance:
-      "Record what was achieved, why it mattered, and what it tells adults about progress or strengths.",
-    prompts: [
-      "What was achieved?",
-      "Why did it matter?",
-      "What did it show about the young person?",
-    ],
-    sections: [
-      buildSection("Achievement details", [
-        fieldDate("achievement_date", "Date", item.achievement_date || today),
-        fieldText("title", "Title", item.title || ""),
-        fieldText("achievement_type", "Achievement type", item.achievement_type || ""),
-        fieldText("source", "Source", item.source || ""),
-        fieldSelect("significance", "Significance", item.significance || "", severityOptions()),
-      ]),
-      buildSection("Achievement summary", [
-        fieldTextArea("description", "Description", item.description || item.summary || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-      ]),
-    ],
-  };
-}
-
-function buildSafeguardingContent(item = {}) {
-  const now = getNowLocal();
-
-  return {
-    title: item?.id ? "Edit safeguarding record" : "New safeguarding record",
-    subtitle: "Record safeguarding concern, immediate action and outcome.",
-    guidance:
-      "Be clear, factual and precise. Record the concern, action taken, referrals, and current outcome.",
-    prompts: [
-      "What is the concern?",
-      "What immediate action was taken?",
-      "Was a referral made?",
-      "What is the current outcome?",
-    ],
-    sections: [
-      buildSection("Safeguarding details", [
-        fieldDateTime(
-          "concern_datetime",
-          "Concern date and time",
-          toDateTimeLocalValue(item.concern_datetime) || now
-        ),
-        fieldText("safeguarding_category", "Safeguarding category", item.safeguarding_category || ""),
-        fieldText("manager_review_status", "Manager review status", item.manager_review_status || ""),
-        fieldText("incident_id", "Linked incident ID", item.incident_id || ""),
-        fieldDate("closed_at", "Closed date", toDateInputValue(item.closed_at) || ""),
-      ]),
-      buildSection("Concern and response", [
-        fieldTextArea("concern_details", "Concern details", item.concern_details || ""),
-        fieldTextArea("disclosure_details", "Disclosure details", item.disclosure_details || ""),
-        fieldTextArea(
-          "immediate_action_taken",
-          "Immediate action taken",
-          item.immediate_action_taken || ""
-        ),
-        fieldCheckbox("referral_made", "Referral made", Boolean(item.referral_made)),
-        fieldTextArea("referral_details", "Referral details", item.referral_details || ""),
-        fieldTextArea("outcome", "Outcome", item.outcome || ""),
-      ]),
-    ],
-  };
-}
-
-function buildMissingEpisodeContent(item = {}) {
-  const now = getNowLocal();
-
-  return {
-    title: item?.id ? "Edit missing episode" : "New missing episode",
-    subtitle: "Record missing episode, return and follow-up.",
-    guidance:
-      "Capture the times, immediate response, return information and required review clearly.",
-    prompts: [
-      "When did the episode begin and end?",
-      "What action was taken?",
-      "What were the trigger or push/pull factors?",
-      "What needs to happen next?",
-    ],
-    sections: [
-      buildSection("Episode details", [
-        fieldDateTime("start_datetime", "Start", toDateTimeLocalValue(item.start_datetime) || now),
-        fieldDateTime("reported_datetime", "Reported", toDateTimeLocalValue(item.reported_datetime) || ""),
-        fieldDateTime("return_datetime", "Return", toDateTimeLocalValue(item.return_datetime) || ""),
-        fieldText("police_reference", "Police reference", item.police_reference || ""),
-        fieldText("manager_review_status", "Manager review status", item.manager_review_status || ""),
-        fieldText(
-          "linked_risk_assessment_id",
-          "Linked risk assessment ID",
-          item.linked_risk_assessment_id || ""
-        ),
-      ]),
-      buildSection("Episode summary", [
-        fieldTextArea("trigger_factors", "Trigger factors", item.trigger_factors || ""),
-        fieldTextArea("push_pull_factors", "Push / pull factors", item.push_pull_factors || ""),
-        fieldTextArea("actions_taken", "Actions taken", item.actions_taken || ""),
-        fieldTextArea("outcome", "Outcome", item.outcome || ""),
-        fieldTextArea("child_voice", "Child voice", item.child_voice || ""),
-        fieldCheckbox(
-          "return_interview_completed",
-          "Return interview completed",
-          Boolean(item.return_interview_completed)
-        ),
-        fieldDate("return_interview_date", "Return interview date", item.return_interview_date || ""),
-        fieldCheckbox("review_required", "Review required", Boolean(item.review_required)),
-      ]),
-    ],
-  };
-}
-
-function buildTaskContent(item = {}) {
-  const today = getToday();
-  const meta = getComposerMeta();
-  const isInspectionTask =
-    item.task_type === "inspection_improvement" ||
-    meta.suggestion_action_type === "inspection_refresh" ||
-    meta.suggestion_action_type === "inspection_sync" ||
-    meta.inspection_score_id ||
-    meta.line_of_enquiry_id;
-
-  return {
-    title: item?.id ? "Edit task" : "New task",
-    subtitle: isInspectionTask
-      ? "Create an inspection-linked action with clear ownership and follow-up."
-      : "Create a clear action with ownership and follow-up.",
-    guidance: "Make the task specific, practical and easy to complete.",
-    prompts: [
-      "What needs to happen?",
-      "Who should do it?",
-      "When is it due?",
-      "Why does it matter?",
-    ],
-    sections: [
-      buildSection("Task details", [
-        fieldText("title", "Title", item.title || ""),
-        fieldTextArea("task", "Task", item.task || item.summary || ""),
-        fieldSelect(
-          "task_type",
-          "Task type",
-          item.task_type || (isInspectionTask ? "inspection_improvement" : ""),
-          taskTypeOptions()
-        ),
-        fieldText("assigned_role", "Assigned role", item.assigned_role || ""),
-        fieldText("assigned_to_user_id", "Assigned to user ID", item.assigned_to_user_id || ""),
-        fieldDate("task_date", "Task date", item.task_date || today),
-        fieldDate("due_date", "Due date", item.due_date || ""),
-        fieldCheckbox("completed", "Completed", Boolean(item.completed)),
-        fieldCheckbox("compliance_generated", "Compliance generated", Boolean(item.compliance_generated)),
-      ]),
-      buildSection("Linking and context", [
-        fieldText(
-          "source_table",
-          "Source table",
-          item.source_table || item.related_table || item.source_record_type || ""
-        ),
-        fieldText(
-          "source_id",
-          "Source ID",
-          item.source_id || item.related_id || item.source_record_id || ""
-        ),
-        fieldText(
-          "inspection_score_id",
-          "Inspection score ID",
-          item.inspection_score_id || meta.inspection_score_id || ""
-        ),
-        fieldText(
-          "line_of_enquiry_id",
-          "Line of enquiry ID",
-          item.line_of_enquiry_id || meta.line_of_enquiry_id || ""
-        ),
-        fieldText(
-          "projected_section_band",
-          "Projected section band",
-          item.projected_section_band || meta.projected_section_band || ""
-        ),
-        fieldText(
-          "recoverable_points_estimate",
-          "Recoverable points estimate",
-          item.recoverable_points_estimate || meta.recoverable_points_estimate || ""
-        ),
-      ]),
-    ],
-  };
-}
-
-function buildProfileIdentityContent(item = {}) {
-  return {
-    title: "Identity profile",
-    subtitle: "Capture culture, identity, interests and what matters.",
-    guidance:
-      "Keep this child-centred and practical for adults supporting day-to-day care.",
-    prompts: [
-      "What matters most to this young person?",
-      "What strengths and interests should adults hold in mind?",
-    ],
-    sections: [
-      buildSection("Identity and what matters", [
-        fieldText("religion_or_faith", "Religion or faith", item.religion_or_faith || ""),
-        fieldText("cultural_identity", "Cultural identity", item.cultural_identity || ""),
-        fieldText("first_language", "First language", item.first_language || ""),
-        fieldText("dietary_needs", "Dietary needs", item.dietary_needs || ""),
-        fieldTextArea("interests", "Interests", item.interests || ""),
-        fieldTextArea("strengths_summary", "Strengths summary", item.strengths_summary || ""),
-        fieldTextArea("what_matters_to_me", "What matters to me", item.what_matters_to_me || ""),
-        fieldTextArea("important_dates", "Important dates", item.important_dates || ""),
-      ]),
-    ],
-  };
-}
-
-function buildProfileCommunicationContent(item = {}) {
-  return {
-    title: "Communication profile",
-    subtitle: "Capture communication, processing and regulation needs.",
-    guidance:
-      "Make the information practical for adults supporting communication and co-regulation.",
-    prompts: [
-      "How does this young person communicate?",
-      "What helps them regulate and understand information?",
-    ],
-    sections: [
-      buildSection("Communication and regulation", [
-        fieldTextArea("neurodiversity_summary", "Neurodiversity summary", item.neurodiversity_summary || ""),
-        fieldTextArea("communication_style", "Communication style", item.communication_style || ""),
-        fieldTextArea("sensory_profile", "Sensory profile", item.sensory_profile || ""),
-        fieldTextArea("processing_needs", "Processing needs", item.processing_needs || ""),
-        fieldTextArea("signs_of_distress", "Signs of distress", item.signs_of_distress || ""),
-        fieldTextArea("what_helps", "What helps", item.what_helps || ""),
-        fieldTextArea("what_to_avoid", "What to avoid", item.what_to_avoid || ""),
-        fieldTextArea(
-          "routines_and_predictability",
-          "Routines and predictability",
-          item.routines_and_predictability || ""
-        ),
-        fieldTextArea("visual_support_needs", "Visual support needs", item.visual_support_needs || ""),
-      ]),
-    ],
-  };
-}
-
-function buildProfileEducationContent(item = {}) {
-  return {
-    title: "Education profile",
-    subtitle: "Capture school context, support and access to learning.",
-    guidance:
-      "Keep this practical and up to date so staff understand the learning context quickly.",
-    prompts: [
-      "What is the current educational context?",
-      "What support helps learning and attendance?",
-    ],
-    sections: [
-      buildSection("Education profile", [
-        fieldText("school_name", "School name", item.school_name || ""),
-        fieldText("year_group", "Year group", item.year_group || ""),
-        fieldText("education_status", "Education status", item.education_status || ""),
-        fieldText("sen_status", "SEN status", item.sen_status || ""),
-        fieldTextArea("ehcp_details", "EHCP details", item.ehcp_details || ""),
-        fieldText("designated_teacher", "Designated teacher", item.designated_teacher || ""),
-        fieldText("attendance_baseline", "Attendance baseline", item.attendance_baseline || ""),
-        fieldText("pep_status", "PEP status", item.pep_status || ""),
-        fieldTextArea("support_summary", "Support summary", item.support_summary || ""),
-      ]),
-    ],
-  };
-}
-
-function buildProfileHealthContent(item = {}) {
-  return {
-    title: "Health profile",
-    subtitle: "Capture health contacts, diagnoses, allergies and wellbeing context.",
-    guidance:
-      "Keep this factual and current so adults can respond safely and consistently.",
-    prompts: [
-      "What health information do adults need to hold in mind?",
-      "Who are the key professionals and what support is in place?",
-    ],
-    sections: [
-      buildSection("Health profile", [
-        fieldText("gp_name", "GP name", item.gp_name || ""),
-        fieldText("gp_contact", "GP contact", item.gp_contact || ""),
-        fieldText("dentist_name", "Dentist name", item.dentist_name || ""),
-        fieldText("dentist_contact", "Dentist contact", item.dentist_contact || ""),
-        fieldText("optician_name", "Optician name", item.optician_name || ""),
-        fieldText("optician_contact", "Optician contact", item.optician_contact || ""),
-        fieldTextArea("allergies", "Allergies", item.allergies || ""),
-        fieldTextArea("diagnoses", "Diagnoses", item.diagnoses || ""),
-        fieldTextArea("mental_health_summary", "Mental health summary", item.mental_health_summary || ""),
-        fieldTextArea("medication_summary", "Medication summary", item.medication_summary || ""),
-        fieldTextArea("consent_notes", "Consent notes", item.consent_notes || ""),
-      ]),
-    ],
-  };
-}
-
-function buildProfileLegalContent(item = {}) {
-  return {
-    title: "Legal status",
-    subtitle: "Capture legal context, authority and delegated arrangements.",
-    guidance:
-      "Keep this clear and accurate. Adults should be able to understand the legal position quickly.",
-    prompts: [
-      "What is the current legal status?",
-      "What delegated authority and restrictions apply?",
-    ],
-    sections: [
-      buildSection("Legal status", [
-        fieldText("legal_status", "Legal status", item.legal_status || ""),
-        fieldText("order_type", "Order type", item.order_type || ""),
-        fieldTextArea("order_details", "Order details", item.order_details || ""),
-        fieldTextArea(
-          "delegated_authority_details",
-          "Delegated authority details",
-          item.delegated_authority_details || ""
-        ),
-        fieldTextArea("restrictions_text", "Restrictions", item.restrictions_text || ""),
-        fieldTextArea("consent_arrangements", "Consent arrangements", item.consent_arrangements || ""),
-        fieldDate("effective_from", "Effective from", item.effective_from || ""),
-        fieldDate("effective_to", "Effective to", item.effective_to || ""),
-        fieldCheckbox("is_current", "Current", item.is_current !== false),
-      ]),
-    ],
-  };
-}
-
-function buildProfileFormulationContent(item = {}) {
-  return {
-    title: "Formulation",
-    subtitle: "Capture a shared understanding of needs, behaviour and what helps.",
-    guidance:
-      "Use professional reflective thinking, but keep the output practical and useful to staff.",
-    prompts: [
-      "What is the shared understanding of this young person’s needs?",
-      "What patterns, triggers and protective factors matter most?",
-    ],
-    sections: [
-      buildSection("Shared formulation", [
-        fieldTextArea("presenting_needs", "Presenting needs", item.presenting_needs || ""),
-        fieldTextArea("developmental_context", "Developmental context", item.developmental_context || ""),
-        fieldTextArea("trauma_context", "Trauma context", item.trauma_context || ""),
-        fieldTextArea(
-          "neurodevelopmental_context",
-          "Neurodevelopmental context",
-          item.neurodevelopmental_context || ""
-        ),
-        fieldTextArea("relational_context", "Relational context", item.relational_context || ""),
-        fieldTextArea("meaning_of_behaviour", "Meaning of behaviour", item.meaning_of_behaviour || ""),
-        fieldTextArea("known_triggers", "Known triggers", item.known_triggers || ""),
-        fieldTextArea(
-          "early_signs_of_distress",
-          "Early signs of distress",
-          item.early_signs_of_distress || ""
-        ),
-        fieldTextArea("protective_factors", "Protective factors", item.protective_factors || ""),
-        fieldTextArea("what_helps", "What helps", item.what_helps || ""),
-        fieldTextArea(
-          "what_adults_should_avoid",
-          "What adults should avoid",
-          item.what_adults_should_avoid || ""
-        ),
-        fieldTextArea("regulation_strategies", "Regulation strategies", item.regulation_strategies || ""),
-        fieldTextArea("child_voice_summary", "Child voice summary", item.child_voice_summary || ""),
-        fieldDate("review_date", "Review date", item.review_date || ""),
-        fieldCheckbox("is_current", "Current", item.is_current !== false),
-      ]),
-    ],
-  };
-}
-
-function buildDocumentContent(item = {}) {
-  return {
-    title: item?.id ? "Edit document record" : "Upload document",
-    subtitle:
-      getCurrentScope() === "child"
-        ? "Add a statutory or supporting document to this young person."
-        : "Add a statutory or service-level document.",
-    guidance:
-      "Use a clear title, document type, review date and summary so documents are easy to find and audit.",
-    prompts: [
-      "What type of document is this?",
-      "Who does it relate to?",
-      "When does it need review?",
-      "What should staff know about it?",
-    ],
-    sections: [
-      buildSection("Document details", [
-        fieldText("title", "Title", item.title || ""),
-        fieldText("document_type", "Document type", item.document_type || ""),
-        fieldText("category", "Category", item.category || ""),
-        fieldDate("review_date", "Review date", item.review_date || ""),
-        fieldText("status", "Status", item.status || "active"),
-        fieldText("file_name", "File name / reference", item.file_name || ""),
-      ]),
-      buildSection("Document notes", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("notes", "Notes", item.notes || ""),
-        fieldTextArea("important_actions", "Important actions", item.important_actions || ""),
-      ]),
-    ],
-  };
-}
-
-function buildCommunicationContent(item = {}) {
-  const now = getNowLocal();
-
-  return {
-    title: item?.id ? "Edit communication log" : "Log communication",
-    subtitle:
-      "Record professional liaison, family communication or key partner contact.",
-    guidance:
-      "Keep communication records factual, concise and easy to review later.",
-    prompts: [
-      "Who was involved?",
-      "What was discussed?",
-      "Were there any decisions or actions?",
-      "What needs follow-up?",
-    ],
-    sections: [
-      buildSection("Communication details", [
-        fieldDateTime(
-          "contact_datetime",
-          "Date and time",
-          toDateTimeLocalValue(item.contact_datetime) || now
-        ),
-        fieldText("contact_type", "Contact type", item.contact_type || ""),
-        fieldText("contact_person", "Contact person", item.contact_person || ""),
-        fieldText("organisation", "Organisation", item.organisation || ""),
-        fieldText("role", "Role", item.role || ""),
-        fieldText("direction", "Direction", item.direction || ""),
-      ]),
-      buildSection("Communication summary", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("decisions", "Decisions", item.decisions || ""),
-        fieldTextArea("actions_required", "Actions required", item.actions_required || ""),
-        fieldCheckbox("follow_up_required", "Follow-up required", Boolean(item.follow_up_required)),
-      ]),
-    ],
-  };
-}
-
-function buildTherapyContent(item = {}) {
-  const today = getToday();
-
-  return {
-    title: item?.id ? "Edit therapeutic service note" : "New therapeutic service note",
-    subtitle: "Record therapy input, recommendations and follow-up.",
-    guidance:
-      "Capture therapeutic involvement in a practical, respectful way that helps the team respond consistently.",
-    prompts: [
-      "What therapeutic input was provided?",
-      "What themes or recommendations matter most?",
-      "What should adults do next?",
-    ],
-    sections: [
-      buildSection("Therapeutic input", [
-        fieldDate("session_date", "Session date", item.session_date || today),
-        fieldText("service_name", "Service name", item.service_name || ""),
-        fieldText("professional_name", "Professional name", item.professional_name || ""),
-        fieldText("intervention_type", "Intervention type", item.intervention_type || ""),
-      ]),
-      buildSection("Clinical summary", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("recommendations", "Recommendations", item.recommendations || ""),
-        fieldTextArea("staff_guidance", "Guidance for staff", item.staff_guidance || ""),
-        fieldTextArea("next_steps", "Next steps", item.next_steps || ""),
-      ]),
-    ],
-  };
-}
-
-function buildTeamContent(item = {}) {
-  const today = getToday();
-
-  return {
-    title: item?.id ? "Edit team update" : "New team update",
-    subtitle: "Record staffing, deployment and workforce context.",
-    guidance:
-      "Use this for team-wide operational staffing notes rather than child-specific records.",
-    prompts: [
-      "What staffing issue or update needs recording?",
-      "What is the operational impact?",
-      "What action is required?",
-    ],
-    sections: [
-      buildSection("Team update", [
-        fieldDate("record_date", "Date", item.record_date || today),
-        fieldText("update_type", "Update type", item.update_type || ""),
-        fieldText("shift", "Shift / period", item.shift || ""),
-        fieldText("staff_member", "Staff member", item.staff_member || ""),
-      ]),
-      buildSection("Operational context", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("impact", "Impact", item.impact || ""),
-        fieldTextArea("actions_required", "Actions required", item.actions_required || ""),
-      ]),
-    ],
-  };
-}
-
-function buildSupervisionContent(item = {}) {
-  const today = getToday();
-
-  return {
-    title: item?.id ? "Edit supervision record" : "New supervision record",
-    subtitle: "Record supervision, development and support.",
-    guidance:
-      "Keep this structured, professional and useful for leadership oversight.",
-    prompts: [
-      "What was discussed?",
-      "What support or development needs were identified?",
-      "What was agreed next?",
-    ],
-    sections: [
-      buildSection("Supervision details", [
-        fieldDate("session_date", "Session date", item.session_date || today),
-        fieldText("staff_member", "Staff member", item.staff_member || ""),
-        fieldText("supervisor", "Supervisor", item.supervisor || ""),
-        fieldText("supervision_type", "Supervision type", item.supervision_type || ""),
-      ]),
-      buildSection("Discussion and outcomes", [
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea("strengths", "Strengths", item.strengths || ""),
-        fieldTextArea("development_needs", "Development needs", item.development_needs || ""),
-        fieldTextArea("actions_agreed", "Actions agreed", item.actions_agreed || ""),
-      ]),
-    ],
-  };
-}
-
-function buildManagerActionContent(item = {}) {
-  const meta = getComposerMeta();
-  const isInspectionLinked =
-    meta.inspection_score_id ||
-    meta.line_of_enquiry_id ||
-    item.inspection_score_id ||
-    item.line_of_enquiry_id;
-
-  return {
-    title: item?.id ? "Edit manager action" : "New manager action",
-    subtitle: isInspectionLinked
-      ? "Record management oversight or inspection follow-up."
-      : "Record management oversight, escalation, or follow-up.",
-    guidance:
-      "Use this for management decisions, oversight actions, escalation, and formal follow-up.",
-    prompts: [
-      "What needs management attention?",
-      "Why does this matter?",
-      "What is the decision or required follow-up?",
-    ],
-    sections: [
-      buildSection("Manager action details", [
-        fieldSelect(
-          "action_type",
-          "Action type",
-          item.action_type || (isInspectionLinked ? "inspection_follow_up" : ""),
-          managerActionTypeOptions()
-        ),
-        fieldText(
-          "related_table",
-          "Related table",
-          item.related_table || item.source_record_type || ""
-        ),
-        fieldText(
-          "related_id",
-          "Related ID",
-          item.related_id || item.source_record_id || null
-        ),
-        fieldText(
-          "inspection_score_id",
-          "Inspection score ID",
-          item.inspection_score_id || meta.inspection_score_id || ""
-        ),
-        fieldText(
-          "line_of_enquiry_id",
-          "Line of enquiry ID",
-          item.line_of_enquiry_id || meta.line_of_enquiry_id || ""
-        ),
-      ]),
-      buildSection("Management note", [
-        fieldTextArea("note", "Note", item.note || item.summary || ""),
-        fieldTextArea("summary", "Summary", item.summary || ""),
-        fieldTextArea(
-          "inspection_context",
-          "Inspection context",
-          item.inspection_context ||
-            meta.suggestion_reason ||
-            ""
-        ),
-      ]),
-    ],
-  };
-}
-
-function getComposerContent(recordType, item = {}) {
-  const map = {
-    daily_note: buildDailyNoteContent,
-    incident: buildIncidentContent,
-    support_plan: buildSupportPlanContent,
-    risk: buildRiskContent,
-    health_record: buildHealthRecordContent,
-    education_record: buildEducationRecordContent,
-    family_contact: buildFamilyContactContent,
-    keywork: buildKeyworkContent,
-    appointment: buildAppointmentContent,
-    achievement_record: buildAchievementContent,
-    safeguarding_record: buildSafeguardingContent,
-    missing_episode: buildMissingEpisodeContent,
-    task: buildTaskContent,
-    profile_identity: buildProfileIdentityContent,
-    profile_communication: buildProfileCommunicationContent,
-    profile_education: buildProfileEducationContent,
-    profile_health: buildProfileHealthContent,
-    profile_legal: buildProfileLegalContent,
-    profile_formulation: buildProfileFormulationContent,
-    document: buildDocumentContent,
-    communication: buildCommunicationContent,
-    therapy: buildTherapyContent,
-    team: buildTeamContent,
-    supervision: buildSupervisionContent,
-    manager_action: buildManagerActionContent,
-  };
-
-  const builder = map[recordType];
-  if (builder) return builder(item);
-
-  return {
-    title: "New record",
-    subtitle: "Record clearly and accurately.",
-    guidance: "Complete the fields below.",
-    prompts: [],
-    sections: [],
-  };
-}
-
-function getStorageKey() {
-  return [
-    "yp-shell-composer",
-    getCurrentScope(),
-    getScopeEntityId() || "none",
-    state.composerRecordType || "none",
-    state.composerMode || "create",
-    state.composerRecordId || "new",
-  ].join(":");
-}
-
-function serialiseValue(key, value) {
-  if (
+function journeySection(item = {}) {
+  return section(
+    "Young person journey",
+    "Link this record to where the young person is in their placement journey.",
     [
-      "reminder_minutes_before",
-      "attendance_baseline",
-      "incident_id",
-      "linked_risk_assessment_id",
-      "linked_plan_id",
-      "linked_target_id",
-      "related_id",
-      "assigned_to_user_id",
-      "inspection_score_id",
-      "line_of_enquiry_id",
-      "recoverable_points_estimate",
-      "source_id",
-    ].includes(key)
-  ) {
-    return value === "" ? null : Number(value);
+      {
+        name: "journey_stage",
+        label: "Journey stage",
+        type: "select",
+        options: JOURNEY_OPTIONS,
+      },
+    ],
+    item
+  );
+}
+
+function staffJourneySection(item = {}) {
+  return section(
+    "Adult journey",
+    "Link this record to where the adult is in their employment and practice journey.",
+    [
+      {
+        name: "staff_journey_stage",
+        label: "Adult journey stage",
+        type: "select",
+        options: STAFF_JOURNEY_OPTIONS,
+      },
+    ],
+    item
+  );
+}
+
+function meaningSection(item = {}) {
+  return section(
+    "Meaning and learning",
+    "Move beyond description. Capture what the young person may be communicating and what adults have learnt.",
+    [
+      {
+        name: "what_is_child_communicating",
+        label: "What may the young person be communicating?",
+        desc: "Consider feelings, needs, stress, trauma responses, sensory needs, relationships, safety and belonging.",
+        type: "textarea",
+        full: true,
+      },
+      {
+        name: "what_helped",
+        label: "What helped?",
+        type: "textarea",
+        full: true,
+      },
+      {
+        name: "what_did_adults_learn",
+        label: "What did adults learn?",
+        type: "textarea",
+        full: true,
+      },
+      {
+        name: "what_needs_to_change",
+        label: "What needs to change?",
+        type: "textarea",
+        full: true,
+      },
+    ],
+    item
+  );
+}
+
+function oversightSection(item = {}) {
+  return section(
+    "Follow-up and oversight",
+    "Record next steps, management oversight and whether this should link to quality evidence.",
+    [
+      { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+      { name: "manager_review_comment", label: "Manager review comment", type: "textarea", full: true },
+      { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+      { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+      { name: "link_to_chronology", label: "Link to chronology", type: "checkbox", value: true },
+      { name: "link_quality_standards", label: "Link quality standards", type: "checkbox", value: true },
+    ],
+    item
+  );
+}
+
+function dailyRecord(item = {}) {
+  return {
+    title: "Daily life note",
+    intro:
+      "Record the day clearly, kindly and professionally. Include the young person’s experience, what adults noticed, what helped, any risk changes and follow-up.",
+    required: ["note_date", "shift_type", "young_person_voice", "actions_required"],
+    html: `
+      ${journeySection(item)}
+      ${section("Basic information", "Core shift details for this daily note.", [
+        { name: "note_date", label: "Date", type: "date", value: today(), required: true },
+        { name: "shift_type", label: "Shift", type: "select", value: "day", required: true, options: SHIFT_OPTIONS },
+        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
+      ], item)}
+      ${section("What happened", "Give a factual and balanced account of the day.", [
+        { name: "narrative", label: "Daily summary", type: "textarea", rows: 5, full: true },
+        { name: "activities", label: "Activities, routines and relationships", type: "textarea", rows: 4, full: true },
+        { name: "behaviour_update", label: "Presentation / behaviour as communication", type: "textarea", rows: 4, full: true },
+      ], item)}
+      ${section("Young person’s experience", "Capture how the day appeared from the young person’s perspective.", [
+        { name: "mood", label: "Mood / emotional presentation", full: true },
+        { name: "presentation", label: "Presentation", type: "textarea", full: true },
+        { name: "young_person_voice", label: "Young person’s voice", type: "textarea", required: true, full: true },
+        { name: "positives", label: "Strengths, positives and progress", type: "textarea", full: true },
+      ], item)}
+      ${meaningSection(item)}
+      ${section("Health, education and family", "Record any relevant daily updates.", [
+        { name: "education_update", label: "Education update", type: "textarea", full: true },
+        { name: "health_update", label: "Health update", type: "textarea", full: true },
+        { name: "family_update", label: "Family / relationships update", type: "textarea", full: true },
+      ], item)}
+      ${section("Follow-up and oversight", "Show what must happen next.", [
+        { name: "actions_required", label: "Actions required", type: "textarea", required: true, full: true },
+        { name: "significance", label: "Significance", type: "select", options: SEVERITY_OPTIONS },
+        { name: "manager_review_comment", label: "Manager review comment", type: "textarea", full: true },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+        { name: "link_to_chronology", label: "Link to chronology", type: "checkbox", value: true },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+        { name: "safeguarding_concern", label: "Safeguarding concern", type: "checkbox" },
+        { name: "link_quality_standards", label: "Link quality standards", type: "checkbox", value: true },
+      ], item)}
+    `,
+  };
+}
+
+function incidentForm(item = {}) {
+  return {
+    title: "Incident record",
+    intro:
+      "Record the incident factually and calmly. Include context, de-escalation, child voice, adult response, outcome, notifications and learning.",
+    required: ["incident_datetime", "incident_type", "description", "actions_taken"],
+    html: `
+      ${journeySection(item)}
+      ${section("Incident details", "Core incident information.", [
+        { name: "incident_datetime", label: "Date and time", type: "datetime-local", value: now(), required: true },
+        { name: "incident_type", label: "Incident type", required: true },
+        { name: "location", label: "Location" },
+        { name: "severity", label: "Severity", type: "select", options: SEVERITY_OPTIONS },
+      ], item)}
+      ${section("Factual account", "A clear, neutral chronology of what happened.", [
+        { name: "description", label: "What happened", type: "textarea", rows: 6, required: true, full: true },
+        { name: "antecedent", label: "What happened before?", type: "textarea", full: true },
+        { name: "deescalation_attempted", label: "De-escalation attempted", type: "textarea", full: true },
+      ], item)}
+      ${section("Young person and staff response", "Capture presentation, voice and adult response.", [
+        { name: "presentation", label: "Young person’s presentation", type: "textarea", full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
+        { name: "staff_response", label: "Staff response", type: "textarea", full: true },
+      ], item)}
+      ${meaningSection(item)}
+      ${section("Outcome and safeguarding", "Record the result, notifications and next actions.", [
+        { name: "outcome", label: "Outcome", type: "textarea", full: true },
+        { name: "actions_taken", label: "Actions taken / required", type: "textarea", required: true, full: true },
+        { name: "police_involved", label: "Police involved", type: "checkbox" },
+        { name: "ofsted_notified", label: "Ofsted notified", type: "checkbox" },
+        { name: "placing_authority_notified", label: "Placing authority notified", type: "checkbox" },
+        { name: "manager_oversight", label: "Manager oversight", type: "textarea", full: true },
+      ], item)}
+    `,
+  };
+}
+
+function keyworkForm(item = {}) {
+  return {
+    title: "Key work session",
+    intro:
+      "Capture the purpose of the session, what was explored, the young person’s voice, reflection, outcomes and agreed actions.",
+    required: ["session_date", "topic", "child_voice"],
+    html: `
+      ${journeySection(item)}
+      ${section("Session information", "Core key work details.", [
+        { name: "session_date", label: "Date", type: "date", value: today(), required: true },
+        { name: "topic", label: "Topic", required: true },
+        { name: "purpose", label: "Purpose", type: "textarea", full: true },
+        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
+      ], item)}
+      ${section("Session content", "What was discussed or completed.", [
+        { name: "summary", label: "Session summary", type: "textarea", rows: 5, full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", required: true, full: true },
+        { name: "reflective_analysis", label: "Reflection / analysis", type: "textarea", full: true },
+      ], item)}
+      ${meaningSection(item)}
+      ${section("Outcome", "What changes or actions were agreed.", [
+        { name: "actions_agreed", label: "Actions agreed", type: "textarea", full: true },
+        { name: "next_session_date", label: "Next session date", type: "date" },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+      ], item)}
+    `,
+  };
+}
+
+function riskForm(item = {}) {
+  return {
+    title: "Risk assessment",
+    intro:
+      "Record the risk category, concern, triggers, controls, protective factors, response actions and review date.",
+    required: ["category", "title"],
+    html: `
+      ${journeySection(item)}
+      ${section("Risk overview", "Identify the risk and review date.", [
+        { name: "category", label: "Category", required: true },
+        { name: "title", label: "Risk title", required: true },
+        { name: "review_date", label: "Review date", type: "date", value: today() },
+        { name: "severity", label: "Severity", type: "select", options: SEVERITY_OPTIONS, value: "medium" },
+        { name: "likelihood", label: "Likelihood", type: "select", options: SEVERITY_OPTIONS, value: "medium" },
+        { name: "status", label: "Status", type: "select", options: [
+          { value: "active", label: "Active" },
+          { value: "draft", label: "Draft" },
+          { value: "submitted", label: "Submitted" },
+          { value: "approved", label: "Approved" },
+          { value: "archived", label: "Archived" },
+        ], value: "active" },
+      ], item)}
+      ${section("Assessment", "Describe the concern and what may increase risk.", [
+        { name: "concern_summary", label: "Concern summary", type: "textarea", rows: 5, full: true },
+        { name: "known_triggers", label: "Known triggers", type: "textarea", full: true },
+        { name: "early_warning_signs", label: "Early warning signs", type: "textarea", full: true },
+        { name: "protective_factors", label: "Protective factors", type: "textarea", full: true },
+        { name: "contextual_factors", label: "Contextual factors", type: "textarea", full: true },
+      ], item)}
+      ${meaningSection(item)}
+      ${section("Controls and response", "Set out what adults should do.", [
+        { name: "current_controls", label: "Current controls", type: "textarea", full: true },
+        { name: "deescalation_strategies", label: "De-escalation strategies", type: "textarea", full: true },
+        { name: "response_actions", label: "Response actions", type: "textarea", rows: 5, full: true },
+        { name: "child_views", label: "Child views", type: "textarea", full: true },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+      ], item)}
+    `,
+  };
+}
+
+function safeguardingForm(item = {}) {
+  return {
+    title: "Safeguarding record",
+    intro:
+      "Record the concern, disclosure or information received, immediate safety action, notifications, referrals and management oversight.",
+    required: ["concern_type", "concern_summary", "immediate_action_taken"],
+    html: `
+      ${journeySection(item)}
+      ${section("Concern details", "Describe the safeguarding concern.", [
+        { name: "concern_type", label: "Concern type", required: true },
+        { name: "concern_datetime", label: "Date and time", type: "datetime-local", value: now() },
+        { name: "severity", label: "Severity", type: "select", options: SEVERITY_OPTIONS, value: "high" },
+      ], item)}
+      ${section("Concern and voice", "Record facts, disclosure and the young person’s voice.", [
+        { name: "concern_summary", label: "Concern summary", type: "textarea", rows: 5, required: true, full: true },
+        { name: "disclosure_details", label: "Disclosure / young person’s voice", type: "textarea", full: true },
+        { name: "presentation", label: "Presentation", type: "textarea", full: true },
+      ], item)}
+      ${section("Immediate action and referrals", "Record safeguarding action taken.", [
+        { name: "immediate_action_taken", label: "Immediate action taken", type: "textarea", required: true, full: true },
+        { name: "referral_details", label: "Referral / notification details", type: "textarea", full: true },
+        { name: "placing_authority_notified", label: "Placing authority notified", type: "checkbox" },
+        { name: "ofsted_notified", label: "Ofsted notified", type: "checkbox" },
+        { name: "police_notified", label: "Police notified", type: "checkbox" },
+        { name: "manager_oversight", label: "Manager oversight", type: "textarea", full: true },
+      ], item)}
+      ${oversightSection(item)}
+    `,
+  };
+}
+
+function healthForm(item = {}) {
+  return {
+    title: "Health record",
+    intro:
+      "Record health needs, appointments, advice, treatment, medication impact, young person voice and follow-up.",
+    required: ["record_date", "health_area", "summary"],
+    html: `
+      ${journeySection(item)}
+      ${section("Health information", "Core health record details.", [
+        { name: "record_date", label: "Date", type: "date", value: today(), required: true },
+        { name: "health_area", label: "Health area", required: true },
+        { name: "professional_name", label: "Professional / service" },
+      ], item)}
+      ${section("Health update", "Describe the issue, advice or outcome.", [
+        { name: "summary", label: "Summary", type: "textarea", rows: 5, required: true, full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
+        { name: "outcome", label: "Outcome", type: "textarea", full: true },
+      ], item)}
+      ${section("Follow-up", "Record actions and next steps.", [
+        { name: "next_action_date", label: "Next action date", type: "date" },
+        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+      ], item)}
+    `,
+  };
+}
+
+function educationForm(item = {}) {
+  return {
+    title: "Education record",
+    intro:
+      "Record attendance, engagement, learning experience, achievements, barriers, voice and follow-up.",
+    required: ["record_date", "education_area", "summary"],
+    html: `
+      ${journeySection(item)}
+      ${section("Education information", "Core education details.", [
+        { name: "record_date", label: "Date", type: "date", value: today(), required: true },
+        { name: "education_area", label: "Education area", required: true },
+        { name: "school_or_provider", label: "School / provider" },
+      ], item)}
+      ${section("Learning and experience", "Capture what happened and how the young person experienced it.", [
+        { name: "summary", label: "Summary", type: "textarea", rows: 5, required: true, full: true },
+        { name: "learning_engagement", label: "Learning engagement", type: "textarea", full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
+        { name: "achievement_note", label: "Achievement / progress", type: "textarea", full: true },
+      ], item)}
+      ${section("Actions", "Record follow-up.", [
+        { name: "issue_raised", label: "Issue raised", type: "textarea", full: true },
+        { name: "action_taken", label: "Action taken / required", type: "textarea", full: true },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+      ], item)}
+    `,
+  };
+}
+
+function familyContactForm(item = {}) {
+  return {
+    title: "Family contact",
+    intro:
+      "Record contact arrangements, presentation before and after, young person voice, impact, concerns and follow-up.",
+    required: ["contact_datetime", "contact_type", "summary"],
+    html: `
+      ${journeySection(item)}
+      ${section("Contact details", "Core family contact information.", [
+        { name: "contact_datetime", label: "Date and time", type: "datetime-local", value: now(), required: true },
+        { name: "contact_type", label: "Contact type", required: true },
+        { name: "contact_person", label: "Person contacted" },
+      ], item)}
+      ${section("Experience", "Capture the young person’s experience.", [
+        { name: "summary", label: "Summary", type: "textarea", rows: 5, required: true, full: true },
+        { name: "pre_contact_presentation", label: "Before contact", type: "textarea", full: true },
+        { name: "post_contact_presentation", label: "After contact", type: "textarea", full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
+      ], item)}
+      ${section("Concerns and follow-up", "Record any impact, concern or next step.", [
+        { name: "concerns", label: "Concerns", type: "textarea", full: true },
+        { name: "follow_up_required", label: "Follow-up required", type: "textarea", full: true },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+      ], item)}
+    `,
+  };
+}
+
+function appointmentForm(item = {}) {
+  return {
+    title: "Appointment",
+    intro:
+      "Record appointment purpose, time, preparation, attendance, outcome and follow-up.",
+    required: ["appointment_date", "appointment_type"],
+    html: `
+      ${journeySection(item)}
+      ${section("Appointment details", "Core appointment information.", [
+        { name: "appointment_date", label: "Appointment date", type: "datetime-local", value: now(), required: true },
+        { name: "appointment_type", label: "Appointment type", required: true },
+        { name: "location", label: "Location" },
+        { name: "professional_name", label: "Professional / service" },
+      ], item)}
+      ${section("Purpose and preparation", "What is this appointment for?", [
+        { name: "purpose", label: "Purpose", type: "textarea", full: true },
+        { name: "preparation_needed", label: "Preparation needed", type: "textarea", full: true },
+      ], item)}
+      ${section("Outcome", "Complete after the appointment where relevant.", [
+        { name: "outcome", label: "Outcome", type: "textarea", full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
+        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+      ], item)}
+    `,
+  };
+}
+
+function taskForm(item = {}) {
+  return {
+    title: "Action / task",
+    intro:
+      "Create a clear task with ownership, priority, due date and closure expectation.",
+    required: ["title", "description"],
+    html: `
+      ${section("Task details", "What needs to happen?", [
+        { name: "title", label: "Task title", required: true },
+        { name: "due_date", label: "Due date", type: "date" },
+        { name: "priority", label: "Priority", type: "select", options: PRIORITY_OPTIONS },
+        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
+      ], item)}
+      ${section("Description", "Give enough detail for someone else to complete it safely.", [
+        { name: "description", label: "Task description", type: "textarea", rows: 5, required: true, full: true },
+        { name: "owner_name", label: "Owner" },
+        { name: "completion_notes", label: "Completion notes", type: "textarea", full: true },
+      ], item)}
+    `,
+  };
+}
+
+function medicationRecordForm(item = {}) {
+  return {
+    title: "Medication record",
+    intro:
+      "Record medication administration, omission, refusal, error or concern clearly and safely.",
+    required: ["administered_at", "medication_name", "status"],
+    html: `
+      ${journeySection(item)}
+      ${section("Medication details", "Core medication information.", [
+        { name: "administered_at", label: "Date and time", type: "datetime-local", value: now(), required: true },
+        { name: "medication_name", label: "Medication name", required: true },
+        { name: "dose", label: "Dose" },
+        { name: "route", label: "Route" },
+        { name: "status", label: "Status", type: "select", required: true, options: [
+          { value: "administered", label: "Administered" },
+          { value: "refused", label: "Refused" },
+          { value: "omitted", label: "Omitted" },
+          { value: "error", label: "Medication error" },
+        ] },
+      ], item)}
+      ${section("Details", "Record what happened and any action taken.", [
+        { name: "notes", label: "Notes", type: "textarea", full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
+        { name: "refusal_reason", label: "Refusal reason", type: "textarea", full: true },
+        { name: "omission_reason", label: "Omission reason", type: "textarea", full: true },
+        { name: "error_details", label: "Error details", type: "textarea", full: true },
+        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+      ], item)}
+    `,
+  };
+}
+
+function handoverForm(item = {}) {
+  return {
+    title: "Handover record",
+    intro:
+      "Record key information needed for the next shift to provide safe, consistent and thoughtful care.",
+    required: ["handover_datetime", "shift", "summary"],
+    html: `
+      ${section("Handover details", "Core shift handover information.", [
+        { name: "handover_datetime", label: "Date and time", type: "datetime-local", value: now(), required: true },
+        { name: "shift", label: "Shift", type: "select", options: SHIFT_OPTIONS, required: true },
+        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
+      ], item)}
+      ${section("Key handover", "What must the next adults know?", [
+        { name: "summary", label: "Handover summary", type: "textarea", rows: 5, required: true, full: true },
+        { name: "risks_to_monitor", label: "Risks to monitor", type: "textarea", full: true },
+        { name: "positive_updates", label: "Positive updates", type: "textarea", full: true },
+        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+      ], item)}
+    `,
+  };
+}
+
+function documentForm(item = {}) {
+  return {
+    title: "Document record",
+    intro:
+      "Record document details, review dates, ownership and any actions needed.",
+    required: ["title"],
+    html: `
+      ${section("Document details", "Describe the document being recorded.", [
+        { name: "title", label: "Document title", required: true },
+        { name: "document_type", label: "Document type" },
+        { name: "review_date", label: "Review date", type: "date" },
+        { name: "expiry_date", label: "Expiry date", type: "date" },
+        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
+      ], item)}
+      ${section("Summary and actions", "Why this document matters and what needs doing.", [
+        { name: "description", label: "Description", type: "textarea", full: true },
+        { name: "summary", label: "Summary", type: "textarea", full: true },
+        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+      ], item)}
+    `,
+  };
+}
+
+function staffRecordForm(type, item = {}) {
+  const label = getRecordLabel(type, "Staff record");
+
+  return {
+    title: label,
+    intro:
+      "Record the adult’s journey clearly, including onboarding, supervision, learning, wellbeing, performance and follow-up.",
+    required: ["title", "summary"],
+    html: `
+      ${staffJourneySection(item)}
+      ${section("Record details", "Core information for this adult journey record.", [
+        { name: "record_date", label: "Date", type: "date", value: today() },
+        { name: "title", label: "Title", required: true },
+        { name: "staff_member_name", label: "Staff member" },
+        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
+      ], item)}
+      ${section("Summary", "Record the detail clearly and professionally.", [
+        { name: "summary", label: "Summary", type: "textarea", rows: 6, required: true, full: true },
+        { name: "strengths", label: "Strengths / positive practice", type: "textarea", full: true },
+        { name: "development_needs", label: "Development needs", type: "textarea", full: true },
+      ], item)}
+      ${section("Follow-up", "Record support, actions and oversight.", [
+        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+        { name: "next_review_date", label: "Next review date", type: "date" },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+      ], item)}
+    `,
+  };
+}
+
+function simpleForm(type, item = {}) {
+  const label = getRecordLabel(type, "Record");
+  const primaryDate = getRecordPrimaryDateField(type) || "created_at";
+  const isDateTime = primaryDate.includes("datetime");
+
+  return {
+    title: label,
+    intro:
+      "Complete this record clearly, including context, voice, meaning and follow-up.",
+    required: ["title", "summary"],
+    html: `
+      ${journeySection(item)}
+      ${section("Record details", "Core information for this record.", [
+        { name: primaryDate, label: "Date", type: isDateTime ? "datetime-local" : "date", value: isDateTime ? now() : today() },
+        { name: "title", label: "Title", required: true },
+        { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, value: "draft" },
+      ], item)}
+      ${section("Summary", "Record the detail clearly.", [
+        { name: "summary", label: "Summary", type: "textarea", rows: 6, required: true, full: true },
+        { name: "child_voice", label: "Young person’s voice", type: "textarea", full: true },
+      ], item)}
+      ${meaningSection(item)}
+      ${section("Actions", "Record follow-up and oversight.", [
+        { name: "actions_required", label: "Actions required", type: "textarea", full: true },
+        { name: "manager_review_needed", label: "Manager review needed", type: "checkbox" },
+        { name: "create_follow_up_task", label: "Create follow-up task", type: "checkbox" },
+        { name: "approval_status", label: "Approval status", type: "select", options: APPROVAL_OPTIONS },
+      ], item)}
+    `,
+  };
+}
+
+function getForm(type, item = {}) {
+  const safeType = normaliseRecordType(type) || type;
+
+  if (safeType === "daily_note") return dailyRecord(item);
+  if (safeType === "incident") return incidentForm(item);
+  if (safeType === "keywork") return keyworkForm(item);
+  if (safeType === "risk") return riskForm(item);
+  if (safeType === "safeguarding_record") return safeguardingForm(item);
+  if (safeType === "health_record") return healthForm(item);
+  if (safeType === "education_record") return educationForm(item);
+  if (safeType === "family_contact") return familyContactForm(item);
+  if (safeType === "appointment") return appointmentForm(item);
+  if (safeType === "task") return taskForm(item);
+  if (safeType === "medication_record") return medicationRecordForm(item);
+  if (safeType === "handover_record") return handoverForm(item);
+  if (safeType === "document" || safeType === "statutory_document") {
+    return documentForm(item);
   }
 
-  return value;
+  if (
+    [
+      "staff_profile",
+      "supervision",
+      "training",
+      "onboarding",
+      "probation",
+      "staff_wellbeing",
+      "performance",
+      "exit_interview",
+    ].includes(safeType)
+  ) {
+    return staffRecordForm(safeType, item);
+  }
+
+  return simpleForm(safeType, item);
 }
 
-function serializeComposerForm() {
-  const form = getComposerForm();
-  if (!form) return {};
+function getComposerIds() {
+  const youngPersonId = getYoungPersonId();
+  const homeId = getHomeId();
 
-  const formData = new FormData(form);
-  const payload = {};
+  return {
+    youngPersonId: youngPersonId ? String(youngPersonId) : null,
+    homeId: homeId ? String(homeId) : null,
+  };
+}
 
-  form.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-    if (checkbox.name) {
-      payload[checkbox.name] = checkbox.checked;
+function collectFormData(form) {
+  const data = Object.fromEntries(new FormData(form));
+
+  form.querySelectorAll("input[type='checkbox']").forEach((checkbox) => {
+    data[checkbox.name] = checkbox.checked;
+  });
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (typeof value === "string") data[key] = value.trim();
+  });
+
+  return data;
+}
+
+function validateRequired(data = {}, required = []) {
+  return required.filter((key) => {
+    const value = data[key];
+    return value === null || value === undefined || String(value).trim() === "";
+  });
+}
+
+function runWritingQualityCheck(data = {}) {
+  const issues = [];
+  const joined = Object.values(data)
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  COMMON_SPELLING_HINTS.forEach(([wrong, right]) => {
+    if (joined.includes(wrong)) {
+      issues.push(`Possible spelling: "${wrong}" should be "${right}"`);
     }
   });
 
-  for (const [key, value] of formData.entries()) {
-    payload[key] = serialiseValue(key, value);
+  return issues;
+}
+
+function strictValidation(type, data = {}) {
+  const issues = [];
+
+  if (
+    !data.note_date &&
+    !data.record_date &&
+    !data.incident_datetime &&
+    !data.session_date &&
+    !data.review_date &&
+    !data.appointment_date &&
+    !data.handover_datetime &&
+    !data.administered_at
+  ) {
+    issues.push("date or context");
   }
 
-  if (getCurrentScope() === "child") {
-    payload.young_person_id = state.youngPersonId;
-  } else {
-    payload.home_id = getCurrentHomeId();
-    payload.scope = getCurrentScope();
-  }
-
-  const meta = getComposerMeta();
-
-  if (meta.source_record_type && !payload.source_record_type) {
-    payload.source_record_type = meta.source_record_type;
-  }
-
-  if (meta.source_record_id && !payload.source_record_id) {
-    payload.source_record_id = meta.source_record_id;
-  }
-
-  if (meta.inspection_score_id && !payload.inspection_score_id) {
-    payload.inspection_score_id = meta.inspection_score_id;
-  }
-
-  if (meta.line_of_enquiry_id && !payload.line_of_enquiry_id) {
-    payload.line_of_enquiry_id = meta.line_of_enquiry_id;
-  }
-
-  if (meta.projected_section_band && !payload.projected_section_band) {
-    payload.projected_section_band = meta.projected_section_band;
+  if (!data.narrative && !data.summary && !data.description && !data.concern_summary && !data.title) {
+    issues.push("summary / factual account");
   }
 
   if (
-    meta.recoverable_points_estimate &&
-    !payload.recoverable_points_estimate
+    ["daily_note", "incident", "keywork", "risk", "safeguarding_record"].includes(type) &&
+    !data.young_person_voice &&
+    !data.child_voice &&
+    !data.child_views &&
+    !data.disclosure_details
   ) {
-    payload.recoverable_points_estimate = meta.recoverable_points_estimate;
+    issues.push("child voice or reason unavailable");
   }
 
-  return payload;
+  if (
+    ["daily_note", "incident", "keywork", "risk"].includes(type) &&
+    !data.what_is_child_communicating &&
+    !data.what_helped &&
+    !data.what_did_adults_learn &&
+    !data.what_needs_to_change &&
+    !data.reflective_analysis &&
+    !data.concern_summary
+  ) {
+    issues.push("meaning / analysis");
+  }
+
+  if (
+    !data.actions_required &&
+    !data.actions_taken &&
+    !data.response_actions &&
+    !data.follow_up_required &&
+    !data.actions_agreed &&
+    !data.description
+  ) {
+    issues.push("actions or response");
+  }
+
+  if (
+    ["incident", "risk", "safeguarding_record", "medication_record"].includes(type) &&
+    ["high", "critical"].includes(String(data.severity || "").toLowerCase()) &&
+    !data.manager_oversight &&
+    !data.manager_review_comment &&
+    !data.manager_review_needed
+  ) {
+    issues.push("manager oversight for high-risk record");
+  }
+
+  return [...new Set(issues)];
 }
 
-function buildDraftState() {
+function qualityCheck(type, data = {}, required = []) {
+  const missing = validateRequired(data, required);
+  return [...new Set(missing.map((key) => key.replaceAll("_", " ")))];
+}
+
+function applySmartDefaults(type, data = {}) {
+  const next = { ...data };
+
+  const highRisk =
+    ["high", "critical"].includes(String(next.severity || "").toLowerCase()) ||
+    next.safeguarding_concern === true ||
+    type === "safeguarding_record" ||
+    type === "medication_record";
+
+  if (highRisk) {
+    next.manager_review_needed = true;
+    next.approval_status = next.approval_status || "manager_review";
+  }
+
+  if (type === "daily_note" && !next.title) next.title = "Daily life note";
+  if (type === "incident" && !next.title) next.title = next.incident_type || "Incident";
+  if (type === "risk" && !next.approval_status) next.approval_status = "manager_review";
+
+  return next;
+}
+
+function buildPayload(type, data = {}, mode = "draft", ids = getComposerIds()) {
+  const status = mode === "submit" ? "submitted" : data.status || "draft";
+  const smartData = applySmartDefaults(type, data);
+
   return {
-    saved_at: new Date().toISOString(),
-    values: serializeComposerForm(),
-    meta: getComposerMeta(),
+    ...smartData,
+    workflow_status: status,
+    status: smartData.status || status,
+    record_type: type,
+    young_person_id: ids.youngPersonId ? toNumberOrNull(ids.youngPersonId) : null,
+    home_id: ids.homeId ? toNumberOrNull(ids.homeId) : null,
   };
 }
 
-function saveDraftToLocal() {
-  try {
-    localStorage.setItem(getStorageKey(), JSON.stringify(buildDraftState()));
+async function maybeCreateFollowUpTask(ids, type, data = {}) {
+  if (!data.create_follow_up_task) return null;
 
-    showComposerStatus(
-      `Autosaved ${new Date().toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`
-    );
-  } catch {
-    showComposerStatus("Autosave unavailable");
-  }
-}
+  const description =
+    data.actions_required ||
+    data.actions_taken ||
+    data.response_actions ||
+    data.follow_up_required ||
+    data.actions_agreed ||
+    "";
 
-function loadDraftFromLocal() {
+  if (!description) return null;
+
   try {
-    const raw = localStorage.getItem(getStorageKey());
-    return raw ? JSON.parse(raw) : null;
-  } catch {
+    return await createRecord("task", ids, {
+      title: `Follow-up: ${getRecordLabel(type, type)}`,
+      description,
+      priority: data.severity || data.significance || "medium",
+      status: "draft",
+      due_date: data.next_action_date || data.next_session_date || data.next_review_date || "",
+      young_person_id: ids.youngPersonId ? toNumberOrNull(ids.youngPersonId) : null,
+      home_id: ids.homeId ? toNumberOrNull(ids.homeId) : null,
+    });
+  } catch (error) {
+    console.warn("[composer] follow-up task creation failed", error);
     return null;
   }
 }
 
-function clearDraftFromLocal() {
-  try {
-    localStorage.removeItem(getStorageKey());
-  } catch {
-    // ignore
-  }
+function setComposerFeedback(message = "") {
+  const feedback =
+    els.composerAiFeedback || document.getElementById("composerAiFeedback");
+
+  if (!feedback) return;
+  feedback.textContent = message || "No review has been run yet.";
 }
 
-function hydrateComposerDraft(draft) {
-  const form = getComposerForm();
-  if (!draft?.values || !form) return;
+function updateQualityStrip(data = {}) {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
 
-  if (draft.meta && typeof draft.meta === "object") {
-    state.composerMeta = {
-      ...getComposerMeta(),
-      ...draft.meta,
-    };
-  }
+  set(
+    "qualityFactsStatus",
+    data.narrative || data.summary || data.description || data.concern_summary
+      ? "Present"
+      : "Needs detail"
+  );
 
-  Object.entries(draft.values).forEach(([key, value]) => {
-    const field = form.elements.namedItem(key);
-    if (!field) return;
+  set(
+    "qualityChildVoiceStatus",
+    data.young_person_voice || data.child_voice || data.child_views || data.disclosure_details
+      ? "Present"
+      : "Add voice"
+  );
 
-    if (field.type === "checkbox") {
-      field.checked = Boolean(value);
-      return;
-    }
+  set(
+    "qualityActionsStatus",
+    data.actions_required || data.actions_taken || data.response_actions || data.actions_agreed
+      ? "Present"
+      : "Add actions"
+  );
 
-    field.value = value ?? "";
-  });
+  set(
+    "qualityOversightStatus",
+    data.manager_oversight || data.manager_review_comment || data.manager_review_needed
+      ? "Present"
+      : "As needed"
+  );
 }
 
-let autosaveBoundForKey = "";
-
-function bindComposerAutosave() {
+function runComposerReview() {
   const form = getComposerForm();
   if (!form) return;
 
-  const storageKey = getStorageKey();
-  if (autosaveBoundForKey === storageKey) return;
-  autosaveBoundForKey = storageKey;
+  const type =
+    normaliseRecordType(state.composerRecordType) || state.composerRecordType || "";
 
-  form.querySelectorAll("input, textarea, select").forEach((field) => {
-    field.addEventListener("input", () => {
-      window.clearTimeout(state.autosaveTimer);
-      state.autosaveTimer = window.setTimeout(saveDraftToLocal, 500);
+  const data = collectFormData(form);
+  updateQualityStrip(data);
+
+  const required = state.composerRequiredFields || getForm(type).required || [];
+  const requiredIssues = qualityCheck(type, data, required);
+  const strictIssues = strictValidation(type, data);
+  const writingIssues = runWritingQualityCheck(data);
+
+  const issues = [...requiredIssues, ...strictIssues, ...writingIssues];
+
+  if (!issues.length) {
+    setComposerFeedback(
+      "This record has the key ingredients: factual detail, voice, analysis, actions and oversight where needed."
+    );
+    return;
+  }
+
+  setComposerFeedback(`Review before submitting: ${issues.join("; ")}.`);
+}
+
+function bindComposerReviewButtons() {
+  const bindings = [
+    "composerCheckBtn",
+    "composerGrammarBtn",
+    "composerClarityBtn",
+    "composerSafeguardingBtn",
+    "composerChildVoiceBtn",
+    "composerLanguageBtn",
+  ];
+
+  bindings.forEach((id) => {
+    const button = document.getElementById(id);
+    if (!button || button.dataset.reviewBound === "true") return;
+
+    button.dataset.reviewBound = "true";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      runComposerReview();
     });
-
-    field.addEventListener("change", saveDraftToLocal);
-  });
-}
-
-function unwrapSavedRecord(recordType, response) {
-  if (!response) return null;
-
-  const unwrapped = unwrapCreateResponse(recordType, response);
-  if (unwrapped && typeof unwrapped === "object") return unwrapped;
-
-  if (response.data && typeof response.data === "object") return response.data;
-  if (response.record && typeof response.record === "object") return response.record;
-  if (response.item && typeof response.item === "object") return response.item;
-
-  return response;
-}
-
-function buildSuggestionMetadata(recordType, savedRecord) {
-  const recordId =
-    savedRecord?.id ||
-    savedRecord?.record_id ||
-    savedRecord?.source_id ||
-    state.composerRecordId ||
-    null;
-
-  const meta = getComposerMeta();
-
-  return {
-    record_type: recordType,
-    id: recordId,
-    source_record_type: recordType,
-    source_record_id: recordId,
-    young_person_id:
-      getCurrentScope() === "child"
-        ? savedRecord?.young_person_id || state.youngPersonId || null
-        : null,
-    home_id:
-      getCurrentScope() !== "child"
-        ? savedRecord?.home_id || getCurrentHomeId() || null
-        : null,
-    scope: getCurrentScope(),
-    user_role: state.userRole || "",
-    inspection_score_id:
-      savedRecord?.inspection_score_id ||
-      meta.inspection_score_id ||
-      null,
-    line_of_enquiry_id:
-      savedRecord?.line_of_enquiry_id ||
-      meta.line_of_enquiry_id ||
-      null,
-  };
-}
-
-async function runSuggestionEngineAfterSave(recordType, savedRecord) {
-  if (!recordType || !savedRecord) return [];
-
-  const metadata = buildSuggestionMetadata(recordType, savedRecord);
-
-  const rawSuggestions = await rulesClient.evaluateSuggestions({
-    recordType,
-    record: {
-      ...savedRecord,
-      record_type: recordType,
-      id: metadata.id,
-      source_id: metadata.id,
-    },
-    metadata,
   });
 
-  const suggestions = rulesClient.mergeSuggestionLists(rawSuggestions);
+  const form = getComposerForm();
+  if (form && form.dataset.qualityBound !== "true") {
+    form.dataset.qualityBound = "true";
 
-  state.currentSuggestions = suggestions;
-  state.currentSuggestionSource = metadata;
-  state.lastSavedRecord = savedRecord;
-
-  if (els.composerAiFeedback) {
-    els.composerAiFeedback.textContent = suggestions.length
-      ? `${suggestions.length} linked suggestion${suggestions.length === 1 ? "" : "s"} ready.`
-      : "Saved. No AI suggestions triggered.";
+    let qualityStripRaf = null;
+    form.addEventListener("input", () => {
+      if (qualityStripRaf) return;
+      qualityStripRaf = window.requestAnimationFrame(() => {
+        qualityStripRaf = null;
+        updateQualityStrip(collectFormData(form));
+      });
+    });
   }
+}
 
-  if (!suggestions.length) {
-    emitSuggestionsPanelHide();
-    return suggestions;
-  }
+function forceComposerVisible(panel) {
+  if (!panel) return;
 
-  emitSuggestionsPanelShow(suggestions, {
-    source_record_type: metadata.source_record_type,
-    source_record_id: metadata.source_record_id,
-    scope: metadata.scope,
+  document.getElementById("assistantModal")?.classList.add("hidden");
+  document.getElementById("assistantBackdrop")?.classList.add("hidden");
+  document.getElementById("assistantModal")?.setAttribute("aria-hidden", "true");
+  document.getElementById("assistantBackdrop")?.setAttribute("aria-hidden", "true");
+
+  panel.classList.remove("hidden");
+  panel.classList.add("composer-panel");
+  panel.setAttribute("aria-hidden", "false");
+
+  Object.assign(panel.style, {
+    display: "grid",
+    position: "fixed",
+    inset: "0",
+    zIndex: "2147483647",
+    placeItems: "center",
+    pointerEvents: "auto",
+    background: "rgba(15, 23, 42, 0.42)",
   });
 
-  return suggestions;
+  const shell = panel.querySelector(".composer-shell");
+
+  if (shell) {
+    Object.assign(shell.style, {
+      display: "grid",
+      position: "relative",
+      zIndex: "2147483647",
+      width: "min(1440px, 96vw)",
+      maxHeight: "92vh",
+      overflow: "hidden",
+      pointerEvents: "auto",
+      opacity: "1",
+      visibility: "visible",
+      background: "var(--surface, #fff)",
+    });
+  }
+
+  document.body.classList.add("composer-open");
+  document.body.style.overflow = "hidden";
 }
 
-function updateComposerAssistantContext() {
-  if (!els.composerAiFeedback) return;
+function clearComposerForcedVisibility(panel) {
+  if (!panel) return;
 
-  const meta = getComposerMeta();
-  const lines = [];
+  panel.classList.add("hidden");
+  panel.setAttribute("aria-hidden", "true");
+  panel.removeAttribute("style");
 
-  if (meta.suggestion_action_type) {
-    lines.push(
-      `Assistant action: ${String(meta.suggestion_action_type).replaceAll("_", " ")}`
-    );
-  }
+  const shell = panel.querySelector(".composer-shell");
+  shell?.removeAttribute("style");
 
-  if (meta.source_record_type) {
-    lines.push(
-      `Linked from ${meta.source_record_type}${
-        meta.source_record_id ? ` #${meta.source_record_id}` : ""
-      }`
-    );
-  }
-
-  if (meta.inspection_score_id) {
-    lines.push(`Inspection score #${meta.inspection_score_id}`);
-  }
-
-  if (meta.line_of_enquiry_id) {
-    lines.push(`Line of enquiry #${meta.line_of_enquiry_id}`);
-  }
-
-  if (meta.improvement_prompt) {
-    lines.push(meta.improvement_prompt);
-  } else if (meta.review_prompt) {
-    lines.push(meta.review_prompt);
-  } else if (meta.suggestion_reason) {
-    lines.push(meta.suggestion_reason);
-  }
-
-  els.composerAiFeedback.textContent = lines.length
-    ? lines.join(" • ")
-    : "No AI review run yet.";
+  document.body.classList.remove("composer-open");
+  document.body.style.overflow = "";
 }
 
-export function openComposerFor(recordType, mode = "create", item = null) {
-  if (!isRecordAllowedInScope(recordType)) {
-    throw new Error(`"${recordType}" is not available in ${getCurrentScope()} scope.`);
+export function openComposer(type, item = {}) {
+  const safeType = normaliseRecordType(type) || type;
+
+  state.composerRecordType = safeType;
+  state.composerEditItem = item || null;
+  state.composerMode = getRecordId(item) ? "edit" : "create";
+
+  const form = getForm(safeType, item);
+  state.composerRequiredFields = form.required || [];
+
+  const titleEl =
+    els.composerTitle ||
+    document.getElementById("recordComposerTitle") ||
+    document.getElementById("composerTitle");
+
+  const subtitleEl =
+    els.composerSubtitle ||
+    document.getElementById("composerSubtitle");
+
+  const guidanceEl =
+    els.composerGuidanceText ||
+    document.getElementById("recordComposerGuidanceText") ||
+    document.getElementById("composerGuidanceText");
+
+  const fieldsEl = getComposerFields();
+  const panel = getRecordComposerPage();
+
+  if (titleEl) titleEl.textContent = form.title;
+  if (subtitleEl) subtitleEl.textContent = form.intro;
+
+  if (guidanceEl) {
+    guidanceEl.textContent =
+      `${form.intro} Use factual language, include the young person’s experience, and make next steps clear.`;
   }
 
-  if (requiresEntityId(recordType) && !getScopeEntityId()) {
-    throw new Error(
-      getCurrentScope() === "child"
-        ? "Select a young person first."
-        : "No home context available for this record."
-    );
-  }
+  if (fieldsEl) fieldsEl.innerHTML = form.html;
 
-  state.composerMode = mode;
-  state.composerRecordType = recordType;
-  state.composerRecordId = item?.id || item?.record_id || item?.source_id || null;
-  state.composerEditItem = item || {};
-  state.composerOpen = true;
+  setComposerFeedback("No review has been run yet.");
 
-  setComposerMetaFromItem(item || {});
+  forceComposerVisible(panel);
 
-  const content = getComposerContent(recordType, item || {});
-  const fieldsHost = getComposerFieldsHost();
+  window.requestAnimationFrame(() => {
+    updateQualityStrip({});
+    bindComposerReviewButtons();
+  });
 
-  if (els.composerTitle) els.composerTitle.textContent = content.title;
-  if (els.composerSubtitle) els.composerSubtitle.textContent = content.subtitle;
-  if (els.composerGuidanceText) els.composerGuidanceText.textContent = content.guidance;
+  console.log("[composer] openComposer rendered", {
+    safeType,
+    titleFound: !!titleEl,
+    subtitleFound: !!subtitleEl,
+    fieldsFound: !!fieldsEl,
+    panelFound: !!panel,
+    fieldsLength: fieldsEl?.innerHTML?.length,
+    panelClass: panel?.className,
+    ariaHidden: panel?.getAttribute("aria-hidden"),
+  });
 
-  if (els.composerPrompts) {
-    els.composerPrompts.innerHTML = [
-      ...(content.prompts || []).map(
-        (prompt) => `<div class="composer-prompt">${escapeHtml(prompt)}</div>`
-      ),
-      getSuggestionBannerHtml(),
-    ].join("");
-  }
-
-  if (fieldsHost) {
-    fieldsHost.innerHTML = renderSections(content.sections || []);
-  }
-
-  updateComposerAssistantContext();
-  openComposer();
-  bindComposerAutosave();
-
-  const draft = loadDraftFromLocal();
-  if (draft) {
-    hydrateComposerDraft(draft);
-  }
-
-  showComposerStatus("Autosave ready");
 }
 
-export function buildAiFeedback(type = "clarity") {
-  const payload = serializeComposerForm();
-  const notes = [];
-  const meta = getComposerMeta();
+export function openComposerFor(type, mode = "create", item = {}) {
+  const safeType = normaliseRecordType(type) || type;
 
-  if (type === "grammar") {
-    notes.push("Writing review:");
-    notes.push("• Tighten long sentences and remove repeated wording.");
-    notes.push("• Keep language professional, calm and clear.");
-  }
+  state.composerRecordType = safeType;
+  state.composerMode = mode || (getRecordId(item) ? "edit" : "create");
+  state.composerEditItem = item || null;
 
-  if (type === "clarity") {
-    notes.push("Clarity review:");
-    notes.push("• Make the sequence of events easy to follow.");
-    notes.push("• Separate facts, reflection and next steps.");
-  }
+  openComposer(safeType, item);
 
-  if (type === "safeguarding") {
-    notes.push("Safeguarding review:");
-    notes.push("• Check whether risk, response and follow-up are explicit.");
-    notes.push("• Make sure any notifications or escalation are clear.");
-  }
+  state.composerMode = mode || (getRecordId(item) ? "edit" : "create");
+  state.composerEditItem = item || null;
 
-  if (type === "child_voice") {
-    notes.push("Young person voice review:");
-    notes.push("• Make the young person’s views, feelings or communication more visible.");
-    notes.push("• Show how adults responded to that communication.");
-  }
+  console.log("[composer] openComposerFor complete", {
+    type,
+    safeType,
+    mode: state.composerMode,
+    item,
+    panel: document.getElementById("recordComposerPage")?.className,
+    fieldsLength: document.getElementById("recordComposerFields")?.innerHTML?.length,
+  });
 
-  if (meta.improvement_prompt) {
-    notes.push(`• ${meta.improvement_prompt}`);
-  }
-
-  if (
-    !payload.child_voice &&
-    !payload.young_person_voice &&
-    !payload.child_voice_summary &&
-    getCurrentScope() === "child"
-  ) {
-    notes.push("• Add more of the young person’s voice where appropriate.");
-  }
-
-  return notes.join("\n");
+  return state.composerEditItem;
 }
 
-function isNotFoundError(error) {
-  return (
-    error?.status === 404 ||
-    error?.message === "Not Found" ||
-    /not found/i.test(String(error?.message || ""))
+export function closeComposer() {
+  state.composerMode = "closed";
+  const panel = getRecordComposerPage();
+  clearComposerForcedVisibility(panel);
+}
+
+export function resetComposer() {
+  const form = getComposerForm();
+  const fieldsEl = getComposerFields();
+
+  if (form) form.reset();
+  if (fieldsEl) fieldsEl.innerHTML = "";
+
+  state.composerRecordType = null;
+  state.composerEditItem = null;
+  state.composerMode = "closed";
+  state.composerRequiredFields = [];
+
+  setComposerFeedback("No review has been run yet.");
+  updateQualityStrip({});
+  closeComposer();
+}
+
+function dispatchComposerSaved(detail = {}) {
+  window.dispatchEvent(
+    new CustomEvent("indicare:record-saved", {
+      detail: {
+        ...detail,
+        timestamp: new Date().toISOString(),
+      },
+    })
   );
 }
 
-function nowIso() {
-  return new Date().toISOString();
-}
+function setSavingState(isSaving, label = "Saving...") {
+  const buttons = [
+    els.composerDraftBtn,
+    els.composerSaveDraftBtn,
+    els.composerSubmitBtn,
+    document.getElementById("recordComposerDraftBtn"),
+    document.getElementById("composerDraftBtn"),
+    document.getElementById("composerSaveDraftBtn"),
+    document.getElementById("recordComposerSubmitBtn"),
+    document.getElementById("composerSubmitBtn"),
+  ].filter(Boolean);
 
-function normaliseSavedRecordForSchema(recordType, payload = {}) {
-  const currentScope = getCurrentScope();
-  const entityId = getScopeEntityId();
-  const meta = getComposerMeta();
-  const id =
-    payload.id ||
-    state.composerRecordId ||
-    `local-${recordType}-${Date.now()}`;
-
-  const base = {
-    id,
-    record_id: id,
-    source_id: id,
-    record_type: recordType,
-    created_at: payload.created_at || nowIso(),
-    updated_at: nowIso(),
-    _local_only: true,
-  };
-
-  if (currentScope === "child") {
-    base.young_person_id = payload.young_person_id || state.youngPersonId || null;
-  } else {
-    base.home_id = payload.home_id || getCurrentHomeId() || entityId || null;
-    base.scope = currentScope;
-  }
-
-  const byType = {
-    daily_note: {
-      note_date: payload.note_date || null,
-      shift_type: payload.shift_type || "",
-      presentation: payload.presentation || "",
-      activities: payload.activities || "",
-      education_update: payload.education_update || "",
-      health_update: payload.health_update || "",
-      family_update: payload.family_update || "",
-      behaviour_update: payload.behaviour_update || "",
-      young_person_voice: payload.young_person_voice || "",
-      positives: payload.positives || "",
-      actions_required: payload.actions_required || "",
-      significance: payload.significance || "",
-      workflow_status: payload.workflow_status || "draft",
-      manager_review_comment: payload.manager_review_comment || "",
-    },
-
-    incident: {
-      incident_type: payload.incident_type || "",
-      incident_datetime: payload.incident_datetime || null,
-      location: payload.location || "",
-      description: payload.description || "",
-      antecedent: payload.antecedent || "",
-      staff_response: payload.staff_response || "",
-      child_response: payload.child_response || "",
-      outcome: payload.outcome || "",
-      injury_flag: Boolean(payload.injury_flag),
-      property_damage_flag: Boolean(payload.property_damage_flag),
-      police_involved: Boolean(payload.police_involved),
-      safeguarding_flag: Boolean(payload.safeguarding_flag),
-      severity: payload.severity || "",
-      follow_up_required: Boolean(payload.follow_up_required),
-      workflow_status: payload.workflow_status || "draft",
-      manager_review_status: payload.manager_review_status || "",
-      presentation: payload.presentation || "",
-      trauma_informed_formulation: payload.trauma_informed_formulation || "",
-      child_voice: payload.child_voice || "",
-      restorative_follow_up: payload.restorative_follow_up || "",
-      actions_taken: payload.actions_taken || "",
-      ofsted_notified: Boolean(payload.ofsted_notified),
-      requires_reg40: Boolean(payload.requires_reg40),
-    },
-
-    support_plan: {
-      plan_type: payload.plan_type || "",
-      title: payload.title || "",
-      presenting_need: payload.presenting_need || "",
-      summary: payload.summary || "",
-      child_voice: payload.child_voice || "",
-      proactive_strategies: payload.proactive_strategies || "",
-      pace_guidance: payload.pace_guidance || "",
-      triggers: payload.triggers || "",
-      protective_factors: payload.protective_factors || "",
-      start_date: payload.start_date || null,
-      review_date: payload.review_date || null,
-      status: payload.status || "active",
-      approval_status: payload.approval_status || "",
-      review_comment: payload.review_comment || "",
-    },
-
-    risk: {
-      category: payload.category || "",
-      title: payload.title || "",
-      concern_summary: payload.concern_summary || "",
-      known_triggers: payload.known_triggers || "",
-      early_warning_signs: payload.early_warning_signs || "",
-      contextual_factors: payload.contextual_factors || "",
-      current_controls: payload.current_controls || "",
-      deescalation_strategies: payload.deescalation_strategies || "",
-      response_actions: payload.response_actions || "",
-      child_views: payload.child_views || "",
-      severity: payload.severity || "",
-      likelihood: payload.likelihood || "",
-      review_date: payload.review_date || null,
-      status: payload.status || "active",
-      approval_status: payload.approval_status || "",
-      review_comment: payload.review_comment || "",
-    },
-
-    health_record: {
-      record_type: payload.record_type || "",
-      event_datetime: payload.event_datetime || null,
-      title: payload.title || "",
-      summary: payload.summary || "",
-      professional_name: payload.professional_name || "",
-      outcome: payload.outcome || "",
-      follow_up_required: Boolean(payload.follow_up_required),
-      next_action_date: payload.next_action_date || null,
-      child_voice: payload.child_voice || "",
-      workflow_status: payload.workflow_status || "draft",
-      significance: payload.significance || "",
-      linked_appointment_id: payload.linked_appointment_id || null,
-      linked_plan_id: payload.linked_plan_id || null,
-    },
-
-    education_record: {
-      record_date: payload.record_date || null,
-      attendance_status: payload.attendance_status || "",
-      provision_name: payload.provision_name || "",
-      behaviour_summary: payload.behaviour_summary || "",
-      learning_engagement: payload.learning_engagement || "",
-      issue_raised: payload.issue_raised || "",
-      action_taken: payload.action_taken || "",
-      professional_involved: payload.professional_involved || "",
-      achievement_note: payload.achievement_note || "",
-      child_voice: payload.child_voice || "",
-      follow_up_required: Boolean(payload.follow_up_required),
-      workflow_status: payload.workflow_status || "draft",
-      significance: payload.significance || "",
-      linked_plan_id: payload.linked_plan_id || null,
-    },
-
-    family_contact: {
-      contact_datetime: payload.contact_datetime || null,
-      contact_type: payload.contact_type || "",
-      contact_person: payload.contact_person || "",
-      supervision_level: payload.supervision_level || "",
-      location: payload.location || "",
-      pre_contact_presentation: payload.pre_contact_presentation || "",
-      post_contact_presentation: payload.post_contact_presentation || "",
-      child_voice: payload.child_voice || "",
-      concerns: payload.concerns || "",
-      follow_up_required: Boolean(payload.follow_up_required),
-      workflow_status: payload.workflow_status || "draft",
-      significance: payload.significance || "",
-      linked_contact_id: payload.linked_contact_id || null,
-    },
-
-    keywork: {
-      session_date: payload.session_date || null,
-      topic: payload.topic || "",
-      purpose: payload.purpose || "",
-      summary: payload.summary || "",
-      child_voice: payload.child_voice || "",
-      reflective_analysis: payload.reflective_analysis || "",
-      actions_agreed: payload.actions_agreed || "",
-      next_session_date: payload.next_session_date || null,
-      status: payload.status || "draft",
-      workflow_status: payload.workflow_status || "draft",
-      review_comment: payload.review_comment || "",
-      manager_review_comment: payload.manager_review_comment || "",
-    },
-
-    appointment: {
-      title: payload.title || "",
-      description: payload.description || "",
-      appointment_type: payload.appointment_type || "",
-      start_datetime: payload.start_datetime || null,
-      end_datetime: payload.end_datetime || null,
-      location: payload.location || "",
-      linked_plan_id: payload.linked_plan_id || null,
-      reminder_minutes_before: payload.reminder_minutes_before || null,
-      status: payload.status || "planned",
-      outcome: payload.outcome || payload.outcome_notes || "",
-      notes: payload.notes || payload.summary || "",
-      professional_name: payload.professional_name || "",
-      professional_role: payload.professional_role || "",
-      purpose: payload.purpose || "",
-      child_voice: payload.child_voice || "",
-      preparation_notes: payload.preparation_notes || "",
-      follow_up_actions: payload.follow_up_actions || "",
-    },
-
-    achievement_record: {
-      achievement_date: payload.achievement_date || null,
-      achievement_type: payload.achievement_type || "",
-      title: payload.title || "",
-      description: payload.description || "",
-      source: payload.source || "",
-      child_voice: payload.child_voice || "",
-      linked_plan_id: payload.linked_plan_id || null,
-      linked_target_id: payload.linked_target_id || null,
-      significance: payload.significance || "",
-      archived: Boolean(payload.archived),
-    },
-
-    safeguarding_record: {
-      incident_id: payload.incident_id || null,
-      safeguarding_category: payload.safeguarding_category || "",
-      concern_datetime: payload.concern_datetime || null,
-      disclosure_details: payload.disclosure_details || "",
-      concern_details: payload.concern_details || "",
-      immediate_action_taken: payload.immediate_action_taken || "",
-      referral_made: Boolean(payload.referral_made),
-      referral_details: payload.referral_details || "",
-      outcome: payload.outcome || "",
-      manager_review_status: payload.manager_review_status || "",
-      closed_at: payload.closed_at || null,
-    },
-
-    missing_episode: {
-      start_datetime: payload.start_datetime || null,
-      reported_datetime: payload.reported_datetime || null,
-      police_reference: payload.police_reference || "",
-      return_datetime: payload.return_datetime || null,
-      return_interview_completed: Boolean(payload.return_interview_completed),
-      trigger_factors: payload.trigger_factors || "",
-      push_pull_factors: payload.push_pull_factors || "",
-      actions_taken: payload.actions_taken || "",
-      outcome: payload.outcome || "",
-      review_required: Boolean(payload.review_required),
-      workflow_status: payload.workflow_status || "draft",
-      manager_review_status: payload.manager_review_status || "",
-      child_voice: payload.child_voice || "",
-      return_interview_date: payload.return_interview_date || null,
-      linked_risk_assessment_id: payload.linked_risk_assessment_id || null,
-    },
-
-    task: {
-      home_id: payload.home_id || getCurrentHomeId() || null,
-      young_person_id:
-        currentScope === "child"
-          ? payload.young_person_id || state.youngPersonId || null
-          : null,
-      task: payload.task || "",
-      task_date: payload.task_date || null,
-      completed: Boolean(payload.completed),
-      assigned_role: payload.assigned_role || "",
-      title: payload.title || "",
-      assigned_to_user_id: payload.assigned_to_user_id || null,
-      source_table: payload.source_table || payload.related_table || payload.source_record_type || "",
-      source_id: payload.source_id || payload.related_id || payload.source_record_id || null,
-      task_type: payload.task_type || "",
-      due_date: payload.due_date || null,
-      compliance_generated: Boolean(payload.compliance_generated),
-      completed_at: payload.completed ? nowIso() : null,
-      inspection_score_id: payload.inspection_score_id || meta.inspection_score_id || null,
-      line_of_enquiry_id: payload.line_of_enquiry_id || meta.line_of_enquiry_id || null,
-      projected_section_band:
-        payload.projected_section_band || meta.projected_section_band || "",
-      recoverable_points_estimate:
-        payload.recoverable_points_estimate || meta.recoverable_points_estimate || null,
-    },
-
-    manager_action: {
-      young_person_id:
-        currentScope === "child"
-          ? payload.young_person_id || state.youngPersonId || null
-          : null,
-      home_id: currentScope !== "child" ? payload.home_id || getCurrentHomeId() || null : null,
-      action_type: payload.action_type || "",
-      related_table: payload.related_table || payload.source_record_type || "",
-      related_id: payload.related_id || payload.source_record_id || null,
-      note: payload.note || payload.summary || "",
-      action_at: nowIso(),
-      summary: payload.summary || "",
-      inspection_score_id: payload.inspection_score_id || meta.inspection_score_id || null,
-      line_of_enquiry_id: payload.line_of_enquiry_id || meta.line_of_enquiry_id || null,
-      inspection_context: payload.inspection_context || meta.suggestion_reason || "",
-    },
-
-    document: {
-      young_person_id:
-        currentScope === "child"
-          ? payload.young_person_id || state.youngPersonId || null
-          : null,
-      home_id: payload.home_id || getCurrentHomeId() || null,
-      document_type: payload.document_type || "",
-      title: payload.title || "",
-      issue_date: payload.issue_date || null,
-      review_date: payload.review_date || null,
-      expiry_date: payload.expiry_date || null,
-      approval_status: payload.approval_status || "",
-      confidentiality_level: payload.confidentiality_level || "",
-      notes: payload.notes || "",
-      summary: payload.summary || "",
-      important_actions: payload.important_actions || "",
-      status: payload.status || "active",
-      file_name: payload.file_name || "",
-      category: payload.category || "",
-    },
-
-    communication: {
-      young_person_id:
-        currentScope === "child"
-          ? payload.young_person_id || state.youngPersonId || null
-          : null,
-      home_id: payload.home_id || getCurrentHomeId() || null,
-      contact_datetime: payload.contact_datetime || null,
-      contact_type: payload.contact_type || "",
-      contact_person: payload.contact_person || "",
-      organisation: payload.organisation || "",
-      role: payload.role || "",
-      direction: payload.direction || "",
-      summary: payload.summary || "",
-      decisions: payload.decisions || "",
-      actions_required: payload.actions_required || "",
-      follow_up_required: Boolean(payload.follow_up_required),
-    },
-
-    therapy: {
-      home_id: payload.home_id || getCurrentHomeId() || null,
-      session_date: payload.session_date || null,
-      service_name: payload.service_name || "",
-      professional_name: payload.professional_name || "",
-      intervention_type: payload.intervention_type || "",
-      summary: payload.summary || "",
-      recommendations: payload.recommendations || "",
-      staff_guidance: payload.staff_guidance || "",
-      next_steps: payload.next_steps || "",
-    },
-
-    team: {
-      home_id: payload.home_id || getCurrentHomeId() || null,
-      record_date: payload.record_date || null,
-      update_type: payload.update_type || "",
-      shift: payload.shift || "",
-      staff_member: payload.staff_member || "",
-      summary: payload.summary || "",
-      impact: payload.impact || "",
-      actions_required: payload.actions_required || "",
-    },
-
-    supervision: {
-      home_id: payload.home_id || getCurrentHomeId() || null,
-      session_date: payload.session_date || null,
-      staff_member: payload.staff_member || "",
-      supervisor: payload.supervisor || "",
-      supervision_type: payload.supervision_type || "",
-      summary: payload.summary || "",
-      strengths: payload.strengths || "",
-      development_needs: payload.development_needs || "",
-      actions_agreed: payload.actions_agreed || "",
-    },
-
-    profile_identity: {
-      young_person_id: payload.young_person_id || state.youngPersonId || null,
-      religion_or_faith: payload.religion_or_faith || "",
-      cultural_identity: payload.cultural_identity || "",
-      first_language: payload.first_language || "",
-      dietary_needs: payload.dietary_needs || "",
-      interests: payload.interests || "",
-      strengths_summary: payload.strengths_summary || "",
-      what_matters_to_me: payload.what_matters_to_me || "",
-      important_dates: payload.important_dates || "",
-    },
-
-    profile_communication: {
-      young_person_id: payload.young_person_id || state.youngPersonId || null,
-      neurodiversity_summary: payload.neurodiversity_summary || "",
-      communication_style: payload.communication_style || "",
-      sensory_profile: payload.sensory_profile || "",
-      processing_needs: payload.processing_needs || "",
-      signs_of_distress: payload.signs_of_distress || "",
-      what_helps: payload.what_helps || "",
-      what_to_avoid: payload.what_to_avoid || "",
-      routines_and_predictability: payload.routines_and_predictability || "",
-      visual_support_needs: payload.visual_support_needs || "",
-    },
-
-    profile_education: {
-      young_person_id: payload.young_person_id || state.youngPersonId || null,
-      school_name: payload.school_name || "",
-      year_group: payload.year_group || "",
-      education_status: payload.education_status || "",
-      sen_status: payload.sen_status || "",
-      ehcp_details: payload.ehcp_details || "",
-      designated_teacher: payload.designated_teacher || "",
-      attendance_baseline: payload.attendance_baseline || null,
-      pep_status: payload.pep_status || "",
-      support_summary: payload.support_summary || "",
-    },
-
-    profile_health: {
-      young_person_id: payload.young_person_id || state.youngPersonId || null,
-      gp_name: payload.gp_name || "",
-      gp_contact: payload.gp_contact || "",
-      dentist_name: payload.dentist_name || "",
-      dentist_contact: payload.dentist_contact || "",
-      optician_name: payload.optician_name || "",
-      optician_contact: payload.optician_contact || "",
-      allergies: payload.allergies || "",
-      diagnoses: payload.diagnoses || "",
-      mental_health_summary: payload.mental_health_summary || "",
-      medication_summary: payload.medication_summary || "",
-      consent_notes: payload.consent_notes || "",
-    },
-
-    profile_legal: {
-      young_person_id: payload.young_person_id || state.youngPersonId || null,
-      legal_status: payload.legal_status || "",
-      order_type: payload.order_type || "",
-      order_details: payload.order_details || "",
-      delegated_authority_details: payload.delegated_authority_details || "",
-      restrictions_text: payload.restrictions_text || "",
-      consent_arrangements: payload.consent_arrangements || "",
-      effective_from: payload.effective_from || null,
-      effective_to: payload.effective_to || null,
-      is_current: payload.is_current !== false,
-    },
-
-    profile_formulation: {
-      young_person_id: payload.young_person_id || state.youngPersonId || null,
-      presenting_needs: payload.presenting_needs || "",
-      developmental_context: payload.developmental_context || "",
-      trauma_context: payload.trauma_context || "",
-      neurodevelopmental_context: payload.neurodevelopmental_context || "",
-      relational_context: payload.relational_context || "",
-      meaning_of_behaviour: payload.meaning_of_behaviour || "",
-      known_triggers: payload.known_triggers || "",
-      early_signs_of_distress: payload.early_signs_of_distress || "",
-      protective_factors: payload.protective_factors || "",
-      what_helps: payload.what_helps || "",
-      what_adults_should_avoid: payload.what_adults_should_avoid || "",
-      regulation_strategies: payload.regulation_strategies || "",
-      child_voice_summary: payload.child_voice_summary || "",
-      review_date: payload.review_date || null,
-      is_current: payload.is_current !== false,
-    },
-  };
-
-  return {
-    ...base,
-    ...(byType[recordType] || payload),
-  };
-}
-
-function buildLocalFallbackResponse(recordType, payload = {}) {
-  return {
-    item: normaliseSavedRecordForSchema(recordType, payload),
-    _local_only: true,
-  };
-}
-
-async function safeComposerSend(url, method, payload, recordType) {
-  try {
-    return await apiSend(url, method, payload);
-  } catch (error) {
-    if (getCurrentScope() !== "child" && isNotFoundError(error)) {
-      console.warn("[composer] endpoint missing, using local fallback", {
-        scope: getCurrentScope(),
-        recordType,
-        method,
-        url,
-      });
-
-      return buildLocalFallbackResponse(recordType, payload);
+  buttons.forEach((button) => {
+    if (!button.dataset.originalText) {
+      button.dataset.originalText = button.textContent || "";
     }
 
-    throw error;
-  }
+    button.disabled = isSaving;
+
+    if (isSaving) {
+      button.textContent = label;
+    } else {
+      button.textContent = button.dataset.originalText || button.textContent;
+    }
+  });
+}
+
+function buildDailyNotePayload(data, ids, status) {
+  return {
+    note_date: data.note_date || today(),
+    shift_type: data.shift_type || "day",
+    presentation: data.presentation || null,
+    behaviour_update: data.behaviour_update || null,
+    positives: data.positives || null,
+    actions_required: data.actions_required || null,
+    young_person_voice: data.young_person_voice || null,
+    workflow_status: status,
+    status,
+    young_person_id: toNumberOrNull(ids.youngPersonId),
+    home_id: toNumberOrNull(ids.homeId || data.home_id || 1),
+  };
 }
 
 export async function saveComposer(mode = "draft") {
-  const recordType = state.composerRecordType;
-  const config = COMPOSER_CONFIG[recordType];
-
-  if (!config) {
-    throw new Error(`No composer configuration for ${recordType}`);
+  if (composerSaveInProgress) {
+    console.warn("[composer] duplicate save blocked");
+    return null;
   }
 
-  if (!isRecordAllowedInScope(recordType)) {
-    throw new Error(`"${recordType}" is not available in ${getCurrentScope()} scope.`);
-  }
+  composerSaveInProgress = true;
+  setSavingState(true, mode === "submit" ? "Submitting..." : "Saving...");
 
-  if (requiresEntityId(recordType) && !getScopeEntityId()) {
-    throw new Error(
-      getCurrentScope() === "child"
-        ? "Select a young person first."
-        : "No home context available for this record."
-    );
-  }
-
-  const payload = serializeComposerForm();
-  let response;
-  let savedRecord;
-
-  const isSingleton = isSingletonComposerRecord(recordType);
-  const hasStandardUpdateTarget =
-    state.composerMode === "edit" &&
-    state.composerRecordId &&
-    config.updateUrl &&
-    !isSingleton;
-
-  if (isSingleton) {
-    response = await safeComposerSend(
-      config.updateUrl(),
-      config.updateMethod || config.createMethod || "PUT",
-      payload,
-      recordType
-    );
-
-    savedRecord = unwrapSavedRecord(recordType, response);
-    state.composerRecordId =
-      savedRecord?.id ||
-      savedRecord?.record_id ||
-      savedRecord?.source_id ||
-      state.composerRecordId ||
-      getScopeEntityId();
-
-    state.composerMode = "edit";
-  } else if (hasStandardUpdateTarget) {
-    response = await safeComposerSend(
-      config.updateUrl(state.composerRecordId),
-      config.updateMethod || "PATCH",
-      payload,
-      recordType
-    );
-
-    savedRecord = unwrapSavedRecord(recordType, response);
-    state.composerRecordId =
-      savedRecord?.id ||
-      savedRecord?.record_id ||
-      savedRecord?.source_id ||
-      state.composerRecordId;
-  } else {
-    response = await safeComposerSend(
-      config.createUrl(),
-      config.createMethod || "POST",
-      payload,
-      recordType
-    );
-
-    savedRecord = unwrapSavedRecord(recordType, response);
-    state.composerRecordId =
-      savedRecord?.id ||
-      savedRecord?.record_id ||
-      savedRecord?.source_id ||
-      state.composerRecordId;
-
-    state.composerMode = "edit";
-  }
-
-  if (
-    mode === "submit" &&
-    config.submitUrl &&
-    state.composerRecordId &&
-    !response?._local_only
-  ) {
-    await safeComposerSend(
-      config.submitUrl(state.composerRecordId),
-      "POST",
-      {},
-      recordType
-    );
-  }
+  console.log("[composer] save started", {
+    mode,
+    composerMode: state.composerMode,
+    composerRecordType: state.composerRecordType,
+    composerEditItem: state.composerEditItem,
+  });
 
   try {
-    await runSuggestionEngineAfterSave(recordType, {
-      ...(savedRecord || {}),
-      young_person_id:
-        getCurrentScope() === "child"
-          ? savedRecord?.young_person_id ||
-            payload.young_person_id ||
-            state.youngPersonId
-          : null,
-      home_id:
-        getCurrentScope() !== "child"
-          ? savedRecord?.home_id || payload.home_id || getCurrentHomeId()
-          : null,
-      inspection_score_id:
-        savedRecord?.inspection_score_id ||
-        payload.inspection_score_id ||
-        getComposerMeta().inspection_score_id ||
-        null,
-      line_of_enquiry_id:
-        savedRecord?.line_of_enquiry_id ||
-        payload.line_of_enquiry_id ||
-        getComposerMeta().line_of_enquiry_id ||
-        null,
-    });
-  } catch (error) {
-    console.error("[composer] suggestion trigger failed", error);
-    if (els.composerAiFeedback) {
-      els.composerAiFeedback.textContent =
-        "Saved, but AI suggestions could not be loaded.";
+    const form = getComposerForm();
+    if (!form) throw new Error("Composer form is not available.");
+
+    const type =
+      normaliseRecordType(state.composerRecordType) || state.composerRecordType;
+
+    if (!type) throw new Error("No record type selected.");
+
+    const ids = getComposerIds();
+
+    console.log("[composer] ids resolved", ids);
+
+    if (CHILD_SCOPED_TYPES.has(type) && !ids.youngPersonId) {
+      throw new Error("Select a child or young person first.");
     }
+
+    const data = collectFormData(form);
+
+    console.log("[composer] form data collected", data);
+
+    const required = state.composerRequiredFields || getForm(type).required || [];
+    const missing = validateRequired(data, required);
+
+    if (missing.length) {
+      throw new Error(`Please complete: ${missing.map((key) => key.replaceAll("_", " ")).join(", ")}.`);
+    }
+
+    const status = mode === "submit" ? "submitted" : data.status || "draft";
+
+    const payload =
+      type === "daily_note"
+        ? buildDailyNotePayload(data, ids, status)
+        : buildPayload(type, data, mode, ids);
+
+    console.log("[composer] payload ready", {
+      type,
+      mode,
+      ids,
+      payload,
+    });
+
+    const editItem = state.composerEditItem || {};
+    const existingId = getRecordId(editItem);
+    const isEdit = state.composerMode === "edit" && existingId;
+
+    let saved;
+
+    if (isEdit) {
+      console.log("[composer] updateRecord starting", {
+        type,
+        existingId,
+        ids,
+        payload,
+      });
+
+      saved = await updateRecord(type, existingId, ids, payload);
+
+      console.log("[composer] updateRecord complete", saved);
+    } else {
+      console.log("[composer] createRecord starting", {
+        type,
+        ids,
+        payload,
+      });
+
+      saved = await createRecord(type, ids, payload);
+
+      console.log("[composer] createRecord complete", saved);
+    }
+
+    const followUp = await maybeCreateFollowUpTask(ids, type, data);
+
+    if (followUp) {
+      console.log("[composer] follow-up task created", followUp);
+    }
+
+    dispatchComposerSaved({
+      type,
+      mode,
+      ids,
+      payload,
+      saved,
+      followUp,
+      action: isEdit ? "update" : "create",
+    });
+
+    closeComposer();
+
+    console.log("[composer] save finished", saved);
+
+    return saved;
+  } catch (error) {
+    console.error("[composer] save failed", error);
+    throw error;
+  } finally {
+    composerSaveInProgress = false;
+    setSavingState(false);
   }
+}
 
-  clearDraftFromLocal();
-  autosaveBoundForKey = "";
+async function runSaveAndRefresh(mode, onSaved) {
+  try {
+    const saved = await saveComposer(mode);
 
-  showComposerStatus(
-    response?._local_only
-      ? "Saved locally"
-      : mode === "submit"
-      ? "Submitted"
-      : "Saved"
-  );
+    console.log("[composer] saveComposer returned", saved);
 
-  closeComposer(true);
-  return response;
+    if (!saved) return saved;
+
+    try {
+      console.log("[composer] onSaved starting");
+      await onSaved?.(saved);
+      console.log("[composer] onSaved complete");
+    } catch (error) {
+      console.error("[composer] onSaved failed after save", error);
+      window.alert(
+        "The record saved, but the screen refresh failed. Refresh the page if you cannot see the new record."
+      );
+    }
+
+    return saved;
+  } catch (error) {
+    console.error(`[composer] ${mode} failed`, error);
+    window.alert(error?.message || "Unable to save record.");
+    return null;
+  }
+}
+
+export function bindComposerEvents({ onSaved } = {}) {
+  if (state.composerEventsBound) return;
+  state.composerEventsBound = true;
+
+  const closeBtn =
+    els.closeComposerBtn ||
+    document.getElementById("closeComposerBtn");
+
+  closeBtn?.addEventListener("click", closeComposer);
+
+  const cancelBtn =
+    els.composerCancelBtn ||
+    document.getElementById("recordComposerCancelBtn") ||
+    document.getElementById("composerCancelBtn");
+
+  const draftBtn =
+    els.composerDraftBtn ||
+    els.composerSaveDraftBtn ||
+    document.getElementById("recordComposerDraftBtn") ||
+    document.getElementById("composerDraftBtn") ||
+    document.getElementById("composerSaveDraftBtn");
+
+  const submitBtn =
+    els.composerSubmitBtn ||
+    document.getElementById("recordComposerSubmitBtn") ||
+    document.getElementById("composerSubmitBtn");
+
+  cancelBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    closeComposer();
+  });
+
+  draftBtn?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    await runSaveAndRefresh("draft", onSaved);
+  });
+
+  submitBtn?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    await runSaveAndRefresh("submit", onSaved);
+  });
+
+  document.addEventListener("submit", async (event) => {
+    const form = getComposerForm();
+    if (!form || event.target !== form) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    await runSaveAndRefresh("submit", onSaved);
+  });
+
+  bindComposerReviewButtons();
 }

@@ -11,13 +11,26 @@ from pydantic import BaseModel, ConfigDict, Field
 from auth.current_user import get_current_user
 from db.connection import get_db
 from services.ai_service import generate_ai_stream
+from services.assistant_context_service import build_runtime_assistant_context
 from services.assistant_orchestrator import build_assistant_prompt
+from services.assistant_security import (
+    contains_prompt_injection_attempt,
+    is_provider_level_role,
+    normalise_history as normalise_safe_history,
+    normalise_role,
+    safe_int,
+    safe_int_list,
+    safe_string,
+)
 from services.report_scheduler import preview_report_snapshot, send_scheduled_report_now
 from services.young_person_service import YoungPersonService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assistant-api", tags=["Operational Assistant"])
+
+MAX_PUBLIC_MESSAGE_CHARS = 3000
+MAX_OS_MESSAGE_CHARS = 20000
 
 
 class AssistantScope(BaseModel):
@@ -37,7 +50,7 @@ class AssistantContextRequest(BaseModel):
 class AssistantPromptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    message: str = Field(..., min_length=1, max_length=3000)
+    message: str = Field(..., min_length=1, max_length=MAX_PUBLIC_MESSAGE_CHARS)
     scope: AssistantScope | None = None
     history: list[dict[str, Any]] | None = None
 
@@ -59,12 +72,15 @@ class YoungPersonAssistantContext(BaseModel):
     record_id: int | None = None
     start_date: str | None = None
     end_date: str | None = None
+    reporting_period_start: str | None = None
+    reporting_period_end: str | None = None
+    reporting_period_inferred: bool | None = None
 
 
 class YoungPersonAssistantPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    message: str = Field(..., min_length=1, max_length=20000)
+    message: str = Field(..., min_length=1, max_length=MAX_OS_MESSAGE_CHARS)
     context: YoungPersonAssistantContext
     response_mode: str | None = "balanced"
     history: list[dict[str, Any]] | None = None
@@ -87,12 +103,15 @@ class HomeAssistantContext(BaseModel):
     provider_id: int | None = None
     start_date: str | None = None
     end_date: str | None = None
+    reporting_period_start: str | None = None
+    reporting_period_end: str | None = None
+    reporting_period_inferred: bool | None = None
 
 
 class HomeAssistantPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    message: str = Field(..., min_length=1, max_length=20000)
+    message: str = Field(..., min_length=1, max_length=MAX_OS_MESSAGE_CHARS)
     context: HomeAssistantContext
     response_mode: str | None = "balanced"
     history: list[dict[str, Any]] | None = None
@@ -115,12 +134,15 @@ class QualityAssistantContext(BaseModel):
     provider_id: int | None = None
     start_date: str | None = None
     end_date: str | None = None
+    reporting_period_start: str | None = None
+    reporting_period_end: str | None = None
+    reporting_period_inferred: bool | None = None
 
 
 class QualityAssistantPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    message: str = Field(..., min_length=1, max_length=20000)
+    message: str = Field(..., min_length=1, max_length=MAX_OS_MESSAGE_CHARS)
     context: QualityAssistantContext
     response_mode: str | None = "balanced"
     history: list[dict[str, Any]] | None = None
@@ -140,83 +162,48 @@ class ReportSendPayload(BaseModel):
     force_refresh: bool | None = False
 
 
-def _safe_int(value: Any) -> int | None:
-    try:
-        if value is None or value == "":
-            return None
-        return int(value)
-    except Exception:
-        return None
-
-
-def _safe_int_list(values: Any) -> list[int]:
-    if not isinstance(values, list):
-        return []
-    result: list[int] = []
-    for value in values:
-        parsed = _safe_int(value)
-        if parsed is not None:
-            result.append(parsed)
-    return result
-
-
 def _safe_user_id(current_user: dict[str, Any]) -> int:
-    user_id = current_user.get("user_id") or current_user.get("id")
-    if not user_id:
+    user_id = safe_int(
+        current_user.get("user_id")
+        or current_user.get("id")
+        or current_user.get("sub")
+    )
+    if user_id is None:
         raise HTTPException(status_code=401, detail="Authentication required.")
-    return int(user_id)
+    return user_id
 
 
 def _user_home_id(current_user: dict[str, Any]) -> int | None:
-    return _safe_int(current_user.get("home_id"))
+    return safe_int(current_user.get("home_id"))
 
 
 def _user_provider_id(current_user: dict[str, Any]) -> int | None:
-    return _safe_int(current_user.get("provider_id"))
+    return safe_int(current_user.get("provider_id"))
 
 
 def _user_role(current_user: dict[str, Any]) -> str:
-    return str(current_user.get("role") or "").strip().lower()
-
-
-def _is_provider_level_role(role: str) -> bool:
-    return role in {"admin", "provider_admin", "ri", "responsible_individual"}
+    return normalise_role(current_user.get("role"))
 
 
 def _normalise_response_mode(value: str | None) -> str:
-    mode = str(value or "balanced").strip().lower()
+    mode = safe_string(value or "balanced").lower()
     if mode in {"quick", "balanced", "deep"}:
         return mode
     return "balanced"
 
 
 def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, str]]:
-    if not history:
-        return []
+    return normalise_safe_history(history or [], max_items=20, max_chars=3000)
 
-    safe_history: list[dict[str, str]] = []
 
-    for item in history[:20]:
-        if not isinstance(item, dict):
-            continue
+def _assert_safe_message(message: str) -> None:
+    clean = safe_string(message)
 
-        role = str(item.get("role") or "").strip().lower()
-        content = str(item.get("content") or item.get("message") or "").strip()
+    if not clean:
+        raise HTTPException(status_code=400, detail="Message is required.")
 
-        if role not in {"user", "assistant", "system"}:
-            continue
-
-        if not content:
-            continue
-
-        safe_history.append(
-            {
-                "role": role,
-                "content": content[:3000],
-            }
-        )
-
-    return safe_history
+    if contains_prompt_injection_attempt(clean):
+        raise HTTPException(status_code=400, detail="Prompt injection attempt detected.")
 
 
 def _normalise_public_scope(scope: AssistantScope | None) -> dict[str, Any]:
@@ -253,14 +240,17 @@ def _assert_home_access(
     role = _user_role(current_user)
     user_home_id = _user_home_id(current_user)
 
-    if _is_provider_level_role(role):
+    if is_provider_level_role(role):
         return
 
     if record_home_id is None:
-        raise HTTPException(status_code=403, detail="Home access could not be verified")
+        raise HTTPException(status_code=403, detail="Home access could not be verified.")
 
     if user_home_id != record_home_id:
-        raise HTTPException(status_code=403, detail="You do not have access to this young person")
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this home or young person.",
+        )
 
 
 def _assert_requested_home_access(
@@ -272,17 +262,17 @@ def _assert_requested_home_access(
 
     if requested_home_id is None:
         if user_home_id is None:
-            raise HTTPException(status_code=403, detail="Home access could not be verified")
+            raise HTTPException(status_code=403, detail="Home access could not be verified.")
         return user_home_id
 
-    if _is_provider_level_role(role):
+    if is_provider_level_role(role):
         return requested_home_id
 
     if user_home_id is None:
-        raise HTTPException(status_code=403, detail="Home access could not be verified")
+        raise HTTPException(status_code=403, detail="Home access could not be verified.")
 
     if requested_home_id != user_home_id:
-        raise HTTPException(status_code=403, detail="You do not have access to this home")
+        raise HTTPException(status_code=403, detail="You do not have access to this home.")
 
     return requested_home_id
 
@@ -295,8 +285,8 @@ def _resolve_quality_home_ids(
     role = _user_role(current_user)
     user_home_id = _user_home_id(current_user)
 
-    if _is_provider_level_role(role):
-        allowed = _safe_int_list(payload_allowed_home_ids or [])
+    if is_provider_level_role(role):
+        allowed = safe_int_list(payload_allowed_home_ids or [])
         if allowed:
             return allowed
         if payload_home_id is not None:
@@ -306,10 +296,13 @@ def _resolve_quality_home_ids(
         return []
 
     if user_home_id is None:
-        raise HTTPException(status_code=403, detail="Home access could not be verified")
+        raise HTTPException(status_code=403, detail="Home access could not be verified.")
 
     if payload_home_id is not None and payload_home_id != user_home_id:
-        raise HTTPException(status_code=403, detail="You do not have access to this quality scope")
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this quality scope.",
+        )
 
     return [user_home_id]
 
@@ -320,18 +313,19 @@ def _load_and_check_young_person(
 ) -> dict[str, Any]:
     record = YoungPersonService.get_young_person_by_id(young_person_id)
     if not record:
-        raise HTTPException(status_code=404, detail="Young person not found")
+        raise HTTPException(status_code=404, detail="Young person not found.")
 
-    _assert_home_access(current_user, _safe_int(record.get("home_id")))
+    _assert_home_access(current_user, safe_int(record.get("home_id")))
     return record
 
 
 def _normalise_young_person_scope(
     payload: YoungPersonAssistantPayload,
     current_user: dict[str, Any],
+    record: dict[str, Any],
 ) -> dict[str, Any]:
-    record = YoungPersonService.get_young_person_by_id(int(payload.context.young_person_id))
-    record_home_id = _safe_int((record or {}).get("home_id")) or _user_home_id(current_user)
+    record_home_id = safe_int(record.get("home_id"))
+    _assert_home_access(current_user, record_home_id)
 
     return {
         "scope_type": "young_person",
@@ -346,7 +340,11 @@ def _normalise_home_scope(
     payload: HomeAssistantPayload,
     current_user: dict[str, Any],
 ) -> dict[str, Any]:
-    resolved_home_id = _assert_requested_home_access(current_user, _safe_int(payload.context.home_id))
+    resolved_home_id = _assert_requested_home_access(
+        current_user,
+        safe_int(payload.context.home_id),
+    )
+
     return {
         "scope_type": "home",
         "scope": "home",
@@ -362,14 +360,16 @@ def _normalise_quality_scope(
     current_user: dict[str, Any],
 ) -> dict[str, Any]:
     role = _user_role(current_user)
-    payload_home_id = _safe_int(payload.context.home_id)
+    payload_home_id = safe_int(payload.context.home_id)
+
     allowed_home_ids = _resolve_quality_home_ids(
         current_user=current_user,
         payload_allowed_home_ids=payload.context.allowed_home_ids,
         payload_home_id=payload_home_id,
     )
 
-    access_level = "provider" if _is_provider_level_role(role) else "home"
+    access_level = "provider" if is_provider_level_role(role) else "home"
+
     selected_home_id = payload_home_id
     if selected_home_id is None and len(allowed_home_ids) == 1:
         selected_home_id = allowed_home_ids[0]
@@ -389,8 +389,13 @@ def _normalise_young_person_context(
     record: dict[str, Any],
 ) -> dict[str, Any]:
     full_name = (
-        " ".join([x for x in [record.get("first_name"), record.get("last_name")] if x]).strip()
-        or record.get("preferred_name")
+        " ".join(
+            [
+                safe_string(record.get("first_name")),
+                safe_string(record.get("last_name")),
+            ]
+        ).strip()
+        or safe_string(record.get("preferred_name"))
         or "Young person"
     )
 
@@ -408,9 +413,12 @@ def _normalise_young_person_context(
         "record_type": payload.context.record_type,
         "record_id": payload.context.record_id,
         "young_person_id": int(payload.context.young_person_id),
-        "home_id": _safe_int(record.get("home_id")),
+        "home_id": safe_int(record.get("home_id")),
         "start_date": payload.context.start_date,
         "end_date": payload.context.end_date,
+        "reporting_period_start": payload.context.reporting_period_start or payload.context.start_date,
+        "reporting_period_end": payload.context.reporting_period_end or payload.context.end_date,
+        "reporting_period_inferred": payload.context.reporting_period_inferred,
     }
 
 
@@ -420,6 +428,7 @@ def _normalise_home_context(
     current_user: dict[str, Any],
 ) -> dict[str, Any]:
     current_view = payload.context.current_view or payload.context.current_section
+
     home_name = (
         payload.context.home_name
         or current_user.get("home_name")
@@ -441,6 +450,9 @@ def _normalise_home_context(
         "provider_id": scope.get("provider_id"),
         "start_date": payload.context.start_date,
         "end_date": payload.context.end_date,
+        "reporting_period_start": payload.context.reporting_period_start or payload.context.start_date,
+        "reporting_period_end": payload.context.reporting_period_end or payload.context.end_date,
+        "reporting_period_inferred": payload.context.reporting_period_inferred,
     }
 
 
@@ -450,11 +462,16 @@ def _normalise_quality_context(
     current_user: dict[str, Any],
 ) -> dict[str, Any]:
     current_view = payload.context.current_view or payload.context.current_section
+
     home_name = (
         payload.context.home_name
         or current_user.get("home_name")
         or current_user.get("homeName")
-        or (f"Home {scope.get('home_id')}" if scope.get("home_id") is not None else "Quality oversight")
+        or (
+            f"Home {scope.get('home_id')}"
+            if scope.get("home_id") is not None
+            else "Quality oversight"
+        )
     )
 
     return {
@@ -471,6 +488,9 @@ def _normalise_quality_context(
         "provider_id": scope.get("provider_id"),
         "start_date": payload.context.start_date,
         "end_date": payload.context.end_date,
+        "reporting_period_start": payload.context.reporting_period_start or payload.context.start_date,
+        "reporting_period_end": payload.context.reporting_period_end or payload.context.end_date,
+        "reporting_period_inferred": payload.context.reporting_period_inferred,
     }
 
 
@@ -488,6 +508,45 @@ def _sse_done() -> str:
     return "event: done\ndata: [DONE]\n\n"
 
 
+def _stream_headers() -> dict[str, str]:
+    return {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+
+
+def _dedupe_sources(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    cleaned: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for source in sources or []:
+        if not isinstance(source, dict):
+            continue
+
+        key = "|".join(
+            str(source.get(k) or "")
+            for k in (
+                "type",
+                "source_type",
+                "record_type",
+                "record_id",
+                "citation_ref",
+                "label",
+                "document_title",
+                "url",
+            )
+        )
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        cleaned.append(source)
+
+    return cleaned
+
+
 async def _stream_assistant_response(
     *,
     assistant_prompt_bundle: dict[str, Any],
@@ -500,9 +559,17 @@ async def _stream_assistant_response(
     sources: list[dict[str, Any]] = []
     runtime: dict[str, Any] = {}
     explainability: dict[str, Any] = {}
-    assistant_scope_meta: dict[str, Any] = dict(meta_payload.get("assistant_scope") or {})
-    assistant_context_meta: dict[str, Any] = assistant_prompt_bundle.get("context") or meta_payload.get("assistant_context") or {}
     suggested_actions: list[str] = []
+    pipeline: dict[str, Any] = {}
+    user_transparency_panel: dict[str, Any] = {}
+    audit_panel: dict[str, Any] = {}
+
+    assistant_scope_meta: dict[str, Any] = dict(meta_payload.get("assistant_scope") or {})
+    assistant_context_meta: dict[str, Any] = (
+        assistant_prompt_bundle.get("context")
+        or meta_payload.get("assistant_context")
+        or {}
+    )
 
     try:
         generator = generate_ai_stream(
@@ -528,7 +595,7 @@ async def _stream_assistant_response(
             item_type = item.get("type")
 
             if item_type == "progress":
-                content = str(item.get("content") or "").strip()
+                content = safe_string(item.get("content"))
                 if content:
                     yield _sse_event("progress", {"content": content})
                 continue
@@ -563,60 +630,73 @@ async def _stream_assistant_response(
                 if isinstance(item.get("assistant_context"), dict):
                     assistant_context_meta = item.get("assistant_context") or assistant_context_meta
                 if isinstance(item.get("suggested_actions"), list):
-                    suggested_actions = [str(x).strip() for x in item.get("suggested_actions") if str(x).strip()]
+                    suggested_actions = [
+                        safe_string(action)
+                        for action in item.get("suggested_actions")
+                        if safe_string(action)
+                    ]
+                if isinstance(item.get("pipeline"), dict):
+                    pipeline = item.get("pipeline") or {}
+                if isinstance(item.get("user_transparency_panel"), dict):
+                    user_transparency_panel = item.get("user_transparency_panel") or {}
+                if isinstance(item.get("audit_panel"), dict):
+                    audit_panel = item.get("audit_panel") or {}
                 continue
 
     except Exception:
         logger.exception("Assistant streaming failed")
-        fallback = (
+        yield _sse_message(
             "Sorry, the assistant could not generate that response just now. "
             "Please try again, or ask a shorter question."
         )
-        yield _sse_message(fallback)
 
     finally:
         final_runtime = dict(runtime)
         prompt_runtime = assistant_prompt_bundle.get("runtime") or {}
         assistant_context = meta_payload.get("assistant_context") or {}
 
-        for key, value in prompt_runtime.items():
-            if value not in (None, "", []):
-                final_runtime.setdefault(key, value)
+        if isinstance(prompt_runtime, dict):
+            for key, value in prompt_runtime.items():
+                if value not in (None, "", []):
+                    final_runtime.setdefault(key, value)
 
-        for key, value in assistant_context.items():
-            if value not in (None, "", []):
-                final_runtime.setdefault(key, value)
+        if isinstance(assistant_context, dict):
+            for key, value in assistant_context.items():
+                if value not in (None, "", []):
+                    final_runtime.setdefault(key, value)
 
         final_runtime.setdefault("assistant_type", meta_payload.get("assistant_type", "public"))
 
-        if suggested_actions:
-            existing_actions = final_runtime.get("suggested_actions") or []
-            if isinstance(existing_actions, list):
-                merged: list[str] = []
-                seen: set[str] = set()
+        if pipeline:
+            final_runtime.setdefault("pipeline", pipeline)
 
-                for action in [*existing_actions, *suggested_actions]:
-                    normalised = str(action).strip()
-                    if not normalised:
-                        continue
-                    lowered = normalised.lower()
-                    if lowered in seen:
-                        continue
-                    seen.add(lowered)
-                    merged.append(normalised)
+        final_sources = _dedupe_sources(
+            [
+                *(sources or []),
+                *(assistant_prompt_bundle.get("sources") or []),
+                *(assistant_context.get("sources") if isinstance(assistant_context, dict) else [] or []),
+            ]
+        )
 
-                final_runtime["suggested_actions"] = merged
+        evidence_index = []
+        if isinstance(assistant_context, dict):
+            evidence_index = assistant_context.get("evidence_index") or []
 
         yield _sse_event(
             "meta",
             {
                 **meta_payload.get("top_level_meta", {}),
-                "sources": sources,
+                "sources": final_sources,
                 "runtime": final_runtime,
                 "explainability": explainability,
                 "assistant_scope": assistant_scope_meta,
                 "assistant_context": assistant_context_meta,
                 "suggested_actions": suggested_actions,
+                "evidence_index": evidence_index,
+                "evidence_count": len(evidence_index) if isinstance(evidence_index, list) else 0,
+                "pipeline": pipeline,
+                "user_transparency_panel": user_transparency_panel,
+                "audit_panel": audit_panel,
             },
         )
         yield _sse_done()
@@ -659,10 +739,7 @@ def get_assistant_context(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
         logger.exception("Public assistant context failed")
-        raise HTTPException(
-            status_code=500,
-            detail="Unable to build assistant context.",
-        )
+        raise HTTPException(status_code=500, detail="Unable to build assistant context.")
 
 
 @router.post("/prompt")
@@ -672,6 +749,8 @@ def build_prompt(
     current_user=Depends(get_current_user),
 ):
     try:
+        _assert_safe_message(payload.message)
+
         user_id = _safe_user_id(current_user)
         scope = _normalise_public_scope(payload.scope)
         history = _normalise_history(payload.history)
@@ -705,10 +784,7 @@ def build_prompt(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
         logger.exception("Public assistant prompt build failed")
-        raise HTTPException(
-            status_code=500,
-            detail="Unable to build assistant prompt.",
-        )
+        raise HTTPException(status_code=500, detail="Unable to build assistant prompt.")
 
 
 @router.post("/young-people/assistant")
@@ -717,14 +793,25 @@ async def ask_young_person_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    _assert_safe_message(payload.message)
+
     record = _load_and_check_young_person(payload.context.young_person_id, current_user)
 
     try:
-        scope = _normalise_young_person_scope(payload, current_user)
+        scope = _normalise_young_person_scope(payload, current_user, record)
         context = _normalise_young_person_context(payload, record)
         response_mode = _normalise_response_mode(payload.response_mode)
         history = _normalise_history(payload.history)
         user_id = _safe_user_id(current_user)
+
+        runtime_context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="young_people_os",
+            scope=scope,
+            ui_context=context,
+            message=payload.message,
+        )
 
         assistant_prompt_bundle = build_assistant_prompt(
             conn,
@@ -732,7 +819,7 @@ async def ask_young_person_assistant(
             message=payload.message,
             scope=scope,
             history=history,
-            context=context,
+            user_context=runtime_context,
             assistant_type="young_people_os",
         )
 
@@ -744,7 +831,10 @@ async def ask_young_person_assistant(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Failed to prepare young person assistant")
-        raise HTTPException(status_code=500, detail=f"Failed to prepare young person assistant: {str(exc)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to prepare young person assistant: {str(exc)}",
+        ) from exc
 
     return StreamingResponse(
         _stream_assistant_response(
@@ -756,19 +846,20 @@ async def ask_young_person_assistant(
             meta_payload={
                 "assistant_type": "young_people_os",
                 "assistant_scope": dict(scope),
-                "assistant_context": assistant_prompt_bundle.get("context") or context,
+                "assistant_context": assistant_prompt_bundle.get("context") or runtime_context,
                 "top_level_meta": {
                     "young_person_id": payload.context.young_person_id,
-                    "young_person_name": context.get("young_person_name"),
+                    "young_person_name": runtime_context.get("young_person_name") or context.get("young_person_name"),
+                    "home_id": runtime_context.get("home_id") or scope.get("home_id"),
+                    "reporting_period_start": runtime_context.get("reporting_period_start"),
+                    "reporting_period_end": runtime_context.get("reporting_period_end"),
+                    "reporting_period_inferred": runtime_context.get("reporting_period_inferred"),
+                    "evidence_count": len(runtime_context.get("evidence_index", []) or []),
                 },
             },
         ),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache, no-transform",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=_stream_headers(),
     )
 
 
@@ -778,6 +869,8 @@ async def ask_home_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    _assert_safe_message(payload.message)
+
     try:
         scope = _normalise_home_scope(payload, current_user)
         context = _normalise_home_context(payload, scope, current_user)
@@ -785,13 +878,22 @@ async def ask_home_assistant(
         history = _normalise_history(payload.history)
         user_id = _safe_user_id(current_user)
 
+        runtime_context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="home_os",
+            scope=scope,
+            ui_context=context,
+            message=payload.message,
+        )
+
         assistant_prompt_bundle = build_assistant_prompt(
             conn,
             user_id=user_id,
             message=payload.message,
             scope=scope,
             history=history,
-            context=context,
+            user_context=runtime_context,
             assistant_type="home_os",
         )
 
@@ -803,7 +905,10 @@ async def ask_home_assistant(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Failed to prepare home assistant")
-        raise HTTPException(status_code=500, detail=f"Failed to prepare home assistant: {str(exc)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to prepare home assistant: {str(exc)}",
+        ) from exc
 
     return StreamingResponse(
         _stream_assistant_response(
@@ -815,19 +920,19 @@ async def ask_home_assistant(
             meta_payload={
                 "assistant_type": "home_os",
                 "assistant_scope": dict(scope),
-                "assistant_context": assistant_prompt_bundle.get("context") or context,
+                "assistant_context": assistant_prompt_bundle.get("context") or runtime_context,
                 "top_level_meta": {
                     "home_id": scope.get("home_id"),
-                    "home_name": context.get("home_name"),
+                    "home_name": runtime_context.get("home_name") or context.get("home_name"),
+                    "reporting_period_start": runtime_context.get("reporting_period_start"),
+                    "reporting_period_end": runtime_context.get("reporting_period_end"),
+                    "reporting_period_inferred": runtime_context.get("reporting_period_inferred"),
+                    "evidence_count": len(runtime_context.get("evidence_index", []) or []),
                 },
             },
         ),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache, no-transform",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=_stream_headers(),
     )
 
 
@@ -837,6 +942,8 @@ async def ask_quality_assistant(
     conn=Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    _assert_safe_message(payload.message)
+
     try:
         scope = _normalise_quality_scope(payload, current_user)
         context = _normalise_quality_context(payload, scope, current_user)
@@ -844,13 +951,22 @@ async def ask_quality_assistant(
         history = _normalise_history(payload.history)
         user_id = _safe_user_id(current_user)
 
+        runtime_context = build_runtime_assistant_context(
+            conn,
+            user_id=user_id,
+            assistant_type="quality_os",
+            scope=scope,
+            ui_context=context,
+            message=payload.message,
+        )
+
         assistant_prompt_bundle = build_assistant_prompt(
             conn,
             user_id=user_id,
             message=payload.message,
             scope=scope,
             history=history,
-            context=context,
+            user_context=runtime_context,
             assistant_type="quality_os",
         )
 
@@ -862,42 +978,43 @@ async def ask_quality_assistant(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Failed to prepare quality assistant")
-        raise HTTPException(status_code=500, detail=f"Failed to prepare quality assistant: {str(exc)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to prepare quality assistant: {str(exc)}",
+        ) from exc
+
+    conversation_scope = (
+        f"quality-provider-{scope.get('provider_id')}"
+        if scope.get("access_level") == "provider"
+        else f"quality-home-{scope.get('home_id')}"
+    )
 
     return StreamingResponse(
         _stream_assistant_response(
             assistant_prompt_bundle=assistant_prompt_bundle,
             response_mode=response_mode,
-            session_id=(
-                f"quality-provider-{scope.get('provider_id')}"
-                if scope.get("access_level") == "provider"
-                else f"quality-home-{scope.get('home_id')}"
-            ),
-            conversation_id=(
-                f"quality-provider-{scope.get('provider_id')}"
-                if scope.get("access_level") == "provider"
-                else f"quality-home-{scope.get('home_id')}"
-            ),
+            session_id=conversation_scope,
+            conversation_id=conversation_scope,
             user_id=user_id,
             meta_payload={
                 "assistant_type": "quality_os",
                 "assistant_scope": dict(scope),
-                "assistant_context": assistant_prompt_bundle.get("context") or context,
+                "assistant_context": assistant_prompt_bundle.get("context") or runtime_context,
                 "top_level_meta": {
                     "home_id": scope.get("home_id"),
-                    "home_name": context.get("home_name"),
+                    "home_name": runtime_context.get("home_name") or context.get("home_name"),
                     "allowed_home_ids": scope.get("allowed_home_ids", []),
                     "access_level": scope.get("access_level"),
                     "provider_id": scope.get("provider_id"),
+                    "reporting_period_start": runtime_context.get("reporting_period_start"),
+                    "reporting_period_end": runtime_context.get("reporting_period_end"),
+                    "reporting_period_inferred": runtime_context.get("reporting_period_inferred"),
+                    "evidence_count": len(runtime_context.get("evidence_index", []) or []),
                 },
             },
         ),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache, no-transform",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=_stream_headers(),
     )
 
 
@@ -908,8 +1025,13 @@ async def preview_report(
     current_user=Depends(get_current_user),
 ):
     try:
+        _assert_safe_message(payload.message)
+
         if not payload.context.start_date or not payload.context.end_date:
-            raise HTTPException(status_code=400, detail="start_date and end_date are required for report preview")
+            raise HTTPException(
+                status_code=400,
+                detail="start_date and end_date are required for report preview.",
+            )
 
         scope = _normalise_home_scope(payload, current_user)
         user_id = _safe_user_id(current_user)
@@ -958,7 +1080,7 @@ async def preview_report(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Failed to preview report")
-        raise HTTPException(status_code=500, detail=f"Failed to preview report: {str(exc)}")
+        raise HTTPException(status_code=500, detail=f"Failed to preview report: {str(exc)}") from exc
 
 
 @router.post("/reports/send-now")
@@ -970,16 +1092,22 @@ async def send_report_now(
     try:
         user_id = _safe_user_id(current_user)
         role = _user_role(current_user)
-        access_level = payload.access_level or ("provider" if _is_provider_level_role(role) else "home")
-        allowed_home_ids = _safe_int_list(payload.allowed_home_ids)
+        access_level = payload.access_level or (
+            "provider" if is_provider_level_role(role) else "home"
+        )
 
+        allowed_home_ids = safe_int_list(payload.allowed_home_ids)
         resolved_home_id = payload.home_id
 
         if access_level != "provider":
             resolved_home_id = _assert_requested_home_access(current_user, payload.home_id)
             allowed_home_ids = [resolved_home_id]
         else:
-            allowed_home_ids = _resolve_quality_home_ids(current_user, allowed_home_ids, payload.home_id)
+            allowed_home_ids = _resolve_quality_home_ids(
+                current_user,
+                allowed_home_ids,
+                payload.home_id,
+            )
 
         result = send_scheduled_report_now(
             conn,
@@ -1005,4 +1133,4 @@ async def send_report_now(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Failed to send report")
-        raise HTTPException(status_code=500, detail=f"Failed to send report: {str(exc)}")
+        raise HTTPException(status_code=500, detail=f"Failed to send report: {str(exc)}") from exc

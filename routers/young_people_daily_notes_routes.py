@@ -80,12 +80,20 @@ def _load_and_check_daily_note(
     return row
 
 
+def _normalise_status(value: Any) -> str:
+    value = str(value or "").strip().lower()
+    return value or "draft"
+
+
 class DailyNoteCreatePayload(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
     home_id: int | None = None
     note_date: str
     shift_type: str
+
+    status: str | None = "draft"
+    workflow_status: str | None = "draft"
 
     mood: str | None = None
     presentation: str | None = None
@@ -99,7 +107,6 @@ class DailyNoteCreatePayload(BaseModel):
     actions_required: str | None = None
     significance: str | None = None
 
-    workflow_status: str | None = "draft"
     manager_review_comment: str | None = None
     approved_by: int | None = None
     approved_at: str | None = None
@@ -123,11 +130,14 @@ class DailyNoteCreatePayload(BaseModel):
 
 
 class DailyNoteUpdatePayload(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
     home_id: int | None = None
     note_date: str | None = None
     shift_type: str | None = None
+
+    status: str | None = None
+    workflow_status: str | None = None
 
     mood: str | None = None
     presentation: str | None = None
@@ -141,7 +151,6 @@ class DailyNoteUpdatePayload(BaseModel):
     actions_required: str | None = None
     significance: str | None = None
 
-    workflow_status: str | None = None
     manager_review_comment: str | None = None
     approved_by: int | None = None
     approved_at: str | None = None
@@ -212,8 +221,14 @@ def create_daily_note(
     person = _load_and_check_young_person(conn, young_person_id, current_user)
 
     data = payload.model_dump(exclude_none=True, by_alias=False)
+
     if "home_id" not in data or data["home_id"] is None:
         data["home_id"] = person.get("home_id")
+
+    data["status"] = _normalise_status(data.get("status"))
+    data["workflow_status"] = _normalise_status(
+        data.get("workflow_status") or data.get("status")
+    )
 
     return YoungPersonDailyNotesService.create_daily_note(
         conn,
@@ -234,10 +249,20 @@ def update_daily_note(
     _assert_can_edit(current_user)
     _load_and_check_daily_note(conn, daily_note_id, current_user)
 
+    data = payload.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
+
+    if "status" in data:
+        data["status"] = _normalise_status(data.get("status"))
+
+    if "workflow_status" in data:
+        data["workflow_status"] = _normalise_status(
+            data.get("workflow_status") or data.get("status")
+        )
+
     return YoungPersonDailyNotesService.update_daily_note(
         conn,
         daily_note_id=daily_note_id,
-        payload=payload.model_dump(exclude_unset=True, by_alias=False),
+        payload=data,
     )
 
 

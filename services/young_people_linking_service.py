@@ -3,26 +3,12 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
+from psycopg2.extras import Json
+
 
 class YoungPeopleLinkingService:
     """
     Central linking / workflow engine for all young people's records.
-
-    Purpose:
-    - create chronology events
-    - create tasks
-    - create manager actions
-    - create safeguarding records
-    - create record links
-    - link to support plans
-    - link to monthly reviews
-    - link to quality standards
-    - create compliance items later if needed
-
-    Design principles:
-    - defensive: never break the main record save flow
-    - centralised: one place for downstream linking logic
-    - extensible: easy to add new record types
     """
 
     @staticmethod
@@ -110,6 +96,7 @@ class YoungPeopleLinkingService:
                     ):
                         result["record_links_created"] += 1
         except Exception as exc:
+            conn.rollback()
             result["errors"].append(f"Chronology linking failed: {exc}")
 
         try:
@@ -141,6 +128,7 @@ class YoungPeopleLinkingService:
                     ):
                         result["record_links_created"] += 1
         except Exception as exc:
+            conn.rollback()
             result["errors"].append(f"Task creation failed: {exc}")
 
         try:
@@ -157,6 +145,7 @@ class YoungPeopleLinkingService:
                 result["manager_action_id"] = manager_action_id
                 result["notes"].append("Manager action processed.")
         except Exception as exc:
+            conn.rollback()
             result["errors"].append(f"Manager action creation failed: {exc}")
 
         try:
@@ -186,6 +175,7 @@ class YoungPeopleLinkingService:
                     ):
                         result["record_links_created"] += 1
         except Exception as exc:
+            conn.rollback()
             result["errors"].append(f"Safeguarding creation failed: {exc}")
 
         try:
@@ -202,6 +192,7 @@ class YoungPeopleLinkingService:
                     result["record_links_created"] += count
                     result["notes"].append(f"Linked to {count} support plan(s).")
         except Exception as exc:
+            conn.rollback()
             result["errors"].append(f"Support plan linking failed: {exc}")
 
         try:
@@ -218,6 +209,7 @@ class YoungPeopleLinkingService:
                 if count:
                     result["notes"].append(f"Linked to {count} monthly review record(s).")
         except Exception as exc:
+            conn.rollback()
             result["errors"].append(f"Monthly review linking failed: {exc}")
 
         try:
@@ -234,6 +226,7 @@ class YoungPeopleLinkingService:
                 if count:
                     result["notes"].append(f"Linked to {count} quality standard(s).")
         except Exception as exc:
+            conn.rollback()
             result["errors"].append(f"Quality standards linking failed: {exc}")
 
         return result
@@ -247,6 +240,28 @@ class YoungPeopleLinkingService:
         if value in (None, "", "null"):
             return None
         return value
+
+    @staticmethod
+    def _normalise_task_date(value: str | date | None) -> str | date:
+        safe_value = YoungPeopleLinkingService._normalise_due_date(value)
+        return safe_value or date.today()
+
+    @staticmethod
+    def _resolve_home_id(conn, young_person_id: int) -> int | None:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT home_id
+                FROM young_people
+                WHERE id = %s
+                LIMIT 1
+                """,
+                (young_person_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            return row.get("home_id") if isinstance(row, dict) else row[0]
 
     @staticmethod
     def _create_or_update_chronology_event(
@@ -284,6 +299,8 @@ class YoungPeopleLinkingService:
             existing = cur.fetchone()
 
             if existing:
+                existing_id = existing.get("id") if isinstance(existing, dict) else existing[0]
+
                 cur.execute(
                     """
                     UPDATE chronology_events
@@ -311,14 +328,16 @@ class YoungPeopleLinkingService:
                         summary,
                         significance,
                         created_by,
-                        safe_metadata,
+                        Json(safe_metadata),
                         now,
                         event_status,
-                        existing["id"],
+                        existing_id,
                     ),
                 )
                 row = cur.fetchone()
-                return row["id"] if row else existing["id"]
+                if not row:
+                    return existing_id
+                return row.get("id") if isinstance(row, dict) else row[0]
 
             cur.execute(
                 """
@@ -358,14 +377,16 @@ class YoungPeopleLinkingService:
                     created_by,
                     True,
                     True,
-                    safe_metadata,
+                    Json(safe_metadata),
                     now,
                     now,
                     event_status,
                 ),
             )
             row = cur.fetchone()
-            return row["id"] if row else None
+            if not row:
+                return None
+            return row.get("id") if isinstance(row, dict) else row[0]
 
     @staticmethod
     def _create_task_if_missing(
@@ -381,6 +402,8 @@ class YoungPeopleLinkingService:
         task_type: str,
     ) -> int | None:
         safe_due_date = YoungPeopleLinkingService._normalise_due_date(due_date)
+        safe_task_date = YoungPeopleLinkingService._normalise_task_date(safe_due_date)
+        home_id = YoungPeopleLinkingService._resolve_home_id(conn, young_person_id)
         now = datetime.utcnow()
 
         with conn.cursor() as cur:
@@ -401,48 +424,66 @@ class YoungPeopleLinkingService:
             existing = cur.fetchone()
 
             if existing:
+                existing_id = existing.get("id") if isinstance(existing, dict) else existing[0]
+
                 cur.execute(
                     """
                     UPDATE tasks
                     SET
                         title = %s,
                         task = %s,
+                        task_date = %s,
                         due_date = %s,
-                        assigned_to_user_id = COALESCE(%s, assigned_to_user_id)
+                        assigned_to_user_id = COALESCE(%s, assigned_to_user_id),
+                        home_id = COALESCE(home_id, %s)
                     WHERE id = %s
                     RETURNING id
                     """,
-                    (title, task, safe_due_date, owner_id, existing["id"]),
+                    (
+                        title,
+                        task,
+                        safe_task_date,
+                        safe_due_date,
+                        owner_id,
+                        home_id,
+                        existing_id,
+                    ),
                 )
                 row = cur.fetchone()
-                return row["id"] if row else existing["id"]
+                if not row:
+                    return existing_id
+                return row.get("id") if isinstance(row, dict) else row[0]
 
             cur.execute(
                 """
                 INSERT INTO tasks (
+                    home_id,
                     title,
                     task,
+                    task_date,
+                    due_date,
                     young_person_id,
                     source_table,
                     source_id,
                     task_type,
-                    due_date,
                     assigned_to_user_id,
                     completed,
                     compliance_generated,
                     created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
+                    home_id,
                     title,
                     task,
+                    safe_task_date,
+                    safe_due_date,
                     young_person_id,
                     source_table,
                     source_id,
                     task_type,
-                    safe_due_date,
                     owner_id,
                     False,
                     False,
@@ -450,7 +491,9 @@ class YoungPeopleLinkingService:
                 ),
             )
             row = cur.fetchone()
-            return row["id"] if row else None
+            if not row:
+                return None
+            return row.get("id") if isinstance(row, dict) else row[0]
 
     @staticmethod
     def _create_manager_action_if_missing(
@@ -482,7 +525,7 @@ class YoungPeopleLinkingService:
             existing = cur.fetchone()
 
             if existing:
-                return existing["id"]
+                return existing.get("id") if isinstance(existing, dict) else existing[0]
 
             cur.execute(
                 """
@@ -509,7 +552,9 @@ class YoungPeopleLinkingService:
                 ),
             )
             row = cur.fetchone()
-            return row["id"] if row else None
+            if not row:
+                return None
+            return row.get("id") if isinstance(row, dict) else row[0]
 
     @staticmethod
     def _create_safeguarding_record(
@@ -566,7 +611,9 @@ class YoungPeopleLinkingService:
                 ),
             )
             row = cur.fetchone()
-            return row["id"] if row else None
+            if not row:
+                return None
+            return row.get("id") if isinstance(row, dict) else row[0]
 
     @staticmethod
     def _create_record_link_if_missing(
@@ -661,13 +708,14 @@ class YoungPeopleLinkingService:
             rows = cur.fetchall() or []
 
         for row in rows:
+            plan_id = row.get("id") if isinstance(row, dict) else row[0]
             created = YoungPeopleLinkingService._create_record_link_if_missing(
                 conn=conn,
                 young_person_id=young_person_id,
                 from_table=source_table,
                 from_id=source_id,
                 to_table="support_plans",
-                to_id=row["id"],
+                to_id=plan_id,
                 relationship_type="relevant_to_plan",
                 created_by=created_by,
             )
@@ -703,6 +751,8 @@ class YoungPeopleLinkingService:
             rows = cur.fetchall() or []
 
             for row in rows:
+                monthly_review_id = row.get("id") if isinstance(row, dict) else row[0]
+
                 cur.execute(
                     """
                     SELECT id
@@ -712,7 +762,7 @@ class YoungPeopleLinkingService:
                       AND source_id = %s
                     LIMIT 1
                     """,
-                    (row["id"], source_table, source_id),
+                    (monthly_review_id, source_table, source_id),
                 )
                 existing = cur.fetchone()
                 if existing:
@@ -730,7 +780,7 @@ class YoungPeopleLinkingService:
                     VALUES (%s, %s, %s, %s, %s)
                     """,
                     (
-                        row["id"],
+                        monthly_review_id,
                         source_table,
                         source_id,
                         reason,

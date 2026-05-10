@@ -222,6 +222,15 @@ def _generate_recovery_codes() -> list[str]:
     return codes
 
 
+def generate_and_store_recovery_codes(user_id: int, count: int = RECOVERY_CODE_COUNT) -> list[str]:
+    """
+    Backwards-compatible helper kept for tests and legacy callers.
+    """
+    codes = _generate_recovery_codes()[: max(1, int(count))]
+    save_recovery_codes(user_id=user_id, recovery_codes=codes)
+    return codes
+
+
 def _set_session_cookie(response: Response, token: str, remember: bool = False) -> None:
     max_age = (
         auth_settings.cookie_max_age_long

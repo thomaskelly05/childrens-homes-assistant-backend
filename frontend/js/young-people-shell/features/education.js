@@ -376,6 +376,8 @@ export async function loadEducation() {
         achievementsData.items ||
         achievementsData.records ||
         achievementsData.achievement_records ||
+        educationData.achievement_records ||
+        educationData.education_records ||
         []
       ).map(mapAchievementRecord),
       ["achievement_date", "created_at"]

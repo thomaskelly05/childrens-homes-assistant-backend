@@ -15,6 +15,14 @@ VALID_JUDGEMENT_AREAS = {
 }
 
 
+def _read_row_value(row, *, key: str, index: int):
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row.get(key)
+    return row[index]
+
+
 def _normalise_evidence_strength(value: str | None) -> str:
     cleaned = (value or "moderate").strip().lower()
     return cleaned if cleaned in VALID_EVIDENCE_STRENGTHS else "moderate"
@@ -41,7 +49,11 @@ def _record_standard_link_columns() -> set[str]:
                   AND table_name = 'record_standard_links'
                 """
             )
-            return {row[0] for row in cur.fetchall()}
+            return {
+                _read_row_value(row, key="column_name", index=0)
+                for row in (cur.fetchall() or [])
+                if _read_row_value(row, key="column_name", index=0)
+            }
     finally:
         release_db_connection(conn)
 
@@ -90,7 +102,7 @@ class StandardsLinkService:
                 existing = cur.fetchone()
 
                 if existing:
-                    link_id = int(existing[0])
+                    link_id = int(_read_row_value(existing, key="id", index=0))
                     if has_judgement_area:
                         cur.execute(
                             """
@@ -199,7 +211,7 @@ class StandardsLinkService:
 
                 row = cur.fetchone()
             conn.commit()
-            return int(row[0])
+            return int(_read_row_value(row, key="id", index=0))
         except Exception:
             if conn:
                 conn.rollback()
@@ -338,18 +350,18 @@ class StandardsLinkService:
                     rows = cur.fetchall()
                     return [
                         {
-                            "id": row[0],
-                            "young_person_id": row[1],
-                            "source_table": row[2],
-                            "source_id": row[3],
-                            "standard_code": row[4],
-                            "evidence_strength": row[5],
-                            "rationale": row[6],
-                            "linked_by": row[7],
-                            "auto_linked": row[8],
-                            "judgement_area": row[9],
-                            "created_at": row[10],
-                            "updated_at": row[11],
+                            "id": _read_row_value(row, key="id", index=0),
+                            "young_person_id": _read_row_value(row, key="young_person_id", index=1),
+                            "source_table": _read_row_value(row, key="source_table", index=2),
+                            "source_id": _read_row_value(row, key="source_id", index=3),
+                            "standard_code": _read_row_value(row, key="standard_code", index=4),
+                            "evidence_strength": _read_row_value(row, key="evidence_strength", index=5),
+                            "rationale": _read_row_value(row, key="rationale", index=6),
+                            "linked_by": _read_row_value(row, key="linked_by", index=7),
+                            "auto_linked": _read_row_value(row, key="auto_linked", index=8),
+                            "judgement_area": _read_row_value(row, key="judgement_area", index=9),
+                            "created_at": _read_row_value(row, key="created_at", index=10),
+                            "updated_at": _read_row_value(row, key="updated_at", index=11),
                         }
                         for row in rows
                     ]
@@ -379,18 +391,18 @@ class StandardsLinkService:
                 rows = cur.fetchall()
                 return [
                     {
-                        "id": row[0],
-                        "young_person_id": row[1],
-                        "source_table": row[2],
-                        "source_id": row[3],
-                        "standard_code": row[4],
-                        "evidence_strength": row[5],
-                        "rationale": row[6],
-                        "linked_by": row[7],
-                        "auto_linked": row[8],
+                        "id": _read_row_value(row, key="id", index=0),
+                        "young_person_id": _read_row_value(row, key="young_person_id", index=1),
+                        "source_table": _read_row_value(row, key="source_table", index=2),
+                        "source_id": _read_row_value(row, key="source_id", index=3),
+                        "standard_code": _read_row_value(row, key="standard_code", index=4),
+                        "evidence_strength": _read_row_value(row, key="evidence_strength", index=5),
+                        "rationale": _read_row_value(row, key="rationale", index=6),
+                        "linked_by": _read_row_value(row, key="linked_by", index=7),
+                        "auto_linked": _read_row_value(row, key="auto_linked", index=8),
                         "judgement_area": None,
-                        "created_at": row[9],
-                        "updated_at": row[10],
+                        "created_at": _read_row_value(row, key="created_at", index=9),
+                        "updated_at": _read_row_value(row, key="updated_at", index=10),
                     }
                     for row in rows
                 ]

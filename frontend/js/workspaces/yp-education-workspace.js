@@ -226,7 +226,7 @@ window.YoungPersonEducationWorkspace = (function () {
     showStatus("educationSaveStatus", "Saving education record...");
 
     try {
-      await window.YoungPeopleShell.api("/young-people/education-records", {
+      await window.YoungPeopleShell.api(`/young-people/${selectedYoungPerson.id}/education-records`, {
         method: "POST",
         body: JSON.stringify(payload)
       });

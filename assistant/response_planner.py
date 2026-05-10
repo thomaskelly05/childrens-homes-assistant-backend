@@ -182,6 +182,27 @@ RSW_TRIGGER_KEYWORDS = {
     "practical",
 }
 
+OS_RECORD_SPECIFIC_KEYWORDS = {
+    "record",
+    "records",
+    "whole record",
+    "whole scoped record",
+    "across all records",
+    "full summary",
+    "full overview",
+    "chronology",
+    "timeline",
+    "risk view",
+    "what does the record show",
+    "what do the records show",
+    "what is missing",
+    "evidence index",
+    "inspection pack",
+    "reg 45",
+    "reg45",
+    "report snapshot",
+}
+
 DOCUMENT_HEAVY_MODES = {
     "rewrite",
     "document_review",
@@ -299,6 +320,8 @@ class ResponsePlan:
     must_preserve_source_facts: bool = False
     should_distinguish_fact_from_inference: bool = False
     should_be_brief: bool = False
+    assistant_surface: str = "standalone"
+    requires_evidence_grounding: bool = False
     guidance_plan: GuidancePlan = field(default_factory=GuidancePlan)
     model_plan: ModelPlan = field(default_factory=ModelPlan)
     reasons: list[str] = field(default_factory=list)
@@ -316,6 +339,8 @@ def _normalise_mode(value: str) -> str:
     value = _safe_string(value).lower()
     if value in {"quick", "balanced", "deep"}:
         return value
+    if value == "slow":
+        return "deep"
     return "balanced"
 
 
@@ -326,6 +351,13 @@ def _normalise_text(value: Any) -> str:
 def _contains_any(text: str, keywords: set[str]) -> bool:
     lower = _normalise_text(text)
     return any(keyword.lower() in lower for keyword in keywords)
+
+
+def _normalise_surface(value: str | None) -> str:
+    surface = _safe_string(value).lower()
+    if surface in {"standalone", "os_embedded"}:
+        return surface
+    return "standalone"
 
 
 def _looks_like_internal_report_request(message: str, output_type: str, mode: str) -> bool:
@@ -342,6 +374,7 @@ def _looks_like_internal_report_request(message: str, output_type: str, mode: st
         "monthly summary",
         "monthly overview",
         "reg 45",
+        "reg45",
         "regulation 45",
         "annual report",
         "annual overview",
@@ -378,13 +411,20 @@ def _is_ri_heavy(message: str, user_role_profile: str) -> bool:
 def _is_leadership_heavy(message: str, user_role_profile: str, task_type: str) -> bool:
     if user_role_profile in {"manager", "provider"}:
         return True
-    if task_type in {"review", "planning", "reflection", "document_work", "oversight_review"}:
+    if task_type in {
+        "review",
+        "planning",
+        "reflection",
+        "document_work",
+        "oversight_review",
+        "report",
+    }:
         return True
     return _contains_any(message, LEADERSHIP_TRIGGER_KEYWORDS)
 
 
 def _is_safeguarding_heavy(message: str, safeguarding_level: str) -> bool:
-    if safeguarding_level in {"current", "serious", "urgent", "heightened"}:
+    if safeguarding_level in {"urgent", "heightened"}:
         return True
     return _contains_any(message, SAFEGUARDING_TRIGGER_KEYWORDS)
 
@@ -397,6 +437,10 @@ def _is_therapeutic_heavy(message: str, mode: str, task_type: str) -> bool:
     return _contains_any(message, THERAPEUTIC_TRIGGER_KEYWORDS)
 
 
+def _is_os_record_specific_request(message: str) -> bool:
+    return _contains_any(message, OS_RECORD_SPECIFIC_KEYWORDS)
+
+
 def _derive_response_stance(
     mode: str,
     task_type: str,
@@ -406,8 +450,12 @@ def _derive_response_stance(
 ) -> tuple[str, list[str]]:
     reasons: list[str] = []
 
-    if safeguarding_level in {"urgent", "serious"}:
-        reasons.append("serious_or_urgent_safeguarding_forces_safeguarding_stance")
+    if safeguarding_level == "urgent":
+        reasons.append("urgent_safeguarding_forces_safeguarding_stance")
+        return "safeguarding", reasons
+
+    if safeguarding_level == "heightened":
+        reasons.append("heightened_safeguarding_prefers_safeguarding_stance")
         return "safeguarding", reasons
 
     if _contains_any(message, INSPECTION_TRIGGER_KEYWORDS):
@@ -422,7 +470,11 @@ def _derive_response_stance(
         reasons.append("recording_or_rewrite_mode_prefers_documentation_stance")
         return "documentation", reasons
 
-    if task_type in REVIEW_TASKS or mode in {"manager_review", "quality_review", "inspection_review"}:
+    if task_type in REVIEW_TASKS or mode in {
+        "manager_review",
+        "quality_review",
+        "inspection_review",
+    }:
         reasons.append("review_or_inspection_task_prefers_management_stance")
         return "management", reasons
 
@@ -442,11 +494,19 @@ def _derive_response_stance(
     return "practice_support", reasons
 
 
-def _should_use_memory(selected_mode: str, mode: str) -> tuple[bool, list[str]]:
+def _should_use_memory(
+    selected_mode: str,
+    mode: str,
+    assistant_surface: str,
+) -> tuple[bool, list[str]]:
     reasons: list[str] = []
 
     if selected_mode == "quick":
         reasons.append("quick_mode_disables_memory")
+        return False, reasons
+
+    if assistant_surface == "os_embedded":
+        reasons.append("os_embedded_assistant_prefers_scoped_context_over_chat_memory")
         return False, reasons
 
     if mode in FAST_OPERATIONAL_MODES:
@@ -465,6 +525,8 @@ def _should_use_retrieval(
     has_document: bool,
     message: str,
     output_type: str,
+    assistant_surface: str,
+    requires_evidence_grounding: bool,
 ) -> tuple[bool, list[str]]:
     reasons: list[str] = []
 
@@ -476,12 +538,20 @@ def _should_use_retrieval(
         reasons.append("quick_mode_disables_retrieval")
         return False, reasons
 
-    if safeguarding_level in {"urgent", "serious"} and task_type == "recording":
-        reasons.append("serious_safeguarding_recording_prefers_direct_response_over_retrieval")
+    if requires_evidence_grounding and _is_os_record_specific_request(message):
+        reasons.append("os_record_specific_request_uses_scoped_evidence_not_background_retrieval")
+        return False, reasons
+
+    if safeguarding_level == "urgent" and task_type == "recording":
+        reasons.append("urgent_safeguarding_recording_prefers_direct_response_over_retrieval")
         return False, reasons
 
     if _looks_like_internal_report_request(message, output_type, mode):
         reasons.append("internal_report_like_request_prefers_local_context_over_retrieval")
+        return False, reasons
+
+    if assistant_surface == "os_embedded" and task_type in {"report", "summary"}:
+        reasons.append("os_report_or_summary_uses_attached_snapshot_context")
         return False, reasons
 
     if _contains_any(message, GUIDANCE_KEYWORDS):
@@ -541,7 +611,10 @@ def _should_use_reflection(
         reasons.append("reflective_review_planning_or_analysis_task_enables_reflection")
         return True, selected_mode == "deep", reasons
 
-    if _contains_any(message, INSPECTION_TRIGGER_KEYWORDS | RI_TRIGGER_KEYWORDS | THERAPEUTIC_TRIGGER_KEYWORDS):
+    if _contains_any(
+        message,
+        INSPECTION_TRIGGER_KEYWORDS | RI_TRIGGER_KEYWORDS | THERAPEUTIC_TRIGGER_KEYWORDS,
+    ):
         reasons.append("inspection_ri_or_therapeutic_keywords_enable_reflection")
         return True, False, reasons
 
@@ -566,8 +639,15 @@ def _should_use_leadership_lens(
         reasons.append("manager_role_enables_leadership_lens")
         return True, reasons
 
-    if task_type in {"review", "planning", "reflection", "document_work", "oversight_review"}:
-        reasons.append("review_planning_reflection_or_document_work_enables_leadership_lens")
+    if task_type in {
+        "review",
+        "planning",
+        "reflection",
+        "document_work",
+        "oversight_review",
+        "report",
+    }:
+        reasons.append("review_planning_reflection_document_or_report_enables_leadership_lens")
         return True, reasons
 
     if selected_mode == "quick":
@@ -575,7 +655,15 @@ def _should_use_leadership_lens(
         reasons.append("quick_mode_uses_keyword_trigger_for_leadership_lens")
         return enabled, reasons
 
-    if mode in {"manager_review", "supervision", "support_planning", "document_review", "reflective", "quality_review", "inspection_review"}:
+    if mode in {
+        "manager_review",
+        "supervision",
+        "support_planning",
+        "document_review",
+        "reflective",
+        "quality_review",
+        "inspection_review",
+    }:
         reasons.append("mode_enables_leadership_lens")
         return True, reasons
 
@@ -614,7 +702,11 @@ def _should_use_ri_lens(
 ) -> tuple[bool, list[str]]:
     reasons: list[str] = []
 
-    if selected_mode == "quick" and role_profile != "provider" and not _contains_any(message, RI_TRIGGER_KEYWORDS):
+    if (
+        selected_mode == "quick"
+        and role_profile != "provider"
+        and not _contains_any(message, RI_TRIGGER_KEYWORDS)
+    ):
         reasons.append("quick_mode_without_ri_trigger_disables_ri_lens")
         return False, reasons
 
@@ -652,19 +744,35 @@ def _build_guidance_plan(
     safeguarding_level: str,
     selected_mode: str,
     output_type: str,
+    assistant_surface: str,
+    requires_evidence_grounding: bool,
 ) -> GuidancePlan:
     text = _safe_string(message).lower()
 
     if selected_mode == "quick":
         return GuidancePlan(enabled=False, reason="quick_mode", search_query="")
 
-    if safeguarding_level in {"serious", "urgent"}:
+    if safeguarding_level == "urgent":
         return GuidancePlan(enabled=False, reason="safeguarding_override", search_query="")
+
+    if requires_evidence_grounding and _is_os_record_specific_request(message):
+        return GuidancePlan(
+            enabled=False,
+            reason="os_record_specific_request_uses_scoped_evidence",
+            search_query="",
+        )
 
     if _looks_like_internal_report_request(message, output_type, mode):
         return GuidancePlan(
             enabled=False,
             reason="internal_report_like_request_uses_local_context",
+            search_query="",
+        )
+
+    if assistant_surface == "os_embedded" and output_type in REPORT_OUTPUTS:
+        return GuidancePlan(
+            enabled=False,
+            reason="os_report_uses_operational_snapshot_context",
             search_query="",
         )
 
@@ -705,46 +813,56 @@ def _build_model_plan(
     inspection_lens: bool,
     ri_lens: bool,
     output_type: str,
+    assistant_surface: str,
+    requires_evidence_grounding: bool,
 ) -> ModelPlan:
     internal_report_like = _looks_like_internal_report_request(message, output_type, mode)
     inspection_heavy = _is_inspection_heavy(message, output_type, mode)
     ri_heavy = _contains_any(message, RI_TRIGGER_KEYWORDS)
+    os_record_specific = requires_evidence_grounding and _is_os_record_specific_request(message)
 
     if safeguarding_level == "urgent":
-        return ModelPlan(model=MINI_MODEL, temperature=0.15, max_tokens=500)
-
-    if safeguarding_level == "serious":
-        return ModelPlan(model=STRONG_MODEL, temperature=0.15, max_tokens=900)
+        return ModelPlan(model=MINI_MODEL, temperature=0.15, max_tokens=550)
 
     if selected_mode == "quick":
-        if inspection_heavy or ri_heavy or internal_report_like:
+        if inspection_heavy or ri_heavy or internal_report_like or os_record_specific:
             return ModelPlan(model=STRONG_MODEL, temperature=0.15, max_tokens=900)
-        return ModelPlan(model=MINI_MODEL, temperature=0.15, max_tokens=400)
+        return ModelPlan(model=MINI_MODEL, temperature=0.15, max_tokens=450)
 
     if selected_mode == "deep":
-        if inspection_heavy or ri_lens or internal_report_like:
-            return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1800)
+        if os_record_specific or inspection_heavy or ri_lens or internal_report_like:
+            return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1900)
         if has_document and mode in {"document_review", "rewrite"}:
-            return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1500)
-        return ModelPlan(model=STRONG_MODEL, temperature=0.25, max_tokens=1400)
+            return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1600)
+        return ModelPlan(model=STRONG_MODEL, temperature=0.25, max_tokens=1500)
+
+    if os_record_specific:
+        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1400)
 
     if inspection_lens or ri_lens:
         return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1300)
 
     if leadership_lens:
-        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1100)
+        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1150)
 
     if has_document and mode in {"document_review", "rewrite"}:
-        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1000)
+        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1100)
 
     if internal_report_like:
+        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1350)
+
+    if assistant_surface == "os_embedded" and output_type in {
+        "manager_review",
+        "report",
+        "structured_report",
+    }:
         return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1300)
 
     if mode in {"incident_summary", "recording", "chronology", "handover", "factual"}:
-        return ModelPlan(model=MINI_MODEL, temperature=0.1, max_tokens=700)
+        return ModelPlan(model=MINI_MODEL, temperature=0.1, max_tokens=750)
 
     if mode in DEEP_REASONING_MODES:
-        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1100)
+        return ModelPlan(model=STRONG_MODEL, temperature=0.2, max_tokens=1150)
 
     return ModelPlan(model=MINI_MODEL, temperature=0.2, max_tokens=900)
 
@@ -758,7 +876,13 @@ def _should_be_brief(
     reasons: list[str] = []
     text = _normalise_text(message)
 
-    if " no more than " in text or " in 180 words " in text or " concise " in text or " briefly " in text:
+    if (
+        " no more than " in text
+        or " in 180 words " in text
+        or " concise " in text
+        or " briefly " in text
+        or " keep it short " in text
+    ):
         reasons.append("user_requested_brief_output")
         return True, reasons
 
@@ -789,8 +913,11 @@ def build_response_plan(
     user_role_profile: str,
     selected_mode: str,
     has_document: bool,
+    assistant_surface: str = "standalone",
+    requires_evidence_grounding: bool = False,
 ) -> ResponsePlan:
     selected_mode = _normalise_mode(selected_mode)
+    assistant_surface = _normalise_surface(assistant_surface)
     reasons: list[str] = []
 
     response_stance, stance_reasons = _derive_response_stance(
@@ -805,6 +932,7 @@ def build_response_plan(
     use_memory, memory_reasons = _should_use_memory(
         selected_mode=selected_mode,
         mode=mode,
+        assistant_surface=assistant_surface,
     )
     reasons.extend(memory_reasons)
 
@@ -816,6 +944,8 @@ def build_response_plan(
         has_document=has_document,
         message=message,
         output_type=output_type,
+        assistant_surface=assistant_surface,
+        requires_evidence_grounding=requires_evidence_grounding,
     )
     reasons.extend(retrieval_reasons)
 
@@ -866,6 +996,8 @@ def build_response_plan(
         safeguarding_level=safeguarding_level,
         selected_mode=selected_mode,
         output_type=output_type,
+        assistant_surface=assistant_surface,
+        requires_evidence_grounding=requires_evidence_grounding,
     )
 
     model_plan = _build_model_plan(
@@ -878,21 +1010,38 @@ def build_response_plan(
         inspection_lens=use_inspection_lens,
         ri_lens=use_ri_lens,
         output_type=output_type,
+        assistant_surface=assistant_surface,
+        requires_evidence_grounding=requires_evidence_grounding,
     )
 
-    must_lead_with_safety = safeguarding_level in {"urgent", "serious"} or urgency == "urgent"
+    must_lead_with_safety = safeguarding_level == "urgent" or urgency == "urgent"
     if must_lead_with_safety:
-        reasons.append("urgent_or_serious_context_requires_safety_first_response")
+        reasons.append("urgent_context_requires_safety_first_response")
 
     must_preserve_source_facts = has_document or mode in DOCUMENT_FIDELITY_MODES
-    if must_preserve_source_facts:
+    if requires_evidence_grounding:
+        must_preserve_source_facts = True
+        reasons.append("os_evidence_grounding_requires_source_fidelity")
+    elif must_preserve_source_facts:
         reasons.append("document_or_recording_context_requires_source_fidelity")
 
     should_distinguish_fact_from_inference = (
         output_type in RECORDING_OUTPUTS
-        or safeguarding_level in {"current", "heightened", "serious", "urgent"}
-        or mode in {"rewrite", "incident_summary", "recording", "chronology", "handover", "quality_review", "inspection_review"}
-        or _contains_any(message, INSPECTION_TRIGGER_KEYWORDS | LEADERSHIP_TRIGGER_KEYWORDS | RI_TRIGGER_KEYWORDS)
+        or safeguarding_level in {"heightened", "urgent"}
+        or mode in {
+            "rewrite",
+            "incident_summary",
+            "recording",
+            "chronology",
+            "handover",
+            "quality_review",
+            "inspection_review",
+        }
+        or requires_evidence_grounding
+        or _contains_any(
+            message,
+            INSPECTION_TRIGGER_KEYWORDS | LEADERSHIP_TRIGGER_KEYWORDS | RI_TRIGGER_KEYWORDS,
+        )
     )
     if should_distinguish_fact_from_inference:
         reasons.append("context_requires_fact_inference_separation")
@@ -921,6 +1070,8 @@ def build_response_plan(
         must_preserve_source_facts=must_preserve_source_facts,
         should_distinguish_fact_from_inference=should_distinguish_fact_from_inference,
         should_be_brief=should_be_brief,
+        assistant_surface=assistant_surface,
+        requires_evidence_grounding=requires_evidence_grounding,
         guidance_plan=guidance_plan,
         model_plan=model_plan,
         reasons=reasons,

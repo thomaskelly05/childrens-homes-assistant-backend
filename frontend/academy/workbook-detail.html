@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy • Workbook Detail</title>
+    <link rel="stylesheet" href="/css/os-unified.css" />
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+  <body class="academy-page">
+    <div class="academy-layout">
+      <header class="academy-page-header">
+        <div class="academy-page-header__inner">
+          <div>
+            <div class="academy-page-header__eyebrow">IndiCare Academy</div>
+            <h1 id="academyWorkbookTitle">Workbook</h1>
+            <p id="academyWorkbookSubtitle" class="academy-page-header__subtitle"></p>
+          </div>
+
+          <div class="academy-page-header__actions">
+            <a class="academy-button academy-button--ghost" href="/frontend/academy.html">
+              Back to Academy
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="academy-page-main">
+        <div id="academyWorkbookError"></div>
+
+        <section class="academy-panel">
+          <div class="academy-panel__body">
+            <div class="academy-toolbar" style="justify-content: space-between; align-items: center;">
+              <div id="academyWorkbookMeta" class="academy-chip-row"></div>
+              <div id="academyWorkbookStatus"></div>
+            </div>
+
+            <div class="academy-toolbar" style="margin-top: 18px;">
+              <button
+                id="academyWorkbookSaveBtn"
+                type="button"
+                class="academy-button academy-button--secondary"
+              >
+                Save answers
+              </button>
+
+              <button
+                id="academyWorkbookSubmitBtn"
+                type="button"
+                class="academy-button"
+              >
+                Submit workbook
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 24px;">
+          <div class="academy-section__header">
+            <h2>Feedback</h2>
+            <p>Assessor and manager feedback connected to this workbook submission.</p>
+          </div>
+          <div id="academyWorkbookFeedback" class="academy-stack">
+            <div class="academy-empty-state">Loading feedback…</div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 24px; margin-bottom: 40px;">
+          <div class="academy-section__header">
+            <h2>Workbook sections</h2>
+            <p>Complete each question with clear, evidence-based responses.</p>
+          </div>
+          <div id="academyWorkbookSections" class="academy-stack">
+            <div class="academy-empty-state">Loading workbook sections…</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-workbook-detail.js"></script>
+  </body>
+</html>

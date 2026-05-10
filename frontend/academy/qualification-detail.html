@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy • Qualification Detail</title>
+
+    <link rel="stylesheet" href="/css/os-unified.css" />
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+
+  <body class="academy-page">
+    <div class="academy-layout">
+      <!-- HEADER -->
+      <header class="academy-page-header">
+        <div class="academy-page-header__inner">
+          <div>
+            <div class="academy-page-header__eyebrow">
+              IndiCare Academy
+            </div>
+
+            <h1 id="academyQualificationTitle">
+              Qualification
+            </h1>
+
+            <p
+              id="academyQualificationSubtitle"
+              class="academy-page-header__subtitle"
+            ></p>
+          </div>
+
+          <div class="academy-page-header__actions">
+            <a
+              class="academy-button academy-button--ghost"
+              href="/frontend/academy.html"
+            >
+              Back to Academy
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <!-- MAIN -->
+      <main class="academy-page-main">
+        <!-- ERROR -->
+        <div id="academyQualificationError"></div>
+
+        <!-- SUMMARY PANEL -->
+        <section class="academy-panel">
+          <div class="academy-panel__body">
+            <!-- META -->
+            <div
+              class="academy-toolbar"
+              style="justify-content: space-between; align-items: center;"
+            >
+              <div
+                id="academyQualificationMeta"
+                class="academy-chip-row"
+              ></div>
+
+              <div id="academyQualificationStatus"></div>
+            </div>
+
+            <!-- PROGRESS -->
+            <div style="margin-top: 18px;">
+              <div class="academy-progress">
+                <div
+                  id="academyQualificationProgressBar"
+                  class="academy-progress__bar"
+                  style="width: 0%;"
+                ></div>
+              </div>
+
+              <p
+                id="academyQualificationProgressText"
+                class="academy-muted"
+                style="margin-top: 8px;"
+              >
+                Loading progress…
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- UNITS -->
+        <section
+          class="academy-section"
+          style="margin-top: 24px; margin-bottom: 40px;"
+        >
+          <div class="academy-section__header">
+            <h2>Qualification units</h2>
+            <p>
+              Each unit links to workbook evidence, modules and regulatory standards.
+            </p>
+          </div>
+
+          <div id="academyQualificationUnits" class="academy-stack">
+            <div class="academy-empty-state">
+              Loading qualification units…
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-qualification-detail.js"></script>
+  </body>
+</html>

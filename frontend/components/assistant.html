@@ -5,9 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IndiCare Assistant</title>
   <meta name="theme-color" content="#0f172a" />
+  <link rel="stylesheet" href="/css/os-unified.css" />
   <link rel="stylesheet" href="/css/assistant.css" />
 </head>
-<body>
+<body class="os-unified-page os-fixed-shell-page">
+  <header class="os-topbar">
+    <a href="/young-people-shell.html" class="os-brand-button">
+      <span class="os-brand-mark">IC</span>
+      <span class="os-brand-copy">
+        <strong>IndiCare OS</strong>
+        <small>Children's residential operating system</small>
+      </span>
+    </a>
+    <nav class="os-topbar-nav" aria-label="Platform areas">
+      <a href="/young-people-shell.html" class="os-topbar-link">Shell</a>
+      <a href="/young-people.html" class="os-topbar-link">Gateway</a>
+      <a href="/ai-note.html" class="os-topbar-link">I-Notes</a>
+      <a href="/assistant" class="os-topbar-link active">Assistant</a>
+      <a href="/rostering.html" class="os-topbar-link">Rostering</a>
+    </nav>
+    <div class="os-topbar-context">Assistant and knowledge workspace</div>
+  </header>
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
     <symbol id="i-menu" viewBox="0 0 24 24">
       <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -621,8 +639,9 @@
                   <svg class="ui-icon"><use href="#i-mic"></use></svg>
                 </button>
 
-<button id="voiceRepliesSettings" class="toggle-btn mobile-only" type="button">Voice replies</button>
+                <button id="voiceRepliesSettings" class="toggle-btn mobile-only" type="button">
                   <svg class="ui-icon"><use href="#i-volume"></use></svg>
+                  Voice replies
                 </button>
               </div>
 

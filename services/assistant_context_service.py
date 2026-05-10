@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+import re
+from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
 from psycopg2.extras import RealDictCursor
@@ -123,6 +124,328 @@ def _isoish(value: Any) -> str | None:
         return value.isoformat()
     text = _safe_string(value)
     return text or None
+
+
+def _parse_datetime_value(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date):
+        return datetime.combine(value, datetime.min.time())
+
+    text = _safe_string(value)
+    if not text:
+        return None
+
+    candidates = [
+        text,
+        text.replace("Z", "+00:00"),
+        text[:10],
+    ]
+    for candidate in candidates:
+        try:
+            if len(candidate) == 10 and "-" in candidate:
+                parsed_date = date.fromisoformat(candidate)
+                return datetime.combine(parsed_date, datetime.min.time())
+            return datetime.fromisoformat(candidate)
+        except Exception:
+            continue
+    return None
+
+
+def _normalise_period_iso(value: Any) -> str | None:
+    parsed = _parse_datetime_value(value)
+    if parsed is None:
+        return None
+    return parsed.isoformat()
+
+
+COMPLETED_ACTION_STATUSES = {
+    "completed",
+    "closed",
+    "done",
+    "resolved",
+    "cancelled",
+    "canceled",
+}
+
+
+def _resolve_reporting_period(
+    *,
+    message: str | None,
+    start_date: Any = None,
+    end_date: Any = None,
+    report_type: str | None = None,
+) -> dict[str, Any]:
+    explicit_start = _parse_datetime_value(start_date)
+    explicit_end = _parse_datetime_value(end_date)
+    inferred = False
+
+    if explicit_start or explicit_end:
+        resolved_end = explicit_end or datetime.utcnow()
+        resolved_start = explicit_start or resolved_end - timedelta(days=183)
+        if resolved_start > resolved_end:
+            resolved_start, resolved_end = resolved_end, resolved_start
+        return {
+            "start": resolved_start,
+            "end": resolved_end,
+            "start_iso": resolved_start.isoformat(),
+            "end_iso": resolved_end.isoformat(),
+            "inferred": False,
+            "label": "Custom period",
+        }
+
+    text = _safe_string(message).lower()
+    now = datetime.utcnow()
+    days: int | None = None
+
+    if re.search(r"\b(last|past)\s+7\s+days\b", text):
+        days = 7
+    elif re.search(r"\b(last|past)\s+30\s+days\b", text):
+        days = 30
+    elif re.search(r"\b(last|past)\s+3\s+months?\b", text):
+        days = 92
+    elif re.search(r"\b(last|past)\s+6\s+months?\b", text) or "reg 45" in text or "reg45" in text:
+        days = 183
+    elif re.search(r"\b(last|past)\s+12\s+months?\b", text) or "yearly" in text or "annual" in text:
+        days = 365
+    elif _safe_string(report_type).lower() == "reg45":
+        days = 183
+
+    if days is None:
+        return {
+            "start": None,
+            "end": None,
+            "start_iso": None,
+            "end_iso": None,
+            "inferred": False,
+            "label": "",
+        }
+
+    inferred = True
+    start = now - timedelta(days=days)
+    end = now
+    return {
+        "start": start,
+        "end": end,
+        "start_iso": start.isoformat(),
+        "end_iso": end.isoformat(),
+        "inferred": inferred,
+        "label": f"Last {days} days",
+    }
+
+
+def _filter_evidence_index_by_period(
+    evidence_index: list[dict[str, Any]],
+    *,
+    start: datetime | None,
+    end: datetime | None,
+) -> list[dict[str, Any]]:
+    if not evidence_index:
+        return []
+    if start is None and end is None:
+        return list(evidence_index)
+
+    filtered: list[dict[str, Any]] = []
+    for item in evidence_index:
+        if not isinstance(item, dict):
+            continue
+        item_date = _parse_datetime_value(item.get("date") or item.get("event_at") or item.get("updated_at"))
+        if item_date is None:
+            continue
+        if start is not None and item_date < start:
+            continue
+        if end is not None and item_date > end:
+            continue
+        filtered.append(item)
+    return filtered
+
+
+def _is_open_action_item(item: dict[str, Any]) -> bool:
+    status = _safe_string(
+        item.get("status")
+        or item.get("task_status")
+        or item.get("action_status")
+    ).lower()
+    if status and status in COMPLETED_ACTION_STATUSES:
+        return False
+
+    for completed_flag in ("completed", "is_completed", "closed", "is_closed"):
+        if _safe_bool(item.get(completed_flag)) is True:
+            return False
+
+    return True
+
+
+def _is_domain_covered(
+    evidence_index: list[dict[str, Any]],
+    expected_types: set[str],
+) -> bool:
+    for item in evidence_index:
+        record_type = _safe_string((item or {}).get("record_type")).lower()
+        if record_type in expected_types:
+            return True
+    return False
+
+
+def _build_assistant_insight_pack(
+    *,
+    scope_type: str,
+    context_payload: dict[str, Any],
+    evidence_index: list[dict[str, Any]],
+    reporting_period: dict[str, Any],
+) -> dict[str, Any]:
+    now = datetime.utcnow()
+    sorted_evidence = _sort_evidence_index(_dedupe_evidence_index(list(evidence_index or [])))
+
+    def _latest_match(types: set[str], title_contains: str | None = None) -> dict[str, Any] | None:
+        needle = _safe_string(title_contains).lower()
+        for item in sorted_evidence:
+            record_type = _safe_string((item or {}).get("record_type")).lower()
+            if record_type not in types:
+                continue
+            label = _safe_string((item or {}).get("label")).lower()
+            excerpt = _safe_string((item or {}).get("excerpt")).lower()
+            if needle and needle not in label and needle not in excerpt:
+                continue
+            return {
+                "citation_ref": item.get("citation_ref"),
+                "record_type": item.get("record_type"),
+                "record_id": item.get("record_id"),
+                "label": item.get("label"),
+                "date": item.get("date"),
+                "section": item.get("section"),
+            }
+        return None
+
+    appointments: list[dict[str, Any]] = []
+    for item in context_payload.get("active_work", {}).get("appointments", []) if isinstance(context_payload.get("active_work"), dict) else []:
+        if isinstance(item, dict):
+            appointments.append(item)
+
+    next_appointment: dict[str, Any] | None = None
+    next_appointment_dt: datetime | None = None
+    for item in appointments:
+        when = _parse_datetime_value(item.get("appointment_date") or item.get("date"))
+        if when is None or when < now:
+            continue
+        if next_appointment_dt is None or when < next_appointment_dt:
+            next_appointment_dt = when
+            next_appointment = {
+                "id": _safe_int(item.get("id")),
+                "title": _record_title("appointment", item),
+                "date": when.isoformat(),
+            }
+
+    action_candidates: list[dict[str, Any]] = []
+    for key in ("tasks", "compliance_items", "inspection_actions", "transition_actions"):
+        value = context_payload.get(key)
+        if isinstance(value, list):
+            action_candidates.extend([row for row in value if isinstance(row, dict)])
+    active_work = context_payload.get("active_work")
+    if isinstance(active_work, dict) and isinstance(active_work.get("tasks"), list):
+        action_candidates.extend([row for row in active_work.get("tasks", []) if isinstance(row, dict)])
+
+    open_actions: list[dict[str, Any]] = []
+    overdue_actions: list[dict[str, Any]] = []
+    for item in action_candidates:
+        if not _is_open_action_item(item):
+            continue
+
+        due_dt = _parse_datetime_value(item.get("due_date") or item.get("target_date") or item.get("next_due_date"))
+        action_entry = {
+            "id": _safe_int(item.get("id")),
+            "title": _record_title("task", item),
+            "status": _safe_string(item.get("status") or item.get("task_status") or "open"),
+            "due_date": _normalise_period_iso(due_dt),
+            "record_type": _safe_string(item.get("record_type")) or "task",
+            "citation_ref": f"[task:{_safe_int(item.get('id'))}]" if _safe_int(item.get("id")) is not None else None,
+        }
+        open_actions.append(action_entry)
+
+        if due_dt is not None and due_dt < now:
+            overdue_actions.append(action_entry)
+
+    incidents_in_period = [
+        item
+        for item in sorted_evidence
+        if _safe_string(item.get("record_type")).lower() in {"incident", "missing_episode", "safeguarding_record"}
+    ]
+
+    chronology_focus = [
+        {
+            "citation_ref": item.get("citation_ref"),
+            "record_type": item.get("record_type"),
+            "record_id": item.get("record_id"),
+            "label": item.get("label"),
+            "date": item.get("date"),
+            "section": item.get("section"),
+        }
+        for item in sorted_evidence[:12]
+    ]
+
+    expected_domains_by_scope: dict[str, dict[str, set[str]]] = {
+        "young_person": {
+            "daily_life": {"daily_note"},
+            "incidents": {"incident", "missing_episode", "safeguarding_record"},
+            "health": {"health_record", "wellbeing_check", "appointment"},
+            "education": {"education_record"},
+            "family": {"family_contact"},
+            "actions": {"task", "transition_action"},
+        },
+        "home": {
+            "incidents": {"incident"},
+            "actions": {"task", "inspection_action"},
+            "workforce": {"staff", "rota", "supervision_session", "training_record"},
+            "compliance": {"document", "report", "inspection_line_of_enquiry"},
+        },
+        "quality": {
+            "incidents": {"incident"},
+            "actions": {"inspection_action", "compliance_item", "task"},
+            "oversight": {"quality_audit", "inspection_scorecard", "report"},
+            "leadership": {"supervision_session", "staff"},
+        },
+    }
+    scope_expectations = expected_domains_by_scope.get(scope_type, {})
+
+    evidence_gaps: list[str] = []
+    for domain_name, expected_types in scope_expectations.items():
+        if not _is_domain_covered(sorted_evidence, expected_types):
+            evidence_gaps.append(f"No recent {domain_name} evidence is visible in the selected period.")
+
+    facts = {
+        "latest_incident": _latest_match({"incident", "missing_episode", "safeguarding_record"}),
+        "latest_health_update": _latest_match({"health_record", "wellbeing_check", "appointment"}),
+        "latest_education_update": _latest_match({"education_record"}),
+        "latest_family_contact": _latest_match({"family_contact"}),
+        "latest_dentist_visit": _latest_match({"appointment", "health_record"}, title_contains="dentist"),
+        "latest_lac_review": _latest_match(
+            {"appointment", "report", "monthly_review", "chronology_event"},
+            title_contains="lac review",
+        ),
+        "next_appointment": next_appointment,
+    }
+
+    return {
+        "reporting_period": {
+            "start": reporting_period.get("start_iso"),
+            "end": reporting_period.get("end_iso"),
+            "inferred": bool(reporting_period.get("inferred")),
+            "label": reporting_period.get("label"),
+        },
+        "summary_counts": {
+            "evidence_items_in_period": len(sorted_evidence),
+            "incident_items_in_period": len(incidents_in_period),
+            "open_actions_count": len(open_actions),
+            "overdue_actions_count": len(overdue_actions),
+        },
+        "facts": {k: v for k, v in facts.items() if v not in (None, "", [], {})},
+        "chronology_focus": chronology_focus,
+        "open_actions": open_actions[:20],
+        "overdue_actions": overdue_actions[:20],
+        "evidence_gaps": evidence_gaps[:10],
+    }
 
 
 def _first_non_empty(item: dict[str, Any], keys: list[str]) -> Any:
@@ -337,7 +660,7 @@ def _make_evidence_item(
         return None
 
     resolved_section = section or _source_section_for_record_type(record_type)
-    citation_ref = f"{record_type}:{record_id}"
+    citation_ref = f"[{record_type}:{record_id}]"
 
     return {
         "citation_ref": citation_ref,
@@ -373,7 +696,7 @@ def _make_summary_evidence_item(
     synthetic_id: str,
 ) -> dict[str, Any]:
     return {
-        "citation_ref": f"{record_type}:{synthetic_id}",
+        "citation_ref": f"[{record_type}:{synthetic_id}]",
         "record_type": record_type,
         "record_id": None,
         "label": label,
@@ -2425,6 +2748,11 @@ def build_runtime_assistant_context(
         "placement_status",
         "summary_risk_level",
         "home_name",
+        "start_date",
+        "end_date",
+        "reporting_period_start",
+        "reporting_period_end",
+        "reporting_period_inferred",
     ]
 
     for key in safe_passthrough_keys:
@@ -2441,8 +2769,44 @@ def build_runtime_assistant_context(
         merged_context["output_mode"] = "structured_report"
         merged_context["ask_for_summary"] = True
 
+    reporting_period = _resolve_reporting_period(
+        message=message,
+        start_date=safe_ui.get("reporting_period_start") or safe_ui.get("start_date"),
+        end_date=safe_ui.get("reporting_period_end") or safe_ui.get("end_date"),
+        report_type=merged_context.get("report_type"),
+    )
+
+    merged_context["reporting_period_start"] = reporting_period.get("start_iso")
+    merged_context["reporting_period_end"] = reporting_period.get("end_iso")
+    merged_context["reporting_period_inferred"] = bool(reporting_period.get("inferred"))
+
     evidence_index = merged_context.get("evidence_index")
     if isinstance(evidence_index, list):
+        filtered_period_evidence = _filter_evidence_index_by_period(
+            evidence_index,
+            start=reporting_period.get("start"),
+            end=reporting_period.get("end"),
+        )
+
+        # Preserve the full list for fallback reasoning while prioritising time-window evidence.
+        if reporting_period.get("start") is not None and filtered_period_evidence:
+            merged_context["evidence_index_full"] = list(evidence_index)
+            merged_context["evidence_index"] = filtered_period_evidence
+            evidence_index = filtered_period_evidence
+
         merged_context["sources"] = _evidence_to_sources(evidence_index)
+        merged_context["assistant_insight_pack"] = _build_assistant_insight_pack(
+            scope_type=_safe_string(final_scope.get("scope_type")) or "global",
+            context_payload=merged_context,
+            evidence_index=evidence_index,
+            reporting_period=reporting_period,
+        )
+    else:
+        merged_context["assistant_insight_pack"] = _build_assistant_insight_pack(
+            scope_type=_safe_string(final_scope.get("scope_type")) or "global",
+            context_payload=merged_context,
+            evidence_index=[],
+            reporting_period=reporting_period,
+        )
 
     return merged_context

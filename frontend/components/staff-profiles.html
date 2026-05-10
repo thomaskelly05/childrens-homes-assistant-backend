@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Staff Profiles | IndiCare OS</title>
+  <link rel="stylesheet" href="/css/young-people-shell.css" />
+</head>
+<body style="padding:20px;font-family:system-ui;">
+  <header>
+    <p>IndiCare OS</p>
+    <h1>Staff Profiles</h1>
+    <p>Workforce lifecycle, Academy intelligence, supervision, probation and manager actions.</p>
+    <p><a href="/young-people-shell">Back to OS</a> | <a href="/staff-profile.html">My profile</a></p>
+  </header>
+
+  <section>
+    <label for="homeIdInput">Home ID</label>
+    <input id="homeIdInput" type="number" min="1" placeholder="1" />
+    <button id="loadHomeStaffBtn" type="button">Load staff</button>
+    <div id="staffHubStatus" role="status"></div>
+  </section>
+
+  <section>
+    <h2>Staff requiring attention</h2>
+    <div id="staffProfilesList"></div>
+  </section>
+
+  <script src="/js/staff-profiles.js"></script>
+</body>
+</html>

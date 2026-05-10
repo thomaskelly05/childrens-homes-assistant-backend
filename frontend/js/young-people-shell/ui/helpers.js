@@ -1,5 +1,13 @@
 import { escapeHtml, formatDate } from "../core/utils.js";
 
+function buildRecordPayloadAttr(item = {}) {
+  try {
+    return encodeURIComponent(JSON.stringify(item));
+  } catch {
+    return "";
+  }
+}
+
 function normaliseStatus(value = "") {
   return String(value || "")
     .trim()
@@ -267,12 +275,14 @@ export function renderRowList(items = [], emptyMessage = "No records found.") {
           const recordType = item.record_type || item.type || "";
           const title = getBestTitle(item);
           const summary = getBestSummary(item);
+          const status =
+            item.workflow_status || item.status || item.approval_status || "";
+          const dateValue = pickBestDate(item);
           const metaParts = buildMetaParts(item);
+          const recordPayload = buildRecordPayloadAttr(item);
 
           const badgeValues = [
-            item.workflow_status,
-            item.status,
-            item.approval_status,
+            status,
             item.severity,
             item.significance,
           ].filter(Boolean);
@@ -284,6 +294,10 @@ export function renderRowList(items = [], emptyMessage = "No records found.") {
               data-record-id="${escapeHtml(String(recordId))}"
               data-record-type="${escapeHtml(String(recordType))}"
               data-title="${escapeHtml(String(title))}"
+              data-record-summary="${escapeHtml(String(summary || ""))}"
+              data-record-status="${escapeHtml(String(status || ""))}"
+              data-record-date="${escapeHtml(String(dateValue || ""))}"
+              data-record-payload="${escapeHtml(String(recordPayload || ""))}"
               role="button"
               tabindex="0"
             >
@@ -329,11 +343,10 @@ export function renderRecordsTable(items = [], emptyMessage = "No records found.
             item.status ||
             item.approval_status ||
             "";
-
-          const summaryParts = [
-            recordType ? String(recordType).replaceAll("_", " ") : "",
-            dateValue ? formatDate(dateValue) : "",
-          ].filter(Boolean);
+          const summary = [recordType ? String(recordType).replaceAll("_", " ") : "", dateValue ? formatDate(dateValue) : ""]
+            .filter(Boolean)
+            .join(" • ");
+          const recordPayload = buildRecordPayloadAttr(item);
 
           return `
             <article
@@ -342,14 +355,18 @@ export function renderRecordsTable(items = [], emptyMessage = "No records found.
               data-record-id="${escapeHtml(String(recordId))}"
               data-record-type="${escapeHtml(String(recordType))}"
               data-title="${escapeHtml(String(title))}"
+              data-record-summary="${escapeHtml(String(summary || ""))}"
+              data-record-status="${escapeHtml(String(status || ""))}"
+              data-record-date="${escapeHtml(String(dateValue || ""))}"
+              data-record-payload="${escapeHtml(String(recordPayload || ""))}"
               role="button"
               tabindex="0"
             >
               <div class="record-row-main">
                 <div class="record-row-title">${escapeHtml(title)}</div>
                 ${
-                  summaryParts.length
-                    ? `<div class="record-row-summary">${escapeHtml(summaryParts.join(" • "))}</div>`
+                  summary
+                    ? `<div class="record-row-summary">${escapeHtml(summary)}</div>`
                     : ""
                 }
               </div>

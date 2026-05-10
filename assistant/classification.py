@@ -5,10 +5,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-# ---------------------------------------------------------
-# Intent signals
-# ---------------------------------------------------------
-
 FACTUAL_KEYWORDS = {
     "how often",
     "timescale",
@@ -24,10 +20,23 @@ FACTUAL_KEYWORDS = {
     "pep",
     "supervision frequency",
     "quality standard",
+    "quality standards",
     "children's homes regulations",
     "childrens homes regulations",
+    "guide to the children's homes regulations",
+    "guide to the childrens homes regulations",
     "sccif",
+    "reg 40",
+    "reg 44",
+    "reg 45",
+    "regulation 40",
+    "regulation 44",
+    "regulation 45",
+    "children act",
+    "working together",
+    "statutory guidance",
 }
+
 
 HANDOVER_KEYWORDS = {
     "handover",
@@ -35,7 +44,14 @@ HANDOVER_KEYWORDS = {
     "end of shift",
     "pass on",
     "what should i hand over",
+    "next shift",
+    "shift brief",
+    "handover note",
+    "handover summary",
+    "staff need to know",
+    "what does the next shift need",
 }
+
 
 RECORDING_KEYWORDS = {
     "daily log",
@@ -43,6 +59,7 @@ RECORDING_KEYWORDS = {
     "write this up",
     "log entry",
     "body map",
+    "body-map",
     "bruise",
     "injury",
     "observation",
@@ -52,7 +69,13 @@ RECORDING_KEYWORDS = {
     "daily note",
     "entry",
     "document this",
+    "case note",
+    "write a note",
+    "recording wording",
+    "professional wording",
+    "care note",
 }
+
 
 INCIDENT_KEYWORDS = {
     "incident summary",
@@ -61,19 +84,32 @@ INCIDENT_KEYWORDS = {
     "summary of incident",
     "review this incident",
     "incident",
+    "restraint",
+    "physical intervention",
+    "police attended",
+    "missing episode",
+    "serious event",
+    "reg 40",
+    "notification",
 }
+
 
 CHRONOLOGY_KEYWORDS = {
     "chronology",
     "timeline",
     "sequence of events",
     "put this in order",
+    "date order",
+    "chronological",
+    "events in order",
 }
+
 
 PLANNING_KEYWORDS = {
     "support plan",
     "care plan",
     "risk assessment",
+    "risk plan",
     "strategy",
     "how should we support",
     "support this child",
@@ -83,7 +119,14 @@ PLANNING_KEYWORDS = {
     "communication profile",
     "placement plan",
     "behaviour plan",
+    "positive behaviour support",
+    "pbs plan",
+    "safety plan",
+    "missing plan",
+    "de-escalation plan",
+    "key work plan",
 }
+
 
 MANAGER_REVIEW_KEYWORDS = {
     "manager update",
@@ -93,9 +136,25 @@ MANAGER_REVIEW_KEYWORDS = {
     "audit this",
     "quality check this",
     "what would ofsted think",
+    "what would ofsted say",
+    "what would an inspector think",
     "inspection ready",
+    "inspection readiness",
     "is this defensible",
+    "whole scoped record",
+    "across the whole record",
+    "full child-centred summary",
+    "full summary",
+    "quality assurance",
+    "oversight",
+    "management oversight",
+    "manager review",
+    "leadership review",
+    "registered manager view",
+    "ri view",
+    "responsible individual",
 }
+
 
 REWRITE_KEYWORDS = {
     "rewrite",
@@ -106,7 +165,14 @@ REWRITE_KEYWORDS = {
     "phrase this better",
     "clean this up",
     "tidy this up",
+    "professionalise",
+    "professionalize",
+    "make this sound better",
+    "make this less judgemental",
+    "make this child-centred",
+    "make this factual",
 }
+
 
 REFLECTIVE_KEYWORDS = {
     "i felt",
@@ -124,7 +190,14 @@ REFLECTIVE_KEYWORDS = {
     "reflect",
     "supervision",
     "debrief",
+    "reflective account",
+    "staff debrief",
+    "team debrief",
+    "learning from",
+    "what went well",
+    "what could be improved",
 }
+
 
 DECISION_SUPPORT_KEYWORDS = {
     "what should i do",
@@ -138,7 +211,13 @@ DECISION_SUPPORT_KEYWORDS = {
     "should i report",
     "should this be escalated",
     "what should happen next",
+    "what needs to happen",
+    "who should i tell",
+    "do i call",
+    "do we need to notify",
+    "should we notify",
 }
+
 
 DOCUMENT_REVIEW_KEYWORDS = {
     "review this document",
@@ -149,7 +228,13 @@ DOCUMENT_REVIEW_KEYWORDS = {
     "does this make sense",
     "is this defensible",
     "improve this record",
+    "quality check",
+    "spot gaps",
+    "what is missing",
+    "is this strong enough",
+    "would this stand up",
 }
+
 
 SAFEGUARDING_REVIEW_KEYWORDS = {
     "safeguarding",
@@ -162,7 +247,20 @@ SAFEGUARDING_REVIEW_KEYWORDS = {
     "local authority",
     "police",
     "on-call",
+    "child protection",
+    "disclosure",
+    "allegation",
+    "exploitation",
+    "cse",
+    "cce",
+    "county lines",
+    "missing from home",
+    "self-harm",
+    "suicidal",
+    "risk of harm",
+    "unsafe",
 }
+
 
 LEADERSHIP_KEYWORDS = {
     "manager",
@@ -175,12 +273,115 @@ LEADERSHIP_KEYWORDS = {
     "audit",
     "inspection",
     "ofsted",
+    "leadership",
+    "service issue",
+    "pattern",
+    "theme",
+    "trend",
+    "drift",
+    "compliance",
 }
 
 
-# ---------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------
+OFSTED_KEYWORDS = {
+    "ofsted",
+    "inspection",
+    "sccif",
+    "inspector",
+    "inspection ready",
+    "inspection readiness",
+    "quality standards",
+    "lived experience",
+    "impact of care",
+    "evidence pack",
+    "audit trail",
+    "triangulation",
+    "what would ofsted notice",
+    "what would an inspector notice",
+}
+
+
+THERAPEUTIC_KEYWORDS = {
+    "trauma-informed",
+    "trauma informed",
+    "therapeutic",
+    "attachment",
+    "relational",
+    "relationship-based",
+    "relationship based",
+    "co-regulation",
+    "co regulation",
+    "emotional regulation",
+    "trigger",
+    "triggers",
+    "sensory",
+    "low arousal",
+    "de-escalation",
+    "formulation",
+    "presentation",
+    "lived experience",
+}
+
+
+NEURODEVELOPMENTAL_KEYWORDS = {
+    "autism",
+    "autistic",
+    "adhd",
+    "learning disability",
+    "learning difficulties",
+    "global developmental delay",
+    "gdd",
+    "non-verbal",
+    "non verbal",
+    "minimally verbal",
+    "communication aid",
+    "sensory",
+    "neurodivergent",
+    "processing time",
+    "visuals",
+    "visual timetable",
+}
+
+
+REPORT_KEYWORDS = {
+    "report",
+    "monthly report",
+    "monthly summary",
+    "reg 45",
+    "reg45",
+    "regulation 45",
+    "quality of care review",
+    "annual report",
+    "yearly report",
+    "manager brief",
+    "quality brief",
+    "inspection summary",
+    "overview report",
+    "review pack",
+}
+
+
+EMAIL_KEYWORDS = {
+    "email",
+    "write an email",
+    "draft an email",
+    "message to",
+    "letter",
+    "professional email",
+}
+
+
+TEMPLATE_KEYWORDS = {
+    "template",
+    "form",
+    "checklist",
+    "proforma",
+    "tool",
+    "worksheet",
+    "structure for",
+    "format for",
+}
+
 
 @dataclass
 class IntentClassification:
@@ -193,10 +394,6 @@ class IntentClassification:
     legacy_mode: str = "practical"
 
 
-# ---------------------------------------------------------
-# Safe helpers
-# ---------------------------------------------------------
-
 def _safe_string(value: Any) -> str:
     if value is None:
         return ""
@@ -205,7 +402,11 @@ def _safe_string(value: Any) -> str:
     return str(value).strip()
 
 
-def _normalise_text(message: str, history: list[dict[str, Any]] | None = None, max_history: int = 4) -> str:
+def _normalise_text(
+    message: str,
+    history: list[dict[str, Any]] | None = None,
+    max_history: int = 4,
+) -> str:
     parts: list[str] = []
 
     current = _safe_string(message).lower()
@@ -213,10 +414,12 @@ def _normalise_text(message: str, history: list[dict[str, Any]] | None = None, m
         parts.append(current)
 
     for item in (history or [])[-max_history:]:
+        if not isinstance(item, dict):
+            continue
+
         role = _safe_string(item.get("role")).lower()
         content = _safe_string(item.get("message") or item.get("content")).lower()
 
-        # Prefer user context, not assistant self-repetition
         if role == "user" and content:
             parts.append(content)
 
@@ -228,7 +431,7 @@ def _contains_phrase(text: str, phrase: str) -> bool:
     if not phrase:
         return False
 
-    if " " in phrase or "-" in phrase:
+    if " " in phrase or "-" in phrase or "'" in phrase:
         return phrase in text
 
     pattern = rf"\b{re.escape(phrase)}\b"
@@ -258,9 +461,39 @@ def _dedupe(items: list[str]) -> list[str]:
     return result
 
 
-# ---------------------------------------------------------
-# Legacy mode support
-# ---------------------------------------------------------
+def _role_is_managerial(role_text: str) -> bool:
+    return any(
+        term in role_text
+        for term in {
+            "manager",
+            "registered manager",
+            "deputy",
+            "senior",
+            "team leader",
+            "shift leader",
+            "responsible individual",
+            "provider",
+            "director",
+            "quality",
+            "operations",
+        }
+    )
+
+
+def _role_is_provider(role_text: str) -> bool:
+    return any(
+        term in role_text
+        for term in {
+            "responsible individual",
+            "provider",
+            "director",
+            "operations manager",
+            "head of care",
+            "service manager",
+            "governance",
+        }
+    )
+
 
 def _resolve_legacy_mode(
     primary_intent: str,
@@ -285,8 +518,12 @@ def _resolve_legacy_mode(
         return "safeguarding"
     if output_format == "reflective_debrief":
         return "reflective"
+    if output_format in {"report", "structured_report", "email_report"}:
+        return "manager_review"
+    if output_format == "template":
+        return "general_practice"
 
-    if primary_intent == "review" and response_stance == "management":
+    if primary_intent == "review" and response_stance in {"management", "inspection"}:
         return "manager_review"
     if primary_intent == "reflection":
         return "reflective"
@@ -294,15 +531,87 @@ def _resolve_legacy_mode(
         return "support_planning"
     if primary_intent == "documentation":
         return "recording"
+    if primary_intent == "decision_support":
+        return "practical"
     if primary_intent == "guidance":
         return "factual" if response_stance == "practice_support" else "practical"
 
     return "practical"
 
 
-# ---------------------------------------------------------
-# Main classifier
-# ---------------------------------------------------------
+def _make_result(
+    *,
+    primary_intent: str,
+    secondary_intents: list[str] | None = None,
+    output_format: str,
+    response_stance: str,
+    confidence: float,
+    matched_signals: list[str],
+) -> IntentClassification:
+    result = IntentClassification(
+        primary_intent=primary_intent,
+        secondary_intents=_dedupe(secondary_intents or []),
+        output_format=output_format,
+        response_stance=response_stance,
+        confidence=max(0.0, min(float(confidence), 1.0)),
+        matched_signals=_dedupe(matched_signals),
+    )
+
+    result.legacy_mode = _resolve_legacy_mode(
+        result.primary_intent,
+        result.output_format,
+        result.response_stance,
+    )
+
+    return result
+
+
+def _has_direct_write_pattern(text: str, target: str) -> bool:
+    return re.search(rf"\b(write|draft|create|produce|make)\b.*\b{target}\b", text) is not None
+
+
+def _has_rewrite_pattern(text: str) -> bool:
+    return re.search(
+        r"\b(rewrite|reword|improve|tidy|clean up|professionalise|professionalize|make this better)\b",
+        text,
+    ) is not None
+
+
+def _is_email_request(text: str) -> bool:
+    return (
+        re.search(r"\b(write|draft|create)\b.*\b(email|letter|message)\b", text) is not None
+        or _contains_phrase(text, "write an email")
+        or _contains_phrase(text, "draft an email")
+    )
+
+
+def _is_template_request(text: str) -> bool:
+    return (
+        re.search(r"\b(create|make|draft|write|give me)\b.*\b(template|checklist|form|proforma|tool)\b", text) is not None
+        or _contains_phrase(text, "template for")
+        or _contains_phrase(text, "checklist for")
+    )
+
+
+def _is_report_request(text: str) -> bool:
+    if any(_contains_phrase(text, keyword) for keyword in REPORT_KEYWORDS):
+        return True
+
+    return re.search(r"\b(write|draft|create|produce)\b.*\b(report|summary|overview)\b", text) is not None
+
+
+def _is_standalone_record_limitation_signal(text: str) -> bool:
+    return any(
+        phrase in text
+        for phrase in {
+            "without seeing the record",
+            "i don't have the record",
+            "i do not have the record",
+            "based on this only",
+            "from this information only",
+        }
+    )
+
 
 def classify_intent(
     message: str,
@@ -336,71 +645,153 @@ def classify_intent(
         "document_review": _score_keywords(text, DOCUMENT_REVIEW_KEYWORDS),
         "safeguarding_review": _score_keywords(text, SAFEGUARDING_REVIEW_KEYWORDS),
         "leadership": _score_keywords(text, LEADERSHIP_KEYWORDS),
+        "ofsted": _score_keywords(text, OFSTED_KEYWORDS),
+        "therapeutic": _score_keywords(text, THERAPEUTIC_KEYWORDS),
+        "neurodevelopmental": _score_keywords(text, NEURODEVELOPMENTAL_KEYWORDS),
+        "report": _score_keywords(text, REPORT_KEYWORDS),
+        "email": _score_keywords(text, EMAIL_KEYWORDS),
+        "template": _score_keywords(text, TEMPLATE_KEYWORDS),
     }
 
     matched_signals: list[str] = []
-    for _, (_, matches) in signals.items():
+    for _, matches in signals.values():
         matched_signals.extend(matches)
     matched_signals = _dedupe(matched_signals)
 
-    # -----------------------------------------------------
-    # Strong direct pattern resolution
-    # -----------------------------------------------------
+    secondary_intents: list[str] = []
 
-    if re.search(r"\b(write|draft)\b.*\bhandover\b", text):
-        result = IntentClassification(
+    if _role_is_managerial(role_text):
+        secondary_intents.append("managerial_role")
+    if _role_is_provider(role_text):
+        secondary_intents.append("provider_role")
+
+    if signals["ofsted"][0] > 0:
+        secondary_intents.append("inspection_lens")
+    if signals["therapeutic"][0] > 0:
+        secondary_intents.append("therapeutic_lens")
+    if signals["neurodevelopmental"][0] > 0:
+        secondary_intents.append("neurodevelopmental_lens")
+    if signals["leadership"][0] > 0:
+        secondary_intents.append("leadership")
+    if _is_standalone_record_limitation_signal(text):
+        secondary_intents.append("limited_evidence_warning")
+
+    # Strong direct patterns first.
+    if _is_email_request(text):
+        return _make_result(
             primary_intent="documentation",
-            secondary_intents=[],
+            secondary_intents=secondary_intents + ["email_drafting"],
+            output_format="email_report",
+            response_stance="documentation",
+            confidence=0.94,
+            matched_signals=matched_signals + ["email_drafting_pattern"],
+        )
+
+    if _is_template_request(text):
+        return _make_result(
+            primary_intent="template",
+            secondary_intents=secondary_intents + ["template_generation"],
+            output_format="template",
+            response_stance="practice_support",
+            confidence=0.94,
+            matched_signals=matched_signals + ["template_request_pattern"],
+        )
+
+    if _is_report_request(text):
+        stance = "inspection" if signals["ofsted"][0] > 0 or "reg 45" in text or "reg45" in text else "management"
+        output_format = "structured_report" if any(term in text for term in {"reg 45", "reg45", "report"}) else "manager_update"
+
+        return _make_result(
+            primary_intent="report",
+            secondary_intents=secondary_intents + ["report_generation"],
+            output_format=output_format,
+            response_stance=stance,
+            confidence=0.92,
+            matched_signals=matched_signals + ["report_request_pattern"],
+        )
+
+    if _has_direct_write_pattern(text, "handover"):
+        return _make_result(
+            primary_intent="documentation",
+            secondary_intents=secondary_intents,
             output_format="handover_note",
             response_stance="documentation",
             confidence=0.95,
-            matched_signals=_dedupe(matched_signals + ["write_handover_pattern"]),
+            matched_signals=matched_signals + ["write_handover_pattern"],
         )
-        result.legacy_mode = _resolve_legacy_mode(result.primary_intent, result.output_format, result.response_stance)
-        return result
 
-    if re.search(r"\b(write|draft)\b.*\b(incident|incident report|incident summary)\b", text):
-        result = IntentClassification(
+    if re.search(r"\b(write|draft|create|produce)\b.*\b(incident|incident report|incident summary)\b", text):
+        return _make_result(
             primary_intent="documentation",
-            secondary_intents=[],
+            secondary_intents=secondary_intents,
             output_format="incident_record",
             response_stance="documentation",
             confidence=0.95,
-            matched_signals=_dedupe(matched_signals + ["write_incident_pattern"]),
+            matched_signals=matched_signals + ["write_incident_pattern"],
         )
-        result.legacy_mode = _resolve_legacy_mode(result.primary_intent, result.output_format, result.response_stance)
-        return result
 
-    if re.search(r"\b(write|draft|create)\b.*\b(chronology|timeline)\b", text):
-        result = IntentClassification(
+    if re.search(r"\b(write|draft|create|produce)\b.*\b(chronology|timeline)\b", text):
+        return _make_result(
             primary_intent="documentation",
-            secondary_intents=[],
+            secondary_intents=secondary_intents,
             output_format="chronology_entry",
             response_stance="documentation",
             confidence=0.95,
-            matched_signals=_dedupe(matched_signals + ["write_chronology_pattern"]),
+            matched_signals=matched_signals + ["write_chronology_pattern"],
         )
-        result.legacy_mode = _resolve_legacy_mode(result.primary_intent, result.output_format, result.response_stance)
-        return result
 
-    if re.search(r"\b(rewrite|reword|improve)\b", text):
-        result = IntentClassification(
+    if _has_rewrite_pattern(text):
+        return _make_result(
             primary_intent="documentation",
-            secondary_intents=[],
+            secondary_intents=secondary_intents + ["rewrite"],
             output_format="professional_rewrite",
             response_stance="documentation",
-            confidence=0.9,
-            matched_signals=_dedupe(matched_signals + ["rewrite_pattern"]),
+            confidence=0.92,
+            matched_signals=matched_signals + ["rewrite_pattern"],
         )
-        result.legacy_mode = _resolve_legacy_mode(result.primary_intent, result.output_format, result.response_stance)
-        return result
 
-    # -----------------------------------------------------
-    # Intent resolution
-    # -----------------------------------------------------
+    if any(
+        phrase in text
+        for phrase in {
+            "full child-centred summary",
+            "whole scoped record",
+            "across the whole scoped record",
+            "across the whole record",
+            "not just this page",
+            "whole record summary",
+        }
+    ):
+        return _make_result(
+            primary_intent="review",
+            secondary_intents=secondary_intents + ["whole_scope_summary", "evidence_review"],
+            output_format="manager_update",
+            response_stance="management",
+            confidence=0.92,
+            matched_signals=matched_signals + ["whole_scope_summary_pattern"],
+        )
 
+    if any(
+        phrase in text
+        for phrase in {
+            "what would ofsted think",
+            "what would ofsted say",
+            "what would an inspector think",
+            "what would an inspector notice",
+            "ofsted view",
+            "inspection view",
+        }
+    ):
+        return _make_result(
+            primary_intent="review",
+            secondary_intents=secondary_intents + ["inspection_lens"],
+            output_format="manager_update",
+            response_stance="inspection",
+            confidence=0.9,
+            matched_signals=matched_signals + ["inspection_review_pattern"],
+        )
+
+    # Scored intent resolution.
     primary_intent = "guidance"
-    secondary_intents: list[str] = []
     output_format = "plain_response"
     response_stance = "practice_support"
 
@@ -450,29 +841,54 @@ def classify_intent(
         secondary_intents.append("safeguarding_review")
         if primary_intent in {"guidance", "decision_support"}:
             response_stance = "safeguarding"
+            output_format = "safeguarding_note"
 
     if signals["factual"][0] > 0 and primary_intent == "guidance":
         primary_intent = "guidance"
         output_format = "plain_response"
         response_stance = "practice_support"
 
-    if signals["leadership"][0] > 0 and primary_intent in {"guidance", "review", "planning"}:
-        response_stance = "management"
+    if signals["ofsted"][0] > 0:
+        if primary_intent in {"guidance", "review", "planning", "decision_support"}:
+            response_stance = "inspection"
+        secondary_intents.append("inspection_lens")
+
+    if signals["leadership"][0] > 0:
+        if primary_intent in {"guidance", "review", "planning", "decision_support"}:
+            response_stance = "management"
         secondary_intents.append("leadership")
 
-    if any(term in role_text for term in {"manager", "registered manager", "deputy", "senior", "team leader"}):
-        if primary_intent in {"guidance", "review", "planning"}:
-            secondary_intents.append("manager_role")
+    if signals["therapeutic"][0] > 0:
+        secondary_intents.append("therapeutic_lens")
 
-    # Safeguarding keywords should influence output form where nothing more specific exists
-    if signals["safeguarding_review"][0] > 0 and output_format == "plain_response":
-        output_format = "safeguarding_note"
+    if signals["neurodevelopmental"][0] > 0:
+        secondary_intents.append("neurodevelopmental_lens")
+
+    if signals["email"][0] > 0 and output_format == "plain_response":
+        output_format = "email_report"
+        primary_intent = "documentation"
+        response_stance = "documentation"
+
+    if signals["template"][0] > 0 and output_format == "plain_response":
+        output_format = "template"
+        primary_intent = "template"
+
+    if signals["report"][0] > 0:
+        primary_intent = "report"
+        output_format = "structured_report"
+        response_stance = "inspection" if signals["ofsted"][0] > 0 else "management"
+
+    if _role_is_managerial(role_text) and primary_intent in {"guidance", "review", "planning", "decision_support"}:
+        secondary_intents.append("manager_role")
+        if response_stance == "practice_support":
+            response_stance = "management"
+
+    if _role_is_provider(role_text):
+        secondary_intents.append("provider_role")
+        if primary_intent in {"guidance", "review", "planning", "decision_support", "report"}:
+            response_stance = "management"
 
     secondary_intents = _dedupe(secondary_intents)
-
-    # -----------------------------------------------------
-    # Confidence
-    # -----------------------------------------------------
 
     total_signal_count = sum(score for score, _ in signals.values())
 
@@ -483,10 +899,19 @@ def classify_intent(
         confidence = 0.7
     if total_signal_count >= 4:
         confidence = 0.82
-    if re.search(r"\b(write|draft|rewrite|reword|improve)\b", text):
+    if total_signal_count >= 7:
+        confidence = 0.9
+
+    if re.search(r"\b(write|draft|rewrite|reword|improve|create|produce)\b", text):
         confidence = max(confidence, 0.9)
 
-    result = IntentClassification(
+    if signals["safeguarding_review"][0] > 0:
+        confidence = max(confidence, 0.82)
+
+    if signals["ofsted"][0] > 0 or signals["leadership"][0] > 0:
+        confidence = max(confidence, 0.78)
+
+    return _make_result(
         primary_intent=primary_intent,
         secondary_intents=secondary_intents,
         output_format=output_format,
@@ -494,21 +919,15 @@ def classify_intent(
         confidence=confidence,
         matched_signals=matched_signals,
     )
-    result.legacy_mode = _resolve_legacy_mode(
-        result.primary_intent,
-        result.output_format,
-        result.response_stance,
-    )
-    return result
 
-
-# ---------------------------------------------------------
-# Compatibility helper
-# ---------------------------------------------------------
 
 def detect_legacy_mode(
     message: str,
     history: list[dict[str, Any]] | None = None,
     role: str = "",
 ) -> str:
-    return classify_intent(message=message, history=history, role=role).legacy_mode
+    return classify_intent(
+        message=message,
+        history=history,
+        role=role,
+    ).legacy_mode

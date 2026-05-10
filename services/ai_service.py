@@ -4,8 +4,13 @@ import asyncio
 import json
 import logging
 import os
+import re
 from typing import Any
 
+from assistant.assistant_response_pipeline import (
+    build_pipeline_prompt_blocks,
+    process_assistant_response,
+)
 from assistant.audit_logger import (
     AssistantAuditTimer,
     log_assistant_request_finished,
@@ -16,12 +21,20 @@ from assistant.explainability import (
     build_loading_updates,
 )
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
-from assistant.orchestrator import OrchestratorRequest, build_orchestrator_result
 from assistant.web_search import web_search
+from services.assistant_orchestrator import OrchestratorRequest, build_orchestrator_result
 
 logger = logging.getLogger("indicare.ai_service")
 
 SEARCH_TIMEOUT_SECONDS = float(os.getenv("GUIDANCE_SEARCH_TIMEOUT_SECONDS", "3.0"))
+
+OS_ASSISTANT_TYPES = {
+    "young_people_os",
+    "home_os",
+    "quality_os",
+    "ofsted_os",
+    "manager_os",
+}
 
 
 def _safe_string(value: Any) -> str:
@@ -50,13 +63,43 @@ def _normalise_response_mode(response_mode: str | None, speed: str | None) -> st
     value = _safe_string(response_mode or speed or "balanced").lower()
     if value in {"quick", "balanced", "deep"}:
         return value
+    if value == "slow":
+        return "deep"
     return "balanced"
 
 
-def _trim_document_text(document_text: str | None, selected_mode: str) -> str | None:
-    if not document_text:
-        return None
+def _assistant_surface_from_context(user_context: dict[str, Any]) -> str:
+    explicit = _safe_string(user_context.get("assistant_surface")).lower()
+    if explicit in {"standalone", "os_embedded"}:
+        return explicit
 
+    assistant_type = _safe_string(user_context.get("assistant_type")).lower()
+    if assistant_type in OS_ASSISTANT_TYPES or assistant_type.endswith("_os"):
+        return "os_embedded"
+
+    scope_type = _safe_string(user_context.get("scope_type")).lower()
+    if scope_type in {"young_person", "home", "quality", "child"}:
+        return "os_embedded"
+
+    return "standalone"
+
+
+def _enrich_surface_context(user_context: dict[str, Any]) -> dict[str, Any]:
+    enriched = dict(user_context or {})
+    assistant_surface = _assistant_surface_from_context(enriched)
+
+    enriched["assistant_surface"] = assistant_surface
+    enriched["requires_evidence_grounding"] = assistant_surface == "os_embedded"
+
+    if assistant_surface == "standalone":
+        enriched.setdefault("assistant_type", "standalone")
+    else:
+        enriched.setdefault("assistant_type", "os_embedded")
+
+    return enriched
+
+
+def _trim_document_text(document_text: str | None, selected_mode: str) -> str | None:
     text = _safe_string(document_text)
     if not text:
         return None
@@ -104,12 +147,13 @@ def _trim_messages_for_mode(
         max_chars = 1800
 
     trimmed: list[dict[str, Any]] = []
+
     for item in messages[-keep:]:
         if not isinstance(item, dict):
             continue
 
         role = _safe_string(item.get("role")).lower()
-        content = _safe_string(item.get("content"))
+        content = _safe_string(item.get("content") or item.get("message"))
 
         if role not in {"user", "assistant", "system"}:
             continue
@@ -126,19 +170,27 @@ def _trim_messages_for_mode(
     return trimmed
 
 
-def _normalise_sources(value: Any) -> list[dict]:
+def _normalise_sources(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
 
-    cleaned: list[dict] = []
+    cleaned: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     for item in value:
         if not isinstance(item, dict):
             continue
 
+        record_type = item.get("record_type") or item.get("type")
+        record_id = item.get("record_id") or item.get("id")
+        citation_ref = item.get("citation_ref") or item.get("citation_format")
+
+        if not citation_ref and record_type and record_id:
+            citation_ref = f"[{record_type}:{record_id}]"
+
         source = {
             "type": item.get("type"),
+            "source_type": item.get("source_type"),
             "label": item.get("label"),
             "document_title": item.get("document_title"),
             "title": item.get("title"),
@@ -148,20 +200,24 @@ def _normalise_sources(value: Any) -> list[dict]:
             "page_number": item.get("page_number"),
             "excerpt": item.get("excerpt"),
             "url": item.get("url"),
-            "record_type": item.get("record_type"),
-            "record_id": item.get("record_id"),
-            "citation_ref": item.get("citation_ref"),
-            "date": item.get("date"),
+            "record_type": record_type,
+            "record_id": record_id,
+            "citation_ref": citation_ref,
+            "date": item.get("date") or item.get("event_at") or item.get("updated_at"),
+            "event_at": item.get("event_at"),
+            "updated_at": item.get("updated_at"),
             "scope_type": item.get("scope_type"),
             "young_person_id": item.get("young_person_id"),
             "home_id": item.get("home_id"),
             "deep_link": item.get("deep_link"),
+            "is_record_source": bool(item.get("is_record_source")),
         }
 
         key = "|".join(
             str(source.get(k) or "")
             for k in [
                 "type",
+                "source_type",
                 "label",
                 "document_title",
                 "section",
@@ -182,8 +238,8 @@ def _normalise_sources(value: Any) -> list[dict]:
     return cleaned
 
 
-def _merge_sources(*source_lists: list[dict]) -> list[dict]:
-    merged: list[dict] = []
+def _merge_sources(*source_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     for source_list in source_lists:
@@ -192,6 +248,7 @@ def _merge_sources(*source_lists: list[dict]) -> list[dict]:
                 str(item.get(k) or "")
                 for k in [
                     "type",
+                    "source_type",
                     "label",
                     "document_title",
                     "section",
@@ -202,37 +259,47 @@ def _merge_sources(*source_lists: list[dict]) -> list[dict]:
                     "citation_ref",
                 ]
             )
+
             if key in seen:
                 continue
+
             seen.add(key)
             merged.append(item)
 
     return merged
 
 
-def _normalise_evidence_index(value: Any, *, limit: int = 300) -> list[dict]:
+def _normalise_evidence_index(value: Any, *, limit: int = 300) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
 
-    cleaned: list[dict] = []
+    cleaned: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     for item in value[:limit]:
         if not isinstance(item, dict):
             continue
 
+        record_type = item.get("record_type") or item.get("type")
+        record_id = item.get("record_id") or item.get("id")
+        citation_ref = item.get("citation_ref") or item.get("citation_format")
+
+        if not citation_ref and record_type and record_id:
+            citation_ref = f"[{record_type}:{record_id}]"
+
         evidence = {
-            "citation_ref": item.get("citation_ref"),
-            "record_type": item.get("record_type"),
-            "record_id": item.get("record_id"),
+            "citation_ref": citation_ref,
+            "record_type": record_type,
+            "record_id": record_id,
             "label": item.get("label"),
             "title": item.get("title"),
             "section": item.get("section"),
             "excerpt": item.get("excerpt"),
+            "summary": item.get("summary"),
             "description": item.get("description"),
             "event_at": item.get("event_at"),
             "updated_at": item.get("updated_at"),
-            "date": item.get("date"),
+            "date": item.get("date") or item.get("event_at") or item.get("updated_at"),
             "url": item.get("url"),
             "scope_type": item.get("scope_type"),
             "young_person_id": item.get("young_person_id"),
@@ -261,8 +328,8 @@ def _normalise_evidence_index(value: Any, *, limit: int = 300) -> list[dict]:
     return cleaned
 
 
-def _merge_evidence_indexes(*evidence_lists: list[dict]) -> list[dict]:
-    merged: list[dict] = []
+def _merge_evidence_indexes(*evidence_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     for evidence_list in evidence_lists:
@@ -278,8 +345,10 @@ def _merge_evidence_indexes(*evidence_lists: list[dict]) -> list[dict]:
                     "url",
                 ]
             )
+
             if key in seen:
                 continue
+
             seen.add(key)
             merged.append(item)
 
@@ -299,8 +368,10 @@ def _normalise_suggested_actions(value: Any) -> list[Any]:
                 key = json.dumps(item, sort_keys=True, ensure_ascii=False)
             except Exception:
                 continue
+
             if key in seen:
                 continue
+
             seen.add(key)
             cleaned.append(item)
             continue
@@ -308,9 +379,11 @@ def _normalise_suggested_actions(value: Any) -> list[Any]:
         text = _safe_string(item)
         if not text:
             continue
+
         lowered = text.lower()
         if lowered in seen:
             continue
+
         seen.add(lowered)
         cleaned.append(text)
 
@@ -406,6 +479,8 @@ def _has_internal_snapshot_context(user_context: dict[str, Any] | None) -> bool:
         "inspection_lines",
         "homes",
         "audits",
+        "evidence_index",
+        "sources",
     }
 
     return any(key in user_context for key in keys)
@@ -426,7 +501,7 @@ def _should_skip_guidance_search(
     if task_type in {"report", "summary", "draft"} and internal_snapshot_task:
         return True
 
-    if output_type in {"report", "structured_report", "email_report"} and internal_snapshot_task:
+    if output_type in {"report", "structured_report", "email_report", "reg45_report"} and internal_snapshot_task:
         return True
 
     return False
@@ -478,10 +553,35 @@ def _append_live_guidance_context(system_prompt: str, search_results: str) -> st
     ).strip()
 
 
-def _append_service_level_answer_rules(system_prompt: str) -> str:
-    extra = """
+def _append_service_level_answer_rules(
+    system_prompt: str,
+    *,
+    assistant_surface: str,
+) -> str:
+    if assistant_surface == "os_embedded":
+        surface_rules = """
+OS-EMBEDDED ASSISTANT RULES:
+- Treat scoped OS evidence as the primary source of truth.
+- Do not answer record-specific questions from general practice knowledge alone.
+- If scoped evidence is missing, limited or unclear, say this directly.
+- Cite exact citation_ref values where evidence supports a claim.
+- Do not invent chronology, incidents, risks, progress, outcomes, staff actions or dates.
+- General guidance may support interpretation, but must not be presented as evidence that something happened.
+""".strip()
+    else:
+        surface_rules = """
+STANDALONE ASSISTANT RULES:
+- You are not inside the OS record unless the user supplies record content.
+- Do not imply access to a child, home, incident, chronology or care record unless provided.
+- You may give practice guidance, drafting support, reflective support and professional wording.
+- If the user asks about their IndiCare records, explain that you need the relevant record content or OS context.
+""".strip()
+
+    extra = f"""
 ============================================================
 SERVICE-LEVEL ANSWER RULES
+
+{surface_rules}
 
 Your answer must:
 - stay within the authorised children’s residential care scope
@@ -511,13 +611,32 @@ def _build_context_evidence_block(
 ) -> str:
     lines: list[str] = []
 
-    scope_type = _safe_string(user_context.get("scope_type") or (user_context.get("scope") or {}).get("scope_type"))
-    young_person_name = _safe_string(user_context.get("young_person_name") or (user_context.get("young_person") or {}).get("preferred_name"))
-    home_name = _safe_string(user_context.get("home_name") or (user_context.get("home") or {}).get("home_name"))
+    scope_value = user_context.get("scope")
+    scope_type = _safe_string(user_context.get("scope_type"))
+    if not scope_type and isinstance(scope_value, dict):
+        scope_type = _safe_string(scope_value.get("scope_type"))
+    elif not scope_type:
+        scope_type = _safe_string(scope_value)
+
+    young_person = user_context.get("young_person")
+    home = user_context.get("home")
+
+    young_person_name = _safe_string(user_context.get("young_person_name"))
+    if not young_person_name and isinstance(young_person, dict):
+        young_person_name = _safe_string(
+            young_person.get("preferred_name")
+            or young_person.get("full_name")
+            or young_person.get("name")
+        )
+
+    home_name = _safe_string(user_context.get("home_name"))
+    if not home_name and isinstance(home, dict):
+        home_name = _safe_string(home.get("home_name") or home.get("name"))
 
     lines.append("============================================================")
     lines.append("OPERATIONAL RECORD CONTEXT")
     lines.append("")
+
     if scope_type:
         lines.append(f"Scope type: {scope_type}")
     if young_person_name:
@@ -553,6 +672,7 @@ def _build_context_evidence_block(
     if not evidence_index and not sources:
         lines.append("")
         lines.append("No structured evidence items were attached.")
+        lines.append("If the user asks for record-specific conclusions, say the evidence is not visible.")
         return "\n".join(lines).strip()
 
     if selected_mode == "quick":
@@ -574,10 +694,12 @@ def _build_context_evidence_block(
             citation_ref = _safe_string(item.get("citation_ref"))
             label = _safe_string(item.get("label") or item.get("title"))
             section = _safe_string(item.get("section"))
-            excerpt = _safe_string(item.get("excerpt") or item.get("description"))
+            excerpt = _safe_string(item.get("excerpt") or item.get("summary") or item.get("description"))
             record_type = _safe_string(item.get("record_type"))
+            record_id = _safe_string(item.get("record_id"))
             lines.append(
-                f"- [{citation_ref}] type={record_type}; section={section}; label={label}; excerpt={excerpt[:220]}"
+                f"- citation_ref={citation_ref}; type={record_type}; id={record_id}; "
+                f"section={section}; label={label}; excerpt={excerpt[:220]}"
             )
 
     if sources:
@@ -588,17 +710,19 @@ def _build_context_evidence_block(
                 continue
             citation_ref = _safe_string(item.get("citation_ref"))
             record_type = _safe_string(item.get("record_type"))
+            record_id = _safe_string(item.get("record_id"))
             label = _safe_string(item.get("label") or item.get("title"))
             section = _safe_string(item.get("section"))
             excerpt = _safe_string(item.get("excerpt"))
             lines.append(
-                f"- [{citation_ref}] type={record_type}; section={section}; label={label}; excerpt={excerpt[:180]}"
+                f"- citation_ref={citation_ref}; type={record_type}; id={record_id}; "
+                f"section={section}; label={label}; excerpt={excerpt[:180]}"
             )
 
     lines.append("")
     lines.append("Use these citation_ref values inline wherever evidence supports the statement.")
     lines.append("Prefer specific operational evidence before general guidance.")
-    lines.append("If evidence is missing, say this explicitly.")
+    lines.append("If evidence is missing, limited or unclear, say this explicitly.")
 
     return "\n".join(lines).strip()
 
@@ -642,15 +766,19 @@ Rules:
 - When making evidence-based statements, cite inline using the exact citation_ref in square brackets, for example [incident:123].
 - Prefer direct internal evidence over generic guidance.
 - Do not invent citation_ref values.
+- Never write broken citations such as [daily_note:] or [incident:] without an ID.
+- If no ID is visible, say "record ID not visible" rather than creating a broken citation.
 - If multiple items support a sentence, cite more than one when useful.
 - If evidence is partial, say it is partial.
 - If the request asks for an overview, synthesise the evidence but still cite key claims.
+- If the user asks for "whole scoped record", "across all records", "full summary", or similar, use the evidence index as the source boundary.
+- If the evidence index is small or missing, say clearly that only limited evidence is visible.
 - For Reg 45, overview, chronology, safeguarding, quality or compliance requests, evidence-led analysis is required.
 """
     return f"{system_prompt}\n\n{extra}".strip()
 
 
-def _classify_source_groups(sources: list[dict]) -> dict[str, int]:
+def _classify_source_groups(sources: list[dict[str, Any]]) -> dict[str, int]:
     counts = {
         "internal_evidence": 0,
         "live_guidance": 0,
@@ -659,7 +787,7 @@ def _classify_source_groups(sources: list[dict]) -> dict[str, int]:
     }
 
     for item in sources:
-        source_type = _safe_string(item.get("type")).lower()
+        source_type = _safe_string(item.get("type") or item.get("source_type")).lower()
         url = _safe_string(item.get("url")).lower()
         record_type = _safe_string(item.get("record_type")).lower()
 
@@ -690,15 +818,13 @@ def _has_inline_citation_markers(answer_text: str) -> bool:
     if not text:
         return False
 
-    citation_markers = ["[", "cite", "citation", "source", "ref"]
-    lowered = text.lower()
-    return any(marker in lowered for marker in citation_markers)
+    return bool(re.search(r"\[[A-Za-z][A-Za-z0-9_\-]*:\d+[A-Za-z0-9_\-]*\]", text))
 
 
 def _estimate_evidence_sufficiency(
     *,
-    sources: list[dict],
-    evidence_index: list[dict],
+    sources: list[dict[str, Any]],
+    evidence_index: list[dict[str, Any]],
     guidance_used: bool,
 ) -> str:
     evidence_count = len(evidence_index)
@@ -725,7 +851,7 @@ def _estimate_answer_confidence(
     if not provider_success or not text:
         return "low"
 
-    if output_type in {"report", "structured_report", "email_report"}:
+    if output_type in {"report", "structured_report", "email_report", "reg45_report"}:
         if evidence_sufficiency == "strong" and len(text) >= 800:
             return "high"
         if evidence_sufficiency in {"strong", "moderate"} and len(text) >= 400:
@@ -743,16 +869,23 @@ def _build_answer_quality_flags(
     *,
     answer_text: str,
     output_type: str,
-    sources: list[dict],
-    evidence_index: list[dict],
+    sources: list[dict[str, Any]],
+    evidence_index: list[dict[str, Any]],
+    assistant_surface: str,
 ) -> dict[str, Any]:
     text = _safe_string(answer_text)
     evidence_available = bool(sources or evidence_index)
     has_citation_markers = _has_inline_citation_markers(text)
 
     answer_empty = not bool(text)
-    too_short_for_report = output_type in {"report", "structured_report", "email_report"} and len(text) < 250
+    too_short_for_report = output_type in {
+        "report",
+        "structured_report",
+        "email_report",
+        "reg45_report",
+    } and len(text) < 250
     possible_missing_citations = evidence_available and text and not has_citation_markers
+    os_answer_without_evidence = assistant_surface == "os_embedded" and not evidence_available
 
     warnings: list[str] = []
     if answer_empty:
@@ -761,16 +894,29 @@ def _build_answer_quality_flags(
         warnings.append("report_answer_short")
     if possible_missing_citations:
         warnings.append("possible_missing_citations")
+    if os_answer_without_evidence:
+        warnings.append("os_answer_without_visible_evidence")
 
     return {
         "answer_empty": answer_empty,
         "too_short_for_report": too_short_for_report,
         "possible_missing_citations": possible_missing_citations,
+        "os_answer_without_evidence": os_answer_without_evidence,
         "warnings": warnings,
     }
 
 
-def _build_safe_user_fallback_text() -> str:
+def _build_safe_user_fallback_text(
+    *,
+    safeguarding_level: str = "normal",
+) -> str:
+    if safeguarding_level in {"heightened", "urgent"}:
+        return (
+            "I couldn’t generate the full response. If this involves immediate risk or a safeguarding concern, "
+            "follow your home’s safeguarding, on-call, medical, police or emergency procedure now. "
+            "Record the facts, times, actions taken, who was informed, and the current outcome."
+        )
+
     return "Sorry, something went wrong while generating the response. Please try again."
 
 
@@ -779,8 +925,15 @@ def _build_empty_answer_fallback_text(
     output_type: str,
     guidance_used: bool,
     source_count: int,
+    safeguarding_level: str,
 ) -> str:
-    if output_type in {"report", "structured_report", "email_report"}:
+    if safeguarding_level in {"heightened", "urgent"}:
+        return (
+            "I couldn’t generate a usable response. Because this may involve safeguarding, prioritise immediate safety, "
+            "follow your safeguarding/on-call procedure, and record the facts, actions, people informed, and outcome."
+        )
+
+    if output_type in {"report", "structured_report", "email_report", "reg45_report"}:
         return (
             "I couldn’t generate a usable report from the available material. "
             "Please review the evidence, then try again."
@@ -825,6 +978,64 @@ def _normalise_assistant_context(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def _looks_record_specific_request(message: str) -> bool:
+    text = _safe_string(message).lower()
+    terms = {
+        "record",
+        "records",
+        "chronology",
+        "timeline",
+        "summary",
+        "overview",
+        "risk",
+        "incident",
+        "handover",
+        "daily note",
+        "daily log",
+        "whole scoped",
+        "whole record",
+        "across all",
+        "what is missing",
+        "what evidence",
+        "reg 45",
+        "reg45",
+        "inspection",
+    }
+    return any(term in text for term in terms)
+
+
+def _append_os_no_evidence_warning_if_needed(
+    *,
+    answer_text: str,
+    assistant_surface: str,
+    evidence_index: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    message: str,
+) -> str:
+    if assistant_surface != "os_embedded":
+        return answer_text
+
+    if evidence_index or sources:
+        return answer_text
+
+    if not _looks_record_specific_request(message):
+        return answer_text
+
+    warning = (
+        "I can’t see enough scoped OS evidence to answer this as a record-based view. "
+        "I can give general practice guidance, but I should not infer incidents, risks, patterns, "
+        "actions or outcomes without visible records."
+    )
+
+    if not answer_text:
+        return warning
+
+    if warning.lower() in answer_text.lower():
+        return answer_text
+
+    return f"{warning}\n\n{answer_text}".strip()
+
+
 async def generate_ai_stream(
     message: str,
     session_id: str,
@@ -841,12 +1052,14 @@ async def generate_ai_stream(
     conversation_id: str | int | None = None,
 ):
     history = history or []
-    user_context = user_context or {}
+    user_context = _enrich_surface_context(user_context or {})
+
     timer = AssistantAuditTimer.start()
     request_audit_event = None
 
     selected_mode = _normalise_response_mode(response_mode, speed)
     trimmed_document_text = _trim_document_text(document_text, selected_mode)
+    assistant_surface = _assistant_surface_from_context(user_context)
 
     orchestration = build_orchestrator_result(
         OrchestratorRequest(
@@ -860,6 +1073,7 @@ async def generate_ai_stream(
             training_mode=training_mode,
             speed=selected_mode,
             user_context=user_context,
+            user_id=user_id,
         )
     )
 
@@ -882,11 +1096,16 @@ async def generate_ai_stream(
 
     orchestration_sources = _normalise_sources(orchestration.sources)
     context_sources = _normalise_sources(user_context.get("sources"))
+
     runtime_payload = dict(orchestration.runtime_payload or {})
+    runtime_payload["assistant_surface"] = assistant_surface
+    runtime_payload["requires_evidence_grounding"] = assistant_surface == "os_embedded"
+
     explainability_payload = build_explainability_payload(
         user_message=message,
         orchestration=orchestration,
     )
+    explainability_payload["assistant_surface"] = assistant_surface
 
     orchestration_evidence_index = _normalise_evidence_index(
         runtime_payload.get("evidence_index") or []
@@ -964,7 +1183,26 @@ async def generate_ai_stream(
         evidence_index=merged_pre_provider_evidence,
         sources=merged_pre_provider_sources,
     )
-    final_system_prompt = _append_service_level_answer_rules(final_system_prompt)
+    final_system_prompt = _append_service_level_answer_rules(
+        final_system_prompt,
+        assistant_surface=assistant_surface,
+    )
+
+    pipeline_prompt_block = build_pipeline_prompt_blocks(
+        message=message,
+        user_context=user_context,
+        runtime=runtime_payload,
+        selected_mode=selected_mode,
+        output_type=output_type,
+        task_type=task_type,
+        user_role=role,
+    )
+
+    final_system_prompt = (
+        f"{final_system_prompt}\n\n"
+        "============================================================\n"
+        f"{pipeline_prompt_block}"
+    ).strip()
 
     messages = [
         {"role": "system", "content": final_system_prompt},
@@ -974,12 +1212,13 @@ async def generate_ai_stream(
 
     logger.info(
         (
-            "Starting AI stream session_id=%s mode=%s task_type=%s output_type=%s "
+            "Starting AI stream session_id=%s surface=%s mode=%s task_type=%s output_type=%s "
             "safeguarding=%s response_mode=%s model=%s temperature=%s max_tokens=%s "
-            "history_count=%s has_document=%s sources=%s evidence=%s guidance_enabled=%s guidance_reason=%s "
-            "guidance_skipped=%s"
+            "message_count=%s has_document=%s sources=%s evidence=%s guidance_enabled=%s "
+            "guidance_reason=%s guidance_skipped=%s"
         ),
         session_id,
+        assistant_surface,
         mode,
         task_type,
         output_type,
@@ -1002,14 +1241,15 @@ async def generate_ai_stream(
     provider_error_code = None
     provider_error_message = None
 
-    final_answer_parts: list[str] = []
-    provider_meta_sources: list[dict] = []
+    raw_answer_parts: list[str] = []
+
+    provider_meta_sources: list[dict[str, Any]] = []
     provider_runtime: dict[str, Any] = {}
     provider_explainability: dict[str, Any] = {}
     provider_assistant_scope: dict[str, Any] = {}
     provider_assistant_context: dict[str, Any] = {}
     provider_suggested_actions: list[Any] = []
-    provider_evidence_index: list[dict] = []
+    provider_evidence_index: list[dict[str, Any]] = []
 
     try:
         async for content in provider.stream_chat(
@@ -1027,10 +1267,19 @@ async def generate_ai_stream(
                     "response_mode": selected_mode,
                     "conversation_id": _safe_string(conversation_id or session_id),
                     "user_id": _safe_string(user_id),
-                    "scope_type": _safe_string(user_context.get("scope_type") or (user_context.get("scope") or {}).get("scope_type")),
+                    "scope_type": _safe_string(
+                        user_context.get("scope_type")
+                        or (
+                            user_context.get("scope", {}).get("scope_type")
+                            if isinstance(user_context.get("scope"), dict)
+                            else user_context.get("scope")
+                        )
+                    ),
                     "assistant_type": _safe_string(user_context.get("assistant_type")),
+                    "assistant_surface": assistant_surface,
                     "evidence_count": len(merged_pre_provider_evidence),
                     "source_count": len(merged_pre_provider_sources),
+                    "structured_output": True,
                 },
             )
         ):
@@ -1040,11 +1289,7 @@ async def generate_ai_stream(
                 if structured:
                     text = _extract_text_from_provider_payload(structured)
                     if text:
-                        final_answer_parts.append(text)
-                        yield {
-                            "type": "token",
-                            "content": text,
-                        }
+                        raw_answer_parts.append(text)
 
                     if isinstance(structured.get("sources"), list):
                         provider_meta_sources = _normalise_sources(structured.get("sources"))
@@ -1085,26 +1330,19 @@ async def generate_ai_stream(
 
                 token_text = _extract_text_from_provider_payload(content)
                 if _safe_string(token_text):
-                    final_answer_parts.append(token_text)
-                    yield {
-                        "type": "token",
-                        "content": token_text,
-                    }
+                    raw_answer_parts.append(token_text)
+
                 continue
 
             if _safe_string(content):
-                token_text = str(content)
-                final_answer_parts.append(token_text)
-                yield {
-                    "type": "token",
-                    "content": token_text,
-                }
+                raw_answer_parts.append(str(content))
 
         provider_success = True
 
     except Exception as exc:
         provider_error_code = "provider_stream_failed"
         provider_error_message = _safe_string(exc) or "AI provider stream failed"
+
         logger.exception(
             "AI provider stream failed for session_id=%s model=%s error=%r",
             session_id,
@@ -1112,14 +1350,13 @@ async def generate_ai_stream(
             exc,
         )
 
-        fallback_text = _build_safe_user_fallback_text()
-        final_answer_parts.append(fallback_text)
-        yield {
-            "type": "token",
-            "content": fallback_text,
-        }
+        raw_answer_parts.append(
+            _build_safe_user_fallback_text(
+                safeguarding_level=safeguarding_level,
+            )
+        )
 
-    final_answer_text = "".join(final_answer_parts).strip()
+    raw_answer_text = "".join(raw_answer_parts).strip()
 
     final_sources = _merge_sources(
         orchestration_sources,
@@ -1136,6 +1373,8 @@ async def generate_ai_stream(
         "task_type": task_type,
         "output_type": output_type,
         "safeguarding_level": safeguarding_level,
+        "assistant_surface": assistant_surface,
+        "requires_evidence_grounding": assistant_surface == "os_embedded",
     }
 
     final_evidence_index = _merge_evidence_indexes(
@@ -1143,6 +1382,14 @@ async def generate_ai_stream(
         context_evidence_index,
         final_runtime.get("evidence_index") or [],
         provider_evidence_index,
+    )
+
+    raw_answer_text = _append_os_no_evidence_warning_if_needed(
+        answer_text=raw_answer_text,
+        assistant_surface=assistant_surface,
+        evidence_index=final_evidence_index,
+        sources=final_sources,
+        message=message,
     )
 
     source_group_counts = _classify_source_groups(final_sources)
@@ -1153,39 +1400,38 @@ async def generate_ai_stream(
     )
 
     quality_flags = _build_answer_quality_flags(
-        answer_text=final_answer_text,
+        answer_text=raw_answer_text,
         output_type=output_type,
         sources=final_sources,
         evidence_index=final_evidence_index,
+        assistant_surface=assistant_surface,
     )
 
     answer_confidence = _estimate_answer_confidence(
-        answer_text=final_answer_text,
+        answer_text=raw_answer_text,
         output_type=output_type,
         evidence_sufficiency=evidence_sufficiency,
         provider_success=provider_success,
     )
 
     if quality_flags["answer_empty"]:
-        fallback_text = _build_empty_answer_fallback_text(
+        raw_answer_text = _build_empty_answer_fallback_text(
             output_type=output_type,
             guidance_used=bool(trimmed_search_results),
             source_count=len(final_sources),
+            safeguarding_level=safeguarding_level,
         )
-        final_answer_text = fallback_text
-        final_answer_parts = [fallback_text]
-        yield {
-            "type": "token",
-            "content": fallback_text,
-        }
+
         quality_flags = _build_answer_quality_flags(
-            answer_text=final_answer_text,
+            answer_text=raw_answer_text,
             output_type=output_type,
             sources=final_sources,
             evidence_index=final_evidence_index,
+            assistant_surface=assistant_surface,
         )
+
         answer_confidence = _estimate_answer_confidence(
-            answer_text=final_answer_text,
+            answer_text=raw_answer_text,
             output_type=output_type,
             evidence_sufficiency=evidence_sufficiency,
             provider_success=provider_success,
@@ -1195,10 +1441,34 @@ async def generate_ai_stream(
     final_runtime["evidence_sufficiency"] = evidence_sufficiency
     final_runtime["answer_confidence"] = answer_confidence
     final_runtime["answer_quality_flags"] = quality_flags
+    final_runtime["source_count"] = len(final_sources)
+    final_runtime["evidence_items_loaded"] = len(final_evidence_index)
 
     if final_evidence_index:
         final_runtime["evidence_index"] = final_evidence_index
-        final_runtime["evidence_items_loaded"] = len(final_evidence_index)
+
+    pipeline_result = process_assistant_response(
+        answer_text=raw_answer_text,
+        message=message,
+        user_context=user_context,
+        runtime=final_runtime,
+        sources=final_sources,
+        evidence_index=final_evidence_index,
+        selected_mode=selected_mode,
+        output_type=output_type,
+        task_type=task_type,
+        user_role=role,
+    )
+
+    final_answer_text = _safe_string(pipeline_result.get("answer")) or raw_answer_text
+    pipeline_meta = pipeline_result.get("meta") if isinstance(pipeline_result, dict) else {}
+
+    final_runtime["pipeline"] = pipeline_meta
+
+    yield {
+        "type": "token",
+        "content": final_answer_text,
+    }
 
     final_explainability = {
         **(explainability_payload or {}),
@@ -1206,6 +1476,8 @@ async def generate_ai_stream(
         "answer_quality_flags": quality_flags,
         "evidence_sufficiency": evidence_sufficiency,
         "answer_confidence": answer_confidence,
+        "assistant_surface": assistant_surface,
+        "pipeline": (pipeline_meta or {}).get("explainability"),
     }
 
     meta_payload = {
@@ -1216,6 +1488,10 @@ async def generate_ai_stream(
         "assistant_scope": provider_assistant_scope or {},
         "assistant_context": provider_assistant_context or {},
         "suggested_actions": provider_suggested_actions or [],
+        "assistant_surface": assistant_surface,
+        "pipeline": pipeline_meta,
+        "user_transparency_panel": (pipeline_meta or {}).get("user_transparency_panel"),
+        "audit_panel": (pipeline_meta or {}).get("audit_panel"),
     }
 
     if final_evidence_index:
@@ -1229,9 +1505,11 @@ async def generate_ai_stream(
             duration_ms=duration_ms,
             success=provider_success,
             source_count=len(final_sources),
+            evidence_count=len(final_evidence_index),
             error_code=provider_error_code,
             error_message=provider_error_message,
             extra={
+                "assistant_surface": assistant_surface,
                 "guidance_results_used": bool(trimmed_search_results),
                 "guidance_search_skipped": skip_guidance_search,
                 "trimmed_history_count": len(trimmed_history),
@@ -1240,14 +1518,19 @@ async def generate_ai_stream(
                 "evidence_sufficiency": evidence_sufficiency,
                 "answer_confidence": answer_confidence,
                 "answer_quality_warnings": quality_flags.get("warnings", []),
+                "pipeline_quality": (pipeline_meta or {}).get("quality"),
             },
         )
 
     yield meta_payload
 
     logger.info(
-        "Completed AI stream session_id=%s success=%s evidence_sufficiency=%s answer_confidence=%s sources=%s evidence=%s",
+        (
+            "Completed AI stream session_id=%s surface=%s success=%s "
+            "evidence_sufficiency=%s answer_confidence=%s sources=%s evidence=%s"
+        ),
         session_id,
+        assistant_surface,
         provider_success,
         evidence_sufficiency,
         answer_confidence,

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndiCare Academy • Module Detail</title>
+    <link rel="stylesheet" href="/css/os-unified.css" />
+    <link rel="stylesheet" href="/css/academy.css" />
+  </head>
+  <body class="academy-page">
+    <div class="academy-layout">
+      <header class="academy-page-header">
+        <div class="academy-page-header__inner">
+          <div>
+            <div class="academy-page-header__eyebrow">IndiCare Academy</div>
+            <h1 id="academyModuleTitle">Module</h1>
+            <p id="academyModuleSubtitle" class="academy-page-header__subtitle"></p>
+          </div>
+
+          <div class="academy-page-header__actions">
+            <a class="academy-button academy-button--ghost" href="/frontend/academy.html">
+              Back to Academy
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="academy-page-main">
+        <div id="academyModuleError"></div>
+
+        <section class="academy-panel">
+          <div class="academy-panel__body">
+            <div id="academyModuleMeta" class="academy-chip-row"></div>
+
+            <div class="academy-progress-shell" style="margin-top: 18px;">
+              <div class="academy-progress-track">
+                <div id="academyModuleProgressBar" class="academy-progress-fill" style="width: 0%;"></div>
+              </div>
+              <div id="academyModuleProgressText" class="academy-progress-text">not_started • 0%</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 24px;">
+          <div class="academy-section__header">
+            <h2>Lessons</h2>
+            <p>Core learning content for this module.</p>
+          </div>
+          <div id="academyModuleLessons" class="academy-stack">
+            <div class="academy-empty-state">Loading lessons…</div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 24px;">
+          <div class="academy-section__header">
+            <h2>Knowledge check</h2>
+            <p>Quiz and question set linked to this module.</p>
+          </div>
+          <div id="academyModuleQuiz" class="academy-stack">
+            <div class="academy-empty-state">Loading quiz…</div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 24px;">
+          <div class="academy-section__header">
+            <h2>Scenarios</h2>
+            <p>Applied practice scenarios for discussion and reflection.</p>
+          </div>
+          <div id="academyModuleScenarios" class="academy-stack">
+            <div class="academy-empty-state">Loading scenarios…</div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 24px;">
+          <div class="academy-section__header">
+            <h2>Reflection prompts</h2>
+            <p>Prompts to support reflective learning and supervision.</p>
+          </div>
+          <div id="academyModuleReflections" class="academy-stack">
+            <div class="academy-empty-state">Loading reflection prompts…</div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 24px;">
+          <div class="academy-section__header">
+            <h2>Linked workbooks</h2>
+            <p>Evidence workbooks linked to this module.</p>
+          </div>
+          <div id="academyModuleWorkbooks" class="academy-stack">
+            <div class="academy-empty-state">Loading linked workbooks…</div>
+          </div>
+        </section>
+
+        <section class="academy-section" style="margin-top: 24px; margin-bottom: 40px;">
+          <div class="academy-section__header">
+            <h2>Framework mappings</h2>
+            <p>How this module links to standards, frameworks and evidence expectations.</p>
+          </div>
+          <div id="academyModuleMappings" class="academy-stack">
+            <div class="academy-empty-state">Loading mappings…</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/academy-module-detail.js"></script>
+  </body>
+</html>
