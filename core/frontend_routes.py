@@ -15,6 +15,7 @@ CARE_OS_PATH = "/os-command"
 WORKSPACE_FILE = "indicare-workspace.html"
 COMMAND_SHELL_FILE = "os-command-runtime.html"
 LEGACY_COMMAND_SHELL_FILE = "os-command.html"
+AI_SUITE_ROUTES = {"/assistant", "/assistant.html", "/ai-suite", "/ai-suite/"}
 LEGACY_CARE_OS_PATHS = {
     "/young-people-shell",
     "/young-people-shell.html",
@@ -119,17 +120,10 @@ def get_page_routes() -> dict[str, list[str]]:
         "/access-denied.html": frontend("access-denied.html"),
         "/security-centre": frontend("security-centre.html"),
         "/security-centre.html": frontend("security-centre.html"),
-
-        # Primary full-height IndiCare OS runtime shell.
         "/os-command": command_shell(),
         "/os-command.html": command_shell(),
-
-        # Standalone AI Suite conversational product.
         "/ai-suite": ai_suite("index.html"),
         "/ai-suite/": ai_suite("index.html"),
-
-        # Other operating routes can still fall back to the wider workspace until
-        # each one is migrated into the new shell.
         "/care-os": command_shell(),
         "/care-os.html": command_shell(),
         "/os-child": command_shell(),
@@ -158,8 +152,6 @@ def get_page_routes() -> dict[str, list[str]]:
         "/provider-dashboard": command_shell(),
         "/rostering": command_shell(),
         "/rostering.html": command_shell(),
-
-        # Standalone legacy/support pages kept available.
         "/tasks-ui": frontend("tasks-ui.html"),
         "/tasks-ui.html": frontend("tasks-ui.html"),
         "/notifications-ui": frontend("notifications-ui.html"),
@@ -174,8 +166,8 @@ def get_page_routes() -> dict[str, list[str]]:
         "/founder-hq.html": frontend("founder-hq.html"),
         "/admin-users": frontend("admin-users.html"),
         "/admin-users.html": frontend("admin-users.html"),
-        "/assistant": component("assistant-cockpit.html"),
-        "/assistant.html": component("assistant-cockpit.html"),
+        "/assistant": ai_suite("index.html"),
+        "/assistant.html": ai_suite("index.html"),
         "/academy": academy("academy.html"),
         "/academy.html": academy("academy.html"),
         "/academy-ui": academy("academy.html"),
@@ -212,7 +204,7 @@ def register_frontend_routes(app: FastAPI) -> None:
         if route_path in LEGACY_CARE_OS_PATHS:
             continue
 
-        if route_path.startswith('/ai-suite'):
+        if route_path in AI_SUITE_ROUTES:
             register_ai_suite_route(app, route_path, paths, 'ai_suite')
         else:
             register_file_route(app, route_path, paths, 'page')
