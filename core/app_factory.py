@@ -18,6 +18,7 @@ CSS_DIR = os.path.join(BASE_DIR, "frontend", "css")
 JS_DIR = os.path.join(BASE_DIR, "frontend", "js")
 ASSETS_DIR = os.path.join(BASE_DIR, "frontend", "assets")
 COMPONENTS_DIR = os.path.join(BASE_DIR, "frontend", "components")
+AI_SUITE_DIR = os.path.join(BASE_DIR, "frontend", "ai-suite")
 
 
 def mount_static_assets(app: FastAPI) -> None:
@@ -25,6 +26,7 @@ def mount_static_assets(app: FastAPI) -> None:
     app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
     app.mount("/components", StaticFiles(directory=COMPONENTS_DIR), name="components")
+    app.mount("/ai-suite", StaticFiles(directory=AI_SUITE_DIR, html=True), name="ai_suite")
 
 
 def create_app() -> FastAPI:
