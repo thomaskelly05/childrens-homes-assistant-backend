@@ -30,6 +30,7 @@ OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/os-child-workspace-tabs.js"></script>',
     '<script src="/js/chronology-visual-timeline.js"></script>',
     '<script src="/js/os-command-ui-bridge.js"></script>',
+    '<script src="/js/os-safe-operational-links.js"></script>',
 ]
 
 # Experimental or shell-mutating systems remain optional.
