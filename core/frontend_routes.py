@@ -10,6 +10,7 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 CSS_DIR = os.path.join(FRONTEND_DIR, "css")
+AI_SUITE_DIR = os.path.join(FRONTEND_DIR, "ai-suite")
 CARE_OS_PATH = "/os-command"
 WORKSPACE_FILE = "indicare-workspace.html"
 COMMAND_SHELL_FILE = "os-command-runtime.html"
@@ -37,10 +38,24 @@ def serve_html(path: str):
     return HTMLResponse(inject_app_shell(html))
 
 
+def serve_ai_suite(path: str):
+    with open(path, encoding="utf-8") as file:
+        html = file.read()
+    # Standalone AI Suite intentionally bypasses the OS shell injection.
+    return HTMLResponse(html)
+
+
 def serve_from(paths: list[str], error: str = "Page not found"):
     for path in paths:
         if os.path.exists(path):
             return serve_html(path) if path.lower().endswith(".html") else FileResponse(path)
+    return JSONResponse(status_code=404, content={"error": error})
+
+
+def serve_ai_suite_from(paths: list[str], error: str = "AI Suite page not found"):
+    for path in paths:
+        if os.path.exists(path):
+            return serve_ai_suite(path) if path.lower().endswith(".html") else FileResponse(path)
     return JSONResponse(status_code=404, content={"error": error})
 
 
@@ -52,8 +67,20 @@ def register_file_route(app: FastAPI, route_path: str, paths: list[str], name_pr
     app.get(route_path)(endpoint)
 
 
+def register_ai_suite_route(app: FastAPI, route_path: str, paths: list[str], name_prefix: str = "ai_suite") -> None:
+    def endpoint():
+        return serve_ai_suite_from(paths, "AI Suite page not found")
+
+    endpoint.__name__ = f"{name_prefix}_{route_path.strip('/').replace('-', '_').replace('.', '_') or 'root'}"
+    app.get(route_path)(endpoint)
+
+
 def frontend(file_name: str) -> list[str]:
     return [os.path.join(FRONTEND_DIR, file_name)]
+
+
+def ai_suite(file_name: str) -> list[str]:
+    return [os.path.join(AI_SUITE_DIR, file_name)]
 
 
 def workspace() -> list[str]:
@@ -96,6 +123,10 @@ def get_page_routes() -> dict[str, list[str]]:
         # Primary full-height IndiCare OS runtime shell.
         "/os-command": command_shell(),
         "/os-command.html": command_shell(),
+
+        # Standalone AI Suite conversational product.
+        "/ai-suite": ai_suite("index.html"),
+        "/ai-suite/": ai_suite("index.html"),
 
         # Other operating routes can still fall back to the wider workspace until
         # each one is migrated into the new shell.
@@ -180,7 +211,11 @@ def register_frontend_routes(app: FastAPI) -> None:
     for route_path, paths in get_page_routes().items():
         if route_path in LEGACY_CARE_OS_PATHS:
             continue
-        register_file_route(app, route_path, paths, "page")
+
+        if route_path.startswith('/ai-suite'):
+            register_ai_suite_route(app, route_path, paths, 'ai_suite')
+        else:
+            register_file_route(app, route_path, paths, 'page')
 
     @app.get("/css/indicare-os-design-system.css")
     def indicare_os_design_system_css():
