@@ -116,6 +116,14 @@ def register_frontend_routes(app: FastAPI) -> None:
     async def login_page():
         return HTMLResponse(_load_html("login.html"))
 
+    @app.get(CARE_OS_PATH)
+    @app.get(f"{CARE_OS_PATH}/")
+    async def os_command_surface():
+        html = _load_html(COMMAND_SHELL_FILE)
+        if "Frontend missing" in html:
+            html = _load_html(LEGACY_COMMAND_SHELL_FILE)
+        return HTMLResponse(html)
+
     @app.get("/assistant")
     @app.get("/assistant.html")
     @app.get("/ai-suite")
@@ -149,6 +157,7 @@ def register_frontend_routes(app: FastAPI) -> None:
             "frontend": True,
             "default_route": "/login",
             "login_route": True,
+            "os_command_route": True,
             "indicare_ai_app": "disabled_redirects_to_login",
             "legacy_young_people_shell": "redirects_to_assistant",
             "ai_suite_assets": sorted(list(ai_suite_asset_names())),
