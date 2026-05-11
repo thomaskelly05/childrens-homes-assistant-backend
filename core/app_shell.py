@@ -12,9 +12,6 @@ APP_SHELL_SCRIPTS = [
     '<script src="/js/login-security-gateway.js"></script>',
 ]
 
-# The OS command runtime is its own full-screen application shell.
-# Keep this boot list deliberately small and stable. The AI Suite is loaded by
-# its own frontend/ai-suite runtime and must not be mixed into the OS shell.
 OS_COMMAND_CORE_SCRIPTS = [
     '<script src="/js/api.js"></script>',
     '<script src="/js/auth.js"></script>',
@@ -22,37 +19,27 @@ OS_COMMAND_CORE_SCRIPTS = [
     '<script src="/js/core/route-guard.js"></script>',
 ]
 
-# Safe OS runtime only. These are the baseline scripts required to boot the OS
-# command centre without white-screening the workspace.
+# Stable runtime boot sequence for the upgraded OS Command surface.
+# These scripts were previously split across optional enhancement buckets,
+# which meant the deployed UI often looked older than the upgraded runtime.
 OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safe.js"></script>',
     '<script src="/js/indicare-runtime-safety.js"></script>',
-    '<script>window.IndiCareSafe?.run("OS boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;});</script>',
-    '<script src="/js/os-floating-assistant.js"></script>',
-    '<script src="/js/os-safe-operational-links.js"></script>',
-]
-
-# Optional OS enhancements. Keep these out of the default boot path so one
-# broken enhancement cannot take down the OS. Enable after shell verification or
-# by moving individual proven-safe scripts into OS_COMMAND_RUNTIME_SCRIPTS.
-OS_COMMAND_OPTIONAL_ENHANCEMENTS = [
     '<script src="/js/indicare-operational-intelligence.js"></script>',
     '<script src="/js/indicare-intelligence-migration-bridge.js"></script>',
-    '<script src="/js/os-therapeutic-record-creator.js"></script>',
-    '<script src="/js/os-child-workspace-tabs.js"></script>',
-    '<script src="/js/chronology-visual-timeline.js"></script>',
     '<script src="/js/os-command-ui-bridge.js"></script>',
     '<script src="/js/os-operational-intelligence-reconnect.js"></script>',
     '<script src="/js/os-safe-contextual-navigation.js"></script>',
-    '<script src="/js/os-final-reconnect-polish.js"></script>',
+    '<script src="/js/os-child-workspace-tabs.js"></script>',
+    '<script src="/js/chronology-visual-timeline.js"></script>',
     '<script src="/js/document-intelligence-upload.js"></script>',
     '<script src="/js/reg44-report-reader-workspace.js"></script>',
-    '<script src="/js/indicare-connected-care-experience.js"></script>',
-    '<script src="/js/indicare-workspace-groups.js"></script>',
-    '<script src="/js/daily-living-workspace-refinement.js"></script>',
     '<script src="/js/oversight-intelligence-dashboard.js"></script>',
     '<script src="/js/indicare-production-readiness-bridge.js"></script>',
     '<script src="/js/os-contextual-navigation.js"></script>',
+    '<script src="/js/os-floating-assistant.js"></script>',
+    '<script src="/js/os-safe-operational-links.js"></script>',
+    '<script>window.IndiCareSafe?.run("OS boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;console.info("IndiCare OS upgraded runtime active")});</script>',
 ]
 
 
@@ -79,7 +66,7 @@ def _looks_like_os_command_runtime(html: str) -> bool:
 
 def inject_app_shell(html: str) -> str:
     if _looks_like_os_command_runtime(html):
-        html = html.replace('<body', '<body data-skip-global-nav="true"', 1) if 'data-skip-global-nav' not in html else html
+        html = html.replace('<body', '<body data-skip-global-nav="true" data-indicare-os-runtime="true"', 1) if 'data-skip-global-nav' not in html else html
         html = _inject_once(html, OS_COMMAND_CORE_SCRIPTS, '</body>')
         html = _inject_once(html, OS_COMMAND_RUNTIME_SCRIPTS, '</body>')
         return html
