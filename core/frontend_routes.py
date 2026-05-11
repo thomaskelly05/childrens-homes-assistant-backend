@@ -48,10 +48,6 @@ LEGACY_CARE_OS_PATHS = {
     "/home.html",
 }
 
-AI_SUITE_RUNTIME_SCRIPTS = [
-    '<link rel="stylesheet" href="/ai-suite/indicare-ai-suite-unified.css">',
-    '<script src="/ai-suite/indicare-ai-suite-unified.js"></script>',
-]
 
 def _root_path(request: Request | None = None) -> str:
     if not request:
@@ -59,9 +55,11 @@ def _root_path(request: Request | None = None) -> str:
     root_path = request.scope.get("root_path") or ""
     return root_path.rstrip("/")
 
+
 def _public_path(path: str, request: Request | None = None) -> str:
     root_path = _root_path(request)
     return f"{root_path}{path if path.startswith('/') else '/' + path}"
+
 
 def ai_suite_asset_names() -> set[str]:
     if not os.path.isdir(AI_SUITE_DIR):
@@ -72,6 +70,7 @@ def ai_suite_asset_names() -> set[str]:
         if os.path.isfile(os.path.join(AI_SUITE_DIR, name)) and not name.startswith(".")
     } | AI_SUITE_ASSET_NAMES
 
+
 def ai_suite_asset_version() -> str:
     newest = 0
     for asset_name in ai_suite_asset_names():
@@ -80,47 +79,64 @@ def ai_suite_asset_version() -> str:
             newest = max(newest, int(os.path.getmtime(path)))
     return str(newest or 1)
 
-def ai_suite_asset_base(request: Request | None = None) -> str:
-    return _public_path("/ai-suite/", request)
-
-def ai_suite_asset_url(asset_name: str, request: Request | None = None) -> str:
-    return f"{ai_suite_asset_base(request)}{asset_name}?v={ai_suite_asset_version()}"
-
-def inject_ai_suite_asset_config(html: str, request: Request | None = None) -> str:
-    version = ai_suite_asset_version()
-    asset_base = ai_suite_asset_base(request)
-    replacements = {
-        "__AI_SUITE_ASSET_BASE__": asset_base,
-        "__AI_SUITE_ASSET_VERSION__": version,
-        "__AI_SUITE_CSS_HREF__": ai_suite_asset_url("indicare-suite.css", request),
-    }
-    for needle, value in replacements.items():
-        html = html.replace(needle, value)
-    root_path = _root_path(request)
-    if root_path:
-        html = html.replace('href="/ai-suite/', f'href="{root_path}/ai-suite/')
-        html = html.replace('src="/ai-suite/', f'src="{root_path}/ai-suite/')
-    return html
-
-def _inject_once(html: str, snippets: list[str], marker: str) -> str:
-    injection = "\n".join(snippet for snippet in snippets if snippet not in html)
-    if not injection:
-        return html
-    if marker in html:
-        return html.replace(marker, f"  {injection}\n{marker}")
-    return f"{html}\n{injection}\n"
 
 def inject_ai_suite_runtime(html: str, request: Request | None = None) -> str:
-    html = inject_ai_suite_asset_config(html, request)
-    html = html.replace('<body', '<body data-indicare-ai-suite="true"', 1) if 'data-indicare-ai-suite' not in html else html
+    version = ai_suite_asset_version()
+    root = _root_path(request)
+    css_href = f"{root}/ai-suite/indicare-ai-suite-unified.css?v={version}"
+    js_src = f"{root}/ai-suite/indicare-ai-suite-unified.js?v={version}"
 
-    style_snippets = [
-        f'<link rel="stylesheet" href="{_public_path("/ai-suite/indicare-ai-suite-unified.css", request)}?v={ai_suite_asset_version()}">'
-    ]
-    script_snippets = [
-        f'<script src="{_public_path("/ai-suite/indicare-ai-suite-unified.js", request)}?v={ai_suite_asset_version()}"></script>'
-    ]
+    if css_href not in html:
+        html = html.replace(
+            "</head>",
+            f'<link rel="stylesheet" href="{css_href}">\n</head>'
+        )
 
-    html = _inject_once(html, style_snippets, "</head>")
-    html = _inject_once(html, script_snippets, "</body>")
+    if js_src not in html:
+        html = html.replace(
+            "</body>",
+            f'<script src="{js_src}"></script>\n</body>'
+        )
+
+    if 'data-indicare-ai-suite' not in html:
+        html = html.replace('<body', '<body data-indicare-ai-suite="true"', 1)
+
     return html
+
+
+def _load_html(filename: str) -> str:
+    path = os.path.join(FRONTEND_DIR, filename)
+    if not os.path.exists(path):
+        return "<html><body><h1>Frontend missing</h1></body></html>"
+    with open(path, "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
+def register_frontend_routes(app: FastAPI) -> None:
+    @app.get("/")
+    async def root_redirect():
+        return RedirectResponse(url="/assistant")
+
+    @app.get("/assistant")
+    @app.get("/assistant.html")
+    @app.get("/ai-suite")
+    @app.get("/ai-suite/")
+    async def assistant_surface(request: Request):
+        html = _load_html("assistant.html")
+        html = inject_ai_suite_runtime(html, request)
+        return HTMLResponse(html)
+
+    @app.get("/academy")
+    async def academy_index():
+        index_path = os.path.join(ACADEMY_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        return JSONResponse({"ok": False, "error": "Academy not found"}, status_code=404)
+
+    @app.get("/health/frontend")
+    async def frontend_health():
+        return {
+            "ok": True,
+            "frontend": True,
+            "ai_suite_assets": sorted(list(ai_suite_asset_names())),
+        }
