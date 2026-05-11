@@ -27,6 +27,31 @@ LEGACY_CARE_OS_PATHS = {
     "/home.html",
 }
 
+AI_SUITE_RUNTIME_SCRIPTS = [
+    '<script src="/js/indicare-runtime-safe.js"></script>',
+    '<script src="/js/indicare-runtime-safety.js"></script>',
+    '<script src="/js/indicare-operational-intelligence.js"></script>',
+    '<script src="/js/indicare-intelligence-migration-bridge.js"></script>',
+    '<script src="/js/os-floating-assistant.js"></script>',
+]
+
+
+def _inject_once(html: str, snippets: list[str], marker: str) -> str:
+    injection = "\n".join(snippet for snippet in snippets if snippet not in html)
+    if not injection:
+        return html
+    if marker in html:
+        return html.replace(marker, f"  {injection}\n{marker}")
+    return f"{html}\n{injection}\n"
+
+
+def inject_ai_suite_runtime(html: str) -> str:
+    # AI Suite is intentionally standalone, but it still needs the shared orb,
+    # runtime safety and canonical intelligence bridge. Do not inject the full
+    # OS shell or OS workspace layers here.
+    html = html.replace('<body', '<body data-indicare-ai-suite="true"', 1) if 'data-indicare-ai-suite' not in html else html
+    return _inject_once(html, AI_SUITE_RUNTIME_SCRIPTS, "</body>")
+
 
 def serve_html(path: str):
     with open(path, encoding="utf-8") as file:
@@ -42,8 +67,7 @@ def serve_html(path: str):
 def serve_ai_suite(path: str):
     with open(path, encoding="utf-8") as file:
         html = file.read()
-    # Standalone AI Suite intentionally bypasses the OS shell injection.
-    return HTMLResponse(html)
+    return HTMLResponse(inject_ai_suite_runtime(html))
 
 
 def serve_from(paths: list[str], error: str = "Page not found"):
