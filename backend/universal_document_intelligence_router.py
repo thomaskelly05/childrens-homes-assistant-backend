@@ -92,6 +92,18 @@ def actor_id_from_request(request: Request, fallback: int | None = None) -> int 
 def classify_document(text: str, file_name: str | None = None) -> tuple[str, str]:
     haystack = f'{file_name or ""} {text or ""}'.lower()
     rules = [
+        ('statement_of_purpose', ['statement of purpose', 'regulation 16', 'schedule 1', 'ethos', 'outcomes that the home seeks to achieve']),
+        ('annex_a', ['annex a', 'provider details', 'registered manager details', 'responsible individual', 'ofsted annex']),
+        ('locality_risk_assessment', ['locality risk assessment', 'location assessment', 'local area risk', 'community risk', 'area risk assessment', 'neighbourhood risk']),
+        ('impact_risk_assessment', ['impact risk assessment', 'placement impact risk', 'impact assessment', 'matching assessment', 'impact on children already living']),
+        ('workforce_development_plan', ['workforce development plan', 'training plan', 'staff development plan', 'supervision plan']),
+        ('home_fire_risk_assessment', ['fire risk assessment', 'fire safety risk assessment', 'fire evacuation']),
+        ('home_health_safety', ['health and safety assessment', 'premises risk assessment', 'environmental risk assessment']),
+        ('missing_from_care_protocol_home', ['missing from care protocol', 'missing protocol', 'philomena protocol']),
+        ('behaviour_management_policy', ['behaviour management policy', 'positive behaviour support', 'restraint policy', 'physical intervention policy']),
+        ('child_protection_policy', ['child protection policy', 'safeguarding policy', 'safeguarding children policy']),
+        ('complaints_policy', ['complaints policy', 'complaints procedure']),
+        ('admissions_policy', ['admission policy', 'admissions criteria', 'referral process', 'matching process']),
         ('ehcp', ['education health and care plan', 'ehcp']),
         ('pep', ['personal education plan', 'pep meeting', 'pep review']),
         ('education_plan', ['education plan', 'school report', 'attendance', 'virtual school']),
@@ -125,6 +137,12 @@ def classify_document(text: str, file_name: str | None = None) -> tuple[str, str
 
 def route_for_category(category: str) -> str:
     mapping = {
+        'statement_of_purpose': 'home_compliance', 'annex_a': 'home_compliance',
+        'locality_risk_assessment': 'home_compliance', 'impact_risk_assessment': 'placement',
+        'workforce_development_plan': 'staff_record', 'home_fire_risk_assessment': 'home_compliance',
+        'home_health_safety': 'home_compliance', 'missing_from_care_protocol_home': 'safeguarding',
+        'behaviour_management_policy': 'home_compliance', 'child_protection_policy': 'safeguarding',
+        'complaints_policy': 'home_compliance', 'admissions_policy': 'placement',
         'ehcp': 'education', 'pep': 'education', 'education_plan': 'education',
         'health_plan': 'health', 'medication_document': 'health', 'therapy_report': 'health',
         'care_plan': 'care_plan', 'placement_plan': 'placement', 'risk_assessment': 'risk',
@@ -176,7 +194,7 @@ def parse_dates(text: str) -> dict[str, datetime.date | None]:
     past_dates = sorted([d for d in dates if d < today], reverse=True)
     lower = text.lower() if text else ''
     expiry = future_dates[0] if future_dates and any(word in lower for word in ['expiry', 'expires', 'valid until', 'renewal due']) else None
-    review = future_dates[0] if future_dates and any(word in lower for word in ['review date', 'next review', 'review due', 'pep review', 'annual review']) else None
+    review = future_dates[0] if future_dates and any(word in lower for word in ['review date', 'next review', 'review due', 'pep review', 'annual review', 'reviewed by']) else None
     if not expiry and not review and future_dates:
         review = future_dates[0]
     return {'document_date': past_dates[0] if past_dates else None, 'effective_date': past_dates[0] if past_dates else None, 'expiry_date': expiry, 'review_date': review, 'next_action_date': expiry or review}
@@ -184,14 +202,15 @@ def parse_dates(text: str) -> dict[str, datetime.date | None]:
 
 def make_summary(text: str, category: str) -> dict[str, str | None]:
     preview = ' '.join((text or '').split())[:900]
+    home_categories = {'statement_of_purpose', 'annex_a', 'locality_risk_assessment', 'impact_risk_assessment', 'home_fire_risk_assessment', 'home_health_safety', 'missing_from_care_protocol_home', 'behaviour_management_policy', 'child_protection_policy', 'complaints_policy', 'admissions_policy'}
     return {
         'summary': preview or None,
         'key_information': preview or None,
         'education_summary': preview if category in {'pep', 'ehcp', 'education_plan'} else None,
         'health_summary': preview if category in {'health_plan', 'medication_document', 'therapy_report'} else None,
-        'placement_summary': preview if category in {'placement_plan', 'care_plan', 'support_plan'} else None,
-        'safeguarding_summary': preview if category in {'risk_assessment', 'safeguarding_document', 'missing_protocol'} else None,
-        'compliance_summary': preview if category in {'policy', 'insurance', 'reg44', 'reg45', 'inspection_report', 'home_certificate'} else None,
+        'placement_summary': preview if category in {'placement_plan', 'care_plan', 'support_plan', 'impact_risk_assessment', 'admissions_policy'} else None,
+        'safeguarding_summary': preview if category in {'risk_assessment', 'safeguarding_document', 'missing_protocol', 'locality_risk_assessment', 'missing_from_care_protocol_home', 'child_protection_policy', 'behaviour_management_policy'} else None,
+        'compliance_summary': preview if category in {'policy', 'insurance', 'reg44', 'reg45', 'inspection_report', 'home_certificate'} or category in home_categories else None,
     }
 
 
