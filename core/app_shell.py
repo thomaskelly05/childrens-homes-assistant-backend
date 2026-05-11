@@ -21,9 +21,9 @@ OS_COMMAND_CORE_SCRIPTS = [
 ]
 
 # Canonical OS runtime boot sequence.
-# The OS now boots around the existing child-first workspace modules and restores
-# the original document, evidence and reporting routes so chronology, uploads,
-# inspections and narrative reporting all reconnect into the same runtime.
+# The OS now boots around the three roots of the operating system: young people,
+# adults and home. Documents, evidence, reporting and oversight all reconnect
+# into the same journey-centred runtime.
 OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safe.js"></script>',
     '<script src="/js/indicare-runtime-safety.js"></script>',
@@ -35,6 +35,8 @@ OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-workspace/child-life-ecosystem.js"></script>',
     '<script type="module" src="/js/indicare-workspace/child-journey-experience.js"></script>',
     '<script src="/js/indicare-workspace/child-timeline.js"></script>',
+    '<script src="/js/indicare-workspace/adult-journey-profile.js"></script>',
+    '<script src="/js/indicare-workspace/home-journey-profile.js"></script>',
     '<script type="module" src="/js/indicare-workspace/manager-oversight.js"></script>',
     '<script src="/js/document-intelligence-upload.js"></script>',
     '<script src="/js/reg44-report-reader-workspace.js"></script>',
