@@ -59,6 +59,14 @@ def register_frontend_routes(app: FastAPI) -> None:
     async def indicare_ai_bridge():
         return _ai_asset("assistant-bridge.js", "application/javascript")
 
+    @app.get("/indicare-ai/intelligence-voice.js")
+    async def indicare_ai_voice():
+        return _ai_asset("intelligence-voice.js", "application/javascript")
+
+    @app.get("/indicare-ai/assistant-streaming.js")
+    async def indicare_ai_streaming():
+        return _ai_asset("assistant-streaming.js", "application/javascript")
+
     @app.get("/indicare-ai/assistant-runtime.js")
     async def indicare_ai_runtime():
         return _ai_asset("assistant-runtime.js", "application/javascript")
@@ -83,6 +91,8 @@ def register_frontend_routes(app: FastAPI) -> None:
             "assistant_runtime": "indicare-ai",
             "assistant_assets": "isolated",
             "assistant_bridge": True,
+            "assistant_streaming": True,
+            "assistant_voice": True,
             "assistant_pro_design": True,
             "login_route": True,
             "assistant_route": True,
