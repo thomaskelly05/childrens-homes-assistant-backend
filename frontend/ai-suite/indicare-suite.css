@@ -1,6 +1,5 @@
 /* IndiCare AI Suite consolidated stylesheet.
-   Keep all AI Suite recovery, Orb, Projects, Intelligence, Connect, Docs, I-Notes,
-   conversations, memory and actions presentation here rather than scattered JS styles.
+   Unified styling system for Assistant, Connect, Docs, I-Notes and Intelligence.
 */
 
 :root {
@@ -13,6 +12,7 @@
   --ic-muted: #64748b;
   --ic-dark: #020617;
   --ic-panel: #fbfbfc;
+  --ic-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
 }
 
 html[data-product-surface="ai-suite"],
@@ -29,7 +29,7 @@ html[data-product-surface="ai-suite"] textarea {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Hide legacy OS/dashboard fragments if they leak into the AI Suite. */
+/* Remove legacy operational dashboard bleed */
 html[data-product-surface="ai-suite"] .os-topbar,
 html[data-product-surface="ai-suite"] .dashboard-grid,
 html[data-product-surface="ai-suite"] .dashboard-card,
@@ -53,7 +53,7 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
   pointer-events: none !important;
 }
 
-/* ChatGPT-style shell refinements */
+/* Shell */
 .sidebar,
 .ai-suite-sidebar {
   background: #f8fafc !important;
@@ -94,7 +94,7 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
 .composer,
 .composer-card,
 .modern-composer {
-  box-shadow: 0 20px 60px rgba(15,23,42,.12) !important;
+  box-shadow: var(--ic-shadow) !important;
   border-radius: 22px !important;
 }
 
@@ -124,11 +124,16 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
   border: 0;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 25%, #fff 0, #93c5fd 18%, #2563eb 43%, #020617 100%);
-  box-shadow: 0 0 50px rgba(37,99,235,.55);
+  box-shadow: 0 0 55px rgba(37,99,235,.6);
   color: #fff;
   font-weight: 900;
   z-index: 1000;
   cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.ic-orb:hover {
+  transform: scale(1.04);
 }
 
 .ic-orb.listening {
@@ -189,27 +194,315 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
   overflow: auto;
 }
 
-/* Intelligence companion */
-#icIntelligenceShell {
-  background: radial-gradient(circle at top, #111827 0, #020617 48%, #020617 100%) !important;
-  color: #f8fafc !important;
+/* Intelligence */
+.ic-intelligence-shell {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #111827 0, #020617 55%, #020617 100%);
+  color: #f8fafc;
 }
 
-#icIntelligenceShell aside {
+.ic-intelligence-rail {
+  border-right: 1px solid rgba(255,255,255,.06);
+  padding: 28px 20px;
   background: rgba(15,23,42,.72);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(20px);
 }
 
-#icIntelligenceFeed > div > div {
-  box-shadow: 0 18px 45px rgba(0,0,0,.2);
+.ic-ai-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  margin-bottom: 14px;
 }
 
-#icIntelligenceInput {
+.ic-ai-mark.large {
+  width: 74px;
+  height: 74px;
+  border-radius: 24px;
+  font-size: 1.35rem;
+  margin-bottom: 20px;
+}
+
+.ic-intelligence-rail h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.ic-rail-copy {
+  color: #94a3b8;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+
+.ic-rail-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.ic-primary-action,
+.ic-secondary-action,
+.icModeBtn {
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+
+.ic-primary-action {
+  border: 0;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+}
+
+.ic-secondary-action,
+.icModeBtn {
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+  color: #fff;
+}
+
+.icModeBtn.active,
+.icModeBtn:hover,
+.ic-primary-action:hover,
+.ic-secondary-action:hover {
+  transform: translateY(-1px);
+}
+
+.ic-mode-stack,
+.ic-memory-card {
+  margin-top: 28px;
+}
+
+.ic-section-label {
+  display: block;
+  color: #64748b;
+  text-transform: uppercase;
+  font-size: .75rem;
+  letter-spacing: .08em;
+  margin-bottom: 12px;
+}
+
+.ic-memory-card {
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255,255,255,.03);
+}
+
+.ic-intelligence-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ic-intelligence-hero {
+  padding: 42px 56px 16px;
+}
+
+.ic-kicker {
+  color: #93c5fd;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .78rem;
+  margin: 0 0 10px;
+}
+
+.ic-intelligence-hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1;
+}
+
+.ic-intelligence-hero p {
+  margin-top: 16px;
+  max-width: 760px;
+  color: #94a3b8;
+  line-height: 1.7;
+  font-size: 1.04rem;
+}
+
+.ic-intelligence-feed {
+  flex: 1;
+  overflow: auto;
+  padding: 0 56px 160px;
+}
+
+.ic-message-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 26px;
+  align-items: flex-start;
+}
+
+.ic-message-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: .84rem;
+  font-weight: 700;
+}
+
+.ic-message-bubble {
+  max-width: 920px;
+  border-radius: 24px;
+  padding: 18px 22px;
+  line-height: 1.75;
+  font-size: 1rem;
+  background: rgba(255,255,255,.04);
+  box-shadow: 0 18px 40px rgba(0,0,0,.14);
+}
+
+.ic-message-row.user .ic-message-bubble {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.ic-thinking {
+  display: flex;
+  gap: 8px;
+  padding-left: 54px;
+}
+
+.ic-thinking span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #93c5fd;
+  animation: icThinking 1s infinite ease-in-out;
+}
+
+.ic-thinking span:nth-child(2) {
+  animation-delay: .15s;
+}
+
+.ic-thinking span:nth-child(3) {
+  animation-delay: .3s;
+}
+
+@keyframes icThinking {
+  0%, 100% { opacity: .35; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+.ic-empty-conversation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 56vh;
+}
+
+.ic-empty-conversation h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.ic-empty-conversation p {
+  margin-top: 12px;
+  max-width: 640px;
+  color: #94a3b8;
+  line-height: 1.7;
+}
+
+.ic-starter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+  width: min(760px, 100%);
+}
+
+.ic-starter-grid button {
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+  color: #fff;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease;
+}
+
+.ic-starter-grid button:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,.05);
+}
+
+.ic-intelligence-composer-wrap {
+  position: sticky;
+  bottom: 0;
+  padding: 22px 40px 32px;
+  background: linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,.95) 42%);
+}
+
+.ic-intelligence-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(15,23,42,.82);
+  backdrop-filter: blur(20px);
+  border-radius: 30px;
+  padding: 14px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.25);
+}
+
+.ic-intelligence-composer textarea {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  resize: none;
   outline: none;
+  min-height: 28px;
+  max-height: 180px;
+  line-height: 1.7;
+  font-size: 1rem;
 }
 
-#icIntelligenceInput:focus {
-  border-color: rgba(96,165,250,.75) !important;
+.ic-composer-tool,
+.ic-composer-send {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.15rem;
+}
+
+.ic-composer-tool {
+  background: rgba(255,255,255,.06);
+  color: #fff;
+}
+
+.ic-composer-send {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  box-shadow: 0 14px 40px rgba(37,99,235,.4);
+}
+
+.ic-composer-hint {
+  color: #64748b;
+  text-align: center;
+  margin-top: 12px;
+  font-size: .82rem;
 }
 
 /* Connect */
@@ -273,17 +566,32 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
 }
 
 /* Mobile */
-@media (max-width: 1100px) {
-  .takeover,
-  .doc-layout,
-  .notes-layout,
-  .intel-layout,
-  #icIntelligenceShell {
-    grid-template-columns: 1fr !important;
+@media (max-width: 1180px) {
+  .ic-intelligence-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .ic-intelligence-rail {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
   }
 }
 
 @media (max-width: 780px) {
+  .ic-intelligence-feed,
+  .ic-intelligence-hero {
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+
+  .ic-intelligence-composer-wrap {
+    padding: 18px;
+  }
+
+  .ic-starter-grid {
+    grid-template-columns: 1fr;
+  }
+
   .ic-orb {
     width: 72px;
     height: 72px;
