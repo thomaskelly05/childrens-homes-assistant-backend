@@ -17,31 +17,25 @@ OS_COMMAND_CORE_SCRIPTS = [
     '<script src="/js/auth.js"></script>',
     '<script src="/js/core/permissions.js"></script>',
     '<script src="/js/core/route-guard.js"></script>',
+    '<script src="/js/indicare-workspace/context-store.js"></script>',
 ]
 
-# Stable runtime boot sequence for the upgraded OS Command surface.
-# These scripts were previously split across optional enhancement buckets,
-# which meant the deployed UI often looked older than the upgraded runtime.
+# Canonical OS runtime boot sequence.
+# The OS now boots around the existing child-first workspace modules rather than
+# parallel command-centre scaffolds. The context wall establishes home + child,
+# the bridge syncs that into IndiCareContext, and the existing journey modules
+# render Today, Journey, Timeline and Manager Oversight.
 OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safe.js"></script>',
     '<script src="/js/indicare-runtime-safety.js"></script>',
-    '<script src="/js/indicare-operational-intelligence.js"></script>',
-    '<script src="/js/indicare-intelligence-migration-bridge.js"></script>',
     '<script src="/js/os-operating-system-resilience.js"></script>',
-    '<script src="/js/os-child-journey-workspace.js"></script>',
-    '<script src="/js/os-command-ui-bridge.js"></script>',
-    '<script src="/js/os-operational-intelligence-reconnect.js"></script>',
-    '<script src="/js/os-safe-contextual-navigation.js"></script>',
-    '<script src="/js/os-child-workspace-tabs.js"></script>',
-    '<script src="/js/chronology-visual-timeline.js"></script>',
-    '<script src="/js/document-intelligence-upload.js"></script>',
-    '<script src="/js/reg44-report-reader-workspace.js"></script>',
-    '<script src="/js/oversight-intelligence-dashboard.js"></script>',
-    '<script src="/js/indicare-production-readiness-bridge.js"></script>',
-    '<script src="/js/os-contextual-navigation.js"></script>',
+    '<script src="/js/os-existing-journey-runtime-bridge.js"></script>',
+    '<script type="module" src="/js/indicare-workspace/today-for-child.js"></script>',
+    '<script type="module" src="/js/indicare-workspace/child-journey-experience.js"></script>',
+    '<script src="/js/indicare-workspace/child-timeline.js"></script>',
+    '<script type="module" src="/js/indicare-workspace/manager-oversight.js"></script>',
     '<script src="/js/os-floating-assistant.js"></script>',
-    '<script src="/js/os-safe-operational-links.js"></script>',
-    '<script>window.IndiCareSafe?.run("OS boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;console.info("IndiCare OS upgraded runtime active")});</script>',
+    '<script>window.IndiCareSafe?.run("OS canonical boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;console.info("IndiCare OS canonical journey runtime active")});</script>',
 ]
 
 
