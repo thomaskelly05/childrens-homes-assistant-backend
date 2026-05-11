@@ -111,6 +111,11 @@ def register_frontend_routes(app: FastAPI) -> None:
     async def root_redirect():
         return RedirectResponse(url="/login")
 
+    @app.get("/login")
+    @app.get("/login.html")
+    async def login_page():
+        return HTMLResponse(_load_html("login.html"))
+
     @app.get("/assistant")
     @app.get("/assistant.html")
     @app.get("/ai-suite")
@@ -123,6 +128,11 @@ def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/indicare-ai-app")
     @app.get("/indicare-ai-app/")
     async def indicare_ai_surface_disabled():
+        return RedirectResponse(url="/login", status_code=302)
+
+    @app.get("/young-people-shell")
+    @app.get("/young-people-shell.html")
+    async def legacy_young_people_shell_redirect():
         return RedirectResponse(url="/assistant", status_code=302)
 
     @app.get("/academy")
@@ -138,6 +148,8 @@ def register_frontend_routes(app: FastAPI) -> None:
             "ok": True,
             "frontend": True,
             "default_route": "/login",
-            "indicare_ai_app": "disabled_redirects_to_assistant",
+            "login_route": True,
+            "indicare_ai_app": "disabled_redirects_to_login",
+            "legacy_young_people_shell": "redirects_to_assistant",
             "ai_suite_assets": sorted(list(ai_suite_asset_names())),
         }
