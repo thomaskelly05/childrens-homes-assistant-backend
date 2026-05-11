@@ -1,0 +1,300 @@
+/* IndiCare AI Suite consolidated stylesheet.
+   Keep all AI Suite recovery, Orb, Projects, Intelligence, Connect, Docs, I-Notes,
+   conversations, memory and actions presentation here rather than scattered JS styles.
+*/
+
+:root {
+  --ic-brand: #2563eb;
+  --ic-brand-2: #14b8a6;
+  --ic-bg: #ffffff;
+  --ic-soft: #f7f7f8;
+  --ic-line: #e5e7eb;
+  --ic-text: #111827;
+  --ic-muted: #64748b;
+  --ic-dark: #020617;
+  --ic-panel: #fbfbfc;
+}
+
+html[data-product-surface="ai-suite"],
+html[data-product-surface="ai-suite"] body {
+  background: var(--ic-bg);
+  color: var(--ic-text);
+  overscroll-behavior: none;
+}
+
+html[data-product-surface="ai-suite"] body,
+html[data-product-surface="ai-suite"] button,
+html[data-product-surface="ai-suite"] input,
+html[data-product-surface="ai-suite"] textarea {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Hide legacy OS/dashboard fragments if they leak into the AI Suite. */
+html[data-product-surface="ai-suite"] .os-topbar,
+html[data-product-surface="ai-suite"] .dashboard-grid,
+html[data-product-surface="ai-suite"] .dashboard-card,
+html[data-product-surface="ai-suite"] .metric-card,
+html[data-product-surface="ai-suite"] .timeline-grid,
+html[data-product-surface="ai-suite"] .chronology-grid,
+html[data-product-surface="ai-suite"] .care-dashboard,
+html[data-product-surface="ai-suite"] .care-workspace,
+html[data-product-surface="ai-suite"] .connected-care-workspace,
+html[data-product-surface="ai-suite"] .operational-dashboard,
+html[data-product-surface="ai-suite"] .operational-dashboard-grid,
+html[data-product-surface="ai-suite"] .record-dashboard,
+html[data-product-surface="ai-suite"] .record-grid,
+html[data-product-surface="ai-suite"] .compliance-dashboard,
+html[data-product-surface="ai-suite"] [data-ai-suite-hidden="true"],
+html[data-product-surface="ai-suite"] [data-os-module],
+html[data-product-surface="ai-suite"] [data-care-module],
+html[data-product-surface="ai-suite"] [data-operational-grid] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* ChatGPT-style shell refinements */
+.sidebar,
+.ai-suite-sidebar {
+  background: #f8fafc !important;
+  border-right: 1px solid var(--ic-line) !important;
+}
+
+.main,
+.ai-suite-shell,
+.ai-suite-chat-surface {
+  background: var(--ic-bg) !important;
+  min-width: 0;
+}
+
+.app-btn.active,
+.app-btn:hover,
+.conv-btn.active,
+.conv-btn:hover,
+.ai-suite-side-link.active,
+.ai-suite-side-link:hover,
+.ic-project-chip.active,
+.ic-project-chip:hover {
+  background: #eef2ff !important;
+}
+
+.new-chat,
+.ai-suite-new-chat,
+.pill,
+.smallbtn,
+.tab,
+.item,
+.suggestion,
+.composer,
+.composer-card,
+.modern-composer {
+  border-color: var(--ic-line) !important;
+}
+
+.composer,
+.composer-card,
+.modern-composer {
+  box-shadow: 0 20px 60px rgba(15,23,42,.12) !important;
+  border-radius: 22px !important;
+}
+
+/* Projects */
+.ic-projects {
+  display: grid;
+  gap: 4px;
+}
+
+.ic-project-chip {
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ic-text);
+}
+
+/* Orb */
+.ic-orb {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 86px;
+  height: 86px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #fff 0, #93c5fd 18%, #2563eb 43%, #020617 100%);
+  box-shadow: 0 0 50px rgba(37,99,235,.55);
+  color: #fff;
+  font-weight: 900;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+.ic-orb.listening {
+  animation: icPulse 1.2s infinite;
+}
+
+@keyframes icPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.ic-orb-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 124px;
+  width: min(430px, 92vw);
+  background: #fff;
+  border: 1px solid var(--ic-line);
+  border-radius: 24px;
+  box-shadow: 0 30px 90px rgba(15,23,42,.25);
+  padding: 18px;
+  z-index: 999;
+  display: none;
+}
+
+.ic-orb-panel.open {
+  display: block;
+}
+
+.ic-mode {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.ic-mode button {
+  flex: 1;
+  border: 1px solid var(--ic-line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.ic-mode button.active {
+  background: #111827;
+  color: #fff;
+}
+
+.ic-output {
+  white-space: pre-wrap;
+  background: #f8fafc;
+  border-left: 4px solid var(--ic-brand);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 12px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+/* Intelligence companion */
+#icIntelligenceShell {
+  background: radial-gradient(circle at top, #111827 0, #020617 48%, #020617 100%) !important;
+  color: #f8fafc !important;
+}
+
+#icIntelligenceShell aside {
+  background: rgba(15,23,42,.72);
+  backdrop-filter: blur(18px);
+}
+
+#icIntelligenceFeed > div > div {
+  box-shadow: 0 18px 45px rgba(0,0,0,.2);
+}
+
+#icIntelligenceInput {
+  outline: none;
+}
+
+#icIntelligenceInput:focus {
+  border-color: rgba(96,165,250,.75) !important;
+}
+
+/* Connect */
+#connectScreen .takeover,
+.takeover {
+  background: #fff;
+}
+
+#presenceBox,
+#icActionsPanel .item,
+#connectMessages .post,
+#mailList .item,
+#connectMeetings .item,
+#connectMeetingsMain .item {
+  border: 1px solid var(--ic-line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.call-stage {
+  background: radial-gradient(circle at top, #1e3a8a 0, #0f172a 48%, #020617 100%) !important;
+}
+
+/* Docs */
+.doc-page,
+#docEditor {
+  background: #fff;
+  color: var(--ic-text);
+  box-shadow: 0 18px 45px rgba(15,23,42,.08) !important;
+}
+
+/* I-Notes */
+.recorder {
+  background: linear-gradient(135deg, #020617, #1e3a8a, #312e81) !important;
+}
+
+.transcript {
+  background: #fff;
+}
+
+/* Actions */
+#icActionsPanel {
+  margin-top: 18px;
+}
+
+#icActionInput {
+  min-width: 0;
+}
+
+#icActionsList .item strong {
+  line-height: 1.35;
+}
+
+/* Conversations */
+#icConversationRail .ic-conv {
+  transition: background .15s ease, transform .15s ease;
+}
+
+#icConversationRail .ic-conv:hover {
+  transform: translateX(2px);
+}
+
+/* Mobile */
+@media (max-width: 1100px) {
+  .takeover,
+  .doc-layout,
+  .notes-layout,
+  .intel-layout,
+  #icIntelligenceShell {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 780px) {
+  .ic-orb {
+    width: 72px;
+    height: 72px;
+    right: 18px;
+    bottom: 18px;
+  }
+
+  .ic-orb-panel {
+    right: 12px;
+    left: 12px;
+    width: auto;
+    bottom: 104px;
+  }
+}
