@@ -13,6 +13,9 @@
   --ic-dark: #020617;
   --ic-panel: #fbfbfc;
   --ic-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+  --ic-shadow-soft: 0 12px 40px rgba(15, 23, 42, 0.08);
+  --ic-radius: 22px;
+  --ic-radius-lg: 32px;
 }
 
 html[data-product-surface="ai-suite"],
@@ -25,8 +28,13 @@ html[data-product-surface="ai-suite"] body {
 html[data-product-surface="ai-suite"] body,
 html[data-product-surface="ai-suite"] button,
 html[data-product-surface="ai-suite"] input,
-html[data-product-surface="ai-suite"] textarea {
+html[data-product-surface="ai-suite"] textarea,
+html[data-product-surface="ai-suite"] select {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html[data-product-surface="ai-suite"] * {
+  box-sizing: border-box;
 }
 
 /* Remove legacy operational dashboard bleed */
@@ -67,6 +75,13 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
   min-width: 0;
 }
 
+.app-btn,
+.conv-btn,
+.ai-suite-side-link,
+.ic-project-chip {
+  transition: background .15s ease, transform .15s ease, color .15s ease;
+}
+
 .app-btn.active,
 .app-btn:hover,
 .conv-btn.active,
@@ -96,6 +111,85 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
 .modern-composer {
   box-shadow: var(--ic-shadow) !important;
   border-radius: 22px !important;
+}
+
+button {
+  font: inherit;
+}
+
+/* Shared professional workspace system */
+.takeover,
+.docs-screen,
+.notes-screen,
+.connect-screen,
+.assistant-screen,
+.intel-layout,
+.doc-layout,
+.notes-layout,
+.connect-layout {
+  min-height: 100%;
+}
+
+.takeover {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+}
+
+.hero,
+.workspace-hero,
+.screen-hero,
+.assistant-empty,
+.docs-hero,
+.notes-hero,
+.connect-hero {
+  border-radius: var(--ic-radius-lg);
+}
+
+.card,
+.item,
+.suggestion,
+.workspace-card,
+.panel,
+.doc-page,
+.transcript,
+#docEditor,
+#presenceBox,
+#mailList .item,
+#connectMeetings .item,
+#connectMeetingsMain .item,
+#connectMessages .post,
+#icActionsPanel .item {
+  border: 1px solid var(--ic-line) !important;
+  border-radius: var(--ic-radius) !important;
+  box-shadow: none;
+}
+
+.suggestion,
+.item,
+.card,
+.workspace-card {
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.suggestion:hover,
+.item:hover,
+.card:hover,
+.workspace-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--ic-shadow-soft);
+  border-color: #cbd5e1 !important;
+}
+
+input,
+textarea,
+select {
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(37,99,235,.55) !important;
+  box-shadow: 0 0 0 4px rgba(37,99,235,.08);
 }
 
 /* Projects */
@@ -192,6 +286,23 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
   margin-top: 12px;
   max-height: 260px;
   overflow: auto;
+}
+
+/* Assistant */
+#assistantScreen,
+.assistant-screen {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+#messages,
+.messages {
+  line-height: 1.7;
+}
+
+.message,
+.msg,
+.chat-message {
+  border-radius: 22px;
 }
 
 /* Intelligence */
@@ -384,13 +495,8 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
   animation: icThinking 1s infinite ease-in-out;
 }
 
-.ic-thinking span:nth-child(2) {
-  animation-delay: .15s;
-}
-
-.ic-thinking span:nth-child(3) {
-  animation-delay: .3s;
-}
+.ic-thinking span:nth-child(2) { animation-delay: .15s; }
+.ic-thinking span:nth-child(3) { animation-delay: .3s; }
 
 @keyframes icThinking {
   0%, 100% { opacity: .35; transform: translateY(0); }
@@ -505,42 +611,127 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
   font-size: .82rem;
 }
 
-/* Connect */
+/* Connect: Teams-style operational collaboration */
+#connectScreen,
+.connect-screen {
+  background: #f8fafc !important;
+}
+
 #connectScreen .takeover,
-.takeover {
-  background: #fff;
+.connect-layout {
+  background: #f8fafc !important;
+  gap: 18px;
+}
+
+.channel-list,
+.connect-channels,
+.connect-sidebar,
+.connect-rail {
+  background: #ffffff !important;
+  border-right: 1px solid var(--ic-line) !important;
+}
+
+#connectMessages,
+.connect-messages {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: var(--ic-radius-lg);
+}
+
+#connectMessages .post,
+.connect-message,
+.team-message {
+  border: 0 !important;
+  background: #fff !important;
+  box-shadow: var(--ic-shadow-soft);
+  padding: 16px 18px;
 }
 
 #presenceBox,
-#icActionsPanel .item,
-#connectMessages .post,
 #mailList .item,
 #connectMeetings .item,
-#connectMeetingsMain .item {
-  border: 1px solid var(--ic-line);
-  border-radius: 14px;
-  background: #fff;
+#connectMeetingsMain .item,
+#icActionsPanel .item {
+  background: #fff !important;
 }
 
 .call-stage {
   background: radial-gradient(circle at top, #1e3a8a 0, #0f172a 48%, #020617 100%) !important;
+  color: #fff;
+  border-radius: var(--ic-radius-lg);
+  box-shadow: 0 24px 70px rgba(15,23,42,.24);
 }
 
-/* Docs */
+/* Docs: Google Docs / Notion style */
+#docsScreen,
+.docs-screen {
+  background: #f8fafc !important;
+}
+
+.doc-layout {
+  background: #f8fafc !important;
+}
+
 .doc-page,
 #docEditor {
-  background: #fff;
+  background: #fff !important;
   color: var(--ic-text);
-  box-shadow: 0 18px 45px rgba(15,23,42,.08) !important;
+  box-shadow: 0 24px 80px rgba(15,23,42,.1) !important;
+  border: 1px solid #eef2f7 !important;
+  border-radius: 28px !important;
+  line-height: 1.75;
 }
 
-/* I-Notes */
+#docEditor {
+  min-height: 520px;
+  padding: 52px !important;
+  font-size: 1.04rem;
+}
+
+#docEditor h1,
+.doc-page h1 {
+  letter-spacing: -.04em;
+}
+
+.docs-toolbar,
+.doc-toolbar,
+.doc-actions {
+  background: rgba(255,255,255,.82) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--ic-line) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--ic-shadow-soft);
+}
+
+/* I-Notes: Beam/Magic Notes style */
+#notesScreen,
+.notes-screen,
+.notes-layout {
+  background: #f8fafc !important;
+}
+
 .recorder {
-  background: linear-gradient(135deg, #020617, #1e3a8a, #312e81) !important;
+  background: radial-gradient(circle at top left, #1e40af 0, #312e81 42%, #020617 100%) !important;
+  color: #fff;
+  border-radius: var(--ic-radius-lg) !important;
+  box-shadow: 0 24px 80px rgba(30,64,175,.28);
 }
 
-.transcript {
-  background: #fff;
+.transcript,
+#transcript {
+  background: #fff !important;
+  color: var(--ic-text);
+  border: 1px solid var(--ic-line) !important;
+  border-radius: 28px !important;
+  box-shadow: var(--ic-shadow-soft);
+  line-height: 1.75;
+}
+
+#notesOutput,
+.notes-output {
+  background: #fff !important;
+  border: 1px solid var(--ic-line) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--ic-shadow-soft);
 }
 
 /* Actions */
@@ -567,8 +758,12 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
 
 /* Mobile */
 @media (max-width: 1180px) {
-  .ic-intelligence-shell {
-    grid-template-columns: 1fr;
+  .ic-intelligence-shell,
+  .takeover,
+  .doc-layout,
+  .notes-layout,
+  .connect-layout {
+    grid-template-columns: 1fr !important;
   }
 
   .ic-intelligence-rail {
@@ -590,6 +785,10 @@ html[data-product-surface="ai-suite"] [data-operational-grid] {
 
   .ic-starter-grid {
     grid-template-columns: 1fr;
+  }
+
+  #docEditor {
+    padding: 28px !important;
   }
 
   .ic-orb {
