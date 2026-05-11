@@ -32,10 +32,11 @@
       <header>
         <p class="eyebrow">Connected journey workspace</p>
         <h2 id="view-title">Today for child</h2>
-        <p id="view-subtitle">Existing journey, recording, oversight and reporting modules wired into the OS context.</p>
+        <p id="view-subtitle">Existing journey, profile, recording, oversight and reporting modules wired into the OS context.</p>
       </header>
       <nav id="workspace-nav" aria-label="Journey navigation">
         <button type="button" class="nav-item active" data-view="today-child">Today</button>
+        <button type="button" class="nav-item" data-view="child-life">Child profile</button>
         <button type="button" class="nav-item" data-view="child-journey">Child journey</button>
         <button type="button" class="nav-item" data-view="child-timeline">Timeline</button>
         <button type="button" class="nav-item" data-view="review">Manager oversight</button>
@@ -87,6 +88,7 @@
     shell.querySelectorAll('.nav-item').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
 
     if (view === 'today-child' && typeof window.loadTodayForChild === 'function') return window.loadTodayForChild();
+    if (view === 'child-life' && typeof window.loadChildLifeEcosystem === 'function') return window.loadChildLifeEcosystem();
     if (view === 'child-journey' && typeof window.loadChildJourneyExperience === 'function') return window.loadChildJourneyExperience();
     if (view === 'child-timeline' && typeof window.loadChildTimeline === 'function') return window.loadChildTimeline();
     if (view === 'review' && typeof window.loadManagerOversight === 'function') return window.loadManagerOversight();
