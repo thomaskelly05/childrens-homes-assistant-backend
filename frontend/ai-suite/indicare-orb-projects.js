@@ -83,12 +83,12 @@
     });
   }
 
-  function loadOrbAiRuntime() {
-    if (document.querySelector('script[data-indicare-orb-ai]')) return;
+  function loadRuntime(name, src) {
+    if (document.querySelector(`script[data-runtime="${name}"]`)) return;
     const script = document.createElement('script');
     script.defer = true;
-    script.dataset.indicareOrbAi = 'true';
-    script.src = '/frontend/ai-suite/indicare-orb-ai.js';
+    script.dataset.runtime = name;
+    script.src = src;
     document.body.appendChild(script);
   }
 
@@ -96,7 +96,8 @@
     addStyles();
     addProjects();
     addOrb();
-    loadOrbAiRuntime();
+    loadRuntime('orb-ai', '/frontend/ai-suite/indicare-orb-ai.js');
+    loadRuntime('connect-runtime', '/frontend/ai-suite/indicare-connect-runtime.js');
     window.IndiCareRecoveryUI = { state, renderProjects };
   }
 
