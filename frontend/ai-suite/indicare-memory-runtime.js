@@ -20,6 +20,7 @@
         documents:[],
         notes:[],
         meetings:[],
+        actions:[],
         safeguardingThemes:[]
       };
     }
@@ -76,6 +77,7 @@
       documentCount:p.documents.length,
       noteCount:p.notes.length,
       meetingCount:p.meetings.length,
+      actionCount:(p.actions||[]).length,
       safeguardingThemes:p.safeguardingThemes
     };
   }
@@ -124,11 +126,21 @@
     };
   }
 
+  function loadActionsRuntime(){
+    if(document.querySelector('script[data-runtime="actions-runtime"]')) return;
+    const script=document.createElement('script');
+    script.defer=true;
+    script.dataset.runtime='actions-runtime';
+    script.src='/frontend/ai-suite/indicare-actions-runtime.js';
+    document.body.appendChild(script);
+  }
+
   function init(){
     ensureProject();
     intercept();
     expose();
     save();
+    loadActionsRuntime();
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
