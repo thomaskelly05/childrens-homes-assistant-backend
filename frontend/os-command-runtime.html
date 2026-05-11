@@ -6,6 +6,7 @@
   <title>IndiCare OS | Children’s Home Operating System</title>
   <meta name="description" content="A modern children’s home operating system for recording, reporting, oversight and inspection readiness." />
   <link rel="stylesheet" href="/css/indicare-app-shell.css" />
+  <link rel="stylesheet" href="/css/indicare-os-modern.css" />
   <style>
     :root {
       --ic-os-bg:#f4f6fb;--ic-os-card:rgba(255,255,255,.88);--ic-os-line:rgba(15,23,42,.08);--ic-os-text:#111827;--ic-os-muted:#64748b;--ic-os-blue:#2563eb;--ic-os-purple:#7c3aed;
@@ -24,6 +25,23 @@
     .ic365-button.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;border-color:#1d4ed8!important}
     .ic365-shift-ribbon article{position:relative;overflow:hidden}
     .ic365-shift-ribbon article::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:linear-gradient(90deg,#2563eb,#7c3aed)}
+    .ic365-operational-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+    .ic365-overview-card{position:relative;overflow:hidden;padding:16px;border-radius:18px;border:1px solid rgba(15,23,42,.08);background:rgba(255,255,255,.92);box-shadow:0 12px 30px rgba(15,23,42,.06)}
+    .ic365-overview-card::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,#117c70,#19a493,#2563eb)}
+    .ic365-overview-card strong{display:block;font-size:28px;line-height:1;font-weight:900;color:#10201f;margin-bottom:6px}
+    .ic365-overview-card span{display:block;color:#62736f;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+    .ic365-continuity-grid{display:grid;grid-template-columns:1.4fr .8fr;gap:16px;margin-top:16px}
+    .ic365-continuity-panel{border-radius:22px;border:1px solid rgba(15,23,42,.08);background:rgba(255,255,255,.92);box-shadow:0 12px 30px rgba(15,23,42,.06);padding:18px}
+    .ic365-continuity-panel h3{margin:0 0 12px;font-size:16px;font-weight:900;color:#10201f}
+    .ic365-continuity-list,.ic365-focus-stack{display:grid;gap:12px}
+    .ic365-continuity-item{padding:12px 14px;border-radius:16px;background:#f8fafc;border:1px solid rgba(15,23,42,.06)}
+    .ic365-continuity-item strong{display:block;margin-bottom:4px;font-size:13px;color:#10201f}
+    .ic365-continuity-item span{display:block;color:#62736f;font-size:12px;line-height:1.45}
+    .ic365-focus-card{border-radius:18px;padding:16px;background:linear-gradient(135deg,rgba(17,124,112,.08),rgba(25,164,147,.06));border:1px solid rgba(17,124,112,.10)}
+    .ic365-focus-card strong{display:block;margin-bottom:6px;font-size:13px;font-weight:900;color:#117c70;text-transform:uppercase;letter-spacing:.05em}
+    .ic365-focus-card p{margin:0;color:#334155;line-height:1.5;font-size:13px}
+    @media (max-width:1100px){.ic365-operational-overview,.ic365-continuity-grid{grid-template-columns:1fr 1fr}}
+    @media (max-width:760px){.ic365-operational-overview,.ic365-continuity-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body data-skip-global-nav="true" data-indicare-os-runtime="true" data-os-shell="sharepoint">
@@ -52,7 +70,6 @@
           <button type="button" class="ic365-nav-item" data-view="child-life"><span>Young Person</span></button>
           <button type="button" class="ic365-nav-item" data-view="child-journey"><span>Journey</span></button>
           <button type="button" class="ic365-nav-item" data-view="child-timeline"><span>Timeline</span></button>
-
           <div class="ic365-nav-divider"></div>
           <div class="ic365-nav-section-title">Recording</div>
           <button type="button" class="ic365-nav-item" data-shell="daily-recording"><span>Daily Recording</span></button>
@@ -61,7 +78,6 @@
           <button type="button" class="ic365-nav-item" data-shell="health"><span>Health & Medication</span></button>
           <button type="button" class="ic365-nav-item" data-shell="education"><span>Education</span></button>
           <button type="button" class="ic365-nav-item" data-shell="contact"><span>Family & Contact</span></button>
-
           <div class="ic365-nav-divider"></div>
           <div class="ic365-nav-section-title">Home system</div>
           <button type="button" class="ic365-nav-item" data-view="adult-profile"><span>Adults</span></button>
@@ -84,8 +100,35 @@
             <button type="button" class="ic365-button" data-os-documents>Documents</button>
           </div>
         </section>
+
+        <section class="ic365-operational-overview">
+          <article class="ic365-overview-card"><strong>24</strong><span>Live chronology items</span></article>
+          <article class="ic365-overview-card"><strong>5</strong><span>Reviews pending</span></article>
+          <article class="ic365-overview-card"><strong>3</strong><span>Safeguarding links</span></article>
+          <article class="ic365-overview-card"><strong>92%</strong><span>Chronology continuity</span></article>
+        </section>
+
         <section id="workspace-main" class="ic365-content-panel">
           <div class="ic365-empty-state">Choose a home and young person to open the workspace.</div>
+        </section>
+
+        <section class="ic365-continuity-grid">
+          <article class="ic365-continuity-panel">
+            <h3>Shift continuity</h3>
+            <div class="ic365-continuity-list">
+              <div class="ic365-continuity-item"><strong>Morning emotional presentation</strong><span>Staff recorded increased dysregulation after education transport discussion. Continue reassurance and low arousal approach.</span></div>
+              <div class="ic365-continuity-item"><strong>Direct work follow-up</strong><span>Young person requested follow-up key work regarding family contact boundaries and future planning.</span></div>
+              <div class="ic365-continuity-item"><strong>Medication observation</strong><span>Continue monitoring sleep presentation overnight and update chronology before handover.</span></div>
+            </div>
+          </article>
+          <article class="ic365-continuity-panel">
+            <h3>Operational focus</h3>
+            <div class="ic365-focus-stack">
+              <div class="ic365-focus-card"><strong>Safeguarding</strong><p>Review linked chronology entries and confirm manager sign-off before end of shift.</p></div>
+              <div class="ic365-focus-card"><strong>Education</strong><p>Attendance follow-up required with school after reduced engagement this morning.</p></div>
+              <div class="ic365-focus-card"><strong>Inspection readiness</strong><p>Two documents awaiting chronology linkage and evidence review completion.</p></div>
+            </div>
+          </article>
         </section>
       </main>
 
