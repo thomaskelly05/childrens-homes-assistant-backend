@@ -1,5 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import {
+  addProfessionalAction,
+  buildProfessionalContext,
+  loadActions,
+  memorySummary,
+  rememberProfessionalMoment,
+  toggleAction,
+  deleteAction,
+} from './indicareAiRuntime.js';
 import './styles.css';
 
 const API_BASE = (import.meta.env.VITE_INDICARE_API_BASE || '').replace(/\/$/, '');
@@ -8,7 +17,7 @@ const experiences = {
   assistant: {
     label: 'Assistant',
     model: 'ChatGPT',
-    subtitle: 'Professional residential childcare support',
+    subtitle: 'Professional support for adults in children’s homes',
     prompt: 'Ask, reflect, draft and think clearly.',
     intro: 'A calm conversational workspace for staff, managers, responsible individuals and providers.',
     starters: [
@@ -21,15 +30,15 @@ const experiences = {
   connect: {
     label: 'Connect',
     model: 'Teams',
-    subtitle: 'AI-native collaboration for children’s homes',
-    prompt: 'Coordinate the home with AI in the room.',
-    intro: 'Channels, handovers, meetings, debriefs and actions with live AI summaries.'
+    subtitle: 'Adult collaboration, meetings and follow-up support',
+    prompt: 'Coordinate adults with AI in the room.',
+    intro: 'Meeting notes, professional communication, debriefs, shared preparation and action clarity.'
   },
   notes: {
     label: 'I-Notes',
     model: 'Beam',
-    subtitle: 'Voice-first notes and professional transformation',
-    prompt: 'Talk naturally. Let AI structure the record.',
+    subtitle: 'Voice-first adult reflection and note transformation',
+    prompt: 'Talk naturally. Let AI structure your thoughts.',
     intro: 'Capture speech, reflection and messy notes, then turn them into professional summaries, actions and preparation.'
   },
   docs: {
@@ -59,12 +68,13 @@ function apiPath(path) {
 }
 
 async function streamReply({ mode, message, history, onToken }) {
+  const professionalContext = buildProfessionalContext(mode);
   const response = await fetch(apiPath('/indicare-ai/stream'), {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      message,
+      message: `${message}\n\nINDICARE.AI PROFESSIONAL CONTEXT:\n${JSON.stringify(professionalContext)}`,
       experience: mode,
       history: history.slice(-12),
       response_mode: mode === 'intelligence' ? 'deep' : 'balanced',
@@ -108,10 +118,13 @@ function App() {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [voiceState, setVoiceState] = useState('idle');
+  const [actions, setActions] = useState(() => loadActions());
   const recognitionRef = useRef(null);
 
   const current = experiences[mode];
   const scopedMessages = useMemo(() => messages.filter((m) => m.mode === mode), [messages, mode]);
+  const memory = useMemo(() => memorySummary(mode), [mode, messages, actions]);
+  const openActions = useMemo(() => actions.filter((action) => action.experience === mode && action.status !== 'done').slice(0, 6), [actions, mode]);
 
   useEffect(() => {
     localStorage.setItem('indicare.ai.messages', JSON.stringify(messages.slice(-200)));
@@ -123,6 +136,8 @@ function App() {
 
     setDraft('');
     setBusy(true);
+
+    rememberProfessionalMoment({ experience: mode, type: mode === 'intelligence' ? 'reflection' : 'conversation', text: clean });
 
     const userMessage = { role: 'user', content: clean, mode };
     const assistantMessage = { role: 'assistant', content: '', mode };
@@ -140,6 +155,7 @@ function App() {
           setMessages([...nextMessages]);
         }
       });
+      rememberProfessionalMoment({ experience: mode, type: 'conversation', text: assistantMessage.content, meta: { role: 'assistant' } });
     } catch (error) {
       assistantMessage.content = `I could not connect to IndiCare.ai. ${error.message}`;
       setMessages([...nextMessages]);
@@ -150,6 +166,22 @@ function App() {
 
   function newThread() {
     setMessages(messages.filter((m) => m.mode !== mode));
+  }
+
+  function addActionFromDraft() {
+    const clean = String(draft || '').trim();
+    if (!clean) return;
+    addProfessionalAction({ title: clean, experience: mode, source: current.label });
+    setActions(loadActions());
+    setDraft('');
+  }
+
+  function markAction(actionId) {
+    setActions(toggleAction(actionId));
+  }
+
+  function removeAction(actionId) {
+    setActions(deleteAction(actionId));
   }
 
   function toggleVoice() {
@@ -210,7 +242,7 @@ function App() {
 
         <div className="context-card">
           <strong>Standalone AI environment</strong>
-          <span>IndiCare.ai is completely separate from the IndiCare OS assistant and focuses on adult professional support.</span>
+          <span>Adult professional support only. OS child-record intelligence stays separate.</span>
         </div>
       </aside>
 
@@ -222,9 +254,9 @@ function App() {
             <span>{current.subtitle}</span>
           </div>
           <div className="top-actions">
-            <button>Memory</button>
-            <button>Voice</button>
-            <button>Workspace</button>
+            <button>{memory.conversations + memory.reflections} memories</button>
+            <button>{openActions.length} actions</button>
+            <button>{voiceState === 'listening' ? 'Voice live' : 'Voice ready'}</button>
           </div>
         </header>
 
@@ -258,6 +290,24 @@ function App() {
           </div>
         </section>
 
+        <aside className="professional-panel">
+          <h2>Professional context</h2>
+          <p>This is IndiCare.ai memory for adult support, not OS record intelligence.</p>
+          <div className="mini-stats">
+            <span>{memory.conversations} conversations</span>
+            <span>{memory.reflections} reflections</span>
+            <span>{memory.notes} notes</span>
+          </div>
+          <h3>Open actions</h3>
+          {openActions.length ? openActions.map((action) => (
+            <div className="action-item" key={action.id}>
+              <button onClick={() => markAction(action.id)}>○</button>
+              <span>{action.title}</span>
+              <button onClick={() => removeAction(action.id)}>×</button>
+            </div>
+          )) : <p className="muted-copy">No open actions for this experience.</p>}
+        </aside>
+
         <div className="composer-wrap">
           <div className="composer">
             <textarea
@@ -273,10 +323,10 @@ function App() {
             />
 
             <div className="composer-row">
-              <button onClick={toggleVoice}>
-                {voiceState === 'listening' ? 'Listening…' : 'Voice'}
-              </button>
-
+              <div className="composer-tools">
+                <button onClick={toggleVoice}>{voiceState === 'listening' ? 'Listening…' : 'Voice'}</button>
+                <button onClick={addActionFromDraft}>Save as action</button>
+              </div>
               <button className="send" onClick={() => send()}>↑</button>
             </div>
           </div>
