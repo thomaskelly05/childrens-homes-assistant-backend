@@ -1,4 +1,5 @@
 import os
+import time
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
@@ -72,12 +73,7 @@ def ai_suite_asset_names() -> set[str]:
 
 
 def ai_suite_asset_version() -> str:
-    newest = 0
-    for asset_name in ai_suite_asset_names():
-        path = os.path.join(AI_SUITE_DIR, asset_name)
-        if os.path.exists(path):
-            newest = max(newest, int(os.path.getmtime(path)))
-    return str(newest or 1)
+    return str(int(time.time()))
 
 
 def inject_ai_suite_runtime(html: str, request: Request | None = None) -> str:
@@ -85,6 +81,9 @@ def inject_ai_suite_runtime(html: str, request: Request | None = None) -> str:
     root = _root_path(request)
     css_href = f"{root}/ai-suite/indicare-ai-suite-unified.css?v={version}"
     js_src = f"{root}/ai-suite/indicare-ai-suite-unified.js?v={version}"
+
+    html = html.replace("indicare-ai-suite-unified.css", f"indicare-ai-suite-unified.css?v={version}")
+    html = html.replace("indicare-ai-suite-unified.js", f"indicare-ai-suite-unified.js?v={version}")
 
     if css_href not in html:
         html = html.replace("</head>", f'<link rel="stylesheet" href="{css_href}">\n</head>')
@@ -153,5 +152,6 @@ def register_frontend_routes(app: FastAPI) -> None:
             "default_route": "/login",
             "login_route": True,
             "os_command_route": True,
+            "assistant_assets_forced_fresh": True,
             "ai_suite_assets": sorted(list(ai_suite_asset_names())),
         }
