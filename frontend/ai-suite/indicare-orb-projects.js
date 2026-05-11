@@ -98,6 +98,7 @@
     addOrb();
     loadRuntime('orb-ai', '/frontend/ai-suite/indicare-orb-ai.js');
     loadRuntime('connect-runtime', '/frontend/ai-suite/indicare-connect-runtime.js');
+    loadRuntime('docs-notes-runtime', '/frontend/ai-suite/indicare-docs-notes-runtime.js');
     window.IndiCareRecoveryUI = { state, renderProjects };
   }
 
