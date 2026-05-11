@@ -55,6 +55,10 @@ def register_frontend_routes(app: FastAPI) -> None:
     async def indicare_ai_pro_css():
         return _ai_asset("assistant-pro.css", "text/css")
 
+    @app.get("/indicare-ai/assistant-polish.css")
+    async def indicare_ai_polish_css():
+        return _ai_asset("assistant-polish.css", "text/css")
+
     @app.get("/indicare-ai/assistant-bridge.js")
     async def indicare_ai_bridge():
         return _ai_asset("assistant-bridge.js", "application/javascript")
@@ -85,16 +89,4 @@ def register_frontend_routes(app: FastAPI) -> None:
 
     @app.get("/health/frontend")
     async def frontend_health():
-        return {
-            "ok": True,
-            "frontend": True,
-            "assistant_runtime": "indicare-ai",
-            "assistant_assets": "isolated",
-            "assistant_bridge": True,
-            "assistant_streaming": True,
-            "assistant_voice": True,
-            "assistant_pro_design": True,
-            "login_route": True,
-            "assistant_route": True,
-            "os_command_route": True,
-        }
+        return {"ok": True, "frontend": True, "assistant_runtime": "indicare-ai", "assistant_assets": "isolated", "assistant_bridge": True, "assistant_streaming": True, "assistant_voice": True, "assistant_pro_design": True, "assistant_polish": True, "login_route": True, "assistant_route": True, "os_command_route": True}
