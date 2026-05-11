@@ -109,7 +109,7 @@ def _load_html(filename: str) -> str:
 def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     async def root_redirect():
-        return RedirectResponse(url="/assistant")
+        return RedirectResponse(url="/login")
 
     @app.get("/assistant")
     @app.get("/assistant.html")
@@ -137,7 +137,7 @@ def register_frontend_routes(app: FastAPI) -> None:
         return {
             "ok": True,
             "frontend": True,
-            "default_route": "/assistant",
+            "default_route": "/login",
             "indicare_ai_app": "disabled_redirects_to_assistant",
             "ai_suite_assets": sorted(list(ai_suite_asset_names())),
         }
