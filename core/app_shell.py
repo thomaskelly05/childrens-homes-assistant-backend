@@ -33,6 +33,7 @@ OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/os-safe-operational-links.js"></script>',
     '<script src="/js/os-operational-intelligence-reconnect.js"></script>',
     '<script src="/js/os-safe-contextual-navigation.js"></script>',
+    '<script src="/js/os-final-reconnect-polish.js"></script>',
 ]
 
 # Experimental or shell-mutating systems remain optional.
