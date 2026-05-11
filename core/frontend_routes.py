@@ -7,7 +7,6 @@ from core.app_shell import inject_app_shell
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-INDICARE_AI_DIR = os.path.join(BASE_DIR, "indicare-ai")
 ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 COMPONENTS_DIR = os.path.join(FRONTEND_DIR, "components")
 CSS_DIR = os.path.join(FRONTEND_DIR, "css")
@@ -107,18 +106,10 @@ def _load_html(filename: str) -> str:
         return handle.read()
 
 
-def _load_indicare_ai_index() -> str:
-    path = os.path.join(INDICARE_AI_DIR, "index.html")
-    if not os.path.exists(path):
-        return "<html><body><h1>IndiCare.ai app missing</h1></body></html>"
-    with open(path, "r", encoding="utf-8") as handle:
-        return handle.read()
-
-
 def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     async def root_redirect():
-        return RedirectResponse(url="/indicare-ai-app")
+        return RedirectResponse(url="/assistant")
 
     @app.get("/assistant")
     @app.get("/assistant.html")
@@ -131,8 +122,8 @@ def register_frontend_routes(app: FastAPI) -> None:
 
     @app.get("/indicare-ai-app")
     @app.get("/indicare-ai-app/")
-    async def indicare_ai_surface():
-        return HTMLResponse(_load_indicare_ai_index())
+    async def indicare_ai_surface_disabled():
+        return RedirectResponse(url="/assistant", status_code=302)
 
     @app.get("/academy")
     async def academy_index():
@@ -146,8 +137,7 @@ def register_frontend_routes(app: FastAPI) -> None:
         return {
             "ok": True,
             "frontend": True,
-            "flagship": "indicare_ai",
-            "default_route": "/indicare-ai-app",
+            "default_route": "/assistant",
+            "indicare_ai_app": "disabled_redirects_to_assistant",
             "ai_suite_assets": sorted(list(ai_suite_asset_names())),
-            "indicare_ai_app": os.path.exists(os.path.join(INDICARE_AI_DIR, "index.html")),
         }
