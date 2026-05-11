@@ -13,7 +13,8 @@ APP_SHELL_SCRIPTS = [
 ]
 
 # The OS command runtime is its own full-screen application shell.
-# Only safe operational layers should be auto-injected.
+# Keep this boot list deliberately small and stable. The AI Suite is loaded by
+# its own frontend/ai-suite runtime and must not be mixed into the OS shell.
 OS_COMMAND_CORE_SCRIPTS = [
     '<script src="/js/api.js"></script>',
     '<script src="/js/auth.js"></script>',
@@ -21,25 +22,29 @@ OS_COMMAND_CORE_SCRIPTS = [
     '<script src="/js/core/route-guard.js"></script>',
 ]
 
+# Safe OS runtime only. These are the baseline scripts required to boot the OS
+# command centre without white-screening the workspace.
 OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safe.js"></script>',
     '<script src="/js/indicare-runtime-safety.js"></script>',
     '<script>window.IndiCareSafe?.run("OS boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;});</script>',
+    '<script src="/js/os-floating-assistant.js"></script>',
+    '<script src="/js/os-safe-operational-links.js"></script>',
+]
+
+# Optional OS enhancements. Keep these out of the default boot path so one
+# broken enhancement cannot take down the OS. Enable after shell verification or
+# by moving individual proven-safe scripts into OS_COMMAND_RUNTIME_SCRIPTS.
+OS_COMMAND_OPTIONAL_ENHANCEMENTS = [
     '<script src="/js/indicare-operational-intelligence.js"></script>',
     '<script src="/js/indicare-intelligence-migration-bridge.js"></script>',
-    '<script src="/js/os-floating-assistant.js"></script>',
     '<script src="/js/os-therapeutic-record-creator.js"></script>',
     '<script src="/js/os-child-workspace-tabs.js"></script>',
     '<script src="/js/chronology-visual-timeline.js"></script>',
     '<script src="/js/os-command-ui-bridge.js"></script>',
-    '<script src="/js/os-safe-operational-links.js"></script>',
     '<script src="/js/os-operational-intelligence-reconnect.js"></script>',
     '<script src="/js/os-safe-contextual-navigation.js"></script>',
     '<script src="/js/os-final-reconnect-polish.js"></script>',
-]
-
-# Experimental or shell-mutating systems remain optional.
-OS_COMMAND_OPTIONAL_ENHANCEMENTS = [
     '<script src="/js/document-intelligence-upload.js"></script>',
     '<script src="/js/reg44-report-reader-workspace.js"></script>',
     '<script src="/js/indicare-connected-care-experience.js"></script>',
