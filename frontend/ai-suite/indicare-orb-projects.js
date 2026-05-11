@@ -101,6 +101,7 @@
     loadRuntime('docs-notes-runtime', '/frontend/ai-suite/indicare-docs-notes-runtime.js');
     loadRuntime('intelligence-runtime', '/frontend/ai-suite/indicare-intelligence-runtime.js');
     loadRuntime('conversations-runtime', '/frontend/ai-suite/indicare-conversations-runtime.js');
+    loadRuntime('memory-runtime', '/frontend/ai-suite/indicare-memory-runtime.js');
     window.IndiCareRecoveryUI = { state, renderProjects };
   }
 
