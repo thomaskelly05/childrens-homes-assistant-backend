@@ -43,6 +43,20 @@ def register_frontend_routes(app: FastAPI) -> None:
     async def assistant_surface():
         return HTMLResponse(_load_html(INDICARE_AI_DIR, "assistant.html"))
 
+    @app.get("/indicare-ai/assistant.css")
+    async def indicare_ai_css():
+        return FileResponse(
+            os.path.join(INDICARE_AI_DIR, "assistant.css"),
+            media_type="text/css",
+        )
+
+    @app.get("/indicare-ai/assistant-runtime.js")
+    async def indicare_ai_runtime():
+        return FileResponse(
+            os.path.join(INDICARE_AI_DIR, "assistant-runtime.js"),
+            media_type="application/javascript",
+        )
+
     @app.get("/young-people-shell")
     @app.get("/young-people-shell.html")
     async def legacy_young_people_shell_redirect():
@@ -61,6 +75,7 @@ def register_frontend_routes(app: FastAPI) -> None:
             "ok": True,
             "frontend": True,
             "assistant_runtime": "indicare-ai",
+            "assistant_assets": "isolated",
             "login_route": True,
             "assistant_route": True,
             "os_command_route": True,
