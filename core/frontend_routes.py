@@ -133,11 +133,6 @@ def register_frontend_routes(app: FastAPI) -> None:
         html = inject_ai_suite_runtime(html, request)
         return HTMLResponse(html)
 
-    @app.get("/indicare-ai-app")
-    @app.get("/indicare-ai-app/")
-    async def indicare_ai_surface_disabled():
-        return RedirectResponse(url="/login", status_code=302)
-
     @app.get("/young-people-shell")
     @app.get("/young-people-shell.html")
     async def legacy_young_people_shell_redirect():
@@ -158,7 +153,5 @@ def register_frontend_routes(app: FastAPI) -> None:
             "default_route": "/login",
             "login_route": True,
             "os_command_route": True,
-            "indicare_ai_app": "disabled_redirects_to_login",
-            "legacy_young_people_shell": "redirects_to_assistant",
             "ai_suite_assets": sorted(list(ai_suite_asset_names())),
         }
