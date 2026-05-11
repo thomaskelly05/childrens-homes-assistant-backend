@@ -10,6 +10,7 @@
   };
 
   const assetPaths = (file) => [`/ai-suite/${file}`, `/frontend/ai-suite/${file}`];
+  const runtimeRegistry = window.__indicareAiSuiteRuntimes || (window.__indicareAiSuiteRuntimes = new Map());
 
   function save() {
     localStorage.setItem('ic_orb_mode', state.mode);
@@ -68,7 +69,7 @@
     const panel = document.createElement('div');
     panel.id = 'indicareOrbPanel';
     panel.className = 'ic-orb-panel';
-    panel.innerHTML = '<h3>IndiCare Conversation AI</h3><p style="color:#64748b">Press the orb to use IndiCare in Everyday or Specialist mode.</p><div class="ic-mode"><button data-ic-mode="everyday">Everyday</button><button data-ic-mode="specialist">Specialist</button></div><button id="icListen" class="pill">Start listening</button> <button id="icStop" class="pill">Stop</button> <button id="icAsk" class="pill">Ask with current message</button><div id="icOrbOutput" class="ic-output"></div>';
+    panel.innerHTML = '<h3>IndiCare Conversation AI</h3><p class="ic-panel-copy">Press the orb to use IndiCare in Everyday or Specialist mode.</p><div class="ic-mode"><button data-ic-mode="everyday">Everyday</button><button data-ic-mode="specialist">Specialist</button></div><button id="icListen" class="pill">Start listening</button> <button id="icStop" class="pill">Stop</button> <button id="icAsk" class="pill">Ask with current message</button><div id="icOrbOutput" class="ic-output"></div>';
     document.body.appendChild(panel);
     const orb = document.createElement('button');
     orb.id = 'indicareOrb';
@@ -91,14 +92,27 @@
   }
 
   function loadRuntime(name, file) {
-    if (document.querySelector(`script[data-runtime="${name}"]`)) return;
+    if (runtimeRegistry.get(name) === 'loaded' || document.querySelector(`script[data-runtime="${name}"]`)) return;
     const paths = assetPaths(file);
     const script = document.createElement('script');
+    let pathIndex = 0;
     script.defer = true;
     script.dataset.runtime = name;
-    script.src = paths[0];
+    script.src = paths[pathIndex];
+    runtimeRegistry.set(name, 'loading');
+    script.onload = () => {
+      runtimeRegistry.set(name, 'loaded');
+      window.dispatchEvent(new CustomEvent('indicare:runtime-loaded', { detail: { name, file } }));
+    };
     script.onerror = () => {
-      if (script.src.endsWith(paths[0])) script.src = paths[1];
+      pathIndex += 1;
+      if (paths[pathIndex]) {
+        script.src = paths[pathIndex];
+        return;
+      }
+      runtimeRegistry.set(name, 'failed');
+      console.warn(`[IndiCare AI Suite] Runtime failed to load: ${name} (${file})`);
+      window.dispatchEvent(new CustomEvent('indicare:runtime-failed', { detail: { name, file } }));
     };
     document.body.appendChild(script);
   }
