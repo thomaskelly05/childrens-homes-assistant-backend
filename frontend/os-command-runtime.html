@@ -6,6 +6,25 @@
   <title>IndiCare OS | Children’s Home Operating System</title>
   <meta name="description" content="A modern children’s home operating system for recording, reporting, oversight and inspection readiness." />
   <link rel="stylesheet" href="/css/indicare-app-shell.css" />
+  <style>
+    :root {
+      --ic-os-bg:#f4f6fb;--ic-os-card:rgba(255,255,255,.88);--ic-os-line:rgba(15,23,42,.08);--ic-os-text:#111827;--ic-os-muted:#64748b;--ic-os-blue:#2563eb;--ic-os-purple:#7c3aed;
+    }
+    body[data-os-shell="sharepoint"]{background:radial-gradient(circle at 18% 8%,rgba(37,99,235,.10),transparent 26%),radial-gradient(circle at 86% 2%,rgba(124,58,237,.10),transparent 28%),var(--ic-os-bg)}
+    .ic365-topbar{height:56px;background:rgba(15,23,42,.92)!important;backdrop-filter:blur(18px)}
+    .ic365-appmark{border-radius:12px!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important}
+    .ic365-leftnav,.ic365-rightpanel{background:rgba(255,255,255,.78)!important;backdrop-filter:blur(18px)}
+    .ic365-page-header,.panel,.record-card,.ic365-side-card,.metric-card{border-radius:16px!important;background:var(--ic-os-card)!important;border:1px solid var(--ic-os-line)!important;box-shadow:0 10px 28px rgba(15,23,42,.06)!important}
+    .ic365-nav-item,#workspace-nav [data-view],#workspace-nav [data-shell]{min-height:38px!important;border-radius:10px!important}
+    .ic365-nav-item.active,#workspace-nav [data-view].active,#workspace-nav [data-shell].active{background:linear-gradient(90deg,rgba(37,99,235,.14),rgba(255,255,255,.7))!important;color:#1d4ed8!important}
+    .ic365-workspace-tabs button{border-radius:10px 10px 0 0!important}
+    .ic365-record-card{border-radius:14px!important;background:rgba(255,255,255,.94)!important}
+    .ic365-record-feed:not(.compact)::before{background:linear-gradient(180deg,rgba(37,99,235,.28),rgba(124,58,237,.18),rgba(37,99,235,.05))!important}
+    .ic365-record-feed:not(.compact) .ic365-record-card::before{width:11px!important;height:11px!important;background:#2563eb!important;box-shadow:0 0 0 4px #fff,0 0 0 6px rgba(37,99,235,.13)!important}
+    .ic365-button.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;border-color:#1d4ed8!important}
+    .ic365-shift-ribbon article{position:relative;overflow:hidden}
+    .ic365-shift-ribbon article::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:linear-gradient(90deg,#2563eb,#7c3aed)}
+  </style>
 </head>
 <body data-skip-global-nav="true" data-indicare-os-runtime="true" data-os-shell="sharepoint">
   <div class="ic365-shell" aria-label="IndiCare OS">
@@ -104,34 +123,5 @@
   <script src="/js/indicare-runtime-safe.js"></script>
   <script src="/js/os-operating-system-resilience.js"></script>
   <script src="/js/os-existing-journey-runtime-bridge.js"></script>
-  <script type="module" src="/js/indicare-workspace/today-for-child.js"></script>
-  <script type="module" src="/js/indicare-workspace/child-understanding-hub.js"></script>
-  <script src="/js/indicare-workspace/child-life-model.js"></script>
-  <script src="/js/indicare-workspace/child-life-ecosystem.js"></script>
-  <script type="module" src="/js/indicare-workspace/child-journey-experience.js"></script>
-  <script src="/js/indicare-workspace/child-timeline.js"></script>
-  <script src="/js/indicare-workspace/adult-journey-profile.js"></script>
-  <script src="/js/indicare-workspace/home-journey-profile.js"></script>
-  <script src="/js/indicare-workspace/standards-ofsted-readiness.js"></script>
-  <script type="module" src="/js/indicare-workspace/manager-oversight.js"></script>
-  <script src="/js/document-intelligence-upload.js"></script>
-  <script src="/js/reg44-report-reader-workspace.js"></script>
-  <script src="/js/chronology-visual-timeline.js"></script>
-  <script src="/js/oversight-intelligence-dashboard.js"></script>
-  <script>
-    document.addEventListener('click', (event) => {
-      const reset = event.target.closest('[data-os-reset-context]');
-      if (reset) window.IndiCareOSContextGate?.clearContext?.();
-      const record = event.target.closest('[data-os-record]');
-      if (record) window.openWorkspaceForm?.('daily', record.dataset.osRecord || 'daily_record');
-      const docs = event.target.closest('[data-os-documents]');
-      if (docs) window.IndiCareDocumentIntelligence?.mount?.();
-    });
-    document.addEventListener('indicare:os-context-ready', (event) => {
-      const context = event.detail || window.IndiCareOSContext || {};
-      document.querySelectorAll('[data-os-context-home],[data-os-side-home]').forEach((node) => node.textContent = context.homeName || `Home ${context.homeId || ''}` || 'Selected home');
-      document.querySelectorAll('[data-os-context-child],[data-os-side-child]').forEach((node) => node.textContent = context.childName || `Young person ${context.childId || ''}` || 'Selected young person');
-    });
-  </script>
 </body>
 </html>
