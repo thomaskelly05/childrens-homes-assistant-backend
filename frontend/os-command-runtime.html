@@ -1,167 +1,62 @@
 <!doctype html>
 <html lang="en-GB">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IndiCare OS | Children’s Home Operating System</title>
-  <meta name="description" content="A modern children’s home operating system for recording, reporting, oversight and inspection readiness." />
-  <link rel="stylesheet" href="/css/indicare-app-shell.css" />
-  <link rel="stylesheet" href="/css/indicare-os-modern.css" />
-  <style>
-    :root {
-      --ic-os-bg:#f4f6fb;--ic-os-card:rgba(255,255,255,.88);--ic-os-line:rgba(15,23,42,.08);--ic-os-text:#111827;--ic-os-muted:#64748b;--ic-os-blue:#2563eb;--ic-os-purple:#7c3aed;
-    }
-    body[data-os-shell="sharepoint"]{background:radial-gradient(circle at 18% 8%,rgba(37,99,235,.10),transparent 26%),radial-gradient(circle at 86% 2%,rgba(124,58,237,.10),transparent 28%),var(--ic-os-bg)}
-    .ic365-topbar{height:56px;background:rgba(15,23,42,.92)!important;backdrop-filter:blur(18px)}
-    .ic365-appmark{border-radius:12px!important;background:linear-gradient(135deg,#2563eb,#7c3aed)!important}
-    .ic365-leftnav,.ic365-rightpanel{background:rgba(255,255,255,.78)!important;backdrop-filter:blur(18px)}
-    .ic365-page-header,.panel,.record-card,.ic365-side-card,.metric-card{border-radius:16px!important;background:var(--ic-os-card)!important;border:1px solid var(--ic-os-line)!important;box-shadow:0 10px 28px rgba(15,23,42,.06)!important}
-    .ic365-nav-item,#workspace-nav [data-view],#workspace-nav [data-shell]{min-height:38px!important;border-radius:10px!important}
-    .ic365-nav-item.active,#workspace-nav [data-view].active,#workspace-nav [data-shell].active{background:linear-gradient(90deg,rgba(37,99,235,.14),rgba(255,255,255,.7))!important;color:#1d4ed8!important}
-    .ic365-workspace-tabs button{border-radius:10px 10px 0 0!important}
-    .ic365-record-card{border-radius:14px!important;background:rgba(255,255,255,.94)!important}
-    .ic365-record-feed:not(.compact)::before{background:linear-gradient(180deg,rgba(37,99,235,.28),rgba(124,58,237,.18),rgba(37,99,235,.05))!important}
-    .ic365-record-feed:not(.compact) .ic365-record-card::before{width:11px!important;height:11px!important;background:#2563eb!important;box-shadow:0 0 0 4px #fff,0 0 0 6px rgba(37,99,235,.13)!important}
-    .ic365-button.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;border-color:#1d4ed8!important}
-    .ic365-shift-ribbon article{position:relative;overflow:hidden}
-    .ic365-shift-ribbon article::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:linear-gradient(90deg,#2563eb,#7c3aed)}
-    .ic365-operational-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
-    .ic365-overview-card{position:relative;overflow:hidden;padding:16px;border-radius:18px;border:1px solid rgba(15,23,42,.08);background:rgba(255,255,255,.92);box-shadow:0 12px 30px rgba(15,23,42,.06)}
-    .ic365-overview-card::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,#117c70,#19a493,#2563eb)}
-    .ic365-overview-card strong{display:block;font-size:28px;line-height:1;font-weight:900;color:#10201f;margin-bottom:6px}
-    .ic365-overview-card span{display:block;color:#62736f;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
-    .ic365-continuity-grid{display:grid;grid-template-columns:1.4fr .8fr;gap:16px;margin-top:16px}
-    .ic365-continuity-panel{border-radius:22px;border:1px solid rgba(15,23,42,.08);background:rgba(255,255,255,.92);box-shadow:0 12px 30px rgba(15,23,42,.06);padding:18px}
-    .ic365-continuity-panel h3{margin:0 0 12px;font-size:16px;font-weight:900;color:#10201f}
-    .ic365-continuity-list,.ic365-focus-stack{display:grid;gap:12px}
-    .ic365-continuity-item{padding:12px 14px;border-radius:16px;background:#f8fafc;border:1px solid rgba(15,23,42,.06)}
-    .ic365-continuity-item strong{display:block;margin-bottom:4px;font-size:13px;color:#10201f}
-    .ic365-continuity-item span{display:block;color:#62736f;font-size:12px;line-height:1.45}
-    .ic365-focus-card{border-radius:18px;padding:16px;background:linear-gradient(135deg,rgba(17,124,112,.08),rgba(25,164,147,.06));border:1px solid rgba(17,124,112,.10)}
-    .ic365-focus-card strong{display:block;margin-bottom:6px;font-size:13px;font-weight:900;color:#117c70;text-transform:uppercase;letter-spacing:.05em}
-    .ic365-focus-card p{margin:0;color:#334155;line-height:1.5;font-size:13px}
-    @media (max-width:1100px){.ic365-operational-overview,.ic365-continuity-grid{grid-template-columns:1fr 1fr}}
-    @media (max-width:760px){.ic365-operational-overview,.ic365-continuity-grid{grid-template-columns:1fr}}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IndiCare OS | Children’s Home Operating System</title>
+<link rel="stylesheet" href="/css/indicare-app-shell.css" />
+<link rel="stylesheet" href="/css/indicare-os-modern.css" />
 </head>
 <body data-skip-global-nav="true" data-indicare-os-runtime="true" data-os-shell="sharepoint">
-  <div class="ic365-shell" aria-label="IndiCare OS">
-    <header class="ic365-topbar">
-      <div class="ic365-appmark" aria-hidden="true">IC</div>
-      <div class="ic365-title-block">
-        <strong>IndiCare OS</strong>
-        <span>Children’s home workspace</span>
-      </div>
-      <div class="ic365-context-strip" aria-label="Current context">
-        <span data-os-context-home>Choose home</span>
-        <span class="ic365-context-divider">/</span>
-        <span data-os-context-child>Choose young person</span>
-      </div>
-      <div class="ic365-top-actions">
-        <button type="button" class="ic365-button subtle" data-os-reset-context>Change context</button>
-      </div>
-    </header>
-
-    <div class="ic365-body">
-      <aside class="ic365-leftnav" aria-label="Primary navigation">
-        <div class="ic365-nav-section-title">Core journey</div>
-        <nav id="workspace-nav">
-          <button type="button" class="ic365-nav-item active" data-view="today-child"><span>Today</span></button>
-          <button type="button" class="ic365-nav-item" data-view="child-life"><span>Young Person</span></button>
-          <button type="button" class="ic365-nav-item" data-view="child-journey"><span>Journey</span></button>
-          <button type="button" class="ic365-nav-item" data-view="child-timeline"><span>Timeline</span></button>
-          <div class="ic365-nav-divider"></div>
-          <div class="ic365-nav-section-title">Recording</div>
-          <button type="button" class="ic365-nav-item" data-shell="daily-recording"><span>Daily Recording</span></button>
-          <button type="button" class="ic365-nav-item" data-shell="direct-work"><span>Direct Work</span></button>
-          <button type="button" class="ic365-nav-item" data-shell="incidents"><span>Incidents & Safeguarding</span></button>
-          <button type="button" class="ic365-nav-item" data-shell="health"><span>Health & Medication</span></button>
-          <button type="button" class="ic365-nav-item" data-shell="education"><span>Education</span></button>
-          <button type="button" class="ic365-nav-item" data-shell="contact"><span>Family & Contact</span></button>
-          <div class="ic365-nav-divider"></div>
-          <div class="ic365-nav-section-title">Home system</div>
-          <button type="button" class="ic365-nav-item" data-view="adult-profile"><span>Adults</span></button>
-          <button type="button" class="ic365-nav-item" data-view="home-profile"><span>Home</span></button>
-          <button type="button" class="ic365-nav-item" data-shell="documents"><span>Documents</span></button>
-          <button type="button" class="ic365-nav-item" data-view="standards-ofsted"><span>Standards & Ofsted</span></button>
-          <button type="button" class="ic365-nav-item" data-view="review"><span>Oversight</span></button>
-        </nav>
-      </aside>
-
-      <main class="ic365-main" id="indicare-existing-journey-runtime" aria-label="Workspace content">
-        <section class="ic365-page-header">
-          <div>
-            <p class="ic365-kicker">Children’s home OS</p>
-            <h1 id="view-title">Today</h1>
-            <p id="view-subtitle">Daily recording, journey context, documents, adults, home and oversight in one structured workspace.</p>
-          </div>
-          <div class="ic365-header-actions">
-            <button type="button" class="ic365-button primary" data-os-record>New record</button>
-            <button type="button" class="ic365-button" data-os-documents>Documents</button>
-          </div>
-        </section>
-
-        <section class="ic365-operational-overview">
-          <article class="ic365-overview-card"><strong>0</strong><span>Live chronology items</span></article>
-          <article class="ic365-overview-card"><strong>0</strong><span>Reviews pending</span></article>
-          <article class="ic365-overview-card"><strong>0</strong><span>Safeguarding links</span></article>
-          <article class="ic365-overview-card"><strong>0%</strong><span>Chronology continuity</span></article>
-        </section>
-
-        <section id="workspace-main" class="ic365-content-panel">
-          <div class="ic365-empty-state">Choose a home and young person to open the workspace.</div>
-        </section>
-
-        <section class="ic365-continuity-grid">
-          <article class="ic365-continuity-panel">
-            <h3>Shift continuity</h3>
-            <div class="ic365-continuity-list">
-              <div class="ic365-continuity-item"><strong>Live continuity</strong><span>Records will appear here once the selected context has chronology activity.</span></div>
-            </div>
-          </article>
-          <article class="ic365-continuity-panel">
-            <h3>Operational focus</h3>
-            <div class="ic365-focus-stack">
-              <div class="ic365-focus-card"><strong>Operational focus</strong><p>No live risk, review or document focus has been returned for this context.</p></div>
-            </div>
-          </article>
-        </section>
-      </main>
-
-      <aside class="ic365-rightpanel" aria-label="Context panel">
-        <section class="ic365-side-card">
-          <h2>Current context</h2>
-          <dl class="ic365-context-list">
-            <div><dt>Home</dt><dd data-os-side-home>Not selected</dd></div>
-            <div><dt>Young person</dt><dd data-os-side-child>Not selected</dd></div>
-            <div><dt>Status</dt><dd>Active journey</dd></div>
-          </dl>
-        </section>
-        <section class="ic365-side-card">
-          <h2>Quick actions</h2>
-          <div class="ic365-action-list">
-            <button type="button" data-os-record="daily_record">Daily record</button>
-            <button type="button" data-os-record="direct_work">Direct work</button>
-            <button type="button" data-os-record="incident">Incident / safeguarding</button>
-            <button type="button" data-os-record="contact">Family contact</button>
-          </div>
-        </section>
-        <section class="ic365-side-card quiet">
-          <h2>Mounted shell areas</h2>
-          <p>Recording, direct work, safeguarding, health, education, contact, documents, adults, home, standards and oversight are now present in the shell before deeper wiring.</p>
-        </section>
-      </aside>
-    </div>
-  </div>
-
-  <script src="/js/api.js"></script>
-  <script src="/js/auth.js"></script>
-  <script src="/js/core/permissions.js"></script>
-  <script src="/js/core/route-guard.js"></script>
-  <script src="/js/indicare-workspace/context-store.js"></script>
-  <script src="/js/indicare-runtime-safe.js"></script>
-  <script src="/js/os-operating-system-resilience.js"></script>
-  <script src="/js/os-existing-journey-runtime-bridge.js"></script>
-  <script src="/js/os-operational-overview-sync.js"></script>
+<div class="ic365-shell" aria-label="IndiCare OS">
+<header class="ic365-topbar">
+<div class="ic365-appmark">IC</div>
+<div class="ic365-title-block"><strong>IndiCare OS</strong><span>Children’s home workspace</span></div>
+<div class="ic365-context-strip"><span data-os-context-home>Choose home</span><span class="ic365-context-divider">/</span><span data-os-context-child>Choose young person</span></div>
+<div class="ic365-top-actions"><button type="button" class="ic365-button subtle" data-os-reset-context>Change context</button></div>
+</header>
+<div class="ic365-body">
+<aside class="ic365-leftnav">
+<div class="ic365-nav-section-title">Core journey</div>
+<nav id="workspace-nav">
+<button type="button" class="ic365-nav-item active" data-view="today-child"><span>Today</span></button>
+<button type="button" class="ic365-nav-item" data-view="child-life"><span>Young Person</span></button>
+<button type="button" class="ic365-nav-item" data-view="child-journey"><span>Journey</span></button>
+<button type="button" class="ic365-nav-item" data-view="child-timeline"><span>Timeline</span></button>
+<div class="ic365-nav-divider"></div>
+<div class="ic365-nav-section-title">Recording</div>
+<button type="button" class="ic365-nav-item" data-shell="daily-recording"><span>Daily Recording</span></button>
+<button type="button" class="ic365-nav-item" data-shell="direct-work"><span>Direct Work</span></button>
+<button type="button" class="ic365-nav-item" data-shell="incidents"><span>Incidents & Safeguarding</span></button>
+<button type="button" class="ic365-nav-item" data-shell="health"><span>Health & Medication</span></button>
+<button type="button" class="ic365-nav-item" data-shell="education"><span>Education</span></button>
+<button type="button" class="ic365-nav-item" data-shell="contact"><span>Family & Contact</span></button>
+<div class="ic365-nav-divider"></div>
+<div class="ic365-nav-section-title">Home system</div>
+<button type="button" class="ic365-nav-item" data-view="adult-profile"><span>Adults</span></button>
+<button type="button" class="ic365-nav-item" data-view="home-profile"><span>Home</span></button>
+<button type="button" class="ic365-nav-item" data-shell="documents"><span>Documents</span></button>
+<button type="button" class="ic365-nav-item" data-view="standards-ofsted"><span>Standards & Ofsted</span></button>
+<button type="button" class="ic365-nav-item" data-view="review"><span>Oversight</span></button>
+</nav>
+</aside>
+<main class="ic365-main" id="indicare-existing-journey-runtime">
+<section class="ic365-page-header"><div><p class="ic365-kicker">Children’s home OS</p><h1 id="view-title">Today</h1><p id="view-subtitle">Daily recording, journey context, documents, adults, home and oversight in one structured workspace.</p></div></section>
+<section class="ic365-operational-overview"><article class="ic365-overview-card"><strong>0</strong><span>Live chronology items</span></article><article class="ic365-overview-card"><strong>0</strong><span>Reviews pending</span></article><article class="ic365-overview-card"><strong>0</strong><span>Safeguarding links</span></article><article class="ic365-overview-card"><strong>0%</strong><span>Chronology continuity</span></article></section>
+<section id="workspace-main" class="ic365-content-panel"><div class="ic365-empty-state">Choose a home and young person to open the workspace.</div></section>
+</main>
+<aside class="ic365-rightpanel"></aside>
+</div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/core/permissions.js"></script>
+<script src="/js/core/route-guard.js"></script>
+<script src="/js/indicare-workspace/context-store.js"></script>
+<script src="/js/indicare-runtime-safe.js"></script>
+<script src="/js/os-operating-system-resilience.js"></script>
+<script src="/js/os-existing-journey-runtime-bridge.js"></script>
+<script src="/js/os-operational-overview-sync.js"></script>
+<script src="/js/os-command-palette.js"></script>
 </body>
 </html>
