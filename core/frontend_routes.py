@@ -18,6 +18,8 @@ LEGACY_COMMAND_SHELL_FILE = "os-command.html"
 AI_SUITE_ROUTES = {"/assistant", "/assistant.html", "/ai-suite", "/ai-suite/"}
 AI_SUITE_ASSET_NAMES = {
     "indicare-suite.css",
+    "indicare-ai-suite-unified.css",
+    "indicare-ai-suite-unified.js",
     "indicare-orb-ai.js",
     "indicare-orb-projects.js",
     "indicare-intelligence-runtime.js",
@@ -47,12 +49,8 @@ LEGACY_CARE_OS_PATHS = {
 }
 
 AI_SUITE_RUNTIME_SCRIPTS = [
-    '<script src="/js/indicare-runtime-safe.js"></script>',
-    '<script src="/js/indicare-runtime-safety.js"></script>',
-    '<script src="/js/indicare-operational-intelligence.js"></script>',
-    '<script src="/js/indicare-intelligence-migration-bridge.js"></script>',
-    '<script src="/js/os-floating-assistant.js"></script>',
-    '<script src="/ai-suite/indicare-intelligence-immersive.js"></script>',
+    '<link rel="stylesheet" href="/ai-suite/indicare-ai-suite-unified.css">',
+    '<script src="/ai-suite/indicare-ai-suite-unified.js"></script>',
 ]
 
 def _root_path(request: Request | None = None) -> str:
@@ -102,17 +100,6 @@ def inject_ai_suite_asset_config(html: str, request: Request | None = None) -> s
     if root_path:
         html = html.replace('href="/ai-suite/', f'href="{root_path}/ai-suite/')
         html = html.replace('src="/ai-suite/', f'src="{root_path}/ai-suite/')
-    config = (
-        "<script>window.__INDICARE_AI_SUITE_ASSET_BASE__="
-        f"{asset_base!r};window.__INDICARE_AI_SUITE_ASSET_VERSION__={version!r};"
-        "window.IndiCareAISuiteAssets=window.IndiCareAISuiteAssets||"
-        "{basePath:window.__INDICARE_AI_SUITE_ASSET_BASE__,version:window.__INDICARE_AI_SUITE_ASSET_VERSION__,"
-        "resolve:function(file){var clean=String(file||'').replace(/^\\/+/, '');var url=this.basePath+clean;"
-        "return this.version?url+(url.indexOf('?')>-1?'&':'?')+'v='+encodeURIComponent(this.version):url;},"
-        "candidates:function(file){return [this.resolve(file)];}};</script>"
-    )
-    if "window.IndiCareAISuiteAssets" not in html:
-        html = html.replace("</head>", f"  {config}\n</head>")
     return html
 
 def _inject_once(html: str, snippets: list[str], marker: str) -> str:
@@ -126,6 +113,14 @@ def _inject_once(html: str, snippets: list[str], marker: str) -> str:
 def inject_ai_suite_runtime(html: str, request: Request | None = None) -> str:
     html = inject_ai_suite_asset_config(html, request)
     html = html.replace('<body', '<body data-indicare-ai-suite="true"', 1) if 'data-indicare-ai-suite' not in html else html
-    snippets = [_public_path(script.replace('<script src="', '').replace('"></script>', ''), request) for script in AI_SUITE_RUNTIME_SCRIPTS]
-    snippets = [f'<script src="{src}?v={ai_suite_asset_version()}"></script>' for src in snippets]
-    return _inject_once(html, snippets, "</body>")
+
+    style_snippets = [
+        f'<link rel="stylesheet" href="{_public_path("/ai-suite/indicare-ai-suite-unified.css", request)}?v={ai_suite_asset_version()}">'
+    ]
+    script_snippets = [
+        f'<script src="{_public_path("/ai-suite/indicare-ai-suite-unified.js", request)}?v={ai_suite_asset_version()}"></script>'
+    ]
+
+    html = _inject_once(html, style_snippets, "</head>")
+    html = _inject_once(html, script_snippets, "</body>")
+    return html
