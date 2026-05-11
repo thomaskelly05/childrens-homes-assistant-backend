@@ -79,11 +79,8 @@ def ai_suite_asset_version() -> str:
 def inject_ai_suite_runtime(html: str, request: Request | None = None) -> str:
     version = ai_suite_asset_version()
     root = _root_path(request)
-    css_href = f"{root}/ai-suite/indicare-ai-suite-unified.css?v={version}"
-    js_src = f"{root}/ai-suite/indicare-ai-suite-unified.js?v={version}"
-
-    html = html.replace("indicare-ai-suite-unified.css", f"indicare-ai-suite-unified.css?v={version}")
-    html = html.replace("indicare-ai-suite-unified.js", f"indicare-ai-suite-unified.js?v={version}")
+    css_href = f"{root}/indicare-ai-suite-unified.css?v={version}"
+    js_src = f"{root}/indicare-ai-suite-unified.js?v={version}"
 
     if css_href not in html:
         html = html.replace("</head>", f'<link rel="stylesheet" href="{css_href}">\n</head>')
@@ -152,6 +149,6 @@ def register_frontend_routes(app: FastAPI) -> None:
             "default_route": "/login",
             "login_route": True,
             "os_command_route": True,
-            "assistant_assets_forced_fresh": True,
+            "assistant_assets_root_alias": True,
             "ai_suite_assets": sorted(list(ai_suite_asset_names())),
         }
