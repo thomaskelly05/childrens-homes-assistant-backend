@@ -20,6 +20,10 @@ def _load_html(directory: str, filename: str) -> str:
         return handle.read()
 
 
+def _ai_asset(filename: str, media_type: str) -> FileResponse:
+    return FileResponse(os.path.join(INDICARE_AI_DIR, filename), media_type=media_type)
+
+
 def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     async def root_redirect():
@@ -45,17 +49,19 @@ def register_frontend_routes(app: FastAPI) -> None:
 
     @app.get("/indicare-ai/assistant.css")
     async def indicare_ai_css():
-        return FileResponse(
-            os.path.join(INDICARE_AI_DIR, "assistant.css"),
-            media_type="text/css",
-        )
+        return _ai_asset("assistant.css", "text/css")
+
+    @app.get("/indicare-ai/assistant-pro.css")
+    async def indicare_ai_pro_css():
+        return _ai_asset("assistant-pro.css", "text/css")
+
+    @app.get("/indicare-ai/assistant-bridge.js")
+    async def indicare_ai_bridge():
+        return _ai_asset("assistant-bridge.js", "application/javascript")
 
     @app.get("/indicare-ai/assistant-runtime.js")
     async def indicare_ai_runtime():
-        return FileResponse(
-            os.path.join(INDICARE_AI_DIR, "assistant-runtime.js"),
-            media_type="application/javascript",
-        )
+        return _ai_asset("assistant-runtime.js", "application/javascript")
 
     @app.get("/young-people-shell")
     @app.get("/young-people-shell.html")
@@ -76,6 +82,8 @@ def register_frontend_routes(app: FastAPI) -> None:
             "frontend": True,
             "assistant_runtime": "indicare-ai",
             "assistant_assets": "isolated",
+            "assistant_bridge": True,
+            "assistant_pro_design": True,
             "login_route": True,
             "assistant_route": True,
             "os_command_route": True,
