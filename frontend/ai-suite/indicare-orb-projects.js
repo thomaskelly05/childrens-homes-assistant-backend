@@ -9,6 +9,8 @@
     projects: JSON.parse(localStorage.getItem('ic_projects') || '[{"id":"general","name":"General"},{"id":"ofsted","name":"OFSTED readiness"},{"id":"safeguarding","name":"Safeguarding"}]')
   };
 
+  const assetPaths = (file) => [`/ai-suite/${file}`, `/frontend/ai-suite/${file}`];
+
   function save() {
     localStorage.setItem('ic_orb_mode', state.mode);
     localStorage.setItem('ic_active_project', state.project);
@@ -17,10 +19,14 @@
 
   function loadStylesheet() {
     if (document.querySelector('link[data-runtime="indicare-suite-css"]')) return;
+    const paths = assetPaths('indicare-suite.css');
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/frontend/ai-suite/indicare-suite.css';
+    link.href = paths[0];
     link.dataset.runtime = 'indicare-suite-css';
+    link.onerror = () => {
+      if (link.href.endsWith(paths[0])) link.href = paths[1];
+    };
     document.head.appendChild(link);
   }
 
@@ -84,12 +90,16 @@
     });
   }
 
-  function loadRuntime(name, src) {
+  function loadRuntime(name, file) {
     if (document.querySelector(`script[data-runtime="${name}"]`)) return;
+    const paths = assetPaths(file);
     const script = document.createElement('script');
     script.defer = true;
     script.dataset.runtime = name;
-    script.src = src;
+    script.src = paths[0];
+    script.onerror = () => {
+      if (script.src.endsWith(paths[0])) script.src = paths[1];
+    };
     document.body.appendChild(script);
   }
 
@@ -97,13 +107,13 @@
     loadStylesheet();
     addProjects();
     addOrb();
-    loadRuntime('orb-ai', '/frontend/ai-suite/indicare-orb-ai.js');
-    loadRuntime('connect-runtime', '/frontend/ai-suite/indicare-connect-runtime.js');
-    loadRuntime('docs-notes-runtime', '/frontend/ai-suite/indicare-docs-notes-runtime.js');
-    loadRuntime('intelligence-runtime', '/frontend/ai-suite/indicare-intelligence-runtime.js');
-    loadRuntime('conversations-runtime', '/frontend/ai-suite/indicare-conversations-runtime.js');
-    loadRuntime('memory-runtime', '/frontend/ai-suite/indicare-memory-runtime.js');
-    loadRuntime('actions-runtime', '/frontend/ai-suite/indicare-actions-runtime.js');
+    loadRuntime('orb-ai', 'indicare-orb-ai.js');
+    loadRuntime('connect-runtime', 'indicare-connect-runtime.js');
+    loadRuntime('docs-notes-runtime', 'indicare-docs-notes-runtime.js');
+    loadRuntime('intelligence-runtime', 'indicare-intelligence-runtime.js');
+    loadRuntime('conversations-runtime', 'indicare-conversations-runtime.js');
+    loadRuntime('memory-runtime', 'indicare-memory-runtime.js');
+    loadRuntime('actions-runtime', 'indicare-actions-runtime.js');
     window.IndiCareRecoveryUI = { state, renderProjects };
   }
 
