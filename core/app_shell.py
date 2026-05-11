@@ -21,10 +21,9 @@ OS_COMMAND_CORE_SCRIPTS = [
 ]
 
 # Canonical OS runtime boot sequence.
-# The OS now boots around the existing child-first workspace modules rather than
-# parallel command-centre scaffolds. The context wall establishes home + child,
-# the bridge syncs that into IndiCareContext, and the existing journey modules
-# render Today, Understanding, Profile, Journey, Timeline and Manager Oversight.
+# The OS now boots around the existing child-first workspace modules and restores
+# the original document, evidence and reporting routes so chronology, uploads,
+# inspections and narrative reporting all reconnect into the same runtime.
 OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safe.js"></script>',
     '<script src="/js/indicare-runtime-safety.js"></script>',
@@ -37,6 +36,12 @@ OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script type="module" src="/js/indicare-workspace/child-journey-experience.js"></script>',
     '<script src="/js/indicare-workspace/child-timeline.js"></script>',
     '<script type="module" src="/js/indicare-workspace/manager-oversight.js"></script>',
+    '<script src="/js/document-intelligence-upload.js"></script>',
+    '<script src="/js/reg44-report-reader-workspace.js"></script>',
+    '<script src="/js/visual-outcome-storytelling.js"></script>',
+    '<script src="/js/live-therapeutic-orchestration.js"></script>',
+    '<script src="/js/chronology-visual-timeline.js"></script>',
+    '<script src="/js/oversight-intelligence-dashboard.js"></script>',
     '<script src="/js/os-floating-assistant.js"></script>',
     '<script>window.IndiCareSafe?.run("OS canonical boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;console.info("IndiCare OS canonical journey runtime active")});</script>',
 ]
