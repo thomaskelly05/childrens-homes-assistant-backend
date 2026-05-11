@@ -22,7 +22,6 @@ AI_SUITE_DIR = os.path.join(BASE_DIR, "frontend", "ai-suite")
 
 
 def mount_core_static_assets(app: FastAPI) -> None:
-    """Mount shared static folders used by both product surfaces."""
     app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
     app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
@@ -30,14 +29,12 @@ def mount_core_static_assets(app: FastAPI) -> None:
 
 
 def mount_ai_suite_static_assets(app: FastAPI) -> None:
-    """Mount AI Suite assets after explicit routes are registered.
-
-    The explicit `/assistant`, `/assistant.html`, `/ai-suite` and `/ai-suite/`
-    routes inject the AI runtime bridge. If this static mount is registered
-    first, Starlette can serve `frontend/ai-suite/index.html` directly and the
-    user sees an older/static AI Suite without the runtime wiring.
-    """
     app.mount("/ai-suite", StaticFiles(directory=AI_SUITE_DIR, html=True), name="ai_suite_assets")
+
+
+def _serve_ai_suite_asset(filename: str):
+    path = os.path.join(AI_SUITE_DIR, filename)
+    return FileResponse(path) if os.path.exists(path) else {"ok": False, "error": f"{filename} not found"}
 
 
 def create_app() -> FastAPI:
@@ -57,14 +54,23 @@ def create_app() -> FastAPI:
 
     @app.get("/indicare-suite.css")
     def ai_suite_legacy_css():
-        """Compatibility alias for older AI Suite HTML served from /assistant.
+        return _serve_ai_suite_asset("indicare-suite.css")
 
-        The canonical stylesheet lives at /ai-suite/indicare-suite.css. Older
-        cached or static HTML can still request indicare-suite.css relative to
-        /assistant, which resolves to /indicare-suite.css and used to 404.
-        """
-        path = os.path.join(AI_SUITE_DIR, "indicare-suite.css")
-        return FileResponse(path) if os.path.exists(path) else {"ok": False, "error": "AI Suite CSS not found"}
+    @app.get("/indicare-ai-suite-unified.css")
+    def ai_suite_unified_css():
+        return _serve_ai_suite_asset("indicare-ai-suite-unified.css")
+
+    @app.get("/indicare-ai-suite-unified.js")
+    def ai_suite_unified_js():
+        return _serve_ai_suite_asset("indicare-ai-suite-unified.js")
+
+    @app.get("/chatgpt-mobile-shell.css")
+    def ai_suite_mobile_css():
+        return _serve_ai_suite_asset("chatgpt-mobile-shell.css")
+
+    @app.get("/chatgpt-design-guard.css")
+    def ai_suite_design_guard_css():
+        return _serve_ai_suite_asset("chatgpt-design-guard.css")
 
     register_frontend_routes(app)
     mount_ai_suite_static_assets(app)
