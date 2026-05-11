@@ -11,6 +11,19 @@
     try { return fn(); } catch (error) { console.warn(`IndiCare bridge skipped ${label}`, error); return null; }
   };
 
+  function resolveAiSuiteAsset(file) {
+    const resolver = window.IndiCareAISuiteAssets;
+    if (resolver?.resolve) return resolver.resolve(file);
+    const version = window.__INDICARE_AI_SUITE_ASSET_VERSION__ || document.querySelector('meta[name="indicare-ai-suite-asset-version"]')?.content || '';
+    const path = window.location.pathname || '/';
+    const aiSuiteIndex = path.indexOf('/ai-suite');
+    const basePath = window.__INDICARE_AI_SUITE_ASSET_BASE__ || (aiSuiteIndex >= 0
+      ? `${path.slice(0, aiSuiteIndex)}/ai-suite/`
+      : `${path.replace(/\/?(?:assistant(?:\.html)?|ai-suite)?\/?$/, '/') || '/'}ai-suite/`);
+    const url = new URL(String(file || '').replace(/^\/+/, ''), window.location.origin + basePath).href;
+    return version ? `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}` : url;
+  }
+
   function csrfToken() {
     const match = document.cookie.match(/(?:^|;\s*)(?:__Host-indicare_csrf|indicare_csrf)=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : "";
@@ -286,7 +299,7 @@
       ["/js/indicare-alive-voice-layer.js", "data-indicare-alive-voice-layer", 650],
       ["/js/indicare-voice-setup.js", "data-indicare-voice-setup", 900],
       ["/js/indicare-hey-indicare-wake.js", "data-indicare-hey-indicare-wake", 1000],
-      ["/ai-suite/indicare-ai-suite-loader.js", "data-indicare-ai-suite-loader", 1120],
+      [resolveAiSuiteAsset("indicare-ai-suite-loader.js"), "data-indicare-ai-suite-loader", 1120],
     ];
     optionalScripts.forEach(([src, marker, delay]) => loadScript(src, marker, delay));
     window.setInterval(() => safe("refresh updates interval", refreshUpdates), 60000);

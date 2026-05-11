@@ -9,7 +9,33 @@
     projects: JSON.parse(localStorage.getItem('ic_projects') || '[{"id":"general","name":"General"},{"id":"ofsted","name":"OFSTED readiness"},{"id":"safeguarding","name":"Safeguarding"}]')
   };
 
+  function createAssetResolver() {
+    const version = window.__INDICARE_AI_SUITE_ASSET_VERSION__ || document.querySelector('meta[name="indicare-ai-suite-asset-version"]')?.content || '';
+    const currentScriptBase = document.currentScript?.src ? new URL('.', document.currentScript.src).href : '';
+    const path = window.location.pathname || '/';
+    const aiSuiteIndex = path.indexOf('/ai-suite');
+    const derivedBase = aiSuiteIndex >= 0
+      ? `${path.slice(0, aiSuiteIndex)}/ai-suite/`
+      : `${path.replace(/\/?(?:assistant(?:\.html)?|ai-suite)?\/?$/, '/') || '/'}ai-suite/`;
+    const basePath = window.__INDICARE_AI_SUITE_ASSET_BASE__ || currentScriptBase || derivedBase;
+    return {
+      basePath,
+      version,
+      resolve(file) {
+        const clean = String(file || '').replace(/^\/+/, '');
+        const url = new URL(clean, this.basePath).href;
+        return this.version ? `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(this.version)}` : url;
+      },
+      candidates(file) {
+        return [this.resolve(file)];
+      },
+    };
+  }
+
+  const assetResolver = window.IndiCareAISuiteAssets || (window.IndiCareAISuiteAssets = createAssetResolver());
+  const assetPaths = (file) => assetResolver.candidates?.(file) || [assetResolver.resolve(file)];
   const assetPaths = (file) => [`/ai-suite/${file}`, `/frontend/ai-suite/${file}`];
+  const runtimeRegistry = window.__indicareAiSuiteRuntimes || (window.__indicareAiSuiteRuntimes = new Map());
 
   function save() {
     localStorage.setItem('ic_orb_mode', state.mode);
@@ -21,11 +47,20 @@
     if (document.querySelector('link[data-runtime="indicare-suite-css"]')) return;
     const paths = assetPaths('indicare-suite.css');
     const link = document.createElement('link');
+    let pathIndex = 0;
     link.rel = 'stylesheet';
-    link.href = paths[0];
+    link.href = paths[pathIndex];
     link.dataset.runtime = 'indicare-suite-css';
+    link.onload = () => window.dispatchEvent(new CustomEvent('indicare:asset-loaded', { detail: { type: 'css', file: 'indicare-suite.css', href: link.href } }));
     link.onerror = () => {
-      if (link.href.endsWith(paths[0])) link.href = paths[1];
+      pathIndex += 1;
+      if (paths[pathIndex]) {
+        console.warn(`[IndiCare AI Suite] CSS failed at ${link.href}; trying ${paths[pathIndex]}`);
+        link.href = paths[pathIndex];
+        return;
+      }
+      console.warn(`[IndiCare AI Suite] CSS failed to load. Attempted: ${paths.join(', ')}`);
+      window.dispatchEvent(new CustomEvent('indicare:asset-failed', { detail: { type: 'css', file: 'indicare-suite.css', attempted: paths } }));
     };
     document.head.appendChild(link);
   }
@@ -68,7 +103,7 @@
     const panel = document.createElement('div');
     panel.id = 'indicareOrbPanel';
     panel.className = 'ic-orb-panel';
-    panel.innerHTML = '<h3>IndiCare Conversation AI</h3><p style="color:#64748b">Press the orb to use IndiCare in Everyday or Specialist mode.</p><div class="ic-mode"><button data-ic-mode="everyday">Everyday</button><button data-ic-mode="specialist">Specialist</button></div><button id="icListen" class="pill">Start listening</button> <button id="icStop" class="pill">Stop</button> <button id="icAsk" class="pill">Ask with current message</button><div id="icOrbOutput" class="ic-output"></div>';
+    panel.innerHTML = '<h3>IndiCare Conversation AI</h3><p class="ic-panel-copy">Press the orb to use IndiCare in Everyday or Specialist mode.</p><div class="ic-mode"><button data-ic-mode="everyday">Everyday</button><button data-ic-mode="specialist">Specialist</button></div><button id="icListen" class="pill">Start listening</button> <button id="icStop" class="pill">Stop</button> <button id="icAsk" class="pill">Ask with current message</button><div id="icOrbOutput" class="ic-output"></div>';
     document.body.appendChild(panel);
     const orb = document.createElement('button');
     orb.id = 'indicareOrb';
@@ -91,14 +126,28 @@
   }
 
   function loadRuntime(name, file) {
-    if (document.querySelector(`script[data-runtime="${name}"]`)) return;
+    if (runtimeRegistry.get(name) === 'loaded' || document.querySelector(`script[data-runtime="${name}"]`)) return;
     const paths = assetPaths(file);
     const script = document.createElement('script');
+    let pathIndex = 0;
     script.defer = true;
     script.dataset.runtime = name;
-    script.src = paths[0];
+    script.src = paths[pathIndex];
+    runtimeRegistry.set(name, 'loading');
+    script.onload = () => {
+      runtimeRegistry.set(name, 'loaded');
+      window.dispatchEvent(new CustomEvent('indicare:runtime-loaded', { detail: { name, file } }));
+    };
     script.onerror = () => {
-      if (script.src.endsWith(paths[0])) script.src = paths[1];
+      pathIndex += 1;
+      if (paths[pathIndex]) {
+        script.src = paths[pathIndex];
+        return;
+      }
+      runtimeRegistry.set(name, 'failed');
+      console.warn(`[IndiCare AI Suite] Runtime failed to load: ${name} (${file}). Attempted: ${paths.join(', ')}`);
+      console.warn(`[IndiCare AI Suite] Runtime failed to load: ${name} (${file})`);
+      window.dispatchEvent(new CustomEvent('indicare:runtime-failed', { detail: { name, file } }));
     };
     document.body.appendChild(script);
   }

@@ -55,6 +55,17 @@ def create_app() -> FastAPI:
         path = os.path.join(ASSETS_DIR, "favicon.ico")
         return FileResponse(path) if os.path.exists(path) else {"ok": True}
 
+    @app.get("/indicare-suite.css")
+    def ai_suite_legacy_css():
+        """Compatibility alias for older AI Suite HTML served from /assistant.
+
+        The canonical stylesheet lives at /ai-suite/indicare-suite.css. Older
+        cached or static HTML can still request indicare-suite.css relative to
+        /assistant, which resolves to /indicare-suite.css and used to 404.
+        """
+        path = os.path.join(AI_SUITE_DIR, "indicare-suite.css")
+        return FileResponse(path) if os.path.exists(path) else {"ok": False, "error": "AI Suite CSS not found"}
+
     register_frontend_routes(app)
     mount_ai_suite_static_assets(app)
     return app

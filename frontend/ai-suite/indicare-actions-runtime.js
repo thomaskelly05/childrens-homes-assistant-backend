@@ -58,12 +58,12 @@
     panel.innerHTML = `
       <hr>
       <h3>Actions</h3>
-      <div style="display:flex;gap:6px;margin-bottom:8px">
-        <input id="icActionInput" placeholder="Add action..." style="min-width:0;flex:1;border:1px solid #e5e7eb;border-radius:10px;padding:8px">
+      <div class="ic-action-row">
+        <input id="icActionInput" class="ic-action-input" placeholder="Add action...">
         <button id="icAddAction" class="smallbtn small">Add</button>
       </div>
       <button id="icExtractActions" class="smallbtn small">Extract from current workspace</button>
-      <div id="icActionsList" style="margin-top:10px"></div>
+      <div id="icActionsList" class="ic-actions-list"></div>
     `;
     rail.appendChild(panel);
     $('icAddAction')?.addEventListener('click', () => {
@@ -81,14 +81,14 @@
     if (!list) return;
     const current = state.actions.filter((a) => a.project === project()).slice(0, 20);
     list.innerHTML = current.length ? current.map((a) => `
-      <div class="item" style="padding:10px;margin-bottom:8px;opacity:${a.status === 'done' ? '.58' : '1'}">
-        <div style="display:flex;gap:8px;align-items:flex-start">
+      <div class="item ic-action-item ${a.status === 'done' ? 'done' : ''}">
+        <div class="ic-action-content">
           <input type="checkbox" data-action-done="${esc(a.id)}" ${a.status === 'done' ? 'checked' : ''}>
-          <div style="flex:1;min-width:0">
-            <strong style="text-decoration:${a.status === 'done' ? 'line-through' : 'none'}">${esc(a.title)}</strong>
-            <div style="font-size:12px;color:#64748b">${esc(a.source)} ${a.due ? '· Due ' + esc(a.due) : ''}</div>
+          <div class="ic-action-copy">
+            <strong>${esc(a.title)}</strong>
+            <div class="ic-action-meta">${esc(a.source)} ${a.due ? '· Due ' + esc(a.due) : ''}</div>
           </div>
-          <button data-action-delete="${esc(a.id)}" style="border:0;background:transparent;cursor:pointer;color:#64748b">×</button>
+          <button data-action-delete="${esc(a.id)}" class="ic-icon-button" aria-label="Delete action">×</button>
         </div>
       </div>`).join('') : '<div class="item">No actions yet.</div>';
 

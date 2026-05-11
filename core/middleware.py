@@ -16,12 +16,27 @@ def allowed_origins() -> list[str]:
     return [origin.strip() for origin in configured.split(",") if origin.strip()]
 
 
+def cookie_secure_default() -> bool:
+    """Keep session middleware aligned with auth cookie behaviour.
+
+    Production should default to secure cookies.
+    Development/local environments should default to non-secure cookies so
+    browsers will actually persist sessions over plain HTTP.
+    """
+    app_env = os.getenv("APP_ENV", "development").strip().lower()
+    is_production = app_env == "production"
+    return os.getenv(
+        "COOKIE_SECURE",
+        "true" if is_production else "false",
+    ).lower() == "true"
+
+
 def add_middlewares(app: FastAPI) -> None:
     app.add_middleware(
         SessionMiddleware,
         secret_key=os.getenv("SESSION_SECRET_KEY") or os.getenv("SECRET_KEY") or "dev-session-secret-change-me",
         same_site=os.getenv("COOKIE_SAMESITE", "lax").lower(),
-        https_only=(os.getenv("COOKIE_SECURE", "true").lower() == "true"),
+        https_only=cookie_secure_default(),
         max_age=60 * 60 * 24 * 14,
     )
     app.add_middleware(SecurityHeadersMiddleware)
