@@ -9,6 +9,31 @@
     projects: JSON.parse(localStorage.getItem('ic_projects') || '[{"id":"general","name":"General"},{"id":"ofsted","name":"OFSTED readiness"},{"id":"safeguarding","name":"Safeguarding"}]')
   };
 
+  function createAssetResolver() {
+    const version = window.__INDICARE_AI_SUITE_ASSET_VERSION__ || document.querySelector('meta[name="indicare-ai-suite-asset-version"]')?.content || '';
+    const currentScriptBase = document.currentScript?.src ? new URL('.', document.currentScript.src).href : '';
+    const path = window.location.pathname || '/';
+    const aiSuiteIndex = path.indexOf('/ai-suite');
+    const derivedBase = aiSuiteIndex >= 0
+      ? `${path.slice(0, aiSuiteIndex)}/ai-suite/`
+      : `${path.replace(/\/?(?:assistant(?:\.html)?|ai-suite)?\/?$/, '/') || '/'}ai-suite/`;
+    const basePath = window.__INDICARE_AI_SUITE_ASSET_BASE__ || currentScriptBase || derivedBase;
+    return {
+      basePath,
+      version,
+      resolve(file) {
+        const clean = String(file || '').replace(/^\/+/, '');
+        const url = new URL(clean, this.basePath).href;
+        return this.version ? `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(this.version)}` : url;
+      },
+      candidates(file) {
+        return [this.resolve(file)];
+      },
+    };
+  }
+
+  const assetResolver = window.IndiCareAISuiteAssets || (window.IndiCareAISuiteAssets = createAssetResolver());
+  const assetPaths = (file) => assetResolver.candidates?.(file) || [assetResolver.resolve(file)];
   const assetPaths = (file) => [`/ai-suite/${file}`, `/frontend/ai-suite/${file}`];
   const runtimeRegistry = window.__indicareAiSuiteRuntimes || (window.__indicareAiSuiteRuntimes = new Map());
 
@@ -22,11 +47,20 @@
     if (document.querySelector('link[data-runtime="indicare-suite-css"]')) return;
     const paths = assetPaths('indicare-suite.css');
     const link = document.createElement('link');
+    let pathIndex = 0;
     link.rel = 'stylesheet';
-    link.href = paths[0];
+    link.href = paths[pathIndex];
     link.dataset.runtime = 'indicare-suite-css';
+    link.onload = () => window.dispatchEvent(new CustomEvent('indicare:asset-loaded', { detail: { type: 'css', file: 'indicare-suite.css', href: link.href } }));
     link.onerror = () => {
-      if (link.href.endsWith(paths[0])) link.href = paths[1];
+      pathIndex += 1;
+      if (paths[pathIndex]) {
+        console.warn(`[IndiCare AI Suite] CSS failed at ${link.href}; trying ${paths[pathIndex]}`);
+        link.href = paths[pathIndex];
+        return;
+      }
+      console.warn(`[IndiCare AI Suite] CSS failed to load. Attempted: ${paths.join(', ')}`);
+      window.dispatchEvent(new CustomEvent('indicare:asset-failed', { detail: { type: 'css', file: 'indicare-suite.css', attempted: paths } }));
     };
     document.head.appendChild(link);
   }
@@ -111,6 +145,7 @@
         return;
       }
       runtimeRegistry.set(name, 'failed');
+      console.warn(`[IndiCare AI Suite] Runtime failed to load: ${name} (${file}). Attempted: ${paths.join(', ')}`);
       console.warn(`[IndiCare AI Suite] Runtime failed to load: ${name} (${file})`);
       window.dispatchEvent(new CustomEvent('indicare:runtime-failed', { detail: { name, file } }));
     };

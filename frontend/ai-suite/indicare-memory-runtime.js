@@ -126,12 +126,25 @@
     };
   }
 
+  function resolveAiSuiteAsset(file){
+    const resolver = window.IndiCareAISuiteAssets;
+    if(resolver?.resolve) return resolver.resolve(file);
+    const currentScriptBase = document.currentScript?.src ? new URL('.', document.currentScript.src).href : '';
+    const path = window.location.pathname || '/';
+    const aiSuiteIndex = path.indexOf('/ai-suite');
+    const basePath = window.__INDICARE_AI_SUITE_ASSET_BASE__ || currentScriptBase || (aiSuiteIndex >= 0 ? `${path.slice(0, aiSuiteIndex)}/ai-suite/` : `${path.replace(/\/?(?:assistant(?:\.html)?|ai-suite)?\/?$/, '/') || '/'}ai-suite/`);
+    const url = new URL(String(file || '').replace(/^\/+/, ''), basePath).href;
+    const version = window.__INDICARE_AI_SUITE_ASSET_VERSION__ || document.querySelector('meta[name="indicare-ai-suite-asset-version"]')?.content || '';
+    return version ? `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}` : url;
+  }
+
   function loadActionsRuntime(){
     if(document.querySelector('script[data-runtime="actions-runtime"]')) return;
     const script=document.createElement('script');
     script.defer=true;
     script.dataset.runtime='actions-runtime';
-    script.src='/frontend/ai-suite/indicare-actions-runtime.js';
+    script.src=resolveAiSuiteAsset('indicare-actions-runtime.js');
+    script.onerror=()=>console.warn(`[IndiCare AI Suite] Actions runtime failed to load from ${script.src}`);
     document.body.appendChild(script);
   }
 
