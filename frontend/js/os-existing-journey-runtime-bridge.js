@@ -4,6 +4,7 @@
   window[FLAG] = true;
 
   const CANONICAL_CONTAINER_ID = 'indicare-existing-journey-runtime';
+  const state = { records: [], commands: [], safeguarding: [], placement: [], activeTab: 'All', activeMode: 'today', activeWorkspace: null };
 
   const SHELL_WORKSPACES = {
     'daily-recording': { title: 'Daily Recording', subtitle: 'Daily logs, observations, handover notes and shift continuity records.', endpoint: '/api/os-command/care-recording', filters: ['daily_record', 'observation', 'handover', 'daily_note'], actions: ['Daily record', 'Observation', 'Handover note'] },
@@ -16,9 +17,21 @@
   };
 
   const WORKSPACE_TABS = ['All', 'Daily', 'Direct work', 'Incidents', 'Health', 'Education', 'Contact', 'Documents', 'Review'];
+  const TAB_FILTERS = {
+    All: [],
+    Daily: ['daily', 'observation', 'handover', 'shift'],
+    'Direct work': ['direct', 'key work', 'life story', 'session', 'outcome'],
+    Incidents: ['incident', 'safeguard', 'missing', 'risk', 'critical'],
+    Health: ['health', 'medication', 'wellbeing', 'sleep', 'regulation'],
+    Education: ['education', 'school', 'pep', 'attendance', 'achievement'],
+    Contact: ['family', 'contact', 'phone', 'visit'],
+    Documents: ['document', 'plan', 'assessment', 'evidence', 'reg 44', 'reg44'],
+    Review: ['review', 'returned', 'submitted', 'manager', 'action', 'critical', 'high']
+  };
 
   function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
   function osContext() { return window.IndiCareOSContext || {}; }
+  function searchText(record) { return [record.record_type, record.source_type, record.type, record.title, record.summary, record.narrative, record.pattern_type, record.domain, record.status, record.priority, record.feed_state, record.timeline_state].join(' ').toLowerCase(); }
 
   function ensureWorkspaceShell() {
     const shell = document.getElementById(CANONICAL_CONTAINER_ID);
@@ -30,7 +43,17 @@
       main.innerHTML = '<div class="ic365-empty-state">Waiting for home and young person context...</div>';
       shell.appendChild(main);
     }
+    ensureReviewDrawer();
     return shell;
+  }
+
+  function ensureReviewDrawer() {
+    if (document.getElementById('ic365-review-drawer')) return;
+    const drawer = document.createElement('aside');
+    drawer.id = 'ic365-review-drawer';
+    drawer.className = 'ic365-review-drawer';
+    drawer.innerHTML = '<button type="button" class="ic365-drawer-close" data-close-review>Close</button><div id="ic365-review-drawer-body"></div>';
+    document.body.appendChild(drawer);
   }
 
   function updateContextChrome(ctx) {
@@ -103,10 +126,12 @@
 
   function filterRecords(records, filters) {
     if (!filters?.length) return records;
-    return records.filter((record) => {
-      const text = [record.record_type, record.source_type, record.type, record.title, record.summary, record.narrative, record.pattern_type].join(' ').toLowerCase();
-      return filters.some((filter) => text.includes(filter.toLowerCase()));
-    });
+    return records.filter((record) => filters.some((filter) => searchText(record).includes(filter.toLowerCase())));
+  }
+
+  function tabRecords(records, tab = state.activeTab) {
+    const filters = TAB_FILTERS[tab] || [];
+    return filters.length ? filterRecords(records, filters) : records;
   }
 
   function recordDate(record) { return record.occurred_at || record.event_at || record.created_at || record.detected_at || record.record_date || record.updated_at || ''; }
@@ -114,6 +139,7 @@
   function recordTitle(record) { return record.title || record.event_title || record.pattern_type || record.record_type || record.domain || 'Care record'; }
   function recordSummary(record) { return record.narrative || record.summary || record.event_summary || record.recommended_action || record.leadership_summary || record.follow_up_summary || 'No narrative available yet.'; }
   function recordStatus(record) { return record.feed_state || record.timeline_state || record.status || record.severity || record.priority || 'recorded'; }
+  function recordId(record) { return String(record.id || record.feed_id || record.timeline_id || record.command_item_id || record.source_id || `${recordTitle(record)}-${recordDate(record)}`); }
 
   function recordCard(record) {
     const title = recordTitle(record);
@@ -122,13 +148,16 @@
     const summary = recordSummary(record);
     const voice = record.child_voice || record.young_person_voice || '';
     const status = recordStatus(record);
+    const id = recordId(record);
     const needsReview = record.manager_review_required || /review|returned|submitted|critical|high/i.test(String(status));
-    return `<article class="record-card ic365-record-card ${needsReview ? 'needs-review' : ''}">
+    const docs = /document|plan|assessment|evidence/i.test(JSON.stringify(record));
+    return `<article class="record-card ic365-record-card ${needsReview ? 'needs-review' : ''}" data-record-id="${esc(id)}">
       <div class="ic365-record-head"><span class="mini-tag">${esc(type)}</span><small>${esc(when)}</small><strong>${esc(status)}</strong></div>
       <h4>${esc(title)}</h4>
-      <p>${esc(summary).slice(0, 360)}</p>
+      <p>${esc(summary).slice(0, 420)}</p>
+      <div class="ic365-record-meta"><span>${needsReview ? 'Review required' : 'Recorded'}</span><span>${docs ? 'Document linked' : 'No document link'}</span><span>${voice ? 'Child voice captured' : 'Child voice missing'}</span></div>
       ${voice ? `<div class="alert low"><strong>Child voice</strong><p>${esc(voice).slice(0, 220)}</p></div>` : ''}
-      <footer class="ic365-record-foot"><button type="button" class="ic365-button" data-review-record="${esc(record.id || record.feed_id || record.timeline_id || '')}">Review</button><button type="button" class="ic365-button">Link document</button><button type="button" class="ic365-button">Add comment</button></footer>
+      <footer class="ic365-record-foot"><button type="button" class="ic365-button" data-review-record="${esc(id)}">Review</button><button type="button" class="ic365-button" data-link-document="${esc(id)}">Link document</button><button type="button" class="ic365-button" data-add-comment="${esc(id)}">Add comment</button><button type="button" class="ic365-button" data-continue-record="${esc(id)}">Continue</button></footer>
     </article>`;
   }
 
@@ -151,17 +180,32 @@
     return Array.from(groups.entries()).sort((a, b) => String(b[0]).localeCompare(String(a[0])));
   }
 
-  function tabs(active = 'All') {
+  function tabs(active = state.activeTab) {
     return `<div class="ic365-workspace-tabs">${WORKSPACE_TABS.map((tab) => `<button type="button" class="${tab === active ? 'active' : ''}" data-os-tab="${esc(tab)}">${esc(tab)}</button>`).join('')}</div>`;
   }
 
   function groupedFeed(records) {
     if (!records.length) return '<div class="ic365-empty-state">No matching live records yet. The workspace is connected and will show records as they are added.</div>';
-    return groupRecords(records).map(([day, items]) => `<section class="ic365-day-group"><h3>${esc(day)}</h3><div class="ic365-record-feed">${items.slice(0, 18).map(recordCard).join('')}</div></section>`).join('');
+    return groupRecords(records).map(([day, items]) => `<section class="ic365-day-group"><h3>${esc(day)}</h3><div class="ic365-record-feed">${items.slice(0, 24).map(recordCard).join('')}</div></section>`).join('');
+  }
+
+  function railHtml(commands, safeguarding, placement, records) {
+    const stability = placement[0] || {};
+    const gaps = records.filter((r) => !(r.child_voice || r.young_person_voice)).slice(0, 4);
+    return `<article class="panel ic365-command-rail">
+      <p class="eyebrow">Operational rail</p><h3>Review, risk and continuity</h3>
+      <div class="ic365-rail-state"><strong>${esc(stability.risk_level || 'stable')}</strong><span>Placement state</span></div>
+      <div class="ic365-action-list">${commands.slice(0, 7).map((item) => `<button type="button"><strong>${esc(item.priority || item.status || 'review')}</strong><span>${esc(item.title || item.summary || 'Action required')}</span></button>`).join('') || '<div class="ic365-empty-state">No live command actions.</div>'}</div>
+      <hr class="ic365-soft-rule" />
+      <p class="eyebrow">Safeguarding context</p><div class="ic365-record-feed compact">${safeguarding.slice(0, 4).map(recordCard).join('') || '<div class="ic365-empty-state">No safeguarding patterns returned.</div>'}</div>
+      <hr class="ic365-soft-rule" />
+      <p class="eyebrow">Continuity gaps</p><div class="ic365-action-list">${gaps.map((item) => `<button type="button"><strong>Child voice</strong><span>${esc(recordTitle(item))}</span></button>`).join('') || '<div class="ic365-empty-state">No obvious continuity gaps.</div>'}</div>
+    </article>`;
   }
 
   function liveShiftHtml(records, commands, safeguarding, placement) {
-    const all = [...records, ...commands, ...safeguarding];
+    const all = [...records, ...commands, ...safeguarding].sort((a, b) => String(recordDate(b)).localeCompare(String(recordDate(a))));
+    const filtered = tabRecords(all);
     const stats = overviewStats(all);
     const stability = placement[0] || {};
     return `
@@ -172,27 +216,20 @@
         <article><strong>${stats.voice}</strong><span>Child voice</span></article>
         <article><strong>${esc(stability.risk_level || 'stable')}</strong><span>Placement state</span></article>
       </section>
-      ${tabs('All')}
+      ${tabs()}
       <section class="two-column ic365-live-shift">
         <article class="panel">
-          <div class="section-header-row"><div><p class="eyebrow">Live shift</p><h3>Chronology stream</h3></div><div class="hero-actions"><button class="ic365-button primary">New daily record</button><button class="ic365-button">Handover note</button></div></div>
-          ${groupedFeed(all)}
+          <div class="section-header-row"><div><p class="eyebrow">Live shift</p><h3>${esc(state.activeTab)} chronology</h3></div><div class="hero-actions"><button class="ic365-button primary" data-os-record="daily_record">New daily record</button><button class="ic365-button" data-os-record="handover">Handover note</button></div></div>
+          ${groupedFeed(filtered)}
         </article>
-        <article class="panel">
-          <p class="eyebrow">Review workflow</p><h3>Manager and continuity actions</h3>
-          <div class="ic365-action-list">
-            ${commands.slice(0, 8).map((item) => `<button type="button"><strong>${esc(item.priority || item.status || 'review')}</strong><span>${esc(item.title || item.summary || 'Action required')}</span></button>`).join('') || '<div class="ic365-empty-state">No live command actions.</div>'}
-          </div>
-          <hr class="ic365-soft-rule" />
-          <p class="eyebrow">Safeguarding context</p>
-          <div class="ic365-record-feed compact">${safeguarding.slice(0, 5).map(recordCard).join('') || '<div class="ic365-empty-state">No safeguarding patterns returned.</div>'}</div>
-        </article>
+        ${railHtml(commands, safeguarding, placement, all)}
       </section>`;
   }
 
   function liveWorkspaceHtml(workspace, records, allRecords = []) {
-    const stats = overviewStats(records);
-    const allTimeline = allRecords.length ? groupedFeed(allRecords.slice(0, 12)) : '<div class="ic365-empty-state">No chronology records available yet.</div>';
+    const base = records.length ? records : allRecords;
+    const filtered = tabRecords(base);
+    const stats = overviewStats(base);
     return `
       <section class="ic365-shift-ribbon">
         <article><strong>${stats.total}</strong><span>Records</span></article>
@@ -201,40 +238,44 @@
         <article><strong>${stats.voice}</strong><span>Child voice</span></article>
         <article><strong>${stats.documents}</strong><span>Documents</span></article>
       </section>
-      ${tabs(workspace.title.split(' ')[0])}
+      ${tabs()}
       <section class="two-column">
         <article class="panel">
-          <div class="section-header-row"><div><p class="eyebrow">Live flow</p><h3>${esc(workspace.title)} chronology</h3></div><div class="hero-actions">${workspace.actions.map((action) => `<button type="button" class="ic365-button">${esc(action)}</button>`).join('')}</div></div>
-          ${groupedFeed(records)}
+          <div class="section-header-row"><div><p class="eyebrow">Live flow</p><h3>${esc(state.activeTab)} ${esc(workspace.title)} chronology</h3></div><div class="hero-actions">${workspace.actions.map((action) => `<button type="button" class="ic365-button">${esc(action)}</button>`).join('')}</div></div>
+          ${groupedFeed(filtered)}
         </article>
         <article class="panel">
           <p class="eyebrow">Connected flow</p><h3>Recent chronology context</h3>
           <p>This panel reuses the existing chronology and care-recording routers so this workspace does not become another disconnected module.</p>
-          ${allTimeline}
+          ${groupedFeed(allRecords.slice(0, 12))}
         </article>
       </section>`;
   }
 
+  function renderCurrent() {
+    const main = document.getElementById('workspace-main');
+    if (!main) return;
+    if (state.activeMode === 'today') main.innerHTML = liveShiftHtml(state.records, state.commands, state.safeguarding, state.placement);
+    if (state.activeMode === 'shell' && state.activeWorkspace) main.innerHTML = liveWorkspaceHtml(SHELL_WORKSPACES[state.activeWorkspace], state.records, state.contextRecords || []);
+  }
+
   async function activateToday() {
+    state.activeMode = 'today';
+    state.activeWorkspace = null;
+    state.activeTab = 'All';
     setHeaderForView('today-child');
     const main = document.getElementById('workspace-main');
     if (!main) return;
     main.innerHTML = '<div class="ic365-empty-state">Loading live shift, chronology, actions and safeguarding...</div>';
     try {
-      const [care, chronology, commands, safeguarding, placement] = await Promise.all([
-        api('/api/os-command/care-recording'),
-        api('/api/os-command/chronology-intelligence'),
-        api('/api/os-command'),
-        api('/api/os-command/safeguarding-patterns'),
-        api('/api/os-command/placement-stability')
-      ]);
+      const [care, chronology, commands, safeguarding, placement] = await Promise.all([api('/api/os-command/care-recording'), api('/api/os-command/chronology-intelligence'), api('/api/os-command'), api('/api/os-command/safeguarding-patterns'), api('/api/os-command/placement-stability')]);
       const careRecords = normaliseRecords('care', care);
       const chronologyRecords = normaliseRecords('chronology', chronology);
-      const commandRecords = normaliseRecords('commands', commands);
-      const safeguardingRecords = normaliseRecords('incidents', safeguarding);
-      const placementRecords = normaliseRecords('placement', placement);
-      const combined = [...careRecords, ...chronologyRecords].sort((a, b) => String(recordDate(b)).localeCompare(String(recordDate(a))));
-      main.innerHTML = liveShiftHtml(combined, commandRecords, safeguardingRecords, placementRecords);
+      state.records = [...careRecords, ...chronologyRecords].sort((a, b) => String(recordDate(b)).localeCompare(String(recordDate(a))));
+      state.commands = normaliseRecords('commands', commands);
+      state.safeguarding = normaliseRecords('incidents', safeguarding);
+      state.placement = normaliseRecords('placement', placement);
+      renderCurrent();
     } catch (error) {
       console.warn('[IndiCare OS] Today live shift failed', error);
       if (typeof window.loadTodayForChild === 'function') return window.loadTodayForChild();
@@ -246,6 +287,9 @@
     const shell = ensureWorkspaceShell();
     const workspace = SHELL_WORKSPACES[key];
     if (!shell || !workspace) return;
+    state.activeMode = 'shell';
+    state.activeWorkspace = key;
+    state.activeTab = 'All';
     setHeader(workspace.title, workspace.subtitle);
     const main = document.getElementById('workspace-main');
     if (!main) return;
@@ -254,13 +298,21 @@
       const [primary, chronology, commands] = await Promise.all([api(workspace.endpoint), api('/api/os-command/chronology-intelligence'), workspace.commandEndpoint ? api(workspace.commandEndpoint) : Promise.resolve(null)]);
       const primaryRecords = filterRecords(normaliseRecords(key, primary), workspace.filters);
       const commandRecords = commands ? filterRecords(normaliseRecords(key, commands), workspace.filters) : [];
-      const chronRecords = normaliseRecords('chronology', chronology);
-      const merged = [...primaryRecords, ...commandRecords].sort((a, b) => String(recordDate(b)).localeCompare(String(recordDate(a))));
-      main.innerHTML = liveWorkspaceHtml(workspace, merged.length ? merged : primaryRecords, chronRecords);
+      state.records = [...primaryRecords, ...commandRecords].sort((a, b) => String(recordDate(b)).localeCompare(String(recordDate(a))));
+      state.contextRecords = normaliseRecords('chronology', chronology);
+      renderCurrent();
     } catch (error) {
       console.warn('[IndiCare OS] Shell workspace endpoint failed', key, error);
       main.innerHTML = `<div class="ic365-empty-state">Could not load live records for ${esc(workspace.title)} yet. Existing routers remain available and this workspace will populate when the endpoint responds.</div>`;
     }
+  }
+
+  function openReviewDrawer(id, mode = 'review') {
+    const record = [...state.records, ...state.commands, ...state.safeguarding, ...(state.contextRecords || [])].find((item) => recordId(item) === id) || {};
+    const body = document.getElementById('ic365-review-drawer-body');
+    if (!body) return;
+    body.innerHTML = `<p class="eyebrow">${esc(mode)}</p><h2>${esc(recordTitle(record))}</h2><p>${esc(recordSummary(record))}</p><div class="ic365-review-form"><label>Manager comment<textarea placeholder="Type review, return reason or continuity note..."></textarea></label><label>Action required<input placeholder="What needs to happen next?" /></label><div class="hero-actions"><button class="ic365-button primary">Sign off</button><button class="ic365-button">Return</button><button class="ic365-button">Escalate</button></div></div>`;
+    document.body.classList.add('ic365-drawer-open');
   }
 
   function activate(view) {
@@ -284,9 +336,10 @@
     document.querySelectorAll('[data-shell]').forEach((button) => button.addEventListener('click', () => { setActive(button); syncContext(); activateShell(button.dataset.shell); }));
     document.addEventListener('click', (event) => {
       const tab = event.target.closest('[data-os-tab]');
-      if (tab) {
-        tab.closest('.ic365-workspace-tabs')?.querySelectorAll('button').forEach((button) => button.classList.toggle('active', button === tab));
-      }
+      if (tab) { state.activeTab = tab.dataset.osTab || 'All'; renderCurrent(); return; }
+      const review = event.target.closest('[data-review-record],[data-link-document],[data-add-comment],[data-continue-record]');
+      if (review) { openReviewDrawer(review.dataset.reviewRecord || review.dataset.linkDocument || review.dataset.addComment || review.dataset.continueRecord, review.textContent.trim()); return; }
+      if (event.target.closest('[data-close-review]')) document.body.classList.remove('ic365-drawer-open');
     });
   }
 
@@ -310,7 +363,7 @@
       if (activeShell) activateShell(activeShell);
       else activate(activeView || 'today-child');
     });
-    console.info('[IndiCare OS] Chronology-first live shift shell connected to existing OS routers');
+    console.info('[IndiCare OS] Live shift shell tabs rail and review drawer active');
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
