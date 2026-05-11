@@ -1,6 +1,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const qsa = (s,r=document)=>[...r.querySelectorAll(s)];
+  const esc = (v) => String(v || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
 
   const STORAGE_KEY = 'ic_suite_conversations';
   const ACTIVE_KEY = 'ic_active_conversation';
@@ -23,7 +24,7 @@
     const wrap = document.createElement('div');
     wrap.id='icConversationRail';
     wrap.innerHTML = `
-      <div class="label" style="margin-top:18px">Conversations</div>
+      <div class="label ic-conversation-label">Conversations</div>
       <div id="icConversationList"></div>
       <button id="icNewConversation" class="new-chat new">+ New conversation</button>
     `;
@@ -59,9 +60,9 @@
     if(!list) return;
 
     list.innerHTML = state.conversations.map(c=>`
-      <div class="item ic-conv ${c.id===state.active?'active':''}" data-conv="${c.id}" style="cursor:pointer;margin-bottom:6px;padding:10px;border-radius:12px;background:${c.id===state.active?'rgba(37,99,235,.12)':'transparent'}">
-        <div style="font-weight:600">${c.title}</div>
-        <div style="font-size:12px;opacity:.6">${new Date(c.created_at).toLocaleString()}</div>
+      <div class="item ic-conv ${c.id===state.active?'active':''}" data-conv="${c.id}">
+        <div class="ic-conv-title">${esc(c.title)}</div>
+        <div class="ic-conv-time">${new Date(c.created_at).toLocaleString()}</div>
       </div>`).join('');
 
     qsa('[data-conv]').forEach(el=>{
@@ -97,8 +98,8 @@
     if(!feed) return;
 
     feed.innerHTML = messages.map(m=>`
-      <div style="margin-bottom:18px;display:flex;justify-content:${m.role==='user'?'flex-end':'flex-start'}">
-        <div style="max-width:820px;padding:18px;border-radius:22px;background:${m.role==='user'?'#2563eb':'#111827'};color:#fff;white-space:pre-wrap;line-height:1.6">${m.content}</div>
+      <div class="ic-history-row ${m.role==='user'?'user':'assistant'}">
+        <div class="ic-history-bubble">${esc(m.content)}</div>
       </div>`).join('');
 
     feed.scrollTop = feed.scrollHeight;
