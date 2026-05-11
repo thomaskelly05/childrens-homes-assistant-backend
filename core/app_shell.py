@@ -25,6 +25,7 @@ OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safe.js"></script>',
     '<script src="/js/indicare-runtime-safety.js"></script>',
     '<script>window.IndiCareSafe?.run("OS boot",()=>{window.state=typeof state!=="undefined"?state:window.state;window.loadAll=typeof loadAll!=="undefined"?loadAll:window.loadAll;window.toast=typeof toast!=="undefined"?toast:window.toast;});</script>',
+    '<script src="/js/indicare-operational-intelligence.js"></script>',
     '<script src="/js/os-floating-assistant.js"></script>',
     '<script src="/js/os-therapeutic-record-creator.js"></script>',
     '<script src="/js/os-child-workspace-tabs.js"></script>',
