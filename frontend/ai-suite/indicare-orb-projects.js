@@ -34,6 +34,7 @@
 
   const assetResolver = window.IndiCareAISuiteAssets || (window.IndiCareAISuiteAssets = createAssetResolver());
   const assetPaths = (file) => assetResolver.candidates?.(file) || [assetResolver.resolve(file)];
+  const assetPaths = (file) => [`/ai-suite/${file}`, `/frontend/ai-suite/${file}`];
   const runtimeRegistry = window.__indicareAiSuiteRuntimes || (window.__indicareAiSuiteRuntimes = new Map());
 
   function save() {
@@ -145,6 +146,7 @@
       }
       runtimeRegistry.set(name, 'failed');
       console.warn(`[IndiCare AI Suite] Runtime failed to load: ${name} (${file}). Attempted: ${paths.join(', ')}`);
+      console.warn(`[IndiCare AI Suite] Runtime failed to load: ${name} (${file})`);
       window.dispatchEvent(new CustomEvent('indicare:runtime-failed', { detail: { name, file } }));
     };
     document.body.appendChild(script);
