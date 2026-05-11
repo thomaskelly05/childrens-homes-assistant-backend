@@ -3,22 +3,9 @@
   if (window[FLAG]) return;
   window[FLAG] = true;
 
-  const REQUIRED_IDS = [
-    'command-list',
-    'care-list',
-    'pattern-list',
-    'placement-list',
-    'workforce-board',
-    'network-board',
-    'chronology-board',
-    'inspection-board',
-    'recommendations',
-    'alerts'
-  ];
-
   const CONTEXT_KEY = 'indicare.os.context.v1';
   const WALL_ID = 'indicare-os-context-wall';
-  const PROTECTED_SELECTOR = '.ic-layout, .layout';
+  const PROTECTED_SELECTOR = '.existing-journey-runtime, #indicare-existing-journey-runtime, #os-runtime-root, .indicare-os-host';
 
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (m) => ({
@@ -56,11 +43,9 @@
     };
     sessionStorage.setItem(CONTEXT_KEY, JSON.stringify(clean));
     window.IndiCareOSContext = clean;
-    window.state = window.state || {};
-    window.state.currentHomeId = clean.homeId;
-    window.state.currentChildId = clean.childId;
-    window.state.currentHomeName = clean.homeName;
-    window.state.currentChildName = clean.childName;
+    if (window.IndiCareContext?.set) {
+      window.IndiCareContext.set(clean);
+    }
     document.dispatchEvent(new CustomEvent('indicare:os-context-ready', { detail: clean }));
     return clean;
   }
@@ -68,6 +53,7 @@
   function clearContext() {
     sessionStorage.removeItem(CONTEXT_KEY);
     window.IndiCareOSContext = {};
+    window.IndiCareContext?.clear?.();
   }
 
   function contextIsReady() {
@@ -97,44 +83,12 @@
     });
   }
 
-  function ensureMount(id) {
-    if (!contextIsReady()) return;
-    if (document.getElementById(id)) return;
-
-    const fallback = document.createElement('div');
-    fallback.id = id;
-    fallback.className = 'ic-list os-runtime-fallback';
-    fallback.setAttribute('data-runtime-generated', 'true');
-    fallback.style.display = 'grid';
-    fallback.style.gap = '10px';
-
-    const workspace = document.querySelector('.ic-workspace, .workspace, main');
-    if (!workspace) return;
-
-    const card = document.createElement('section');
-    card.className = 'ic-card';
-    card.innerHTML = `<div class="ic-card-head"><div><h3 class="ic-h3">Runtime recovery</h3><small class="ic-card-subtitle">OS runtime auto-created a missing operational mount point (${id}).</small></div></div>`;
-    card.appendChild(fallback);
-
-    workspace.appendChild(card);
-
-    console.warn('[IndiCare OS] Missing mount restored:', id);
-  }
-
-  function hardenRenderPipeline() {
-    if (!contextIsReady()) return;
-    REQUIRED_IDS.forEach(ensureMount);
-  }
-
   function stabiliseState() {
     const context = readContext();
-    window.state = window.state || {};
-    window.state.operatingSystemMode = true;
-    window.state.connectedSafeguarding = true;
-    window.state.liveOperationalModel = true;
-    if (context.homeId) window.state.currentHomeId = context.homeId;
-    if (context.childId) window.state.currentChildId = context.childId;
     window.IndiCareOSContext = context;
+    if (context.homeId && context.childId && window.IndiCareContext?.set) {
+      window.IndiCareContext.set(context);
+    }
   }
 
   async function fetchYoungPeople(homeId = '') {
@@ -177,28 +131,25 @@
   function contextWallHtml() {
     return `
       <section id="${WALL_ID}" class="os-context-wall" role="dialog" aria-modal="true" aria-labelledby="os-context-title">
-        <style>
-          .os-context-wall{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#eef4fb,#f8fafc 55%,#dbeafe);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a}.os-context-panel{width:min(980px,100%);max-height:92vh;overflow:auto;border:1px solid #dbe7f3;background:rgba(255,255,255,.96);box-shadow:0 24px 80px rgba(15,23,42,.18);border-radius:30px;padding:24px}.os-context-kicker{font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-weight:900;color:#155eef}.os-context-title{margin:8px 0 8px;font-size:34px;line-height:1.05;letter-spacing:-.04em}.os-context-copy{margin:0;color:#64748b;line-height:1.55;max-width:780px}.os-context-steps{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}.os-context-card{border:1px solid #dbe7f3;border-radius:22px;background:#fff;padding:16px;min-height:240px}.os-context-card h3{margin:0 0 6px;font-size:18px}.os-context-card small{display:block;color:#64748b;margin-bottom:12px}.os-context-list{display:grid;gap:10px}.os-context-option{width:100%;text-align:left;border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;padding:13px;cursor:pointer;color:#0f172a}.os-context-option:hover,.os-context-option.active{border-color:#155eef;background:#eaf2ff}.os-context-option strong{display:block;font-size:15px}.os-context-option span{display:block;margin-top:4px;color:#64748b;font-size:13px}.os-context-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid #dbe7f3}.os-context-status{color:#64748b;font-size:13px}.os-context-button{border:0;border-radius:14px;padding:12px 16px;font-weight:900;cursor:pointer}.os-context-button.primary{background:#155eef;color:#fff}.os-context-button.secondary{background:#eef4fb;color:#334155}.os-context-button:disabled{opacity:.45;cursor:not-allowed}.os-context-empty{border:1px dashed #dbe7f3;background:#f8fafc;border-radius:16px;padding:16px;color:#64748b;text-align:center}.os-context-selected{margin-top:10px;padding:10px 12px;border-radius:14px;background:#dcfce7;color:#166534;font-weight:850}@media(max-width:780px){.os-context-steps{grid-template-columns:1fr}.os-context-title{font-size:28px}.os-context-panel{padding:18px;border-radius:22px}}
-        </style>
         <div class="os-context-panel">
-          <div class="os-context-kicker">IndiCare OS context wall</div>
-          <h1 class="os-context-title" id="os-context-title">Choose the home and child before anything opens</h1>
-          <p class="os-context-copy">The OS is built around the child’s journey, the adult’s journey and the home’s journey. Select the home first, then the child you are working with. Nothing operational is shown until that context is set.</p>
+          <div class="os-context-kicker">IndiCare OS</div>
+          <h1 class="os-context-title" id="os-context-title">Select home and young person</h1>
+          <p class="os-context-copy">Start with the home and the young person you are working with. The OS then opens the child, adult, home, documents, standards and oversight journey in one context.</p>
           <div class="os-context-steps">
             <article class="os-context-card">
-              <h3>1. Which home are you working in?</h3>
-              <small>This sets the safeguarding and recording boundary.</small>
+              <h3>1. Home</h3>
+              <small>This sets the operational and safeguarding boundary.</small>
               <div class="os-context-list" data-os-home-list><div class="os-context-empty">Loading homes…</div></div>
             </article>
             <article class="os-context-card">
-              <h3>2. Which child are you working with?</h3>
-              <small>This opens the child journey and links every record back to their profile.</small>
+              <h3>2. Young person</h3>
+              <small>This opens the living journey and links every action to their profile.</small>
               <div class="os-context-list" data-os-child-list><div class="os-context-empty">Select a home first.</div></div>
             </article>
           </div>
           <div class="os-context-footer">
-            <div class="os-context-status" data-os-context-status>Waiting for home and child selection.</div>
-            <div>
+            <div class="os-context-status" data-os-context-status>Waiting for home and young person.</div>
+            <div class="os-context-actions">
               <button type="button" class="os-context-button secondary" data-os-context-reset>Reset</button>
               <button type="button" class="os-context-button primary" data-os-context-enter disabled>Enter OS</button>
             </div>
@@ -211,7 +162,7 @@
   function renderChildren(root, children, selectedChildId = '') {
     const list = root.querySelector('[data-os-child-list]');
     if (!children.length) {
-      list.innerHTML = '<div class="os-context-empty">No children found for this home.</div>';
+      list.innerHTML = '<div class="os-context-empty">No young people found for this home.</div>';
       return;
     }
     list.innerHTML = children.map((child) => {
@@ -235,10 +186,10 @@
         status.innerHTML = `<strong>${esc(selectedHome.name)}</strong> · <strong>${esc(selectedChild.name)}</strong> selected.`;
         enter.disabled = false;
       } else if (selectedHome) {
-        status.textContent = `${selectedHome.name} selected. Now choose the child.`;
+        status.textContent = `${selectedHome.name} selected. Now choose the young person.`;
         enter.disabled = true;
       } else {
-        status.textContent = 'Waiting for home and child selection.';
+        status.textContent = 'Waiting for home and young person.';
         enter.disabled = true;
       }
     }
@@ -247,11 +198,10 @@
       const allChildren = await fetchYoungPeople('');
       const homes = deriveHomes(allChildren);
       if (!homes.length) {
-        homeList.innerHTML = '<div class="os-context-empty">No homes found. Check the young person profile views and permissions.</div>';
+        homeList.innerHTML = '<div class="os-context-empty">No homes found. Check profiles and permissions.</div>';
         return;
       }
-      homeList.innerHTML = homes.map((home) => `<button type="button" class="os-context-option" data-os-home-id="${esc(home.id)}" data-os-home-name="${esc(home.name)}"><strong>${esc(home.name)}</strong><span>${home.children} child${home.children === 1 ? '' : 'ren'} · ${esc(home.highestState)}</span></button>`).join('');
-
+      homeList.innerHTML = homes.map((home) => `<button type="button" class="os-context-option" data-os-home-id="${esc(home.id)}" data-os-home-name="${esc(home.name)}"><strong>${esc(home.name)}</strong><span>${home.children} young person${home.children === 1 ? '' : 's'} · ${esc(home.highestState)}</span></button>`).join('');
       homeList.querySelectorAll('[data-os-home-id]').forEach((button) => {
         button.addEventListener('click', async () => {
           homeList.querySelectorAll('.os-context-option').forEach((item) => item.classList.remove('active'));
@@ -273,7 +223,7 @@
       });
     } catch (error) {
       console.warn('[IndiCare OS] Context wall failed to load', error);
-      homeList.innerHTML = '<div class="os-context-empty">Could not load homes yet. Check OS young people API and database views.</div>';
+      homeList.innerHTML = '<div class="os-context-empty">Could not load homes yet. Check OS young people API and permissions.</div>';
     }
 
     root.querySelector('[data-os-context-reset]').addEventListener('click', () => {
@@ -292,15 +242,10 @@
       applyContextToUrl(context);
       root.remove();
       showProtectedRuntime();
-      hardenRenderPipeline();
-      window.loadAll?.();
       setTimeout(() => {
-        window.openChild?.(context.childId);
-        const childInput = document.getElementById('care-yp-id');
-        const homeInput = document.getElementById('care-home-id');
-        if (childInput) childInput.value = context.childId;
-        if (homeInput) homeInput.value = context.homeId;
-      }, 250);
+        document.dispatchEvent(new CustomEvent('indicare:care-data-changed'));
+        window.loadTodayForChild?.();
+      }, 120);
     });
   }
 
@@ -330,12 +275,6 @@
   function boot() {
     stabiliseState();
     ensureContextWall();
-    hardenRenderPipeline();
-
-    document.addEventListener('indicare:care-data-changed', hardenRenderPipeline);
-    document.addEventListener('indicare:os-context-ready', hardenRenderPipeline);
-
-    setInterval(hardenRenderPipeline, 4000);
 
     window.IndiCareOSContextGate = {
       readContext,
@@ -346,7 +285,7 @@
       requireContext: ensureContextWall
     };
 
-    console.info('[IndiCare OS] Operating system resilience and context wall active');
+    console.info('[IndiCare OS] Context wall active');
   }
 
   if (document.readyState === 'loading') {
