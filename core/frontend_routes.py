@@ -118,7 +118,7 @@ def _load_indicare_ai_index() -> str:
 def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     async def root_redirect():
-        return RedirectResponse(url="/assistant")
+        return RedirectResponse(url="/indicare-ai-app")
 
     @app.get("/assistant")
     @app.get("/assistant.html")
@@ -146,6 +146,8 @@ def register_frontend_routes(app: FastAPI) -> None:
         return {
             "ok": True,
             "frontend": True,
+            "flagship": "indicare_ai",
+            "default_route": "/indicare-ai-app",
             "ai_suite_assets": sorted(list(ai_suite_asset_names())),
             "indicare_ai_app": os.path.exists(os.path.join(INDICARE_AI_DIR, "index.html")),
         }
