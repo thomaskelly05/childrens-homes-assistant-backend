@@ -19,7 +19,7 @@
     if (document.getElementById('icRecoveryStyles')) return;
     const style = document.createElement('style');
     style.id = 'icRecoveryStyles';
-    style.textContent = '.ic-orb{position:fixed;right:24px;bottom:24px;width:86px;height:86px;border:0;border-radius:50%;background:radial-gradient(circle at 30% 25%,#fff 0,#93c5fd 18%,#2563eb 43%,#020617 100%);box-shadow:0 0 50px rgba(37,99,235,.55);color:#fff;font-weight:900;z-index:1000;cursor:pointer}.ic-orb-panel{position:fixed;right:24px;bottom:124px;width:min(430px,92vw);background:#fff;border:1px solid #e5e7eb;border-radius:24px;box-shadow:0 30px 90px rgba(15,23,42,.25);padding:18px;z-index:999;display:none}.ic-orb-panel.open{display:block}.ic-mode{display:flex;gap:8px;margin:10px 0}.ic-mode button{flex:1;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:8px;cursor:pointer}.ic-mode button.active{background:#111827;color:#fff}.ic-output{white-space:pre-wrap;background:#f8fafc;border-left:4px solid #2563eb;padding:12px;border-radius:8px;margin-top:12px;max-height:260px;overflow:auto}.ic-projects{display:grid;gap:4px}.ic-project-chip{border:0;background:transparent;border-radius:10px;padding:8px;text-align:left;cursor:pointer}.ic-project-chip.active,.ic-project-chip:hover{background:#eef2ff}';
+    style.textContent = '.ic-orb{position:fixed;right:24px;bottom:24px;width:86px;height:86px;border:0;border-radius:50%;background:radial-gradient(circle at 30% 25%,#fff 0,#93c5fd 18%,#2563eb 43%,#020617 100%);box-shadow:0 0 50px rgba(37,99,235,.55);color:#fff;font-weight:900;z-index:1000;cursor:pointer}.ic-orb.listening{animation:icPulse 1.2s infinite}@keyframes icPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}.ic-orb-panel{position:fixed;right:24px;bottom:124px;width:min(430px,92vw);background:#fff;border:1px solid #e5e7eb;border-radius:24px;box-shadow:0 30px 90px rgba(15,23,42,.25);padding:18px;z-index:999;display:none}.ic-orb-panel.open{display:block}.ic-mode{display:flex;gap:8px;margin:10px 0}.ic-mode button{flex:1;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:8px;cursor:pointer}.ic-mode button.active{background:#111827;color:#fff}.ic-output{white-space:pre-wrap;background:#f8fafc;border-left:4px solid #2563eb;padding:12px;border-radius:8px;margin-top:12px;max-height:260px;overflow:auto}.ic-projects{display:grid;gap:4px}.ic-project-chip{border:0;background:transparent;border-radius:10px;padding:8px;text-align:left;cursor:pointer}.ic-project-chip.active,.ic-project-chip:hover{background:#eef2ff}';
     document.head.appendChild(style);
   }
 
@@ -61,7 +61,7 @@
     const panel = document.createElement('div');
     panel.id = 'indicareOrbPanel';
     panel.className = 'ic-orb-panel';
-    panel.innerHTML = '<h3>IndiCare Conversation AI</h3><p style="color:#64748b">Press the orb to use IndiCare in Everyday or Specialist mode.</p><div class="ic-mode"><button data-ic-mode="everyday">Everyday</button><button data-ic-mode="specialist">Specialist</button></div><button id="icAsk" class="pill">Ask with current message</button><div id="icOrbOutput" class="ic-output"></div>';
+    panel.innerHTML = '<h3>IndiCare Conversation AI</h3><p style="color:#64748b">Press the orb to use IndiCare in Everyday or Specialist mode.</p><div class="ic-mode"><button data-ic-mode="everyday">Everyday</button><button data-ic-mode="specialist">Specialist</button></div><button id="icListen" class="pill">Start listening</button> <button id="icStop" class="pill">Stop</button> <button id="icAsk" class="pill">Ask with current message</button><div id="icOrbOutput" class="ic-output"></div>';
     document.body.appendChild(panel);
     const orb = document.createElement('button');
     orb.id = 'indicareOrb';
@@ -83,10 +83,20 @@
     });
   }
 
+  function loadOrbAiRuntime() {
+    if (document.querySelector('script[data-indicare-orb-ai]')) return;
+    const script = document.createElement('script');
+    script.defer = true;
+    script.dataset.indicareOrbAi = 'true';
+    script.src = '/frontend/ai-suite/indicare-orb-ai.js';
+    document.body.appendChild(script);
+  }
+
   function init() {
     addStyles();
     addProjects();
     addOrb();
+    loadOrbAiRuntime();
     window.IndiCareRecoveryUI = { state, renderProjects };
   }
 
