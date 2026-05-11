@@ -24,13 +24,16 @@ OS_COMMAND_CORE_SCRIPTS = [
 # The OS now boots around the existing child-first workspace modules rather than
 # parallel command-centre scaffolds. The context wall establishes home + child,
 # the bridge syncs that into IndiCareContext, and the existing journey modules
-# render Today, Journey, Timeline and Manager Oversight.
+# render Today, Understanding, Profile, Journey, Timeline and Manager Oversight.
 OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safe.js"></script>',
     '<script src="/js/indicare-runtime-safety.js"></script>',
     '<script src="/js/os-operating-system-resilience.js"></script>',
     '<script src="/js/os-existing-journey-runtime-bridge.js"></script>',
     '<script type="module" src="/js/indicare-workspace/today-for-child.js"></script>',
+    '<script type="module" src="/js/indicare-workspace/child-understanding-hub.js"></script>',
+    '<script src="/js/indicare-workspace/child-life-model.js"></script>',
+    '<script src="/js/indicare-workspace/child-life-ecosystem.js"></script>',
     '<script type="module" src="/js/indicare-workspace/child-journey-experience.js"></script>',
     '<script src="/js/indicare-workspace/child-timeline.js"></script>',
     '<script type="module" src="/js/indicare-workspace/manager-oversight.js"></script>',
