@@ -15,12 +15,13 @@
     localStorage.setItem('ic_projects', JSON.stringify(state.projects));
   }
 
-  function addStyles() {
-    if (document.getElementById('icRecoveryStyles')) return;
-    const style = document.createElement('style');
-    style.id = 'icRecoveryStyles';
-    style.textContent = '.ic-orb{position:fixed;right:24px;bottom:24px;width:86px;height:86px;border:0;border-radius:50%;background:radial-gradient(circle at 30% 25%,#fff 0,#93c5fd 18%,#2563eb 43%,#020617 100%);box-shadow:0 0 50px rgba(37,99,235,.55);color:#fff;font-weight:900;z-index:1000;cursor:pointer}.ic-orb.listening{animation:icPulse 1.2s infinite}@keyframes icPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}.ic-orb-panel{position:fixed;right:24px;bottom:124px;width:min(430px,92vw);background:#fff;border:1px solid #e5e7eb;border-radius:24px;box-shadow:0 30px 90px rgba(15,23,42,.25);padding:18px;z-index:999;display:none}.ic-orb-panel.open{display:block}.ic-mode{display:flex;gap:8px;margin:10px 0}.ic-mode button{flex:1;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:8px;cursor:pointer}.ic-mode button.active{background:#111827;color:#fff}.ic-output{white-space:pre-wrap;background:#f8fafc;border-left:4px solid #2563eb;padding:12px;border-radius:8px;margin-top:12px;max-height:260px;overflow:auto}.ic-projects{display:grid;gap:4px}.ic-project-chip{border:0;background:transparent;border-radius:10px;padding:8px;text-align:left;cursor:pointer}.ic-project-chip.active,.ic-project-chip:hover{background:#eef2ff}';
-    document.head.appendChild(style);
+  function loadStylesheet() {
+    if (document.querySelector('link[data-runtime="indicare-suite-css"]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/frontend/ai-suite/indicare-suite.css';
+    link.dataset.runtime = 'indicare-suite-css';
+    document.head.appendChild(link);
   }
 
   function renderProjects() {
@@ -77,8 +78,8 @@
         qsa('[data-ic-mode]', panel).forEach((b) => b.classList.toggle('active', b === button));
       });
     });
-    $('icAsk').addEventListener('click', async () => {
-      const text = (($('input') || $('intelInput') || {}).value || '').trim();
+    $('icAsk').addEventListener('click', () => {
+      const text = (($('input') || $('intelInput') || $('connectInput') || {}).value || '').trim();
       $('icOrbOutput').textContent = text ? `Ready: ${text}` : 'Type a message first, then press Ask.';
     });
   }
@@ -93,7 +94,7 @@
   }
 
   function init() {
-    addStyles();
+    loadStylesheet();
     addProjects();
     addOrb();
     loadRuntime('orb-ai', '/frontend/ai-suite/indicare-orb-ai.js');
