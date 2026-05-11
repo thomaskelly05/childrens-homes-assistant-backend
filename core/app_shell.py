@@ -27,6 +27,7 @@ OS_COMMAND_RUNTIME_SCRIPTS = [
     '<script src="/js/indicare-runtime-safety.js"></script>',
     '<script src="/js/indicare-operational-intelligence.js"></script>',
     '<script src="/js/indicare-intelligence-migration-bridge.js"></script>',
+    '<script src="/js/os-operating-system-resilience.js"></script>',
     '<script src="/js/os-command-ui-bridge.js"></script>',
     '<script src="/js/os-operational-intelligence-reconnect.js"></script>',
     '<script src="/js/os-safe-contextual-navigation.js"></script>',
