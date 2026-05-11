@@ -3,19 +3,85 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IndiCare OS | Therapeutic Continuity Operating System</title>
-  <meta name="description" content="A therapeutic continuity operating system for children, adults and homes." />
+  <title>IndiCare OS | Children’s Home Operating System</title>
+  <meta name="description" content="A modern children’s home operating system for recording, reporting, oversight and inspection readiness." />
   <link rel="stylesheet" href="/css/indicare-app-shell.css" />
 </head>
-<body data-skip-global-nav="true" data-indicare-os-runtime="true">
-  <main class="workspace indicare-page-shell" aria-label="IndiCare OS">
-    <section class="indicare-os-host ic-card panel">
-      <p class="eyebrow">IndiCare OS</p>
-      <h1 class="indicare-section-title">Therapeutic continuity operating system</h1>
-      <p class="indicare-section-copy">Select a home and young person to begin. The operating system will then open the young person, adults, home, timeline, standards, documents and oversight workspaces within one connected journey environment.</p>
-    </section>
-    <div id="os-runtime-root"></div>
-  </main>
+<body data-skip-global-nav="true" data-indicare-os-runtime="true" data-os-shell="sharepoint">
+  <div class="ic365-shell" aria-label="IndiCare OS">
+    <header class="ic365-topbar">
+      <div class="ic365-appmark" aria-hidden="true">IC</div>
+      <div class="ic365-title-block">
+        <strong>IndiCare OS</strong>
+        <span>Children’s home workspace</span>
+      </div>
+      <div class="ic365-context-strip" aria-label="Current context">
+        <span data-os-context-home>Choose home</span>
+        <span class="ic365-context-divider">/</span>
+        <span data-os-context-child>Choose young person</span>
+      </div>
+      <div class="ic365-top-actions">
+        <button type="button" class="ic365-button subtle" data-os-reset-context>Change context</button>
+      </div>
+    </header>
+
+    <div class="ic365-body">
+      <aside class="ic365-leftnav" aria-label="Primary navigation">
+        <div class="ic365-nav-section-title">Workspace</div>
+        <nav id="workspace-nav">
+          <button type="button" class="ic365-nav-item active" data-view="today-child"><span>Today</span></button>
+          <button type="button" class="ic365-nav-item" data-view="child-life"><span>Young Person</span></button>
+          <button type="button" class="ic365-nav-item" data-view="child-journey"><span>Journey</span></button>
+          <button type="button" class="ic365-nav-item" data-view="child-timeline"><span>Timeline</span></button>
+          <button type="button" class="ic365-nav-item" data-view="adult-profile"><span>Adults</span></button>
+          <button type="button" class="ic365-nav-item" data-view="home-profile"><span>Home</span></button>
+          <button type="button" class="ic365-nav-item" data-view="standards-ofsted"><span>Standards & Ofsted</span></button>
+          <button type="button" class="ic365-nav-item" data-view="review"><span>Oversight</span></button>
+        </nav>
+      </aside>
+
+      <main class="ic365-main" id="indicare-existing-journey-runtime" aria-label="Workspace content">
+        <section class="ic365-page-header">
+          <div>
+            <p class="ic365-kicker">Children’s home OS</p>
+            <h1 id="view-title">Today</h1>
+            <p id="view-subtitle">Daily recording, journey context, documents, adults, home and oversight in one structured workspace.</p>
+          </div>
+          <div class="ic365-header-actions">
+            <button type="button" class="ic365-button primary" data-os-record>New record</button>
+            <button type="button" class="ic365-button" data-os-documents>Documents</button>
+          </div>
+        </section>
+        <section id="workspace-main" class="ic365-content-panel">
+          <div class="ic365-empty-state">Choose a home and young person to open the workspace.</div>
+        </section>
+      </main>
+
+      <aside class="ic365-rightpanel" aria-label="Context panel">
+        <section class="ic365-side-card">
+          <h2>Current context</h2>
+          <dl class="ic365-context-list">
+            <div><dt>Home</dt><dd data-os-side-home>Not selected</dd></div>
+            <div><dt>Young person</dt><dd data-os-side-child>Not selected</dd></div>
+            <div><dt>Status</dt><dd>Active journey</dd></div>
+          </dl>
+        </section>
+        <section class="ic365-side-card">
+          <h2>Quick actions</h2>
+          <div class="ic365-action-list">
+            <button type="button" data-os-record="daily_record">Daily record</button>
+            <button type="button" data-os-record="direct_work">Direct work</button>
+            <button type="button" data-os-record="incident">Incident / safeguarding</button>
+            <button type="button" data-os-record="contact">Family contact</button>
+          </div>
+        </section>
+        <section class="ic365-side-card quiet">
+          <h2>Shell focus</h2>
+          <p>ClearCare / CHARMS practicality with Microsoft 365 structure: clear navigation, consistent recording, documents, chronology and manager sign-off.</p>
+        </section>
+      </aside>
+    </div>
+  </div>
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
@@ -39,6 +105,20 @@
   <script src="/js/reg44-report-reader-workspace.js"></script>
   <script src="/js/chronology-visual-timeline.js"></script>
   <script src="/js/oversight-intelligence-dashboard.js"></script>
-  <script src="/js/os-floating-assistant.js"></script>
+  <script>
+    document.addEventListener('click', (event) => {
+      const reset = event.target.closest('[data-os-reset-context]');
+      if (reset) window.IndiCareOSContextGate?.clearContext?.();
+      const record = event.target.closest('[data-os-record]');
+      if (record) window.openWorkspaceForm?.('daily', record.dataset.osRecord || 'daily_record');
+      const docs = event.target.closest('[data-os-documents]');
+      if (docs) window.IndiCareDocumentIntelligence?.mount?.();
+    });
+    document.addEventListener('indicare:os-context-ready', (event) => {
+      const context = event.detail || window.IndiCareOSContext || {};
+      document.querySelectorAll('[data-os-context-home],[data-os-side-home]').forEach((node) => node.textContent = context.homeName || `Home ${context.homeId || ''}` || 'Selected home');
+      document.querySelectorAll('[data-os-context-child],[data-os-side-child]').forEach((node) => node.textContent = context.childName || `Young person ${context.childId || ''}` || 'Selected young person');
+    });
+  </script>
 </body>
 </html>
