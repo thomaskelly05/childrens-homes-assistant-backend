@@ -39,7 +39,7 @@
   function isPublicPage() { return PUBLIC_PATHS.has(currentPath()); }
   function currentRoleGroup() { return permissions().currentRoleGroup?.() || "staff"; }
   function roleCanAccess(allowed = [], roleGroup = currentRoleGroup()) { if (permissions().roleCanAccess) return permissions().roleCanAccess(allowed, roleGroup); if (!Array.isArray(allowed) || allowed.length === 0) return true; return allowed.includes(roleGroup); }
-  function loginRedirect() { window.location.replace(`/login?next=${encodeURIComponent("/care-os")}`); }
+  function loginRedirect() { window.location.replace(`/login?next=${encodeURIComponent("/assistant")}`); }
   function accessDeniedRedirect() { const blocked = encodeURIComponent(window.location.pathname + window.location.search); window.location.replace(`/access-denied?blocked=${blocked}`); }
 
   function showAccessDenied(roleGroup) {
