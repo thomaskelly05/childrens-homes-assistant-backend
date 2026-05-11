@@ -30,15 +30,18 @@
         .existing-journey-runtime #workspace-main{display:grid;gap:16px}
       </style>
       <header>
-        <p class="eyebrow">Connected journey workspace</p>
+        <p class="eyebrow">Connected care operating system</p>
         <h2 id="view-title">Today for child</h2>
-        <p id="view-subtitle">Existing journey, profile, recording, oversight and reporting modules wired into the OS context.</p>
+        <p id="view-subtitle">Young people, adults, home, documents, standards, oversight and reporting wired into one OS context.</p>
       </header>
       <nav id="workspace-nav" aria-label="Journey navigation">
         <button type="button" class="nav-item active" data-view="today-child">Today</button>
-        <button type="button" class="nav-item" data-view="child-life">Child profile</button>
-        <button type="button" class="nav-item" data-view="child-journey">Child journey</button>
+        <button type="button" class="nav-item" data-view="child-life">Young person</button>
+        <button type="button" class="nav-item" data-view="child-journey">Journey</button>
         <button type="button" class="nav-item" data-view="child-timeline">Timeline</button>
+        <button type="button" class="nav-item" data-view="adult-profile">Adults</button>
+        <button type="button" class="nav-item" data-view="home-profile">Home</button>
+        <button type="button" class="nav-item" data-view="standards-ofsted">Standards & Ofsted</button>
         <button type="button" class="nav-item" data-view="review">Manager oversight</button>
       </nav>
       <main id="workspace-main"><div class="panel">Waiting for home and child context…</div></main>
@@ -91,6 +94,9 @@
     if (view === 'child-life' && typeof window.loadChildLifeEcosystem === 'function') return window.loadChildLifeEcosystem();
     if (view === 'child-journey' && typeof window.loadChildJourneyExperience === 'function') return window.loadChildJourneyExperience();
     if (view === 'child-timeline' && typeof window.loadChildTimeline === 'function') return window.loadChildTimeline();
+    if (view === 'adult-profile' && typeof window.loadAdultJourneyProfile === 'function') return window.loadAdultJourneyProfile();
+    if (view === 'home-profile' && typeof window.loadHomeJourneyProfile === 'function') return window.loadHomeJourneyProfile();
+    if (view === 'standards-ofsted' && typeof window.loadStandardsOfstedReadiness === 'function') return window.loadStandardsOfstedReadiness();
     if (view === 'review' && typeof window.loadManagerOversight === 'function') return window.loadManagerOversight();
   }
 
