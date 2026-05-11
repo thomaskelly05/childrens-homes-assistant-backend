@@ -9,78 +9,60 @@
     'daily-recording': {
       title: 'Daily Recording',
       subtitle: 'Daily logs, observations, handover notes and shift continuity records.',
-      sections: [
-        ['Daily log', 'Record the day clearly: presentation, routines, support offered, child voice and outcome.'],
-        ['Observations', 'Capture factual observations that build the chronology without duplicating records.'],
-        ['Handover continuity', 'Promises, worries, routines and follow-up points that must carry into the next shift.']
-      ],
+      endpoint: '/api/os-command/care-recording',
+      filters: ['daily_record', 'observation', 'handover', 'daily_note'],
       actions: ['Daily record', 'Observation', 'Handover note']
     },
     'direct-work': {
       title: 'Direct Work',
       subtitle: 'Key work, therapeutic conversations, life-story work and outcome-focused sessions.',
-      sections: [
-        ['Session record', 'Who was involved, what was explored, what the child said and what changed.'],
-        ['Themes', 'Identity, relationships, safety, emotions, family, education and future planning.'],
-        ['Follow-up', 'Actions, linked plans, documents and manager review points.']
-      ],
+      endpoint: '/api/os-command/care-recording',
+      filters: ['key_work_session', 'direct_work', 'life_story', 'outcome'],
       actions: ['Key work session', 'Life-story note', 'Outcome update']
     },
     incidents: {
       title: 'Incidents & Safeguarding',
       subtitle: 'Incident recording, missing from care, safeguarding concerns, notifications and review.',
-      sections: [
-        ['Incident record', 'What happened, who was present, de-escalation, physical intervention and outcome.'],
-        ['Safeguarding concern', 'Risk, immediate action, notifications, strategy discussion and review needs.'],
-        ['Missing from care', 'Trigger, timeline, return conversation, notifications and prevention learning.']
-      ],
+      endpoint: '/api/os-command/safeguarding-patterns',
+      commandEndpoint: '/api/os-command',
+      filters: ['incident', 'safeguarding', 'missing', 'risk'],
       actions: ['Incident', 'Safeguarding concern', 'Missing episode']
     },
     health: {
       title: 'Health & Medication',
       subtitle: 'Health notes, medication, appointments, sleep, emotional wellbeing and regulation.',
-      sections: [
-        ['Health note', 'Physical and emotional wellbeing updates linked back to the child chronology.'],
-        ['Medication', 'Medication support, refusal, errors, side effects and review needs.'],
-        ['Regulation', 'Sleep, sensory needs, routines, anxiety and what helped the child settle.']
-      ],
+      endpoint: '/api/os-command/care-recording',
+      filters: ['health_note', 'medication', 'wellbeing', 'emotional_wellbeing_note'],
       actions: ['Health note', 'Medication note', 'Wellbeing update']
     },
     education: {
       title: 'Education',
       subtitle: 'Attendance, school updates, PEP, achievements, exclusions, transitions and aspirations.',
-      sections: [
-        ['Education update', 'Attendance, engagement, relationships, achievements and support needs.'],
-        ['School communication', 'Messages, meetings, professionals, actions and document links.'],
-        ['Progress', 'Learning, aspirations, barriers and next steps.']
-      ],
+      endpoint: '/api/os-command/care-recording',
+      filters: ['education_note', 'education', 'pep', 'achievement'],
       actions: ['Education note', 'PEP update', 'Achievement']
     },
     contact: {
       title: 'Family & Contact',
       subtitle: 'Family time, calls, visits, responses, emotional impact and follow-up support.',
-      sections: [
-        ['Contact record', 'Who, when, where, what happened and how the child experienced it.'],
-        ['Emotional impact', 'Presentation before and after contact, what helped and what needs follow-up.'],
-        ['Planning', 'Arrangements, decisions, documents, risks and review points.']
-      ],
+      endpoint: '/api/os-command/care-recording',
+      filters: ['family_contact', 'contact', 'phone_call', 'visit'],
       actions: ['Family contact', 'Phone call', 'Contact review']
     },
     documents: {
       title: 'Documents',
       subtitle: 'Plans, assessments, reports, policies, evidence, review dates and signatures.',
-      sections: [
-        ['Care documents', 'Care plans, placement plans, risk assessments, PEPs and health documents.'],
-        ['Evidence library', 'Professional reports, Reg 44/45, meeting minutes, inspection evidence and uploads.'],
-        ['Review control', 'Expiry dates, review reminders, manager sign-off and version control.']
-      ],
+      endpoint: '/api/os-command/inspection/workspaces',
+      filters: ['document', 'plan', 'assessment', 'evidence'],
       actions: ['Upload document', 'Review document', 'Link to chronology']
     }
   };
 
-  function osContext() {
-    return window.IndiCareOSContext || {};
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   }
+
+  function osContext() { return window.IndiCareOSContext || {}; }
 
   function ensureWorkspaceShell() {
     const shell = document.getElementById(CANONICAL_CONTAINER_ID);
@@ -108,7 +90,6 @@
     const ctx = osContext();
     updateContextChrome(ctx);
     if (!ctx.homeId || !ctx.childId) return null;
-
     const next = {
       homeId: String(ctx.homeId || ''),
       homeName: ctx.homeName || `Home ${ctx.homeId}`,
@@ -118,25 +99,28 @@
       childRiskLevel: ctx.childRiskLevel || '',
       childPlacementStatus: ctx.childPlacementStatus || 'active journey'
     };
-
-    if (window.IndiCareContext?.set) {
-      window.IndiCareContext.set(next);
-    } else {
+    if (window.IndiCareContext?.set) window.IndiCareContext.set(next);
+    else {
       let current = { ...next };
-      window.IndiCareContext = {
-        get: () => current,
-        set: (value) => {
-          current = { ...current, ...(value || {}) };
-          return current;
-        },
-        clear: () => {
-          current = { ...next };
-          return current;
-        }
-      };
+      window.IndiCareContext = { get: () => current, set: (value) => (current = { ...current, ...(value || {}) }), clear: () => (current = { ...next }) };
     }
-
     return next;
+  }
+
+  function params(extra = {}) {
+    const ctx = syncContext() || osContext();
+    const p = new URLSearchParams({ limit: '80' });
+    if (ctx.homeId) p.set('home_id', ctx.homeId);
+    if (ctx.childId) p.set('young_person_id', ctx.childId);
+    Object.entries(extra).forEach(([key, value]) => value !== undefined && value !== null && value !== '' && p.set(key, value));
+    return p;
+  }
+
+  async function api(path, extra = {}) {
+    const q = params(extra).toString();
+    const response = await fetch(`${path}${q ? `?${q}` : ''}`, { credentials: 'include' });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    return response.json();
   }
 
   function setHeader(titleText, subtitleText) {
@@ -169,49 +153,98 @@
     });
   }
 
-  function shellWorkspaceCard(workspace) {
+  function normaliseRecords(key, payload) {
+    if (!payload) return [];
+    if (Array.isArray(payload)) return payload;
+    if (key === 'incidents') return [...(payload.patterns || []), ...(payload.items || [])];
+    if (key === 'documents') return [...(payload.workspaces || []), ...(payload.items || [])];
+    return payload.records || payload.items || payload.care_plan_reviews || [];
+  }
+
+  function filterRecords(records, filters) {
+    if (!filters?.length) return records;
+    return records.filter((record) => {
+      const text = [record.record_type, record.source_type, record.type, record.title, record.summary, record.narrative, record.pattern_type].join(' ').toLowerCase();
+      return filters.some((filter) => text.includes(filter.toLowerCase()));
+    });
+  }
+
+  function recordCard(record) {
+    const title = record.title || record.event_title || record.pattern_type || record.record_type || 'Record';
+    const type = String(record.record_type || record.source_type || record.pattern_type || record.status || 'record').replaceAll('_', ' ');
+    const when = record.occurred_at || record.event_at || record.created_at || record.detected_at || record.record_date || '';
+    const summary = record.narrative || record.summary || record.event_summary || record.recommended_action || record.leadership_summary || 'No narrative available yet.';
+    const voice = record.child_voice || record.young_person_voice || '';
+    const status = record.feed_state || record.timeline_state || record.status || record.severity || 'recorded';
+    return `<article class="record-card ic365-record-card">
+      <div class="ic365-record-head"><span class="mini-tag">${esc(type)}</span><small>${esc(when)}</small><strong>${esc(status)}</strong></div>
+      <h4>${esc(title)}</h4>
+      <p>${esc(summary).slice(0, 320)}</p>
+      ${voice ? `<div class="alert low"><strong>Child voice</strong><p>${esc(voice).slice(0, 220)}</p></div>` : ''}
+      <footer class="ic365-record-foot"><button type="button" class="ic365-button">Review</button><button type="button" class="ic365-button">Link document</button><button type="button" class="ic365-button">Add comment</button></footer>
+    </article>`;
+  }
+
+  function overviewStats(records) {
+    const review = records.filter((r) => r.manager_review_required || /review|returned|submitted/i.test(String(r.status || r.feed_state || ''))).length;
+    const safeguard = records.filter((r) => /safeguard|incident|missing|risk/i.test(JSON.stringify(r))).length;
+    const voice = records.filter((r) => r.child_voice || r.young_person_voice).length;
+    return { total: records.length, review, safeguard, voice };
+  }
+
+  function liveWorkspaceHtml(workspace, records, allRecords = []) {
+    const stats = overviewStats(records);
+    const timeline = records.length ? records.slice(0, 16).map(recordCard).join('') : '<div class="ic365-empty-state">No matching live records yet. The shell is connected and will show records as they are added.</div>';
+    const allTimeline = allRecords.length ? allRecords.slice(0, 5).map(recordCard).join('') : '<div class="ic365-empty-state">No chronology records available yet.</div>';
     return `
-      <section class="hero-card">
-        <div>
-          <p class="eyebrow">Shell workspace</p>
-          <h3>${workspace.title}</h3>
-          <p>${workspace.subtitle}</p>
-        </div>
-        <div class="hero-actions">
-          ${workspace.actions.map((action) => `<button type="button" class="ic365-button">${action}</button>`).join('')}
-        </div>
-      </section>
       <section class="card-grid">
-        ${workspace.sections.map(([title, text]) => `<article class="metric-card"><strong>${title}</strong><span>${text}</span></article>`).join('')}
+        <article class="metric-card"><strong>${stats.total}</strong><span>Records in this area</span><small>From existing OS endpoints</small></article>
+        <article class="metric-card"><strong>${stats.review}</strong><span>Review signals</span><small>Manager review / returned / submitted</small></article>
+        <article class="metric-card"><strong>${stats.safeguard}</strong><span>Safeguarding links</span><small>Incident, risk or missing language</small></article>
+        <article class="metric-card"><strong>${stats.voice}</strong><span>Child voice</span><small>Records with young person voice</small></article>
       </section>
       <section class="two-column">
         <article class="panel">
-          <h3>Recording structure</h3>
-          <div class="check-row done">Context: home, young person, date/time and adults involved</div>
-          <div class="check-row done">Narrative: what happened, support offered, child voice and outcome</div>
-          <div class="check-row todo">Manager review, comments, returns and sign-off pending deeper wiring</div>
+          <div class="section-header-row"><div><p class="eyebrow">Live flow</p><h3>${esc(workspace.title)} chronology</h3></div><div class="hero-actions">${workspace.actions.map((action) => `<button type="button" class="ic365-button">${esc(action)}</button>`).join('')}</div></div>
+          <div class="ic365-record-feed">${timeline}</div>
         </article>
         <article class="panel">
-          <h3>Shell-only integration</h3>
-          <p>This area is now present in the operating system shell. Existing backend workflows will be reused and wired after the shell is stable.</p>
+          <p class="eyebrow">Connected flow</p><h3>Recent chronology context</h3>
+          <p>This panel reuses the existing chronology and care-recording routers so this workspace does not become another disconnected module.</p>
+          <div class="ic365-record-feed compact">${allTimeline}</div>
         </article>
       </section>`;
   }
 
-  function activateShell(key) {
+  async function activateShell(key) {
     const shell = ensureWorkspaceShell();
     const workspace = SHELL_WORKSPACES[key];
     if (!shell || !workspace) return;
     setHeader(workspace.title, workspace.subtitle);
     const main = document.getElementById('workspace-main');
-    if (main) main.innerHTML = shellWorkspaceCard(workspace);
+    if (!main) return;
+    main.innerHTML = '<div class="ic365-empty-state">Loading existing records and chronology...</div>';
+    try {
+      const [primary, chronology, commands] = await Promise.all([
+        api(workspace.endpoint),
+        api('/api/os-command/chronology-intelligence'),
+        workspace.commandEndpoint ? api(workspace.commandEndpoint) : Promise.resolve(null)
+      ]);
+      const primaryRecords = filterRecords(normaliseRecords(key, primary), workspace.filters);
+      const commandRecords = commands ? filterRecords(normaliseRecords(key, commands), workspace.filters) : [];
+      const chronRecords = normaliseRecords('chronology', chronology);
+      const merged = [...primaryRecords, ...commandRecords];
+      main.innerHTML = liveWorkspaceHtml(workspace, merged.length ? merged : primaryRecords, chronRecords);
+    } catch (error) {
+      console.warn('[IndiCare OS] Shell workspace endpoint failed', key, error);
+      main.innerHTML = `<div class="ic365-empty-state">Could not load live records for ${esc(workspace.title)} yet. Existing routers remain available and this workspace will populate when the endpoint responds.</div>`;
+    }
   }
 
   function activate(view) {
     const shell = ensureWorkspaceShell();
     if (!shell) return;
     setHeaderForView(view);
-
     if (view === 'today-child' && typeof window.loadTodayForChild === 'function') return window.loadTodayForChild();
     if (view === 'child-life' && typeof window.loadChildLifeEcosystem === 'function') return window.loadChildLifeEcosystem();
     if (view === 'child-journey' && typeof window.loadChildJourneyExperience === 'function') return window.loadChildJourneyExperience();
@@ -225,20 +258,8 @@
   function bindNav() {
     if (document.body.dataset.ic365NavBound === 'true') return;
     document.body.dataset.ic365NavBound = 'true';
-    document.querySelectorAll('[data-view]').forEach((button) => {
-      button.addEventListener('click', () => {
-        setActive(button);
-        syncContext();
-        activate(button.dataset.view);
-      });
-    });
-    document.querySelectorAll('[data-shell]').forEach((button) => {
-      button.addEventListener('click', () => {
-        setActive(button);
-        syncContext();
-        activateShell(button.dataset.shell);
-      });
-    });
+    document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => { setActive(button); syncContext(); activate(button.dataset.view); }));
+    document.querySelectorAll('[data-shell]').forEach((button) => button.addEventListener('click', () => { setActive(button); syncContext(); activateShell(button.dataset.shell); }));
   }
 
   function bootExistingModules() {
@@ -261,7 +282,7 @@
       if (activeShell) activateShell(activeShell);
       else activate(activeView || 'today-child');
     });
-    console.info('[IndiCare OS] SharePoint shell bridge with shell-only workspaces active');
+    console.info('[IndiCare OS] SharePoint shell bridge connected to existing OS routers');
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
