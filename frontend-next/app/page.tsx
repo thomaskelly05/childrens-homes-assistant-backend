@@ -8,6 +8,9 @@ import { WorkspaceTabs } from '@/components/workspace-tabs'
 import { OperationalStatusBar } from '@/components/operational-status-bar'
 import { CommandCentrePanel } from '@/components/command-centre-panel'
 import { LiveAlertsPanel } from '@/components/live-alerts-panel'
+import { NotificationCentre } from '@/components/notification-centre'
+import { RecentActivityFeed } from '@/components/recent-activity-feed'
+import { SystemHealthPanel } from '@/components/system-health-panel'
 import { loadChronologyContext } from '@/lib/api'
 
 export default async function HomePage() {
@@ -25,14 +28,19 @@ export default async function HomePage() {
 
           <OverviewMetrics />
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <ChronologyWorkspace records={context.records.slice(0, 12)} />
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="space-y-6">
+              <ChronologyWorkspace records={context.records.slice(0, 12)} />
+              <RecentActivityFeed />
+            </div>
 
             <div className="space-y-6">
               <ContextRail />
               <AssistantPanel />
               <CommandCentrePanel />
               <LiveAlertsPanel />
+              <NotificationCentre />
+              <SystemHealthPanel />
             </div>
           </div>
         </div>
