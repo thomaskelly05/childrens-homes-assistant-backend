@@ -15,6 +15,7 @@ router = APIRouter(prefix="/assistant/realtime", tags=["Assistant Realtime Voice
 OPENAI_REALTIME_SESSION_URL = "https://api.openai.com/v1/realtime/sessions"
 DEFAULT_REALTIME_MODEL = os.getenv("INDICARE_REALTIME_MODEL", "gpt-4o-realtime-preview")
 DEFAULT_REALTIME_VOICE = os.getenv("INDICARE_REALTIME_VOICE", "shimmer")
+ALLOWED_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"}
 
 
 class RealtimeSessionRequest(BaseModel):
@@ -24,6 +25,17 @@ class RealtimeSessionRequest(BaseModel):
     profile: dict[str, Any] | None = None
     memory_summary: str | None = None
     conversation_id: str | None = None
+
+
+def _configured() -> bool:
+    return bool(os.getenv("OPENAI_API_KEY"))
+
+
+def _voice(value: str | None) -> str:
+    requested = safe_string(value).lower()
+    configured = safe_string(DEFAULT_REALTIME_VOICE).lower()
+    selected = requested or configured or "shimmer"
+    return selected if selected in ALLOWED_VOICES else "shimmer"
 
 
 def _voice_instruction(payload: RealtimeSessionRequest, current_user: dict[str, Any]) -> str:
@@ -37,12 +49,22 @@ def _voice_instruction(payload: RealtimeSessionRequest, current_user: dict[str, 
         "Speak naturally, calmly and humanly. Use short spoken sentences, not long paragraphs. "
         "Default personality: warm British colleague, emotionally mature, non-corporate, professional and reassuring. "
         f"User: {name}. Role/context: {role}. Preferred tone: {tone}. "
-        "Start with brief natural acknowledgements only when they fit. Do not over-talk. "
-        "Pause naturally. Ask one useful question when more detail is needed. "
+        "Use light acknowledgements only when natural. Do not over-talk. Pause naturally. "
         "If safeguarding, risk, allegation, missing episode, restraint, self-harm, harm to others or serious incident is mentioned, slow down, separate facts from interpretation and suggest manager, DSL or professional escalation as appropriate. "
         "Do not claim to be human or conscious. Do not make final legal, safeguarding, employment or clinical decisions. Keep British English. "
         f"Live memory available: {memory or 'No live memory summary supplied yet.'}"
     )
+
+
+def _session_body(payload: RealtimeSessionRequest, current_user: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "model": DEFAULT_REALTIME_MODEL,
+        "voice": _voice(payload.voice),
+        "instructions": _voice_instruction(payload, current_user),
+        "modalities": ["audio", "text"],
+        "input_audio_transcription": {"model": "whisper-1"},
+        "turn_detection": {"type": "server_vad", "threshold": 0.48, "prefix_padding_ms": 280, "silence_duration_ms": 520},
+    }
 
 
 @router.post("/session")
@@ -50,15 +72,7 @@ async def create_realtime_voice_session(payload: RealtimeSessionRequest, current
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=503, detail="Realtime voice is not configured.")
-    voice = safe_string(payload.voice) or DEFAULT_REALTIME_VOICE
-    body = {
-        "model": DEFAULT_REALTIME_MODEL,
-        "voice": voice,
-        "instructions": _voice_instruction(payload, current_user),
-        "modalities": ["audio", "text"],
-        "input_audio_transcription": {"model": "whisper-1"},
-        "turn_detection": {"type": "server_vad", "threshold": 0.5, "prefix_padding_ms": 300, "silence_duration_ms": 650},
-    }
+    body = _session_body(payload, current_user)
     async with httpx.AsyncClient(timeout=20) as client:
         response = await client.post(
             OPENAI_REALTIME_SESSION_URL,
@@ -68,9 +82,32 @@ async def create_realtime_voice_session(payload: RealtimeSessionRequest, current
     if response.status_code >= 400:
         raise HTTPException(status_code=502, detail="Could not create realtime voice session.")
     data = response.json()
-    return {"ok": True, "provider": "openai_realtime", "model": DEFAULT_REALTIME_MODEL, "voice": voice, "session": data, "fallback": "browser_voice"}
+    return {"ok": True, "provider": "openai_realtime", "configured": True, "model": DEFAULT_REALTIME_MODEL, "voice": body["voice"], "session": data, "fallback": "browser_voice"}
+
+
+@router.get("/config")
+async def realtime_voice_config():
+    return {
+        "ok": True,
+        "configured": _configured(),
+        "provider": "openai_realtime",
+        "model": DEFAULT_REALTIME_MODEL,
+        "voice": _voice(DEFAULT_REALTIME_VOICE),
+        "allowed_voices": sorted(ALLOWED_VOICES),
+        "transport": "webrtc",
+        "fallback": "browser_voice",
+        "production_ready": _configured(),
+    }
 
 
 @router.get("/health")
 async def realtime_voice_health():
-    return {"ok": True, "configured": bool(os.getenv("OPENAI_API_KEY")), "provider": "openai_realtime", "model": DEFAULT_REALTIME_MODEL, "voice": DEFAULT_REALTIME_VOICE}
+    return {
+        "ok": True,
+        "configured": _configured(),
+        "provider": "openai_realtime",
+        "model": DEFAULT_REALTIME_MODEL,
+        "voice": _voice(DEFAULT_REALTIME_VOICE),
+        "transport": "webrtc",
+        "production_ready": _configured(),
+    }
