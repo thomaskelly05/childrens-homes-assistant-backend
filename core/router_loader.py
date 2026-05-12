@@ -28,6 +28,7 @@ routers.ai_notes_routes
 routers.ai_note_templates_routes
 routers.ai_note_export_routes
 routers.assistant_general_routes
+routers.assistant_realtime_voice_routes
 routers.assistant_general_safe_routes
 routers.assistant_web_routes
 routers.indicare_ai_orchestrator_routes
