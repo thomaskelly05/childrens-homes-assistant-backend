@@ -141,6 +141,7 @@ backend.os_command_network_router
 backend.os_command_care_recording_router
 backend.os_command_young_person_workspace_router
 backend.os_production_diagnostics_router
+backend.os_enterprise_compat_router
 """.split()
 
 REQUIRED_ROUTERS = {
