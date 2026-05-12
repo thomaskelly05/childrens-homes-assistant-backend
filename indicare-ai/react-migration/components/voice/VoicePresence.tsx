@@ -4,6 +4,7 @@ import { useEffect,useState } from 'react'
 import { IntelligenceOrb } from '../orb/IntelligenceOrb'
 import { RealtimeStatus } from './RealtimeStatus'
 import { AudioActivityVisualizer } from '../audio/AudioActivityVisualizer'
+import { SpatialAudioPulse } from '../audio/SpatialAudioPulse'
 import { useRuntime } from '../../lib/store'
 
 export function VoicePresence(){
@@ -33,19 +34,25 @@ export function VoicePresence(){
     }
   }
 
+  const active=state==='listening'||state==='speaking'
+
   return (
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'100vh',position:'relative'}}>
       <RealtimeStatus />
 
-      <div style={{display:'flex',gap:12,marginBottom:32,flexWrap:'wrap',justifyContent:'center'}}>
+      <SpatialAudioPulse active={active} />
+
+      <div style={{display:'flex',gap:12,marginBottom:32,flexWrap:'wrap',justifyContent:'center',position:'relative',zIndex:2}}>
         <div className='glass' style={{padding:'10px 16px',borderRadius:999}}>Realtime conversational</div>
         <div className='glass' style={{padding:'10px 16px',borderRadius:999}}>Continuous listening</div>
         <div className='glass' style={{padding:'10px 16px',borderRadius:999}}>British female voice</div>
       </div>
 
-      <AudioActivityVisualizer active={state==='listening'||state==='speaking'} />
+      <div style={{position:'relative',zIndex:2}}>
+        <AudioActivityVisualizer active={active} />
+      </div>
 
-      <div style={{margin:'36px 0'}}>
+      <div style={{margin:'36px 0',position:'relative',zIndex:2}}>
         <IntelligenceOrb
           listening={state==='listening'}
           thinking={state==='thinking'}
@@ -54,9 +61,9 @@ export function VoicePresence(){
         />
       </div>
 
-      <h1 style={{fontSize:72,fontWeight:900,margin:'24px 0 12px'}}>Talk naturally</h1>
+      <h1 style={{fontSize:72,fontWeight:900,margin:'24px 0 12px',position:'relative',zIndex:2}}>Talk naturally</h1>
 
-      <p style={{fontSize:22,color:'#cbd5e1',maxWidth:760,textAlign:'center',lineHeight:1.7}}>
+      <p style={{fontSize:22,color:'#cbd5e1',maxWidth:760,textAlign:'center',lineHeight:1.7,position:'relative',zIndex:2}}>
         Presence-led conversational intelligence for residential care professionals.
       </p>
     </div>
