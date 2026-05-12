@@ -7,6 +7,7 @@ import { VoicePresence } from '../voice/VoicePresence'
 import { ConnectWorkspace } from '../workspace/ConnectWorkspace'
 import { NotesWorkspace } from '../workspace/NotesWorkspace'
 import { DocsWorkspace } from '../workspace/DocsWorkspace'
+import { RuntimeTelemetry } from '../observability/RuntimeTelemetry'
 import { useRuntime } from '../../lib/store'
 
 export function AppShell(){
@@ -40,6 +41,8 @@ export function AppShell(){
         {workspace()}
 
         {mode!=='intelligence'&&<Composer />}
+
+        <RuntimeTelemetry />
       </main>
     </div>
   )
