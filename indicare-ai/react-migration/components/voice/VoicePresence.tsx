@@ -5,6 +5,7 @@ import { IntelligenceOrb } from '../orb/IntelligenceOrb'
 import { RealtimeStatus } from './RealtimeStatus'
 import { AudioActivityVisualizer } from '../audio/AudioActivityVisualizer'
 import { SpatialAudioPulse } from '../audio/SpatialAudioPulse'
+import { InsightCard } from '../intelligence/InsightCard'
 import { useRuntime } from '../../lib/store'
 
 export function VoicePresence(){
@@ -41,6 +42,8 @@ export function VoicePresence(){
       <RealtimeStatus />
 
       <SpatialAudioPulse active={active} />
+
+      <InsightCard />
 
       <div style={{display:'flex',gap:12,marginBottom:32,flexWrap:'wrap',justifyContent:'center',position:'relative',zIndex:2}}>
         <div className='glass' style={{padding:'10px 16px',borderRadius:999}}>Realtime conversational</div>
