@@ -47,33 +47,13 @@ def register_frontend_routes(app: FastAPI) -> None:
     async def assistant_surface():
         return HTMLResponse(_load_html(INDICARE_AI_DIR, "assistant.html"))
 
-    @app.get("/indicare-ai/assistant.css")
-    async def indicare_ai_css():
-        return _ai_asset("assistant.css", "text/css")
-
-    @app.get("/indicare-ai/assistant-pro.css")
-    async def indicare_ai_pro_css():
-        return _ai_asset("assistant-pro.css", "text/css")
-
-    @app.get("/indicare-ai/assistant-polish.css")
-    async def indicare_ai_polish_css():
-        return _ai_asset("assistant-polish.css", "text/css")
-
-    @app.get("/indicare-ai/assistant-bridge.js")
-    async def indicare_ai_bridge():
-        return _ai_asset("assistant-bridge.js", "application/javascript")
-
-    @app.get("/indicare-ai/intelligence-voice.js")
-    async def indicare_ai_voice():
-        return _ai_asset("intelligence-voice.js", "application/javascript")
-
-    @app.get("/indicare-ai/assistant-streaming.js")
-    async def indicare_ai_streaming():
-        return _ai_asset("assistant-streaming.js", "application/javascript")
-
-    @app.get("/indicare-ai/assistant-runtime.js")
-    async def indicare_ai_runtime():
-        return _ai_asset("assistant-runtime.js", "application/javascript")
+    @app.get("/indicare-ai/{filename}")
+    async def indicare_ai_asset(filename: str):
+        if filename.endswith(".css"):
+            return _ai_asset(filename, "text/css")
+        if filename.endswith(".js"):
+            return _ai_asset(filename, "application/javascript")
+        return JSONResponse({"ok": False, "error": "Unsupported asset"}, status_code=404)
 
     @app.get("/young-people-shell")
     @app.get("/young-people-shell.html")
@@ -89,4 +69,21 @@ def register_frontend_routes(app: FastAPI) -> None:
 
     @app.get("/health/frontend")
     async def frontend_health():
-        return {"ok": True, "frontend": True, "assistant_runtime": "indicare-ai", "assistant_assets": "isolated", "assistant_bridge": True, "assistant_streaming": True, "assistant_voice": True, "assistant_pro_design": True, "assistant_polish": True, "login_route": True, "assistant_route": True, "os_command_route": True}
+        return {
+            "ok": True,
+            "frontend": True,
+            "assistant_runtime": "indicare-ai",
+            "assistant_assets": "isolated_dynamic",
+            "assistant_bridge": True,
+            "assistant_streaming": True,
+            "assistant_voice": True,
+            "assistant_voice_live": True,
+            "assistant_realtime": True,
+            "assistant_voice_presence": True,
+            "assistant_notes_beam": True,
+            "assistant_pro_design": True,
+            "assistant_polish": True,
+            "login_route": True,
+            "assistant_route": True,
+            "os_command_route": True,
+        }
