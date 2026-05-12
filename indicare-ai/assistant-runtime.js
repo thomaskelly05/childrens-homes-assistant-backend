@@ -1,40 +1,116 @@
 (function(){
+  if(window.__IndiCareAssistantRuntimeMounted)return;
+  window.__IndiCareAssistantRuntimeMounted=true;
+
   var modes={assistant:['Assistant','Full ChatGPT copilot','Ask, draft, reflect and plan with one professional AI.'],connect:['Connect','Outlook + Teams + Calendar','Email, calls, meetings, channels and follow-ups with AI built in.'],notes:['I-Notes','Beam / Magic Notes','Voice-aware notes that become document-ready outputs.'],docs:['Docs','Word processor + care templates','SCCIF, Ofsted, supervision and leadership documents.'],intelligence:['Intelligence','ChatGPT Voice style presence','Click the orb and start a natural conversation.']};
-  var templates={'Supervision record':'Purpose\n\nWellbeing check-in\n\nPractice reflection\n\nSafeguarding discussion\n\nDevelopment needs\n\nActions agreed\n\nReview date','SCCIF evidence note':'Inspection judgement area\n\nEvidence available\n\nImpact on children\n\nLeadership oversight\n\nGaps or risks\n\nNext action','Reg 44 response':'Recommendation\n\nManagement response\n\nEvidence reviewed\n\nAction taken\n\nResponsible person\n\nCompletion date','Team meeting minutes':'Purpose\n\nAttendees\n\nDiscussion points\n\nDecisions\n\nActions and owners\n\nFollow-up date','Allegation management reflection':'Concern raised\n\nImmediate actions\n\nNotifications considered\n\nManagement oversight\n\nSupport offered\n\nNext review','Safer recruitment note':'Role\n\nChecks completed\n\nRisk considerations\n\nDecision rationale\n\nInduction actions'};
-  var state={mode:localStorage.getItem('ic.ai.mode')||'assistant',messages:read('ic.ai.messages',[]),actions:read('ic.ai.actions',[]),uploads:read('ic.ai.uploads',[]),notes:localStorage.getItem('ic.ai.notes')||'',docTitle:localStorage.getItem('ic.ai.docTitle')||'Untitled professional document',docBody:localStorage.getItem('ic.ai.docBody')||'',profile:read('ic.ai.profile',{name:'Adult professional',role:'Residential care professional',tone:'Calm, clear and professional',voice:'Warm British English',memory:true}),busy:false,voice:false,profileOpen:false,cmdOpen:false,search:''};
+  var templates={'Supervision record':'Purpose\n\nWellbeing check-in\n\nPractice reflection\n\nSafeguarding discussion\n\nDevelopment needs\n\nActions agreed\n\nReview date'};
   function read(k,f){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(f));}catch(e){return f;}}
-  function save(){localStorage.setItem('ic.ai.mode',state.mode);localStorage.setItem('ic.ai.messages',JSON.stringify(state.messages.slice(-220)));localStorage.setItem('ic.ai.actions',JSON.stringify(state.actions.slice(0,160)));localStorage.setItem('ic.ai.uploads',JSON.stringify(state.uploads.slice(0,40)));localStorage.setItem('ic.ai.notes',state.notes);localStorage.setItem('ic.ai.docTitle',state.docTitle);localStorage.setItem('ic.ai.docBody',state.docBody);localStorage.setItem('ic.ai.profile',JSON.stringify(state.profile));}
+  var state={mode:localStorage.getItem('ic.ai.mode')||'assistant',messages:read('ic.ai.messages',[]),uploads:read('ic.ai.uploads',[]),notes:localStorage.getItem('ic.ai.notes')||'',docTitle:localStorage.getItem('ic.ai.docTitle')||'Untitled professional document',docBody:localStorage.getItem('ic.ai.docBody')||'',profile:read('ic.ai.profile',{name:'Adult professional',role:'Residential care professional'}),busy:false,voice:false,profileOpen:false,cmdOpen:false,search:''};
+  var rendering=false;
+
+  function save(){try{localStorage.setItem('ic.ai.mode',state.mode);localStorage.setItem('ic.ai.messages',JSON.stringify(state.messages.slice(-220)));localStorage.setItem('ic.ai.uploads',JSON.stringify(state.uploads.slice(0,40)));localStorage.setItem('ic.ai.notes',state.notes);localStorage.setItem('ic.ai.docTitle',state.docTitle);localStorage.setItem('ic.ai.docBody',state.docBody);localStorage.setItem('ic.ai.profile',JSON.stringify(state.profile));}catch(e){}}
   function esc(v){return String(v||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c];});}
-  function scoped(){return state.messages.filter(function(m){return m.mode===state.mode});}
-  function conversations(){var map={};state.messages.forEach(function(m){var id=m.thread||'default';if(!map[id])map[id]={id:id,mode:m.mode,title:'New conversation',count:0,pinned:localStorage.getItem('ic.ai.pin.'+id)==='1'};map[id].count++;if(m.role==='user'&&map[id].title==='New conversation')map[id].title=autoTitle(m.content);});return Object.values(map).filter(function(c){return !state.search||c.title.toLowerCase().indexOf(state.search.toLowerCase())>-1}).sort(function(a,b){return (b.pinned-a.pinned)||0}).slice(0,24);}
-  function autoTitle(t){return String(t||'Conversation').trim().split(/\s+/).slice(0,7).join(' ');}
   function currentThread(){return localStorage.getItem('ic.ai.thread')||'default';}
-  function setThread(id){localStorage.setItem('ic.ai.thread',id);render();}
-  function newThread(){localStorage.setItem('ic.ai.thread','t'+Date.now());render();}
-  function deleteThread(id){state.messages=state.messages.filter(function(m){return (m.thread||'default')!==id});if(currentThread()===id)localStorage.setItem('ic.ai.thread','default');save();render();}
-  function pinThread(id){localStorage.setItem('ic.ai.pin.'+id,localStorage.getItem('ic.ai.pin.'+id)==='1'?'0':'1');render();}
-  function layout(){return '<div class="ai-app '+(state.mode==='intelligence'?'is-dark intelligence-mode':'')+'">'+rail()+'<main class="ai-main">'+header()+surface()+composer()+'</main>'+profileModal()+cmdPalette()+'<input id="aiFileInput" type="file" multiple hidden></div>';}
-  function rail(){return '<aside class="ai-rail smart"><div class="ai-brand"><div>IC</div><span><strong>IndiCare AI</strong><small>'+esc(state.profile.role)+'</small></span></div><button class="side-new" data-action="new">+ New chat</button><input class="side-search real" data-search value="'+esc(state.search)+'" placeholder="Search conversations"><nav>'+Object.keys(modes).map(function(k){return '<button class="'+(state.mode===k?'active':'')+'" data-mode="'+k+'"><b>'+modes[k][0].charAt(0)+'</b><span><strong>'+modes[k][0]+'</strong><small>'+modes[k][1]+'</small></span></button>'}).join('')+'</nav><div class="side-title">Conversations</div><div class="side-convos">'+(conversations().map(function(c){return '<div class="side-convo '+(currentThread()===c.id?'active':'')+'"><button data-thread="'+c.id+'"><strong>'+esc(c.title)+'</strong><small>'+c.count+' messages</small></button><button class="mini" data-pin-thread="'+c.id+'">'+(c.pinned?'★':'☆')+'</button><button class="mini" data-delete-thread="'+c.id+'">×</button></div>'}).join('')||'<p class="muted">No conversations yet.</p>')+'</div><div class="side-title">Uploads</div><div class="upload-list">'+(state.uploads.slice(0,5).map(function(u){return '<span>'+esc(u.name)+'</span>'}).join('')||'<small>No files yet</small>')+'</div><div class="profile-card" data-action="profile"><div class="avatar">'+esc((state.profile.name||'A').charAt(0))+'</div><span><strong>'+esc(state.profile.name)+'</strong><small>Profile & settings</small></span></div></aside>';}
-  function header(){var m=modes[state.mode];return '<header class="ai-header"><div><p>'+esc(m[1])+'</p><h1>'+esc(m[0])+'</h1><span>'+esc(m[2])+'</span></div><div class="ai-header-actions"><button data-action="cmd">⌘K</button><button data-action="edit-last">Edit</button><button data-action="regen">Regenerate</button><button data-action="save-action">Save action</button></div></header>';}
-  function surface(){if(state.mode==='intelligence')return intelligence();if(state.mode==='connect')return connect();if(state.mode==='notes')return notes();if(state.mode==='docs')return docs();return conversation();}
-  function conversation(){var msgs=scoped().filter(function(m){return (m.thread||'default')===currentThread()});return '<section class="ai-conversation"><div class="ai-feed">'+(msgs.length?messages(msgs):hero(['Assistant','Your professional AI copilot.','Ask anything, draft anything, prepare anything.']))+(state.busy?thinking():'')+'</div></section>';}
-  function intelligence(){var msgs=scoped().filter(function(m){return (m.thread||'default')===currentThread()});return '<section class="voice-stage"><div class="voice-bg"></div><button class="voice-orb '+(state.voice?'listening':'')+'" data-action="voice"><span></span><b>'+ (state.voice?'Listening':'Start') +'</b></button><h2>Click the orb and talk naturally.</h2><p>Intelligence listens, reasons, responds and remembers across Assistant, Connect, I-Notes and Docs.</p><div class="voice-transcript">'+(msgs.length?messages(msgs):'<em>No conversation yet. Click the orb to begin.</em>')+'</div></section>';}
-  function hero(cfg){return '<div class="ai-hero"><div class="ai-orb">IC</div><h2>'+esc(cfg[1])+'</h2><p>'+esc(cfg[2])+'</p><div class="ai-starters"><button data-starter="Help me think through a difficult shift calmly"><strong>Think through a shift</strong><span>Reflect calmly</span></button><button data-starter="Turn these notes into a professional handover"><strong>Professional handover</strong><span>Write clearly</span></button><button data-starter="Prepare me for supervision"><strong>Supervision prep</strong><span>Structure thinking</span></button><button data-starter="Help me prioritise my day"><strong>Prioritise</strong><span>Plan next steps</span></button></div></div>';}
-  function messages(list){return list.map(function(m,i){return '<article class="ai-message '+m.role+'"><div>'+(m.role==='user'?'You':'AI')+'</div><p>'+esc(m.content)+'</p><menu><button data-edit="'+i+'">Edit</button><button data-copy="'+i+'">Copy</button><button data-branch="'+i+'">Branch</button></menu></article>'}).join('');}
-  function connect(){return '<section class="connect-shell"><aside class="connect-left"><h3>Mail</h3><button>Inbox</button><button>Drafts</button><button>Sent</button><h3>Teams</h3><button>Managers</button><button>Shift handover</button><button>Safeguarding</button><h3>Calendar</h3><button>Today</button><button>Calls</button></aside><div class="connect-main"><div class="connect-toolbar"><button data-connect="Draft a professional email reply">Email</button><button data-connect="Create a meeting agenda">Meeting</button><button data-connect="Summarise this call and extract actions">Call</button><button data-connect="Create calendar follow-ups">Calendar</button></div><textarea id="connectInput" placeholder="Paste an email, Teams thread, meeting note, call transcript or calendar brief..."></textarea></div></section>';}
-  function notes(){return '<section class="notes-shell"><div class="recorder"><div class="mic-orb">●</div><h2>Voice-aware notes</h2><p>Speak, paste or type. Transform into document-ready outputs.</p><div class="wave"><i></i><i></i><i></i><i></i></div><button data-action="voice">'+(state.voice?'Stop capture':'Start capture')+'</button></div><div class="note-editor"><textarea id="notesInput" placeholder="Rough notes...">'+esc(state.notes)+'</textarea><div class="ai-actions"><button data-note="professional summary">Summary</button><button data-note="supervision preparation">Supervision</button><button data-note="meeting minutes and actions">Minutes</button><button data-note="document-ready reflection">Document-ready</button></div></div></section>';}
-  function docs(){return '<section class="docs-shell"><aside class="doc-templates"><h3>Templates</h3>'+Object.keys(templates).map(function(t){return '<button data-template="'+esc(t)+'"><strong>'+esc(t)+'</strong><span>Ready template</span></button>'}).join('')+'</aside><div class="doc-stage"><input id="docTitle" value="'+esc(state.docTitle)+'"><textarea id="docBody" placeholder="Start writing...">'+esc(state.docBody)+'</textarea><div class="floating-tools"><button data-doc="Improve">Improve</button><button data-doc="Strengthen professional tone">Tone</button><button data-doc="Check against SCCIF expectations">SCCIF</button><button data-doc="Create actions from">Actions</button></div></div></section>';}
-  function composer(){return state.mode==='intelligence'?'<div class="voice-hint">ChatGPT Voice style mode · click orb to start · type here as fallback</div><div class="ai-composer"><textarea id="prompt" placeholder="Or type to Intelligence..."></textarea><div><button data-action="upload">Upload</button><button data-action="voice">Voice</button><button data-action="send">Send</button></div></div>':'<div class="ai-composer"><textarea id="prompt" placeholder="Message IndiCare AI..."></textarea><div><button data-action="upload">Upload</button><button data-action="cmd">⌘K</button><button data-action="send">Send</button></div></div>';}
-  function profileModal(){if(!state.profileOpen)return '';return '<div class="profile-modal"><div><button class="close" data-action="profile">×</button><h2>Adult profile & AI settings</h2><label>Name<input data-profile="name" value="'+esc(state.profile.name)+'"></label><label>Role<input data-profile="role" value="'+esc(state.profile.role)+'"></label><label>AI tone<input data-profile="tone" value="'+esc(state.profile.tone)+'"></label><label>Voice preference<input data-profile="voice" value="'+esc(state.profile.voice)+'"></label><label>Organisation/Home<input data-profile="home" value="'+esc(state.profile.home||'')+'"></label><div class="settings-grid"><button>Memory on</button><button>Accessibility</button><button>Privacy</button><button>Notifications</button><button>Leadership mode</button><button>Reflective mode</button></div></div></div>';}
-  function cmdPalette(){if(!state.cmdOpen)return '';return '<div class="cmd-modal"><div><input id="cmdInput" autofocus placeholder="Search or run a command..."><button data-cmd="assistant">Open Assistant</button><button data-cmd="intelligence">Start Intelligence</button><button data-cmd="notes">Create note</button><button data-cmd="docs">Create document</button><button data-cmd="connect">Draft email</button><button data-action="upload">Upload file</button></div></div>';}
-  function thinking(){return '<div class="ai-thinking"><span></span><span></span><span></span></div>';}
-  function render(){var r=document.getElementById('indicareAiRoot');if(r)r.innerHTML=layout();}
-  function addAction(t){if(t){state.actions.unshift({id:'a'+Date.now(),title:t,status:'open'});window.IndiCareAI&&window.IndiCareAI.addAction&&window.IndiCareAI.addAction(t,'runtime');save();render();}}
-  function uploadFiles(files){Array.from(files||[]).forEach(function(f){state.uploads.unshift({name:f.name,size:f.size,type:f.type,created_at:new Date().toISOString()});});save();render();}
-  async function send(text){var el=document.getElementById('prompt');var clean=String(text||(el&&el.value)||'').trim();if(!clean||state.busy)return;var uploadContext=state.uploads.length?'\n\nAttached workspace files: '+state.uploads.slice(0,8).map(function(u){return u.name+' ('+(u.type||'file')+')'}).join(', '):'';state.messages.push({role:'user',mode:state.mode,thread:currentThread(),content:clean});state.busy=true;save();render();try{var res=await fetch('/assistant/general-safe',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'['+state.mode.toUpperCase()+'] '+clean+uploadContext,history:scoped().slice(-12),response_mode:state.mode==='intelligence'?'deep':'balanced',profile:state.profile})});var data=await res.json();var answer=data.answer||data.response||'I am here. Tell me what you want to work through.';state.messages.push({role:'assistant',mode:state.mode,thread:currentThread(),content:answer});if(state.mode==='intelligence'&&window.IndiCareVoice)window.IndiCareVoice.speak(answer);}catch(e){state.messages.push({role:'assistant',mode:state.mode,thread:currentThread(),content:'I could not connect just now. '+(e.message||e)});}state.busy=false;save();render();}
-  function toggleVoice(){state.voice=!state.voice;if(window.IndiCareVoice){window.IndiCareVoice.toggle();}save();render();}
-  window.addEventListener('indicare:voice',function(e){if(e.detail&&e.detail.transcript){var p=document.getElementById('prompt');if(p)p.value=e.detail.transcript;}if(e.detail&&e.detail.state==='idle'&&e.detail.transcript&&state.mode==='intelligence'){send(e.detail.transcript);window.IndiCareVoice&&window.IndiCareVoice.clear&&window.IndiCareVoice.clear();}});
-  function bind(){document.body.addEventListener('click',function(e){var m=e.target.closest('[data-mode]');if(m){state.mode=m.dataset.mode;state.cmdOpen=false;save();render();return;}var a=e.target.closest('[data-action]');if(a){var v=a.dataset.action;if(v==='send')send();if(v==='voice')toggleVoice();if(v==='new')newThread();if(v==='cmd'){state.cmdOpen=!state.cmdOpen;render();}if(v==='upload'){document.getElementById('aiFileInput')&&document.getElementById('aiFileInput').click();}if(v==='profile'){state.profileOpen=!state.profileOpen;render();}if(v==='save-action')addAction((document.getElementById('prompt')||{}).value||'Follow up');if(v==='regen'){var last=state.messages.filter(function(x){return x.role==='user'}).pop();if(last)send(last.content);}return;}var cmd=e.target.closest('[data-cmd]');if(cmd){state.mode=cmd.dataset.cmd;state.cmdOpen=false;save();render();return;}var s=e.target.closest('[data-starter]');if(s)send(s.dataset.starter);var th=e.target.closest('[data-thread]');if(th)setThread(th.dataset.thread);var del=e.target.closest('[data-delete-thread]');if(del)deleteThread(del.dataset.deleteThread);var pin=e.target.closest('[data-pin-thread]');if(pin)pinThread(pin.dataset.pinThread);var c=e.target.closest('[data-connect]');if(c)send(c.dataset.connect+': '+((document.getElementById('connectInput')||{}).value||''));var n=e.target.closest('[data-note]');if(n){state.notes=(document.getElementById('notesInput')||{}).value||state.notes;send('Transform these notes into '+n.dataset.note+': '+state.notes);}var d=e.target.closest('[data-doc]');if(d){state.docTitle=(document.getElementById('docTitle')||{}).value||state.docTitle;state.docBody=(document.getElementById('docBody')||{}).value||state.docBody;send(d.dataset.doc+' this document: '+state.docTitle+'\n\n'+state.docBody);}var tpl=e.target.closest('[data-template]');if(tpl){state.docTitle=tpl.dataset.template;state.docBody=templates[state.docTitle]||'';save();render();}});document.body.addEventListener('change',function(e){if(e.target.id==='aiFileInput')uploadFiles(e.target.files);});document.body.addEventListener('input',function(e){if(e.target.dataset.profile){state.profile[e.target.dataset.profile]=e.target.value;}if(e.target.dataset.search!==undefined){state.search=e.target.value;render();}if(e.target.id==='notesInput')state.notes=e.target.value;if(e.target.id==='docTitle')state.docTitle=e.target.value;if(e.target.id==='docBody')state.docBody=e.target.value;save();});document.body.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();state.cmdOpen=!state.cmdOpen;render();}if(e.target.id==='prompt'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});document.body.addEventListener('dragover',function(e){e.preventDefault();document.body.classList.add('dragging');});document.body.addEventListener('dragleave',function(){document.body.classList.remove('dragging');});document.body.addEventListener('drop',function(e){e.preventDefault();document.body.classList.remove('dragging');uploadFiles(e.dataTransfer.files);});}
-  function mount(){render();bind();}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+  function autoTitle(t){return String(t||'Conversation').trim().split(/\s+/).slice(0,7).join(' ');}
+
+  function conversations(){
+    var map={};
+    state.messages.forEach(function(m){
+      var id=m.thread||'default';
+      if(!map[id])map[id]={id:id,title:'New conversation',count:0};
+      map[id].count++;
+      if(m.role==='user'&&map[id].title==='New conversation')map[id].title=autoTitle(m.content);
+    });
+    return Object.values(map).filter(function(c){return !state.search||c.title.toLowerCase().indexOf(state.search.toLowerCase())>-1;}).slice(0,24);
+  }
+
+  function layout(){return '<div class="ai-app '+(state.mode==='intelligence'?'intelligence-mode':'')+'"><aside class="ai-rail"><div class="ai-brand">IndiCare Intelligence</div><button data-action="new">+ New chat</button><input class="side-search" data-search value="'+esc(state.search)+'" placeholder="Search"><nav>'+Object.keys(modes).map(function(k){return '<button class="'+(state.mode===k?'active':'')+'" data-mode="'+k+'">'+modes[k][0]+'</button>';}).join('')+'</nav><div class="side-convos">'+conversations().map(function(c){return '<button data-thread="'+c.id+'">'+esc(c.title)+'</button>';}).join('')+'</div></aside><main class="ai-main">'+surface()+composer()+'</main><input id="aiFileInput" type="file" multiple hidden></div>';}
+
+  function messages(list){return list.map(function(m){return '<article class="ai-message '+m.role+'"><p>'+esc(m.content)+'</p></article>';}).join('');}
+
+  function surface(){
+    var msgs=state.messages.filter(function(m){return (m.thread||'default')===currentThread()&&m.mode===state.mode;});
+    if(state.mode==='intelligence')return '<section class="voice-stage"><button class="voice-orb '+(state.voice?'listening':'')+'" data-action="voice">'+(state.voice?'Listening':'Start')+'</button><div class="voice-transcript">'+(msgs.length?messages(msgs):'<em>Start speaking…</em>')+'</div></section>';
+    if(state.mode==='notes')return '<section class="notes-shell"><textarea id="notesInput">'+esc(state.notes)+'</textarea></section>';
+    if(state.mode==='docs')return '<section class="docs-shell"><input id="docTitle" value="'+esc(state.docTitle)+'"><textarea id="docBody">'+esc(state.docBody)+'</textarea></section>';
+    return '<section class="ai-conversation">'+messages(msgs)+'</section>';
+  }
+
+  function composer(){return '<div class="ai-composer"><textarea id="prompt" placeholder="Message IndiCare Intelligence..."></textarea><div><button data-action="upload">Upload</button><button data-action="voice">Voice</button><button data-action="send">Send</button></div></div>';}
+
+  function render(){
+    if(rendering)return;
+    rendering=true;
+    requestAnimationFrame(function(){
+      var r=document.getElementById('indicareAiRoot');
+      if(r)r.innerHTML=layout();
+      rendering=false;
+    });
+  }
+
+  async function send(text){
+    var el=document.getElementById('prompt');
+    var clean=String(text||(el&&el.value)||'').trim();
+    if(!clean||state.busy)return;
+    state.messages.push({role:'user',mode:state.mode,thread:currentThread(),content:clean});
+    state.busy=true;
+    save();
+    render();
+    try{
+      var res=await fetch('/assistant/general-safe',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:clean,history:state.messages.slice(-10),profile:state.profile})});
+      var data=await res.json();
+      var answer=data.answer||data.response||'I am here.';
+      state.messages.push({role:'assistant',mode:state.mode,thread:currentThread(),content:answer});
+      if(state.mode==='intelligence'&&window.IndiCareVoice&&window.IndiCareVoice.speak)window.IndiCareVoice.speak(answer);
+    }catch(e){
+      state.messages.push({role:'assistant',mode:state.mode,thread:currentThread(),content:'Connection issue. Please retry.'});
+    }
+    state.busy=false;
+    save();
+    render();
+  }
+
+  function toggleVoice(){
+    state.voice=!state.voice;
+    if(window.IndiCareVoice&&window.IndiCareVoice.toggle)window.IndiCareVoice.toggle();
+    render();
+  }
+
+  function uploadFiles(files){Array.from(files||[]).forEach(function(f){state.uploads.unshift({name:f.name,size:f.size});});save();}
+
+  document.body.addEventListener('click',function(e){
+    var mode=e.target.closest('[data-mode]');
+    if(mode){state.mode=mode.dataset.mode;save();render();return;}
+    var action=e.target.closest('[data-action]');
+    if(action){
+      var a=action.dataset.action;
+      if(a==='send')send();
+      if(a==='voice')toggleVoice();
+      if(a==='new'){localStorage.setItem('ic.ai.thread','t'+Date.now());render();}
+      if(a==='upload'){var f=document.getElementById('aiFileInput');if(f)f.click();}
+    }
+    var thread=e.target.closest('[data-thread]');
+    if(thread){localStorage.setItem('ic.ai.thread',thread.dataset.thread);render();}
+  },{passive:true});
+
+  document.body.addEventListener('input',function(e){
+    if(e.target.dataset.search!==undefined){state.search=e.target.value;render();}
+    if(e.target.id==='notesInput')state.notes=e.target.value;
+    if(e.target.id==='docTitle')state.docTitle=e.target.value;
+    if(e.target.id==='docBody')state.docBody=e.target.value;
+    save();
+  },{passive:true});
+
+  document.body.addEventListener('change',function(e){if(e.target.id==='aiFileInput')uploadFiles(e.target.files);},{passive:true});
+
+  document.body.addEventListener('keydown',function(e){if(e.target.id==='prompt'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+
+  window.addEventListener('indicare:voice',function(e){
+    if(!e.detail)return;
+    if(e.detail.state==='idle'&&e.detail.transcript&&state.mode==='intelligence'){
+      send(e.detail.transcript);
+    }
+  },{passive:true});
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
 })();
