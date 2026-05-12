@@ -20,6 +20,7 @@ class OSAssistantAskRequest(BaseModel):
     young_person_id: int | None = None
     staff_id: int | None = None
     adult_id: int | None = None
+    current_record_id: str | None = None
     current_page: str | None = None
     mode: str | None = None
     date_from: datetime.datetime | None = None
@@ -133,7 +134,10 @@ def fetch_records(cursor: Any, payload: OSAssistantAskRequest) -> list[dict[str,
         ''',
         tuple(params + [payload.limit]),
     )
-    return rows_to_dicts(cursor, cursor.fetchall())
+    records = rows_to_dicts(cursor, cursor.fetchall())
+    if payload.current_record_id:
+        records.sort(key=lambda row: 0 if str(row.get('id')) == str(payload.current_record_id) else 1)
+    return records
 
 
 def fetch_tasks(cursor: Any, payload: OSAssistantAskRequest) -> list[dict[str, Any]]:
@@ -216,34 +220,94 @@ def fetch_evidence(cursor: Any, payload: OSAssistantAskRequest) -> list[dict[str
     return rows_to_dicts(cursor, cursor.fetchall())
 
 
-def make_basic_answer(payload: OSAssistantAskRequest, context: dict[str, Any]) -> str:
+def classify_intent(message: str) -> str:
+    text = message.lower()
+    if any(term in text for term in ['reg 44', 'reg44', 'regulation 44', 'ofsted', 'inspection']):
+        return 'inspection'
+    if any(term in text for term in ['lac', 'looked after', 'care review', 'statutory review']):
+        return 'lac_review'
+    if any(term in text for term in ['handover', 'shift', 'brief']):
+        return 'handover'
+    if any(term in text for term in ['safeguard', 'risk', 'missing', 'incident', 'pattern']):
+        return 'safeguarding'
+    if any(term in text for term in ['manager', 'review', 'sign off', 'return']):
+        return 'manager_review'
+    if any(term in text for term in ['record', 'this record', 'chronology', 'evidence']):
+        return 'record_review'
+    return 'summary'
+
+
+def label_record(record: dict[str, Any]) -> str:
+    title = record.get('title') or record.get('record_type') or 'Record'
+    summary = record.get('summary') or record.get('narrative') or ''
+    date = record.get('occurred_at') or record.get('created_at') or ''
+    return f"- {title} ({date}): {str(summary)[:220]}"
+
+
+def make_answer(payload: OSAssistantAskRequest, context: dict[str, Any]) -> tuple[str, list[str]]:
     records = context.get('records', [])
     tasks = context.get('tasks', [])
     calendar = context.get('calendar', [])
     connect = context.get('connect_messages', [])
     evidence = context.get('evidence', [])
-    safeguarding = [r for r in records if r.get('safeguarding_relevant')]
-    review = [r for r in records if r.get('manager_review_required') or r.get('review_state') in {'required', 'returned'}]
-    high_risk = [r for r in records if str(r.get('risk_level') or '').lower() in {'high', 'critical'}]
-    overdue = [t for t in tasks if t.get('due_at') and str(t.get('status')) not in {'completed', 'cancelled'}]
+    intent = classify_intent(payload.message)
+    safeguarding = [r for r in records if r.get('safeguarding_relevant') or str(r.get('risk_level') or '').lower() in {'high', 'critical'}]
+    review = [r for r in records if r.get('manager_review_required') or r.get('review_state') in {'required', 'returned', 'submitted'}]
+    inspection = [r for r in records if r.get('inspection_relevant')]
+    child_voice_missing = [r for r in records if not r.get('child_voice')]
+    open_tasks = [t for t in tasks if str(t.get('status') or '').lower() not in {'completed', 'cancelled', 'done'}]
+    focused = [r for r in records if payload.current_record_id and str(r.get('id')) == str(payload.current_record_id)]
+    if focused:
+        records = focused + [r for r in records if str(r.get('id')) != str(payload.current_record_id)]
 
-    lines = [
-        f"I found {len(records)} records, {len(tasks)} tasks, {len(calendar)} diary events, {len(connect)} Connect messages and {len(evidence)} evidence items for this context.",
+    heading = {
+        'inspection': 'Inspection-ready summary',
+        'lac_review': 'LAC / statutory review summary',
+        'handover': 'Live handover brief',
+        'safeguarding': 'Safeguarding and risk picture',
+        'manager_review': 'Manager review position',
+        'record_review': 'Record review and follow-up',
+        'summary': 'Operational summary',
+    }[intent]
+
+    lines = [heading, '']
+    lines.append(f"Context returned {len(records)} records, {len(open_tasks)} open tasks, {len(calendar)} diary items, {len(connect)} Connect messages and {len(evidence)} evidence items.")
+
+    if intent == 'handover':
+        lines.extend(['', 'What matters for handover:', *(label_record(r) for r in records[:8])])
+        if open_tasks:
+            lines.extend(['', 'Actions to carry forward:', *(f"- {t.get('title') or t.get('recommended_action') or 'Task'}: {t.get('status') or 'open'}" for t in open_tasks[:6])])
+    elif intent == 'inspection':
+        lines.extend(['', 'Evidence strength:', *(label_record(r) for r in inspection[:8])])
+        lines.extend(['', 'Inspection gaps:', f"- {len(child_voice_missing)} recent records have no child voice attached.", f"- {len(review)} records appear to need manager oversight.", f"- {len(safeguarding)} records carry safeguarding or high-risk relevance."])
+    elif intent == 'lac_review':
+        lines.extend(['', 'Progress and lived experience:', *(label_record(r) for r in records[:8])])
+        if safeguarding:
+            lines.extend(['', 'Safeguarding and risk:', *(label_record(r) for r in safeguarding[:5])])
+    elif intent == 'safeguarding':
+        lines.extend(['', 'Safeguarding signals:', *(label_record(r) for r in safeguarding[:10])])
+        lines.extend(['', 'Suggested next checks:', '- Confirm manager oversight and escalation status.', '- Check whether related documents, risk assessments and notifications are linked.', '- Confirm follow-up actions are allocated and dated.'])
+    elif intent == 'manager_review':
+        lines.extend(['', 'Records needing review:', *(label_record(r) for r in review[:10])])
+        if not review:
+            lines.append('- No manager-review records were returned in this context.')
+    elif intent == 'record_review':
+        primary = records[0] if records else None
+        if primary:
+            lines.extend(['', 'Selected record:', label_record(primary), '', 'Recommended follow-up:', '- Check child voice and impact.', '- Link evidence or relevant plan/risk assessment.', '- Add manager comment if this affects risk, safeguarding or care planning.', '- Continue the chronology if the outcome or next step is not clear.'])
+        else:
+            lines.append('No record was returned for this context.')
+    else:
+        lines.extend(['', 'Recent chronology:', *(label_record(r) for r in records[:8])])
+
+    suggested = [
+        'What should be carried into handover?',
+        'Which records need manager review?',
+        'Prepare an Ofsted-ready evidence summary.',
+        'What safeguarding patterns are emerging?',
+        'What follow-up should be recorded next?',
     ]
-    if safeguarding:
-        lines.append(f"Safeguarding appears in {len(safeguarding)} recent records. The latest is: {safeguarding[0].get('title') or safeguarding[0].get('summary') or 'Untitled safeguarding record'}.")
-    if high_risk:
-        lines.append(f"There are {len(high_risk)} high/critical risk records in the returned context.")
-    if review:
-        lines.append(f"There are {len(review)} records requiring or awaiting management review.")
-    if overdue:
-        lines.append(f"There are {len(overdue)} tasks with due dates that may need checking for completion or escalation.")
-    if calendar:
-        lines.append(f"The latest diary item is: {calendar[0].get('title')} on {calendar[0].get('starts_at')}.")
-    if records[:5]:
-        lines.append('Key recent records: ' + '; '.join([str(r.get('title') or r.get('record_type') or 'Record') for r in records[:5]]) + '.')
-    lines.append('For LAC, Reg 44 or Reg 45 reporting, ask me to produce the specific report summary and I will structure the answer by safeguarding, progress, health, education, family time, incidents, risks, management oversight and actions.')
-    return '\n\n'.join(lines)
+    return '\n'.join(lines), suggested
 
 
 @router.post('/ask')
@@ -264,28 +328,15 @@ async def ask_os_assistant(payload: OSAssistantAskRequest, request: Request):
                 'connect_messages': fetch_connect(cursor, payload),
                 'evidence': fetch_evidence(cursor, payload),
             }
-            answer = make_basic_answer(payload, context)
+            answer, suggested_questions = make_answer(payload, context)
             sources = []
-            for record in context['records'][:10]:
+            for record in context['records'][:12]:
                 sources.append({'type': 'record', 'id': record.get('id'), 'title': record.get('title'), 'record_type': record.get('record_type'), 'created_at': record.get('created_at')})
             for task in context['tasks'][:5]:
                 sources.append({'type': 'task', 'id': task.get('id'), 'title': task.get('title'), 'status': task.get('status')})
             for event in context['calendar'][:5]:
                 sources.append({'type': 'calendar', 'id': event.get('id'), 'title': event.get('title'), 'starts_at': event.get('starts_at')})
-            return {
-                'ok': True,
-                'answer': answer,
-                'scope': context['scope'],
-                'context': context,
-                'sources': sources,
-                'suggested_questions': [
-                    'Summarise the last 30 days for LAC review.',
-                    'What safeguarding patterns are emerging?',
-                    'Prepare a Reg 44 summary for this home.',
-                    'What should the RI or CEO be aware of?',
-                    'Which records need manager review?',
-                ],
-            }
+            return {'ok': True, 'answer': answer, 'scope': context['scope'], 'intent': classify_intent(payload.message), 'context': context, 'sources': sources, 'suggested_questions': suggested_questions}
     except HTTPException:
         raise
     except Exception as error:
