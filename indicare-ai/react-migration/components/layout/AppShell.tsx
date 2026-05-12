@@ -4,10 +4,21 @@ import { Sidebar } from './Sidebar'
 import { Composer } from '../composer/Composer'
 import { AssistantWorkspace } from '../workspace/AssistantWorkspace'
 import { VoicePresence } from '../voice/VoicePresence'
+import { ConnectWorkspace } from '../workspace/ConnectWorkspace'
+import { NotesWorkspace } from '../workspace/NotesWorkspace'
+import { DocsWorkspace } from '../workspace/DocsWorkspace'
 import { useRuntime } from '../../lib/store'
 
 export function AppShell(){
   const mode=useRuntime(s=>s.mode)
+
+  function workspace(){
+    if(mode==='connect')return <ConnectWorkspace />
+    if(mode==='notes')return <NotesWorkspace />
+    if(mode==='docs')return <DocsWorkspace />
+    if(mode==='intelligence')return <VoicePresence />
+    return <AssistantWorkspace />
+  }
 
   return (
     <div style={{display:'flex',minHeight:'100vh',background:'#020617',color:'white'}}>
@@ -26,7 +37,7 @@ export function AppShell(){
           </div>
         </header>
 
-        {mode==='intelligence'?<VoicePresence />:<AssistantWorkspace />}
+        {workspace()}
 
         {mode!=='intelligence'&&<Composer />}
       </main>
