@@ -1,5 +1,6 @@
 import './globals.css'
 import type { ReactNode } from 'react'
+import { RealtimeProvider } from '../components/realtime/RealtimeProvider'
 
 export const metadata = {
   title: 'IndiCare Intelligence',
@@ -9,7 +10,11 @@ export const metadata = {
 export default function RootLayout({children}:{children:ReactNode}){
   return (
     <html lang="en-GB">
-      <body>{children}</body>
+      <body>
+        <RealtimeProvider>
+          {children}
+        </RealtimeProvider>
+      </body>
     </html>
   )
 }
