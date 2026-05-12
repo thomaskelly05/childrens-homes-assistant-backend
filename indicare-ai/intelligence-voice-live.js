@@ -4,92 +4,244 @@
 
   var realtimeActive=false;
   var assistantBuffer='';
+  var speaking=false;
+  var interrupted=false;
 
   function esc(v){return String(v||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c];});}
   function isIntelligence(){return localStorage.getItem('ic.ai.mode')==='intelligence'||document.querySelector('.intelligence-mode');}
   function transcript(){return document.querySelector('.voice-transcript');}
   function orb(){return document.querySelector('.voice-orb');}
+  function orbLabel(text){var o=orb();if(!o)return;var b=o.querySelector('b');if(b)b.textContent=text;}
 
-  function addPresence(){
+  function ensurePresence(){
     var stage=document.querySelector('.voice-stage');
-    if(!stage||stage.dataset.liveEnhanced==='1')return;
-    stage.dataset.liveEnhanced='1';
-    stage.insertAdjacentHTML('afterbegin','<div class="voice-presence-bar"><div class="presence-pill active" id="rtPill">Realtime ready</div><div class="presence-pill">Memory active</div><div class="presence-pill">British voice</div></div><div class="voice-live">Live conversational Intelligence</div>');
-    if(!stage.querySelector('.voice-stream'))stage.insertAdjacentHTML('beforeend','<div class="voice-stream"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="voice-thinking">Thinking naturally...</div>');
+    if(!stage||stage.dataset.presenceReady==='1')return;
+    stage.dataset.presenceReady='1';
+
+    var hero=stage.querySelector('h2');
+    if(hero)hero.textContent='Talk naturally with IndiCare Intelligence';
+
+    var sub=stage.querySelector('p');
+    if(sub)sub.textContent='Realtime British conversational intelligence with memory, emotional awareness and live interruption support.';
+
+    var existing=stage.querySelector('.voice-presence-bar');
+    if(existing)existing.remove();
+
+    stage.insertAdjacentHTML('afterbegin','<div class="voice-presence-bar"><div class="presence-pill active" id="rtState">Realtime conversational</div><div class="presence-pill">Low latency</div><div class="presence-pill">British female voice</div></div>');
   }
 
-  function pill(text){var p=document.getElementById('rtPill');if(p)p.textContent=text;}
-  function append(role,text){var t=transcript();if(!t||!text)return;var line=document.createElement('span');line.className='stream-line '+role;line.innerHTML=esc(text);t.appendChild(line);t.scrollTop=t.scrollHeight;}
-  function delta(text){var t=transcript();if(!t||!text)return;var line=t.querySelector('.stream-line.assistant.live-assistant');if(!line){line=document.createElement('span');line.className='stream-line assistant live-assistant';t.appendChild(line);assistantBuffer='';}assistantBuffer+=text;line.innerHTML=esc(assistantBuffer);t.scrollTop=t.scrollHeight;}
-  function finishDelta(){var line=document.querySelector('.stream-line.live-assistant');if(line)line.classList.remove('live-assistant');assistantBuffer='';}
-  function setOrb(label){var o=orb();if(o){var b=o.querySelector('b');if(b)b.textContent=label;}}
-  function enhance(){if(isIntelligence())addPresence();}
+  function state(text){
+    var el=document.getElementById('rtState');
+    if(el)el.textContent=text;
+  }
+
+  function append(role,text){
+    if(!text)return;
+    var t=transcript();
+    if(!t)return;
+
+    var wrap=document.createElement('div');
+    wrap.className='voice-line '+role;
+    wrap.innerHTML='<label>'+(role==='assistant'?'IndiCare':'You')+'</label><span>'+esc(text)+'</span>';
+    t.appendChild(wrap);
+    t.scrollTop=t.scrollHeight;
+  }
+
+  function delta(text){
+    var t=transcript();
+    if(!t||!text)return;
+
+    var line=t.querySelector('.voice-line.assistant.live');
+    if(!line){
+      line=document.createElement('div');
+      line.className='voice-line assistant live';
+      line.innerHTML='<label>IndiCare</label><span></span>';
+      t.appendChild(line);
+      assistantBuffer='';
+    }
+
+    assistantBuffer+=text;
+    var span=line.querySelector('span');
+    if(span)span.innerHTML=esc(assistantBuffer);
+
+    t.scrollTop=t.scrollHeight;
+  }
+
+  function finishDelta(){
+    var live=document.querySelector('.voice-line.assistant.live');
+    if(live)live.classList.remove('live');
+    assistantBuffer='';
+  }
 
   async function startRealtime(){
-    enhance();
-    if(window.IndiCareVoice&&window.IndiCareVoice.interrupt)window.IndiCareVoice.interrupt();
-    if(window.IndiCareRealtimeWebRTC){
-      setOrb('Connecting');pill('Connecting');
-      var ok=await window.IndiCareRealtimeWebRTC.connect();
-      if(ok){realtimeActive=true;setOrb('Listening');pill('Realtime live');if(window.IndiCareRealtime)window.IndiCareRealtime.listen(true);return true;}
-      pill('Fallback voice');
+    ensurePresence();
+
+    interrupted=false;
+    orbLabel('Connecting');
+    state('Connecting');
+
+    if(window.IndiCareVoice&&window.IndiCareVoice.interrupt){
+      window.IndiCareVoice.interrupt();
     }
+
+    if(window.IndiCareRealtimeWebRTC){
+      try{
+        var ok=await window.IndiCareRealtimeWebRTC.connect();
+
+        if(ok){
+          realtimeActive=true;
+          orbLabel('Listening');
+          state('Live');
+          append('assistant','Hello. I am listening.');
+          return true;
+        }
+      }catch(e){}
+    }
+
     realtimeActive=false;
-    if(window.IndiCareVoice)return window.IndiCareVoice.start();
+    state('Fallback voice');
+
+    if(window.IndiCareVoice&&window.IndiCareVoice.start){
+      window.IndiCareVoice.start();
+    }
+
     return false;
   }
 
   function stopRealtime(){
-    if(window.IndiCareRealtimeWebRTC&&realtimeActive){window.IndiCareRealtimeWebRTC.disconnect();realtimeActive=false;}
-    if(window.IndiCareVoice)window.IndiCareVoice.stop('manual');
-    setOrb('Start');pill('Realtime ready');
-    if(window.IndiCareRealtime)window.IndiCareRealtime.listen(false);
+    interrupted=true;
+
+    if(window.IndiCareRealtimeWebRTC&&realtimeActive){
+      window.IndiCareRealtimeWebRTC.disconnect();
+    }
+
+    realtimeActive=false;
+    speaking=false;
+
+    if(window.IndiCareVoice&&window.IndiCareVoice.stop){
+      window.IndiCareVoice.stop('manual');
+    }
+
+    orbLabel('Start');
+    state('Realtime ready');
   }
 
-  window.IndiCareIntelligenceLive={start:startRealtime,stop:stopRealtime,isRealtime:function(){return realtimeActive;}};
+  window.IndiCareIntelligenceLive={
+    start:startRealtime,
+    stop:stopRealtime,
+    interrupt:function(){
+      interrupted=true;
+      if(window.IndiCareVoice&&window.IndiCareVoice.interrupt){
+        window.IndiCareVoice.interrupt();
+      }
+      orbLabel('Listening');
+      state('Interrupted');
+    }
+  };
 
   document.addEventListener('click',function(e){
-    var v=e.target.closest('[data-action="voice"],.voice-orb');
-    if(!v||!isIntelligence())return;
+    var target=e.target.closest('.voice-orb,[data-action="voice"]');
+    if(!target||!isIntelligence())return;
+
     e.preventDefault();
     e.stopPropagation();
-    if(realtimeActive)stopRealtime();else startRealtime();
+
+    if(realtimeActive)stopRealtime();
+    else startRealtime();
   },true);
 
   window.addEventListener('indicare:voice',function(e){
-    enhance();
+    ensurePresence();
+
     if(realtimeActive)return;
-    var d=e.detail||{};
-    if(d.state==='listening'){setOrb('Listening');if(window.IndiCareRealtime)window.IndiCareRealtime.listen(true);}
-    if(d.interim){var t=transcript();if(t){var live=t.querySelector('.stream-line.live-user');if(!live){live=document.createElement('span');live.className='stream-line user live-user';t.appendChild(live);}live.innerHTML=esc(d.interim);t.scrollTop=t.scrollHeight;}}
-    if(d.state==='idle'){setOrb('Start');if(window.IndiCareRealtime)window.IndiCareRealtime.listen(false);var live=document.querySelector('.stream-line.live-user');if(live)live.remove();}
-    if(d.state==='speaking'){setOrb('Speaking');if(window.IndiCareRealtime)window.IndiCareRealtime.speak(true);}
-    if(d.state==='spoken'){setOrb('Start');if(window.IndiCareRealtime)window.IndiCareRealtime.speak(false);}
-  });
 
-  window.addEventListener('indicare:realtime-webrtc',function(e){
-    enhance();
     var d=e.detail||{};
-    if(d.type==='ready'){realtimeActive=true;setOrb('Listening');pill('Realtime live');append('assistant','I am listening.');}
-    if(d.type==='fallback'){realtimeActive=false;setOrb('Fallback');pill('Fallback voice');if(window.IndiCareVoice)window.IndiCareVoice.start();}
-    if(d.type==='assistant_delta')delta(d.text||'');
-    if(d.type==='transcript'){finishDelta();append(d.role,d.text);}
-    if(d.type==='event'&&d.type){}
-  });
 
-  window.addEventListener('indicare:realtime',function(e){
-    var d=e.detail||{};
-    if(d.type==='state'){
-      if(d.speaking)setOrb('Speaking');
-      else if(d.thinking)setOrb('Thinking');
-      else if(d.listening)setOrb('Listening');
+    if(d.state==='listening'){
+      orbLabel('Listening');
+      state('Listening');
+    }
+
+    if(d.interim){
+      var t=transcript();
+      if(t){
+        var live=t.querySelector('.voice-line.user.live');
+
+        if(!live){
+          live=document.createElement('div');
+          live.className='voice-line user live';
+          live.innerHTML='<label>You</label><span></span>';
+          t.appendChild(live);
+        }
+
+        var span=live.querySelector('span');
+        if(span)span.innerHTML=esc(d.interim);
+        t.scrollTop=t.scrollHeight;
+      }
+    }
+
+    if(d.transcript){
+      var liveUser=document.querySelector('.voice-line.user.live');
+      if(liveUser)liveUser.remove();
+      append('user',d.transcript);
+    }
+
+    if(d.state==='thinking'){
+      orbLabel('Thinking');
+      state('Thinking');
+    }
+
+    if(d.state==='speaking'){
+      speaking=true;
+      orbLabel('Speaking');
+      state('Responding');
+    }
+
+    if(d.state==='spoken'){
+      speaking=false;
+      orbLabel('Listening');
+      state('Listening');
+    }
+
+    if(d.state==='idle'&&!speaking){
+      orbLabel('Start');
+      state('Realtime ready');
     }
   });
 
-  window.addEventListener('indicare:stream-start',function(){enhance();setOrb('Thinking');if(window.IndiCareRealtime)window.IndiCareRealtime.think(true);});
-  window.addEventListener('indicare:stream-done',function(e){enhance();if(window.IndiCareRealtime){window.IndiCareRealtime.think(false);window.IndiCareRealtime.speak(true);}var d=e.detail||{};if(d.answer&&isIntelligence()&&!realtimeActive)append('assistant',d.answer);});
+  window.addEventListener('indicare:realtime-webrtc',function(e){
+    ensurePresence();
 
-  var mo=new MutationObserver(enhance);
+    var d=e.detail||{};
+
+    if(d.type==='ready'){
+      realtimeActive=true;
+      orbLabel('Listening');
+      state('Live conversation');
+    }
+
+    if(d.type==='fallback'){
+      realtimeActive=false;
+      orbLabel('Fallback');
+      state('Fallback voice');
+    }
+
+    if(d.type==='assistant_delta'){
+      delta(d.text||'');
+    }
+
+    if(d.type==='transcript'){
+      finishDelta();
+      append(d.role,d.text);
+    }
+  });
+
+  var mo=new MutationObserver(ensurePresence);
   mo.observe(document.body,{childList:true,subtree:true});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhance);else enhance();
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',ensurePresence,{once:true});
+  }else{
+    ensurePresence();
+  }
 })();
