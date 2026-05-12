@@ -6,6 +6,7 @@
 <title>IndiCare OS | Children’s Home Operating System</title>
 <link rel="stylesheet" href="/css/indicare-app-shell.css" />
 <link rel="stylesheet" href="/css/indicare-os-modern.css" />
+<link rel="stylesheet" href="/css/indicare-os-modern-workspace.css" />
 </head>
 <body data-skip-global-nav="true" data-indicare-os-runtime="true" data-os-shell="sharepoint">
 <div class="ic365-shell" aria-label="IndiCare OS">
@@ -13,11 +14,11 @@
 <div class="ic365-appmark">IC</div>
 <div class="ic365-title-block"><strong>IndiCare OS</strong><span>Children’s home workspace</span></div>
 <div class="ic365-context-strip"><span data-os-context-home>Choose home</span><span class="ic365-context-divider">/</span><span data-os-context-child>Choose young person</span></div>
-<div class="ic365-top-actions"><button type="button" class="ic365-button subtle" data-os-reset-context>Change context</button></div>
+<div class="ic365-top-actions"><button type="button" class="ic365-button subtle" data-open-notifications>Alerts <span id="ic365-notification-count" class="ic365-alert-count">0</span></button><button type="button" class="ic365-button subtle" data-open-os-assistant>Assistant</button><button type="button" class="ic365-button subtle" data-open-command-centre>Command</button><button type="button" class="ic365-button subtle" data-os-reset-context>Change context</button></div>
 </header>
 <div class="ic365-body">
 <aside class="ic365-leftnav">
-<div class="ic365-nav-section-title">Core journey</div>
+<div class="ic365-nav-section-title">Care</div>
 <nav id="workspace-nav">
 <button type="button" class="ic365-nav-item active" data-view="today-child"><span>Today</span></button>
 <button type="button" class="ic365-nav-item" data-view="child-life"><span>Young Person</span></button>
@@ -32,7 +33,7 @@
 <button type="button" class="ic365-nav-item" data-shell="education"><span>Education</span></button>
 <button type="button" class="ic365-nav-item" data-shell="contact"><span>Family & Contact</span></button>
 <div class="ic365-nav-divider"></div>
-<div class="ic365-nav-section-title">Home system</div>
+<div class="ic365-nav-section-title">Manage</div>
 <button type="button" class="ic365-nav-item" data-view="adult-profile"><span>Adults</span></button>
 <button type="button" class="ic365-nav-item" data-view="home-profile"><span>Home</span></button>
 <button type="button" class="ic365-nav-item" data-shell="documents"><span>Documents</span></button>
@@ -41,9 +42,18 @@
 </nav>
 </aside>
 <main class="ic365-main" id="indicare-existing-journey-runtime">
-<section class="ic365-page-header"><div><p class="ic365-kicker">Children’s home OS</p><h1 id="view-title">Today</h1><p id="view-subtitle">Daily recording, journey context, documents, adults, home and oversight in one structured workspace.</p></div></section>
-<section class="ic365-operational-overview"><article class="ic365-overview-card"><strong>0</strong><span>Live chronology items</span></article><article class="ic365-overview-card"><strong>0</strong><span>Reviews pending</span></article><article class="ic365-overview-card"><strong>0</strong><span>Safeguarding links</span></article><article class="ic365-overview-card"><strong>0%</strong><span>Chronology continuity</span></article></section>
-<section id="workspace-main" class="ic365-content-panel"><div class="ic365-empty-state">Choose a home and young person to open the workspace.</div></section>
+<section class="ic365-page-header"><div><p class="ic365-kicker">Children’s home OS</p><h1 id="view-title">Today</h1><p id="view-subtitle">Live shift recording, chronology, actions and review for the selected young person.</p></div></section>
+<section class="ic365-operational-overview"><article class="ic365-overview-card"><strong>255</strong><span>Live records</span></article><article class="ic365-overview-card"><strong>24</strong><span>Review / action</span></article><article class="ic365-overview-card"><strong>255</strong><span>Safeguarding links</span></article><article class="ic365-overview-card"><strong>240</strong><span>Child voice</span></article><article class="ic365-overview-card"><strong>Stable</strong><span>Placement state</span></article></section>
+<div class="ic365-workspace-tabs"><button class="active">All</button><button>Daily</button><button>Direct work</button><button>Incidents</button><button>Health</button><button>Education</button><button>Contact</button><button>Documents</button><button>Review</button></div>
+<section id="workspace-main" class="two-column">
+<div class="panel">
+<div class="section-header-row"><div><p class="eyebrow">Live shift</p><h3>All chronology</h3></div><div class="hero-actions"><button class="ic365-button primary">New daily record</button><button class="ic365-button">Handover note</button></div></div>
+<div class="ic365-record-feed">
+<div class="ic365-day-group"><h3>2026-05-08</h3><article class="ic365-record-card"><div class="ic365-record-head"><span class="mini-tag">Daily Record</span><small>2026-05-08T20:00:00+00:00</small><strong>Recorded</strong></div><h4>Evening daily note</h4><p>Accepted support from staff and made at least one positive choice during the shift. Jamie presented as bright during the evening. Staff provided support, routine and reassurance. No significant behavioural concerns. Positive choices reinforced.</p><div class="ic365-record-meta"><span>Education routine</span><span>Positive engagement</span><span>Emotional stability</span></div></article></div>
+</div>
+</div>
+<div class="panel ic365-command-rail"><p class="eyebrow">Operational rail</p><h3>Review, risk and continuity</h3><div class="ic365-rail-state"><strong>stable</strong><span>Placement state</span></div><div class="ic365-action-list"><button><strong>Medium behaviour</strong><span>Review emotional presentation trends.</span></button><button><strong>Inspection readiness</strong><span>Structure evidence and chronology.</span></button><button><strong>Manager review</strong><span>Find records requiring oversight.</span></button></div></div>
+</section>
 </main>
 <aside class="ic365-rightpanel"></aside>
 </div>
