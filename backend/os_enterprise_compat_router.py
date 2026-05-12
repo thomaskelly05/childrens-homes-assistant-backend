@@ -12,29 +12,78 @@ def ok(name: str):
     }
 
 
+@router.get('/api/auth/me')
+async def auth_me():
+    return {
+        'ok': True,
+        'authenticated': True,
+        'source': 'compat-router',
+        'user': {
+            'id': 'runtime-user',
+            'name': 'IndiCare User',
+            'role': 'operator'
+        }
+    }
+
+
 @router.get('/api/tasks')
 async def tasks():
-    return ok('tasks')
+    return {'ok': True, 'tasks': [], 'items': [], 'source': 'compat-router'}
+
+
+@router.get('/api/actions')
+async def actions():
+    return {'ok': True, 'actions': [], 'items': [], 'source': 'compat-router'}
+
+
+@router.get('/api/notifications')
+async def notifications():
+    return {'ok': True, 'notifications': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/evidence')
 async def evidence():
-    return ok('evidence')
+    return {'ok': True, 'evidence': [], 'items': [], 'source': 'compat-router'}
+
+
+@router.get('/api/documents')
+async def documents():
+    return {'ok': True, 'documents': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/document-library')
 async def document_library():
-    return ok('document-library')
+    return {'ok': True, 'documents': [], 'folders': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/health')
 async def health():
-    return ok('health')
+    return {'ok': True, 'health': [], 'items': [], 'source': 'compat-router'}
+
+
+@router.get('/api/young-people/health')
+async def young_people_health():
+    return {'ok': True, 'health': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/mar')
 async def mar():
-    return ok('mar')
+    return {'ok': True, 'mar': [], 'medications': [], 'items': [], 'source': 'compat-router'}
+
+
+@router.get('/api/staff')
+async def staff():
+    return {'ok': True, 'staff': [], 'items': [], 'source': 'compat-router'}
+
+
+@router.get('/api/rota')
+async def rota():
+    return {'ok': True, 'rota': [], 'shifts': [], 'items': [], 'source': 'compat-router'}
+
+
+@router.get('/api/rostering')
+async def rostering():
+    return {'ok': True, 'rostering': [], 'shifts': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/staff-profile')
@@ -74,29 +123,29 @@ async def ofsted_pack():
 
 @router.get('/api/finance')
 async def finance():
-    return ok('finance')
+    return {'ok': True, 'finance': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/pocket-money')
 async def pocket_money():
-    return ok('pocket-money')
+    return {'ok': True, 'pocket_money': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/sanctions')
 async def sanctions():
-    return ok('sanctions')
+    return {'ok': True, 'sanctions': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/connect')
 async def connect():
-    return ok('connect')
+    return {'ok': True, 'messages': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/mail')
 async def mail():
-    return ok('mail')
+    return {'ok': True, 'mail': [], 'items': [], 'source': 'compat-router'}
 
 
 @router.get('/api/calendar')
 async def calendar():
-    return ok('calendar')
+    return {'ok': True, 'calendar': [], 'items': [], 'source': 'compat-router'}
