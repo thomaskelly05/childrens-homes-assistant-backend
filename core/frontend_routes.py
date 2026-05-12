@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
@@ -11,6 +12,41 @@ CARE_OS_PATH = "/os-command"
 COMMAND_SHELL_FILE = "os-command-runtime.html"
 LEGACY_COMMAND_SHELL_FILE = "os-command.html"
 
+ASSISTANT_REQUIRED_ASSETS = [
+    "assistant.html",
+    "assistant.css",
+    "assistant-pro.css",
+    "assistant-polish.css",
+    "runtime-guard.css",
+    "runtime-guard.js",
+    "assistant-bridge.js",
+    "assistant-streaming.js",
+    "assistant-runtime.js",
+    "intelligence-voice.js",
+    "intelligence-voice-live.js",
+    "realtime-conversation.js",
+    "realtime-webrtc.js",
+    "realtime-readiness.js",
+    "realtime-production-check.js",
+    "realtime-launch-audit.js",
+    "voice-soundscape.js",
+    "voice-audio-reactor.js",
+    "voice-presence.css",
+    "voice-reactive.css",
+    "voice-emotion-engine.js",
+    "voice-emotion.css",
+    "voice-identity-engine.js",
+    "proactive-intelligence.js",
+    "proactive-intelligence.css",
+    "longitudinal-memory.js",
+    "agi-reasoning-engine.js",
+    "enterprise-telemetry.js",
+    "voice-mobile-runtime.js",
+    "native-runtime.css",
+    "notes-beam.js",
+    "notes-beam.css",
+]
+
 
 def _load_html(directory: str, filename: str) -> str:
     path = os.path.join(directory, filename)
@@ -21,7 +57,23 @@ def _load_html(directory: str, filename: str) -> str:
 
 
 def _ai_asset(filename: str, media_type: str) -> FileResponse:
-    return FileResponse(os.path.join(INDICARE_AI_DIR, filename), media_type=media_type)
+    path = os.path.join(INDICARE_AI_DIR, filename)
+    if not os.path.exists(path):
+        return JSONResponse({"ok": False, "error": "Asset not found", "asset": filename}, status_code=404)
+    return FileResponse(path, media_type=media_type)
+
+
+def _assistant_asset_audit() -> dict:
+    root = Path(INDICARE_AI_DIR)
+    assets = {}
+    missing = []
+    for name in ASSISTANT_REQUIRED_ASSETS:
+        path = root / name
+        exists = path.exists()
+        assets[name] = {"exists": exists, "size": path.stat().st_size if exists else 0}
+        if not exists:
+            missing.append(name)
+    return {"ok": not missing, "missing": missing, "assets": assets}
 
 
 def register_frontend_routes(app: FastAPI) -> None:
@@ -55,6 +107,36 @@ def register_frontend_routes(app: FastAPI) -> None:
             return _ai_asset(filename, "application/javascript")
         return JSONResponse({"ok": False, "error": "Unsupported asset"}, status_code=404)
 
+    @app.get("/assistant/system")
+    async def assistant_system_manifest():
+        audit = _assistant_asset_audit()
+        return {
+            "ok": audit["ok"],
+            "surface": "/assistant",
+            "runtime": "indicare-ai",
+            "router": "main-router",
+            "assets": audit,
+            "endpoints": {
+                "assistant": "/assistant",
+                "safe_chat": "/assistant/general-safe",
+                "stream_chat": "/assistant/general/stream",
+                "realtime_session": "/assistant/realtime/session",
+                "realtime_health": "/assistant/realtime/health",
+                "frontend_health": "/health/frontend",
+            },
+            "capabilities": {
+                "runtime_guard": True,
+                "safe_fallback": True,
+                "streaming": True,
+                "realtime_voice": True,
+                "webrtc": True,
+                "notes_beam": True,
+                "longitudinal_memory": True,
+                "enterprise_telemetry": True,
+                "launch_audit": True,
+            },
+        }
+
     @app.get("/young-people-shell")
     @app.get("/young-people-shell.html")
     async def legacy_young_people_shell_redirect():
@@ -69,11 +151,13 @@ def register_frontend_routes(app: FastAPI) -> None:
 
     @app.get("/health/frontend")
     async def frontend_health():
+        audit = _assistant_asset_audit()
         return {
-            "ok": True,
+            "ok": audit["ok"],
             "frontend": True,
             "assistant_runtime": "indicare-ai",
             "assistant_assets": "isolated_dynamic",
+            "assistant_asset_audit": audit,
             "assistant_bridge": True,
             "assistant_streaming": True,
             "assistant_voice": True,
@@ -83,6 +167,7 @@ def register_frontend_routes(app: FastAPI) -> None:
             "assistant_notes_beam": True,
             "assistant_pro_design": True,
             "assistant_polish": True,
+            "runtime_guard": True,
             "login_route": True,
             "assistant_route": True,
             "os_command_route": True,
