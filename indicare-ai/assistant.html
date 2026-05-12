@@ -8,20 +8,11 @@
   <link rel="stylesheet" href="/indicare-ai/assistant.css">
   <link rel="stylesheet" href="/indicare-ai/assistant-pro.css">
   <link rel="stylesheet" href="/indicare-ai/assistant-polish.css">
-  <link rel="stylesheet" href="/indicare-ai/notes-beam.css">
-  <link rel="stylesheet" href="/indicare-ai/voice-presence.css">
-  <link rel="stylesheet" href="/indicare-ai/voice-reactive.css">
-  <link rel="stylesheet" href="/indicare-ai/realtime-readiness.css">
-  <link rel="stylesheet" href="/indicare-ai/production-ready.css">
-  <link rel="stylesheet" href="/indicare-ai/voice-emotion.css">
-  <link rel="stylesheet" href="/indicare-ai/launch-audit.css">
-  <link rel="stylesheet" href="/indicare-ai/proactive-intelligence.css">
-  <link rel="stylesheet" href="/indicare-ai/native-runtime.css">
   <link rel="stylesheet" href="/indicare-ai/runtime-guard.css">
 </head>
 <body>
   <div id="indicareAiRoot">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#020617;color:#e2e8f0;font-family:Inter,sans-serif;">
+    <div id="bootLoader" style="display:flex;align-items:center;justify-content:center;height:100vh;background:#020617;color:#e2e8f0;font-family:Inter,sans-serif;">
       <div style="text-align:center;max-width:520px;padding:32px;">
         <div style="width:84px;height:84px;border-radius:999px;margin:0 auto 24px;background:radial-gradient(circle at center,#38bdf8 0%,#0f172a 72%);box-shadow:0 0 120px rgba(56,189,248,.28);"></div>
         <h1 style="font-size:28px;margin:0 0 12px;">Launching IndiCare Intelligence</h1>
@@ -30,26 +21,58 @@
     </div>
   </div>
 
+  <script>
+    window.__INDICARE_BOOT_OK=false;
+    setTimeout(function(){
+      if(window.__INDICARE_BOOT_OK)return;
+      var root=document.getElementById('indicareAiRoot');
+      if(!root)return;
+      root.innerHTML='\
+      <div style="display:flex;height:100vh;background:#020617;color:#e2e8f0;font-family:Inter,sans-serif">\
+        <aside style="width:260px;border-right:1px solid rgba(255,255,255,.08);padding:24px;background:#0f172a">\
+          <h2 style="margin:0 0 24px">IndiCare Intelligence</h2>\
+          <button onclick="location.reload()" style="width:100%;padding:12px;border-radius:14px;border:none;background:#2563eb;color:white;margin-bottom:16px">Reload Runtime</button>\
+          <button onclick="localStorage.clear();location.reload()" style="width:100%;padding:12px;border-radius:14px;border:none;background:#1e293b;color:white">Reset Cache</button>\
+        </aside>\
+        <main style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px">\
+          <div style="max-width:680px;width:100%">\
+            <h1 style="font-size:42px;margin:0 0 16px">Safe Mode Activated</h1>\
+            <p style="opacity:.72;margin:0 0 24px">The advanced conversational runtime did not finish loading. Fallback assistant mode is active.</p>\
+            <textarea id="safePrompt" placeholder="Message IndiCare Intelligence..." style="width:100%;height:180px;border-radius:22px;padding:24px;background:#111827;color:#fff;border:1px solid rgba(255,255,255,.08)"></textarea>\
+            <div style="display:flex;gap:12px;margin-top:16px">\
+              <button id="safeSend" style="padding:14px 22px;border:none;border-radius:14px;background:#2563eb;color:#fff">Send</button>\
+              <button onclick="location.reload()" style="padding:14px 22px;border:none;border-radius:14px;background:#1e293b;color:#fff">Retry Runtime</button>\
+            </div>\
+            <div id="safeOutput" style="margin-top:24px"></div>\
+          </div>\
+        </main>\
+      </div>';
+
+      var btn=document.getElementById('safeSend');
+      if(btn){
+        btn.onclick=async function(){
+          var prompt=document.getElementById('safePrompt');
+          var output=document.getElementById('safeOutput');
+          if(!prompt||!output)return;
+          output.innerHTML='Thinking…';
+          try{
+            var response=await fetch('/assistant/general-safe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:prompt.value})});
+            var data=await response.json();
+            output.innerHTML='<div style="padding:24px;border-radius:20px;background:#111827;border:1px solid rgba(255,255,255,.08)">'+(data.answer||data.response||'Assistant ready')+'</div>';
+          }catch(e){
+            output.innerHTML='Connection issue';
+          }
+        }
+      }
+    },5000);
+  </script>
+
   <script defer src="/indicare-ai/runtime-guard.js"></script>
-  <script defer src="/indicare-ai/realtime-conversation.js"></script>
-  <script defer src="/indicare-ai/realtime-webrtc.js"></script>
-  <script defer src="/indicare-ai/voice-soundscape.js"></script>
-  <script defer src="/indicare-ai/voice-audio-reactor.js"></script>
-  <script defer src="/indicare-ai/realtime-readiness.js"></script>
-  <script defer src="/indicare-ai/realtime-production-check.js"></script>
-  <script defer src="/indicare-ai/realtime-launch-audit.js"></script>
-  <script defer src="/indicare-ai/voice-emotion-engine.js"></script>
-  <script defer src="/indicare-ai/voice-identity-engine.js"></script>
-  <script defer src="/indicare-ai/proactive-intelligence.js"></script>
-  <script defer src="/indicare-ai/longitudinal-memory.js"></script>
-  <script defer src="/indicare-ai/agi-reasoning-engine.js"></script>
-  <script defer src="/indicare-ai/enterprise-telemetry.js"></script>
-  <script defer src="/indicare-ai/voice-mobile-runtime.js"></script>
   <script defer src="/indicare-ai/assistant-bridge.js"></script>
   <script defer src="/indicare-ai/assistant-streaming.js"></script>
   <script defer src="/indicare-ai/intelligence-voice.js"></script>
   <script defer src="/indicare-ai/intelligence-voice-live.js"></script>
   <script defer src="/indicare-ai/assistant-runtime.js"></script>
-  <script defer src="/indicare-ai/notes-beam.js"></script>
+  <script defer>window.__INDICARE_BOOT_OK=true;</script>
 </body>
 </html>
