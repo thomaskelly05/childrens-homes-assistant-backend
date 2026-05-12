@@ -9,6 +9,7 @@ import { NotesWorkspace } from '../workspace/NotesWorkspace'
 import { DocsWorkspace } from '../workspace/DocsWorkspace'
 import { RuntimeTelemetry } from '../observability/RuntimeTelemetry'
 import { ConversationChime } from '../audio/ConversationChime'
+import { SessionContinuityBanner } from '../session/SessionContinuityBanner'
 import { useRuntime } from '../../lib/store'
 
 export function AppShell(){
@@ -38,6 +39,8 @@ export function AppShell(){
             <button className='glass' style={{padding:'12px 18px',borderRadius:999,color:'white'}}>Save action</button>
           </div>
         </header>
+
+        <SessionContinuityBanner />
 
         {workspace()}
 
