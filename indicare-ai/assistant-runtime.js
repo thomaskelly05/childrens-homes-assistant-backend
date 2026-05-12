@@ -106,7 +106,14 @@ return `<section class="assistant-hero">
 <div class="ai-orb premium"></div>
 <h2>Think, write and work naturally.</h2>
 <p>A calm professional AI workspace for adults working in residential children's homes.</p>
+<div class="assistant-thread">
+${state.messages.map(renderMessage).join('')}
+</div>
 </section>`;
+}
+
+function renderMessage(message){
+return `<div class="message ${esc(message.role)}"><div class="message-bubble">${esc(message.content).replace(/\n/g,'<br>')}</div></div>`;
 }
 
 function connect(){
@@ -192,6 +199,16 @@ render();
 const send=document.querySelector('[data-action="send"]');
 if(send)send.onclick=submit;
 
+const prompt=document.getElementById('prompt');
+if(prompt){
+prompt.addEventListener('keydown',e=>{
+if(e.key==='Enter'&&!e.shiftKey){
+e.preventDefault();
+submit();
+}
+});
+}
+
 Array.from(document.querySelectorAll('[data-action="voice"]')).forEach(v=>{
 v.onclick=toggleVoice;
 });
@@ -205,35 +222,76 @@ const text=input.value.trim();
 input.value='';
 
 state.messages.push({role:'user',content:text});
+state.messages.push({role:'assistant',content:'Thinking...'});
 render();
 
 try{
-const res=await fetch('/assistant/general-safe',{
+const response=await fetch('/assistant/general/stream',{
 method:'POST',
+credentials:'include',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({message:text})
+body:JSON.stringify({
+message:text,
+assistant_mode:state.mode,
+assistant_surface:'indicare-ai',
+response_mode:'balanced',
+conversation_id:state.thread,
+history:state.messages.slice(-12)
+})
 });
 
-const data=await res.json();
+if(!response.ok||!response.body){
+throw new Error('Assistant unavailable');
+}
 
-state.messages.push({
+const reader=response.body.getReader();
+const decoder=new TextDecoder();
+let answer='';
+
+while(true){
+const {value,done}=await reader.read();
+if(done)break;
+
+const chunk=decoder.decode(value,{stream:true});
+const lines=chunk.split('\n');
+
+for(const line of lines){
+if(line.startsWith('data:')){
+const token=line.replace('data:','').trim();
+if(token&&token!=='[DONE]'){
+answer+=token+' ';
+}
+}
+}
+
+state.messages[state.messages.length-1]={
 role:'assistant',
-content:data.answer||data.response||'Ready.'
-});
+content:answer.trim()
+};
+
+render();
+}
 }catch(e){
 console.error(e);
-state.messages.push({role:'assistant',content:'Connection issue.'});
+state.messages[state.messages.length-1]={
+role:'assistant',
+content:'Connection issue.'
+};
+render();
 }
 
 save();
-render();
 }
 
 function toggleVoice(){
 state.voice=!state.voice;
 
 try{
-if(window.IndiCareIntelligenceLive){
+if(
+window.IndiCareIntelligenceLive&&
+typeof window.IndiCareIntelligenceLive.start==='function'&&
+typeof window.IndiCareIntelligenceLive.stop==='function'
+){
 state.voice
 ?window.IndiCareIntelligenceLive.start()
 :window.IndiCareIntelligenceLive.stop();
