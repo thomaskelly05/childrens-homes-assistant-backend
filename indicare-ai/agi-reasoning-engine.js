@@ -1,0 +1,11 @@
+(function(){
+  if(window.__IndiCareAGIReasoningInstalled)return;
+  window.__IndiCareAGIReasoningInstalled=true;
+  var suggestions=[];
+  function emit(){window.dispatchEvent(new CustomEvent('indicare:agi-reasoning',{detail:{suggestions:suggestions.slice(0,12)}}));}
+  function add(type,title,detail,priority){suggestions.unshift({id:'agi-'+Date.now()+'-'+Math.random().toString(16).slice(2),type:type,title:title,detail:detail,priority:priority||'medium',created_at:new Date().toISOString()});suggestions=suggestions.slice(0,40);emit();render();}
+  function analyse(text){text=String(text||'');var t=text.toLowerCase();if(/missing|abscond/i.test(t))add('safeguarding','Missing episode reasoning','Consider chronology review, police notification threshold, return-home interview planning and placement vulnerability review.','high');if(/restraint|physical intervention/i.test(t))add('operational','Restrictive practice review','Consider debrief, body-map check, antecedent analysis and regulation 40 threshold review.','high');if(/ofsted|inspection|sccif/i.test(t))add('quality','Inspection readiness insight','Surface evidence themes, strengths, impact examples and identified gaps for rapid preparation.','medium');if(/self-harm|suicide|harm myself/i.test(t))add('wellbeing','Emotional wellbeing escalation','Consider immediate safeguarding review, emotional support planning and clinical escalation pathways.','critical');if(/staffing|rota|agency/i.test(t))add('workforce','Operational workforce risk','Potential continuity-of-care instability detected. Consider staffing resilience review.','medium');}
+  function render(){var stage=document.querySelector('.voice-stage');if(!stage)return;var wrap=document.getElementById('agiReasoningPanel');if(!wrap){wrap=document.createElement('div');wrap.id='agiReasoningPanel';wrap.className='agi-reasoning-panel';stage.appendChild(wrap);}wrap.innerHTML=suggestions.slice(0,3).map(function(s){return '<article class="agi-card priority-'+s.priority+'"><strong>'+s.title+'</strong><span>'+s.detail+'</span></article>';}).join('');}
+  window.addEventListener('indicare:realtime-webrtc',function(e){var d=e.detail||{};if(d.type==='transcript'&&d.role==='user')analyse(d.text);});
+  window.IndiCareAGIReasoning={analyse:analyse,get:function(){return suggestions;}};
+})();
