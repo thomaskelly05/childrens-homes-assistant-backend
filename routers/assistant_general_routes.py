@@ -58,9 +58,9 @@ def _clip(value: str | None, limit: int) -> str | None:
 
 def _normalise_ai_surface(value: str | None) -> str:
     clean = safe_string(value).lower()
-    if clean in {"ai-suite", "assistant", "standalone"}:
-        return "ai-suite"
-    return "ai-suite"
+    if clean in {"ai-suite", "assistant", "standalone", "indicare-ai"}:
+        return "indicare-ai"
+    return "indicare-ai"
 
 
 def _normalise_ai_mode(value: str | None) -> str:
@@ -79,22 +79,9 @@ def _conversation_presence_prefix(surface: str, mode: str) -> str:
     active_mode = mode_labels.get(mode, mode_labels["assistant"])
     return f"""
 INDICARE AI SUITE CONVERSATIONAL PRESENCE:
-You are operating inside the IndiCare AI Suite, not the retired standalone cockpit.
+You are operating inside the IndiCare AI Suite.
 Current product surface: {surface}.
 Current app mode: {active_mode}
-The suite contains Assistant, Connect, Docs, I-Notes and Intelligence AI.
-Sound like the best calm British colleague or experienced manager: warm, steady, practical, reflective and professionally grounded.
-Do not be blunt, cold or transactional. Avoid sounding like a form, policy bot or generic chatbot.
-Begin with a natural acknowledgement where appropriate, then help the user think clearly.
-Keep answers conversational while still being useful and structured.
-When the user sounds stressed, describes an incident, safeguarding concern, difficult shift, allegation, restraint, missing episode or conflict, slow the pace emotionally and guide them carefully.
-Do not pretend to be human, conscious or emotionally self-aware. You can say you are here to help them think it through, but do not claim feelings or lived experience.
-For residential childcare topics, use British English and child-centred, factual, non-judgemental language.
-Do not make final safeguarding, legal, clinical, employment or regulatory decisions. Support manager/DSL/professional review.
-When useful, separate facts, professional interpretation, missing information and next steps.
-Never abruptly end. Close with one natural continuation, such as a helpful next step, a gentle question, or an offer to structure the next part together.
-If live web context is supplied, use it naturally. Do not sound like a search results page; explain what you found and keep the conversation going.
-If orchestrated IndiCare context is supplied, use it as the assistant's brain. Do not expose raw JSON. Be clear if context is limited or unavailable.
 """.strip()
 
 
@@ -128,25 +115,12 @@ def _message_with_document(payload: GeneralAssistantRequest, current_user: dict[
     parts = [_conversation_presence_prefix(surface, mode)]
 
     if orchestrated and orchestrated.get("prompt_context"):
-        parts.extend([
-            "",
-            str(orchestrated.get("prompt_context"))[:45000],
-            "",
-            "USER'S CURRENT MESSAGE:",
-            message,
-        ])
+        parts.extend(["", str(orchestrated.get("prompt_context"))[:45000], "", "USER'S CURRENT MESSAGE:", message])
     else:
         parts.extend(["", message])
 
     if document_text:
-        parts.extend([
-            "",
-            "USER-SUPPLIED DOCUMENT CONTEXT:",
-            f"Document name: {document_name}",
-            "Use this document only as user-provided context for this AI Suite conversation.",
-            "",
-            document_text,
-        ])
+        parts.extend(["", "USER-SUPPLIED DOCUMENT CONTEXT:", f"Document name: {document_name}", "", document_text])
 
     return "\n".join(parts), orchestrated, surface, mode
 
@@ -165,16 +139,7 @@ def _sse_done() -> str:
 
 
 def _assistant_component_path() -> Path:
-    return Path(__file__).resolve().parents[1] / "frontend" / "ai-suite" / "index.html"
-
-
-def _inject_ofsted_ui_patch(html: str) -> str:
-    recovery_script = '<script defer src="/frontend/ai-suite/indicare-orb-projects.js"></script>'
-    if "indicare-orb-projects.js" in html:
-        return html
-    if "</body>" in html:
-        return html.replace("</body>", f"{recovery_script}\n</body>")
-    return f"{html}\n{recovery_script}"
+    return Path(__file__).resolve().parents[1] / "indicare-ai" / "assistant.html"
 
 
 @ui_router.get("/assistant", response_class=HTMLResponse)
@@ -182,9 +147,8 @@ def _inject_ofsted_ui_patch(html: str) -> str:
 def serve_ai_suite_assistant():
     path = _assistant_component_path()
     if not path.exists():
-        raise HTTPException(status_code=404, detail="AI Suite page not found.")
-    html = path.read_text(encoding="utf-8")
-    return HTMLResponse(_inject_ofsted_ui_patch(html))
+        raise HTTPException(status_code=404, detail="Assistant page not found.")
+    return HTMLResponse(path.read_text(encoding="utf-8"))
 
 
 @router.post("/stream")
@@ -198,32 +162,6 @@ async def stream_general_assistant(
     message, orchestrated_context, surface, mode = _message_with_document(payload, current_user)
 
     async def _stream():
-        sources: list[dict[str, Any]] = []
-        runtime: dict[str, Any] = {}
-        explainability: dict[str, Any] = {}
-        assistant_scope: dict[str, Any] = {
-            "assistant_mode": mode,
-            "assistant_surface": surface,
-            "scope": "indicare_ai_suite",
-            "scope_type": "indicare_ai_suite",
-            "internal_data_access": bool(orchestrated_context),
-        }
-        assistant_context: dict[str, Any] = {
-            "guidance_only": True,
-            "history_items_loaded": len(history),
-            "document_attached": bool(payload.document_text),
-            "document_name": safe_string(payload.document_name) or None,
-            "conversation_presence": True,
-            "orchestrator_enabled": bool(orchestrated_context),
-            "orchestrator_project_id": (orchestrated_context or {}).get("project_id"),
-            "orchestrator_surface": (orchestrated_context or {}).get("surface"),
-            "orchestrator_sources": (orchestrated_context or {}).get("sources", []),
-            "suite_apps": ["assistant", "connect", "docs", "notes", "intelligence"],
-        }
-        suggested_actions: list[dict[str, Any]] = []
-        safeguarding: dict[str, Any] = {}
-        boundary: dict[str, Any] = {}
-
         try:
             async for item in generate_general_assistant_stream(
                 message=message,
@@ -232,80 +170,14 @@ async def stream_general_assistant(
                 user_id=user_id,
                 conversation_id=conversation_id,
             ):
-                if not isinstance(item, dict):
-                    continue
-
-                item_type = item.get("type")
-
-                if item_type == "progress":
-                    content = safe_string(item.get("content"))
-                    if content:
-                        yield _sse_event("progress", {"content": content})
-                    continue
-
-                if item_type == "token":
+                if isinstance(item, dict) and item.get("type") == "token":
                     content = item.get("content")
                     if isinstance(content, str) and content:
                         yield _sse_message(content)
-                    continue
-
-                if item_type == "meta":
-                    if isinstance(item.get("sources"), list):
-                        sources = item.get("sources") or []
-                    if isinstance(item.get("runtime"), dict):
-                        runtime = item.get("runtime") or {}
-                    if isinstance(item.get("explainability"), dict):
-                        explainability = item.get("explainability") or {}
-                    if isinstance(item.get("assistant_scope"), dict):
-                        assistant_scope = {**assistant_scope, **(item.get("assistant_scope") or {})}
-                    if isinstance(item.get("assistant_context"), dict):
-                        assistant_context = {
-                            **assistant_context,
-                            **(item.get("assistant_context") or {}),
-                            "document_attached": bool(payload.document_text),
-                            "document_name": safe_string(payload.document_name) or None,
-                            "conversation_presence": True,
-                            "orchestrator_enabled": bool(orchestrated_context),
-                            "orchestrator_project_id": (orchestrated_context or {}).get("project_id"),
-                            "orchestrator_surface": (orchestrated_context or {}).get("surface"),
-                            "orchestrator_sources": (orchestrated_context or {}).get("sources", []),
-                            "suite_apps": ["assistant", "connect", "docs", "notes", "intelligence"],
-                        }
-                    if isinstance(item.get("suggested_actions"), list):
-                        suggested_actions = [
-                            action
-                            for action in item.get("suggested_actions")
-                            if isinstance(action, dict) and safe_string(action.get("label"))
-                        ]
-                    if isinstance(item.get("safeguarding"), dict):
-                        safeguarding = item.get("safeguarding") or {}
-                    if isinstance(item.get("boundary"), dict):
-                        boundary = item.get("boundary") or {}
-                    continue
-
         except Exception:
             logger.exception("General assistant stream failed")
-            yield _sse_message(
-                "I’m sorry, I couldn’t complete that just now. Try again and we’ll work through it together."
-            )
+            yield _sse_message("I’m sorry, I couldn’t complete that just now.")
         finally:
-            assistant_scope["assistant_surface"] = surface
-            assistant_scope["assistant_mode"] = mode
-            assistant_scope["scope"] = "indicare_ai_suite"
-            assistant_scope["scope_type"] = "indicare_ai_suite"
-            yield _sse_event(
-                "meta",
-                {
-                    "sources": sources,
-                    "runtime": runtime,
-                    "explainability": explainability,
-                    "assistant_scope": assistant_scope,
-                    "assistant_context": assistant_context,
-                    "suggested_actions": suggested_actions,
-                    "safeguarding": safeguarding,
-                    "boundary": boundary,
-                },
-            )
             yield _sse_done()
 
     return StreamingResponse(
