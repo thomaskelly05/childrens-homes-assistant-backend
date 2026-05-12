@@ -4,6 +4,8 @@ import { ContextRail } from '@/components/context-rail'
 import { OverviewMetrics } from '@/components/overview-metrics'
 import { WorkspaceHeader } from '@/components/workspace-header'
 import { AssistantPanel } from '@/components/assistant-panel'
+import { WorkspaceTabs } from '@/components/workspace-tabs'
+import { OperationalStatusBar } from '@/components/operational-status-bar'
 import { loadChronologyContext } from '@/lib/api'
 
 export default async function HomePage() {
@@ -14,6 +16,10 @@ export default async function HomePage() {
       <OSShell rail={<ContextRail />}>
         <div className="mx-auto max-w-6xl space-y-6">
           <WorkspaceHeader />
+
+          <OperationalStatusBar />
+
+          <WorkspaceTabs />
 
           <OverviewMetrics />
 
