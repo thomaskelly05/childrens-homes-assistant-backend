@@ -12,6 +12,12 @@ CARE_OS_PATH = "/os-command"
 COMMAND_SHELL_FILE = "os-command-runtime.html"
 LEGACY_COMMAND_SHELL_FILE = "os-command.html"
 
+NO_STORE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
 ASSISTANT_REQUIRED_ASSETS = [
     "assistant.html",
     "assistant.css",
@@ -84,7 +90,7 @@ def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/login")
     @app.get("/login.html")
     async def login_page():
-        return HTMLResponse(_load_html(FRONTEND_DIR, "login.html"))
+        return HTMLResponse(_load_html(FRONTEND_DIR, "login.html"), headers=NO_STORE_HEADERS)
 
     @app.get(CARE_OS_PATH)
     @app.get(f"{CARE_OS_PATH}/")
@@ -92,12 +98,12 @@ def register_frontend_routes(app: FastAPI) -> None:
         html = _load_html(FRONTEND_DIR, COMMAND_SHELL_FILE)
         if "Frontend missing" in html:
             html = _load_html(FRONTEND_DIR, LEGACY_COMMAND_SHELL_FILE)
-        return HTMLResponse(html)
+        return HTMLResponse(html, headers=NO_STORE_HEADERS)
 
     @app.get("/assistant")
     @app.get("/assistant.html")
     async def assistant_surface():
-        return HTMLResponse(_load_html(INDICARE_AI_DIR, "assistant.html"))
+        return HTMLResponse(_load_html(INDICARE_AI_DIR, "assistant.html"), headers=NO_STORE_HEADERS)
 
     @app.get("/indicare-ai/{filename}")
     async def indicare_ai_asset(filename: str):
