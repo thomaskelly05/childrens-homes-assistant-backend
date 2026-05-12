@@ -1,49 +1,33 @@
-import { RuntimeOrchestrator } from './runtime-orchestrator.js'
 import { OpenAIRealtimeVoice } from './openai-realtime-voice.js'
+import { RuntimeOrchestrator } from './runtime-orchestrator.js'
 
-export async function bootstrapOpenAIVoiceRuntime(){
-  if(window.__IndiCareOpenAIRuntime)return window.__IndiCareOpenAIRuntime
+export async function bootstrapOpenAIVoiceRuntime() {
+  if (window.__IndiCareOpenAIRuntime) return window.__IndiCareOpenAIRuntime
 
-  const realtime=new OpenAIRealtimeVoice({
-    apiKey:window.OPENAI_API_KEY,
-    voice:'alloy',
-    onEvent(type,payload){
-      try{
-        window.dispatchEvent(new CustomEvent('indicare:openai-realtime',{
-          detail:{type,payload}
-        }))
-      }catch{}
+  const listeners = new Set()
+  const realtime = new OpenAIRealtimeVoice({
+    apiKey: window.OPENAI_API_KEY,
+    voice: window.INDICARE_REALTIME_VOICE || 'alloy',
+    onEvent(type, payload) {
+      orchestrator.handleRealtimeEvent(type, payload)
     }
   })
 
-  const orchestrator=new RuntimeOrchestrator()
+  const orchestrator = new RuntimeOrchestrator({ realtime })
+  orchestrator.on((type, payload) => listeners.forEach(listener => listener(type, payload)))
 
-  orchestrator.on((type,payload)=>{
-    if(type==='turn-complete'){
-      realtime.send({
-        type:'conversation.item.create',
-        item:{
-          type:'message',
-          role:'user',
-          content:[{type:'input_text',text:payload.text||''}]
-        }
-      })
-
-      realtime.send({type:'response.create'})
-    }
-  })
-
-  await realtime.connect()
-
-  window.__IndiCareOpenAIRuntime={
+  window.__IndiCareOpenAIRuntime = {
     realtime,
     orchestrator,
-    async start(){
+    async start() {
       await orchestrator.start()
     },
-    stop(){
+    stop() {
       orchestrator.stop()
-      realtime.disconnect()
+    },
+    on(listener) {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
     }
   }
 

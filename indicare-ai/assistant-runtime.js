@@ -1,327 +1,155 @@
-(function(){
-try{
-if(window.__IndiCarePremiumRuntime)return;
-window.__IndiCarePremiumRuntime=true;
-window.__INDICARE_BOOT_OK=true;
+import { bootstrapOpenAIVoiceRuntime } from './realtime/openai-voice-runtime-bootstrap.js'
 
-const templates={
-'Supervision':'Purpose\n\nReflection\n\nSafeguarding\n\nActions',
-'SCCIF':'Evidence\n\nImpact\n\nLeadership\n\nActions',
-'Reg 44':'Recommendation\n\nResponse\n\nOwner\n\nDeadline',
-'Meeting':'Agenda\n\nDiscussion\n\nActions\n\nReview'
-};
+const root = document.getElementById('indicareAiRoot')
 
-const state={
-mode:localStorage.getItem('ic.mode')||'assistant',
-messages:safeJson(localStorage.getItem('ic.messages'),[]),
-notes:localStorage.getItem('ic.notes')||'',
-voice:false,
-thread:localStorage.getItem('ic.thread')||'main'
-};
-
-function safeJson(value,fallback){
-try{return JSON.parse(value||'')}catch{return fallback}
+if (!root) {
+  throw new Error('IndiCare assistant root is missing')
 }
 
-function save(){
-try{
-localStorage.setItem('ic.mode',state.mode);
-localStorage.setItem('ic.messages',JSON.stringify(state.messages.slice(-200)));
-localStorage.setItem('ic.notes',state.notes);
-localStorage.setItem('ic.thread',state.thread);
-}catch(e){
-console.warn('Persistence warning',e);
-}
+if (window.__IndiCareAssistantRuntime) {
+  throw new Error('Duplicate IndiCare assistant runtime detected')
 }
 
-function esc(v){
-return String(v||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+window.__IndiCareAssistantRuntime = true
+
+const state = {
+  active: false,
+  connecting: false,
+  connected: false,
+  speaking: false,
+  listening: false,
+  level: 0,
+  status: 'Tap the orb to begin',
+  detail: 'Realtime voice only. No text panel. No legacy renderer.',
+  error: '',
+  runtime: null,
+  stopEvents: null
 }
 
-function layout(){
-return `<div class="ai-app ${state.mode==='intelligence'?'is-dark intelligence-mode':''}">
-${sidebar()}
-<main class="ai-main premium-shell">
-${header()}
-<div class="premium-body ${state.mode==='intelligence'?'voice-only-body':''}">
-${surface()}
-</div>
-${state.mode==='assistant'?composer():''}
-</main>
-</div>`;
+function render() {
+  root.innerHTML = `
+    <section class="voice-shell" data-state="${state.active ? 'active' : 'idle'}">
+      <div class="ambient ambient-one"></div>
+      <div class="ambient ambient-two"></div>
+      <div class="ambient ambient-three"></div>
+
+      <div class="voice-presence" aria-live="polite">
+        <div class="presence-dot ${state.connected ? 'is-live' : ''}"></div>
+        <span>${state.connected ? 'OpenAI realtime connected' : state.connecting ? 'Connecting realtime voice' : 'IndiCare Intelligence'}</span>
+      </div>
+
+      <button class="voice-orb ${state.active ? 'is-active' : ''} ${state.speaking ? 'is-speaking' : ''} ${state.listening ? 'is-listening' : ''}"
+        type="button"
+        aria-pressed="${state.active}"
+        aria-label="${state.active ? 'Stop voice conversation' : 'Start voice conversation'}"
+        style="--voice-level:${Math.min(1, state.level).toFixed(3)}">
+        <span class="orb-ring orb-ring-one"></span>
+        <span class="orb-ring orb-ring-two"></span>
+        <span class="orb-core"></span>
+      </button>
+
+      <div class="voice-copy">
+        <p class="eyebrow">Continuous voice conversation</p>
+        <h1>${state.active ? state.status : 'Talk naturally'}</h1>
+        <p>${state.error || state.detail}</p>
+      </div>
+    </section>
+  `
+
+  root.querySelector('.voice-orb')?.addEventListener('click', toggleVoice, { once: true })
 }
 
-function sidebar(){
-return `<aside class="ai-rail smart glass">
-<div class="ai-brand"><div>IC</div><span><strong>IndiCare AI</strong><small>Residential care professional</small></span></div>
-<button class="side-new" data-action="new">+ New chat</button>
-<input class="side-search real" placeholder="Search conversations">
-<nav>
-${nav('assistant','Assistant','Full ChatGPT copilot')}
-${nav('connect','Connect','Outlook + Teams + Calendar')}
-${nav('notes','I-Notes','Beam / Magic Notes')}
-${nav('docs','Docs','Word processor + care templates')}
-${nav('intelligence','Intelligence','ChatGPT Voice style presence')}
-</nav>
-</aside>`;
+async function toggleVoice() {
+  if (state.connecting) return
+  if (state.active) {
+    stopVoice()
+    return
+  }
+  await startVoice()
 }
 
-function nav(mode,title,sub){
-return `<button class="${state.mode===mode?'active':''}" data-mode="${mode}"><b>${title[0]}</b><span><strong>${title}</strong><small>${sub}</small></span></button>`;
+async function startVoice() {
+  state.connecting = true
+  state.error = ''
+  state.status = 'Requesting microphone'
+  state.detail = 'Allow microphone access to start a continuous realtime conversation.'
+  render()
+
+  try {
+    const runtime = await bootstrapOpenAIVoiceRuntime()
+    state.runtime = runtime
+
+    if (!state.stopEvents) {
+      state.stopEvents = runtime.on(handleRuntimeEvent)
+    }
+
+    await runtime.start()
+
+    state.active = true
+    state.listening = true
+    state.status = 'Listening'
+    state.detail = 'Speak naturally. Interruptions and turn-taking stay inside the single realtime runtime.'
+  } catch (error) {
+    state.error = String(error?.message || error)
+    state.status = 'Voice failed'
+    state.detail = 'Realtime voice failed fast; no legacy renderer was started.'
+    console.error('[IndiCare voice] start failed', error)
+  } finally {
+    state.connecting = false
+    render()
+  }
 }
 
-function header(){
-return `<header class="ai-header glass-header">
-<div>
-<p>${state.mode==='intelligence'?'CHATGPT VOICE STYLE PRESENCE':'FULL CHATGPT COPILOT'}</p>
-<h1>${cap(state.mode)}</h1>
-<span>${subtitle()}</span>
-</div>
-<div class="ai-header-actions">
-<button data-action="new">New thread</button>
-<button data-action="voice">${state.voice?'Voice active':'Voice ready'}</button>
-</div>
-</header>`;
+function stopVoice() {
+  state.runtime?.stop()
+  state.active = false
+  state.connected = false
+  state.speaking = false
+  state.listening = false
+  state.level = 0
+  state.status = 'Tap the orb to begin'
+  state.detail = 'Realtime voice only. No text panel. No legacy renderer.'
+  render()
 }
 
-function subtitle(){
-if(state.mode==='assistant')return 'Ask, draft, reflect and plan with one professional AI.';
-if(state.mode==='connect')return 'Email, calls, meetings and follow-ups with AI built in.';
-if(state.mode==='notes')return 'Voice-aware notes that become document-ready outputs.';
-if(state.mode==='docs')return 'SCCIF, Ofsted, supervision and leadership documents.';
-return 'Presence-led conversation. No typing, no transcript panel.';
+function handleRuntimeEvent(type, payload = {}) {
+  if (type === 'connected' || type === 'reconnected') {
+    state.connected = true
+    state.status = 'Listening'
+  }
+
+  if (type === 'disconnected' || type === 'reconnecting') {
+    state.connected = false
+    state.status = type === 'reconnecting' ? 'Reconnecting' : 'Disconnected'
+  }
+
+  if (type === 'failed' || type === 'error' || type === 'audio-error') {
+    state.error = String(payload.error?.message || payload.error || payload.reason || 'Realtime voice error')
+    state.status = 'Voice failed'
+  }
+
+  if (type === 'audio-level') {
+    state.level = payload.level || 0
+  }
+
+  if (type === 'speech-start') {
+    state.listening = true
+    state.status = 'Listening'
+  }
+
+  if (type === 'assistant-speaking') {
+    state.speaking = true
+    state.listening = false
+    state.status = 'Responding'
+  }
+
+  if (type === 'assistant-finished') {
+    state.speaking = false
+    state.listening = true
+    state.status = 'Listening'
+  }
+
+  render()
 }
 
-function surface(){
-if(state.mode==='assistant')return assistant();
-if(state.mode==='connect')return connect();
-if(state.mode==='notes')return notes();
-if(state.mode==='docs')return docs();
-return intelligence();
-}
-
-function assistant(){
-return `<section class="assistant-hero">
-<div class="hero-glow"></div>
-<div class="ai-orb premium"></div>
-<h2>Think, write and work naturally.</h2>
-<p>A calm professional AI workspace for adults working in residential children's homes.</p>
-<div class="assistant-thread">
-${state.messages.map(renderMessage).join('')}
-</div>
-</section>`;
-}
-
-function renderMessage(message){
-return `<div class="message ${esc(message.role)}"><div class="message-bubble">${esc(message.content).replace(/\n/g,'<br>')}</div></div>`;
-}
-
-function connect(){
-return `<section class="connect-premium">
-<div class="connect-card"><h3>Mail Intelligence</h3><p>Outlook summaries and drafting.</p></div>
-<div class="connect-card"><h3>Teams Intelligence</h3><p>Meeting extraction and continuity.</p></div>
-<div class="connect-card"><h3>Calendar Intelligence</h3><p>Operational planning support.</p></div>
-</section>`;
-}
-
-function notes(){
-return `<section class="notes-premium">
-<div class="recording-panel glass-card">
-<div class="record-orb"></div>
-<h2>Voice-aware notes</h2>
-<p>Capture thoughts naturally and structure later.</p>
-</div>
-<div class="notes-editor glass-card">
-<textarea id="notesInput" placeholder="Rough notes...">${esc(state.notes)}</textarea>
-</div>
-</section>`;
-}
-
-function docs(){
-return `<section class="docs-premium">
-<aside class="template-sidebar glass-card">
-${Object.keys(templates).map(t=>`<button data-template="${t}">${t}</button>`).join('')}
-</aside>
-<div class="docs-editor glass-card">
-<input id="docTitle" value="Professional document">
-<textarea id="docBody" placeholder="Start writing..."></textarea>
-</div>
-</section>`;
-}
-
-function intelligence(){
-return `<section class="voice-premium fullscreen-voice no-transcript">
-<div class="voice-gradient"></div>
-<div class="voice-presence-bar">
-<div class="presence-pill active">Realtime conversational</div>
-<div class="presence-pill">Continuous listening</div>
-<div class="presence-pill">British female voice</div>
-</div>
-<button class="voice-orb premium ${state.voice?'listening':''}" data-action="voice">
-<b>${state.voice?'Listening':'START'}</b>
-</button>
-<h2>${state.voice?'Conversation active':'Talk naturally'}</h2>
-<p>${state.voice?'Speech session active':'Click the orb. Conversation happens through presence and speech.'}</p>
-</section>`;
-}
-
-function composer(){
-return `<div class="ai-composer premium">
-<textarea id="prompt" placeholder="Message IndiCare AI..."></textarea>
-<div>
-<button data-action="upload">Upload</button>
-<button data-action="voice">Voice</button>
-<button data-action="send">Send</button>
-</div>
-</div>`;
-}
-
-function cap(v){
-return v.charAt(0).toUpperCase()+v.slice(1);
-}
-
-function render(){
-const root=document.getElementById('indicareAiRoot');
-if(!root)return;
-root.innerHTML=layout();
-bind();
-}
-
-function bind(){
-document.querySelectorAll('[data-mode]').forEach(el=>{
-el.onclick=()=>{
-state.mode=el.dataset.mode;
-save();
-render();
-};
-});
-
-const send=document.querySelector('[data-action="send"]');
-if(send)send.onclick=submit;
-
-const prompt=document.getElementById('prompt');
-if(prompt){
-prompt.addEventListener('keydown',e=>{
-if(e.key==='Enter'&&!e.shiftKey){
-e.preventDefault();
-submit();
-}
-});
-}
-
-Array.from(document.querySelectorAll('[data-action="voice"]')).forEach(v=>{
-v.onclick=toggleVoice;
-});
-}
-
-async function submit(){
-const input=document.getElementById('prompt');
-if(!input||!input.value.trim())return;
-
-const text=input.value.trim();
-input.value='';
-
-state.messages.push({role:'user',content:text});
-state.messages.push({role:'assistant',content:'Thinking...'});
-render();
-
-try{
-const response=await fetch('/assistant/general/stream',{
-method:'POST',
-credentials:'include',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-message:text,
-assistant_mode:state.mode,
-assistant_surface:'indicare-ai',
-response_mode:'balanced',
-conversation_id:state.thread,
-history:state.messages.slice(-12)
-})
-});
-
-if(!response.ok||!response.body){
-throw new Error('Assistant unavailable');
-}
-
-const reader=response.body.getReader();
-const decoder=new TextDecoder();
-let answer='';
-
-while(true){
-const {value,done}=await reader.read();
-if(done)break;
-
-const chunk=decoder.decode(value,{stream:true});
-const lines=chunk.split('\n');
-
-for(const line of lines){
-if(line.startsWith('data:')){
-const token=line.replace('data:','').trim();
-if(token&&token!=='[DONE]'){
-answer+=token+' ';
-}
-}
-}
-
-state.messages[state.messages.length-1]={
-role:'assistant',
-content:answer.trim()
-};
-
-render();
-}
-}catch(e){
-console.error(e);
-state.messages[state.messages.length-1]={
-role:'assistant',
-content:'Connection issue.'
-};
-render();
-}
-
-save();
-}
-
-function toggleVoice(){
-state.voice=!state.voice;
-
-try{
-if(
-window.IndiCareIntelligenceLive&&
-typeof window.IndiCareIntelligenceLive.start==='function'&&
-typeof window.IndiCareIntelligenceLive.stop==='function'
-){
-state.voice
-?window.IndiCareIntelligenceLive.start()
-:window.IndiCareIntelligenceLive.stop();
-}
-}catch(e){
-console.error('Voice runtime error',e);
-}
-
-save();
-render();
-}
-
-window.addEventListener('error',e=>{
-console.error('Runtime error',e.error||e.message);
-});
-
-window.addEventListener('unhandledrejection',e=>{
-console.error('Unhandled promise rejection',e.reason);
-});
-
-if(document.readyState==='loading'){
-document.addEventListener('DOMContentLoaded',render,{once:true});
-}else{
-render();
-}
-}catch(error){
-console.error('Fatal IndiCare runtime failure',error);
-const root=document.getElementById('indicareAiRoot');
-if(root){
-root.innerHTML=`<div style="background:#020617;color:white;min-height:100vh;padding:40px;font-family:Inter,sans-serif"><h1>IndiCare Runtime Recovery</h1><p>The assistant runtime recovered from an error.</p><pre>${String(error)}</pre></div>`;
-}
-}
-})();
+render()

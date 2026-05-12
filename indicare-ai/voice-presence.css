@@ -1,1 +1,13 @@
-.ai-live-connected .voice-orb{box-shadow:0 0 180px rgba(56,189,248,.72),0 0 340px rgba(37,99,235,.28),inset 0 0 44px rgba(255,255,255,.24)}.ai-live-listening .voice-orb{animation:listen 1.2s ease-in-out infinite}.ai-live-speaking .voice-orb{animation:speaking 1.8s ease-in-out infinite}.ai-live-thinking .voice-orb{animation:thinking 2.4s ease-in-out infinite}.voice-presence-bar{position:absolute;top:18px;right:18px;display:flex;gap:10px;z-index:12}.presence-pill{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);backdrop-filter:blur(20px);padding:10px 14px;border-radius:999px;color:#e2e8f0;font-size:12px;font-weight:800}.presence-pill.active{background:rgba(59,130,246,.22);border-color:rgba(125,211,252,.22);box-shadow:0 0 24px rgba(56,189,248,.22)}.voice-stream{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:6px;height:68px;z-index:4}.voice-stream i{display:block;width:8px;border-radius:999px;background:linear-gradient(180deg,#7dd3fc,#2563eb);animation:streamWave 1.2s ease-in-out infinite}.voice-stream i:nth-child(1){height:18px}.voice-stream i:nth-child(2){height:42px}.voice-stream i:nth-child(3){height:64px}.voice-stream i:nth-child(4){height:34px}.voice-stream i:nth-child(5){height:22px}.voice-stream i:nth-child(6){height:54px}.voice-stream i:nth-child(7){height:28px}.ai-live-speaking .voice-stream i{animation-duration:.7s}.ai-live-listening .voice-stream i{animation-duration:1s}.voice-thinking{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);color:#cbd5e1;font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:0;transition:opacity .2s ease}.ai-live-thinking .voice-thinking{opacity:1}.voice-transcript .stream-line{display:block;margin:10px 0;padding:12px 16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06)}.voice-transcript .stream-line.user{margin-left:auto;background:rgba(56,189,248,.14)}.voice-transcript .stream-line.assistant{background:rgba(255,255,255,.08)}@keyframes thinking{0%,100%{transform:scale(1)}50%{transform:scale(1.03) rotate(1deg)}}@keyframes streamWave{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
+.voice-shell[data-state="active"] .voice-presence {
+  border-color: rgba(56, 189, 248, .24);
+  background: rgba(8, 47, 73, .42);
+}
+
+.voice-orb.is-listening .orb-ring-one {
+  border-color: rgba(52, 211, 153, .42);
+}
+
+.voice-orb.is-speaking .orb-ring-one,
+.voice-orb.is-speaking .orb-ring-two {
+  border-color: rgba(167, 139, 250, .44);
+}

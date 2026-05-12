@@ -1,92 +1,126 @@
-import { VoiceSessionManager } from './voice-session-manager.js'
-import { ConversationMemoryStore } from './conversation-memory-store.js'
-import { TurnTakingController } from './turn-taking-controller.js'
 import { AudioStreamController } from './audio-stream-controller.js'
+import { ConversationMemoryStore } from './conversation-memory-store.js'
+import { ReconnectOrchestrator } from './reconnect-orchestrator.js'
+import { SpeechSynthesisStream } from './speech-synthesis-stream.js'
+import { TurnTakingController } from './turn-taking-controller.js'
 import { VoiceActivityDetector } from './voice-activity-detector.js'
-import { SessionAuditLog } from './session-audit-log.js'
 
 export class RuntimeOrchestrator {
-  constructor({sessionUrl='/assistant/realtime/ws'}={}){
-    this.sessionUrl=sessionUrl
-    this.session=new VoiceSessionManager()
-    this.memory=new ConversationMemoryStore()
-    this.audit=new SessionAuditLog()
-    this.vad=new VoiceActivityDetector({
-      onSpeechStart:()=>this.audit.write('speech-start'),
-      onSpeechEnd:()=>this.audit.write('speech-end')
+  constructor({ realtime }) {
+    if (!realtime) throw new Error('RuntimeOrchestrator requires the OpenAI realtime voice runtime')
+
+    this.realtime = realtime
+    this.memory = new ConversationMemoryStore()
+    this.listeners = new Set()
+    this.started = false
+    this.assistantText = ''
+
+    this.speech = new SpeechSynthesisStream({
+      onStart: () => this.emit('assistant-speaking'),
+      onEnd: () => this.emit('assistant-finished'),
+      onError: error => this.emit('error', { error })
     })
-    this.turns=new TurnTakingController({
-      onTurnComplete:(text)=>this.completeUserTurn(text),
-      onInterruption:()=>this.interruptAssistant()
+
+    this.vad = new VoiceActivityDetector({
+      onSpeechStart: () => {
+        this.turns.userSpeech('', { final: false })
+        this.emit('speech-start')
+      },
+      onSpeechEnd: () => this.emit('speech-end'),
+      onLevel: level => this.emit('audio-level', { level })
     })
-    this.audio=new AudioStreamController({
-      onChunk:(chunk)=>this.handleAudioChunk(chunk),
-      onLevel:(level)=>this.emit('audio-level',{level}),
-      onError:(error)=>this.emit('audio-error',{error:String(error)})
+
+    this.turns = new TurnTakingController({
+      onInterruption: () => this.interruptAssistant()
     })
-    this.listeners=new Set()
+
+    this.audio = new AudioStreamController({
+      onChunk: chunk => this.handleAudioChunk(chunk),
+      onLevel: level => this.emit('audio-level', { level }),
+      onError: error => this.emit('audio-error', { error })
+    })
+
+    this.reconnect = new ReconnectOrchestrator({
+      connect: () => this.realtime.connect(),
+      onStateChange: (type, error) => this.emit(type, { error })
+    })
   }
 
-  async start(){
-    this.audit.write('runtime-start')
-    this.session.on((type,data)=>this.handleSessionEvent(type,data))
-    await this.session.connect(this.sessionUrl)
+  async start() {
+    if (this.started) return
+    await this.realtime.connect()
     await this.audio.start()
+    this.started = true
     this.emit('started')
   }
 
-  stop(){
-    this.audit.write('runtime-stop')
+  stop() {
+    if (!this.started) return
+    this.started = false
     this.audio.stop()
-    this.session.disconnect()
     this.turns.reset()
     this.vad.reset()
+    this.speech.stop()
+    this.realtime.disconnect()
     this.emit('stopped')
   }
 
-  handleAudioChunk(chunk){
-    const speaking=this.vad.process(chunk)
-    if(speaking){
-      this.session.send({type:'audio',data:Array.from(chunk)})
+  handleAudioChunk(chunk) {
+    if (!this.started) return
+    this.vad.process(chunk)
+    this.realtime.sendAudio(chunk)
+  }
+
+  handleRealtimeEvent(type, payload = {}) {
+    if (type === 'connected') {
+      this.reconnect.connectedState()
+      this.emit('connected')
+      return
     }
+
+    if (type === 'disconnected') {
+      this.emit('disconnected', payload)
+      if (this.started && payload.wasConnected) this.reconnect.disconnectedState()
+      return
+    }
+
+    if (type === 'response.audio_transcript.delta') {
+      this.assistantText += payload.delta || ''
+    }
+
+    if (type === 'response.audio_transcript.done' || type === 'response.output_text.done') {
+      const text = payload.transcript || payload.text || this.assistantText.trim()
+      if (text) this.memory.append({ role: 'assistant', content: text })
+      this.assistantText = ''
+    }
+
+    if (type === 'response.audio.delta') {
+      this.speech.playPcm16Base64(payload.delta)
+      this.emit('assistant-speaking')
+    }
+    if (type === 'response.done') this.emit('assistant-finished')
+    if (type === 'input_audio_buffer.speech_started') this.interruptAssistant()
+    if (type === 'conversation.item.input_audio_transcription.completed' && payload.transcript) {
+      this.memory.append({ role: 'user', content: payload.transcript })
+    }
+
+    if (type === 'error') this.emit('error', payload)
+    this.emit(type, payload)
   }
 
-  handleSessionEvent(type,data){
-    this.audit.write(`session-${type}`,{data})
-    this.emit(type,{data})
-  }
-
-  completeUserTurn(text){
-    this.memory.append({role:'user',content:text})
-    this.session.send({type:'user-turn',text,memory:this.memory.recent(12)})
-    this.emit('turn-complete',{text})
-  }
-
-  assistantStarted(){
-    this.turns.assistantStarted()
-    this.audit.write('assistant-started')
-  }
-
-  assistantStopped(){
-    this.turns.assistantStopped()
-    this.audit.write('assistant-stopped')
-  }
-
-  interruptAssistant(){
-    this.session.send({type:'interrupt'})
-    this.audit.write('assistant-interrupted')
+  interruptAssistant() {
+    this.speech.stop()
+    this.realtime.interrupt()
     this.emit('interrupted')
   }
 
-  on(listener){
+  on(listener) {
     this.listeners.add(listener)
-    return ()=>this.listeners.delete(listener)
+    return () => this.listeners.delete(listener)
   }
 
-  emit(type,payload={}){
-    this.listeners.forEach(listener=>listener(type,payload))
-    try{
-      window.dispatchEvent(new CustomEvent('indicare:runtime-orchestrator',{detail:{type,...payload}}))
-    }catch{}
+  emit(type, payload = {}) {
+    this.listeners.forEach(listener => listener(type, payload))
+    window.dispatchEvent(new CustomEvent('indicare:voice-runtime', { detail: { type, ...payload } }))
   }
 }

@@ -22,35 +22,17 @@ ASSISTANT_REQUIRED_ASSETS = [
     "assistant.html",
     "assistant.css",
     "assistant-pro.css",
-    "assistant-polish.css",
-    "runtime-guard.css",
-    "runtime-guard.js",
-    "assistant-bridge.js",
-    "assistant-streaming.js",
-    "assistant-runtime.js",
-    "intelligence-voice.js",
-    "intelligence-voice-live.js",
-    "realtime-conversation.js",
-    "realtime-webrtc.js",
-    "realtime-readiness.js",
-    "realtime-production-check.js",
-    "realtime-launch-audit.js",
-    "voice-soundscape.js",
-    "voice-audio-reactor.js",
     "voice-presence.css",
-    "voice-reactive.css",
-    "voice-emotion-engine.js",
-    "voice-emotion.css",
-    "voice-identity-engine.js",
-    "proactive-intelligence.js",
-    "proactive-intelligence.css",
-    "longitudinal-memory.js",
-    "agi-reasoning-engine.js",
-    "enterprise-telemetry.js",
-    "voice-mobile-runtime.js",
-    "native-runtime.css",
-    "notes-beam.js",
-    "notes-beam.css",
+    "assistant-runtime.js",
+    "realtime/openai-realtime-voice.js",
+    "realtime/runtime-orchestrator.js",
+    "realtime/openai-voice-runtime-bootstrap.js",
+    "realtime/audio-stream-controller.js",
+    "realtime/voice-activity-detector.js",
+    "realtime/turn-taking-controller.js",
+    "realtime/conversation-memory-store.js",
+    "realtime/reconnect-orchestrator.js",
+    "realtime/speech-synthesis-stream.js",
 ]
 
 
@@ -99,8 +81,11 @@ def _assert_single_os_shell(html: str) -> None:
 
 
 def _ai_asset(filename: str, media_type: str) -> FileResponse:
-    path = os.path.join(INDICARE_AI_DIR, filename)
-    if not os.path.exists(path):
+    root = Path(INDICARE_AI_DIR).resolve()
+    path = (root / filename).resolve()
+    if root not in path.parents and path != root:
+        return JSONResponse({"ok": False, "error": "Invalid asset path", "asset": filename}, status_code=404)
+    if not path.exists() or not path.is_file():
         return JSONResponse({"ok": False, "error": "Asset not found", "asset": filename}, status_code=404)
     return FileResponse(path, media_type=media_type)
 
@@ -141,7 +126,7 @@ def register_frontend_routes(app: FastAPI) -> None:
     async def assistant_surface():
         return HTMLResponse(_load_html(INDICARE_AI_DIR, "assistant.html"), headers=NO_STORE_HEADERS)
 
-    @app.get("/indicare-ai/{filename}")
+    @app.get("/indicare-ai/{filename:path}")
     async def indicare_ai_asset(filename: str):
         if filename.endswith(".css"):
             return _ai_asset(filename, "text/css")
@@ -160,22 +145,17 @@ def register_frontend_routes(app: FastAPI) -> None:
             "assets": audit,
             "endpoints": {
                 "assistant": "/assistant",
-                "safe_chat": "/assistant/general-safe",
-                "stream_chat": "/assistant/general/stream",
-                "realtime_session": "/assistant/realtime/session",
-                "realtime_health": "/assistant/realtime/health",
                 "frontend_health": "/health/frontend",
             },
             "capabilities": {
-                "runtime_guard": True,
-                "safe_fallback": True,
-                "streaming": True,
+                "single_runtime": True,
+                "single_renderer": True,
+                "safe_fallback": False,
+                "runtime_overlays": False,
+                "transcript_panel": False,
+                "text_chat": False,
                 "realtime_voice": True,
-                "webrtc": True,
-                "notes_beam": True,
-                "longitudinal_memory": True,
-                "enterprise_telemetry": True,
-                "launch_audit": True,
+                "openai_realtime_websocket": True,
             },
         }
 
@@ -198,18 +178,18 @@ def register_frontend_routes(app: FastAPI) -> None:
             "ok": audit["ok"],
             "frontend": True,
             "assistant_runtime": "indicare-ai",
-            "assistant_assets": "isolated_dynamic",
+            "assistant_assets": "single_runtime_hard_cut",
             "assistant_asset_audit": audit,
-            "assistant_bridge": True,
-            "assistant_streaming": True,
+            "assistant_bridge": False,
+            "assistant_streaming": False,
             "assistant_voice": True,
-            "assistant_voice_live": True,
+            "assistant_voice_live": False,
             "assistant_realtime": True,
             "assistant_voice_presence": True,
-            "assistant_notes_beam": True,
+            "assistant_notes_beam": False,
             "assistant_pro_design": True,
-            "assistant_polish": True,
-            "runtime_guard": True,
+            "assistant_polish": False,
+            "runtime_guard": False,
             "login_route": True,
             "assistant_route": True,
             "os_command_route": True,
