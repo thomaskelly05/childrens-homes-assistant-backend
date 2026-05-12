@@ -1,95 +1,103 @@
 export class OpenAIRealtimeVoice {
-  constructor({apiKey,model='gpt-4o-realtime-preview',voice='alloy',onEvent=()=>{}}={}){
-    this.apiKey=apiKey||window.OPENAI_API_KEY||''
-    this.model=model
-    this.voice=voice
-    this.onEvent=onEvent
-    this.socket=null
-    this.connected=false
+  constructor({ apiKey, model = 'gpt-4o-realtime-preview', voice = 'alloy', onEvent = () => {} } = {}) {
+    this.apiKey = apiKey || window.OPENAI_API_KEY || ''
+    this.model = model
+    this.voice = voice
+    this.onEvent = onEvent
+    this.socket = null
+    this.connected = false
+    this.connecting = false
   }
 
-  async connect(){
-    if(this.connected)return
+  async connect() {
+    if (this.connected || this.connecting) return
+    if (!this.apiKey) throw new Error('OpenAI realtime API key is missing')
 
-    const url=`wss://api.openai.com/v1/realtime?model=${this.model}`
+    this.connecting = true
+    const url = `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(this.model)}`
 
-    this.socket=new WebSocket(url,[
-      'realtime',
-      `openai-insecure-api-key.${this.apiKey}`,
-      'openai-beta.realtime-v1'
-    ])
+    await new Promise((resolve, reject) => {
+      const socket = new WebSocket(url, [
+        'realtime',
+        `openai-insecure-api-key.${this.apiKey}`,
+        'openai-beta.realtime-v1'
+      ])
 
-    this.socket.onopen=()=>{
-      this.connected=true
+      this.socket = socket
 
-      this.send({
-        type:'session.update',
-        session:{
-          voice:this.voice,
-          instructions:'You are IndiCare Intelligence. Speak as a calm emotionally intelligent British female professional supporting residential care adults.',
-          modalities:['text','audio']
-        }
-      })
-
-      this.onEvent('connected')
-    }
-
-    this.socket.onclose=()=>{
-      this.connected=false
-      this.onEvent('disconnected')
-    }
-
-    this.socket.onerror=(error)=>{
-      this.onEvent('error',error)
-    }
-
-    this.socket.onmessage=(event)=>{
-      try{
-        const payload=JSON.parse(event.data)
-        this.onEvent(payload.type,payload)
-      }catch(error){
-        this.onEvent('parse-error',error)
+      socket.onopen = () => {
+        this.connected = true
+        this.connecting = false
+        this.send({
+          type: 'session.update',
+          session: {
+            voice: this.voice,
+            instructions: 'You are IndiCare Intelligence. Speak in a calm, emotionally intelligent British professional voice for adults working in residential children\'s homes. Keep replies concise and conversational.',
+            modalities: ['text', 'audio'],
+            input_audio_format: 'pcm16',
+            output_audio_format: 'pcm16',
+            turn_detection: { type: 'server_vad', interrupt_response: true }
+          }
+        })
+        this.onEvent('connected')
+        resolve()
       }
-    }
-  }
 
-  send(event){
-    if(!this.socket||this.socket.readyState!==1)return
-    this.socket.send(JSON.stringify(event))
-  }
+      socket.onclose = event => {
+        const wasConnected = this.connected
+        this.connected = false
+        this.connecting = false
+        this.onEvent('disconnected', { code: event.code, reason: event.reason, wasConnected })
+      }
 
-  sendAudio(float32Audio){
-    const pcm16=new Int16Array(float32Audio.length)
+      socket.onerror = event => {
+        this.connecting = false
+        this.onEvent('error', { error: 'OpenAI realtime websocket error', event })
+        reject(new Error('OpenAI realtime websocket error'))
+      }
 
-    for(let i=0;i<float32Audio.length;i++){
-      const sample=Math.max(-1,Math.min(1,float32Audio[i]))
-      pcm16[i]=sample<0?sample*0x8000:sample*0x7fff
-    }
-
-    const bytes=new Uint8Array(pcm16.buffer)
-    let binary=''
-
-    for(let i=0;i<bytes.byteLength;i++){
-      binary+=String.fromCharCode(bytes[i])
-    }
-
-    this.send({
-      type:'input_audio_buffer.append',
-      audio:btoa(binary)
+      socket.onmessage = event => {
+        try {
+          const payload = JSON.parse(event.data)
+          this.onEvent(payload.type, payload)
+        } catch (error) {
+          this.onEvent('error', { error })
+        }
+      }
     })
   }
 
-  commitAudio(){
-    this.send({type:'input_audio_buffer.commit'})
-    this.send({type:'response.create'})
+  send(event) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false
+    this.socket.send(JSON.stringify(event))
+    return true
   }
 
-  interrupt(){
-    this.send({type:'response.cancel'})
+  sendAudio(float32Audio) {
+    if (!float32Audio?.length) return
+    const pcm16 = new Int16Array(float32Audio.length)
+
+    for (let i = 0; i < float32Audio.length; i += 1) {
+      const sample = Math.max(-1, Math.min(1, float32Audio[i]))
+      pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff
+    }
+
+    let binary = ''
+    const bytes = new Uint8Array(pcm16.buffer)
+    for (let i = 0; i < bytes.byteLength; i += 1) binary += String.fromCharCode(bytes[i])
+
+    this.send({ type: 'input_audio_buffer.append', audio: btoa(binary) })
   }
 
-  disconnect(){
-    if(this.socket)this.socket.close()
-    this.connected=false
+  interrupt() {
+    this.send({ type: 'response.cancel' })
+  }
+
+  disconnect() {
+    const socket = this.socket
+    this.socket = null
+    this.connected = false
+    this.connecting = false
+    if (socket && socket.readyState <= WebSocket.OPEN) socket.close(1000, 'voice stopped')
   }
 }
