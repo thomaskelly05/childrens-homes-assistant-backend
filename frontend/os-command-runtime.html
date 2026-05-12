@@ -1,20 +1,1688 @@
 <!doctype html>
 <html lang="en-GB">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="indicare-shell-version" content="single-shell-2026-05-12" />
-<title>IndiCare OS | Care Operating System</title>
-<style>
-:root{--bg:#f3f6fb;--surface:#fff;--line:rgba(15,23,42,.09);--text:#0f172a;--muted:#64748b;--blue:#2563eb;--green:#11845b;--amber:#b45309;--shadow:0 18px 55px rgba(15,23,42,.07)}
-*{box-sizing:border-box}html,body{height:100%;min-height:100%;margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{overflow:auto}button{font:inherit;pointer-events:auto}.os{display:grid;grid-template-columns:280px minmax(0,1fr) 360px;min-height:100vh;overflow:visible;background:var(--bg);isolation:isolate}.side,.main,.rail{min-width:0}.side{position:sticky;top:0;height:100vh;background:rgba(255,255,255,.96);border-right:1px solid var(--line);padding:24px 20px;display:flex;flex-direction:column;overflow:auto}.brand-kicker,.kicker{font-size:11px;font-weight:950;letter-spacing:.22em;text-transform:uppercase;color:#94a3b8}.brand-title{font-size:28px;font-weight:950;letter-spacing:-.06em;margin:6px 0 2px}.brand-sub{font-size:12px;color:var(--muted);font-weight:700}.nav{margin-top:34px;display:grid;gap:28px}.nav-title{font-size:11px;font-weight:950;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;margin:0 0 10px 12px}.nav button{width:100%;border:0;background:transparent;border-radius:16px;padding:13px 14px;text-align:left;font-weight:850;color:#475569;cursor:pointer}.nav button.active{background:#0f172a;color:white}.nav button:hover:not(.active){background:#f1f5f9;color:#0f172a}.shift-card{margin-top:auto;border:1px solid rgba(17,132,91,.16);background:linear-gradient(135deg,#ecfdf5,#ecfeff);border-radius:24px;padding:18px}.shift-card strong{display:block;font-size:30px;letter-spacing:-.06em;color:#047857;margin-top:6px}.main{border-right:1px solid var(--line);padding:30px 38px;overflow:visible}.main-inner{max-width:900px;margin:0 auto}.context{margin-bottom:30px}.context h1{font-size:54px;line-height:.95;font-weight:950;letter-spacing:-.075em;margin:10px 0}.context p{max-width:690px;color:var(--muted);font-size:15px;line-height:1.75}.stream{background:white;border:1px solid rgba(255,255,255,.8);border-radius:34px;padding:30px;box-shadow:var(--shadow)}.stream-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:28px}.stream h2{font-size:38px;font-weight:950;letter-spacing:-.065em;margin:8px 0}.stream-sub{color:var(--muted);font-size:14px;line-height:1.65;max-width:620px}.primary-btn{border:0;border-radius:16px;background:var(--blue);color:white;padding:13px 18px;font-weight:950;box-shadow:0 12px 28px rgba(37,99,235,.28);cursor:pointer}.timeline{position:relative;display:grid;gap:20px}.timeline:before{content:"";position:absolute;left:21px;top:10px;bottom:10px;width:1px;background:#dbe3ef}.event{position:relative;padding-left:58px}.dot{position:absolute;left:0;top:22px;width:42px;height:42px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;display:grid;place-items:center;font-size:12px;font-weight:950}.event-card{border:1px solid #eef2f7;background:linear-gradient(135deg,#fff,#f8fafc);border-radius:28px;padding:24px;box-shadow:0 10px 32px rgba(15,23,42,.05)}.event-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}.pill{border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:950;letter-spacing:.15em;text-transform:uppercase;padding:8px 12px}.time{font-size:12px;font-weight:800;color:#94a3b8}.status{margin-left:auto;border-radius:999px;background:white;color:#64748b;box-shadow:0 4px 14px rgba(15,23,42,.06);font-size:11px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;padding:8px 12px}.event-card h3{font-size:24px;letter-spacing:-.045em;margin:0;color:#0f172a}.event-card p{font-size:15px;line-height:1.75;color:#475569;margin:14px 0 0}.intel{margin-top:18px;border:1px solid rgba(180,83,9,.16);background:#fffbeb;border-radius:18px;padding:14px}.intel strong{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#b45309}.intel span{display:block;margin-top:7px;font-size:13px;line-height:1.55;color:#92400e}.rail{position:sticky;top:0;height:100vh;background:#f7f9fc;padding:24px 18px;overflow:auto}.rail-card{background:white;border:1px solid rgba(255,255,255,.8);border-radius:26px;padding:20px;margin-bottom:16px;box-shadow:0 12px 35px rgba(15,23,42,.05)}.rail-card h3{font-size:20px;letter-spacing:-.04em;margin:8px 0 10px}.rail-card p{font-size:13px;line-height:1.6;color:var(--muted)}.action{display:block;width:100%;border:1px solid #eef2f7;background:#f8fafc;border-radius:16px;padding:14px;text-align:left;font-weight:850;color:#334155;margin-top:10px;cursor:pointer}.alert{border-color:#fde68a;background:#fffbeb}.health{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid #eef2f7;background:#f8fafc;border-radius:16px;padding:13px;margin-top:10px}.health span{font-size:12px;font-weight:950;color:#059669;text-transform:uppercase}@media(max-width:1200px){.os{grid-template-columns:240px minmax(0,1fr)}.rail{display:none}}@media(max-width:820px){.os{display:block;min-height:100vh;overflow:visible}.side{display:none}.main{border-right:0;padding:20px;overflow:visible}.context h1{font-size:40px}.stream{padding:20px}.stream-head{display:block}.primary-btn{margin-top:16px}.rail{display:block;overflow:visible}.event{padding-left:0}.dot,.timeline:before{display:none}}
-</style>
-</head>
-<body>
-<div class="os" data-shell="indicare-os-single-shell">
-<aside class="side"><div><div class="brand-kicker">IndiCare OS</div><div class="brand-title">Care OS</div><div class="brand-sub">Children's home workspace</div></div><nav class="nav"><section><p class="nav-title">Care</p><button type="button" class="active">Today</button><button type="button">Young people</button><button type="button">Journey</button><button type="button">Recording</button></section><section><p class="nav-title">Manage</p><button type="button">Oversight</button><button type="button">Safeguarding</button><button type="button">Documents</button><button type="button">Compliance</button></section><section><p class="nav-title">Operate</p><button type="button">Assistant</button><button type="button">Notifications</button><button type="button">Calendar</button></section></nav><div class="shift-card"><div class="kicker">Shift continuity</div><strong>Stable</strong></div></aside>
-<main class="main"><div class="main-inner"><section class="context"><div class="kicker">Oak House · Evening shift</div><h1>Jamie's journey</h1><p>Live care operating stream combining chronology, safeguarding, assistant insights, continuity and operational oversight.</p></section><section class="stream"><div class="stream-head"><div><div class="kicker">Live journey</div><h2>Care operating stream</h2><p class="stream-sub">One continuous care timeline bringing together daily records, incidents, health, education, direct work, assistant insights and oversight.</p></div><button type="button" class="primary-btn">+ New record</button></div><div class="timeline"><article class="event"><div class="dot">1</div><div class="event-card"><div class="event-top"><span class="pill">Daily record</span><span class="time">Current shift</span><span class="status">Recorded</span></div><h3>Evening support and emotional regulation</h3><p>Young person accepted staff reassurance, completed the evening routine and remained settled. No escalation indicators were identified.</p><div class="intel"><strong>Intelligence layer</strong><span>This entry remains visible in handover, review and evidence continuity.</span></div></div></article><article class="event"><div class="dot">2</div><div class="event-card"><div class="event-top"><span class="pill">Assistant insight</span><span class="time">Current shift</span><span class="status">Insight</span></div><h3>Positive routine pattern strengthening</h3><p>Engagement appears stronger when the evening routine is structured and emotionally prepared in advance.</p><div class="intel"><strong>Intelligence layer</strong><span>Assistant suggests linking this to direct work and placement stability evidence.</span></div></div></article></div></section></div></main>
-<aside class="rail"><section class="rail-card"><div class="kicker">Assistant</div><h3>Operational co-pilot</h3><p>Ask about the current young person, safeguarding, evidence, handover or inspection readiness.</p><button type="button" class="action">Summarise chronology</button><button type="button" class="action">Prepare handover</button><button type="button" class="action">Review safeguarding risks</button></section><section class="rail-card alert"><div class="kicker">Live alerts</div><h3>Review required</h3><p>Chronology continuity and manager oversight are being monitored.</p></section><section class="rail-card"><div class="kicker">System health</div><div class="health"><strong>Chronology engine</strong><span>Operational</span></div><div class="health"><strong>Assistant orchestration</strong><span>Operational</span></div><div class="health"><strong>Continuity checks</strong><span>Operational</span></div></section></aside>
-</div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="indicare-shell-version" content="single-shell-2026-05-12" />
+    <title>IndiCare OS | Care Operating System</title>
+    <style>
+      :root {
+        --bg: #eef3f8;
+        --surface: #fff;
+        --surface-soft: #f8fafc;
+        --line: rgba(15, 23, 42, 0.09);
+        --line-strong: rgba(15, 23, 42, 0.14);
+        --text: #0f172a;
+        --muted: #64748b;
+        --muted-soft: #94a3b8;
+        --blue: #2563eb;
+        --blue-soft: #dbeafe;
+        --green: #11845b;
+        --green-soft: #dcfce7;
+        --amber: #b45309;
+        --amber-soft: #fef3c7;
+        --red: #b91c1c;
+        --red-soft: #fee2e2;
+        --purple: #6d28d9;
+        --purple-soft: #ede9fe;
+        --shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+        --shadow-soft: 0 12px 34px rgba(15, 23, 42, 0.05);
+        --radius: 24px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(37, 99, 235, 0.08),
+            transparent 34rem
+          ),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      body {
+        overflow: auto;
+      }
+      button {
+        font: inherit;
+        pointer-events: auto;
+      }
+      .os {
+        display: grid;
+        grid-template-columns: 282px minmax(0, 1fr) 372px;
+        min-height: 100vh;
+        overflow: visible;
+        background: transparent;
+        isolation: isolate;
+      }
+      .side,
+      .main,
+      .rail {
+        min-width: 0;
+      }
+      .side {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        background: rgba(255, 255, 255, 0.92);
+        border-right: 1px solid var(--line);
+        padding: 22px 18px;
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        background: #0f172a;
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 950;
+        letter-spacing: -0.05em;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+      }
+      .brand-kicker,
+      .kicker {
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--muted-soft);
+      }
+      .brand-title {
+        font-size: 23px;
+        font-weight: 950;
+        letter-spacing: -0.06em;
+        margin: 2px 0 1px;
+      }
+      .brand-sub {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 750;
+      }
+      .person-card {
+        margin-top: 22px;
+        border: 1px solid rgba(37, 99, 235, 0.12);
+        background: linear-gradient(135deg, #eff6ff, #fff);
+        border-radius: 22px;
+        padding: 16px;
+      }
+      .person-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+      .avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 16px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        display: grid;
+        place-items: center;
+        font-weight: 950;
+      }
+      .person-card h2 {
+        font-size: 18px;
+        letter-spacing: -0.045em;
+        margin: 0;
+      }
+      .person-card p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .shift-state {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 14px;
+        color: #047857;
+        font-size: 12px;
+        font-weight: 950;
+      }
+      .pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #10b981;
+        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.12);
+      }
+      .nav {
+        margin-top: 26px;
+        display: grid;
+        gap: 24px;
+      }
+      .nav-title {
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted-soft);
+        margin: 0 0 8px 10px;
+      }
+      .nav button {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        border-radius: 15px;
+        padding: 11px 12px;
+        text-align: left;
+        font-weight: 850;
+        color: #475569;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        transition:
+          background 0.16s ease,
+          color 0.16s ease,
+          transform 0.16s ease;
+      }
+      .nav button:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+        transform: translateX(2px);
+      }
+      .nav button.active {
+        background: #0f172a;
+        color: white;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+      }
+      .nav-meta {
+        font-size: 11px;
+        font-weight: 950;
+        color: inherit;
+        opacity: 0.68;
+      }
+      .nav-indicator {
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        padding: 3px 7px;
+        font-size: 10px;
+        font-weight: 950;
+      }
+      .nav button.active .nav-indicator {
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+      }
+      .shift-card {
+        margin-top: auto;
+        border: 1px solid rgba(17, 132, 91, 0.16);
+        background: linear-gradient(135deg, #ecfdf5, #ecfeff);
+        border-radius: 22px;
+        padding: 16px;
+      }
+      .shift-card strong {
+        display: block;
+        font-size: 30px;
+        letter-spacing: -0.06em;
+        color: #047857;
+        margin-top: 5px;
+      }
+      .shift-card p {
+        font-size: 12px;
+        line-height: 1.55;
+        color: #0f766e;
+        margin: 8px 0 0;
+      }
+      .mobile-tabs {
+        display: none;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: rgba(248, 250, 252, 0.94);
+        border-bottom: 1px solid var(--line);
+        padding: 10px;
+        gap: 8px;
+        overflow: auto;
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+      }
+      .mobile-tabs button {
+        border: 1px solid var(--line);
+        background: white;
+        border-radius: 999px;
+        padding: 10px 13px;
+        white-space: nowrap;
+        font-size: 13px;
+        font-weight: 900;
+        color: #475569;
+      }
+      .mobile-tabs button.active {
+        background: #0f172a;
+        color: white;
+        border-color: #0f172a;
+      }
+      .main {
+        border-right: 1px solid var(--line);
+        padding: 28px 38px 46px;
+        overflow: visible;
+      }
+      .main-inner {
+        max-width: 930px;
+        margin: 0 auto;
+      }
+      .context {
+        margin-bottom: 22px;
+      }
+      .context-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 20px;
+        align-items: end;
+      }
+      .context h1 {
+        font-size: 56px;
+        line-height: 0.94;
+        font-weight: 950;
+        letter-spacing: -0.075em;
+        margin: 9px 0;
+      }
+      .context p {
+        max-width: 700px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.75;
+        margin: 0;
+      }
+      .context-status {
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: 22px;
+        padding: 15px 17px;
+        box-shadow: var(--shadow-soft);
+        min-width: 190px;
+      }
+      .context-status strong {
+        display: block;
+        font-size: 24px;
+        letter-spacing: -0.05em;
+        color: #047857;
+      }
+      .context-status span {
+        font-size: 12px;
+        font-weight: 850;
+        color: var(--muted);
+      }
+      .stream {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: 34px;
+        padding: 26px;
+        box-shadow: var(--shadow);
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+      }
+      .stream-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: flex-start;
+        margin-bottom: 18px;
+      }
+      .stream h2 {
+        font-size: 39px;
+        font-weight: 950;
+        letter-spacing: -0.065em;
+        margin: 7px 0;
+      }
+      .stream-sub {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+        max-width: 660px;
+      }
+      .stream-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .primary-btn,
+      .ghost-btn {
+        border: 0;
+        border-radius: 15px;
+        padding: 12px 16px;
+        font-weight: 950;
+        cursor: pointer;
+        transition:
+          transform 0.16s ease,
+          box-shadow 0.16s ease,
+          background 0.16s ease;
+      }
+      .primary-btn {
+        background: var(--blue);
+        color: white;
+        box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
+      }
+      .primary-btn:hover,
+      .ghost-btn:hover {
+        transform: translateY(-1px);
+      }
+      .ghost-btn {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.8);
+        color: #334155;
+      }
+      .filters {
+        display: flex;
+        gap: 8px;
+        overflow: auto;
+        padding: 4px 0 18px;
+        margin-bottom: 5px;
+      }
+      .filter {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.74);
+        color: #475569;
+        border-radius: 999px;
+        padding: 9px 12px;
+        white-space: nowrap;
+        font-size: 12px;
+        font-weight: 950;
+        cursor: pointer;
+      }
+      .filter.active {
+        background: #0f172a;
+        color: white;
+        border-color: #0f172a;
+      }
+      .timeline {
+        position: relative;
+        display: grid;
+        gap: 0;
+        padding-top: 4px;
+      }
+      .day-separator {
+        display: grid;
+        grid-template-columns: 82px minmax(0, 1fr);
+        gap: 18px;
+        align-items: center;
+        margin: 18px 0 10px;
+      }
+      .day-separator time {
+        font-size: 11px;
+        font-weight: 950;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted-soft);
+        text-align: right;
+      }
+      .day-separator span {
+        height: 1px;
+        background: linear-gradient(90deg, var(--line-strong), transparent);
+      }
+      .event {
+        position: relative;
+        display: grid;
+        grid-template-columns: 82px minmax(0, 1fr);
+        gap: 18px;
+        padding: 0 0 18px;
+      }
+      .event[hidden] {
+        display: none;
+      }
+      .event:before {
+        content: "";
+        position: absolute;
+        left: 81px;
+        top: 24px;
+        bottom: -20px;
+        width: 1px;
+        background: linear-gradient(var(--line-strong), var(--line));
+      }
+      .event:last-child:before {
+        bottom: 30px;
+      }
+      .time-axis {
+        position: relative;
+        text-align: right;
+        padding-top: 16px;
+      }
+      .time-axis time {
+        display: block;
+        font-size: 13px;
+        font-weight: 950;
+        color: #334155;
+        letter-spacing: -0.01em;
+      }
+      .time-axis span {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--muted-soft);
+      }
+      .node {
+        position: absolute;
+        right: -25px;
+        top: 20px;
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: white;
+        border: 3px solid var(--blue);
+        box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.1);
+        z-index: 1;
+      }
+      .event.current .node {
+        border-color: #10b981;
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.13);
+      }
+      .event.safeguarding .node {
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.13);
+      }
+      .entry {
+        border: 1px solid transparent;
+        background: transparent;
+        border-radius: 26px;
+        padding: 16px 18px 15px;
+        margin: -3px 0;
+        transition:
+          background 0.16s ease,
+          border-color 0.16s ease,
+          box-shadow 0.16s ease,
+          transform 0.16s ease;
+      }
+      .entry:hover {
+        background: rgba(255, 255, 255, 0.74);
+        border-color: rgba(15, 23, 42, 0.06);
+        box-shadow: var(--shadow-soft);
+        transform: translateY(-1px);
+      }
+      .event.current .entry {
+        background: linear-gradient(
+          135deg,
+          rgba(236, 253, 245, 0.88),
+          rgba(255, 255, 255, 0.78)
+        );
+        border-color: rgba(16, 185, 129, 0.18);
+        box-shadow: 0 18px 45px rgba(16, 185, 129, 0.08);
+      }
+      .entry-main {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: left;
+        width: 100%;
+        cursor: pointer;
+        color: inherit;
+      }
+      .event-top {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 9px;
+        flex-wrap: wrap;
+      }
+      .pill,
+      .tone,
+      .marker {
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        padding: 6px 9px;
+      }
+      .pill {
+        background: var(--blue-soft);
+        color: #1d4ed8;
+      }
+      .pill.green {
+        background: var(--green-soft);
+        color: #047857;
+      }
+      .pill.amber {
+        background: var(--amber-soft);
+        color: #92400e;
+      }
+      .pill.purple {
+        background: var(--purple-soft);
+        color: #5b21b6;
+      }
+      .tone {
+        background: #f1f5f9;
+        color: #475569;
+        letter-spacing: 0.08em;
+      }
+      .tone.settled {
+        background: #ecfdf5;
+        color: #047857;
+      }
+      .tone.watch {
+        background: #fffbeb;
+        color: #b45309;
+      }
+      .marker {
+        background: #fff7ed;
+        color: #c2410c;
+      }
+      .marker.ai {
+        background: #eef2ff;
+        color: #4338ca;
+      }
+      .entry h3 {
+        font-size: 23px;
+        letter-spacing: -0.045em;
+        margin: 0;
+        color: #0f172a;
+        line-height: 1.12;
+      }
+      .summary {
+        font-size: 15px;
+        line-height: 1.72;
+        color: #475569;
+        margin: 11px 0 0;
+        max-width: 690px;
+      }
+      .expand-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 12px;
+        font-size: 12px;
+        font-weight: 950;
+        color: #2563eb;
+      }
+      .chevron {
+        transition: transform 0.16s ease;
+      }
+      .event.expanded .chevron {
+        transform: rotate(90deg);
+      }
+      .details {
+        display: none;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid var(--line);
+      }
+      .event.expanded .details {
+        display: block;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .detail {
+        background: rgba(248, 250, 252, 0.86);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        padding: 12px;
+      }
+      .detail strong {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--muted-soft);
+        margin-bottom: 6px;
+      }
+      .detail span {
+        font-size: 13px;
+        line-height: 1.45;
+        color: #334155;
+        font-weight: 750;
+      }
+      .intel {
+        margin-top: 13px;
+        border: 1px solid rgba(109, 40, 217, 0.14);
+        background: linear-gradient(135deg, #f5f3ff, #fff);
+        border-radius: 17px;
+        overflow: hidden;
+      }
+      .intel-toggle {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        padding: 13px 14px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        text-align: left;
+        cursor: pointer;
+        color: #4338ca;
+        font-weight: 950;
+      }
+      .intel-toggle small {
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #6d28d9;
+        font-weight: 950;
+      }
+      .intel-body {
+        padding: 0 14px 14px;
+        font-size: 13px;
+        line-height: 1.55;
+        color: #4c1d95;
+      }
+      .intel.collapsed .intel-body {
+        display: none;
+      }
+      .intel.collapsed .chevron {
+        transform: rotate(-90deg);
+      }
+      .rail {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        background: rgba(247, 249, 252, 0.88);
+        padding: 22px 18px;
+        overflow: auto;
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+      }
+      .rail-header {
+        padding: 2px 4px 14px;
+      }
+      .rail-header h2 {
+        font-size: 25px;
+        letter-spacing: -0.055em;
+        margin: 6px 0 5px;
+      }
+      .rail-header p {
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--muted);
+        margin: 0;
+      }
+      .intel-stack {
+        display: grid;
+        gap: 12px;
+      }
+      .rail-item {
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid rgba(255, 255, 255, 0.92);
+        border-radius: 22px;
+        padding: 15px;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.045);
+      }
+      .rail-item.warning {
+        border-color: rgba(245, 158, 11, 0.2);
+        background: linear-gradient(135deg, #fffbeb, #fff);
+      }
+      .rail-item.risk {
+        border-color: rgba(185, 28, 28, 0.18);
+        background: linear-gradient(135deg, #fff1f2, #fff);
+      }
+      .rail-line {
+        display: flex;
+        gap: 11px;
+        align-items: flex-start;
+      }
+      .severity {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        margin-top: 6px;
+        background: #2563eb;
+        box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.1);
+        flex: 0 0 auto;
+      }
+      .severity.green {
+        background: #10b981;
+        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.12);
+      }
+      .severity.amber {
+        background: #f59e0b;
+        box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.13);
+      }
+      .severity.red {
+        background: #ef4444;
+        box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.12);
+      }
+      .rail-item h3 {
+        font-size: 16px;
+        letter-spacing: -0.035em;
+        margin: 0 0 6px;
+      }
+      .rail-item p {
+        font-size: 13px;
+        line-height: 1.55;
+        color: #64748b;
+        margin: 0;
+      }
+      .rail-label {
+        display: inline-flex;
+        margin-bottom: 9px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        padding: 5px 8px;
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+      .rail-actions {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .action {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        border: 1px solid #e9eef5;
+        background: #f8fafc;
+        border-radius: 14px;
+        padding: 11px 12px;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 900;
+        color: #334155;
+        cursor: pointer;
+      }
+      .action:hover {
+        background: #eef6ff;
+        border-color: #cfe2ff;
+      }
+      .completion {
+        margin-top: 12px;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .completion span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #2563eb);
+        border-radius: inherit;
+      }
+      @media (max-width: 1240px) {
+        .os {
+          grid-template-columns: 252px minmax(0, 1fr);
+        }
+        .rail {
+          position: relative;
+          display: block;
+          grid-column: 2;
+          height: auto;
+          border-top: 1px solid var(--line);
+        }
+        .main {
+          border-right: 0;
+        }
+        .rail .intel-stack {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 900px) {
+        .os {
+          display: block;
+          min-height: 100vh;
+          overflow: visible;
+        }
+        .mobile-tabs {
+          display: flex;
+        }
+        .side {
+          display: none;
+        }
+        .main {
+          border-right: 0;
+          padding: 22px 16px 28px;
+          overflow: visible;
+        }
+        .context-grid {
+          display: block;
+        }
+        .context h1 {
+          font-size: 42px;
+        }
+        .context-status {
+          margin-top: 16px;
+        }
+        .stream {
+          padding: 17px;
+          border-radius: 26px;
+        }
+        .stream-head {
+          display: block;
+        }
+        .stream-actions {
+          justify-content: flex-start;
+          margin-top: 16px;
+        }
+        .event,
+        .day-separator {
+          grid-template-columns: 54px minmax(0, 1fr);
+          gap: 14px;
+        }
+        .event:before {
+          left: 53px;
+        }
+        .time-axis time {
+          font-size: 12px;
+        }
+        .time-axis span {
+          font-size: 10px;
+        }
+        .node {
+          right: -22px;
+        }
+        .entry {
+          padding: 15px 13px;
+        }
+        .entry h3 {
+          font-size: 20px;
+        }
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+        .rail {
+          display: block;
+          height: auto;
+          position: relative;
+          padding: 18px 16px 26px;
+        }
+        .rail .intel-stack {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 560px) {
+        .mobile-tabs button {
+          padding: 9px 11px;
+          font-size: 12px;
+        }
+        .main {
+          padding-inline: 12px;
+        }
+        .context h1 {
+          font-size: 36px;
+        }
+        .stream h2 {
+          font-size: 30px;
+        }
+        .stream-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+        .primary-btn,
+        .ghost-btn {
+          width: 100%;
+        }
+        .event,
+        .day-separator {
+          grid-template-columns: 1fr;
+        }
+        .day-separator time {
+          text-align: left;
+        }
+        .event:before,
+        .node {
+          display: none;
+        }
+        .time-axis {
+          text-align: left;
+          padding-top: 5px;
+        }
+        .entry {
+          margin: 0;
+          padding: 15px 0;
+          border-radius: 0;
+        }
+        .entry:hover,
+        .event.current .entry {
+          box-shadow: none;
+          background: transparent;
+          border-color: transparent;
+        }
+        .summary {
+          font-size: 14px;
+        }
+        .filters {
+          margin-inline: -4px;
+          padding-inline: 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="os" data-shell="indicare-os-single-shell">
+      <div class="mobile-tabs" aria-label="Mobile operational sections">
+        <button type="button" class="active" data-scroll-target="stream">
+          Chronology</button
+        ><button type="button" data-scroll-target="intelligence">
+          Intelligence</button
+        ><button type="button" data-scroll-target="today-current">
+          Current shift</button
+        ><button type="button" data-scroll-target="today-safeguarding">
+          Safeguarding
+        </button>
+      </div>
+      <aside class="side" aria-label="Operational navigation">
+        <div class="brand">
+          <div class="brand-mark">OS</div>
+          <div>
+            <div class="brand-kicker">IndiCare OS</div>
+            <div class="brand-title">Care OS</div>
+            <div class="brand-sub">Children's home workspace</div>
+          </div>
+        </div>
+        <section class="person-card" aria-label="Current young person">
+          <div class="person-row">
+            <div>
+              <h2>Jamie Carter</h2>
+              <p>Oak House · Placement day 114</p>
+            </div>
+            <div class="avatar">JC</div>
+          </div>
+          <div class="shift-state">
+            <span class="pulse"></span><span>Evening shift live · 4 tasks</span>
+          </div>
+        </section>
+        <nav class="nav" data-nav>
+          <section>
+            <p class="nav-title">Care flow</p>
+            <button type="button" class="active" data-scroll-target="stream">
+              <span>Today</span><span class="nav-indicator">Live</span></button
+            ><button type="button" data-scroll-target="today-health">
+              <span>Health & wellbeing</span
+              ><span class="nav-meta">2</span></button
+            ><button type="button" data-scroll-target="today-education">
+              <span>Education</span><span class="nav-meta">1</span></button
+            ><button type="button" data-scroll-target="today-direct-work">
+              <span>Direct work</span><span class="nav-meta">1</span>
+            </button>
+          </section>
+          <section>
+            <p class="nav-title">Safeguard</p>
+            <button type="button" data-scroll-target="today-safeguarding">
+              <span>Safeguarding</span
+              ><span class="nav-indicator">Watch</span></button
+            ><button type="button" data-scroll-target="manager-review">
+              <span>Manager review</span
+              ><span class="nav-meta">Due</span></button
+            ><button type="button" data-scroll-target="evidence">
+              <span>Evidence gaps</span><span class="nav-meta">3</span>
+            </button>
+          </section>
+          <section>
+            <p class="nav-title">Operate</p>
+            <button type="button" data-scroll-target="intelligence">
+              <span>Assistant layer</span
+              ><span class="nav-meta">6</span></button
+            ><button type="button" data-scroll-target="shift-summary">
+              <span>Shift summary</span><span class="nav-meta">Ready</span>
+            </button>
+          </section>
+        </nav>
+        <div class="shift-card">
+          <div class="kicker">Shift continuity</div>
+          <strong>Stable</strong>
+          <p>
+            Structured routine is supporting emotional regulation. Safeguarding
+            watch remains low-level and monitored.
+          </p>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="main-inner">
+          <section class="context">
+            <div class="context-grid">
+              <div>
+                <div class="kicker">
+                  Oak House · Evening shift · Tuesday 12 May 2026
+                </div>
+                <h1>Jamie's journey</h1>
+                <p>
+                  Chronology-first care operating stream combining daily life,
+                  safeguarding awareness, direct work, evidence continuity and
+                  assistant intelligence in one calm workspace.
+                </p>
+              </div>
+              <aside class="context-status">
+                <div class="kicker">Current state</div>
+                <strong>Settled</strong
+                ><span>Last update 19:42 · handover building</span>
+              </aside>
+            </div>
+          </section>
+          <section class="stream" id="stream">
+            <div class="stream-head">
+              <div>
+                <div class="kicker">Live journey</div>
+                <h2>Care operating stream</h2>
+                <p class="stream-sub">
+                  A continuous, case-aware chronology. Expand entries for
+                  evidence, actions and assistant reasoning without leaving the
+                  flow.
+                </p>
+              </div>
+              <div class="stream-actions">
+                <button
+                  type="button"
+                  class="ghost-btn"
+                  data-scroll-target="shift-summary"
+                >
+                  View handover</button
+                ><button
+                  type="button"
+                  class="primary-btn"
+                  data-action="new-record"
+                >
+                  + New record
+                </button>
+              </div>
+            </div>
+            <div class="filters" role="tablist" aria-label="Filter chronology">
+              <button type="button" class="filter active" data-filter="all">
+                All chronology</button
+              ><button type="button" class="filter" data-filter="care">
+                Care records</button
+              ><button type="button" class="filter" data-filter="safeguarding">
+                Safeguarding</button
+              ><button type="button" class="filter" data-filter="health">
+                Health</button
+              ><button type="button" class="filter" data-filter="ai">
+                Assistant insights
+              </button>
+            </div>
+            <div class="timeline" data-timeline>
+              <div class="day-separator"><time>Today</time><span></span></div>
+              <article
+                class="event current expanded"
+                id="today-current"
+                data-type="care ai"
+              >
+                <div class="time-axis">
+                  <time>19:42</time><span>Current shift</span
+                  ><i class="node" aria-hidden="true"></i>
+                </div>
+                <div class="entry">
+                  <button type="button" class="entry-main" aria-expanded="true">
+                    <div class="event-top">
+                      <span class="pill green">Daily record</span
+                      ><span class="tone settled">Settled tone</span
+                      ><span class="marker ai">AI linked</span>
+                    </div>
+                    <h3>Evening support and emotional regulation</h3>
+                    <p class="summary">
+                      Jamie accepted staff reassurance, completed the evening
+                      routine and remained settled after a short period of worry
+                      about tomorrow's contact plan.
+                    </p>
+                    <span class="expand-label"
+                      ><span class="chevron">›</span> Evidence and actions</span
+                    >
+                  </button>
+                  <div class="details">
+                    <div class="detail-grid">
+                      <div class="detail">
+                        <strong>Evidence</strong
+                        ><span
+                          >Routine completed, meal taken, no missing-from-care
+                          indicators.</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Action</strong
+                        ><span
+                          >Keep tomorrow's contact plan visible during morning
+                          handover.</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Continuity</strong
+                        ><span
+                          >Include in placement stability evidence and weekly
+                          wellbeing review.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="intel">
+                      <button
+                        type="button"
+                        class="intel-toggle"
+                        aria-expanded="true"
+                      >
+                        <span
+                          ><small>Assistant insight</small><br />Handover
+                          summary is ready</span
+                        ><span class="chevron">›</span>
+                      </button>
+                      <div class="intel-body">
+                        The assistant can summarise the regulation strategy,
+                        staff response and outcome for the next shift while
+                        keeping the record child-centred and factual.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article
+                class="event safeguarding"
+                id="today-safeguarding"
+                data-type="safeguarding ai"
+              >
+                <div class="time-axis">
+                  <time>18:20</time><span>Safeguarding watch</span
+                  ><i class="node" aria-hidden="true"></i>
+                </div>
+                <div class="entry">
+                  <button
+                    type="button"
+                    class="entry-main"
+                    aria-expanded="false"
+                  >
+                    <div class="event-top">
+                      <span class="pill amber">Safeguarding</span
+                      ><span class="tone watch">Watchful</span
+                      ><span class="marker">Evidence needed</span>
+                    </div>
+                    <h3>
+                      Contact anxiety pattern remains low-level but visible
+                    </h3>
+                    <p class="summary">
+                      No immediate escalation identified. Anxiety appears before
+                      planned family contact and reduces when staff provide
+                      predictable choices.
+                    </p>
+                    <span class="expand-label"
+                      ><span class="chevron">›</span> Review safeguarding
+                      context</span
+                    >
+                  </button>
+                  <div class="details">
+                    <div class="detail-grid">
+                      <div class="detail">
+                        <strong>Risk</strong
+                        ><span
+                          >Low-level emotional distress before contact; no
+                          disclosure or immediate harm indicator.</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Missing evidence</strong
+                        ><span
+                          >Record whether advocacy offer was understood and
+                          accepted or declined.</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Next step</strong
+                        ><span
+                          >Manager to review pattern alongside contact minutes
+                          by 21:00.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="intel collapsed">
+                      <button
+                        type="button"
+                        class="intel-toggle"
+                        aria-expanded="false"
+                      >
+                        <span
+                          ><small>Assistant insight</small><br />Possible
+                          escalation pattern</span
+                        ><span class="chevron">›</span>
+                      </button>
+                      <div class="intel-body">
+                        Three mild anxiety records have occurred before contact
+                        over ten days. Keep monitoring as a pattern, not an
+                        incident, unless intensity or disclosure changes.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="event" id="today-health" data-type="health care">
+                <div class="time-axis">
+                  <time>17:35</time><span>Wellbeing</span
+                  ><i class="node" aria-hidden="true"></i>
+                </div>
+                <div class="entry">
+                  <button
+                    type="button"
+                    class="entry-main"
+                    aria-expanded="false"
+                  >
+                    <div class="event-top">
+                      <span class="pill green">Health</span
+                      ><span class="tone settled">Calm</span>
+                    </div>
+                    <h3>Medication and wellbeing check completed</h3>
+                    <p class="summary">
+                      Medication administered as prescribed. Jamie reported
+                      feeling tired but joined tea and later chose a quiet
+                      activity with staff nearby.
+                    </p>
+                    <span class="expand-label"
+                      ><span class="chevron">›</span> Show medication
+                      evidence</span
+                    >
+                  </button>
+                  <div class="details">
+                    <div class="detail-grid">
+                      <div class="detail">
+                        <strong>Medication</strong
+                        ><span>Administered and signed by two staff.</span>
+                      </div>
+                      <div class="detail">
+                        <strong>Voice</strong
+                        ><span>"I just want a quiet evening."</span>
+                      </div>
+                      <div class="detail">
+                        <strong>Action</strong
+                        ><span
+                          >Offer low-stimulation routine before bedtime.</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="event" id="today-education" data-type="care">
+                <div class="time-axis">
+                  <time>15:10</time><span>Education</span
+                  ><i class="node" aria-hidden="true"></i>
+                </div>
+                <div class="entry">
+                  <button
+                    type="button"
+                    class="entry-main"
+                    aria-expanded="false"
+                  >
+                    <div class="event-top">
+                      <span class="pill">Education</span
+                      ><span class="tone">Positive</span>
+                    </div>
+                    <h3>School feedback shows improved peer tolerance</h3>
+                    <p class="summary">
+                      Teacher reported Jamie remained in class after a
+                      disagreement and used the planned exit card rather than
+                      leaving the site.
+                    </p>
+                    <span class="expand-label"
+                      ><span class="chevron">›</span> Link to plan</span
+                    >
+                  </button>
+                  <div class="details">
+                    <div class="detail-grid">
+                      <div class="detail">
+                        <strong>Outcome</strong
+                        ><span
+                          >Stayed in class and rejoined learning after staff
+                          check-in.</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Plan link</strong
+                        ><span
+                          >Education target: safe de-escalation when
+                          overwhelmed.</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Evidence</strong
+                        ><span
+                          >Useful for next PEP and social worker update.</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="event" id="today-direct-work" data-type="care ai">
+                <div class="time-axis">
+                  <time>11:45</time><span>Direct work</span
+                  ><i class="node" aria-hidden="true"></i>
+                </div>
+                <div class="entry">
+                  <button
+                    type="button"
+                    class="entry-main"
+                    aria-expanded="false"
+                  >
+                    <div class="event-top">
+                      <span class="pill purple">Direct work</span
+                      ><span class="tone settled">Reflective</span
+                      ><span class="marker ai">Continuity</span>
+                    </div>
+                    <h3>
+                      Life-story session connected feelings to contact routines
+                    </h3>
+                    <p class="summary">
+                      Jamie explored how uncertainty before contact affects
+                      sleep and appetite. Staff used grounding prompts and
+                      agreed a visual plan.
+                    </p>
+                    <span class="expand-label"
+                      ><span class="chevron">›</span> Open direct-work
+                      notes</span
+                    >
+                  </button>
+                  <div class="details">
+                    <div class="detail-grid">
+                      <div class="detail">
+                        <strong>Child voice</strong
+                        ><span
+                          >Jamie wanted the plan to be "less last minute".</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Therapeutic thread</strong
+                        ><span
+                          >Predictability reduces worry before contact.</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Assistant</strong
+                        ><span>Link this to tomorrow's staff briefing.</span>
+                      </div>
+                    </div>
+                    <div class="intel collapsed">
+                      <button
+                        type="button"
+                        class="intel-toggle"
+                        aria-expanded="false"
+                      >
+                        <span
+                          ><small>Assistant insight</small><br />Behaviour
+                          stabilising</span
+                        ><span class="chevron">›</span>
+                      </button>
+                      <div class="intel-body">
+                        The chronology suggests stronger regulation when direct
+                        work creates a clear plan before transition points.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <div class="day-separator">
+                <time>Yesterday</time><span></span>
+              </div>
+              <article class="event" id="evidence" data-type="ai safeguarding">
+                <div class="time-axis">
+                  <time>21:05</time><span>Evidence check</span
+                  ><i class="node" aria-hidden="true"></i>
+                </div>
+                <div class="entry">
+                  <button
+                    type="button"
+                    class="entry-main"
+                    aria-expanded="false"
+                  >
+                    <div class="event-top">
+                      <span class="pill amber">Evidence</span
+                      ><span class="marker ai">Assistant</span>
+                    </div>
+                    <h3>
+                      Manager oversight evidence still needs one linked note
+                    </h3>
+                    <p class="summary">
+                      The assistant found a review decision but no linked
+                      rationale for the contact support adjustment.
+                    </p>
+                    <span class="expand-label"
+                      ><span class="chevron">›</span> Show evidence gap</span
+                    >
+                  </button>
+                  <div class="details">
+                    <div class="detail-grid">
+                      <div class="detail">
+                        <strong>Gap</strong
+                        ><span
+                          >Decision rationale not attached to manager
+                          review.</span
+                        >
+                      </div>
+                      <div class="detail">
+                        <strong>Impact</strong
+                        ><span>Could weaken inspection-ready continuity.</span>
+                      </div>
+                      <div class="detail">
+                        <strong>Suggested fix</strong
+                        ><span
+                          >Add a short management note referencing the
+                          chronology pattern.</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </main>
+      <aside
+        class="rail"
+        id="intelligence"
+        aria-label="Operational intelligence"
+      >
+        <div class="rail-header">
+          <div class="kicker">Operational intelligence</div>
+          <h2>Assistant awareness layer</h2>
+          <p>
+            Contextual recommendations, safeguarding checks, reviews and shift
+            actions that support the chronology without becoming a separate
+            chatbot.
+          </p>
+        </div>
+        <div class="intel-stack">
+          <section class="rail-item warning" id="manager-review">
+            <span class="rail-label">Review due</span>
+            <div class="rail-line">
+              <span class="severity amber"></span>
+              <div>
+                <h3>Manager review by 21:00</h3>
+                <p>
+                  Review the contact-anxiety pattern and attach rationale to the
+                  oversight note.
+                </p>
+              </div>
+            </div>
+            <div class="rail-actions">
+              <button
+                type="button"
+                class="action"
+                data-scroll-target="today-safeguarding"
+              >
+                Open pattern <span>→</span></button
+              ><button
+                type="button"
+                class="action"
+                data-scroll-target="evidence"
+              >
+                Resolve evidence gap <span>→</span>
+              </button>
+            </div>
+          </section>
+          <section class="rail-item">
+            <span class="rail-label">Continuity</span>
+            <div class="rail-line">
+              <span class="severity green"></span>
+              <div>
+                <h3>Handover summary ready</h3>
+                <p>
+                  Current shift has enough evidence for a concise child-centred
+                  handover.
+                </p>
+              </div>
+            </div>
+            <div class="completion" aria-label="Handover completeness">
+              <span style="width: 82%"></span>
+            </div>
+          </section>
+          <section class="rail-item risk">
+            <span class="rail-label">Safeguarding</span>
+            <div class="rail-line">
+              <span class="severity red"></span>
+              <div>
+                <h3>No immediate escalation</h3>
+                <p>
+                  Watch pattern remains visible. Escalate if distress
+                  intensifies, disclosure emerges or contact arrangements change
+                  unexpectedly.
+                </p>
+              </div>
+            </div>
+          </section>
+          <section class="rail-item" id="shift-summary">
+            <span class="rail-label">Active tasks</span>
+            <div class="rail-line">
+              <span class="severity"></span>
+              <div>
+                <h3>4 operational actions</h3>
+                <p>
+                  Morning plan, advocacy confirmation, manager note and
+                  direct-work link are pending.
+                </p>
+              </div>
+            </div>
+            <div class="rail-actions">
+              <button type="button" class="action" data-action="expand-all">
+                Expand chronology <span>↓</span></button
+              ><button
+                type="button"
+                class="action"
+                data-action="collapse-insights"
+              >
+                Collapse insights <span>−</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>
+    <script>
+      (function () {
+        var shell = document.querySelector(
+          '[data-shell="indicare-os-single-shell"]',
+        );
+        if (!shell) return;
+        function setActiveButton(list, button) {
+          list.querySelectorAll("button.active").forEach(function (item) {
+            item.classList.remove("active");
+          });
+          button.classList.add("active");
+        }
+        function scrollToId(id) {
+          var target = document.getElementById(id);
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+        shell.addEventListener("click", function (event) {
+          var scrollButton = event.target.closest("[data-scroll-target]");
+          if (scrollButton) {
+            if (scrollButton.closest("[data-nav]"))
+              setActiveButton(scrollButton.closest("[data-nav]"), scrollButton);
+            if (scrollButton.closest(".mobile-tabs"))
+              setActiveButton(
+                scrollButton.closest(".mobile-tabs"),
+                scrollButton,
+              );
+            scrollToId(scrollButton.getAttribute("data-scroll-target"));
+            return;
+          }
+          var filterButton = event.target.closest("[data-filter]");
+          if (filterButton) {
+            var filters = filterButton.closest(".filters");
+            setActiveButton(filters, filterButton);
+            var filter = filterButton.getAttribute("data-filter");
+            document
+              .querySelectorAll("[data-timeline] .event")
+              .forEach(function (entry) {
+                var types = (entry.getAttribute("data-type") || "").split(" ");
+                entry.hidden = filter !== "all" && types.indexOf(filter) === -1;
+              });
+            return;
+          }
+          var entryButton = event.target.closest(".entry-main");
+          if (entryButton) {
+            var entry = entryButton.closest(".event");
+            var expanded = entry.classList.toggle("expanded");
+            entryButton.setAttribute(
+              "aria-expanded",
+              expanded ? "true" : "false",
+            );
+            return;
+          }
+          var insightButton = event.target.closest(".intel-toggle");
+          if (insightButton) {
+            var insight = insightButton.closest(".intel");
+            var collapsed = insight.classList.toggle("collapsed");
+            insightButton.setAttribute(
+              "aria-expanded",
+              collapsed ? "false" : "true",
+            );
+            return;
+          }
+          var actionButton = event.target.closest("[data-action]");
+          if (actionButton) {
+            var action = actionButton.getAttribute("data-action");
+            if (action === "new-record") {
+              scrollToId("today-current");
+              var current = document.getElementById("today-current");
+              if (current) {
+                current.classList.add("expanded");
+                current
+                  .querySelector(".entry-main")
+                  .setAttribute("aria-expanded", "true");
+              }
+            }
+            if (action === "expand-all") {
+              document
+                .querySelectorAll("[data-timeline] .event")
+                .forEach(function (entry) {
+                  entry.classList.add("expanded");
+                  var button = entry.querySelector(".entry-main");
+                  if (button) button.setAttribute("aria-expanded", "true");
+                });
+            }
+            if (action === "collapse-insights") {
+              document.querySelectorAll(".intel").forEach(function (insight) {
+                insight.classList.add("collapsed");
+                var button = insight.querySelector(".intel-toggle");
+                if (button) button.setAttribute("aria-expanded", "false");
+              });
+            }
+          }
+        });
+      })();
+    </script>
+  </body>
 </html>
