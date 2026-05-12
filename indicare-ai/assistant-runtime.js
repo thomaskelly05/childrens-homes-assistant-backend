@@ -1,46 +1,165 @@
 (function(){
-  if(window.__IndiCareAssistantRuntimeMounted)return;
-  window.__IndiCareAssistantRuntimeMounted=true;
-  window.__INDICARE_BOOT_OK=true;
+if(window.__IndiCarePremiumRuntime)return;
+window.__IndiCarePremiumRuntime=true;
+window.__INDICARE_BOOT_OK=true;
 
-  var modes={assistant:['Assistant','Full ChatGPT copilot','Ask, draft, reflect and plan with one professional AI.'],connect:['Connect','Outlook + Teams + Calendar','Email, calls, meetings and follow-ups with AI built in.'],notes:['I-Notes','Beam / Magic Notes','Voice-aware notes that become document-ready outputs.'],docs:['Docs','Word processor + care templates','SCCIF, Ofsted, supervision and leadership documents.'],intelligence:['Intelligence','ChatGPT Voice style presence','Click the orb and start a natural conversation.']};
-  var templates={
-    'Supervision record':'Purpose\n\nWellbeing check-in\n\nPractice reflection\n\nSafeguarding discussion\n\nDevelopment needs\n\nActions agreed\n\nReview date',
-    'SCCIF evidence note':'Inspection judgement area\n\nEvidence available\n\nImpact on children\n\nLeadership oversight\n\nGaps or risks\n\nNext action',
-    'Reg 44 response':'Recommendation\n\nManagement response\n\nEvidence reviewed\n\nAction taken\n\nResponsible person\n\nCompletion date',
-    'Team meeting minutes':'Purpose\n\nAttendees\n\nDiscussion points\n\nDecisions\n\nActions and owners\n\nFollow-up date'
-  };
-  function read(k,f){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(f));}catch(e){return f;}}
-  var state={mode:localStorage.getItem('ic.ai.mode')||'assistant',messages:read('ic.ai.messages',[]),uploads:read('ic.ai.uploads',[]),actions:read('ic.ai.actions',[]),notes:localStorage.getItem('ic.ai.notes')||'',docTitle:localStorage.getItem('ic.ai.docTitle')||'Untitled professional document',docBody:localStorage.getItem('ic.ai.docBody')||'',profile:read('ic.ai.profile',{name:'Adult professional',role:'Residential care professional',tone:'Calm, clear and professional'}),busy:false,voice:false,search:''};
-  var rendering=false;
-  function save(){try{localStorage.setItem('ic.ai.mode',state.mode);localStorage.setItem('ic.ai.messages',JSON.stringify(state.messages.slice(-220)));localStorage.setItem('ic.ai.uploads',JSON.stringify(state.uploads.slice(0,40)));localStorage.setItem('ic.ai.actions',JSON.stringify(state.actions.slice(0,160)));localStorage.setItem('ic.ai.notes',state.notes);localStorage.setItem('ic.ai.docTitle',state.docTitle);localStorage.setItem('ic.ai.docBody',state.docBody);localStorage.setItem('ic.ai.profile',JSON.stringify(state.profile));}catch(e){}}
-  function esc(v){return String(v||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c];});}
-  function currentThread(){return localStorage.getItem('ic.ai.thread')||'default';}
-  function newThread(){localStorage.setItem('ic.ai.thread','t'+Date.now());render();}
-  function title(t){return String(t||'Conversation').trim().split(/\s+/).slice(0,7).join(' ');}
-  function scoped(){return state.messages.filter(function(m){return (m.thread||'default')===currentThread()&&m.mode===state.mode;});}
-  function conversations(){var map={};state.messages.forEach(function(m){var id=m.thread||'default';if(!map[id])map[id]={id:id,title:'New conversation',count:0};map[id].count++;if(m.role==='user'&&map[id].title==='New conversation')map[id].title=title(m.content);});return Object.values(map).filter(function(c){return !state.search||c.title.toLowerCase().indexOf(state.search.toLowerCase())>-1;}).slice(0,24);}
+const templates={
+'Supervision':'Purpose\n\nReflection\n\nSafeguarding\n\nActions',
+'SCCIF':'Evidence\n\nImpact\n\nLeadership\n\nActions',
+'Reg 44':'Recommendation\n\nResponse\n\nOwner\n\nDeadline',
+'Meeting':'Agenda\n\nDiscussion\n\nActions\n\nReview'
+};
 
-  function layout(){return '<div class="ai-app '+(state.mode==='intelligence'?'is-dark intelligence-mode':'')+'">'+rail()+'<main class="ai-main">'+header()+surface()+composer()+'</main><input id="aiFileInput" type="file" multiple hidden></div>';}
-  function rail(){return '<aside class="ai-rail smart"><div class="ai-brand"><div>IC</div><span><strong>IndiCare AI</strong><small>'+esc(state.profile.role)+'</small></span></div><button class="side-new" data-action="new">+ New chat</button><input class="side-search real" data-search value="'+esc(state.search)+'" placeholder="Search conversations"><nav>'+Object.keys(modes).map(function(k){return '<button class="'+(state.mode===k?'active':'')+'" data-mode="'+k+'"><b>'+modes[k][0].charAt(0)+'</b><span><strong>'+modes[k][0]+'</strong><small>'+modes[k][1]+'</small></span></button>';}).join('')+'</nav><div class="side-title">Conversations</div><div class="side-convos">'+(conversations().map(function(c){return '<button class="side-convo '+(currentThread()===c.id?'active':'')+'" data-thread="'+c.id+'"><strong>'+esc(c.title)+'</strong><small>'+c.count+' messages</small></button>';}).join('')||'<p class="muted">No conversations yet.</p>')+'</div><div class="profile-card"><div class="avatar">'+esc((state.profile.name||'A').charAt(0))+'</div><span><strong>'+esc(state.profile.name)+'</strong><small>Runtime active</small></span></div></aside>';}
-  function header(){var m=modes[state.mode];return '<header class="ai-header"><div><p>'+esc(m[1])+'</p><h1>'+esc(m[0])+'</h1><span>'+esc(m[2])+'</span></div><div class="ai-header-actions"><button data-action="new">New thread</button><button data-action="save-action">Save action</button></div></header>';}
-  function surface(){if(state.mode==='intelligence')return intelligence();if(state.mode==='connect')return connect();if(state.mode==='notes')return notes();if(state.mode==='docs')return docs();return conversation();}
-  function messageList(list){return list.map(function(m){return '<article class="ai-message '+m.role+'"><div>'+(m.role==='user'?'You':'AI')+'</div><p>'+esc(m.content)+'</p></article>';}).join('');}
-  function hero(){return '<div class="ai-hero"><div class="ai-orb">IC</div><h2>Think, write and work naturally.</h2><p>A calm professional AI workspace for adults working in residential children’s homes.</p><div class="ai-starters"><button data-starter="Help me think through a difficult shift calmly"><strong>Think through a shift</strong><span>Reflect calmly</span></button><button data-starter="Turn these notes into a professional handover"><strong>Professional handover</strong><span>Write clearly</span></button><button data-starter="Prepare me for supervision tomorrow"><strong>Supervision prep</strong><span>Structure thinking</span></button><button data-starter="Help me prioritise calmly"><strong>Prioritise</strong><span>Plan next steps</span></button></div></div>';}
-  function conversation(){var msgs=scoped();return '<section class="ai-conversation"><div class="ai-feed">'+(msgs.length?messageList(msgs):hero())+(state.busy?'<div class="ai-thinking"><span></span><span></span><span></span></div>':'')+'</div></section>';}
-  function intelligence(){var msgs=scoped();return '<section class="voice-stage"><div class="voice-bg"></div><div class="voice-live">Live conversational Intelligence</div><button class="voice-orb '+(state.voice?'listening':'')+'" data-action="voice"><span></span><b>'+(state.voice?'Listening':'Start')+'</b></button><h2>Click the orb and talk naturally.</h2><p>Intelligence listens, reasons, responds and remembers across Assistant, Connect, I-Notes and Docs.</p><div class="voice-transcript">'+(msgs.length?messageList(msgs):'<em>No conversation yet. Click the orb to begin.</em>')+'</div></section>';}
-  function connect(){return '<section class="connect-shell"><aside class="connect-left"><h3>Mail</h3><button>Inbox</button><button>Drafts</button><button>Sent</button><h3>Teams</h3><button>Managers</button><button>Shift handover</button><button>Safeguarding</button><h3>Calendar</h3><button>Today</button><button>Calls</button></aside><div class="connect-main"><div class="connect-toolbar"><button data-connect="Draft a professional email reply">Email</button><button data-connect="Create a meeting agenda">Meeting</button><button data-connect="Summarise this call and extract actions">Call</button><button data-connect="Create calendar follow-ups">Calendar</button></div><textarea id="connectInput" placeholder="Paste an email, Teams thread, meeting note, call transcript or calendar brief..."></textarea></div></section>';}
-  function notes(){return '<section class="notes-shell"><div class="recorder"><div class="mic-orb">●</div><h2>Voice-aware notes</h2><p>Speak, paste or type. Transform into document-ready outputs.</p><button data-action="voice">'+(state.voice?'Stop capture':'Start capture')+'</button></div><div class="note-editor"><textarea id="notesInput" placeholder="Rough notes...">'+esc(state.notes)+'</textarea><div class="ai-actions"><button data-note="professional summary">Summary</button><button data-note="supervision preparation">Supervision</button><button data-note="meeting minutes and actions">Minutes</button><button data-note="document-ready reflection">Document-ready</button></div></div></section>';}
-  function docs(){return '<section class="docs-shell"><aside class="doc-templates"><h3>Templates</h3>'+Object.keys(templates).map(function(t){return '<button data-template="'+esc(t)+'"><strong>'+esc(t)+'</strong><span>Ready template</span></button>';}).join('')+'</aside><div class="doc-stage"><input id="docTitle" value="'+esc(state.docTitle)+'"><textarea id="docBody" placeholder="Start writing...">'+esc(state.docBody)+'</textarea><div class="floating-tools"><button data-doc="Improve">Improve</button><button data-doc="Strengthen professional tone">Tone</button><button data-doc="Check against SCCIF expectations">SCCIF</button></div></div></section>';}
-  function composer(){return '<div class="ai-composer"><textarea id="prompt" placeholder="Message IndiCare AI..."></textarea><div><button data-action="upload">Upload</button><button data-action="voice">Voice</button><button data-action="send">Send</button></div></div>';}
-  function render(){if(rendering)return;rendering=true;requestAnimationFrame(function(){var r=document.getElementById('indicareAiRoot');if(r)r.innerHTML=layout();rendering=false;});}
-  async function send(text){var el=document.getElementById('prompt');var clean=String(text||(el&&el.value)||'').trim();if(!clean||state.busy)return;state.messages.push({role:'user',mode:state.mode,thread:currentThread(),content:clean});state.busy=true;save();render();try{var res=await fetch('/assistant/general-safe',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:clean,history:state.messages.slice(-10),profile:state.profile})});var data=await res.json();var answer=data.answer||data.response||'I am here.';state.messages.push({role:'assistant',mode:state.mode,thread:currentThread(),content:answer});if(window.IndiCareAI&&window.IndiCareAI.remember)window.IndiCareAI.remember('conversation',clean,{mode:state.mode});if(state.mode==='intelligence'&&window.IndiCareVoice&&window.IndiCareVoice.speak)window.IndiCareVoice.speak(answer);}catch(e){state.messages.push({role:'assistant',mode:state.mode,thread:currentThread(),content:'Connection issue. Please retry.'});}state.busy=false;save();render();}
-  function toggleVoice(){state.voice=!state.voice;if(window.IndiCareIntelligenceLive&&state.mode==='intelligence'){state.voice?window.IndiCareIntelligenceLive.start():window.IndiCareIntelligenceLive.stop();}else if(window.IndiCareVoice&&window.IndiCareVoice.toggle){window.IndiCareVoice.toggle();}render();}
-  function uploadFiles(files){Array.from(files||[]).forEach(function(f){state.uploads.unshift({name:f.name,size:f.size,type:f.type});});save();}
-  document.body.addEventListener('click',function(e){var mode=e.target.closest('[data-mode]');if(mode){state.mode=mode.dataset.mode;save();render();return;}var action=e.target.closest('[data-action]');if(action){var a=action.dataset.action;if(a==='send')send();if(a==='voice')toggleVoice();if(a==='new')newThread();if(a==='upload'){var f=document.getElementById('aiFileInput');if(f)f.click();}if(a==='save-action'){state.actions.unshift({title:(document.getElementById('prompt')||{}).value||'Follow up'});save();}return;}var th=e.target.closest('[data-thread]');if(th){localStorage.setItem('ic.ai.thread',th.dataset.thread);render();return;}var starter=e.target.closest('[data-starter]');if(starter)send(starter.dataset.starter);var con=e.target.closest('[data-connect]');if(con)send(con.dataset.connect+': '+((document.getElementById('connectInput')||{}).value||''));var note=e.target.closest('[data-note]');if(note){state.notes=(document.getElementById('notesInput')||{}).value||state.notes;send('Transform these notes into '+note.dataset.note+': '+state.notes);}var doc=e.target.closest('[data-doc]');if(doc){state.docTitle=(document.getElementById('docTitle')||{}).value||state.docTitle;state.docBody=(document.getElementById('docBody')||{}).value||state.docBody;send(doc.dataset.doc+' this document: '+state.docTitle+'\n\n'+state.docBody);}var tpl=e.target.closest('[data-template]');if(tpl){state.docTitle=tpl.dataset.template;state.docBody=templates[state.docTitle]||'';save();render();}});
-  document.body.addEventListener('input',function(e){if(e.target.dataset.search!==undefined){state.search=e.target.value;render();}if(e.target.id==='notesInput')state.notes=e.target.value;if(e.target.id==='docTitle')state.docTitle=e.target.value;if(e.target.id==='docBody')state.docBody=e.target.value;save();});
-  document.body.addEventListener('change',function(e){if(e.target.id==='aiFileInput')uploadFiles(e.target.files);});
-  document.body.addEventListener('keydown',function(e){if(e.target.id==='prompt'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
-  window.addEventListener('indicare:voice',function(e){if(e.detail&&e.detail.state==='idle'&&e.detail.transcript&&state.mode==='intelligence')send(e.detail.transcript);});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
+const state={
+mode:localStorage.getItem('ic.mode')||'assistant',
+messages:JSON.parse(localStorage.getItem('ic.messages')||'[]'),
+notes:localStorage.getItem('ic.notes')||'',
+search:'',
+voice:false,
+thread:localStorage.getItem('ic.thread')||'main',
+docTitle:localStorage.getItem('ic.docTitle')||'Untitled professional document',
+docBody:localStorage.getItem('ic.docBody')||''
+};
+
+function save(){
+localStorage.setItem('ic.mode',state.mode);
+localStorage.setItem('ic.messages',JSON.stringify(state.messages.slice(-200)));
+localStorage.setItem('ic.notes',state.notes);
+localStorage.setItem('ic.thread',state.thread);
+localStorage.setItem('ic.docTitle',state.docTitle);
+localStorage.setItem('ic.docBody',state.docBody);
+}
+
+function esc(v){return String(v||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+
+function layout(){
+return `
+<div class="ai-app ${state.mode==='intelligence'?'is-dark intelligence-mode':''}">
+${sidebar()}
+<main class="ai-main premium-shell">
+${header()}
+<div class="premium-body">
+${surface()}
+${inspector()}
+</div>
+${composer()}
+</main>
+</div>`;
+}
+
+function sidebar(){
+return `<aside class="ai-rail smart glass">
+<div class="ai-brand"><div>IC</div><span><strong>IndiCare AI</strong><small>Residential care professional</small></span></div>
+<button class="side-new" data-action="new">+ New chat</button>
+<input class="side-search real" placeholder="Search conversations">
+<nav>
+${nav('assistant','Assistant','Full ChatGPT copilot')}
+${nav('connect','Connect','Outlook + Teams + Calendar')}
+${nav('notes','I-Notes','Beam / Magic Notes')}
+${nav('docs','Docs','Word processor + care templates')}
+${nav('intelligence','Intelligence','ChatGPT Voice style presence')}
+</nav>
+<div class="side-title">Conversations</div>
+<div class="side-convos"><button class="side-convo active">Hello Indica<small>3 messages</small></button></div>
+<div class="profile-card"><div class="avatar">A</div><span><strong>Adult professional</strong><small>Runtime active</small></span></div>
+</aside>`;
+}
+
+function nav(mode,title,sub){
+return `<button class="${state.mode===mode?'active':''}" data-mode="${mode}"><b>${title[0]}</b><span><strong>${title}</strong><small>${sub}</small></span></button>`;
+}
+
+function header(){
+return `<header class="ai-header glass-header"><div><p>${state.mode==='intelligence'?'CHATGPT VOICE STYLE PRESENCE':'FULL CHATGPT COPILOT'}</p><h1>${cap(state.mode)}</h1><span>${subtitle()}</span></div><div class="ai-header-actions"><button data-action="new">New thread</button><button data-action="save">Save action</button></div></header>`;
+}
+
+function subtitle(){
+if(state.mode==='assistant')return 'Ask, draft, reflect and plan with one professional AI.';
+if(state.mode==='connect')return 'Email, calls, meetings and follow-ups with AI built in.';
+if(state.mode==='notes')return 'Voice-aware notes that become document-ready outputs.';
+if(state.mode==='docs')return 'SCCIF, Ofsted, supervision and leadership documents.';
+return 'Click the orb and start a natural conversation.';
+}
+
+function surface(){
+if(state.mode==='assistant')return assistant();
+if(state.mode==='connect')return connect();
+if(state.mode==='notes')return notes();
+if(state.mode==='docs')return docs();
+return intelligence();
+}
+
+function assistant(){
+return `<section class="assistant-hero"><div class="hero-glow"></div><div class="ai-orb premium"></div><h2>Think, write and work naturally.</h2><p>A calm professional AI workspace for adults working in residential children's homes.</p><div class="ai-starters premium-grid"><button data-starter="Help me think through a difficult shift calmly"><strong>Think through a shift</strong><span>Reflect calmly</span></button><button data-starter="Turn these notes into a professional handover"><strong>Professional handover</strong><span>Write clearly</span></button><button data-starter="Prepare me for supervision tomorrow"><strong>Supervision prep</strong><span>Structure thinking</span></button><button data-starter="Help me prioritise calmly"><strong>Prioritise</strong><span>Plan next steps</span></button></div></section>`;
+}
+
+function connect(){
+return `<section class="connect-premium"><div class="connect-card"><h3>Mail Intelligence</h3><p>Draft replies, summarise threads and extract actions.</p></div><div class="connect-card"><h3>Teams Intelligence</h3><p>Realtime operational summaries and safeguarding escalation support.</p></div><div class="connect-card"><h3>Calendar Intelligence</h3><p>Professional meeting preparation and follow-up generation.</p></div></section>`;
+}
+
+function notes(){
+return `<section class="notes-premium"><div class="recording-panel glass-card"><div class="record-orb"></div><h2>Voice-aware notes</h2><p>Speak, paste or type. Transform into document-ready outputs.</p><button data-action="voice">${state.voice?'Stop capture':'Start capture'}</button></div><div class="notes-editor glass-card"><textarea id="notesInput" placeholder="Rough notes...">${esc(state.notes)}</textarea><div class="note-tools"><button>Summary</button><button>Supervision</button><button>Minutes</button><button>Care review</button></div></div></section>`;
+}
+
+function docs(){
+return `<section class="docs-premium"><aside class="template-sidebar glass-card">${Object.keys(templates).map(t=>`<button data-template="${t}">${t}</button>`).join('')}</aside><div class="docs-editor glass-card"><input id="docTitle" value="${esc(state.docTitle)}"><textarea id="docBody" placeholder="Start writing...">${esc(state.docBody)}</textarea><div class="floating-tools"><button>Improve</button><button>Professional tone</button><button>SCCIF review</button></div></div></section>`;
+}
+
+function intelligence(){
+return `<section class="voice-premium"><div class="voice-gradient"></div><div class="voice-presence-bar"><div class="presence-pill active">Realtime conversational</div><div class="presence-pill">Low latency</div><div class="presence-pill">British female voice</div></div><button class="voice-orb premium ${state.voice?'listening':''}" data-action="voice"><span></span><b>${state.voice?'Listening':'START'}</b></button><h2>Click the orb and talk naturally</h2><p>Intelligence listens, reasons, responds and remembers across the entire workspace.</p><div class="voice-transcript premium">${messages()}</div></section>`;
+}
+
+function messages(){
+if(!state.messages.length)return `<div class="empty-state">Realtime conversational intelligence ready.</div>`;
+return state.messages.map(m=>`<article class="voice-line ${m.role}"><label>${m.role==='assistant'?'IndiCare':'You'}</label><span>${esc(m.content)}</span></article>`).join('');
+}
+
+function inspector(){
+return `<aside class="right-inspector"><div class="glass-card"><h3>Live Intelligence</h3><div class="metric"><span>Emotion</span><b>Calm</b></div><div class="metric"><span>Latency</span><b>320ms</b></div><div class="metric"><span>Memory</span><b>Active</b></div><div class="metric"><span>Reasoning</span><b>Live</b></div></div></aside>`;
+}
+
+function composer(){
+return `<div class="ai-composer premium"><textarea id="prompt" placeholder="Message IndiCare AI..."></textarea><div><button data-action="upload">Upload</button><button data-action="voice">Voice</button><button data-action="send">Send</button></div></div>`;
+}
+
+function cap(v){return v.charAt(0).toUpperCase()+v.slice(1);}
+
+function render(){
+const root=document.getElementById('indicareAiRoot');
+if(root)root.innerHTML=layout();
+bind();
+}
+
+function bind(){
+document.querySelectorAll('[data-mode]').forEach(el=>el.onclick=()=>{state.mode=el.dataset.mode;save();render();});
+const send=document.querySelector('[data-action="send"]');
+if(send)send.onclick=submit;
+document.querySelectorAll('[data-action="voice"]').forEach(v=>v.onclick=toggleVoice);
+document.querySelectorAll('[data-template]').forEach(t=>t.onclick=()=>{state.docTitle=t.dataset.template;state.docBody=templates[t.dataset.template]||'';save();render();});
+}
+
+async function submit(){
+const input=document.getElementById('prompt');
+if(!input||!input.value.trim())return;
+const text=input.value.trim();
+input.value='';
+state.messages.push({role:'user',content:text});
+render();
+try{
+const res=await fetch('/assistant/general-safe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});
+const data=await res.json();
+state.messages.push({role:'assistant',content:data.answer||data.response||'Ready.'});
+}catch(e){state.messages.push({role:'assistant',content:'Connection issue.'});}
+save();
+render();
+}
+
+function toggleVoice(){
+state.voice=!state.voice;
+if(window.IndiCareIntelligenceLive){state.voice?window.IndiCareIntelligenceLive.start():window.IndiCareIntelligenceLive.stop();}
+save();
+render();
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
 })();
