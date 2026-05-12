@@ -10,7 +10,7 @@ INDICARE_AI_DIR = os.path.join(BASE_DIR, "indicare-ai")
 ACADEMY_DIR = os.path.join(FRONTEND_DIR, "academy")
 CARE_OS_PATH = "/os-command"
 COMMAND_SHELL_FILE = "os-command-runtime.html"
-LEGACY_COMMAND_SHELL_FILE = "os-command.html"
+COMMAND_SHELL_VERSION = "single-shell-2026-05-12"
 
 NO_STORE_HEADERS = {
     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -96,9 +96,8 @@ def register_frontend_routes(app: FastAPI) -> None:
     @app.get(f"{CARE_OS_PATH}/")
     async def os_command_surface():
         html = _load_html(FRONTEND_DIR, COMMAND_SHELL_FILE)
-        if "Frontend missing" in html:
-            html = _load_html(FRONTEND_DIR, LEGACY_COMMAND_SHELL_FILE)
-        return HTMLResponse(html, headers=NO_STORE_HEADERS)
+        headers = {**NO_STORE_HEADERS, "X-IndiCare-Shell": COMMAND_SHELL_VERSION}
+        return HTMLResponse(html, headers=headers)
 
     @app.get("/assistant")
     @app.get("/assistant.html")
@@ -177,4 +176,6 @@ def register_frontend_routes(app: FastAPI) -> None:
             "login_route": True,
             "assistant_route": True,
             "os_command_route": True,
+            "os_command_shell": COMMAND_SHELL_FILE,
+            "os_command_shell_version": COMMAND_SHELL_VERSION,
         }
