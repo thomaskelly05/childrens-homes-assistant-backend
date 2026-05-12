@@ -6,6 +6,8 @@ import { WorkspaceHeader } from '@/components/workspace-header'
 import { AssistantPanel } from '@/components/assistant-panel'
 import { WorkspaceTabs } from '@/components/workspace-tabs'
 import { OperationalStatusBar } from '@/components/operational-status-bar'
+import { CommandCentrePanel } from '@/components/command-centre-panel'
+import { LiveAlertsPanel } from '@/components/live-alerts-panel'
 import { loadChronologyContext } from '@/lib/api'
 
 export default async function HomePage() {
@@ -29,6 +31,8 @@ export default async function HomePage() {
             <div className="space-y-6">
               <ContextRail />
               <AssistantPanel />
+              <CommandCentrePanel />
+              <LiveAlertsPanel />
             </div>
           </div>
         </div>
