@@ -4,11 +4,18 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 
 import { ActionsPanel, EvidenceGapsPanel } from '@/components/indicare/action-evidence-panels'
+import { CitationList } from '@/components/indicare/citations/citation-list'
+import { QualityStandardBadges } from '@/components/indicare/workflows/quality-standard-badges'
 import { generateReport } from '@/lib/regulatory-reporting/generators'
 import { reportTemplates } from '@/lib/regulatory-reporting/templates'
 import { ReportTemplateId } from '@/lib/regulatory-reporting/types'
 import { getEvidenceItems } from '@/lib/evidence/selectors'
 import { indicareData } from '@/lib/indicare/demo-data'
+import { getRegulatoryReferenceById } from '@/lib/regulatory-framework/selectors'
+
+function isRegulatoryReference(reference: ReturnType<typeof getRegulatoryReferenceById>): reference is NonNullable<ReturnType<typeof getRegulatoryReferenceById>> {
+  return Boolean(reference)
+}
 
 export function ReportingFoundation() {
   const [templateId, setTemplateId] = useState<ReportTemplateId>('reg44')
@@ -102,8 +109,16 @@ export function ReportingFoundation() {
               <article key={section.id} className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
                 <h3 className="text-xl font-black tracking-[-0.03em] text-slate-950">{section.title}</h3>
                 <p className="mt-3 text-sm leading-7 text-slate-600">{section.body}</p>
+                <div className="mt-4">
+                  <QualityStandardBadges references={section.regulatoryReferenceIds.map((referenceId) => getRegulatoryReferenceById(referenceId)).filter(isRegulatoryReference)} limit={6} />
+                </div>
+                <div className="mt-4 grid gap-3 rounded-2xl border border-white bg-white p-4 text-xs font-bold leading-5 text-slate-500 md:grid-cols-3">
+                  <p><strong className="text-slate-800">Linked SCCIF:</strong> {section.linkedSccifAreas.slice(0, 2).join(', ') || 'No mapped area yet'}</p>
+                  <p><strong className="text-slate-800">Evidence gaps:</strong> {section.evidenceGaps.join(', ') || 'No current gap flagged'}</p>
+                  <p><strong className="text-slate-800">Review:</strong> {section.reviewRequired ? 'Requires manager review' : 'Reviewed'}</p>
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {section.citations.map((citation) => <span key={`${section.id}-${citation.eventId}`} className="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-500">{citation.label}</span>)}
+                  {section.citations.map((citation) => <Link key={`${section.id}-${citation.eventId}`} href={`/chronology/${citation.eventId}`} className="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-500">{citation.label}</Link>)}
                 </div>
               </article>
             ))}
@@ -115,8 +130,18 @@ export function ReportingFoundation() {
             <h2 className="text-lg font-black text-slate-950">Citations panel</h2>
             <div className="mt-4 space-y-2">
               {generated.citations.map((citation) => (
-                <Link key={citation.eventId} href="/chronology" className="block rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-bold leading-5 text-slate-600">{citation.label}</Link>
+                <Link key={citation.eventId} href={`/chronology/${citation.eventId}`} className="block rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-bold leading-5 text-slate-600">{citation.label}</Link>
               ))}
+            </div>
+          </div>
+          <div className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+            <h2 className="text-lg font-black text-slate-950">Report source panel</h2>
+            <div className="mt-4 space-y-3 text-xs font-bold leading-5 text-slate-600">
+              <p>Chronology events used: {generated.sourcePanel.chronologyEventIds.length}</p>
+              <p>Documents used: {generated.sourcePanel.documentIds.length || 'No linked documents found'}</p>
+              <p>Actions used: {generated.sourcePanel.actionIds.length}</p>
+              <p>Evidence used: {generated.sourcePanel.evidenceIds.length}</p>
+              <p>Missing expected evidence: {generated.sourcePanel.missingExpectedEvidence.join(', ') || 'No current missing expected evidence flagged'}</p>
             </div>
           </div>
           <div className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
@@ -133,6 +158,12 @@ export function ReportingFoundation() {
           <div className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
             <h2 className="text-lg font-black text-slate-950">Evidence gaps</h2>
             <div className="mt-4"><EvidenceGapsPanel gaps={generated.evidenceGaps} /></div>
+          </div>
+          <div className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+            <h2 className="text-lg font-black text-slate-950">Traceability chips</h2>
+            <div className="mt-4">
+              <CitationList citations={generated.citations.map((citation) => ({ label: citation.label, href: `/chronology/${citation.eventId}`, confidence: 'source record', reviewRequired: true }))} />
+            </div>
           </div>
           <div className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
             <h2 className="text-lg font-black text-slate-950">Actions</h2>

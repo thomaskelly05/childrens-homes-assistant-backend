@@ -4,11 +4,14 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 
 import { ActionsPanel, EvidenceGapsPanel, EvidenceItemsPanel } from '@/components/indicare/action-evidence-panels'
+import { SourceCitationChip } from '@/components/indicare/citations/source-citation-chip'
+import { QualityStandardBadges } from '@/components/indicare/workflows/quality-standard-badges'
 import { RecordQuestionPanel } from '@/components/indicare/record-question-panel'
 import { getActionsFromChronology, getEvidenceGapsFromChronology, filterChronology } from '@/lib/chronology/selectors'
 import { ChronologyEvent, ChronologyFilter } from '@/lib/chronology/types'
 import { getEvidenceItems } from '@/lib/evidence/selectors'
 import { getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
+import { mapEventToRegulatoryReferences } from '@/lib/regulatory-framework/mapping'
 
 const savedViews: Array<{ label: string; filters: ChronologyFilter }> = [
   { label: 'All chronology', filters: {} },
@@ -138,16 +141,18 @@ export function ChronologyFoundation({
         </div>
 
         <div className="relative space-y-5 before:absolute before:left-5 before:top-4 before:h-[calc(100%-32px)] before:w-px before:bg-slate-200">
-          {filteredEvents.map((event) => (
-            <article key={event.id} className="relative pl-12">
-              <button type="button" onClick={() => setSelectedEventId(event.id)} className={`absolute left-0 top-7 h-10 w-10 rounded-full border ${selectedEvent?.id === event.id ? 'border-blue-300 bg-blue-100' : 'border-slate-200 bg-white'}`} aria-label={`Select ${event.title}`} />
-              <div className="rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+          {filteredEvents.map((event) => {
+            const references = mapEventToRegulatoryReferences(event)
+            return (
+              <article key={event.id} className="relative pl-12">
+                <button type="button" onClick={() => setSelectedEventId(event.id)} className={`absolute left-0 top-7 h-10 w-10 rounded-full border ${selectedEvent?.id === event.id ? 'border-blue-300 bg-blue-100' : 'border-slate-200 bg-white'}`} aria-label={`Select ${event.title}`} />
+                <div className="rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-blue-700">{event.eventType.replaceAll('_', ' ')}</span>
                   <span className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{event.severity}</span>
                   <span className="text-xs font-bold text-slate-400">{formatDate(event.dateTime)}</span>
                 </div>
-                <h3 className="mt-4 text-2xl font-black tracking-[-0.04em] text-slate-950">{event.title}</h3>
+                <Link href={`/chronology/${event.id}`} className="mt-4 block text-2xl font-black tracking-[-0.04em] text-slate-950 hover:text-blue-700">{event.title}</Link>
                 <p className="mt-3 text-sm leading-7 text-slate-600">{event.summary}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">{event.category}</span>
@@ -156,15 +161,22 @@ export function ChronologyFoundation({
                   {event.evidenceIds.length ? <span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">{event.evidenceIds.length} evidence</span> : null}
                   {event.actionIds.length ? <span className="rounded-full bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">{event.actionIds.length} actions</span> : null}
                 </div>
-                <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-bold leading-5 text-slate-500">{event.citationLabel}</div>
+                <div className="mt-4">
+                  <QualityStandardBadges references={references} limit={5} />
+                </div>
+                <div className="mt-4">
+                  <SourceCitationChip label={event.citationLabel} href={`/chronology/${event.id}`} sourceDate={formatDate(event.dateTime)} confidence={event.regulationLinks.some((link) => link.confidence === 'direct') ? 'direct' : 'supporting'} reviewRequired={event.tags.includes('manager-review') || event.tags.includes('overdue-manager-review')} />
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" onClick={() => setSelectedEventId(event.id)} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Ask IndiCare about this</button>
                   <Link href="/reports" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Use in report</Link>
+                  <Link href={`/chronology/${event.id}`} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open detail</Link>
                   <Link href={`/${event.sourceType === 'incident' ? 'incidents' : event.sourceType === 'lac_review' ? 'documents' : event.sourceType === 'reg44_report' || event.sourceType === 'reg45_report' ? 'documents' : 'chronology'}/${event.sourceId}`} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open source record</Link>
                 </div>
               </div>
             </article>
-          ))}
+            )
+          })}
         </div>
       </section>
 

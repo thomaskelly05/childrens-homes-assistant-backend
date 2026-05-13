@@ -54,6 +54,8 @@ export default function DashboardPage() {
         <StatCard label="Chronology activity" value={chronologyEvents.length} detail="Connected events ready for filtering" href="/chronology" />
         <StatCard label="Open Reg 44 actions" value={reg44Actions.length} detail="Independent visitor action plan" href="/actions" />
         <StatCard label="Evidence gaps" value={evidenceGaps.length} detail="Evidence still required" href="/evidence" />
+        <StatCard label="Ofsted readiness" value="Open" detail="SCCIF and regulatory evidence view" href="/ofsted-readiness" />
+        <StatCard label="Regulatory framework" value="Mapped" detail="Regulations, Quality Standards and SCCIF" href="/regulatory" />
         <StatCard label="Safeguarding chronology alerts" value={chronologySafeguarding.length} detail="Chronology events with safeguarding flags" href="/chronology" />
         <StatCard label="Overdue manager reviews" value={overdueManagerReviews.length} detail="Manager oversight required" href="/chronology" />
         <StatCard label="Documents needing review" value={reviewDocuments.length} detail="Regulatory or care documents" href="/documents" />

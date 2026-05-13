@@ -1,11 +1,25 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { CitationList } from '@/components/indicare/citations/citation-list'
 import { ReportPreview } from '@/components/indicare/report-preview'
 import { Card, PageHeader, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { indicareData } from '@/lib/indicare/demo-data'
 import { buildReportDraft } from '@/lib/indicare/reports'
 import { fullName, getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
+import { generateReport } from '@/lib/regulatory-reporting/generators'
+import { ReportTemplateId } from '@/lib/regulatory-reporting/types'
+
+function templateForReportType(type: string): ReportTemplateId {
+  const lower = type.toLowerCase()
+  if (lower.includes('lac')) return 'lac_review'
+  if (lower.includes('safeguarding')) return 'safeguarding_chronology'
+  if (lower.includes('manager')) return 'manager_oversight'
+  if (lower.includes('ofsted')) return 'ofsted_evidence_pack'
+  if (lower.includes('reg 45')) return 'reg45'
+  if (lower.includes('reg 44')) return 'reg44'
+  return 'weekly_care_summary'
+}
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -15,6 +29,13 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   const draft = buildReportDraft(report)
   const person = getYoungPersonById(report.youngPersonId)
   const generatedBy = getStaffById(report.generatedBy)
+  const generated = generateReport({
+    templateId: templateForReportType(report.type),
+    homeId: 'home-oak',
+    youngPersonId: report.youngPersonId,
+    dateFrom: report.dateRangeStart,
+    dateTo: report.dateRangeEnd
+  })
 
   return (
     <div className="space-y-6">
@@ -32,9 +53,23 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
             <p><strong className="text-slate-950">Created:</strong> {new Date(report.createdAt).toLocaleString('en-GB')}</p>
             <p><strong className="text-slate-950">Updated:</strong> {new Date(report.updatedAt).toLocaleString('en-GB')}</p>
             <p><strong className="text-slate-950">Assistant actions:</strong> draft report, improve wording, check missing sections, make Ofsted-ready.</p>
+            <p><strong className="text-slate-950">Review warning:</strong> Draft requires manager review and must not imply final regulatory judgement.</p>
           </div>
         </Card>
       </section>
+      <Card>
+        <SectionHeader eyebrow="Report source panel" title="Traceability and missing expected evidence" description="Generated report foundations use source chronology, evidence, actions and gaps. Wording remains draft and review required." />
+        <div className="grid gap-4 md:grid-cols-5">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-600"><strong className="block text-2xl font-black text-slate-950">{generated.sourcePanel.chronologyEventIds.length}</strong>Chronology events used</div>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-600"><strong className="block text-2xl font-black text-slate-950">{generated.sourcePanel.documentIds.length}</strong>Documents used</div>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-600"><strong className="block text-2xl font-black text-slate-950">{generated.sourcePanel.actionIds.length}</strong>Actions used</div>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-600"><strong className="block text-2xl font-black text-slate-950">{generated.sourcePanel.evidenceIds.length}</strong>Evidence used</div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm font-bold text-amber-800"><strong className="block text-2xl font-black text-amber-950">{generated.sourcePanel.missingExpectedEvidence.length}</strong>Missing/review items</div>
+        </div>
+        <div className="mt-6">
+          <CitationList citations={generated.citations.map((citation) => ({ label: citation.label, href: `/chronology/${citation.eventId}`, confidence: 'source record', reviewRequired: true }))} />
+        </div>
+      </Card>
     </div>
   )
 }

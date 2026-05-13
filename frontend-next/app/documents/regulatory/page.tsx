@@ -30,7 +30,7 @@ export default function RegulatoryDocumentsPage() {
           <DataTable
             headers={['Title', 'Type', 'Period', 'Uploaded by', 'Status', 'Findings']}
             rows={documents.map((document) => [
-              <Link key={document.id} href="/documents" className="font-black text-slate-950 hover:text-blue-700">{document.title}</Link>,
+              <Link key={document.id} href={`/documents/${document.id}`} className="font-black text-slate-950 hover:text-blue-700">{document.title}</Link>,
               document.documentType.replaceAll('_', ' '),
               `${document.periodStart || 'Open'} to ${document.periodEnd || 'Open'}`,
               getStaffById(document.uploadedBy)?.firstName || document.uploadedBy,
