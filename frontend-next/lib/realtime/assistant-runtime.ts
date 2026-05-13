@@ -1,4 +1,5 @@
 import { BrowserVoiceRuntime } from './browser-voice-runtime'
+import { OpenAIRealtimeSession } from './openai-realtime-session'
 import { ReconnectManager } from './reconnect-manager'
 import { runtimeTelemetry } from './runtime-telemetry'
 import { speechPlaybackRuntime } from './speech-playback-runtime'
@@ -18,10 +19,12 @@ export type RuntimeState = {
   speaking: boolean
   streaming: boolean
   wakeWordEnabled: boolean
+  realtimeVoiceConnected: boolean
   error?: string
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+const REALTIME_WS_URL = process.env.NEXT_PUBLIC_OPENAI_REALTIME_WS_URL || ''
 
 function messageId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -46,7 +49,8 @@ export class AssistantRuntime {
     listening: false,
     speaking: false,
     streaming: false,
-    wakeWordEnabled: false
+    wakeWordEnabled: false,
+    realtimeVoiceConnected: false
   }
 
   private messages: AssistantMessage[] = [welcomeMessage()]
@@ -55,6 +59,8 @@ export class AssistantRuntime {
   private messageListeners = new Set<(messages: AssistantMessage[]) => void>()
   private abortController: AbortController | null = null
   private lastSpokenAssistantMessageId: string | null = null
+  private realtimeSession: OpenAIRealtimeSession | null = null
+  private realtimeAssistantMessageId: string | null = null
 
   private reconnect = new ReconnectManager({
     onReconnect: () => {
@@ -122,6 +128,7 @@ export class AssistantRuntime {
 
       if (response.ok) {
         this.reconnect.markConnected()
+        this.connectRealtimeVoice()
         runtimeTelemetry.track('assistant.connect.ready')
       } else {
         this.reconnect.markDisconnected()
@@ -140,10 +147,41 @@ export class AssistantRuntime {
     }
   }
 
+  private connectRealtimeVoice() {
+    if (!REALTIME_WS_URL || this.realtimeSession) return
+
+    this.realtimeSession = new OpenAIRealtimeSession(REALTIME_WS_URL, {
+      onConnected: () => {
+        this.state.realtimeVoiceConnected = true
+        runtimeTelemetry.track('assistant.realtime_voice.connected')
+        this.emit()
+      },
+      onDisconnected: () => {
+        this.state.realtimeVoiceConnected = false
+        runtimeTelemetry.track('assistant.realtime_voice.disconnected')
+        this.emit()
+      },
+      onTranscript: (delta) => {
+        this.applyRealtimeAssistantDelta(delta)
+      },
+      onAudioChunk: () => {
+        runtimeTelemetry.track('assistant.realtime_voice.audio_delta')
+      },
+      onError: (error) => {
+        this.state.error = error
+        runtimeTelemetry.track('assistant.realtime_voice.error', { error })
+        this.emit()
+      }
+    })
+
+    this.realtimeSession.connect()
+  }
+
   loadMessages(messages: AssistantMessage[]) {
     this.interrupt()
     this.messages = messages.length ? messages : [welcomeMessage()]
     this.lastSpokenAssistantMessageId = null
+    this.realtimeAssistantMessageId = null
     runtimeTelemetry.track('assistant.conversation.loaded', { messages: this.messages.length })
     this.emitMessages()
   }
@@ -152,6 +190,7 @@ export class AssistantRuntime {
     this.interrupt()
     this.messages = [welcomeMessage()]
     this.lastSpokenAssistantMessageId = null
+    this.realtimeAssistantMessageId = null
     runtimeTelemetry.track('assistant.conversation.reset')
     this.emitMessages()
   }
@@ -159,6 +198,8 @@ export class AssistantRuntime {
   disconnect() {
     this.abortController?.abort()
     this.abortController = null
+    this.realtimeSession?.disconnect()
+    this.realtimeSession = null
     this.voice.stop()
     this.wakeWord.stop()
     speechPlaybackRuntime.stop()
@@ -168,6 +209,7 @@ export class AssistantRuntime {
     this.state.speaking = false
     this.state.streaming = false
     this.state.wakeWordEnabled = false
+    this.state.realtimeVoiceConnected = false
 
     runtimeTelemetry.track('assistant.disconnect')
     this.emit()
@@ -176,6 +218,11 @@ export class AssistantRuntime {
   async sendMessage(content: string) {
     const trimmed = content.trim()
     if (!trimmed || this.state.streaming) return
+
+    if (this.state.realtimeVoiceConnected && this.realtimeSession) {
+      this.realtimeSession.sendText(trimmed)
+      runtimeTelemetry.track('assistant.realtime_voice.text_sent', { length: trimmed.length })
+    }
 
     const userMessage: AssistantMessage = {
       id: messageId(),
@@ -198,6 +245,7 @@ export class AssistantRuntime {
     this.state.streaming = true
     this.state.error = undefined
     this.lastSpokenAssistantMessageId = null
+    this.realtimeAssistantMessageId = assistantMessage.id
 
     runtimeTelemetry.track('assistant.message.sent', { length: trimmed.length })
     this.emit()
@@ -356,6 +404,31 @@ export class AssistantRuntime {
       `${current?.content || ''}${token}`,
       true
     )
+  }
+
+  private applyRealtimeAssistantDelta(delta: string) {
+    if (!delta) return
+
+    const id = this.realtimeAssistantMessageId || messageId()
+    this.realtimeAssistantMessageId = id
+
+    const existing = this.messages.find((message) => message.id === id)
+    if (!existing) {
+      this.messages = [
+        ...this.messages,
+        {
+          id,
+          role: 'assistant',
+          content: delta,
+          createdAt: new Date().toISOString(),
+          streaming: true
+        }
+      ]
+    } else {
+      this.updateMessage(id, `${existing.content || ''}${delta}`, true)
+    }
+
+    this.emitMessages()
   }
 
   private updateMessage(id: string, content: string, streaming: boolean) {
