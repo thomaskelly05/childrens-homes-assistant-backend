@@ -86,7 +86,9 @@ export class OrbRuntimeController {
   subscribe(listener: (snapshot: OrbRuntimeSnapshot) => void) {
     this.listeners.add(listener)
     listener(this.snapshot)
-    return () => this.listeners.delete(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
   }
 
   getSnapshot() {

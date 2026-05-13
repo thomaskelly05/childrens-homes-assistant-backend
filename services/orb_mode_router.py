@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from auth.rbac import normalise_role
 from schemas.orb import OrbContext, OrbModeDecision, OrbSelectedMode
 from services.orb_persona_policy import CARE_ASSISTANT_TONE, INSPECTOR_TONE
 
@@ -72,7 +71,8 @@ def _text(value: Any) -> str:
 
 
 def _role(current_user: dict[str, Any]) -> str:
-    return normalise_role(current_user.get("role"))
+    role = str(current_user.get("role") or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return role or "viewer"
 
 
 def _workspace(context: OrbContext | None) -> str:

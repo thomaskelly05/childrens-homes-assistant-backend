@@ -98,7 +98,7 @@ export function OrbModal({
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-600">Orb powered by IndiCare</p>
               <h2 id="orb-modal-title" className="text-2xl font-black tracking-[-0.04em] text-slate-950">Voice and conversational care assistant</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-500">Status: {orbStateLabel(snapshot.state)} - Wake phrase foundation: "Hey IndiCare".</p>
+              <p className="mt-1 text-sm leading-6 text-slate-500">Status: {orbStateLabel(snapshot.state)} - Wake phrase foundation: &quot;Hey IndiCare&quot;.</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-full bg-slate-100 p-3 text-slate-600 hover:bg-slate-200" aria-label="Close Orb">
@@ -155,7 +155,7 @@ export function OrbModal({
             <OrbTranscript transcript={snapshot.transcript} partialTranscript={snapshot.partialTranscript} />
             <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
               <FileText className="mr-2 inline h-4 w-4" aria-hidden />
-              Try: "Start my shift", "What would Ofsted challenge here?", "Create a daily note for Jamie", or "What Reg 44 actions remain open?"
+              Try: &quot;Start my shift&quot;, &quot;What would Ofsted challenge here?&quot;, &quot;Create a daily note for Jamie&quot;, or &quot;What Reg 44 actions remain open?&quot;
             </div>
           </main>
         </div>
