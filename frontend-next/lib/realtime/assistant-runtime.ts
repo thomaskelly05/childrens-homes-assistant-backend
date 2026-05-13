@@ -1,4 +1,7 @@
 import { BrowserVoiceRuntime } from './browser-voice-runtime'
+import { ReconnectManager } from './reconnect-manager'
+import { runtimeTelemetry } from './runtime-telemetry'
+import { speechPlaybackRuntime } from './speech-playback-runtime'
 
 export type AssistantMessage = {
   id: string
@@ -48,24 +51,45 @@ export class AssistantRuntime {
   private listeners = new Set<(state: RuntimeState) => void>()
   private messageListeners = new Set<(messages: AssistantMessage[]) => void>()
   private abortController: AbortController | null = null
+  private lastSpokenAssistantMessageId: string | null = null
+
+  private reconnect = new ReconnectManager({
+    onReconnect: () => {
+      runtimeTelemetry.track('assistant.reconnect.attempt')
+      this.connect()
+    },
+    onDisconnect: () => {
+      runtimeTelemetry.track('assistant.disconnected')
+    },
+    onStatusChange: (connected) => {
+      this.state.connected = connected
+      this.emit()
+    }
+  })
 
   private voice = new BrowserVoiceRuntime({
     onTranscript: (text) => {
       if (text.trim()) {
+        runtimeTelemetry.track('assistant.voice.transcript', { length: text.length })
         this.sendMessage(text)
       }
     },
     onListeningChange: (listening) => {
       this.state.listening = listening
+      runtimeTelemetry.track(listening ? 'assistant.voice.listening.started' : 'assistant.voice.listening.stopped')
       this.emit()
     },
     onError: (error) => {
       this.state.error = error
+      runtimeTelemetry.track('assistant.voice.error', { error })
       this.emit()
     }
   })
 
   async connect() {
+    runtimeTelemetry.hydrate()
+    runtimeTelemetry.track('assistant.connect.started')
+
     try {
       const response = await fetch(`${API_BASE}/assistant/realtime/health`, {
         credentials: 'include',
@@ -74,11 +98,22 @@ export class AssistantRuntime {
 
       this.state.connected = response.ok
       this.state.error = response.ok ? undefined : `Realtime health failed: ${response.status}`
+
+      if (response.ok) {
+        this.reconnect.markConnected()
+        runtimeTelemetry.track('assistant.connect.ready')
+      } else {
+        this.reconnect.markDisconnected()
+        runtimeTelemetry.track('assistant.connect.failed', { status: response.status })
+      }
+
       this.emit()
       this.emitMessages()
     } catch (error) {
       this.state.connected = false
       this.state.error = String(error)
+      this.reconnect.markDisconnected()
+      runtimeTelemetry.track('assistant.connect.error', { error: String(error) })
       this.emit()
       this.emitMessages()
     }
@@ -87,12 +122,16 @@ export class AssistantRuntime {
   loadMessages(messages: AssistantMessage[]) {
     this.interrupt()
     this.messages = messages.length ? messages : [welcomeMessage()]
+    this.lastSpokenAssistantMessageId = null
+    runtimeTelemetry.track('assistant.conversation.loaded', { messages: this.messages.length })
     this.emitMessages()
   }
 
   resetConversation() {
     this.interrupt()
     this.messages = [welcomeMessage()]
+    this.lastSpokenAssistantMessageId = null
+    runtimeTelemetry.track('assistant.conversation.reset')
     this.emitMessages()
   }
 
@@ -100,12 +139,14 @@ export class AssistantRuntime {
     this.abortController?.abort()
     this.abortController = null
     this.voice.stop()
+    speechPlaybackRuntime.stop()
 
     this.state.connected = false
     this.state.listening = false
     this.state.speaking = false
     this.state.streaming = false
 
+    runtimeTelemetry.track('assistant.disconnect')
     this.emit()
   }
 
@@ -133,7 +174,9 @@ export class AssistantRuntime {
     this.state.speaking = true
     this.state.streaming = true
     this.state.error = undefined
+    this.lastSpokenAssistantMessageId = null
 
+    runtimeTelemetry.track('assistant.message.sent', { length: trimmed.length })
     this.emit()
     this.emitMessages()
 
@@ -165,6 +208,7 @@ export class AssistantRuntime {
       }
 
       await this.consumeStream(response.body, assistantMessage.id)
+      runtimeTelemetry.track('assistant.message.completed')
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         this.updateMessage(
@@ -174,6 +218,7 @@ export class AssistantRuntime {
         )
 
         this.state.error = String(error)
+        runtimeTelemetry.track('assistant.message.error', { error: String(error) })
       }
     } finally {
       this.abortController = null
@@ -182,16 +227,19 @@ export class AssistantRuntime {
 
       this.emit()
       this.finishStreamingMessage(assistantMessage.id)
+      this.playAssistantMessage(assistantMessage.id)
     }
   }
 
   interrupt() {
     this.abortController?.abort()
     this.abortController = null
+    speechPlaybackRuntime.stop()
 
     this.state.speaking = false
     this.state.streaming = false
 
+    runtimeTelemetry.track('assistant.interrupted')
     this.emit()
 
     const lastAssistant = [...this.messages]
@@ -309,6 +357,17 @@ export class AssistantRuntime {
     )
 
     this.emitMessages()
+  }
+
+  private playAssistantMessage(id: string) {
+    if (this.lastSpokenAssistantMessageId === id) return
+
+    const message = this.messages.find((item) => item.id === id)
+    if (!message?.content || message.content === 'I could not generate a response.') return
+
+    this.lastSpokenAssistantMessageId = id
+    runtimeTelemetry.track('assistant.speech.playback.started', { length: message.content.length })
+    speechPlaybackRuntime.speak(message.content, { rate: 1.02, pitch: 1 })
   }
 
   private emit() {
