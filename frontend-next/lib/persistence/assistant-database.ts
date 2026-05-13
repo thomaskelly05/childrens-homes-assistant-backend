@@ -8,7 +8,9 @@ export type PersistedConversation = {
   updatedAt: string
 }
 
-const DEFAULT_API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : ''
+const DEFAULT_API_BASE = process.env.NODE_ENV === 'development'
+  ? 'http://localhost:8000'
+  : 'https://childrens-homes-assistant-backend-new.onrender.com'
 const API_BASE = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||

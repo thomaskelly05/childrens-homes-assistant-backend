@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { ReactNode } from 'react'
 
-import { ContextualAssistantPanel } from '@/components/indicare/assistant-panel'
+import { ContextualAssistantPanel } from '@/components/indicare/embedded-assistant/contextual-assistant-panel'
 import { CommandSearch } from '@/components/indicare/command-search'
 import { useAuth } from '@/contexts/auth-context'
 import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permissions'
@@ -93,6 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     .filter((item) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
     .sort((a, b) => b.href.length - a.href.length)[0]
   const hasRouteAccess = !matchedRoute || userHasAnyPermission(user, matchedRoute.permissions)
+  const isStandaloneAssistant = pathname === '/assistant' || pathname.startsWith('/assistant/')
 
   if (isPublicPage) {
     return <>{children}</>
@@ -122,6 +123,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
     )
+  }
+
+  if (isStandaloneAssistant) {
+    return <>{children}</>
   }
 
   return (
