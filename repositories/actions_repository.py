@@ -23,6 +23,14 @@ from repositories.os_repository_utils import (
 
 ACTION_TABLES = [
     {
+        "table": "universal_tasks",
+        "source_type": "universal_task",
+        "title": ["title"],
+        "summary": ["description", "recommended_action"],
+        "owner": ["assigned_to", "assigned_to_user_id", "staff_id", "owner_id"],
+        "due": ["due_at", "due_date", "target_date"],
+    },
+    {
         "table": "tasks",
         "source_type": "task",
         "title": ["title", "task"],
@@ -233,23 +241,28 @@ def update_action(conn: Any, *, action_id: str, payload: dict[str, Any], current
     action = get_action(conn, action_id=action_id, current_user=current_user)
     if not action:
         raise HTTPException(status_code=404, detail="Action not found.")
-    if action["original_table"] != "tasks":
+    table_name = action["original_table"]
+    if table_name not in {config["table"] for config in ACTION_TABLES}:
         raise HTTPException(status_code=400, detail="This action source is read-only from the OS projection.")
 
-    cols = table_columns(conn, "tasks")
+    cols = table_columns(conn, table_name)
     updates: list[str] = []
     params: list[Any] = []
     mapping = {
-        "title": "title",
-        "description": "task",
-        "summary": "task",
-        "status": "status",
-        "priority": "priority",
-        "due_date": "due_date",
-        "assigned_to_staff_id": "assigned_to_user_id",
+        "title": first_col(cols, ["title", "action_title", "action"]),
+        "description": first_col(cols, ["task", "description", "summary", "action_description", "notes", "recommended_action"]),
+        "summary": first_col(cols, ["task", "summary", "description", "action_description", "notes", "recommended_action"]),
+        "status": first_col(cols, ["status", "workflow_status", "completed_status"]),
+        "priority": first_col(cols, ["priority", "severity", "impact"]),
+        "due_date": first_col(cols, ["due_date", "due_at", "target_date", "action_due_date"]),
+        "assigned_to_staff_id": first_col(cols, ["assigned_to_user_id", "assigned_to", "owner_user_id", "owner_id", "staff_id"]),
+        "assigned_to_user_id": first_col(cols, ["assigned_to_user_id", "assigned_to", "owner_user_id", "owner_id", "staff_id"]),
     }
+    updated_columns: set[str] = set()
     for key, column in mapping.items():
         if key not in payload or column not in cols:
+            continue
+        if column in updated_columns:
             continue
         value = payload.get(key)
         if key == "status":
@@ -258,34 +271,57 @@ def update_action(conn: Any, *, action_id: str, payload: dict[str, Any], current
             value = normalise_priority(value)
         updates.append(f"{quote_ident(column)} = %s")
         params.append(value)
+        updated_columns.add(column)
     if "updated_at" in cols:
         updates.append("updated_at = NOW()")
-    if payload.get("status") and "completed" in cols:
-        completed = normalise_status(payload.get("status")) == "completed"
+    if first_col(cols, ["updated_by", "updated_by_user_id"]):
+        updated_by_col = first_col(cols, ["updated_by", "updated_by_user_id"])
+        updates.append(f"{quote_ident(updated_by_col)} = %s")
+        params.append(current_user_id(current_user))
+    status_payload = payload.get("status")
+    if status_payload:
+        status = normalise_status(status_payload)
+        completed = status == "completed"
+        if "completed" in cols:
+            updates.append("completed = %s")
+            params.append(completed)
+        if completed:
+            completed_by_col = first_col(cols, ["completed_by", "completed_by_user_id"])
+            if completed_by_col:
+                updates.append(f"{quote_ident(completed_by_col)} = %s")
+                params.append(current_user_id(current_user))
+        if "completed_at" in cols:
+            if completed:
+                updates.append("completed_at = NOW()")
+            elif status in {"open", "in_progress"}:
+                updates.append("completed_at = NULL")
+    elif "completed" in cols and "completed" in payload:
+        completed = bool(payload.get("completed"))
         updates.append("completed = %s")
         params.append(completed)
         if "completed_at" in cols:
-            updates.append("completed_at = CASE WHEN %s THEN NOW() ELSE completed_at END")
+            updates.append("completed_at = CASE WHEN %s THEN NOW() ELSE NULL END")
             params.append(completed)
 
     if not updates:
         raise HTTPException(status_code=400, detail="No writable action fields provided.")
 
-    raw_id = safe_int(action["original_id"])
+    raw_id = action["original_id"]
+    config = next((item for item in ACTION_TABLES if item["table"] == table_name), ACTION_TABLES[0])
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             f"""
-            UPDATE public.tasks
+            UPDATE public.{quote_ident(table_name)}
             SET {", ".join(updates)}
-            WHERE id = %s
+            WHERE id::text = %s
             RETURNING *
             """,
-            tuple(params + [raw_id]),
+            tuple(params + [str(raw_id)]),
         )
         row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Action not found.")
-    return _normalise_action(dict(row), ACTION_TABLES[0])
+    return _normalise_action(dict(row), config)
 
 
 def create_action(conn: Any, *, payload: dict[str, Any], current_user: dict[str, Any]) -> dict[str, Any]:

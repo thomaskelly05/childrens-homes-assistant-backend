@@ -1,0 +1,75 @@
+import Link from 'next/link'
+
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard } from '@/components/indicare/ui'
+import { getOsManagementOversight } from '@/lib/os-api/management'
+
+export default async function ManagementPage() {
+  const result = await getOsManagementOversight()
+  const data = result.data
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Management oversight"
+        title="Operational queues, risk indicators and compliance heatmap"
+        description="Live oversight cards surface overdue reviews, overdue actions, safeguarding escalations, missing evidence and sign-off work."
+        action={<Link href="/actions" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open actions</Link>}
+      />
+      <LiveDataStatus result={result} />
+      <section className="grid gap-4 md:grid-cols-5">
+        {Object.entries(data.cards).map(([key, value]) => <StatCard key={key} label={key.replaceAll('_', ' ')} value={value} />)}
+      </section>
+      <section className="grid gap-6 xl:grid-cols-3">
+        <Card>
+          <SectionHeader eyebrow="Escalations" title="Safeguarding escalation queue" />
+          <DataTable
+            headers={['Title', 'Source', 'Severity']}
+            rows={data.escalation_queue.slice(0, 8).map((item) => [String(item.title || 'Escalation'), String(item.source_type || ''), String(item.severity || '')])}
+            empty={<EmptyState title="No escalations" description="No safeguarding escalations are currently visible." />}
+          />
+        </Card>
+        <Card>
+          <SectionHeader eyebrow="Reviews" title="Manager review queue" />
+          <DataTable
+            headers={['Title', 'Source', 'Date']}
+            rows={data.review_queue.slice(0, 8).map((item) => [String(item.title || 'Review'), String(item.source_type || ''), String(item.date_time || '')])}
+            empty={<EmptyState title="No reviews" description="No overdue reviews are currently visible." />}
+          />
+        </Card>
+        <Card>
+          <SectionHeader eyebrow="Sign-off" title="Sign-off queue" />
+          <DataTable
+            headers={['Title', 'Status', 'Type']}
+            rows={data.sign_off_queue.slice(0, 8).map((item) => [String(item.title || 'Sign-off'), String(item.status || ''), String(item.source_type || item.type || '')])}
+            empty={<EmptyState title="No sign-offs" description="No records are currently waiting for sign-off." />}
+          />
+        </Card>
+      </section>
+      <section className="grid gap-6 xl:grid-cols-[1fr_0.8fr]">
+        <Card>
+          <SectionHeader eyebrow="Compliance" title="SCCIF evidence heatmap" />
+          <div className="grid gap-3 md:grid-cols-3">
+            {data.compliance_heatmap.areas.map((area) => (
+              <div key={String(area.key)} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-sm font-black text-slate-950">{String(area.label || area.key)}</p>
+                <p className="mt-2 text-xs font-bold text-slate-500">Evidence {String(area.evidence || 0)} · Actions {String(area.actions || 0)} · {String(area.status || 'gap')}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <SectionHeader eyebrow="Indicators" title="Risk indicators" />
+          <div className="space-y-3">
+            {data.risk_indicators.map((indicator) => (
+              <div key={indicator.key} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-600">
+                <span>{indicator.label}</span>
+                <strong className="text-slate-950">{indicator.count}</strong>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+    </div>
+  )
+}

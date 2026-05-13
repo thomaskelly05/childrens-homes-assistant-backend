@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
-from psycopg2.extras import RealDictCursor
+from fastapi import HTTPException
+from psycopg2.extras import Json, RealDictCursor
 
 from repositories.os_repository_utils import (
     build_scope_where,
+    can_write_records,
+    current_user_id,
     first_col,
     isoformat,
     normalise_priority,
     quote_ident,
+    safe_int,
     table_columns,
     table_exists,
 )
@@ -203,6 +208,72 @@ def get_evidence(conn: Any, *, evidence_id: str, current_user: dict[str, Any]) -
         if item["id"] == evidence_id or item["original_id"] == evidence_id:
             return item
     return None
+
+
+def create_evidence_link(conn: Any, *, payload: dict[str, Any], current_user: dict[str, Any]) -> dict[str, Any]:
+    if not can_write_records(current_user):
+        raise HTTPException(status_code=403, detail="You do not have permission to attach evidence.")
+    if not table_exists(conn, "os_evidence_links"):
+        raise HTTPException(status_code=400, detail="Evidence link storage is not available in this schema.")
+
+    source_table = str(payload.get("source_table") or payload.get("source_type") or payload.get("record_type") or "").strip()
+    source_id = safe_int(payload.get("source_id") or payload.get("record_id"))
+    if not source_table or source_id is None:
+        raise HTTPException(status_code=400, detail="A numeric source_id and source_table are required to attach evidence.")
+
+    cols = table_columns(conn, "os_evidence_links")
+    metadata = {
+        **(payload.get("metadata") or {}),
+        "record_type": payload.get("record_type"),
+        "record_id": payload.get("record_id"),
+        "evidence_id": payload.get("evidence_id"),
+        "quality": payload.get("quality"),
+        "confidence": payload.get("confidence"),
+        "source": payload.get("source"),
+        "duplicate_key": f"{source_table}:{source_id}:{payload.get('evidence_type') or 'record'}",
+    }
+    insert: dict[str, Any] = {}
+    for column, value in {
+        "provider_id": safe_int(payload.get("provider_id")),
+        "home_id": safe_int(payload.get("home_id")),
+        "young_person_id": safe_int(payload.get("young_person_id")),
+        "evidence_type": payload.get("evidence_type") or "record",
+        "source_table": source_table,
+        "source_id": source_id,
+        "label": payload.get("label") or payload.get("title") or "Evidence attached",
+        "sccif_area": payload.get("sccif_area"),
+        "regulation_refs": payload.get("regulation_refs") or payload.get("regulation_references") or [],
+        "added_by": current_user_id(current_user),
+        "added_at": datetime.now(timezone.utc),
+        "metadata": metadata,
+    }.items():
+        if column in cols and value is not None:
+            insert[column] = value
+
+    columns = list(insert)
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT *
+            FROM public.os_evidence_links
+            WHERE source_table = %s AND source_id = %s AND evidence_type = %s
+            LIMIT 1
+            """,
+            (source_table, source_id, insert.get("evidence_type", "record")),
+        )
+        existing = cur.fetchone()
+        if existing:
+            return _normalise_evidence(dict(existing), EVIDENCE_TABLES[2])
+        cur.execute(
+            f"""
+            INSERT INTO public.os_evidence_links ({", ".join(quote_ident(col) for col in columns)})
+            VALUES ({", ".join(["%s"] * len(columns))})
+            RETURNING *
+            """,
+            tuple(Json(insert[col]) if col == "metadata" else insert[col] for col in columns),
+        )
+        row = cur.fetchone()
+    return _normalise_evidence(dict(row), EVIDENCE_TABLES[2])
 
 
 def build_coverage(evidence: list[dict[str, Any]], actions: list[dict[str, Any]]) -> dict[str, Any]:

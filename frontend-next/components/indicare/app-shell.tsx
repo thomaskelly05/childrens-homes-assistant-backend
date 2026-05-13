@@ -47,6 +47,7 @@ const navItems = [
   { section: 'Recording', href: '/keywork', label: 'Keywork', icon: BriefcaseMedical, permissions: ['records:read'] },
   { section: 'Recording', href: '/appointments', label: 'Appointments', icon: CalendarDays, permissions: ['records:read'] },
   { section: 'Quality & Compliance', href: '/actions', label: 'Actions', icon: ClipboardCheck, permissions: ['records:read'] },
+  { section: 'Quality & Compliance', href: '/management', label: 'Management Oversight', icon: Gauge, permissions: ['reports:read'] },
   { section: 'Quality & Compliance', href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'] },
   { section: 'Quality & Compliance', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
   { section: 'Quality & Compliance', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
