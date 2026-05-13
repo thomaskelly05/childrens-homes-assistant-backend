@@ -30,6 +30,7 @@ import { ReactNode } from 'react'
 import { ContextualAssistantPanel } from '@/components/indicare/embedded-assistant/contextual-assistant-panel'
 import { CommandSearch } from '@/components/indicare/command-search'
 import { ContextualOperationalSidebar } from '@/components/indicare/contextual-operational-sidebar'
+import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { MobileNav } from '@/components/mobile-nav'
 import { useAuth } from '@/contexts/auth-context'
 import { buildAssistantContext } from '@/lib/assistant-core/context'
@@ -146,6 +147,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     return <>{children}</>
   }
 
+  const assistantContext = buildAssistantContext({
+    mode: 'embedded',
+    route: pathname,
+    pageTitle,
+    selectedYoungPersonId: selectedId,
+    selectedRecordId: selectedEntityContext?.selected_record_id,
+    selectedRecordType: selectedEntityContext?.selected_record_type,
+    selectedRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined
+  })
+
   return (
     <div className="flex min-h-screen bg-[#f3f6fb] text-slate-900">
       <aside className="sticky top-0 hidden h-screen w-[282px] shrink-0 flex-col border-r border-slate-200/80 bg-white/95 px-4 py-5 backdrop-blur-xl lg:flex">
@@ -230,21 +241,26 @@ export function AppShell({ children }: { children: ReactNode }) {
           <aside className="hidden border-l border-slate-200/80 bg-[#f7f9fc] p-5 xl:block">
             <div className="sticky top-[92px] space-y-5">
               <ContextualAssistantPanel
-                context={buildAssistantContext({
-                  mode: 'embedded',
-                  route: pathname,
-                  pageTitle,
-                  selectedYoungPersonId: selectedId,
-                  selectedRecordId: selectedEntityContext?.selected_record_id,
-                  selectedRecordType: selectedEntityContext?.selected_record_type,
-                  selectedRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined
-                })}
+                context={assistantContext}
               />
               <ContextualOperationalSidebar pathname={pathname} />
             </div>
           </aside>
         </div>
       </div>
+      <OrbButton
+        context={{
+          route: pathname,
+          workspace: assistantContext.current_workspace_type,
+          page_title: pageTitle,
+          selected_young_person_id: selectedId && Number.isFinite(Number(selectedId)) ? Number(selectedId) : undefined,
+          selected_record_id: selectedEntityContext?.selected_record_id,
+          selected_record_type: selectedEntityContext?.selected_record_type,
+          current_record_summary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined,
+          assistant_context: assistantContext
+        }}
+        role={user.role}
+      />
       <MobileNav />
     </div>
   )

@@ -1,3 +1,5 @@
+import { OrbButton } from '@/components/indicare/orb/orb-button'
+
 export function QuickRecordSheet() {
   return (
     <section className="rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
@@ -11,6 +13,19 @@ export function QuickRecordSheet() {
             Create entry
           </h3>
         </div>
+        <OrbButton
+          placement="inline"
+          context={{
+            route: '/quick-recording',
+            workspace: 'mobile_quick_recording',
+            page_title: 'Quick recording',
+            assistant_context: {
+              current_route: '/quick-recording',
+              current_workspace_type: 'mobile_quick_recording',
+              assistant_mode: 'embedded'
+            }
+          }}
+        />
       </div>
 
       <div className="mt-6 grid gap-4">
