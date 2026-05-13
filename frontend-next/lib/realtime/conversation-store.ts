@@ -1,3 +1,5 @@
+import { assistantDatabase } from '@/lib/persistence/assistant-database'
+
 import { AssistantMessage } from './assistant-runtime'
 
 export type StoredConversation = {
@@ -28,8 +30,19 @@ function fallbackConversation(): StoredConversation {
 }
 
 export class ConversationStore {
-  list(): StoredConversation[] {
+  async list(): Promise<StoredConversation[]> {
     if (typeof window === 'undefined') return [fallbackConversation()]
+
+    try {
+      const backendConversations = await assistantDatabase.listConversations()
+
+      if (Array.isArray(backendConversations) && backendConversations.length) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(backendConversations))
+        return backendConversations
+      }
+    } catch {
+      // fallback to local cache
+    }
 
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
@@ -43,7 +56,7 @@ export class ConversationStore {
 
   getActiveId() {
     if (typeof window === 'undefined') return 'default'
-    return localStorage.getItem(ACTIVE_KEY) || this.list()[0]?.id || 'default'
+    return localStorage.getItem(ACTIVE_KEY) || 'default'
   }
 
   setActiveId(id: string) {
@@ -51,11 +64,12 @@ export class ConversationStore {
     localStorage.setItem(ACTIVE_KEY, id)
   }
 
-  get(id: string): StoredConversation {
-    return this.list().find((conversation) => conversation.id === id) || fallbackConversation()
+  async get(id: string): Promise<StoredConversation> {
+    const conversations = await this.list()
+    return conversations.find((conversation) => conversation.id === id) || fallbackConversation()
   }
 
-  create(title = 'New conversation') {
+  async create(title = 'New conversation') {
     const timestamp = now()
 
     const conversation: StoredConversation = {
@@ -66,15 +80,17 @@ export class ConversationStore {
       updatedAt: timestamp
     }
 
-    const conversations = [conversation, ...this.list().filter((item) => item.id !== 'default')]
+    await assistantDatabase.saveConversation(conversation)
+
+    const conversations = [conversation, ...(await this.list()).filter((item) => item.id !== 'default')]
     this.saveAll(conversations)
     this.setActiveId(conversation.id)
 
     return conversation
   }
 
-  saveMessages(id: string, messages: AssistantMessage[]) {
-    const conversations = this.list()
+  async saveMessages(id: string, messages: AssistantMessage[]) {
+    const conversations = await this.list()
     const existing = conversations.find((conversation) => conversation.id === id)
     const timestamp = now()
     const title = this.titleFromMessages(messages) || existing?.title || 'New conversation'
@@ -91,6 +107,23 @@ export class ConversationStore {
       next,
       ...conversations.filter((conversation) => conversation.id !== id && conversation.id !== 'default')
     ])
+
+    try {
+      await assistantDatabase.saveConversation(next)
+    } catch {
+      // retain local persistence resilience
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      await assistantDatabase.deleteConversation(id)
+    } catch {
+      // continue local cleanup
+    }
+
+    const conversations = (await this.list()).filter((conversation) => conversation.id !== id)
+    this.saveAll(conversations)
   }
 
   private saveAll(conversations: StoredConversation[]) {
