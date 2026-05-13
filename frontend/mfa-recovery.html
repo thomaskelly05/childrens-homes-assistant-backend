@@ -208,17 +208,25 @@
       async function boot() {
         const state = await window.auth.validateSession();
 
-        if (!state.authenticated) {
-          window.location.replace("/login");
-          return;
-        }
-
-        if (!state.mfaEnabled) {
+        if (state?.mfa_pending && (state.mfa_setup_required || state.mfa_enabled === false)) {
           window.location.replace("/mfa-setup");
           return;
         }
 
-        if (state.mfaVerified) {
+        if (!state?.authenticated && !state?.mfa_pending) {
+          window.location.replace("/login");
+          return;
+        }
+
+        const mfaEnabled = state.mfa_enabled ?? state.mfaEnabled;
+        const mfaVerified = state.mfa_verified ?? state.mfaVerified;
+
+        if (!mfaEnabled) {
+          window.location.replace("/mfa-setup");
+          return;
+        }
+
+        if (mfaVerified) {
           window.location.replace("/assistant");
         }
       }
@@ -237,10 +245,7 @@
         setStatus("Checking your recovery code...");
 
         try {
-          const data = await window.apiRequest("/auth/mfa/verify-recovery", {
-            method: "POST",
-            body: JSON.stringify({ recovery_code: value })
-          });
+          const data = await window.auth.verifyRecoveryCode(value);
 
           if (!data?.ok) {
             throw new Error("Recovery code verification failed.");

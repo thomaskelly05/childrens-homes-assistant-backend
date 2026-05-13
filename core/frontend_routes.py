@@ -128,6 +128,21 @@ def register_frontend_routes(app: FastAPI) -> None:
     async def login_page():
         return HTMLResponse(_load_html(FRONTEND_DIR, "login.html"), headers=NO_STORE_HEADERS)
 
+    @app.get("/mfa")
+    @app.get("/mfa.html")
+    async def mfa_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "mfa.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/mfa-setup")
+    @app.get("/mfa-setup.html")
+    async def mfa_setup_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "mfa-setup.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/mfa-recovery")
+    @app.get("/mfa-recovery.html")
+    async def mfa_recovery_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "mfa-recovery.html"), headers=NO_STORE_HEADERS)
+
     @app.get(CARE_OS_PATH)
     @app.get(f"{CARE_OS_PATH}/")
     async def os_command_surface():

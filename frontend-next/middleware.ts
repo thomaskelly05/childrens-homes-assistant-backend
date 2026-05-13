@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const publicPrefixes = ['/login', '/unauthorized', '/auth', '/api']
+const publicPrefixes = [
+  '/login',
+  '/unauthorized',
+  '/auth',
+  '/api',
+  '/mfa',
+  '/mfa-setup',
+  '/mfa-recovery',
+  '/js',
+  '/css',
+  '/assets',
+  '/components'
+]
 const sessionCookieNames = ['indicare_session', '__Host-indicare_session']
 
 function isPublicPath(pathname: string) {

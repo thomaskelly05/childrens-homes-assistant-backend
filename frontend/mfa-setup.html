@@ -358,6 +358,16 @@
 
         const state = await window.auth.validateSession();
 
+        if (state?.mfa_pending && (state.mfa_setup_required || state.mfa_enabled === false)) {
+          await loadSetup();
+          return;
+        }
+
+        if (state?.mfa_pending) {
+          window.location.replace("/mfa");
+          return;
+        }
+
         if (!state || !state.authenticated) {
           window.location.replace("/login");
           return;

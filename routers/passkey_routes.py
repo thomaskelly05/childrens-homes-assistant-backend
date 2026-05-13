@@ -4,6 +4,7 @@ import os
 import secrets
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel
@@ -28,20 +29,46 @@ from db.passkeys_db import (
 
 router = APIRouter(prefix="/auth/passkeys", tags=["Passkeys"])
 
-RP_ID = os.getenv("PASSKEY_RP_ID", "app.indicare.co.uk")
+DEFAULT_RP_ID = "app.indicare.co.uk"
+REQUIRED_PASSKEY_ALLOWED_ORIGINS = {
+    "https://app.indicare.co.uk",
+    "https://indicare-frontend-next.onrender.com",
+}
+
+RP_ID = os.getenv("PASSKEY_RP_ID", DEFAULT_RP_ID).strip() or DEFAULT_RP_ID
 RP_NAME = os.getenv("PASSKEY_RP_NAME", "IndiCare")
 PASSKEY_CHALLENGE_MAX_AGE_SECONDS = int(
     os.getenv("PASSKEY_CHALLENGE_MAX_AGE_SECONDS", "300")
 )
 
-ALLOWED_ORIGINS = {
-    origin.strip()
-    for origin in os.getenv(
-        "PASSKEY_ALLOWED_ORIGINS",
-        "https://app.indicare.co.uk,http://localhost:3000,http://127.0.0.1:3000",
-    ).split(",")
-    if origin.strip()
-}
+
+def _normalise_origin(origin: str | None) -> str:
+    if origin is None:
+        return ""
+    if isinstance(origin, str):
+        return origin.strip().rstrip("/")
+    return str(origin).strip().rstrip("/")
+
+
+def _configured_allowed_origins() -> set[str]:
+    configured = os.getenv("PASSKEY_ALLOWED_ORIGINS")
+    default_origins = (
+        "https://app.indicare.co.uk,"
+        "https://indicare-frontend-next.onrender.com,"
+        "http://localhost:3000,"
+        "http://127.0.0.1:3000"
+    )
+    raw_origins = configured if configured is not None else default_origins
+    origins = {
+        _normalise_origin(origin)
+        for origin in raw_origins.split(",")
+        if _normalise_origin(origin)
+    }
+    origins.update(REQUIRED_PASSKEY_ALLOWED_ORIGINS)
+    return origins
+
+
+ALLOWED_ORIGINS = _configured_allowed_origins()
 
 
 class PasskeyRegisterVerifyRequest(BaseModel):
@@ -63,6 +90,47 @@ def _safe_string(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     return str(value).strip()
+
+
+def _origin_host(origin: str | None) -> str:
+    parsed = urlparse(_normalise_origin(origin))
+    return (parsed.hostname or "").lower()
+
+
+def _rp_id_matches_origin(rp_id: str, origin_host: str) -> bool:
+    rp_id = _safe_string(rp_id).lower()
+    origin_host = _safe_string(origin_host).lower()
+    if not rp_id or not origin_host:
+        return False
+    return origin_host == rp_id or origin_host.endswith(f".{rp_id}")
+
+
+def _request_origin(request: Request) -> str:
+    origin = _normalise_origin(request.headers.get("origin"))
+    if origin:
+        return origin
+
+    referer = _safe_string(request.headers.get("referer"))
+    if referer:
+        parsed = urlparse(referer)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+
+    return ""
+
+
+def _rp_id_for_request(request: Request) -> str:
+    origin = _request_origin(request)
+    origin_host = _origin_host(origin)
+    configured_rp_id = _safe_string(RP_ID).lower()
+
+    if _rp_id_matches_origin(configured_rp_id, origin_host):
+        return configured_rp_id
+
+    if origin in ALLOWED_ORIGINS and origin_host:
+        return origin_host
+
+    return configured_rp_id or DEFAULT_RP_ID
 
 
 def _normalise_email(value: str | None) -> str:
@@ -344,7 +412,7 @@ def _parse_client_data_json(encoded: str) -> dict[str, Any]:
 
 
 def _assert_allowed_origin(origin: str | None) -> None:
-    if origin not in ALLOWED_ORIGINS:
+    if _normalise_origin(origin) not in ALLOWED_ORIGINS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid passkey origin",
@@ -561,6 +629,7 @@ def register_passkey_options(
 
     challenge_b64 = _b64url_encode(challenge_bytes)
     user_handle_b64 = _b64url_encode(user_handle_bytes)
+    rp_id = _rp_id_for_request(request)
 
     request.session["passkey_register_challenge"] = challenge_b64
     request.session["passkey_register_user_id"] = user_id
@@ -570,7 +639,7 @@ def register_passkey_options(
         "challenge": challenge_b64,
         "rp": {
             "name": RP_NAME,
-            "id": RP_ID,
+            "id": rp_id,
         },
         "user": {
             "id": user_handle_b64,
@@ -722,10 +791,11 @@ def authenticate_passkey_options(
     request.session["passkey_auth_challenge"] = challenge_b64
     request.session["passkey_auth_started_at"] = _now()
     request.session["passkey_auth_user_hint"] = int(user["id"])
+    rp_id = _rp_id_for_request(request)
 
     options: dict[str, Any] = {
         "challenge": challenge_b64,
-        "rpId": RP_ID,
+        "rpId": rp_id,
         "timeout": 60000,
         "userVerification": "preferred",
         "allowCredentials": allow_credentials,
