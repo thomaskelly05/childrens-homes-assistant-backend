@@ -13,7 +13,8 @@ export default function AssistantPage() {
   const [runtimeState, setRuntimeState] = useState<RuntimeState>({
     connected: false,
     listening: false,
-    speaking: false
+    speaking: false,
+    streaming: false
   })
 
   const [input, setInput] = useState('')
@@ -25,9 +26,7 @@ export default function AssistantPage() {
 
     const unsubscribeState = assistantRuntime.onState(setRuntimeState)
 
-    const unsubscribeMessages = assistantRuntime.onMessage((message) => {
-      setMessages((current) => [...current, message])
-    })
+    const unsubscribeMessages = assistantRuntime.onMessages(setMessages)
 
     return () => {
       unsubscribeState()
@@ -49,18 +48,21 @@ export default function AssistantPage() {
   }
 
   return (
-    <main className="flex h-screen flex-col bg-[#0f172a] text-white">
-      <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+    <main className="flex h-screen flex-col bg-[#0b1020] text-white">
+      <header className="flex items-center justify-between border-b border-white/10 px-6 py-4 backdrop-blur-xl">
         <div>
-          <h1 className="text-2xl font-black">IndiCare Intelligence</h1>
-          <p className="text-sm text-slate-400">
-            Unified conversational assistant runtime
+          <h1 className="text-2xl font-black tracking-[-0.04em]">
+            IndiCare Intelligence
+          </h1>
+
+          <p className="mt-1 text-sm text-slate-400">
+            Unified conversational operating system
           </p>
         </div>
 
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
           <div
-            className={`h-2.5 w-2.5 rounded-full ${runtimeState.connected ? 'bg-emerald-400' : 'bg-red-400'}`}
+            className={`h-2.5 w-2.5 rounded-full ${runtimeState.connected ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]' : 'bg-red-400'}`}
           />
 
           {runtimeState.connected
@@ -69,26 +71,29 @@ export default function AssistantPage() {
         </div>
       </header>
 
-      <section className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto flex max-w-4xl flex-col gap-5">
+      <section className="flex-1 overflow-y-auto px-5 py-8">
+        <div className="mx-auto flex max-w-4xl flex-col gap-6">
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`max-w-[85%] rounded-3xl px-5 py-4 text-[15px] leading-7 ${message.role === 'assistant' ? 'bg-slate-800 text-white' : 'ml-auto bg-emerald-500 text-slate-950'}`}
+              className={`max-w-[88%] rounded-[28px] px-6 py-5 text-[15px] leading-8 shadow-[0_12px_40px_rgba(0,0,0,0.18)] ${message.role === 'assistant' ? 'bg-[#151c31] text-white' : 'ml-auto bg-emerald-400 text-slate-950'}`}
             >
-              {message.content}
+              <div className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] opacity-60">
+                {message.role === 'assistant' ? 'IndiCare' : 'You'}
+              </div>
+
+              <div className="whitespace-pre-wrap">
+                {message.content}
+                {message.streaming ? (
+                  <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-full bg-emerald-300 align-middle" />
+                ) : null}
+              </div>
             </div>
           ))}
 
-          {runtimeState.speaking ? (
-            <div className="max-w-[180px] rounded-3xl bg-slate-800 px-5 py-4 text-sm text-slate-300">
-              IndiCare is speaking...
-            </div>
-          ) : null}
-
           {runtimeState.listening ? (
-            <div className="max-w-[180px] rounded-3xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-200">
-              Listening...
+            <div className="max-w-[220px] rounded-[28px] border border-emerald-400/30 bg-emerald-400/10 px-6 py-5 text-sm text-emerald-200 shadow-[0_10px_30px_rgba(16,185,129,0.15)]">
+              Listening for speech...
             </div>
           ) : null}
 
@@ -96,10 +101,11 @@ export default function AssistantPage() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 px-6 py-5">
-        <div className="mx-auto flex max-w-4xl items-end gap-3 rounded-3xl border border-white/10 bg-slate-900 p-4">
+      <footer className="border-t border-white/10 bg-black/20 px-5 py-5 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-4xl items-end gap-3 rounded-[32px] border border-white/10 bg-[#151b2d] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
           <textarea
             value={input}
+            disabled={runtimeState.streaming}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey) {
@@ -108,22 +114,31 @@ export default function AssistantPage() {
               }
             }}
             placeholder="Message IndiCare..."
-            className="max-h-40 min-h-[56px] flex-1 resize-none bg-transparent text-[15px] outline-none placeholder:text-slate-500"
+            className="max-h-48 min-h-[64px] flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-7 outline-none placeholder:text-slate-500"
           />
 
           <button
             onClick={() => assistantRuntime.toggleListening()}
-            className={`rounded-2xl px-4 py-3 text-sm font-black ${runtimeState.listening ? 'bg-red-500 text-white' : 'bg-slate-800 text-slate-200'}`}
+            className={`rounded-2xl px-4 py-3 text-sm font-black transition ${runtimeState.listening ? 'bg-red-500 text-white shadow-[0_0_24px_rgba(239,68,68,0.5)]' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
           >
             {runtimeState.listening ? 'Stop voice' : 'Voice'}
           </button>
 
-          <button
-            onClick={sendMessage}
-            className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950"
-          >
-            Send
-          </button>
+          {runtimeState.streaming ? (
+            <button
+              onClick={() => assistantRuntime.interrupt()}
+              className="rounded-2xl bg-amber-400 px-5 py-3 text-sm font-black text-slate-950"
+            >
+              Interrupt
+            </button>
+          ) : (
+            <button
+              onClick={sendMessage}
+              className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_0_24px_rgba(52,211,153,0.35)]"
+            >
+              Send
+            </button>
+          )}
         </div>
       </footer>
     </main>
