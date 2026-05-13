@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { ActionsPanel, EvidenceGapsPanel } from '@/components/indicare/action-evidence-panels'
+import { DocumentUploadPanel } from '@/components/indicare/document-upload-panel'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getEvidenceGaps } from '@/lib/evidence/selectors'
@@ -31,19 +32,8 @@ export default async function DocumentsPage() {
       </section>
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <Card>
-          <SectionHeader eyebrow="Reg 44 upload" title="Upload or paste report text" description="Mock extraction converts findings into chronology links, staff actions and evidence requirements." />
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-[24px] border border-dashed border-blue-200 bg-blue-50/70 p-6">
-              <h3 className="text-lg font-black text-blue-950">Upload placeholder</h3>
-              <p className="mt-2 text-sm leading-7 text-blue-800">Drop PDF, Word or image report here when parsing is connected. Metadata and pasted text can be sent to the live Reg 44 endpoints.</p>
-              <button className="mt-5 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Choose file placeholder</button>
-            </div>
-            <div className="rounded-[24px] border border-slate-100 bg-slate-50/80 p-6">
-              <h3 className="text-lg font-black text-slate-950">Paste/import text placeholder</h3>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{reg44?.extractedText || 'Paste independent visitor text to extract findings.'}</p>
-              <button className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Run safe extraction</button>
-            </div>
-          </div>
+          <SectionHeader eyebrow="Document ingestion" title="Upload or paste report text" description="Uploads create document metadata, extraction status, version history and review-ready findings through the live OS endpoints." />
+          <DocumentUploadPanel />
           {reg44 ? (
             <div className="mt-6 space-y-3">
               {(reg44.extractedFindings || []).map((finding) => (

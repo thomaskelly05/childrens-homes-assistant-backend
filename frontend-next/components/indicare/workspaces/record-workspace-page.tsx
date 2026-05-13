@@ -11,6 +11,7 @@ import { WorkspaceLifecyclePanel } from './workspace-lifecycle-panel'
 import { WorkspaceSidePanel } from './workspace-side-panel'
 import { WorkspaceTabs } from './workspace-tabs'
 import { WorkspaceTimeline } from './workspace-timeline'
+import { WorkflowWritebackPanel } from './workflow-writeback-panel'
 
 type WorkspaceRecord = {
   id: string
@@ -65,6 +66,7 @@ export function RecordWorkspacePage({
     >
       <div className="space-y-5">
         <WorkspaceHeader title={record.title} status={lifecycle.status} context={record.description} />
+        <WorkflowWritebackPanel entityType={entityType} recordId={record.id} />
         <WorkspaceTabs tabs={tabs} />
         <Card>
           <SectionHeader eyebrow="Source record" title="Record details" description="This workspace uses the live source record where available and keeps original source type/source id visible for traceability." />
@@ -80,6 +82,14 @@ export function RecordWorkspacePage({
         <Card>
           <SectionHeader eyebrow="Chronology" title="Linked chronology" />
           <WorkspaceTimeline events={chronology} />
+        </Card>
+        <Card>
+          <SectionHeader eyebrow="Audit" title="Audit and record history" description="Workflow transitions, comments, evidence attachments and approvals are written to the OS audit and workflow event tables for this record." />
+          <div className="grid gap-3 md:grid-cols-3">
+            {['Workflow events', 'Record history', 'Change summaries'].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-600">{item}</div>
+            ))}
+          </div>
         </Card>
       </div>
     </FullScreenWorkspace>

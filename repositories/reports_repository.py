@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import Json, RealDictCursor
 
 from repositories.os_repository_utils import (
     build_scope_where,
@@ -55,10 +55,16 @@ def _normalise_report(row: dict[str, Any], config: dict[str, Any]) -> dict[str, 
         "date_range_start": isoformat(row.get("date_range_start") or row.get("period_start") or row.get("date_from")),
         "date_range_end": isoformat(row.get("date_range_end") or row.get("period_end") or row.get("date_to")),
         "generated_by": str(row.get("generated_by") or row.get("created_by") or "") or None,
+        "approved_by": str(row.get("approved_by") or "") or None,
+        "approved_at": isoformat(row.get("approved_at")),
         "created_at": isoformat(row.get("created_at") or row.get("generated_at")) or "",
         "updated_at": isoformat(row.get("updated_at") or row.get("generated_at")) or "",
         "body": _first(row, BODY_COLUMNS, ""),
         "citations": row.get("citations") or row.get("source_citations") or [],
+        "evidence_links": row.get("evidence_links") or (row.get("metadata") or {}).get("evidence_links") or [],
+        "review_comments": row.get("review_comments") or (row.get("metadata") or {}).get("review_comments") or [],
+        "export_history": row.get("export_history") or (row.get("metadata") or {}).get("export_history") or [],
+        "version": (row.get("metadata") or {}).get("version", 1),
         "metadata": row.get("metadata") or {},
     }
 
@@ -101,11 +107,16 @@ def list_reports(
                     "date_to",
                     "generated_by",
                     "created_by",
+                    "approved_by",
+                    "approved_at",
                     "created_at",
                     "updated_at",
                     "generated_at",
                     "citations",
                     "source_citations",
+                    "evidence_links",
+                    "review_comments",
+                    "export_history",
                     "metadata",
                 ]
                 if col in cols
@@ -186,8 +197,10 @@ def generate_report_draft(*, payload: dict[str, Any], chronology_items: list[dic
         "status": "draft",
         "body": body,
         "citations": citations,
+        "evidence_links": [item.get("id") for item in evidence[:50]],
         "evidence_gaps": evidence_gaps,
         "review_required": True,
+        "generated_by": payload.get("generated_by"),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -213,7 +226,24 @@ def save_report_draft(conn: Any, *, report_id: str, payload: dict[str, Any], cur
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
         "generated_at": datetime.now(timezone.utc),
-        "metadata": payload.get("metadata") or {"saved_from": report_id},
+        "date_range_start": payload.get("date_range_start") or payload.get("date_from"),
+        "date_range_end": payload.get("date_range_end") or payload.get("date_to"),
+        "period_start": payload.get("period_start") or payload.get("date_from"),
+        "period_end": payload.get("period_end") or payload.get("date_to"),
+        "citations": payload.get("citations") or payload.get("source_citations") or [],
+        "source_citations": payload.get("citations") or payload.get("source_citations") or [],
+        "evidence_links": payload.get("evidence_links") or payload.get("evidence_ids") or [],
+        "review_comments": payload.get("review_comments") or [],
+        "export_history": payload.get("export_history") or [],
+        "metadata": {
+            **(payload.get("metadata") or {}),
+            "saved_from": report_id,
+            "version": safe_int(payload.get("version")) or 1,
+            "citations": payload.get("citations") or payload.get("source_citations") or [],
+            "evidence_links": payload.get("evidence_links") or payload.get("evidence_ids") or [],
+            "review_comments": payload.get("review_comments") or [],
+            "export_history": payload.get("export_history") or [],
+        },
     }.items():
         if column in cols and value is not None:
             insert[column] = value
@@ -227,8 +257,68 @@ def save_report_draft(conn: Any, *, report_id: str, payload: dict[str, Any], cur
             VALUES ({", ".join(["%s"] * len(columns))})
             RETURNING *
             """,
-            tuple(insert[col] for col in columns),
+            tuple(Json(insert[col]) if col in {"metadata", "citations", "source_citations", "evidence_links", "review_comments", "export_history"} else insert[col] for col in columns),
         )
         row = cur.fetchone()
     return _normalise_report(dict(row), {"table": "ai_generated_reports", "source_type": "ai_generated_report"})
+
+
+def update_report_workflow(conn: Any, *, report_id: str, payload: dict[str, Any], current_user: dict[str, Any]) -> dict[str, Any]:
+    if not can_write_records(current_user):
+        raise HTTPException(status_code=403, detail="You do not have permission to update reports.")
+
+    report = get_report(conn, report_id=report_id, current_user=current_user)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    table_name = report["original_table"]
+    if not table_exists(conn, table_name):
+        raise HTTPException(status_code=400, detail="Report storage is not available.")
+    cols = table_columns(conn, table_name)
+
+    status = payload.get("status")
+    updates: list[str] = []
+    params: list[Any] = []
+    if status is not None:
+        status_col = first_col(cols, ["status", "workflow_status"])
+        if status_col:
+            updates.append(f"{quote_ident(status_col)} = %s")
+            params.append(str(status))
+    if "body" in payload:
+        body_col = first_col(cols, BODY_COLUMNS)
+        if body_col:
+            updates.append(f"{quote_ident(body_col)} = %s")
+            params.append(payload.get("body"))
+    if "title" in payload:
+        title_col = first_col(cols, TITLE_COLUMNS)
+        if title_col:
+            updates.append(f"{quote_ident(title_col)} = %s")
+            params.append(payload.get("title"))
+    if status in {"approved", "archived", "exported"}:
+        if "approved_by" in cols:
+            updates.append("approved_by = %s")
+            params.append(current_user_id(current_user))
+        if "approved_at" in cols:
+            updates.append("approved_at = NOW()")
+    if "updated_at" in cols:
+        updates.append("updated_at = NOW()")
+
+    if not updates:
+        raise HTTPException(status_code=400, detail="No writable report fields provided.")
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            f"""
+            UPDATE public.{quote_ident(table_name)}
+            SET {", ".join(updates)}
+            WHERE id::text = %s
+            RETURNING *
+            """,
+            tuple(params + [report["original_id"]]),
+        )
+        row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    config = next((item for item in REPORT_TABLES if item["table"] == table_name), {"table": table_name, "source_type": table_name})
+    return _normalise_report(dict(row), config)
 

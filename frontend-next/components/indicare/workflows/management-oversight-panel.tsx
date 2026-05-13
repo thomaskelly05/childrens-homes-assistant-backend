@@ -31,7 +31,7 @@ export function ManagementOversightPanel({ events, actions }: { events: Chronolo
         <Link key={event.id} href={`/chronology/${event.id}`} className="block rounded-2xl border border-amber-100 bg-white p-4 text-sm font-bold leading-6 text-slate-600">
           <span className="font-black text-slate-950">{event.title}</span>
           <br />
-          Manager oversight placeholder: mark reviewed, add evidence or create an action.
+          Open workspace to mark reviewed, add evidence, request amendment or create an action.
         </Link>
       ))}
     </div>
