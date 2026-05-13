@@ -1,25 +1,38 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import {
+  assistantRuntime,
+  AssistantMessage,
+  RuntimeState
+} from '@/lib/realtime/assistant-runtime'
 
 export default function AssistantPage() {
-  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([
-    {
-      role: 'assistant',
-      content: 'Hello. I am IndiCare Intelligence. How can I help today?'
-    }
-  ])
+  const [messages, setMessages] = useState<AssistantMessage[]>([])
+
+  const [runtimeState, setRuntimeState] = useState<RuntimeState>({
+    connected: false,
+    listening: false,
+    speaking: false
+  })
 
   const [input, setInput] = useState('')
-  const [connected, setConnected] = useState(false)
-  const [speaking, setSpeaking] = useState(false)
-  const [listening, setListening] = useState(false)
+
   const endRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/assistant/realtime/health`)
-      .then(() => setConnected(true))
-      .catch(() => setConnected(false))
+    assistantRuntime.connect()
+
+    const unsubscribeState = assistantRuntime.onState(setRuntimeState)
+
+    const unsubscribeMessages = assistantRuntime.onMessage((message) => {
+      setMessages((current) => [...current, message])
+    })
+
+    return () => {
+      unsubscribeState()
+      unsubscribeMessages()
+    }
   }, [])
 
   useEffect(() => {
@@ -30,30 +43,9 @@ export default function AssistantPage() {
     if (!input.trim()) return
 
     const next = input
-
-    setMessages((current) => [
-      ...current,
-      { role: 'user', content: next }
-    ])
-
     setInput('')
-    setSpeaking(true)
 
-    window.setTimeout(() => {
-      setMessages((current) => [
-        ...current,
-        {
-          role: 'assistant',
-          content: 'The unified realtime assistant runtime is now connected and ready for operational intelligence integration.'
-        }
-      ])
-
-      setSpeaking(false)
-    }, 900)
-  }
-
-  async function toggleVoice() {
-    setListening((value) => !value)
+    await assistantRuntime.sendMessage(next)
   }
 
   return (
@@ -67,25 +59,36 @@ export default function AssistantPage() {
         </div>
 
         <div className="flex items-center gap-3 text-sm">
-          <div className={`h-2.5 w-2.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-red-400'}`} />
-          {connected ? 'Realtime connected' : 'Realtime unavailable'}
+          <div
+            className={`h-2.5 w-2.5 rounded-full ${runtimeState.connected ? 'bg-emerald-400' : 'bg-red-400'}`}
+          />
+
+          {runtimeState.connected
+            ? 'Realtime connected'
+            : 'Realtime unavailable'}
         </div>
       </header>
 
       <section className="flex-1 overflow-y-auto px-6 py-6">
         <div className="mx-auto flex max-w-4xl flex-col gap-5">
-          {messages.map((message, index) => (
+          {messages.map((message) => (
             <div
-              key={`${message.role}-${index}`}
+              key={message.id}
               className={`max-w-[85%] rounded-3xl px-5 py-4 text-[15px] leading-7 ${message.role === 'assistant' ? 'bg-slate-800 text-white' : 'ml-auto bg-emerald-500 text-slate-950'}`}
             >
               {message.content}
             </div>
           ))}
 
-          {speaking ? (
-            <div className="max-w-[160px] rounded-3xl bg-slate-800 px-5 py-4 text-sm text-slate-300">
-              IndiCare is responding...
+          {runtimeState.speaking ? (
+            <div className="max-w-[180px] rounded-3xl bg-slate-800 px-5 py-4 text-sm text-slate-300">
+              IndiCare is speaking...
+            </div>
+          ) : null}
+
+          {runtimeState.listening ? (
+            <div className="max-w-[180px] rounded-3xl border border-emerald-400/40 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-200">
+              Listening...
             </div>
           ) : null}
 
@@ -98,15 +101,21 @@ export default function AssistantPage() {
           <textarea
             value={input}
             onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault()
+                sendMessage()
+              }
+            }}
             placeholder="Message IndiCare..."
             className="max-h-40 min-h-[56px] flex-1 resize-none bg-transparent text-[15px] outline-none placeholder:text-slate-500"
           />
 
           <button
-            onClick={toggleVoice}
-            className={`rounded-2xl px-4 py-3 text-sm font-black ${listening ? 'bg-red-500 text-white' : 'bg-slate-800 text-slate-200'}`}
+            onClick={() => assistantRuntime.toggleListening()}
+            className={`rounded-2xl px-4 py-3 text-sm font-black ${runtimeState.listening ? 'bg-red-500 text-white' : 'bg-slate-800 text-slate-200'}`}
           >
-            {listening ? 'Stop voice' : 'Voice'}
+            {runtimeState.listening ? 'Stop voice' : 'Voice'}
           </button>
 
           <button
