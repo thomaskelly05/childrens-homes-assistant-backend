@@ -11,23 +11,7 @@ import {
   RuntimeState
 } from '@/lib/realtime/assistant-runtime'
 
-const mockConversations = [
-  {
-    id: 'handover-review',
-    title: 'Evening handover review',
-    updatedAt: '2 mins ago'
-  },
-  {
-    id: 'safeguarding-patterns',
-    title: 'Safeguarding patterns',
-    updatedAt: '18 mins ago'
-  },
-  {
-    id: 'chronology-summary',
-    title: 'Chronology summary',
-    updatedAt: '1 hour ago'
-  }
-]
+import { useAssistantConversations } from '@/hooks/use-assistant-conversations'
 
 export default function AssistantPage() {
   const [messages, setMessages] = useState<AssistantMessage[]>([])
@@ -41,19 +25,41 @@ export default function AssistantPage() {
 
   const [input, setInput] = useState('')
 
+  const {
+    conversations,
+    activeConversation,
+    activeConversationId,
+    createConversation,
+    selectConversation,
+    saveConversation
+  } = useAssistantConversations()
+
   const endRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     assistantRuntime.connect()
 
     const unsubscribeState = assistantRuntime.onState(setRuntimeState)
-    const unsubscribeMessages = assistantRuntime.onMessages(setMessages)
+
+    const unsubscribeMessages = assistantRuntime.onMessages((nextMessages) => {
+      setMessages(nextMessages)
+
+      if (activeConversationId) {
+        saveConversation(activeConversationId, nextMessages)
+      }
+    })
 
     return () => {
       unsubscribeState()
       unsubscribeMessages()
     }
-  }, [])
+  }, [activeConversationId, saveConversation])
+
+  useEffect(() => {
+    if (activeConversation?.messages?.length) {
+      setMessages(activeConversation.messages)
+    }
+  }, [activeConversation])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -68,11 +74,22 @@ export default function AssistantPage() {
     await assistantRuntime.sendMessage(next)
   }
 
+  function handleCreateConversation() {
+    createConversation()
+    setMessages([])
+  }
+
   return (
     <main className="flex h-screen overflow-hidden bg-[#0b1020] text-white">
       <ConversationSidebar
-        conversations={mockConversations}
-        activeConversationId="handover-review"
+        conversations={conversations.map((conversation) => ({
+          id: conversation.id,
+          title: conversation.title,
+          updatedAt: new Date(conversation.updatedAt).toLocaleString()
+        }))}
+        activeConversationId={activeConversationId}
+        onSelect={selectConversation}
+        onCreateConversation={handleCreateConversation}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
