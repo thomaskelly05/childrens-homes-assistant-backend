@@ -1,23 +1,27 @@
 import { ActionsPanel, EvidenceGapsPanel } from '@/components/indicare/action-evidence-panels'
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, PageHeader, SectionHeader, StatCard } from '@/components/indicare/ui'
 import { ManagementOversightPanel } from '@/components/indicare/workflows/management-oversight-panel'
 import { NextBestActions } from '@/components/indicare/workflows/next-best-actions'
-import { getChronologyEvents } from '@/lib/chronology/selectors'
-import { getCareActions, getEvidenceGaps, getOpenCareActions } from '@/lib/evidence/selectors'
+import { getEvidenceGaps } from '@/lib/evidence/selectors'
+import { getOsActions } from '@/lib/os-api/actions'
+import { getOsChronology } from '@/lib/os-api/chronology'
 
-export default function ActionsPage() {
-  const actions = getCareActions()
-  const openActions = getOpenCareActions()
+export default async function ActionsPage() {
+  const [actionsResult, chronologyResult] = await Promise.all([getOsActions(), getOsChronology()])
+  const actions = actionsResult.data
+  const openActions = actions.filter((action) => action.status !== 'completed')
   const gaps = getEvidenceGaps()
-  const events = getChronologyEvents()
+  const events = chronologyResult.data
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Actions"
         title="Care actions and evidence gathering"
-        description="Foundation action register for Reg 44 findings, safeguarding follow-up, LAC review evidence and manager oversight. Completion and attachment controls are placeholders."
+        description="Live action register for Reg 44 findings, safeguarding follow-up, LAC review evidence and management oversight."
       />
+      <LiveDataStatus result={actionsResult} />
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard label="Actions" value={actions.length} />
         <StatCard label="Open" value={openActions.length} />
