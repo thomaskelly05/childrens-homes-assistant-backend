@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { AlertTriangle, ClipboardList, FileText, ShieldAlert, Sparkles } from 'lucide-react'
 
 import { citationHref } from '@/lib/assistant-core/citations'
+import { SourceCitationChip } from '@/components/indicare/citations/source-citation-chip'
 import { contextSummary } from '@/lib/assistant-core/context'
 import { queryAssistant } from '@/lib/assistant-core/client'
 import { suggestedPromptsForWorkspace } from '@/lib/assistant-core/retrieval'
@@ -132,11 +133,20 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
       {response?.citations.length ? (
         <div className="mt-4 rounded-[22px] border border-slate-200 bg-white p-4">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Citations</p>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {response.citations.slice(0, 5).map((citation, index) => (
-              <Link key={`${citation.source_type}-${citation.source_id}-${index}`} href={citationHref(citation)} className="block rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                {citation.label}
-              </Link>
+              <SourceCitationChip
+                key={`${citation.source_type}-${citation.source_id}-${index}`}
+                label={citation.label}
+                href={citationHref(citation)}
+                sourceType={citation.source_type}
+                sourceId={citation.source_id}
+                sourceDate={citation.date || undefined}
+                staffName={citation.staff_name || undefined}
+                youngPersonName={citation.young_person_name || undefined}
+                confidence={citation.confidence}
+                excerpt={citation.excerpt}
+              />
             ))}
           </div>
         </div>

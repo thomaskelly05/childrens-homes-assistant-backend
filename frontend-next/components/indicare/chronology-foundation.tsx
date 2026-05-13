@@ -12,7 +12,7 @@ import { ChronologyEvent, ChronologyFilter } from '@/lib/chronology/types'
 import { getEvidenceItems } from '@/lib/evidence/selectors'
 import { getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
 import { mapEventToRegulatoryReferences } from '@/lib/regulatory-framework/mapping'
-import { routeToChronologyEvent, routeToSourceRecord } from '@/lib/routes/os-routes'
+import { routeToAction, routeToChronologyEvent, routeToEvidence, routeToSourceRecord } from '@/lib/routes/os-routes'
 
 const savedViews: Array<{ label: string; filters: ChronologyFilter }> = [
   { label: 'All chronology', filters: {} },
@@ -166,13 +166,16 @@ export function ChronologyFoundation({
                   <QualityStandardBadges references={references} limit={5} />
                 </div>
                 <div className="mt-4">
-                  <SourceCitationChip label={event.citationLabel} href={routeToChronologyEvent(event.id)} sourceDate={formatDate(event.dateTime)} confidence={event.regulationLinks.some((link) => link.confidence === 'direct') ? 'direct' : 'supporting'} reviewRequired={event.tags.includes('manager-review') || event.tags.includes('overdue-manager-review')} />
+                  <SourceCitationChip label={event.citationLabel} href={routeToChronologyEvent(event.id)} sourceType={event.sourceType} sourceId={event.sourceId} sourceDate={formatDate(event.dateTime)} confidence={event.regulationLinks.some((link) => link.confidence === 'direct') ? 'direct' : 'supporting'} reviewRequired={event.tags.includes('manager-review') || event.tags.includes('overdue-manager-review')} excerpt={event.summary} />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" onClick={() => setSelectedEventId(event.id)} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Ask IndiCare about this</button>
                   <Link href="/reports" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Use in report</Link>
                   <Link href={routeToChronologyEvent(event.id)} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open detail</Link>
                   <Link href={routeToSourceRecord(event.sourceType, event.sourceId)} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open source record</Link>
+                  <Link href={`/chronology?cluster=${encodeURIComponent(event.id)}`} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Show surrounding events</Link>
+                  {event.actionIds[0] ? <Link href={routeToAction(event.actionIds[0])} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open linked action</Link> : null}
+                  {event.evidenceIds[0] ? <Link href={routeToEvidence(event.evidenceIds[0])} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open linked evidence</Link> : null}
                 </div>
               </div>
             </article>
@@ -189,6 +192,13 @@ export function ChronologyFoundation({
           defaultQuestion={selectedEvent ? `Summarise "${selectedEvent.title}" with citations.` : 'Summarise safeguarding concerns in the last 30 days.'}
           prompts={selectedEvent ? ['What actions are linked?', 'What evidence is attached?', 'What would Ofsted want to see here?'] : undefined}
         />
+        <section className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+          <h2 className="text-lg font-black text-slate-950">Relationship graph</h2>
+          <div className="mt-4 grid gap-2 text-sm font-bold text-slate-600">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">Chronology breadcrumbs: child - source record - evidence - actions - regulatory references.</div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">Drilldowns: show linked records, inspection relevance and surrounding events from the selected event.</div>
+          </div>
+        </section>
         <section className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
           <h2 className="text-lg font-black text-slate-950">Actions required</h2>
           <div className="mt-4"><ActionsPanel actions={panelActions} /></div>

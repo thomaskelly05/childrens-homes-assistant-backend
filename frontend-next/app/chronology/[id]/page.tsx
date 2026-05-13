@@ -65,7 +65,7 @@ export default async function ChronologyDetailPage({ params }: { params: Promise
           </div>
           <div className="mt-6">
             <SectionHeader eyebrow="Traceability" title="Source citations" />
-            <CitationList citations={[{ label: event.citationLabel, href: `/chronology/${event.id}`, sourceDate: new Date(event.dateTime).toLocaleDateString('en-GB'), staffName: linkedStaff.map((staff) => staff ? fullName(staff) : '').join(', '), youngPersonName: linkedPeople.map((person) => person ? fullName(person) : '').join(', '), confidence: event.regulationLinks.some((link) => link.confidence === 'direct') ? 'direct record' : 'supporting record', reviewRequired: event.tags.includes('manager-review') || event.tags.includes('overdue-manager-review') }]} />
+            <CitationList citations={[{ label: event.citationLabel, href: `/chronology/${event.id}`, sourceType: event.sourceType, sourceId: event.sourceId, sourceDate: new Date(event.dateTime).toLocaleDateString('en-GB'), staffName: linkedStaff.map((staff) => staff ? fullName(staff) : '').join(', '), youngPersonName: linkedPeople.map((person) => person ? fullName(person) : '').join(', '), confidence: event.regulationLinks.some((link) => link.confidence === 'direct') ? 'direct record' : 'supporting record', reviewRequired: event.tags.includes('manager-review') || event.tags.includes('overdue-manager-review'), excerpt: event.summary }]} />
           </div>
         </Card>
         <div className="space-y-6">

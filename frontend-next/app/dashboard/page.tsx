@@ -6,6 +6,7 @@ import { getDocumentsNeedingReview } from '@/lib/documents/selectors'
 import { getEvidenceGaps, getOpenCareActions } from '@/lib/evidence/selectors'
 import { indicareData } from '@/lib/indicare/demo-data'
 import { dashboardMetrics, fullName, getStaffById, getYoungPersonById, sortByDateDesc } from '@/lib/indicare/selectors'
+import { getEntityRoute } from '@/lib/navigation/entity-resolver'
 
 export default function DashboardPage() {
   const metrics = dashboardMetrics()
@@ -25,9 +26,9 @@ export default function DashboardPage() {
   const lacReviewsDue = chronologyEvents.filter((event) => event.eventType === 'lac_review' && event.actionIds.length)
   const reg45Prep = getRegulationLinkedEvents(chronologyEvents, 'Regulation 45')
   const priorityActions = [
-    { title: 'Review Noah critical risk controls', body: 'Missing/exploitation risk review is overdue and linked to a new safeguarding concern.', href: '/young-people/yp-noah' },
-    { title: 'Record strategy discussion outcome', body: 'Appointment outcome is pending and should update safeguarding chronology.', href: '/appointments' },
-    { title: 'Confirm Jamie medication prompt', body: 'Evening administration history contains an overdue entry for review.', href: '/young-people/yp-jamie' }
+    { title: 'Review Noah critical risk controls', body: 'Missing/exploitation risk review is overdue and linked to a new safeguarding concern.', entity: { entity_type: 'young_person', entity_id: 'yp-noah' } },
+    { title: 'Record strategy discussion outcome', body: 'Appointment outcome is pending and should update safeguarding chronology.', entity: { entity_type: 'appointment', entity_id: 'appt-strategy-noah', linked_child_id: 'yp-noah' } },
+    { title: 'Confirm Jamie medication prompt', body: 'Evening administration history contains an overdue entry for review.', entity: { entity_type: 'medication_record', entity_id: 'med-jamie-evening', linked_child_id: 'yp-jamie' } }
   ]
 
   return (
@@ -40,28 +41,28 @@ export default function DashboardPage() {
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Current young people" value={metrics.currentYoungPeople} detail="Active care records" href="/young-people" />
-        <StatCard label="Available beds" value={metrics.availableBeds} detail="Based on demo capacity of 7" href="/placements" />
-        <StatCard label="High-risk young people" value={metrics.highRisk} detail="High or critical risk" href="/risk-assessments" />
-        <StatCard label="Open incidents" value={metrics.openIncidents} detail="Active or review status" href="/incidents" />
-        <StatCard label="Overdue reports" value={metrics.overdueReports} detail="Need manager action" href="/reports" />
-        <StatCard label="Upcoming appointments" value={metrics.upcomingAppointments} detail="Open or review appointments" href="/appointments" />
-        <StatCard label="Medication alerts" value={metrics.medicationAlerts} detail="Missed or overdue administration" href="/medication" />
-        <StatCard label="Safeguarding concerns" value={metrics.safeguardingConcerns} detail="Active or monitoring" href="/safeguarding" />
+        <StatCard label="Current young people" value={metrics.currentYoungPeople} detail="Active care records" href="/young-people" entity={{ entity_type: 'young_person' }} />
+        <StatCard label="Available beds" value={metrics.availableBeds} detail="Based on demo capacity of 7" href="/placements" entity={{ entity_type: 'home_record', entity_id: 'oak-house' }} />
+        <StatCard label="High-risk young people" value={metrics.highRisk} detail="High or critical risk" href="/risk-assessments" entity={{ entity_type: 'risk_assessment' }} />
+        <StatCard label="Open incidents" value={metrics.openIncidents} detail="Active or review status" href="/incidents" entity={{ entity_type: 'incident' }} />
+        <StatCard label="Overdue reports" value={metrics.overdueReports} detail="Need manager action" href="/reports" entity={{ entity_type: 'report' }} />
+        <StatCard label="Upcoming appointments" value={metrics.upcomingAppointments} detail="Open or review appointments" href="/appointments" entity={{ entity_type: 'appointment' }} />
+        <StatCard label="Medication alerts" value={metrics.medicationAlerts} detail="Missed or overdue administration" href="/medication" entity={{ entity_type: 'medication_record' }} />
+        <StatCard label="Safeguarding concerns" value={metrics.safeguardingConcerns} detail="Active or monitoring" href="/safeguarding" entity={{ entity_type: 'safeguarding_concern' }} />
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard label="Chronology activity" value={chronologyEvents.length} detail="Connected events ready for filtering" href="/chronology" />
-        <StatCard label="Open Reg 44 actions" value={reg44Actions.length} detail="Independent visitor action plan" href="/actions" />
-        <StatCard label="Evidence gaps" value={evidenceGaps.length} detail="Evidence still required" href="/evidence" />
-        <StatCard label="Ofsted readiness" value="Open" detail="SCCIF and regulatory evidence view" href="/ofsted-readiness" />
-        <StatCard label="Regulatory framework" value="Mapped" detail="Regulations, Quality Standards and SCCIF" href="/regulatory" />
-        <StatCard label="Safeguarding chronology alerts" value={chronologySafeguarding.length} detail="Chronology events with safeguarding flags" href="/chronology" />
-        <StatCard label="Overdue manager reviews" value={overdueManagerReviews.length} detail="Manager oversight required" href="/chronology" />
-        <StatCard label="Documents needing review" value={reviewDocuments.length} detail="Regulatory or care documents" href="/documents" />
-        <StatCard label="LAC review actions" value={lacReviewsDue.length} detail="Review evidence gathering" href="/reports" />
-        <StatCard label="Reg 45 preparation" value={reg45Prep.length} detail="Quality of care evidence events" href="/reports" />
-        <StatCard label="Reports due" value={metrics.overdueReports} detail="Report register requiring action" href="/reports" />
+        <StatCard label="Chronology activity" value={chronologyEvents.length} detail="Connected events ready for filtering" href="/chronology" entity={{ entity_type: 'chronology_event' }} />
+        <StatCard label="Open Reg 44 actions" value={reg44Actions.length} detail="Independent visitor action plan" href="/actions" entity={{ entity_type: 'reg44_finding' }} />
+        <StatCard label="Evidence gaps" value={evidenceGaps.length} detail="Evidence still required" href="/evidence" entity={{ entity_type: 'evidence_gap' }} />
+        <StatCard label="Ofsted readiness" value="Open" detail="SCCIF and regulatory evidence view" href="/ofsted-readiness" entity={{ entity_type: 'ofsted_concern' }} />
+        <StatCard label="Regulatory framework" value="Mapped" detail="Regulations, Quality Standards and SCCIF" href="/regulatory" entity={{ entity_type: 'regulatory_reference' }} />
+        <StatCard label="Safeguarding chronology alerts" value={chronologySafeguarding.length} detail="Chronology events with safeguarding flags" href="/chronology" entity={{ entity_type: 'safeguarding_concern' }} />
+        <StatCard label="Overdue manager reviews" value={overdueManagerReviews.length} detail="Manager oversight required" href="/chronology" entity={{ entity_type: 'handover', entity_id: 'manager-reviews' }} />
+        <StatCard label="Documents needing review" value={reviewDocuments.length} detail="Regulatory or care documents" href="/documents" entity={{ entity_type: 'document' }} />
+        <StatCard label="LAC review actions" value={lacReviewsDue.length} detail="Review evidence gathering" href="/reports" entity={{ entity_type: 'lac_review' }} />
+        <StatCard label="Reg 45 preparation" value={reg45Prep.length} detail="Quality of care evidence events" href="/reports" entity={{ entity_type: 'reg45_section' }} />
+        <StatCard label="Reports due" value={metrics.overdueReports} detail="Report register requiring action" href="/reports" entity={{ entity_type: 'report' }} />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
@@ -69,7 +70,7 @@ export default function DashboardPage() {
           <SectionHeader eyebrow="Today" title="Shift overview" description="Operational records that need handover awareness today." />
           <div className="grid gap-4 md:grid-cols-2">
             {youngPeople.map((person) => (
-              <Link key={person.id} href={`/young-people/${person.id}`} className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5 transition hover:bg-white hover:shadow-lg">
+              <Link key={person.id} href={getEntityRoute({ entity_type: 'young_person', entity_id: person.id })} className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5 transition hover:bg-white hover:shadow-lg">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-black tracking-[-0.03em] text-slate-950">{person.preferredName}</h3>
@@ -86,7 +87,7 @@ export default function DashboardPage() {
         <Card>
           <SectionHeader eyebrow="Priority" title="Actions required" />
           <div className="space-y-3">
-            {priorityActions.map((action) => <AlertCard key={action.title} {...action} />)}
+            {priorityActions.map((action) => <AlertCard key={action.title} {...action} href={getEntityRoute(action.entity)} />)}
           </div>
         </Card>
       </section>
@@ -98,7 +99,7 @@ export default function DashboardPage() {
             {recentIncidents.map((incident) => {
               const person = getYoungPersonById(incident.youngPersonId)
               return (
-                <Link key={incident.id} href={`/incidents/${incident.id}`} className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-5">
+                <Link key={incident.id} href={getEntityRoute({ entity_type: 'incident', entity_id: incident.id, linked_child_id: incident.youngPersonId })} className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-5 transition hover:bg-white hover:shadow-lg">
                   <div className="flex flex-wrap items-center gap-3">
                     <RiskBadge value={incident.severity} />
                     <StatusBadge value={incident.status} />
@@ -119,7 +120,7 @@ export default function DashboardPage() {
               const person = getYoungPersonById(appointment.youngPersonId)
               const staff = getStaffById(appointment.staffId)
               return (
-                <Link key={appointment.id} href="/appointments" className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-5">
+                <Link key={appointment.id} href={getEntityRoute({ entity_type: 'appointment', entity_id: appointment.id, linked_child_id: appointment.youngPersonId })} className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-5 transition hover:bg-white hover:shadow-lg">
                   <div className="flex flex-wrap items-center gap-3">
                     <StatusBadge value={appointment.status} />
                     <span className="text-xs font-bold text-slate-400">{new Date(appointment.dateTime).toLocaleString('en-GB')}</span>
@@ -142,7 +143,7 @@ export default function DashboardPage() {
               title: `${getYoungPersonById(log.youngPersonId)?.preferredName || 'Unknown young person'} · ${log.shift} shift`,
               date: log.date,
               body: `${log.presentation} Actions: ${log.followUpActions?.join(', ') || 'none'}.`,
-              href: `/young-people/${log.youngPersonId}`
+              href: getEntityRoute({ entity_type: 'daily_record', entity_id: log.id, linked_child_id: log.youngPersonId })
             }))}
           />
         </Card>
@@ -154,7 +155,7 @@ export default function DashboardPage() {
               title: `${getYoungPersonById(event.youngPersonId)?.preferredName || 'Unknown young person'} · ${event.concernType}`,
               date: event.date,
               body: event.actionTaken,
-              href: `/young-people/${event.youngPersonId}`
+              href: getEntityRoute({ entity_type: 'safeguarding_concern', entity_id: event.id, linked_child_id: event.youngPersonId })
             }))}
           />
         </Card>
@@ -162,7 +163,7 @@ export default function DashboardPage() {
           <SectionHeader eyebrow="Reports" title="Deadlines" />
           <div className="space-y-4">
             {reports.map((report) => (
-              <Link key={report.id} href={`/reports/${report.id}`} className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-5">
+              <Link key={report.id} href={getEntityRoute({ entity_type: report.type.toLowerCase().includes('lac') ? 'lac_review' : 'report', entity_id: report.id, linked_child_id: report.youngPersonId })} className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-5 transition hover:bg-white hover:shadow-lg">
                 <StatusBadge value={report.status} />
                 <h3 className="mt-3 text-lg font-black text-slate-950">{report.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">{report.type} · {report.dateRangeStart} to {report.dateRangeEnd}</p>

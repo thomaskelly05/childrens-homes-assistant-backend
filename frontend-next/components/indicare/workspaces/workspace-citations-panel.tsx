@@ -7,8 +7,11 @@ export function WorkspaceCitationsPanel({ events }: { events: ChronologyEvent[] 
       citations={events.slice(0, 8).map((event) => ({
         label: event.citationLabel,
         href: `/chronology/${encodeURIComponent(event.id)}`,
+        sourceType: event.sourceType,
+        sourceId: event.sourceId,
         sourceDate: new Date(event.dateTime).toLocaleDateString('en-GB'),
-        reviewRequired: event.tags.includes('manager-review')
+        reviewRequired: event.tags.includes('manager-review'),
+        excerpt: event.summary
       }))}
     />
   )

@@ -28,11 +28,14 @@ import { ReactNode } from 'react'
 
 import { ContextualAssistantPanel } from '@/components/indicare/embedded-assistant/contextual-assistant-panel'
 import { CommandSearch } from '@/components/indicare/command-search'
+import { ContextualOperationalSidebar } from '@/components/indicare/contextual-operational-sidebar'
+import { MobileNav } from '@/components/mobile-nav'
 import { useAuth } from '@/contexts/auth-context'
 import { buildAssistantContext } from '@/lib/assistant-core/context'
 import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permissions'
 import { indicareData } from '@/lib/indicare/demo-data'
 import { getYoungPersonById } from '@/lib/indicare/selectors'
+import { entityContextFromPath } from '@/lib/navigation/entity-resolver'
 
 const navItems = [
   { section: 'Home', href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['records:read'] },
@@ -94,6 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { status, user, logout } = useAuth()
   const selectedId = selectedYoungPersonId(pathname)
   const selectedPerson = selectedId ? getYoungPersonById(selectedId) : undefined
+  const selectedEntityContext = entityContextFromPath(pathname)
   const pageTitle = selectedPerson ? `${selectedPerson.preferredName}'s record` : titleFromPath(pathname)
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date('2026-05-13T12:00:00.000Z'))
   const isPublicPage = pathname === '/login' || pathname.startsWith('/login/') || pathname === '/unauthorized'
@@ -219,7 +223,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         <div className="grid min-h-0 flex-1 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <main className="min-w-0 px-4 py-6 md:px-8 md:py-8">{children}</main>
+          <main className="min-w-0 px-4 py-6 pb-28 md:px-8 md:py-8">{children}</main>
           <aside className="hidden border-l border-slate-200/80 bg-[#f7f9fc] p-5 xl:block">
             <div className="sticky top-[92px] space-y-5">
               <ContextualAssistantPanel
@@ -228,13 +232,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                   route: pathname,
                   pageTitle,
                   selectedYoungPersonId: selectedId,
+                  selectedRecordId: selectedEntityContext?.selected_record_id,
+                  selectedRecordType: selectedEntityContext?.selected_record_type,
                   selectedRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined
                 })}
               />
+              <ContextualOperationalSidebar pathname={pathname} />
             </div>
           </aside>
         </div>
       </div>
+      <MobileNav />
     </div>
   )
 }

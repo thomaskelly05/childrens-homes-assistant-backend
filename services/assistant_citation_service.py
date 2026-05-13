@@ -14,17 +14,43 @@ def route_for_source(source_type: str, source_id: str, source: dict[str, Any] | 
         return str(source["route"])
     if source.get("source_url"):
         return str(source["source_url"])
-    if source_type in {"chronology", "daily_log", "care_record", "incident", "safeguarding", "risk_assessment", "risk_review"}:
-        return f"/chronology?source={source_type}:{source_id}"
+    if source_type == "chronology":
+        return f"/chronology/{source_id}"
+    if source_type in {"daily_log", "care_record"}:
+        return f"/daily-logs/{source_id}"
+    if source_type == "incident":
+        return f"/incidents/{source_id}"
+    if source_type in {"safeguarding", "safeguarding_event", "safeguarding_concern"}:
+        return f"/safeguarding/{source_id}"
+    if source_type in {"risk_assessment", "risk_review"}:
+        return f"/risk-assessments/{source_id}"
+    if source_type in {"medication", "medication_record"}:
+        return f"/medication/{source_id}"
+    if source_type in {"health", "health_record"}:
+        return f"/health/{source_id}"
+    if source_type in {"keywork", "keywork_session", "direct_work"}:
+        return f"/keywork/{source_id}"
+    if source_type in {"appointment", "meeting"}:
+        return f"/appointments/{source_id}"
+    if source_type in {"missing_episode"}:
+        return f"/incidents/{source_id}"
     if source_type in {"action", "task", "universal_task", "manager_action", "inspection_action", "reg44_report_action"}:
         return f"/actions/{source_id}"
     if source_type in {"evidence", "inspection_evidence_fact", "inspection_evidence_note", "record_evidence_link"}:
         return f"/evidence/{source_id}"
     if source_type in {"document", "statutory_document", "child_document", "reg44_import"}:
         return f"/documents/{source_id}"
-    if source_type in {"report", "ai_generated_report", "reg45_report", "ofsted_report"}:
+    if source_type in {"reg44", "reg44_report", "reg44_finding"}:
+        return f"/documents/regulatory/reg44/{source_id}"
+    if source_type in {"reg45", "reg45_report", "reg45_section"}:
+        return f"/reports/reg45/{source_id}"
+    if source_type == "lac_review":
+        return f"/reports/lac-review/{source_id}"
+    if source_type in {"report", "ai_generated_report", "ofsted_report"}:
         return f"/reports/{source_id}"
-    return f"/os/retrieval/sources?source={source_type}:{source_id}"
+    if source_type in {"staff", "staff_record"}:
+        return f"/staff/{source_id}/workspace"
+    return f"/chronology?source={source_type}:{source_id}"
 
 
 def citation_label(source: dict[str, Any], index: int) -> str:
