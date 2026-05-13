@@ -34,6 +34,7 @@ import { getYoungPersonById } from '@/lib/indicare/selectors'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['records:read'] },
   { href: '/young-people', label: 'Young People', icon: UserRound, permissions: ['records:read'] },
+  { href: '/chronology', label: 'Chronology', icon: Search, permissions: ['records:read'] },
   { href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },
   { href: '/placements', label: 'Placements', icon: Home, permissions: ['records:read'] },
   { href: '/daily-logs', label: 'Daily Logs', icon: NotebookTabs, permissions: ['records:read'] },
@@ -45,6 +46,8 @@ const navItems = [
   { href: '/appointments', label: 'Appointments', icon: CalendarDays, permissions: ['records:read'] },
   { href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
   { href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
+  { href: '/actions', label: 'Actions', icon: ClipboardCheck, permissions: ['records:read'] },
+  { href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'] },
   { href: '/assistant', label: 'Assistant', icon: Sparkles, permissions: ['assistant:access'] },
   { href: '/settings', label: 'Settings', icon: Settings, permissions: ['settings:read', 'settings:manage'] }
 ]
@@ -52,7 +55,7 @@ const navItems = [
 function selectedYoungPersonId(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
   if (parts[0] === 'young-people' && parts[1]) return parts[1]
-  const linkedCollections = ['daily-logs', 'incidents', 'safeguarding', 'risk-assessments', 'medication', 'keywork', 'appointments', 'reports', 'documents']
+  const linkedCollections = ['daily-logs', 'incidents', 'safeguarding', 'risk-assessments', 'medication', 'keywork', 'appointments', 'reports', 'documents', 'chronology']
   if (linkedCollections.includes(parts[0] || '')) {
     const recordId = parts[1]
     if (!recordId) return undefined

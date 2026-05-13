@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { RecordQuestionPanel } from '@/components/indicare/record-question-panel'
 import { AlertCard, Card, DataTable, EmptyState, PageHeader, RecordTimeline, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { buildOfstedEvidenceOutline, buildRiskReview, buildSafeguardingChronology, buildWeeklyCareSummary } from '@/lib/indicare/reports'
 import { fullName, getStaffById, getYoungPersonSummary } from '@/lib/indicare/selectors'
@@ -11,7 +12,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
   if (!summary) notFound()
 
   const person = summary.youngPerson
-  const tabs = ['Overview', 'Daily Logs', 'Incidents', 'Risk', 'Safeguarding', 'Medication', 'Keywork', 'Appointments', 'Documents', 'Reports', 'Audit']
+  const tabs = ['Overview', 'Chronology', 'Daily Logs', 'Incidents', 'Risk', 'Safeguarding', 'Medication', 'Keywork', 'Appointments', 'Documents', 'Reports', 'Audit']
   const weekly = buildWeeklyCareSummary(id)
   const risk = buildRiskReview(id)
   const safeguarding = buildSafeguardingChronology(id)
@@ -28,7 +29,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
 
       <div className="flex gap-2 overflow-auto rounded-[24px] border border-white/70 bg-white/80 p-2 shadow-sm">
         {tabs.map((tab, index) => (
-          <a key={tab} href={`#${tab.toLowerCase().replace(/\s+/g, '-')}`} className={`whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black ${index === 0 ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>{tab}</a>
+          <Link key={tab} href={tab === 'Chronology' ? `/young-people/${id}/chronology` : `#${tab.toLowerCase().replace(/\s+/g, '-')}`} className={`whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black ${index === 0 ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>{tab}</Link>
         ))}
       </div>
 
@@ -77,8 +78,11 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
         </Card>
       </section>
 
+      <RecordQuestionPanel scope={{ youngPersonIds: [id], dateFrom: '2026-05-07', dateTo: '2026-05-13' }} title={`Ask IndiCare about ${person.preferredName}'s records`} defaultQuestion={`What has changed for ${person.preferredName} this week?`} />
+
       <Card>
-        <SectionHeader eyebrow="Timeline" title="Recent joined-up timeline" />
+        <SectionHeader eyebrow="Timeline" title="Recent joined-up timeline" description="Open the full chronology for source citations, evidence gaps, actions and report-ready filtering." />
+        <Link href={`/young-people/${id}/chronology`} className="mb-5 inline-flex rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open full chronology</Link>
         <RecordTimeline
           items={[
             ...summary.dailyLogs.map((log) => ({ id: log.id, title: `${log.shift} daily log`, date: log.date, body: log.presentation })),
