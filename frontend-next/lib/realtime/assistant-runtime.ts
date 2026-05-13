@@ -26,6 +26,15 @@ function messageId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+function welcomeMessage(): AssistantMessage {
+  return {
+    id: messageId(),
+    role: 'assistant',
+    content: 'Hello. I am IndiCare Intelligence. How can I help today?',
+    createdAt: new Date().toISOString()
+  }
+}
+
 export class AssistantRuntime {
   private state: RuntimeState = {
     connected: false,
@@ -34,14 +43,7 @@ export class AssistantRuntime {
     streaming: false
   }
 
-  private messages: AssistantMessage[] = [
-    {
-      id: messageId(),
-      role: 'assistant',
-      content: 'Hello. I am IndiCare Intelligence. How can I help today?',
-      createdAt: new Date().toISOString()
-    }
-  ]
+  private messages: AssistantMessage[] = [welcomeMessage()]
 
   private listeners = new Set<(state: RuntimeState) => void>()
   private messageListeners = new Set<(messages: AssistantMessage[]) => void>()
@@ -80,6 +82,18 @@ export class AssistantRuntime {
       this.emit()
       this.emitMessages()
     }
+  }
+
+  loadMessages(messages: AssistantMessage[]) {
+    this.interrupt()
+    this.messages = messages.length ? messages : [welcomeMessage()]
+    this.emitMessages()
+  }
+
+  resetConversation() {
+    this.interrupt()
+    this.messages = [welcomeMessage()]
+    this.emitMessages()
   }
 
   disconnect() {
