@@ -18,7 +18,9 @@ import app as app_module  # noqa: E402
 import routers.auth_routes as auth_routes  # noqa: E402
 import routers.mfa_routes as mfa_routes  # noqa: E402
 import auth.current_user as current_user_module  # noqa: E402
+import auth.passwords as password_module  # noqa: E402
 import auth.legal_acceptance as legal_acceptance_module  # noqa: E402
+import core.lifespan as lifespan_module  # noqa: E402
 import db.legal_acceptance_db as legal_acceptance_db  # noqa: E402
 
 TEST_USER_ID = 5
@@ -65,16 +67,24 @@ def client(monkeypatch, fake_state):
     async def _bypass_csrf_dispatch(self, request, call_next):
         return await call_next(request)
 
-    monkeypatch.setattr(app_module.CSRFMiddleware, "dispatch", _bypass_csrf_dispatch)
+    csrf_middleware = getattr(app_module, "CSRFMiddleware", None)
+    if csrf_middleware is not None:
+        monkeypatch.setattr(csrf_middleware, "dispatch", _bypass_csrf_dispatch)
 
     # -----------------------------
     # App startup / shutdown mocks
     # -----------------------------
-    monkeypatch.setattr(app_module, "init_db_pool", lambda: None)
-    monkeypatch.setattr(app_module, "close_db_pool", lambda: None)
-    monkeypatch.setattr(app_module, "init_legal_acceptance_table", lambda: None)
-    monkeypatch.setattr(app_module, "init_mfa_tables", lambda: None)
-    monkeypatch.setattr(app_module, "init_passkeys_table", lambda: None)
+    monkeypatch.setattr(app_module, "init_db_pool", lambda: None, raising=False)
+    monkeypatch.setattr(app_module, "close_db_pool", lambda: None, raising=False)
+    monkeypatch.setattr(app_module, "init_legal_acceptance_table", lambda: None, raising=False)
+    monkeypatch.setattr(app_module, "init_mfa_tables", lambda: None, raising=False)
+    monkeypatch.setattr(app_module, "init_passkeys_table", lambda: None, raising=False)
+    monkeypatch.setattr(lifespan_module, "init_db_pool", lambda: None)
+    monkeypatch.setattr(lifespan_module, "close_db_pool", lambda: None)
+    monkeypatch.setattr(lifespan_module, "init_legal_acceptance_table", lambda: None)
+    monkeypatch.setattr(lifespan_module, "init_mfa_tables", lambda: None)
+    monkeypatch.setattr(lifespan_module, "init_passkeys_table", lambda: None)
+    monkeypatch.setattr(lifespan_module, "init_partner_assistant_tables", lambda: None)
 
     # -----------------------------
     # Health DB mocks
@@ -98,8 +108,8 @@ def client(monkeypatch, fake_state):
         def cursor(self, *args, **kwargs):
             return DummyCursor()
 
-    monkeypatch.setattr(app_module, "get_db_connection", lambda: DummyConn())
-    monkeypatch.setattr(app_module, "release_db_connection", lambda conn: None)
+    monkeypatch.setattr(app_module, "get_db_connection", lambda: DummyConn(), raising=False)
+    monkeypatch.setattr(app_module, "release_db_connection", lambda conn: None, raising=False)
 
     # -----------------------------
     # Token / auth helpers
@@ -107,12 +117,12 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(
         auth_routes,
         "create_session_token",
-        lambda user_id: f"test-token-{user_id}",
+        lambda user_id, **_kwargs: f"test-token-{user_id}",
     )
     monkeypatch.setattr(
         mfa_routes,
         "create_session_token",
-        lambda user_id: f"test-token-{user_id}",
+        lambda user_id, **_kwargs: f"test-token-{user_id}",
     )
 
     def fake_decode_session_token(token):
@@ -121,7 +131,7 @@ def client(monkeypatch, fake_state):
         return None
 
     monkeypatch.setattr(auth_routes, "decode_session_token", fake_decode_session_token)
-    monkeypatch.setattr(app_module, "decode_session_token", fake_decode_session_token)
+    monkeypatch.setattr(app_module, "decode_session_token", fake_decode_session_token, raising=False)
     monkeypatch.setattr(current_user_module, "decode_session_token", fake_decode_session_token)
     monkeypatch.setattr(mfa_routes, "decode_session_token", fake_decode_session_token)
 
@@ -141,12 +151,16 @@ def client(monkeypatch, fake_state):
         def execute(self, query, params=None):
             q = " ".join(str(query).split()).lower()
 
-            if "from users where lower(email)" in q:
+            if "from users where lower(email)" in q or "from users u" in q and "lower(u.email)" in q:
                 email = params[0]
                 self._result = fake_state["user"] if email == TEST_EMAIL.lower() else None
                 return
 
-            if "from users where id = %s" in q or "from users where id =" in q:
+            if (
+                "from users where id = %s" in q
+                or "from users where id =" in q
+                or "from users u" in q and "where u.id = %s" in q
+            ):
                 user_id = params[0]
                 self._result = fake_state["user"] if int(user_id) == TEST_USER_ID else None
                 return
@@ -178,9 +192,14 @@ def client(monkeypatch, fake_state):
     # Password check mock
     # -----------------------------
     monkeypatch.setattr(
-        auth_routes.bcrypt,
-        "checkpw",
-        lambda password, password_hash: password.decode("utf-8") == TEST_PASSWORD,
+        password_module,
+        "verify_password",
+        lambda password, password_hash: password == TEST_PASSWORD,
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        "verify_password",
+        lambda password, password_hash: password == TEST_PASSWORD,
     )
 
     # -----------------------------
@@ -244,7 +263,7 @@ def client(monkeypatch, fake_state):
 
     monkeypatch.setattr(auth_routes, "get_user_mfa", fake_get_user_mfa)
     monkeypatch.setattr(current_user_module, "get_user_mfa", fake_get_user_mfa)
-    monkeypatch.setattr(app_module, "user_has_enabled_mfa", lambda user_id: fake_state["mfa_enabled"])
+    monkeypatch.setattr(app_module, "user_has_enabled_mfa", lambda user_id: fake_state["mfa_enabled"], raising=False)
 
     monkeypatch.setattr(mfa_routes, "get_user_mfa", fake_get_user_mfa)
     monkeypatch.setattr(mfa_routes, "upsert_user_mfa_secret", fake_upsert_user_mfa_secret)
@@ -266,7 +285,7 @@ def client(monkeypatch, fake_state):
     def fake_has_user_accepted_version(user_id, version):
         return fake_state["accepted_legal"]
 
-    monkeypatch.setattr(app_module, "has_user_accepted_version", fake_has_user_accepted_version)
+    monkeypatch.setattr(app_module, "has_user_accepted_version", fake_has_user_accepted_version, raising=False)
     monkeypatch.setattr(legal_acceptance_module, "has_user_accepted_version", fake_has_user_accepted_version)
     monkeypatch.setattr(legal_acceptance_db, "has_user_accepted_version", fake_has_user_accepted_version)
 

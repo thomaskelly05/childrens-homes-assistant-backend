@@ -7,7 +7,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.current_user import get_current_user
+from auth.permissions import require_assistant_access
 from services.assistant_security import safe_string
 
 router = APIRouter(prefix="/assistant/web", tags=["Assistant Web"])
@@ -82,7 +82,7 @@ async def _search_serper(query: str, limit: int) -> tuple[list[dict[str, str]], 
 
 
 @router.get("/diagnostics")
-def diagnostics(current_user=Depends(get_current_user)):
+def diagnostics(current_user=Depends(require_assistant_access)):
     return {
         "ok": True,
         "web_search_available": bool(_tavily_key() or _serper_key()),
@@ -95,7 +95,7 @@ def diagnostics(current_user=Depends(get_current_user)):
 
 
 @router.post("/search")
-async def search_web(payload: WebSearchRequest, current_user=Depends(get_current_user)):
+async def search_web(payload: WebSearchRequest, current_user=Depends(require_assistant_access)):
     query = safe_string(payload.query)
     if not query:
         raise HTTPException(status_code=400, detail="Search query is required.")

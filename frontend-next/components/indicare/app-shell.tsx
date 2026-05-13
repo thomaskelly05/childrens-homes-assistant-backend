@@ -19,31 +19,34 @@ import {
   BriefcaseMedical,
   TriangleAlert,
   NotebookTabs,
-  FolderOpen
+  FolderOpen,
+  LogOut
 } from 'lucide-react'
 import { ReactNode } from 'react'
 
 import { ContextualAssistantPanel } from '@/components/indicare/assistant-panel'
 import { CommandSearch } from '@/components/indicare/command-search'
+import { useAuth } from '@/contexts/auth-context'
+import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permissions'
 import { indicareData } from '@/lib/indicare/demo-data'
 import { getYoungPersonById } from '@/lib/indicare/selectors'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/young-people', label: 'Young People', icon: UserRound },
-  { href: '/staff', label: 'Staff', icon: Users },
-  { href: '/placements', label: 'Placements', icon: Home },
-  { href: '/daily-logs', label: 'Daily Logs', icon: NotebookTabs },
-  { href: '/incidents', label: 'Incidents', icon: TriangleAlert },
-  { href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert },
-  { href: '/risk-assessments', label: 'Risk Assessments', icon: ClipboardCheck },
-  { href: '/medication', label: 'Medication', icon: Pill },
-  { href: '/keywork', label: 'Keywork', icon: BriefcaseMedical },
-  { href: '/appointments', label: 'Appointments', icon: CalendarDays },
-  { href: '/reports', label: 'Reports', icon: FileText },
-  { href: '/documents', label: 'Documents', icon: FolderOpen },
-  { href: '/assistant', label: 'Assistant', icon: Sparkles },
-  { href: '/settings', label: 'Settings', icon: Settings }
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['records:read'] },
+  { href: '/young-people', label: 'Young People', icon: UserRound, permissions: ['records:read'] },
+  { href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },
+  { href: '/placements', label: 'Placements', icon: Home, permissions: ['records:read'] },
+  { href: '/daily-logs', label: 'Daily Logs', icon: NotebookTabs, permissions: ['records:read'] },
+  { href: '/incidents', label: 'Incidents', icon: TriangleAlert, permissions: ['records:read'] },
+  { href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'] },
+  { href: '/risk-assessments', label: 'Risk Assessments', icon: ClipboardCheck, permissions: ['records:read'] },
+  { href: '/medication', label: 'Medication', icon: Pill, permissions: ['records:read'] },
+  { href: '/keywork', label: 'Keywork', icon: BriefcaseMedical, permissions: ['records:read'] },
+  { href: '/appointments', label: 'Appointments', icon: CalendarDays, permissions: ['records:read'] },
+  { href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
+  { href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
+  { href: '/assistant', label: 'Assistant', icon: Sparkles, permissions: ['assistant:access'] },
+  { href: '/settings', label: 'Settings', icon: Settings, permissions: ['settings:read', 'settings:manage'] }
 ]
 
 function selectedYoungPersonId(pathname: string) {
@@ -74,10 +77,47 @@ function titleFromPath(pathname: string) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const { status, user, logout } = useAuth()
   const selectedId = selectedYoungPersonId(pathname)
   const selectedPerson = selectedId ? getYoungPersonById(selectedId) : undefined
   const pageTitle = selectedPerson ? `${selectedPerson.preferredName}'s record` : titleFromPath(pathname)
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date('2026-05-13T12:00:00.000Z'))
+  const isPublicPage = pathname === '/login' || pathname.startsWith('/login/') || pathname === '/unauthorized'
+  const visibleNavItems = navItems.filter((item) => userHasAnyPermission(user, item.permissions))
+  const matchedRoute = navItems
+    .filter((item) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+    .sort((a, b) => b.href.length - a.href.length)[0]
+  const hasRouteAccess = !matchedRoute || userHasAnyPermission(user, matchedRoute.permissions)
+
+  if (isPublicPage) {
+    return <>{children}</>
+  }
+
+  if (status === 'loading' || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
+        <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white">IC</div>
+          <p className="mt-6 text-[11px] font-black uppercase tracking-[0.22em] text-blue-600">Checking session</p>
+          <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">Loading IndiCare OS</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-500">Verifying your secure workspace access.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!hasRouteAccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
+        <div className="w-full max-w-lg rounded-[32px] border border-amber-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-600">Unauthorized</p>
+          <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">You do not have access to this workspace area</h1>
+          <p className="mt-4 text-sm leading-6 text-slate-600">Your current role is {roleLabels[user.role]}. Ask an administrator or registered manager if your access needs changing.</p>
+          <Link href="/dashboard" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Back to dashboard</Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen bg-[#f3f6fb] text-slate-900">
@@ -92,7 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <nav aria-label="Main navigation" className="min-h-0 flex-1 overflow-auto pr-1">
           <div className="space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
               const Icon = item.icon
               return (
@@ -115,6 +155,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Shift continuity</p>
           <strong className="mt-2 block text-3xl font-black tracking-[-0.05em] text-emerald-800">Stable</strong>
           <p className="mt-2 text-xs leading-5 text-slate-600">Oak House evening shift, 5 residents in placement.</p>
+        </div>
+        <div className="mt-3 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Signed in</p>
+          <p className="mt-2 text-sm font-black text-slate-950">{displayName(user)}</p>
+          <p className="mt-1 text-xs font-bold text-slate-500">{roleLabels[user.role]}</p>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100"
+          >
+            <LogOut className="mr-2 h-4 w-4" aria-hidden />
+            Log out
+          </button>
         </div>
       </aside>
 
@@ -148,7 +201,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   pageTitle,
                   selectedYoungPersonId: selectedId,
                   visibleRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined,
-                  userRole: 'Registered manager'
+                  userRole: roleLabels[user.role]
                 }}
               />
             </div>

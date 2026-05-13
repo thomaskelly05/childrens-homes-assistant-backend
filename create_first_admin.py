@@ -1,10 +1,11 @@
 import os
 import sys
 
-import bcrypt
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from auth.passwords import hash_password
+from auth.rbac import CANONICAL_STAFF_ROLES, normalise_role
 
 def require_env(name: str) -> str:
     value = (os.getenv(name) or "").strip()
@@ -16,10 +17,6 @@ def require_env(name: str) -> str:
 def get_db():
     database_url = require_env("DATABASE_URL")
     return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
-
-
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def validate_password(password: str) -> None:
@@ -36,11 +33,14 @@ def main() -> None:
     password = require_env("FIRST_ADMIN_PASSWORD")
     first_name = (os.getenv("FIRST_ADMIN_FIRST_NAME") or "System").strip()
     last_name = (os.getenv("FIRST_ADMIN_LAST_NAME") or "Admin").strip()
-    role = (os.getenv("FIRST_ADMIN_ROLE") or "admin").strip().lower()
+    role = normalise_role(os.getenv("FIRST_ADMIN_ROLE") or "admin")
     home_id_raw = (os.getenv("FIRST_ADMIN_HOME_ID") or "").strip()
 
-    if role not in {"admin", "provider_admin", "manager", "staff"}:
-        raise RuntimeError("FIRST_ADMIN_ROLE must be one of: admin, provider_admin, manager, staff")
+    if role not in CANONICAL_STAFF_ROLES:
+        raise RuntimeError(
+            "FIRST_ADMIN_ROLE must be one of: "
+            + ", ".join(CANONICAL_STAFF_ROLES)
+        )
 
     validate_password(password)
 

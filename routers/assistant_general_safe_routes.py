@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.current_user import get_current_user
+from auth.permissions import require_assistant_access
 from services.assistant_general_service import generate_general_assistant_stream
 from services.assistant_security import normalise_history, safe_int, safe_string
 
@@ -33,7 +33,7 @@ def _user_id(current_user: dict[str, Any]) -> int | None:
 @router.post("")
 async def safe_assistant_response(
     payload: SafeAssistantRequest,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(require_assistant_access),
 ):
     """Fallback JSON route used when SSE streaming is unavailable.
 

@@ -4,10 +4,17 @@ from typing import Any
 from fastapi import Depends, HTTPException, Path, Query, status
 
 from auth.current_user import get_current_user
+from auth.errors import forbidden
+from auth.rbac import (
+    StaffRole,
+    has_permission,
+    normalise_role,
+    permissions_for_role,
+)
 
 
 PROVIDER_LEVEL_ROLES = {
-    "admin",
+    StaffRole.ADMIN.value,
     "provider_admin",
     "super_admin",
     "superadmin",
@@ -17,21 +24,26 @@ PROVIDER_LEVEL_ROLES = {
 }
 
 MANAGER_LEVEL_ROLES = {
-    "manager",
+    StaffRole.MANAGER.value,
     "registered_manager",
-    "deputy_manager",
+    StaffRole.DEPUTY_MANAGER.value,
 }
 
 STAFF_LEVEL_ROLES = {
     "staff",
+    StaffRole.SUPPORT_WORKER.value,
     "senior",
     "rsw",
     "residential_support_worker",
 }
 
+READ_ONLY_ROLES = {
+    StaffRole.VIEWER.value,
+}
+
 
 def _normalise_role(role: str | None) -> str:
-    return (role or "").strip().lower()
+    return normalise_role(role)
 
 
 def _as_int(value: Any, field_name: str) -> int:
@@ -45,9 +57,9 @@ def _as_int(value: Any, field_name: str) -> int:
 
 
 def _forbidden(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=detail,
+    return forbidden(
+        "permission_denied",
+        detail,
     )
 
 
@@ -115,7 +127,7 @@ def require_authenticated_user(
 def require_admin(
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
-    return _ensure_role(current_user, {"admin", "super_admin", "superadmin"})
+    return _ensure_role(current_user, {StaffRole.ADMIN.value, "super_admin", "superadmin"})
 
 
 def require_provider_admin(
@@ -140,6 +152,42 @@ def require_staff_or_manager(
         current_user,
         PROVIDER_LEVEL_ROLES | MANAGER_LEVEL_ROLES | STAFF_LEVEL_ROLES,
     )
+
+
+def require_read_access(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    return _ensure_role(
+        current_user,
+        PROVIDER_LEVEL_ROLES | MANAGER_LEVEL_ROLES | STAFF_LEVEL_ROLES | READ_ONLY_ROLES,
+    )
+
+
+def require_write_access(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    if not has_permission(current_user.get("role"), "records:write"):
+        raise _forbidden("You do not have permission to change records")
+    return current_user
+
+
+def require_assistant_access(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    if not has_permission(current_user.get("role"), "assistant:access"):
+        raise _forbidden("You do not have permission to use the assistant")
+    return current_user
+
+
+def require_permission(permission: str):
+    def dependency(
+        current_user: dict[str, Any] = Depends(get_current_user),
+    ) -> dict[str, Any]:
+        if not has_permission(current_user.get("role"), permission):
+            raise _forbidden("You do not have permission to access this resource")
+        return current_user
+
+    return dependency
 
 
 def role_required(*roles: str):
@@ -229,3 +277,7 @@ def require_active_subscription(
         raise _forbidden("Subscription required")
 
     return current_user
+
+
+def user_permissions(current_user: dict[str, Any]) -> list[str]:
+    return sorted(permissions_for_role(current_user.get("role")))

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.current_user import get_current_user
+from auth.permissions import require_assistant_access
 from db.connection import get_db
 from services.ai_service import generate_ai_stream
 from services.assistant_context_service import build_runtime_assistant_context
@@ -706,7 +706,7 @@ async def _stream_assistant_response(
 def get_assistant_context(
     payload: AssistantContextRequest,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     try:
         user_id = _safe_user_id(current_user)
@@ -746,7 +746,7 @@ def get_assistant_context(
 def build_prompt(
     payload: AssistantPromptRequest,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     try:
         _assert_safe_message(payload.message)
@@ -791,7 +791,7 @@ def build_prompt(
 async def ask_young_person_assistant(
     payload: YoungPersonAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _assert_safe_message(payload.message)
 
@@ -867,7 +867,7 @@ async def ask_young_person_assistant(
 async def ask_home_assistant(
     payload: HomeAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _assert_safe_message(payload.message)
 
@@ -940,7 +940,7 @@ async def ask_home_assistant(
 async def ask_quality_assistant(
     payload: QualityAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _assert_safe_message(payload.message)
 
@@ -1022,7 +1022,7 @@ async def ask_quality_assistant(
 async def preview_report(
     payload: HomeAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     try:
         _assert_safe_message(payload.message)
@@ -1087,7 +1087,7 @@ async def preview_report(
 async def send_report_now(
     payload: ReportSendPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     try:
         user_id = _safe_user_id(current_user)

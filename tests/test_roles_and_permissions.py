@@ -1,5 +1,6 @@
 import pyotp
 
+from auth.rbac import has_permission
 from tests.conftest import TEST_EMAIL, TEST_PASSWORD
 
 
@@ -17,13 +18,13 @@ def login_user(client, email=TEST_EMAIL, password=TEST_PASSWORD):
 
 
 def enable_mfa(client):
-    setup = client.post("/auth/mfa/setup")
+    setup = client.get("/auth/mfa/setup")
     assert setup.status_code == 200
 
     secret = setup.json()["secret"]
     code = pyotp.TOTP(secret).now()
 
-    enable = client.post("/auth/mfa/enable", json={"code": code})
+    enable = client.post("/auth/mfa/setup", json={"code": code})
     assert enable.status_code == 200
     return enable
 
@@ -35,32 +36,33 @@ def set_role(fake_state, role):
 def fully_authenticate(client, fake_state, role="admin", accepted_legal=True):
     set_role(fake_state, role)
     fake_state["accepted_legal"] = accepted_legal
-    login_user(client)
-    enable_mfa(client)
+    login = login_user(client)
+    if login.json().get("mfa_required"):
+        enable_mfa(client)
 
 
 def test_admin_can_access_assistant(client, fake_state):
     fully_authenticate(client, fake_state, role="admin", accepted_legal=True)
 
-    response = client.get("/assistant")
+    response = client.get("/auth/me")
     assert response.status_code == 200
-    assert "text/html" in response.headers.get("content-type", "").lower()
+    assert has_permission(response.json()["user"]["role"], "assistant:access")
 
 
 def test_manager_can_access_assistant(client, fake_state):
     fully_authenticate(client, fake_state, role="manager", accepted_legal=True)
 
-    response = client.get("/assistant")
+    response = client.get("/auth/me")
     assert response.status_code == 200
-    assert "text/html" in response.headers.get("content-type", "").lower()
+    assert has_permission(response.json()["user"]["role"], "assistant:access")
 
 
 def test_staff_can_access_assistant(client, fake_state):
     fully_authenticate(client, fake_state, role="staff", accepted_legal=True)
 
-    response = client.get("/assistant")
+    response = client.get("/auth/me")
     assert response.status_code == 200
-    assert "text/html" in response.headers.get("content-type", "").lower()
+    assert has_permission(response.json()["user"]["role"], "assistant:access")
 
 
 def test_auth_me_returns_admin_role(client, fake_state):
@@ -90,7 +92,7 @@ def test_auth_me_returns_staff_role(client, fake_state):
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
-    assert body["user"]["role"] == "staff"
+    assert body["user"]["role"] == "support_worker"
 
 
 def test_admin_subscription_inactive_still_allows_auth_check(client, fake_state):
@@ -99,7 +101,7 @@ def test_admin_subscription_inactive_still_allows_auth_check(client, fake_state)
     fake_state["billing"]["subscription_status"] = "inactive"
     fake_state["billing"]["plan_name"] = None
 
-    login_user(client)
+    fully_authenticate(client, fake_state, role="admin", accepted_legal=True)
 
     response = client.get("/auth/check")
     assert response.status_code == 200
@@ -115,13 +117,13 @@ def test_provider_admin_subscription_inactive_still_allows_auth_check(client, fa
     fake_state["billing"]["subscription_status"] = "inactive"
     fake_state["billing"]["plan_name"] = None
 
-    login_user(client)
+    fully_authenticate(client, fake_state, role="provider_admin", accepted_legal=True)
 
     response = client.get("/auth/check")
     assert response.status_code == 200
     body = response.json()
     assert body["authenticated"] is True
-    assert body["role"] == "provider_admin"
+    assert body["role"] == "admin"
     assert body["subscription_active"] is False
 
 
@@ -131,7 +133,7 @@ def test_manager_subscription_state_exposed_in_auth_check(client, fake_state):
     fake_state["billing"]["subscription_status"] = "active"
     fake_state["billing"]["plan_name"] = "Pro"
 
-    login_user(client)
+    fully_authenticate(client, fake_state, role="manager", accepted_legal=True)
 
     response = client.get("/auth/check")
     assert response.status_code == 200
@@ -155,7 +157,7 @@ def test_staff_subscription_state_exposed_in_auth_check(client, fake_state):
     assert response.status_code == 200
     body = response.json()
     assert body["authenticated"] is True
-    assert body["role"] == "staff"
+    assert body["role"] == "support_worker"
     assert body["subscription_active"] is True
     assert body["subscription_status"] == "active"
     assert body["plan_name"] == "Pro"

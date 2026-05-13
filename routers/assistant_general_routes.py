@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.current_user import get_current_user
+from auth.permissions import require_assistant_access
 from services.assistant_general_service import generate_general_assistant_stream
 from services.assistant_security import normalise_history, safe_int, safe_string
 from services.indicare_ai_orchestrator_service import IndiCareAIOrchestratorService
@@ -155,7 +155,7 @@ def serve_ai_suite_assistant():
 @router.post("/stream")
 async def stream_general_assistant(
     payload: GeneralAssistantRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     user_id = _safe_user_id(current_user)
     history = normalise_history(payload.history, max_items=12, max_chars=2200)
@@ -195,6 +195,6 @@ async def stream_general_assistant(
 @compat_router.post("/assistant")
 async def stream_assistant(
     payload: GeneralAssistantRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     return await stream_general_assistant(payload, current_user)

@@ -18,6 +18,8 @@ routers.frontend_compat
 routers.young_people_shell_item_compat_routes
 routers.young_people_safe_routes
 routers.home_selector_routes
+homes.routes
+staff.routes
 routers.account_routes
 routers.admin_routes
 routers.founder_ai_routes

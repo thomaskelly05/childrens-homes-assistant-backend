@@ -33,6 +33,17 @@ function resolveUrl(path: string) {
   return `${API_BASE}${path}`
 }
 
+function handleAuthStatus(response: Response) {
+  if (typeof window === 'undefined') return
+  if (response.status === 401) {
+    const returnUrl = encodeURIComponent(`${window.location.pathname}${window.location.search}`)
+    window.location.assign(`/login?returnUrl=${returnUrl}&expired=1`)
+  }
+  if (response.status === 403) {
+    window.location.assign('/unauthorized')
+  }
+}
+
 export async function apiGet<T>(path: string, fallback: T): Promise<ApiResult<T>> {
   try {
     const response = await fetch(resolveUrl(path), {
@@ -41,6 +52,7 @@ export async function apiGet<T>(path: string, fallback: T): Promise<ApiResult<T>
     })
 
     if (!response.ok) {
+      handleAuthStatus(response)
       return { ok: false, data: fallback, error: `${response.status} ${response.statusText}` }
     }
 
@@ -61,6 +73,7 @@ export async function apiPost<T>(path: string, body: unknown, fallback: T): Prom
     })
 
     if (!response.ok) {
+      handleAuthStatus(response)
       return { ok: false, data: fallback, error: `${response.status} ${response.statusText}` }
     }
 
