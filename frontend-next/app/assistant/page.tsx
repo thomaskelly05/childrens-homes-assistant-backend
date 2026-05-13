@@ -22,7 +22,9 @@ export default function AssistantPage() {
     connected: false,
     listening: false,
     speaking: false,
-    streaming: false
+    streaming: false,
+    wakeWordEnabled: false,
+    realtimeVoiceConnected: false
   })
 
   const [input, setInput] = useState('')
