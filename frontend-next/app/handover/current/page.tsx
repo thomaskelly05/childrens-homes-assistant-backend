@@ -31,7 +31,7 @@ export default function CurrentHandoverPage() {
             items={handover.timeline.map((item) => ({
               id: item.id,
               title: item.title,
-              date: 'date' in item && item.date ? new Date(item.date).toLocaleString('en-GB') : 'Review required',
+              date: 'date' in item && typeof item.date === 'string' ? new Date(item.date).toLocaleString('en-GB') : 'Review required',
               body: item.details,
               href: item.href
             }))}

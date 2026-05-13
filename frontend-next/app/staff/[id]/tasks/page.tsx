@@ -23,7 +23,7 @@ export default async function StaffTasksPage({ params }: { params: Promise<{ id:
                 {items.map((item) => (
                   <Link key={item.id} href={'href' in item ? item.href : `/incidents/${item.id}`} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <strong className="text-sm font-black text-slate-950">{'title' in item ? item.title : item.type}</strong>
+                      <strong className="text-sm font-black text-slate-950">{'title' in item ? item.title : 'type' in item ? item.type : `Recording ${item.id}`}</strong>
                       <StatusBadge value={'urgency' in item ? item.urgency : 'review'} />
                     </div>
                   </Link>
