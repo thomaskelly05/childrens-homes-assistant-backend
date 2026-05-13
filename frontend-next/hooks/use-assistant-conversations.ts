@@ -1,15 +1,20 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   conversationStore,
   StoredConversation
 } from '@/lib/realtime/conversation-store'
+import { AssistantMessage } from '@/lib/realtime/assistant-runtime'
 
 export function useAssistantConversations() {
   const [conversations, setConversations] = useState<StoredConversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState('default')
+
+  const refreshConversations = useCallback(() => {
+    setConversations(conversationStore.list())
+  }, [])
 
   useEffect(() => {
     const loaded = conversationStore.list()
@@ -25,24 +30,24 @@ export function useAssistantConversations() {
     )
   }, [conversations, activeConversationId])
 
-  function createConversation() {
+  const createConversation = useCallback(() => {
     const conversation = conversationStore.create()
 
     setConversations(conversationStore.list())
     setActiveConversationId(conversation.id)
 
     return conversation
-  }
+  }, [])
 
-  function selectConversation(id: string) {
+  const selectConversation = useCallback((id: string) => {
     conversationStore.setActiveId(id)
     setActiveConversationId(id)
-  }
+  }, [])
 
-  function saveConversation(id: string, messages: any[]) {
+  const saveConversation = useCallback((id: string, messages: AssistantMessage[]) => {
     conversationStore.saveMessages(id, messages)
-    setConversations(conversationStore.list())
-  }
+    refreshConversations()
+  }, [refreshConversations])
 
   return {
     conversations,
