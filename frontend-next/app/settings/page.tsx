@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { Card, PageHeader, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 
 const settings = [
@@ -25,6 +27,13 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
+      </Card>
+      <Card>
+        <SectionHeader eyebrow="Orb" title="Voice assistant setup" />
+        <p className="text-sm leading-6 text-slate-600">Configure Orb powered by IndiCare, including voice profile, microphone onboarding, activation preferences, privacy and confirmation-before-write safety controls.</p>
+        <Link href="/settings/orb" className="mt-5 inline-flex rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white">
+          Open Orb settings
+        </Link>
       </Card>
     </div>
   )

@@ -34,6 +34,7 @@ routers.assistant_general_routes
 routers.assistant_conversation_routes
 routers.assistant_realtime_voice_routes
 routers.assistant_realtime_proxy_routes
+routers.orb_routes
 routers.assistant_general_safe_routes
 routers.assistant_web_routes
 routers.assistant_query_routes

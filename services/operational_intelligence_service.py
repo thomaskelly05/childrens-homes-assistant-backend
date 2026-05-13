@@ -264,6 +264,130 @@ def _inspection_report(scope: str, score: int, counts: Counter[str], alerts: lis
     }
 
 
+def _chronology_graph_intelligence(events: list[dict[str, Any]]) -> dict[str, Any]:
+    linked = [event for event in events if event.get("young_person_id")]
+    by_child: dict[str, Counter[str]] = defaultdict(Counter)
+    for event in linked:
+        by_child[str(event.get("young_person_id"))][str(event.get("record_type") or "record")] += 1
+    nodes = [
+        {
+            "young_person_id": young_person_id,
+            "total_events": sum(counts.values()),
+            "dominant_event_type": counts.most_common(1)[0][0] if counts else "record",
+            "safeguarding_links": counts.get("safeguarding", 0),
+            "incident_links": counts.get("incident", 0),
+        }
+        for young_person_id, counts in by_child.items()
+    ]
+    return {
+        "nodes": sorted(nodes, key=lambda item: (-item["safeguarding_links"], -item["total_events"]))[:20],
+        "edges_foundation": "Record-link graph foundation; durable cross-record edges can be populated by chronology linking jobs.",
+        "patterns": [
+            "Repeated family-time anxiety pattern should be checked where family contact and incident records cluster.",
+            "Safeguarding/incident clusters should be reviewed against risk assessments and support plans.",
+        ],
+    }
+
+
+def _safeguarding_panels(events: list[dict[str, Any]], counts: Counter[str]) -> list[dict[str, Any]]:
+    safeguarding_events = [event for event in events if event.get("record_type") in {"safeguarding", "incident", "missing_episode", "risk"}]
+    return [
+        {
+            "id": "manager_review",
+            "title": "Manager review",
+            "level": "high" if safeguarding_events else "review",
+            "summary": f"{len(safeguarding_events)} safeguarding/risk-linked event(s) visible in the current window.",
+            "spoken_summary": "There are safeguarding and risk-linked events that may need manager review." if safeguarding_events else "No safeguarding-linked events were visible in the current window.",
+        },
+        {
+            "id": "plan_linkage",
+            "title": "Plan linkage",
+            "level": "medium" if (counts.get("incident", 0) or counts.get("safeguarding", 0)) and counts.get("support_plan", 0) == 0 else "stable",
+            "summary": "Check whether incidents/safeguarding are linked to current plans and risk assessments.",
+            "spoken_summary": "Incidents or safeguarding should be checked against current plans before drawing conclusions.",
+        },
+    ]
+
+
+def _sccif_ofsted_readiness(score: int, alerts: list[dict[str, Any]], signals: list[dict[str, str]], counts: Counter[str]) -> dict[str, Any]:
+    gaps: list[dict[str, str]] = []
+    if counts.get("keywork", 0) == 0:
+        gaps.append({"area": "Child voice", "summary": "Evidence for child voice is limited in this window."})
+    if (counts.get("incident", 0) or counts.get("safeguarding", 0)) and counts.get("support_plan", 0) == 0:
+        gaps.append({"area": "Impact of care", "summary": "Incident/safeguarding evidence needs plan-impact linkage."})
+    if alerts or signals:
+        gaps.append({"area": "Leadership and management", "summary": "Management oversight should be checked against current alerts and signals."})
+    return {
+        "readiness_band": _risk_band(score),
+        "sccif_focus": ["help and protection", "leadership and management", "children's progress", "wishes and feelings"],
+        "evidence_gaps": gaps[:8],
+        "spoken_summary": "SCCIF readiness should focus on child voice, manager oversight and evidence of impact.",
+    }
+
+
+def _management_copilot_cards(alerts: list[dict[str, Any]], signals: list[dict[str, str]], homes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+    for alert in alerts[:4]:
+        cards.append({"type": "alert", "title": alert.get("title"), "level": alert.get("level"), "summary": alert.get("summary"), "action": "Review evidence and assign management follow-up if needed."})
+    for signal in signals[:3]:
+        cards.append({"type": "predictive_signal", "title": signal.get("title"), "level": signal.get("level"), "summary": signal.get("summary"), "action": "Check whether the trend is supported by records and plans."})
+    for home in homes[:2]:
+        if home.get("risk_score", 0) >= 40:
+            cards.append({"type": "home_risk", "title": home.get("home_name"), "level": home.get("alert_level"), "summary": f"Risk score {home.get('risk_score')}/100 from visible operational records.", "action": "Prioritise oversight and evidence checks."})
+    return cards[:8]
+
+
+def _child_centred_indicators(counts: Counter[str], events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "child_voice",
+            "label": "Child voice",
+            "status": "limited" if counts.get("keywork", 0) == 0 and events else "visible",
+            "summary": "Evidence for child voice is limited this month." if counts.get("keywork", 0) == 0 and events else "Child voice evidence is visible in the current window.",
+        },
+        {
+            "id": "impact",
+            "label": "Impact of care",
+            "status": "needs_linkage" if (counts.get("incident", 0) or counts.get("safeguarding", 0)) and counts.get("support_plan", 0) == 0 else "review",
+            "summary": "Check that plans show the impact of care after incidents or safeguarding events.",
+        },
+        {
+            "id": "relationships",
+            "label": "Relationships and family time",
+            "status": "review",
+            "summary": "Review family-time records for anxiety, presentation changes and follow-up evidence.",
+        },
+    ]
+
+
+def _realtime_operational_events(alerts: list[dict[str, Any]], signals: list[dict[str, str]]) -> list[dict[str, Any]]:
+    now = datetime.utcnow().isoformat() + "Z"
+    return [
+        {
+            "id": f"op-{index}",
+            "type": item.get("level") or "review",
+            "title": item.get("title"),
+            "summary": item.get("summary"),
+            "created_at": now,
+            "orb_spoken": item.get("summary"),
+        }
+        for index, item in enumerate([*alerts, *signals], start=1)
+    ][:10]
+
+
+def _orb_spoken_insights(summary: dict[str, Any], readiness: dict[str, Any], cards: list[dict[str, Any]]) -> list[str]:
+    insights = [
+        f"There are {summary.get('safeguarding', 0)} safeguarding record(s) and {summary.get('incidents', 0)} incident(s) in the current window.",
+        readiness.get("spoken_summary", "SCCIF readiness should be reviewed against current records."),
+    ]
+    if summary.get("high_risk_homes", 0):
+        insights.append(f"{summary['high_risk_homes']} home(s) currently need high-priority leadership attention.")
+    for card in cards[:3]:
+        if card.get("summary"):
+            insights.append(str(card["summary"]))
+    return insights[:6]
+
+
 def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], days: int = 30) -> dict[str, Any]:
     role = _role(current_user)
     if not _allowed_scope(scope, role):
@@ -295,6 +419,25 @@ def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], 
         trends = _trend_series(events, safe_days)
         predictive_signals = _predictive_signals(events, trends, homes)
         inspection_report = _inspection_report(scope, score, counts, alerts, homes, predictive_signals)
+        chronology_graph = _chronology_graph_intelligence(events)
+        safeguarding_panels = _safeguarding_panels(events, counts)
+        sccif_readiness = _sccif_ofsted_readiness(score, alerts, predictive_signals, counts)
+        management_cards = _management_copilot_cards(alerts, predictive_signals, homes)
+        child_centred_indicators = _child_centred_indicators(counts, events)
+        realtime_events = _realtime_operational_events(alerts, predictive_signals)
+        summary = {
+            "total_events": len(events),
+            "incidents": counts.get("incident", 0),
+            "safeguarding": counts.get("safeguarding", 0),
+            "missing_episodes": counts.get("missing_episode", 0),
+            "risk_reviews": counts.get("risk", 0),
+            "keywork": counts.get("keywork", 0),
+            "support_plans": counts.get("support_plan", 0),
+            "homes_visible": len(homes),
+            "risk_score": score,
+            "high_risk_homes": len(high_risk_homes),
+            "predictive_signals": len(predictive_signals),
+        }
 
         return {
             "ok": True,
@@ -303,23 +446,18 @@ def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], 
             "window_days": safe_days,
             "risk_score": score,
             "risk_band": _risk_band(score),
-            "summary": {
-                "total_events": len(events),
-                "incidents": counts.get("incident", 0),
-                "safeguarding": counts.get("safeguarding", 0),
-                "missing_episodes": counts.get("missing_episode", 0),
-                "risk_reviews": counts.get("risk", 0),
-                "keywork": counts.get("keywork", 0),
-                "support_plans": counts.get("support_plan", 0),
-                "homes_visible": len(homes),
-                "risk_score": score,
-                "high_risk_homes": len(high_risk_homes),
-                "predictive_signals": len(predictive_signals),
-            },
+            "summary": summary,
             "counts_by_category": dict(counts),
             "alerts": alerts,
             "predictive_signals": predictive_signals,
             "inspection_report": inspection_report,
+            "chronology_graph_intelligence": chronology_graph,
+            "safeguarding_intelligence_panels": safeguarding_panels,
+            "sccif_ofsted_readiness_intelligence": sccif_readiness,
+            "management_copilot_cards": management_cards,
+            "child_centred_intelligence_indicators": child_centred_indicators,
+            "realtime_operational_events": realtime_events,
+            "orb_spoken_insights": _orb_spoken_insights(summary, sccif_readiness, management_cards),
             "homes": homes,
             "ranked_homes": homes,
             "high_risk_homes": high_risk_homes,
@@ -337,3 +475,33 @@ def build_operational_intelligence(*, scope: str, current_user: dict[str, Any], 
     finally:
         if conn is not None:
             release_db_connection(conn)
+
+
+def build_orb_operational_intelligence_snapshot(*, current_user: dict[str, Any], context: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Small, failure-tolerant intelligence payload that Orb can speak during a turn."""
+
+    role = _role(current_user)
+    if role in PROVIDER_ROLES:
+        scope = "provider"
+    elif role in RI_ROLES:
+        scope = "ri"
+    elif role in MANAGER_ROLES:
+        scope = "manager"
+    else:
+        scope = "staff"
+    try:
+        data = build_operational_intelligence(scope=scope, current_user=current_user, days=30)
+        if not data.get("ok"):
+            return {"ok": False, "scope": scope, "orb_spoken_insights": []}
+        return {
+            "ok": True,
+            "scope": scope,
+            "context": context or {},
+            "summary": data.get("summary", {}),
+            "orb_spoken_insights": data.get("orb_spoken_insights", []),
+            "management_copilot_cards": data.get("management_copilot_cards", [])[:4],
+            "sccif_ofsted_readiness_intelligence": data.get("sccif_ofsted_readiness_intelligence", {}),
+            "realtime_operational_events": data.get("realtime_operational_events", [])[:4],
+        }
+    except Exception as exc:
+        return {"ok": False, "scope": scope, "error": str(exc), "orb_spoken_insights": []}

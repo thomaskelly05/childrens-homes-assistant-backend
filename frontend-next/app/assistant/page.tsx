@@ -30,6 +30,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { AssistantStatusBar } from '@/components/assistant/assistant-status-bar'
 import { AssistantWaveform } from '@/components/assistant/assistant-waveform'
+import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { SourceCitationChip } from '@/components/indicare/citations/source-citation-chip'
 
 import { assistantWorkspaceAdapters } from '@/lib/assistant-workspace/adapters'
@@ -46,6 +47,7 @@ import {
   RuntimeState
 } from '@/lib/realtime/assistant-runtime'
 import { useAssistantConversations } from '@/hooks/use-assistant-conversations'
+import { useAuth } from '@/contexts/auth-context'
 import { citationHref } from '@/lib/assistant-core/citations'
 import { buildStandaloneAssistantContext, queryAssistant } from '@/lib/assistant-core/client'
 import { suggestedPromptsForWorkspace } from '@/lib/assistant-core/retrieval'
@@ -124,6 +126,7 @@ function modeForSection(section: WorkspaceSection): AssistantMode {
 }
 
 export default function AssistantPage() {
+  const { user } = useAuth()
   const workspace = useMemo(() => assistantWorkspaceAdapters.getWorkspaceData(), [])
   const [activeSection, setActiveSection] = useState<WorkspaceSection>('chat')
   const [magicNote, setMagicNote] = useState<MagicNote>(workspace.magicNotes[0])
@@ -282,6 +285,11 @@ export default function AssistantPage() {
     assistantRuntime.interrupt()
   }
 
+  const orbAssistantContext = buildStandaloneAssistantContext({
+    activeSection,
+    conversationId: activeConversationId
+  })
+
   return (
     <main className="flex min-h-screen overflow-hidden bg-[#070b16] text-white">
       <StandaloneSidebar
@@ -438,6 +446,15 @@ export default function AssistantPage() {
           />
         </div>
       </section>
+      <OrbButton
+        context={{
+          route: '/assistant',
+          workspace: activeSection,
+          page_title: 'IndiCare Assistant',
+          assistant_context: orbAssistantContext
+        }}
+        role={user?.role}
+      />
     </main>
   )
 }
