@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -50,7 +50,7 @@ def create_app() -> FastAPI:
             "status": "ok",
             "service": "indicare-os",
             "check": check,
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "routes": {
                 "assistant": "/assistant",
                 "health": "/health",
