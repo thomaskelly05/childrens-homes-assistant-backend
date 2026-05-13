@@ -1,3 +1,5 @@
+import { BrowserVoiceRuntime } from './browser-voice-runtime'
+
 export type AssistantMessage = {
   id: string
   role: 'user' | 'assistant' | 'system'
@@ -45,6 +47,22 @@ export class AssistantRuntime {
   private messageListeners = new Set<(messages: AssistantMessage[]) => void>()
   private abortController: AbortController | null = null
 
+  private voice = new BrowserVoiceRuntime({
+    onTranscript: (text) => {
+      if (text.trim()) {
+        this.sendMessage(text)
+      }
+    },
+    onListeningChange: (listening) => {
+      this.state.listening = listening
+      this.emit()
+    },
+    onError: (error) => {
+      this.state.error = error
+      this.emit()
+    }
+  })
+
   async connect() {
     try {
       const response = await fetch(`${API_BASE}/assistant/realtime/health`, {
@@ -67,10 +85,13 @@ export class AssistantRuntime {
   disconnect() {
     this.abortController?.abort()
     this.abortController = null
+    this.voice.stop()
+
     this.state.connected = false
     this.state.listening = false
     this.state.speaking = false
     this.state.streaming = false
+
     this.emit()
   }
 
@@ -94,9 +115,11 @@ export class AssistantRuntime {
     }
 
     this.messages = [...this.messages, userMessage, assistantMessage]
+
     this.state.speaking = true
     this.state.streaming = true
     this.state.error = undefined
+
     this.emit()
     this.emitMessages()
 
@@ -135,12 +158,14 @@ export class AssistantRuntime {
           'I could not complete that response just now. Please check the backend assistant stream and try again.',
           false
         )
+
         this.state.error = String(error)
       }
     } finally {
       this.abortController = null
       this.state.speaking = false
       this.state.streaming = false
+
       this.emit()
       this.finishStreamingMessage(assistantMessage.id)
     }
@@ -149,18 +174,27 @@ export class AssistantRuntime {
   interrupt() {
     this.abortController?.abort()
     this.abortController = null
+
     this.state.speaking = false
     this.state.streaming = false
+
     this.emit()
-    const lastAssistant = [...this.messages].reverse().find((message) => message.role === 'assistant' && message.streaming)
+
+    const lastAssistant = [...this.messages]
+      .reverse()
+      .find((message) => message.role === 'assistant' && message.streaming)
+
     if (lastAssistant) {
-      this.updateMessage(lastAssistant.id, lastAssistant.content || 'Response interrupted.', false)
+      this.updateMessage(
+        lastAssistant.id,
+        lastAssistant.content || 'Response interrupted.',
+        false
+      )
     }
   }
 
   toggleListening() {
-    this.state.listening = !this.state.listening
-    this.emit()
+    this.voice.toggle()
   }
 
   onState(listener: (state: RuntimeState) => void) {
@@ -181,9 +215,13 @@ export class AssistantRuntime {
     }
   }
 
-  private async consumeStream(body: ReadableStream<Uint8Array>, assistantMessageId: string) {
+  private async consumeStream(
+    body: ReadableStream<Uint8Array>,
+    assistantMessageId: string
+  ) {
     const reader = body.getReader()
     const decoder = new TextDecoder()
+
     let buffer = ''
 
     while (true) {
@@ -191,6 +229,7 @@ export class AssistantRuntime {
       if (done) break
 
       buffer += decoder.decode(value, { stream: true })
+
       const events = buffer.split('\n\n')
       buffer = events.pop() || ''
 
@@ -205,7 +244,9 @@ export class AssistantRuntime {
   }
 
   private applySseEvent(event: string, assistantMessageId: string) {
-    if (event.includes('event: done') || event.includes('[DONE]')) return
+    if (event.includes('event: done') || event.includes('[DONE]')) {
+      return
+    }
 
     const lines = event
       .split('\n')
@@ -217,8 +258,15 @@ export class AssistantRuntime {
     const token = lines.join('\n')
     if (!token) return
 
-    const current = this.messages.find((message) => message.id === assistantMessageId)
-    this.updateMessage(assistantMessageId, `${current?.content || ''}${token}`, true)
+    const current = this.messages.find(
+      (message) => message.id === assistantMessageId
+    )
+
+    this.updateMessage(
+      assistantMessageId,
+      `${current?.content || ''}${token}`,
+      true
+    )
   }
 
   private updateMessage(id: string, content: string, streaming: boolean) {
