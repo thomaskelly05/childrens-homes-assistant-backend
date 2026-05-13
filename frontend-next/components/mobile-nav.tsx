@@ -2,19 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardPlus, FileText, Home, MessageSquarePlus, ShieldAlert, Sparkles } from 'lucide-react'
+import { ClipboardPlus, Clock3, FileText, Home, MessageSquarePlus, ShieldAlert } from 'lucide-react'
 
 export function MobileNav() {
   const pathname = usePathname() || '/dashboard'
   const items = [
     { label: 'Today', href: '/dashboard', icon: Home },
+    { label: 'Shift', href: '/shifts/current', icon: Clock3 },
     { label: 'Records', href: '/young-people', icon: FileText },
-    { label: 'Chronology', href: '/chronology', icon: Sparkles },
     { label: 'Alerts', href: '/safeguarding', icon: ShieldAlert },
     { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
   ]
   const quickActions = [
-    { label: 'Quick note', href: '/daily-logs', icon: ClipboardPlus },
+    { label: 'Quick note', href: '/staff/me/recording', icon: ClipboardPlus },
     { label: 'Incident', href: '/incidents', icon: ShieldAlert },
     { label: 'Concern', href: '/safeguarding', icon: ShieldAlert }
   ]

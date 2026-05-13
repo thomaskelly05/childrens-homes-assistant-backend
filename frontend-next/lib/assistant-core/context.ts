@@ -39,6 +39,7 @@ function stringList(values: Array<string | number> | undefined) {
 export function inferWorkspaceType(route?: string | null) {
   const value = (route ?? '').toLowerCase()
   if (value.includes('assistant')) return 'standalone_assistant'
+  if (value.includes('shift') || value.includes('handover')) return 'shift_operations'
   if (value.includes('chronology')) return 'chronology'
   if (value.includes('incident')) return 'incident'
   if (value.includes('safeguarding')) return 'safeguarding'

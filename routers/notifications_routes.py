@@ -149,6 +149,55 @@ def mark_notification_read(
         return {"ok": False, "available": False, "detail": "Notifications are not available yet."}
 
 
+@router.post("/{notification_id}/acknowledge")
+def acknowledge_notification(
+    notification_id: int,
+    conn=Depends(get_db),
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    result = mark_notification_read(notification_id=notification_id, conn=conn, current_user=current_user)
+    if isinstance(result, dict):
+        result["acknowledged"] = bool(result.get("ok"))
+        result["action"] = "acknowledged"
+    return result
+
+
+@router.post("/{notification_id}/snooze")
+def snooze_notification(
+    notification_id: int,
+    payload: dict[str, Any] | None = None,
+    conn=Depends(get_db),
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    user_id = _current_user_id(current_user)
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM notifications
+                WHERE id = %s AND user_id = %s AND dismissed_at IS NULL
+                """,
+                (notification_id, user_id),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Notification not found")
+            return {
+                "ok": True,
+                "notification": row,
+                "snooze_foundation": True,
+                "snooze_until": (payload or {}).get("snooze_until"),
+                "detail": "Snooze state is acknowledged by the API contract; persistence can be enabled with a snooze_until column migration.",
+            }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _rollback(conn)
+        logger.warning("notification_snooze_failed user_id=%s notification_id=%s error=%s", user_id, notification_id, exc)
+        return {"ok": False, "available": False, "detail": "Notifications are not available yet."}
+
+
 @router.post("/mark-all-read")
 def mark_all_read(
     conn=Depends(get_db),
