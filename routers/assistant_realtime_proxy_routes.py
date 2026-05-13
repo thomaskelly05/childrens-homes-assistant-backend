@@ -7,6 +7,8 @@ import os
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import websockets
 
+from middleware.assistant_realtime_guard import assistant_realtime_guard
+
 router = APIRouter(prefix="/assistant/realtime", tags=["Assistant Realtime Proxy"])
 
 OPENAI_REALTIME_URL = os.getenv(
@@ -19,6 +21,17 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 @router.websocket("/ws")
 async def assistant_realtime_proxy(websocket: WebSocket):
+    allowed = await assistant_realtime_guard.allow(websocket)
+
+    if not allowed:
+        await websocket.accept()
+        await websocket.send_json({
+            "type": "error",
+            "message": "Realtime connection limit exceeded"
+        })
+        await websocket.close(code=1013)
+        return
+
     await websocket.accept()
 
     if not OPENAI_API_KEY:
@@ -27,6 +40,7 @@ async def assistant_realtime_proxy(websocket: WebSocket):
             "message": "OPENAI_API_KEY missing"
         })
         await websocket.close(code=1011)
+        await assistant_realtime_guard.disconnect(websocket)
         return
 
     headers = {
@@ -76,3 +90,5 @@ async def assistant_realtime_proxy(websocket: WebSocket):
             pass
 
         await websocket.close(code=1011)
+    finally:
+        await assistant_realtime_guard.disconnect(websocket)
