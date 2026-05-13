@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ReactNode } from 'react'
 
 import { RiskLevel } from '@/lib/indicare/types'
+import { getEntityActions, type EntityRouteInput } from '@/lib/navigation/entity-resolver'
 
 type BadgeTone = 'slate' | 'blue' | 'emerald' | 'amber' | 'red' | 'purple'
 
@@ -83,27 +84,79 @@ export function RiskBadge({ value }: { value: RiskLevel }) {
   return <span className={`inline-flex rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] ${toneClasses[tone[value]]}`}>{value}</span>
 }
 
-export function StatCard({ label, value, detail, href }: { label: string; value: string | number; detail?: string; href?: string }) {
+export function StatCard({
+  label,
+  value,
+  detail,
+  href,
+  entity
+}: {
+  label: string
+  value: string | number
+  detail?: string
+  href?: string
+  entity?: EntityRouteInput
+}) {
+  const actions = entity ? getEntityActions(entity).slice(0, 3) : []
   const content = (
-    <article className="h-full rounded-[26px] border border-white/70 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-xl">
+    <article className="group relative h-full rounded-[26px] border border-white/70 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-xl">
+      {href ? <Link href={href} className="absolute inset-0 rounded-[26px]" aria-label={`Open ${label}`} /> : null}
       <strong className="block text-3xl font-black tracking-[-0.06em] text-slate-950">{value}</strong>
       <span className="mt-2 block text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</span>
       {detail ? <p className="mt-3 text-sm leading-6 text-slate-500">{detail}</p> : null}
+      {actions.length ? (
+        <div className="relative z-10 mt-4 flex flex-wrap gap-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100">
+          {actions.map((action) => (
+            <Link
+              key={`${action.id}-${action.route}`}
+              href={action.route}
+              className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-blue-700"
+            >
+              {action.id === 'workspace' ? 'Open' : action.id}
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </article>
   )
 
-  return href ? <Link href={href}>{content}</Link> : content
+  return content
 }
 
-export function AlertCard({ title, body, href }: { title: string; body: string; href?: string }) {
+export function AlertCard({
+  title,
+  body,
+  href,
+  entity
+}: {
+  title: string
+  body: string
+  href?: string
+  entity?: EntityRouteInput
+}) {
+  const actions = entity ? getEntityActions(entity).slice(0, 4) : []
   const content = (
-    <article className="rounded-2xl border border-amber-100 bg-amber-50/80 p-4">
+    <article className="group relative rounded-2xl border border-amber-100 bg-amber-50/80 p-4 transition hover:border-amber-200 hover:bg-amber-50">
+      {href ? <Link href={href} className="absolute inset-0 rounded-2xl" aria-label={`Open ${title}`} /> : null}
       <strong className="block text-sm font-black text-amber-950">{title}</strong>
       <p className="mt-2 text-sm leading-6 text-amber-800">{body}</p>
+      {actions.length ? (
+        <div className="relative z-10 mt-3 flex flex-wrap gap-2">
+          {actions.map((action) => (
+            <Link
+              key={`${action.id}-${action.route}`}
+              href={action.route}
+              className="rounded-full border border-amber-200 bg-white/80 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800"
+            >
+              {action.id === 'workspace' ? 'Open source' : action.id}
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </article>
   )
 
-  return href ? <Link href={href}>{content}</Link> : content
+  return content
 }
 
 export function EmptyState({ title, description }: { title: string; description: string }) {

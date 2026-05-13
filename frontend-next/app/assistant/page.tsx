@@ -30,6 +30,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { AssistantStatusBar } from '@/components/assistant/assistant-status-bar'
 import { AssistantWaveform } from '@/components/assistant/assistant-waveform'
+import { SourceCitationChip } from '@/components/indicare/citations/source-citation-chip'
 
 import { assistantWorkspaceAdapters } from '@/lib/assistant-workspace/adapters'
 import type {
@@ -621,13 +622,18 @@ function ChatWorkspace({
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-300">Citations used</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {assistantData.citations.map((citation, index) => (
-                <Link
+                <SourceCitationChip
                   key={`${citation.source_type}-${citation.source_id}-${index}`}
+                  label={citation.label}
                   href={citationHref(citation)}
-                  className="rounded-full border border-white/10 bg-[#0d1324] px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-emerald-300/40 hover:text-emerald-200"
-                >
-                  {citation.label}
-                </Link>
+                  sourceType={citation.source_type}
+                  sourceId={citation.source_id}
+                  sourceDate={citation.date || undefined}
+                  staffName={citation.staff_name || undefined}
+                  youngPersonName={citation.young_person_name || undefined}
+                  confidence={citation.confidence}
+                  excerpt={citation.excerpt}
+                />
               ))}
             </div>
           </div>
@@ -959,14 +965,18 @@ function ContextPanel({
           {assistantData?.citations?.length ? (
             <div className="mt-3 space-y-3">
               {assistantData.citations.slice(0, 6).map((citation, index) => (
-                <Link
+                <SourceCitationChip
                   key={`${citation.source_type}-${citation.source_id}-${index}`}
+                  label={citation.label}
                   href={citationHref(citation)}
-                  className="block rounded-2xl border border-white/10 bg-[#0d1324] p-4 text-sm leading-6 text-slate-300 transition hover:border-emerald-300/40"
-                >
-                  <span className="font-black text-slate-100">{citation.label}</span>
-                  <span className="mt-1 block text-xs text-slate-500">{citation.source_type} · {citation.date || 'date unavailable'}</span>
-                </Link>
+                  sourceType={citation.source_type}
+                  sourceId={citation.source_id}
+                  sourceDate={citation.date || undefined}
+                  staffName={citation.staff_name || undefined}
+                  youngPersonName={citation.young_person_name || undefined}
+                  confidence={citation.confidence}
+                  excerpt={citation.excerpt}
+                />
               ))}
             </div>
           ) : (
