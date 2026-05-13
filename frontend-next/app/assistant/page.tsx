@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { AssistantEmptyState } from '@/components/assistant/assistant-empty-state'
+import { AssistantStatusBar } from '@/components/assistant/assistant-status-bar'
 import { AssistantWaveform } from '@/components/assistant/assistant-waveform'
 import { ConversationSidebar } from '@/components/assistant/conversation-sidebar'
 
@@ -58,6 +60,7 @@ export default function AssistantPage() {
   useEffect(() => {
     if (activeConversation?.messages?.length) {
       setMessages(activeConversation.messages)
+      assistantRuntime.loadMessages(activeConversation.messages)
     }
   }, [activeConversation])
 
@@ -65,18 +68,20 @@ export default function AssistantPage() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  async function sendMessage() {
-    if (!input.trim()) return
+  async function sendMessage(messageOverride?: string) {
+    const value = messageOverride || input
 
-    const next = input
+    if (!value.trim()) return
+
     setInput('')
 
-    await assistantRuntime.sendMessage(next)
+    await assistantRuntime.sendMessage(value)
   }
 
   function handleCreateConversation() {
     createConversation()
     setMessages([])
+    assistantRuntime.resetConversation()
   }
 
   return (
@@ -109,47 +114,49 @@ export default function AssistantPage() {
               <AssistantWaveform active />
             ) : null}
 
-            <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
-              <div
-                className={`h-2.5 w-2.5 rounded-full ${runtimeState.connected ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]' : 'bg-red-400'}`}
-              />
-
-              {runtimeState.connected
-                ? 'Realtime connected'
-                : 'Realtime unavailable'}
-            </div>
+            <AssistantStatusBar
+              connected={runtimeState.connected}
+              listening={runtimeState.listening}
+              speaking={runtimeState.speaking}
+              streaming={runtimeState.streaming}
+              error={runtimeState.error}
+            />
           </div>
         </header>
 
         <section className="flex-1 overflow-y-auto px-5 py-8">
-          <div className="mx-auto flex max-w-4xl flex-col gap-6">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`max-w-[88%] rounded-[28px] px-6 py-5 text-[15px] leading-8 shadow-[0_12px_40px_rgba(0,0,0,0.18)] ${message.role === 'assistant' ? 'bg-[#151c31] text-white' : 'ml-auto bg-emerald-400 text-slate-950'}`}
-              >
-                <div className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] opacity-60">
-                  {message.role === 'assistant' ? 'IndiCare' : 'You'}
+          {!messages.length ? (
+            <AssistantEmptyState onPromptSelect={sendMessage} />
+          ) : (
+            <div className="mx-auto flex max-w-4xl flex-col gap-6">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`max-w-[88%] rounded-[28px] px-6 py-5 text-[15px] leading-8 shadow-[0_12px_40px_rgba(0,0,0,0.18)] ${message.role === 'assistant' ? 'bg-[#151c31] text-white' : 'ml-auto bg-emerald-400 text-slate-950'}`}
+                >
+                  <div className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] opacity-60">
+                    {message.role === 'assistant' ? 'IndiCare' : 'You'}
+                  </div>
+
+                  <div className="whitespace-pre-wrap">
+                    {message.content}
+
+                    {message.streaming ? (
+                      <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-full bg-emerald-300 align-middle" />
+                    ) : null}
+                  </div>
                 </div>
+              ))}
 
-                <div className="whitespace-pre-wrap">
-                  {message.content}
-
-                  {message.streaming ? (
-                    <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-full bg-emerald-300 align-middle" />
-                  ) : null}
+              {runtimeState.listening ? (
+                <div className="max-w-[240px] rounded-[28px] border border-emerald-400/30 bg-emerald-400/10 px-6 py-5 text-sm text-emerald-200 shadow-[0_10px_30px_rgba(16,185,129,0.15)]">
+                  Listening for speech...
                 </div>
-              </div>
-            ))}
+              ) : null}
 
-            {runtimeState.listening ? (
-              <div className="max-w-[240px] rounded-[28px] border border-emerald-400/30 bg-emerald-400/10 px-6 py-5 text-sm text-emerald-200 shadow-[0_10px_30px_rgba(16,185,129,0.15)]">
-                Listening for speech...
-              </div>
-            ) : null}
-
-            <div ref={endRef} />
-          </div>
+              <div ref={endRef} />
+            </div>
+          )}
         </section>
 
         <footer className="border-t border-white/10 bg-black/20 px-5 py-5 backdrop-blur-xl">
@@ -184,7 +191,7 @@ export default function AssistantPage() {
               </button>
             ) : (
               <button
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
                 className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_0_24px_rgba(52,211,153,0.35)]"
               >
                 Send
