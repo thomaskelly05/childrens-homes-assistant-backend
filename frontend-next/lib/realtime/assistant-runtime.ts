@@ -2,6 +2,7 @@ import { BrowserVoiceRuntime } from './browser-voice-runtime'
 import { ReconnectManager } from './reconnect-manager'
 import { runtimeTelemetry } from './runtime-telemetry'
 import { speechPlaybackRuntime } from './speech-playback-runtime'
+import { WakeWordRuntime } from './wake-word-runtime'
 
 export type AssistantMessage = {
   id: string
@@ -16,6 +17,7 @@ export type RuntimeState = {
   listening: boolean
   speaking: boolean
   streaming: boolean
+  wakeWordEnabled: boolean
   error?: string
 }
 
@@ -43,7 +45,8 @@ export class AssistantRuntime {
     connected: false,
     listening: false,
     speaking: false,
-    streaming: false
+    streaming: false,
+    wakeWordEnabled: false
   }
 
   private messages: AssistantMessage[] = [welcomeMessage()]
@@ -82,6 +85,24 @@ export class AssistantRuntime {
     onError: (error) => {
       this.state.error = error
       runtimeTelemetry.track('assistant.voice.error', { error })
+      this.emit()
+    }
+  })
+
+  private wakeWord = new WakeWordRuntime({
+    onWake: () => {
+      runtimeTelemetry.track('assistant.wake_word.detected')
+      speechPlaybackRuntime.speak('Yes, I am listening.', { rate: 1.05, pitch: 1 })
+      this.voice.start()
+    },
+    onStateChange: (enabled) => {
+      this.state.wakeWordEnabled = enabled
+      runtimeTelemetry.track(enabled ? 'assistant.wake_word.enabled' : 'assistant.wake_word.disabled')
+      this.emit()
+    },
+    onError: (error) => {
+      this.state.error = error
+      runtimeTelemetry.track('assistant.wake_word.error', { error })
       this.emit()
     }
   })
@@ -139,12 +160,14 @@ export class AssistantRuntime {
     this.abortController?.abort()
     this.abortController = null
     this.voice.stop()
+    this.wakeWord.stop()
     speechPlaybackRuntime.stop()
 
     this.state.connected = false
     this.state.listening = false
     this.state.speaking = false
     this.state.streaming = false
+    this.state.wakeWordEnabled = false
 
     runtimeTelemetry.track('assistant.disconnect')
     this.emit()
@@ -257,6 +280,10 @@ export class AssistantRuntime {
 
   toggleListening() {
     this.voice.toggle()
+  }
+
+  toggleWakeWord() {
+    this.wakeWord.toggle()
   }
 
   onState(listener: (state: RuntimeState) => void) {
