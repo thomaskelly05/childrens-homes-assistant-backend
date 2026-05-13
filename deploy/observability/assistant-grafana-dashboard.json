@@ -1,0 +1,54 @@
+{
+  "title": "IndiCare Assistant Runtime",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "Assistant Response Latency P95",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{route=~\".*assistant.*\"}[5m])) by (le))"
+        }
+      ]
+    },
+    {
+      "title": "Realtime Voice Connections",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(active_realtime_voice_sessions)"
+        }
+      ]
+    },
+    {
+      "title": "Assistant Stream Error Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(assistant_stream_errors_total[5m]))"
+        }
+      ]
+    },
+    {
+      "title": "Websocket Disconnect Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(assistant_websocket_disconnects_total[5m]))"
+        }
+      ]
+    },
+    {
+      "title": "Conversation Persistence Writes",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(assistant_conversation_write_total[5m]))"
+        }
+      ]
+    }
+  ]
+}
