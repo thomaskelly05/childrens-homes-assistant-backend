@@ -4,10 +4,191 @@ import re
 from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
+from pydantic import BaseModel, ConfigDict, Field
 from psycopg2.extras import RealDictCursor
+
+from auth.rbac import normalise_role, permissions_for_role
+from repositories.os_repository_utils import current_allowed_home_ids, safe_int
 
 
 AssistantType = Literal["public", "young_people_os", "home_os", "quality_os"]
+AssistantMode = Literal[
+    "embedded",
+    "standalone",
+    "report_writer",
+    "chronology_qna",
+    "regulatory_readiness",
+    "safeguarding_review",
+    "handover",
+    "reg44_action_plan",
+    "reg45_writer",
+    "lac_review_writer",
+    "safeguarding_chronology",
+    "manager_oversight_report",
+    "ofsted_evidence_pack",
+]
+
+
+class SharedAssistantContext(BaseModel):
+    """Shared runtime context used by embedded and standalone assistants."""
+
+    model_config = ConfigDict(extra="allow")
+
+    user_id: int | None = None
+    staff_profile: dict[str, Any] | None = None
+    role: str | None = None
+    permissions: list[str] = Field(default_factory=list)
+    home_id: int | None = None
+    provider_id: int | None = None
+    organisation_id: int | None = None
+    allowed_home_ids: list[int] = Field(default_factory=list)
+    home_scope: dict[str, Any] = Field(default_factory=dict)
+    current_route: str | None = None
+    current_workspace_type: str | None = None
+    selected_young_person_id: int | None = None
+    selected_record_id: str | None = None
+    selected_record_type: str | None = None
+    selected_report_id: str | None = None
+    selected_document_id: str | None = None
+    active_filters: dict[str, Any] = Field(default_factory=dict)
+    visible_chronology_ids: list[str] = Field(default_factory=list)
+    visible_action_ids: list[str] = Field(default_factory=list)
+    visible_evidence_ids: list[str] = Field(default_factory=list)
+    regulatory_scope: list[str] = Field(default_factory=list)
+    sccif_scope: list[str] = Field(default_factory=list)
+    conversation_id: str | None = None
+    project_id: str | None = None
+    assistant_mode: AssistantMode = "embedded"
+    page_title: str | None = None
+    selected_record_summary: str | None = None
+
+
+def _safe_context_int(value: Any) -> int | None:
+    return safe_int(value)
+
+
+def _safe_context_str(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
+
+
+def _safe_context_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return [str(item).strip() for item in value if str(item or "").strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def build_shared_assistant_context(
+    *,
+    current_user: dict[str, Any],
+    requested_context: dict[str, Any] | None,
+    mode: AssistantMode | str,
+    conversation_id: str | None = None,
+    project_id: str | None = None,
+) -> SharedAssistantContext:
+    """Normalise UI/user context into one AssistantContext contract.
+
+    The frontend may supply route/page hints while authoritative identity,
+    permissions and home scope always come from the authenticated backend user.
+    """
+
+    raw_context = dict(requested_context or {})
+    role = normalise_role(current_user.get("role"))
+    user_id = _safe_context_int(current_user.get("user_id") or current_user.get("id") or current_user.get("sub"))
+    home_id = _safe_context_int(raw_context.get("home_id") or current_user.get("home_id") or current_user.get("homeId"))
+    provider_id = _safe_context_int(current_user.get("provider_id") or current_user.get("providerId") or raw_context.get("provider_id"))
+    allowed_home_ids = current_allowed_home_ids({**current_user, "home_id": current_user.get("home_id") or current_user.get("homeId")})
+    if home_id is not None and home_id not in allowed_home_ids:
+        allowed_home_ids.append(home_id)
+        allowed_home_ids.sort()
+
+    assistant_mode = str(mode or raw_context.get("assistant_mode") or "embedded").strip().lower()
+    if assistant_mode not in AssistantMode.__args__:  # type: ignore[attr-defined]
+        assistant_mode = "embedded"
+
+    current_route = _safe_context_str(raw_context.get("current_route") or raw_context.get("route"))
+    workspace_type = _safe_context_str(
+        raw_context.get("current_workspace_type")
+        or raw_context.get("workspace_type")
+        or raw_context.get("workspace")
+    )
+    if not workspace_type and current_route:
+        route = current_route.lower()
+        if "assistant" in route:
+            workspace_type = "standalone_assistant"
+        elif "chronology" in route:
+            workspace_type = "chronology"
+        elif "report" in route:
+            workspace_type = "reports"
+        elif "regulatory" in route or "ofsted" in route:
+            workspace_type = "regulatory"
+        elif "young-people" in route or "young_people" in route:
+            workspace_type = "young_person"
+        else:
+            workspace_type = "dashboard"
+
+    staff_profile = {
+        "id": user_id,
+        "name": " ".join(
+            item
+            for item in [
+                _safe_context_str(current_user.get("first_name")),
+                _safe_context_str(current_user.get("last_name")),
+            ]
+            if item
+        ) or _safe_context_str(current_user.get("email")),
+        "email": _safe_context_str(current_user.get("email")),
+        "role": role,
+    }
+
+    return SharedAssistantContext(
+        user_id=user_id,
+        staff_profile=staff_profile,
+        role=role,
+        permissions=sorted(permissions_for_role(role)),
+        home_id=home_id,
+        provider_id=provider_id,
+        organisation_id=_safe_context_int(raw_context.get("organisation_id") or raw_context.get("org_id") or provider_id),
+        allowed_home_ids=allowed_home_ids,
+        home_scope={
+            "home_id": home_id,
+            "provider_id": provider_id,
+            "allowed_home_ids": allowed_home_ids,
+        },
+        current_route=current_route,
+        current_workspace_type=workspace_type,
+        selected_young_person_id=_safe_context_int(
+            raw_context.get("selected_young_person_id")
+            or raw_context.get("young_person_id")
+            or raw_context.get("selectedYoungPersonId")
+        ),
+        selected_record_id=_safe_context_str(
+            raw_context.get("selected_record_id")
+            or raw_context.get("record_id")
+            or raw_context.get("selectedRecordId")
+        ),
+        selected_record_type=_safe_context_str(
+            raw_context.get("selected_record_type")
+            or raw_context.get("record_type")
+            or raw_context.get("selectedRecordType")
+        ),
+        selected_report_id=_safe_context_str(raw_context.get("selected_report_id") or raw_context.get("report_id")),
+        selected_document_id=_safe_context_str(raw_context.get("selected_document_id") or raw_context.get("document_id")),
+        active_filters=raw_context.get("active_filters") if isinstance(raw_context.get("active_filters"), dict) else {},
+        visible_chronology_ids=_safe_context_list(raw_context.get("visible_chronology_ids")),
+        visible_action_ids=_safe_context_list(raw_context.get("visible_action_ids")),
+        visible_evidence_ids=_safe_context_list(raw_context.get("visible_evidence_ids")),
+        regulatory_scope=_safe_context_list(raw_context.get("regulatory_scope")),
+        sccif_scope=_safe_context_list(raw_context.get("sccif_scope") or raw_context.get("SCCIF_scope")),
+        conversation_id=_safe_context_str(conversation_id or raw_context.get("conversation_id")),
+        project_id=_safe_context_str(project_id or raw_context.get("project_id")),
+        assistant_mode=assistant_mode,  # type: ignore[arg-type]
+        page_title=_safe_context_str(raw_context.get("page_title") or raw_context.get("pageTitle")),
+        selected_record_summary=_safe_context_str(raw_context.get("selected_record_summary") or raw_context.get("visibleRecordSummary")),
+    )
 
 
 def _fetch_one(conn, query: str, params: tuple[Any, ...]) -> dict[str, Any] | None:

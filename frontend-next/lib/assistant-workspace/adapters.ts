@@ -13,7 +13,7 @@ import type {
 
 const DEFAULT_API_BASE = process.env.NODE_ENV === 'development'
   ? 'http://localhost:8000'
-  : 'https://childrens-homes-assistant-backend-new.onrender.com'
+  : 'https://api.indicare.co.uk'
 
 export const ASSISTANT_API_BASE = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||

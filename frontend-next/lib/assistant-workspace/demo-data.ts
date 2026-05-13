@@ -3,14 +3,19 @@ import type { AssistantWorkspaceData, MagicNote } from './types'
 export const assistantWorkspaceDemoData: AssistantWorkspaceData = {
   apps: [
     { id: 'chat', label: 'Chat', description: 'ChatGPT-style care assistant workspace', status: 'ready' },
+    { id: 'chronology', label: 'Chronology', description: 'Search, summarise and evidence chronology patterns', status: 'ready' },
+    { id: 'reports', label: 'Reports', description: 'Report drafting, review and evidence collection', status: 'ready' },
+    { id: 'reg44', label: 'Reg 44', description: 'Reg 44 action plans and independent visitor follow-up', status: 'foundation' },
+    { id: 'reg45', label: 'Reg 45', description: 'Reg 45 quality-of-care evidence overview and drafts', status: 'foundation' },
+    { id: 'lac_review', label: 'LAC Review', description: 'Looked-after child review summaries and evidence gaps', status: 'foundation' },
+    { id: 'ofsted', label: 'Ofsted', description: 'SCCIF readiness, evidence packs and inspection questions', status: 'foundation' },
+    { id: 'actions', label: 'Actions', description: 'Open, overdue and management oversight actions', status: 'ready' },
+    { id: 'evidence', label: 'Evidence', description: 'Evidence quality, gaps and linked records', status: 'ready' },
+    { id: 'documents', label: 'Documents', description: 'Documents, extracted text and report attachments', status: 'ready' },
     { id: 'projects', label: 'Projects', description: 'Group chats, notes, records and workflows by outcome', status: 'foundation' },
     { id: 'notes', label: 'Notes', description: 'Magic Notes recording, transcription and care-note drafting', status: 'mock' },
     { id: 'voice', label: 'Voice', description: 'Hey IndiCare voice assistant foundation', status: 'mock' },
-    { id: 'calls', label: 'Calls', description: 'Care team, professional and family contact calls', status: 'foundation' },
-    { id: 'calendar', label: 'Calendar', description: 'Appointments, meetings and statutory review prompts', status: 'foundation' },
-    { id: 'mail', label: 'Mail', description: 'Outlook-style message triage for care operations', status: 'foundation' },
-    { id: 'reports', label: 'Reports', description: 'Report drafting, review and evidence collection', status: 'foundation' },
-    { id: 'knowledge', label: 'Knowledge', description: 'Policies, standards and home-specific guidance', status: 'foundation' }
+    { id: 'calls', label: 'Calls', description: 'Care team, professional and family contact calls', status: 'foundation' }
   ],
   conversations: [
     {
@@ -62,7 +67,7 @@ export const assistantWorkspaceDemoData: AssistantWorkspaceData = {
       linkedHomeId: 'oak-house',
       linkedYoungPersonIds: ['yp-1', 'yp-2'],
       linkedAdultProfileIds: ['adult-sarah', 'adult-michael'],
-      appIds: ['chat', 'notes', 'calls', 'calendar'],
+      appIds: ['chat', 'chronology', 'actions', 'notes', 'calls'],
       updatedAt: '2026-05-13T18:45:00.000Z'
     },
     {
@@ -72,7 +77,7 @@ export const assistantWorkspaceDemoData: AssistantWorkspaceData = {
       linkedHomeId: 'oak-house',
       linkedYoungPersonIds: ['yp-2'],
       linkedAdultProfileIds: ['adult-sarah'],
-      appIds: ['chat', 'reports', 'knowledge'],
+      appIds: ['chat', 'chronology', 'reports', 'evidence'],
       updatedAt: '2026-05-13T15:20:00.000Z'
     },
     {
@@ -81,7 +86,7 @@ export const assistantWorkspaceDemoData: AssistantWorkspaceData = {
       description: 'Evidence collection, report drafting and missing-section checks.',
       linkedYoungPersonIds: ['yp-1', 'yp-3'],
       linkedAdultProfileIds: ['adult-michael'],
-      appIds: ['chat', 'reports', 'calendar'],
+      appIds: ['chat', 'reports', 'reg45', 'ofsted'],
       updatedAt: '2026-05-12T11:50:00.000Z'
     }
   ],

@@ -35,6 +35,7 @@ routers.assistant_realtime_voice_routes
 routers.assistant_realtime_proxy_routes
 routers.assistant_general_safe_routes
 routers.assistant_web_routes
+routers.assistant_query_routes
 routers.indicare_ai_orchestrator_routes
 routers.indicare_ai_memory_routes
 routers.standalone_assistant_library_routes

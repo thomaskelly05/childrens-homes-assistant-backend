@@ -2,14 +2,19 @@ import type { AssistantMessage } from '@/lib/realtime/assistant-runtime'
 
 export type AssistantAppId =
   | 'chat'
+  | 'chronology'
+  | 'reports'
+  | 'reg44'
+  | 'reg45'
+  | 'lac_review'
+  | 'ofsted'
+  | 'actions'
+  | 'evidence'
+  | 'documents'
   | 'projects'
   | 'notes'
   | 'voice'
   | 'calls'
-  | 'calendar'
-  | 'mail'
-  | 'reports'
-  | 'knowledge'
 
 export type AssistantConversation = {
   id: string
