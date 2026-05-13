@@ -32,6 +32,22 @@ def current_home_id(current_user: dict[str, Any]) -> int | None:
     return safe_int(current_user.get("home_id") or current_user.get("homeId"))
 
 
+def current_allowed_home_ids(current_user: dict[str, Any]) -> list[int]:
+    raw_values = (
+        current_user.get("allowed_home_ids")
+        or current_user.get("allowedHomeIds")
+        or current_user.get("home_ids")
+        or current_user.get("homeIds")
+        or []
+    )
+    values = raw_values if isinstance(raw_values, (list, tuple, set)) else [raw_values]
+    allowed = {safe_id for item in values if (safe_id := safe_int(item)) is not None}
+    home_id = current_home_id(current_user)
+    if home_id is not None:
+        allowed.add(home_id)
+    return sorted(allowed)
+
+
 def current_provider_id(current_user: dict[str, Any]) -> int | None:
     return safe_int(current_user.get("provider_id") or current_user.get("providerId"))
 
@@ -185,11 +201,21 @@ def build_scope_where(
     params: list[Any] = []
 
     resolved_provider = provider_id if provider_id is not None else current_provider_id(current_user)
-    resolved_home = home_id if home_id is not None else current_home_id(current_user)
+    allowed_home_ids = current_allowed_home_ids(current_user)
 
-    if not is_admin(current_user) and resolved_home is not None and "home_id" in cols:
-        where.append("home_id = %s")
-        params.append(resolved_home)
+    if not is_admin(current_user) and "home_id" in cols:
+        if home_id is not None:
+            if home_id in allowed_home_ids:
+                where.append("home_id = %s")
+                params.append(home_id)
+            else:
+                where.append("1 = 0")
+        elif len(allowed_home_ids) == 1:
+            where.append("home_id = %s")
+            params.append(allowed_home_ids[0])
+        elif allowed_home_ids:
+            where.append("home_id = ANY(%s)")
+            params.append(allowed_home_ids)
     elif home_id is not None and "home_id" in cols:
         where.append("home_id = %s")
         params.append(home_id)

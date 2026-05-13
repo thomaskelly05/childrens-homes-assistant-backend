@@ -7,11 +7,12 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CheckSquare,
+  ClipboardList,
   ChevronDown,
+  Database,
   FileAudio,
   FileText,
   FolderKanban,
-  Mail,
   Mic,
   Paperclip,
   Phone,
@@ -44,19 +45,28 @@ import {
   RuntimeState
 } from '@/lib/realtime/assistant-runtime'
 import { useAssistantConversations } from '@/hooks/use-assistant-conversations'
+import { citationHref } from '@/lib/assistant-core/citations'
+import { buildStandaloneAssistantContext, queryAssistant } from '@/lib/assistant-core/client'
+import { suggestedPromptsForWorkspace } from '@/lib/assistant-core/retrieval'
+import type { AssistantMode, AssistantQueryData } from '@/lib/assistant-core/types'
 
 type WorkspaceSection = AssistantAppId | 'adults' | 'settings'
 
 const appIconMap: Record<AssistantAppId, LucideIcon> = {
   chat: Bot,
+  chronology: CalendarDays,
+  reports: FileText,
+  reg44: ClipboardList,
+  reg45: BriefcaseBusiness,
+  lac_review: Users,
+  ofsted: ShieldAlert,
+  actions: CheckSquare,
+  evidence: Database,
+  documents: FileText,
   projects: FolderKanban,
   notes: FileAudio,
   voice: Radio,
-  calls: Phone,
-  calendar: CalendarDays,
-  mail: Mail,
-  reports: FileText,
-  knowledge: BriefcaseBusiness
+  calls: Phone
 }
 
 const sidebarItems: Array<{
@@ -74,12 +84,7 @@ const sidebarItems: Array<{
   { id: 'settings', label: 'Settings', icon: Settings }
 ]
 
-const suggestedPrompts = [
-  'Summarise today for Oak House with risks and overdue actions',
-  'Create a safeguarding chronology from the recent notes',
-  'Draft an evening handover for the care team',
-  'Turn this conversation into a keywork note and action plan'
-]
+const suggestedPrompts = suggestedPromptsForWorkspace('standalone_assistant', 'standalone')
 
 function formatDateLabel(value: string) {
   return new Date(value).toLocaleString('en-GB', {
@@ -93,7 +98,28 @@ function formatDateLabel(value: string) {
 function sectionLabel(section: WorkspaceSection) {
   if (section === 'adults') return 'Adults / Staff'
   if (section === 'settings') return 'Settings'
-  return section.charAt(0).toUpperCase() + section.slice(1)
+  if (section === 'lac_review') return 'LAC Review'
+  return section.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function messageId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function modeForSection(section: WorkspaceSection): AssistantMode {
+  if (section === 'chronology') return 'chronology_qna'
+  if (section === 'reg44') return 'reg44_action_plan'
+  if (section === 'reg45') return 'reg45_writer'
+  if (section === 'lac_review') return 'lac_review_writer'
+  if (section === 'ofsted') return 'ofsted_evidence_pack'
+  if (section === 'reports') return 'report_writer'
+  if (section === 'actions') return 'handover'
+  if (section === 'evidence' || section === 'documents') return 'regulatory_readiness'
+  return 'standalone'
 }
 
 export default function AssistantPage() {
@@ -110,6 +136,8 @@ export default function AssistantPage() {
     wakeWordEnabled: false,
     realtimeVoiceConnected: false
   })
+  const [lastAssistantData, setLastAssistantData] = useState<AssistantQueryData | null>(null)
+  const [assistantError, setAssistantError] = useState<string | null>(null)
 
   const [input, setInput] = useState('')
 
@@ -157,18 +185,77 @@ export default function AssistantPage() {
   }, [messages])
 
   async function sendMessage(messageOverride?: string) {
-    const value = messageOverride || input
+    const value = (messageOverride || input).trim()
 
-    if (!value.trim()) return
+    if (!value || runtimeState.streaming) return
 
     setInput('')
+    setAssistantError(null)
 
-    await assistantRuntime.sendMessage(value)
+    const userMessage: AssistantMessage = {
+      id: messageId(),
+      role: 'user',
+      content: value,
+      createdAt: new Date().toISOString()
+    }
+    const assistantMessage: AssistantMessage = {
+      id: messageId(),
+      role: 'assistant',
+      content: '',
+      createdAt: new Date().toISOString(),
+      streaming: true
+    }
+    const pendingMessages = [...messages, userMessage, assistantMessage]
+    setMessages(pendingMessages)
+    setRuntimeState((current) => ({ ...current, streaming: true, speaking: true, error: undefined }))
+
+    try {
+      const mode = modeForSection(activeSection)
+      const data = await queryAssistant({
+        message: value,
+        mode,
+        context: buildStandaloneAssistantContext({
+          activeSection,
+          conversationId: activeConversationId
+        }),
+        conversation_id: activeConversationId || undefined
+      })
+      setLastAssistantData(data)
+      const nextMessages = pendingMessages.map((message) => (
+        message.id === assistantMessage.id
+          ? { ...message, content: data.answer, streaming: false }
+          : message
+      ))
+      setMessages(nextMessages)
+      if (activeConversationId) {
+        await saveConversation(activeConversationId, nextMessages)
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Assistant backend unavailable.'
+      setAssistantError(message)
+      const nextMessages = pendingMessages.map((item) => (
+        item.id === assistantMessage.id
+          ? {
+              ...item,
+              content: `The live assistant endpoint is unavailable or returned an error: ${message}\n\nNo record-specific answer has been generated. Try again after checking your connection or permissions.`,
+              streaming: false
+            }
+          : item
+      ))
+      setMessages(nextMessages)
+      if (activeConversationId) {
+        await saveConversation(activeConversationId, nextMessages)
+      }
+    } finally {
+      setRuntimeState((current) => ({ ...current, streaming: false, speaking: false }))
+    }
   }
 
   async function handleCreateConversation() {
     await createConversation()
     setMessages([])
+    setLastAssistantData(null)
+    setAssistantError(null)
     assistantRuntime.resetConversation()
     setActiveSection('chat')
   }
@@ -279,6 +366,8 @@ export default function AssistantPage() {
                     messages={messages}
                     runtimeState={runtimeState}
                     suggestedPrompts={suggestedPrompts}
+                    assistantData={lastAssistantData}
+                    assistantError={assistantError}
                     onPromptSelect={sendMessage}
                     endRef={endRef}
                   />
@@ -309,7 +398,7 @@ export default function AssistantPage() {
                   <CallsWorkspace calls={workspace.calls} />
                 ) : null}
 
-                {['calendar', 'mail', 'reports', 'knowledge'].includes(activeSection) ? (
+                {['chronology', 'reports', 'reg44', 'reg45', 'lac_review', 'ofsted', 'actions', 'evidence', 'documents'].includes(activeSection) ? (
                   <ProductivityWorkspace tasks={workspace.productivityTasks} activeSection={activeSection} />
                 ) : null}
 
@@ -343,6 +432,8 @@ export default function AssistantPage() {
             context={workspace.careContext}
             magicNote={magicNote}
             activeSection={activeSection}
+            assistantData={lastAssistantData}
+            assistantError={assistantError}
           />
         </div>
       </section>
@@ -455,12 +546,16 @@ function ChatWorkspace({
   messages,
   runtimeState,
   suggestedPrompts,
+  assistantData,
+  assistantError,
   onPromptSelect,
   endRef
 }: {
   messages: AssistantMessage[]
   runtimeState: RuntimeState
   suggestedPrompts: string[]
+  assistantData: AssistantQueryData | null
+  assistantError: string | null
   onPromptSelect: (prompt: string) => void
   endRef: RefObject<HTMLDivElement | null>
 }) {
@@ -481,7 +576,7 @@ function ChatWorkspace({
           <h3 className="mt-1 text-2xl font-black tracking-[-0.04em]">Conversation thread</h3>
         </div>
         <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-black text-slate-300">
-          Model: IndiCare care assistant · {runtimeState.connected ? 'backend reachable' : 'deterministic fallback ready'}
+          Model: IndiCare OS assistant core · {runtimeState.streaming ? 'retrieving OS evidence' : 'ready'}
         </div>
       </div>
 
@@ -506,6 +601,35 @@ function ChatWorkspace({
         {runtimeState.listening ? (
           <div className="max-w-[320px] rounded-[28px] border border-emerald-400/30 bg-emerald-400/10 px-6 py-5 text-sm text-emerald-200">
             Listening placeholder is active. Browser speech support may vary; live clinical voice is not claimed in this foundation.
+          </div>
+        ) : null}
+
+        {assistantError ? (
+          <div className="rounded-[24px] border border-red-300/30 bg-red-400/10 px-5 py-4 text-sm leading-6 text-red-100">
+            Backend unavailable or permission denied: {assistantError}
+          </div>
+        ) : null}
+
+        {assistantData?.review_required ? (
+          <div className="rounded-[24px] border border-amber-300/30 bg-amber-300/10 px-5 py-4 text-sm leading-6 text-amber-100">
+            Review required: assistant outputs are draft operational support and must be checked by an adult/manager before use.
+          </div>
+        ) : null}
+
+        {assistantData?.citations?.length ? (
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-300">Citations used</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {assistantData.citations.map((citation, index) => (
+                <Link
+                  key={`${citation.source_type}-${citation.source_id}-${index}`}
+                  href={citationHref(citation)}
+                  className="rounded-full border border-white/10 bg-[#0d1324] px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-emerald-300/40 hover:text-emerald-200"
+                >
+                  {citation.label}
+                </Link>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -803,11 +927,15 @@ function SettingsWorkspace() {
 function ContextPanel({
   context,
   magicNote,
-  activeSection
+  activeSection,
+  assistantData,
+  assistantError
 }: {
   context: ReturnType<typeof assistantWorkspaceAdapters.getWorkspaceData>['careContext']
   magicNote: MagicNote
   activeSection: WorkspaceSection
+  assistantData: AssistantQueryData | null
+  assistantError: string | null
 }) {
   return (
     <aside className="hidden border-l border-white/10 bg-[#090e1b] p-5 xl:block">
@@ -825,6 +953,51 @@ function ContextPanel({
 
         <ListCard title="Recent notes" items={context.recentNotes} />
         <ListCard title="Safety / compliance reminders" items={context.safetyReminders} tone="risk" />
+
+        <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-300">Citations panel</p>
+          {assistantData?.citations?.length ? (
+            <div className="mt-3 space-y-3">
+              {assistantData.citations.slice(0, 6).map((citation, index) => (
+                <Link
+                  key={`${citation.source_type}-${citation.source_id}-${index}`}
+                  href={citationHref(citation)}
+                  className="block rounded-2xl border border-white/10 bg-[#0d1324] p-4 text-sm leading-6 text-slate-300 transition hover:border-emerald-300/40"
+                >
+                  <span className="font-black text-slate-100">{citation.label}</span>
+                  <span className="mt-1 block text-xs text-slate-500">{citation.source_type} · {citation.date || 'date unavailable'}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              {assistantError ? 'Citations unavailable while the backend is unavailable.' : 'Ask a record-specific question to populate citations.'}
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Related records</p>
+          {assistantData?.related_records?.length ? (
+            <div className="mt-3 space-y-2">
+              {assistantData.related_records.slice(0, 6).map((record) => (
+                <Link key={`${record.source_type}-${record.source_id}`} href={record.route || '/assistant'} className="block rounded-2xl bg-[#0d1324] px-4 py-3 text-sm font-bold text-slate-200">
+                  {record.title || `${record.source_type} ${record.source_id}`}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-slate-400">No related records loaded yet.</p>
+          )}
+        </div>
+
+        {assistantData?.suggested_actions?.length ? (
+          <ListCard title="Suggested actions" items={assistantData.suggested_actions.slice(0, 6).map((action) => action.title)} />
+        ) : null}
+
+        {assistantData?.evidence_gaps?.length ? (
+          <ListCard title="Evidence gaps" items={assistantData.evidence_gaps.slice(0, 6).map((gap) => gap.gap)} tone="risk" />
+        ) : null}
 
         <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Linked Magic Note</p>

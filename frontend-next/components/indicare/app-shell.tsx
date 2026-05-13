@@ -29,6 +29,7 @@ import { ReactNode } from 'react'
 import { ContextualAssistantPanel } from '@/components/indicare/embedded-assistant/contextual-assistant-panel'
 import { CommandSearch } from '@/components/indicare/command-search'
 import { useAuth } from '@/contexts/auth-context'
+import { buildAssistantContext } from '@/lib/assistant-core/context'
 import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permissions'
 import { indicareData } from '@/lib/indicare/demo-data'
 import { getYoungPersonById } from '@/lib/indicare/selectors'
@@ -222,13 +223,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <aside className="hidden border-l border-slate-200/80 bg-[#f7f9fc] p-5 xl:block">
             <div className="sticky top-[92px] space-y-5">
               <ContextualAssistantPanel
-                context={{
+                context={buildAssistantContext({
+                  mode: 'embedded',
                   route: pathname,
                   pageTitle,
                   selectedYoungPersonId: selectedId,
-                  visibleRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined,
-                  userRole: labelForRole(user.role)
-                }}
+                  selectedRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined
+                })}
               />
             </div>
           </aside>
