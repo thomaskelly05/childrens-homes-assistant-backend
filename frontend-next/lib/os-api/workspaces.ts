@@ -11,6 +11,12 @@ import type { OsApiResult } from './types'
 export type OsPersonSummary = {
   id: string
   displayName: string
+  preferredName?: string
+  age?: number | string
+  riskLevel?: string
+  keyWorkerId?: string
+  role?: string
+  email?: string
   status?: string
   placementStatus?: string
   legalStatus?: string
@@ -22,6 +28,7 @@ export type OsWorkspace = {
   youngPerson?: OsPersonSummary
   adult?: OsPersonSummary
   chronology: ReturnType<typeof mapOsChronology>[]
+  recordsAuthored?: ReturnType<typeof mapOsChronology>[]
   actions: ReturnType<typeof mapOsAction>[]
   evidence: ReturnType<typeof mapOsEvidence>[]
 }
@@ -32,6 +39,10 @@ function demoYoungPerson(id: string): OsPersonSummary | undefined {
     ...person,
     id: person.id,
     displayName: `${person.firstName} ${person.lastName}`,
+    preferredName: person.preferredName,
+    age: person.age,
+    riskLevel: person.riskLevel,
+    keyWorkerId: person.allocatedKeyWorkerId,
     placementStatus: person.status,
     carePlanning: person.educationStatus
   } : undefined
@@ -45,7 +56,13 @@ function mapPerson(row: Record<string, any>): OsPersonSummary {
     status: row.status,
     placementStatus: row.placement_status || row.placementStatus || row.status,
     legalStatus: row.legal_status || row.legalStatus,
-    carePlanning: row.care_planning || row.carePlanning || row.summary
+    carePlanning: row.care_planning || row.carePlanning || row.summary,
+    preferredName: row.preferred_name || row.preferredName || row.first_name,
+    age: row.age,
+    riskLevel: row.risk_level || row.riskLevel,
+    keyWorkerId: row.key_worker_id || row.allocated_key_worker_id || row.keyWorkerId,
+    role: row.role,
+    email: row.email
   }
 }
 
@@ -84,6 +101,7 @@ export async function getOsAdultWorkspace(id: string): Promise<OsApiResult<OsWor
     data: {
       adult: result.data.adult ? mapPerson(result.data.adult) : undefined,
       chronology: Array.isArray(result.data.chronology) ? result.data.chronology.map(mapOsChronology) : [],
+      recordsAuthored: Array.isArray(result.data.records_authored) ? result.data.records_authored.map(mapOsChronology) : Array.isArray(result.data.recordsAuthored) ? result.data.recordsAuthored.map(mapOsChronology) : [],
       actions: Array.isArray(result.data.actions) ? result.data.actions.map(mapOsAction) : [],
       evidence: Array.isArray(result.data.evidence) ? result.data.evidence.map(mapOsEvidence) : []
     }
