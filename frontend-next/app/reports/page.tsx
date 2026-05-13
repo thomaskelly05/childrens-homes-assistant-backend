@@ -1,39 +1,31 @@
 import Link from 'next/link'
 
-import { ReportPreview } from '@/components/indicare/report-preview'
+import { RecordQuestionPanel } from '@/components/indicare/record-question-panel'
+import { ReportingFoundation } from '@/components/indicare/reporting-foundation'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { indicareData } from '@/lib/indicare/demo-data'
-import { buildOfstedEvidenceOutline, buildWeeklyCareSummary } from '@/lib/indicare/reports'
 import { fullName, getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
-
-const reportTypes = [
-  'Weekly care summary',
-  'Monthly placement report',
-  'Incident summary',
-  'Risk review',
-  'Safeguarding chronology',
-  'Keywork summary',
-  'Education summary',
-  'Health summary',
-  'Ofsted evidence pack outline'
-]
+import { reportTemplates } from '@/lib/regulatory-reporting/templates'
+import { generateReport } from '@/lib/regulatory-reporting/generators'
 
 export default function ReportsPage() {
+  const reg44Draft = generateReport({ templateId: 'reg44', homeId: 'home-oak', dateFrom: '2026-05-01', dateTo: '2026-05-13' })
+
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Reports" title="Report generator" description="Structured report foundations that gather relevant daily logs, incidents, risks, keywork, medication, safeguarding, appointments, documents and staff notes." action={<Link href="/assistant" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Assistant draft</Link>} />
+      <PageHeader
+        eyebrow="Reports"
+        title="Regulatory and care report generator"
+        description="Draft report foundations that gather chronology events, evidence, actions and citations. All generated text is draft and review required."
+        action={<Link href="/chronology" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open chronology</Link>}
+      />
       <section className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Report types" value={reportTypes.length} />
+        <StatCard label="Report templates" value={reportTemplates.length} />
         <StatCard label="Drafts" value={indicareData.reports.filter((report) => report.status === 'draft').length} />
         <StatCard label="Review" value={indicareData.reports.filter((report) => report.status === 'review').length} />
-        <StatCard label="Overdue" value={indicareData.reports.filter((report) => report.status === 'overdue').length} />
+        <StatCard label="Citations in preview" value={reg44Draft.citations.length} />
       </section>
-      <Card>
-        <SectionHeader eyebrow="Types" title="Available report foundations" />
-        <div className="grid gap-3 md:grid-cols-3">
-          {reportTypes.map((type) => <div key={type} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 text-sm font-black text-slate-700">{type}</div>)}
-        </div>
-      </Card>
+      <ReportingFoundation />
       <Card>
         <SectionHeader eyebrow="Register" title="Generated and draft reports" />
         <DataTable
@@ -54,16 +46,7 @@ export default function ReportsPage() {
           empty={<EmptyState title="No reports generated" description="No reports have been generated yet." />}
         />
       </Card>
-      <section className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <SectionHeader eyebrow="Preview" title="Weekly care summary sections" />
-          <ReportPreview sections={buildWeeklyCareSummary('yp-jamie').slice(0, 4)} />
-        </Card>
-        <Card>
-          <SectionHeader eyebrow="Inspection" title="Ofsted evidence outline" />
-          <ReportPreview sections={buildOfstedEvidenceOutline('yp-noah').slice(0, 5)} />
-        </Card>
-      </section>
+      <RecordQuestionPanel scope={{ homeId: 'home-oak' }} title="Ask IndiCare for report evidence" defaultQuestion="Prepare a LAC review summary with citations." />
     </div>
   )
 }

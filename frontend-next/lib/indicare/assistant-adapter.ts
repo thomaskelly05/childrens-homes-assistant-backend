@@ -1,5 +1,6 @@
 import { indicareData } from './demo-data'
 import { getYoungPersonById } from './selectors'
+import { createRecordQuestion, answerRecordQuestion } from '@/lib/record-intelligence/mock-answerer'
 
 export type AssistantContext = {
   route?: string
@@ -24,7 +25,11 @@ export function suggestedActionsForContext(context: AssistantContext): string[] 
   }
 
   if (context.route?.includes('reports')) {
-    return ['Draft report sections', 'Check missing evidence', 'Make wording inspection-ready', 'Summarise overdue reports']
+    return ['Prepare a LAC review summary with citations', 'Check missing evidence', 'What would Ofsted want to see here?', 'What actions are overdue from Reg 44?']
+  }
+
+  if (context.route?.includes('chronology')) {
+    return ['Summarise safeguarding concerns in the last 30 days', 'Which incidents link to contact anxiety?', 'What evidence do we have for emotional wellbeing progress?', 'What actions are overdue from Reg 44?']
   }
 
   if (context.route?.includes('incidents') || context.route?.includes('safeguarding')) {
@@ -41,6 +46,21 @@ export function generateMockAssistantResponse(prompt: string, context: Assistant
   const unread = (indicareData.notifications ?? []).filter((item) => !item.read).length
   const highRisks = (indicareData.youngPeople ?? []).filter((item) => ['high', 'critical'].includes(item.riskLevel)).length
   const route = context.pageTitle || context.route || 'current workspace'
+
+  if (context.route?.includes('chronology') || context.route?.includes('reports') || context.route?.includes('documents')) {
+    const cited = answerRecordQuestion(createRecordQuestion(prompt, {
+      youngPersonIds: context.selectedYoungPersonId ? [context.selectedYoungPersonId] : undefined,
+      dateFrom: '2026-05-01',
+      dateTo: '2026-05-13'
+    }))
+    return [
+      `Context: ${route}`,
+      `Prompt: ${prompt}`,
+      cited.answer,
+      `Citations: ${cited.citations.map((citation) => citation.label).join(' ') || 'No matching citations found.'}`,
+      'Draft only. Review required before this is used in a record or report.'
+    ].join('\n\n')
+  }
 
   if (person) {
     return [

@@ -1,6 +1,9 @@
 import Link from 'next/link'
 
 import { Card, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge, RiskBadge, AlertCard } from '@/components/indicare/ui'
+import { getChronologyEvents, getRegulationLinkedEvents, getSafeguardingChronology } from '@/lib/chronology/selectors'
+import { getDocumentsNeedingReview } from '@/lib/documents/selectors'
+import { getEvidenceGaps, getOpenCareActions } from '@/lib/evidence/selectors'
 import { indicareData } from '@/lib/indicare/demo-data'
 import { dashboardMetrics, fullName, getStaffById, getYoungPersonById, sortByDateDesc } from '@/lib/indicare/selectors'
 
@@ -12,6 +15,15 @@ export default function DashboardPage() {
   const recentIncidents = sortByDateDesc(indicareData.incidents, (incident) => incident.dateTime).slice(0, 4)
   const recentLogs = sortByDateDesc(indicareData.dailyLogs, (log) => log.createdAt).slice(0, 4)
   const safeguardingTimeline = sortByDateDesc(indicareData.safeguardingEvents, (event) => event.date).slice(0, 4)
+  const chronologyEvents = getChronologyEvents()
+  const chronologySafeguarding = getSafeguardingChronology(chronologyEvents)
+  const openCareActions = getOpenCareActions()
+  const evidenceGaps = getEvidenceGaps()
+  const reviewDocuments = getDocumentsNeedingReview()
+  const reg44Actions = openCareActions.filter((action) => action.regulation?.includes('44'))
+  const overdueManagerReviews = chronologyEvents.filter((event) => event.tags.includes('overdue-manager-review'))
+  const lacReviewsDue = chronologyEvents.filter((event) => event.eventType === 'lac_review' && event.actionIds.length)
+  const reg45Prep = getRegulationLinkedEvents(chronologyEvents, 'Regulation 45')
   const priorityActions = [
     { title: 'Review Noah critical risk controls', body: 'Missing/exploitation risk review is overdue and linked to a new safeguarding concern.', href: '/young-people/yp-noah' },
     { title: 'Record strategy discussion outcome', body: 'Appointment outcome is pending and should update safeguarding chronology.', href: '/appointments' },
@@ -36,6 +48,18 @@ export default function DashboardPage() {
         <StatCard label="Upcoming appointments" value={metrics.upcomingAppointments} detail="Open or review appointments" href="/appointments" />
         <StatCard label="Medication alerts" value={metrics.medicationAlerts} detail="Missed or overdue administration" href="/medication" />
         <StatCard label="Safeguarding concerns" value={metrics.safeguardingConcerns} detail="Active or monitoring" href="/safeguarding" />
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard label="Chronology activity" value={chronologyEvents.length} detail="Connected events ready for filtering" href="/chronology" />
+        <StatCard label="Open Reg 44 actions" value={reg44Actions.length} detail="Independent visitor action plan" href="/actions" />
+        <StatCard label="Evidence gaps" value={evidenceGaps.length} detail="Evidence still required" href="/evidence" />
+        <StatCard label="Safeguarding chronology alerts" value={chronologySafeguarding.length} detail="Chronology events with safeguarding flags" href="/chronology" />
+        <StatCard label="Overdue manager reviews" value={overdueManagerReviews.length} detail="Manager oversight required" href="/chronology" />
+        <StatCard label="Documents needing review" value={reviewDocuments.length} detail="Regulatory or care documents" href="/documents" />
+        <StatCard label="LAC review actions" value={lacReviewsDue.length} detail="Review evidence gathering" href="/reports" />
+        <StatCard label="Reg 45 preparation" value={reg45Prep.length} detail="Quality of care evidence events" href="/reports" />
+        <StatCard label="Reports due" value={metrics.overdueReports} detail="Report register requiring action" href="/reports" />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
