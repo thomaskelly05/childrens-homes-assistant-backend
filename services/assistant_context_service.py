@@ -20,6 +20,7 @@ AssistantMode = Literal[
     "regulatory_readiness",
     "safeguarding_review",
     "handover",
+    "shift_operations",
     "reg44_action_plan",
     "reg45_writer",
     "lac_review_writer",
@@ -119,6 +120,8 @@ def build_shared_assistant_context(
         route = current_route.lower()
         if "assistant" in route:
             workspace_type = "standalone_assistant"
+        elif "shift" in route or "handover" in route:
+            workspace_type = "shift_operations"
         elif "chronology" in route:
             workspace_type = "chronology"
         elif "report" in route:

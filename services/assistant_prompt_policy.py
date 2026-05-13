@@ -76,6 +76,14 @@ def is_record_specific_question(message: str, context: SharedAssistantContext) -
 def suggested_prompts_for_context(context: SharedAssistantContext) -> list[str]:
     route = safe_string(context.current_route).lower()
     workspace = safe_string(context.current_workspace_type).lower()
+    if context.assistant_mode == "shift_operations" or "shift" in route or "handover" in route or workspace in {"shift", "shift_operations", "handover"}:
+        return [
+            "What do I need to complete this shift?",
+            "Which children need attention?",
+            "What recording is overdue?",
+            "Summarise safeguarding concerns for my shift.",
+            "What follow-up actions remain?",
+        ]
     if "chronology" in route or workspace == "chronology":
         return [
             "Summarise this chronology.",

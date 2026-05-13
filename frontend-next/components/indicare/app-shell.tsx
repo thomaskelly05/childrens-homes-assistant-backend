@@ -22,7 +22,8 @@ import {
   FolderOpen,
   LogOut,
   Scale,
-  Gauge
+  Gauge,
+  Clock3
 } from 'lucide-react'
 import { ReactNode } from 'react'
 
@@ -39,6 +40,8 @@ import { entityContextFromPath } from '@/lib/navigation/entity-resolver'
 
 const navItems = [
   { section: 'Home', href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['records:read'] },
+  { section: 'Home', href: '/shifts', label: 'Shifts', icon: Clock3, permissions: ['records:read'] },
+  { section: 'Home', href: '/handover/current', label: 'Handover', icon: ClipboardCheck, permissions: ['records:read'] },
   { section: 'Home', href: '/chronology', label: 'Chronology', icon: Search, permissions: ['records:read'] },
   { section: 'People', href: '/young-people', label: 'Young People', icon: UserRound, permissions: ['records:read'] },
   { section: 'People', href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },

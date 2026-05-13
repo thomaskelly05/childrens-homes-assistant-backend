@@ -113,12 +113,12 @@ function messageId() {
 
 function modeForSection(section: WorkspaceSection): AssistantMode {
   if (section === 'chronology') return 'chronology_qna'
+  if (section === 'actions') return 'shift_operations'
   if (section === 'reg44') return 'reg44_action_plan'
   if (section === 'reg45') return 'reg45_writer'
   if (section === 'lac_review') return 'lac_review_writer'
   if (section === 'ofsted') return 'ofsted_evidence_pack'
   if (section === 'reports') return 'report_writer'
-  if (section === 'actions') return 'handover'
   if (section === 'evidence' || section === 'documents') return 'regulatory_readiness'
   return 'standalone'
 }

@@ -110,7 +110,33 @@ export function searchIndiCare(query: string): SearchResult[] {
       chronologyHref: getEntityRoute({ entity_type: notification.linkedRecordType || 'chronology_event', entity_id: notification.id }, 'chronology'),
       permissionsRequired: ['records:read'],
       actions: getEntityActions({ entity_type: notification.linkedRecordType || 'chronology_event', entity_id: notification.id }).slice(0, 4)
-    }))
+    })),
+    {
+      id: 'current-shift',
+      type: 'shift',
+      entityType: normalizeEntityType('shift'),
+      group: 'Shift operations',
+      title: 'Current shift board',
+      description: 'Live operational board, rapid recording, welfare checks, safeguarding alerts and handover.',
+      href: '/shifts/current',
+      previewHref: '/shifts/current',
+      chronologyHref: '/chronology',
+      permissionsRequired: ['records:read'],
+      actions: getEntityActions({ entity_type: 'shift', entity_id: 'current' }).slice(0, 4)
+    },
+    {
+      id: 'current-handover',
+      type: 'handover',
+      entityType: normalizeEntityType('handover'),
+      group: 'Shift operations',
+      title: 'Current handover',
+      description: 'Timeline-led handover with linked records, actions, evidence and management sign-off state.',
+      href: '/handover/current',
+      previewHref: '/handover/current',
+      chronologyHref: '/chronology',
+      permissionsRequired: ['records:read'],
+      actions: getEntityActions({ entity_type: 'handover', entity_id: 'current' }).slice(0, 4)
+    }
   ]
 
   return results.filter((result) => matches(result, clean)).slice(0, 12)

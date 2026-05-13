@@ -6,6 +6,7 @@ export type AssistantMode =
   | 'regulatory_readiness'
   | 'safeguarding_review'
   | 'handover'
+  | 'shift_operations'
   | 'reg44_action_plan'
   | 'reg45_writer'
   | 'lac_review_writer'
