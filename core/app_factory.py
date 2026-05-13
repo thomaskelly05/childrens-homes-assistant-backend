@@ -1,8 +1,9 @@
 import logging
 import os
+from datetime import UTC, datetime
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Response
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from core.frontend_routes import register_frontend_routes
@@ -43,9 +44,31 @@ def create_app() -> FastAPI:
     include_routers(app)
     mount_core_static_assets(app)
 
+    def health_payload(check: str = "health") -> dict:
+        return {
+            "ok": True,
+            "status": "ok",
+            "service": "indicare-os",
+            "check": check,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "routes": {
+                "assistant": "/assistant",
+                "health": "/health",
+                "root": "/",
+            },
+        }
+
     @app.get("/health")
     def health():
-        return {"ok": True}
+        return health_payload()
+
+    @app.get("/")
+    def root_health():
+        return JSONResponse(health_payload("root"))
+
+    @app.head("/")
+    def root_head():
+        return Response(status_code=200)
 
     @app.get("/favicon.ico")
     def favicon():

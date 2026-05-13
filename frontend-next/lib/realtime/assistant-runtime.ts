@@ -24,8 +24,16 @@ export type RuntimeState = {
   error?: string
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+const API_BASE = (
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  ''
+).replace(/\/+$/, '')
 const REALTIME_WS_URL = process.env.NEXT_PUBLIC_OPENAI_REALTIME_WS_URL || ''
+
+function backendUrl(path: string) {
+  return `${API_BASE}${path}`
+}
 
 function messageId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -119,13 +127,13 @@ export class AssistantRuntime {
     runtimeTelemetry.track('assistant.connect.started')
 
     try {
-      const response = await fetch(`${API_BASE}/assistant/realtime/health`, {
+      const response = await fetch(backendUrl('/health'), {
         credentials: 'include',
         cache: 'no-store'
       })
 
       this.state.connected = response.ok
-      this.state.error = response.ok ? undefined : `Realtime health failed: ${response.status}`
+      this.state.error = response.ok ? undefined : `Assistant backend health failed: ${response.status}`
 
       if (response.ok) {
         this.reconnect.markConnected()
@@ -255,7 +263,7 @@ export class AssistantRuntime {
     this.abortController = new AbortController()
 
     try {
-      const response = await fetch(`${API_BASE}/assistant/general/stream`, {
+      const response = await fetch(backendUrl('/assistant'), {
         method: 'POST',
         credentials: 'include',
         cache: 'no-store',
