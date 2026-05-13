@@ -24,10 +24,11 @@ export type RuntimeState = {
   error?: string
 }
 
+const DEFAULT_API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : ''
 const API_BASE = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  ''
+  DEFAULT_API_BASE
 ).replace(/\/+$/, '')
 const REALTIME_WS_URL = process.env.NEXT_PUBLIC_OPENAI_REALTIME_WS_URL || ''
 
