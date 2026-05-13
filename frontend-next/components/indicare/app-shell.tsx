@@ -57,11 +57,11 @@ function selectedYoungPersonId(pathname: string) {
     const recordId = parts[1]
     if (!recordId) return undefined
     const allRecords = [
-      ...indicareData.incidents,
-      ...indicareData.reports,
-      ...indicareData.dailyLogs,
-      ...indicareData.appointments,
-      ...indicareData.documents
+      ...(indicareData.incidents ?? []),
+      ...(indicareData.reports ?? []),
+      ...(indicareData.dailyLogs ?? []),
+      ...(indicareData.appointments ?? []),
+      ...(indicareData.documents ?? [])
     ]
     return allRecords.find((record) => record.id === recordId)?.youngPersonId
   }
@@ -75,8 +75,13 @@ function titleFromPath(pathname: string) {
   return parts[0].split('-').map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(' ')
 }
 
+function labelForRole(role: keyof typeof roleLabels | string | undefined) {
+  return role && role in roleLabels ? roleLabels[role as keyof typeof roleLabels] : roleLabels.viewer
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
+  const currentPathname = usePathname()
+  const pathname = currentPathname || '/dashboard'
   const { status, user, logout } = useAuth()
   const selectedId = selectedYoungPersonId(pathname)
   const selectedPerson = selectedId ? getYoungPersonById(selectedId) : undefined
@@ -112,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="w-full max-w-lg rounded-[32px] border border-amber-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-600">Unauthorized</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">You do not have access to this workspace area</h1>
-          <p className="mt-4 text-sm leading-6 text-slate-600">Your current role is {roleLabels[user.role]}. Ask an administrator or registered manager if your access needs changing.</p>
+          <p className="mt-4 text-sm leading-6 text-slate-600">Your current role is {labelForRole(user.role)}. Ask an administrator or registered manager if your access needs changing.</p>
           <Link href="/dashboard" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Back to dashboard</Link>
         </div>
       </div>
@@ -159,7 +164,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mt-3 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Signed in</p>
           <p className="mt-2 text-sm font-black text-slate-950">{displayName(user)}</p>
-          <p className="mt-1 text-xs font-bold text-slate-500">{roleLabels[user.role]}</p>
+          <p className="mt-1 text-xs font-bold text-slate-500">{labelForRole(user.role)}</p>
           <button
             type="button"
             onClick={() => void logout()}
@@ -182,7 +187,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
               <Link href="/notifications" className="relative rounded-2xl border border-slate-200 bg-white p-3 text-slate-700 shadow-sm" aria-label="Notifications">
                 <Bell className="h-5 w-5" aria-hidden />
-                <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black text-white">{indicareData.notifications.filter((item) => !item.read).length}</span>
+                <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black text-white">{(indicareData.notifications ?? []).filter((item) => !item.read).length}</span>
               </Link>
               <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 shadow-sm xl:block">
                 Oak House · {today}
@@ -201,7 +206,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   pageTitle,
                   selectedYoungPersonId: selectedId,
                   visibleRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined,
-                  userRole: roleLabels[user.role]
+                  userRole: labelForRole(user.role)
                 }}
               />
             </div>

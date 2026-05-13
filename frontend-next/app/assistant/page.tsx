@@ -51,7 +51,7 @@ export default function AssistantPage() {
       setMessages(nextMessages)
 
       if (activeConversationId) {
-        saveConversation(activeConversationId, nextMessages)
+        void saveConversation(activeConversationId, nextMessages).catch(() => undefined)
       }
     })
 
@@ -94,7 +94,7 @@ export default function AssistantPage() {
         conversations={conversations.map((conversation) => ({
           id: conversation.id,
           title: conversation.title,
-          updatedAt: new Date(conversation.updatedAt).toLocaleString()
+          updatedAt: conversation.updatedAt ? new Date(conversation.updatedAt).toLocaleString() : 'Not saved yet'
         }))}
         activeConversationId={activeConversationId}
         onSelect={selectConversation}

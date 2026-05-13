@@ -6,6 +6,9 @@ import { dashboardMetrics, fullName, getStaffById, getYoungPersonById, sortByDat
 
 export default function DashboardPage() {
   const metrics = dashboardMetrics()
+  const youngPeople = indicareData.youngPeople ?? []
+  const appointments = indicareData.appointments ?? []
+  const reports = indicareData.reports ?? []
   const recentIncidents = sortByDateDesc(indicareData.incidents, (incident) => incident.dateTime).slice(0, 4)
   const recentLogs = sortByDateDesc(indicareData.dailyLogs, (log) => log.createdAt).slice(0, 4)
   const safeguardingTimeline = sortByDateDesc(indicareData.safeguardingEvents, (event) => event.date).slice(0, 4)
@@ -39,7 +42,7 @@ export default function DashboardPage() {
         <Card>
           <SectionHeader eyebrow="Today" title="Shift overview" description="Operational records that need handover awareness today." />
           <div className="grid gap-4 md:grid-cols-2">
-            {indicareData.youngPeople.map((person) => (
+            {youngPeople.map((person) => (
               <Link key={person.id} href={`/young-people/${person.id}`} className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5 transition hover:bg-white hover:shadow-lg">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -76,7 +79,7 @@ export default function DashboardPage() {
                     <span className="text-xs font-bold text-slate-400">{new Date(incident.dateTime).toLocaleString('en-GB')}</span>
                   </div>
                   <h3 className="mt-3 text-lg font-black text-slate-950">{incident.type}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{person?.preferredName}: {incident.outcome}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{person?.preferredName || 'Unknown young person'}: {incident.outcome}</p>
                 </Link>
               )
             })}
@@ -86,7 +89,7 @@ export default function DashboardPage() {
         <Card>
           <SectionHeader eyebrow="Appointments" title="Upcoming appointments" />
           <div className="space-y-4">
-            {indicareData.appointments.filter((appointment) => appointment.status !== 'closed').map((appointment) => {
+            {appointments.filter((appointment) => appointment.status !== 'closed').map((appointment) => {
               const person = getYoungPersonById(appointment.youngPersonId)
               const staff = getStaffById(appointment.staffId)
               return (
@@ -110,9 +113,9 @@ export default function DashboardPage() {
           <RecordTimeline
             items={recentLogs.map((log) => ({
               id: log.id,
-              title: `${getYoungPersonById(log.youngPersonId)?.preferredName} · ${log.shift} shift`,
+              title: `${getYoungPersonById(log.youngPersonId)?.preferredName || 'Unknown young person'} · ${log.shift} shift`,
               date: log.date,
-              body: `${log.presentation} Actions: ${log.followUpActions.join(', ') || 'none'}.`,
+              body: `${log.presentation} Actions: ${log.followUpActions?.join(', ') || 'none'}.`,
               href: `/young-people/${log.youngPersonId}`
             }))}
           />
@@ -122,7 +125,7 @@ export default function DashboardPage() {
           <RecordTimeline
             items={safeguardingTimeline.map((event) => ({
               id: event.id,
-              title: `${getYoungPersonById(event.youngPersonId)?.preferredName} · ${event.concernType}`,
+              title: `${getYoungPersonById(event.youngPersonId)?.preferredName || 'Unknown young person'} · ${event.concernType}`,
               date: event.date,
               body: event.actionTaken,
               href: `/young-people/${event.youngPersonId}`
@@ -132,7 +135,7 @@ export default function DashboardPage() {
         <Card>
           <SectionHeader eyebrow="Reports" title="Deadlines" />
           <div className="space-y-4">
-            {indicareData.reports.map((report) => (
+            {reports.map((report) => (
               <Link key={report.id} href={`/reports/${report.id}`} className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-5">
                 <StatusBadge value={report.status} />
                 <h3 className="mt-3 text-lg font-black text-slate-950">{report.title}</h3>

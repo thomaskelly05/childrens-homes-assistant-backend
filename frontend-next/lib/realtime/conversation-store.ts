@@ -17,6 +17,14 @@ function now() {
   return new Date().toISOString()
 }
 
+function conversationId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+
+  return `conversation-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
 function fallbackConversation(): StoredConversation {
   const timestamp = now()
 
@@ -73,7 +81,7 @@ export class ConversationStore {
     const timestamp = now()
 
     const conversation: StoredConversation = {
-      id: crypto.randomUUID(),
+      id: conversationId(),
       title,
       messages: [],
       createdAt: timestamp,

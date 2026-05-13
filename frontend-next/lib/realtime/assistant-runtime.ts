@@ -264,7 +264,7 @@ export class AssistantRuntime {
     this.abortController = new AbortController()
 
     try {
-      const response = await fetch(backendUrl('/assistant'), {
+      const response = await fetch(backendUrl('/assistant/general/stream'), {
         method: 'POST',
         credentials: 'include',
         cache: 'no-store',

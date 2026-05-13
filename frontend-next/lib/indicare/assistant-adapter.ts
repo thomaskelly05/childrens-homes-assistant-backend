@@ -38,8 +38,8 @@ export function generateMockAssistantResponse(prompt: string, context: Assistant
   const person = context.selectedYoungPersonId
     ? getYoungPersonById(context.selectedYoungPersonId)
     : undefined
-  const unread = indicareData.notifications.filter((item) => !item.read).length
-  const highRisks = indicareData.youngPeople.filter((item) => ['high', 'critical'].includes(item.riskLevel)).length
+  const unread = (indicareData.notifications ?? []).filter((item) => !item.read).length
+  const highRisks = (indicareData.youngPeople ?? []).filter((item) => ['high', 'critical'].includes(item.riskLevel)).length
   const route = context.pageTitle || context.route || 'current workspace'
 
   if (person) {
@@ -55,7 +55,7 @@ export function generateMockAssistantResponse(prompt: string, context: Assistant
   return [
     `Context: ${route}`,
     `Prompt: ${prompt}`,
-    `Operational snapshot: ${highRisks} high/critical risk young person record(s), ${unread} unread notification(s), and ${indicareData.incidents.length} incident record(s) are available in the current frontend dataset.`,
+    `Operational snapshot: ${highRisks} high/critical risk young person record(s), ${unread} unread notification(s), and ${(indicareData.incidents ?? []).length} incident record(s) are available in the current frontend dataset.`,
     `Role lens: ${context.userRole || 'Care team'}.`,
     'Suggested next step: open the linked record, confirm evidence, then ask the live assistant to draft the final care-record wording.'
   ].join('\n\n')

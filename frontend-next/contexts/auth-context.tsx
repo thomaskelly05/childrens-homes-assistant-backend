@@ -38,8 +38,12 @@ function normaliseUser(user: StaffUser): StaffUser {
   return {
     ...user,
     role,
-    permissions: user.permissions || []
+    permissions: Array.isArray(user.permissions) ? user.permissions : []
   }
+}
+
+function hasUserPayload(response: AuthMeResponse): response is AuthMeResponse & { user: StaffUser } {
+  return Boolean(response?.user && typeof response.user === 'object')
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -55,6 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       const response = await authFetch<AuthMeResponse>('/auth/me')
+      if (!hasUserPayload(response)) {
+        throw new AuthApiError(401, 'Your session could not be loaded')
+      }
       setUser(normaliseUser(response.user))
       setStatus('authenticated')
       setSessionExpired(false)

@@ -21,6 +21,7 @@ export class BrowserVoiceRuntime {
   }
 
   supported() {
+    if (typeof window === 'undefined') return false
     return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition)
   }
 
