@@ -4,6 +4,7 @@ import { ReconnectManager } from './reconnect-manager'
 import { runtimeTelemetry } from './runtime-telemetry'
 import { speechPlaybackRuntime } from './speech-playback-runtime'
 import { WakeWordRuntime } from './wake-word-runtime'
+import { generateMockAssistantResponse } from '@/lib/indicare/assistant-adapter'
 
 export type AssistantMessage = {
   id: string
@@ -282,9 +283,14 @@ export class AssistantRuntime {
       runtimeTelemetry.track('assistant.message.completed')
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
+        const fallback = generateMockAssistantResponse(trimmed, {
+          route: '/assistant',
+          pageTitle: 'Assistant workspace',
+          userRole: 'Registered manager'
+        })
         this.updateMessage(
           assistantMessage.id,
-          'I could not complete that response just now. Please check the backend assistant stream and try again.',
+          `${fallback}\n\n_Runtime note: the live assistant stream was unavailable, so IndiCare used the deterministic care-aware adapter. Your records are still safe._`,
           false
         )
 

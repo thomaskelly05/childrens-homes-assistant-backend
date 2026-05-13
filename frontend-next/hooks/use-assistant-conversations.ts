@@ -11,17 +11,43 @@ import { AssistantMessage } from '@/lib/realtime/assistant-runtime'
 export function useAssistantConversations() {
   const [conversations, setConversations] = useState<StoredConversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState('default')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | undefined>()
 
-  const refreshConversations = useCallback(() => {
-    setConversations(conversationStore.list())
+  const refreshConversations = useCallback(async () => {
+    try {
+      setConversations(await conversationStore.list())
+      setError(undefined)
+    } catch (storeError) {
+      setError(String(storeError))
+    }
   }, [])
 
   useEffect(() => {
-    const loaded = conversationStore.list()
-    const active = conversationStore.getActiveId()
+    let cancelled = false
 
-    setConversations(loaded)
-    setActiveConversationId(active)
+    async function load() {
+      try {
+        const loaded = await conversationStore.list()
+        const active = conversationStore.getActiveId()
+
+        if (!cancelled) {
+          setConversations(loaded)
+          setActiveConversationId(active)
+          setError(undefined)
+        }
+      } catch (storeError) {
+        if (!cancelled) setError(String(storeError))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const activeConversation = useMemo(() => {
@@ -30,10 +56,10 @@ export function useAssistantConversations() {
     )
   }, [conversations, activeConversationId])
 
-  const createConversation = useCallback(() => {
-    const conversation = conversationStore.create()
+  const createConversation = useCallback(async () => {
+    const conversation = await conversationStore.create()
 
-    setConversations(conversationStore.list())
+    setConversations(await conversationStore.list())
     setActiveConversationId(conversation.id)
 
     return conversation
@@ -44,15 +70,17 @@ export function useAssistantConversations() {
     setActiveConversationId(id)
   }, [])
 
-  const saveConversation = useCallback((id: string, messages: AssistantMessage[]) => {
-    conversationStore.saveMessages(id, messages)
-    refreshConversations()
+  const saveConversation = useCallback(async (id: string, messages: AssistantMessage[]) => {
+    await conversationStore.saveMessages(id, messages)
+    await refreshConversations()
   }, [refreshConversations])
 
   return {
     conversations,
     activeConversation,
     activeConversationId,
+    loading,
+    error,
     createConversation,
     selectConversation,
     saveConversation
