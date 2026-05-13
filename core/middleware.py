@@ -7,13 +7,20 @@ from starlette.middleware.sessions import SessionMiddleware
 from middleware.access_scope_middleware import AccessScopeMiddleware
 from middleware.security_middleware import AuditLoggingMiddleware, SecurityHeadersMiddleware
 
+REQUIRED_PRODUCTION_ORIGINS = {
+    "https://app.indicare.co.uk",
+    "https://indicare-frontend-next.onrender.com",
+}
+
 
 def allowed_origins() -> list[str]:
     configured = os.getenv(
         "ALLOWED_ORIGINS",
-        "https://app.indicare.co.uk,http://localhost:3000,http://127.0.0.1:3000",
+        "https://app.indicare.co.uk,https://indicare-frontend-next.onrender.com,http://localhost:3000,http://127.0.0.1:3000",
     )
-    return [origin.strip() for origin in configured.split(",") if origin.strip()]
+    origins = {origin.strip().rstrip("/") for origin in configured.split(",") if origin.strip()}
+    origins.update(REQUIRED_PRODUCTION_ORIGINS)
+    return sorted(origins)
 
 
 def cookie_secure_default() -> bool:

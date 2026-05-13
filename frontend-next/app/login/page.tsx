@@ -18,6 +18,12 @@ function LoginPanel() {
   const [notice, setNotice] = useState<string | null>(searchParams.get('expired') ? 'Your session expired. Please sign in again.' : null)
   const [submitting, setSubmitting] = useState(false)
 
+  function redirectToMfa(response: Awaited<ReturnType<typeof login>>) {
+    const returnUrl = searchParams.get('returnUrl') || '/dashboard'
+    const target = response.mfa_setup_required || response.mfa_enabled === false ? '/mfa-setup' : '/mfa'
+    router.replace(`${target}?next=${encodeURIComponent(returnUrl)}`)
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
@@ -33,7 +39,8 @@ function LoginPanel() {
       }
 
       if (response.mfa_required) {
-        setNotice(response.message || 'Password accepted. Complete MFA setup in the backend auth flow to finish sign-in.')
+        setNotice(response.message || 'Password accepted. Continue to multi-factor verification.')
+        redirectToMfa(response)
         return
       }
 

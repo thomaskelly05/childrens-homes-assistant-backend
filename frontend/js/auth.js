@@ -16,6 +16,7 @@ const SAFE_USER_FIELDS = [
   "mfa_enabled",
   "mfa_verified",
   "mfa_pending",
+  "mfa_setup_required",
   "has_passkeys",
   "authenticated",
   "allowed_home_ids",
@@ -93,6 +94,7 @@ function normaliseUserPatch(user = {}) {
     mfa_enabled: !!user.mfa_enabled,
     mfa_verified: !!user.mfa_verified,
     mfa_pending: !!user.mfa_pending,
+    mfa_setup_required: !!user.mfa_setup_required,
     has_passkeys: !!user.has_passkeys,
   });
 }
@@ -134,13 +136,15 @@ async function login(credentialsArg = null) {
 
     const user = data.user || {};
     const mfaPending = !!data.mfa_pending || !!data.mfa_required || !!user.mfa_pending;
+    const mfaEnabled = !!user.mfa_enabled || !!data.mfa_enabled;
     if (data.user) {
       setStoredUser(normaliseUserPatch({
         ...user,
         authenticated: !!data.authenticated && !mfaPending,
-        mfa_enabled: !!user.mfa_enabled || !!data.mfa_enabled || mfaPending,
+        mfa_enabled: mfaEnabled,
         mfa_verified: !!data.authenticated && !mfaPending,
         mfa_pending: mfaPending,
+        mfa_setup_required: !!data.mfa_setup_required || (mfaPending && !mfaEnabled),
         has_passkeys: !!user.has_passkeys,
       }), remember);
     }
@@ -174,15 +178,17 @@ async function validateSession() {
     const remember = shouldRememberUser();
 
     if (data?.mfa_pending) {
+      const mfaEnabled = !!data.mfa_enabled;
       const merged = normaliseUserPatch({
         ...existing,
         authenticated: false,
         user_id: data.user_id || existing.user_id || existing.id || null,
         id: data.user_id || existing.id || null,
         subscription_active: false,
-        mfa_enabled: true,
+        mfa_enabled: mfaEnabled,
         mfa_verified: false,
         mfa_pending: true,
+        mfa_setup_required: !!data.mfa_setup_required || !mfaEnabled,
       });
       setStoredUser(merged, remember);
       return { ...merged, authenticated: false, mfa_pending: true, expires_in_seconds: data.expires_in_seconds ?? null };
@@ -221,7 +227,7 @@ async function validateSession() {
 
 async function requireAuth() {
   const state = await validateSession();
-  if (state.mfa_pending) { window.location.replace("/mfa"); return false; }
+  if (state.mfa_pending) { window.location.replace(state.mfa_setup_required || state.mfa_enabled === false ? "/mfa-setup" : "/mfa"); return false; }
   if (!state.authenticated) { window.location.replace("/login"); return false; }
   if (!state.subscription_active && !["admin", "provider_admin", "founder", "owner", "super_admin", "superadmin"].includes(String(state.role || "").toLowerCase())) {
     throw new Error("Subscription required");
