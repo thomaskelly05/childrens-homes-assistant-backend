@@ -4,7 +4,7 @@ const backendOrigin = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   process.env.BACKEND_URL ||
-  (process.env.NODE_ENV === 'production' ? 'https://indicare-os.onrender.com' : 'http://localhost:8000')
+  (process.env.NODE_ENV === 'production' ? 'https://childrens-homes-assistant-backend-new.onrender.com' : 'http://localhost:8000')
 ).replace(/\/+$/, '')
 
 const nextConfig: NextConfig = {
