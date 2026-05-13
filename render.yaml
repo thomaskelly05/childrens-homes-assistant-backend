@@ -1,6 +1,28 @@
 services:
   - type: web
-    name: indicare-os
+    name: indicare-frontend-next
+    env: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    rootDir: frontend-next
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_ENVIRONMENT
+        value: production
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://childrens-homes-assistant-backend-new.onrender.com
+      - key: NEXT_PUBLIC_BACKEND_URL
+        value: https://childrens-homes-assistant-backend-new.onrender.com
+      - key: BACKEND_URL
+        value: https://childrens-homes-assistant-backend-new.onrender.com
+  - type: web
+    name: childrens-homes-assistant-backend-new
     env: python
     plan: starter
     region: frankfurt
@@ -22,8 +44,12 @@ services:
         value: gpt-4o-mini
       - key: APP_BASE_URL
         value: https://app.indicare.co.uk
+      - key: FRONTEND_APP_URL
+        value: https://indicare-frontend-next.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://indicare-frontend-next.onrender.com,https://app.indicare.co.uk,https://api.indicare.co.uk
       - key: CORS_ALLOWED_ORIGINS
-        value: https://app.indicare.co.uk
+        value: https://indicare-frontend-next.onrender.com,https://app.indicare.co.uk,https://api.indicare.co.uk
       - key: DATABASE_URL
         sync: false
       - key: SECRET_KEY
