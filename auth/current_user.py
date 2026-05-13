@@ -1,12 +1,14 @@
 import logging
 from typing import Any
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from psycopg2 import OperationalError, ProgrammingError
 from psycopg2.extras import RealDictCursor
 
 from auth.routes import settings as auth_settings
+from auth.errors import forbidden, service_unavailable, unauthorised
+from auth.rbac import normalise_role, permissions_for_role
 from auth.tokens import decode_session_token
 from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
@@ -58,19 +60,19 @@ def get_bearer_token(
 
 
 def _unauthorised(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+    return unauthorised("not_authenticated", detail)
 
 
 def _forbidden(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+    return forbidden("permission_denied", detail)
 
 
 def _service_unavailable(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detail)
+    return service_unavailable("auth_service_unavailable", detail)
 
 
 def _normalise_role(role: str | None) -> str:
-    return (role or "").strip().lower()
+    return normalise_role(role)
 
 
 def _get_request_token(request: Request, bearer_token: str | None) -> str | None:
@@ -139,25 +141,25 @@ def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
 def _decode_session_payload(token: str) -> dict[str, Any]:
     payload = decode_session_token(token)
     if not payload:
-        raise _unauthorised("Invalid or expired session")
+        raise unauthorised("session_invalid_or_expired", "Invalid or expired session")
     return payload
 
 
 def _decode_user_id_from_payload(payload: dict[str, Any]) -> int:
     raw_user_id = payload.get("sub")
     if raw_user_id is None:
-        raise _unauthorised("Invalid session payload")
+        raise unauthorised("session_invalid", "Invalid session payload")
 
     try:
         return int(raw_user_id)
     except (TypeError, ValueError) as exc:
-        raise _unauthorised("Invalid session subject") from exc
+        raise unauthorised("session_invalid", "Invalid session subject") from exc
 
 
 def _enforce_session_state(payload: dict[str, Any]) -> None:
     session_id = payload.get("sid")
     if session_id and is_session_revoked(str(session_id)):
-        raise _unauthorised("Session has been revoked")
+        raise unauthorised("session_revoked", "Session has been revoked")
     if session_id:
         touch_session(str(session_id))
 
@@ -228,7 +230,7 @@ def get_current_user(
 ):
     token = _get_request_token(request, bearer_token)
     if not token:
-        raise _unauthorised("Not authenticated")
+        raise unauthorised("not_authenticated", "Not authenticated")
 
     payload = _decode_session_payload(token)
     _enforce_session_state(payload)
@@ -247,7 +249,7 @@ def get_current_user(
     )
 
     if not is_exempt and not subscription_active:
-        raise _forbidden("Subscription required")
+        raise forbidden("subscription_required", "Subscription required")
 
     home_id = user.get("home_id")
     provider_id = user.get("provider_id")
@@ -274,4 +276,5 @@ def get_current_user(
         "subscription_active": subscription_active,
         "subscription_status": subscription_status,
         "plan_name": plan_name,
+        "permissions": sorted(permissions_for_role(role)),
     }

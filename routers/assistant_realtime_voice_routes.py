@@ -7,7 +7,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
-from auth.current_user import get_current_user
+from auth.permissions import require_assistant_access
 from services.assistant_security import safe_string
 
 router = APIRouter(prefix="/assistant/realtime", tags=["Assistant Realtime Voice"])
@@ -68,7 +68,7 @@ def _session_body(payload: RealtimeSessionRequest, current_user: dict[str, Any])
 
 
 @router.post("/session")
-async def create_realtime_voice_session(payload: RealtimeSessionRequest, current_user=Depends(get_current_user)):
+async def create_realtime_voice_session(payload: RealtimeSessionRequest, current_user=Depends(require_assistant_access)):
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=503, detail="Realtime voice is not configured.")

@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth.current_user import get_current_user
+from auth.permissions import require_assistant_access
 from db.connection import get_db
 from routers.assistant_routes import (
     HomeAssistantPayload,
@@ -128,7 +128,7 @@ def _preflight_assistant_request(
 @router.get("/context/{young_person_id}")
 def get_os_context(
     young_person_id: int,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _assert_authenticated_user(current_user)
     _assert_scope_access(current_user, "child")
@@ -141,7 +141,7 @@ def get_os_context(
 @router.post("/reason")
 async def reason_about_child(
     payload: dict,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _assert_authenticated_user(current_user)
     _assert_scope_access(current_user, "child")
@@ -170,7 +170,7 @@ async def reason_about_child(
 async def ask_young_person_assistant(
     payload: YoungPersonAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _preflight_assistant_request(
         current_user=current_user,
@@ -189,7 +189,7 @@ async def ask_young_person_assistant(
 async def ask_home_assistant(
     payload: HomeAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _preflight_assistant_request(
         current_user=current_user,
@@ -208,7 +208,7 @@ async def ask_home_assistant(
 async def ask_quality_assistant(
     payload: QualityAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _preflight_assistant_request(
         current_user=current_user,
@@ -227,7 +227,7 @@ async def ask_quality_assistant(
 async def preview_report(
     payload: HomeAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _preflight_assistant_request(
         current_user=current_user,
@@ -246,7 +246,7 @@ async def preview_report(
 async def send_report_now(
     payload: ReportSendPayload,
     conn=Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
 ):
     _assert_authenticated_user(current_user)
     _assert_scope_access(current_user, "home")

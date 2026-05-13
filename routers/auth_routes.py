@@ -5,7 +5,6 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-import bcrypt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, field_validator
 from psycopg2.extras import RealDictCursor
@@ -15,6 +14,10 @@ from auth.mfa_guard import (
     SESSION_USER_EMAIL_KEY,
     SESSION_USER_ID_KEY,
 )
+from auth.errors import auth_error_detail, forbidden, unauthorised
+from auth.models import staff_user_payload
+from auth.passwords import burn_dummy_password_check, verify_password
+from auth.rbac import normalise_role, permissions_for_role
 from auth.tokens import create_session_token, decode_session_token
 from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
@@ -32,7 +35,6 @@ THROTTLE_WINDOW_SECONDS = int(os.getenv("AUTH_THROTTLE_WINDOW_SECONDS", "900"))
 MAX_FAILED_ATTEMPTS_PER_IP = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS_PER_IP", "20"))
 MAX_FAILED_ATTEMPTS_PER_EMAIL = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS_PER_EMAIL", "8"))
 LOCKOUT_SECONDS = int(os.getenv("AUTH_LOCKOUT_SECONDS", "900"))
-DUMMY_BCRYPT_HASH = b"$2b$12$yAc2mW0pYv4B4xXj3H3oJ.5XQmsx3M3uVJfY0jQnR8iW0VtT1hN3K"
 INVALID_CREDENTIALS_MESSAGE = "Invalid email or password"
 LOCKOUT_MESSAGE = "Too many failed sign-in attempts. Please try again later."
 
@@ -112,17 +114,6 @@ def _safe_session_reset(request: Request) -> None:
     except Exception:
         pass
 
-def _ensure_password_hash_bytes(password_hash: str | bytes | None) -> bytes:
-    if password_hash is None:
-        return b""
-    return password_hash if isinstance(password_hash, bytes) else password_hash.encode("utf-8")
-
-def _dummy_bcrypt_check(password: str) -> None:
-    try:
-        bcrypt.checkpw(password.encode("utf-8"), DUMMY_BCRYPT_HASH)
-    except Exception:
-        pass
-
 def _client_ip(request: Request) -> str | None:
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
@@ -179,11 +170,15 @@ def _clear_failures(ip: str | None, email: str | None) -> None:
         LOCKED_EMAILS.pop(email, None)
 
 def _raise_lockout(until_timestamp: float | None) -> None:
-    detail: dict[str, Any] = {"message": LOCKOUT_MESSAGE}
     retry_after_seconds = _seconds_remaining(until_timestamp)
-    if retry_after_seconds is not None:
-        detail["retry_after_seconds"] = retry_after_seconds
-    raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=detail)
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail=auth_error_detail(
+            "too_many_login_attempts",
+            LOCKOUT_MESSAGE,
+            retry_after_seconds=retry_after_seconds,
+        ),
+    )
 
 def _assert_not_locked(request: Request, email: str | None) -> None:
     ip = _client_ip(request)
@@ -195,7 +190,7 @@ def _assert_not_locked(request: Request, email: str | None) -> None:
         _raise_lockout(email_locked_until)
 
 def _mfa_required_for_role(role: str | None) -> bool:
-    return settings.force_mfa_for_sensitive_roles and (role or "").strip().lower() in {"admin", "provider_admin", "manager"}
+    return settings.force_mfa_for_sensitive_roles and normalise_role(role) in {"admin", "manager"}
 
 def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -238,20 +233,25 @@ def _get_mfa_safe(user_id: int) -> dict[str, Any] | None:
         return None
 
 def _session_user_payload(user: dict[str, Any], billing: dict[str, Any] | None) -> dict[str, Any]:
-    return {"id": user["id"], "email": user["email"], "role": user["role"], "home_id": user.get("home_id"), "provider_id": user.get("provider_id"), "first_name": user.get("first_name"), "last_name": user.get("last_name"), "is_active": bool(user.get("is_active")), "subscription_active": bool(billing and billing.get("subscription_active")), "subscription_status": billing.get("subscription_status") if billing else "inactive", "plan_name": billing.get("plan_name") if billing else None}
+    return staff_user_payload(user, billing=billing)
 
 def _full_user_payload(user: dict[str, Any], billing: dict[str, Any] | None, *, mfa_enabled: bool, mfa_verified: bool, has_passkeys: bool) -> dict[str, Any]:
-    payload = _session_user_payload(user, billing)
-    payload.update({"archived": user.get("archived"), "updated_at": user.get("updated_at"), "created_at": user.get("created_at"), "stripe_customer_id": billing.get("stripe_customer_id") if billing else None, "stripe_subscription_id": billing.get("stripe_subscription_id") if billing else None, "current_period_end": billing.get("current_period_end") if billing else None, "mfa_enabled": mfa_enabled, "mfa_verified": mfa_verified, "has_passkeys": has_passkeys})
-    return payload
+    return staff_user_payload(
+        user,
+        billing=billing,
+        mfa_enabled=mfa_enabled,
+        mfa_verified=mfa_verified,
+        has_passkeys=has_passkeys,
+        include_audit_fields=True,
+    )
 
 def _validate_active_user(user: dict[str, Any] | None) -> dict[str, Any]:
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise unauthorised("user_not_found", "User not found")
     if user.get("archived") is True:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is archived")
+        raise forbidden("user_archived", "User is archived")
     if user.get("is_active") is False:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")
+        raise forbidden("user_inactive", "User account is inactive")
     return user
 
 def _get_session_user_from_request(request: Request, conn: Any, authorization: str | None, *, raise_on_missing: bool) -> tuple[dict[str, Any] | None, int | None]:
@@ -259,13 +259,13 @@ def _get_session_user_from_request(request: Request, conn: Any, authorization: s
     payload = decode_session_token(token) if token else None
     if not payload:
         if raise_on_missing:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+            raise unauthorised("not_authenticated", "Not authenticated")
         return None, None
     try:
         user_id = int(payload.get("sub"))
     except (TypeError, ValueError):
         if raise_on_missing:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+            raise unauthorised("session_invalid", "Invalid session")
         return None, None
     return _get_user_by_id(conn, user_id), user_id
 
@@ -292,7 +292,9 @@ def _set_authenticated_session_state(request: Request, *, user_id: int, email: s
 def _deny_login(*, request: Request, email: str, user_id: int | None, log_detail: str, event_type: str = "login_failed", status_code_value: int = status.HTTP_401_UNAUTHORIZED) -> None:
     _register_failure(_client_ip(request), email)
     _log_auth(request=request, user_id=user_id, email=email, event_type=event_type, detail=log_detail)
-    raise HTTPException(status_code=status_code_value, detail=INVALID_CREDENTIALS_MESSAGE if status_code_value == status.HTTP_401_UNAUTHORIZED else log_detail)
+    code = "invalid_credentials" if status_code_value == status.HTTP_401_UNAUTHORIZED else "login_blocked"
+    message = INVALID_CREDENTIALS_MESSAGE if status_code_value == status.HTTP_401_UNAUTHORIZED else log_detail
+    raise HTTPException(status_code=status_code_value, detail=auth_error_detail(code, message))
 
 @router.post("/login")
 def login(payload: LoginRequest, request: Request, response: Response, conn=Depends(get_db)):
@@ -304,16 +306,13 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email and password are required")
     user = _get_user_by_email(conn, email)
     if not user:
-        _dummy_bcrypt_check(password)
+        burn_dummy_password_check(password)
         _deny_login(request=request, email=email, user_id=None, log_detail="Invalid credentials")
     if user.get("archived") is True:
         _deny_login(request=request, email=email, user_id=user["id"], log_detail="Archived user", event_type="login_blocked", status_code_value=status.HTTP_403_FORBIDDEN)
     if user.get("is_active") is False:
         _deny_login(request=request, email=email, user_id=user["id"], log_detail="Inactive user", event_type="login_blocked", status_code_value=status.HTTP_403_FORBIDDEN)
-    try:
-        password_ok = bool(user.get("password_hash")) and bcrypt.checkpw(password.encode("utf-8"), _ensure_password_hash_bytes(user.get("password_hash")))
-    except ValueError:
-        password_ok = False
+    password_ok = verify_password(password, user.get("password_hash"))
     if not password_ok:
         _deny_login(request=request, email=email, user_id=user["id"], log_detail="Invalid credentials")
 
@@ -330,7 +329,16 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
         _safe_session_reset(request)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Session could not be created")
 
-    token = create_session_token(user["id"], mfa_verified=not mfa_pending, remember=remember)
+    token = create_session_token(
+        user["id"],
+        email=user.get("email"),
+        role=normalise_role(user.get("role")),
+        home_id=user.get("home_id"),
+        provider_id=user.get("provider_id"),
+        permissions=sorted(permissions_for_role(user.get("role"))),
+        mfa_verified=not mfa_pending,
+        remember=remember,
+    )
     _set_session_cookie(response, token, remember=remember)
     _set_csrf_cookie(response, csrf_token, remember=remember)
     _clear_failures(_client_ip(request), email)
@@ -408,13 +416,14 @@ def check_auth(request: Request, authorization: str | None = Header(default=None
     mfa_row = _get_mfa_safe(user_id)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
-    return {"authenticated": True, "user_id": user["id"], "email": user["email"], "role": user["role"], "home_id": user.get("home_id"), "provider_id": user.get("provider_id"), "is_active": bool(user.get("is_active")), "subscription_active": bool(billing and billing.get("subscription_active")), "subscription_status": billing.get("subscription_status") if billing else "inactive", "plan_name": billing.get("plan_name") if billing else None, "mfa_enabled": mfa_enabled, "mfa_verified": mfa_verified, "mfa_mandatory": _mfa_required_for_role(user.get("role")), "mfa_pending": False}
+    user_payload = _session_user_payload(user, billing)
+    return {"authenticated": True, "user_id": user["id"], "email": user["email"], **user_payload, "mfa_enabled": mfa_enabled, "mfa_verified": mfa_verified, "mfa_mandatory": _mfa_required_for_role(user.get("role")), "mfa_pending": False}
 
 @router.get("/me")
 def get_me(request: Request, authorization: str | None = Header(default=None), conn=Depends(get_db)):
     user, user_id = _get_session_user_from_request(request, conn, authorization, raise_on_missing=True)
     if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+        raise unauthorised("session_invalid", "Invalid session")
     user = _validate_active_user(user)
     billing = _get_billing_safe(conn, user_id)
     mfa_row = _get_mfa_safe(user_id)

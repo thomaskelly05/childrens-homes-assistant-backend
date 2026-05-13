@@ -90,7 +90,7 @@ def test_auth_me_returns_staff_role(client, fake_state):
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
-    assert body["user"]["role"] == "staff"
+    assert body["user"]["role"] == "support_worker"
 
 
 def test_admin_subscription_inactive_still_allows_auth_check(client, fake_state):
@@ -155,7 +155,7 @@ def test_staff_subscription_state_exposed_in_auth_check(client, fake_state):
     assert response.status_code == 200
     body = response.json()
     assert body["authenticated"] is True
-    assert body["role"] == "staff"
+    assert body["role"] == "support_worker"
     assert body["subscription_active"] is True
     assert body["subscription_status"] == "active"
     assert body["plan_name"] == "Pro"

@@ -19,6 +19,11 @@ def create_session_token(
     user_id: int,
     *,
     expires_seconds: int | None = None,
+    email: str | None = None,
+    role: str | None = None,
+    home_id: int | None = None,
+    provider_id: int | None = None,
+    permissions: list[str] | None = None,
     mfa_verified: bool = False,
     remember: bool = False,
     session_id: str | None = None,
@@ -39,9 +44,18 @@ def create_session_token(
         "exp": int(expires_at.timestamp()),
         "jti": secrets.token_urlsafe(16),
         "sid": session_id or secrets.token_urlsafe(24),
+        "typ": "access",
         "mfa_verified": bool(mfa_verified),
         "remember": bool(remember),
     }
+    optional_claims = {
+        "email": email,
+        "role": role,
+        "home_id": home_id,
+        "provider_id": provider_id,
+        "permissions": permissions,
+    }
+    payload.update({key: value for key, value in optional_claims.items() if value is not None})
 
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 

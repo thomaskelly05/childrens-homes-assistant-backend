@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from auth.dependencies import get_current_user
+from auth.dependencies import require_assistant_access
 from services.indicare_knowledge_service import IndiCareKnowledgeService
 
 router = APIRouter(prefix="/assistant/os", tags=["assistant-os-knowledge"])
@@ -23,7 +23,7 @@ class KnowledgeAskRequest(BaseModel):
 @router.post("/knowledge")
 def ask_knowledge(
     payload: KnowledgeAskRequest,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(require_assistant_access),
 ):
     """Ask the home/child knowledge base with document citations.
 

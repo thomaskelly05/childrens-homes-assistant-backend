@@ -18,6 +18,7 @@ import app as app_module  # noqa: E402
 import routers.auth_routes as auth_routes  # noqa: E402
 import routers.mfa_routes as mfa_routes  # noqa: E402
 import auth.current_user as current_user_module  # noqa: E402
+import auth.passwords as password_module  # noqa: E402
 import auth.legal_acceptance as legal_acceptance_module  # noqa: E402
 import db.legal_acceptance_db as legal_acceptance_db  # noqa: E402
 
@@ -107,12 +108,12 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(
         auth_routes,
         "create_session_token",
-        lambda user_id: f"test-token-{user_id}",
+        lambda user_id, **_kwargs: f"test-token-{user_id}",
     )
     monkeypatch.setattr(
         mfa_routes,
         "create_session_token",
-        lambda user_id: f"test-token-{user_id}",
+        lambda user_id, **_kwargs: f"test-token-{user_id}",
     )
 
     def fake_decode_session_token(token):
@@ -141,12 +142,16 @@ def client(monkeypatch, fake_state):
         def execute(self, query, params=None):
             q = " ".join(str(query).split()).lower()
 
-            if "from users where lower(email)" in q:
+            if "from users where lower(email)" in q or "from users u" in q and "lower(u.email)" in q:
                 email = params[0]
                 self._result = fake_state["user"] if email == TEST_EMAIL.lower() else None
                 return
 
-            if "from users where id = %s" in q or "from users where id =" in q:
+            if (
+                "from users where id = %s" in q
+                or "from users where id =" in q
+                or "from users u" in q and "where u.id = %s" in q
+            ):
                 user_id = params[0]
                 self._result = fake_state["user"] if int(user_id) == TEST_USER_ID else None
                 return
@@ -178,9 +183,14 @@ def client(monkeypatch, fake_state):
     # Password check mock
     # -----------------------------
     monkeypatch.setattr(
-        auth_routes.bcrypt,
-        "checkpw",
-        lambda password, password_hash: password.decode("utf-8") == TEST_PASSWORD,
+        password_module,
+        "verify_password",
+        lambda password, password_hash: password == TEST_PASSWORD,
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        "verify_password",
+        lambda password, password_hash: password == TEST_PASSWORD,
     )
 
     # -----------------------------

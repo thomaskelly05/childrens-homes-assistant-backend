@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.current_user import get_current_user
+from auth.permissions import require_assistant_access
 from db.connection import get_db
 from services.assistant_security import safe_int, safe_string
 
@@ -78,7 +78,7 @@ def _row_to_payload(row: dict[str, Any]) -> dict[str, Any]:
 
 
 @router.get("")
-def list_assistant_conversations(current_user=Depends(get_current_user), conn=Depends(get_db)):
+def list_assistant_conversations(current_user=Depends(require_assistant_access), conn=Depends(get_db)):
     user_id = _safe_user_id(current_user)
     _ensure_table(conn)
 
@@ -102,7 +102,7 @@ def list_assistant_conversations(current_user=Depends(get_current_user), conn=De
 def save_assistant_conversation(
     conversation_id: str,
     payload: AssistantConversationPayload,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
     conn=Depends(get_db),
 ):
     user_id = _safe_user_id(current_user)
@@ -136,7 +136,7 @@ def save_assistant_conversation(
 @router.delete("/{conversation_id}")
 def delete_assistant_conversation(
     conversation_id: str,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_assistant_access),
     conn=Depends(get_db),
 ):
     user_id = _safe_user_id(current_user)

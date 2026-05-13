@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth.dependencies import get_current_user
+from auth.dependencies import require_assistant_access
 from services.assistant_intelligence_service import AssistantIntelligenceService
 
 router = APIRouter(prefix="/assistant/intelligence", tags=["assistant-intelligence"])
@@ -27,7 +27,7 @@ def _current_home_id(current_user: dict[str, Any]) -> int | None:
 @router.get("/home")
 def current_home_inspection_brief(
     days: int = 90,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(require_assistant_access),
 ):
     home_id = _current_home_id(current_user)
     if not home_id:
@@ -39,7 +39,7 @@ def current_home_inspection_brief(
 def home_inspection_brief(
     home_id: int,
     days: int = 90,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(require_assistant_access),
 ):
     return service.home_inspection_brief(home_id=home_id, current_user=current_user, days=days)
 
@@ -48,7 +48,7 @@ def home_inspection_brief(
 def child_inspection_brief(
     young_person_id: int,
     days: int = 90,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(require_assistant_access),
 ):
     return service.child_inspection_brief(young_person_id=young_person_id, current_user=current_user, days=days)
 
@@ -56,7 +56,7 @@ def child_inspection_brief(
 @router.get("/reg45")
 def current_home_reg45_draft(
     days: int = 180,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(require_assistant_access),
 ):
     home_id = _current_home_id(current_user)
     if not home_id:
@@ -68,6 +68,6 @@ def current_home_reg45_draft(
 def reg45_draft(
     home_id: int,
     days: int = 180,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(require_assistant_access),
 ):
     return service.reg45_draft(home_id=home_id, current_user=current_user, days=days)

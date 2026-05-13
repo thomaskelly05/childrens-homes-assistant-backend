@@ -6,7 +6,7 @@ router = APIRouter()
 
 @router.get("/staff")
 def list_staff(
-    user = Depends(require_role(["provider_admin", "regional_manager"])),
+    user = Depends(require_role(["admin", "manager", "deputy_manager"])),
     conn = Depends(get_db)
 ):
     with conn.cursor() as cur:
