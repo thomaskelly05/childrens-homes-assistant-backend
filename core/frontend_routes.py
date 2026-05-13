@@ -92,8 +92,17 @@ def _assert_single_os_shell(html: str) -> None:
             detail="OS command shell may contain only one safe inline interaction script",
         )
 
-    if html.count('data-shell="indicare-os-single-shell"') != 1:
-        raise HTTPException(status_code=503, detail="OS command shell must contain exactly one IndiCare shell")
+    shell_markers = re.findall(
+        r'data-shell\s*=\s*["\']indicare-os-single-shell["\']',
+        html,
+        flags=re.IGNORECASE,
+    )
+
+    if len(shell_markers) != 1:
+        raise HTTPException(
+            status_code=503,
+            detail="OS command shell must contain exactly one IndiCare shell",
+        )
 
 
 def _ai_asset(filename: str, media_type: str) -> FileResponse:
