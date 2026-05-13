@@ -34,6 +34,14 @@ button {
   font: inherit;
 }
 
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

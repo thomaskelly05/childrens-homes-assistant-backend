@@ -17,6 +17,7 @@ from services.indicare_ai_orchestrator_service import IndiCareAIOrchestratorServ
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assistant/general", tags=["General Assistant"])
+compat_router = APIRouter(tags=["Assistant Compatibility"])
 ui_router = APIRouter(tags=["Assistant UI"])
 orchestrator_service = IndiCareAIOrchestratorService()
 
@@ -189,3 +190,11 @@ async def stream_general_assistant(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@compat_router.post("/assistant")
+async def stream_assistant(
+    payload: GeneralAssistantRequest,
+    current_user=Depends(get_current_user),
+):
+    return await stream_general_assistant(payload, current_user)

@@ -4,6 +4,7 @@ import { ReconnectManager } from './reconnect-manager'
 import { runtimeTelemetry } from './runtime-telemetry'
 import { speechPlaybackRuntime } from './speech-playback-runtime'
 import { WakeWordRuntime } from './wake-word-runtime'
+import { generateMockAssistantResponse } from '@/lib/indicare/assistant-adapter'
 
 export type AssistantMessage = {
   id: string
@@ -23,8 +24,17 @@ export type RuntimeState = {
   error?: string
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+const DEFAULT_API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : ''
+const API_BASE = (
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  DEFAULT_API_BASE
+).replace(/\/+$/, '')
 const REALTIME_WS_URL = process.env.NEXT_PUBLIC_OPENAI_REALTIME_WS_URL || ''
+
+function backendUrl(path: string) {
+  return `${API_BASE}${path}`
+}
 
 function messageId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -118,13 +128,13 @@ export class AssistantRuntime {
     runtimeTelemetry.track('assistant.connect.started')
 
     try {
-      const response = await fetch(`${API_BASE}/assistant/realtime/health`, {
+      const response = await fetch(backendUrl('/health'), {
         credentials: 'include',
         cache: 'no-store'
       })
 
       this.state.connected = response.ok
-      this.state.error = response.ok ? undefined : `Realtime health failed: ${response.status}`
+      this.state.error = response.ok ? undefined : `Assistant backend health failed: ${response.status}`
 
       if (response.ok) {
         this.reconnect.markConnected()
@@ -254,7 +264,7 @@ export class AssistantRuntime {
     this.abortController = new AbortController()
 
     try {
-      const response = await fetch(`${API_BASE}/assistant/general/stream`, {
+      const response = await fetch(backendUrl('/assistant'), {
         method: 'POST',
         credentials: 'include',
         cache: 'no-store',
@@ -282,9 +292,14 @@ export class AssistantRuntime {
       runtimeTelemetry.track('assistant.message.completed')
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
+        const fallback = generateMockAssistantResponse(trimmed, {
+          route: '/assistant',
+          pageTitle: 'Assistant workspace',
+          userRole: 'Registered manager'
+        })
         this.updateMessage(
           assistantMessage.id,
-          'I could not complete that response just now. Please check the backend assistant stream and try again.',
+          `${fallback}\n\n_Runtime note: the live assistant stream was unavailable, so IndiCare used the deterministic care-aware adapter. Your records are still safe._`,
           false
         )
 

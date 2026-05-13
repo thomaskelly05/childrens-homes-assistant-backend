@@ -33,6 +33,8 @@ export default function AssistantPage() {
     conversations,
     activeConversation,
     activeConversationId,
+    loading,
+    error,
     createConversation,
     selectConversation,
     saveConversation
@@ -80,14 +82,14 @@ export default function AssistantPage() {
     await assistantRuntime.sendMessage(value)
   }
 
-  function handleCreateConversation() {
-    createConversation()
+  async function handleCreateConversation() {
+    await createConversation()
     setMessages([])
     assistantRuntime.resetConversation()
   }
 
   return (
-    <main className="flex h-screen overflow-hidden bg-[#0b1020] text-white">
+    <section className="flex min-h-[calc(100vh-132px)] overflow-hidden rounded-[32px] border border-slate-800 bg-[#0b1020] text-white shadow-2xl shadow-slate-950/20">
       <ConversationSidebar
         conversations={conversations.map((conversation) => ({
           id: conversation.id,
@@ -103,12 +105,14 @@ export default function AssistantPage() {
         <header className="flex items-center justify-between border-b border-white/10 px-6 py-4 backdrop-blur-xl">
           <div>
             <h1 className="text-2xl font-black tracking-[-0.04em]">
-              IndiCare Intelligence
+              Assistant command workspace
             </h1>
 
             <p className="mt-1 text-sm text-slate-400">
-              Unified conversational operating system
+              Context-aware care assistant with deterministic fallback if the live backend is unavailable.
             </p>
+            {loading ? <p className="mt-1 text-xs text-slate-500">Loading conversations...</p> : null}
+            {error ? <p className="mt-1 text-xs text-amber-300">Conversation persistence warning: {error}</p> : null}
           </div>
 
           <div className="flex items-center gap-4">
@@ -202,6 +206,6 @@ export default function AssistantPage() {
           </div>
         </footer>
       </div>
-    </main>
+    </section>
   )
 }
