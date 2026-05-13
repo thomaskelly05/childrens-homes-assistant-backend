@@ -216,11 +216,9 @@ export default function AssistantPage() {
         mode,
         context: buildStandaloneAssistantContext({
           activeSection,
-          conversationId: activeConversationId,
-          projectId: activeConversation?.projectId
+          conversationId: activeConversationId
         }),
-        conversation_id: activeConversationId || undefined,
-        project_id: activeConversation?.projectId
+        conversation_id: activeConversationId || undefined
       })
       setLastAssistantData(data)
       const nextMessages = pendingMessages.map((message) => (

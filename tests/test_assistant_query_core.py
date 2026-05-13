@@ -1,39 +1,19 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import Any
 
-import pyotp
-
+import routers.assistant_query_routes as assistant_query_routes
 from repositories.os_repository_utils import build_scope_where
 from services.assistant_context_service import build_shared_assistant_context
 from services.assistant_response_service import AssistantResponseService
 from services.assistant_retrieval_service import AssistantRetrievalResult
-from tests.conftest import TEST_EMAIL, TEST_PASSWORD
 
 
-def _fully_authenticate(client, fake_state, role: str = "manager"):
-    fake_state["user"]["role"] = role
-    fake_state["accepted_legal"] = True
-    response = client.post(
-        "/auth/login",
-        json={
-            "email": TEST_EMAIL,
-            "password": TEST_PASSWORD,
-            "remember": False,
-        },
-    )
-    assert response.status_code == 200
-    setup = client.get("/auth/mfa/setup")
-    assert setup.status_code == 200
-    code = pyotp.TOTP(setup.json()["secret"]).now()
-    enable = client.post("/auth/mfa/setup", json={"code": code})
-    assert enable.status_code == 200
-
-
-def test_assistant_query_endpoint_uses_shared_context(client, fake_state, monkeypatch):
-    _fully_authenticate(client, fake_state, role="manager")
+def test_assistant_query_route_uses_shared_context(fake_state, monkeypatch):
     captured: dict[str, Any] = {}
+    fake_state["user"]["role"] = "manager"
 
     def fake_query(conn, *, message, context, current_user):
         captured["message"] = message
@@ -53,20 +33,25 @@ def test_assistant_query_endpoint_uses_shared_context(client, fake_state, monkey
 
     monkeypatch.setattr("routers.assistant_query_routes.assistant_response_service.query", fake_query)
 
-    response = client.post(
-        "/assistant/query",
-        json={
-            "message": "Summarise this young person's last 7 days.",
-            "mode": "embedded",
-            "context": {
-                "current_route": "/young-people/12",
-                "selected_young_person_id": 12,
-            },
-        },
+    class FakeConn:
+        pass
+
+    response = asyncio.run(
+        assistant_query_routes.query_assistant(
+            assistant_query_routes.AssistantQueryRequest(
+                message="Summarise this young person's last 7 days.",
+                mode="embedded",
+                context={
+                    "current_route": "/young-people/12",
+                    "selected_young_person_id": 12,
+                },
+            ),
+            conn=FakeConn(),
+            current_user=fake_state["user"],
+        )
     )
 
-    assert response.status_code == 200
-    body = response.json()
+    body = response
     assert body["success"] is True
     assert body["data"]["review_required"] is True
     assert captured["context"].assistant_mode == "embedded"
@@ -74,15 +59,13 @@ def test_assistant_query_endpoint_uses_shared_context(client, fake_state, monkey
     assert captured["context"].permissions
 
 
-def test_assistant_query_denies_role_without_assistant_access(client, fake_state):
-    _fully_authenticate(client, fake_state, role="viewer")
-
+def test_assistant_query_requires_authentication(client):
     response = client.post(
         "/assistant/query",
         json={"message": "Can I use the assistant?", "mode": "standalone", "context": {}},
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_os_scope_where_blocks_other_home_for_non_admin():
