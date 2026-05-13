@@ -23,11 +23,19 @@ export type ApiResult<T> = {
   error?: string
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || ''
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || 'http://localhost:8000'
+
+function resolveUrl(path: string) {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+
+  return `${API_BASE}${path}`
+}
 
 export async function apiGet<T>(path: string, fallback: T): Promise<ApiResult<T>> {
   try {
-    const response = await fetch(`${API_BASE}${path}`, {
+    const response = await fetch(resolveUrl(path), {
       credentials: 'include',
       cache: 'no-store'
     })
@@ -44,7 +52,7 @@ export async function apiGet<T>(path: string, fallback: T): Promise<ApiResult<T>
 
 export async function apiPost<T>(path: string, body: unknown, fallback: T): Promise<ApiResult<T>> {
   try {
-    const response = await fetch(`${API_BASE}${path}`, {
+    const response = await fetch(resolveUrl(path), {
       method: 'POST',
       credentials: 'include',
       cache: 'no-store',
