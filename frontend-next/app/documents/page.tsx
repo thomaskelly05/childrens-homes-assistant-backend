@@ -52,8 +52,8 @@ export default function DocumentsPage() {
                   <p className="mt-2 text-sm leading-6 text-slate-600">{finding.summary}</p>
                   <p className="mt-3 text-xs font-bold text-slate-500">Evidence required: {finding.evidenceRequired.join(', ')}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Link href="/chronology" className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600">Link finding to chronology</Link>
-                    <Link href="/actions" className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600">Link finding to staff action</Link>
+                    <Link href={finding.chronologyEventId ? `/chronology/${finding.chronologyEventId}` : '/chronology'} className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600">Link finding to chronology</Link>
+                    <Link href={finding.actionIds[0] ? `/actions/${finding.actionIds[0]}` : '/actions'} className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600">Link finding to staff action</Link>
                     <Link href="/evidence" className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600">Link evidence</Link>
                   </div>
                 </article>
@@ -79,7 +79,7 @@ export default function DocumentsPage() {
           rows={documents.map((document) => {
             const uploader = getStaffById(document.uploadedBy)
             return [
-              <a key={document.id} href={document.fileUrl} className="font-black text-slate-950 hover:text-blue-700">{document.title}</a>,
+              <Link key={document.id} href={`/documents/${document.id}`} className="font-black text-slate-950 hover:text-blue-700">{document.title}</Link>,
               document.documentType.replaceAll('_', ' '),
               document.regulation || 'Care record',
               uploader?.firstName || document.uploadedBy,

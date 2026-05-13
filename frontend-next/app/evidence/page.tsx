@@ -1,11 +1,15 @@
 import { ActionsPanel, EvidenceGapsPanel, EvidenceItemsPanel } from '@/components/indicare/action-evidence-panels'
 import { Card, PageHeader, SectionHeader, StatCard } from '@/components/indicare/ui'
+import { SccifCoveragePanel } from '@/components/indicare/workflows/sccif-coverage-panel'
+import { getChronologyEvents } from '@/lib/chronology/selectors'
 import { getEvidenceGaps, getEvidenceItems, getOpenCareActions } from '@/lib/evidence/selectors'
+import { getSccifCoverage } from '@/lib/regulatory-framework/mapping'
 
 export default function EvidencePage() {
   const evidence = getEvidenceItems()
   const gaps = getEvidenceGaps()
   const actions = getOpenCareActions()
+  const sccifCoverage = getSccifCoverage(getChronologyEvents(), evidence, actions)
 
   return (
     <div className="space-y-6">
@@ -34,6 +38,10 @@ export default function EvidencePage() {
           <ActionsPanel actions={actions} />
         </Card>
       </section>
+      <Card>
+        <SectionHeader eyebrow="SCCIF alignment" title="Evidence mapped to inspection areas" />
+        <SccifCoveragePanel items={sccifCoverage.items} limit={6} />
+      </Card>
     </div>
   )
 }

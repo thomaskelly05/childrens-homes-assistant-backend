@@ -7,11 +7,13 @@ import {
   getSafeguardingChronology
 } from '@/lib/chronology/selectors'
 import { ChronologyEvent } from '@/lib/chronology/types'
+import { getEvidenceItems } from '@/lib/evidence/selectors'
+import { mapEventToRegulatoryReferences } from '@/lib/regulatory-framework/mapping'
 
 import { getReportTemplate, reportTemplates } from './templates'
 import { GeneratedReport, ReportGenerationContext, ReportSection, ReportSourceCitation, ReportTemplateId } from './types'
 
-const disclaimer = 'Draft generated from structured records. Review required by appropriate staff before use, sharing, filing or professional judgement.'
+const disclaimer = 'Draft generated from structured records. Requires manager review before use, sharing, filing or professional judgement. The wording uses "records indicate" and "evidence suggests" and must not be treated as a final regulatory judgement.'
 
 function citationsFor(events: ChronologyEvent[]): ReportSourceCitation[] {
   return events.map((event) => ({
@@ -30,13 +32,27 @@ function sourceBody(events: ChronologyEvent[], fallback: string) {
 function section(id: string, title: string, events: ChronologyEvent[], fallback: string): ReportSection {
   const gaps = getEvidenceGapsFromChronology(events)
   const actions = getActionsFromChronology(events)
+  const references = events.flatMap((event) => mapEventToRegulatoryReferences(event))
+  const uniqueReferences = references.filter((reference, index, list) => list.findIndex((item) => item.id === reference.id) === index)
+  const linkedRegulations = uniqueReferences.filter((reference) => reference.framework === 'children_homes_regulations_2015' || reference.framework === 'reg44' || reference.framework === 'reg45').map((reference) => reference.code)
+  const linkedQualityStandards = uniqueReferences.filter((reference) => reference.framework === 'quality_standards').map((reference) => reference.title)
+  const linkedSccifAreas = uniqueReferences.filter((reference) => reference.framework === 'sccif').map((reference) => reference.title)
+  const missingEvidence = gaps.length ? gaps.map((gap) => gap.title) : events.length ? [] : ['No evidence found in current records for this section.']
+
   return {
     id,
     title,
-    body: sourceBody(events, fallback),
+    body: `${sourceBody(events, fallback)} ${events.length ? 'Records indicate this section is supported by current source records and remains draft pending manager review.' : 'No evidence found in current records; this section requires evidence before reliance.'}`,
     citations: citationsFor(events),
     evidenceGapIds: gaps.map((gap) => gap.id),
-    actionIds: actions.map((action) => action.id)
+    actionIds: actions.map((action) => action.id),
+    regulatoryReferenceIds: uniqueReferences.map((reference) => reference.id),
+    linkedRegulations,
+    linkedQualityStandards,
+    linkedSccifAreas,
+    evidenceGaps: missingEvidence,
+    nextActions: actions.length ? actions.map((action) => action.title) : ['Manager to review this draft section and confirm whether further evidence is required.'],
+    reviewRequired: true
   }
 }
 
@@ -148,6 +164,15 @@ export function generateReport(context: ReportGenerationContext): GeneratedRepor
     }),
     evidenceGaps: getEvidenceGapsFromChronology(events),
     linkedActions: getActionsFromChronology(events),
+    sourcePanel: {
+      chronologyEventIds: events.map((event) => event.id),
+      documentIds: Array.from(new Set(events.filter((event) => event.sourceType === 'document' || event.sourceType === 'reg44_report' || event.sourceType === 'reg45_report' || event.sourceType === 'lac_review').map((event) => event.sourceId))),
+      actionIds: Array.from(new Set(events.flatMap((event) => event.actionIds))),
+      evidenceIds: Array.from(new Set(events.flatMap((event) => event.evidenceIds))),
+      missingExpectedEvidence: Array.from(new Set(getEvidenceGapsFromChronology(events).map((gap) => gap.title))).concat(
+        getEvidenceItems().filter((item) => item.quality === 'review_required').map((item) => `${item.title} requires manager review`)
+      )
+    },
     disclaimer
   }
 }

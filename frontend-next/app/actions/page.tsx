@@ -1,11 +1,15 @@
 import { ActionsPanel, EvidenceGapsPanel } from '@/components/indicare/action-evidence-panels'
 import { Card, PageHeader, SectionHeader, StatCard } from '@/components/indicare/ui'
+import { ManagementOversightPanel } from '@/components/indicare/workflows/management-oversight-panel'
+import { NextBestActions } from '@/components/indicare/workflows/next-best-actions'
+import { getChronologyEvents } from '@/lib/chronology/selectors'
 import { getCareActions, getEvidenceGaps, getOpenCareActions } from '@/lib/evidence/selectors'
 
 export default function ActionsPage() {
   const actions = getCareActions()
   const openActions = getOpenCareActions()
   const gaps = getEvidenceGaps()
+  const events = getChronologyEvents()
 
   return (
     <div className="space-y-6">
@@ -20,6 +24,10 @@ export default function ActionsPage() {
         <StatCard label="Overdue" value={actions.filter((action) => action.status === 'overdue').length} />
         <StatCard label="Evidence gaps" value={gaps.length} href="/evidence" />
       </section>
+      <Card>
+        <SectionHeader eyebrow="Workflow" title="Next best actions" description="Cards link to the action, evidence or chronology workflow that should be opened next." />
+        <NextBestActions actions={actions} gaps={gaps} />
+      </Card>
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <Card>
           <SectionHeader eyebrow="Action register" title="Open and recent actions" />
@@ -30,6 +38,10 @@ export default function ActionsPage() {
           <EvidenceGapsPanel gaps={gaps} />
         </Card>
       </section>
+      <Card>
+        <SectionHeader eyebrow="Management oversight" title="Manager review and sign-off readiness" />
+        <ManagementOversightPanel events={events} actions={actions} />
+      </Card>
     </div>
   )
 }

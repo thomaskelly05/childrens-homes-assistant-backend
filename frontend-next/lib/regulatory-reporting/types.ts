@@ -32,6 +32,13 @@ export type ReportSection = {
   citations: ReportSourceCitation[]
   evidenceGapIds: string[]
   actionIds: string[]
+  regulatoryReferenceIds: string[]
+  linkedRegulations: string[]
+  linkedQualityStandards: string[]
+  linkedSccifAreas: string[]
+  evidenceGaps: string[]
+  nextActions: string[]
+  reviewRequired: boolean
 }
 
 export type ReportTemplate = {
@@ -62,5 +69,12 @@ export type GeneratedReport = {
   citations: ReportSourceCitation[]
   evidenceGaps: EvidenceGap[]
   linkedActions: CareAction[]
+  sourcePanel: {
+    chronologyEventIds: string[]
+    documentIds: string[]
+    actionIds: string[]
+    evidenceIds: string[]
+    missingExpectedEvidence: string[]
+  }
   disclaimer: string
 }

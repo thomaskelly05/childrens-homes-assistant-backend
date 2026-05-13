@@ -20,7 +20,9 @@ import {
   TriangleAlert,
   NotebookTabs,
   FolderOpen,
-  LogOut
+  LogOut,
+  Scale,
+  Gauge
 } from 'lucide-react'
 import { ReactNode } from 'react'
 
@@ -32,30 +34,32 @@ import { indicareData } from '@/lib/indicare/demo-data'
 import { getYoungPersonById } from '@/lib/indicare/selectors'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['records:read'] },
-  { href: '/young-people', label: 'Young People', icon: UserRound, permissions: ['records:read'] },
-  { href: '/chronology', label: 'Chronology', icon: Search, permissions: ['records:read'] },
-  { href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },
-  { href: '/placements', label: 'Placements', icon: Home, permissions: ['records:read'] },
-  { href: '/daily-logs', label: 'Daily Logs', icon: NotebookTabs, permissions: ['records:read'] },
-  { href: '/incidents', label: 'Incidents', icon: TriangleAlert, permissions: ['records:read'] },
-  { href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'] },
-  { href: '/risk-assessments', label: 'Risk Assessments', icon: ClipboardCheck, permissions: ['records:read'] },
-  { href: '/medication', label: 'Medication', icon: Pill, permissions: ['records:read'] },
-  { href: '/keywork', label: 'Keywork', icon: BriefcaseMedical, permissions: ['records:read'] },
-  { href: '/appointments', label: 'Appointments', icon: CalendarDays, permissions: ['records:read'] },
-  { href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
-  { href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
-  { href: '/actions', label: 'Actions', icon: ClipboardCheck, permissions: ['records:read'] },
-  { href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'] },
-  { href: '/assistant', label: 'Assistant', icon: Sparkles, permissions: ['assistant:access'] },
-  { href: '/settings', label: 'Settings', icon: Settings, permissions: ['settings:read', 'settings:manage'] }
+  { section: 'Home', href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['records:read'] },
+  { section: 'Home', href: '/chronology', label: 'Chronology', icon: Search, permissions: ['records:read'] },
+  { section: 'People', href: '/young-people', label: 'Young People', icon: UserRound, permissions: ['records:read'] },
+  { section: 'People', href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },
+  { section: 'People', href: '/placements', label: 'Placements', icon: Home, permissions: ['records:read'] },
+  { section: 'Recording', href: '/daily-logs', label: 'Daily Logs', icon: NotebookTabs, permissions: ['records:read'] },
+  { section: 'Recording', href: '/incidents', label: 'Incidents', icon: TriangleAlert, permissions: ['records:read'] },
+  { section: 'Recording', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'] },
+  { section: 'Recording', href: '/risk-assessments', label: 'Risk', icon: ClipboardCheck, permissions: ['records:read'] },
+  { section: 'Recording', href: '/medication', label: 'Medication', icon: Pill, permissions: ['records:read'] },
+  { section: 'Recording', href: '/keywork', label: 'Keywork', icon: BriefcaseMedical, permissions: ['records:read'] },
+  { section: 'Recording', href: '/appointments', label: 'Appointments', icon: CalendarDays, permissions: ['records:read'] },
+  { section: 'Quality & Compliance', href: '/actions', label: 'Actions', icon: ClipboardCheck, permissions: ['records:read'] },
+  { section: 'Quality & Compliance', href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'] },
+  { section: 'Quality & Compliance', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
+  { section: 'Quality & Compliance', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
+  { section: 'Quality & Compliance', href: '/ofsted-readiness', label: 'Ofsted Readiness', icon: Gauge, permissions: ['reports:read'] },
+  { section: 'Quality & Compliance', href: '/regulatory', label: 'Regulatory Framework', icon: Scale, permissions: ['records:read'] },
+  { section: 'Assistant', href: '/assistant', label: 'IndiCare Assistant', icon: Sparkles, permissions: ['assistant:access'] },
+  { section: 'Assistant', href: '/settings', label: 'Settings', icon: Settings, permissions: ['settings:read', 'settings:manage'] }
 ]
 
 function selectedYoungPersonId(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
   if (parts[0] === 'young-people' && parts[1]) return parts[1]
-  const linkedCollections = ['daily-logs', 'incidents', 'safeguarding', 'risk-assessments', 'medication', 'keywork', 'appointments', 'reports', 'documents', 'chronology']
+  const linkedCollections = ['daily-logs', 'incidents', 'safeguarding', 'risk-assessments', 'medication', 'keywork', 'appointments', 'reports', 'documents', 'chronology', 'actions', 'evidence']
   if (linkedCollections.includes(parts[0] || '')) {
     const recordId = parts[1]
     if (!recordId) return undefined
@@ -92,6 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date('2026-05-13T12:00:00.000Z'))
   const isPublicPage = pathname === '/login' || pathname.startsWith('/login/') || pathname === '/unauthorized'
   const visibleNavItems = navItems.filter((item) => userHasAnyPermission(user, item.permissions))
+  const navSections = Array.from(new Set(visibleNavItems.map((item) => item.section)))
   const matchedRoute = navItems
     .filter((item) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
     .sort((a, b) => b.href.length - a.href.length)[0]
@@ -144,23 +149,30 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
 
         <nav aria-label="Main navigation" className="min-h-0 flex-1 overflow-auto pr-1">
-          <div className="space-y-1">
-            {visibleNavItems.map((item) => {
-              const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" aria-hidden />
-                  {item.label}
-                </Link>
-              )
-            })}
+          <div className="space-y-5">
+            {navSections.map((section) => (
+              <section key={section}>
+                <p className="mb-2 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{section}</p>
+                <div className="space-y-1">
+                  {visibleNavItems.filter((item) => item.section === section).map((item) => {
+                    const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" aria-hidden />
+                        {item.label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         </nav>
 
