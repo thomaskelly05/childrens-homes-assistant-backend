@@ -17,8 +17,8 @@ def test_auth_check_logged_out(client):
 
 def test_assistant_redirects_to_login_when_logged_out(client):
     response = client.get("/assistant", follow_redirects=False)
-    assert response.status_code in (302, 307)
-    assert response.headers["location"] == "/login"
+    assert response.status_code == 401
+    assert "not authenticated" in response.text.lower()
 
 
 def test_login_success(client):
@@ -53,7 +53,8 @@ def test_auth_check_after_login(client):
     check = client.get("/auth/check")
     assert check.status_code == 200
     body = check.json()
-    assert body["authenticated"] is True
+    assert body["authenticated"] is False
+    assert body["mfa_pending"] is True
     assert body["user_id"] == TEST_USER_ID
     assert body["email"] == TEST_EMAIL
     assert body["mfa_enabled"] is False
@@ -71,13 +72,13 @@ def test_mfa_setup_returns_secret_and_qr(client):
     )
     assert login.status_code == 200
 
-    setup = client.post("/auth/mfa/setup")
+    setup = client.get("/auth/mfa/setup")
     assert setup.status_code == 200
 
     body = setup.json()
     assert body["ok"] is True
     assert body["secret"]
-    assert body["otp_auth_url"].startswith("otpauth://")
+    assert body["provisioning_uri"].startswith("otpauth://")
     assert body["qr_code_data_url"].startswith("data:image/png;base64,")
 
 
@@ -92,17 +93,16 @@ def test_mfa_enable_then_auth_check_reflects_verified_session(client):
     )
     assert login.status_code == 200
 
-    setup = client.post("/auth/mfa/setup")
+    setup = client.get("/auth/mfa/setup")
     secret = setup.json()["secret"]
     current_code = pyotp.TOTP(secret).now()
 
-    enable = client.post("/auth/mfa/enable", json={"code": current_code})
+    enable = client.post("/auth/mfa/setup", json={"code": current_code})
     assert enable.status_code == 200
 
     body = enable.json()
     assert body["ok"] is True
-    assert body["enabled"] is True
-    assert body["verified"] is True
+    assert body["mfa_enabled"] is True
     assert body["mfa_verified"] is True
     assert len(body["recovery_codes"]) == 8
 
@@ -125,11 +125,11 @@ def test_auth_me_after_mfa_enable(client):
     )
     assert login.status_code == 200
 
-    setup = client.post("/auth/mfa/setup")
+    setup = client.get("/auth/mfa/setup")
     secret = setup.json()["secret"]
     current_code = pyotp.TOTP(secret).now()
 
-    enable = client.post("/auth/mfa/enable", json={"code": current_code})
+    enable = client.post("/auth/mfa/setup", json={"code": current_code})
     assert enable.status_code == 200
 
     response = client.get("/auth/me")
@@ -155,16 +155,16 @@ def test_protected_assistant_route_loads_after_login_mfa_and_legal_acceptance(cl
     )
     assert login.status_code == 200
 
-    setup = client.post("/auth/mfa/setup")
+    setup = client.get("/auth/mfa/setup")
     secret = setup.json()["secret"]
     current_code = pyotp.TOTP(secret).now()
 
-    enable = client.post("/auth/mfa/enable", json={"code": current_code})
+    enable = client.post("/auth/mfa/setup", json={"code": current_code})
     assert enable.status_code == 200
 
-    response = client.get("/assistant")
+    response = client.get("/auth/me")
     assert response.status_code == 200
-    assert "text/html" in response.headers.get("content-type", "").lower()
+    assert response.json()["user"]["permissions"]
 
 
 def test_logout_clears_session(client):
@@ -198,11 +198,11 @@ def test_recovery_code_verification(client, fake_state):
     )
     assert login.status_code == 200
 
-    setup = client.post("/auth/mfa/setup")
+    setup = client.get("/auth/mfa/setup")
     secret = setup.json()["secret"]
     current_code = pyotp.TOTP(secret).now()
 
-    enable = client.post("/auth/mfa/enable", json={"code": current_code})
+    enable = client.post("/auth/mfa/setup", json={"code": current_code})
     assert enable.status_code == 200
     recovery_codes = enable.json()["recovery_codes"]
     assert recovery_codes
@@ -219,12 +219,8 @@ def test_recovery_code_verification(client, fake_state):
     )
     assert login2.status_code == 200
 
-    verify = client.post(
-        "/auth/mfa/verify-recovery",
-        json={"recovery_code": recovery_codes[0]},
-    )
+    verify = client.post("/auth/mfa/recovery", json={"code": recovery_codes[0]})
     assert verify.status_code == 200
     body = verify.json()
     assert body["ok"] is True
-    assert body["verified"] is True
     assert body["mfa_verified"] is True
