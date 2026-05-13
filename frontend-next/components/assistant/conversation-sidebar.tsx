@@ -6,17 +6,22 @@ type ConversationSidebarProps = {
   }>
   activeConversationId?: string
   onSelect?: (id: string) => void
+  onCreateConversation?: () => void
 }
 
 export function ConversationSidebar({
   conversations,
   activeConversationId,
-  onSelect
+  onSelect,
+  onCreateConversation
 }: ConversationSidebarProps) {
   return (
     <aside className="hidden w-[320px] border-r border-white/10 bg-[#0a0f1d] xl:flex xl:flex-col">
       <div className="border-b border-white/10 px-5 py-5">
-        <button className="w-full rounded-2xl bg-emerald-400 px-4 py-3 text-left text-sm font-black text-slate-950 shadow-[0_0_24px_rgba(52,211,153,0.35)]">
+        <button
+          onClick={onCreateConversation}
+          className="w-full rounded-2xl bg-emerald-400 px-4 py-3 text-left text-sm font-black text-slate-950 shadow-[0_0_24px_rgba(52,211,153,0.35)]"
+        >
           + New conversation
         </button>
       </div>
