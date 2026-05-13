@@ -1,9 +1,12 @@
 import { ChronologyFoundation } from '@/components/indicare/chronology-foundation'
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { PageHeader, StatCard } from '@/components/indicare/ui'
-import { getChronologyEvents, getSafeguardingChronology } from '@/lib/chronology/selectors'
+import { getSafeguardingChronology } from '@/lib/chronology/selectors'
+import { getOsChronology } from '@/lib/os-api/chronology'
 
-export default function ChronologyPage() {
-  const events = getChronologyEvents()
+export default async function ChronologyPage() {
+  const chronology = await getOsChronology()
+  const events = chronology.data
   const eventsWithEvidence = events.filter((event) => event.evidenceIds.length)
   const eventsWithActions = events.filter((event) => event.actionIds.length)
 
@@ -14,8 +17,9 @@ export default function ChronologyPage() {
         title="Connected care chronology"
         description="A chronology-first foundation where daily care, incidents, safeguarding, documents, evidence, actions and regulation links can be searched and cited."
       />
+      <LiveDataStatus result={chronology} />
       <section className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Chronology events" value={events.length} detail="Demo chronology repository" />
+        <StatCard label="Chronology events" value={events.length} detail={chronology.source === 'live' ? 'Live schema projection' : 'Demo fallback'} />
         <StatCard label="Safeguarding events" value={getSafeguardingChronology(events).length} detail="Restricted and active concerns" />
         <StatCard label="Evidence linked" value={eventsWithEvidence.length} detail="Events with evidence IDs" />
         <StatCard label="Actions linked" value={eventsWithActions.length} detail="Events requiring follow-up" />

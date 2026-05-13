@@ -12,6 +12,7 @@ import { ChronologyEvent, ChronologyFilter } from '@/lib/chronology/types'
 import { getEvidenceItems } from '@/lib/evidence/selectors'
 import { getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
 import { mapEventToRegulatoryReferences } from '@/lib/regulatory-framework/mapping'
+import { routeToChronologyEvent, routeToSourceRecord } from '@/lib/routes/os-routes'
 
 const savedViews: Array<{ label: string; filters: ChronologyFilter }> = [
   { label: 'All chronology', filters: {} },
@@ -152,7 +153,7 @@ export function ChronologyFoundation({
                   <span className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{event.severity}</span>
                   <span className="text-xs font-bold text-slate-400">{formatDate(event.dateTime)}</span>
                 </div>
-                <Link href={`/chronology/${event.id}`} className="mt-4 block text-2xl font-black tracking-[-0.04em] text-slate-950 hover:text-blue-700">{event.title}</Link>
+                <Link href={routeToChronologyEvent(event.id)} className="mt-4 block text-2xl font-black tracking-[-0.04em] text-slate-950 hover:text-blue-700">{event.title}</Link>
                 <p className="mt-3 text-sm leading-7 text-slate-600">{event.summary}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">{event.category}</span>
@@ -165,13 +166,13 @@ export function ChronologyFoundation({
                   <QualityStandardBadges references={references} limit={5} />
                 </div>
                 <div className="mt-4">
-                  <SourceCitationChip label={event.citationLabel} href={`/chronology/${event.id}`} sourceDate={formatDate(event.dateTime)} confidence={event.regulationLinks.some((link) => link.confidence === 'direct') ? 'direct' : 'supporting'} reviewRequired={event.tags.includes('manager-review') || event.tags.includes('overdue-manager-review')} />
+                  <SourceCitationChip label={event.citationLabel} href={routeToChronologyEvent(event.id)} sourceDate={formatDate(event.dateTime)} confidence={event.regulationLinks.some((link) => link.confidence === 'direct') ? 'direct' : 'supporting'} reviewRequired={event.tags.includes('manager-review') || event.tags.includes('overdue-manager-review')} />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" onClick={() => setSelectedEventId(event.id)} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Ask IndiCare about this</button>
                   <Link href="/reports" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Use in report</Link>
-                  <Link href={`/chronology/${event.id}`} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open detail</Link>
-                  <Link href={`/${event.sourceType === 'incident' ? 'incidents' : event.sourceType === 'lac_review' ? 'documents' : event.sourceType === 'reg44_report' || event.sourceType === 'reg45_report' ? 'documents' : 'chronology'}/${event.sourceId}`} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open source record</Link>
+                  <Link href={routeToChronologyEvent(event.id)} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open detail</Link>
+                  <Link href={routeToSourceRecord(event.sourceType, event.sourceId)} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open source record</Link>
                 </div>
               </div>
             </article>
