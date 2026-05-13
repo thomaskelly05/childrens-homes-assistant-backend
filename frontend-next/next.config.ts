@@ -18,38 +18,6 @@ const nextConfig: NextConfig = {
       {
         source: '/auth/:path*',
         destination: `${backendOrigin}/auth/:path*`
-      },
-      {
-        source: '/assistant/general/:path*',
-        destination: `${backendOrigin}/assistant/general/:path*`
-      },
-      {
-        source: '/assistant/general-safe/:path*',
-        destination: `${backendOrigin}/assistant/general-safe/:path*`
-      },
-      {
-        source: '/assistant/conversations/:path*',
-        destination: `${backendOrigin}/assistant/conversations/:path*`
-      },
-      {
-        source: '/assistant/realtime/:path*',
-        destination: `${backendOrigin}/assistant/realtime/:path*`
-      },
-      {
-        source: '/assistant/web/:path*',
-        destination: `${backendOrigin}/assistant/web/:path*`
-      },
-      {
-        source: '/assistant/os/:path*',
-        destination: `${backendOrigin}/assistant/os/:path*`
-      },
-      {
-        source: '/assistant/intelligence/:path*',
-        destination: `${backendOrigin}/assistant/intelligence/:path*`
-      },
-      {
-        source: '/assistant-api/:path*',
-        destination: `${backendOrigin}/assistant-api/:path*`
       }
     ]
   }
