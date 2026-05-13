@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -54,7 +55,6 @@ def _load_required_html(directory: str, filename: str) -> str:
 
 def _assert_single_os_shell(html: str) -> None:
     blocked_fragments = [
-        "<script",
         "<link",
         "operating-system-resilience",
         "existing-journey-runtime",
@@ -67,6 +67,8 @@ def _assert_single_os_shell(html: str) -> None:
         "os-operational-audit-runtime",
         "runtime debugging",
         "context wall",
+        "mutationobserver",
+        "websocket",
         "overflow:hidden",
     ]
     lowered = html.lower()
@@ -76,6 +78,20 @@ def _assert_single_os_shell(html: str) -> None:
                 status_code=503,
                 detail=f"OS command shell includes disabled legacy runtime fragment: {fragment}",
             )
+
+    script_tags = re.findall(r"<script\b[^>]*>", html, flags=re.IGNORECASE)
+    external_scripts = [tag for tag in script_tags if re.search(r"\bsrc\s*=", tag, flags=re.IGNORECASE)]
+    if external_scripts:
+        raise HTTPException(
+            status_code=503,
+            detail="OS command shell must not load external runtime scripts",
+        )
+    if len(script_tags) > 1:
+        raise HTTPException(
+            status_code=503,
+            detail="OS command shell may contain only one safe inline interaction script",
+        )
+
     if html.count('data-shell="indicare-os-single-shell"') != 1:
         raise HTTPException(status_code=503, detail="OS command shell must contain exactly one IndiCare shell")
 
