@@ -23,7 +23,8 @@ import {
   LogOut,
   Scale,
   Gauge,
-  Clock3
+  Clock3,
+  Building2
 } from 'lucide-react'
 import { ReactNode } from 'react'
 
@@ -63,9 +64,12 @@ const navItems = [
   { section: 'Secondary / Manager', href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'] },
   { section: 'Secondary / Manager', href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },
   { section: 'Secondary / Manager', href: '/settings', label: 'Settings', icon: Settings, permissions: ['settings:read', 'settings:manage'] },
+  { section: 'Secondary / Manager', href: '/setup', label: 'Home setup', icon: Building2, permissions: ['settings:read', 'settings:manage'] },
   { section: 'Secondary / Manager', href: '/dashboard', label: 'Command dashboard', icon: Gauge, permissions: ['reports:read'] },
   { section: 'Secondary / Manager', href: '/management', label: 'Management Oversight', icon: Gauge, permissions: ['reports:read'] }
 ]
+
+const demoMode = ['1', 'true', 'yes'].includes(String(process.env.NEXT_PUBLIC_DEMO_MODE || '').toLowerCase())
 
 function selectedYoungPersonId(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
@@ -219,6 +223,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {demoMode ? (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-black uppercase tracking-[0.18em] text-amber-900 md:px-6">
+            Demo data mode active - synthetic records only. Do not enter real child, staff or provider information.
+          </div>
+        ) : null}
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#f8fafc]/95 px-4 py-4 backdrop-blur-xl md:px-6">
           <div className="flex flex-wrap items-center gap-4">
             <CommandSearch />

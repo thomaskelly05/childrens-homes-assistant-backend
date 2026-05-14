@@ -13,15 +13,21 @@ export default function NotFound() {
         </h1>
 
         <p className="mt-6 max-w-xl text-base leading-8 text-slate-500">
-          The requested operational workspace could not be located. Return to the chronology workspace to continue operational recording.
+          The requested workspace, record or child route could not be located. It may have been archived, unavailable to your role, or not enabled in this demo workspace.
         </p>
 
-        <div className="mt-8 flex gap-4">
+        <div className="mt-8 flex flex-wrap gap-4">
           <Link
             href="/"
             className="rounded-2xl bg-slate-950 px-6 py-4 text-sm font-black text-white shadow-lg shadow-slate-950/20"
           >
             Return home
+          </Link>
+          <Link
+            href="/chronology"
+            className="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-black text-slate-700"
+          >
+            Open chronology
           </Link>
         </div>
       </section>

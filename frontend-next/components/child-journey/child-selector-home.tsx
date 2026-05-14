@@ -31,12 +31,12 @@ export function ChildSelectorHome({
       />
       <LiveDataStatus result={result} />
 
-      <section className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3" aria-label="Young person selector">
+      <section className="grid gap-4 sm:gap-5 lg:grid-cols-2 2xl:grid-cols-3" aria-label="Young person selector">
         {cards.map((child) => (
           <Link
             key={child.id}
             href={`/young-people/${encodeURIComponent(child.id)}/journey`}
-            className="group block rounded-[32px] border border-white/80 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:border-blue-100 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-100"
+            className="group block rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:border-blue-100 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 sm:rounded-[32px] sm:p-5"
           >
             <article>
               <div className="flex items-start gap-4">
@@ -62,7 +62,7 @@ export function ChildSelectorHome({
                 <RiskBadge value={(child.riskLevel || 'medium') as any} />
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="mt-5 grid gap-3 min-[420px]:grid-cols-3">
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                   <HeartPulse className="h-4 w-4 text-blue-700" aria-hidden />
                   <p className="mt-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Mood / status</p>

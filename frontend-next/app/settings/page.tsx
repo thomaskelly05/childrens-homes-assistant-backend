@@ -35,6 +35,18 @@ export default function SettingsPage() {
           Open Orb settings
         </Link>
       </Card>
+      <Card>
+        <SectionHeader eyebrow="Onboarding" title="Home setup readiness" />
+        <p className="text-sm leading-6 text-slate-600">Walk through provider details, home configuration, staff invitations, roles, young people, document checklists, SCCIF mapping and Orb privacy before pilot use.</p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link href="/setup" className="inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">
+            Open setup wizard
+          </Link>
+          <Link href="/staff" className="inline-flex rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">
+            Staff roles and access
+          </Link>
+        </div>
+      </Card>
     </div>
   )
 }
