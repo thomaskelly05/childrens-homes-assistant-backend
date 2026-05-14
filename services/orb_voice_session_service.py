@@ -36,11 +36,14 @@ from services.orb_memory_service import orb_memory_service
 from services.orb_operational_events_service import orb_operational_events_service
 from services.orb_persona_policy import persona_instruction, spoken_acknowledgement, transcript_storage_policy
 from services.orb_productivity_service import orb_productivity_service
+from services.orb_conversation_policy import orb_conversation_policy
+from services.orb_observability_service import orb_observability_service
 from services.orb_realtime_conversation_service import orb_realtime_conversation_service
 from services.orb_realtime_provider_service import (
     ALLOWED_SYNTHETIC_VOICES,
     orb_realtime_provider_service,
 )
+from services.orb_session_store import orb_session_store
 from services.orb_tool_orchestration_service import orb_tool_orchestration_service
 from services.orb_tool_router import tools_for_decision
 from services.orb_wake_word_service import orb_wake_word_service
@@ -265,8 +268,14 @@ class OpenAIRealtimeVoiceProvider:
         return orb_realtime_provider_service.configured()
 
     async def start_session(self, *, request: OrbSessionStartRequest, decision: OrbModeDecision, current_user: dict[str, Any]) -> dict[str, Any]:
+        instructions = "\n\n".join(
+            [
+                persona_instruction(decision, request.voice_profile),
+                orb_conversation_policy.provider_instructions(decision=decision, preferences=request.preferences),
+            ]
+        )
         return await orb_realtime_provider_service.create_ephemeral_session(
-            instructions=persona_instruction(decision, request.voice_profile),
+            instructions=instructions,
             voice=_provider_voice(request.voice_profile),
             current_user=current_user,
         )
@@ -304,12 +313,57 @@ class OrbSessionRecord:
     expires_at: str = field(default_factory=_expires_at)
 
 
-class OrbVoiceSessionService:
-    """In-memory Orb voice/session foundation layered over the shared assistant core.
+def _session_to_payload(session: OrbSessionRecord) -> dict[str, Any]:
+    return {
+        "id": session.id,
+        "user_id": session.user_id,
+        "current_user": session.current_user,
+        "context": session.context.model_dump(),
+        "preferences": session.preferences.model_dump(),
+        "voice_profile": session.voice_profile.model_dump(),
+        "selected_mode": session.selected_mode,
+        "mode_decision": session.mode_decision.model_dump(),
+        "provider_name": session.provider_name,
+        "state": session.state,
+        "started_at": session.started_at,
+        "ended_at": session.ended_at,
+        "transcript": [entry.model_dump() for entry in session.transcript],
+        "pending_drafts": [draft.model_dump() for draft in session.pending_drafts],
+        "citations_used": session.citations_used,
+        "related_records": session.related_records,
+        "records_changed": session.records_changed,
+        "last_seen_at": session.last_seen_at,
+        "expires_at": session.expires_at,
+    }
 
-    The store is intentionally process-local for the first foundation. Durable transcript
-    storage and retention enforcement can later replace this without changing the route contract.
-    """
+
+def _session_from_payload(payload: dict[str, Any]) -> OrbSessionRecord:
+    decision = OrbModeDecision(**payload["mode_decision"])
+    return OrbSessionRecord(
+        id=payload["id"],
+        user_id=payload.get("user_id"),
+        current_user=dict(payload.get("current_user") or {}),
+        context=OrbContext(**(payload.get("context") or {})),
+        preferences=OrbPreferences(**(payload.get("preferences") or {})),
+        voice_profile=OrbVoiceProfile(**(payload.get("voice_profile") or {})),
+        selected_mode=payload.get("selected_mode") or "auto",
+        mode_decision=decision,
+        provider_name=payload.get("provider_name") or "mock_voice",
+        state=payload.get("state") or "idle",
+        started_at=payload.get("started_at") or _now(),
+        ended_at=payload.get("ended_at"),
+        transcript=[OrbTranscriptEntry(**entry) for entry in payload.get("transcript") or []],
+        pending_drafts=[OrbVoiceDraft(**draft) for draft in payload.get("pending_drafts") or []],
+        citations_used=list(payload.get("citations_used") or []),
+        related_records=list(payload.get("related_records") or []),
+        records_changed=list(payload.get("records_changed") or []),
+        last_seen_at=payload.get("last_seen_at") or _now(),
+        expires_at=payload.get("expires_at") or _expires_at(),
+    )
+
+
+class OrbVoiceSessionService:
+    """Orb voice/session foundation layered over shared realtime storage."""
 
     def __init__(self, assistant_response_service: AssistantResponseService | None = None) -> None:
         self.assistant_response_service = assistant_response_service or AssistantResponseService()
@@ -343,23 +397,39 @@ class OrbVoiceSessionService:
                 expired.append(session_id)
         for session_id in expired:
             self.sessions.pop(session_id, None)
+            orb_session_store.delete_session(session_id)
             orb_realtime_conversation_service.end_session(session_id)
             orb_memory_service.end_session(session_id)
 
     def _cleanup_user_sessions(self, user_id: int | None) -> None:
         if user_id is None:
             return
+        for session_id in orb_session_store.cleanup_user_sessions(user_id):
+            self.sessions.pop(session_id, None)
+            orb_realtime_conversation_service.end_session(session_id)
+            orb_memory_service.end_session(session_id)
         for session_id, session in list(self.sessions.items()):
             if session.user_id == user_id and not session.ended_at:
                 session.ended_at = _now()
                 session.state = "idle"
                 self.sessions.pop(session_id, None)
+                orb_session_store.delete_session(session_id)
                 orb_realtime_conversation_service.end_session(session_id)
                 orb_memory_service.end_session(session_id)
 
     def _touch(self, session: OrbSessionRecord) -> None:
         session.last_seen_at = _now()
         session.expires_at = _expires_at()
+        self._persist(session)
+
+    def _persist(self, session: OrbSessionRecord) -> None:
+        orb_session_store.save_session(
+            session_id=session.id,
+            user_id=session.user_id,
+            home_id=session.context.home_id,
+            payload=_session_to_payload(session),
+            expires_at=session.expires_at,
+        )
 
     def _assert_session_owner(self, session: OrbSessionRecord, current_user: dict[str, Any] | None) -> None:
         if not current_user:
@@ -382,6 +452,11 @@ class OrbVoiceSessionService:
     def get_session(self, session_id: str) -> OrbSessionRecord:
         self._cleanup_expired_sessions()
         session = self.sessions.get(session_id)
+        if not session:
+            payload = orb_session_store.load_session(session_id)
+            if payload:
+                session = _session_from_payload(payload)
+                self.sessions[session_id] = session
         if not session:
             raise KeyError(session_id)
         return session
@@ -424,6 +499,7 @@ class OrbVoiceSessionService:
             )
         )
         self.sessions[session_id] = session
+        self._persist(session)
         orb_memory_service.start_session(session_id=session_id, current_user=current_user, context=request.context)
         memory_snapshot = orb_memory_service.snapshot(session_id)
         realtime_state = orb_realtime_conversation_service.start_session(
@@ -457,6 +533,13 @@ class OrbVoiceSessionService:
                     request.preferences.transcript_retention_days,
                 ),
             },
+        )
+        orb_observability_service.record_event(
+            "session_started",
+            session_id=session_id,
+            user_id=session.user_id,
+            home_id=request.context.home_id,
+            metadata={"provider": provider.name, "provider_configured": provider.configured()},
         )
         return OrbSessionStartResponse(
             session_id=session_id,
@@ -520,6 +603,7 @@ class OrbVoiceSessionService:
         if event.type == "partial_transcript":
             session.state = "listening"
             realtime_state = orb_realtime_conversation_service.partial_user_transcript(session_id=session_id, text=message)
+            self._persist(session)
             return self._event_response(session, decision, provider_event=provider_event, realtime_state=realtime_state)
 
         if event.type in {
@@ -580,6 +664,7 @@ class OrbVoiceSessionService:
                     resource_id=session_id,
                     metadata={"mode": decision.model_dump(), "state": session.state, "raw_audio_stored": False, "realtime_state": realtime_state},
                 )
+            self._persist(session)
             return self._event_response(session, decision, provider_event=provider_event, realtime_state=realtime_state)
 
         if event.state:
@@ -602,6 +687,7 @@ class OrbVoiceSessionService:
                 resource_id=session_id,
                 metadata={"mode": decision.model_dump(), "state": session.state, "raw_audio_stored": False},
             )
+            self._persist(session)
             return self._event_response(session, decision, provider_event=provider_event)
 
         safe_message = assert_safe_assistant_message(message)
@@ -617,6 +703,7 @@ class OrbVoiceSessionService:
                 OrbTranscriptEntry(id=_id("orb_turn"), role="user", content=safe_message, created_at=_now(), state="listening", mode_decision=decision)
             )
         session.state = "thinking"
+        self._persist(session)
         orb_realtime_conversation_service.note_event(session_id=session_id, event_type="speech_stopped")
 
         tool_orchestration = orb_tool_orchestration_service.plan_turn(
@@ -671,7 +758,11 @@ class OrbVoiceSessionService:
         session.related_records.extend(related_records[:12])
 
         answer = assistant_data.get("answer") or "I do not have enough evidence in the records to answer that."
-        answer = f"{spoken_acknowledgement(decision, safe_message)}\n\n{answer}"
+        answer = orb_conversation_policy.shape_response(
+            f"{spoken_acknowledgement(decision, safe_message)}\n\n{answer}",
+            decision=decision,
+            preferences=session.preferences,
+        )
         pending_draft: OrbVoiceDraft | None = None
         if decision.care_scope_required and _write_intent(safe_message):
             pending_draft = OrbVoiceDraft(
@@ -703,6 +794,7 @@ class OrbVoiceSessionService:
         if not session.preferences.do_not_store_transcript:
             session.transcript.append(assistant_turn)
         session.state = assistant_turn.state
+        self._persist(session)
         realtime_state = orb_realtime_conversation_service.assistant_response_started(session_id=session_id)
         memory_snapshot = orb_memory_service.record_assistant_turn(
             session_id=session_id,
@@ -760,8 +852,10 @@ class OrbVoiceSessionService:
         interrupted_text = session.transcript[-1].content if session.transcript and session.transcript[-1].role == "assistant" else None
         if session.transcript:
             session.transcript[-1].interrupted = True
+        self._persist(session)
         memory_snapshot = orb_memory_service.mark_interrupted(session_id=session_id, interrupted_text=interrupted_text)
         realtime_state = orb_realtime_conversation_service.interrupt(session_id=session_id)
+        orb_observability_service.record_event("interruption", session_id=session_id, user_id=session.user_id, home_id=session.context.home_id)
         record_audit_event(
             event_type="orb_voice_session",
             action="interrupt",
@@ -777,6 +871,7 @@ class OrbVoiceSessionService:
         await self._provider(session.provider_name).end(session_id=session_id)
         session.state = "idle"
         session.ended_at = _now()
+        self._persist(session)
         summary = self._summary_from_session(session)
         orb_realtime_conversation_service.end_session(session_id)
         orb_memory_service.end_session(session_id)
@@ -789,6 +884,7 @@ class OrbVoiceSessionService:
             metadata=summary.model_dump(),
         )
         self.sessions.pop(session_id, None)
+        orb_session_store.delete_session(session_id)
         return summary
 
     def transcript(self, session_id: str, current_user: dict[str, Any] | None = None) -> OrbTranscriptResponse:

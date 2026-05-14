@@ -41,7 +41,7 @@ export function OrbControls({
         <button
           type="button"
           onClick={onRequestMicrophone}
-          className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-900/20 transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="min-h-12 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-900/20 transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <Mic className="mr-2 inline h-4 w-4" aria-hidden />
           {microphone === 'granted' ? 'Mic ready' : 'Grant mic'}
@@ -50,7 +50,7 @@ export function OrbControls({
           type="button"
           onClick={onInterrupt}
           disabled={!isSpeaking}
-          className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800 transition hover:bg-amber-100 disabled:opacity-50"
+          className="min-h-12 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800 transition hover:bg-amber-100 disabled:opacity-50"
         >
           <Pause className="mr-2 inline h-4 w-4" aria-hidden />
           Interrupt
@@ -58,7 +58,7 @@ export function OrbControls({
         <button
           type="button"
           onClick={() => onMute(!muted)}
-          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100"
+          className="min-h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100"
         >
           {muted ? <MicOff className="mr-2 inline h-4 w-4" aria-hidden /> : <VolumeX className="mr-2 inline h-4 w-4" aria-hidden />}
           {muted ? 'Unmute' : 'Mute'}
@@ -66,7 +66,7 @@ export function OrbControls({
         <button
           type="button"
           onClick={() => onPrivateMode(!privateMode)}
-          className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${
+          className={`min-h-12 rounded-2xl border px-4 py-3 text-sm font-black transition ${
             privateMode ? 'border-purple-200 bg-purple-50 text-purple-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
           }`}
         >
@@ -74,6 +74,11 @@ export function OrbControls({
           Private
         </button>
       </div>
+      {isSpeaking ? (
+        <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-2 text-xs font-bold text-slate-500" aria-live="polite">
+          Orb is speaking. Tap Interrupt to take over.
+        </p>
+      ) : null}
 
       <form
         className="mt-4 flex gap-2"
@@ -88,9 +93,9 @@ export function OrbControls({
           value={input}
           onChange={(event) => onInputChange(event.target.value)}
           placeholder='Try "Hey IndiCare, what needs manager review?"'
-          className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          className="min-h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
         />
-        <button disabled={!input.trim() || loading} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+        <button disabled={!input.trim() || loading} className="min-h-12 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
           <Send className="h-4 w-4" aria-hidden />
           <span className="sr-only">Send</span>
         </button>
