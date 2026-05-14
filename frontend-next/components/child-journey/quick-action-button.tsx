@@ -30,7 +30,7 @@ export function QuickActionButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-28 left-5 z-40 hidden items-center gap-2 rounded-full bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-2xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 md:inline-flex lg:bottom-8"
+        className="fixed bottom-28 left-5 z-40 hidden items-center gap-2 rounded-full bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-2xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 md:inline-flex lg:bottom-8 lg:left-[306px]"
         aria-haspopup="dialog"
         aria-expanded={open}
       >

@@ -85,12 +85,14 @@ export type OrbContext = {
   workspace?: string | null
   page_title?: string | null
   selected_young_person_id?: number | null
+  selected_young_person_key?: string | null
   selected_record_id?: string | null
   selected_record_type?: string | null
   home_id?: number | null
   home_scope?: Record<string, unknown>
   current_record_summary?: string | null
   current_child?: Record<string, unknown>
+  child_context_lock?: Record<string, unknown>
   current_shift?: Record<string, unknown>
   current_task?: Record<string, unknown>
   session_memory?: Record<string, unknown>

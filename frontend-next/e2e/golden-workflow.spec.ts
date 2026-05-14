@@ -25,10 +25,18 @@ test('Jamie golden workflow is smooth, explicit, and clears sensitive state on l
 
   await expect(page).toHaveURL(/\/home$/)
   await expect(page.getByTestId('child-selector')).toBeVisible()
+  await expect(page.getByText('Detailed chronology, actions and reports stay hidden')).toBeVisible()
+  await expect(page.getByText('Last recorded note')).toHaveCount(0)
+
+  await page.goto('/chronology')
+  await expect(page.getByText('Select a child before opening detailed records')).toBeVisible()
+  await page.goto('/home')
   await page.getByTestId('child-card-yp-jamie').click()
 
   await expect(page).toHaveURL(/\/young-people\/yp-jamie\/journey/)
   await expect(page.getByRole('heading', { name: 'Jamie', exact: true })).toBeVisible()
+  await expect(page.getByText('Active child').first()).toBeVisible()
+  await expect(page.evaluate(() => JSON.parse(localStorage.getItem('child-context:active.v1') || '{}')?.id)).resolves.toBe('yp-jamie')
   await expect(page.getByTestId('orb-button')).toBeVisible()
   await expect(page.getByTestId('manager-review-link')).toBeVisible()
   await expect(page.getByTestId('handover-link')).toBeVisible()
@@ -39,6 +47,7 @@ test('Jamie golden workflow is smooth, explicit, and clears sensitive state on l
   await expect(page).toHaveURL(/\/young-people\/yp-jamie\/daily-note\/new/)
   await expect(page.getByTestId('daily-note-form')).toBeVisible()
   await page.getByLabel('Daily note *').fill('Jamie disclosed feeling unsafe after family contact. Staff reassured Jamie, informed the manager, will update the social worker, and need a follow-up action and safeguarding review.')
+  await page.getByRole('tab', { name: 'Child voice and lived experience' }).click()
   await page.getByLabel('What did the child say or show?').fill('Jamie said he wanted adults to know the call made him anxious.')
   await expect(page.getByRole('button', { name: 'Add safeguarding follow-up' })).toBeVisible()
   await page.getByRole('button', { name: 'Add safeguarding follow-up' }).click()

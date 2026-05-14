@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Bell,
   CalendarDays,
+  ChevronRight,
   ClipboardCheck,
   FileText,
   Home,
@@ -19,9 +20,10 @@ import {
   Scale,
   Gauge,
   Clock3,
-  Building2
+  Building2,
+  ShieldCheck
 } from 'lucide-react'
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 
 import { CommandSearch } from '@/components/indicare/command-search'
 import { ContextualOperationalSidebar } from '@/components/indicare/contextual-operational-sidebar'
@@ -31,9 +33,11 @@ import { MobileNav } from '@/components/mobile-nav'
 import { useAuth } from '@/contexts/auth-context'
 import { buildAssistantContext } from '@/lib/assistant-core/context'
 import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permissions'
+import { useActiveChild } from '@/lib/context/active-child-context'
 import { indicareData } from '@/lib/indicare/demo-data'
 import { getYoungPersonById } from '@/lib/indicare/selectors'
 import { entityContextFromPath } from '@/lib/navigation/entity-resolver'
+import type { OrbContext } from '@/lib/orb/types'
 
 const navItems = [
   { section: 'Primary', href: '/home', label: 'Home / Children', icon: Home, permissions: ['records:read'] },
@@ -60,6 +64,7 @@ const navItems = [
 
 const demoMode = ['1', 'true', 'yes'].includes(String(process.env.NEXT_PUBLIC_DEMO_MODE || '').toLowerCase())
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
+const childContextRequiredRoots = ['chronology', 'actions', 'reports', 'documents', 'evidence', 'safeguarding']
 
 function selectedYoungPersonId(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
@@ -93,12 +98,17 @@ function labelForRole(role: keyof typeof roleLabels | string | undefined) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const currentPathname = usePathname()
+  const router = useRouter()
   const pathname = currentPathname || '/home'
   const { status, user, logout } = useAuth()
-  const selectedId = selectedYoungPersonId(pathname)
+  const { activeChild, breadcrumbs, childScopedHref, lockVersion } = useActiveChild()
+  const pathParts = pathname.split('/').filter(Boolean)
+  const routeSelectedId = selectedYoungPersonId(pathname)
+  const selectedId = routeSelectedId || activeChild?.id
   const selectedPerson = selectedId ? getYoungPersonById(selectedId) : undefined
   const selectedEntityContext = entityContextFromPath(pathname)
-  const pageTitle = selectedPerson ? `${selectedPerson.preferredName}'s record` : titleFromPath(pathname)
+  const activeChildName = activeChild?.preferredName || activeChild?.displayName
+  const pageTitle = selectedPerson ? `${selectedPerson.preferredName}'s journey` : activeChildName ? `${activeChildName}'s journey` : titleFromPath(pathname)
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date('2026-05-13T12:00:00.000Z'))
   const isPublicPage = pathname === '/login' || pathname.startsWith('/login/') || pathname === '/unauthorized'
   const visibleNavItems = navItems.filter((item) => userHasAnyPermission(user, item.permissions))
@@ -108,9 +118,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     .sort((a, b) => b.href.length - a.href.length)[0]
   const hasRouteAccess = !matchedRoute || userHasAnyPermission(user, matchedRoute.permissions)
   const isStandaloneAssistant = pathname === '/assistant' || pathname.startsWith('/assistant/')
-  const pathParts = pathname.split('/').filter(Boolean)
   const isChildRecordingWorkspace = pathParts[0] === 'young-people' && pathParts.length === 4 && ['new', 'upload'].includes(pathParts[3])
   const isRecordWorkspace = pathParts.length >= 2 && recordWorkspaceRoots.includes(pathParts[0]) && !['new', 'current'].includes(pathParts[pathParts.length - 1])
+  const routeRequiresChildContext = pathParts.length === 1 && childContextRequiredRoots.includes(pathParts[0] || '')
+  const childContextRedirect = activeChild && routeRequiresChildContext ? childScopedHref(`/${pathParts[0]}`) : null
+
+  useEffect(() => {
+    if (childContextRedirect && childContextRedirect !== pathname) {
+      router.replace(childContextRedirect)
+    }
+  }, [childContextRedirect, pathname, router])
 
   if (isPublicPage) {
     return <>{children}</>
@@ -142,6 +159,34 @@ export function AppShell({ children }: { children: ReactNode }) {
     )
   }
 
+  if (routeRequiresChildContext && !activeChild) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
+        <div className="w-full max-w-2xl rounded-[36px] border border-blue-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white">
+            <ShieldCheck className="h-6 w-6" aria-hidden />
+          </div>
+          <p className="mt-6 text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Child context required</p>
+          <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">Select a child before opening detailed records</h1>
+          <p className="mt-4 text-sm leading-7 text-slate-600">Chronology, actions, documents, reports and safeguarding detail stay hidden until the OS is locked to one child.</p>
+          <Link href="/home" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (childContextRedirect && childContextRedirect !== pathname) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
+        <div className="w-full max-w-lg rounded-[32px] border border-blue-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Entering child journey</p>
+          <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">Opening {activeChildName}&apos;s scoped workspace</h1>
+          <p className="mt-4 text-sm leading-6 text-slate-600">Detailed records are being filtered to the active child context.</p>
+        </div>
+      </div>
+    )
+  }
+
   const assistantContext = buildAssistantContext({
     mode: 'embedded',
     route: pathname,
@@ -149,8 +194,40 @@ export function AppShell({ children }: { children: ReactNode }) {
     selectedYoungPersonId: selectedId,
     selectedRecordId: selectedEntityContext?.selected_record_id,
     selectedRecordType: selectedEntityContext?.selected_record_type,
-    selectedRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined
+    activeFilters: selectedId ? { young_person_id: selectedId, active_child_id: selectedId, context_lock_version: lockVersion } : {},
+    selectedRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : activeChildName ? `Active child context is locked to ${activeChildName}.` : undefined
   })
+
+  const orbContext: OrbContext = {
+    route: pathname,
+    workspace: assistantContext.current_workspace_type,
+    page_title: pageTitle,
+    selected_young_person_id: selectedId && Number.isFinite(Number(selectedId)) ? Number(selectedId) : undefined,
+    selected_young_person_key: selectedId,
+    selected_record_id: selectedEntityContext?.selected_record_id,
+    selected_record_type: selectedEntityContext?.selected_record_type,
+    current_record_summary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : activeChildName ? `Active child context is locked to ${activeChildName}.` : undefined,
+    current_child: selectedId ? {
+      id: selectedId,
+      name: selectedPerson?.preferredName || activeChildName || selectedId,
+      risk_level: selectedPerson?.riskLevel,
+      safeguarding_status: selectedPerson?.safeguardingStatus,
+      current_route: pathname
+    } : undefined,
+    child_context_lock: activeChild ? {
+      active: true,
+      child_id: activeChild.id,
+      child_name: activeChildName,
+      lock_version: lockVersion,
+      retrieval_scope: 'selected_child_only',
+      allow_global_search: false
+    } : {
+      active: false,
+      retrieval_scope: 'no_child_records',
+      allow_global_search: false
+    },
+    assistant_context: assistantContext
+  }
 
   if (isStandaloneAssistant) {
     return <>{children}</>
@@ -160,26 +237,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className="min-h-screen bg-[#eef4fb] text-slate-900">
         {children}
-        <OrbButton
-          context={{
-            route: pathname,
-            workspace: assistantContext.current_workspace_type,
-            page_title: pageTitle,
-            selected_young_person_id: selectedId && Number.isFinite(Number(selectedId)) ? Number(selectedId) : undefined,
-            selected_record_id: selectedEntityContext?.selected_record_id,
-            selected_record_type: selectedEntityContext?.selected_record_type,
-            current_record_summary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined,
-            current_child: selectedPerson ? {
-              id: selectedId,
-              name: selectedPerson.preferredName,
-              risk_level: selectedPerson.riskLevel,
-              safeguarding_status: selectedPerson.safeguardingStatus,
-              current_route: pathname
-            } : undefined,
-            assistant_context: assistantContext
-          }}
-          role={user.role}
-        />
+        <OrbButton context={orbContext} role={user.role} />
       </div>
     )
   }
@@ -195,6 +253,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </Link>
 
+        <div className="mb-5 rounded-[24px] border border-blue-100 bg-blue-50 p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-700">Active child</p>
+          <p className="mt-2 text-base font-black text-slate-950">{activeChildName || 'No child selected'}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-600">{activeChild ? 'OS locked to this journey. Detailed links stay child-scoped.' : 'Choose a child before opening detailed records.'}</p>
+          <Link href="/home" className="mt-3 inline-flex text-xs font-black uppercase tracking-[0.14em] text-blue-700">{activeChild ? 'Switch child safely' : 'Choose child'}</Link>
+        </div>
+
         <nav aria-label="Main navigation" className="min-h-0 flex-1 overflow-auto pr-1">
           <div className="space-y-5">
             {navSections.map((section) => (
@@ -207,7 +272,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     return (
                       <Link
                         key={item.href}
-                        href={item.href}
+                        href={childScopedHref(item.href)}
                         className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                           active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
                         }`}
@@ -255,6 +320,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap items-center gap-4">
             <CommandSearch />
             <div className="ml-auto flex items-center gap-3">
+              {activeChild ? (
+                <Link href={`/young-people/${encodeURIComponent(activeChild.id)}/journey`} className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
+                  <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                  {activeChildName}
+                </Link>
+              ) : (
+                <Link href="/home" className="hidden rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800 shadow-sm transition hover:bg-amber-100 md:inline-flex">
+                  Choose child
+                </Link>
+              )}
               <Link href="/assistant" className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50 md:inline-flex">
                 <Search className="mr-2 h-4 w-4" aria-hidden />
                 Command
@@ -268,37 +343,26 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             </div>
           </div>
+          <nav className="mt-3 flex flex-wrap items-center gap-1 text-xs font-black uppercase tracking-[0.14em] text-slate-400" aria-label="Context breadcrumb">
+            {breadcrumbs.map((crumb, index) => (
+              <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
+                {index > 0 ? <ChevronRight className="h-3 w-3" aria-hidden /> : null}
+                {crumb.href && !crumb.current ? <Link href={crumb.href} className="hover:text-blue-700">{crumb.label}</Link> : <span className={crumb.current ? 'text-slate-800' : undefined}>{crumb.label}</span>}
+              </span>
+            ))}
+          </nav>
         </header>
 
         <div className="grid min-h-0 flex-1 xl:grid-cols-[minmax(0,1fr)_380px]">
           <main className="min-w-0 px-4 py-6 pb-28 md:px-8 md:py-8">{children}</main>
           <aside className="hidden border-l border-slate-200/80 bg-[#f7f9fc] p-5 xl:block">
             <div className="sticky top-[92px] space-y-5">
-              <ContextualOperationalSidebar pathname={pathname} />
+              <ContextualOperationalSidebar pathname={pathname} activeChildId={selectedId} activeChildName={selectedPerson?.preferredName || activeChildName} />
             </div>
           </aside>
         </div>
       </div>
-      <OrbButton
-        context={{
-          route: pathname,
-          workspace: assistantContext.current_workspace_type,
-          page_title: pageTitle,
-          selected_young_person_id: selectedId && Number.isFinite(Number(selectedId)) ? Number(selectedId) : undefined,
-          selected_record_id: selectedEntityContext?.selected_record_id,
-          selected_record_type: selectedEntityContext?.selected_record_type,
-          current_record_summary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined,
-          current_child: selectedPerson ? {
-            id: selectedId,
-            name: selectedPerson.preferredName,
-            risk_level: selectedPerson.riskLevel,
-            safeguarding_status: selectedPerson.safeguardingStatus,
-            current_route: pathname
-          } : undefined,
-          assistant_context: assistantContext
-        }}
-        role={user.role}
-      />
+      <OrbButton context={orbContext} role={user.role} />
       <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={selectedPerson?.preferredName} />
       <MobileNav />
     </div>

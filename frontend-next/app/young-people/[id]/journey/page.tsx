@@ -151,8 +151,8 @@ export default async function ChildJourneyPage({
             <div className="rounded-[28px] bg-white/8 p-5 ring-1 ring-white/10">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">Progress and relationships</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {[...data.story.progressHighlights, ...data.story.relationshipMarkers].slice(0, 5).map((label) => (
-                  <span key={label} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-100">{label}</span>
+                {[...data.story.progressHighlights, ...data.story.relationshipMarkers].slice(0, 5).map((label, index) => (
+                  <span key={`${label}-${index}`} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-100">{label}</span>
                 ))}
                 {!data.story.progressHighlights.length && !data.story.relationshipMarkers.length ? <span className="text-sm text-slate-300">No visible markers yet.</span> : null}
               </div>
