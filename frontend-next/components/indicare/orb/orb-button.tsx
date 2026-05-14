@@ -16,7 +16,8 @@ export function OrbButton({
   role?: string | null
   placement?: 'floating' | 'inline'
 }) {
-  const controller = useMemo(() => new OrbRuntimeController({ context, role }), [context, role])
+  const contextKey = useMemo(() => JSON.stringify(context), [context])
+  const controller = useMemo(() => new OrbRuntimeController({ context: JSON.parse(contextKey) as OrbContext, role }), [contextKey, role])
   const [snapshot, setSnapshot] = useState<OrbRuntimeSnapshot>(controller.getSnapshot())
   const [captions, setCaptions] = useState(Boolean(controller.getSnapshot().preferences.captions_enabled))
   const [fallbackOpen, setFallbackOpen] = useState(false)
@@ -54,7 +55,7 @@ export function OrbButton({
   }
 
   return (
-    <div className={placement === 'floating' ? 'fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-4 z-50 md:bottom-7 md:right-7' : 'relative inline-flex'}>
+    <div className={placement === 'floating' ? 'fixed bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] right-3 z-50 md:bottom-7 md:right-7' : 'relative inline-flex'}>
       {active ? (
         <div className="mb-3 w-[min(22rem,calc(100vw-2rem))] rounded-[28px] border border-white/70 bg-slate-950/85 p-4 text-white shadow-2xl shadow-blue-950/30 backdrop-blur-xl">
           <div className="flex items-center gap-3">

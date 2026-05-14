@@ -9,16 +9,11 @@ import {
   FileText,
   Home,
   LayoutDashboard,
-  Pill,
   Search,
   Settings,
-  ShieldAlert,
   Sparkles,
   Users,
   UserRound,
-  BriefcaseMedical,
-  TriangleAlert,
-  NotebookTabs,
   FolderOpen,
   LogOut,
   Scale,
@@ -49,11 +44,6 @@ const navItems = [
   { section: 'Primary', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
   { section: 'Primary', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
   { section: 'Primary', href: '/assistant', label: 'Assistant', icon: Sparkles, permissions: ['assistant:access'] },
-  { section: 'Recording', href: '/daily-logs', label: 'Daily Notes', icon: NotebookTabs, permissions: ['records:read'] },
-  { section: 'Recording', href: '/incidents', label: 'Incidents', icon: TriangleAlert, permissions: ['records:read'] },
-  { section: 'Recording', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'] },
-  { section: 'Recording', href: '/medication', label: 'Medication / Health', icon: Pill, permissions: ['records:read'] },
-  { section: 'Recording', href: '/keywork', label: 'Keywork', icon: BriefcaseMedical, permissions: ['records:read'] },
   { section: 'Secondary / Manager', href: '/young-people', label: 'Young People Directory', icon: UserRound, permissions: ['records:read'] },
   { section: 'Secondary / Manager', href: '/handover/current', label: 'Handover', icon: ClipboardCheck, permissions: ['records:read'] },
   { section: 'Secondary / Manager', href: '/placements', label: 'Placements', icon: LayoutDashboard, permissions: ['records:read'] },
@@ -70,6 +60,7 @@ const navItems = [
 ]
 
 const demoMode = ['1', 'true', 'yes'].includes(String(process.env.NEXT_PUBLIC_DEMO_MODE || '').toLowerCase())
+const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 
 function selectedYoungPersonId(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
@@ -118,6 +109,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     .sort((a, b) => b.href.length - a.href.length)[0]
   const hasRouteAccess = !matchedRoute || userHasAnyPermission(user, matchedRoute.permissions)
   const isStandaloneAssistant = pathname === '/assistant' || pathname.startsWith('/assistant/')
+  const pathParts = pathname.split('/').filter(Boolean)
+  const isChildRecordingWorkspace = pathParts[0] === 'young-people' && pathParts.length === 4 && ['new', 'upload'].includes(pathParts[3])
+  const isRecordWorkspace = pathParts.length >= 2 && recordWorkspaceRoots.includes(pathParts[0]) && !['new', 'current'].includes(pathParts[pathParts.length - 1])
 
   if (isPublicPage) {
     return <>{children}</>
@@ -149,10 +143,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     )
   }
 
-  if (isStandaloneAssistant) {
-    return <>{children}</>
-  }
-
   const assistantContext = buildAssistantContext({
     mode: 'embedded',
     route: pathname,
@@ -162,6 +152,38 @@ export function AppShell({ children }: { children: ReactNode }) {
     selectedRecordType: selectedEntityContext?.selected_record_type,
     selectedRecordSummary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined
   })
+
+  if (isStandaloneAssistant) {
+    return <>{children}</>
+  }
+
+  if (isChildRecordingWorkspace || isRecordWorkspace) {
+    return (
+      <div className="min-h-screen bg-[#eef4fb] text-slate-900">
+        {children}
+        <OrbButton
+          context={{
+            route: pathname,
+            workspace: assistantContext.current_workspace_type,
+            page_title: pageTitle,
+            selected_young_person_id: selectedId && Number.isFinite(Number(selectedId)) ? Number(selectedId) : undefined,
+            selected_record_id: selectedEntityContext?.selected_record_id,
+            selected_record_type: selectedEntityContext?.selected_record_type,
+            current_record_summary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined,
+            current_child: selectedPerson ? {
+              id: selectedId,
+              name: selectedPerson.preferredName,
+              risk_level: selectedPerson.riskLevel,
+              safeguarding_status: selectedPerson.safeguardingStatus,
+              current_route: pathname
+            } : undefined,
+            assistant_context: assistantContext
+          }}
+          role={user.role}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen bg-[#f3f6fb] text-slate-900">
@@ -268,6 +290,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           selected_record_id: selectedEntityContext?.selected_record_id,
           selected_record_type: selectedEntityContext?.selected_record_type,
           current_record_summary: selectedPerson ? `${selectedPerson.preferredName} is ${selectedPerson.riskLevel} risk with ${selectedPerson.safeguardingStatus} safeguarding status.` : undefined,
+          current_child: selectedPerson ? {
+            id: selectedId,
+            name: selectedPerson.preferredName,
+            risk_level: selectedPerson.riskLevel,
+            safeguarding_status: selectedPerson.safeguardingStatus,
+            current_route: pathname
+          } : undefined,
           assistant_context: assistantContext
         }}
         role={user.role}

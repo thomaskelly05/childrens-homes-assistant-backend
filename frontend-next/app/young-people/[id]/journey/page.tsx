@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight, CalendarDays, CheckCircle2, ClipboardPlus, FileText, Sparkles } from 'lucide-react'
+import { ArrowRight, ClipboardPlus, FileText, Sparkles } from 'lucide-react'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { getChildJourneyData, todayLong } from '@/lib/child-journey/data'
-import { quickActionOrder, recordingWorkflows } from '@/lib/child-journey/workflows'
+import { childOperationalQuickActions, childQuickActionHref } from '@/lib/child-journey/workflows'
+import { getEntityRoute } from '@/lib/navigation/entity-resolver'
 import type { OsApiResult } from '@/lib/os-api/types'
 
 function ActionLink({ href, children, tone = 'dark' }: { href: string; children: React.ReactNode; tone?: 'dark' | 'light' | 'blue' }) {
@@ -20,7 +21,7 @@ function ActionLink({ href, children, tone = 'dark' }: { href: string; children:
 function savedRecordHref(childId: string, routeType?: string, recordId?: string) {
   if (!recordId) return undefined
   if (routeType === 'family-contact') return `/young-people/${encodeURIComponent(childId)}/chronology?source=${encodeURIComponent(recordId)}`
-  return `/${routeType || 'chronology'}/${encodeURIComponent(recordId)}`
+  return getEntityRoute({ entity_type: routeType || 'chronology', entity_id: recordId, linked_child_id: childId })
 }
 
 export default async function ChildJourneyPage({
@@ -117,168 +118,98 @@ export default async function ChildJourneyPage({
         </div>
       </header>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <Card>
-          <SectionHeader eyebrow="Today" title="Today's care picture" description="Daily recording status, last update and immediate actions." />
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-5">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Daily recording status</p>
-              <h3 className="mt-2 text-2xl font-black text-slate-950">{lastDailyNote ? 'Started today' : 'Needs daily note'}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Last update: {lastDailyNote?.noteDate || data.timeline[0]?.occurredAt || 'None today'}</p>
-              <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="dark">Add / update daily note</ActionLink>
-            </div>
-            <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-5">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Welfare quick summary</p>
-              <p className="mt-3 text-sm leading-7 text-slate-700">{welfareSummary}</p>
-              <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.12em]">
-                {['Welfare', 'Sleep', 'Health', 'Education', 'Family time'].map((label) => <span key={label} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600">{label}</span>)}
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-6">
+          <Card>
+            <SectionHeader eyebrow="1. Child story" title="Today's care picture" description="The most recent narrative, daily recording state and change since the last update." />
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+              <div className="rounded-[26px] border border-slate-100 bg-slate-50 p-5">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Welfare summary</p>
+                <p className="mt-3 text-base leading-8 text-slate-700">{welfareSummary}</p>
+              </div>
+              <div className="rounded-[26px] border border-blue-100 bg-blue-50 p-5">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Recording</p>
+                <h3 className="mt-2 text-2xl font-black text-slate-950">{lastDailyNote ? 'Started today' : 'Needs daily note'}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">Last update: {lastDailyNote?.noteDate || data.timeline[0]?.occurredAt || 'None today'}</p>
+                <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="dark">Record now</ActionLink>
               </div>
             </div>
-          </div>
-          <div className="mt-5 rounded-[24px] border border-slate-100 bg-white p-5">
-            <h3 className="text-lg font-black text-slate-950">Actions due today</h3>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
+          </Card>
+
+          <Card>
+            <SectionHeader eyebrow="2. What changed" title="Recent chronology" description="Five high-signal events. Open the full chronology for deeper review." />
+            <div className="space-y-3">
+              {data.timeline.slice(0, 5).map((event) => (
+                <Link key={event.id} href={event.href} className="group block rounded-[24px] border border-slate-100 bg-slate-50 p-5 transition hover:border-blue-100 hover:bg-white hover:shadow-lg">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">{event.category}</span>
+                    <RiskBadge value={(event.severity || 'medium') as any} />
+                    <span className="text-xs font-bold text-slate-400">{event.occurredAt}</span>
+                  </div>
+                  <div className="mt-3 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-950">{event.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{event.summary}</p>
+                    </div>
+                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" aria-hidden />
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light">Open full chronology</ActionLink>
+            </div>
+          </Card>
+        </div>
+
+        <aside className="space-y-6 xl:sticky xl:top-28 xl:self-start">
+          <Card>
+            <SectionHeader eyebrow="3. Needs attention" title="Next actions" description="One action list, no duplicate review/complete buttons." />
+            <div className="space-y-3">
               {actionsDueToday.length ? actionsDueToday.map((action) => (
-                <Link key={action.id} href={`/actions/${encodeURIComponent(action.id)}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
+                <Link key={action.id} href={`/actions/${encodeURIComponent(action.id)}`} className="block rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
                   <StatusBadge value={action.status} />
                   <p className="mt-2 text-sm font-black text-slate-950">{action.title}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">{action.description || 'Open action for review or completion.'}</p>
                 </Link>
-              )) : <p className="text-sm text-slate-500">No open actions due for this child.</p>}
+              )) : <p className="text-sm leading-6 text-slate-500">No open actions due for this child.</p>}
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card>
-          <SectionHeader eyebrow="Recording" title="What do you need to record?" description="Every button opens a real child-linked workflow." />
-          <div className="grid gap-3">
-            {quickActionOrder.map((workflowId) => {
-              const workflow = recordingWorkflows[workflowId]
-              const mode = workflowId === 'documents' ? 'upload' : 'new'
-              return (
-                <Link key={workflow.id} href={`/young-people/${encodeURIComponent(id)}/${workflow.routeSegment}/${mode}`} className="group rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50">
+          <Card>
+            <SectionHeader eyebrow="4. Record" title="Quick recording" description="Contextual actions for this child only." />
+            <div className="grid gap-2">
+              {childOperationalQuickActions.map((action) => (
+                <Link key={action.id} href={childQuickActionHref(id, action)} className="group rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-3 transition hover:border-blue-100 hover:bg-blue-50">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-black text-slate-950">{workflow.quickActionLabel}</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">{workflow.tone}</p>
+                      <p className="text-sm font-black text-slate-950">{action.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{action.description}</p>
                     </div>
                     <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" aria-hidden />
                   </div>
                 </Link>
-              )
-            })}
-          </div>
-        </Card>
-      </section>
+              ))}
+            </div>
+          </Card>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-        <Card>
-          <SectionHeader eyebrow="Journey timeline" title="Recent chronology" description="Open each item to view the source record, or open the full chronology." />
-          <div className="mb-5 flex flex-wrap gap-2">
-            <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light">Open full chronology</ActionLink>
-          </div>
-          <div className="space-y-4">
-            {data.timeline.slice(0, 8).map((event) => (
-              <Link key={event.id} href={event.href} className="block rounded-[24px] border border-slate-100 bg-slate-50 p-5 transition hover:border-blue-100 hover:bg-white hover:shadow-lg">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">{event.category}</span>
-                  <RiskBadge value={(event.severity || 'medium') as any} />
-                  <span className="text-xs font-bold text-slate-400">{event.occurredAt}</span>
-                </div>
-                <h3 className="mt-3 text-lg font-black text-slate-950">{event.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{event.summary}</p>
-                <span className="mt-3 inline-flex text-xs font-black uppercase tracking-[0.14em] text-blue-700">Open source record</span>
-              </Link>
-            ))}
-          </div>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <SectionHeader eyebrow="Plans and links" title="Plans" description="Key plans are one click away from the child journey." />
-            <div className="grid gap-2">
-              {plans.map(([label, href]) => (
+          <details className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
+            <summary className="cursor-pointer text-sm font-black text-slate-950">Plans, evidence and reports</summary>
+            <div className="mt-4 grid gap-2">
+              {plans.slice(0, 5).map(([label, href]) => (
                 <Link key={label} href={href} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-blue-50 hover:text-blue-800">
                   {label}
                 </Link>
               ))}
-            </div>
-          </Card>
-
-          <Card>
-            <SectionHeader eyebrow="Current actions" title="Action cards" description="Review or complete from the live actions workspace." />
-            <div className="space-y-3">
-              {data.actions.slice(0, 5).map((action) => (
-                <div key={action.id} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4">
-                  <StatusBadge value={action.status} />
-                  <h3 className="mt-2 text-sm font-black text-slate-950">{action.title}</h3>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">{action.description}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Link href={`/actions/${encodeURIComponent(action.id)}`} className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-white">Review</Link>
-                    <Link href={`/actions/${encodeURIComponent(action.id)}`} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-slate-700">Complete</Link>
-                  </div>
-                </div>
+              {evidenceLinks.map(([label, href]) => (
+                <Link key={label} href={href} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-blue-50 hover:text-blue-800">
+                  <FileText className="mr-2 inline h-4 w-4 text-blue-700" aria-hidden />
+                  {label}
+                </Link>
               ))}
-              {!data.actions.length ? <p className="text-sm text-slate-500">No current actions are linked to this child.</p> : null}
             </div>
-          </Card>
-        </div>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <SectionHeader eyebrow="Daily notes" title="Recent daily recording" description="Daily notes are the main driver for this journey." />
-          <div className="space-y-3">
-            {data.dailyNotes.map((note) => (
-              <Link key={note.id} href={note.href} className="block rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge value={note.workflowStatus || 'recorded'} />
-                  <span className="text-xs font-bold text-slate-400">{note.noteDate}</span>
-                </div>
-                <h3 className="mt-2 text-sm font-black text-slate-950">{note.title}</h3>
-                <p className="mt-1 text-xs leading-5 text-slate-500">{note.summary}</p>
-              </Link>
-            ))}
-            {!data.dailyNotes.length ? <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="blue">Add the first daily note</ActionLink> : null}
-          </div>
-        </Card>
-
-        <Card>
-          <SectionHeader eyebrow="Evidence and reports" title="Linked evidence" description="Report-ready views and evidence items connected to this child." />
-          <div className="grid gap-3 sm:grid-cols-2">
-            {evidenceLinks.map(([label, href]) => (
-              <Link key={label} href={href} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
-                <FileText className="h-5 w-5 text-blue-700" aria-hidden />
-                <span className="mt-3 block text-sm font-black text-slate-950">{label}</span>
-              </Link>
-            ))}
-          </div>
-          <div className="mt-5 space-y-3">
-            {data.evidence.slice(0, 4).map((item) => (
-              <Link key={item.id} href={`/evidence/${encodeURIComponent(item.id)}`} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" aria-hidden />
-                <span>
-                  <span className="block text-sm font-black text-slate-950">{item.title}</span>
-                  <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description || item.linkedRegulation || 'Evidence item'}</span>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </Card>
-      </section>
-
-      <section className="rounded-[28px] border border-blue-100 bg-blue-50 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">Adult-friendly next step</p>
-            <h2 className="mt-1 text-xl font-black text-slate-950">If in doubt, add a Daily Note first.</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Daily notes can suggest actions, safeguarding flags, plan links and report relevance before saving.</p>
-          </div>
-          <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="blue">
-            <CalendarDays className="mr-2 h-4 w-4" aria-hidden />
-            Add Daily Note
-          </ActionLink>
-        </div>
+          </details>
+        </aside>
       </section>
     </div>
   )

@@ -208,9 +208,11 @@ export function RecordingForm({
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [draftRestored, setDraftRestored] = useState(false)
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0)
 
   const suggestions = useMemo(() => extractSuggestedLinks(values), [values])
   const flags = useMemo(() => qualityFlags(values, workflow.primaryField), [values, workflow.primaryField])
+  const activeSection = workflow.sections[Math.min(activeSectionIndex, workflow.sections.length - 1)] || workflow.sections[0]
   const autosaveKey = `indicare-recording-draft:${childId}:${workflow.id}`
 
   useEffect(() => {
@@ -429,19 +431,38 @@ export function RecordingForm({
         </div>
       </section>
 
+      <section className="rounded-[28px] border border-white/80 bg-white p-3 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
+        <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label={`${workflow.title} sections`}>
+          {workflow.sections.map((section, index) => (
+            <button
+              key={section.title}
+              type="button"
+              role="tab"
+              aria-selected={activeSectionIndex === index}
+              onClick={() => setActiveSectionIndex(index)}
+              className={`shrink-0 rounded-2xl px-4 py-3 text-left text-xs font-black uppercase tracking-[0.12em] transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                activeSectionIndex === index ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : 'bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-800'
+              }`}
+            >
+              {section.title}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
-          {workflow.sections.map((section) => (
-            <section key={section.title} className="rounded-[30px] border border-white/80 bg-white p-6 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
+          {activeSection ? (
+            <section className="rounded-[30px] border border-white/80 bg-white p-6 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
               <div className="mb-5">
                 <div className="flex flex-wrap items-center gap-2">
-                  {section.badge ? <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-blue-700">{section.badge}</span> : null}
-                  <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">{section.title}</h2>
+                  {activeSection.badge ? <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-blue-700">{activeSection.badge}</span> : null}
+                  <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">{activeSection.title}</h2>
                 </div>
-                {section.description ? <p className="mt-2 text-sm leading-6 text-slate-500">{section.description}</p> : null}
+                {activeSection.description ? <p className="mt-2 text-sm leading-6 text-slate-500">{activeSection.description}</p> : null}
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                {section.fields.map((field) => {
+                {activeSection.fields.map((field) => {
                   const wide = field.type === 'textarea' || field.name === workflow.primaryField
                   return (
                     <label key={field.name} className={wide ? 'block md:col-span-2' : 'block'}>
@@ -455,7 +476,7 @@ export function RecordingForm({
                 })}
               </div>
             </section>
-          ))}
+          ) : null}
         </div>
 
         <aside className="space-y-5 xl:sticky xl:top-28 xl:self-start">
