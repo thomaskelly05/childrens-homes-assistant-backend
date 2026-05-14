@@ -97,7 +97,7 @@ async def test_follow_up_memory_preserves_record_context(monkeypatch):
         current_user=user,
     )
 
-    assert first.memory_snapshot["last_record"]["id"] == "inc-1"
+    assert first.memory_snapshot["last_record"]["source_id"] == "1"
     assert second.tool_orchestration["primary_action"] is not None
     assert second.memory_snapshot["last_record"]["source_id"] == "1"
 
