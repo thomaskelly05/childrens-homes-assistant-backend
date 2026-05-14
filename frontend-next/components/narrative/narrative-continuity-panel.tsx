@@ -40,7 +40,7 @@ export function NarrativeContinuityPanel({
           <div className="rounded-[28px] bg-white/8 p-5 ring-1 ring-white/10">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">Unresolved themes</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {continuity.unresolvedThemes.length ? continuity.unresolvedThemes.map((theme) => <Pill key={theme}>{theme}</Pill>) : <span className="text-sm text-slate-300">No open child-linked action themes.</span>}
+              {continuity.unresolvedThemes.length ? continuity.unresolvedThemes.map((theme, index) => <Pill key={`${theme}-${index}`}>{theme}</Pill>) : <span className="text-sm text-slate-300">No open child-linked action themes.</span>}
             </div>
           </div>
           <div className="rounded-[28px] bg-white/8 p-5 ring-1 ring-white/10">
@@ -49,7 +49,7 @@ export function NarrativeContinuityPanel({
               Progress, relationships and voice
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {[...continuity.progressSummary, ...continuity.relationshipMarkers, ...continuity.recurringThemes].slice(0, 7).map((label) => <Pill key={label}>{label}</Pill>)}
+              {[...continuity.progressSummary, ...continuity.relationshipMarkers, ...continuity.recurringThemes].slice(0, 7).map((label, index) => <Pill key={`${label}-${index}`}>{label}</Pill>)}
               {!continuity.progressSummary.length && !continuity.relationshipMarkers.length && !continuity.recurringThemes.length ? <span className="text-sm text-slate-300">No visible markers yet.</span> : null}
             </div>
             <p className="mt-4 text-sm leading-7 text-slate-100">

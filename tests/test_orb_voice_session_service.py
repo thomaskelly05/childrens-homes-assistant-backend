@@ -147,8 +147,9 @@ async def test_follow_up_memory_carries_active_child_into_care_context(monkeypat
         current_user=user,
     )
 
-    assert fake.contexts[-1]["selected_young_person_id"] == 10
-    assert fake.contexts[-1]["orb_conversation_memory"]["pinned"]["active_child"]["preferredName"] == "Jamie"
+    latest_context = fake.contexts[-1].model_dump() if hasattr(fake.contexts[-1], "model_dump") else fake.contexts[-1]
+    assert latest_context["selected_young_person_id"] == 10
+    assert latest_context["orb_conversation_memory"]["pinned"]["active_child"]["preferredName"] == "Jamie"
 
 
 @pytest.mark.asyncio

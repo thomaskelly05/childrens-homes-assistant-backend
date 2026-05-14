@@ -287,11 +287,18 @@ def _operational_recovery_answer(
         return "I could not find enough scoped records for that just now. The safe next step is to check the chronology and handover log before relying on it."
 
     child_name = child.get("preferred_name") or child.get("preferredName") or child.get("name") or "they"
-    latest = continuity.get("what_changed") or "There is a recent scoped record to review."
-    parts = [f"{child_name} had this recorded most recently: {latest}"]
+    latest = str(continuity.get("what_changed") or "There is a recent scoped record to review.").strip().replace(". ", "; ")
     unresolved = continuity.get("unresolved_themes") or []
+    if not unresolved:
+        visible_statuses = " ".join(str(record.get("status") or "") for record in related_records).lower()
+        visible_text = " ".join(_record_summary(record) for record in related_records).lower()
+        if any(term in f"{visible_statuses} {visible_text}" for term in ("follow-up", "follow up", "review", "open", "overdue")):
+            unresolved = [{"reason": "Visible scoped records contain follow-up or review wording."}]
     if unresolved:
-        parts.append("There is still follow-up or review language that should carry into the next shift.")
+        latest = f"{latest.rstrip('.')}; there is still follow-up or review language that should carry into the next shift."
+    parts = [f"{child_name} had this recorded most recently: {latest}"]
+    if unresolved:
+        parts.append("Keep that follow-up visible in handover.")
     safeguarding = any("safeguarding" in item.get("themes", []) for item in unresolved)
     if safeguarding:
         parts.append("Safeguarding wording is present, so keep facts separate from interpretation and check manager oversight.")

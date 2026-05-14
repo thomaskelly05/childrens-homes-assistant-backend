@@ -62,6 +62,7 @@ class SharedAssistantContext(BaseModel):
     assistant_mode: AssistantMode = "embedded"
     page_title: str | None = None
     selected_record_summary: str | None = None
+    orb_conversation_memory: dict[str, Any] = Field(default_factory=dict)
 
 
 def _safe_context_int(value: Any) -> int | None:
@@ -188,6 +189,7 @@ def build_shared_assistant_context(
         assistant_mode=assistant_mode,  # type: ignore[arg-type]
         page_title=_safe_context_str(raw_context.get("page_title") or raw_context.get("pageTitle")),
         selected_record_summary=_safe_context_str(raw_context.get("selected_record_summary") or raw_context.get("visibleRecordSummary")),
+        orb_conversation_memory=raw_context.get("orb_conversation_memory") if isinstance(raw_context.get("orb_conversation_memory"), dict) else {},
     )
 
 

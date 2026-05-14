@@ -96,7 +96,9 @@ def spoken_acknowledgement(decision: OrbModeDecision, text: str) -> str:
         return "Right. I will check what is available now."
     if decision.brain in {"general_assistant_brain", "productivity_brain"}:
         return "Sure."
-    if any(term in lower for term in ("create", "draft", "record", "daily note", "handover")):
+    if "handover" in lower:
+        return "Right. I will pull the handover thread together."
+    if any(term in lower for term in ("create", "draft", "record", "daily note")):
         return "Yeah. I can help draft that, and I will ask before saving anything."
     if any(term in lower for term in ("safeguarding", "concern", "missing", "incident", "restraint", "self-harm")):
         return "Right. I will separate what is recorded from what still needs checking."
