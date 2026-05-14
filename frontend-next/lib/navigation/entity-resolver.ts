@@ -91,6 +91,7 @@ export function getEntityRoute(entity: EntityRouteInput, view?: 'workspace' | 'c
   const id = entityId(entity)
   const base = routeByType[type] || `/${type.replaceAll('_', '-')}`
   if (!id) return base
+  if (type === 'young_person') return `${base}/${encodeURIComponent(id)}/journey`
   if (type === 'handover' || type === 'shift' || type === 'regulatory_reference') return base
   return `${base}/${encodeURIComponent(id)}`
 }

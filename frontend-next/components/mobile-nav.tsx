@@ -5,18 +5,18 @@ import { usePathname } from 'next/navigation'
 import { ClipboardPlus, Clock3, FileText, Home, MessageSquarePlus, ShieldAlert } from 'lucide-react'
 
 export function MobileNav() {
-  const pathname = usePathname() || '/dashboard'
+  const pathname = usePathname() || '/home'
   const items = [
-    { label: 'Today', href: '/dashboard', icon: Home },
+    { label: 'Children', href: '/home', icon: Home },
     { label: 'Shift', href: '/shifts/current', icon: Clock3 },
     { label: 'Records', href: '/young-people', icon: FileText },
     { label: 'Alerts', href: '/safeguarding', icon: ShieldAlert },
     { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
   ]
   const quickActions = [
-    { label: 'Quick note', href: '/staff/me/recording', icon: ClipboardPlus },
-    { label: 'Incident', href: '/incidents', icon: ShieldAlert },
-    { label: 'Concern', href: '/safeguarding', icon: ShieldAlert }
+    { label: 'Quick note', href: '/home', icon: ClipboardPlus },
+    { label: 'Incident', href: '/home', icon: ShieldAlert },
+    { label: 'Concern', href: '/home', icon: ShieldAlert }
   ]
 
   return (
@@ -34,7 +34,7 @@ export function MobileNav() {
       </div>
       <nav className="flex items-center justify-between rounded-[28px] border border-white/70 bg-white/90 px-3 py-2 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
         {items.map((item) => {
-          const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+          const active = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href))
           const Icon = item.icon
           return (
             <Link

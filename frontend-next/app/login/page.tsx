@@ -19,7 +19,7 @@ function LoginPanel() {
   const [submitting, setSubmitting] = useState(false)
 
   function redirectToMfa(response: Awaited<ReturnType<typeof login>>) {
-    const returnUrl = searchParams.get('returnUrl') || '/dashboard'
+    const returnUrl = searchParams.get('returnUrl') || '/home'
     const target = response.mfa_setup_required || response.mfa_enabled === false ? '/mfa-setup' : '/mfa'
     router.replace(`${target}?next=${encodeURIComponent(returnUrl)}`)
   }
@@ -33,7 +33,7 @@ function LoginPanel() {
       const response = await login({ email, password, remember })
 
       if (response.authenticated) {
-        const returnUrl = searchParams.get('returnUrl') || '/dashboard'
+        const returnUrl = searchParams.get('returnUrl') || '/home'
         router.replace(returnUrl)
         return
       }

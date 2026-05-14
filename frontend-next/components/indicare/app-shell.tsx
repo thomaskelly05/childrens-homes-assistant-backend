@@ -31,6 +31,7 @@ import { ContextualAssistantPanel } from '@/components/indicare/embedded-assista
 import { CommandSearch } from '@/components/indicare/command-search'
 import { ContextualOperationalSidebar } from '@/components/indicare/contextual-operational-sidebar'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
+import { QuickActionButton } from '@/components/child-journey/quick-action-button'
 import { MobileNav } from '@/components/mobile-nav'
 import { useAuth } from '@/contexts/auth-context'
 import { buildAssistantContext } from '@/lib/assistant-core/context'
@@ -40,29 +41,30 @@ import { getYoungPersonById } from '@/lib/indicare/selectors'
 import { entityContextFromPath } from '@/lib/navigation/entity-resolver'
 
 const navItems = [
-  { section: 'Home', href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['records:read'] },
-  { section: 'Home', href: '/shifts', label: 'Shifts', icon: Clock3, permissions: ['records:read'] },
-  { section: 'Home', href: '/handover/current', label: 'Handover', icon: ClipboardCheck, permissions: ['records:read'] },
-  { section: 'Home', href: '/chronology', label: 'Chronology', icon: Search, permissions: ['records:read'] },
-  { section: 'People', href: '/young-people', label: 'Young People', icon: UserRound, permissions: ['records:read'] },
-  { section: 'People', href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },
-  { section: 'People', href: '/placements', label: 'Placements', icon: Home, permissions: ['records:read'] },
-  { section: 'Recording', href: '/daily-logs', label: 'Daily Logs', icon: NotebookTabs, permissions: ['records:read'] },
+  { section: 'Primary', href: '/home', label: 'Home / Children', icon: Home, permissions: ['records:read'] },
+  { section: 'Primary', href: '/shifts/current', label: 'Current Shift', icon: Clock3, permissions: ['records:read'] },
+  { section: 'Primary', href: '/chronology', label: 'Chronology', icon: Search, permissions: ['records:read'] },
+  { section: 'Primary', href: '/actions', label: 'Actions', icon: ClipboardCheck, permissions: ['records:read'] },
+  { section: 'Primary', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
+  { section: 'Primary', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
+  { section: 'Primary', href: '/assistant', label: 'Assistant', icon: Sparkles, permissions: ['assistant:access'] },
+  { section: 'Recording', href: '/daily-logs', label: 'Daily Notes', icon: NotebookTabs, permissions: ['records:read'] },
   { section: 'Recording', href: '/incidents', label: 'Incidents', icon: TriangleAlert, permissions: ['records:read'] },
   { section: 'Recording', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'] },
-  { section: 'Recording', href: '/risk-assessments', label: 'Risk', icon: ClipboardCheck, permissions: ['records:read'] },
-  { section: 'Recording', href: '/medication', label: 'Medication', icon: Pill, permissions: ['records:read'] },
+  { section: 'Recording', href: '/medication', label: 'Medication / Health', icon: Pill, permissions: ['records:read'] },
   { section: 'Recording', href: '/keywork', label: 'Keywork', icon: BriefcaseMedical, permissions: ['records:read'] },
-  { section: 'Recording', href: '/appointments', label: 'Appointments', icon: CalendarDays, permissions: ['records:read'] },
-  { section: 'Quality & Compliance', href: '/actions', label: 'Actions', icon: ClipboardCheck, permissions: ['records:read'] },
-  { section: 'Quality & Compliance', href: '/management', label: 'Management Oversight', icon: Gauge, permissions: ['reports:read'] },
-  { section: 'Quality & Compliance', href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'] },
-  { section: 'Quality & Compliance', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
-  { section: 'Quality & Compliance', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
-  { section: 'Quality & Compliance', href: '/ofsted-readiness', label: 'Ofsted Readiness', icon: Gauge, permissions: ['reports:read'] },
-  { section: 'Quality & Compliance', href: '/regulatory', label: 'Regulatory Framework', icon: Scale, permissions: ['records:read'] },
-  { section: 'Assistant', href: '/assistant', label: 'IndiCare Assistant', icon: Sparkles, permissions: ['assistant:access'] },
-  { section: 'Assistant', href: '/settings', label: 'Settings', icon: Settings, permissions: ['settings:read', 'settings:manage'] }
+  { section: 'Secondary / Manager', href: '/young-people', label: 'Young People Directory', icon: UserRound, permissions: ['records:read'] },
+  { section: 'Secondary / Manager', href: '/handover/current', label: 'Handover', icon: ClipboardCheck, permissions: ['records:read'] },
+  { section: 'Secondary / Manager', href: '/placements', label: 'Placements', icon: LayoutDashboard, permissions: ['records:read'] },
+  { section: 'Secondary / Manager', href: '/risk-assessments', label: 'Risk', icon: ClipboardCheck, permissions: ['records:read'] },
+  { section: 'Secondary / Manager', href: '/appointments', label: 'Appointments', icon: CalendarDays, permissions: ['records:read'] },
+  { section: 'Secondary / Manager', href: '/ofsted-readiness', label: 'Ofsted Readiness', icon: Gauge, permissions: ['reports:read'] },
+  { section: 'Secondary / Manager', href: '/regulatory', label: 'Regulatory Framework', icon: Scale, permissions: ['records:read'] },
+  { section: 'Secondary / Manager', href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'] },
+  { section: 'Secondary / Manager', href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },
+  { section: 'Secondary / Manager', href: '/settings', label: 'Settings', icon: Settings, permissions: ['settings:read', 'settings:manage'] },
+  { section: 'Secondary / Manager', href: '/dashboard', label: 'Command dashboard', icon: Gauge, permissions: ['reports:read'] },
+  { section: 'Secondary / Manager', href: '/management', label: 'Management Oversight', icon: Gauge, permissions: ['reports:read'] }
 ]
 
 function selectedYoungPersonId(pathname: string) {
@@ -85,9 +87,9 @@ function selectedYoungPersonId(pathname: string) {
 }
 
 function titleFromPath(pathname: string) {
-  if (pathname === '/') return 'Dashboard'
+  if (pathname === '/' || pathname === '/home') return 'Home'
   const parts = pathname.split('/').filter(Boolean)
-  if (!parts.length) return 'Dashboard'
+  if (!parts.length) return 'Home'
   return parts[0].split('-').map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(' ')
 }
 
@@ -97,7 +99,7 @@ function labelForRole(role: keyof typeof roleLabels | string | undefined) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const currentPathname = usePathname()
-  const pathname = currentPathname || '/dashboard'
+  const pathname = currentPathname || '/home'
   const { status, user, logout } = useAuth()
   const selectedId = selectedYoungPersonId(pathname)
   const selectedPerson = selectedId ? getYoungPersonById(selectedId) : undefined
@@ -137,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-600">Unauthorized</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">You do not have access to this workspace area</h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">Your current role is {labelForRole(user.role)}. Ask an administrator or registered manager if your access needs changing.</p>
-          <Link href="/dashboard" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Back to dashboard</Link>
+          <Link href="/home" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Back home</Link>
         </div>
       </div>
     )
@@ -160,7 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#f3f6fb] text-slate-900">
       <aside className="sticky top-0 hidden h-screen w-[282px] shrink-0 flex-col border-r border-slate-200/80 bg-white/95 px-4 py-5 backdrop-blur-xl lg:flex">
-        <Link href="/dashboard" className="mb-6 flex items-center gap-3 rounded-[24px] px-2 py-2">
+        <Link href="/home" className="mb-6 flex items-center gap-3 rounded-[24px] px-2 py-2">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-950 to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-950/20">IC</div>
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">IndiCare OS</p>
@@ -261,6 +263,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }}
         role={user.role}
       />
+      <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={selectedPerson?.preferredName} />
       <MobileNav />
     </div>
   )
