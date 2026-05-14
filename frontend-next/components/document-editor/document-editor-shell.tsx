@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { DocumentExportPanel } from '@/components/document-export/export-panel'
 import { DocumentPromptRail } from '@/components/document-prompts/prompt-rail'
@@ -8,7 +8,7 @@ import { DocumentQualityPanel } from '@/components/document-quality/quality-pane
 import { DocumentReviewPanel } from '@/components/document-review/review-panel'
 import { DocumentSignoffPanel } from '@/components/document-signoff/signoff-panel'
 import { DocumentVersionTimeline } from '@/components/document-timeline/version-timeline'
-import type { DocumentScope, DocumentTemplateSummary } from '@/lib/document-system/templates'
+import type { DocumentScope } from '@/lib/document-system/templates'
 import { getDocumentTemplate } from '@/lib/document-system/templates'
 
 type EditorProps = {
@@ -31,6 +31,9 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
   const [message, setMessage] = useState('Continue writing. Nothing is saved until the backend confirms it.')
   const [version, setVersion] = useState<number | string | undefined>(undefined)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sectionPayload = useCallback(() => {
+    return Object.fromEntries(Object.entries(sections).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''), value]))
+  }, [sections])
 
   useEffect(() => {
     if (!documentId) return
@@ -46,7 +49,7 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
         setDocumentTitle(doc.title || template.title)
         setVersion(doc.version_number)
         const loaded = Object.fromEntries((doc.editor_sections || []).map((section: any) => [section.title, section.content || '']))
-        setSections(Object.keys(loaded).length ? loaded : doc.sections || sections)
+        setSections((current) => Object.keys(loaded).length ? loaded : doc.sections || current)
         setSaveState('saved')
         setMessage('Document loaded from the live document system.')
       })
@@ -81,11 +84,7 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     }
-  }, [sections, activeDocumentId, version])
-
-  function sectionPayload() {
-    return Object.fromEntries(Object.entries(sections).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''), value]))
-  }
+  }, [activeDocumentId, version, sectionPayload])
 
   async function ensureDocument() {
     if (activeDocumentId) return activeDocumentId
