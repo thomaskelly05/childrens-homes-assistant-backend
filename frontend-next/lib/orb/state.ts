@@ -63,7 +63,7 @@ function fallbackDecision(selectedMode: OrbSelectedMode, context: OrbContext, ro
   return routeOrbMode({ selectedMode, context, role })
 }
 
-function isOrbAuthFailure(error: unknown) {
+function isOrbAuthFailure(error: unknown): error is AssistantClientError {
   return error instanceof AssistantClientError && (error.status === 401 || error.status === 403)
 }
 
