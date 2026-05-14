@@ -4,7 +4,7 @@ import { ReconnectManager } from './reconnect-manager'
 import { runtimeTelemetry } from './runtime-telemetry'
 import { speechPlaybackRuntime } from './speech-playback-runtime'
 import { WakeWordRuntime } from './wake-word-runtime'
-import { getCsrfToken } from '@/lib/auth/api'
+import { authFetchResponse, isAuthFailureStatus } from '@/lib/auth/api'
 import { generateMockAssistantResponse } from '@/lib/indicare/assistant-adapter'
 
 export type AssistantMessage = {
@@ -25,18 +25,10 @@ export type RuntimeState = {
   error?: string
 }
 
-const DEFAULT_API_BASE = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:8000'
-  : 'https://api.indicare.co.uk'
-const API_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  DEFAULT_API_BASE
-).replace(/\/+$/, '')
 const REALTIME_WS_URL = process.env.NEXT_PUBLIC_OPENAI_REALTIME_WS_URL || ''
 
 function backendUrl(path: string) {
-  return `${API_BASE}${path}`
+  return path
 }
 
 function messageId() {
@@ -71,6 +63,7 @@ export class AssistantRuntime {
   private listeners = new Set<(state: RuntimeState) => void>()
   private messageListeners = new Set<(messages: AssistantMessage[]) => void>()
   private abortController: AbortController | null = null
+  private connectInFlight: Promise<void> | null = null
   private lastSpokenAssistantMessageId: string | null = null
   private realtimeSession: OpenAIRealtimeSession | null = null
   private realtimeAssistantMessageId: string | null = null
@@ -127,14 +120,19 @@ export class AssistantRuntime {
   })
 
   async connect() {
+    if (this.connectInFlight) return this.connectInFlight
+    this.connectInFlight = this.connectOnce().finally(() => {
+      this.connectInFlight = null
+    })
+    return this.connectInFlight
+  }
+
+  private async connectOnce() {
     runtimeTelemetry.hydrate()
     runtimeTelemetry.track('assistant.connect.started')
 
     try {
-      const response = await fetch(backendUrl('/health'), {
-        credentials: 'include',
-        cache: 'no-store'
-      })
+      const response = await authFetchResponse(backendUrl('/health'))
 
       this.state.connected = response.ok
       this.state.error = response.ok ? undefined : `Assistant backend health failed: ${response.status}`
@@ -144,7 +142,7 @@ export class AssistantRuntime {
         this.connectRealtimeVoice()
         runtimeTelemetry.track('assistant.connect.ready')
       } else {
-        this.reconnect.markDisconnected()
+        this.reconnect.markDisconnected({ retry: !isAuthFailureStatus(response.status) })
         runtimeTelemetry.track('assistant.connect.failed', { status: response.status })
       }
 
@@ -211,6 +209,7 @@ export class AssistantRuntime {
   disconnect() {
     this.abortController?.abort()
     this.abortController = null
+    this.reconnect.cancel()
     this.realtimeSession?.disconnect()
     this.realtimeSession = null
     this.voice.stop()
@@ -267,16 +266,9 @@ export class AssistantRuntime {
     this.abortController = new AbortController()
 
     try {
-      const csrfToken = getCsrfToken()
-      const response = await fetch(backendUrl('/assistant/general/stream'), {
+      const response = await authFetchResponse(backendUrl('/assistant/general/stream'), {
         method: 'POST',
-        credentials: 'include',
-        cache: 'no-store',
         signal: this.abortController.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
-        },
         body: JSON.stringify({
           message: trimmed,
           assistant_surface: 'next-assistant',

@@ -1,14 +1,8 @@
 'use client'
 
 import { DragEvent, useState } from 'react'
-import { getCsrfToken } from '@/lib/auth/api'
+import { authFetchResponse } from '@/lib/auth/api'
 import { setSafeDraft } from '@/lib/security/safe-storage'
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  ''
-).replace(/\/+$/, '')
 
 type UploadState = 'idle' | 'uploading' | 'uploaded' | 'error'
 
@@ -26,12 +20,8 @@ export function DocumentUploadPanel() {
     form.set('document_type', documentType)
     if (text.trim()) form.set('extracted_text', text.trim())
     try {
-      const response = await fetch(`${API_BASE}/os/documents/upload`, {
+      const response = await authFetchResponse('/os/documents/upload', {
         method: 'POST',
-        credentials: 'include',
-        headers: {
-          ...(getCsrfToken() ? { 'X-CSRF-Token': getCsrfToken() } : {})
-        },
         body: form
       })
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)

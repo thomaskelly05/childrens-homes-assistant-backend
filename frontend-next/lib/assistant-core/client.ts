@@ -1,5 +1,5 @@
 import { buildAssistantContext } from './context'
-import { getCsrfToken } from '@/lib/auth/api'
+import { authFetch, AuthApiError } from '@/lib/auth/api'
 import type {
   AssistantContext,
   AssistantMode,
@@ -9,7 +9,6 @@ import type {
 } from './types'
 
 export const ASSISTANT_API_BASE = (
-  process.env.NEXT_PUBLIC_ASSISTANT_API_BASE ||
   ''
 ).replace(/\/+$/, '')
 
@@ -28,7 +27,7 @@ export class AssistantClientError extends Error {
 }
 
 function assistantUrl(path: string) {
-  return `${ASSISTANT_API_BASE}${path}`
+  return path
 }
 
 export function assistantErrorMessage(error: unknown) {
@@ -45,40 +44,30 @@ export function assistantErrorMessage(error: unknown) {
 }
 
 export async function queryAssistant(request: AssistantQueryRequest, signal?: AbortSignal): Promise<AssistantQueryData> {
-  const csrfToken = getCsrfToken()
-  const response = await fetch(assistantUrl('/assistant/query'), {
-    method: 'POST',
-    credentials: 'include',
-    cache: 'no-store',
-    signal,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
-    },
-    body: JSON.stringify(request)
-  })
-
-  let payload: AssistantQueryResponse | null = null
   try {
-    payload = await response.json() as AssistantQueryResponse
-  } catch {
-    payload = null
-  }
+    const payload = await authFetch<AssistantQueryResponse>(assistantUrl('/assistant/query'), {
+      method: 'POST',
+      signal,
+      body: JSON.stringify(request)
+    })
 
-  if (!response.ok || !payload) {
-    const fallbackMessage = response.status === 401
-      ? 'Your session has expired. Please sign in again before using the assistant.'
-      : response.status === 403
-        ? 'You do not have permission to use the assistant.'
-        : `Assistant backend unavailable (${response.status})`
-    throw new AssistantClientError(fallbackMessage, 'backend_unavailable', payload, response.status)
-  }
+    if (!payload.success) {
+      throw new AssistantClientError(payload.error.message, payload.error.code, payload.error.details)
+    }
 
-  if (!payload.success) {
-    throw new AssistantClientError(payload.error.message, payload.error.code, payload.error.details, response.status)
+    return payload.data
+  } catch (error) {
+    if (error instanceof AssistantClientError) throw error
+    if (error instanceof AuthApiError) {
+      const message = error.status === 401
+        ? 'Your session has expired. Please sign in again before using the assistant.'
+        : error.status === 403
+          ? 'You do not have permission to use the assistant.'
+          : error.message
+      throw new AssistantClientError(message, error.code || 'backend_unavailable', undefined, error.status)
+    }
+    throw error
   }
-
-  return payload.data
 }
 
 export function buildStandaloneAssistantContext(options: {

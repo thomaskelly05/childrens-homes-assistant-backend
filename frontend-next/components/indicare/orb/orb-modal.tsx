@@ -7,6 +7,7 @@ import { OrbControls } from './orb-controls'
 import { OrbModeSwitcher } from './orb-mode-switcher'
 import { OrbTranscript } from './orb-transcript'
 import { orbStateLabel, OrbVisual } from './orb-visual'
+import { useAuth } from '@/contexts/auth-context'
 import { OrbRuntimeController, type OrbRuntimeSnapshot } from '@/lib/orb/state'
 import type { OrbContext, OrbSelectedMode, OrbVoiceDraft } from '@/lib/orb/types'
 
@@ -77,7 +78,10 @@ export function OrbModal({
   context: OrbContext
   role?: string | null
 }) {
-  const controller = useMemo(() => new OrbRuntimeController({ context, role }), [context, role])
+  const { status, user, csrfReady } = useAuth()
+  const orbReady = status === 'authenticated' && Boolean(user) && csrfReady
+  const effectiveRole = role ?? user?.role
+  const controller = useMemo(() => new OrbRuntimeController({ context, role: effectiveRole }), [context, effectiveRole])
   const [snapshot, setSnapshot] = useState<OrbRuntimeSnapshot>(controller.getSnapshot())
   const [input, setInput] = useState('')
   const [draftDismissed, setDraftDismissed] = useState(false)
@@ -88,10 +92,10 @@ export function OrbModal({
   useEffect(() => controller.attachBrowserLifecycle(), [controller])
 
   useEffect(() => {
-    if (open && !snapshot.sessionId && !snapshot.loading) {
-      void controller.start(context, role)
+    if (open && orbReady && !snapshot.sessionId && !snapshot.loading) {
+      void controller.start(context, effectiveRole)
     }
-  }, [controller, context, open, role, snapshot.loading, snapshot.sessionId])
+  }, [controller, context, effectiveRole, open, orbReady, snapshot.loading, snapshot.sessionId])
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
@@ -103,7 +107,7 @@ export function OrbModal({
 
   async function send() {
     const text = input.trim()
-    if (!text) return
+    if (!text || !orbReady) return
     setInput('')
     setDraftDismissed(false)
     await controller.sendText(text, context)
@@ -132,6 +136,11 @@ export function OrbModal({
 
         <div className="grid max-h-[calc(94vh-92px)] gap-5 overflow-auto p-5 lg:grid-cols-[320px_minmax(0,1fr)]">
           <aside className="space-y-4">
+            {!orbReady ? (
+              <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
+                Orb is waiting for your secure session before connecting.
+              </div>
+            ) : null}
             {snapshot.mobile.reconnectBanner ? (
               <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
                 <AlertTriangle className="mr-2 inline h-4 w-4" aria-hidden />

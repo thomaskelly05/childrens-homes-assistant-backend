@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   conversationStore,
@@ -8,28 +8,45 @@ import {
 } from '@/lib/realtime/conversation-store'
 import { AssistantMessage } from '@/lib/realtime/assistant-runtime'
 
-export function useAssistantConversations() {
+type UseAssistantConversationsOptions = {
+  enabled?: boolean
+}
+
+export function useAssistantConversations(options: UseAssistantConversationsOptions = {}) {
+  const enabled = options.enabled ?? true
   const [conversations, setConversations] = useState<StoredConversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState('default')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | undefined>()
+  const loadPromiseRef = useRef<Promise<{ loaded: StoredConversation[]; active: string }> | null>(null)
 
   const refreshConversations = useCallback(async () => {
+    if (!enabled) return
     try {
       setConversations(await conversationStore.list())
       setError(undefined)
     } catch (storeError) {
       setError(String(storeError))
     }
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     let cancelled = false
+    if (!enabled) {
+      setLoading(true)
+      return () => {
+        cancelled = true
+      }
+    }
 
     async function load() {
+      const loadPromise = loadPromiseRef.current ?? conversationStore.list().then((loaded) => ({
+        loaded,
+        active: conversationStore.getActiveId()
+      }))
+      loadPromiseRef.current = loadPromise
       try {
-        const loaded = await conversationStore.list()
-        const active = conversationStore.getActiveId()
+        const { loaded, active } = await loadPromise
 
         if (!cancelled) {
           setConversations(loaded)
@@ -39,6 +56,7 @@ export function useAssistantConversations() {
       } catch (storeError) {
         if (!cancelled) setError(String(storeError))
       } finally {
+        if (loadPromiseRef.current === loadPromise) loadPromiseRef.current = null
         if (!cancelled) setLoading(false)
       }
     }
@@ -48,7 +66,7 @@ export function useAssistantConversations() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [enabled])
 
   const activeConversation = useMemo(() => {
     return conversations.find(
@@ -57,13 +75,16 @@ export function useAssistantConversations() {
   }, [conversations, activeConversationId])
 
   const createConversation = useCallback(async () => {
+    if (!enabled) {
+      throw new Error('Assistant session is not ready.')
+    }
     const conversation = await conversationStore.create()
 
     setConversations(await conversationStore.list())
     setActiveConversationId(conversation.id)
 
     return conversation
-  }, [])
+  }, [enabled])
 
   const selectConversation = useCallback((id: string) => {
     conversationStore.setActiveId(id)
@@ -71,9 +92,10 @@ export function useAssistantConversations() {
   }, [])
 
   const saveConversation = useCallback(async (id: string, messages: AssistantMessage[]) => {
+    if (!enabled) return
     await conversationStore.saveMessages(id, messages)
     await refreshConversations()
-  }, [refreshConversations])
+  }, [enabled, refreshConversations])
 
   return {
     conversations,

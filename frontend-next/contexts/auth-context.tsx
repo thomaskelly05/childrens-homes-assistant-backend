@@ -3,7 +3,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
-import { authFetch, AuthApiError } from '@/lib/auth/api'
+import { authFetch, AuthApiError, getCsrfToken } from '@/lib/auth/api'
 import { normaliseRole, permissionsForRole } from '@/lib/auth/permissions'
 import { clearSensitiveBrowserState, suppressProductionConsole } from '@/lib/security/privacy'
 import type { AuthMeResponse, LoginResponse, StaffUser } from '@/lib/auth/types'
@@ -21,6 +21,7 @@ type AuthContextValue = {
   user: StaffUser | null
   error: string | null
   sessionExpired: boolean
+  csrfReady: boolean
   refreshSession: () => Promise<void>
   login: (input: LoginInput) => Promise<LoginResponse>
   logout: () => Promise<void>
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<StaffUser | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sessionExpired, setSessionExpired] = useState(false)
+  const [csrfReady, setCsrfReady] = useState(false)
   const logoutRedirecting = useRef(false)
 
   const refreshSession = useCallback(async () => {
@@ -83,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(e2eUser)
       setStatus('authenticated')
       setSessionExpired(false)
+      setCsrfReady(true)
       logoutRedirecting.current = false
       return
     }
@@ -94,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(normaliseUser(response.user))
       setStatus('authenticated')
       setSessionExpired(false)
+      setCsrfReady(Boolean(getCsrfToken()))
       logoutRedirecting.current = false
     } catch (caught) {
       const authError = caught instanceof AuthApiError ? caught : null
@@ -101,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('unauthenticated')
       setError(authError?.message || 'Your session could not be loaded')
       setSessionExpired(authError?.status === 401)
+      setCsrfReady(false)
     }
   }, [])
 
@@ -130,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(e2eUser)
       setStatus('authenticated')
       setSessionExpired(false)
+      setCsrfReady(true)
       logoutRedirecting.current = false
       return {
         ok: true,
@@ -147,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(normaliseUser(response.user))
       setStatus('authenticated')
       setSessionExpired(false)
+      setCsrfReady(Boolean(getCsrfToken()))
       logoutRedirecting.current = false
     }
 
@@ -163,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearSensitiveBrowserState()
       setUser(null)
       setStatus('unauthenticated')
+      setCsrfReady(false)
       router.replace('/login')
     }
   }, [router])
@@ -173,11 +181,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       error,
       sessionExpired,
+      csrfReady,
       refreshSession,
       login,
       logout
     }),
-    [error, login, logout, refreshSession, sessionExpired, status, user]
+    [csrfReady, error, login, logout, refreshSession, sessionExpired, status, user]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

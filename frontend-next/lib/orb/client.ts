@@ -1,5 +1,5 @@
-import { ASSISTANT_API_BASE, AssistantClientError } from '@/lib/assistant-core/client'
-import { getCsrfToken } from '@/lib/auth/api'
+import { AssistantClientError } from '@/lib/assistant-core/client'
+import { authFetchResponse } from '@/lib/auth/api'
 import type {
   OrbApiResponse,
   OrbSessionEventData,
@@ -11,7 +11,7 @@ import type {
 } from './types'
 
 function orbUrl(path: string) {
-  return `${ASSISTANT_API_BASE}${path}`
+  return path
 }
 
 const ORB_REQUEST_TIMEOUT_MS = 20000
@@ -22,7 +22,6 @@ function requestId() {
 }
 
 async function orbFetch(path: string, init: RequestInit = {}) {
-  const method = (init.method || 'GET').toUpperCase()
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), ORB_REQUEST_TIMEOUT_MS)
   const externalSignal = init.signal
@@ -30,17 +29,12 @@ async function orbFetch(path: string, init: RequestInit = {}) {
     if (externalSignal.aborted) controller.abort()
     externalSignal.addEventListener('abort', () => controller.abort(), { once: true })
   }
-  const csrfToken = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) ? getCsrfToken() : ''
   try {
-    return await fetch(orbUrl(path), {
+    return await authFetchResponse(orbUrl(path), {
       ...init,
-      credentials: 'include',
-      cache: 'no-store',
       signal: controller.signal,
       headers: {
-        'Content-Type': 'application/json',
         'X-Request-ID': requestId(),
-        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         ...init.headers
       }
     })

@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.errors import unauthorised
 from auth.permissions import require_assistant_access
 from db.connection import get_db
 from services.assistant_security import safe_int, safe_string
@@ -26,7 +27,7 @@ class AssistantConversationPayload(BaseModel):
 def _safe_user_id(current_user: dict[str, Any]) -> int:
     user_id = safe_int(current_user.get("user_id") or current_user.get("id"))
     if user_id is None:
-        raise HTTPException(status_code=401, detail="Authentication required.")
+        raise unauthorised("not_authenticated", "Authentication required.")
     return user_id
 
 

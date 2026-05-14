@@ -19,7 +19,8 @@ const operationalFocus = [
 ]
 
 export function ContextualAssistantPanel({ context }: { context: AssistantContext }) {
-  const { status } = useAuth()
+  const { status, user, csrfReady } = useAuth()
+  const assistantReady = status === 'authenticated' && Boolean(user) && csrfReady
   const actions = useMemo(() => suggestedPromptsForWorkspace(context.current_workspace_type, 'embedded'), [context])
   const [input, setInput] = useState('')
   const [response, setResponse] = useState<AssistantQueryData | null>(null)
@@ -33,8 +34,12 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
       setError('Your session is still loading. Please try again in a moment.')
       return
     }
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || !user) {
       setError('Your session has expired. Please sign in again before using the assistant.')
+      return
+    }
+    if (!csrfReady) {
+      setError('Your secure session is still being prepared. Please try again in a moment.')
       return
     }
     setLoading(true)
@@ -65,7 +70,7 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
           <p className="mt-2 text-sm leading-6 text-slate-500">{contextSummary(context)}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className="rounded-full bg-blue-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">{status === 'loading' ? 'Session loading' : loading ? 'Thinking' : 'Ready'}</div>
+          <div className="rounded-full bg-blue-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">{!assistantReady ? 'Session loading' : loading ? 'Thinking' : 'Ready'}</div>
           <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Orb uses this context</span>
         </div>
       </div>
@@ -109,7 +114,7 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
           placeholder="Ask about this page or selected record..."
           className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400"
         />
-          <button disabled={loading || status !== 'authenticated'} className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+          <button disabled={loading || !assistantReady} className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
           Ask
         </button>
       </form>

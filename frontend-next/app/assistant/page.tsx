@@ -126,7 +126,8 @@ function modeForSection(section: WorkspaceSection): AssistantMode {
 }
 
 export default function AssistantPage() {
-  const { status, user } = useAuth()
+  const { status, user, csrfReady } = useAuth()
+  const assistantReady = status === 'authenticated' && Boolean(user) && csrfReady
   const workspace = useMemo(() => assistantWorkspaceAdapters.getWorkspaceData(), [])
   const [activeSection, setActiveSection] = useState<WorkspaceSection>('chat')
   const [magicNote, setMagicNote] = useState<MagicNote>(workspace.magicNotes[0])
@@ -154,20 +155,32 @@ export default function AssistantPage() {
     createConversation,
     selectConversation,
     saveConversation
-  } = useAssistantConversations()
+  } = useAssistantConversations({ enabled: assistantReady })
 
   const endRef = useRef<HTMLDivElement | null>(null)
+  const activeConversationIdRef = useRef(activeConversationId)
+  const saveConversationRef = useRef(saveConversation)
 
   useEffect(() => {
-    assistantRuntime.connect()
+    activeConversationIdRef.current = activeConversationId
+    saveConversationRef.current = saveConversation
+  }, [activeConversationId, saveConversation])
+
+  useEffect(() => {
+    if (!assistantReady) {
+      assistantRuntime.disconnect()
+      return
+    }
+
+    void assistantRuntime.connect()
 
     const unsubscribeState = assistantRuntime.onState(setRuntimeState)
 
     const unsubscribeMessages = assistantRuntime.onMessages((nextMessages) => {
       setMessages(nextMessages)
 
-      if (activeConversationId) {
-        void saveConversation(activeConversationId, nextMessages).catch(() => undefined)
+      if (activeConversationIdRef.current && nextMessages.some((message) => message.role === 'user')) {
+        void saveConversationRef.current(activeConversationIdRef.current, nextMessages).catch(() => undefined)
       }
     })
 
@@ -175,7 +188,7 @@ export default function AssistantPage() {
       unsubscribeState()
       unsubscribeMessages()
     }
-  }, [activeConversationId, saveConversation])
+  }, [assistantReady])
 
   useEffect(() => {
     if (activeConversation?.messages?.length) {
@@ -196,8 +209,12 @@ export default function AssistantPage() {
       setAssistantError('Your session is still loading. Please try again in a moment.')
       return
     }
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || !user) {
       setAssistantError('Your session has expired. Please sign in again before using the assistant.')
+      return
+    }
+    if (!csrfReady) {
+      setAssistantError('Your secure session is still being prepared. Please refresh if this does not clear.')
       return
     }
 
@@ -240,7 +257,7 @@ export default function AssistantPage() {
       ))
       setMessages(nextMessages)
       if (activeConversationId) {
-        await saveConversation(activeConversationId, nextMessages)
+        await saveConversation(activeConversationId, nextMessages).catch(() => undefined)
       }
     } catch (error) {
       const message = assistantErrorMessage(error)
@@ -256,7 +273,7 @@ export default function AssistantPage() {
       ))
       setMessages(nextMessages)
       if (activeConversationId) {
-        await saveConversation(activeConversationId, nextMessages)
+        await saveConversation(activeConversationId, nextMessages).catch(() => undefined)
       }
     } finally {
       setRuntimeState((current) => ({ ...current, streaming: false, speaking: false }))
@@ -264,6 +281,10 @@ export default function AssistantPage() {
   }
 
   async function handleCreateConversation() {
+    if (!assistantReady) {
+      setAssistantError('Your secure session is still loading. Please try again in a moment.')
+      return
+    }
     await createConversation()
     setMessages([])
     setLastAssistantData(null)
@@ -454,15 +475,17 @@ export default function AssistantPage() {
           />
         </div>
       </section>
-      <OrbButton
-        context={{
-          route: '/assistant',
-          workspace: activeSection,
-          page_title: 'IndiCare Assistant',
-          assistant_context: orbAssistantContext
-        }}
-        role={user?.role}
-      />
+      {assistantReady ? (
+        <OrbButton
+          context={{
+            route: '/assistant',
+            workspace: activeSection,
+            page_title: 'IndiCare Assistant',
+            assistant_context: orbAssistantContext
+          }}
+          role={user?.role}
+        />
+      ) : null}
     </main>
   )
 }
