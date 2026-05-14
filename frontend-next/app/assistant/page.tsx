@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileUp, Mic, Paperclip, Send, Sparkles } from 'lucide-react'
+import { FileUp, Mic, Paperclip, Send } from 'lucide-react'
 
 import { StandaloneAssistantShell, StandaloneOrbVisual } from '@/lib/standalone-assistant/assistant-shell'
 import { assistantBrains, assistantPrompts } from '@/lib/standalone-assistant/config'

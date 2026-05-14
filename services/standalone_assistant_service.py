@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Standalone assistant response foundation with no OS record retrieval."""
+
+from __future__ import annotations
 
 from typing import Any
 

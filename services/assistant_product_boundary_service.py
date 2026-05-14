@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Product boundary enforcement for OS Orb and standalone assistant surfaces."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any

@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Static children homes knowledge available to the standalone assistant."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
