@@ -28,7 +28,7 @@ test('Jamie golden workflow is smooth, explicit, and clears sensitive state on l
   await page.getByTestId('child-card-yp-jamie').click()
 
   await expect(page).toHaveURL(/\/young-people\/yp-jamie\/journey/)
-  await expect(page.getByRole('heading', { name: 'Jamie' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Jamie', exact: true })).toBeVisible()
   await expect(page.getByTestId('orb-button')).toBeVisible()
   await expect(page.getByTestId('manager-review-link')).toBeVisible()
   await expect(page.getByTestId('handover-link')).toBeVisible()
@@ -58,7 +58,7 @@ test('Jamie golden workflow is smooth, explicit, and clears sensitive state on l
   await expect(page.getByTestId('safeguarding-form')).toBeVisible()
   await page.getByLabel('Concern summary *').fill('Jamie reported pressure during family contact and asked staff for help.')
   await page.getByLabel('Immediate safety actions').fill('Staff reassured Jamie, informed the manager and recorded the concern for review.')
-  await page.getByLabel('Actions').fill('Manager to review threshold and update the social worker today.')
+  await page.getByTestId('recording-field-actions_required').fill('Manager to review threshold and update the social worker today.')
   await page.getByTestId('save-daily-note-button').click()
   await expect(page).toHaveURL(/\/young-people\/yp-jamie\/journey\?/)
   await expect(page.getByTestId('save-state-message')).toContainText('Draft saved locally')

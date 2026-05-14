@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
 import { authFetch, AuthApiError } from '@/lib/auth/api'
@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<StaffUser | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sessionExpired, setSessionExpired] = useState(false)
+  const logoutRedirecting = useRef(false)
 
   const refreshSession = useCallback(async () => {
     setStatus('loading')
@@ -82,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(e2eUser)
       setStatus('authenticated')
       setSessionExpired(false)
+      logoutRedirecting.current = false
       return
     }
     try {
@@ -92,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(normaliseUser(response.user))
       setStatus('authenticated')
       setSessionExpired(false)
+      logoutRedirecting.current = false
     } catch (caught) {
       const authError = caught instanceof AuthApiError ? caught : null
       setUser(null)
@@ -107,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshSession])
 
   useEffect(() => {
-    if (status !== 'unauthenticated' || isPublicPath(pathname)) return
+    if (status !== 'unauthenticated' || isPublicPath(pathname) || logoutRedirecting.current) return
     const search = typeof window === 'undefined' ? '' : window.location.search
     const returnUrl = encodeURIComponent(`${pathname}${search}`)
     router.replace(`/login?returnUrl=${returnUrl}${sessionExpired ? '&expired=1' : ''}`)
@@ -127,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(e2eUser)
       setStatus('authenticated')
       setSessionExpired(false)
+      logoutRedirecting.current = false
       return {
         ok: true,
         authenticated: true,
@@ -143,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(normaliseUser(response.user))
       setStatus('authenticated')
       setSessionExpired(false)
+      logoutRedirecting.current = false
     }
 
     return response
@@ -154,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await authFetch('/auth/logout', { method: 'POST' })
       }
     } finally {
+      logoutRedirecting.current = true
       clearSensitiveBrowserState()
       setUser(null)
       setStatus('unauthenticated')

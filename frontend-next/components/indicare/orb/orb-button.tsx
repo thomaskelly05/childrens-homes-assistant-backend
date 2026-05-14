@@ -146,7 +146,7 @@ export function OrbButton({
       <button
         type="button"
         onClick={() => void controller.activate(context, role)}
-        data-testid="orb-button"
+        data-testid={placement === 'floating' ? 'orb-button' : 'orb-button-inline'}
         className={`group relative inline-flex items-center justify-center rounded-full border border-white/70 bg-white/95 p-2 shadow-2xl shadow-blue-950/20 backdrop-blur transition hover:-translate-y-0.5 hover:shadow-cyan-900/20 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
           placement === 'inline' ? '' : 'min-h-16 min-w-16'
         }`}
