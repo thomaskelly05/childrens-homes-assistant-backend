@@ -14,6 +14,7 @@ from starlette.responses import JSONResponse, Response
 from auth.tokens import decode_session_token
 from routers.auth_routes import settings as auth_settings
 from services.audit_event_service import record_audit_event
+from services.safe_logging import safe_log_dict
 
 logger = logging.getLogger("indicare.security")
 
@@ -162,7 +163,7 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
                     status_code,
                     duration_ms,
                     request.client.host if request.client else None,
-                    request.headers.get("user-agent", ""),
+                    safe_log_dict({"user_agent": request.headers.get("user-agent", "")}).get("user_agent", ""),
                 )
                 record_audit_event(
                     event_type="http.request",

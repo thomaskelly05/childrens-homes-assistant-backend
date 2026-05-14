@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
+from services.document_security_service import scope_matches
 
 DOCUMENT_STATUSES = {"draft", "ai_improved", "submitted_for_review", "changes_requested", "approved", "archived", "superseded"}
 
@@ -101,6 +102,14 @@ class ChildDocumentsService:
             if home_id:
                 where.append("(home_id = %s OR home_id IS NULL)")
                 params.append(home_id)
+            else:
+                provider_id = self._current_provider_id(current_user)
+                role = str(current_user.get("role") or "").strip().lower()
+                if provider_id and role in {"admin", "super_admin", "superadmin", "founder", "owner", "provider_admin", "responsible_individual", "ri"}:
+                    where.append("provider_id = %s")
+                    params.append(provider_id)
+                elif role not in {"admin", "super_admin", "superadmin", "founder", "owner"}:
+                    where.append("1 = 0")
             if group:
                 where.append("document_group = %s")
                 params.append(group)
@@ -142,6 +151,12 @@ class ChildDocumentsService:
             sections = payload.get("sections") or self._blank_sections(doc_type)
             metadata = payload.get("metadata") or {}
             status = payload.get("status") if payload.get("status") in DOCUMENT_STATUSES else "draft"
+            requested_scope = {
+                "home_id": self._safe_int(payload.get("home_id")) or self._current_home_id(current_user),
+                "provider_id": self._safe_int(payload.get("provider_id")) or self._current_provider_id(current_user),
+            }
+            if not scope_matches(current_user, requested_scope):
+                return {"ok": False, "error": "Permission denied"}
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -149,7 +164,7 @@ class ChildDocumentsService:
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb,%s,COALESCE(%s::time, CURRENT_TIME),%s,%s)
                     RETURNING *
                     """,
-                    (self._safe_int(payload.get("young_person_id")), self._safe_int(payload.get("home_id")) or self._current_home_id(current_user), self._safe_int(payload.get("provider_id")) or self._current_provider_id(current_user), doc_type, group, title, auto_title, payload.get("editable_title") or title, status, json.dumps(sections), json.dumps(metadata), payload.get("document_date") or datetime.utcnow().date().isoformat(), payload.get("created_time"), self._current_user_id(current_user), self._current_user_id(current_user)),
+                    (self._safe_int(payload.get("young_person_id")), requested_scope["home_id"], requested_scope["provider_id"], doc_type, group, title, auto_title, payload.get("editable_title") or title, status, json.dumps(sections), json.dumps(metadata), payload.get("document_date") or datetime.utcnow().date().isoformat(), payload.get("created_time"), self._current_user_id(current_user), self._current_user_id(current_user)),
                 )
                 row = dict(cur.fetchone())
                 self._insert_version(cur, row["id"], row, "created", current_user)
@@ -173,7 +188,10 @@ class ChildDocumentsService:
                 row = cur.fetchone()
             if not row:
                 return {"ok": False, "error": "Document not found"}
-            return {"ok": True, "document": self._normalise(dict(row))}
+            row = dict(row)
+            if not scope_matches(current_user, row):
+                return {"ok": False, "error": "Permission denied"}
+            return {"ok": True, "document": self._normalise(row)}
         except Exception as exc:
             return {"ok": False, "error": repr(exc)}
         finally:
@@ -191,6 +209,8 @@ class ChildDocumentsService:
                 if not existing:
                     return {"ok": False, "error": "Document not found"}
                 existing = dict(existing)
+                if not scope_matches(current_user, existing):
+                    return {"ok": False, "error": "Permission denied"}
                 self._insert_version(cur, document_id, existing, payload.get("version_reason") or "before_update", current_user)
                 status = payload.get("status") if payload.get("status") in DOCUMENT_STATUSES else existing.get("status")
                 cur.execute(
@@ -218,6 +238,9 @@ class ChildDocumentsService:
             conn = get_db_connection()
             self.ensure_schema(conn)
             with conn.cursor() as cur:
+                document = self._load_document_for_access(cur, document_id)
+                if not document or not scope_matches(current_user, document):
+                    return {"ok": False, "error": "Permission denied"}
                 cur.execute("INSERT INTO child_document_comments (document_id, comment, comment_type, created_by) VALUES (%s,%s,%s,%s) RETURNING *", (document_id, comment, comment_type, self._current_user_id(current_user)))
                 row = dict(cur.fetchone())
             conn.commit()
@@ -236,6 +259,9 @@ class ChildDocumentsService:
             conn = get_db_connection()
             self.ensure_schema(conn)
             with conn.cursor() as cur:
+                document = self._load_document_for_access(cur, document_id)
+                if not document or not scope_matches(current_user, document):
+                    return {"ok": False, "error": "Permission denied", "versions": []}
                 cur.execute("SELECT * FROM child_document_versions WHERE document_id = %s ORDER BY version_number DESC LIMIT 50", (document_id,))
                 versions = [dict(row) for row in cur.fetchall()]
             return {"ok": True, "versions": versions}
@@ -251,6 +277,9 @@ class ChildDocumentsService:
             conn = get_db_connection()
             self.ensure_schema(conn)
             with conn.cursor() as cur:
+                document = self._load_document_for_access(cur, document_id)
+                if not document or not scope_matches(current_user, document):
+                    return {"ok": False, "error": "Permission denied", "comments": []}
                 cur.execute("SELECT * FROM child_document_comments WHERE document_id = %s ORDER BY created_at DESC LIMIT 100", (document_id,))
                 comments = [dict(row) for row in cur.fetchall()]
             return {"ok": True, "comments": comments}
@@ -287,6 +316,11 @@ class ChildDocumentsService:
         row = cur.fetchone()
         version_number = row[0] if not isinstance(row, dict) else next(iter(row.values()))
         cur.execute("INSERT INTO child_document_versions (document_id, version_number, snapshot, reason, created_by) VALUES (%s,%s,%s::jsonb,%s,%s)", (document_id, version_number, json.dumps(snapshot, default=str), reason, self._current_user_id(current_user)))
+
+    def _load_document_for_access(self, cur: Any, document_id: int) -> dict[str, Any] | None:
+        cur.execute("SELECT id, home_id, provider_id, young_person_id FROM child_documents WHERE id = %s LIMIT 1", (document_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None
 
     def _auto_title(self, doc_type: str, child_name: str | None, document_date: str | None) -> str:
         date = document_date or datetime.utcnow().date().isoformat()

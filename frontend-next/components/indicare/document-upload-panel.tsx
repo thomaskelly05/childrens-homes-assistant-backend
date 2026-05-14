@@ -1,6 +1,8 @@
 'use client'
 
 import { DragEvent, useState } from 'react'
+import { getCsrfToken } from '@/lib/auth/api'
+import { setSafeDraft } from '@/lib/security/safe-storage'
 
 const API_BASE = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -27,6 +29,9 @@ export function DocumentUploadPanel() {
       const response = await fetch(`${API_BASE}/os/documents/upload`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          ...(getCsrfToken() ? { 'X-CSRF-Token': getCsrfToken() } : {})
+        },
         body: form
       })
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
@@ -34,12 +39,11 @@ export function DocumentUploadPanel() {
       setState('uploaded')
       setMessage(`Uploaded. Extraction status: ${payload.data?.extraction_status || payload.data?.status || 'queued'}. Refresh to see the version history and findings.`)
     } catch (error) {
-      window.localStorage.setItem('indicare-document-upload-draft', JSON.stringify({
+      setSafeDraft('indicare-document-upload-draft', {
         fileName: file.name,
         documentType,
-        text,
-        savedAt: new Date().toISOString()
-      }))
+        text
+      }, undefined, 'export_restricted')
       setState('error')
       setMessage(`Draft saved locally. It has not yet been added to the child's record. Live document upload failed: ${error instanceof Error ? error.message : String(error)}`)
     }

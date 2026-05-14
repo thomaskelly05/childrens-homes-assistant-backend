@@ -3,7 +3,10 @@ import io
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 
+from auth.current_user import get_current_user
 from db.connection import get_db
+from services.audit_event_service import record_audit_event
+from services.document_security_service import scope_matches
 from services.export_service import (
     render_html_document,
     build_docx_bytes,
@@ -67,10 +70,50 @@ def _load_record(conn, record_type: str, record_id: int):
     return row
 
 
+def _enforce_export_access(row: dict, *, record_type: str, record_id: int, current_user: dict) -> None:
+    role = str(current_user.get("role") or "").strip().lower()
+    privileged = role in {"admin", "super_admin", "superadmin", "founder", "owner"}
+    if not row.get("home_id") and not row.get("provider_id") and not privileged:
+        record_audit_event(
+            event_type="export.denied",
+            action="export_scope_missing",
+            outcome="denied",
+            actor=current_user,
+            resource_type=record_type,
+            resource_id=str(record_id),
+        )
+        raise HTTPException(status_code=403, detail="Export access cannot be verified")
+    if not scope_matches(current_user, row):
+        record_audit_event(
+            event_type="export.denied",
+            action="export_scope_denied",
+            outcome="denied",
+            actor=current_user,
+            resource_type=record_type,
+            resource_id=str(record_id),
+        )
+        raise HTTPException(status_code=403, detail="You do not have access to export this record")
+
+
+def _load_authorised_record(conn, record_type: str, record_id: int, current_user: dict):
+    row = _load_record(conn, record_type, record_id)
+    _enforce_export_access(row, record_type=record_type, record_id=record_id, current_user=current_user)
+    record_audit_event(
+        event_type="export.access",
+        action="export_record",
+        outcome="success",
+        actor=current_user,
+        resource_type=record_type,
+        resource_id=str(record_id),
+        metadata={"home_id": row.get("home_id"), "provider_id": row.get("provider_id")},
+    )
+    return row
+
+
 @router.get("/{record_type}/{record_id}/print", response_class=HTMLResponse)
-def export_print(record_type: str, record_id: int, conn=Depends(get_db)):
+def export_print(record_type: str, record_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
     try:
-        row = _load_record(conn, record_type, record_id)
+        row = _load_authorised_record(conn, record_type, record_id, current_user)
         return HTMLResponse(content=render_html_document(record_type, row))
     except HTTPException:
         raise
@@ -79,9 +122,9 @@ def export_print(record_type: str, record_id: int, conn=Depends(get_db)):
 
 
 @router.get("/{record_type}/{record_id}/docx")
-def export_docx(record_type: str, record_id: int, conn=Depends(get_db)):
+def export_docx(record_type: str, record_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
     try:
-        row = _load_record(conn, record_type, record_id)
+        row = _load_authorised_record(conn, record_type, record_id, current_user)
         buf = build_docx_bytes(record_type, row)
         filename = f"{EXPORT_MAP[record_type]['filename']}_{record_id}.docx"
         return StreamingResponse(
@@ -96,9 +139,9 @@ def export_docx(record_type: str, record_id: int, conn=Depends(get_db)):
 
 
 @router.get("/{record_type}/{record_id}/pdf")
-def export_pdf(record_type: str, record_id: int, conn=Depends(get_db)):
+def export_pdf(record_type: str, record_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
     try:
-        row = _load_record(conn, record_type, record_id)
+        row = _load_authorised_record(conn, record_type, record_id, current_user)
         buf = build_pdf_bytes(record_type, row)
         filename = f"{EXPORT_MAP[record_type]['filename']}_{record_id}.pdf"
         return StreamingResponse(

@@ -17,6 +17,7 @@ from repositories.os_repository_utils import (
     table_columns,
     table_exists,
 )
+from services.data_classification_service import classify_document_type
 
 
 DOCUMENT_TABLES = [
@@ -46,6 +47,7 @@ def _normalise_document(row: dict[str, Any], config: dict[str, Any]) -> dict[str
     status = str(row.get("status") or row.get("workflow_status") or "uploaded")
     extracted_text = _first(row, TEXT_COLUMNS, "")
     metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+    classification = row.get("classification") or metadata.get("classification") or classify_document_type(document_type).value
     return {
         "id": f"{config['source_type']}:{raw_id}",
         "source_type": config["source_type"],
@@ -54,6 +56,7 @@ def _normalise_document(row: dict[str, Any], config: dict[str, Any]) -> dict[str
         "original_id": raw_id,
         "title": str(_first(row, TITLE_COLUMNS, "Document")),
         "document_type": document_type,
+        "classification": classification,
         "category": document_type,
         "status": status,
         "young_person_id": str(row["young_person_id"]) if row.get("young_person_id") is not None else None,
@@ -105,6 +108,7 @@ def list_documents(
                 col
                 for col in [
                     "status",
+                    "classification",
                     "workflow_status",
                     "young_person_id",
                     "home_id",
@@ -237,8 +241,10 @@ def create_document_metadata(conn: Any, *, payload: dict[str, Any], current_user
     cols = table_columns(conn, table_name)
     category = payload.get("document_type") or payload.get("category") or payload.get("detected_category") or "other"
     title = payload.get("title") or payload.get("detected_title") or payload.get("file_name") or "Uploaded document"
+    classification = payload.get("classification") or classify_document_type(category, title=title).value
     metadata = {
         **(payload.get("metadata") or {}),
+        "classification": classification,
         "file_url": payload.get("file_url") or payload.get("storage_path"),
         "file_name": payload.get("file_name") or payload.get("filename"),
         "file_size_bytes": payload.get("file_size_bytes"),
@@ -270,6 +276,7 @@ def create_document_metadata(conn: Any, *, payload: dict[str, Any], current_user
         "mime_type": payload.get("mime_type"),
         "file_size_bytes": safe_int(payload.get("file_size_bytes")),
         "document_type": category,
+        "classification": classification,
         "category": category,
         "detected_category": category,
         "status": payload.get("status") or "queued",

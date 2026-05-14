@@ -17,6 +17,7 @@ from repositories.reports_repository import generate_report_draft, get_report, l
 from repositories.workflow_repository import create_workflow_event, get_workflow, list_workflows
 from repositories.workspaces_repository import adult_workspace, get_adult, get_young_person, list_adults, list_young_people, young_person_workspace
 from services.document_extraction_pipeline import extraction_pipeline
+from services.document_security_service import document_security_service
 from services.file_storage import storage_from_env
 from services.os_chronology_service import get_chronology_event, list_chronology
 
@@ -37,6 +38,37 @@ def ok(data: Any, meta: dict[str, Any] | None = None) -> dict[str, Any]:
 
 def _filters(**kwargs: Any) -> dict[str, Any]:
     return {key: value for key, value in kwargs.items() if value not in (None, "")}
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value in (None, ""):
+            return None
+        return int(value)
+    except Exception:
+        return None
+
+
+def _allowed_home_ids(current_user: dict[str, Any]) -> set[int]:
+    raw = current_user.get("allowed_home_ids") or current_user.get("allowedHomeIds") or current_user.get("home_ids") or []
+    values = raw if isinstance(raw, (list, tuple, set)) else [raw]
+    allowed = {_safe_int(item) for item in values}
+    allowed.add(_safe_int(current_user.get("home_id") or current_user.get("homeId")))
+    return {item for item in allowed if item is not None}
+
+
+def _resolve_upload_home(home_id: int | None, current_user: dict[str, Any]) -> int:
+    requested = _safe_int(home_id)
+    allowed = _allowed_home_ids(current_user)
+    role = str(current_user.get("role") or "").lower()
+    provider_role = role in {"admin", "super_admin", "superadmin", "founder", "owner", "provider_admin", "responsible_individual", "ri"}
+    if requested is not None:
+        if requested in allowed or provider_role:
+            return requested
+        raise HTTPException(status_code=403, detail="You do not have access to this home")
+    if len(allowed) == 1:
+        return next(iter(allowed))
+    raise HTTPException(status_code=400, detail="home_id is required for document uploads")
 
 
 def _with_transition(payload: FlexiblePayload | None, transition: str) -> dict[str, Any]:
@@ -267,7 +299,8 @@ async def os_document_upload(
     conn=Depends(get_db),
 ):
     storage = storage_from_env()
-    stored = await storage.save_upload(file, home_id=home_id)
+    resolved_home_id = _resolve_upload_home(home_id, current_user)
+    stored = await storage.save_upload(file, home_id=resolved_home_id)
     text = (extracted_text or "").strip()
     if not text and stored.get("mime_type") == "text/plain":
         text = Path(str(stored["storage_path"])).read_text(encoding="utf-8", errors="ignore")
@@ -278,7 +311,7 @@ async def os_document_upload(
             **stored,
             "title": title or stored.get("file_name"),
             "document_type": document_type,
-            "home_id": home_id,
+            "home_id": resolved_home_id,
             "young_person_id": young_person_id,
             "staff_id": staff_id,
             "text": text or None,
@@ -290,7 +323,11 @@ async def os_document_upload(
             "chronology_links": extraction.chronology_links if extraction else [],
             "safeguarding_flags": extraction.safeguarding_flags if extraction else [],
             "regulation_references": extraction.regulation_references if extraction else [],
-            "metadata": {"storage": stored, "processor": extraction.processor if extraction else "pending"},
+            "metadata": {
+                "storage": stored,
+                "processor": extraction.processor if extraction else "pending",
+                "classification": stored.get("classification"),
+            },
         },
         current_user=current_user,
     )
@@ -301,8 +338,13 @@ async def os_document_upload(
 def os_document_uploaded_file(bucket: str, file_name: str, current_user=Depends(get_current_user)):
     storage = storage_from_env()
     root = storage.root.resolve()
-    target = (root / bucket / file_name).resolve()
-    if not str(target).startswith(str(root)) or not target.exists():
+    bucket_home_id = _safe_int(bucket)
+    if bucket_home_id is None or bucket_home_id not in _allowed_home_ids(current_user):
+        role = str(current_user.get("role") or "").lower()
+        if role not in {"admin", "super_admin", "superadmin", "founder", "owner", "provider_admin", "responsible_individual", "ri"}:
+            raise HTTPException(status_code=403, detail="You do not have access to this document")
+    target = document_security_service.validate_path_under_root(root, root / bucket / file_name)
+    if not target.exists():
         raise HTTPException(status_code=404, detail="Uploaded file not found.")
     return FileResponse(target)
 

@@ -153,6 +153,9 @@ def render_html_document(record_type: str, row: dict):
       </style>
     </head>
     <body>
+      <div style="font-size:12px;font-weight:700;color:#7f1d1d;margin-bottom:12px;">
+        Confidential — authorised children's home record
+      </div>
       <h1>{escape(title)}</h1>
       <div class="meta">{meta_html}</div>
       {sections_html}
@@ -164,6 +167,7 @@ def render_html_document(record_type: str, row: dict):
 def build_docx_bytes(record_type: str, row: dict):
     title, meta, sections = _sections_for_record(record_type, row)
     doc = Document()
+    doc.add_paragraph("Confidential — authorised children's home record")
     doc.add_heading(title, 0)
 
     for m in meta:
@@ -190,6 +194,8 @@ def build_pdf_bytes(record_type: str, row: dict):
     y = height - 50
 
     pdf.setFont("Helvetica-Bold", 18)
+    pdf.drawString(40, y, "Confidential - authorised children's home record")
+    y -= 24
     pdf.drawString(40, y, title)
     y -= 28
 

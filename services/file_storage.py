@@ -7,6 +7,8 @@ from uuid import uuid4
 
 from fastapi import HTTPException, UploadFile
 
+from services.document_security_service import document_security_service, max_upload_bytes
+
 
 ALLOWED_DOCUMENT_MIME_TYPES = {
     "application/pdf",
@@ -32,12 +34,13 @@ class LocalDocumentStorage:
 
     async def save_upload(self, upload: UploadFile, *, home_id: int | None = None) -> dict[str, object]:
         self.validate_upload(upload)
+        security = document_security_service.validate_upload(upload)
         bucket = str(home_id or "shared")
         target_dir = self.root / bucket
         target_dir.mkdir(parents=True, exist_ok=True)
 
         original_name = Path(upload.filename or "document").name
-        suffix = Path(original_name).suffix.lower()
+        suffix = Path(security.safe_filename or original_name).suffix.lower()
         stored_name = f"{uuid4().hex}{suffix}"
         target_path = target_dir / stored_name
 
@@ -45,6 +48,10 @@ class LocalDocumentStorage:
         with target_path.open("wb") as handle:
             while chunk := await upload.read(1024 * 1024):
                 size += len(chunk)
+                if size > max_upload_bytes():
+                    handle.close()
+                    target_path.unlink(missing_ok=True)
+                    raise HTTPException(status_code=413, detail="Uploaded document is too large")
                 handle.write(chunk)
 
         return {
@@ -55,6 +62,7 @@ class LocalDocumentStorage:
             "stored_name": stored_name,
             "mime_type": upload.content_type,
             "file_size_bytes": size,
+            "classification": security.classification.value,
         }
 
 

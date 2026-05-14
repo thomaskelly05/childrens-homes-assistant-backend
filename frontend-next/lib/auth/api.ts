@@ -22,13 +22,25 @@ function detailFromPayload(payload: unknown): AuthErrorDetail | string {
   return 'Authentication request failed'
 }
 
+export function getCsrfToken() {
+  if (typeof document === 'undefined') return ''
+  const cookie = document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('indicare_csrf=') || part.startsWith('__Host-indicare_csrf='))
+  return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : ''
+}
+
 export async function authFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = (init.method || 'GET').toUpperCase()
+  const csrfToken = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) ? getCsrfToken() : ''
   const response = await fetch(path, {
     ...init,
     credentials: 'include',
     cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
       ...init.headers
     }
   })

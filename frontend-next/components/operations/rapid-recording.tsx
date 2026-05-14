@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Mic, Plus, RotateCcw, Save, Sparkles, WifiOff } from 'lucide-react'
 
 import { rapidRecordingTypes } from '@/lib/operations/shift-data'
+import { getSafeDraft, removeSafeDraft, setSafeDraft } from '@/lib/security/safe-storage'
 
 const recentPhrases = [
   'Presented as settled and engaged with routine.',
@@ -32,20 +33,20 @@ export function RapidRecordingDrawer() {
 
   useEffect(() => {
     try {
-      const draft = window.localStorage.getItem('indicare-rapid-recording-draft')
+      const draft = getSafeDraft<{ selected?: string; note?: string; wellbeing?: string }>('indicare-rapid-recording-draft')
       if (!draft) return
-      const parsed = JSON.parse(draft) as { selected?: string; note?: string; wellbeing?: string }
+      const parsed = draft.value
       setSelected(parsed.selected || rapidRecordingTypes[0].id)
       setNote(parsed.note || '')
       setWellbeing(parsed.wellbeing || '')
     } catch {
-      window.localStorage.removeItem('indicare-rapid-recording-draft')
+      removeSafeDraft('indicare-rapid-recording-draft')
     }
   }, [])
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      window.localStorage.setItem('indicare-rapid-recording-draft', JSON.stringify({ selected, note, wellbeing, savedAt: new Date().toISOString() }))
+      setSafeDraft('indicare-rapid-recording-draft', { selected, note, wellbeing }, undefined, 'confidential_child')
     }, 400)
     return () => window.clearTimeout(handle)
   }, [note, selected, wellbeing])
@@ -57,7 +58,7 @@ export function RapidRecordingDrawer() {
     }
     setSaveError(null)
     setSaved(true)
-    window.localStorage.removeItem('indicare-rapid-recording-draft')
+    removeSafeDraft('indicare-rapid-recording-draft')
   }
 
   return (
