@@ -30,12 +30,16 @@ from services.assistant_prompt_policy import assert_safe_assistant_message
 from services.assistant_response_service import AssistantResponseService
 from services.audit_event_service import record_audit_event
 from services.operational_intelligence_service import build_orb_operational_intelligence_snapshot
-from services.orb_mode_router import route_orb_mode
+from services.orb_general_assistant_service import orb_general_assistant_service
+from services.orb_intent_router import route_orb_intent
 from services.orb_persona_policy import persona_instruction, spoken_acknowledgement, transcript_storage_policy
+from services.orb_productivity_service import orb_productivity_service
+from services.orb_tool_router import tools_for_decision
+from services.orb_web_search_service import orb_web_search_service
 
 
 OPENAI_REALTIME_SESSION_URL = "https://api.openai.com/v1/realtime/sessions"
-DEFAULT_REALTIME_MODEL = os.getenv("INDICARE_REALTIME_MODEL", "gpt-4o-realtime-preview")
+DEFAULT_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL") or os.getenv("INDICARE_REALTIME_MODEL", "gpt-4o-realtime-preview")
 ALLOWED_SYNTHETIC_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"}
 WRITE_INTENT_TERMS = {
     "create",
@@ -68,9 +72,32 @@ def _user_id(current_user: dict[str, Any]) -> int | None:
         return None
 
 
+def _enabled(value: str | None, default: bool = True) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on", "enabled"}
+
+
 def _provider_voice(profile: OrbVoiceProfile) -> str:
-    voice = str(profile.provider_voice or "shimmer").strip().lower()
+    configured = os.getenv("ORB_DEFAULT_VOICE") or profile.provider_voice or "shimmer"
+    voice = str(configured).strip().lower()
     return voice if voice in ALLOWED_SYNTHETIC_VOICES else "shimmer"
+
+
+def _public_openai_session_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return only client-safe ephemeral realtime fields."""
+
+    session = dict(payload or {})
+    for key in ("api_key", "OPENAI_API_KEY", "authorization", "Authorization"):
+        session.pop(key, None)
+    client_secret = session.get("client_secret")
+    if isinstance(client_secret, dict):
+        value = client_secret.get("value")
+        session["client_secret"] = {
+            "value": value,
+            "expires_at": client_secret.get("expires_at"),
+        }
+    return session
 
 
 def _assistant_context_from_orb(context: OrbContext, decision: OrbModeDecision, conversation_id: str | None) -> dict[str, Any]:
@@ -163,10 +190,10 @@ class OpenAIRealtimeVoiceProvider:
     name = "openai_realtime"
 
     def configured(self) -> bool:
-        return bool(os.getenv("OPENAI_API_KEY"))
+        return _enabled(os.getenv("ORB_REALTIME_ENABLED"), default=True) and bool(os.getenv("OPENAI_API_KEY"))
 
     async def start_session(self, *, request: OrbSessionStartRequest, decision: OrbModeDecision, current_user: dict[str, Any]) -> dict[str, Any]:
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY") if _enabled(os.getenv("ORB_REALTIME_ENABLED"), default=True) else None
         body = {
             "model": DEFAULT_REALTIME_MODEL,
             "voice": _provider_voice(request.voice_profile),
@@ -181,7 +208,13 @@ class OpenAIRealtimeVoiceProvider:
             },
         }
         if not api_key:
-            return {"provider": self.name, "configured": False, "env_gated": True, "request_body": body}
+            return {
+                "provider": self.name,
+                "configured": False,
+                "env_gated": True,
+                "unavailable_reason": "Realtime voice unavailable: OPENAI_API_KEY is missing or ORB_REALTIME_ENABLED=false.",
+                "request_body": body,
+            }
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
                 OPENAI_REALTIME_SESSION_URL,
@@ -193,8 +226,20 @@ class OpenAIRealtimeVoiceProvider:
                 json=body,
             )
         if response.status_code >= 400:
-            return {"provider": self.name, "configured": True, "error": "realtime_session_failed", "status": response.status_code}
-        return {"provider": self.name, "configured": True, "session": response.json(), "model": DEFAULT_REALTIME_MODEL, "voice": body["voice"]}
+            return {
+                "provider": self.name,
+                "configured": True,
+                "error": "realtime_session_failed",
+                "status": response.status_code,
+                "unavailable_reason": "Realtime voice unavailable: OpenAI realtime session could not be created.",
+            }
+        return {
+            "provider": self.name,
+            "configured": True,
+            "session": _public_openai_session_payload(response.json()),
+            "model": DEFAULT_REALTIME_MODEL,
+            "voice": body["voice"],
+        }
 
     async def event(self, *, session_id: str, event: OrbSessionEventRequest) -> dict[str, Any]:
         return {"provider": self.name, "accepted": True, "event_type": event.type, "session_id": session_id}
@@ -243,6 +288,11 @@ class OrbVoiceSessionService:
         }
 
     def _provider(self, requested: str | None = None) -> VoiceProvider:
+        requested = requested or os.getenv("ORB_VOICE_PROVIDER")
+        if requested == "openai":
+            requested = "openai_realtime"
+        if requested == "mock":
+            requested = "mock_voice"
         if requested and requested in self.providers:
             provider = self.providers[requested]
             if provider.configured() or requested == "mock_voice":
@@ -258,7 +308,7 @@ class OrbVoiceSessionService:
 
     async def start_session(self, *, request: OrbSessionStartRequest, current_user: dict[str, Any]) -> OrbSessionStartResponse:
         session_id = _id("orb_session")
-        decision = route_orb_mode(message=None, current_user=current_user, selected_mode=request.selected_mode, context=request.context)
+        decision = route_orb_intent(message=None, current_user=current_user, selected_mode=request.selected_mode, context=request.context)
         provider = self._provider(request.provider)
         provider_session = await provider.start_session(request=request, decision=decision, current_user=current_user)
         state: OrbState = "private" if request.preferences.private_mode else request.current_state
@@ -295,6 +345,7 @@ class OrbVoiceSessionService:
                 "mode": decision.model_dump(),
                 "workspace_context": request.workspace_context,
                 "provider": provider.name,
+                "provider_configured": provider.configured(),
                 "raw_audio_stored": False,
                 "transcript_policy": transcript_storage_policy(
                     request.preferences.do_not_store_transcript,
@@ -315,6 +366,11 @@ class OrbVoiceSessionService:
                 "transport": "webrtc" if provider.name == "openai_realtime" and provider.configured() else "mock_text_voice",
                 "supports_interruptions": True,
                 "fallback_text_mode": True,
+                "supports_microphone_input": provider.name == "openai_realtime" and provider.configured(),
+                "supports_audio_playback": provider.name == "openai_realtime" and provider.configured(),
+                "supports_partial_transcript": True,
+                "reconnect_supported": True,
+                "status": "available" if provider.name == "openai_realtime" and provider.configured() else "Realtime voice unavailable; text/mock voice fallback is active.",
                 "wake_phrase_foundation": "Hey IndiCare placeholder; real wake-word detection is not enabled server-side.",
             },
             transcript_storage_policy=transcript_storage_policy(
@@ -335,7 +391,7 @@ class OrbVoiceSessionService:
         context = event.context or session.context
         selected_mode = event.selected_mode or session.selected_mode
         message = event.text or ""
-        decision = route_orb_mode(message=message, current_user=current_user, selected_mode=selected_mode, context=context)
+        decision = route_orb_intent(message=message, current_user=current_user, selected_mode=selected_mode, context=context)
         session.mode_decision = decision
         session.context = context
         session.selected_mode = selected_mode
@@ -378,19 +434,42 @@ class OrbVoiceSessionService:
             )
         session.state = "thinking"
 
-        shared_context = build_shared_assistant_context(
-            current_user=current_user,
-            requested_context=_assistant_context_from_orb(context, decision, session.id),
-            mode=decision.assistant_mode,
-            conversation_id=session.id,
-        )
-        assistant_data = self.assistant_response_service.query(
-            conn,
-            message=safe_message,
-            context=shared_context,
-            current_user=current_user,
-        )
-        citations = list(assistant_data.get("citations") or [])
+        tools_used = tools_for_decision(decision, safe_message)
+        history = [
+            {"role": entry.role, "content": entry.content}
+            for entry in session.transcript
+            if entry.role in {"user", "assistant"} and not entry.partial
+        ][-8:]
+
+        if decision.care_scope_required:
+            shared_context = build_shared_assistant_context(
+                current_user=current_user,
+                requested_context=_assistant_context_from_orb(context, decision, session.id),
+                mode=decision.assistant_mode,
+                conversation_id=session.id,
+            )
+            assistant_data = self.assistant_response_service.query(
+                conn,
+                message=safe_message,
+                context=shared_context,
+                current_user=current_user,
+            )
+        elif decision.brain == "web_research_brain":
+            assistant_data = await orb_web_search_service.answer(safe_message)
+        elif decision.brain == "productivity_brain":
+            assistant_data = await orb_productivity_service.answer(
+                safe_message,
+                history=history,
+                detail=session.preferences.response_detail,
+            )
+        else:
+            assistant_data = await orb_general_assistant_service.answer(
+                safe_message,
+                history=history,
+                detail=session.preferences.response_detail,
+            )
+
+        citations = list(assistant_data.get("citations") or assistant_data.get("sources") or [])
         related_records = list(assistant_data.get("related_records") or [])
         session.citations_used.extend(citations[:12])
         session.related_records.extend(related_records[:12])
@@ -398,7 +477,7 @@ class OrbVoiceSessionService:
         answer = assistant_data.get("answer") or "I do not have enough evidence in the records to answer that."
         answer = f"{spoken_acknowledgement(decision, safe_message)}\n\n{answer}"
         pending_draft: OrbVoiceDraft | None = None
-        if _write_intent(safe_message):
+        if decision.care_scope_required and _write_intent(safe_message):
             pending_draft = OrbVoiceDraft(
                 id=_id("orb_draft"),
                 draft_type=_draft_type(safe_message),
@@ -421,6 +500,7 @@ class OrbVoiceSessionService:
             created_at=_now(),
             state="speaking" if not pending_draft else "safeguarding_sensitive" if "safeguarding_sensitive" in decision.safety_flags else "speaking",
             citations=citations,
+            tools_used=tools_used,
             mode_decision=decision,
             draft=pending_draft,
         )
@@ -440,6 +520,7 @@ class OrbVoiceSessionService:
                 "workspace_context": context.model_dump(),
                 "records_retrieved": related_records[:30],
                 "citations_used": citations[:30],
+                "tools_used": tools_used,
                 "pending_write_confirmation": pending_draft.model_dump() if pending_draft else None,
                 "raw_audio_stored": False,
                 "transcript_stored": not session.preferences.do_not_store_transcript,
@@ -456,6 +537,7 @@ class OrbVoiceSessionService:
             suggested_actions=list(assistant_data.get("suggested_actions") or []),
             evidence_gaps=list(assistant_data.get("evidence_gaps") or []),
             regulatory_links=list(assistant_data.get("regulatory_links") or []),
+            tools_used=tools_used,
             operational_insights=operational_insights,
             provider_event=provider_event,
         )
@@ -531,6 +613,7 @@ class OrbVoiceSessionService:
         suggested_actions: list[dict[str, Any]] | None = None,
         evidence_gaps: list[dict[str, Any]] | None = None,
         regulatory_links: list[dict[str, Any]] | None = None,
+        tools_used: list[dict[str, Any]] | None = None,
         operational_insights: dict[str, Any] | None = None,
         provider_event: dict[str, Any] | None = None,
     ) -> OrbSessionEventResponse:
@@ -546,6 +629,7 @@ class OrbVoiceSessionService:
             suggested_actions=suggested_actions or [],
             evidence_gaps=evidence_gaps or [],
             regulatory_links=regulatory_links or [],
+            tools_used=tools_used or [],
             operational_insights=operational_insights or {},
             provider_event=provider_event or {},
         )

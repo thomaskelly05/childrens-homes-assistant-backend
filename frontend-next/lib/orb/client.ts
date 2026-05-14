@@ -33,7 +33,7 @@ async function parseOrbResponse<T>(response: Response): Promise<T> {
 }
 
 export async function startOrbSession(request: OrbSessionStartRequest, signal?: AbortSignal): Promise<OrbSessionStartData> {
-  const response = await fetch(orbUrl('/orb/session/start'), {
+  const response = await fetch(orbUrl('/orb/realtime/session'), {
     method: 'POST',
     credentials: 'include',
     cache: 'no-store',
@@ -57,7 +57,7 @@ export async function sendOrbEvent(sessionId: string, request: OrbSessionEventRe
 }
 
 export async function interruptOrbSession(sessionId: string): Promise<{ session_id: string; state: string; message: string }> {
-  const response = await fetch(orbUrl(`/orb/session/${encodeURIComponent(sessionId)}/interrupt`), {
+  const response = await fetch(orbUrl(`/orb/realtime/session/${encodeURIComponent(sessionId)}/interrupt`), {
     method: 'POST',
     credentials: 'include',
     cache: 'no-store'
@@ -66,7 +66,7 @@ export async function interruptOrbSession(sessionId: string): Promise<{ session_
 }
 
 export async function endOrbSession(sessionId: string): Promise<OrbSessionSummary> {
-  const response = await fetch(orbUrl(`/orb/session/${encodeURIComponent(sessionId)}/end`), {
+  const response = await fetch(orbUrl(`/orb/realtime/session/${encodeURIComponent(sessionId)}/end`), {
     method: 'POST',
     credentials: 'include',
     cache: 'no-store'
@@ -75,7 +75,7 @@ export async function endOrbSession(sessionId: string): Promise<OrbSessionSummar
 }
 
 export async function fetchOrbTranscript(sessionId: string): Promise<{ session_id: string; transcript: OrbTranscriptEntry[]; storage_policy: Record<string, unknown> }> {
-  const response = await fetch(orbUrl(`/orb/session/${encodeURIComponent(sessionId)}/transcript`), {
+  const response = await fetch(orbUrl(`/orb/realtime/session/${encodeURIComponent(sessionId)}/transcript`), {
     credentials: 'include',
     cache: 'no-store'
   })

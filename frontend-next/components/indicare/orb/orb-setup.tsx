@@ -11,9 +11,9 @@ import { defaultOrbPreferences, defaultOrbVoiceProfile } from '@/lib/orb/types'
 
 const setupPhrases = [
   'Hey IndiCare, start my shift.',
-  'Hey IndiCare, create a daily note.',
-  'Hey IndiCare, summarise Jamie\'s chronology.',
-  'Hey IndiCare, what needs manager review?'
+  'Orb, create a daily note.',
+  'Orb, summarise Jamie\'s chronology.',
+  'Orb, what would Ofsted challenge?'
 ]
 
 export function OrbSetup({ compact = false }: { compact?: boolean }) {
@@ -34,7 +34,11 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
   }
 
   function save() {
-    controller.updatePreferences(preferences)
+    controller.updatePreferences({
+      ...preferences,
+      voice_style: voiceProfile.voice_style || preferences.voice_style,
+      speaking_speed: voiceProfile.speaking_speed || voiceProfile.speed || preferences.speaking_speed
+    })
     setSaved(true)
   }
 
@@ -46,7 +50,10 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-600">Orb setup</p>
             <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">Set up Orb powered by IndiCare</h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-              Orb is the calm voice and presence layer for IndiCare OS. It uses the existing assistant core, RBAC, retrieval and citations. Raw audio is not stored by default.
+              Orb is the calm voice and presence layer for IndiCare OS: a sector-specific assistant for children&apos;s homes and an everyday assistant for writing, planning and general questions. It uses RBAC-scoped retrieval and citations for care records, and live tools for current facts when configured.
+            </p>
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
+              Wake word is a foundation only. Orb is activated by click/tap, shortcut or push-to-talk until a real always-on wake-word provider is implemented.
             </p>
           </div>
           <OrbVisual state={microphone === 'granted' ? 'listening' : 'idle'} />
@@ -57,12 +64,13 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
         <section className="rounded-[28px] border border-slate-200 bg-white p-6">
           <div className="flex items-center gap-3">
             <Lock className="h-5 w-5 text-blue-600" aria-hidden />
-            <h2 className="text-xl font-black text-slate-950">1. Privacy and safety</h2>
+            <h2 className="text-xl font-black text-slate-950">1. Privacy and recording policy</h2>
           </div>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
             <li>Orb cites records and says when there is not enough evidence.</li>
             <li>Orb drafts before writing and asks before saving records/actions.</li>
             <li>Safeguarding-sensitive prompts are handled with caution and manager escalation prompts.</li>
+            <li>Raw audio is not stored by default. Transcript storage follows the preference below.</li>
           </ul>
           <label className="mt-5 flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
             Do not store transcript for new sessions
@@ -93,7 +101,7 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
         <section className="rounded-[28px] border border-slate-200 bg-white p-6">
           <div className="flex items-center gap-3">
             <Volume2 className="h-5 w-5 text-blue-600" aria-hidden />
-            <h2 className="text-xl font-black text-slate-950">3. Voice profile</h2>
+            <h2 className="text-xl font-black text-slate-950">3. Choose voice profile</h2>
           </div>
           <div className="mt-4 rounded-2xl bg-blue-50 p-4 text-sm leading-6 text-blue-900">
             Default: {voiceProfile.name}, British accent, calm/warm/professional, medium speed. Synthetic provider voices only; Orb does not clone real people.
@@ -111,18 +119,45 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
               <option value="quiet">Quiet mode</option>
             </select>
           </label>
+          <label className="mt-4 block text-sm font-black text-slate-700">
+            Speaking speed
+            <select
+              value={voiceProfile.speaking_speed || voiceProfile.speed}
+              onChange={(event) => {
+                setVoiceProfile((current) => ({ ...current, speaking_speed: event.target.value, speed: event.target.value }))
+                updatePreference('speaking_speed', event.target.value)
+              }}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
+            >
+              <option value="slow">Slow</option>
+              <option value="medium">Medium</option>
+              <option value="fast">Fast</option>
+            </select>
+          </label>
         </section>
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-6">
           <div className="flex items-center gap-3">
             <Keyboard className="h-5 w-5 text-blue-600" aria-hidden />
-            <h2 className="text-xl font-black text-slate-950">4. Activation</h2>
+            <h2 className="text-xl font-black text-slate-950">4. Test Orb</h2>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-slate-600">Use the global Orb button to test a short spoken or typed turn. If realtime voice is unavailable, Orb will show text fallback clearly.</p>
+          <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm font-bold text-blue-900">
+            Say: &quot;Orb, tell me about IndiCare.&quot;
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-slate-200 bg-white p-6">
+          <div className="flex items-center gap-3">
+            <Keyboard className="h-5 w-5 text-blue-600" aria-hidden />
+            <h2 className="text-xl font-black text-slate-950">5. Choose activation</h2>
           </div>
           <div className="mt-4 space-y-3">
             {([
-              ['press_to_talk', 'Press-to-talk'],
-              ['hey_indicare_placeholder', '"Hey IndiCare" foundation placeholder'],
-              ['keyboard_shortcut', 'Keyboard shortcut']
+              ['click_tap_orb', 'Click/tap Orb'],
+              ['push_to_talk', 'Push-to-talk'],
+              ['keyboard_shortcut', 'Keyboard shortcut'],
+              ['wake_word_placeholder', '"Hey IndiCare" wake-word foundation']
             ] as const).map(([value, label]) => (
               <label key={value} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
                 {label}
@@ -141,7 +176,7 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
       <section className="rounded-[28px] border border-slate-200 bg-white p-6">
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-blue-600" aria-hidden />
-          <h2 className="text-xl font-black text-slate-950">5. Test phrases</h2>
+          <h2 className="text-xl font-black text-slate-950">6. Practice phrases</h2>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {setupPhrases.map((phrase) => (
@@ -153,13 +188,15 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
       <section className="rounded-[28px] border border-slate-200 bg-white p-6">
         <div className="flex items-center gap-3">
           <ShieldCheck className="h-5 w-5 text-blue-600" aria-hidden />
-          <h2 className="text-xl font-black text-slate-950">6. Preferences</h2>
+          <h2 className="text-xl font-black text-slate-950">7. Preferences and save</h2>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {([
             ['concise_answers', 'Concise answers'],
             ['read_citations_aloud', 'Read citations aloud'],
             ['confirm_before_writing_records', 'Confirm before writing records'],
+            ['quiet_mode', 'Quiet mode'],
+            ['inspection_challenge_mode', 'Inspection challenge mode'],
             ['safeguarding_sensitive_mode', 'Safeguarding-sensitive mode']
           ] as const).map(([key, label]) => (
             <label key={key} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
@@ -173,6 +210,18 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
             </label>
           ))}
         </div>
+        <label className="mt-4 block text-sm font-black text-slate-700">
+          Default response detail
+          <select
+            value={preferences.response_detail}
+            onChange={(event) => updatePreference('response_detail', event.target.value as OrbPreferences['response_detail'])}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
+          >
+            <option value="concise">Concise</option>
+            <option value="balanced">Balanced</option>
+            <option value="detailed">Detailed when useful</option>
+          </select>
+        </label>
         <div className="mt-5 flex flex-wrap gap-3">
           <button type="button" onClick={save} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">
             Save Orb preferences

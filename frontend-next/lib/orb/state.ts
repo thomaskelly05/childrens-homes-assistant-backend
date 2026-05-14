@@ -56,6 +56,9 @@ export class OrbRuntimeController {
   private listeners = new Set<(snapshot: OrbRuntimeSnapshot) => void>()
   private stream: MediaStream | null = null
   private abortController: AbortController | null = null
+  private peerConnection: RTCPeerConnection | null = null
+  private dataChannel: RTCDataChannel | null = null
+  private audioElement: HTMLAudioElement | null = null
 
   constructor(options: {
     selectedMode?: OrbSelectedMode
@@ -152,6 +155,7 @@ export class OrbRuntimeController {
         loading: false,
         error: undefined
       }
+      await this.connectRealtimeIfAvailable(data)
     } catch (error) {
       this.snapshot = { ...this.snapshot, state: 'error', loading: false, connected: false, error: error instanceof Error ? error.message : 'Orb session failed.' }
     } finally {
@@ -194,6 +198,8 @@ export class OrbRuntimeController {
   }
 
   async interrupt() {
+    this.stopAssistantAudio()
+    this.sendRealtimeEvent({ type: 'response.cancel' })
     if (!this.snapshot.sessionId) {
       this.snapshot = { ...this.snapshot, state: 'interrupted' }
       this.emit()
@@ -231,6 +237,7 @@ export class OrbRuntimeController {
     }
     this.stream?.getTracks().forEach((track) => track.stop())
     this.stream = null
+    this.closeRealtime()
     this.snapshot = { ...this.snapshot, sessionId: null, state: 'idle', connected: false, loading: false }
     this.emit()
   }
@@ -250,6 +257,153 @@ export class OrbRuntimeController {
 
   private emit() {
     this.listeners.forEach((listener) => listener(this.snapshot))
+  }
+
+  private async connectRealtimeIfAvailable(data: OrbSessionStartData) {
+    const realtime = data.realtime || {}
+    if (realtime.transport !== 'webrtc' || data.provider !== 'openai_realtime' || !data.provider_configured) {
+      const status = typeof realtime.status === 'string' ? realtime.status : 'Realtime voice unavailable; text fallback is active.'
+      this.snapshot = { ...this.snapshot, error: status.includes('unavailable') ? status : this.snapshot.error }
+      return
+    }
+
+    const providerSession = data.provider_session as {
+      session?: { client_secret?: { value?: string }, model?: string },
+      model?: string
+    }
+    const ephemeralKey = providerSession.session?.client_secret?.value
+    const model = providerSession.model || providerSession.session?.model
+    if (!ephemeralKey || !model) {
+      this.snapshot = { ...this.snapshot, error: 'Realtime voice unavailable; ephemeral client session was not returned. Text fallback is active.' }
+      return
+    }
+
+    if (!this.stream) {
+      const micReady = await this.requestMicrophone()
+      if (!micReady || !this.stream) {
+        this.snapshot = { ...this.snapshot, error: 'Realtime voice unavailable until microphone permission is granted. Text fallback is active.' }
+        return
+      }
+    }
+
+    if (typeof RTCPeerConnection === 'undefined') {
+      this.snapshot = { ...this.snapshot, error: 'Realtime voice unavailable in this browser. Text fallback is active.' }
+      return
+    }
+
+    try {
+      this.closeRealtime()
+      const peer = new RTCPeerConnection()
+      this.peerConnection = peer
+      this.stream.getAudioTracks().forEach((track) => peer.addTrack(track, this.stream as MediaStream))
+      peer.ontrack = (event) => {
+        const [remoteStream] = event.streams
+        if (!remoteStream) return
+        const audio = this.audioElement || new Audio()
+        audio.autoplay = true
+        audio.srcObject = remoteStream
+        this.audioElement = audio
+        void audio.play().catch(() => undefined)
+      }
+      peer.onconnectionstatechange = () => {
+        if (['failed', 'disconnected', 'closed'].includes(peer.connectionState)) {
+          this.snapshot = { ...this.snapshot, connected: false, error: 'Realtime voice disconnected. Text fallback is active; reopen Orb to reconnect.' }
+          this.emit()
+        }
+      }
+      const channel = peer.createDataChannel('oai-events')
+      this.dataChannel = channel
+      channel.onmessage = (event) => this.handleRealtimeEvent(event.data)
+      channel.onopen = () => {
+        this.snapshot = { ...this.snapshot, connected: true, error: undefined }
+        this.emit()
+      }
+      const offer = await peer.createOffer()
+      await peer.setLocalDescription(offer)
+      const response = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${ephemeralKey}`,
+          'Content-Type': 'application/sdp',
+          'OpenAI-Beta': 'realtime=v1'
+        },
+        body: offer.sdp || ''
+      })
+      if (!response.ok) throw new Error(`OpenAI realtime WebRTC failed (${response.status})`)
+      const answer = { type: 'answer' as RTCSdpType, sdp: await response.text() }
+      await peer.setRemoteDescription(answer)
+    } catch (error) {
+      this.closeRealtime()
+      this.snapshot = {
+        ...this.snapshot,
+        connected: false,
+        error: error instanceof Error ? `${error.message}. Text fallback is active.` : 'Realtime voice unavailable. Text fallback is active.'
+      }
+    }
+  }
+
+  private handleRealtimeEvent(raw: unknown) {
+    let event: Record<string, unknown>
+    try {
+      event = JSON.parse(String(raw)) as Record<string, unknown>
+    } catch {
+      return
+    }
+    const type = String(event.type || '')
+    if (type === 'input_audio_buffer.speech_started') {
+      if (this.snapshot.state === 'speaking' || this.snapshot.loading) {
+        void this.interrupt()
+      } else {
+        this.snapshot = { ...this.snapshot, state: 'listening' }
+        this.emit()
+      }
+      return
+    }
+    if (type === 'response.created') {
+      this.snapshot = { ...this.snapshot, state: 'thinking' }
+      this.emit()
+      return
+    }
+    if (type === 'response.audio_transcript.delta') {
+      const delta = typeof event.delta === 'string' ? event.delta : ''
+      this.snapshot = { ...this.snapshot, state: 'speaking', partialTranscript: `${this.snapshot.partialTranscript}${delta}` }
+      this.emit()
+      return
+    }
+    if (type === 'response.done') {
+      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
+      this.emit()
+      return
+    }
+    if (type === 'error') {
+      this.snapshot = { ...this.snapshot, state: 'error', error: 'Realtime voice reported an error. Text fallback is active.' }
+      this.emit()
+    }
+  }
+
+  private sendRealtimeEvent(payload: Record<string, unknown>) {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') return
+    this.dataChannel.send(JSON.stringify(payload))
+  }
+
+  private stopAssistantAudio() {
+    if (!this.audioElement) return
+    try {
+      this.audioElement.pause()
+    } catch {
+      // Ignore browser media edge cases; backend interruption still proceeds.
+    }
+  }
+
+  private closeRealtime() {
+    this.dataChannel?.close()
+    this.dataChannel = null
+    this.peerConnection?.close()
+    this.peerConnection = null
+    if (this.audioElement) {
+      this.audioElement.srcObject = null
+      this.audioElement = null
+    }
   }
 }
 

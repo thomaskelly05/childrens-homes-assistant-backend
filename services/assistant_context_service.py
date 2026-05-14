@@ -102,9 +102,6 @@ def build_shared_assistant_context(
     home_id = _safe_context_int(raw_context.get("home_id") or current_user.get("home_id") or current_user.get("homeId"))
     provider_id = _safe_context_int(current_user.get("provider_id") or current_user.get("providerId") or raw_context.get("provider_id"))
     allowed_home_ids = current_allowed_home_ids({**current_user, "home_id": current_user.get("home_id") or current_user.get("homeId")})
-    if home_id is not None and home_id not in allowed_home_ids:
-        allowed_home_ids.append(home_id)
-        allowed_home_ids.sort()
 
     assistant_mode = str(mode or raw_context.get("assistant_mode") or "embedded").strip().lower()
     if assistant_mode not in AssistantMode.__args__:  # type: ignore[attr-defined]

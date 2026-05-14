@@ -1,7 +1,15 @@
 import type { AssistantCitation, AssistantContext, AssistantEvidenceGap, AssistantRegulatoryLink, AssistantRelatedRecord, AssistantSuggestedAction } from '@/lib/assistant-core/types'
+import type { OrbToolManifestItem } from './tool-types'
 
-export type OrbBrain = 'care_assistant' | 'inspector'
-export type OrbSelectedMode = 'auto' | 'care' | 'inspector'
+export type OrbBrain =
+  | 'care_brain'
+  | 'inspector_brain'
+  | 'general_assistant_brain'
+  | 'web_research_brain'
+  | 'productivity_brain'
+  | 'report_writer_brain'
+  | 'voice_recording_brain'
+export type OrbSelectedMode = 'auto' | 'care' | 'inspector' | 'general'
 export type OrbState =
   | 'idle'
   | 'listening'
@@ -16,7 +24,7 @@ export type OrbState =
   | 'inspection'
   | 'error'
 
-export type OrbActivationMode = 'press_to_talk' | 'hey_indicare_placeholder' | 'keyboard_shortcut'
+export type OrbActivationMode = 'click_tap_orb' | 'push_to_talk' | 'press_to_talk' | 'hey_indicare_placeholder' | 'wake_word_placeholder' | 'keyboard_shortcut'
 
 export type OrbVoiceProfile = {
   name: string
@@ -24,6 +32,7 @@ export type OrbVoiceProfile = {
   accent: string
   tone: string
   speed: string
+  speaking_speed?: string
   expressiveness: string
   use_case: string
   voice_style?: string | null
@@ -37,16 +46,23 @@ export type OrbVoiceProfile = {
 export type OrbPreferences = {
   activation_mode: OrbActivationMode
   wake_phrase: string
+  voice_style: string
+  speaking_speed: string
+  response_detail: 'concise' | 'balanced' | 'detailed'
   concise_answers: boolean
   read_citations_aloud: boolean
   show_citations: boolean
   confirm_before_writing_records: boolean
+  quiet_mode: boolean
+  inspection_challenge_mode: boolean
   safeguarding_sensitive_mode: boolean
   private_mode: boolean
   do_not_store_transcript: boolean
   transcript_retention_days: number | null
   quiet_hours: Record<string, unknown>
   keyboard_shortcut: string
+  default_home_id?: number | null
+  default_shift_context?: Record<string, unknown>
 }
 
 export type OrbContext = {
@@ -59,6 +75,11 @@ export type OrbContext = {
   home_id?: number | null
   home_scope?: Record<string, unknown>
   current_record_summary?: string | null
+  current_child?: Record<string, unknown>
+  current_shift?: Record<string, unknown>
+  current_task?: Record<string, unknown>
+  session_memory?: Record<string, unknown>
+  operational_memory?: Record<string, unknown>
   assistant_context?: AssistantContext | Record<string, unknown>
 }
 
@@ -70,6 +91,11 @@ export type OrbModeDecision = {
   safety_flags: string[]
   requires_citations: boolean
   requires_confirmation_before_write: boolean
+  requires_external_tool: boolean
+  allow_general_knowledge: boolean
+  care_scope_required: boolean
+  tool_categories: string[]
+  memory_updates: Record<string, unknown>
   selected_mode: OrbSelectedMode
 }
 
@@ -96,6 +122,7 @@ export type OrbTranscriptEntry = {
   partial: boolean
   interrupted: boolean
   citations: AssistantCitation[]
+  tools_used?: OrbToolManifestItem[]
   mode_decision?: OrbModeDecision | null
   draft?: OrbVoiceDraft | null
 }
@@ -168,6 +195,7 @@ export type OrbSessionEventData = {
   suggested_actions: AssistantSuggestedAction[]
   evidence_gaps: AssistantEvidenceGap[]
   regulatory_links: AssistantRegulatoryLink[]
+  tools_used: OrbToolManifestItem[]
   operational_insights: Record<string, unknown>
   provider_event: Record<string, unknown>
 }
@@ -202,6 +230,7 @@ export const defaultOrbVoiceProfile: OrbVoiceProfile = {
   accent: 'British',
   tone: 'calm, warm, professional',
   speed: 'medium',
+  speaking_speed: 'medium',
   expressiveness: 'natural but not theatrical',
   use_case: "children's home operational support",
   formality: 'professional',
@@ -212,17 +241,24 @@ export const defaultOrbVoiceProfile: OrbVoiceProfile = {
 }
 
 export const defaultOrbPreferences: OrbPreferences = {
-  activation_mode: 'press_to_talk',
+  activation_mode: 'click_tap_orb',
   wake_phrase: 'Hey IndiCare',
+  voice_style: 'calm_operational',
+  speaking_speed: 'medium',
+  response_detail: 'concise',
   concise_answers: true,
   read_citations_aloud: false,
   show_citations: true,
   confirm_before_writing_records: true,
+  quiet_mode: false,
+  inspection_challenge_mode: false,
   safeguarding_sensitive_mode: true,
   private_mode: false,
   do_not_store_transcript: false,
   transcript_retention_days: 30,
   quiet_hours: {},
-  keyboard_shortcut: 'Ctrl+Shift+Space'
+  keyboard_shortcut: 'Ctrl+Shift+Space',
+  default_home_id: null,
+  default_shift_context: {}
 }
 

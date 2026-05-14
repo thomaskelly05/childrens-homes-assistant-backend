@@ -32,6 +32,22 @@ async def start_orb_session(
         return _error_response(500, "orb_session_start_failed", "Orb session could not be started.", str(exc))
 
 
+@router.post("/realtime/session")
+async def create_orb_realtime_session(
+    payload: OrbSessionStartRequest,
+    current_user=Depends(require_assistant_access),
+):
+    """Create a client-safe Orb realtime session.
+
+    When OpenAI realtime is configured, the response includes only the OpenAI
+    ephemeral client secret/session payload, never the server OPENAI_API_KEY.
+    If realtime is disabled or unconfigured, the mock/text fallback remains
+    available and the response states that clearly.
+    """
+
+    return await start_orb_session(payload=payload, current_user=current_user)
+
+
 @router.post("/session/{session_id}/event")
 async def orb_session_event(
     session_id: str,
@@ -67,6 +83,14 @@ async def interrupt_orb_session(
         raise HTTPException(status_code=404, detail="Orb session not found.")
 
 
+@router.post("/realtime/session/{session_id}/interrupt")
+async def interrupt_orb_realtime_session(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    return await interrupt_orb_session(session_id=session_id, current_user=current_user)
+
+
 @router.post("/session/{session_id}/end")
 async def end_orb_session(
     session_id: str,
@@ -79,6 +103,14 @@ async def end_orb_session(
         raise HTTPException(status_code=404, detail="Orb session not found.")
 
 
+@router.post("/realtime/session/{session_id}/end")
+async def end_orb_realtime_session(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    return await end_orb_session(session_id=session_id, current_user=current_user)
+
+
 @router.get("/session/{session_id}/transcript")
 async def orb_session_transcript(
     session_id: str,
@@ -89,6 +121,14 @@ async def orb_session_transcript(
         return {"success": True, "data": response.model_dump()}
     except KeyError:
         raise HTTPException(status_code=404, detail="Orb session not found.")
+
+
+@router.get("/realtime/session/{session_id}/transcript")
+async def orb_realtime_session_transcript(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    return await orb_session_transcript(session_id=session_id, current_user=current_user)
 
 
 @router.get("/session/{session_id}/summary")
@@ -111,6 +151,15 @@ async def orb_config(current_user=Depends(require_assistant_access)):
             "name": "Orb powered by IndiCare",
             "wake_phrase": "Hey IndiCare",
             "wake_phrase_status": "foundation_placeholder",
+            "brains": [
+                "care_brain",
+                "inspector_brain",
+                "general_assistant_brain",
+                "web_research_brain",
+                "productivity_brain",
+                "report_writer_brain",
+                "voice_recording_brain",
+            ],
             "default_voice_profile": {
                 "name": "IndiCare British Female",
                 "accent": "British",
@@ -132,6 +181,15 @@ async def orb_config(current_user=Depends(require_assistant_access)):
                 "inspection",
             ],
             "provider_abstraction": ["openai_realtime", "mock_voice", "future_provider_interface"],
+            "required_env": [
+                "OPENAI_API_KEY",
+                "ORB_VOICE_PROVIDER=openai|mock",
+                "ORB_DEFAULT_VOICE=shimmer",
+                "ORB_REALTIME_ENABLED=true|false",
+                "ORB_WEB_SEARCH_ENDPOINT",
+                "ORB_WEB_SEARCH_API_KEY",
+                "OPENWEATHER_API_KEY",
+            ],
             "raw_audio_stored": False,
             "secret_keys_exposed_to_client": False,
         },

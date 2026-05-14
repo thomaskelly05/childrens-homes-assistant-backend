@@ -10,7 +10,7 @@ const foundations = [
   ['Wake phrase', 'Hey IndiCare placeholder foundation', 'Foundation'],
   ['Record writing safety', 'Draft preview and confirmation before save', 'Operational'],
   ['Transcript privacy', 'No raw audio storage by default', 'Operational'],
-  ['Two brains', 'Care Assistant and Inspector routing', 'Operational']
+  ['Seven brains', 'Care, Inspector, General, Web Research, Productivity, Report Writer and Voice Recording routing', 'Operational']
 ]
 
 const conceptCards: Array<[LucideIcon, string, string]> = [
