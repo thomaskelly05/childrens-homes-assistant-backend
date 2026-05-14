@@ -17,6 +17,7 @@ function routeFromPage(path) {
   const route = relative(appDir, path)
     .replace(/\/page\.tsx$/, '')
     .replace(/\/page\.ts$/, '')
+    .replace(/^page\.(tsx|ts)$/, '')
     .replace(/\\/g, '/')
   return route === '' ? '/' : `/${route}`
 }
@@ -46,6 +47,8 @@ for (const file of sourceFiles) {
   for (const match of text.matchAll(literalHref)) {
     const href = match[1]
     if (!href.startsWith('/') || ignorePrefixes.some((prefix) => href.startsWith(prefix))) continue
+    const clean = href.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/'
+    if (routes.has(clean)) continue
     const route = hrefToRoute(href)
     const routeParts = route.split('/').filter(Boolean)
     const known = routes.has(route) || routes.has(normaliseRoute(route)) || [...routes].some((candidate) => {

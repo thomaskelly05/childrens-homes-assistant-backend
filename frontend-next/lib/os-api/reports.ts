@@ -66,7 +66,13 @@ export function mapOsReport(row: Record<string, any>): OsReport {
 
 export async function getOsReports(): Promise<OsApiResult<OsReport[]>> {
   const result = await osGet<Record<string, any>[]>('/os/reports', fallbackReports)
-  return { ...result, data: result.data.map(mapOsReport) }
+  const rows = Array.isArray(result.data) ? result.data : fallbackReports
+  return {
+    ...result,
+    source: Array.isArray(result.data) ? result.source : 'fallback',
+    error: Array.isArray(result.data) ? result.error : 'Reports endpoint returned an unexpected shape; showing safe demo drafts.',
+    data: rows.map(mapOsReport)
+  }
 }
 
 export async function getOsReport(id: string): Promise<OsApiResult<OsReport | undefined>> {
