@@ -77,11 +77,6 @@ function initials(name: string) {
   return (parts[0]?.[0] || '?') + (parts[1]?.[0] || '')
 }
 
-function childName(child: Pick<YoungPerson, 'firstName' | 'lastName' | 'preferredName'> | undefined) {
-  if (!child) return 'Unknown child'
-  return child.preferredName || `${child.firstName} ${child.lastName}`.trim()
-}
-
 function riskFromValue(value: unknown): RiskLevel {
   return value === 'low' || value === 'medium' || value === 'high' || value === 'critical' ? value : 'medium'
 }
