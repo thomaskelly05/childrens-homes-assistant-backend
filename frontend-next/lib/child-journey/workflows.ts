@@ -410,7 +410,7 @@ export type ChildQuickActionItem =
       href: (childId: string) => string
     }
 
-export const childOperationalQuickActions: ChildQuickActionItem[] = [
+const childOperationalWorkflowIds: RecordingWorkflowId[] = [
   'daily-note',
   'incidents',
   'safeguarding',
@@ -418,16 +418,19 @@ export const childOperationalQuickActions: ChildQuickActionItem[] = [
   'keywork',
   'health',
   'family-contact'
-].map((workflowId) => {
+]
+
+export const childOperationalQuickActions: ChildQuickActionItem[] = [
+  ...childOperationalWorkflowIds.map((workflowId): ChildQuickActionItem => {
   const workflow = recordingWorkflows[workflowId as RecordingWorkflowId]
   return {
-    id: workflowId as RecordingWorkflowId,
+    id: workflowId,
     kind: 'workflow' as const,
     label: workflow.quickActionLabel,
     description: workflow.tone,
     workflowId: workflow.id
   }
-}).concat([
+}),
   {
     id: 'add-action',
     kind: 'route' as const,
@@ -442,7 +445,7 @@ export const childOperationalQuickActions: ChildQuickActionItem[] = [
     description: 'Open Orb with this child already in context.',
     href: (childId: string) => `/assistant?mode=dictate&youngPersonId=${encodeURIComponent(childId)}`
   }
-])
+]
 
 export function childQuickActionHref(childId: string, action: ChildQuickActionItem) {
   if (action.kind === 'route') return action.href(childId)
