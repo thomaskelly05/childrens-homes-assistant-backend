@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ClipboardPlus, Mic, Plus, X } from 'lucide-react'
 
-import { childOperationalQuickActions, childQuickActionHref } from '@/lib/child-journey/workflows'
+import { childQuickActionHref, contextualChildQuickActions } from '@/lib/child-journey/workflows'
 
 export function QuickActionButton({
   selectedYoungPersonId,
@@ -15,6 +15,7 @@ export function QuickActionButton({
 }) {
   const [open, setOpen] = useState(false)
   const childName = selectedYoungPersonName || 'this young person'
+  const actions = contextualChildQuickActions({ workflow: 'journey' })
 
   useEffect(() => {
     if (!open) return
@@ -68,8 +69,8 @@ export function QuickActionButton({
 
             <div className="min-h-0 flex-1 overflow-auto p-5">
               {selectedYoungPersonId ? (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {childOperationalQuickActions.map((action) => {
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {actions.map((action) => {
                     const href = childQuickActionHref(selectedYoungPersonId, action)
                     const Icon = action.id === 'dictate-orb' ? Mic : ClipboardPlus
                     return (

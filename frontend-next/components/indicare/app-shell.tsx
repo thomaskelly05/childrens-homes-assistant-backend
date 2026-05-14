@@ -4,14 +4,11 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Bell,
-  CalendarDays,
   ChevronRight,
   ClipboardCheck,
   FileText,
   Home,
-  LayoutDashboard,
   Search,
-  Settings,
   Sparkles,
   Users,
   UserRound,
@@ -20,9 +17,9 @@ import {
   Scale,
   Gauge,
   Clock3,
-  Building2,
   ShieldCheck
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { ReactNode, useEffect } from 'react'
 
 import { CommandSearch } from '@/components/indicare/command-search'
@@ -39,27 +36,35 @@ import { getYoungPersonById } from '@/lib/indicare/selectors'
 import { entityContextFromPath } from '@/lib/navigation/entity-resolver'
 import type { OrbContext } from '@/lib/orb/types'
 
-const navItems = [
-  { section: 'Primary', href: '/home', label: 'Home / Children', icon: Home, permissions: ['records:read'] },
-  { section: 'Primary', href: '/shifts/current', label: 'Current Shift', icon: Clock3, permissions: ['records:read'] },
-  { section: 'Primary', href: '/chronology', label: 'Chronology', icon: Search, permissions: ['records:read'] },
-  { section: 'Primary', href: '/actions', label: 'Actions', icon: ClipboardCheck, permissions: ['records:read'] },
-  { section: 'Primary', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'] },
-  { section: 'Primary', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'] },
-  { section: 'Primary', href: '/assistant', label: 'Assistant', icon: Sparkles, permissions: ['assistant:access'] },
-  { section: 'Secondary / Manager', href: '/young-people', label: 'Young People Directory', icon: UserRound, permissions: ['records:read'] },
-  { section: 'Secondary / Manager', href: '/handover/current', label: 'Handover', icon: ClipboardCheck, permissions: ['records:read'] },
-  { section: 'Secondary / Manager', href: '/placements', label: 'Placements', icon: LayoutDashboard, permissions: ['records:read'] },
-  { section: 'Secondary / Manager', href: '/risk-assessments', label: 'Risk', icon: ClipboardCheck, permissions: ['records:read'] },
-  { section: 'Secondary / Manager', href: '/appointments', label: 'Appointments', icon: CalendarDays, permissions: ['records:read'] },
-  { section: 'Secondary / Manager', href: '/ofsted-readiness', label: 'Ofsted Readiness', icon: Gauge, permissions: ['reports:read'] },
-  { section: 'Secondary / Manager', href: '/regulatory', label: 'Regulatory Framework', icon: Scale, permissions: ['records:read'] },
-  { section: 'Secondary / Manager', href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'] },
-  { section: 'Secondary / Manager', href: '/staff', label: 'Staff', icon: Users, permissions: ['staff:read'] },
-  { section: 'Secondary / Manager', href: '/settings', label: 'Settings', icon: Settings, permissions: ['settings:read', 'settings:manage'] },
-  { section: 'Secondary / Manager', href: '/setup', label: 'Home setup', icon: Building2, permissions: ['settings:read', 'settings:manage'] },
-  { section: 'Secondary / Manager', href: '/dashboard', label: 'Command dashboard', icon: Gauge, permissions: ['reports:read'] },
-  { section: 'Secondary / Manager', href: '/management', label: 'Management Oversight', icon: Gauge, permissions: ['reports:read'] }
+type NavItem = {
+  section: 'Global' | 'Care' | 'Planning' | 'Evidence' | 'Manager'
+  href: string
+  label: string
+  icon: LucideIcon
+  permissions: string[]
+  scoped?: boolean
+  activeRoots?: string[]
+}
+
+const navItems: NavItem[] = [
+  { section: 'Global', href: '/home', label: 'Home', icon: Home, permissions: ['records:read'] },
+  { section: 'Global', href: '/active-child', label: 'Active Child', icon: UserRound, permissions: ['records:read'], scoped: true },
+  { section: 'Global', href: '/shifts/current', label: 'Shift', icon: Clock3, permissions: ['records:read'], activeRoots: ['shifts', 'handover'] },
+  { section: 'Global', href: '/notifications', label: 'Notifications', icon: Bell, permissions: ['records:read'], activeRoots: ['notifications'] },
+  { section: 'Global', href: '/assistant', label: 'Orb', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'] },
+  { section: 'Care', href: '/journey', label: 'Journey', icon: ShieldCheck, permissions: ['records:read'], scoped: true },
+  { section: 'Care', href: '/daily-note', label: 'Recording', icon: ClipboardCheck, permissions: ['records:read'], scoped: true, activeRoots: ['daily-logs', 'incidents', 'keywork', 'medication', 'health'] },
+  { section: 'Care', href: '/chronology', label: 'Chronology', icon: Search, permissions: ['records:read'], scoped: true },
+  { section: 'Planning', href: '/plans', label: 'Plans', icon: ClipboardCheck, permissions: ['records:read'], scoped: true, activeRoots: ['placements', 'risk-assessments'] },
+  { section: 'Planning', href: '/actions', label: 'Actions', icon: ClipboardCheck, permissions: ['records:read'], scoped: true },
+  { section: 'Planning', href: '/management?focus=reviews', label: 'Reviews', icon: Gauge, permissions: ['reports:read'], activeRoots: ['management'] },
+  { section: 'Evidence', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'], scoped: true },
+  { section: 'Evidence', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'], scoped: true },
+  { section: 'Evidence', href: '/evidence', label: 'Evidence', icon: FileText, permissions: ['records:read'], scoped: true },
+  { section: 'Manager', href: '/management', label: 'Oversight', icon: Gauge, permissions: ['reports:read'] },
+  { section: 'Manager', href: '/regulatory', label: 'Compliance', icon: Scale, permissions: ['records:read'] },
+  { section: 'Manager', href: '/staff', label: 'Staffing', icon: Users, permissions: ['staff:read'] },
+  { section: 'Manager', href: '/ofsted-readiness', label: 'Inspection Readiness', icon: Gauge, permissions: ['reports:read'] }
 ]
 
 const demoMode = ['1', 'true', 'yes'].includes(String(process.env.NEXT_PUBLIC_DEMO_MODE || '').toLowerCase())
@@ -96,6 +101,30 @@ function labelForRole(role: keyof typeof roleLabels | string | undefined) {
   return role && role in roleLabels ? roleLabels[role as keyof typeof roleLabels] : roleLabels.viewer
 }
 
+function hrefForNavItem(item: NavItem, activeChildId: string | undefined, childScopedHref: (href: string) => string) {
+  const encodedChildId = activeChildId ? encodeURIComponent(activeChildId) : null
+  if (item.href === '/active-child' || item.href === '/journey') {
+    return encodedChildId ? `/young-people/${encodedChildId}/journey` : '/home'
+  }
+  if (item.href === '/daily-note') {
+    return encodedChildId ? `/young-people/${encodedChildId}/daily-note/new` : '/home'
+  }
+  if (item.href === '/plans') {
+    return encodedChildId ? `/young-people/${encodedChildId}/journey?focus=plans` : '/documents'
+  }
+  return item.scoped ? childScopedHref(item.href) : item.href
+}
+
+function isNavItemActive(item: NavItem, pathname: string) {
+  const parts = pathname.split('/').filter(Boolean)
+  const root = parts[0] || 'home'
+  if (item.activeRoots?.includes(root)) return true
+  if (item.href === '/journey') return parts[0] === 'young-people' && parts[2] === 'journey'
+  if (item.href === '/daily-note') return parts[0] === 'young-people' && parts[2] === 'daily-note'
+  if (item.href === '/plans') return ['placements', 'risk-assessments'].includes(root) || pathname.includes('focus=plans')
+  return pathname === item.href || (item.href !== '/home' && item.href !== '/dashboard' && pathname.startsWith(item.href))
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const currentPathname = usePathname()
   const router = useRouter()
@@ -114,7 +143,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const visibleNavItems = navItems.filter((item) => userHasAnyPermission(user, item.permissions))
   const navSections = Array.from(new Set(visibleNavItems.map((item) => item.section)))
   const matchedRoute = navItems
-    .filter((item) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+    .filter((item) => !item.scoped && (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))))
     .sort((a, b) => b.href.length - a.href.length)[0]
   const hasRouteAccess = !matchedRoute || userHasAnyPermission(user, matchedRoute.permissions)
   const isStandaloneAssistant = pathname === '/assistant' || pathname.startsWith('/assistant/')
@@ -267,12 +296,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <p className="mb-2 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{section}</p>
                 <div className="space-y-1">
                   {visibleNavItems.filter((item) => item.section === section).map((item) => {
-                    const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                    const active = isNavItemActive(item, pathname)
                     const Icon = item.icon
+                    const href = hrefForNavItem(item, selectedId, childScopedHref)
                     return (
                       <Link
                         key={item.href}
-                        href={childScopedHref(item.href)}
+                        href={href}
                         className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                           active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
                         }`}

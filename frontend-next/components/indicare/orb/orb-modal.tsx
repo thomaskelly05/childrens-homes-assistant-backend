@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Check, FileText, Lock, X } from 'lucide-react'
+import { AlertTriangle, FileText, Lock, X } from 'lucide-react'
 
 import { OrbControls } from './orb-controls'
 import { OrbModeSwitcher } from './orb-mode-switcher'
@@ -39,20 +39,11 @@ function DraftPreview({ draft, onClose }: { draft: OrbVoiceDraft; onClose: () =>
       <div className="mt-3 max-h-44 overflow-auto rounded-2xl bg-white p-4 text-sm leading-6 text-slate-700">
         {draft.content}
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        <button className="rounded-2xl bg-purple-700 px-4 py-3 text-sm font-black text-white">
-          <Check className="mr-2 inline h-4 w-4" aria-hidden />
-          Save after review
-        </button>
-        <button className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800">
-          Edit draft
-        </button>
-        <button className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">
-          Cancel
-        </button>
-      </div>
+      <button type="button" onClick={onClose} className="mt-3 rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800">
+        Dismiss draft preview
+      </button>
       <p className="mt-3 text-xs leading-5 text-purple-900">
-        Safety foundation: save/edit/cancel controls are present, but this sprint does not silently write records. The backend audit marks this as pending confirmation.
+        Safety foundation: Orb can prepare wording, but live record writeback stays in the source workflow with staff confirmation.
       </p>
     </div>
   )
@@ -125,8 +116,8 @@ export function OrbModal({
             <OrbVisual state={snapshot.state} size="small" />
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-600">Orb powered by IndiCare</p>
-              <h2 id="orb-modal-title" className="text-2xl font-black tracking-[-0.04em] text-slate-950">Voice and conversational care assistant</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-500">Status: {orbStateLabel(snapshot.state)} - Wake phrase foundation: &quot;Hey IndiCare&quot;.</p>
+              <h2 id="orb-modal-title" className="text-2xl font-black tracking-[-0.04em] text-slate-950">Orb is here with you</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-500">Status: {orbStateLabel(snapshot.state)}. Short answers, calm pauses, child-scoped context.</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-full bg-slate-100 p-3 text-slate-600 hover:bg-slate-200" aria-label="Close Orb">
@@ -155,7 +146,7 @@ export function OrbModal({
             <div className="rounded-[28px] border border-white/70 bg-white p-6 text-center shadow-sm">
               <OrbVisual state={snapshot.state} />
               <p className="mt-5 text-sm font-black text-slate-950">{brainLabel(snapshot.modeDecision.brain)}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-500">{snapshot.modeDecision.tone}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-500">{snapshot.modeDecision.tone || 'Calm, brief and present.'}</p>
             </div>
 
             <div className="rounded-[24px] border border-slate-200 bg-white p-4">

@@ -78,6 +78,8 @@ const dailyNoteSections: RecordingSection[] = [
     fields: [
       select('mood', 'Quick wellbeing indicator', ['Settled', 'Positive', 'Anxious', 'Low mood', 'Heightened', 'Withdrawn', 'Mixed'], 'Use the closest plain-language indicator.'),
       textarea('narrative', 'Daily note', 'What did the day feel like for this child? Include facts, support offered, response and outcome.', 'This is the main record Orb and linkage checks use.', true, 6),
+      textarea('what_changed_today', 'What changed today?', 'What is different from the last shift, last note or usual routine?', 'Use this for continuity, not analysis.'),
+      textarea('what_mattered_today', 'What mattered today?', 'Why did today matter in the child’s lived experience?', 'Small moments can be meaningful evidence.'),
       textarea('emotional_wellbeing', 'Emotional wellbeing', 'How did the child present emotionally? What helped?', 'Include changes from the start or previous shift.'),
       textarea('sleep_routine', 'Sleep / routine', 'Sleep, waking, morning or evening routine, meals, hygiene, settled periods or changes from usual rhythm.'),
       textarea('positive_moments', 'Positive progress / achievements', 'What went well? What is the child building on?', 'Small positives matter in the living story.'),
@@ -403,7 +405,7 @@ export type ChildQuickActionItem =
       workflowId: RecordingWorkflowId
     }
   | {
-      id: 'add-action' | 'dictate-orb'
+      id: 'add-action' | 'dictate-orb' | 'open-chronology'
       kind: 'route'
       label: string
       description: string
@@ -439,6 +441,13 @@ export const childOperationalQuickActions: ChildQuickActionItem[] = [
     href: (childId: string) => `/actions?young_person_id=${encodeURIComponent(childId)}&intent=new`
   },
   {
+    id: 'open-chronology',
+    kind: 'route' as const,
+    label: 'Open Chronology',
+    description: 'Return to the child chronology without changing context.',
+    href: (childId: string) => `/young-people/${encodeURIComponent(childId)}/chronology`
+  },
+  {
     id: 'dictate-orb',
     kind: 'route' as const,
     label: 'Dictate with Orb',
@@ -446,6 +455,26 @@ export const childOperationalQuickActions: ChildQuickActionItem[] = [
     href: (childId: string) => `/assistant?mode=dictate&youngPersonId=${encodeURIComponent(childId)}`
   }
 ]
+
+export type ChildQuickActionContext = {
+  workflow?: 'recording' | 'qa' | 'oversight' | 'journey' | 'mobile'
+  role?: string | null
+  unresolvedActions?: number
+}
+
+export function contextualChildQuickActions(context: ChildQuickActionContext = {}) {
+  const byId = new Map(childOperationalQuickActions.map((action) => [action.id, action]))
+  const requested = context.workflow === 'qa'
+    ? ['open-chronology', 'add-action', 'documents', 'dictate-orb']
+    : context.workflow === 'oversight'
+      ? ['open-chronology', 'documents', 'add-action', 'dictate-orb']
+      : context.workflow === 'mobile'
+        ? ['daily-note', 'open-chronology', 'dictate-orb']
+        : context.unresolvedActions
+          ? ['daily-note', 'add-action', 'open-chronology', 'dictate-orb']
+          : ['daily-note', 'keywork', 'open-chronology', 'dictate-orb']
+  return requested.map((id) => byId.get(id as ChildQuickActionItem['id'])).filter(Boolean) as ChildQuickActionItem[]
+}
 
 export function childQuickActionHref(childId: string, action: ChildQuickActionItem) {
   if (action.kind === 'route') return action.href(childId)

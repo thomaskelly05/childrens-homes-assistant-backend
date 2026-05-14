@@ -30,6 +30,12 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _normalised_child_id(value: Any) -> str | None:
+    if value is None or value == "":
+        return None
+    return str(value)
+
+
 @dataclass
 class OrbRealtimeConversationState:
     session_id: str
@@ -76,6 +82,7 @@ class OrbRealtimeConversationState:
             "reconnect_attempts": self.reconnect_attempts,
             "temporary_conversational_memory": self.temporary_conversational_memory,
             "active_context_references": self.active_context_references,
+            "selected_young_person_id": self.active_context_references.get("selected_young_person_id"),
             "pending_tool_plans": self.pending_tool_plans[-5:],
             "operational_context_snapshot": self.operational_context_snapshot,
             "active_websocket_bindings": self.active_websocket_bindings[-3:],
@@ -89,6 +96,7 @@ class OrbRealtimeConversationState:
                 "silence_detection": True,
                 "response_chunk_pacing": True,
                 "reconnect_continuation": True,
+                "child_scope_reconciliation": True,
             },
             "realtime_continuity": realtime_scaling_service.reconnect_plan(
                 attempts=self.reconnect_attempts,
@@ -177,6 +185,7 @@ class OrbRealtimeConversationService:
                 "context": {
                     "workspace": context.workspace,
                     "home_id": context.home_id,
+                    "selected_young_person_id": context.selected_young_person_id,
                     "selected_record_type": context.selected_record_type,
                 },
             }
@@ -249,7 +258,14 @@ class OrbRealtimeConversationService:
         if metadata:
             active_context = metadata.get("active_context_references") or metadata.get("context")
             if isinstance(active_context, dict):
-                state.active_context_references.update(active_context)
+                if self._context_matches_child_scope(state, active_context):
+                    state.active_context_references.update(active_context)
+                else:
+                    state.events.append({
+                        "type": "context_scope_rejected",
+                        "created_at": _now(),
+                        "reason": "Realtime context attempted to switch child inside a bound Orb session.",
+                    })
             pending_tool_plan = metadata.get("pending_tool_plan")
             if isinstance(pending_tool_plan, dict):
                 state.pending_tool_plans.append(pending_tool_plan)
@@ -259,6 +275,11 @@ class OrbRealtimeConversationService:
         state.events.append({"type": event_type, "metadata": metadata or {}, "created_at": _now()})
         self._persist(state)
         return state.snapshot()
+
+    def _context_matches_child_scope(self, state: OrbRealtimeConversationState, active_context: dict[str, Any]) -> bool:
+        current_child = _normalised_child_id(state.active_context_references.get("selected_young_person_id"))
+        incoming_child = _normalised_child_id(active_context.get("selected_young_person_id"))
+        return not current_child or not incoming_child or current_child == incoming_child
 
     def partial_user_transcript(self, *, session_id: str, text: str) -> dict[str, Any]:
         state = self.get(session_id)
@@ -325,6 +346,7 @@ class OrbRealtimeConversationService:
                 "created_at": _now(),
                 "preserved_interrupted_response": bool(state.interrupted_response),
                 "continuation_ready": bool(state.interrupted_response),
+                "continuation_prompt": "Yeah. I’ll follow you.",
             }
         )
         self._persist(state)
@@ -345,6 +367,11 @@ class OrbRealtimeConversationService:
                 attempts=state.reconnect_attempts,
                 last_sequence=state.turn_index,
             ),
+            "context_continuation": {
+                "selected_young_person_id": state.active_context_references.get("selected_young_person_id"),
+                "last_phase": state.phase,
+                "resume_without_cross_child_lookup": True,
+            },
         })
         self._persist(state)
         return state.snapshot()
