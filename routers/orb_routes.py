@@ -8,7 +8,9 @@ from fastapi.responses import JSONResponse
 from auth.permissions import require_assistant_access
 from db.connection import get_db
 from schemas.orb import OrbSessionEventRequest, OrbSessionStartRequest
+from services.orb_operational_events_service import orb_operational_events_service
 from services.orb_voice_session_service import orb_voice_session_service
+from services.orb_wake_word_service import orb_wake_word_service
 
 router = APIRouter(prefix="/orb", tags=["Orb Voice Assistant"])
 
@@ -145,12 +147,15 @@ async def orb_session_summary(
 
 @router.get("/config")
 async def orb_config(current_user=Depends(require_assistant_access)):
+    wake_word = orb_wake_word_service.capability()
+    event_subscriptions = orb_operational_events_service.subscriptions_for(current_user=current_user, context={})
     return {
         "success": True,
         "data": {
             "name": "Orb powered by IndiCare",
             "wake_phrase": "Hey IndiCare",
-            "wake_phrase_status": "foundation_placeholder",
+            "wake_phrase_status": "optional_disabled_by_default",
+            "wake_word": wake_word,
             "brains": [
                 "care_brain",
                 "inspector_brain",
@@ -169,11 +174,13 @@ async def orb_config(current_user=Depends(require_assistant_access)):
                 "use_case": "children's home operational support",
             },
             "states": [
+                "passive_listening",
                 "listening",
                 "thinking",
                 "speaking",
                 "interrupted",
                 "muted",
+                "unavailable",
                 "private",
                 "recording",
                 "dictation",
@@ -192,6 +199,21 @@ async def orb_config(current_user=Depends(require_assistant_access)):
             ],
             "raw_audio_stored": False,
             "secret_keys_exposed_to_client": False,
+            "realtime_conversation": {
+                "microphone_streaming": "OpenAI Realtime WebRTC when configured.",
+                "turn_taking": "Server VAD with client-side silence and backend turn-state coordination.",
+                "barge_in": "Realtime spoken interruption when provider transport is active; click/tap interrupt fallback is always available.",
+                "direct_writes": False,
+            },
+            "operational_event_subscriptions": event_subscriptions,
         },
+    }
+
+
+@router.get("/events/subscriptions")
+async def orb_event_subscriptions(current_user=Depends(require_assistant_access)):
+    return {
+        "success": True,
+        "data": orb_operational_events_service.subscriptions_for(current_user=current_user, context={}),
     }
 

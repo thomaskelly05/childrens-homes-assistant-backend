@@ -43,6 +43,8 @@ async def test_write_intent_creates_pending_draft_not_silent_save(monkeypatch):
     assert response.pending_write_confirmation is not None
     assert response.pending_write_confirmation.requires_confirmation is True
     assert response.pending_write_confirmation.approved_by_user_id is None
+    assert response.tool_orchestration["writeback_policy"]["silent_writeback_allowed"] is False
+    assert response.memory_snapshot["scope"]["home_id"] == 1
     assert service.summary(start.session_id).records_changed == []
 
 
@@ -67,6 +69,65 @@ async def test_interrupt_marks_latest_turn_interrupted(monkeypatch):
     assert response.state == "interrupted"
     assert service.get_session(start.session_id).state == "interrupted"
     assert service.get_session(start.session_id).transcript[-1].interrupted is True
+
+
+@pytest.mark.asyncio
+async def test_follow_up_memory_preserves_record_context(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(workspace="chronology", home_id=1, selected_young_person_id=1, selected_record_id="inc-1", selected_record_type="incident"),
+            provider="mock_voice",
+        ),
+        current_user=user,
+    )
+
+    first = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="What happened after contact?", context=OrbContext(home_id=1, selected_young_person_id=1, selected_record_id="inc-1", selected_record_type="incident")),
+        conn=object(),
+        current_user=user,
+    )
+    second = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="Open it", context=OrbContext(home_id=1, selected_young_person_id=1)),
+        conn=object(),
+        current_user=user,
+    )
+
+    assert first.memory_snapshot["last_record"]["id"] == "inc-1"
+    assert second.tool_orchestration["primary_action"] is not None
+    assert second.memory_snapshot["last_record"]["source_id"] == "1"
+
+
+@pytest.mark.asyncio
+async def test_realtime_partial_and_silence_state(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(context=OrbContext(workspace="shift_operations", home_id=1), provider="mock_voice"),
+        current_user=user,
+    )
+
+    partial = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="partial_transcript", text="Jamie was upset", context=OrbContext(home_id=1)),
+        conn=object(),
+        current_user=user,
+    )
+    silence = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="silence_timeout", context=OrbContext(home_id=1)),
+        conn=object(),
+        current_user=user,
+    )
+
+    assert partial.realtime_state["partial_user_transcript"] == "Jamie was upset"
+    assert silence.state == "idle"
+    assert silence.realtime_state["phase"] == "idle"
 
 
 def test_retrieval_rejects_cross_home_context_before_fetching_records():

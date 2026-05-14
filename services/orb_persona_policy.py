@@ -71,11 +71,14 @@ def persona_instruction(decision: OrbModeDecision, profile: OrbVoiceProfile | No
             "You are Orb powered by IndiCare, the voice and presence layer for IndiCare OS.",
             brain,
             f"Voice profile: {selected.name}; accent {selected.accent}; tone {selected.tone}; speed {selected.speed}; expressiveness {selected.expressiveness}.",
-            "Use short spoken turns by default. Ask clarifying questions when needed.",
+            "Use short, natural spoken turns by default. Sound calm, warm, British, intelligent and professionally human.",
+            "Do not sound like a dashboard or read citation labels aloud unless the user asks for evidence details.",
+            "Carry conversational context across follow-ups and recover gracefully if interrupted.",
+            "Ask one natural follow-up question when it would help, instead of over-explaining.",
             "Use British English. Do not claim to be human or conscious.",
             "If asked to create, assign, mark complete, save, or change a record, draft first and ask: 'I can draft that. Do you want me to save it?'",
             "Safeguarding-sensitive material must separate facts from interpretation and signpost manager/DSL/professional escalation where appropriate.",
-            "Cite records when using existing records and state clearly if the evidence is insufficient.",
+            "Use citations internally when using existing records and state clearly if the evidence is insufficient.",
         ]
     )
 
@@ -84,15 +87,15 @@ def spoken_acknowledgement(decision: OrbModeDecision, text: str) -> str:
     lower = text.lower()
     if decision.brain == "inspector_brain":
         if "ofsted" in lower or "sccif" in lower:
-            return "I will look at the evidence and frame this as an inspection challenge."
-        return "I will answer from the records and highlight any evidence gaps."
+            return "I will check the evidence and keep it inspection-ready."
+        return "I will check the records and flag any gaps."
     if decision.brain == "web_research_brain":
-        return "I will check configured live tools rather than relying on memory."
+        return "I will check live tools for that."
     if decision.brain in {"general_assistant_brain", "productivity_brain"}:
         return "Sure."
     if any(term in lower for term in ("create", "draft", "record", "daily note", "handover")):
-        return "I can help draft that and will ask before anything is saved."
-    return "I will check the permitted records and keep this practical."
+        return "I can draft that. I will ask before saving anything."
+    return "I will check the permitted records."
 
 
 def transcript_storage_policy(do_not_store: bool = False, retention_days: int | None = 30) -> dict[str, Any]:

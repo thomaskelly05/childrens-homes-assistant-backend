@@ -12,11 +12,13 @@ export type OrbBrain =
 export type OrbSelectedMode = 'auto' | 'care' | 'inspector' | 'general'
 export type OrbState =
   | 'idle'
+  | 'passive_listening'
   | 'listening'
   | 'thinking'
   | 'speaking'
   | 'interrupted'
   | 'muted'
+  | 'unavailable'
   | 'private'
   | 'recording'
   | 'dictation'
@@ -150,6 +152,10 @@ export type OrbSessionStartData = {
   mode_decision: OrbModeDecision
   provider_session: Record<string, unknown>
   realtime: Record<string, unknown>
+  realtime_state?: Record<string, unknown>
+  memory_snapshot?: Record<string, unknown>
+  wake_word?: Record<string, unknown>
+  operational_event_subscriptions?: Record<string, unknown>
   transcript_storage_policy: Record<string, unknown>
 }
 
@@ -160,6 +166,16 @@ export type OrbSessionEventRequest = {
     | 'partial_transcript'
     | 'speech_started'
     | 'speech_stopped'
+    | 'audio_delta'
+    | 'response_started'
+    | 'response_delta'
+    | 'response_done'
+    | 'silence_timeout'
+    | 'reconnect'
+    | 'wake_listening_started'
+    | 'wake_listening_stopped'
+    | 'wake_word_detected'
+    | 'operational_event'
     | 'assistant_turn'
     | 'interrupt'
     | 'mute'
@@ -196,7 +212,10 @@ export type OrbSessionEventData = {
   evidence_gaps: AssistantEvidenceGap[]
   regulatory_links: AssistantRegulatoryLink[]
   tools_used: OrbToolManifestItem[]
+  tool_orchestration?: Record<string, unknown>
   operational_insights: Record<string, unknown>
+  realtime_state?: Record<string, unknown>
+  memory_snapshot?: Record<string, unknown>
   provider_event: Record<string, unknown>
 }
 

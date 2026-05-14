@@ -17,11 +17,13 @@ OrbBrain = Literal[
 OrbSelectedMode = Literal["auto", "care", "inspector", "general"]
 OrbState = Literal[
     "idle",
+    "passive_listening",
     "listening",
     "thinking",
     "speaking",
     "interrupted",
     "muted",
+    "unavailable",
     "private",
     "recording",
     "dictation",
@@ -43,6 +45,16 @@ OrbEventType = Literal[
     "partial_transcript",
     "speech_started",
     "speech_stopped",
+    "audio_delta",
+    "response_started",
+    "response_delta",
+    "response_done",
+    "silence_timeout",
+    "reconnect",
+    "wake_listening_started",
+    "wake_listening_stopped",
+    "wake_word_detected",
+    "operational_event",
     "assistant_turn",
     "interrupt",
     "mute",
@@ -216,6 +228,10 @@ class OrbSessionStartResponse(BaseModel):
     mode_decision: OrbModeDecision
     provider_session: dict[str, Any] = Field(default_factory=dict)
     realtime: dict[str, Any] = Field(default_factory=dict)
+    realtime_state: dict[str, Any] = Field(default_factory=dict)
+    memory_snapshot: dict[str, Any] = Field(default_factory=dict)
+    wake_word: dict[str, Any] = Field(default_factory=dict)
+    operational_event_subscriptions: dict[str, Any] = Field(default_factory=dict)
     transcript_storage_policy: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -247,7 +263,10 @@ class OrbSessionEventResponse(BaseModel):
     evidence_gaps: list[dict[str, Any]] = Field(default_factory=list)
     regulatory_links: list[dict[str, Any]] = Field(default_factory=list)
     tools_used: list[dict[str, Any]] = Field(default_factory=list)
+    tool_orchestration: dict[str, Any] = Field(default_factory=dict)
     operational_insights: dict[str, Any] = Field(default_factory=dict)
+    realtime_state: dict[str, Any] = Field(default_factory=dict)
+    memory_snapshot: dict[str, Any] = Field(default_factory=dict)
     provider_event: dict[str, Any] = Field(default_factory=dict)
 
 

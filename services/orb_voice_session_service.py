@@ -32,9 +32,14 @@ from services.audit_event_service import record_audit_event
 from services.operational_intelligence_service import build_orb_operational_intelligence_snapshot
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_intent_router import route_orb_intent
+from services.orb_memory_service import orb_memory_service
+from services.orb_operational_events_service import orb_operational_events_service
 from services.orb_persona_policy import persona_instruction, spoken_acknowledgement, transcript_storage_policy
 from services.orb_productivity_service import orb_productivity_service
+from services.orb_realtime_conversation_service import orb_realtime_conversation_service
+from services.orb_tool_orchestration_service import orb_tool_orchestration_service
 from services.orb_tool_router import tools_for_decision
+from services.orb_wake_word_service import orb_wake_word_service
 from services.orb_web_search_service import orb_web_search_service
 
 
@@ -100,7 +105,12 @@ def _public_openai_session_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return session
 
 
-def _assistant_context_from_orb(context: OrbContext, decision: OrbModeDecision, conversation_id: str | None) -> dict[str, Any]:
+def _assistant_context_from_orb(
+    context: OrbContext,
+    decision: OrbModeDecision,
+    conversation_id: str | None,
+    memory_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     base = dict(context.assistant_context or {})
     base.update(
         {
@@ -120,6 +130,8 @@ def _assistant_context_from_orb(context: OrbContext, decision: OrbModeDecision, 
             "assistant_surface": "orb",
         }
     )
+    if memory_context:
+        base.update(memory_context)
     return {key: value for key, value in base.items() if value not in (None, "", [], {})}
 
 
@@ -205,7 +217,10 @@ class OpenAIRealtimeVoiceProvider:
                 "threshold": 0.48,
                 "prefix_padding_ms": 280,
                 "silence_duration_ms": 520,
+                "create_response": False,
+                "interrupt_response": True,
             },
+            "input_audio_noise_reduction": {"type": "near_field"},
         }
         if not api_key:
             return {
@@ -335,6 +350,19 @@ class OrbVoiceSessionService:
             )
         )
         self.sessions[session_id] = session
+        orb_memory_service.start_session(session_id=session_id, current_user=current_user, context=request.context)
+        memory_snapshot = orb_memory_service.snapshot(session_id)
+        realtime_state = orb_realtime_conversation_service.start_session(
+            session_id=session_id,
+            provider_name=provider.name,
+            provider_configured=provider.configured(),
+            context=request.context,
+        )
+        operational_event_subscriptions = orb_operational_events_service.subscriptions_for(
+            current_user=current_user,
+            context=request.context.model_dump(),
+        )
+        wake_word = orb_wake_word_service.capability()
         record_audit_event(
             event_type="orb_voice_session",
             action="start",
@@ -347,6 +375,8 @@ class OrbVoiceSessionService:
                 "provider": provider.name,
                 "provider_configured": provider.configured(),
                 "raw_audio_stored": False,
+                "memory_scope": memory_snapshot.get("scope"),
+                "realtime_state": realtime_state,
                 "transcript_policy": transcript_storage_policy(
                     request.preferences.do_not_store_transcript,
                     request.preferences.transcript_retention_days,
@@ -365,14 +395,24 @@ class OrbVoiceSessionService:
             realtime={
                 "transport": "webrtc" if provider.name == "openai_realtime" and provider.configured() else "mock_text_voice",
                 "supports_interruptions": True,
+                "supports_spoken_barge_in": provider.name == "openai_realtime" and provider.configured(),
+                "supports_click_to_interrupt": True,
                 "fallback_text_mode": True,
                 "supports_microphone_input": provider.name == "openai_realtime" and provider.configured(),
+                "supports_microphone_streaming": provider.name == "openai_realtime" and provider.configured(),
                 "supports_audio_playback": provider.name == "openai_realtime" and provider.configured(),
                 "supports_partial_transcript": True,
+                "supports_silence_detection": True,
+                "server_vad": provider.name == "openai_realtime" and provider.configured(),
                 "reconnect_supported": True,
                 "status": "available" if provider.name == "openai_realtime" and provider.configured() else "Realtime voice unavailable; text/mock voice fallback is active.",
-                "wake_phrase_foundation": "Hey IndiCare placeholder; real wake-word detection is not enabled server-side.",
+                "architecture": "Browser WebRTC streams microphone to the provider; backend owns routed turns, memory, audit, tool previews and safe care retrieval.",
+                "wake_phrase_foundation": "Hey Orb/Hey IndiCare optional foundation; passive wake-word detection is disabled by default.",
             },
+            realtime_state=realtime_state,
+            memory_snapshot=orb_memory_service.snapshot(session_id),
+            wake_word=wake_word,
+            operational_event_subscriptions=operational_event_subscriptions,
             transcript_storage_policy=transcript_storage_policy(
                 request.preferences.do_not_store_transcript,
                 request.preferences.transcript_retention_days,
@@ -396,14 +436,72 @@ class OrbVoiceSessionService:
         session.context = context
         session.selected_mode = selected_mode
         provider_event = await self._provider(session.provider_name).event(session_id=session_id, event=event)
+        orb_memory_service.update_from_context(session_id=session_id, context=context, current_user=current_user)
 
         if event.type == "partial_transcript":
             session.state = "listening"
-            if message and not session.preferences.do_not_store_transcript:
-                session.transcript.append(
-                    OrbTranscriptEntry(id=_id("orb_turn"), role="user", content=message, created_at=_now(), state="listening", partial=True, mode_decision=decision)
+            realtime_state = orb_realtime_conversation_service.partial_user_transcript(session_id=session_id, text=message)
+            return self._event_response(session, decision, provider_event=provider_event, realtime_state=realtime_state)
+
+        if event.type in {
+            "speech_started",
+            "speech_stopped",
+            "recording_on",
+            "recording_off",
+            "mute",
+            "unmute",
+            "wake_listening_started",
+            "wake_listening_stopped",
+            "wake_word_detected",
+            "silence_timeout",
+            "reconnect",
+            "operational_event",
+            "response_started",
+            "response_delta",
+            "response_done",
+        }:
+            if event.type == "response_started":
+                realtime_state = orb_realtime_conversation_service.assistant_response_started(session_id=session_id)
+                session.state = "speaking"
+            elif event.type == "response_delta":
+                realtime_state = orb_realtime_conversation_service.assistant_response_delta(session_id=session_id, delta=message)
+                session.state = "speaking"
+            elif event.type == "response_done":
+                realtime_state = orb_realtime_conversation_service.assistant_response_done(session_id=session_id)
+                session.state = "idle"
+            elif event.type == "reconnect":
+                realtime_state = orb_realtime_conversation_service.reconnect(session_id=session_id)
+                session.state = "thinking"
+            else:
+                realtime_state = orb_realtime_conversation_service.note_event(
+                    session_id=session_id,
+                    event_type=event.type,
+                    metadata=event.metadata,
                 )
-            return self._event_response(session, decision, provider_event=provider_event)
+                if event.state:
+                    session.state = event.state
+                elif event.type == "speech_started":
+                    session.state = "listening"
+                elif event.type == "speech_stopped":
+                    session.state = "thinking"
+                elif event.type == "mute":
+                    session.state = "muted"
+                elif event.type == "unmute":
+                    session.state = "idle"
+                elif event.type == "wake_listening_started":
+                    session.state = "passive_listening"
+                elif event.type == "silence_timeout":
+                    session.state = "idle"
+            if event.type != "operational_event":
+                record_audit_event(
+                    event_type="orb_voice_session",
+                    action=event.type,
+                    actor=current_user,
+                    resource_type="orb_session",
+                    resource_id=session_id,
+                    metadata={"mode": decision.model_dump(), "state": session.state, "raw_audio_stored": False, "realtime_state": realtime_state},
+                )
+            return self._event_response(session, decision, provider_event=provider_event, realtime_state=realtime_state)
 
         if event.state:
             session.state = event.state
@@ -428,13 +526,27 @@ class OrbVoiceSessionService:
             return self._event_response(session, decision, provider_event=provider_event)
 
         safe_message = assert_safe_assistant_message(message)
+        memory_snapshot = orb_memory_service.record_user_turn(
+            session_id=session_id,
+            text=safe_message,
+            decision=decision,
+            context=context,
+            current_user=current_user,
+        )
         if not session.preferences.do_not_store_transcript:
             session.transcript.append(
                 OrbTranscriptEntry(id=_id("orb_turn"), role="user", content=safe_message, created_at=_now(), state="listening", mode_decision=decision)
             )
         session.state = "thinking"
+        orb_realtime_conversation_service.note_event(session_id=session_id, event_type="speech_stopped")
 
-        tools_used = tools_for_decision(decision, safe_message)
+        tool_orchestration = orb_tool_orchestration_service.plan_turn(
+            decision=decision,
+            message=safe_message,
+            context=context,
+            memory_snapshot=memory_snapshot,
+        )
+        tools_used = tool_orchestration.get("manifest") or tools_for_decision(decision, safe_message)
         history = [
             {"role": entry.role, "content": entry.content}
             for entry in session.transcript
@@ -444,7 +556,12 @@ class OrbVoiceSessionService:
         if decision.care_scope_required:
             shared_context = build_shared_assistant_context(
                 current_user=current_user,
-                requested_context=_assistant_context_from_orb(context, decision, session.id),
+                requested_context=_assistant_context_from_orb(
+                    context,
+                    decision,
+                    session.id,
+                    memory_context=orb_memory_service.prompt_context(session.id),
+                ),
                 mode=decision.assistant_mode,
                 conversation_id=session.id,
             )
@@ -507,6 +624,13 @@ class OrbVoiceSessionService:
         if not session.preferences.do_not_store_transcript:
             session.transcript.append(assistant_turn)
         session.state = assistant_turn.state
+        realtime_state = orb_realtime_conversation_service.assistant_response_started(session_id=session_id)
+        memory_snapshot = orb_memory_service.record_assistant_turn(
+            session_id=session_id,
+            text=answer,
+            citations=citations,
+            related_records=related_records,
+        )
 
         operational_insights = build_orb_operational_intelligence_snapshot(current_user=current_user, context=context.model_dump())
         record_audit_event(
@@ -521,7 +645,10 @@ class OrbVoiceSessionService:
                 "records_retrieved": related_records[:30],
                 "citations_used": citations[:30],
                 "tools_used": tools_used,
+                "tool_orchestration": tool_orchestration,
                 "pending_write_confirmation": pending_draft.model_dump() if pending_draft else None,
+                "memory_scope": memory_snapshot.get("scope"),
+                "realtime_state": realtime_state,
                 "raw_audio_stored": False,
                 "transcript_stored": not session.preferences.do_not_store_transcript,
             },
@@ -538,7 +665,10 @@ class OrbVoiceSessionService:
             evidence_gaps=list(assistant_data.get("evidence_gaps") or []),
             regulatory_links=list(assistant_data.get("regulatory_links") or []),
             tools_used=tools_used,
+            tool_orchestration=tool_orchestration,
             operational_insights=operational_insights,
+            realtime_state=realtime_state,
+            memory_snapshot=memory_snapshot,
             provider_event=provider_event,
         )
 
@@ -546,15 +676,18 @@ class OrbVoiceSessionService:
         session = self.get_session(session_id)
         await self._provider(session.provider_name).interrupt(session_id=session_id)
         session.state = "interrupted"
+        interrupted_text = session.transcript[-1].content if session.transcript and session.transcript[-1].role == "assistant" else None
         if session.transcript:
             session.transcript[-1].interrupted = True
+        memory_snapshot = orb_memory_service.mark_interrupted(session_id=session_id, interrupted_text=interrupted_text)
+        realtime_state = orb_realtime_conversation_service.interrupt(session_id=session_id)
         record_audit_event(
             event_type="orb_voice_session",
             action="interrupt",
             actor=current_user,
             resource_type="orb_session",
             resource_id=session_id,
-            metadata={"mode": session.mode_decision.model_dump(), "raw_audio_stored": False},
+            metadata={"mode": session.mode_decision.model_dump(), "raw_audio_stored": False, "memory_scope": memory_snapshot.get("scope"), "realtime_state": realtime_state},
         )
         return OrbInterruptResponse(session_id=session_id)
 
@@ -563,6 +696,8 @@ class OrbVoiceSessionService:
         await self._provider(session.provider_name).end(session_id=session_id)
         session.state = "idle"
         session.ended_at = _now()
+        orb_realtime_conversation_service.end_session(session_id)
+        orb_memory_service.end_session(session_id)
         record_audit_event(
             event_type="orb_voice_session",
             action="end",
@@ -615,8 +750,15 @@ class OrbVoiceSessionService:
         regulatory_links: list[dict[str, Any]] | None = None,
         tools_used: list[dict[str, Any]] | None = None,
         operational_insights: dict[str, Any] | None = None,
+        tool_orchestration: dict[str, Any] | None = None,
+        realtime_state: dict[str, Any] | None = None,
+        memory_snapshot: dict[str, Any] | None = None,
         provider_event: dict[str, Any] | None = None,
     ) -> OrbSessionEventResponse:
+        current_realtime_state = realtime_state
+        if current_realtime_state is None:
+            realtime_session = orb_realtime_conversation_service.get(session.id)
+            current_realtime_state = realtime_session.snapshot() if realtime_session else {}
         return OrbSessionEventResponse(
             session_id=session.id,
             state=session.state,
@@ -630,7 +772,10 @@ class OrbVoiceSessionService:
             evidence_gaps=evidence_gaps or [],
             regulatory_links=regulatory_links or [],
             tools_used=tools_used or [],
+            tool_orchestration=tool_orchestration or {},
             operational_insights=operational_insights or {},
+            realtime_state=current_realtime_state,
+            memory_snapshot=memory_snapshot or orb_memory_service.snapshot(session.id),
             provider_event=provider_event or {},
         )
 
