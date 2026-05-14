@@ -72,6 +72,8 @@ def persona_instruction(decision: OrbModeDecision, profile: OrbVoiceProfile | No
             brain,
             f"Voice profile: {selected.name}; accent {selected.accent}; tone {selected.tone}; speed {selected.speed}; expressiveness {selected.expressiveness}.",
             "Use short, natural spoken turns by default. Sound calm, warm, British, intelligent and professionally human.",
+            "Avoid saying 'as an AI assistant'. Avoid filler, corporate wording and repeated introductions.",
+            "When interrupted, acknowledge briefly and continue from the current subject without restarting the whole answer.",
             "Do not sound like a dashboard or read citation labels aloud unless the user asks for evidence details.",
             "Carry conversational context across follow-ups and recover gracefully if interrupted.",
             "Ask one natural follow-up question when it would help, instead of over-explaining.",
@@ -87,15 +89,17 @@ def spoken_acknowledgement(decision: OrbModeDecision, text: str) -> str:
     lower = text.lower()
     if decision.brain == "inspector_brain":
         if "ofsted" in lower or "sccif" in lower:
-            return "I will check the evidence and keep it inspection-ready."
-        return "I will check the records and flag any gaps."
+            return "Yeah. I will keep this evidence-led."
+        return "Yeah. I will check the records and flag any gaps."
     if decision.brain == "web_research_brain":
-        return "I will check live tools for that."
+        return "I will check what is available now."
     if decision.brain in {"general_assistant_brain", "productivity_brain"}:
         return "Sure."
     if any(term in lower for term in ("create", "draft", "record", "daily note", "handover")):
-        return "I can draft that. I will ask before saving anything."
-    return "I will check the permitted records."
+        return "Yeah. I can draft that, and I will ask before saving anything."
+    if any(term in lower for term in ("safeguarding", "concern", "missing", "incident", "restraint", "self-harm")):
+        return "Yeah. I will separate what is recorded from what still needs checking."
+    return "Yeah. I will check the permitted records."
 
 
 def transcript_storage_policy(do_not_store: bool = False, retention_days: int | None = 30) -> dict[str, Any]:

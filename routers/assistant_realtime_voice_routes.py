@@ -3,19 +3,20 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from auth.permissions import require_assistant_access
 from services.assistant_security import safe_string
+from services.orb_realtime_provider_service import (
+    ALLOWED_SYNTHETIC_VOICES,
+    DEFAULT_REALTIME_MODEL,
+    orb_realtime_provider_service,
+)
 
 router = APIRouter(prefix="/assistant/realtime", tags=["Assistant Realtime Voice"])
 
-OPENAI_REALTIME_SESSION_URL = "https://api.openai.com/v1/realtime/sessions"
-DEFAULT_REALTIME_MODEL = os.getenv("INDICARE_REALTIME_MODEL", "gpt-4o-realtime-preview")
 DEFAULT_REALTIME_VOICE = os.getenv("INDICARE_REALTIME_VOICE", "shimmer")
-ALLOWED_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"}
 
 
 class RealtimeSessionRequest(BaseModel):
@@ -28,14 +29,14 @@ class RealtimeSessionRequest(BaseModel):
 
 
 def _configured() -> bool:
-    return bool(os.getenv("OPENAI_API_KEY"))
+    return orb_realtime_provider_service.configured()
 
 
 def _voice(value: str | None) -> str:
     requested = safe_string(value).lower()
     configured = safe_string(DEFAULT_REALTIME_VOICE).lower()
     selected = requested or configured or "shimmer"
-    return selected if selected in ALLOWED_VOICES else "shimmer"
+    return selected if selected in ALLOWED_SYNTHETIC_VOICES else "shimmer"
 
 
 def _voice_instruction(payload: RealtimeSessionRequest, current_user: dict[str, Any]) -> str:
@@ -69,20 +70,17 @@ def _session_body(payload: RealtimeSessionRequest, current_user: dict[str, Any])
 
 @router.post("/session")
 async def create_realtime_voice_session(payload: RealtimeSessionRequest, current_user=Depends(require_assistant_access)):
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    if not _configured():
         raise HTTPException(status_code=503, detail="Realtime voice is not configured.")
-    body = _session_body(payload, current_user)
-    async with httpx.AsyncClient(timeout=20) as client:
-        response = await client.post(
-            OPENAI_REALTIME_SESSION_URL,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "OpenAI-Beta": "realtime=v1"},
-            json=body,
-        )
-    if response.status_code >= 400:
-        raise HTTPException(status_code=502, detail="Could not create realtime voice session.")
-    data = response.json()
-    return {"ok": True, "provider": "openai_realtime", "configured": True, "model": DEFAULT_REALTIME_MODEL, "voice": body["voice"], "session": data, "fallback": "browser_voice"}
+    data = await orb_realtime_provider_service.create_ephemeral_session(
+        instructions=_voice_instruction(payload, current_user),
+        voice=_voice(payload.voice),
+        current_user=current_user,
+        orb_session_id=payload.conversation_id,
+    )
+    if data.get("error"):
+        raise HTTPException(status_code=503 if data.get("retryable") else 502, detail=data.get("unavailable_reason") or "Could not create realtime voice session.")
+    return {"ok": True, "provider": "openai_realtime", "configured": True, "model": DEFAULT_REALTIME_MODEL, "voice": data.get("voice"), "session": data.get("session"), "fallback": "browser_voice", "expires_at": data.get("expires_at")}
 
 
 @router.get("/config")
@@ -93,7 +91,7 @@ async def realtime_voice_config():
         "provider": "openai_realtime",
         "model": DEFAULT_REALTIME_MODEL,
         "voice": _voice(DEFAULT_REALTIME_VOICE),
-        "allowed_voices": sorted(ALLOWED_VOICES),
+        "allowed_voices": sorted(ALLOWED_SYNTHETIC_VOICES),
         "transport": "webrtc",
         "fallback": "browser_voice",
         "production_ready": _configured(),

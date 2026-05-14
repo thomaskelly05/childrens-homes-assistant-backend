@@ -24,6 +24,7 @@ SENSITIVE_PREFIXES = (
     "/passkeys",
     "/young-people",
     "/assistant",
+    "/orb",
     "/os",
     "/staff",
     "/admin",
@@ -84,7 +85,12 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         expected = str(request.session.get("csrf_token") or "")
+        cookie_token = str(request.cookies.get(auth_settings.csrf_cookie_name) or "")
         supplied = str(request.headers.get("x-csrf-token") or "")
+        if supplied and cookie_token and secrets.compare_digest(supplied, cookie_token):
+            if not expected:
+                request.session["csrf_token"] = cookie_token
+            return await call_next(request)
         if not expected or not supplied or not secrets.compare_digest(expected, supplied):
             logger.warning(
                 "csrf_blocked method=%s path=%s ip=%s",
@@ -116,10 +122,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "Content-Security-Policy",
             "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; "
             "img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline'; connect-src 'self'",
+            "script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.openai.com wss://api.openai.com",
         )
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()")
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
 

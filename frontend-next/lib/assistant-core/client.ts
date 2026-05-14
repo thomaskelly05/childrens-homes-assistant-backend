@@ -1,4 +1,5 @@
 import { buildAssistantContext } from './context'
+import { getCsrfToken } from '@/lib/auth/api'
 import type {
   AssistantContext,
   AssistantMode,
@@ -44,13 +45,15 @@ export function assistantErrorMessage(error: unknown) {
 }
 
 export async function queryAssistant(request: AssistantQueryRequest, signal?: AbortSignal): Promise<AssistantQueryData> {
+  const csrfToken = getCsrfToken()
   const response = await fetch(assistantUrl('/assistant/query'), {
     method: 'POST',
     credentials: 'include',
     cache: 'no-store',
     signal,
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
     },
     body: JSON.stringify(request)
   })

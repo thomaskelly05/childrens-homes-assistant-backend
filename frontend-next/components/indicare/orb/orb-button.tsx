@@ -18,11 +18,12 @@ export function OrbButton({
 }) {
   const controller = useMemo(() => new OrbRuntimeController({ context, role }), [context, role])
   const [snapshot, setSnapshot] = useState<OrbRuntimeSnapshot>(controller.getSnapshot())
-  const [captions, setCaptions] = useState(false)
+  const [captions, setCaptions] = useState(Boolean(controller.getSnapshot().preferences.captions_enabled))
   const [fallbackOpen, setFallbackOpen] = useState(false)
   const [typedText, setTypedText] = useState('')
 
   useEffect(() => controller.subscribe(setSnapshot), [controller])
+  useEffect(() => controller.attachBrowserLifecycle(), [controller])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -124,7 +125,13 @@ export function OrbButton({
           ) : null}
 
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-            <button type="button" onClick={() => setCaptions((value) => !value)} className="rounded-full bg-white/10 px-3 py-1.5 font-bold text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+            <button type="button" onClick={() => {
+              setCaptions((value) => {
+                const next = !value
+                controller.updatePreferences({ ...snapshot.preferences, captions_enabled: next })
+                return next
+              })
+            }} className="rounded-full bg-white/10 px-3 py-1.5 font-bold text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-300">
               <Captions className="mr-1 inline h-3.5 w-3.5" aria-hidden />
               {captions ? 'Hide captions' : 'Captions'}
             </button>

@@ -6,13 +6,18 @@ import type { OrbState } from '@/lib/orb/types'
 
 const stateLabels: Record<OrbState, string> = {
   idle: 'Ready',
+  connecting: 'Connecting',
   passive_listening: 'Wake word standby',
   listening: 'Listening',
   thinking: 'Thinking',
   speaking: 'Speaking',
   interrupted: 'Interrupted',
+  reconnecting: 'Reconnecting',
+  offline: 'Offline',
   muted: 'Muted',
   unavailable: 'Unavailable',
+  permission_denied: 'Microphone blocked',
+  expired: 'Session expired',
   private: 'Private mode',
   recording: 'Recording',
   dictation: 'Dictation',
@@ -24,9 +29,9 @@ const stateLabels: Record<OrbState, string> = {
 export function OrbVisual({ state, size = 'large' }: { state: OrbState; size?: 'small' | 'large' }) {
   const isSmall = size === 'small'
   const dimension = isSmall ? 'h-12 w-12' : 'h-28 w-28'
-  const pulse = ['passive_listening', 'listening', 'speaking', 'recording', 'dictation'].includes(state)
+  const pulse = ['connecting', 'passive_listening', 'listening', 'speaking', 'recording', 'dictation', 'reconnecting'].includes(state)
   const muted = state === 'muted' || state === 'private'
-  const error = state === 'error' || state === 'unavailable'
+  const error = ['error', 'unavailable', 'permission_denied', 'expired'].includes(state)
   const inspection = state === 'inspection' || state === 'safeguarding_sensitive'
 
   return (

@@ -12,13 +12,18 @@ export type OrbBrain =
 export type OrbSelectedMode = 'auto' | 'care' | 'inspector' | 'general'
 export type OrbState =
   | 'idle'
+  | 'connecting'
   | 'passive_listening'
   | 'listening'
   | 'thinking'
   | 'speaking'
   | 'interrupted'
+  | 'reconnecting'
+  | 'offline'
   | 'muted'
   | 'unavailable'
+  | 'permission_denied'
+  | 'expired'
   | 'private'
   | 'recording'
   | 'dictation'
@@ -65,6 +70,14 @@ export type OrbPreferences = {
   keyboard_shortcut: string
   default_home_id?: number | null
   default_shift_context?: Record<string, unknown>
+  captions_enabled?: boolean
+  privacy_mode_label?: 'standard' | 'private' | 'do_not_store'
+  wake_word_enabled?: boolean
+  wake_word_local_only_acknowledged?: boolean
+  headset_preference?: 'system_default' | 'speaker' | 'headset' | 'bluetooth'
+  microphone_mode?: 'push_to_talk' | 'open_mic'
+  interruption_sensitivity?: 'low' | 'medium' | 'high'
+  ambient_noise_sensitivity?: 'low' | 'medium' | 'high'
 }
 
 export type OrbContext = {
@@ -146,6 +159,7 @@ export type OrbSessionStartData = {
   provider: string
   provider_configured: boolean
   state: OrbState
+  expires_at?: string | null
   wake_phrase: string
   voice_profile: OrbVoiceProfile
   preferences: OrbPreferences
@@ -278,6 +292,14 @@ export const defaultOrbPreferences: OrbPreferences = {
   quiet_hours: {},
   keyboard_shortcut: 'Ctrl+Shift+Space',
   default_home_id: null,
-  default_shift_context: {}
+  default_shift_context: {},
+  captions_enabled: false,
+  privacy_mode_label: 'standard',
+  wake_word_enabled: false,
+  wake_word_local_only_acknowledged: false,
+  headset_preference: 'system_default',
+  microphone_mode: 'push_to_talk',
+  interruption_sensitivity: 'medium',
+  ambient_noise_sensitivity: 'medium'
 }
 

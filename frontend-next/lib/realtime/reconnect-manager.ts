@@ -31,7 +31,6 @@ export class ReconnectManager {
       this.reconnectTimer = null
     }
 
-    this.callbacks.onReconnect?.()
     this.callbacks.onStatusChange?.(true)
   }
 

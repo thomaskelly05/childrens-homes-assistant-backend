@@ -1,5 +1,6 @@
 import { endOrbSession, interruptOrbSession, sendOrbEvent, startOrbSession } from './client'
 import { routeOrbMode } from './mode-router'
+import { mapNetworkStateToOrbState, OrbRealtimeClient, type OrbNetworkState, type OrbRealtimeConnectOptions } from './network'
 import type {
   OrbContext,
   OrbModeDecision,
@@ -59,13 +60,20 @@ export class OrbRuntimeController {
   private listeners = new Set<(snapshot: OrbRuntimeSnapshot) => void>()
   private stream: MediaStream | null = null
   private abortController: AbortController | null = null
-  private peerConnection: RTCPeerConnection | null = null
-  private dataChannel: RTCDataChannel | null = null
-  private audioElement: HTMLAudioElement | null = null
   private activeContext: OrbContext = {}
   private activeRole: string | null | undefined = null
   private silenceTimer: ReturnType<typeof setTimeout> | null = null
   private browserUtterance: SpeechSynthesisUtterance | null = null
+  private hardStateTimer: ReturnType<typeof setTimeout> | null = null
+  private realtimeClient = new OrbRealtimeClient({
+    onEvent: (raw) => this.handleRealtimeEvent(raw),
+    onStateChange: (state, detail) => this.applyNetworkState(state, detail),
+    onError: (message) => {
+      this.snapshot = { ...this.snapshot, connected: false, realtimeAvailable: false, error: message }
+      this.emit()
+    },
+    refreshCredentials: () => this.refreshRealtimeCredentials()
+  })
 
   constructor(options: {
     selectedMode?: OrbSelectedMode
@@ -101,6 +109,33 @@ export class OrbRuntimeController {
     listener(this.snapshot)
     return () => {
       this.listeners.delete(listener)
+    }
+  }
+
+  attachBrowserLifecycle() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return () => undefined
+    const onOnline = () => {
+      this.realtimeClient.handleBrowserOnline()
+      if (this.snapshot.state === 'offline') {
+        this.snapshot = { ...this.snapshot, state: 'reconnecting', error: undefined }
+        this.emit()
+      }
+    }
+    const onOffline = () => {
+      this.realtimeClient.handleBrowserOffline()
+      this.snapshot = { ...this.snapshot, state: 'offline', connected: false, error: 'Orb is offline. It will reconnect when the network returns.' }
+      this.emit()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') this.realtimeClient.handleWake()
+    }
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }
 
@@ -152,7 +187,7 @@ export class OrbRuntimeController {
     this.activeRole = role
     this.abortController?.abort()
     this.abortController = new AbortController()
-    this.snapshot = { ...this.snapshot, loading: true, error: undefined, state: 'thinking' }
+    this.snapshot = { ...this.snapshot, loading: true, error: undefined, state: 'connecting' }
     this.emit()
     try {
       const data: OrbSessionStartData = await startOrbSession({
@@ -176,9 +211,10 @@ export class OrbRuntimeController {
         loading: false,
         error: undefined
       }
+      this.armHardStateRecovery()
       await this.connectRealtimeIfAvailable(data)
     } catch (error) {
-      this.snapshot = { ...this.snapshot, state: 'error', loading: false, connected: false, error: error instanceof Error ? error.message : 'Orb session failed.' }
+      this.snapshot = { ...this.snapshot, state: error instanceof DOMException && error.name === 'AbortError' ? 'idle' : 'unavailable', loading: false, connected: false, error: error instanceof Error ? error.message : 'Orb session failed.' }
     } finally {
       this.emit()
     }
@@ -193,6 +229,7 @@ export class OrbRuntimeController {
     const sessionId = this.snapshot.sessionId
     if (!sessionId) return null
     this.snapshot = { ...this.snapshot, state: 'thinking', loading: true, partialTranscript: '' }
+    this.armHardStateRecovery()
     this.emit()
     try {
       const data = await sendOrbEvent(sessionId, {
@@ -207,7 +244,7 @@ export class OrbRuntimeController {
       }
       return data
     } catch (error) {
-      this.snapshot = { ...this.snapshot, state: 'error', loading: false, error: error instanceof Error ? error.message : 'Orb event failed.' }
+      this.snapshot = { ...this.snapshot, state: 'unavailable', loading: false, error: error instanceof Error ? error.message : 'Orb event failed.' }
       this.emit()
       return null
     }
@@ -287,12 +324,14 @@ export class OrbRuntimeController {
     this.stream = null
     this.closeRealtime()
     this.clearSilenceTimer()
+    this.clearHardStateRecovery()
     this.stopBrowserSpeech()
     this.snapshot = { ...this.snapshot, sessionId: null, state: 'idle', connected: false, realtimeAvailable: false, loading: false }
     this.emit()
   }
 
   private applyEventData(data: OrbSessionEventData) {
+    this.clearHardStateRecovery()
     this.snapshot = {
       ...this.snapshot,
       state: data.state,
@@ -312,13 +351,18 @@ export class OrbRuntimeController {
   }
 
   private async connectRealtimeIfAvailable(data: OrbSessionStartData) {
+    const options = await this.realtimeOptionsFromSession(data)
+    if (!options) return
+    await this.realtimeClient.connect(options)
+  }
+
+  private async realtimeOptionsFromSession(data: OrbSessionStartData): Promise<OrbRealtimeConnectOptions | null> {
     const realtime = data.realtime || {}
     if (realtime.transport !== 'webrtc' || data.provider !== 'openai_realtime' || !data.provider_configured) {
       const status = typeof realtime.status === 'string' ? realtime.status : 'Realtime voice unavailable; text fallback is active.'
-      this.snapshot = { ...this.snapshot, error: status.includes('unavailable') ? status : this.snapshot.error }
-      return
+      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: status.includes('unavailable') ? status : this.snapshot.error }
+      return null
     }
-
     const providerSession = data.provider_session as {
       session?: { client_secret?: { value?: string }, model?: string },
       model?: string
@@ -326,85 +370,56 @@ export class OrbRuntimeController {
     const ephemeralKey = providerSession.session?.client_secret?.value
     const model = providerSession.model || providerSession.session?.model
     if (!ephemeralKey || !model) {
-      this.snapshot = { ...this.snapshot, error: 'Realtime voice unavailable; ephemeral client session was not returned. Text fallback is active.' }
-      return
+      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: 'Realtime voice unavailable; ephemeral client session was not returned. Text fallback is active.' }
+      return null
     }
-
     if (!this.stream) {
       const micReady = await this.requestMicrophone()
       if (!micReady || !this.stream) {
-        this.snapshot = { ...this.snapshot, error: 'Realtime voice unavailable until microphone permission is granted. Text fallback is active.' }
-        return
+        this.snapshot = { ...this.snapshot, state: this.snapshot.microphone === 'denied' ? 'permission_denied' : this.snapshot.state, realtimeAvailable: false, error: 'Realtime voice unavailable until microphone permission is granted. Text fallback is active.' }
+        return null
       }
     }
+    return { model, ephemeralKey, mediaStream: this.stream, sessionId: data.session_id }
+  }
 
-    if (typeof RTCPeerConnection === 'undefined') {
-      this.snapshot = { ...this.snapshot, error: 'Realtime voice unavailable in this browser. Text fallback is active.' }
-      return
+  private async refreshRealtimeCredentials(): Promise<OrbRealtimeConnectOptions | null> {
+    if (!this.activeContext || !this.stream) return null
+    if (this.snapshot.sessionId) {
+      await sendOrbEvent(this.snapshot.sessionId, { type: 'reconnect', context: this.activeContext }).catch(() => undefined)
     }
+    const data = await startOrbSession({
+      selected_mode: this.snapshot.selectedMode,
+      current_state: 'reconnecting',
+      context: this.activeContext,
+      voice_profile: this.snapshot.voiceProfile,
+      preferences: this.snapshot.preferences,
+      workspace_context: { role: this.activeRole, reconnect: true }
+    })
+    this.snapshot = {
+      ...this.snapshot,
+      sessionId: data.session_id,
+      state: 'reconnecting',
+      connected: true,
+      realtimeAvailable: data.realtime?.transport === 'webrtc' && data.provider === 'openai_realtime' && data.provider_configured,
+      realtimeState: data.realtime_state || {},
+      memorySnapshot: data.memory_snapshot || this.snapshot.memorySnapshot,
+      error: undefined
+    }
+    this.emit()
+    return this.realtimeOptionsFromSession(data)
+  }
 
-    try {
-      this.closeRealtime()
-      const peer = new RTCPeerConnection()
-      this.peerConnection = peer
-      this.stream.getAudioTracks().forEach((track) => peer.addTrack(track, this.stream as MediaStream))
-      peer.ontrack = (event) => {
-        const [remoteStream] = event.streams
-        if (!remoteStream) return
-        const audio = this.audioElement || new Audio()
-        audio.autoplay = true
-        audio.srcObject = remoteStream
-        this.audioElement = audio
-        void audio.play().catch(() => undefined)
-      }
-      peer.onconnectionstatechange = () => {
-        if (['failed', 'disconnected', 'closed'].includes(peer.connectionState)) {
-          this.snapshot = { ...this.snapshot, connected: false, error: 'Realtime voice disconnected. Text fallback is active; reopen Orb to reconnect.' }
-          this.emit()
-        }
-      }
-      const channel = peer.createDataChannel('oai-events')
-      this.dataChannel = channel
-      channel.onmessage = (event) => this.handleRealtimeEvent(event.data)
-      channel.onopen = () => {
-        this.snapshot = { ...this.snapshot, connected: true, error: undefined }
-        this.sendRealtimeEvent({
-          type: 'session.update',
-          session: {
-            turn_detection: {
-              type: 'server_vad',
-              threshold: 0.48,
-              prefix_padding_ms: 280,
-              silence_duration_ms: 520,
-              create_response: false,
-              interrupt_response: true
-            }
-          }
-        })
-        this.emit()
-      }
-      const offer = await peer.createOffer()
-      await peer.setLocalDescription(offer)
-      const response = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${ephemeralKey}`,
-          'Content-Type': 'application/sdp',
-          'OpenAI-Beta': 'realtime=v1'
-        },
-        body: offer.sdp || ''
-      })
-      if (!response.ok) throw new Error(`OpenAI realtime WebRTC failed (${response.status})`)
-      const answer = { type: 'answer' as RTCSdpType, sdp: await response.text() }
-      await peer.setRemoteDescription(answer)
-    } catch (error) {
-      this.closeRealtime()
-      this.snapshot = {
-        ...this.snapshot,
-        connected: false,
-        error: error instanceof Error ? `${error.message}. Text fallback is active.` : 'Realtime voice unavailable. Text fallback is active.'
-      }
+  private applyNetworkState(state: OrbNetworkState, detail?: Record<string, unknown>) {
+    const orbState = mapNetworkStateToOrbState(state)
+    this.snapshot = {
+      ...this.snapshot,
+      state: orbState,
+      connected: !['offline', 'unavailable', 'expired', 'permission_denied', 'reconnecting'].includes(state),
+      realtimeAvailable: !['unavailable', 'expired', 'permission_denied'].includes(state) && this.snapshot.realtimeAvailable,
+      realtimeState: { ...this.snapshot.realtimeState, network_state: state, ...(detail || {}) }
     }
+    this.emit()
   }
 
   private handleRealtimeEvent(raw: unknown) {
@@ -469,6 +484,7 @@ export class OrbRuntimeController {
       return
     }
     if (type === 'response.done') {
+      this.clearHardStateRecovery()
       this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
       this.emit()
       if (this.snapshot.sessionId) {
@@ -483,17 +499,11 @@ export class OrbRuntimeController {
   }
 
   private sendRealtimeEvent(payload: Record<string, unknown>) {
-    if (!this.dataChannel || this.dataChannel.readyState !== 'open') return
-    this.dataChannel.send(JSON.stringify(payload))
+    this.realtimeClient.send(payload)
   }
 
   private stopAssistantAudio() {
-    if (!this.audioElement) return
-    try {
-      this.audioElement.pause()
-    } catch {
-      // Ignore browser media edge cases; backend interruption still proceeds.
-    }
+    this.realtimeClient.stopAudio()
   }
 
   private async speakAssistantTurn(text: string) {
@@ -504,14 +514,13 @@ export class OrbRuntimeController {
     if (this.snapshot.sessionId) {
       await sendOrbEvent(this.snapshot.sessionId, { type: 'response_started', context: this.activeContext }).catch(() => undefined)
     }
-    if (this.dataChannel?.readyState === 'open') {
-      this.sendRealtimeEvent({
-        type: 'response.create',
-        response: {
-          modalities: ['audio', 'text'],
-          instructions: `Speak this IndiCare Orb answer naturally, in a calm British female voice. Do not add citations or extra commentary. Say exactly: ${JSON.stringify(spoken)}`
-        }
-      })
+    if (this.realtimeClient.send({
+      type: 'response.create',
+      response: {
+        modalities: ['audio', 'text'],
+        instructions: `Speak this IndiCare Orb answer naturally, in a calm British female voice. Do not add citations or extra commentary. Say exactly: ${JSON.stringify(spoken)}`
+      }
+    })) {
       return
     }
     this.speakWithBrowserVoice(spoken)
@@ -529,6 +538,7 @@ export class OrbRuntimeController {
     utterance.rate = 0.94
     utterance.pitch = 1.02
     utterance.onend = () => {
+      this.clearHardStateRecovery()
       this.browserUtterance = null
       this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
       this.emit()
@@ -578,15 +588,26 @@ export class OrbRuntimeController {
     this.silenceTimer = null
   }
 
+  private armHardStateRecovery() {
+    this.clearHardStateRecovery()
+    this.hardStateTimer = setTimeout(() => {
+      if (!['thinking', 'speaking', 'connecting', 'reconnecting'].includes(this.snapshot.state)) return
+      this.snapshot = { ...this.snapshot, state: 'idle', loading: false, partialTranscript: '', error: 'Orb recovered from a stalled voice turn. Please try again.' }
+      this.emit()
+      if (this.snapshot.sessionId) {
+        void sendOrbEvent(this.snapshot.sessionId, { type: 'error', state: 'idle', context: this.activeContext, metadata: { recovery: 'hard_state_timeout' } }).catch(() => undefined)
+      }
+    }, 45000)
+  }
+
+  private clearHardStateRecovery() {
+    if (!this.hardStateTimer) return
+    clearTimeout(this.hardStateTimer)
+    this.hardStateTimer = null
+  }
+
   private closeRealtime() {
-    this.dataChannel?.close()
-    this.dataChannel = null
-    this.peerConnection?.close()
-    this.peerConnection = null
-    if (this.audioElement) {
-      this.audioElement.srcObject = null
-      this.audioElement = null
-    }
+    this.realtimeClient.close()
   }
 }
 

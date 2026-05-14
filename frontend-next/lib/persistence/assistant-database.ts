@@ -1,4 +1,5 @@
 import { AssistantMessage } from '@/lib/realtime/assistant-runtime'
+import { getCsrfToken } from '@/lib/auth/api'
 
 export type PersistedConversation = {
   id: string
@@ -8,18 +9,19 @@ export type PersistedConversation = {
   updatedAt: string
 }
 
-const DEFAULT_API_BASE = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:8000'
-  : 'https://childrens-homes-assistant-backend-new.onrender.com'
 const API_BASE = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  DEFAULT_API_BASE
+  ''
 ).replace(/\/+$/, '')
+
+function apiUrl(path: string) {
+  return `${API_BASE}${path}`
+}
 
 export class AssistantDatabase {
   async listConversations(): Promise<PersistedConversation[]> {
-    const response = await fetch(`${API_BASE}/assistant/conversations`, {
+    const response = await fetch(apiUrl('/assistant/conversations'), {
       credentials: 'include',
       cache: 'no-store'
     })
@@ -32,12 +34,14 @@ export class AssistantDatabase {
   }
 
   async saveConversation(conversation: PersistedConversation) {
-    const response = await fetch(`${API_BASE}/assistant/conversations/${conversation.id}`, {
+    const csrfToken = getCsrfToken()
+    const response = await fetch(apiUrl(`/assistant/conversations/${conversation.id}`), {
       method: 'PUT',
       credentials: 'include',
       cache: 'no-store',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
       },
       body: JSON.stringify(conversation)
     })
@@ -50,10 +54,14 @@ export class AssistantDatabase {
   }
 
   async deleteConversation(id: string) {
-    const response = await fetch(`${API_BASE}/assistant/conversations/${id}`, {
+    const csrfToken = getCsrfToken()
+    const response = await fetch(apiUrl(`/assistant/conversations/${id}`), {
       method: 'DELETE',
       credentials: 'include',
-      cache: 'no-store'
+      cache: 'no-store',
+      headers: {
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
+      }
     })
 
     if (!response.ok) {
