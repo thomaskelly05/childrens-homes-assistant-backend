@@ -2,15 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket
 from fastapi.responses import JSONResponse
 
 from auth.permissions import require_assistant_access
 from db.connection import get_db
 from schemas.orb import OrbSessionEventRequest, OrbSessionStartRequest
 from services.orb_operational_events_service import orb_operational_events_service
+from services.orb_observability_service import orb_observability_service
 from services.orb_realtime_provider_service import orb_realtime_provider_service
+from services.orb_session_store import orb_session_store
 from services.orb_voice_session_service import orb_voice_session_service
+from services.orb_websocket_gateway import orb_websocket_gateway
 from services.orb_wake_word_service import orb_wake_word_service
 
 router = APIRouter(prefix="/orb", tags=["Orb Voice Assistant"])
@@ -216,6 +219,38 @@ async def orb_config(current_user=Depends(require_assistant_access)):
 @router.get("/realtime/health")
 async def orb_realtime_health(current_user=Depends(require_assistant_access)):
     return {"success": True, "data": orb_realtime_provider_service.health_metrics()}
+
+
+@router.get("/health")
+async def orb_health(current_user=Depends(require_assistant_access)):
+    return {
+        "success": True,
+        "data": {
+            **orb_observability_service.health(),
+            "session_store": orb_session_store.health(),
+        },
+    }
+
+
+@router.get("/realtime/metrics")
+async def orb_realtime_metrics(current_user=Depends(require_assistant_access)):
+    return {"success": True, "data": orb_observability_service.metrics()}
+
+
+@router.get("/provider/status")
+async def orb_provider_status(current_user=Depends(require_assistant_access)):
+    return {
+        "success": True,
+        "data": {
+            "openai_realtime": orb_realtime_provider_service.provider_status(),
+            "observed": orb_observability_service.provider_status(),
+        },
+    }
+
+
+@router.websocket("/realtime/ws")
+async def orb_realtime_websocket(websocket: WebSocket):
+    await orb_websocket_gateway.handle(websocket)
 
 
 @router.get("/events/subscriptions")

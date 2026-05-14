@@ -85,6 +85,8 @@ export function OrbModal({
 
   useEffect(() => controller.subscribe(setSnapshot), [controller])
 
+  useEffect(() => controller.attachBrowserLifecycle(), [controller])
+
   useEffect(() => {
     if (open && !snapshot.sessionId && !snapshot.loading) {
       void controller.start(context, role)
@@ -112,7 +114,7 @@ export function OrbModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/40 p-3 backdrop-blur-sm md:items-center" role="dialog" aria-modal="true" aria-labelledby="orb-modal-title">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/40 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm md:items-center" role="dialog" aria-modal="true" aria-labelledby="orb-modal-title">
       <div className="max-h-[94vh] w-full max-w-5xl overflow-hidden rounded-[32px] border border-white/70 bg-[#f8fafc] shadow-2xl shadow-slate-950/30">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-5">
           <div className="flex items-center gap-4">
@@ -130,6 +132,17 @@ export function OrbModal({
 
         <div className="grid max-h-[calc(94vh-92px)] gap-5 overflow-auto p-5 lg:grid-cols-[320px_minmax(0,1fr)]">
           <aside className="space-y-4">
+            {snapshot.mobile.reconnectBanner ? (
+              <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+                <AlertTriangle className="mr-2 inline h-4 w-4" aria-hidden />
+                {snapshot.state === 'offline' ? 'Orb is offline. It will reconnect when the network returns.' : 'Orb is reconnecting calmly. Text fallback remains available.'}
+              </div>
+            ) : null}
+            {snapshot.mobile.lowBandwidthMode ? (
+              <div className="rounded-[24px] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+                Low-bandwidth mode is active. Orb keeps responses short and avoids extra realtime retries.
+              </div>
+            ) : null}
             <div className="rounded-[28px] border border-white/70 bg-white p-6 text-center shadow-sm">
               <OrbVisual state={snapshot.state} />
               <p className="mt-5 text-sm font-black text-slate-950">{brainLabel(snapshot.modeDecision.brain)}</p>

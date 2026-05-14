@@ -1,4 +1,5 @@
 import type { OrbState } from '../types'
+import { createOrbAudioElement, resumeOrbAudioElement, stopOrbAudioElement } from '../audio'
 
 export type OrbNetworkState =
   | 'idle'
@@ -92,11 +93,10 @@ export class OrbRealtimeClient {
     peer.ontrack = (event) => {
       const [remoteStream] = event.streams
       if (!remoteStream) return
-      const audio = this.audio || new Audio()
-      audio.autoplay = true
+      const audio = this.audio || createOrbAudioElement(remoteStream)
       audio.srcObject = remoteStream
       this.audio = audio
-      void audio.play().catch(() => undefined)
+      void resumeOrbAudioElement(audio)
     }
 
     peer.onconnectionstatechange = () => {
@@ -155,11 +155,7 @@ export class OrbRealtimeClient {
 
   stopAudio() {
     if (!this.audio) return
-    try {
-      this.audio.pause()
-    } catch {
-      // Browser audio elements may throw during device changes or tab sleep.
-    }
+    stopOrbAudioElement(this.audio)
   }
 
   close() {
@@ -184,6 +180,7 @@ export class OrbRealtimeClient {
 
   handleWake() {
     if (this.stopped || !this.current) return
+    void resumeOrbAudioElement(this.audio)
     if (!this.peer || ['failed', 'disconnected', 'closed'].includes(this.peer.connectionState)) {
       this.scheduleReconnect('browser_wake', 0)
     }
@@ -266,7 +263,7 @@ export class OrbRealtimeClient {
     this.peer?.close()
     this.peer = null
     if (this.audio) {
-      this.audio.srcObject = null
+      stopOrbAudioElement(this.audio)
       this.audio = null
     }
   }

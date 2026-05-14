@@ -1,6 +1,7 @@
 import { endOrbSession, interruptOrbSession, sendOrbEvent, startOrbSession } from './client'
 import { routeOrbMode } from './mode-router'
 import { mapNetworkStateToOrbState, OrbRealtimeClient, type OrbNetworkState, type OrbRealtimeConnectOptions } from './network'
+import { OrbAudioRecovery, isMobileOrbBrowser, prefersLowBandwidthMode, triggerOrbHaptic } from './audio'
 import type {
   OrbContext,
   OrbModeDecision,
@@ -30,6 +31,11 @@ export type OrbRuntimeSnapshot = {
   realtimeAvailable: boolean
   realtimeState: Record<string, unknown>
   memorySnapshot: Record<string, unknown>
+  mobile: {
+    isMobile: boolean
+    lowBandwidthMode: boolean
+    reconnectBanner: boolean
+  }
   loading: boolean
   error?: string
 }
@@ -65,6 +71,19 @@ export class OrbRuntimeController {
   private silenceTimer: ReturnType<typeof setTimeout> | null = null
   private browserUtterance: SpeechSynthesisUtterance | null = null
   private hardStateTimer: ReturnType<typeof setTimeout> | null = null
+  private audioRecovery = new OrbAudioRecovery({
+    onRecovery: (reason, detail) => {
+      this.snapshot = {
+        ...this.snapshot,
+        realtimeState: { ...this.snapshot.realtimeState, audio_recovery_reason: reason, audio_recovery_detail: detail || {} }
+      }
+      this.emit()
+    },
+    onError: (message) => {
+      this.snapshot = { ...this.snapshot, microphone: 'denied', realtimeAvailable: false, error: message }
+      this.emit()
+    }
+  })
   private realtimeClient = new OrbRealtimeClient({
     onEvent: (raw) => this.handleRealtimeEvent(raw),
     onStateChange: (state, detail) => this.applyNetworkState(state, detail),
@@ -100,6 +119,11 @@ export class OrbRuntimeController {
       realtimeAvailable: false,
       realtimeState: {},
       memorySnapshot: {},
+      mobile: {
+        isMobile: false,
+        lowBandwidthMode: false,
+        reconnectBanner: false
+      },
       loading: false
     }
   }
@@ -114,7 +138,17 @@ export class OrbRuntimeController {
 
   attachBrowserLifecycle() {
     if (typeof window === 'undefined' || typeof document === 'undefined') return () => undefined
+    this.snapshot = {
+      ...this.snapshot,
+      mobile: {
+        isMobile: isMobileOrbBrowser(),
+        lowBandwidthMode: prefersLowBandwidthMode(),
+        reconnectBanner: this.snapshot.mobile.reconnectBanner
+      }
+    }
+    const cleanupAudioRecovery = this.audioRecovery.attachBrowserRecovery()
     const onOnline = () => {
+      triggerOrbHaptic('reconnect')
       this.realtimeClient.handleBrowserOnline()
       if (this.snapshot.state === 'offline') {
         this.snapshot = { ...this.snapshot, state: 'reconnecting', error: undefined }
@@ -127,7 +161,10 @@ export class OrbRuntimeController {
       this.emit()
     }
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') this.realtimeClient.handleWake()
+      if (document.visibilityState === 'visible') {
+        void this.recoverMediaAfterWake()
+        this.realtimeClient.handleWake()
+      }
     }
     window.addEventListener('online', onOnline)
     window.addEventListener('offline', onOffline)
@@ -136,6 +173,7 @@ export class OrbRuntimeController {
       window.removeEventListener('online', onOnline)
       window.removeEventListener('offline', onOffline)
       document.removeEventListener('visibilitychange', onVisibility)
+      cleanupAudioRecovery()
     }
   }
 
@@ -165,13 +203,8 @@ export class OrbRuntimeController {
       return false
     }
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      })
+      this.stream = await this.audioRecovery.requestMicrophone(this.stream)
+      if (!this.stream) throw new Error('Microphone permission was denied.')
       this.snapshot = { ...this.snapshot, microphone: 'granted', error: undefined }
       this.emit()
       return true
@@ -260,6 +293,7 @@ export class OrbRuntimeController {
   }
 
   async interrupt() {
+    triggerOrbHaptic('interrupt')
     this.stopAssistantAudio()
     this.stopBrowserSpeech()
     this.sendRealtimeEvent({ type: 'response.cancel' })
@@ -290,6 +324,7 @@ export class OrbRuntimeController {
     if (!this.snapshot.sessionId) {
       await this.start(context, role)
     }
+    triggerOrbHaptic('tap')
     const micReady = this.snapshot.microphone === 'granted' || await this.requestMicrophone()
     if (!micReady) return
     if (this.snapshot.sessionId) {
@@ -320,7 +355,7 @@ export class OrbRuntimeController {
     if (this.snapshot.sessionId) {
       await endOrbSession(this.snapshot.sessionId).catch(() => undefined)
     }
-    this.stream?.getTracks().forEach((track) => track.stop())
+    this.audioRecovery.stopAll('logout')
     this.stream = null
     this.closeRealtime()
     this.clearSilenceTimer()
@@ -417,7 +452,12 @@ export class OrbRuntimeController {
       state: orbState,
       connected: !['offline', 'unavailable', 'expired', 'permission_denied', 'reconnecting'].includes(state),
       realtimeAvailable: !['unavailable', 'expired', 'permission_denied'].includes(state) && this.snapshot.realtimeAvailable,
-      realtimeState: { ...this.snapshot.realtimeState, network_state: state, ...(detail || {}) }
+      realtimeState: { ...this.snapshot.realtimeState, network_state: state, ...(detail || {}) },
+      mobile: {
+        ...this.snapshot.mobile,
+        lowBandwidthMode: prefersLowBandwidthMode(),
+        reconnectBanner: ['reconnecting', 'offline', 'unavailable', 'expired'].includes(state)
+      }
     }
     this.emit()
   }
@@ -608,6 +648,15 @@ export class OrbRuntimeController {
 
   private closeRealtime() {
     this.realtimeClient.close()
+  }
+
+  private async recoverMediaAfterWake() {
+    if (this.snapshot.microphone !== 'granted') return
+    const stream = await this.audioRecovery.recoverMicrophone('browser_wake')
+    if (stream && stream !== this.stream) {
+      this.stream = stream
+      this.realtimeClient.handleWake()
+    }
   }
 }
 
