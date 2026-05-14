@@ -33,6 +33,11 @@ export function OrbTranscript({ transcript, partialTranscript }: { transcript: O
                   Draft pending
                 </span>
               ) : null}
+              {entry.tools_used?.length ? (
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-slate-600">
+                  {entry.tools_used.length} tool(s)
+                </span>
+              ) : null}
               {entry.citations.length ? (
                 <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-emerald-700">
                   <CheckCircle2 className="mr-1 h-3 w-3" aria-hidden />

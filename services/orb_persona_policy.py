@@ -7,6 +7,9 @@ from schemas.orb import OrbModeDecision, OrbVoiceProfile
 
 CARE_ASSISTANT_TONE = "warm, calm, supportive, professional and operational"
 INSPECTOR_TONE = "respectful, evidence-led, regulatory, clear and constructively challenging"
+GENERAL_ASSISTANT_TONE = "warm, concise, capable and everyday-useful"
+WEB_RESEARCH_TONE = "careful, current-facts-first, transparent about tool availability"
+PRODUCTIVITY_TONE = "practical, organised, concise and helpful"
 
 DEFAULT_VOICE_PROFILE = OrbVoiceProfile()
 
@@ -27,10 +30,35 @@ def voice_profile_payload(profile: OrbVoiceProfile | None = None) -> dict[str, A
 
 def persona_instruction(decision: OrbModeDecision, profile: OrbVoiceProfile | None = None) -> str:
     selected = profile or DEFAULT_VOICE_PROFILE
-    if decision.brain == "inspector":
+    if decision.brain == "inspector_brain":
         brain = (
             "Use the Inspector Brain. Answer with SCCIF, Children's Homes Regulations, Quality Standards, "
             "Reg 44/Reg 45 and evidence-gap challenge where relevant. Be respectful and never punitive."
+        )
+    elif decision.brain == "general_assistant_brain":
+        brain = (
+            "Use the General Assistant Brain. Help with everyday questions, explanations, drafting, planning "
+            "and general knowledge. Do not claim access to IndiCare records unless routed to a care brain."
+        )
+    elif decision.brain == "web_research_brain":
+        brain = (
+            "Use the Web Research Brain. Current facts such as weather, sport, news, prices and schedules "
+            "must come from configured external tools/search. Say clearly when those tools are unavailable."
+        )
+    elif decision.brain == "productivity_brain":
+        brain = (
+            "Use the Productivity Brain. Help with writing, planning, summarising and calculations using "
+            "concise, useful outputs."
+        )
+    elif decision.brain == "report_writer_brain":
+        brain = (
+            "Use the Report Writer Brain. Draft report sections from citable IndiCare evidence only, "
+            "highlight gaps and keep the draft pending adult/manager review."
+        )
+    elif decision.brain == "voice_recording_brain":
+        brain = (
+            "Use the Voice Recording Brain. Turn dictated care content into factual draft records, "
+            "then ask for confirmation before any save."
         )
     else:
         brain = (
@@ -54,10 +82,14 @@ def persona_instruction(decision: OrbModeDecision, profile: OrbVoiceProfile | No
 
 def spoken_acknowledgement(decision: OrbModeDecision, text: str) -> str:
     lower = text.lower()
-    if decision.brain == "inspector":
+    if decision.brain == "inspector_brain":
         if "ofsted" in lower or "sccif" in lower:
             return "I will look at the evidence and frame this as an inspection challenge."
         return "I will answer from the records and highlight any evidence gaps."
+    if decision.brain == "web_research_brain":
+        return "I will check configured live tools rather than relying on memory."
+    if decision.brain in {"general_assistant_brain", "productivity_brain"}:
+        return "Sure."
     if any(term in lower for term in ("create", "draft", "record", "daily note", "handover")):
         return "I can help draft that and will ask before anything is saved."
     return "I will check the permitted records and keep this practical."

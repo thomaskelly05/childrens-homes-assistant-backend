@@ -10,6 +10,19 @@ import { orbStateLabel, OrbVisual } from './orb-visual'
 import { OrbRuntimeController, type OrbRuntimeSnapshot } from '@/lib/orb/state'
 import type { OrbContext, OrbSelectedMode, OrbVoiceDraft } from '@/lib/orb/types'
 
+function brainLabel(brain: string) {
+  const labels: Record<string, string> = {
+    care_brain: 'Care Brain',
+    inspector_brain: 'Inspector Brain',
+    general_assistant_brain: 'General Assistant',
+    web_research_brain: 'Web Research',
+    productivity_brain: 'Productivity',
+    report_writer_brain: 'Report Writer',
+    voice_recording_brain: 'Voice Recording'
+  }
+  return labels[brain] || 'Orb'
+}
+
 function DraftPreview({ draft, onClose }: { draft: OrbVoiceDraft; onClose: () => void }) {
   return (
     <div className="rounded-[24px] border border-purple-200 bg-purple-50 p-4">
@@ -110,7 +123,7 @@ export function OrbModal({
           <aside className="space-y-4">
             <div className="rounded-[28px] border border-white/70 bg-white p-6 text-center shadow-sm">
               <OrbVisual state={snapshot.state} />
-              <p className="mt-5 text-sm font-black text-slate-950">{snapshot.modeDecision.brain === 'inspector' ? 'Inspector Brain' : 'Care Assistant Brain'}</p>
+              <p className="mt-5 text-sm font-black text-slate-950">{brainLabel(snapshot.modeDecision.brain)}</p>
               <p className="mt-2 text-sm leading-6 text-slate-500">{snapshot.modeDecision.tone}</p>
             </div>
 
@@ -136,6 +149,17 @@ export function OrbModal({
 
           <main className="space-y-4">
             <OrbModeSwitcher value={snapshot.selectedMode} decision={snapshot.modeDecision} onChange={setMode} />
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Tools and mode</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700">{brainLabel(snapshot.modeDecision.brain)}</span>
+                {snapshot.modeDecision.requires_citations ? <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">Citations required</span> : <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600">No care citations needed</span>}
+                {snapshot.modeDecision.requires_external_tool ? <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-700">Live tool required</span> : null}
+                {snapshot.modeDecision.tool_categories.map((tool) => (
+                  <span key={tool} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{tool.replaceAll('_', ' ')}</span>
+                ))}
+              </div>
+            </div>
             <OrbControls
               state={snapshot.state}
               microphone={snapshot.microphone}
