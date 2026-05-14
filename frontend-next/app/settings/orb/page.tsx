@@ -6,7 +6,7 @@ import { Card, PageHeader, SectionHeader, StatusBadge } from '@/components/indic
 import { OrbSetup } from '@/components/indicare/orb/orb-setup'
 
 const foundations = [
-  ['Voice provider abstraction', 'OpenAI realtime env-gated with mock fallback', 'Operational'],
+  ['Voice provider abstraction', 'OpenAI realtime env-gated with typed recovery', 'Operational'],
   ['Wake phrase', 'Hey IndiCare placeholder foundation', 'Foundation'],
   ['Record writing safety', 'Draft preview and confirmation before save', 'Operational'],
   ['Transcript privacy', 'No raw audio storage by default', 'Operational'],

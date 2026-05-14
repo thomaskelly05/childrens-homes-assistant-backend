@@ -135,7 +135,7 @@ export function OrbModal({
             {snapshot.mobile.reconnectBanner ? (
               <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
                 <AlertTriangle className="mr-2 inline h-4 w-4" aria-hidden />
-                {snapshot.state === 'offline' ? 'Orb is offline. It will reconnect when the network returns.' : 'Orb is reconnecting calmly. Text fallback remains available.'}
+                {snapshot.state === 'offline' ? 'Orb is offline. It will reconnect when the network returns.' : 'Orb is reconnecting calmly. Typed Orb remains available.'}
               </div>
             ) : null}
             {snapshot.mobile.lowBandwidthMode ? (

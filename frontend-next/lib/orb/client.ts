@@ -52,16 +52,20 @@ async function parseOrbResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok || !payload) {
+    const developerSuffix = process.env.NODE_ENV === 'development' ? ` (${response.status})` : ''
     const message = response.status === 401
       ? 'Your session has expired. Please sign in again before using Orb.'
       : response.status === 403
         ? 'Orb could not verify your secure session. Refresh the page and try again.'
-        : `Orb backend unavailable (${response.status})`
+        : response.status === 404
+          ? `That workspace isn't available yet.${developerSuffix}`
+          : `I couldn't load Orb just now.${developerSuffix}`
     throw new AssistantClientError(message, 'orb_backend_unavailable', payload, response.status)
   }
 
   if (!payload.success || !payload.data) {
-    throw new AssistantClientError(payload.error?.message || 'Orb request failed.', payload.error?.code || 'orb_request_failed', payload.error?.details, response.status)
+    const detail = process.env.NODE_ENV === 'development' ? payload.error?.details : undefined
+    throw new AssistantClientError(payload.error?.message || "I couldn't load that just now.", payload.error?.code || 'orb_request_failed', detail, response.status)
   }
 
   return payload.data

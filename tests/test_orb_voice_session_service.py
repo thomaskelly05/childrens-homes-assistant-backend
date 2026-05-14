@@ -19,6 +19,24 @@ class FakeAssistantResponseService:
         }
 
 
+class CapturingAssistantResponseService:
+    def __init__(self, *, answer="", related_records=None):
+        self.answer = answer
+        self.related_records = related_records or []
+        self.contexts = []
+
+    def query(self, conn, *, message, context, current_user):
+        self.contexts.append(context)
+        return {
+            "answer": self.answer,
+            "citations": [{"label": "Scoped chronology", "source_type": "chronology", "source_id": "jamie-note"}],
+            "related_records": self.related_records,
+            "suggested_actions": [],
+            "evidence_gaps": [],
+            "regulatory_links": [],
+        }
+
+
 @pytest.mark.asyncio
 async def test_write_intent_creates_pending_draft_not_silent_save(monkeypatch):
     monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
@@ -100,6 +118,82 @@ async def test_follow_up_memory_preserves_record_context(monkeypatch):
     assert first.memory_snapshot["last_record"]["source_id"] == "1"
     assert second.tool_orchestration["primary_action"] is not None
     assert second.memory_snapshot["last_record"]["source_id"] == "1"
+
+
+@pytest.mark.asyncio
+async def test_follow_up_memory_carries_active_child_into_care_context(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    fake = CapturingAssistantResponseService(answer="Jamie engaged with education after staff checked the timetable.")
+    service = OrbVoiceSessionService(assistant_response_service=fake)
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(workspace="chronology", home_id=1, selected_young_person_id=10, current_child={"id": 10, "preferredName": "Jamie"}),
+            provider="mock_voice",
+        ),
+        current_user=user,
+    )
+
+    await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="What happened with Jamie?", context=OrbContext(home_id=1, selected_young_person_id=10, current_child={"id": 10, "preferredName": "Jamie"})),
+        conn=object(),
+        current_user=user,
+    )
+    await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="What about education?", context=OrbContext(home_id=1)),
+        conn=object(),
+        current_user=user,
+    )
+
+    latest_context = fake.contexts[-1].model_dump() if hasattr(fake.contexts[-1], "model_dump") else fake.contexts[-1]
+    assert latest_context["selected_young_person_id"] == 10
+    assert latest_context["orb_conversation_memory"]["pinned"]["active_child"]["preferredName"] == "Jamie"
+
+
+@pytest.mark.asyncio
+async def test_handover_recovery_uses_scoped_records_without_cross_child_leak(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    fake = CapturingAssistantResponseService(
+        answer="I do not have enough evidence in the records to answer that.",
+        related_records=[
+            {
+                "id": "note-1",
+                "home_id": 1,
+                "young_person_id": 10,
+                "record_type": "daily_note",
+                "summary": "Jamie had a settled evening overall and said school felt better after staff checked his timetable. Follow-up is to praise attendance.",
+                "status": "open",
+            },
+            {
+                "id": "other-child",
+                "home_id": 1,
+                "young_person_id": 11,
+                "summary": "Noah had a missing episode with police.",
+            },
+        ],
+    )
+    service = OrbVoiceSessionService(assistant_response_service=fake)
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(workspace="handover", home_id=1, selected_young_person_id=10, current_child={"id": 10, "preferredName": "Jamie"}),
+            provider="mock_voice",
+        ),
+        current_user=user,
+    )
+
+    response = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="Give me a handover for Jamie", context=OrbContext(home_id=1, selected_young_person_id=10, current_child={"id": 10, "preferredName": "Jamie"})),
+        conn=object(),
+        current_user=user,
+    )
+
+    assert "Jamie had a settled evening overall" in response.assistant_turn.content
+    assert "follow-up" in response.assistant_turn.content
+    assert "Noah" not in response.assistant_turn.content
 
 
 @pytest.mark.asyncio

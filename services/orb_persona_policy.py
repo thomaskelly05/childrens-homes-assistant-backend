@@ -5,7 +5,7 @@ from typing import Any
 from schemas.orb import OrbModeDecision, OrbVoiceProfile
 
 
-CARE_ASSISTANT_TONE = "warm, calm, supportive, professional and operational"
+CARE_ASSISTANT_TONE = "warm, calm, British, supportive, professional and operational"
 INSPECTOR_TONE = "respectful, evidence-led, regulatory, clear and constructively challenging"
 GENERAL_ASSISTANT_TONE = "warm, concise, capable and everyday-useful"
 WEB_RESEARCH_TONE = "careful, current-facts-first, transparent about tool availability"
@@ -72,7 +72,8 @@ def persona_instruction(decision: OrbModeDecision, profile: OrbVoiceProfile | No
             brain,
             f"Voice profile: {selected.name}; accent {selected.accent}; tone {selected.tone}; speed {selected.speed}; expressiveness {selected.expressiveness}.",
             "Use short, natural spoken turns by default. Sound calm, warm, British, intelligent and professionally human.",
-            "Avoid saying 'as an AI assistant'. Avoid filler, corporate wording and repeated introductions.",
+            "Use British English and everyday care-home phrasing: settled evening, follow-up, handover, keywork, chronology, next shift.",
+            "Avoid saying 'as an AI assistant'. Avoid dashboard language, corporate wording, Americanisms and repeated introductions.",
             "When interrupted, acknowledge briefly and continue from the current subject without restarting the whole answer.",
             "Do not sound like a dashboard or read citation labels aloud unless the user asks for evidence details.",
             "Carry conversational context across follow-ups and recover gracefully if interrupted.",
@@ -89,17 +90,21 @@ def spoken_acknowledgement(decision: OrbModeDecision, text: str) -> str:
     lower = text.lower()
     if decision.brain == "inspector_brain":
         if "ofsted" in lower or "sccif" in lower:
-            return "Yeah. I will keep this evidence-led."
-        return "Yeah. I will check the records and flag any gaps."
+            return "Right. I will keep this evidence-led."
+        return "Right. I will check the records and flag any gaps."
     if decision.brain == "web_research_brain":
-        return "I will check what is available now."
+        return "Right. I will check what is available now."
     if decision.brain in {"general_assistant_brain", "productivity_brain"}:
         return "Sure."
-    if any(term in lower for term in ("create", "draft", "record", "daily note", "handover")):
-        return "Yeah. I can draft that, and I will ask before saving anything."
+    if "handover" in lower:
+        return "Right. I will pull the handover thread together."
+    if any(term in lower for term in ("create", "draft", "record", "daily note")):
+        return "Yeah. I can help draft that, and I will ask before saving anything."
     if any(term in lower for term in ("safeguarding", "concern", "missing", "incident", "restraint", "self-harm")):
-        return "Yeah. I will separate what is recorded from what still needs checking."
-    return "Yeah. I will check the permitted records."
+        return "Right. I will separate what is recorded from what still needs checking."
+    if any(term in lower for term in ("what happened", "today", "tonight", "next shift", "follow", "education", "worrying", "changed")):
+        return "Right. I am checking the chronology."
+    return "Yeah. I am with you."
 
 
 def transcript_storage_policy(do_not_store: bool = False, retention_days: int | None = 30) -> dict[str, Any]:

@@ -471,8 +471,8 @@ export function contextualChildQuickActions(context: ChildQuickActionContext = {
       : context.workflow === 'mobile'
         ? ['daily-note', 'open-chronology', 'dictate-orb']
         : context.unresolvedActions
-          ? ['daily-note', 'add-action', 'open-chronology', 'dictate-orb']
-          : ['daily-note', 'keywork', 'open-chronology', 'dictate-orb']
+          ? ['daily-note', 'safeguarding', 'add-action', 'open-chronology', 'dictate-orb']
+          : ['daily-note', 'safeguarding', 'keywork', 'open-chronology', 'dictate-orb']
   return requested.map((id) => byId.get(id as ChildQuickActionItem['id'])).filter(Boolean) as ChildQuickActionItem[]
 }
 

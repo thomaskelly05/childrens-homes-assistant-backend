@@ -48,6 +48,7 @@ from services.orb_tool_orchestration_service import orb_tool_orchestration_servi
 from services.orb_tool_router import tools_for_decision
 from services.orb_wake_word_service import orb_wake_word_service
 from services.orb_web_search_service import orb_web_search_service
+from services.narrative_continuity_service import narrative_continuity_service
 
 
 WRITE_INTENT_TERMS = {
@@ -175,6 +176,7 @@ def _assistant_context_from_orb(
     memory_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     base = dict(context.assistant_context or {})
+    remembered_child_id = _memory_selected_child_id(memory_context)
     base.update(
         {
             "route": context.route or base.get("route"),
@@ -182,7 +184,7 @@ def _assistant_context_from_orb(
             "workspace_type": context.workspace or base.get("workspace_type"),
             "current_workspace_type": context.workspace or base.get("current_workspace_type"),
             "page_title": context.page_title or base.get("page_title"),
-            "selected_young_person_id": context.selected_young_person_id or base.get("selected_young_person_id"),
+            "selected_young_person_id": context.selected_young_person_id or base.get("selected_young_person_id") or remembered_child_id,
             "selected_record_id": context.selected_record_id or base.get("selected_record_id"),
             "selected_record_type": context.selected_record_type or base.get("selected_record_type"),
             "home_id": context.home_id or base.get("home_id"),
@@ -196,6 +198,117 @@ def _assistant_context_from_orb(
     if memory_context:
         base.update(memory_context)
     return {key: value for key, value in base.items() if value not in (None, "", [], {})}
+
+
+def _memory_selected_child_id(memory_context: dict[str, Any] | None) -> Any:
+    memory = (memory_context or {}).get("orb_conversation_memory") or {}
+    if not isinstance(memory, dict):
+        return None
+    pinned = memory.get("pinned") if isinstance(memory.get("pinned"), dict) else {}
+    active_child = pinned.get("active_child") if isinstance(pinned.get("active_child"), dict) else {}
+    return active_child.get("id") or active_child.get("young_person_id") or memory.get("last_child_id")
+
+
+def _active_child_payload(context: OrbContext, memory_context: dict[str, Any] | None) -> dict[str, Any]:
+    if context.current_child:
+        return dict(context.current_child)
+    memory = (memory_context or {}).get("orb_conversation_memory") or {}
+    pinned = memory.get("pinned") if isinstance(memory, dict) else {}
+    active_child = pinned.get("active_child") if isinstance(pinned, dict) else {}
+    return dict(active_child) if isinstance(active_child, dict) else {}
+
+
+def _record_summary(record: dict[str, Any]) -> str:
+    for key in ("summary", "narrative", "description", "title", "details", "body"):
+        value = record.get(key)
+        if value:
+            return str(value).strip()
+    return ""
+
+
+def _low_evidence_answer(answer: Any) -> bool:
+    text = str(answer or "").strip().lower()
+    if not text:
+        return True
+    return any(
+        phrase in text
+        for phrase in (
+            "do not have enough evidence",
+            "don't have enough evidence",
+            "i cannot access",
+            "no records available",
+            "orb request failed",
+        )
+    )
+
+
+def _handover_or_continuity_request(message: str) -> bool:
+    text = message.lower()
+    return any(
+        term in text
+        for term in (
+            "handover",
+            "what happened",
+            "today",
+            "tonight",
+            "next shift",
+            "needs following up",
+            "still needs",
+            "safeguarding",
+            "what changed",
+            "worrying staff",
+            "education",
+            "missing chronology",
+            "summarise",
+            "summarize",
+        )
+    )
+
+
+def _operational_recovery_answer(
+    *,
+    message: str,
+    related_records: list[dict[str, Any]],
+    context: OrbContext,
+    memory_context: dict[str, Any] | None,
+) -> str | None:
+    if not _handover_or_continuity_request(message):
+        return None
+    child = _active_child_payload(context, memory_context)
+    child_id = context.selected_young_person_id or _memory_selected_child_id(memory_context)
+    home_id = context.home_id
+    continuity = narrative_continuity_service.summarise(
+        records=related_records,
+        child=child,
+        young_person_id=child_id,
+        home_id=home_id,
+    )
+    if continuity["record_count"] == 0:
+        return "I could not find enough scoped records for that just now. The safe next step is to check the chronology and handover log before relying on it."
+
+    child_name = child.get("preferred_name") or child.get("preferredName") or child.get("name") or "they"
+    latest = str(continuity.get("what_changed") or "There is a recent scoped record to review.").strip().replace(". ", "; ")
+    unresolved = continuity.get("unresolved_themes") or []
+    if not unresolved:
+        visible_statuses = " ".join(str(record.get("status") or "") for record in related_records).lower()
+        visible_text = " ".join(_record_summary(record) for record in related_records).lower()
+        if any(term in f"{visible_statuses} {visible_text}" for term in ("follow-up", "follow up", "review", "open", "overdue")):
+            unresolved = [{"reason": "Visible scoped records contain follow-up or review wording."}]
+    if unresolved:
+        latest = f"{latest.rstrip('.')}; there is still follow-up or review language that should carry into the next shift."
+    parts = [f"{child_name} had this recorded most recently: {latest}"]
+    if unresolved:
+        parts.append("Keep that follow-up visible in handover.")
+    safeguarding = any("safeguarding" in item.get("themes", []) for item in unresolved)
+    if safeguarding:
+        parts.append("Safeguarding wording is present, so keep facts separate from interpretation and check manager oversight.")
+    progress = continuity.get("positive_progress") or []
+    if progress:
+        parts.append("There is also visible progress to build on.")
+    child_voice = continuity.get("child_voice_continuity") or []
+    if child_voice:
+        parts.append("The child's own words or wishes are visible in the scoped record.")
+    return " ".join(parts[:4])
 
 
 def _write_intent(message: str) -> bool:
@@ -242,11 +355,17 @@ class MockVoiceProvider:
         return True
 
     async def start_session(self, *, request: OrbSessionStartRequest, decision: OrbModeDecision, current_user: dict[str, Any]) -> dict[str, Any]:
+        instructions = "\n\n".join(
+            [
+                persona_instruction(decision, request.voice_profile),
+                orb_conversation_policy.provider_instructions(decision=decision, preferences=request.preferences),
+            ]
+        )
         return {
             "provider": self.name,
             "mock": True,
             "transport": "browser_media_recorder_text_fallback",
-            "instructions": persona_instruction(decision, request.voice_profile),
+            "instructions": instructions,
             "supports_interruptions": True,
             "supports_partial_transcript": True,
         }
@@ -556,7 +675,7 @@ class OrbVoiceSessionService:
                 "supports_interruptions": True,
                 "supports_spoken_barge_in": provider.name == "openai_realtime" and provider.configured(),
                 "supports_click_to_interrupt": True,
-                "fallback_text_mode": True,
+                "fallback_text_mode": not (provider.name == "openai_realtime" and provider.configured()),
                 "supports_microphone_input": provider.name == "openai_realtime" and provider.configured(),
                 "supports_microphone_streaming": provider.name == "openai_realtime" and provider.configured(),
                 "supports_audio_playback": provider.name == "openai_realtime" and provider.configured(),
@@ -566,7 +685,7 @@ class OrbVoiceSessionService:
                 "reconnect_supported": True,
                 "token_refresh_required": provider.name == "openai_realtime" and provider.configured(),
                 "session_ttl_seconds": _session_ttl_seconds(),
-                "status": "available" if provider.name == "openai_realtime" and provider.configured() else "Realtime voice unavailable; text/mock voice fallback is active.",
+                "status": "available" if provider.name == "openai_realtime" and provider.configured() else "Realtime audio is not connected yet. Typed Orb remains available.",
                 "architecture": "Browser WebRTC streams microphone to the provider; backend owns routed turns, memory, audit, tool previews and safe care retrieval.",
                 "wake_phrase_foundation": "Hey Orb/Hey IndiCare optional foundation; passive wake-word detection is disabled by default.",
             },
@@ -719,6 +838,7 @@ class OrbVoiceSessionService:
             if entry.role in {"user", "assistant"} and not entry.partial
         ][-8:]
 
+        memory_context = orb_memory_service.prompt_context(session.id)
         if decision.care_scope_required:
             shared_context = build_shared_assistant_context(
                 current_user=current_user,
@@ -726,7 +846,7 @@ class OrbVoiceSessionService:
                     context,
                     decision,
                     session.id,
-                    memory_context=orb_memory_service.prompt_context(session.id),
+                    memory_context=memory_context,
                 ),
                 mode=decision.assistant_mode,
                 conversation_id=session.id,
@@ -757,7 +877,17 @@ class OrbVoiceSessionService:
         session.citations_used.extend(citations[:12])
         session.related_records.extend(related_records[:12])
 
-        answer = assistant_data.get("answer") or "I do not have enough evidence in the records to answer that."
+        answer = assistant_data.get("answer")
+        recovery_answer = _operational_recovery_answer(
+            message=safe_message,
+            related_records=related_records,
+            context=context,
+            memory_context=memory_context,
+        ) if decision.care_scope_required else None
+        if _low_evidence_answer(answer) and recovery_answer:
+            answer = recovery_answer
+        elif not answer:
+            answer = "I could not load enough scoped records for that just now. Let us try the chronology again."
         answer = orb_conversation_policy.shape_response(
             f"{spoken_acknowledgement(decision, safe_message)}\n\n{answer}",
             decision=decision,

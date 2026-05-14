@@ -79,7 +79,7 @@ export class OrbRealtimeClient {
 
     if (typeof window === 'undefined' || typeof RTCPeerConnection === 'undefined') {
       this.callbacks.onStateChange('unavailable', { reason: 'webrtc_unsupported' })
-      throw new Error('Realtime voice is not supported in this browser')
+      throw new Error('Realtime audio is not supported in this browser')
     }
 
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -206,7 +206,7 @@ export class OrbRealtimeClient {
       this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
       throw new OrbNonRetryableError(`Realtime token was rejected (${response.status})`)
     }
-    if (!response.ok) throw new Error(`Realtime provider failed (${response.status})`)
+    if (!response.ok) throw new Error(process.env.NODE_ENV === 'development' ? `Realtime provider failed (${response.status})` : 'Realtime audio could not connect just now')
     await peer.setRemoteDescription({ type: 'answer', sdp: await response.text() })
   }
 
@@ -215,7 +215,7 @@ export class OrbRealtimeClient {
     this.clearReconnectTimer()
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.callbacks.onStateChange('unavailable', { reason, attempts: this.reconnectAttempts })
-      this.callbacks.onError('Realtime voice is temporarily unavailable. Text fallback is active.', { reason })
+      this.callbacks.onError('Realtime audio needs a moment. You can still type to Orb.', { reason })
       return
     }
     this.reconnectAttempts += 1
@@ -231,7 +231,7 @@ export class OrbRealtimeClient {
       const refreshed = await this.callbacks.refreshCredentials().catch(() => null)
       if (!refreshed) {
         this.callbacks.onStateChange('unavailable', { reason: 'credential_refresh_failed' })
-        this.callbacks.onError('Realtime voice could not refresh securely. Text fallback is active.')
+        this.callbacks.onError('Realtime audio could not refresh securely. You can still type to Orb.')
         return
       }
       await this.connect(refreshed)

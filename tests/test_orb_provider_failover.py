@@ -20,6 +20,27 @@ class TimeoutClient:
         raise httpx.TimeoutException("provider timed out")
 
 
+class SuccessResponse:
+    status_code = 200
+
+    def json(self):
+        return {"client_secret": {"value": "ephemeral", "expires_at": 123}, "model": "gpt-realtime-test"}
+
+
+class SuccessClient:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+    async def post(self, *args, **kwargs):
+        return SuccessResponse()
+
+
 def test_provider_timeout_returns_text_fallback_without_raw_prompt_logging(monkeypatch):
     async def scenario():
         service = OrbRealtimeProviderService()
@@ -53,4 +74,18 @@ def test_provider_circuit_breaker_prevents_endless_retries(monkeypatch):
     monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
     monkeypatch.setenv("ORB_PROVIDER_FAILURE_THRESHOLD", "1")
     monkeypatch.setattr("services.orb_realtime_provider_service.httpx.AsyncClient", TimeoutClient)
+    asyncio.run(scenario())
+
+
+def test_provider_success_does_not_mark_text_recovery_active(monkeypatch):
+    async def scenario():
+        service = OrbRealtimeProviderService()
+        result = await service.create_ephemeral_session(instructions="voice instructions")
+
+        assert result["configured"] is True
+        assert result["fallback_text_mode"] is False
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
+    monkeypatch.setattr("services.orb_realtime_provider_service.httpx.AsyncClient", SuccessClient)
     asyncio.run(scenario())

@@ -50,7 +50,7 @@ export function MobileNav() {
           const Icon = item.icon
           return (
             <Link
-              key={item.href}
+              key={`${item.label}-${item.href}`}
               href={item.href}
                 className={active ? 'min-h-12 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white' : 'min-h-12 px-2 py-2 text-xs font-black text-slate-500'}
             >

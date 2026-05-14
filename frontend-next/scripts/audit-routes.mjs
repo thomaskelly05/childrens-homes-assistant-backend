@@ -41,6 +41,13 @@ const pageFiles = walk(appDir).filter((path) => /\/page\.(tsx|ts)$/.test(path))
 const routes = new Set(pageFiles.map((path) => normaliseRoute(routeFromPage(path))))
 const sourceFiles = walk(process.cwd()).filter((path) => /\.(tsx|ts)$/.test(path) && !path.includes('/.next/') && !path.includes('/node_modules/'))
 const problems = []
+const requiredRoutes = ['/voice', '/templates']
+
+for (const route of requiredRoutes) {
+  if (!routes.has(route)) {
+    problems.push(`required route missing -> ${route}`)
+  }
+}
 
 for (const file of sourceFiles) {
   const text = readFileSync(file, 'utf8')

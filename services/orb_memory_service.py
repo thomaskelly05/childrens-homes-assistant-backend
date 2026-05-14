@@ -19,6 +19,12 @@ REFERENCE_TERMS = {
     "summarize that",
     "open it",
     "show me that",
+    "what about",
+    "how about",
+    "and education",
+    "education",
+    "what else",
+    "anything else",
 }
 
 
@@ -64,6 +70,15 @@ def _safe_home_id(context: OrbContext, current_user: dict[str, Any]) -> int | No
     if allowed and int(requested) not in allowed:
         return None
     return int(requested)
+
+
+def _safe_child_id(value: Any) -> int | str | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return str(value)
 
 
 @dataclass
@@ -127,7 +142,12 @@ class OrbMemoryService:
             memory.home_id = safe_home_id
 
         if context.selected_young_person_id:
-            memory.last_child_id = int(context.selected_young_person_id)
+            child_id = _safe_child_id(context.selected_young_person_id)
+            memory.last_child_id = child_id if isinstance(child_id, int) else memory.last_child_id
+            memory.pinned_context["active_child"] = {
+                **_clean_mapping(memory.pinned_context.get("active_child")),
+                "id": child_id,
+            }
         if context.current_child:
             memory.pinned_context["active_child"] = _clean_mapping(context.current_child)
         if context.current_shift:
@@ -222,16 +242,23 @@ class OrbMemoryService:
         if not memory:
             return {}
         lower = text.lower()
-        if not any(term in lower for term in REFERENCE_TERMS):
-            return {}
         resolved: dict[str, Any] = {}
-        if "child" in lower or "young person" in lower:
+        has_reference = any(term in lower for term in REFERENCE_TERMS)
+        follow_up_without_subject = (
+            lower.startswith(("what about", "how about", "and ", "anything", "what else"))
+            or lower in {"education", "school", "safeguarding", "follow up", "follow-up"}
+        )
+        if not has_reference and not follow_up_without_subject:
+            return {}
+        if "child" in lower or "young person" in lower or follow_up_without_subject:
             resolved["that_child"] = memory.pinned_context.get("active_child") or {"id": memory.last_child_id}
         if "incident" in lower or "earlier one" in lower or "it" in lower or "that" in lower:
             resolved["that_record"] = memory.last_record or memory.pinned_context.get("active_record")
-        if "continue" in lower or "summarise" in lower or "summarize" in lower:
+        if "continue" in lower or "summarise" in lower or "summarize" in lower or follow_up_without_subject:
             resolved["last_topic"] = memory.last_topic
             resolved["interrupted_response"] = memory.interrupted_response
+        if follow_up_without_subject and memory.last_child_id is not None:
+            resolved["selected_young_person_id"] = memory.last_child_id
         return {key: value for key, value in resolved.items() if value}
 
     def snapshot(self, session_id: str) -> dict[str, Any]:

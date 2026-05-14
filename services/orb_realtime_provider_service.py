@@ -107,7 +107,7 @@ class OrbRealtimeProviderService:
                 "configured": False,
                 "env_gated": True,
                 "fallback_text_mode": True,
-                "unavailable_reason": "Realtime voice unavailable: OPENAI_API_KEY is missing or ORB_REALTIME_ENABLED=false.",
+                "unavailable_reason": "Realtime audio is not connected yet. Typed Orb remains available.",
                 "request_body": {key: value for key, value in body.items() if key != "instructions"},
             }
         if not self.provider_available():
@@ -120,7 +120,7 @@ class OrbRealtimeProviderService:
                 "fallback_text_mode": True,
                 "retryable": True,
                 "retry_after_seconds": max(1, int(self._circuit_open_until - time.time())),
-                "unavailable_reason": "Realtime voice is recovering. Text fallback is active.",
+                "unavailable_reason": "Realtime audio is recovering. Typed Orb remains available.",
             }
 
         start = time.perf_counter()
@@ -146,7 +146,7 @@ class OrbRealtimeProviderService:
                 "error": "provider_timeout",
                 "fallback_text_mode": True,
                 "retryable": True,
-                "unavailable_reason": "Realtime voice timed out. Text fallback is active.",
+                "unavailable_reason": "Realtime audio took too long to connect. Typed Orb remains available.",
             }
         except httpx.RequestError as exc:
             self._metrics["request_errors"] += 1
@@ -159,7 +159,7 @@ class OrbRealtimeProviderService:
                 "error": "provider_unreachable",
                 "fallback_text_mode": True,
                 "retryable": True,
-                "unavailable_reason": "Realtime voice is temporarily unavailable. Text fallback is active.",
+                "unavailable_reason": "Realtime audio is temporarily unavailable. Typed Orb remains available.",
             }
 
         latency_ms = round((time.perf_counter() - start) * 1000, 2)
@@ -184,7 +184,7 @@ class OrbRealtimeProviderService:
                 "status": response.status_code,
                 "fallback_text_mode": True,
                 "retryable": response.status_code in {408, 409, 425, 429, 500, 502, 503, 504},
-                "unavailable_reason": "Realtime voice unavailable: provider session could not be created.",
+                "unavailable_reason": "Realtime audio could not be started just now. Typed Orb remains available.",
             }
 
         data = _public_openai_session_payload(response.json())
@@ -203,7 +203,7 @@ class OrbRealtimeProviderService:
             "expires_at": expires_at,
             "refresh_recommended_seconds": 55,
             "provider_latency_ms": latency_ms,
-            "fallback_text_mode": True,
+            "fallback_text_mode": False,
         }
 
     def health_metrics(self) -> dict[str, Any]:
