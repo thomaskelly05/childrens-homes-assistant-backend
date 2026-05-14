@@ -8,13 +8,23 @@ import { getChildJourneyData, todayLong } from '@/lib/child-journey/data'
 import { quickActionOrder, recordingWorkflows } from '@/lib/child-journey/workflows'
 import type { OsApiResult } from '@/lib/os-api/types'
 
-function ActionLink({ href, children, tone = 'dark' }: { href: string; children: React.ReactNode; tone?: 'dark' | 'light' | 'blue' }) {
+function ActionLink({
+  href,
+  children,
+  tone = 'dark',
+  testId
+}: {
+  href: string
+  children: React.ReactNode
+  tone?: 'dark' | 'light' | 'blue'
+  testId?: string
+}) {
   const classes = tone === 'dark'
     ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/20'
     : tone === 'blue'
       ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
       : 'border border-slate-200 bg-white text-slate-700 shadow-sm'
-  return <Link href={href} className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-black transition hover:-translate-y-0.5 ${classes}`}>{children}</Link>
+  return <Link href={href} data-testid={testId} className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-black transition hover:-translate-y-0.5 ${classes}`}>{children}</Link>
 }
 
 function savedRecordHref(childId: string, routeType?: string, recordId?: string) {
@@ -73,7 +83,7 @@ export default async function ChildJourneyPage({
       </nav>
 
       {query.saved ? (
-        <div className={`rounded-[28px] border p-5 ${query.status === 'draft' ? 'border-amber-100 bg-amber-50 text-amber-900' : 'border-emerald-100 bg-emerald-50 text-emerald-900'}`}>
+        <div data-testid="save-state-message" className={`rounded-[28px] border p-5 ${query.status === 'draft' ? 'border-amber-100 bg-amber-50 text-amber-900' : 'border-emerald-100 bg-emerald-50 text-emerald-900'}`}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${query.status === 'draft' ? 'text-amber-700' : 'text-emerald-700'}`}>{query.status === 'draft' ? 'Draft saved locally' : 'Saved'}</p>
@@ -82,7 +92,7 @@ export default async function ChildJourneyPage({
               {query.limitation ? <p className="mt-2 text-sm font-bold leading-6 text-amber-800">Limitation: {query.limitation}</p> : null}
             </div>
             <div className="flex flex-wrap gap-2">
-              <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light">View in chronology</ActionLink>
+              <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light" testId="saved-chronology-link">View in chronology</ActionLink>
               {savedHref ? <ActionLink href={savedHref} tone="light">Open source record</ActionLink> : null}
             </div>
           </div>
@@ -105,7 +115,7 @@ export default async function ChildJourneyPage({
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="blue">
+            <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="blue" testId="add-daily-note-button">
               <ClipboardPlus className="mr-2 h-4 w-4" aria-hidden />
               Add Daily Note
             </ActionLink>
@@ -125,7 +135,7 @@ export default async function ChildJourneyPage({
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Daily recording status</p>
               <h3 className="mt-2 text-2xl font-black text-slate-950">{lastDailyNote ? 'Started today' : 'Needs daily note'}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600">Last update: {lastDailyNote?.noteDate || data.timeline[0]?.occurredAt || 'None today'}</p>
-              <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="dark">Add / update daily note</ActionLink>
+              <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="dark" testId="add-daily-note-secondary-button">Add / update daily note</ActionLink>
             </div>
             <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-5">
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Welfare quick summary</p>
@@ -156,7 +166,7 @@ export default async function ChildJourneyPage({
               const workflow = recordingWorkflows[workflowId]
               const mode = workflowId === 'documents' ? 'upload' : 'new'
               return (
-                <Link key={workflow.id} href={`/young-people/${encodeURIComponent(id)}/${workflow.routeSegment}/${mode}`} className="group rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50">
+                <Link key={workflow.id} href={`/young-people/${encodeURIComponent(id)}/${workflow.routeSegment}/${mode}`} data-testid={`workflow-link-${workflow.id}`} className="group rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-black text-slate-950">{workflow.quickActionLabel}</p>
@@ -175,7 +185,7 @@ export default async function ChildJourneyPage({
         <Card>
           <SectionHeader eyebrow="Journey timeline" title="Recent chronology" description="Open each item to view the source record, or open the full chronology." />
           <div className="mb-5 flex flex-wrap gap-2">
-            <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light">Open full chronology</ActionLink>
+            <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light" testId="chronology-link">Open full chronology</ActionLink>
           </div>
           <div className="space-y-4">
             {data.timeline.slice(0, 8).map((event) => (
@@ -207,6 +217,9 @@ export default async function ChildJourneyPage({
 
           <Card>
             <SectionHeader eyebrow="Current actions" title="Action cards" description="Review or complete from the live actions workspace." />
+            <div className="mb-4">
+              <ActionLink href="/management" tone="light" testId="manager-review-link">Open manager QA path</ActionLink>
+            </div>
             <div className="space-y-3">
               {data.actions.slice(0, 5).map((action) => (
                 <div key={action.id} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4">
@@ -214,12 +227,12 @@ export default async function ChildJourneyPage({
                   <h3 className="mt-2 text-sm font-black text-slate-950">{action.title}</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-500">{action.description}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Link href={`/actions/${encodeURIComponent(action.id)}`} className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-white">Review</Link>
+                    <Link href={`/actions/${encodeURIComponent(action.id)}`} data-testid="safeguarding-follow-up-action" className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-white">Review</Link>
                     <Link href={`/actions/${encodeURIComponent(action.id)}`} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-slate-700">Complete</Link>
                   </div>
                 </div>
               ))}
-              {!data.actions.length ? <p className="text-sm text-slate-500">No current actions are linked to this child.</p> : null}
+              {!data.actions.length ? <p className="text-sm text-slate-500">No current actions are linked to this child yet. Manager QA is still available from the review path.</p> : null}
             </div>
           </Card>
         </div>
@@ -247,7 +260,7 @@ export default async function ChildJourneyPage({
           <SectionHeader eyebrow="Evidence and reports" title="Linked evidence" description="Report-ready views and evidence items connected to this child." />
           <div className="grid gap-3 sm:grid-cols-2">
             {evidenceLinks.map(([label, href]) => (
-              <Link key={label} href={href} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
+              <Link key={label} href={href} data-testid={label.includes('Safeguarding') ? 'safeguarding-chronology-link' : label.includes('Reports') ? 'report-evidence-link' : undefined} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
                 <FileText className="h-5 w-5 text-blue-700" aria-hidden />
                 <span className="mt-3 block text-sm font-black text-slate-950">{label}</span>
               </Link>
@@ -274,10 +287,14 @@ export default async function ChildJourneyPage({
             <h2 className="mt-1 text-xl font-black text-slate-950">If in doubt, add a Daily Note first.</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">Daily notes can suggest actions, safeguarding flags, plan links and report relevance before saving.</p>
           </div>
-          <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="blue">
+          <div className="flex flex-wrap gap-3">
+            <ActionLink href="/handover/current" tone="light" testId="handover-link">Open handover</ActionLink>
+            <ActionLink href={`/reports?young_person_id=${encodeURIComponent(id)}`} tone="light" testId="reports-link">Open reports</ActionLink>
+            <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="blue" testId="add-daily-note-footer-button">
             <CalendarDays className="mr-2 h-4 w-4" aria-hidden />
             Add Daily Note
-          </ActionLink>
+            </ActionLink>
+          </div>
         </div>
       </section>
     </div>

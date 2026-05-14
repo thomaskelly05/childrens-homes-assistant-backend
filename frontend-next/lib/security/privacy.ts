@@ -2,6 +2,13 @@ const SENSITIVE_PREFIXES = [
   'indicare-',
   'indicare:',
   'indicare.',
+  'safe-storage:',
+  'child:',
+  'child-context:',
+  'record-context:',
+  'selected-child',
+  'report-draft:',
+  'temporary-report:',
   'orb:',
   'assistant:',
   'openai-realtime'

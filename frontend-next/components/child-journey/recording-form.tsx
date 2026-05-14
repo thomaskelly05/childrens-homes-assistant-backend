@@ -35,17 +35,21 @@ function fieldInitialValue(field: RecordingField) {
 function FieldControl({
   field,
   value,
-  onChange
+  onChange,
+  id
 }: {
   field: RecordingField
   value: string
   onChange: (value: string) => void
+  id: string
 }) {
   const baseClass = 'mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100'
 
   if (field.type === 'textarea') {
     return (
       <textarea
+        id={id}
+        data-testid={`recording-field-${field.name}`}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={field.rows || 4}
@@ -58,7 +62,7 @@ function FieldControl({
 
   if (field.type === 'select') {
     return (
-      <select value={value} onChange={(event) => onChange(event.target.value)} required={field.required} className={baseClass}>
+      <select id={id} data-testid={`recording-field-${field.name}`} value={value} onChange={(event) => onChange(event.target.value)} required={field.required} className={baseClass}>
         <option value="">Choose...</option>
         {(field.options || []).map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
@@ -67,20 +71,24 @@ function FieldControl({
 
   if (field.type === 'checkbox') {
     return (
-      <label className="mt-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+      <div className="mt-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
         <input
+          id={id}
+          data-testid={`recording-field-${field.name}`}
           type="checkbox"
           checked={value === 'Yes'}
           onChange={(event) => onChange(event.target.checked ? 'Yes' : 'No')}
           className="h-4 w-4 rounded border-slate-300"
         />
-        Yes
-      </label>
+        <label htmlFor={id}>Yes</label>
+      </div>
     )
   }
 
   return (
     <input
+      id={id}
+      data-testid={`recording-field-${field.name}`}
       type={field.type || 'text'}
       value={value}
       onChange={(event) => onChange(event.target.value)}
@@ -350,19 +358,19 @@ export function RecordingForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" data-testid={`${workflow.id}-form`}>
       {draftRestored ? (
-        <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-bold leading-6 text-amber-800">
-          Draft recovery is active. Saving will replace the unfinished local draft with a confirmed record.
+        <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-bold leading-6 text-amber-800" data-testid="save-state-message">
+          Draft recovery is active. This is a local draft only until Save record confirms a live write.
         </div>
       ) : null}
       {notice ? (
-        <div className="rounded-[24px] border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold leading-6 text-blue-800">
+        <div className="rounded-[24px] border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold leading-6 text-blue-800" data-testid="save-state-message" aria-live="polite">
           {notice}
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-4 text-sm font-bold leading-6 text-red-700">
+        <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-4 text-sm font-bold leading-6 text-red-700" data-testid="save-state-error" aria-live="assertive">
           {error}
         </div>
       ) : null}
@@ -380,7 +388,7 @@ export function RecordingForm({
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={draftWithOrb} className="rounded-2xl bg-purple-700 px-4 py-3 text-sm font-black text-white shadow-lg shadow-purple-950/20"><Sparkles className="mr-2 inline h-4 w-4" aria-hidden />Draft with Orb</button>
-            <button type="button" onClick={() => setNotice('Dictation opens through Orb voice. For now, paste dictated text into the form before saving.')} className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800"><Mic className="mr-2 inline h-4 w-4" aria-hidden />Dictate with Orb</button>
+            <button type="button" onClick={() => setNotice('Dictation opens through the Orb button. This is not live in the form yet. Your draft has not been added to the child record.')} className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800"><Mic className="mr-2 inline h-4 w-4" aria-hidden />Dictate with Orb</button>
             <button type="button" onClick={improveWording} className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800"><Wand2 className="mr-2 inline h-4 w-4" aria-hidden />Improve wording</button>
           </div>
         </div>
@@ -395,6 +403,7 @@ export function RecordingForm({
               key={prompt}
               type="button"
               onClick={() => setNotice(`Orb prompt ready: "${prompt}" Open Orb if you want conversational support. No record will be saved silently.`)}
+              data-testid="orb-prompt-chip"
               className="rounded-2xl border border-purple-200 bg-white/80 px-4 py-3 text-left text-xs font-black leading-5 text-purple-800"
             >
               {prompt}
@@ -410,7 +419,7 @@ export function RecordingForm({
             <h2 className="mt-1 text-xl font-black text-slate-950">Templates, recent phrases and child voice snippets</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">Tap a phrase to continue recording quickly. Staff still control the wording.</p>
           </div>
-          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">Autosave on</span>
+          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">Local draft autosave on</span>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           {quickTemplates.map((template) => (
@@ -441,16 +450,17 @@ export function RecordingForm({
                 {section.description ? <p className="mt-2 text-sm leading-6 text-slate-500">{section.description}</p> : null}
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                {section.fields.map((field) => {
+              {section.fields.map((field) => {
                   const wide = field.type === 'textarea' || field.name === workflow.primaryField
+                const fieldId = `recording-field-${field.name}`
                   return (
-                    <label key={field.name} className={wide ? 'block md:col-span-2' : 'block'}>
-                      <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                    <div key={field.name} className={wide ? 'block md:col-span-2' : 'block'}>
+                      <label htmlFor={fieldId} className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                         {field.label}{field.required ? ' *' : ''}
-                      </span>
-                      <FieldControl field={field} value={values[field.name] || ''} onChange={(value) => updateField(field.name, value)} />
+                      </label>
+                      <FieldControl field={field} value={values[field.name] || ''} onChange={(value) => updateField(field.name, value)} id={fieldId} />
                       {field.helper ? <span className="mt-1 block text-xs leading-5 text-slate-500">{field.helper}</span> : null}
-                    </label>
+                    </div>
                   )
                 })}
               </div>
@@ -495,11 +505,11 @@ export function RecordingForm({
                   <strong className="block font-black">{suggestion.label}</strong>
                   <span className="mt-1 block text-xs leading-5">{suggestion.reason}</span>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => handleSuggestion(suggestion)} className="rounded-full bg-white/80 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] shadow-sm">
+                    <button type="button" onClick={() => handleSuggestion(suggestion)} data-testid="smart-suggestion-chip" className="rounded-full bg-white/80 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] shadow-sm">
                       {suggestion.actionLabel || 'Use suggestion'}
                     </button>
                     {buildLinkedWorkflowHref(childId, suggestion) ? (
-                      <Link href={buildLinkedWorkflowHref(childId, suggestion)!} className="rounded-full bg-slate-950 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white shadow-sm">
+                      <Link href={buildLinkedWorkflowHref(childId, suggestion)!} data-testid={suggestion.workflowId === 'safeguarding' ? 'safeguarding-follow-up-action' : 'linked-workflow-action'} className="rounded-full bg-slate-950 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white shadow-sm">
                         <Link2 className="mr-1 inline h-3.5 w-3.5" aria-hidden />
                         Open linked workflow
                       </Link>
@@ -532,7 +542,7 @@ export function RecordingForm({
               Chronology writeback is explicit and immutable in the backend projection. Suggestions do not create duplicate actions or chronology entries by themselves.
             </div>
             <div className="mt-5 grid gap-2">
-              <button type="submit" disabled={submitting} className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="submit" data-testid="save-daily-note-button" disabled={submitting} className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
                 <Save className="mr-2 h-4 w-4" aria-hidden />
                 {submitting ? 'Saving...' : 'Save record'}
               </button>

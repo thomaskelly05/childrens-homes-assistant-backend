@@ -97,10 +97,12 @@ function LoginPanel() {
             </div>
           ) : null}
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <label className="block">
+          <form className="space-y-5" onSubmit={handleSubmit} data-testid="login-form">
+            <label className="block" htmlFor="login-email">
               <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Email</span>
               <input
+                id="login-email"
+                data-testid="login-email"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -110,9 +112,11 @@ function LoginPanel() {
               />
             </label>
 
-            <label className="block">
+            <label className="block" htmlFor="login-password">
               <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Password</span>
               <input
+                id="login-password"
+                data-testid="login-password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -134,6 +138,7 @@ function LoginPanel() {
 
             <button
               type="submit"
+              data-testid="login-submit"
               disabled={submitting || status === 'loading'}
               className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-950/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
