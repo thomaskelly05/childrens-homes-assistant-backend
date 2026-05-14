@@ -23,7 +23,6 @@ import {
 } from 'lucide-react'
 import { ReactNode } from 'react'
 
-import { ContextualAssistantPanel } from '@/components/indicare/embedded-assistant/contextual-assistant-panel'
 import { CommandSearch } from '@/components/indicare/command-search'
 import { ContextualOperationalSidebar } from '@/components/indicare/contextual-operational-sidebar'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
@@ -275,9 +274,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <main className="min-w-0 px-4 py-6 pb-28 md:px-8 md:py-8">{children}</main>
           <aside className="hidden border-l border-slate-200/80 bg-[#f7f9fc] p-5 xl:block">
             <div className="sticky top-[92px] space-y-5">
-              <ContextualAssistantPanel
-                context={assistantContext}
-              />
               <ContextualOperationalSidebar pathname={pathname} />
             </div>
           </aside>

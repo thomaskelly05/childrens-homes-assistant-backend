@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 const appDir = join(process.cwd(), 'app')
-const ignorePrefixes = ['/api/', '/auth/', '/assistant/', '/orb/', '/os/', '/mfa', '/js/', '/css/', '/assets/', '/components/']
+const ignorePrefixes = ['/api/', '/auth/', '/orb/', '/os/', '/mfa', '/js/', '/css/', '/assets/', '/components/']
 const literalHref = /href=(?:\{)?["'`]([^"'`{}]+)["'`](?:\})?/g
 
 function walk(dir) {
