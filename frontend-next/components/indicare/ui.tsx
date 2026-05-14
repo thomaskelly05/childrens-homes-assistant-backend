@@ -180,8 +180,8 @@ export function DataTable({
   if (!rows.length) return <>{empty}</>
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-slate-100">
-      <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+    <div className="overflow-x-auto rounded-[24px] border border-slate-100">
+      <table className="min-w-[720px] divide-y divide-slate-100 text-left text-sm">
         <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
           <tr>{headers.map((header) => <th key={header} scope="col" className="px-4 py-4">{header}</th>)}</tr>
         </thead>
