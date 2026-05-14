@@ -26,6 +26,9 @@ export type OrbRuntimeSnapshot = {
   preferences: OrbPreferences
   microphone: 'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'
   connected: boolean
+  realtimeAvailable: boolean
+  realtimeState: Record<string, unknown>
+  memorySnapshot: Record<string, unknown>
   loading: boolean
   error?: string
 }
@@ -59,6 +62,10 @@ export class OrbRuntimeController {
   private peerConnection: RTCPeerConnection | null = null
   private dataChannel: RTCDataChannel | null = null
   private audioElement: HTMLAudioElement | null = null
+  private activeContext: OrbContext = {}
+  private activeRole: string | null | undefined = null
+  private silenceTimer: ReturnType<typeof setTimeout> | null = null
+  private browserUtterance: SpeechSynthesisUtterance | null = null
 
   constructor(options: {
     selectedMode?: OrbSelectedMode
@@ -82,6 +89,9 @@ export class OrbRuntimeController {
       preferences,
       microphone: 'unknown',
       connected: false,
+      realtimeAvailable: false,
+      realtimeState: {},
+      memorySnapshot: {},
       loading: false
     }
   }
@@ -120,7 +130,13 @@ export class OrbRuntimeController {
       return false
     }
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
       this.snapshot = { ...this.snapshot, microphone: 'granted', error: undefined }
       this.emit()
       return true
@@ -132,6 +148,8 @@ export class OrbRuntimeController {
   }
 
   async start(context: OrbContext, role?: string | null) {
+    this.activeContext = context
+    this.activeRole = role
     this.abortController?.abort()
     this.abortController = new AbortController()
     this.snapshot = { ...this.snapshot, loading: true, error: undefined, state: 'thinking' }
@@ -139,7 +157,7 @@ export class OrbRuntimeController {
     try {
       const data: OrbSessionStartData = await startOrbSession({
         selected_mode: this.snapshot.selectedMode,
-        current_state: this.snapshot.state,
+        current_state: this.snapshot.preferences.private_mode ? 'private' : 'idle',
         context,
         voice_profile: this.snapshot.voiceProfile,
         preferences: this.snapshot.preferences,
@@ -152,6 +170,9 @@ export class OrbRuntimeController {
         modeDecision: data.mode_decision,
         transcript: [],
         connected: true,
+        realtimeAvailable: data.realtime?.transport === 'webrtc' && data.provider === 'openai_realtime' && data.provider_configured,
+        realtimeState: data.realtime_state || {},
+        memorySnapshot: data.memory_snapshot || {},
         loading: false,
         error: undefined
       }
@@ -167,7 +188,7 @@ export class OrbRuntimeController {
     const message = text.trim()
     if (!message) return null
     if (!this.snapshot.sessionId) {
-      await this.start(context)
+      await this.start(context, this.activeRole)
     }
     const sessionId = this.snapshot.sessionId
     if (!sessionId) return null
@@ -181,6 +202,9 @@ export class OrbRuntimeController {
         context
       })
       this.applyEventData(data)
+      if (data.assistant_turn?.content) {
+        await this.speakAssistantTurn(data.assistant_turn.content)
+      }
       return data
     } catch (error) {
       this.snapshot = { ...this.snapshot, state: 'error', loading: false, error: error instanceof Error ? error.message : 'Orb event failed.' }
@@ -192,6 +216,7 @@ export class OrbRuntimeController {
   async updatePartialTranscript(text: string, context: OrbContext) {
     this.snapshot = { ...this.snapshot, state: 'listening', partialTranscript: text }
     this.emit()
+    this.resetSilenceTimer(context)
     if (this.snapshot.sessionId) {
       await sendOrbEvent(this.snapshot.sessionId, { type: 'partial_transcript', text, partial: true, context }).catch(() => undefined)
     }
@@ -199,6 +224,7 @@ export class OrbRuntimeController {
 
   async interrupt() {
     this.stopAssistantAudio()
+    this.stopBrowserSpeech()
     this.sendRealtimeEvent({ type: 'response.cancel' })
     if (!this.snapshot.sessionId) {
       this.snapshot = { ...this.snapshot, state: 'interrupted' }
@@ -212,6 +238,28 @@ export class OrbRuntimeController {
       loading: false,
       transcript: this.snapshot.transcript.map((entry, index, list) => index === list.length - 1 ? { ...entry, interrupted: true } : entry)
     }
+    this.emit()
+  }
+
+  async activate(context: OrbContext, role?: string | null) {
+    this.activeContext = context
+    this.activeRole = role
+    if (this.snapshot.state === 'speaking' || this.snapshot.loading) {
+      await this.interrupt()
+      this.snapshot = { ...this.snapshot, state: 'listening' }
+      this.emit()
+      return
+    }
+    if (!this.snapshot.sessionId) {
+      await this.start(context, role)
+    }
+    const micReady = this.snapshot.microphone === 'granted' || await this.requestMicrophone()
+    if (!micReady) return
+    if (this.snapshot.sessionId) {
+      await sendOrbEvent(this.snapshot.sessionId, { type: 'speech_started', context }).catch(() => undefined)
+    }
+    this.snapshot = { ...this.snapshot, state: 'listening', partialTranscript: '', error: undefined }
+    this.resetSilenceTimer(context)
     this.emit()
   }
 
@@ -238,7 +286,9 @@ export class OrbRuntimeController {
     this.stream?.getTracks().forEach((track) => track.stop())
     this.stream = null
     this.closeRealtime()
-    this.snapshot = { ...this.snapshot, sessionId: null, state: 'idle', connected: false, loading: false }
+    this.clearSilenceTimer()
+    this.stopBrowserSpeech()
+    this.snapshot = { ...this.snapshot, sessionId: null, state: 'idle', connected: false, realtimeAvailable: false, loading: false }
     this.emit()
   }
 
@@ -249,6 +299,8 @@ export class OrbRuntimeController {
       modeDecision: data.mode_decision,
       transcript: data.transcript,
       pendingDraft: data.pending_write_confirmation || null,
+      realtimeState: data.realtime_state || this.snapshot.realtimeState,
+      memorySnapshot: data.memory_snapshot || this.snapshot.memorySnapshot,
       loading: false,
       error: undefined
     }
@@ -316,6 +368,19 @@ export class OrbRuntimeController {
       channel.onmessage = (event) => this.handleRealtimeEvent(event.data)
       channel.onopen = () => {
         this.snapshot = { ...this.snapshot, connected: true, error: undefined }
+        this.sendRealtimeEvent({
+          type: 'session.update',
+          session: {
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.48,
+              prefix_padding_ms: 280,
+              silence_duration_ms: 520,
+              create_response: false,
+              interrupt_response: true
+            }
+          }
+        })
         this.emit()
       }
       const offer = await peer.createOffer()
@@ -357,6 +422,36 @@ export class OrbRuntimeController {
         this.snapshot = { ...this.snapshot, state: 'listening' }
         this.emit()
       }
+      this.resetSilenceTimer(this.activeContext)
+      if (this.snapshot.sessionId) {
+        void sendOrbEvent(this.snapshot.sessionId, { type: 'speech_started', context: this.activeContext }).catch(() => undefined)
+      }
+      return
+    }
+    if (type === 'input_audio_buffer.speech_stopped') {
+      this.clearSilenceTimer()
+      this.snapshot = { ...this.snapshot, state: 'thinking' }
+      this.emit()
+      if (this.snapshot.sessionId) {
+        void sendOrbEvent(this.snapshot.sessionId, { type: 'speech_stopped', context: this.activeContext }).catch(() => undefined)
+      }
+      return
+    }
+    if (type === 'conversation.item.input_audio_transcription.delta') {
+      const delta = typeof event.delta === 'string' ? event.delta : ''
+      if (!delta) return
+      const text = `${this.snapshot.partialTranscript}${delta}`
+      void this.updatePartialTranscript(text, this.activeContext)
+      return
+    }
+    if (type === 'conversation.item.input_audio_transcription.completed') {
+      const transcript = typeof event.transcript === 'string' ? event.transcript.trim() : ''
+      this.clearSilenceTimer()
+      if (transcript) {
+        this.snapshot = { ...this.snapshot, partialTranscript: transcript, state: 'thinking' }
+        this.emit()
+        void this.sendText(transcript, this.activeContext)
+      }
       return
     }
     if (type === 'response.created') {
@@ -368,11 +463,17 @@ export class OrbRuntimeController {
       const delta = typeof event.delta === 'string' ? event.delta : ''
       this.snapshot = { ...this.snapshot, state: 'speaking', partialTranscript: `${this.snapshot.partialTranscript}${delta}` }
       this.emit()
+      if (this.snapshot.sessionId && delta) {
+        void sendOrbEvent(this.snapshot.sessionId, { type: 'response_delta', text: delta, context: this.activeContext }).catch(() => undefined)
+      }
       return
     }
     if (type === 'response.done') {
       this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
       this.emit()
+      if (this.snapshot.sessionId) {
+        void sendOrbEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
+      }
       return
     }
     if (type === 'error') {
@@ -393,6 +494,88 @@ export class OrbRuntimeController {
     } catch {
       // Ignore browser media edge cases; backend interruption still proceeds.
     }
+  }
+
+  private async speakAssistantTurn(text: string) {
+    const spoken = this.prepareSpokenText(text)
+    if (!spoken) return
+    this.snapshot = { ...this.snapshot, state: 'speaking', partialTranscript: '' }
+    this.emit()
+    if (this.snapshot.sessionId) {
+      await sendOrbEvent(this.snapshot.sessionId, { type: 'response_started', context: this.activeContext }).catch(() => undefined)
+    }
+    if (this.dataChannel?.readyState === 'open') {
+      this.sendRealtimeEvent({
+        type: 'response.create',
+        response: {
+          modalities: ['audio', 'text'],
+          instructions: `Speak this IndiCare Orb answer naturally, in a calm British female voice. Do not add citations or extra commentary. Say exactly: ${JSON.stringify(spoken)}`
+        }
+      })
+      return
+    }
+    this.speakWithBrowserVoice(spoken)
+  }
+
+  private speakWithBrowserVoice(text: string) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
+      this.emit()
+      return
+    }
+    this.stopBrowserSpeech()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'en-GB'
+    utterance.rate = 0.94
+    utterance.pitch = 1.02
+    utterance.onend = () => {
+      this.browserUtterance = null
+      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
+      this.emit()
+      if (this.snapshot.sessionId) {
+        void sendOrbEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
+      }
+    }
+    utterance.onerror = () => {
+      this.browserUtterance = null
+      this.snapshot = { ...this.snapshot, state: 'idle' }
+      this.emit()
+    }
+    this.browserUtterance = utterance
+    window.speechSynthesis.speak(utterance)
+  }
+
+  private stopBrowserSpeech() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+    this.browserUtterance = null
+  }
+
+  private prepareSpokenText(text: string) {
+    return text
+      .replace(/\n{2,}/g, ' ')
+      .replace(/\[[^\]]*citation[^\]]*\]/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  private resetSilenceTimer(context: OrbContext) {
+    this.clearSilenceTimer()
+    this.silenceTimer = setTimeout(() => {
+      if (this.snapshot.state !== 'listening') return
+      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
+      this.emit()
+      if (this.snapshot.sessionId) {
+        void sendOrbEvent(this.snapshot.sessionId, { type: 'silence_timeout', context }).catch(() => undefined)
+      }
+    }, 12000)
+  }
+
+  private clearSilenceTimer() {
+    if (!this.silenceTimer) return
+    clearTimeout(this.silenceTimer)
+    this.silenceTimer = null
   }
 
   private closeRealtime() {
