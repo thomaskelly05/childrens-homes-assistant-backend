@@ -4,6 +4,7 @@ import { ReconnectManager } from './reconnect-manager'
 import { runtimeTelemetry } from './runtime-telemetry'
 import { speechPlaybackRuntime } from './speech-playback-runtime'
 import { WakeWordRuntime } from './wake-word-runtime'
+import { getCsrfToken } from '@/lib/auth/api'
 import { generateMockAssistantResponse } from '@/lib/indicare/assistant-adapter'
 
 export type AssistantMessage = {
@@ -266,13 +267,15 @@ export class AssistantRuntime {
     this.abortController = new AbortController()
 
     try {
+      const csrfToken = getCsrfToken()
       const response = await fetch(backendUrl('/assistant/general/stream'), {
         method: 'POST',
         credentials: 'include',
         cache: 'no-store',
         signal: this.abortController.signal,
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
         },
         body: JSON.stringify({
           message: trimmed,

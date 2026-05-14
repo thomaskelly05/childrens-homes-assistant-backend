@@ -130,6 +130,49 @@ async def test_realtime_partial_and_silence_state(monkeypatch):
     assert silence.realtime_state["phase"] == "idle"
 
 
+@pytest.mark.asyncio
+async def test_orb_session_rejects_cross_user_access(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+    owner = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    other_user = {"id": 8, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(context=OrbContext(workspace="shift_operations", home_id=1), provider="mock_voice"),
+        current_user=owner,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await service.handle_event(
+            session_id=start.session_id,
+            event=OrbSessionEventRequest(type="speech_started", context=OrbContext(home_id=1)),
+            conn=object(),
+            current_user=other_user,
+        )
+
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_orb_session_rejects_cross_home_event_scope(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(context=OrbContext(workspace="shift_operations", home_id=1), provider="mock_voice"),
+        current_user=user,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await service.handle_event(
+            session_id=start.session_id,
+            event=OrbSessionEventRequest(type="speech_started", context=OrbContext(home_id=2)),
+            conn=object(),
+            current_user=user,
+        )
+
+    assert exc.value.status_code == 403
+
+
 def test_retrieval_rejects_cross_home_context_before_fetching_records():
     context = build_shared_assistant_context(
         current_user={"id": 1, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]},

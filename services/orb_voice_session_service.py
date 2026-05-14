@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
-import httpx
+from fastapi import HTTPException, status
 
 from schemas.orb import (
     OrbContext,
@@ -37,15 +37,16 @@ from services.orb_operational_events_service import orb_operational_events_servi
 from services.orb_persona_policy import persona_instruction, spoken_acknowledgement, transcript_storage_policy
 from services.orb_productivity_service import orb_productivity_service
 from services.orb_realtime_conversation_service import orb_realtime_conversation_service
+from services.orb_realtime_provider_service import (
+    ALLOWED_SYNTHETIC_VOICES,
+    orb_realtime_provider_service,
+)
 from services.orb_tool_orchestration_service import orb_tool_orchestration_service
 from services.orb_tool_router import tools_for_decision
 from services.orb_wake_word_service import orb_wake_word_service
 from services.orb_web_search_service import orb_web_search_service
 
 
-OPENAI_REALTIME_SESSION_URL = "https://api.openai.com/v1/realtime/sessions"
-DEFAULT_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL") or os.getenv("INDICARE_REALTIME_MODEL", "gpt-4o-realtime-preview")
-ALLOWED_SYNTHETIC_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"}
 WRITE_INTENT_TERMS = {
     "create",
     "save",
@@ -65,6 +66,17 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _session_ttl_seconds() -> int:
+    try:
+        return max(300, int(os.getenv("ORB_SESSION_TTL_SECONDS", "7200")))
+    except (TypeError, ValueError):
+        return 7200
+
+
+def _expires_at() -> str:
+    return (datetime.now(timezone.utc) + timedelta(seconds=_session_ttl_seconds())).isoformat()
+
+
 def _id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:16]}"
 
@@ -81,6 +93,54 @@ def _enabled(value: str | None, default: bool = True) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on", "enabled"}
+
+
+def _normalised_role(current_user: dict[str, Any]) -> str:
+    return str(current_user.get("role") or "").strip().lower().replace("-", "_")
+
+
+def _provider_level(current_user: dict[str, Any]) -> bool:
+    return _normalised_role(current_user) in {
+        "admin",
+        "administrator",
+        "provider_admin",
+        "super_admin",
+        "superadmin",
+        "founder",
+        "owner",
+        "ri",
+        "responsible_individual",
+    }
+
+
+def _allowed_home_ids(current_user: dict[str, Any]) -> set[int]:
+    values = (
+        current_user.get("allowed_home_ids")
+        or current_user.get("allowedHomeIds")
+        or current_user.get("home_ids")
+        or current_user.get("homeIds")
+        or []
+    )
+    if isinstance(values, (str, int)):
+        values = [values]
+    allowed: set[int] = set()
+    for value in values:
+        try:
+            allowed.add(int(value))
+        except (TypeError, ValueError):
+            continue
+    for key in ("home_id", "homeId", "default_home_id"):
+        try:
+            value = current_user.get(key)
+            if value is not None:
+                allowed.add(int(value))
+        except (TypeError, ValueError):
+            continue
+    return allowed
+
+
+def _parse_time(value: str) -> datetime:
+    return datetime.fromisoformat(value)
 
 
 def _provider_voice(profile: OrbVoiceProfile) -> str:
@@ -202,59 +262,14 @@ class OpenAIRealtimeVoiceProvider:
     name = "openai_realtime"
 
     def configured(self) -> bool:
-        return _enabled(os.getenv("ORB_REALTIME_ENABLED"), default=True) and bool(os.getenv("OPENAI_API_KEY"))
+        return orb_realtime_provider_service.configured()
 
     async def start_session(self, *, request: OrbSessionStartRequest, decision: OrbModeDecision, current_user: dict[str, Any]) -> dict[str, Any]:
-        api_key = os.getenv("OPENAI_API_KEY") if _enabled(os.getenv("ORB_REALTIME_ENABLED"), default=True) else None
-        body = {
-            "model": DEFAULT_REALTIME_MODEL,
-            "voice": _provider_voice(request.voice_profile),
-            "instructions": persona_instruction(decision, request.voice_profile),
-            "modalities": ["audio", "text"],
-            "input_audio_transcription": {"model": "whisper-1"},
-            "turn_detection": {
-                "type": "server_vad",
-                "threshold": 0.48,
-                "prefix_padding_ms": 280,
-                "silence_duration_ms": 520,
-                "create_response": False,
-                "interrupt_response": True,
-            },
-            "input_audio_noise_reduction": {"type": "near_field"},
-        }
-        if not api_key:
-            return {
-                "provider": self.name,
-                "configured": False,
-                "env_gated": True,
-                "unavailable_reason": "Realtime voice unavailable: OPENAI_API_KEY is missing or ORB_REALTIME_ENABLED=false.",
-                "request_body": body,
-            }
-        async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.post(
-                OPENAI_REALTIME_SESSION_URL,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                    "OpenAI-Beta": "realtime=v1",
-                },
-                json=body,
-            )
-        if response.status_code >= 400:
-            return {
-                "provider": self.name,
-                "configured": True,
-                "error": "realtime_session_failed",
-                "status": response.status_code,
-                "unavailable_reason": "Realtime voice unavailable: OpenAI realtime session could not be created.",
-            }
-        return {
-            "provider": self.name,
-            "configured": True,
-            "session": _public_openai_session_payload(response.json()),
-            "model": DEFAULT_REALTIME_MODEL,
-            "voice": body["voice"],
-        }
+        return await orb_realtime_provider_service.create_ephemeral_session(
+            instructions=persona_instruction(decision, request.voice_profile),
+            voice=_provider_voice(request.voice_profile),
+            current_user=current_user,
+        )
 
     async def event(self, *, session_id: str, event: OrbSessionEventRequest) -> dict[str, Any]:
         return {"provider": self.name, "accepted": True, "event_type": event.type, "session_id": session_id}
@@ -285,6 +300,8 @@ class OrbSessionRecord:
     citations_used: list[dict[str, Any]] = field(default_factory=list)
     related_records: list[dict[str, Any]] = field(default_factory=list)
     records_changed: list[dict[str, Any]] = field(default_factory=list)
+    last_seen_at: str = field(default_factory=_now)
+    expires_at: str = field(default_factory=_expires_at)
 
 
 class OrbVoiceSessionService:
@@ -315,13 +332,70 @@ class OrbVoiceSessionService:
         openai = self.providers["openai_realtime"]
         return openai if openai.configured() else self.providers["mock_voice"]
 
+    def _cleanup_expired_sessions(self) -> None:
+        expired: list[str] = []
+        now = datetime.now(timezone.utc)
+        for session_id, session in list(self.sessions.items()):
+            try:
+                if session.ended_at or now >= _parse_time(session.expires_at):
+                    expired.append(session_id)
+            except Exception:
+                expired.append(session_id)
+        for session_id in expired:
+            self.sessions.pop(session_id, None)
+            orb_realtime_conversation_service.end_session(session_id)
+            orb_memory_service.end_session(session_id)
+
+    def _cleanup_user_sessions(self, user_id: int | None) -> None:
+        if user_id is None:
+            return
+        for session_id, session in list(self.sessions.items()):
+            if session.user_id == user_id and not session.ended_at:
+                session.ended_at = _now()
+                session.state = "idle"
+                self.sessions.pop(session_id, None)
+                orb_realtime_conversation_service.end_session(session_id)
+                orb_memory_service.end_session(session_id)
+
+    def _touch(self, session: OrbSessionRecord) -> None:
+        session.last_seen_at = _now()
+        session.expires_at = _expires_at()
+
+    def _assert_session_owner(self, session: OrbSessionRecord, current_user: dict[str, Any] | None) -> None:
+        if not current_user:
+            return
+        current_user_id = _user_id(current_user)
+        if session.user_id is not None and current_user_id != session.user_id and not _provider_level(current_user):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Orb session does not belong to this user.")
+
+    def _assert_context_scope(self, context: OrbContext, current_user: dict[str, Any]) -> None:
+        if context.home_id is None or _provider_level(current_user):
+            return
+        allowed = _allowed_home_ids(current_user)
+        try:
+            requested_home_id = int(context.home_id)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Orb home scope.") from exc
+        if allowed and requested_home_id not in allowed:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Orb home scope is not permitted for this user.")
+
     def get_session(self, session_id: str) -> OrbSessionRecord:
+        self._cleanup_expired_sessions()
         session = self.sessions.get(session_id)
         if not session:
             raise KeyError(session_id)
         return session
 
+    def get_session_for_user(self, session_id: str, current_user: dict[str, Any] | None) -> OrbSessionRecord:
+        session = self.get_session(session_id)
+        self._assert_session_owner(session, current_user)
+        self._touch(session)
+        return session
+
     async def start_session(self, *, request: OrbSessionStartRequest, current_user: dict[str, Any]) -> OrbSessionStartResponse:
+        self._cleanup_expired_sessions()
+        self._assert_context_scope(request.context, current_user)
+        self._cleanup_user_sessions(_user_id(current_user))
         session_id = _id("orb_session")
         decision = route_orb_intent(message=None, current_user=current_user, selected_mode=request.selected_mode, context=request.context)
         provider = self._provider(request.provider)
@@ -377,6 +451,7 @@ class OrbVoiceSessionService:
                 "raw_audio_stored": False,
                 "memory_scope": memory_snapshot.get("scope"),
                 "realtime_state": realtime_state,
+                "expires_at": session.expires_at,
                 "transcript_policy": transcript_storage_policy(
                     request.preferences.do_not_store_transcript,
                     request.preferences.transcript_retention_days,
@@ -388,6 +463,7 @@ class OrbVoiceSessionService:
             provider=provider.name,
             provider_configured=provider.configured(),
             state=state,
+            expires_at=session.expires_at,
             voice_profile=request.voice_profile,
             preferences=request.preferences,
             mode_decision=decision,
@@ -405,6 +481,8 @@ class OrbVoiceSessionService:
                 "supports_silence_detection": True,
                 "server_vad": provider.name == "openai_realtime" and provider.configured(),
                 "reconnect_supported": True,
+                "token_refresh_required": provider.name == "openai_realtime" and provider.configured(),
+                "session_ttl_seconds": _session_ttl_seconds(),
                 "status": "available" if provider.name == "openai_realtime" and provider.configured() else "Realtime voice unavailable; text/mock voice fallback is active.",
                 "architecture": "Browser WebRTC streams microphone to the provider; backend owns routed turns, memory, audit, tool previews and safe care retrieval.",
                 "wake_phrase_foundation": "Hey Orb/Hey IndiCare optional foundation; passive wake-word detection is disabled by default.",
@@ -427,8 +505,9 @@ class OrbVoiceSessionService:
         conn: Any,
         current_user: dict[str, Any],
     ) -> OrbSessionEventResponse:
-        session = self.get_session(session_id)
+        session = self.get_session_for_user(session_id, current_user)
         context = event.context or session.context
+        self._assert_context_scope(context, current_user)
         selected_mode = event.selected_mode or session.selected_mode
         message = event.text or ""
         decision = route_orb_intent(message=message, current_user=current_user, selected_mode=selected_mode, context=context)
@@ -471,7 +550,7 @@ class OrbVoiceSessionService:
                 session.state = "idle"
             elif event.type == "reconnect":
                 realtime_state = orb_realtime_conversation_service.reconnect(session_id=session_id)
-                session.state = "thinking"
+                session.state = "reconnecting"
             else:
                 realtime_state = orb_realtime_conversation_service.note_event(
                     session_id=session_id,
@@ -674,6 +753,8 @@ class OrbVoiceSessionService:
 
     async def interrupt(self, *, session_id: str, current_user: dict[str, Any]) -> OrbInterruptResponse:
         session = self.get_session(session_id)
+        self._assert_session_owner(session, current_user)
+        self._touch(session)
         await self._provider(session.provider_name).interrupt(session_id=session_id)
         session.state = "interrupted"
         interrupted_text = session.transcript[-1].content if session.transcript and session.transcript[-1].role == "assistant" else None
@@ -692,10 +773,11 @@ class OrbVoiceSessionService:
         return OrbInterruptResponse(session_id=session_id)
 
     async def end(self, *, session_id: str, current_user: dict[str, Any]) -> OrbSessionSummary:
-        session = self.get_session(session_id)
+        session = self.get_session_for_user(session_id, current_user)
         await self._provider(session.provider_name).end(session_id=session_id)
         session.state = "idle"
         session.ended_at = _now()
+        summary = self._summary_from_session(session)
         orb_realtime_conversation_service.end_session(session_id)
         orb_memory_service.end_session(session_id)
         record_audit_event(
@@ -704,12 +786,13 @@ class OrbVoiceSessionService:
             actor=current_user,
             resource_type="orb_session",
             resource_id=session_id,
-            metadata=self.summary(session_id).model_dump(),
+            metadata=summary.model_dump(),
         )
-        return self.summary(session_id)
+        self.sessions.pop(session_id, None)
+        return summary
 
-    def transcript(self, session_id: str) -> OrbTranscriptResponse:
-        session = self.get_session(session_id)
+    def transcript(self, session_id: str, current_user: dict[str, Any] | None = None) -> OrbTranscriptResponse:
+        session = self.get_session_for_user(session_id, current_user)
         entries = [] if session.preferences.do_not_store_transcript else session.transcript
         return OrbTranscriptResponse(
             session_id=session_id,
@@ -720,8 +803,11 @@ class OrbVoiceSessionService:
             ),
         )
 
-    def summary(self, session_id: str) -> OrbSessionSummary:
-        session = self.get_session(session_id)
+    def summary(self, session_id: str, current_user: dict[str, Any] | None = None) -> OrbSessionSummary:
+        session = self.get_session_for_user(session_id, current_user)
+        return self._summary_from_session(session)
+
+    def _summary_from_session(self, session: OrbSessionRecord) -> OrbSessionSummary:
         return OrbSessionSummary(
             session_id=session.id,
             state=session.state,

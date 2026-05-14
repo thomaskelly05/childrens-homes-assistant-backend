@@ -81,6 +81,15 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
               className="h-5 w-5"
             />
           </label>
+          <label className="mt-3 flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
+            Captions on by default
+            <input
+              type="checkbox"
+              checked={Boolean(preferences.captions_enabled)}
+              onChange={(event) => updatePreference('captions_enabled', event.target.checked)}
+              className="h-5 w-5"
+            />
+          </label>
         </section>
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-6">
@@ -96,6 +105,30 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
           >
             {microphone === 'granted' ? 'Microphone granted' : 'Grant microphone'}
           </button>
+          <label className="mt-4 block text-sm font-black text-slate-700">
+            Microphone mode
+            <select
+              value={preferences.microphone_mode || 'push_to_talk'}
+              onChange={(event) => updatePreference('microphone_mode', event.target.value as OrbPreferences['microphone_mode'])}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
+            >
+              <option value="push_to_talk">Push-to-talk</option>
+              <option value="open_mic">Open mic while Orb is active</option>
+            </select>
+          </label>
+          <label className="mt-4 block text-sm font-black text-slate-700">
+            Headset preference
+            <select
+              value={preferences.headset_preference || 'system_default'}
+              onChange={(event) => updatePreference('headset_preference', event.target.value as OrbPreferences['headset_preference'])}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
+            >
+              <option value="system_default">System default</option>
+              <option value="headset">Headset</option>
+              <option value="bluetooth">Bluetooth</option>
+              <option value="speaker">Speaker</option>
+            </select>
+          </label>
         </section>
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-6">
@@ -170,6 +203,18 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
               </label>
             ))}
           </div>
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            Wake word is disabled by default. If you opt in, this foundation remains local-device-first and must not stream passive audio to cloud providers.
+          </div>
+          <label className="mt-3 flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
+            I understand wake word is opt-in and local-first
+            <input
+              type="checkbox"
+              checked={Boolean(preferences.wake_word_local_only_acknowledged)}
+              onChange={(event) => updatePreference('wake_word_local_only_acknowledged', event.target.checked)}
+              className="h-5 w-5"
+            />
+          </label>
         </section>
       </div>
 
@@ -222,6 +267,32 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
             <option value="detailed">Detailed when useful</option>
           </select>
         </label>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <label className="block text-sm font-black text-slate-700">
+            Interruption sensitivity
+            <select
+              value={preferences.interruption_sensitivity || 'medium'}
+              onChange={(event) => updatePreference('interruption_sensitivity', event.target.value as OrbPreferences['interruption_sensitivity'])}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+          <label className="block text-sm font-black text-slate-700">
+            Ambient noise sensitivity
+            <select
+              value={preferences.ambient_noise_sensitivity || 'medium'}
+              onChange={(event) => updatePreference('ambient_noise_sensitivity', event.target.value as OrbPreferences['ambient_noise_sensitivity'])}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
         <div className="mt-5 flex flex-wrap gap-3">
           <button type="button" onClick={save} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">
             Save Orb preferences

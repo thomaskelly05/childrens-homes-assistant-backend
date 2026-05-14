@@ -17,13 +17,18 @@ OrbBrain = Literal[
 OrbSelectedMode = Literal["auto", "care", "inspector", "general"]
 OrbState = Literal[
     "idle",
+    "connecting",
     "passive_listening",
     "listening",
     "thinking",
     "speaking",
     "interrupted",
+    "reconnecting",
+    "offline",
     "muted",
     "unavailable",
+    "permission_denied",
+    "expired",
     "private",
     "recording",
     "dictation",
@@ -113,6 +118,14 @@ class OrbPreferences(BaseModel):
     keyboard_shortcut: str = "Ctrl+Shift+Space"
     default_home_id: int | None = None
     default_shift_context: dict[str, Any] = Field(default_factory=dict)
+    captions_enabled: bool = False
+    privacy_mode_label: Literal["standard", "private", "do_not_store"] = "standard"
+    wake_word_enabled: bool = False
+    wake_word_local_only_acknowledged: bool = False
+    headset_preference: Literal["system_default", "speaker", "headset", "bluetooth"] = "system_default"
+    microphone_mode: Literal["push_to_talk", "open_mic"] = "push_to_talk"
+    interruption_sensitivity: Literal["low", "medium", "high"] = "medium"
+    ambient_noise_sensitivity: Literal["low", "medium", "high"] = "medium"
 
 
 class OrbContext(BaseModel):
@@ -222,6 +235,7 @@ class OrbSessionStartResponse(BaseModel):
     provider: str
     provider_configured: bool
     state: OrbState
+    expires_at: str | None = None
     wake_phrase: str = "Hey IndiCare"
     voice_profile: OrbVoiceProfile
     preferences: OrbPreferences

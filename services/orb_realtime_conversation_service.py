@@ -9,13 +9,18 @@ from schemas.orb import OrbContext, OrbState
 
 ConversationPhase = Literal[
     "idle",
+    "connecting",
     "passive_listening",
     "listening",
     "processing",
     "speaking",
     "interrupted",
+    "reconnecting",
+    "offline",
     "muted",
     "unavailable",
+    "permission_denied",
+    "expired",
 ]
 
 
@@ -136,6 +141,12 @@ class OrbRealtimeConversationService:
             state.phase = "idle"
         elif event_type == "unavailable":
             state.phase = "unavailable"
+        elif event_type == "offline":
+            state.phase = "offline"
+        elif event_type == "permission_denied":
+            state.phase = "permission_denied"
+        elif event_type == "expired":
+            state.phase = "expired"
         state.events.append({"type": event_type, "metadata": metadata or {}, "created_at": _now()})
         return state.snapshot()
 
@@ -201,7 +212,7 @@ class OrbRealtimeConversationService:
         if not state:
             return {}
         state.reconnect_attempts += 1
-        state.phase = "processing"
+        state.phase = "reconnecting"
         state.events.append({"type": "reconnect", "attempt": state.reconnect_attempts, "created_at": _now()})
         return state.snapshot()
 
@@ -212,13 +223,18 @@ class OrbRealtimeConversationService:
 def orb_state_from_realtime(phase: ConversationPhase, fallback: OrbState = "idle") -> OrbState:
     mapping: dict[ConversationPhase, OrbState] = {
         "idle": "idle",
+        "connecting": "connecting",
         "passive_listening": "passive_listening",
         "listening": "listening",
         "processing": "thinking",
         "speaking": "speaking",
         "interrupted": "interrupted",
+        "reconnecting": "reconnecting",
+        "offline": "offline",
         "muted": "muted",
         "unavailable": "unavailable",
+        "permission_denied": "permission_denied",
+        "expired": "expired",
     }
     return mapping.get(phase, fallback)
 

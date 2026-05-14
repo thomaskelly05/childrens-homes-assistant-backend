@@ -9,6 +9,7 @@ from auth.permissions import require_assistant_access
 from db.connection import get_db
 from schemas.orb import OrbSessionEventRequest, OrbSessionStartRequest
 from services.orb_operational_events_service import orb_operational_events_service
+from services.orb_realtime_provider_service import orb_realtime_provider_service
 from services.orb_voice_session_service import orb_voice_session_service
 from services.orb_wake_word_service import orb_wake_word_service
 
@@ -30,8 +31,10 @@ async def start_orb_session(
     try:
         response = await orb_voice_session_service.start_session(request=payload, current_user=current_user)
         return {"success": True, "data": response.model_dump()}
-    except Exception as exc:
-        return _error_response(500, "orb_session_start_failed", "Orb session could not be started.", str(exc))
+    except HTTPException:
+        raise
+    except Exception:
+        return _error_response(503, "orb_session_start_failed", "Orb session could not be started. Please try again.", {"retryable": True})
 
 
 @router.post("/realtime/session")
@@ -69,8 +72,8 @@ async def orb_session_event(
         raise HTTPException(status_code=404, detail="Orb session not found.")
     except HTTPException:
         raise
-    except Exception as exc:
-        return _error_response(500, "orb_session_event_failed", "Orb event could not be processed.", str(exc))
+    except Exception:
+        return _error_response(503, "orb_session_event_failed", "Orb event could not be processed. Please try again.", {"retryable": True})
 
 
 @router.post("/session/{session_id}/interrupt")
@@ -119,7 +122,7 @@ async def orb_session_transcript(
     current_user=Depends(require_assistant_access),
 ):
     try:
-        response = orb_voice_session_service.transcript(session_id)
+        response = orb_voice_session_service.transcript(session_id, current_user=current_user)
         return {"success": True, "data": response.model_dump()}
     except KeyError:
         raise HTTPException(status_code=404, detail="Orb session not found.")
@@ -139,7 +142,7 @@ async def orb_session_summary(
     current_user=Depends(require_assistant_access),
 ):
     try:
-        response = orb_voice_session_service.summary(session_id)
+        response = orb_voice_session_service.summary(session_id, current_user=current_user)
         return {"success": True, "data": response.model_dump()}
     except KeyError:
         raise HTTPException(status_code=404, detail="Orb session not found.")
@@ -208,6 +211,11 @@ async def orb_config(current_user=Depends(require_assistant_access)):
             "operational_event_subscriptions": event_subscriptions,
         },
     }
+
+
+@router.get("/realtime/health")
+async def orb_realtime_health(current_user=Depends(require_assistant_access)):
+    return {"success": True, "data": orb_realtime_provider_service.health_metrics()}
 
 
 @router.get("/events/subscriptions")
