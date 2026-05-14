@@ -17,6 +17,12 @@ function ActionLink({ href, children, tone = 'dark' }: { href: string; children:
   return <Link href={href} className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-black transition hover:-translate-y-0.5 ${classes}`}>{children}</Link>
 }
 
+function savedRecordHref(childId: string, routeType?: string, recordId?: string) {
+  if (!recordId) return undefined
+  if (routeType === 'family-contact') return `/young-people/${encodeURIComponent(childId)}/chronology?source=${encodeURIComponent(recordId)}`
+  return `/${routeType || 'chronology'}/${encodeURIComponent(recordId)}`
+}
+
 export default async function ChildJourneyPage({
   params,
   searchParams
@@ -31,6 +37,7 @@ export default async function ChildJourneyPage({
   if (!child && data.source === 'live') notFound()
 
   const childName = child?.preferredName || child?.displayName || `Young person ${id}`
+  const savedHref = savedRecordHref(id, query.saved, query.recordId)
   const selectorResult: OsApiResult<unknown> = { data, source: data.source, error: data.error }
   const lastDailyNote = data.dailyNotes[0]
   const actionsDueToday = data.actions.filter((action) => ['open', 'overdue', 'in_progress'].includes(action.status)).slice(0, 4)
@@ -42,7 +49,7 @@ export default async function ChildJourneyPage({
     ['Risk assessment', `/risk-assessments?young_person_id=${encodeURIComponent(id)}`],
     ['Placement plan', `/placements?young_person_id=${encodeURIComponent(id)}`],
     ['Education plan', `/documents?young_person_id=${encodeURIComponent(id)}&type=education`],
-    ['Health plan', `/health?young_person_id=${encodeURIComponent(id)}`],
+    ['Health note / plan update', `/young-people/${encodeURIComponent(id)}/health/new`],
     ['Behaviour support plan', `/documents?young_person_id=${encodeURIComponent(id)}&type=behaviour_support_plan`],
     ['Family contact plan', `/documents?young_person_id=${encodeURIComponent(id)}&type=family_contact`],
     ['Keywork goals', `/keywork?young_person_id=${encodeURIComponent(id)}`]
@@ -66,17 +73,17 @@ export default async function ChildJourneyPage({
       </nav>
 
       {query.saved ? (
-        <div className="rounded-[28px] border border-emerald-100 bg-emerald-50 p-5 text-emerald-900">
+        <div className={`rounded-[28px] border p-5 ${query.status === 'draft' ? 'border-amber-100 bg-amber-50 text-amber-900' : 'border-emerald-100 bg-emerald-50 text-emerald-900'}`}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">{query.status === 'draft' ? 'Draft saved' : 'Saved'}</p>
-              <h2 className="mt-1 text-xl font-black">Record linked to {childName}&apos;s journey</h2>
-              <p className="mt-2 text-sm leading-6 text-emerald-800">The timeline and actions panel will show the record from the live backend when the linked projection is available.</p>
+              <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${query.status === 'draft' ? 'text-amber-700' : 'text-emerald-700'}`}>{query.status === 'draft' ? 'Draft saved locally' : 'Saved'}</p>
+              <h2 className="mt-1 text-xl font-black">{query.status === 'draft' ? "Draft saved locally. It has not yet been added to the child's record." : `Record linked to ${childName}'s journey`}</h2>
+              <p className={`mt-2 text-sm leading-6 ${query.status === 'draft' ? 'text-amber-800' : 'text-emerald-800'}`}>{query.status === 'draft' ? 'Please return to this workflow and save again when the live backend is available.' : 'The timeline and actions panel will show the record from the live backend when the linked projection is available.'}</p>
               {query.limitation ? <p className="mt-2 text-sm font-bold leading-6 text-amber-800">Limitation: {query.limitation}</p> : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light">View in chronology</ActionLink>
-              {query.recordId ? <ActionLink href={`/${query.saved}/${encodeURIComponent(query.recordId)}`} tone="light">Open record</ActionLink> : null}
+              {savedHref ? <ActionLink href={savedHref} tone="light">Open source record</ActionLink> : null}
             </div>
           </div>
         </div>

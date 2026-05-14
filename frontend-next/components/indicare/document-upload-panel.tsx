@@ -34,8 +34,14 @@ export function DocumentUploadPanel() {
       setState('uploaded')
       setMessage(`Uploaded. Extraction status: ${payload.data?.extraction_status || payload.data?.status || 'queued'}. Refresh to see the version history and findings.`)
     } catch (error) {
+      window.localStorage.setItem('indicare-document-upload-draft', JSON.stringify({
+        fileName: file.name,
+        documentType,
+        text,
+        savedAt: new Date().toISOString()
+      }))
       setState('error')
-      setMessage(String(error))
+      setMessage(`Draft saved locally. It has not yet been added to the child's record. Live document upload failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 

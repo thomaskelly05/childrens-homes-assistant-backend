@@ -306,6 +306,7 @@ export function RecordingForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submitting) return
     setSubmitting(true)
     setError(null)
     setNotice(null)
@@ -326,7 +327,11 @@ export function RecordingForm({
         throw new Error(payload.error || payload.message || 'The record could not be saved. Check required fields and try again.')
       }
       setDirty(false)
-      window.localStorage.removeItem(autosaveKey)
+      if (payload.status === 'draft') {
+        window.localStorage.setItem(autosaveKey, JSON.stringify({ values, savedAt: new Date().toISOString() }))
+      } else {
+        window.localStorage.removeItem(autosaveKey)
+      }
       const params = new URLSearchParams({
         saved: payload.routeType || workflow.id,
         status: payload.status || 'saved'
@@ -335,7 +340,9 @@ export function RecordingForm({
       if (payload.limitation) params.set('limitation', payload.limitation)
       router.push(`/young-people/${encodeURIComponent(childId)}/journey?${params.toString()}`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'The record could not be saved. Please try again.')
+      window.localStorage.setItem(autosaveKey, JSON.stringify({ values, savedAt: new Date().toISOString() }))
+      const detail = caught instanceof Error ? caught.message : 'The record could not be saved. Please try again.'
+      setError(`Draft saved locally. It has not yet been added to the child's record. ${detail}`)
       setSubmitting(false)
     }
   }
@@ -355,6 +362,11 @@ export function RecordingForm({
       {error ? (
         <div className="rounded-[24px] border border-red-100 bg-red-50 px-5 py-4 text-sm font-bold leading-6 text-red-700">
           {error}
+        </div>
+      ) : null}
+      {workflow.id === 'documents' ? (
+        <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-bold leading-6 text-amber-800">
+          Evidence upload is metadata-only in this workflow. Add the document title, what it evidences and any follow-up; file upload will show a controlled limitation until the live evidence attachment endpoint accepts files.
         </div>
       ) : null}
 

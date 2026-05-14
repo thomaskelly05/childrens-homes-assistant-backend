@@ -8,8 +8,9 @@ import { citationHref } from '@/lib/assistant-core/citations'
 import { SourceCitationChip } from '@/components/indicare/citations/source-citation-chip'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { contextSummary } from '@/lib/assistant-core/context'
-import { queryAssistant } from '@/lib/assistant-core/client'
+import { assistantErrorMessage, queryAssistant } from '@/lib/assistant-core/client'
 import { suggestedPromptsForWorkspace } from '@/lib/assistant-core/retrieval'
+import { useAuth } from '@/contexts/auth-context'
 import type { AssistantContext, AssistantQueryData } from '@/lib/assistant-core/types'
 
 const operationalFocus = [
@@ -19,6 +20,7 @@ const operationalFocus = [
 ]
 
 export function ContextualAssistantPanel({ context }: { context: AssistantContext }) {
+  const { status } = useAuth()
   const actions = useMemo(() => suggestedPromptsForWorkspace(context.current_workspace_type, 'embedded'), [context])
   const [input, setInput] = useState('')
   const [response, setResponse] = useState<AssistantQueryData | null>(null)
@@ -28,6 +30,14 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
   async function runPrompt(prompt: string) {
     const message = prompt.trim()
     if (!message || loading) return
+    if (status === 'loading') {
+      setError('Your session is still loading. Please try again in a moment.')
+      return
+    }
+    if (status === 'unauthenticated') {
+      setError('Your session has expired. Please sign in again before using the assistant.')
+      return
+    }
     setLoading(true)
     setError(null)
 
@@ -41,7 +51,7 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
       })
       setResponse(data)
     } catch (assistantError) {
-      setError(assistantError instanceof Error ? assistantError.message : 'Assistant backend unavailable.')
+      setError(assistantErrorMessage(assistantError))
     } finally {
       setLoading(false)
     }
@@ -56,7 +66,7 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
           <p className="mt-2 text-sm leading-6 text-slate-500">{contextSummary(context)}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className="rounded-full bg-blue-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">{loading ? 'Thinking' : 'Ready'}</div>
+          <div className="rounded-full bg-blue-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">{status === 'loading' ? 'Session loading' : loading ? 'Thinking' : 'Ready'}</div>
           <OrbButton
             placement="inline"
             context={{
@@ -113,7 +123,7 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
           placeholder="Ask about this page or selected record..."
           className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400"
         />
-        <button disabled={loading} className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+          <button disabled={loading || status !== 'authenticated'} className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
           Ask
         </button>
       </form>

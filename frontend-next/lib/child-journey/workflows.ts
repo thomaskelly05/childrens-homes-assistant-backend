@@ -79,6 +79,7 @@ const dailyNoteSections: RecordingSection[] = [
       select('mood', 'Quick wellbeing indicator', ['Settled', 'Positive', 'Anxious', 'Low mood', 'Heightened', 'Withdrawn', 'Mixed'], 'Use the closest plain-language indicator.'),
       textarea('narrative', 'Daily note', 'What did the day feel like for this child? Include facts, support offered, response and outcome.', 'This is the main record Orb and linkage checks use.', true, 6),
       textarea('emotional_wellbeing', 'Emotional wellbeing', 'How did the child present emotionally? What helped?', 'Include changes from the start or previous shift.'),
+      textarea('sleep_routine', 'Sleep / routine', 'Sleep, waking, morning or evening routine, meals, hygiene, settled periods or changes from usual rhythm.'),
       textarea('positive_moments', 'Positive progress / achievements', 'What went well? What is the child building on?', 'Small positives matter in the living story.'),
       textarea('worries_concerns', 'Worries or concerns', 'Any worries, risks, conflict, low mood, self-harm indicators or safeguarding questions?')
     ]
@@ -101,6 +102,7 @@ const dailyNoteSections: RecordingSection[] = [
     fields: [
       textarea('school_attendance', 'Education / school', 'Attendance, refusal, timetable changes, virtual school, homework or achievements.'),
       textarea('education_concerns', 'Education concerns', 'Any refusal, exclusion, anxiety, missing learning or follow-up.'),
+      textarea('exercise_activity', 'Exercise / activity', 'Outdoor time, hobbies, exercise, play, clubs, independence or meaningful activity.'),
       textarea('physical_health', 'Physical health', 'Injury, illness, pain, sleep, food, appointments or medical advice.'),
       textarea('medication_notes', 'Medication notes', 'Medication given, declined/refused, late, missed or side effects.'),
       textarea('family_time', 'Family time / important relationships', 'Family contact, phone calls, visits, peer or staff relationship moments.'),
@@ -114,6 +116,8 @@ const dailyNoteSections: RecordingSection[] = [
     fields: [
       textarea('actions_required', 'Actions required', 'What needs to happen next, by whom and by when?'),
       textarea('plan_links', 'Care plan goals / targets to link', 'Care plan, risk plan, education target, health plan or keywork goal.'),
+      textarea('staff_support', 'Staff support / what helped', 'What did adults do that helped, and what should the next adult continue?'),
+      textarea('outcomes', 'Outcome / progress', 'What changed by the end of the shift, and what remains unresolved?'),
       checkbox('manager_review_required', 'Manager review required?', 'Use if the record needs QA, sign-off, escalation or threshold decision.'),
       checkbox('new_concern', 'New safeguarding or risk concern?', 'This does not make a conclusion; it flags review.'),
       checkbox('incident', 'Should this continue as an incident?', 'Staff stay in control; this only prepares the route.')
@@ -151,7 +155,8 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
           { name: 'occurred_at', label: 'When did it happen?', type: 'datetime-local' },
           { name: 'location', label: 'Where?', type: 'text', placeholder: 'Room, community location or school' },
           textarea('what_happened', 'What happened?', 'Record observable facts in sequence.', undefined, true, 6),
-          textarea('antecedent_triggers', 'Known triggers / context', 'What happened before? Avoid unsupported conclusions.')
+          textarea('antecedent_triggers', 'Trigger / antecedent / context', 'What happened before? Avoid unsupported conclusions.'),
+          textarea('de_escalation', 'De-escalation attempted', 'Reassurance, space, choices, distraction, key adult, sensory support or other support tried.')
         ]
       },
       {
@@ -160,7 +165,11 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
           textarea('staff_response', 'Staff response', 'De-escalation, reassurance, safety actions and repair.'),
           textarea('child_voice', 'Child voice', 'What did the child say, show or explain?'),
           textarea('injuries_damage', 'Injuries / damage / impact', 'Include nil returns if relevant.'),
+          textarea('restraint_sanction_detail', 'Restraint / sanction detail', 'If used, record type, duration, rationale, checks and debrief. If none, say none.'),
+          textarea('safeguarding_consideration', 'Safeguarding consideration', 'Was there any safeguarding threshold, allegation, exploitation or disclosure indicator?'),
+          select('reg40_consideration', 'Reg 40 / notification consideration', ['Not required', 'Review required', 'Required', 'Completed']),
           textarea('follow_up_required', 'Follow-up required', 'Debrief, review, plans, family/social worker updates or evidence.'),
+          textarea('actions_required', 'Actions', 'Who needs to do what next, and by when?'),
           checkbox('restraint', 'Physical intervention / restraint used?'),
           checkbox('police_informed', 'Police or emergency services involved?'),
           checkbox('manager_review_required', 'Manager review required?')
@@ -188,6 +197,8 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
           textarea('child_voice', 'Child voice / wishes', 'What did the child say or show about safety?'),
           select('external_referral', 'External referral', ['No', 'Yes - considered', 'Yes - made']),
           textarea('who_informed', 'Who was informed?', 'Manager, social worker, police, LADO, IRO, family where appropriate.'),
+          textarea('evidence', 'Evidence / source', 'Source record, screenshot, body map, disclosure note, chronology entry or professional advice.'),
+          textarea('actions_required', 'Actions', 'Immediate and follow-up actions, owner and review point.'),
           checkbox('manager_review_required', 'Manager review required?')
         ]
       }
@@ -209,11 +220,14 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
         fields: [
           { name: 'missing_start', label: 'Missing start', type: 'datetime-local' },
           textarea('last_seen', 'Last seen / circumstances', 'What was known when the child was missing?', undefined, true),
+          textarea('timeline', 'Timeline', 'Key times, sightings, contacts, return time and any gaps.'),
           textarea('search_actions', 'Search and notifications', 'Staff actions, known routes, police/social worker notifications.'),
+          checkbox('police_informed', 'Police informed?'),
           textarea('return_circumstances', 'Return circumstances and welfare check', 'How did the child return? Presentation, injuries, immediate care.'),
           textarea('return_home_interview', 'Return interview / independent offer', 'Record offer, acceptance or follow-up needed.'),
+          textarea('return_presentation', 'Presentation on return', 'Mood, physical presentation, injuries, clothing, hunger, tiredness, intoxication or distress.'),
+          checkbox('risk_review_required', 'Risk review required?'),
           textarea('follow_up_actions', 'Follow-up actions', 'Risk plan, exploitation review, keywork, professionals.'),
-          checkbox('police_informed', 'Police informed?'),
           checkbox('manager_review_required', 'Manager review required?')
         ]
       }
@@ -262,7 +276,8 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
           textarea('direct_work_completed', 'What was explored?', 'Plain language summary of the session.', undefined, true),
           textarea('child_voice', 'Child voice', 'What mattered to the child?'),
           textarea('progress', 'Progress from starting point', 'What has changed or strengthened?'),
-          textarea('next_steps', 'Agreed next steps', 'Actions, review date or support needed.')
+          textarea('next_steps', 'Agreed next steps', 'Actions, review date or support needed.'),
+          textarea('plan_links', 'Plan links', 'Care plan goal, risk plan, education/health target or keywork goal.')
         ]
       }
     ]
@@ -286,9 +301,11 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
           { name: 'contact_person', label: 'Person / relationship', type: 'text' },
           textarea('before_presentation', 'Before contact', 'How did the child seem before?'),
           textarea('during_presentation', 'During / after contact', 'What happened and how did the child respond?', undefined, true),
+          textarea('child_voice', 'Child voice', 'What did the child say, show or ask for about family time?'),
           textarea('positives', 'What went well?', 'Positive relationship moments.'),
           textarea('worries', 'Worries or tensions', 'Any pressure, distress, conflict or safety concern.'),
-          textarea('follow_up_support', 'Follow-up support', 'Debrief, plan change, social worker update or keywork.')
+          textarea('follow_up_support', 'Follow-up support', 'Debrief, plan change, social worker update or keywork.'),
+          textarea('linked_risks_actions', 'Linked risks / actions', 'Any risk plan, contact plan or action follow-up to connect.')
         ]
       }
     ]
@@ -309,6 +326,7 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
         fields: [
           textarea('health_update', 'Health update', 'Symptoms, presentation, injury, sleep, nutrition or appointment context.', undefined, true),
           textarea('medication_issue', 'Medication issue', 'Refusal, missed dose, side effect, PRN or stock concern.'),
+          textarea('appointment_outcome', 'Appointment outcome if relevant', 'What was decided, changed, prescribed or advised?'),
           textarea('advice_received', 'Advice received', 'NHS, GP, pharmacy, CAMHS or manager advice.'),
           textarea('follow_up', 'Follow-up', 'Monitoring, appointment, medication review or plan update.')
         ]
@@ -368,9 +386,11 @@ export const quickActionOrder: RecordingWorkflowId[] = [
   'incidents',
   'safeguarding',
   'missing',
+  'body-map',
   'keywork',
   'family-contact',
   'health',
+  'appointment-outcome',
   'documents'
 ]
 

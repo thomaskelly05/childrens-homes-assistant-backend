@@ -82,14 +82,14 @@ function dailyPayload(values: Record<string, string>, suggestions?: SuggestedLin
     title: 'Daily note',
     narrative: values.narrative,
     mood: values.mood,
-    presentation: text(values, ['narrative', 'emotional_wellbeing', 'behaviour_presentation', 'relationships', 'worries_concerns']),
+    presentation: text(values, ['narrative', 'emotional_wellbeing', 'sleep_routine', 'behaviour_presentation', 'relationships', 'worries_concerns']),
     activities: text(values, ['positive_moments', 'routines_completed', 'exercise_activity', 'choices_made', 'participation']),
     education_update: text(values, ['school_attendance', 'education_engagement', 'achievements', 'education_concerns', 'school_communication']),
     health_update: text(values, ['sleep_quality', 'night_observations', 'physical_health', 'emotional_health', 'medication_notes', 'appointments', 'food_nutrition']),
     family_update: text(values, ['family_time', 'family_response', 'peer_relationships', 'staff_relationships']),
-    behaviour_update: text(values, ['behaviour_presentation', 'de_escalation_support', 'nurture_repair']),
+    behaviour_update: text(values, ['behaviour_presentation', 'de_escalation_support', 'nurture_repair', 'staff_support']),
     young_person_voice: text(values, ['child_voice', 'wishes_feelings']),
-    positives: text(values, ['positive_moments', 'achievements', 'progress']),
+    positives: text(values, ['positive_moments', 'achievements', 'progress', 'outcomes']),
     actions_required: actions,
     significance: severity(values, suggestions),
     create_follow_up_task: Boolean(actions),
@@ -117,6 +117,7 @@ function incidentPayload(values: Record<string, string>, suggestions?: Suggested
       'concern_summary',
       'observed_disclosed',
       'last_seen',
+      'timeline',
       'search_actions',
       'return_circumstances',
       'body_map_observation'
@@ -124,7 +125,7 @@ function incidentPayload(values: Record<string, string>, suggestions?: Suggested
     narrative: text(values, ['what_happened', 'concern_summary', 'observed_disclosed', 'last_seen', 'return_circumstances', 'body_map_observation']),
     manager_review_status: yes(values.manager_review_required) || incidentType !== 'other' ? 'pending' : 'draft',
     follow_up_required: actions || values.follow_up_actions || values.immediate_safety_actions,
-    outcome: text(values, ['injuries_damage', 'return_circumstances', 'return_home_interview', 'staff_action']),
+    outcome: text(values, ['injuries_damage', 'return_circumstances', 'return_home_interview', 'return_presentation', 'staff_action']),
     antecedent: values.antecedent_triggers || values.known_triggers,
     presentation: values.return_presentation,
     staff_response: values.staff_response || values.immediate_safety_actions || values.staff_action,
@@ -133,7 +134,7 @@ function incidentPayload(values: Record<string, string>, suggestions?: Suggested
     restorative_follow_up: values.follow_up_actions || actions,
     manager_review_comment: [yes(values.manager_review_required) ? 'Manager review requested from recording workflow.' : undefined, linkingSummary(suggestions)].filter(Boolean).join(' ') || undefined,
     physical_intervention_used: restraintUsed,
-    physical_intervention_type: restraintUsed ? values.restraint_sanction || 'Recorded in workflow' : undefined,
+    physical_intervention_type: restraintUsed ? values.restraint_sanction_detail || 'Recorded in workflow' : undefined,
     body_map_required: incidentType === 'health_incident' || Boolean(values.body_map_observation),
     body_map_json: values.body_map_observation ? {
       observation: values.body_map_observation,
@@ -142,7 +143,7 @@ function incidentPayload(values: Record<string, string>, suggestions?: Suggested
       medical_advice: values.medical_advice
     } : undefined,
     external_notification_required: values.reg40_consideration === 'Required' || yes(values.police_informed) || values.external_referral === 'Yes - made',
-    external_notification_details: text(values, ['reg40_consideration', 'police_informed', 'external_referral', 'who_informed'])
+    external_notification_details: text(values, ['reg40_consideration', 'police_informed', 'external_referral', 'who_informed', 'evidence'])
   }
 }
 
@@ -275,9 +276,7 @@ export async function POST(request: Request) {
   }
 
   const result = await forward(path, payload)
-  const recordId = workflowId === 'family-contact'
-    ? undefined
-    : result.payload.id || result.payload.record_id || result.payload.evidence_id || result.payload.record?.id
+  const recordId = result.payload.id || result.payload.record_id || result.payload.evidence_id || result.payload.record?.id
 
   if (!result.ok) {
     if (workflowId === 'documents') {

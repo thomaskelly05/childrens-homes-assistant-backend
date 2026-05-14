@@ -49,7 +49,7 @@ import {
 import { useAssistantConversations } from '@/hooks/use-assistant-conversations'
 import { useAuth } from '@/contexts/auth-context'
 import { citationHref } from '@/lib/assistant-core/citations'
-import { buildStandaloneAssistantContext, queryAssistant } from '@/lib/assistant-core/client'
+import { assistantErrorMessage, buildStandaloneAssistantContext, queryAssistant } from '@/lib/assistant-core/client'
 import { suggestedPromptsForWorkspace } from '@/lib/assistant-core/retrieval'
 import type { AssistantMode, AssistantQueryData } from '@/lib/assistant-core/types'
 
@@ -126,7 +126,7 @@ function modeForSection(section: WorkspaceSection): AssistantMode {
 }
 
 export default function AssistantPage() {
-  const { user } = useAuth()
+  const { status, user } = useAuth()
   const workspace = useMemo(() => assistantWorkspaceAdapters.getWorkspaceData(), [])
   const [activeSection, setActiveSection] = useState<WorkspaceSection>('chat')
   const [magicNote, setMagicNote] = useState<MagicNote>(workspace.magicNotes[0])
@@ -192,6 +192,14 @@ export default function AssistantPage() {
     const value = (messageOverride || input).trim()
 
     if (!value || runtimeState.streaming) return
+    if (status === 'loading') {
+      setAssistantError('Your session is still loading. Please try again in a moment.')
+      return
+    }
+    if (status === 'unauthenticated') {
+      setAssistantError('Your session has expired. Please sign in again before using the assistant.')
+      return
+    }
 
     setInput('')
     setAssistantError(null)
@@ -235,7 +243,7 @@ export default function AssistantPage() {
         await saveConversation(activeConversationId, nextMessages)
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Assistant backend unavailable.'
+      const message = assistantErrorMessage(error)
       setAssistantError(message)
       const nextMessages = pendingMessages.map((item) => (
         item.id === assistantMessage.id
@@ -624,7 +632,7 @@ function ChatWorkspace({
 
         {assistantError ? (
           <div className="rounded-[24px] border border-red-300/30 bg-red-400/10 px-5 py-4 text-sm leading-6 text-red-100">
-            Backend unavailable or permission denied: {assistantError}
+            {assistantError}
           </div>
         ) : null}
 
@@ -692,7 +700,13 @@ function Composer({
   return (
     <footer className="border-t border-white/10 bg-[#090e1b]/95 px-5 py-4 backdrop-blur-xl">
       <div className="mx-auto flex max-w-5xl items-end gap-3 rounded-[30px] border border-white/10 bg-[#121a2f] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-        <button className="rounded-2xl border border-white/10 bg-white/5 p-3 text-slate-300 transition hover:bg-white/10" aria-label="Attach files placeholder">
+        <button
+          type="button"
+          disabled
+          title="File attachments are coming soon. Use the Documents workspace for uploads."
+          className="rounded-2xl border border-white/10 bg-white/5 p-3 text-slate-500 opacity-70"
+          aria-label="File attachments coming soon"
+        >
           <Paperclip className="h-5 w-5" aria-hidden />
         </button>
         <textarea
@@ -821,9 +835,14 @@ function VoiceWorkspace({
             <Mic className="mr-2 inline h-4 w-4" aria-hidden />
             Start listening placeholder
           </button>
-          <button className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-slate-200">
+          <button
+            type="button"
+            disabled
+            title="Speaking state preview is coming soon. Use Start listening or the Orb button."
+            className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-slate-400 opacity-70"
+          >
             <Volume2 className="mr-2 inline h-4 w-4" aria-hidden />
-            Speaking state placeholder
+            Speaking preview coming soon
           </button>
           <button onClick={onCancel} className="rounded-2xl border border-red-300/30 bg-red-400/10 px-5 py-3 text-sm font-black text-red-100">
             <X className="mr-2 inline h-4 w-4" aria-hidden />

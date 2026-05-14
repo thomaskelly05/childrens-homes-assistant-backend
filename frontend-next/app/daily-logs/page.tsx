@@ -9,7 +9,7 @@ export default function DailyLogsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Daily logs" title="Daily recording" description="Shift-by-shift daily logs linked into young person records, staff activity, reports, handover and audit evidence." action={<button className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Create log draft</button>} />
+      <PageHeader eyebrow="Daily logs" title="Daily recording" description="Shift-by-shift daily logs linked into young person records, staff activity, reports, handover and audit evidence." action={<Link href="/home" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child to add daily note</Link>} />
       <section className="grid gap-4 md:grid-cols-3">
         <StatCard label="Logs today" value={todayLogs.length} />
         <StatCard label="Young people covered" value={new Set(todayLogs.map((log) => log.youngPersonId)).size} />

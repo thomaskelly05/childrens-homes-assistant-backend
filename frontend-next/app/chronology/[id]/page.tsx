@@ -39,7 +39,7 @@ export default async function ChronologyDetailPage({ params }: { params: Promise
         action={<Link href="/assistant" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Ask IndiCare about this</Link>}
       />
       <Card>
-        <SectionHeader eyebrow="Workflow" title="Next operational steps" description="This is a clickable foundation; completion controls are placeholders until write APIs are connected." />
+        <SectionHeader eyebrow="Workflow" title="Next operational steps" description="Use the linked workspaces below for review, evidence and action follow-up." />
         <RegulatoryWorkflowPanel workflow={workflow} />
       </Card>
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
@@ -78,12 +78,12 @@ export default async function ChronologyDetailPage({ params }: { params: Promise
             <EvidenceItemsPanel evidence={evidence} />
           </Card>
           <Card>
-            <SectionHeader eyebrow="Placeholders" title="Operational controls" />
+            <SectionHeader eyebrow="Operational controls" title="Linked workspaces" />
             <div className="grid gap-2">
               <Link href="/reports" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Use in report</Link>
-              <button className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-black text-slate-700">Mark reviewed placeholder</button>
-              <button className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-black text-slate-700">Add evidence placeholder</button>
-              <button className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-black text-slate-700">Create action placeholder</button>
+              <Link href="/management" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Open manager review</Link>
+              <Link href="/evidence" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Open evidence workspace</Link>
+              <Link href="/actions" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Open action workspace</Link>
             </div>
           </Card>
         </div>

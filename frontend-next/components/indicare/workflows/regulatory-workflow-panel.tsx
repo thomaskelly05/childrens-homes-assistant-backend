@@ -44,7 +44,7 @@ const workflows = {
     ['Review overdue items', '/actions', 'current'],
     ['Check incidents and safeguarding', '/incidents', 'review'],
     ['Review Reg 44 actions', '/documents/regulatory', 'review'],
-    ['Sign-off placeholders', '/ofsted-readiness', 'pending']
+    ['Open sign-off readiness', '/ofsted-readiness', 'pending']
   ]
 } as const
 

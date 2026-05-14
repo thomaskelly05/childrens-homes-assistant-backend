@@ -25,7 +25,7 @@ export function ActionsPanel({ actions }: { actions: CareAction[] }) {
             <p className="mt-3 text-xs font-bold text-slate-500">Due {action.dueDate} · {personName(action.youngPersonId)} · {assignee?.firstName || action.assignedToStaffId}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link href={routeToAction(action.id)} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Open action</Link>
-              <Link href="/evidence" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Attach evidence placeholder</Link>
+              <Link href="/evidence" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open evidence workspace</Link>
             </div>
           </article>
         )

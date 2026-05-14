@@ -181,7 +181,9 @@ def build_reg45_review_context(
 
     safeguarding = build_safeguarding_escalation(evidence_index=evidence)
     chronology = build_chronology_synthesis(evidence_index=evidence, limit=20)
-    patterns = detect_patterns(evidence_index=evidence, min_count=2, limit=10)
+    # Reg 45 drafting should surface sparse but material themes for review; this
+    # remains a prompt for professional judgement, not a final pattern finding.
+    patterns = detect_patterns(evidence_index=evidence, min_count=1, limit=10)
 
     safeguarding_payload = serialise_safeguarding_escalation(safeguarding)
     chronology_payload = serialise_chronology_synthesis(chronology)

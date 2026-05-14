@@ -7,7 +7,7 @@ import { getYoungPersonById, sortByDateDesc } from '@/lib/indicare/selectors'
 export default function IncidentsPage() {
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Incidents" title="Incident management" description="Incident records with severity, safeguarding flags, staff involvement, follow-up actions and manager review status." action={<button className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Create incident</button>} />
+      <PageHeader eyebrow="Incidents" title="Incident management" description="Incident records with severity, safeguarding flags, staff involvement, follow-up actions and manager review status." action={<Link href="/home" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child to create incident</Link>} />
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard label="Total incidents" value={indicareData.incidents.length} />
         <StatCard label="Open/review" value={indicareData.incidents.filter((incident) => incident.status !== 'closed').length} />
