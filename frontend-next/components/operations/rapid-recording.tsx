@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Mic, Plus, RotateCcw, Save, Sparkles, WifiOff } from 'lucide-react'
 
 import { rapidRecordingTypes } from '@/lib/operations/shift-data'
@@ -12,15 +12,52 @@ const recentPhrases = [
   'Follow-up action added for next shift handover.'
 ]
 
+const childVoiceSnippets = [
+  'The child said...',
+  'The child chose...',
+  'The child appeared to feel...',
+  'The child wanted adults to know...'
+]
+
+const wellbeingIndicators = ['Settled', 'Positive', 'Low mood', 'Anxious', 'Heightened', 'Withdrawn']
+
 export function RapidRecordingDrawer() {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState(rapidRecordingTypes[0].id)
   const [note, setNote] = useState('')
+  const [wellbeing, setWellbeing] = useState('')
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const template = useMemo(() => rapidRecordingTypes.find((item) => item.id === selected) || rapidRecordingTypes[0], [selected])
 
+  useEffect(() => {
+    try {
+      const draft = window.localStorage.getItem('indicare-rapid-recording-draft')
+      if (!draft) return
+      const parsed = JSON.parse(draft) as { selected?: string; note?: string; wellbeing?: string }
+      setSelected(parsed.selected || rapidRecordingTypes[0].id)
+      setNote(parsed.note || '')
+      setWellbeing(parsed.wellbeing || '')
+    } catch {
+      window.localStorage.removeItem('indicare-rapid-recording-draft')
+    }
+  }, [])
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      window.localStorage.setItem('indicare-rapid-recording-draft', JSON.stringify({ selected, note, wellbeing, savedAt: new Date().toISOString() }))
+    }, 400)
+    return () => window.clearTimeout(handle)
+  }, [note, selected, wellbeing])
+
   function saveDraft() {
+    if (!note.trim()) {
+      setSaveError('Add a short note before saving the rapid draft.')
+      return
+    }
+    setSaveError(null)
     setSaved(true)
+    window.localStorage.removeItem('indicare-rapid-recording-draft')
   }
 
   return (
@@ -70,6 +107,22 @@ export function RapidRecordingDrawer() {
                 <p className="mt-2 text-sm leading-6 text-blue-900">{template.hint}</p>
               </div>
 
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Quick wellbeing</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {wellbeingIndicators.map((indicator) => (
+                    <button
+                      key={indicator}
+                      type="button"
+                      onClick={() => setWellbeing(indicator)}
+                      className={wellbeing === indicator ? 'rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white' : 'rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700'}
+                    >
+                      {indicator}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label className="block">
                 <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Quick note</span>
                 <textarea
@@ -91,6 +144,17 @@ export function RapidRecordingDrawer() {
                 </div>
               </div>
 
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Child voice snippets</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {childVoiceSnippets.map((phrase) => (
+                    <button key={phrase} type="button" onClick={() => setNote((current) => `${current}${current ? ' ' : ''}${phrase}`)} className="rounded-full border border-purple-100 bg-purple-50 px-3 py-2 text-xs font-bold text-purple-700">
+                      {phrase}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-600"><Mic className="mb-2 h-4 w-4" />Voice dictation placeholder</div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-600"><WifiOff className="mb-2 h-4 w-4" />Offline queue foundation</div>
@@ -102,15 +166,23 @@ export function RapidRecordingDrawer() {
                   Draft saved locally. Chronology preview is ready; final chronology writeback remains explicit to avoid duplicate records.
                 </div>
               ) : null}
+              {saveError ? (
+                <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+                  {saveError}
+                </div>
+              ) : null}
             </div>
 
-            <footer className="border-t border-slate-100 p-4">
+            <footer className="sticky bottom-0 border-t border-slate-100 bg-white p-4">
+              <div className="mb-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs font-bold leading-5 text-slate-600">
+                Chronology preview: {wellbeing ? `${wellbeing} - ` : ''}{note || 'Start typing to preview the handover/chronology wording.'}
+              </div>
               <div className="flex gap-2">
-                <button type="button" onClick={saveDraft} className="flex flex-1 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white">
+                <button type="button" onClick={saveDraft} className="flex min-h-12 flex-1 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white">
                   <Save className="mr-2 h-4 w-4" aria-hidden />
                   Rapid save
                 </button>
-                <button type="button" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">AI draft</button>
+                <button type="button" onClick={() => setNote((current) => `${current}${current ? '\n' : ''}Orb draft prompt: summarise this into a factual, child-centred note for staff to review.`)} className="min-h-12 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">AI draft</button>
               </div>
             </footer>
           </section>

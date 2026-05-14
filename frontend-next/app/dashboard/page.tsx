@@ -1,12 +1,22 @@
 import Link from 'next/link'
 
 import { Card, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge, RiskBadge, AlertCard } from '@/components/indicare/ui'
-import { getChronologyEvents, getRegulationLinkedEvents, getSafeguardingChronology } from '@/lib/chronology/selectors'
+import { getChronologyEvents, getRegulationLinkedEvents } from '@/lib/chronology/selectors'
+import type { ChronologyEvent } from '@/lib/chronology/types'
 import { getDocumentsNeedingReview } from '@/lib/documents/selectors'
 import { getEvidenceGaps, getOpenCareActions } from '@/lib/evidence/selectors'
 import { indicareData } from '@/lib/indicare/demo-data'
 import { dashboardMetrics, fullName, getStaffById, getYoungPersonById, sortByDateDesc } from '@/lib/indicare/selectors'
 import { getEntityRoute } from '@/lib/navigation/entity-resolver'
+import { currentHandover, proactiveAssistantSupport } from '@/lib/operations/shift-data'
+
+function childVoiceCount(events: ChronologyEvent[]) {
+  return events.filter((event) => event.tags.includes('child-voice') || /child voice|said|told staff|wishes|wanted/i.test(event.fullText)).length
+}
+
+function childVoiceGapLabel(count: number) {
+  return count ? `${count} chronology events include visible child voice` : 'No visible child voice markers in current chronology'
+}
 
 export default function DashboardPage() {
   const metrics = dashboardMetrics()
@@ -17,7 +27,6 @@ export default function DashboardPage() {
   const recentLogs = sortByDateDesc(indicareData.dailyLogs, (log) => log.createdAt).slice(0, 4)
   const safeguardingTimeline = sortByDateDesc(indicareData.safeguardingEvents, (event) => event.date).slice(0, 4)
   const chronologyEvents = getChronologyEvents()
-  const chronologySafeguarding = getSafeguardingChronology(chronologyEvents)
   const openCareActions = getOpenCareActions()
   const evidenceGaps = getEvidenceGaps()
   const reviewDocuments = getDocumentsNeedingReview()
@@ -25,6 +34,8 @@ export default function DashboardPage() {
   const overdueManagerReviews = chronologyEvents.filter((event) => event.tags.includes('overdue-manager-review'))
   const lacReviewsDue = chronologyEvents.filter((event) => event.eventType === 'lac_review' && event.actionIds.length)
   const reg45Prep = getRegulationLinkedEvents(chronologyEvents, 'Regulation 45')
+  const handover = currentHandover()
+  const assistant = proactiveAssistantSupport()
   const priorityActions = [
     { title: 'Review Noah critical risk controls', body: 'Missing/exploitation risk review is overdue and linked to a new safeguarding concern.', entity: { entity_type: 'young_person', entity_id: 'yp-noah' } },
     { title: 'Record strategy discussion outcome', body: 'Appointment outcome is pending and should update safeguarding chronology.', entity: { entity_type: 'appointment', entity_id: 'appt-strategy-noah', linked_child_id: 'yp-noah' } },
@@ -35,34 +46,55 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Command centre"
-        title="IndiCare OS dashboard"
-        description="One joined-up operating picture for placements, safeguarding, incidents, daily records, medication, appointments, evidence and assistant insight."
-        action={<Link href="/daily-logs" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">+ New daily log</Link>}
+        title="Operational command centre"
+        description="Today-first operating picture: attention, safeguarding, actions, recording gaps, reviews, wellbeing and inspection readiness without generic analytics clutter."
+        action={<Link href="/young-people" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child / record</Link>}
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Current young people" value={metrics.currentYoungPeople} detail="Active care records" href="/young-people" entity={{ entity_type: 'young_person' }} />
-        <StatCard label="Available beds" value={metrics.availableBeds} detail="Based on demo capacity of 7" href="/placements" entity={{ entity_type: 'home_record', entity_id: 'oak-house' }} />
-        <StatCard label="High-risk young people" value={metrics.highRisk} detail="High or critical risk" href="/risk-assessments" entity={{ entity_type: 'risk_assessment' }} />
-        <StatCard label="Open incidents" value={metrics.openIncidents} detail="Active or review status" href="/incidents" entity={{ entity_type: 'incident' }} />
-        <StatCard label="Overdue reports" value={metrics.overdueReports} detail="Need manager action" href="/reports" entity={{ entity_type: 'report' }} />
-        <StatCard label="Upcoming appointments" value={metrics.upcomingAppointments} detail="Open or review appointments" href="/appointments" entity={{ entity_type: 'appointment' }} />
-        <StatCard label="Medication alerts" value={metrics.medicationAlerts} detail="Missed or overdue administration" href="/medication" entity={{ entity_type: 'medication_record' }} />
-        <StatCard label="Safeguarding concerns" value={metrics.safeguardingConcerns} detail="Active or monitoring" href="/safeguarding" entity={{ entity_type: 'safeguarding_concern' }} />
+      <section className="grid gap-4 xl:grid-cols-4">
+        {[
+          {
+            question: 'What needs attention?',
+            value: handover.childrenRequiringAttention.length,
+            body: 'Children with active safeguarding, critical risk or unresolved operational concern.',
+            href: '/shifts/current'
+          },
+          {
+            question: 'What is missing?',
+            value: evidenceGaps.length + handover.recordingGaps.length,
+            body: 'Evidence gaps and recording follow-up that could weaken the story.',
+            href: '/evidence'
+          },
+          {
+            question: 'What changed?',
+            value: handover.keyEventsToday.length,
+            body: 'Key daily notes, incidents and safeguarding changes for handover.',
+            href: '/handover/current'
+          },
+          {
+            question: 'What needs review?',
+            value: overdueManagerReviews.length + metrics.openIncidents,
+            body: 'Manager reviews, incident sign-off and QA attention.',
+            href: '/management'
+          }
+        ].map((item) => (
+          <Link key={item.question} href={item.href} className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">{item.question}</p>
+            <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-slate-950">{item.value}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
+          </Link>
+        ))}
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="High-risk children" value={metrics.highRisk} detail="High or critical risk" href="/risk-assessments" entity={{ entity_type: 'risk_assessment' }} />
+        <StatCard label="Open incidents" value={metrics.openIncidents} detail="Active or review status" href="/incidents" entity={{ entity_type: 'incident' }} />
+        <StatCard label="Medication alerts" value={metrics.medicationAlerts} detail="Missed or overdue administration" href="/medication" entity={{ entity_type: 'medication_record' }} />
+        <StatCard label="Safeguarding concerns" value={metrics.safeguardingConcerns} detail="Active or monitoring" href="/safeguarding" entity={{ entity_type: 'safeguarding_concern' }} />
         <StatCard label="Chronology activity" value={chronologyEvents.length} detail="Connected events ready for filtering" href="/chronology" entity={{ entity_type: 'chronology_event' }} />
-        <StatCard label="Open Reg 44 actions" value={reg44Actions.length} detail="Independent visitor action plan" href="/actions" entity={{ entity_type: 'reg44_finding' }} />
         <StatCard label="Evidence gaps" value={evidenceGaps.length} detail="Evidence still required" href="/evidence" entity={{ entity_type: 'evidence_gap' }} />
-        <StatCard label="Ofsted readiness" value="Open" detail="SCCIF and regulatory evidence view" href="/ofsted-readiness" entity={{ entity_type: 'ofsted_concern' }} />
-        <StatCard label="Regulatory framework" value="Mapped" detail="Regulations, Quality Standards and SCCIF" href="/regulatory" entity={{ entity_type: 'regulatory_reference' }} />
-        <StatCard label="Safeguarding chronology alerts" value={chronologySafeguarding.length} detail="Chronology events with safeguarding flags" href="/chronology" entity={{ entity_type: 'safeguarding_concern' }} />
         <StatCard label="Overdue manager reviews" value={overdueManagerReviews.length} detail="Manager oversight required" href="/chronology" entity={{ entity_type: 'handover', entity_id: 'manager-reviews' }} />
-        <StatCard label="Documents needing review" value={reviewDocuments.length} detail="Regulatory or care documents" href="/documents" entity={{ entity_type: 'document' }} />
-        <StatCard label="LAC review actions" value={lacReviewsDue.length} detail="Review evidence gathering" href="/reports" entity={{ entity_type: 'lac_review' }} />
-        <StatCard label="Reg 45 preparation" value={reg45Prep.length} detail="Quality of care evidence events" href="/reports" entity={{ entity_type: 'reg45_section' }} />
-        <StatCard label="Reports due" value={metrics.overdueReports} detail="Report register requiring action" href="/reports" entity={{ entity_type: 'report' }} />
+        <StatCard label="Inspection readiness" value={reg44Actions.length + reg45Prep.length + lacReviewsDue.length + reviewDocuments.length} detail="Reg 44, Reg 45, LAC and document review work" href="/ofsted-readiness" entity={{ entity_type: 'ofsted_concern' }} />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
@@ -85,9 +117,39 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <SectionHeader eyebrow="Priority" title="Actions required" />
+          <SectionHeader eyebrow="Priority" title="Actions required" description="Operational priorities with source routes, not disconnected dashboard metrics." />
           <div className="space-y-3">
             {priorityActions.map((action) => <AlertCard key={action.title} {...action} href={getEntityRoute(action.entity)} />)}
+          </div>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card>
+          <SectionHeader eyebrow="Recording health" title="Gaps and weak-record indicators" description="Helps managers spot duplicated, missing or weak records before inspection pressure." />
+          <div className="grid gap-3 md:grid-cols-2">
+            {[
+              ['Weak records needing child voice', childVoiceGapLabel(childVoiceCount(chronologyEvents)), '/chronology'],
+              ['Evidence gaps', `${evidenceGaps.length} gaps need source evidence`, '/evidence'],
+              ['Recording gaps', `${handover.recordingGaps.length} daily recording follow-ups`, '/daily-logs'],
+              ['Reviews overdue', `${overdueManagerReviews.length} manager reviews overdue`, '/management']
+            ].map(([title, body, href]) => (
+              <Link key={title} href={href} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-white hover:shadow-lg">
+                <p className="text-sm font-black text-slate-950">{title}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+              </Link>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader eyebrow="Orb copilot" title="Operational prompts" description="Draft-only support for recording, review and handover." />
+          <div className="space-y-2">
+            {assistant.prompts.slice(1).map((prompt) => (
+              <Link key={prompt} href={`/assistant?prompt=${encodeURIComponent(prompt)}`} className="block rounded-2xl border border-purple-100 bg-purple-50 px-4 py-3 text-sm font-black text-purple-800 transition hover:bg-purple-100">
+                {prompt}
+              </Link>
+            ))}
           </div>
         </Card>
       </section>

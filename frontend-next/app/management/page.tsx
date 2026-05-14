@@ -7,6 +7,23 @@ import { getOsManagementOversight } from '@/lib/os-api/management'
 export default async function ManagementPage() {
   const result = await getOsManagementOversight()
   const data = result.data
+  const reviewStatuses = [
+    ['draft', 'Staff record still being completed'],
+    ['submitted', 'Ready for manager QA'],
+    ['reviewed', 'Manager comments added'],
+    ['amendment requested', 'Returned to staff with clear request'],
+    ['approved', 'Signed off and chronology-linked'],
+    ['escalated', 'Safeguarding or leadership escalation active']
+  ]
+  const qaActions = [
+    'Add QA comment',
+    'Return for amendment',
+    'Approve / sign off',
+    'Escalate safeguarding',
+    'Request evidence',
+    'Review chronology links',
+    'Assign follow-up action'
+  ]
 
   return (
     <div className="space-y-6">
@@ -19,6 +36,29 @@ export default async function ManagementPage() {
       <LiveDataStatus result={result} />
       <section className="grid gap-4 md:grid-cols-5">
         {Object.entries(data.cards).map(([key, value]) => <StatCard key={key} label={key.replaceAll('_', ' ')} value={value} />)}
+      </section>
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card>
+          <SectionHeader eyebrow="Manager QA" title="Review workflow" description="Managers can comment, return, approve, escalate, request evidence and check chronology/action links without creating isolated review records." />
+          <div className="grid gap-3 md:grid-cols-3">
+            {reviewStatuses.map(([status, detail]) => (
+              <div key={status} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-sm font-black capitalize text-slate-950">{status}</p>
+                <p className="mt-2 text-xs font-bold leading-5 text-slate-500">{detail}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <SectionHeader eyebrow="QA actions" title="One-click review actions" />
+          <div className="grid gap-2">
+            {qaActions.map((action) => (
+              <Link key={action} href="/management" className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-blue-50 hover:text-blue-800">
+                {action}
+              </Link>
+            ))}
+          </div>
+        </Card>
       </section>
       <section className="grid gap-6 xl:grid-cols-3">
         <Card>
@@ -59,9 +99,9 @@ export default async function ManagementPage() {
           </div>
         </Card>
         <Card>
-          <SectionHeader eyebrow="Indicators" title="Risk indicators" />
+          <SectionHeader eyebrow="Indicators" title="Operational QA indicators" description="Overdue reviews, weak records, evidence gaps and repeated recording concerns remain visible." />
           <div className="space-y-3">
-            {data.risk_indicators.map((indicator) => (
+            {[...data.risk_indicators, { key: 'weak_records', label: 'Weak-record indicators', count: data.review_queue.length }, { key: 'evidence_gaps', label: 'Evidence-gap indicators', count: data.escalation_queue.length }, { key: 'repeated_recording', label: 'Repeated poor recording indicators', count: 0 }].map((indicator) => (
               <div key={indicator.key} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-600">
                 <span>{indicator.label}</span>
                 <strong className="text-slate-950">{indicator.count}</strong>

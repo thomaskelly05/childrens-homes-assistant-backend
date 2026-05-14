@@ -181,12 +181,17 @@ export function proactiveAssistantSupport() {
       'Start my shift.',
       'What do I need to know?',
       'Prepare handover.',
-      'What actions are overdue?'
+      'What changed today?',
+      'What requires follow-up?',
+      'Which children require attention?',
+      'Which incidents still need follow-up?'
     ],
     suggestedActions: [
       'Check manager review on high-priority incidents.',
       'Confirm child voice evidence is present for key records.',
-      'Link overdue recording into chronology where appropriate.'
+      'Link overdue recording into chronology where appropriate.',
+      'Assign unresolved actions before handover sign-off.',
+      'Return weak records for amendment rather than approving unclear wording.'
     ]
   }
 }
@@ -208,7 +213,48 @@ export function currentHandover() {
     date: new Date(referenceDate.getTime() - index * 60 * 60 * 1000).toISOString(),
     href: item.href
   }))
-  return { items, timeline }
+  const unresolvedActions = items.filter((item) => item.requiresFollowUp)
+  const safeguardingAlerts = safeguardingConcerns().map((event) => ({
+    id: event.id,
+    title: `${childName(event.youngPersonId)} - ${event.concernType}`,
+    details: event.actionTaken,
+    href: `/safeguarding/${event.id}`
+  }))
+  const childrenRequiringAttention = highRiskChildren().map((child) => ({
+    id: child.id,
+    title: child.preferredName,
+    details: `${child.riskLevel} risk; ${child.safeguardingStatus} safeguarding status.`,
+    href: `/young-people/${child.id}/journey`
+  }))
+  const keyEventsToday = [
+    ...openIncidents().map((incident) => ({
+      id: `incident-${incident.id}`,
+      title: `${childName(incident.youngPersonId)} - ${incident.type}`,
+      details: incident.outcome,
+      href: `/incidents/${incident.id}`
+    })),
+    ...indicareData.dailyLogs.slice(0, 3).map((log) => ({
+      id: `daily-${log.id}`,
+      title: `${childName(log.youngPersonId)} - ${log.shift} note`,
+      details: log.presentation,
+      href: `/daily-logs/${log.id}`
+    }))
+  ]
+
+  return {
+    items,
+    timeline,
+    unresolvedActions,
+    safeguardingAlerts,
+    childrenRequiringAttention,
+    keyEventsToday,
+    recordingGaps: overdueLogs().map((log) => ({
+      id: log.id,
+      title: `${childName(log.youngPersonId)} recording follow-up`,
+      details: log.followUpActions.join(', ') || 'Daily note follow-up needs review.',
+      href: '/daily-logs'
+    }))
+  }
 }
 
 export function handoverHistory() {

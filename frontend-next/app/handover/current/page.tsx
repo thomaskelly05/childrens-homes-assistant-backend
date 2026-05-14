@@ -19,9 +19,30 @@ export default function CurrentHandoverPage() {
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Handover items" value={handover.items.length} detail="Ready for next shift" href="/handover/current" entity={{ entity_type: 'handover' }} />
-        <StatCard label="Follow-up required" value={handover.items.filter((item) => item.requiresFollowUp).length} detail="Needs explicit assignment" href="/actions" entity={{ entity_type: 'action' }} />
-        <StatCard label="Safeguarding timeline" value={handover.timeline.filter((item) => item.type.includes('safeguarding')).length} detail="Review required language only" href="/safeguarding" entity={{ entity_type: 'safeguarding_concern' }} />
+        <StatCard label="Follow-up required" value={handover.unresolvedActions.length} detail="Needs explicit assignment" href="/actions" entity={{ entity_type: 'action' }} />
+        <StatCard label="Safeguarding timeline" value={handover.safeguardingAlerts.length} detail="Review required language only" href="/safeguarding" entity={{ entity_type: 'safeguarding_concern' }} />
         <StatCard label="Sign-off state" value="Pending" detail="Manager oversight remains visible" href="/management" entity={{ entity_type: 'qa_review' }} />
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['What do I need to know?', handover.keyEventsToday.slice(0, 3)],
+          ['What changed today?', handover.timeline.slice(0, 3)],
+          ['What requires follow-up?', handover.unresolvedActions.slice(0, 3)],
+          ['Which children require attention?', handover.childrenRequiringAttention.slice(0, 3)]
+        ].map(([title, items]) => (
+          <Card key={String(title)}>
+            <SectionHeader eyebrow="Handover intelligence" title={String(title)} />
+            <div className="space-y-3">
+              {(items as Array<{ id: string; title: string; details: string; href: string }>).map((item) => (
+                <Link key={item.id} href={item.href} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm transition hover:bg-white hover:shadow-lg">
+                  <strong className="text-slate-950">{item.title}</strong>
+                  <span className="mt-2 block leading-6 text-slate-600">{item.details}</span>
+                </Link>
+              ))}
+            </div>
+          </Card>
+        ))}
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
@@ -39,7 +60,7 @@ export default function CurrentHandoverPage() {
         </Card>
 
         <Card>
-          <SectionHeader eyebrow="Actions" title="Handover actions" />
+          <SectionHeader eyebrow="Actions" title="Handover actions" description="Unresolved actions, safeguarding alerts, recording gaps and review items stay visible until assigned or signed off." />
           <div className="space-y-3">
             {handover.items.map((item) => (
               <Link key={item.id} href={item.href} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white hover:shadow-lg">

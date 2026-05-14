@@ -3,9 +3,15 @@
 import Link from 'next/link'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mic, Save, Sparkles, Wand2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Link2, MessageSquareHeart, Mic, Save, Sparkles, Wand2 } from 'lucide-react'
 
-import { extractSuggestedLinks, type RecordingField, type RecordingWorkflow } from '@/lib/child-journey/workflows'
+import {
+  buildLinkedWorkflowHref,
+  extractSuggestedLinks,
+  type RecordingField,
+  type RecordingWorkflow,
+  type SuggestedLink
+} from '@/lib/child-journey/workflows'
 
 type SaveResponse = {
   ok: boolean
@@ -83,6 +89,98 @@ function FieldControl({
   )
 }
 
+type QualityFlag = {
+  label: string
+  detail: string
+  tone: 'amber' | 'red' | 'blue' | 'purple'
+}
+
+const childVoicePrompts = [
+  'How did this feel for the child?',
+  'What choices did the child make today?',
+  'What went well for the child?',
+  'What support helped?',
+  'What would the child want adults to understand?'
+]
+
+const quickTemplates = [
+  'Staff observed...',
+  'The child said...',
+  'Staff supported by...',
+  'This helped because...',
+  'The agreed follow-up is...'
+]
+
+function recordText(values: Record<string, string>) {
+  return Object.values(values).join('\n').trim()
+}
+
+function qualityFlags(values: Record<string, string>, primaryField: string | undefined): QualityFlag[] {
+  const text = recordText(values)
+  const primary = primaryField ? values[primaryField] || '' : text
+  const flags: QualityFlag[] = []
+
+  if (/\b(attention seeking|manipulative|naughty|deliberately|kicked off|played up|non[- ]?compliant)\b/i.test(text)) {
+    flags.push({
+      label: 'Reduce opinionated language',
+      detail: 'Replace labels with observable behaviour, direct words and staff response.',
+      tone: 'red'
+    })
+  }
+  if (/\b(always|never|obviously|clearly|must have|probably)\b/i.test(text)) {
+    flags.push({
+      label: 'Check factual tone',
+      detail: 'Avoid unsupported conclusions unless the source is clear.',
+      tone: 'amber'
+    })
+  }
+  if (primary.trim().length > 0 && primary.trim().length < 80) {
+    flags.push({
+      label: 'Add missing context',
+      detail: 'Include what happened, where, staff support, child response and outcome.',
+      tone: 'blue'
+    })
+  }
+  if (!String(values.child_voice || values.wishes_feelings || '').trim()) {
+    flags.push({
+      label: 'Missing child voice',
+      detail: 'Add words, wishes, feelings, choices or non-verbal communication if known.',
+      tone: 'purple'
+    })
+  }
+  if (!String(values.actions_required || values.follow_up_required || values.follow_up_actions || values.next_steps || '').trim() && /\b(concern|risk|injur|incident|missing|refus|low mood|police)\b/i.test(text)) {
+    flags.push({
+      label: 'Missing follow-up',
+      detail: 'Clarify what happens next, who owns it and whether manager review is needed.',
+      tone: 'amber'
+    })
+  }
+  if (!/\b(helped|supported|outcome|settled|agreed|next|review|follow)/i.test(text) && text.length > 120) {
+    flags.push({
+      label: 'Missing outcome',
+      detail: 'Add what changed after staff support or what remains unresolved.',
+      tone: 'blue'
+    })
+  }
+
+  return flags.slice(0, 6)
+}
+
+function flagClasses(tone: QualityFlag['tone']) {
+  if (tone === 'red') return 'border-red-100 bg-red-50 text-red-800'
+  if (tone === 'amber') return 'border-amber-100 bg-amber-50 text-amber-800'
+  if (tone === 'purple') return 'border-purple-100 bg-purple-50 text-purple-800'
+  return 'border-blue-100 bg-blue-50 text-blue-800'
+}
+
+function suggestionClasses(tone: SuggestedLink['tone']) {
+  if (tone === 'red') return 'border-red-100 bg-red-50 text-red-800'
+  if (tone === 'amber') return 'border-amber-100 bg-amber-50 text-amber-800'
+  if (tone === 'emerald') return 'border-emerald-100 bg-emerald-50 text-emerald-800'
+  if (tone === 'purple') return 'border-purple-100 bg-purple-50 text-purple-800'
+  return 'border-blue-100 bg-blue-50 text-blue-800'
+}
+
 export function RecordingForm({
   childId,
   childName,
@@ -107,8 +205,11 @@ export function RecordingForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [draftRestored, setDraftRestored] = useState(false)
 
   const suggestions = useMemo(() => extractSuggestedLinks(values), [values])
+  const flags = useMemo(() => qualityFlags(values, workflow.primaryField), [values, workflow.primaryField])
+  const autosaveKey = `indicare-recording-draft:${childId}:${workflow.id}`
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -119,6 +220,30 @@ export function RecordingForm({
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty, submitting])
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(autosaveKey)
+      if (!saved) return
+      const parsed = JSON.parse(saved) as { values?: Record<string, string>; savedAt?: string }
+      if (parsed.values) {
+        setValues((current) => ({ ...current, ...parsed.values }))
+        setDraftRestored(true)
+        setDirty(true)
+        setNotice(`Unfinished draft restored${parsed.savedAt ? ` from ${new Date(parsed.savedAt).toLocaleString('en-GB')}` : ''}.`)
+      }
+    } catch {
+      window.localStorage.removeItem(autosaveKey)
+    }
+  }, [autosaveKey])
+
+  useEffect(() => {
+    if (!dirty || submitting) return
+    const handle = window.setTimeout(() => {
+      window.localStorage.setItem(autosaveKey, JSON.stringify({ values, savedAt: new Date().toISOString() }))
+    }, 500)
+    return () => window.clearTimeout(handle)
+  }, [autosaveKey, dirty, submitting, values])
 
   function updateField(name: string, nextValue: string) {
     setDirty(true)
@@ -150,6 +275,35 @@ export function RecordingForm({
     setNotice('Child-centred wording prompt added. Review before saving.')
   }
 
+  function addToField(fieldName: string, text: string) {
+    const current = values[fieldName] || ''
+    updateField(fieldName, current ? `${current}\n${text}` : text)
+  }
+
+  function insertTemplate(text: string) {
+    const primaryField = workflow.primaryField
+    if (!primaryField) return
+    addToField(primaryField, text)
+  }
+
+  function handleSuggestion(suggestion: SuggestedLink) {
+    if (suggestion.label.toLowerCase().includes('child voice')) {
+      setNotice(`Child voice prompts: ${childVoicePrompts.join(' ')}`)
+      return
+    }
+    if (suggestion.label.toLowerCase().includes('follow-up') || suggestion.label.toLowerCase().includes('action')) {
+      addToField('actions_required', `Follow-up from suggestion: ${suggestion.label}.`)
+      setNotice('Follow-up action prompt added. Review and assign before saving.')
+      return
+    }
+    if (suggestion.label.toLowerCase().includes('care plan')) {
+      addToField('plan_links', `Link suggested: ${suggestion.label}.`)
+      setNotice('Care plan link prompt added. Review before saving.')
+      return
+    }
+    setNotice(`${suggestion.label}: use the linked workflow button if this needs a separate record.`)
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
@@ -172,6 +326,7 @@ export function RecordingForm({
         throw new Error(payload.error || payload.message || 'The record could not be saved. Check required fields and try again.')
       }
       setDirty(false)
+      window.localStorage.removeItem(autosaveKey)
       const params = new URLSearchParams({
         saved: payload.routeType || workflow.id,
         status: payload.status || 'saved'
@@ -187,6 +342,11 @@ export function RecordingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {draftRestored ? (
+        <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-bold leading-6 text-amber-800">
+          Draft recovery is active. Saving will replace the unfinished local draft with a confirmed record.
+        </div>
+      ) : null}
       {notice ? (
         <div className="rounded-[24px] border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold leading-6 text-blue-800">
           {notice}
@@ -209,6 +369,49 @@ export function RecordingForm({
             <button type="button" onClick={() => setNotice('Dictation opens through Orb voice. For now, paste dictated text into the form before saving.')} className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800"><Mic className="mr-2 inline h-4 w-4" aria-hidden />Dictate with Orb</button>
             <button type="button" onClick={improveWording} className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800"><Wand2 className="mr-2 inline h-4 w-4" aria-hidden />Improve wording</button>
           </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            `Orb, summarise ${childName}'s presentation today.`,
+            'Orb, what follow-up is missing?',
+            'Orb, make this more child-centred.',
+            'Orb, show linked safeguarding concerns.'
+          ].map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => setNotice(`Orb prompt ready: "${prompt}" Open Orb if you want conversational support. No record will be saved silently.`)}
+              className="rounded-2xl border border-purple-200 bg-white/80 px-4 py-3 text-left text-xs font-black leading-5 text-purple-800"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">Quick recording</p>
+            <h2 className="mt-1 text-xl font-black text-slate-950">Templates, recent phrases and child voice snippets</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Tap a phrase to continue recording quickly. Staff still control the wording.</p>
+          </div>
+          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">Autosave on</span>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {quickTemplates.map((template) => (
+            <button key={template} type="button" onClick={() => insertTemplate(template)} className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
+              {template}
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          {childVoicePrompts.map((prompt) => (
+            <button key={prompt} type="button" onClick={() => addToField('child_voice', prompt)} className="rounded-2xl border border-purple-100 bg-purple-50 px-4 py-3 text-left text-sm font-bold text-purple-800">
+              <MessageSquareHeart className="mr-2 inline h-4 w-4" aria-hidden />
+              {prompt}
+            </button>
+          ))}
         </div>
       </section>
 
@@ -243,26 +446,59 @@ export function RecordingForm({
 
         <aside className="space-y-5 xl:sticky xl:top-28 xl:self-start">
           <section className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-700">Record quality assistance</p>
+            <h2 className="mt-2 text-xl font-black text-slate-950">Suggestions only</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Orb-style checks highlight gaps; they do not edit or save the record.</p>
+            <div className="mt-4 space-y-2">
+              {flags.length ? flags.map((flag) => (
+                <div key={flag.label} className={`rounded-2xl border px-4 py-3 text-sm ${flagClasses(flag.tone)}`}>
+                  <strong className="block font-black">{flag.label}</strong>
+                  <span className="mt-1 block text-xs leading-5">{flag.detail}</span>
+                </div>
+              )) : (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  <CheckCircle2 className="mr-2 inline h-4 w-4" aria-hidden />
+                  No obvious quality gaps detected yet.
+                </div>
+              )}
+            </div>
+            <div className="mt-4 grid gap-2">
+              {['Make more child-centred', 'Reduce opinionated language', 'Highlight missing context', 'Suggest follow-up questions'].map((action) => (
+                <button key={action} type="button" onClick={() => setNotice(`${action}: review the highlighted suggestions and edit the staff wording before saving.`)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-xs font-black text-slate-700">
+                  {action}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">Suggested links</p>
             <h2 className="mt-2 text-xl font-black text-slate-950">Review before saving</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">Deterministic suggestions from the words in this record. They do not save without your confirmation.</p>
             <div className="mt-4 space-y-2">
               {suggestions.map((suggestion) => (
-                <div key={suggestion.label} className={`rounded-2xl border px-4 py-3 text-sm ${
-                  suggestion.tone === 'red'
-                    ? 'border-red-100 bg-red-50 text-red-800'
-                    : suggestion.tone === 'amber'
-                      ? 'border-amber-100 bg-amber-50 text-amber-800'
-                      : suggestion.tone === 'emerald'
-                        ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
-                        : suggestion.tone === 'purple'
-                          ? 'border-purple-100 bg-purple-50 text-purple-800'
-                          : 'border-blue-100 bg-blue-50 text-blue-800'
-                }`}>
+                <div key={suggestion.label} className={`rounded-2xl border px-4 py-3 text-sm ${suggestionClasses(suggestion.tone)}`}>
                   <strong className="block font-black">{suggestion.label}</strong>
                   <span className="mt-1 block text-xs leading-5">{suggestion.reason}</span>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => handleSuggestion(suggestion)} className="rounded-full bg-white/80 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] shadow-sm">
+                      {suggestion.actionLabel || 'Use suggestion'}
+                    </button>
+                    {buildLinkedWorkflowHref(childId, suggestion) ? (
+                      <Link href={buildLinkedWorkflowHref(childId, suggestion)!} className="rounded-full bg-slate-950 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white shadow-sm">
+                        <Link2 className="mr-1 inline h-3.5 w-3.5" aria-hidden />
+                        Open linked workflow
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
               ))}
+              {!suggestions.length ? (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  <AlertTriangle className="mr-2 inline h-4 w-4 text-slate-400" aria-hidden />
+                  No linkage suggestions yet. Daily note wording will be checked as you type.
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -277,7 +513,10 @@ export function RecordingForm({
 
           <section className="rounded-[28px] border border-slate-200 bg-slate-950 p-5 text-white shadow-[0_16px_46px_rgba(15,23,42,0.14)]">
             <h2 className="text-xl font-black">Ready to save?</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-300">This will link the record to {childName}, create the live source record where supported, and return to the journey.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">This will link the record to {childName}, create the live source record where supported, and return to the journey with explicit write confirmation.</p>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 text-xs leading-5 text-slate-300">
+              Chronology writeback is explicit and immutable in the backend projection. Suggestions do not create duplicate actions or chronology entries by themselves.
+            </div>
             <div className="mt-5 grid gap-2">
               <button type="submit" disabled={submitting} className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
                 <Save className="mr-2 h-4 w-4" aria-hidden />
