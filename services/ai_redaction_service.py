@@ -58,12 +58,18 @@ class AIRedactionService:
         redacted: list[dict[str, Any]] = []
         mapping: dict[str, str] = {}
         hidden_fields = {"first_name", "last_name", "date_of_birth", "dob", "address", "email", "phone", "mobile"}
+        name_fields = {"name", "full_name", "young_person_name", "child_name", "staff_name", "home_name"}
 
         for index, record in enumerate(records, start=1):
             safe_record: dict[str, Any] = {}
+            entity_label = self._entity_label(record, index)
             for key, value in record.items():
-                if str(key).lower() in hidden_fields:
-                    safe_record[key] = f"[REDACTED_{str(key).upper()}]"
+                key_norm = str(key).lower()
+                if key_norm in hidden_fields:
+                    safe_record[key] = entity_label if key_norm in {"first_name", "last_name"} else f"[REDACTED_{str(key).upper()}]"
+                    continue
+                if mode == "strict" and key_norm in name_fields:
+                    safe_record[key] = entity_label
                     continue
                 if isinstance(value, str):
                     result = self.redact_text(value, mode=mode)
@@ -74,6 +80,18 @@ class AIRedactionService:
             redacted.append(safe_record)
 
         return redacted, mapping
+
+    def _entity_label(self, record: dict[str, Any], index: int) -> str:
+        suffix = chr(ord("A") + ((index - 1) % 26))
+        record_type = str(record.get("record_type") or record.get("type") or "").lower()
+        keys = {str(key).lower() for key in record}
+        if "home" in record_type or "home_name" in keys:
+            return f"Home {suffix}"
+        if "staff" in record_type or "adult" in record_type or "staff_name" in keys:
+            return f"Staff member {suffix}"
+        if "young_person" in record_type or "child" in record_type or {"young_person_name", "child_name"} & keys:
+            return f"Young person {suffix}"
+        return f"Person {suffix}"
 
 
 ai_redaction_service = AIRedactionService()

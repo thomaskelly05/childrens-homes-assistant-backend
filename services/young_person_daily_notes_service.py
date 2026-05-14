@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from services.metadata_extraction_service import metadata_extraction_service
 from services.os_sync_hooks import archive_after_status_change, sync_after_save
 
 
@@ -487,6 +488,18 @@ class YoungPersonDailyNotesService:
         conn.commit()
 
         workflow_result = None
+        intelligence_result = metadata_extraction_service.process_daily_note_saved(
+            {
+                **payload,
+                **db_payload,
+                "workflow_status": workflow_status,
+            },
+            young_person_id=young_person_id,
+            home_id=db_payload["home_id"],
+            staff_id=db_payload["author_id"],
+            source_record_id=daily_note_id,
+        )
+        intelligence_metadata = intelligence_result["metadata"]
 
         try:
             workflow_result = linking_service.process_record_event(
@@ -546,13 +559,14 @@ class YoungPersonDailyNotesService:
                     "workflow_status": workflow_status,
                     "shift_type": shift_type,
                     "note_date": note_date,
-                    "quality_standards": ["quality_and_purpose_of_care"]
+                    "quality_standards": intelligence_metadata["regulatory"]["quality_standard_ids"]
                     if payload.get("link_quality_standards", True)
                     else [],
-                    "standards_rationale": "Linked from daily note workflow",
-                    "evidence_strength": "medium",
+                    "standards_rationale": "Linked from metadata-first daily note extraction",
+                    "evidence_strength": intelligence_metadata["regulatory"]["evidence_strength"],
                     "response_actions": payload.get("actions_required"),
-                    "judgement_areas": ["experiences_and_progress"],
+                    "judgement_areas": intelligence_metadata["regulatory"]["sccif_area_ids"],
+                    "data_intelligence": intelligence_metadata,
                 },
             )
             conn.commit()
@@ -573,6 +587,7 @@ class YoungPersonDailyNotesService:
             "message": "Daily note created successfully",
             "id": daily_note_id,
             "workflow": workflow_result,
+            "intelligence": intelligence_result,
         }
 
     @staticmethod
@@ -657,7 +672,15 @@ class YoungPersonDailyNotesService:
             daily_note_id=daily_note_id,
         )
 
-        return {"message": "Daily note updated successfully", "id": updated_id}
+        intelligence_result = metadata_extraction_service.process_daily_note_saved(
+            update_data,
+            young_person_id=None,
+            home_id=None,
+            staff_id=update_data.get("author_id"),
+            source_record_id=daily_note_id,
+        )
+
+        return {"message": "Daily note updated successfully", "id": updated_id, "intelligence": intelligence_result}
 
     @staticmethod
     def submit_daily_note(
