@@ -43,6 +43,7 @@ def test_switching_to_standalone_clears_active_child_context():
         "home_id": 7,
         "selected_young_person_id": 12,
         "selected_record_summary": "Private child context",
+        "child_context_lock": {"active": True, "child_id": 12},
         "visible_chronology_ids": ["c1"],
     }
 
@@ -51,6 +52,7 @@ def test_switching_to_standalone_clears_active_child_context():
     assert cleared["home_id"] is None
     assert cleared["selected_young_person_id"] is None
     assert cleared["selected_record_summary"] is None
+    assert cleared["child_context_lock"] == {}
     assert cleared["visible_chronology_ids"] == []
 
 

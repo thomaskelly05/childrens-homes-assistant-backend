@@ -34,6 +34,13 @@ def _home_id(value: Any) -> int | None:
         return None
 
 
+def _child_scope(value: Any) -> int | None:
+    try:
+        return int(value) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Orb websocket child scope is invalid.")
+
+
 class OrbWebSocketGateway:
     """Authentication, binding and lifecycle management for Orb sockets."""
 
@@ -86,8 +93,11 @@ class OrbWebSocketGateway:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Orb websocket home scope mismatch.")
         if session_home_id is not None and not realtime_event_bus.can_access_home(current_user, session_home_id):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Orb websocket home scope denied.")
-        selected_child = (assistant_scope or {}).get("selected_young_person_id")
-        if selected_child and session.context.selected_young_person_id and int(selected_child) != int(session.context.selected_young_person_id):
+        selected_child = _child_scope((assistant_scope or {}).get("selected_young_person_id"))
+        session_child = _child_scope(session.context.selected_young_person_id)
+        if selected_child is not None and session_child is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Orb websocket child scope is not bound to the session.")
+        if selected_child is not None and session_child is not None and selected_child != session_child:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Orb websocket child scope mismatch.")
         return {
             "session_id": session.id,
@@ -116,6 +126,10 @@ class OrbWebSocketGateway:
                 session_id=session_id,
                 current_user=current_user,
                 requested_home_id=websocket.query_params.get("home_id"),
+                assistant_scope={
+                    "selected_young_person_id": websocket.query_params.get("selected_young_person_id")
+                    or websocket.query_params.get("young_person_id")
+                },
             )
         except HTTPException as exc:
             await websocket.accept()

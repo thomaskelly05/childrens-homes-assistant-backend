@@ -40,6 +40,7 @@ UNSAFE_CONTEXT_KEYS = {
     "visible_evidence_ids",
     "selected_record_summary",
     "current_child",
+    "child_context_lock",
     "current_record_summary",
     "young_person_id",
     "young_person_name",

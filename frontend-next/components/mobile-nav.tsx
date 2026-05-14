@@ -5,16 +5,18 @@ import { usePathname } from 'next/navigation'
 import { ClipboardPlus, Clock3, FileText, Home, MessageSquarePlus, ShieldAlert } from 'lucide-react'
 
 import { childOperationalQuickActions, childQuickActionHref } from '@/lib/child-journey/workflows'
+import { useActiveChild } from '@/lib/context/active-child-context'
 
 export function MobileNav() {
   const pathname = usePathname() || '/home'
+  const { activeChild, childScopedHref } = useActiveChild()
   const childMatch = pathname.match(/^\/young-people\/([^/]+)/)
-  const childId = childMatch?.[1]
+  const childId = childMatch?.[1] || activeChild?.id
   const items = [
     { label: 'Children', href: '/home', icon: Home },
     { label: 'Shift', href: '/shifts/current', icon: Clock3 },
-    { label: 'Records', href: '/young-people', icon: FileText },
-    { label: 'Alerts', href: '/safeguarding', icon: ShieldAlert },
+    { label: 'Records', href: childScopedHref('/chronology'), icon: FileText },
+    { label: 'Alerts', href: childScopedHref('/safeguarding'), icon: ShieldAlert },
     { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
   ]
   const quickActions = childId
@@ -25,7 +27,7 @@ export function MobileNav() {
       }))
     : [
         { label: 'Choose child', href: '/home', icon: ClipboardPlus },
-        { label: 'Actions', href: '/actions', icon: ShieldAlert },
+        { label: 'Actions', href: '/home', icon: ShieldAlert },
         { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
       ]
 

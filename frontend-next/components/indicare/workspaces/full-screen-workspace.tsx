@@ -25,6 +25,7 @@ export function FullScreenWorkspace({
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">{eyebrow}</p>
             <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] md:text-5xl">{title}</h1>
             {description ? <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">{description}</p> : null}
+            <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-cyan-200">Fullscreen workspace · Escape closes · save state stays pinned</p>
           </div>
           <WorkspaceCloseButton href={backHref} />
         </div>

@@ -50,6 +50,8 @@ export function OrbButton({
   const latestAssistant = [...transcript].reverse().find((entry) => entry.role === 'assistant')
   const latestUser = [...transcript].reverse().find((entry) => entry.role === 'user')
   const orbStatus = snapshot.error ? 'Fallback active' : orbStateLabel(snapshot.state)
+  const childLock = (context.child_context_lock || {}) as { active?: boolean; child_name?: string; retrieval_scope?: string }
+  const childName = typeof childLock.child_name === 'string' ? childLock.child_name : undefined
 
   async function sendTypedFallback() {
     const message = typedText.trim()
@@ -71,8 +73,13 @@ export function OrbButton({
             <p className="mt-8 text-[11px] font-black uppercase tracking-[0.28em] text-cyan-200">IndiCare OS Orb</p>
             <h2 className="mt-3 text-4xl font-black tracking-[-0.07em]">{orbStatus}</h2>
             <p className="mt-3 max-w-md text-sm leading-6 text-slate-300">
-              Voice-first operational assistant. It uses only the current OS route and your permitted child/home scope.
+              {childLock.active && childName
+                ? `Voice-first operational assistant. I am locked to ${childName}'s journey and will not search other children.`
+                : 'Voice-first operational assistant. Select a child before asking for child records.'}
             </p>
+            <div className="mt-5 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-cyan-100">
+              {childLock.active && childName ? `Active child: ${childName}` : 'No active child context'}
+            </div>
 
             {snapshot.error ? (
               <p className="mt-5 rounded-full border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm text-amber-100">
@@ -107,6 +114,7 @@ export function OrbButton({
                   onChange={(event) => setTypedText(event.target.value)}
                   className="min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-300"
                   placeholder="Type fallback..."
+                  aria-label={childName ? `Type to Orb about ${childName}` : 'Type to Orb'}
                 />
                 <button type="submit" disabled={!typedText.trim() || snapshot.loading} className="rounded-full bg-cyan-300 px-4 text-slate-950 disabled:opacity-50" aria-label="Send typed message to Orb">
                   <Send className="h-4 w-4" aria-hidden />

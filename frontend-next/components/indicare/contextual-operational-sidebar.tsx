@@ -10,10 +10,26 @@ const fallbackActions = [
   { label: 'Safeguarding priorities', href: '/safeguarding', icon: ShieldAlert }
 ]
 
-export function ContextualOperationalSidebar({ pathname }: { pathname: string }) {
+export function ContextualOperationalSidebar({
+  pathname,
+  activeChildId,
+  activeChildName
+}: {
+  pathname: string
+  activeChildId?: string
+  activeChildName?: string
+}) {
   const entity = parseEntityFromPath(pathname)
   const summary = entity ? entityLinkSummary(entity) : undefined
   const actions = entity ? getEntityActions(entity).slice(0, 6) : []
+  const scopedFallbackActions = activeChildId
+    ? [
+        { label: `${activeChildName || 'Child'} chronology`, href: `/young-people/${encodeURIComponent(activeChildId)}/chronology`, icon: GitBranch },
+        { label: 'Child reports', href: `/young-people/${encodeURIComponent(activeChildId)}/journey?focus=reports`, icon: FileText },
+        { label: 'Child actions', href: `/young-people/${encodeURIComponent(activeChildId)}/journey?focus=actions`, icon: Activity },
+        { label: 'Safeguarding chronology', href: `/young-people/${encodeURIComponent(activeChildId)}/chronology?filter=safeguarding`, icon: ShieldAlert }
+      ]
+    : fallbackActions
 
   return (
     <section className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
@@ -35,7 +51,7 @@ export function ContextualOperationalSidebar({ pathname }: { pathname: string })
             </Link>
           ))
         ) : (
-          fallbackActions.map((action) => {
+          scopedFallbackActions.map((action) => {
             const Icon = action.icon
             return (
               <Link key={action.href} href={action.href} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-blue-50 hover:text-blue-700">
@@ -47,7 +63,7 @@ export function ContextualOperationalSidebar({ pathname }: { pathname: string })
         )}
       </div>
       <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs leading-5 text-blue-900">
-        Assistant prompts are scoped to the active route, selected record and visible operational links.
+        {activeChildName ? `Assistant prompts are locked to ${activeChildName}'s visible route, records and operational links.` : 'Assistant prompts stay unavailable for child records until a child is selected.'}
       </div>
     </section>
   )

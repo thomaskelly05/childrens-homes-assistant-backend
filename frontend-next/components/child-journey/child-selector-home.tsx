@@ -1,8 +1,11 @@
+'use client'
+
 import Link from 'next/link'
-import { AlertTriangle, ArrowRight, ClipboardList, HeartPulse, Search } from 'lucide-react'
+import { ArrowRight, ClipboardList, Clock3, FileText, Search, ShieldCheck } from 'lucide-react'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, PageHeader, RiskBadge, StatusBadge } from '@/components/indicare/ui'
+import { useActiveChild } from '@/lib/context/active-child-context'
 import type { ChildSelectorCard } from '@/lib/child-journey/data'
 import type { OsApiResult } from '@/lib/os-api/types'
 
@@ -16,6 +19,7 @@ export function ChildSelectorHome({
   error?: string
 }) {
   const result: OsApiResult<ChildSelectorCard[]> = { data: cards, source, error }
+  const { activeChild, recentChildren, selectChild } = useActiveChild()
 
   return (
     <div className="space-y-6">
@@ -31,11 +35,75 @@ export function ChildSelectorHome({
       />
       <LiveDataStatus result={result} />
 
+      <section className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <div className="flex items-start gap-3">
+            <Clock3 className="mt-1 h-5 w-5 text-blue-700" aria-hidden />
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Shift summary</p>
+              <h2 className="mt-2 text-xl font-black text-slate-950">Start calm, then enter one journey.</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">Oak House evening shift. Detailed chronology, actions and reports stay hidden until a child is selected.</p>
+              <Link href="/shifts/current" className="mt-4 inline-flex text-sm font-black text-blue-700">Open shift context</Link>
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-start gap-3">
+            <ClipboardList className="mt-1 h-5 w-5 text-emerald-700" aria-hidden />
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Personal tasks</p>
+              <h2 className="mt-2 text-xl font-black text-slate-950">3 reminders for your role</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">Your personal reminders are available without exposing mixed child records.</p>
+              <Link href="/actions" className="mt-4 inline-flex text-sm font-black text-emerald-700">Open after selecting child</Link>
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-start gap-3">
+            <FileText className="mt-1 h-5 w-5 text-purple-700" aria-hidden />
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-purple-700">Continue draft</p>
+              <h2 className="mt-2 text-xl font-black text-slate-950">{activeChild ? `Continue ${activeChild.preferredName || activeChild.displayName}'s journey` : 'No child draft open'}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">Drafts are restored only inside the child journey they belong to.</p>
+              {activeChild ? <Link href={`/young-people/${encodeURIComponent(activeChild.id)}/journey`} className="mt-4 inline-flex text-sm font-black text-purple-700">Continue safely</Link> : null}
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      {recentChildren.length ? (
+        <section className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Recent children</p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">Return to a recent journey</h2>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {recentChildren.map((child) => (
+              <Link
+                key={child.id}
+                href={`/young-people/${encodeURIComponent(child.id)}/journey`}
+                onClick={() => selectChild(child, 'manual')}
+                className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-black text-blue-800"
+              >
+                {child.preferredName || child.displayName}
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="grid gap-4 sm:gap-5 lg:grid-cols-2 2xl:grid-cols-3" aria-label="Young person selector" data-testid="child-selector">
         {cards.map((child) => (
           <Link
             key={child.id}
             href={`/young-people/${encodeURIComponent(child.id)}/journey`}
+            onClick={() => selectChild({
+              id: child.id,
+              displayName: child.displayName,
+              preferredName: child.preferredName
+            }, 'manual')}
             aria-label={`Enter ${child.preferredName || child.displayName}'s journey`}
             data-testid={`child-card-${child.id}`}
             className="group block rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:border-blue-100 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 sm:rounded-[32px] sm:p-5"
@@ -48,12 +116,6 @@ export function ChildSelectorHome({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">{child.preferredName || child.displayName}</h2>
-                    {child.importantAlert ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-amber-800">
-                        <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
-                        {child.importantAlert}
-                      </span>
-                    ) : null}
                   </div>
                   <p className="mt-1 text-sm font-bold text-slate-500">Age {child.age || 'not recorded'} · {child.keyWorkerName}</p>
                 </div>
@@ -64,27 +126,14 @@ export function ChildSelectorHome({
                 <RiskBadge value={(child.riskLevel || 'medium') as any} />
               </div>
 
-              <div className="mt-5 grid gap-3 min-[420px]:grid-cols-3">
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                  <HeartPulse className="h-4 w-4 text-blue-700" aria-hidden />
-                  <p className="mt-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Mood / status</p>
-                  <p className="mt-1 text-sm font-black text-slate-800">{child.currentMood}</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden />
-                  <p className="mt-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Risks</p>
-                  <p className="mt-1 text-sm font-black text-slate-800">{child.activeRisksCount} active</p>
-                </div>
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                  <ClipboardList className="h-4 w-4 text-emerald-700" aria-hidden />
-                  <p className="mt-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Actions</p>
-                  <p className="mt-1 text-sm font-black text-slate-800">{child.actionsDue} due</p>
-                </div>
-              </div>
-
               <div className="mt-5 rounded-[24px] border border-blue-100 bg-blue-50/70 p-4">
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Last recorded note</p>
-                <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-700">{child.lastRecordedNote}</p>
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 text-blue-700" aria-hidden />
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Context locked on entry</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">Chronology, actions, reports, safeguarding and Orb retrieval open only for this child after selection.</p>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">

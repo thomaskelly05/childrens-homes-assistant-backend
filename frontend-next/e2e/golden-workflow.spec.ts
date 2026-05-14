@@ -25,10 +25,18 @@ test('Jamie golden workflow is smooth, explicit, and clears sensitive state on l
 
   await expect(page).toHaveURL(/\/home$/)
   await expect(page.getByTestId('child-selector')).toBeVisible()
+  await expect(page.getByText('Detailed chronology, actions and reports stay hidden')).toBeVisible()
+  await expect(page.getByText('Last recorded note')).toHaveCount(0)
+
+  await page.goto('/chronology')
+  await expect(page.getByText('Select a child before opening detailed records')).toBeVisible()
+  await page.goto('/home')
   await page.getByTestId('child-card-yp-jamie').click()
 
   await expect(page).toHaveURL(/\/young-people\/yp-jamie\/journey/)
   await expect(page.getByRole('heading', { name: 'Jamie', exact: true })).toBeVisible()
+  await expect(page.getByText('Active child').first()).toBeVisible()
+  await expect(page.evaluate(() => JSON.parse(localStorage.getItem('child-context:active.v1') || '{}')?.id)).resolves.toBe('yp-jamie')
   await expect(page.getByTestId('orb-button')).toBeVisible()
   await expect(page.getByTestId('manager-review-link')).toBeVisible()
   await expect(page.getByTestId('handover-link')).toBeVisible()

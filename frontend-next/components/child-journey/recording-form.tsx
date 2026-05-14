@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, CheckCircle2, Link2, MessageSquareHeart, Mic, Save, Sparkles, Wand2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Link2, MessageSquareHeart, Save, Sparkles, Wand2 } from 'lucide-react'
+import { WorkflowSaveIndicator } from '@/components/system-feedback/workflow-save-indicator'
 import { getCsrfToken } from '@/lib/auth/api'
 import { getSafeDraft, removeSafeDraft, setSafeDraft } from '@/lib/security/safe-storage'
+import { saveStateFromStatus, type WorkflowReliabilitySnapshot } from '@/lib/workflows/reliability'
 
 import {
   buildLinkedWorkflowHref,
@@ -108,17 +110,28 @@ type QualityFlag = {
 const childVoicePrompts = [
   'How did this feel for the child?',
   'What choices did the child make today?',
+  'What changed for the child today?',
+  'What mattered most to the child today?',
   'What went well for the child?',
   'What support helped?',
   'What would the child want adults to understand?'
 ]
 
 const quickTemplates = [
+  'Today mattered because...',
+  'What changed was...',
   'Staff observed...',
   'The child said...',
   'Staff supported by...',
   'This helped because...',
   'The agreed follow-up is...'
+]
+
+const chronologyAwarePrompts = [
+  'Link this to the most recent chronology event if it explains a change.',
+  'Check whether yesterday left an unresolved action.',
+  'Name the support that should continue into handover.',
+  'Describe the outcome before adding another workflow.'
 ]
 
 function recordText(values: Record<string, string>) {
@@ -201,6 +214,7 @@ export function RecordingForm({
   workflow: RecordingWorkflow
 }) {
   const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
   const initialValues = useMemo(() => {
     const values: Record<string, string> = {}
     workflow.sections.forEach((section) => {
@@ -217,6 +231,7 @@ export function RecordingForm({
   const [notice, setNotice] = useState<string | null>(null)
   const [draftRestored, setDraftRestored] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState(0)
+  const [saveSnapshot, setSaveSnapshot] = useState<WorkflowReliabilitySnapshot>(() => saveStateFromStatus('not_saved'))
 
   const suggestions = useMemo(() => extractSuggestedLinks(values), [values])
   const flags = useMemo(() => qualityFlags(values, workflow.primaryField), [values, workflow.primaryField])
@@ -234,6 +249,40 @@ export function RecordingForm({
   }, [dirty, submitting])
 
   useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        formRef.current?.requestSubmit()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  useEffect(() => {
+    function onOffline() {
+      if (dirty) setSaveSnapshot(saveStateFromStatus('offline_draft'))
+    }
+    function onOnline() {
+      if (dirty) setSaveSnapshot(saveStateFromStatus('draft'))
+    }
+    function onStorage(event: StorageEvent) {
+      if (event.key === autosaveKey && event.newValue !== event.oldValue) {
+        setSaveSnapshot(saveStateFromStatus('stale_session'))
+        setNotice('Another tab changed this draft. Review the latest wording before saving.')
+      }
+    }
+    window.addEventListener('offline', onOffline)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener('offline', onOffline)
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [autosaveKey, dirty])
+
+  useEffect(() => {
     try {
       const saved = getSafeDraft<Record<string, string>>(autosaveKey)
       if (!saved) return
@@ -242,6 +291,7 @@ export function RecordingForm({
         setValues((current) => ({ ...current, ...parsed.values }))
         setDraftRestored(true)
         setDirty(true)
+        setSaveSnapshot(saveStateFromStatus('draft'))
         setNotice(`Unfinished draft restored${parsed.savedAt ? ` from ${new Date(parsed.savedAt).toLocaleString('en-GB')}` : ''}.`)
       }
     } catch {
@@ -253,12 +303,14 @@ export function RecordingForm({
     if (!dirty || submitting) return
     const handle = window.setTimeout(() => {
       setSafeDraft(autosaveKey, values, undefined, 'confidential_child')
+      setSaveSnapshot((current) => current.state === 'stale_session' ? current : saveStateFromStatus(navigator.onLine ? 'draft' : 'offline_draft'))
     }, 500)
     return () => window.clearTimeout(handle)
   }, [autosaveKey, dirty, submitting, values])
 
   function updateField(name: string, nextValue: string) {
     setDirty(true)
+    setSaveSnapshot(saveStateFromStatus(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline_draft' : 'draft'))
     setValues((current) => ({ ...current, [name]: nextValue }))
   }
 
@@ -320,6 +372,7 @@ export function RecordingForm({
     event.preventDefault()
     if (submitting) return
     setSubmitting(true)
+    setSaveSnapshot(saveStateFromStatus('saving'))
     setError(null)
     setNotice(null)
     try {
@@ -341,8 +394,10 @@ export function RecordingForm({
       setDirty(false)
       if (payload.status === 'draft') {
         setSafeDraft(autosaveKey, values, undefined, 'confidential_child')
+        setSaveSnapshot(saveStateFromStatus('draft'))
       } else {
         removeSafeDraft(autosaveKey)
+        setSaveSnapshot(saveStateFromStatus(payload.status || 'saved'))
       }
       const params = new URLSearchParams({
         saved: payload.routeType || workflow.id,
@@ -353,6 +408,7 @@ export function RecordingForm({
       router.push(`/young-people/${encodeURIComponent(childId)}/journey?${params.toString()}`)
     } catch (caught) {
       setSafeDraft(autosaveKey, values, undefined, 'confidential_child')
+      setSaveSnapshot(saveStateFromStatus(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline_draft' : 'retry_needed'))
       const detail = caught instanceof Error ? caught.message : 'The record could not be saved. Please try again.'
       setError(`Draft saved locally. It has not yet been added to the child's record. ${detail}`)
       setSubmitting(false)
@@ -360,7 +416,20 @@ export function RecordingForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" data-testid={`${workflow.id}-form`}>
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6" data-testid={`${workflow.id}-form`}>
+      <div className="sticky top-3 z-20 rounded-[28px] border border-white/80 bg-white/95 p-4 shadow-[0_18px_55px_rgba(15,23,42,0.12)] backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <WorkflowSaveIndicator snapshot={saveSnapshot} />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setActiveSectionIndex((index) => Math.min(index + 1, workflow.sections.length - 1))} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
+              Continue recording
+            </button>
+            <button type="submit" disabled={submitting} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60">
+              {submitting ? 'Saving once...' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </div>
       {draftRestored ? (
         <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-bold leading-6 text-amber-800" data-testid="save-state-message">
           Draft recovery is active. This is a local draft only until Save record confirms a live write.
@@ -390,7 +459,6 @@ export function RecordingForm({
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={draftWithOrb} className="rounded-2xl bg-purple-700 px-4 py-3 text-sm font-black text-white shadow-lg shadow-purple-950/20"><Sparkles className="mr-2 inline h-4 w-4" aria-hidden />Draft with Orb</button>
-            <button type="button" onClick={() => setNotice('Dictation opens through the Orb button. This is not live in the form yet. Your draft has not been added to the child record.')} className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800"><Mic className="mr-2 inline h-4 w-4" aria-hidden />Dictate with Orb</button>
             <button type="button" onClick={improveWording} className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-sm font-black text-purple-800"><Wand2 className="mr-2 inline h-4 w-4" aria-hidden />Improve wording</button>
           </div>
         </div>
@@ -434,6 +502,13 @@ export function RecordingForm({
           {childVoicePrompts.map((prompt) => (
             <button key={prompt} type="button" onClick={() => addToField('child_voice', prompt)} className="rounded-2xl border border-purple-100 bg-purple-50 px-4 py-3 text-left text-sm font-bold text-purple-800">
               <MessageSquareHeart className="mr-2 inline h-4 w-4" aria-hidden />
+              {prompt}
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          {chronologyAwarePrompts.map((prompt) => (
+            <button key={prompt} type="button" onClick={() => setNotice(prompt)} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left text-sm font-bold text-blue-800">
               {prompt}
             </button>
           ))}

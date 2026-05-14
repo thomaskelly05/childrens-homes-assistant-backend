@@ -66,3 +66,29 @@ def test_websocket_gateway_rejects_cross_home_and_child_scope(monkeypatch):
     monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
     orb_session_store.reset_for_tests()
     asyncio.run(scenario())
+
+
+def test_websocket_gateway_rejects_unbound_child_subscription(monkeypatch):
+    async def scenario():
+        user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+        service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+        started = await service.start_session(
+            request=OrbSessionStartRequest(context=OrbContext(home_id=1), provider="mock_voice"),
+            current_user=user,
+        )
+
+        with pytest.raises(HTTPException) as child_exc:
+            OrbWebSocketGateway().validate_session_access(
+                session_id=started.session_id,
+                current_user=user,
+                requested_home_id=1,
+                assistant_scope={"selected_young_person_id": 5},
+            )
+
+        assert child_exc.value.status_code == 403
+        assert "not bound" in child_exc.value.detail
+
+    monkeypatch.setenv("ORB_SESSION_STORE_BACKEND", "memory")
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    orb_session_store.reset_for_tests()
+    asyncio.run(scenario())
