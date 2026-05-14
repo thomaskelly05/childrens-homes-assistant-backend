@@ -44,6 +44,7 @@ export type AssistantContext = {
   assistant_mode?: AssistantMode
   page_title?: string | null
   selected_record_summary?: string | null
+  assistant_product_mode?: 'os_orb' | 'standalone_assistant'
 }
 
 export type AssistantCitation = {

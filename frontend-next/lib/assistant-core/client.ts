@@ -74,17 +74,28 @@ export function buildStandaloneAssistantContext(options: {
   conversationId?: string | null
   projectId?: string | null
   activeSection?: string | null
-  homeId?: string | number | null
 } = {}): AssistantContext {
-  return buildAssistantContext({
-    mode: 'standalone',
-    route: '/assistant',
-    pageTitle: 'IndiCare Assistant',
-    workspaceType: options.activeSection || 'standalone_assistant',
-    conversationId: options.conversationId,
-    projectId: options.projectId,
-    homeId: options.homeId
-  })
+  return {
+    ...buildAssistantContext({
+      mode: 'standalone',
+      route: '/assistant',
+      pageTitle: 'IndiCare Assistant',
+      workspaceType: options.activeSection || 'standalone_assistant',
+      conversationId: options.conversationId,
+      projectId: options.projectId
+    }),
+    assistant_product_mode: 'standalone_assistant',
+    home_id: null,
+    allowed_home_ids: [],
+    home_scope: {},
+    selected_young_person_id: null,
+    selected_record_id: null,
+    selected_record_type: null,
+    selected_record_summary: null,
+    visible_chronology_ids: [],
+    visible_action_ids: [],
+    visible_evidence_ids: []
+  }
 }
 
 export function emptyAssistantResponse(message: string, mode: AssistantMode): AssistantQueryData {

@@ -15,7 +15,12 @@ from services.assistant_prompt_policy import (
     is_record_specific_question,
     suggested_prompts_for_context,
 )
+from services.assistant_product_boundary_service import (
+    build_product_boundary_decision,
+    sanitize_standalone_context,
+)
 from services.assistant_retrieval_service import AssistantRetrievalResult, AssistantRetrievalService
+from services.standalone_assistant_service import StandaloneAssistantService
 
 
 def _text(value: Any) -> str:
@@ -175,6 +180,7 @@ def _audit_assistant_query(
     if not table_exists(conn, "os_audit_events"):
         return
     metadata = {
+        "assistant_product_mode": build_product_boundary_decision(context).product_mode.value,
         "assistant_mode": context.assistant_mode,
         "context_summary": context_summary(context),
         "source_records_retrieved": retrieval.related_records[:30],
@@ -212,8 +218,13 @@ def _audit_assistant_query(
 class AssistantResponseService:
     """Shared intelligence core for embedded and standalone assistant UX."""
 
-    def __init__(self, retrieval_service: AssistantRetrievalService | None = None) -> None:
+    def __init__(
+        self,
+        retrieval_service: AssistantRetrievalService | None = None,
+        standalone_service: StandaloneAssistantService | None = None,
+    ) -> None:
         self.retrieval_service = retrieval_service or AssistantRetrievalService()
+        self.standalone_service = standalone_service or StandaloneAssistantService()
 
     def query(
         self,
@@ -223,6 +234,14 @@ class AssistantResponseService:
         context: SharedAssistantContext,
         current_user: dict[str, Any],
     ) -> dict[str, Any]:
+        boundary = build_product_boundary_decision(context)
+        if boundary.product_mode.value == "standalone_assistant":
+            standalone_context = sanitize_standalone_context(context)
+            return self.standalone_service.query(
+                message=message,
+                context=standalone_context,
+            )
+
         retrieval = self.retrieval_service.retrieve(
             conn,
             message=message,
@@ -257,6 +276,9 @@ class AssistantResponseService:
             "follow_up_questions": suggested_prompts_for_context(context)[:4],
             "confidence": confidence,
             "review_required": review_required,
+            "assistant_product_mode": boundary.product_mode.value,
+            "audit_event_type": boundary.audit_event_type,
+            "memory_store": boundary.memory_store,
             "retrieval": {
                 "source_count": len(retrieval.sources),
                 "errors": retrieval.retrieval_errors,
