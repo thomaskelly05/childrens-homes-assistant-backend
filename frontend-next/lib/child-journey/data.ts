@@ -70,6 +70,15 @@ export type ChildJourneyData = {
   timeline: JourneyTimelineItem[]
   actions: JourneyAction[]
   evidence: JourneyEvidence[]
+  story: ChildJourneyStory
+}
+
+export type ChildJourneyStory = {
+  storySoFar: string
+  whatChanged: string
+  todayMatteredBecause: string
+  progressHighlights: string[]
+  relationshipMarkers: string[]
 }
 
 function initials(name: string) {
@@ -231,14 +240,15 @@ function demoEvidence(id: string): JourneyEvidence[] {
 function demoJourneyData(id: string): ChildJourneyData {
   const child = getYoungPersonById(id)
   const placement = child ? getPlacementForYoungPerson(child.id) : undefined
-  return {
+  const base = {
     source: 'fallback',
     child: child ? { ...child, displayName: `${child.firstName} ${child.lastName}`, placementStatus: placement?.status } : undefined,
     dailyNotes: demoDailyNotes(id),
     timeline: demoTimeline(id),
     actions: demoActions(id),
     evidence: demoEvidence(id)
-  }
+  } satisfies Omit<ChildJourneyData, 'story'>
+  return { ...base, story: buildJourneyStory(base) }
 }
 
 function coerceLiveJourney(id: string, payload: any, fallback: ChildJourneyData): ChildJourneyData {
@@ -247,7 +257,7 @@ function coerceLiveJourney(id: string, payload: any, fallback: ChildJourneyData)
     ? childPayload.display_name || childPayload.displayName || [childPayload.first_name, childPayload.last_name].filter(Boolean).join(' ') || childPayload.name
     : undefined
 
-  return {
+  const base = {
     source: 'live',
     child: childPayload ? {
       id: String(childPayload.id || id),
@@ -275,6 +285,24 @@ function coerceLiveJourney(id: string, payload: any, fallback: ChildJourneyData)
     timeline: Array.isArray(payload?.timeline) ? payload.timeline : fallback.timeline,
     actions: Array.isArray(payload?.actions) ? payload.actions : fallback.actions,
     evidence: Array.isArray(payload?.evidence) ? payload.evidence : fallback.evidence
+  } satisfies Omit<ChildJourneyData, 'story'>
+  return { ...base, story: buildJourneyStory(base) }
+}
+
+function buildJourneyStory(data: Omit<ChildJourneyData, 'story'>): ChildJourneyStory {
+  const childName = data.child?.preferredName || data.child?.displayName || 'This child'
+  const recent = data.timeline.slice(0, 3)
+  const lastNote = data.dailyNotes[0]
+  const positive = [...data.timeline, ...data.dailyNotes].filter((item) => /progress|settled|positive|achiev|enjoy|relationship|trusted|school|health/i.test(`${item.title} ${item.summary}`))
+  const relationships = [...data.timeline, ...data.dailyNotes].filter((item) => /family|key worker|staff|relationship|contact|social worker|friend/i.test(`${item.title} ${item.summary}`))
+  return {
+    storySoFar: recent.length
+      ? `${childName}'s recent story is shaped by ${recent.map((item) => item.title.toLowerCase()).join(', ')}.`
+      : `${childName}'s story will build as daily notes, chronology and direct work are recorded.`,
+    whatChanged: recent[0]?.summary || 'No recent change has been recorded in the visible chronology.',
+    todayMatteredBecause: lastNote?.summary || recent[0]?.summary || 'Today has not yet been written into the record.',
+    progressHighlights: positive.slice(0, 3).map((item) => item.title),
+    relationshipMarkers: relationships.slice(0, 3).map((item) => item.title)
   }
 }
 
@@ -305,5 +333,5 @@ export async function getChildJourneyData(id: string): Promise<ChildJourneyData>
   if (result.source === 'live') {
     return coerceLiveJourney(id, result.data, fallback)
   }
-  return { ...fallback, error: result.error }
+  return { ...fallback, error: result.error, story: buildJourneyStory(fallback) }
 }

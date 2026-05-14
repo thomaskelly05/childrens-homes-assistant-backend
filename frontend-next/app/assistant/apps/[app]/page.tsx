@@ -10,14 +10,14 @@ const workspaceDetails: Record<AssistantAppSlug, { title: string; sections: Arra
     title: 'IndiCare Connect',
     sections: [
       { title: 'Spaces and channels', items: ['Oak House team space', 'Announcements', 'Safeguarding discussion room', 'Supervision discussion room'] },
-      { title: 'Conversation tools', items: ['Direct messages foundation', 'Task discussion', 'Calls placeholder', 'Meetings placeholder'] },
+      { title: 'Conversation tools', items: ['Direct messages foundation', 'Task discussion', 'Meeting notes workspace', 'Clear OS boundary'] },
       { title: 'Boundary', items: ['No live OS record access', 'Future OS integration must be permissioned and explicit'] }
     ]
   },
   'magic-notes': {
     title: 'Magic Notes by IndiCare',
     sections: [
-      { title: 'Capture', items: ['Start recording button', 'Upload audio placeholder', 'Transcript panel'] },
+      { title: 'Capture', items: ['Start recording button', 'Paste transcript', 'Transcript panel'] },
       { title: 'AI outputs', items: ['Summary', 'Actions extracted', 'Themes', 'Child-centred wording', 'Safeguarding-aware summary'] },
       { title: 'Export only', items: ['Copy controls', 'Download placeholder', 'No automatic OS writeback'] }
     ]
@@ -25,9 +25,9 @@ const workspaceDetails: Record<AssistantAppSlug, { title: string; sections: Arra
   docs: {
     title: 'IndiCare Docs',
     sections: [
-      { title: 'Editor foundation', items: ['Clean editor', 'AI drafting', 'Citations and references', 'Version history placeholder', 'Review and sign-off placeholder'] },
+      { title: 'Editor foundation', items: ['Clean editor', 'AI drafting', 'Citations and references', 'Version timeline', 'Review and sign-off'] },
       { title: 'Document types', items: documentTypes },
-      { title: 'Output', items: ['Export placeholder', 'Copy content', 'No OS document storage'] }
+      { title: 'Output', items: ['Copy content', 'Review before external use', 'No OS document storage'] }
     ]
   },
   reports: {
@@ -49,7 +49,7 @@ const workspaceDetails: Record<AssistantAppSlug, { title: string; sections: Arra
     title: 'Policy Writer',
     sections: [
       { title: 'Policy drafting', items: ['Policy outline', 'Procedure steps', 'References section', 'Manager review prompt'] },
-      { title: 'Safety', items: ['Guidance not legal advice', 'Review and sign-off placeholder'] }
+      { title: 'Safety', items: ['Guidance not legal advice', 'Review and sign-off'] }
     ]
   },
   meetings: {
@@ -62,7 +62,7 @@ const workspaceDetails: Record<AssistantAppSlug, { title: string; sections: Arra
   voice: {
     title: 'Voice Studio',
     sections: [
-      { title: 'Standalone voice', items: ['Voice button', 'Full voice mode', 'Captions placeholder', 'Separate standalone session'] },
+      { title: 'Standalone voice', items: ['Voice button', 'Full voice mode', 'Captions', 'Separate standalone session'] },
       { title: 'Allowed help', items: ['General questions', 'Sector questions', 'Document drafting', 'Practice reflection'] },
       { title: 'Blocked', items: ['No OS records', 'No child/home context', 'No automatic writeback'] }
     ]
@@ -115,13 +115,17 @@ export default async function AssistantAppPage({ params }: { params: Promise<{ a
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-500 dark:text-cyan-300">Controlled workspace</p>
           <h3 className="mt-3 text-2xl font-black tracking-[-0.05em]">Foundation controls</h3>
           <div className="mt-5 grid gap-3">
-            {['Open workspace', 'Copy/export', 'Upload/paste source', 'Ask assistant'].map((label) => (
-              <button key={label} type="button" className="rounded-2xl bg-slate-950 px-4 py-3 text-left text-sm font-black text-white dark:bg-white dark:text-slate-950">
+            {[
+              ['Open workspace', `/assistant/apps/${slug}`],
+              ['Use assistant', '/assistant'],
+              ['All apps', '/assistant/apps']
+            ].map(([label, href]) => (
+              <Link key={label} href={href} className="rounded-2xl bg-slate-950 px-4 py-3 text-left text-sm font-black text-white dark:bg-white dark:text-slate-950">
                 {label}
-              </button>
+              </Link>
             ))}
           </div>
-          <p className="mt-5 text-sm leading-6 text-slate-500 dark:text-slate-300">Buttons are intentionally local foundation controls; they do not write back to IndiCare OS.</p>
+          <p className="mt-5 text-sm leading-6 text-slate-500 dark:text-slate-300">Standalone work stays separate from live care records unless a reviewed OS workflow is used.</p>
         </aside>
       </div>
     </StandaloneAssistantShell>

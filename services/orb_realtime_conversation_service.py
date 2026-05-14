@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 from schemas.orb import OrbContext, OrbState
 from services.orb_session_store import orb_session_store
+from services.realtime_scaling_service import realtime_scaling_service
 
 
 ConversationPhase = Literal[
@@ -45,6 +46,9 @@ class OrbRealtimeConversationState:
     interrupted_response: str | None = None
     last_user_speech_at: str | None = None
     last_assistant_audio_at: str | None = None
+    last_phase_changed_at: str = field(default_factory=_now)
+    silence_awareness: dict[str, Any] = field(default_factory=dict)
+    emotional_cadence: dict[str, Any] = field(default_factory=dict)
     reconnect_attempts: int = 0
     turn_index: int = 0
     temporary_conversational_memory: dict[str, Any] = field(default_factory=dict)
@@ -66,6 +70,9 @@ class OrbRealtimeConversationState:
             "interrupted_response": self.interrupted_response,
             "last_user_speech_at": self.last_user_speech_at,
             "last_assistant_audio_at": self.last_assistant_audio_at,
+            "last_phase_changed_at": self.last_phase_changed_at,
+            "silence_awareness": self.silence_awareness,
+            "emotional_cadence": self.emotional_cadence,
             "reconnect_attempts": self.reconnect_attempts,
             "temporary_conversational_memory": self.temporary_conversational_memory,
             "active_context_references": self.active_context_references,
@@ -80,7 +87,13 @@ class OrbRealtimeConversationState:
                 "partial_transcript_streaming": True,
                 "server_vad": self.transport == "webrtc",
                 "silence_detection": True,
+                "response_chunk_pacing": True,
+                "reconnect_continuation": True,
             },
+            "realtime_continuity": realtime_scaling_service.reconnect_plan(
+                attempts=self.reconnect_attempts,
+                last_sequence=self.turn_index,
+            ),
             "recent_events": self.events[-12:],
         }
 
@@ -101,6 +114,9 @@ class OrbRealtimeConversationState:
             interrupted_response=payload.get("interrupted_response"),
             last_user_speech_at=payload.get("last_user_speech_at"),
             last_assistant_audio_at=payload.get("last_assistant_audio_at"),
+            last_phase_changed_at=payload.get("last_phase_changed_at") or _now(),
+            silence_awareness=dict(payload.get("silence_awareness") or {}),
+            emotional_cadence=dict(payload.get("emotional_cadence") or {}),
             reconnect_attempts=int(payload.get("reconnect_attempts") or 0),
             turn_index=int(payload.get("turn_index") or 0),
             temporary_conversational_memory=dict(payload.get("temporary_conversational_memory") or {}),
@@ -187,32 +203,49 @@ class OrbRealtimeConversationService:
             return {}
         if event_type in {"speech_started", "recording_on"}:
             state.phase = "listening"
+            state.last_phase_changed_at = _now()
             state.last_user_speech_at = _now()
             state.partial_user_transcript = ""
         elif event_type == "speech_stopped":
             state.phase = "processing"
+            state.last_phase_changed_at = _now()
         elif event_type == "assistant_turn":
             state.phase = "speaking"
+            state.last_phase_changed_at = _now()
             state.last_assistant_audio_at = _now()
         elif event_type == "mute":
             state.phase = "muted"
+            state.last_phase_changed_at = _now()
         elif event_type == "unmute":
             state.phase = "idle"
+            state.last_phase_changed_at = _now()
         elif event_type == "silence_timeout":
             state.phase = "idle"
+            state.last_phase_changed_at = _now()
             state.partial_user_transcript = ""
+            state.silence_awareness = {
+                "last_timeout_at": _now(),
+                "prompt": "Take your time.",
+                "recovered_without_losing_context": True,
+            }
         elif event_type == "wake_listening_started":
             state.phase = "passive_listening"
+            state.last_phase_changed_at = _now()
         elif event_type == "wake_listening_stopped":
             state.phase = "idle"
+            state.last_phase_changed_at = _now()
         elif event_type == "unavailable":
             state.phase = "unavailable"
+            state.last_phase_changed_at = _now()
         elif event_type == "offline":
             state.phase = "offline"
+            state.last_phase_changed_at = _now()
         elif event_type == "permission_denied":
             state.phase = "permission_denied"
+            state.last_phase_changed_at = _now()
         elif event_type == "expired":
             state.phase = "expired"
+            state.last_phase_changed_at = _now()
         if metadata:
             active_context = metadata.get("active_context_references") or metadata.get("context")
             if isinstance(active_context, dict):
@@ -220,6 +253,9 @@ class OrbRealtimeConversationService:
             pending_tool_plan = metadata.get("pending_tool_plan")
             if isinstance(pending_tool_plan, dict):
                 state.pending_tool_plans.append(pending_tool_plan)
+            cadence = metadata.get("emotional_cadence")
+            if isinstance(cadence, dict):
+                state.emotional_cadence.update(cadence)
         state.events.append({"type": event_type, "metadata": metadata or {}, "created_at": _now()})
         self._persist(state)
         return state.snapshot()
@@ -229,6 +265,7 @@ class OrbRealtimeConversationService:
         if not state:
             return {}
         state.phase = "listening"
+        state.last_phase_changed_at = _now()
         state.partial_user_transcript = text[-2000:]
         state.last_user_speech_at = _now()
         state.events.append({"type": "partial_user_transcript", "characters": len(text), "created_at": _now()})
@@ -240,6 +277,7 @@ class OrbRealtimeConversationService:
         if not state:
             return {}
         state.phase = "speaking"
+        state.last_phase_changed_at = _now()
         state.partial_assistant_transcript = ""
         state.last_assistant_audio_at = _now()
         state.events.append({"type": "assistant_response_started", "created_at": _now()})
@@ -251,8 +289,11 @@ class OrbRealtimeConversationService:
         if not state:
             return {}
         state.phase = "speaking"
+        state.last_phase_changed_at = _now()
         state.partial_assistant_transcript = f"{state.partial_assistant_transcript}{delta}"[-4000:]
         state.last_assistant_audio_at = _now()
+        if not any(event.get("type") == "assistant_first_partial" for event in state.events[-4:]):
+            state.events.append({"type": "assistant_first_partial", "created_at": _now(), "characters": len(delta)})
         self._persist(state)
         return state.snapshot()
 
@@ -261,6 +302,7 @@ class OrbRealtimeConversationService:
         if not state:
             return {}
         state.phase = "idle"
+        state.last_phase_changed_at = _now()
         state.turn_index += 1
         state.partial_user_transcript = ""
         state.partial_assistant_transcript = ""
@@ -273,6 +315,7 @@ class OrbRealtimeConversationService:
         if not state:
             return {}
         state.phase = "interrupted"
+        state.last_phase_changed_at = _now()
         state.interrupted_response = state.partial_assistant_transcript or state.interrupted_response
         state.partial_assistant_transcript = ""
         state.events.append(
@@ -281,6 +324,7 @@ class OrbRealtimeConversationService:
                 "source": source,
                 "created_at": _now(),
                 "preserved_interrupted_response": bool(state.interrupted_response),
+                "continuation_ready": bool(state.interrupted_response),
             }
         )
         self._persist(state)
@@ -292,7 +336,16 @@ class OrbRealtimeConversationService:
             return {}
         state.reconnect_attempts += 1
         state.phase = "reconnecting"
-        state.events.append({"type": "reconnect", "attempt": state.reconnect_attempts, "created_at": _now()})
+        state.last_phase_changed_at = _now()
+        state.events.append({
+            "type": "reconnect",
+            "attempt": state.reconnect_attempts,
+            "created_at": _now(),
+            "continuity": realtime_scaling_service.reconnect_plan(
+                attempts=state.reconnect_attempts,
+                last_sequence=state.turn_index,
+            ),
+        })
         self._persist(state)
         return state.snapshot()
 
