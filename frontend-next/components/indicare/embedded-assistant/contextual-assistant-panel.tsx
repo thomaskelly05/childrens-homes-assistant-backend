@@ -6,7 +6,6 @@ import { AlertTriangle, ClipboardList, FileText, ShieldAlert, Sparkles } from 'l
 
 import { citationHref } from '@/lib/assistant-core/citations'
 import { SourceCitationChip } from '@/components/indicare/citations/source-citation-chip'
-import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { contextSummary } from '@/lib/assistant-core/context'
 import { assistantErrorMessage, queryAssistant } from '@/lib/assistant-core/client'
 import { suggestedPromptsForWorkspace } from '@/lib/assistant-core/retrieval'
@@ -67,20 +66,7 @@ export function ContextualAssistantPanel({ context }: { context: AssistantContex
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="rounded-full bg-blue-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">{status === 'loading' ? 'Session loading' : loading ? 'Thinking' : 'Ready'}</div>
-          <OrbButton
-            placement="inline"
-            context={{
-              route: context.current_route,
-              workspace: context.current_workspace_type,
-              page_title: context.page_title,
-              selected_young_person_id: context.selected_young_person_id,
-              selected_record_id: context.selected_record_id,
-              selected_record_type: context.selected_record_type,
-              current_record_summary: context.selected_record_summary,
-              assistant_context: context
-            }}
-            role={context.role}
-          />
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Orb uses this context</span>
         </div>
       </div>
 

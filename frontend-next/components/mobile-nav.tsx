@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ClipboardPlus, Clock3, FileText, Home, MessageSquarePlus, ShieldAlert } from 'lucide-react'
 
+import { childOperationalQuickActions, childQuickActionHref } from '@/lib/child-journey/workflows'
+
 export function MobileNav() {
   const pathname = usePathname() || '/home'
   const childMatch = pathname.match(/^\/young-people\/([^/]+)/)
@@ -15,19 +17,25 @@ export function MobileNav() {
     { label: 'Alerts', href: '/safeguarding', icon: ShieldAlert },
     { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
   ]
-  const quickActions = [
-    { label: childId ? 'Daily note' : 'Choose child', href: childId ? `/young-people/${childId}/daily-note/new` : '/home', icon: ClipboardPlus },
-    { label: childId ? 'Incident' : 'Actions', href: childId ? `/young-people/${childId}/incidents/new` : '/actions', icon: ShieldAlert },
-    { label: childId ? 'Concern' : 'Assistant', href: childId ? `/young-people/${childId}/safeguarding/new` : '/assistant', icon: ShieldAlert }
-  ]
+  const quickActions = childId
+    ? childOperationalQuickActions.map((action) => ({
+        label: action.label,
+        href: childQuickActionHref(childId, action),
+        icon: action.id === 'safeguarding' ? ShieldAlert : ClipboardPlus
+      }))
+    : [
+        { label: 'Choose child', href: '/home', icon: ClipboardPlus },
+        { label: 'Actions', href: '/actions', icon: ShieldAlert },
+        { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
+      ]
 
   return (
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-50 w-[calc(100%-24px)] max-w-md -translate-x-1/2 lg:hidden">
-      <div className="mb-2 flex justify-center gap-2">
+      <div className="mb-2 flex gap-2 overflow-x-auto px-1 pb-1">
         {quickActions.map((item) => {
           const Icon = item.icon
           return (
-            <Link key={item.label} href={item.href} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-white/70 bg-white/95 px-3 py-2 text-[11px] font-black text-slate-700 shadow-lg shadow-slate-900/10">
+            <Link key={item.label} href={item.href} className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-white/70 bg-white/95 px-3 py-2 text-[11px] font-black text-slate-700 shadow-lg shadow-slate-900/10">
               <Icon className="h-3.5 w-3.5" aria-hidden />
               {item.label}
             </Link>

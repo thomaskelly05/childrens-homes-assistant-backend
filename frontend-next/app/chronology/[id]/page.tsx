@@ -2,7 +2,8 @@ import Link from 'next/link'
 
 import { CitationList } from '@/components/indicare/citations/citation-list'
 import { ActionsPanel, EvidenceItemsPanel } from '@/components/indicare/action-evidence-panels'
-import { Card, PageHeader, SectionHeader, StatusBadge } from '@/components/indicare/ui'
+import { Card, SectionHeader, StatusBadge } from '@/components/indicare/ui'
+import { FullScreenWorkspace } from '@/components/indicare/workspaces/full-screen-workspace'
 import { QualityStandardBadges } from '@/components/indicare/workflows/quality-standard-badges'
 import { RegulatoryWorkflowPanel } from '@/components/indicare/workflows/regulatory-workflow-panel'
 import { getChronologyEventById, getChronologyEvents } from '@/lib/chronology/selectors'
@@ -16,9 +17,16 @@ export default async function ChronologyDetailPage({ params }: { params: Promise
 
   if (!event) {
     return (
-      <div className="space-y-6">
-        <PageHeader eyebrow="Chronology" title="Event not found" description="This chronology event is not in the current demo repository. Use the chronology workspace to select another event." action={<Link href="/chronology" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white">Open chronology</Link>} />
-      </div>
+      <FullScreenWorkspace
+        eyebrow="Chronology workspace"
+        title="Event not found"
+        description="This chronology event is not in the current demo repository. Use the chronology workspace to select another event."
+        backHref="/chronology"
+      >
+        <Card>
+          <Link href="/chronology" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white">Open chronology</Link>
+        </Card>
+      </FullScreenWorkspace>
     )
   }
 
@@ -31,13 +39,15 @@ export default async function ChronologyDetailPage({ params }: { params: Promise
   const workflow = event.eventType === 'reg44_finding' ? 'reg44' : event.eventType === 'reg45_evidence' ? 'reg45' : event.eventType === 'lac_review' ? 'lac_review' : event.eventType === 'incident' || event.eventType === 'missing_episode' ? 'incident' : event.eventType === 'safeguarding' ? 'safeguarding' : 'daily_recording'
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Chronology event"
-        title={event.title}
-        description={`${new Date(event.dateTime).toLocaleString('en-GB')} · ${event.category} · ${event.summary}`}
-        action={<Link href="/assistant" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Ask IndiCare about this</Link>}
-      />
+    <FullScreenWorkspace
+      eyebrow="Chronology event workspace"
+      title={event.title}
+      description={`${new Date(event.dateTime).toLocaleString('en-GB')} · ${event.category} · ${event.summary}`}
+      backHref="/chronology"
+    >
+      <div className="mb-5 flex flex-wrap gap-2">
+        <Link href="/assistant" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Ask IndiCare about this</Link>
+      </div>
       <Card>
         <SectionHeader eyebrow="Workflow" title="Next operational steps" description="Use the linked workspaces below for review, evidence and action follow-up." />
         <RegulatoryWorkflowPanel workflow={workflow} />
@@ -99,6 +109,6 @@ export default async function ChronologyDetailPage({ params }: { params: Promise
           ))}
         </div>
       </Card>
-    </div>
+    </FullScreenWorkspace>
   )
 }

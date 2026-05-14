@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { ClipboardPlus, Mic, Plus, Sparkles, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ClipboardPlus, Mic, Plus, X } from 'lucide-react'
 
-import { quickActionOrder, recordingWorkflows } from '@/lib/child-journey/workflows'
+import { childOperationalQuickActions, childQuickActionHref } from '@/lib/child-journey/workflows'
 
 export function QuickActionButton({
   selectedYoungPersonId,
@@ -16,22 +16,33 @@ export function QuickActionButton({
   const [open, setOpen] = useState(false)
   const childName = selectedYoungPersonName || 'this young person'
 
+  useEffect(() => {
+    if (!open) return
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-28 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-4 text-sm font-black text-white shadow-2xl shadow-blue-950/25 transition hover:-translate-y-0.5 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 lg:bottom-8 lg:right-24"
+        className="fixed bottom-28 left-5 z-40 hidden items-center gap-2 rounded-full bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-2xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 md:inline-flex lg:bottom-8"
         aria-haspopup="dialog"
+        aria-expanded={open}
       >
         <Plus className="h-5 w-5" aria-hidden />
         Quick action
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-[70] bg-slate-950/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Quick action sheet">
-          <div className="ml-auto flex h-full max-w-xl flex-col overflow-hidden rounded-[32px] border border-white/80 bg-white shadow-2xl shadow-slate-950/20">
-            <div className="border-b border-slate-100 p-5">
+        <div className="fixed inset-0 z-[70] bg-slate-950/45 p-3 backdrop-blur-md md:p-6" role="dialog" aria-modal="true" aria-label="Quick action workspace">
+          <button type="button" className="absolute inset-0 cursor-default" aria-label="Close quick actions" onClick={() => setOpen(false)} />
+          <div className="relative mx-auto flex h-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-white/80 bg-white shadow-2xl shadow-slate-950/20">
+            <div className="border-b border-slate-100 p-5 md:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Quick action</p>
@@ -57,33 +68,23 @@ export function QuickActionButton({
 
             <div className="min-h-0 flex-1 overflow-auto p-5">
               {selectedYoungPersonId ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {quickActionOrder.map((id) => {
-                    const workflow = recordingWorkflows[id]
-                    const mode = id === 'documents' ? 'upload' : 'new'
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {childOperationalQuickActions.map((action) => {
+                    const href = childQuickActionHref(selectedYoungPersonId, action)
+                    const Icon = action.id === 'dictate-orb' ? Mic : ClipboardPlus
                     return (
                       <Link
-                        key={id}
-                        href={`/young-people/${encodeURIComponent(selectedYoungPersonId)}/${workflow.routeSegment}/${mode}`}
+                        key={action.id}
+                        href={href}
                         onClick={() => setOpen(false)}
                         className="rounded-[24px] border border-slate-100 bg-slate-50 p-4 text-left transition hover:border-blue-100 hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-blue-100"
                       >
-                        <ClipboardPlus className="h-5 w-5 text-blue-700" aria-hidden />
-                        <span className="mt-3 block text-base font-black text-slate-950">{workflow.quickActionLabel}</span>
-                        <span className="mt-1 block text-xs leading-5 text-slate-500">{workflow.tone}</span>
+                        <Icon className="h-5 w-5 text-blue-700" aria-hidden />
+                        <span className="mt-3 block text-base font-black text-slate-950">{action.label}</span>
+                        <span className="mt-1 block text-xs leading-5 text-slate-500">{action.description}</span>
                       </Link>
                     )
                   })}
-                  <Link href={`/assistant?youngPersonId=${encodeURIComponent(selectedYoungPersonId)}`} onClick={() => setOpen(false)} className="rounded-[24px] border border-purple-100 bg-purple-50 p-4 text-left transition hover:bg-purple-100">
-                    <Sparkles className="h-5 w-5 text-purple-700" aria-hidden />
-                    <span className="mt-3 block text-base font-black text-purple-950">Ask Orb</span>
-                    <span className="mt-1 block text-xs leading-5 text-purple-700">Open assistant with this child in context.</span>
-                  </Link>
-                  <Link href={`/assistant?mode=dictate&youngPersonId=${encodeURIComponent(selectedYoungPersonId)}`} onClick={() => setOpen(false)} className="rounded-[24px] border border-emerald-100 bg-emerald-50 p-4 text-left transition hover:bg-emerald-100">
-                    <Mic className="h-5 w-5 text-emerald-700" aria-hidden />
-                    <span className="mt-3 block text-base font-black text-emerald-950">Dictate with Orb</span>
-                    <span className="mt-1 block text-xs leading-5 text-emerald-700">Orb can draft wording; staff review before saving.</span>
-                  </Link>
                 </div>
               ) : (
                 <div className="rounded-[28px] border border-blue-100 bg-blue-50 p-6">

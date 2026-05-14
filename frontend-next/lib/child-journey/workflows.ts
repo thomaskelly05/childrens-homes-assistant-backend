@@ -394,6 +394,66 @@ export const quickActionOrder: RecordingWorkflowId[] = [
   'documents'
 ]
 
+export type ChildQuickActionItem =
+  | {
+      id: RecordingWorkflowId
+      kind: 'workflow'
+      label: string
+      description: string
+      workflowId: RecordingWorkflowId
+    }
+  | {
+      id: 'add-action' | 'dictate-orb'
+      kind: 'route'
+      label: string
+      description: string
+      href: (childId: string) => string
+    }
+
+const childOperationalWorkflowIds: RecordingWorkflowId[] = [
+  'daily-note',
+  'incidents',
+  'safeguarding',
+  'missing',
+  'keywork',
+  'health',
+  'family-contact'
+]
+
+export const childOperationalQuickActions: ChildQuickActionItem[] = [
+  ...childOperationalWorkflowIds.map((workflowId): ChildQuickActionItem => {
+    const workflow = recordingWorkflows[workflowId]
+    return {
+      id: workflowId,
+      kind: 'workflow' as const,
+      label: workflow.quickActionLabel,
+      description: workflow.tone,
+      workflowId: workflow.id
+    }
+  }),
+  {
+    id: 'add-action',
+    kind: 'route' as const,
+    label: 'Add Action',
+    description: 'Create a clear next step linked to this child.',
+    href: (childId: string) => `/actions?young_person_id=${encodeURIComponent(childId)}&intent=new`
+  },
+  {
+    id: 'dictate-orb',
+    kind: 'route' as const,
+    label: 'Dictate with Orb',
+    description: 'Open Orb with this child already in context.',
+    href: (childId: string) => `/assistant?mode=dictate&youngPersonId=${encodeURIComponent(childId)}`
+  }
+]
+
+export function childQuickActionHref(childId: string, action: ChildQuickActionItem) {
+  if (action.kind === 'route') return action.href(childId)
+  const workflow = recordingWorkflows[action.workflowId]
+  const mode = workflow.id === 'documents' ? 'upload' : 'new'
+  return `/young-people/${encodeURIComponent(childId)}/${workflow.routeSegment}/${mode}`
+}
+
 const suggestionRules: Array<{
   test: RegExp
   suggestion: SuggestedLink

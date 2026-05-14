@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight, CalendarDays, CheckCircle2, ClipboardPlus, FileText, Sparkles } from 'lucide-react'
+import { ArrowRight, ClipboardPlus, FileText, Sparkles } from 'lucide-react'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { getChildJourneyData, todayLong } from '@/lib/child-journey/data'
-import { quickActionOrder, recordingWorkflows } from '@/lib/child-journey/workflows'
+import { childOperationalQuickActions, childQuickActionHref } from '@/lib/child-journey/workflows'
+import { getEntityRoute } from '@/lib/navigation/entity-resolver'
 import type { OsApiResult } from '@/lib/os-api/types'
 
 function ActionLink({
@@ -30,7 +31,7 @@ function ActionLink({
 function savedRecordHref(childId: string, routeType?: string, recordId?: string) {
   if (!recordId) return undefined
   if (routeType === 'family-contact') return `/young-people/${encodeURIComponent(childId)}/chronology?source=${encodeURIComponent(recordId)}`
-  return `/${routeType || 'chronology'}/${encodeURIComponent(recordId)}`
+  return getEntityRoute({ entity_type: routeType || 'chronology', entity_id: recordId, linked_child_id: childId })
 }
 
 export default async function ChildJourneyPage({
@@ -144,20 +145,47 @@ export default async function ChildJourneyPage({
                 {['Welfare', 'Sleep', 'Health', 'Education', 'Family time'].map((label) => <span key={label} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600">{label}</span>)}
               </div>
             </div>
-          </div>
-          <div className="mt-5 rounded-[24px] border border-slate-100 bg-white p-5">
-            <h3 className="text-lg font-black text-slate-950">Actions due today</h3>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
+          </Card>
+
+          <Card>
+            <SectionHeader eyebrow="2. What changed" title="Recent chronology" description="Five high-signal events. Open the full chronology for deeper review." />
+            <div className="space-y-3">
+              {data.timeline.slice(0, 5).map((event) => (
+                <Link key={event.id} href={event.href} className="group block rounded-[24px] border border-slate-100 bg-slate-50 p-5 transition hover:border-blue-100 hover:bg-white hover:shadow-lg">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">{event.category}</span>
+                    <RiskBadge value={(event.severity || 'medium') as any} />
+                    <span className="text-xs font-bold text-slate-400">{event.occurredAt}</span>
+                  </div>
+                  <div className="mt-3 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-950">{event.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{event.summary}</p>
+                    </div>
+                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" aria-hidden />
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light">Open full chronology</ActionLink>
+            </div>
+          </Card>
+        </div>
+
+        <aside className="space-y-6 xl:sticky xl:top-28 xl:self-start">
+          <Card>
+            <SectionHeader eyebrow="3. Needs attention" title="Next actions" description="One action list, no duplicate review/complete buttons." />
+            <div className="space-y-3">
               {actionsDueToday.length ? actionsDueToday.map((action) => (
-                <Link key={action.id} href={`/actions/${encodeURIComponent(action.id)}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
+                <Link key={action.id} href={`/actions/${encodeURIComponent(action.id)}`} className="block rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
                   <StatusBadge value={action.status} />
                   <p className="mt-2 text-sm font-black text-slate-950">{action.title}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">{action.description || 'Open action for review or completion.'}</p>
                 </Link>
-              )) : <p className="text-sm text-slate-500">No open actions due for this child.</p>}
+              )) : <p className="text-sm leading-6 text-slate-500">No open actions due for this child.</p>}
             </div>
-          </div>
-        </Card>
+          </Card>
 
         <Card>
           <SectionHeader eyebrow="Recording" title="What do you need to record?" description="Every button opens a real child-linked workflow." />
@@ -169,8 +197,8 @@ export default async function ChildJourneyPage({
                 <Link key={workflow.id} href={`/young-people/${encodeURIComponent(id)}/${workflow.routeSegment}/${mode}`} data-testid={`workflow-link-${workflow.id}`} className="group rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-black text-slate-950">{workflow.quickActionLabel}</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">{workflow.tone}</p>
+                      <p className="text-sm font-black text-slate-950">{action.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{action.description}</p>
                     </div>
                     <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" aria-hidden />
                   </div>
@@ -203,11 +231,10 @@ export default async function ChildJourneyPage({
           </div>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <SectionHeader eyebrow="Plans and links" title="Plans" description="Key plans are one click away from the child journey." />
-            <div className="grid gap-2">
-              {plans.map(([label, href]) => (
+          <details className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
+            <summary className="cursor-pointer text-sm font-black text-slate-950">Plans, evidence and reports</summary>
+            <div className="mt-4 grid gap-2">
+              {plans.slice(0, 5).map(([label, href]) => (
                 <Link key={label} href={href} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-blue-50 hover:text-blue-800">
                   {label}
                 </Link>
