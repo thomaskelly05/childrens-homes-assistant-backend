@@ -422,15 +422,15 @@ const childOperationalWorkflowIds: RecordingWorkflowId[] = [
 
 export const childOperationalQuickActions: ChildQuickActionItem[] = [
   ...childOperationalWorkflowIds.map((workflowId): ChildQuickActionItem => {
-  const workflow = recordingWorkflows[workflowId as RecordingWorkflowId]
-  return {
-    id: workflowId,
-    kind: 'workflow' as const,
-    label: workflow.quickActionLabel,
-    description: workflow.tone,
-    workflowId: workflow.id
-  }
-}),
+    const workflow = recordingWorkflows[workflowId]
+    return {
+      id: workflowId,
+      kind: 'workflow' as const,
+      label: workflow.quickActionLabel,
+      description: workflow.tone,
+      workflowId: workflow.id
+    }
+  }),
   {
     id: 'add-action',
     kind: 'route' as const,
