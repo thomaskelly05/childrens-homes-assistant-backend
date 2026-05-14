@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from schemas.data_intelligence import CacheEntry
@@ -45,7 +45,7 @@ CACHE_EVENTS: dict[str, set[str]] = {
 
 
 def _now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def _normalise_scope(scope: dict[str, Any]) -> dict[str, Any]:
