@@ -1,0 +1,80 @@
+from __future__ import annotations
+
+from typing import Any
+
+from services.document_review_scheduler import document_review_scheduler
+from services.home_document_catalogue_service import home_document_catalogue_service
+from services.risk_intelligence_language import SAFE_DECISION_SUPPORT_NOTICE, evidence_gap, review_prompt, safe_payload
+
+
+class OfstedDocumentReadinessService:
+    """Inspection readiness intelligence for required home, child and staff documents."""
+
+    def readiness(
+        self,
+        *,
+        home_id: int | str | None = None,
+        existing_documents: list[dict[str, Any]] | None = None,
+        child_ids: list[int | str] | None = None,
+        staff_ids: list[int | str] | None = None,
+    ) -> dict[str, Any]:
+        catalogue = home_document_catalogue_service.catalogue(home_id=home_id, child_ids=child_ids, staff_ids=staff_ids)
+        existing_by_type = {str(doc.get("document_type") or doc.get("title") or "").lower(): doc for doc in existing_documents or []}
+        checked = [self._merge(item, existing_by_type) for item in catalogue["items"]]
+        schedule = document_review_scheduler.schedule(documents=checked)
+        missing = [item for item in checked if item["missing_incomplete_status"] == "missing"]
+        weak = [item for item in checked if item["evidence_sufficiency"] in {"weak", "limited"}]
+        oversight_missing = [item for item in checked if item["qa_state"] == "missing" or item["signoff_state"] == "missing"]
+        payload = {
+            "summary": "records indicate document readiness intelligence is available for manager review.",
+            "home_id": home_id,
+            "catalogue_counts": catalogue["counts"],
+            "documents": checked,
+            "review_schedule": schedule,
+            "inspection_readiness_intelligence": [
+                *[self._message(item, "This document appears overdue.") for item in schedule if item.get("review_required")],
+                *[self._message(item, "Evidence appears weak.") for item in weak[:10]],
+                *[self._message(item, "Child voice evidence is limited.") for item in checked if "Child Voice" in str(item.get("document_type"))],
+                *[self._message(item, "Leadership oversight evidence is missing.") for item in oversight_missing[:10]],
+            ],
+            "evidence_gaps": [
+                evidence_gap("missing-documents", f"no evidence found: {len(missing)} required document entries appear missing."),
+                evidence_gap("weak-evidence", f"records indicate {len(weak)} document entries have limited evidence sufficiency."),
+            ],
+            "manager_review_prompts": [
+                review_prompt("document-readiness", "review recommended: sample missing, weak and oversight-missing document evidence."),
+                review_prompt("reg44-reg45-link", "consider checking Reg 44 and Reg 45 evidence links against the catalogue."),
+            ],
+            "decision_support_notice": SAFE_DECISION_SUPPORT_NOTICE,
+        }
+        return safe_payload(payload)
+
+    def _merge(self, item: dict[str, Any], existing_by_type: dict[str, dict[str, Any]]) -> dict[str, Any]:
+        existing = existing_by_type.get(str(item.get("document_type", "")).lower())
+        if not existing:
+            return {**item, "missing_incomplete_status": "missing", "evidence_sufficiency": "weak", "qa_state": "missing", "signoff_state": "missing"}
+        return {
+            **item,
+            "last_reviewed": existing.get("last_reviewed") or existing.get("lastReviewed") or existing.get("reviewDate"),
+            "next_review": existing.get("next_review") or existing.get("nextReview") or existing.get("reviewDate"),
+            "missing_incomplete_status": existing.get("missing_incomplete_status") or existing.get("status") or "present",
+            "evidence_sufficiency": existing.get("evidence_sufficiency") or existing.get("evidenceSufficiency") or "limited",
+            "qa_state": existing.get("qa_state") or existing.get("qaState") or "not_checked",
+            "signoff_state": existing.get("signoff_state") or existing.get("signoffState") or "not_checked",
+            "linked_chronology": existing.get("linked_chronology") or [],
+            "linked_actions": existing.get("linked_actions") or [],
+            "linked_incidents": existing.get("linked_incidents") or [],
+            "linked_safeguarding": existing.get("linked_safeguarding") or [],
+            "linked_reports": existing.get("linked_reports") or [],
+        }
+
+    def _message(self, item: dict[str, Any], message: str) -> dict[str, Any]:
+        return {
+            "document_type": item.get("document_type"),
+            "summary": message,
+            "language": "review recommended",
+            "evidence_strength": item.get("evidence_sufficiency", "limited"),
+        }
+
+
+ofsted_document_readiness_service = OfstedDocumentReadinessService()
