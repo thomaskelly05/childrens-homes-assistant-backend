@@ -21,12 +21,13 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
     { label: 'Exploitation support', href: `/young-people/${id}/exploitation-risk` },
     { label: 'Daily Logs', href: '#daily-logs' },
     { label: 'Incidents', href: '#incidents' },
-    { label: 'Risk', href: '#risk' },
+    { label: 'Risk', href: `/young-people/${id}/risk-assessments` },
     { label: 'Safeguarding', href: '#safeguarding' },
     { label: 'Medication', href: '#medication' },
     { label: 'Keywork', href: '#keywork' },
     { label: 'Appointments', href: '#appointments' },
-    { label: 'Documents', href: '#documents' },
+    { label: 'Plans', href: `/young-people/${id}/plans` },
+    { label: 'Documents', href: `/young-people/${id}/documents` },
     { label: 'Reports', href: '#reports' },
     { label: 'Audit', href: '#audit' }
   ]

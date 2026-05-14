@@ -20,15 +20,15 @@ export default async function DocumentsPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Documents"
-        title="Document library and regulatory upload foundation"
-        description="Home documents feed chronology, evidence gaps, action plans and draft reports from the live schema where available."
-        action={<Link href="/documents/regulatory" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Regulatory documents</Link>}
+        title="Document library and operational editor"
+        description="Documents can be uploaded, created from the therapeutic registry, edited, autosaved, reviewed, signed and exported where live support exists."
+        action={<div className="flex flex-wrap gap-2"><Link href="/documents/new" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">New document</Link><Link href="/documents/templates" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">Templates</Link><Link href="/documents/regulatory" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">Regulatory</Link></div>}
       />
       <LiveDataStatus result={documentsResult} />
       <section className="grid gap-4 md:grid-cols-3">
         <StatCard label="Documents" value={documents.length} />
         <StatCard label="Regulatory documents" value={regulatoryDocuments.length} href="/documents/regulatory" />
-        <StatCard label="Review/action plans" value={reviewDocuments.length} />
+        <StatCard label="Review/action plans" value={reviewDocuments.length} href="/documents/home" />
       </section>
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <Card>

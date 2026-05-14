@@ -77,8 +77,8 @@ def submit_document(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     data = payload or {}
-    data["status"] = "submitted_for_review"
-    data.setdefault("version_reason", "submitted_for_review")
+    data["status"] = "submitted"
+    data.setdefault("version_reason", "submitted")
     return service.update_document(document_id=document_id, payload=data, current_user=current_user)
 
 
@@ -89,7 +89,7 @@ def review_document(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     action = payload.get("action") or payload.get("status") or "approved"
-    status = {"approve": "approved", "request_changes": "changes_requested", "archive": "archived"}.get(action, action)
+    status = {"approve": "approved", "request_changes": "amendment_requested", "archive": "archived", "start_review": "under_review", "escalate": "escalated"}.get(action, action)
     payload["status"] = status
     payload.setdefault("version_reason", status)
     result = service.update_document(document_id=document_id, payload=payload, current_user=current_user)

@@ -6,8 +6,9 @@ from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
 from services.document_security_service import scope_matches
+from services.document_template_service import document_template_service
 
-DOCUMENT_STATUSES = {"draft", "ai_improved", "submitted_for_review", "changes_requested", "approved", "archived", "superseded"}
+DOCUMENT_STATUSES = {"draft", "autosaved", "submitted", "under_review", "amendment_requested", "approved", "escalated", "archived", "ai_improved", "submitted_for_review", "changes_requested", "superseded"}
 
 CORE_DOCUMENT_GROUPS = {
     "Care and placement": ["Placement Plan", "Care Plan"],
@@ -145,6 +146,9 @@ class ChildDocumentsService:
             conn = get_db_connection()
             self.ensure_schema(conn)
             doc_type = payload.get("document_type") or payload.get("name") or "Child Document"
+            young_person_id = self._safe_int(payload.get("young_person_id"))
+            if young_person_id is None:
+                return {"ok": False, "error": "Child documents require an active child context"}
             group = payload.get("document_group") or self._group_for(doc_type)
             auto_title = self._auto_title(doc_type, payload.get("child_name"), payload.get("document_date"))
             title = payload.get("title") or payload.get("editable_title") or auto_title
@@ -164,7 +168,7 @@ class ChildDocumentsService:
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb,%s,COALESCE(%s::time, CURRENT_TIME),%s,%s)
                     RETURNING *
                     """,
-                    (self._safe_int(payload.get("young_person_id")), requested_scope["home_id"], requested_scope["provider_id"], doc_type, group, title, auto_title, payload.get("editable_title") or title, status, json.dumps(sections), json.dumps(metadata), payload.get("document_date") or datetime.utcnow().date().isoformat(), payload.get("created_time"), self._current_user_id(current_user), self._current_user_id(current_user)),
+                    (young_person_id, requested_scope["home_id"], requested_scope["provider_id"], doc_type, group, title, auto_title, payload.get("editable_title") or title, status, json.dumps(sections), json.dumps(metadata), payload.get("document_date") or datetime.utcnow().date().isoformat(), payload.get("created_time"), self._current_user_id(current_user), self._current_user_id(current_user)),
                 )
                 row = dict(cur.fetchone())
                 self._insert_version(cur, row["id"], row, "created", current_user)
@@ -328,6 +332,11 @@ class ChildDocumentsService:
         return f"{who} - {doc_type} - {date}"
 
     def _blank_sections(self, doc_type: str) -> dict[str, str]:
+        template_id = f"child_{doc_type.lower().replace('/', ' ').replace('&', 'and').replace('-', ' ').replace(' ', '_')}"
+        try:
+            return document_template_service.blank_sections(template_id)
+        except Exception:
+            pass
         return {section: "" for section in DEFAULT_SECTIONS.get(doc_type, ["Overview", "Needs", "Risks", "Actions", "Review notes"])}
 
     def _group_for(self, doc_type: str) -> str:
