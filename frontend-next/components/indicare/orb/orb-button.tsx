@@ -49,7 +49,7 @@ export function OrbButton({
   const transcript = snapshot.transcript.filter((entry) => entry.role !== 'system')
   const latestAssistant = [...transcript].reverse().find((entry) => entry.role === 'assistant')
   const latestUser = [...transcript].reverse().find((entry) => entry.role === 'user')
-  const orbStatus = snapshot.error ? 'Orb voice is using fallback' : orbStateLabel(snapshot.state)
+  const orbStatus = snapshot.error ? 'Fallback active' : orbStateLabel(snapshot.state)
 
   async function sendTypedFallback() {
     const message = typedText.trim()
@@ -70,7 +70,7 @@ export function OrbButton({
             <OrbVisual state={snapshot.state} size="small" />
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">Orb</p>
-              <p className="truncate text-sm font-bold">{orbStatus}</p>
+              <p className="text-sm font-bold leading-5">{orbStatus}</p>
               <p className="truncate text-xs text-slate-300">
                 {snapshot.realtimeAvailable ? 'Realtime voice active' : 'Voice fallback ready'}
               </p>
