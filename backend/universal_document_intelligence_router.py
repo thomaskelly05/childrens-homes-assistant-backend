@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from db.connection import get_db_connection, release_db_connection
 from services.child_documents_service import ChildDocumentsService
 from services.document_ai_service import review_document
+from services.document_intelligence_service import document_intelligence_service
 
 router = APIRouter(prefix='/api/document-intelligence', tags=['Universal Document Intelligence'])
 child_documents_service = ChildDocumentsService()
@@ -304,6 +305,12 @@ async def analyse_document(payload: AnalyseDocumentRequest, request: Request):
             dates = parse_dates(source_text)
             summaries = make_summary(source_text, category)
             existing_review = review_document(document_type=category, payload={'file_name': file_name, 'source_text': source_text, **{k: v for k, v in dates.items() if v}}, actions=['classify', 'route', 'expiry_reminders'])
+            quality_review = document_intelligence_service.analyse_quality(
+                text=source_text,
+                document_type=category,
+                evidence_links=payload.metadata.get('evidence_links') if isinstance(payload.metadata.get('evidence_links'), list) else [],
+            )
+            existing_review = {**existing_review, 'care_native_quality': quality_review, 'drafting_guidance': document_intelligence_service.drafting_guidance(document_type=category)}
             requires_review = category == 'other' or not source_text.strip()
             review_reason = 'Document could not be confidently classified or has no extracted text.' if requires_review else None
             child_document = create_child_document_from_intelligence(payload, category, detected_title, dates, summaries, existing_review, actor_id) if payload.create_child_document and payload.route_now and not requires_review else None
@@ -320,7 +327,7 @@ async def analyse_document(payload: AnalyseDocumentRequest, request: Request):
                 ) VALUES (%s::uuid,%s::uuid,%s,%s,%s,%s,%s,%s,%s,%s,'classified',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb)
                 RETURNING *
                 ''',
-                (payload.attachment_id, payload.source_record_id, payload.provider_id, payload.home_id, payload.young_person_id, payload.staff_id, payload.adult_id, file_name, mime_type, source_text, category, detected_title, dates['document_date'], dates['effective_date'], dates['expiry_date'], dates['review_date'], dates['next_action_date'], summaries['summary'], summaries['key_information'], None, None, summaries['safeguarding_summary'], summaries['education_summary'], summaries['health_summary'], summaries['placement_summary'], summaries['compliance_summary'], 0.70 if not requires_review else 0.35, requires_review, review_reason, actor_id, {**payload.metadata, 'existing_document_ai_review': existing_review, 'route_target': route_target, 'child_document_id': child_document_id}),
+                (payload.attachment_id, payload.source_record_id, payload.provider_id, payload.home_id, payload.young_person_id, payload.staff_id, payload.adult_id, file_name, mime_type, source_text, category, detected_title, dates['document_date'], dates['effective_date'], dates['expiry_date'], dates['review_date'], dates['next_action_date'], summaries['summary'], summaries['key_information'], None, None, summaries['safeguarding_summary'], summaries['education_summary'], summaries['health_summary'], summaries['placement_summary'], summaries['compliance_summary'], quality_review['score'] / 100 if not requires_review else min(0.35, quality_review['score'] / 100), requires_review or quality_review['status'] == 'review_recommended', review_reason, actor_id, {**payload.metadata, 'existing_document_ai_review': existing_review, 'care_native_quality': quality_review, 'route_target': route_target, 'child_document_id': child_document_id}),
             )
             job = rows_to_dicts(cursor, cursor.fetchall())[0]
             route_id = create_route(cursor, job['id'], category, route_target, detected_title, summaries['summary'], existing_review, str(child_document_id) if child_document_id else None)
@@ -329,9 +336,9 @@ async def analyse_document(payload: AnalyseDocumentRequest, request: Request):
             cursor.execute('UPDATE public.document_intelligence_jobs SET status = %s, routed_at = CASE WHEN %s THEN now() ELSE routed_at END WHERE id::text = %s', (status, payload.route_now, job['id']))
             if payload.route_now:
                 cursor.execute('UPDATE public.document_intelligence_routes SET routed = true, routed_by = %s, routed_at = now() WHERE id::text = %s', (actor_id, route_id))
-            cursor.execute('INSERT INTO public.document_intelligence_audit_events (job_id, route_id, event_type, event_summary, actor_id, after_snapshot) VALUES (%s::uuid,%s::uuid,%s,%s,%s,%s::jsonb)', (job['id'], route_id, 'document_analysed', 'Document analysed, classified and routed', actor_id, {'category': category, 'route_target': route_target, 'reminders': reminders, 'child_document_id': child_document_id}))
+            cursor.execute('INSERT INTO public.document_intelligence_audit_events (job_id, route_id, event_type, event_summary, actor_id, after_snapshot) VALUES (%s::uuid,%s::uuid,%s,%s,%s,%s::jsonb)', (job['id'], route_id, 'document_analysed', 'Document analysed, classified and routed', actor_id, {'category': category, 'route_target': route_target, 'reminders': reminders, 'child_document_id': child_document_id, 'care_native_quality': quality_review}))
             conn.commit()
-            return {'job': job, 'route_id': route_id, 'reminders': reminders, 'review': existing_review, 'child_document': child_document, 'status': status}
+            return {'job': job, 'route_id': route_id, 'reminders': reminders, 'review': existing_review, 'quality': quality_review, 'child_document': child_document, 'status': status}
     except HTTPException:
         if conn is not None:
             conn.rollback()

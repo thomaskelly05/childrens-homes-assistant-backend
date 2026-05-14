@@ -4,10 +4,12 @@ import { ArrowRight, CalendarDays, CheckCircle2, ClipboardPlus, FileText, Sparkl
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
+import { WorkflowSaveIndicator } from '@/components/system-feedback/workflow-save-indicator'
 import { getChildJourneyData, todayLong } from '@/lib/child-journey/data'
 import { childOperationalQuickActions, childQuickActionHref } from '@/lib/child-journey/workflows'
 import { getEntityRoute } from '@/lib/navigation/entity-resolver'
 import type { OsApiResult } from '@/lib/os-api/types'
+import { saveStateFromStatus } from '@/lib/workflows/reliability'
 
 function ActionLink({
   href,
@@ -54,6 +56,7 @@ export default async function ChildJourneyPage({
   const actionsDueToday = data.actions.filter((action) => ['open', 'overdue', 'in_progress'].includes(action.status)).slice(0, 4)
   const attentionLevel = data.timeline.some((event) => ['high', 'critical'].includes(event.severity)) ? 'Attention needed' : 'Stable today'
   const welfareSummary = lastDailyNote?.summary || data.timeline[0]?.summary || 'No daily note has been recorded yet today.'
+  const savedIndicator = query.saved ? saveStateFromStatus(query.status || 'saved') : null
 
   const plans = [
     ['Care plan', `/documents?young_person_id=${encodeURIComponent(id)}&type=care_plan`],
@@ -84,9 +87,10 @@ export default async function ChildJourneyPage({
       </nav>
 
       {query.saved ? (
-        <div data-testid="save-state-message" className={`rounded-[28px] border p-5 ${query.status === 'draft' ? 'border-amber-100 bg-amber-50 text-amber-900' : 'border-emerald-100 bg-emerald-50 text-emerald-900'}`}>
+        <div data-testid="save-state-message" className={`rounded-[28px] p-5 shadow-[0_16px_44px_rgba(15,23,42,0.06)] ring-1 ${query.status === 'draft' ? 'bg-amber-50 text-amber-900 ring-amber-100' : 'bg-emerald-50 text-emerald-900 ring-emerald-100'}`}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
+              {savedIndicator ? <WorkflowSaveIndicator snapshot={savedIndicator} compact /> : null}
               <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${query.status === 'draft' ? 'text-amber-700' : 'text-emerald-700'}`}>{query.status === 'draft' ? 'Draft saved locally' : 'Saved'}</p>
               <h2 className="mt-1 text-xl font-black">{query.status === 'draft' ? "Draft saved locally. It has not yet been added to the child's record." : `Record linked to ${childName}'s journey`}</h2>
               <p className={`mt-2 text-sm leading-6 ${query.status === 'draft' ? 'text-amber-800' : 'text-emerald-800'}`}>{query.status === 'draft' ? 'Please return to this workflow and save again when the live backend is available.' : 'The timeline and actions panel will show the record from the live backend when the linked projection is available.'}</p>
@@ -102,7 +106,7 @@ export default async function ChildJourneyPage({
 
       <LiveDataStatus result={selectorResult as OsApiResult<any>} />
 
-      <header className="rounded-[36px] border border-white/80 bg-white p-7 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <header className="rounded-[40px] bg-white/90 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] ring-1 ring-white/80 backdrop-blur">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Child journey</p>
@@ -127,6 +131,35 @@ export default async function ChildJourneyPage({
           </div>
         </div>
       </header>
+
+      <section className="rounded-[36px] bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-7 text-white shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-200">Story mode</p>
+            <h2 className="mt-3 text-4xl font-black tracking-[-0.07em]">Continuing {childName}&apos;s story</h2>
+            <p className="mt-4 max-w-3xl text-base leading-8 text-slate-200">{data.story.storySoFar}</p>
+            <div className="mt-5 rounded-[28px] bg-white/8 p-5 ring-1 ring-white/10">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">Today mattered because</p>
+              <p className="mt-2 text-sm leading-7 text-slate-100">{data.story.todayMatteredBecause}</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="rounded-[28px] bg-white/8 p-5 ring-1 ring-white/10">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">What changed?</p>
+              <p className="mt-2 text-sm leading-7 text-slate-100">{data.story.whatChanged}</p>
+            </div>
+            <div className="rounded-[28px] bg-white/8 p-5 ring-1 ring-white/10">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">Progress and relationships</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {[...data.story.progressHighlights, ...data.story.relationshipMarkers].slice(0, 5).map((label) => (
+                  <span key={label} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-100">{label}</span>
+                ))}
+                {!data.story.progressHighlights.length && !data.story.relationshipMarkers.length ? <span className="text-sm text-slate-300">No visible markers yet.</span> : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="space-y-6">
@@ -261,8 +294,7 @@ export default async function ChildJourneyPage({
                   <h3 className="mt-2 text-sm font-black text-slate-950">{action.title}</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-500">{action.description}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Link href={`/actions/${encodeURIComponent(action.id)}`} data-testid="safeguarding-follow-up-action" className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-white">Review</Link>
-                    <Link href={`/actions/${encodeURIComponent(action.id)}`} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-slate-700">Complete</Link>
+                    <Link href={`/actions/${encodeURIComponent(action.id)}`} data-testid="safeguarding-follow-up-action" className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-white">Open action</Link>
                   </div>
                 </div>
               ))}

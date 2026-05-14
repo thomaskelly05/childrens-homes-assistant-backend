@@ -55,3 +55,46 @@ textarea:focus-visible {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(0.985); opacity: 0.78; }
+  50% { transform: scale(1.025); opacity: 1; }
+}
+
+@keyframes orb-shimmer {
+  0% { transform: translateX(-42%) rotate(18deg); opacity: 0; }
+  35% { opacity: 0.55; }
+  100% { transform: translateX(62%) rotate(18deg); opacity: 0; }
+}
+
+@keyframes orb-wave {
+  0%, 100% { transform: translateY(9%) scaleX(0.88); opacity: 0.24; }
+  50% { transform: translateY(-9%) scaleX(1.04); opacity: 0.48; }
+}
+
+@keyframes orb-cadence {
+  0%, 100% { opacity: 0.28; transform: scale(0.96); }
+  45% { opacity: 0.62; transform: scale(1.04); }
+}
+
+.orb-motion-breathing {
+  animation: orb-breathe 5.8s ease-in-out infinite;
+}
+
+.orb-motion-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  width: 56%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  animation: orb-shimmer 2.4s ease-in-out infinite;
+}
+
+.orb-motion-wave {
+  animation: orb-wave 2.8s ease-in-out infinite;
+}
+
+.orb-motion-cadence {
+  animation: orb-cadence 1.35s ease-in-out infinite;
+}

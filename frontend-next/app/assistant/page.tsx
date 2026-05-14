@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { FileUp, Mic, Paperclip, Send } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Mic, Send } from 'lucide-react'
 
 import { StandaloneAssistantShell, StandaloneOrbVisual } from '@/lib/standalone-assistant/assistant-shell'
 import { assistantBrains, assistantPrompts } from '@/lib/standalone-assistant/config'
@@ -18,6 +18,19 @@ export default function AssistantPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [voiceOpen, setVoiceOpen] = useState(false)
 
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('indicare.standalone-assistant.history.v1')
+      if (saved) setMessages(JSON.parse(saved) as ChatMessage[])
+    } catch {
+      setMessages([])
+    }
+  }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem('indicare.standalone-assistant.history.v1', JSON.stringify(messages.slice(-40)))
+  }, [messages])
+
   function sendMessage(text = input) {
     const value = text.trim()
     if (!value) return
@@ -27,18 +40,18 @@ export default function AssistantPage() {
       { role: 'user', content: value },
       {
         role: 'assistant',
-        content: 'Standalone assistant foundation active. I can answer general and static sector questions, draft documents, and work with uploaded or pasted material. I do not have access to live IndiCare OS child, home, chronology, action, evidence or staff records.'
+        content: 'I can help shape this into clearer care language. I’ll keep it grounded in what you paste here and flag anything that needs manager review.'
       }
     ])
   }
 
   return (
     <StandaloneAssistantShell>
-      <div className="grid min-h-[calc(100vh-11rem)] gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="flex min-h-[620px] flex-col rounded-[34px] border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#11131a]">
-          <div className="border-b border-slate-200 p-4 dark:border-white/10">
+      <div className="grid min-h-[calc(100vh-11rem)] gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <section className="flex min-h-[620px] flex-col rounded-[38px] bg-white/92 shadow-[0_28px_80px_rgba(15,23,42,0.10)] ring-1 ring-white/80 backdrop-blur dark:bg-[#11131a] dark:ring-white/10">
+          <div className="p-5">
             <div className="flex flex-wrap items-center gap-3">
-              <label className="text-sm font-black text-slate-500 dark:text-slate-400" htmlFor="brain-selector">Brain</label>
+              <label className="text-sm font-black text-slate-500 dark:text-slate-400" htmlFor="brain-selector">Mode</label>
               <select
                 id="brain-selector"
                 value={brain}
@@ -49,12 +62,7 @@ export default function AssistantPage() {
                   <option key={item.id} value={item.id}>{item.name}</option>
                 ))}
               </select>
-              <span className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 dark:bg-cyan-300/10 dark:text-cyan-200">
-                Standalone memory
-              </span>
-              <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600 dark:bg-white/10 dark:text-slate-300">
-                Static sector knowledge only
-              </span>
+              <span className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 dark:bg-cyan-300/10 dark:text-cyan-200">Conversation saved locally</span>
             </div>
           </div>
 
@@ -78,9 +86,9 @@ export default function AssistantPage() {
               <div className="flex min-h-[470px] flex-col items-center justify-center text-center">
                 <StandaloneOrbVisual large />
                 <p className="mt-8 text-[11px] font-black uppercase tracking-[0.24em] text-cyan-600 dark:text-cyan-300">Separate AI workspace</p>
-                <h2 className="mt-3 max-w-3xl text-5xl font-black tracking-[-0.08em]">How can IndiCare Assistant help?</h2>
+                <h2 className="mt-3 max-w-3xl text-5xl font-black tracking-[-0.08em]">What are we working on?</h2>
                 <p className="mt-4 max-w-2xl text-base leading-7 text-slate-500 dark:text-slate-400">
-                  ChatGPT-style workspace for writing, sector guidance, projects, uploads, templates, apps and voice. No OS sidebar, no child journey panels, no live care-record context.
+                  Paste notes, ask for clearer wording, or draft a review-aware document. This space only uses the context you provide here.
                 </p>
                 <div className="mt-8 grid w-full max-w-3xl gap-3 md:grid-cols-2">
                   {assistantPrompts.map((prompt) => (
@@ -99,16 +107,13 @@ export default function AssistantPage() {
           </div>
 
           <form
-            className="border-t border-slate-200 p-4 dark:border-white/10"
+            className="p-4"
             onSubmit={(event) => {
               event.preventDefault()
               sendMessage()
             }}
           >
-            <div className="flex items-end gap-3 rounded-[30px] border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
-              <button type="button" className="rounded-2xl bg-white p-3 text-slate-500 shadow-sm dark:bg-white/10 dark:text-slate-300" aria-label="Upload file">
-                <Paperclip className="h-5 w-5" aria-hidden />
-              </button>
+            <div className="flex items-end gap-3 rounded-[30px] bg-slate-50 p-3 ring-1 ring-slate-200/80 dark:bg-white/5 dark:ring-white/10">
               <textarea
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
@@ -136,17 +141,7 @@ export default function AssistantPage() {
             </section>
           ) : null}
 
-          <section className="rounded-[30px] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Upload foundation</p>
-            <h3 className="mt-2 text-xl font-black tracking-[-0.04em]">Documents stay standalone</h3>
-            <div className="mt-4 rounded-2xl border border-dashed border-slate-300 p-5 text-center dark:border-white/20">
-              <FileUp className="mx-auto h-6 w-6 text-cyan-500" aria-hidden />
-              <p className="mt-3 text-sm font-bold">PDF, Word, TXT and images later</p>
-              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">Safe filename, size, classification and citation foundations; no automatic OS writeback.</p>
-            </div>
-          </section>
-
-          <section className="rounded-[30px] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+          <section className="rounded-[30px] bg-white/90 p-5 shadow-[0_16px_44px_rgba(15,23,42,0.06)] ring-1 ring-white/80 dark:bg-white/5 dark:ring-white/10">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Current brain</p>
             <h3 className="mt-2 text-xl font-black tracking-[-0.04em]">{assistantBrains.find((item) => item.id === brain)?.name}</h3>
             <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">{assistantBrains.find((item) => item.id === brain)?.description}</p>

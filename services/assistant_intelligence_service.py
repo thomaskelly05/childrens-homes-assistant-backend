@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.ofsted_evidence_engine_service import OfstedEvidenceEngineService
+from services.inspection_intelligence_service import inspection_intelligence_service
 from services.workspace_orchestrator_service import WorkspaceOrchestratorService
 
 
@@ -42,10 +43,12 @@ class AssistantIntelligenceService:
                 "development_plan": self._development_plan(evidence),
             },
             "evidence": evidence,
+            "inspection_readiness": brief.get("inspection_readiness"),
         }
 
     def _brief(self, *, scope: str, evidence: dict[str, Any], workspace: dict[str, Any]) -> dict[str, Any]:
         sections = evidence.get("judgement_sections") or {}
+        readiness = inspection_intelligence_service.readiness(evidence=evidence, workspace=workspace)
         return {
             "ok": True,
             "type": "inspection_brief",
@@ -63,6 +66,7 @@ class AssistantIntelligenceService:
             },
             "gaps": evidence.get("gaps") or [],
             "recommended_next_actions": self._development_plan(evidence),
+            "inspection_readiness": readiness,
             "evidence": evidence,
         }
 

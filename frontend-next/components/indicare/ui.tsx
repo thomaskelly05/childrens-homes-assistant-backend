@@ -17,7 +17,7 @@ const toneClasses: Record<BadgeTone, string> = {
 
 export function Card({ children, className = '', ...props }: { children: ReactNode; className?: string } & ComponentPropsWithoutRef<'section'>) {
   return (
-    <section {...props} className={`rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)] ${className}`}>
+    <section {...props} className={`rounded-[30px] bg-white/90 p-6 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80 backdrop-blur ${className}`}>
       {children}
     </section>
   )
@@ -35,7 +35,7 @@ export function PageHeader({
   action?: ReactNode
 }) {
   return (
-    <section className="rounded-[32px] border border-white/70 bg-white/90 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+    <section className="rounded-[36px] bg-white/90 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] ring-1 ring-white/80 backdrop-blur-xl">
       <div className="flex flex-wrap items-start justify-between gap-5">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">{eyebrow}</p>
@@ -161,7 +161,7 @@ export function AlertCard({
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
+    <div className="rounded-[30px] bg-gradient-to-br from-white via-slate-50 to-blue-50/60 p-8 text-center shadow-[0_14px_36px_rgba(15,23,42,0.05)] ring-1 ring-white/80">
       <h3 className="text-xl font-black tracking-[-0.03em] text-slate-900">{title}</h3>
       <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500">{description}</p>
     </div>
