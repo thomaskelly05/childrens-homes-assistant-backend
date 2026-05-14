@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight, ClipboardPlus, FileText, Sparkles } from 'lucide-react'
+import { ArrowRight, CalendarDays, CheckCircle2, ClipboardPlus, FileText, Sparkles } from 'lucide-react'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
@@ -129,20 +129,26 @@ export default async function ChildJourneyPage({
       </header>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <Card>
-          <SectionHeader eyebrow="Today" title="Today's care picture" description="Daily recording status, last update and immediate actions." />
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-5">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Daily recording status</p>
-              <h3 className="mt-2 text-2xl font-black text-slate-950">{lastDailyNote ? 'Started today' : 'Needs daily note'}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Last update: {lastDailyNote?.noteDate || data.timeline[0]?.occurredAt || 'None today'}</p>
-              <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="dark" testId="add-daily-note-secondary-button">Add / update daily note</ActionLink>
-            </div>
-            <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-5">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Welfare quick summary</p>
-              <p className="mt-3 text-sm leading-7 text-slate-700">{welfareSummary}</p>
-              <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.12em]">
-                {['Welfare', 'Sleep', 'Health', 'Education', 'Family time'].map((label) => <span key={label} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600">{label}</span>)}
+        <div className="space-y-6">
+          <Card>
+            <SectionHeader eyebrow="Today" title="Today's care picture" description="Daily recording status, last update and immediate actions." />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-5">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Daily recording status</p>
+                <h3 className="mt-2 text-2xl font-black text-slate-950">{lastDailyNote ? 'Started today' : 'Needs daily note'}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">Last update: {lastDailyNote?.noteDate || data.timeline[0]?.occurredAt || 'None today'}</p>
+                <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="dark" testId="add-daily-note-secondary-button">Add / update daily note</ActionLink>
+              </div>
+              <div className="rounded-[24px] border border-slate-100 bg-slate-50 p-5">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Welfare quick summary</p>
+                <p className="mt-3 text-sm leading-7 text-slate-700">{welfareSummary}</p>
+                <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.12em]">
+                  {['Welfare', 'Sleep', 'Health', 'Education', 'Family time'].map((label) => (
+                    <span key={label} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600">
+                      {label}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </Card>
@@ -187,26 +193,26 @@ export default async function ChildJourneyPage({
             </div>
           </Card>
 
-        <Card>
-          <SectionHeader eyebrow="Recording" title="What do you need to record?" description="Every button opens a real child-linked workflow." />
-          <div className="grid gap-3">
-            {quickActionOrder.map((workflowId) => {
-              const workflow = recordingWorkflows[workflowId]
-              const mode = workflowId === 'documents' ? 'upload' : 'new'
-              return (
-                <Link key={workflow.id} href={`/young-people/${encodeURIComponent(id)}/${workflow.routeSegment}/${mode}`} data-testid={`workflow-link-${workflow.id}`} className="group rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-black text-slate-950">{action.label}</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">{action.description}</p>
+          <Card>
+            <SectionHeader eyebrow="Recording" title="What do you need to record?" description="Every button opens a real child-linked workflow." />
+            <div className="grid gap-3">
+              {childOperationalQuickActions.map((action) => {
+                const href = childQuickActionHref(id, action)
+                return (
+                  <Link key={action.id} href={href} data-testid={`workflow-link-${action.id}`} className="group rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black text-slate-950">{action.label}</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">{action.description}</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" aria-hidden />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" aria-hidden />
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          </Card>
+        </aside>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
@@ -231,6 +237,7 @@ export default async function ChildJourneyPage({
           </div>
         </Card>
 
+        <div className="space-y-6">
           <details className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
             <summary className="cursor-pointer text-sm font-black text-slate-950">Plans, evidence and reports</summary>
             <div className="mt-4 grid gap-2">
@@ -240,7 +247,7 @@ export default async function ChildJourneyPage({
                 </Link>
               ))}
             </div>
-          </Card>
+          </details>
 
           <Card>
             <SectionHeader eyebrow="Current actions" title="Action cards" description="Review or complete from the live actions workspace." />

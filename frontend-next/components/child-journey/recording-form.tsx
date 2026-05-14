@@ -471,9 +471,9 @@ export function RecordingForm({
                 {activeSection.description ? <p className="mt-2 text-sm leading-6 text-slate-500">{activeSection.description}</p> : null}
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-              {section.fields.map((field) => {
+                {activeSection.fields.map((field) => {
                   const wide = field.type === 'textarea' || field.name === workflow.primaryField
-                const fieldId = `recording-field-${field.name}`
+                  const fieldId = `recording-field-${field.name}`
                   return (
                     <div key={field.name} className={wide ? 'block md:col-span-2' : 'block'}>
                       <label htmlFor={fieldId} className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
