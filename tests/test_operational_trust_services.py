@@ -66,6 +66,9 @@ def test_document_quality_flags_child_voice_and_unsupported_claims():
     assert indicators["child_voice"] == "needs_review"
     assert indicators["unsupported_claims"] == "needs_review"
     assert indicators["weak_outcomes"] == "needs_review"
+    assert quality["manager_signoff"]["required"] is True
+    assert quality["unsupported_claims"]
+    assert indicators["chronology_linked"] == "needs_review"
 
 
 def test_inspection_intelligence_stays_evidence_led():
@@ -83,6 +86,9 @@ def test_inspection_intelligence_stays_evidence_led():
     assert readiness["status"] == "review_recommended"
     assert "No definitive safeguarding conclusions are generated." in readiness["guardrails"]
     assert readiness["quality_patterns"]
+    assert readiness["chronology_quality_indicators"]
+    assert readiness["what_inspectors_may_ask"]
+    assert readiness["inspection_narrative_builder"]["unsupported_conclusion_guard"]
 
 
 def test_orb_cadence_metadata_and_reconnect_continuity(monkeypatch):
@@ -99,17 +105,24 @@ def test_orb_cadence_metadata_and_reconnect_continuity(monkeypatch):
         session_id="orb_trust_session",
         provider_name="openai_realtime",
         provider_configured=True,
-        context=OrbContext(home_id=1),
+        context=OrbContext(home_id=1, selected_young_person_id=5),
     )
     service.note_event(session_id="orb_trust_session", event_type="silence_timeout", metadata=metadata)
+    scoped = service.note_event(
+        session_id="orb_trust_session",
+        event_type="operational_event",
+        metadata={"context": {"selected_young_person_id": 99}},
+    )
     reconnect = service.reconnect(session_id="orb_trust_session")
 
     assert metadata["partial_transcript_streaming"] is True
+    assert metadata["contextual_continuation_memory"] is True
     assert metadata["emotional_cadence"]["idle_motion"] == "breathing_slow"
     assert chunks[0]["text"].startswith("From what I can see")
     assert "Give me a second" in chunks[0]["text"]
     assert reconnect["realtime_continuity"]["request_snapshot"] is False
     assert reconnect["silence_awareness"]["recovered_without_losing_context"] is True
+    assert scoped["selected_young_person_id"] == 5
 
 
 def test_realtime_scaling_dedupes_home_scoped_events():

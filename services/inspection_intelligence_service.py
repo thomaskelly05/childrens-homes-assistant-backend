@@ -24,6 +24,10 @@ class InspectionIntelligenceService:
             "quality_patterns": patterns,
             "weakly_evidenced_standards": weak_sections,
             "recommendations": self._recommendations(patterns, weak_sections),
+            "chronology_quality_indicators": self._chronology_quality_indicators(evidence=evidence, patterns=patterns),
+            "evidence_sufficiency_indicators": self._evidence_sufficiency_indicators(evidence=evidence, weak_sections=weak_sections),
+            "inspection_narrative_builder": self._narrative_builder(patterns=patterns, weak_sections=weak_sections),
+            "what_inspectors_may_ask": self._what_inspectors_may_ask(patterns=patterns, weak_sections=weak_sections),
             "guardrails": [
                 "No definitive safeguarding conclusions are generated.",
                 "All outputs require professional review against source records.",
@@ -51,6 +55,102 @@ class InspectionIntelligenceService:
             "action": "Continue sampling records for child-centred impact and manager oversight.",
             "reason": "Visible evidence does not currently show priority gaps.",
         }]
+
+    def _chronology_quality_indicators(self, *, evidence: dict[str, Any], patterns: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        cards = evidence.get("cards") or []
+        source_linked = [
+            card for card in cards
+            if card.get("href") or card.get("record_id") or card.get("source_record_id")
+        ]
+        weak_follow_up = [
+            pattern for pattern in patterns
+            if "follow" in str(pattern.get("question", "")).lower() or "follow" in str(pattern.get("recommendation", "")).lower()
+        ]
+        return [
+            {
+                "key": "source_links",
+                "status": "visible" if source_linked else "needs_review",
+                "reason": "Inspection claims should open back to chronology or source evidence.",
+                "evidence_links": self._links(source_linked),
+            },
+            {
+                "key": "follow_up_detail",
+                "status": "needs_review" if weak_follow_up else "monitor",
+                "reason": "Several incidents may need clearer follow-up, outcome or manager oversight detail." if weak_follow_up else "No priority follow-up gap is visible in current patterns.",
+                "evidence_links": self._links([link for pattern in weak_follow_up for link in pattern.get("evidence_links", [])]),
+            },
+        ]
+
+    def _evidence_sufficiency_indicators(self, *, evidence: dict[str, Any], weak_sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        cards = evidence.get("cards") or []
+        gaps = evidence.get("gaps") or []
+        return [
+            {
+                "key": "lived_experience",
+                "status": "needs_review" if any("child voice" in str(gap).lower() for gap in gaps) else "monitor",
+                "reason": "This child has limited lived experience evidence." if gaps else "Visible evidence should still be sampled for child voice and impact.",
+            },
+            {
+                "key": "judgement_coverage",
+                "status": "needs_review" if weak_sections else "visible",
+                "reason": f"{len(weak_sections)} judgement area(s) have weak visible coverage." if weak_sections else "Judgement areas have visible cards in the current evidence set.",
+            },
+            {
+                "key": "record_volume",
+                "status": "visible" if len(cards) >= 3 else "needs_review",
+                "reason": "Evidence volume is low; strengthen with chronology, direct work and manager review links." if len(cards) < 3 else "Evidence volume is sufficient for a manager sampling pass.",
+            },
+        ]
+
+    def _narrative_builder(self, *, patterns: list[dict[str, Any]], weak_sections: list[dict[str, Any]]) -> dict[str, Any]:
+        return {
+            "opening": "Start with what children experience, then show the evidence trail.",
+            "evidence_prompts": [
+                "Which chronology entries show change over time?",
+                "Where is child voice visible?",
+                "What follow-up changed the outcome?",
+                "Which manager review confirms oversight?",
+            ],
+            "priority_gaps": [pattern.get("question") for pattern in patterns[:5]] + [section.get("title") for section in weak_sections[:3]],
+            "unsupported_conclusion_guard": "Use 'visible evidence suggests' or 'records show' only when source links are present.",
+        }
+
+    def _what_inspectors_may_ask(self, *, patterns: list[dict[str, Any]], weak_sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        questions = [
+            {
+                "question": "How do you know the child felt heard?",
+                "reason": "Inspectors often test lived experience, child voice and direct work evidence.",
+                "evidence_links": [],
+            },
+            {
+                "question": "What changed after the incident or concern?",
+                "reason": "Follow-up detail must show impact, not only activity.",
+                "evidence_links": [],
+            },
+        ]
+        for pattern in patterns[:4]:
+            questions.append({
+                "question": pattern.get("question") or "What evidence supports this judgement?",
+                "reason": pattern.get("reasoning") or "Visible evidence pattern requires manager sampling.",
+                "evidence_links": pattern.get("evidence_links") or [],
+            })
+        for section in weak_sections[:3]:
+            questions.append({
+                "question": f"What evidence supports {section.get('title')}?",
+                "reason": "This judgement area currently has weak visible coverage.",
+                "evidence_links": [],
+            })
+        return questions[:8]
+
+    def _links(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": item.get("id") or item.get("record_id") or item.get("source_record_id"),
+                "title": item.get("title") or item.get("summary") or "Source record",
+                "href": item.get("href") or item.get("url"),
+            }
+            for item in items[:8]
+        ]
 
 
 inspection_intelligence_service = InspectionIntelligenceService()

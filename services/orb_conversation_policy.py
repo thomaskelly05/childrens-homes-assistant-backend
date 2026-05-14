@@ -15,6 +15,8 @@ AI_PHRASES = [
     r"\bbased on the records available,?\s*",
     r"\bit is important to note that\s+",
     r"\bi am analysing the chronology\.?",
+    r"\bi am processing that request\.?",
+    r"\bi will now provide\b\s*",
 ]
 
 FILLER_PREFIXES = {
@@ -56,20 +58,21 @@ class OrbConversationPolicy:
             "Use short natural sentences, warm acknowledgement, natural pauses, no 'AI assistant' phrasing, no theatrics, and no long preamble. "
             f"Keep spoken answers to about {max_sentences} sentence(s) unless safeguarding detail is essential. "
             "Prefer phrases like 'From what I can see' and 'Give me a second' over technical analysis language. "
-            "If interrupted, stop cleanly and continue from the user's new intent. "
-            "Start with a short acknowledgement when useful, then stream the answer in small chunks. "
+            "If interrupted, stop cleanly, hold the unfinished thought, and continue from the user's new intent. "
+            "Start with a short acknowledgement when useful, then stream the answer in small chunks with small pauses. "
+            "When there is silence, stay present without pushing; use 'Take your time' or 'I'm still here'. "
             "Do not read citations aloud unless explicitly asked."
         )
 
     def timing(self, *, preferences: OrbPreferences) -> ConversationTiming:
         sensitivity = preferences.interruption_sensitivity or "medium"
         return ConversationTiming(
-            acknowledgement_ms=180 if sensitivity == "high" else 260,
-            interruption_resume_ms=220 if sensitivity != "low" else 360,
-            silence_timeout_ms=9000 if preferences.microphone_mode == "open_mic" else 12000,
+            acknowledgement_ms=140 if sensitivity == "high" else 220,
+            interruption_resume_ms=180 if sensitivity != "low" else 320,
+            silence_timeout_ms=11000 if preferences.microphone_mode == "open_mic" else 14000,
             max_spoken_sentences=2 if preferences.concise_answers else 4,
-            first_partial_ms=320 if sensitivity == "high" else 420,
-            chunk_pacing_ms=180 if preferences.speaking_speed == "fast" else 260 if preferences.speaking_speed == "slow" else 220,
+            first_partial_ms=260 if sensitivity == "high" else 360,
+            chunk_pacing_ms=170 if preferences.speaking_speed == "fast" else 290 if preferences.speaking_speed == "slow" else 230,
         )
 
     def shape_response(
@@ -82,7 +85,10 @@ class OrbConversationPolicy:
     ) -> str:
         shaped = (text or "").strip()
         shaped = re.sub(r"\bbased on the records available,?\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
+        shaped = re.sub(r"\bbased on the chronology,?\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
+        shaped = re.sub(r"\bbased on the information provided,?\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
         shaped = re.sub(r"\bi am analysing the chronology\.?\s*", "Give me a second. ", shaped, flags=re.IGNORECASE)
+        shaped = re.sub(r"\bi am processing that request\.?\s*", "Give me a second. ", shaped, flags=re.IGNORECASE)
         for phrase in AI_PHRASES:
             shaped = re.sub(phrase, "", shaped, flags=re.IGNORECASE)
         shaped = re.sub(r"\s+", " ", shaped)
@@ -114,10 +120,15 @@ class OrbConversationPolicy:
             "max_spoken_sentences": timing.max_spoken_sentences,
             "first_partial_ms": timing.first_partial_ms,
             "chunk_pacing_ms": timing.chunk_pacing_ms,
+            "pause_after_acknowledgement_ms": 180 if preferences.quiet_mode else 140,
+            "breathing_idle_state": True,
+            "listening_shimmer": cadence.listening_motion,
+            "speaking_cadence_glow": cadence.speaking_motion,
             "emotional_cadence": cadence.__dict__,
             "filler_suppression": True,
             "overtalk_prevention": True,
             "partial_transcript_streaming": True,
+            "contextual_continuation_memory": True,
         }
 
     def _naturalise_opening(self, text: str) -> str:

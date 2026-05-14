@@ -114,6 +114,7 @@ const childVoicePrompts = [
   'What mattered most to the child today?',
   'What went well for the child?',
   'What support helped?',
+  'What should the next adult understand?',
   'What would the child want adults to understand?'
 ]
 
@@ -130,8 +131,10 @@ const quickTemplates = [
 const chronologyAwarePrompts = [
   'Link this to the most recent chronology event if it explains a change.',
   'Check whether yesterday left an unresolved action.',
+  'Check whether the child’s routine, relationships or mood changed.',
   'Name the support that should continue into handover.',
-  'Describe the outcome before adding another workflow.'
+  'Describe the outcome before adding another workflow.',
+  'Write why today mattered before moving to linked records.'
 ]
 
 function recordText(values: Record<string, string>) {
