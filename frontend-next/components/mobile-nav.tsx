@@ -6,6 +6,8 @@ import { ClipboardPlus, Clock3, FileText, Home, MessageSquarePlus, ShieldAlert }
 
 export function MobileNav() {
   const pathname = usePathname() || '/home'
+  const childMatch = pathname.match(/^\/young-people\/([^/]+)/)
+  const childId = childMatch?.[1]
   const items = [
     { label: 'Children', href: '/home', icon: Home },
     { label: 'Shift', href: '/shifts/current', icon: Clock3 },
@@ -14,9 +16,9 @@ export function MobileNav() {
     { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
   ]
   const quickActions = [
-    { label: 'Quick note', href: '/home', icon: ClipboardPlus },
-    { label: 'Incident', href: '/home', icon: ShieldAlert },
-    { label: 'Concern', href: '/home', icon: ShieldAlert }
+    { label: childId ? 'Daily note' : 'Choose child', href: childId ? `/young-people/${childId}/daily-note/new` : '/home', icon: ClipboardPlus },
+    { label: childId ? 'Incident' : 'Actions', href: childId ? `/young-people/${childId}/incidents/new` : '/actions', icon: ShieldAlert },
+    { label: childId ? 'Concern' : 'Assistant', href: childId ? `/young-people/${childId}/safeguarding/new` : '/assistant', icon: ShieldAlert }
   ]
 
   return (

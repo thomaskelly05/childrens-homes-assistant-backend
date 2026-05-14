@@ -7,14 +7,9 @@ import type {
   AssistantQueryResponse
 } from './types'
 
-const DEFAULT_API_BASE = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:8000'
-  : 'https://api.indicare.co.uk'
-
 export const ASSISTANT_API_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  DEFAULT_API_BASE
+  process.env.NEXT_PUBLIC_ASSISTANT_API_BASE ||
+  ''
 ).replace(/\/+$/, '')
 
 export class AssistantClientError extends Error {
@@ -33,6 +28,19 @@ export class AssistantClientError extends Error {
 
 function assistantUrl(path: string) {
   return `${ASSISTANT_API_BASE}${path}`
+}
+
+export function assistantErrorMessage(error: unknown) {
+  if (error instanceof AssistantClientError) {
+    if (error.status === 401) {
+      return 'Your session has expired. Please sign in again before using the assistant.'
+    }
+    if (error.status === 403) {
+      return 'You do not have permission to use the assistant.'
+    }
+    return error.message
+  }
+  return error instanceof Error ? error.message : 'Assistant backend unavailable.'
 }
 
 export async function queryAssistant(request: AssistantQueryRequest, signal?: AbortSignal): Promise<AssistantQueryData> {
@@ -55,7 +63,12 @@ export async function queryAssistant(request: AssistantQueryRequest, signal?: Ab
   }
 
   if (!response.ok || !payload) {
-    throw new AssistantClientError(`Assistant backend unavailable (${response.status})`, 'backend_unavailable', payload, response.status)
+    const fallbackMessage = response.status === 401
+      ? 'Your session has expired. Please sign in again before using the assistant.'
+      : response.status === 403
+        ? 'You do not have permission to use the assistant.'
+        : `Assistant backend unavailable (${response.status})`
+    throw new AssistantClientError(fallbackMessage, 'backend_unavailable', payload, response.status)
   }
 
   if (!payload.success) {

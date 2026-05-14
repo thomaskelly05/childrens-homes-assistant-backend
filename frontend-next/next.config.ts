@@ -20,6 +20,18 @@ const nextConfig: NextConfig = {
         destination: `${backendOrigin}/auth/:path*`
       },
       {
+        source: '/assistant/:path*',
+        destination: `${backendOrigin}/assistant/:path*`
+      },
+      {
+        source: '/orb/:path*',
+        destination: `${backendOrigin}/orb/:path*`
+      },
+      {
+        source: '/os/:path*',
+        destination: `${backendOrigin}/os/:path*`
+      },
+      {
         source: '/mfa',
         destination: `${backendOrigin}/mfa`
       },

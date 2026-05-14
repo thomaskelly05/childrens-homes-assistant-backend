@@ -92,7 +92,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
         />
       </Card>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <section id="daily-logs" className="grid gap-6 xl:grid-cols-2">
         <Card>
           <SectionHeader eyebrow="Daily logs" title="Recent daily recording" />
           <DataTable
@@ -102,7 +102,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
           />
         </Card>
 
-        <Card>
+        <Card id="incidents">
           <SectionHeader eyebrow="Incidents" title="Incident history" />
           <DataTable
             headers={['Date', 'Type', 'Severity', 'Status', 'Follow-up']}
@@ -112,7 +112,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <section id="risk" className="grid gap-6 xl:grid-cols-2">
         <Card>
           <SectionHeader eyebrow="Risk" title="Risk assessments" />
           <DataTable
@@ -121,7 +121,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
             empty={<EmptyState title="No risk assessments" description="No risk assessments are linked yet." />}
           />
         </Card>
-        <Card>
+        <Card id="safeguarding">
           <SectionHeader eyebrow="Safeguarding" title="Chronology" />
           <DataTable
             headers={['Date', 'Concern', 'Action', 'Status']}
@@ -131,7 +131,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <section id="medication" className="grid gap-6 xl:grid-cols-2">
         <Card>
           <SectionHeader eyebrow="Medication" title="Medication and allergies" />
           <DataTable
@@ -140,7 +140,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
             empty={<EmptyState title="No medication" description="No medication records are linked yet." />}
           />
         </Card>
-        <Card>
+        <Card id="keywork">
           <SectionHeader eyebrow="Keywork" title="Voice and direct work" />
           <DataTable
             headers={['Date', 'Topic', 'Young person voice', 'Next']}
@@ -150,7 +150,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <section id="appointments" className="grid gap-6 xl:grid-cols-2">
         <Card>
           <SectionHeader eyebrow="Appointments" title="Appointments" />
           <DataTable
@@ -159,7 +159,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
             empty={<EmptyState title="No appointments" description="No appointments are linked yet." />}
           />
         </Card>
-        <Card>
+        <Card id="documents">
           <SectionHeader eyebrow="Documents" title="Documents and reports" />
           <DataTable
             headers={['Title', 'Category/type', 'Review/status']}
@@ -172,7 +172,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <section id="reports" className="grid gap-6 xl:grid-cols-2">
         <Card>
           <SectionHeader eyebrow="Report drafts" title="Structured generated sections" description="Preview of report generation foundations from connected records." />
           <div className="space-y-4">
@@ -181,7 +181,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
             ))}
           </div>
         </Card>
-        <Card>
+        <Card id="audit">
           <SectionHeader eyebrow="Audit" title="Audit trail foundations" />
           <DataTable
             headers={['When', 'Actor', 'Action']}

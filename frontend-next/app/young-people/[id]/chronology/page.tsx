@@ -6,8 +6,15 @@ import { PageHeader, StatCard } from '@/components/indicare/ui'
 import { getChronologyForYoungPerson, getSafeguardingChronology } from '@/lib/chronology/selectors'
 import { getYoungPersonById } from '@/lib/indicare/selectors'
 
-export default async function YoungPersonChronologyPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function YoungPersonChronologyPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ filter?: string; source?: string }>
+}) {
   const { id } = await params
+  const query = await searchParams
   const person = getYoungPersonById(id)
   if (!person) notFound()
   const events = getChronologyForYoungPerson(id)
@@ -26,7 +33,7 @@ export default async function YoungPersonChronologyPage({ params }: { params: Pr
         <StatCard label="Evidence linked" value={events.filter((event) => event.evidenceIds.length).length} />
         <StatCard label="Actions linked" value={events.filter((event) => event.actionIds.length).length} />
       </section>
-      <ChronologyFoundation events={events} initialYoungPersonId={id} />
+      <ChronologyFoundation events={events} initialYoungPersonId={id} initialView={query.filter || query.source} />
     </div>
   )
 }

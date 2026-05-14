@@ -22,7 +22,12 @@ async function parseOrbResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok || !payload) {
-    throw new AssistantClientError(`Orb backend unavailable (${response.status})`, 'orb_backend_unavailable', payload, response.status)
+    const message = response.status === 401
+      ? 'Your session has expired. Please sign in again before using Orb.'
+      : response.status === 403
+        ? 'You do not have permission to use Orb.'
+        : `Orb backend unavailable (${response.status})`
+    throw new AssistantClientError(message, 'orb_backend_unavailable', payload, response.status)
   }
 
   if (!payload.success || !payload.data) {

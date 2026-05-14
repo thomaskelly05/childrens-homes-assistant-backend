@@ -16,7 +16,7 @@ REQUIRED_PRODUCTION_ORIGINS = {
 def allowed_origins() -> list[str]:
     configured = os.getenv(
         "ALLOWED_ORIGINS",
-        "https://app.indicare.co.uk,https://indicare-frontend-next.onrender.com,http://localhost:3000,http://127.0.0.1:3000",
+        "https://app.indicare.co.uk,https://indicare-frontend-next.onrender.com,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001",
     )
     origins = {origin.strip().rstrip("/") for origin in configured.split(",") if origin.strip()}
     origins.update(REQUIRED_PRODUCTION_ORIGINS)

@@ -60,8 +60,8 @@ export default async function RegulatoryDetailPage({ params }: { params: Promise
             <SectionHeader eyebrow="Controls" title="Reference workflows" />
             <div className="grid gap-2">
               <Link href="/chronology" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Open linked chronology</Link>
-              <Link href="/evidence" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Add evidence placeholder</Link>
-              <Link href="/actions" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Create action placeholder</Link>
+              <Link href="/evidence" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Open evidence workspace</Link>
+              <Link href="/actions" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Open action workspace</Link>
               <Link href="/assistant" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Ask IndiCare about this</Link>
             </div>
           </Card>

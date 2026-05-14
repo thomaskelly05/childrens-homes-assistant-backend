@@ -73,14 +73,20 @@ function emotionalIndicator(event: ChronologyEvent) {
 
 export function ChronologyFoundation({
   events,
-  initialYoungPersonId
+  initialYoungPersonId,
+  initialView
 }: {
   events: ChronologyEvent[]
   initialYoungPersonId?: string
+  initialView?: string
 }) {
-  const [filters, setFilters] = useState<ChronologyFilter>(initialYoungPersonId ? { youngPersonIds: [initialYoungPersonId] } : {})
+  const initialFilters: ChronologyFilter = {
+    ...(initialView === 'safeguarding' ? { safeguardingOnly: true } : {}),
+    ...(initialYoungPersonId ? { youngPersonIds: [initialYoungPersonId] } : {})
+  }
+  const [filters, setFilters] = useState<ChronologyFilter>(initialFilters)
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined)
-  const [searchText, setSearchText] = useState('')
+  const [searchText, setSearchText] = useState(initialView && initialView !== 'safeguarding' ? initialView : '')
 
   const mergedFilters = useMemo(() => ({ ...filters, searchText: searchText || filters.searchText }), [filters, searchText])
   const filteredEvents = useMemo(() => filterChronology(events, mergedFilters), [events, mergedFilters])
@@ -238,7 +244,7 @@ export function ChronologyFoundation({
                   <SourceCitationChip label={event.citationLabel} href={routeToChronologyEvent(event.id)} sourceType={event.sourceType} sourceId={event.sourceId} sourceDate={formatDate(event.dateTime)} confidence={event.regulationLinks.some((link) => link.confidence === 'direct') ? 'direct' : 'supporting'} reviewRequired={event.tags.includes('manager-review') || event.tags.includes('overdue-manager-review')} excerpt={event.summary} />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setSelectedEventId(event.id)} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Ask Orb about this</button>
+                  <button type="button" onClick={() => setSelectedEventId(event.id)} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Select for assistant panel</button>
                   <Link href="/reports" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Use in report</Link>
                   <Link href={routeToChronologyEvent(event.id)} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open detail</Link>
                   <Link href={routeToSourceRecord(event.sourceType, event.sourceId)} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open source record</Link>

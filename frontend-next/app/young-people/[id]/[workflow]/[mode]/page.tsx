@@ -39,7 +39,7 @@ export default async function ChildRecordingWorkflowPage({
             <p className="mt-3 text-sm font-black text-slate-700">Child selected: {childName}. You do not need to choose the child again.</p>
           </div>
           <Link href={`/young-people/${encodeURIComponent(id)}/journey`} className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50">
-            Cancel
+            Back to journey
           </Link>
         </div>
       </header>

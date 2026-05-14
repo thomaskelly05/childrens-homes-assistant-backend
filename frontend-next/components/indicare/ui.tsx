@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 import { RiskLevel } from '@/lib/indicare/types'
 import { getEntityActions, type EntityRouteInput } from '@/lib/navigation/entity-resolver'
@@ -15,9 +15,9 @@ const toneClasses: Record<BadgeTone, string> = {
   purple: 'border-purple-100 bg-purple-50 text-purple-700'
 }
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function Card({ children, className = '', ...props }: { children: ReactNode; className?: string } & ComponentPropsWithoutRef<'section'>) {
   return (
-    <section className={`rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)] ${className}`}>
+    <section {...props} className={`rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)] ${className}`}>
       {children}
     </section>
   )
