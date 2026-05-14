@@ -12,7 +12,24 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
   if (!summary) notFound()
 
   const person = summary.youngPerson
-  const tabs = ['Overview', 'Chronology', 'Daily Logs', 'Incidents', 'Risk', 'Safeguarding', 'Medication', 'Keywork', 'Appointments', 'Documents', 'Reports', 'Audit']
+  const tabs = [
+    { label: 'Overview', href: '#overview', active: true },
+    { label: 'Chronology', href: `/young-people/${id}/chronology` },
+    { label: 'Risk intelligence', href: `/young-people/${id}/risk-intelligence` },
+    { label: 'Locality', href: `/young-people/${id}/locality` },
+    { label: 'Missing risk', href: `/young-people/${id}/missing-risk` },
+    { label: 'Exploitation support', href: `/young-people/${id}/exploitation-risk` },
+    { label: 'Daily Logs', href: '#daily-logs' },
+    { label: 'Incidents', href: '#incidents' },
+    { label: 'Risk', href: '#risk' },
+    { label: 'Safeguarding', href: '#safeguarding' },
+    { label: 'Medication', href: '#medication' },
+    { label: 'Keywork', href: '#keywork' },
+    { label: 'Appointments', href: '#appointments' },
+    { label: 'Documents', href: '#documents' },
+    { label: 'Reports', href: '#reports' },
+    { label: 'Audit', href: '#audit' }
+  ]
   const weekly = buildWeeklyCareSummary(id)
   const risk = buildRiskReview(id)
   const safeguarding = buildSafeguardingChronology(id)
@@ -28,8 +45,8 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
       />
 
       <div className="flex gap-2 overflow-auto rounded-[24px] border border-white/70 bg-white/80 p-2 shadow-sm">
-        {tabs.map((tab, index) => (
-          <Link key={tab} href={tab === 'Chronology' ? `/young-people/${id}/chronology` : `#${tab.toLowerCase().replace(/\s+/g, '-')}`} className={`whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black ${index === 0 ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>{tab}</Link>
+        {tabs.map((tab) => (
+          <Link key={tab.label} href={tab.href} className={`whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black ${tab.active ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>{tab.label}</Link>
         ))}
       </div>
 
