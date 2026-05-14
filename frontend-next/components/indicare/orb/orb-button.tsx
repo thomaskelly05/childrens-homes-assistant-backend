@@ -49,7 +49,7 @@ export function OrbButton({
   const transcript = snapshot.transcript.filter((entry) => entry.role !== 'system')
   const latestAssistant = [...transcript].reverse().find((entry) => entry.role === 'assistant')
   const latestUser = [...transcript].reverse().find((entry) => entry.role === 'user')
-  const orbStatus = snapshot.error ? 'Fallback active' : orbStateLabel(snapshot.state)
+  const orbStatus = snapshot.error ? 'Orb needs a moment' : orbStateLabel(snapshot.state)
   const childLock = (context.child_context_lock || {}) as { active?: boolean; child_name?: string; retrieval_scope?: string }
   const childName = typeof childLock.child_name === 'string' ? childLock.child_name : undefined
 
@@ -83,7 +83,7 @@ export function OrbButton({
 
             {snapshot.error ? (
               <p className="mt-5 rounded-full border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm text-amber-100">
-                Fallback ready: {snapshot.error}
+                {snapshot.error}
               </p>
             ) : null}
 
@@ -113,7 +113,7 @@ export function OrbButton({
                   value={typedText}
                   onChange={(event) => setTypedText(event.target.value)}
                   className="min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-300"
-                  placeholder="Type fallback..."
+                  placeholder="Type to Orb..."
                   aria-label={childName ? `Type to Orb about ${childName}` : 'Type to Orb'}
                 />
                 <button type="submit" disabled={!typedText.trim() || snapshot.loading} className="rounded-full bg-cyan-300 px-4 text-slate-950 disabled:opacity-50" aria-label="Send typed message to Orb">
@@ -135,7 +135,7 @@ export function OrbButton({
               </button>
               <button type="button" onClick={() => setFallbackOpen((value) => !value)} className="rounded-full bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-300">
                 <Keyboard className="mr-2 inline h-4 w-4" aria-hidden />
-                Type fallback
+                Type to Orb
               </button>
               <button type="button" onClick={() => void controller.end()} className="rounded-full bg-white px-4 py-3 text-sm font-black text-slate-950 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-300">
                 <Square className="mr-2 inline h-4 w-4" aria-hidden />

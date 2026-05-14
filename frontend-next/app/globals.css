@@ -57,28 +57,33 @@ textarea:focus-visible {
 }
 
 @keyframes orb-breathe {
-  0%, 100% { transform: scale(0.985); opacity: 0.78; }
-  50% { transform: scale(1.025); opacity: 1; }
+  0%, 100% { transform: scale(0.982); opacity: 0.74; filter: saturate(0.92); }
+  50% { transform: scale(1.018); opacity: 0.96; filter: saturate(1.08); }
 }
 
 @keyframes orb-shimmer {
-  0% { transform: translateX(-42%) rotate(18deg); opacity: 0; }
-  35% { opacity: 0.55; }
-  100% { transform: translateX(62%) rotate(18deg); opacity: 0; }
+  0% { transform: translateX(-48%) rotate(18deg); opacity: 0; }
+  42% { opacity: 0.42; }
+  100% { transform: translateX(68%) rotate(18deg); opacity: 0; }
 }
 
 @keyframes orb-wave {
-  0%, 100% { transform: translateY(9%) scaleX(0.88); opacity: 0.24; }
-  50% { transform: translateY(-9%) scaleX(1.04); opacity: 0.48; }
+  0%, 100% { transform: translateY(7%) scaleX(0.9); opacity: 0.2; }
+  50% { transform: translateY(-7%) scaleX(1.03); opacity: 0.42; }
 }
 
 @keyframes orb-cadence {
-  0%, 100% { opacity: 0.28; transform: scale(0.96); }
-  45% { opacity: 0.62; transform: scale(1.04); }
+  0%, 100% { opacity: 0.22; transform: scale(0.965); }
+  46% { opacity: 0.58; transform: scale(1.035); }
+}
+
+@keyframes orb-soft-ring {
+  0%, 100% { transform: scale(0.92); opacity: 0.18; }
+  50% { transform: scale(1.08); opacity: 0.34; }
 }
 
 .orb-motion-breathing {
-  animation: orb-breathe 5.8s ease-in-out infinite;
+  animation: orb-breathe 6.8s ease-in-out infinite;
 }
 
 .orb-motion-shimmer::after {
@@ -87,14 +92,18 @@ textarea:focus-visible {
   inset: -18%;
   width: 56%;
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
-  animation: orb-shimmer 2.4s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.58), transparent);
+  animation: orb-shimmer 3s ease-in-out infinite;
 }
 
 .orb-motion-wave {
-  animation: orb-wave 2.8s ease-in-out infinite;
+  animation: orb-wave 3.4s ease-in-out infinite;
 }
 
 .orb-motion-cadence {
-  animation: orb-cadence 1.35s ease-in-out infinite;
+  animation: orb-cadence 1.75s ease-in-out infinite;
+}
+
+.orb-motion-soft-ring {
+  animation: orb-soft-ring 4.8s ease-in-out infinite;
 }

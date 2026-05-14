@@ -174,7 +174,7 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
             <Keyboard className="h-5 w-5 text-blue-600" aria-hidden />
             <h2 className="text-xl font-black text-slate-950">4. Test Orb</h2>
           </div>
-          <p className="mt-4 text-sm leading-6 text-slate-600">Use the global Orb button to test a short spoken or typed turn. If realtime voice is unavailable, Orb will show text fallback clearly.</p>
+          <p className="mt-4 text-sm leading-6 text-slate-600">Use the global Orb button to test a short spoken or typed turn. If realtime audio is not connected, Orb keeps typed conversation available.</p>
           <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm font-bold text-blue-900">
             Say: &quot;Orb, tell me about IndiCare.&quot;
           </div>

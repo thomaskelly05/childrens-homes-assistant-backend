@@ -13,7 +13,7 @@ export default function NotFound() {
         </h1>
 
         <p className="mt-6 max-w-xl text-base leading-8 text-slate-500">
-          The requested workspace, record or child route could not be located. It may have been archived, unavailable to your role, or not enabled in this demo workspace.
+          That workspace is not available yet, or it may be outside your current role. Nothing has been changed.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-4">

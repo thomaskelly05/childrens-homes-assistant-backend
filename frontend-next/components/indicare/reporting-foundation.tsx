@@ -96,7 +96,7 @@ export function ReportingFoundation() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => setExportMessage(`${item} export is not enabled in this demo workspace. This draft has not been saved, shared or marked complete.`)}
+                  onClick={() => setExportMessage(`${item} export is not enabled in this workspace yet. This draft has not been saved, shared or marked complete.`)}
                   className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-600"
                 >
                   {item} export unavailable

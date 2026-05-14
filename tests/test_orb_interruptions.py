@@ -17,6 +17,17 @@ def test_conversation_policy_suppresses_ai_phrasing_and_shortens_interrupted_tur
     assert shaped == "Jamie's chronology indicates he escalated after dinner."
 
 
+def test_conversation_policy_naturalises_robotic_operational_language():
+    shaped = orb_conversation_policy.shape_response(
+        "The system indicates that Jamie had a settled evening overall. Based on the available records, there is a follow-up missing from yesterday's incident.",
+    )
+
+    assert "system indicates" not in shaped.lower()
+    assert "Based on" not in shaped
+    assert shaped.startswith("From what I can see")
+    assert "settled evening" in shaped
+
+
 def test_interruption_state_prevents_double_speaking_after_reconnect(monkeypatch):
     monkeypatch.setenv("ORB_SESSION_STORE_BACKEND", "memory")
     orb_session_store.reset_for_tests()

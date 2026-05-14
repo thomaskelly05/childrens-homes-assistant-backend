@@ -44,6 +44,13 @@ export type OrbRuntimeSnapshot = {
 
 const STORAGE_KEY = 'indicare.orb.preferences.v1'
 
+function calmOrbError(error: unknown, fallback = "I couldn't load that just now.") {
+  if (error instanceof AssistantClientError) return error.message
+  if (error instanceof DOMException && error.name === 'AbortError') return undefined
+  if (process.env.NODE_ENV === 'development' && error instanceof Error) return error.message
+  return fallback
+}
+
 export function loadOrbPreferences(): OrbPreferences {
   if (typeof window === 'undefined') return defaultOrbPreferences
   try {
@@ -87,7 +94,7 @@ export class OrbRuntimeController {
       this.emit()
     },
     onError: (message) => {
-      this.snapshot = { ...this.snapshot, microphone: 'denied', realtimeAvailable: false, error: message }
+      this.snapshot = { ...this.snapshot, microphone: 'denied', realtimeAvailable: false, error: process.env.NODE_ENV === 'development' ? message : 'Microphone access needs checking.' }
       this.emit()
     }
   })
@@ -95,7 +102,7 @@ export class OrbRuntimeController {
     onEvent: (raw) => this.handleRealtimeEvent(raw),
     onStateChange: (state, detail) => this.applyNetworkState(state, detail),
     onError: (message) => {
-      this.snapshot = { ...this.snapshot, connected: false, realtimeAvailable: false, error: message }
+      this.snapshot = { ...this.snapshot, connected: false, realtimeAvailable: false, error: process.env.NODE_ENV === 'development' ? message : 'Realtime audio needs a moment. You can still type to Orb.' }
       this.emit()
     },
     refreshCredentials: () => this.refreshRealtimeCredentials()
@@ -257,7 +264,7 @@ export class OrbRuntimeController {
       await this.connectRealtimeIfAvailable(data)
     } catch (error) {
       if (this.applyAuthFailure(error)) return
-      this.snapshot = { ...this.snapshot, state: error instanceof DOMException && error.name === 'AbortError' ? 'idle' : 'unavailable', loading: false, connected: false, error: error instanceof Error ? error.message : 'Orb session failed.' }
+      this.snapshot = { ...this.snapshot, state: error instanceof DOMException && error.name === 'AbortError' ? 'idle' : 'unavailable', loading: false, connected: false, error: calmOrbError(error, "I couldn't load Orb just now.") }
     } finally {
       this.emit()
     }
@@ -288,7 +295,7 @@ export class OrbRuntimeController {
       }
       return data
     } catch (error) {
-      this.snapshot = { ...this.snapshot, state: 'unavailable', loading: false, error: error instanceof Error ? error.message : 'Orb event failed.' }
+      this.snapshot = { ...this.snapshot, state: 'unavailable', loading: false, error: calmOrbError(error, "I couldn't send that to Orb just now.") }
       this.emit()
       return null
     }
@@ -441,8 +448,8 @@ export class OrbRuntimeController {
   private async realtimeOptionsFromSession(data: OrbSessionStartData): Promise<OrbRealtimeConnectOptions | null> {
     const realtime = data.realtime || {}
     if (realtime.transport !== 'webrtc' || data.provider !== 'openai_realtime' || !data.provider_configured) {
-      const status = typeof realtime.status === 'string' ? realtime.status : 'Realtime voice unavailable; text fallback is active.'
-      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: status.includes('unavailable') ? status : this.snapshot.error }
+      const status = typeof realtime.status === 'string' ? realtime.status : 'Realtime audio is not connected yet. Typed Orb remains available.'
+      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: status.includes('not connected') ? status : this.snapshot.error }
       return null
     }
     const providerSession = data.provider_session as {
@@ -452,13 +459,13 @@ export class OrbRuntimeController {
     const ephemeralKey = providerSession.session?.client_secret?.value
     const model = providerSession.model || providerSession.session?.model
     if (!ephemeralKey || !model) {
-      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: 'Realtime voice unavailable; ephemeral client session was not returned. Text fallback is active.' }
+      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: 'Realtime audio is not connected yet. Typed Orb remains available.' }
       return null
     }
     if (!this.stream) {
       const micReady = await this.requestMicrophone()
       if (!micReady || !this.stream) {
-        this.snapshot = { ...this.snapshot, state: this.snapshot.microphone === 'denied' ? 'permission_denied' : this.snapshot.state, realtimeAvailable: false, error: 'Realtime voice unavailable until microphone permission is granted. Text fallback is active.' }
+        this.snapshot = { ...this.snapshot, state: this.snapshot.microphone === 'denied' ? 'permission_denied' : this.snapshot.state, realtimeAvailable: false, error: 'Microphone permission is needed for live voice. You can still type to Orb.' }
         return null
       }
     }
@@ -586,7 +593,7 @@ export class OrbRuntimeController {
       return
     }
     if (type === 'error') {
-      this.snapshot = { ...this.snapshot, state: 'error', error: 'Realtime voice reported an error. Text fallback is active.' }
+      this.snapshot = { ...this.snapshot, state: 'error', error: 'Realtime audio needs a moment. You can still type to Orb.' }
       this.emit()
     }
   }
@@ -685,7 +692,7 @@ export class OrbRuntimeController {
     this.clearHardStateRecovery()
     this.hardStateTimer = setTimeout(() => {
       if (!['thinking', 'speaking', 'connecting', 'reconnecting'].includes(this.snapshot.state)) return
-      this.snapshot = { ...this.snapshot, state: 'idle', loading: false, partialTranscript: '', error: 'Orb recovered from a stalled voice turn. Please try again.' }
+      this.snapshot = { ...this.snapshot, state: 'idle', loading: false, partialTranscript: '', error: "Orb recovered that turn. Let's try that again." }
       this.emit()
       if (this.snapshot.sessionId) {
         void this.sendEvent(this.snapshot.sessionId, { type: 'error', state: 'idle', context: this.activeContext, metadata: { recovery: 'hard_state_timeout' } }).catch(() => undefined)

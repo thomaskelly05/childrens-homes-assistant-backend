@@ -19,7 +19,7 @@ export default async function ChronologyPage() {
       />
       <LiveDataStatus result={chronology} />
       <section className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Chronology events" value={events.length} detail={chronology.source === 'live' ? 'Live schema projection' : 'Demo fallback'} />
+        <StatCard label="Chronology events" value={events.length} detail={chronology.source === 'live' ? 'Live schema projection' : 'Cached workspace data'} />
         <StatCard label="Safeguarding events" value={getSafeguardingChronology(events).length} detail="Restricted and active concerns" />
         <StatCard label="Evidence linked" value={eventsWithEvidence.length} detail="Events with evidence IDs" />
         <StatCard label="Actions linked" value={eventsWithActions.length} detail="Events requiring follow-up" />

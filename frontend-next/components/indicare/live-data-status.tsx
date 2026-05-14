@@ -4,10 +4,10 @@ export function LiveDataStatus({ result }: { result: Pick<OsApiResult<unknown>, 
   if (!result.warning && result.source === 'live') return null
 
   return (
-    <section className="rounded-[24px] border border-amber-100 bg-amber-50/80 p-4 text-sm leading-6 text-amber-900">
-      <strong className="block font-black">{result.source === 'live' ? 'Live data issue' : 'Demo fallback visible'}</strong>
-      <span>{result.warning || 'This view is using demo OS data.'}</span>
-      {result.error ? <span className="mt-1 block text-xs font-bold">Backend detail: {result.error}</span> : null}
+    <section className="rounded-[24px] border border-blue-100 bg-blue-50/80 p-4 text-sm leading-6 text-blue-950">
+      <strong className="block font-black">{result.source === 'live' ? 'Live data issue' : 'Workspace data recovering'}</strong>
+      <span>{result.warning || "I couldn't load live workspace data just now."}</span>
+      {process.env.NODE_ENV === 'development' && result.error ? <span className="mt-1 block text-xs font-bold">Developer detail: {result.error}</span> : null}
     </section>
   )
 }

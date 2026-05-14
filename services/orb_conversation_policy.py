@@ -13,10 +13,14 @@ AI_PHRASES = [
     r"\bi can confirm that\s+",
     r"\bbased on the information provided,?\s*",
     r"\bbased on the records available,?\s*",
+    r"\bbased on the available records,?\s*",
     r"\bit is important to note that\s+",
     r"\bi am analysing the chronology\.?",
     r"\bi am processing that request\.?",
     r"\bi will now provide\b\s*",
+    r"\bthe system indicates that\s+",
+    r"\bthe system indicates,?\s*",
+    r"\baccording to the system,?\s*",
 ]
 
 FILLER_PREFIXES = {
@@ -54,13 +58,14 @@ class OrbConversationPolicy:
         detail = preferences.response_detail
         max_sentences = 2 if preferences.concise_answers or detail == "concise" else 4
         return (
-            "Conversation style: speak like a calm senior colleague in a children's home. "
-            "Use short natural sentences, warm acknowledgement, natural pauses, no 'AI assistant' phrasing, no theatrics, and no long preamble. "
+            "Conversation style: speak like a calm British senior colleague in a children's home. "
+            "Use short natural sentences, light acknowledgement, small pauses, no 'AI assistant' phrasing, no Americanisms, no theatrics, and no long preamble. "
             f"Keep spoken answers to about {max_sentences} sentence(s) unless safeguarding detail is essential. "
-            "Prefer phrases like 'From what I can see' and 'Give me a second' over technical analysis language. "
-            "If interrupted, stop cleanly, hold the unfinished thought, and continue from the user's new intent. "
+            "Prefer phrases like 'From what I can see', 'Right, I have found it', and 'Hang on, I am just checking the chronology' over technical analysis language. "
+            "If interrupted, stop cleanly, hold the unfinished thought, and continue from the user's new intent without restarting. "
             "Start with a short acknowledgement when useful, then stream the answer in small chunks with small pauses. "
             "When there is silence, stay present without pushing; use 'Take your time' or 'I'm still here'. "
+            "For care records, answer operationally: what happened, what still needs follow-up, what changed, safeguarding context, positive progress, and the child's voice when visible. "
             "Do not read citations aloud unless explicitly asked."
         )
 
@@ -85,10 +90,13 @@ class OrbConversationPolicy:
     ) -> str:
         shaped = (text or "").strip()
         shaped = re.sub(r"\bbased on the records available,?\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
+        shaped = re.sub(r"\bbased on the available records,?\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
         shaped = re.sub(r"\bbased on the chronology,?\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
         shaped = re.sub(r"\bbased on the information provided,?\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
-        shaped = re.sub(r"\bi am analysing the chronology\.?\s*", "Give me a second. ", shaped, flags=re.IGNORECASE)
+        shaped = re.sub(r"\bi am analysing the chronology\.?\s*", "Hang on, I am just checking the chronology. ", shaped, flags=re.IGNORECASE)
         shaped = re.sub(r"\bi am processing that request\.?\s*", "Give me a second. ", shaped, flags=re.IGNORECASE)
+        shaped = re.sub(r"\bthe system indicates that\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
+        shaped = re.sub(r"\bthe system indicates,?\s*", "From what I can see, ", shaped, flags=re.IGNORECASE)
         for phrase in AI_PHRASES:
             shaped = re.sub(phrase, "", shaped, flags=re.IGNORECASE)
         shaped = re.sub(r"\s+", " ", shaped)
@@ -107,8 +115,8 @@ class OrbConversationPolicy:
         if not interrupted_response:
             return "Yeah. Go ahead."
         if user_text:
-            return "Yeah, I heard you. I’ll follow that instead."
-        return "Yeah. I’ll pause there."
+            return "Yeah, I heard you. I will follow that instead."
+        return "Yeah. I will pause there."
 
     def event_metadata(self, *, preferences: OrbPreferences) -> dict[str, Any]:
         timing = self.timing(preferences=preferences)
@@ -120,7 +128,7 @@ class OrbConversationPolicy:
             "max_spoken_sentences": timing.max_spoken_sentences,
             "first_partial_ms": timing.first_partial_ms,
             "chunk_pacing_ms": timing.chunk_pacing_ms,
-            "pause_after_acknowledgement_ms": 180 if preferences.quiet_mode else 140,
+            "pause_after_acknowledgement_ms": 220 if preferences.quiet_mode else 170,
             "breathing_idle_state": True,
             "listening_shimmer": cadence.listening_motion,
             "speaking_cadence_glow": cadence.speaking_motion,
@@ -143,6 +151,8 @@ class OrbConversationPolicy:
     def _suppress_filler(self, text: str) -> str:
         text = re.sub(r"^(yeah,\s*){2,}", "Yeah, ", text, flags=re.IGNORECASE)
         text = re.sub(r"\b(please note that|for your information)\b,?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\butilize\b", "use", text, flags=re.IGNORECASE)
+        text = re.sub(r"\banalyze\b", "look at", text, flags=re.IGNORECASE)
         return text
 
     def _shorten(
@@ -158,6 +168,8 @@ class OrbConversationPolicy:
         max_sentences = 2
         if preferences and not preferences.concise_answers:
             max_sentences = 4
+        if decision and decision.care_scope_required:
+            max_sentences = max(max_sentences, 3)
         if decision and "safeguarding_sensitive" in decision.safety_flags:
             max_sentences = max(max_sentences, 3)
         if interrupted:
@@ -174,7 +186,7 @@ class OrbConversationPolicy:
             listening_motion="shimmer_soft" if quiet else "shimmer_present",
             thinking_motion="wave_slow",
             speaking_motion="cadence_glow",
-            acknowledgement="Mm. I’m with you." if quiet else "Yeah. I’m with you.",
+            acknowledgement="Mm. I am with you." if quiet else "Yeah. I am with you.",
             silence_prompt="Take your time." if quiet else "I’m still here.",
             ambient_sound_hook="orb_room_tone_quiet" if quiet else "orb_room_tone_soft",
         )

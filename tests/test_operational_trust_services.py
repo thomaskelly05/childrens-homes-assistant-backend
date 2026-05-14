@@ -119,7 +119,7 @@ def test_orb_cadence_metadata_and_reconnect_continuity(monkeypatch):
     assert metadata["contextual_continuation_memory"] is True
     assert metadata["emotional_cadence"]["idle_motion"] == "breathing_slow"
     assert chunks[0]["text"].startswith("From what I can see")
-    assert "Give me a second" in chunks[0]["text"]
+    assert "Hang on, I am just checking the chronology" in chunks[0]["text"]
     assert reconnect["realtime_continuity"]["request_snapshot"] is False
     assert reconnect["silence_awareness"]["recovered_without_losing_context"] is True
     assert scoped["selected_young_person_id"] == 5
