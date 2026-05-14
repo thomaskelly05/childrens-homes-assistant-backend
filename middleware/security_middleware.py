@@ -11,6 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from auth.errors import auth_error_detail
 from auth.tokens import decode_session_token
 from routers.auth_routes import settings as auth_settings
 from services.audit_event_service import record_audit_event
@@ -106,7 +107,10 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
                 actor=_safe_actor_from_request(request),
                 metadata={"path": path, "method": request.method},
             )
-            return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
+            return JSONResponse(
+                status_code=403,
+                content={"detail": auth_error_detail("csrf_invalid", "Invalid CSRF token")},
+            )
 
         return await call_next(request)
 
@@ -161,7 +165,8 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             should_audit = path.startswith(SENSITIVE_PREFIXES) or status_code >= 400
 
             if should_audit:
-                logger.info(
+                log = logger.debug if status_code in {401, 403} else logger.info
+                log(
                     "audit_event request_id=%s method=%s path=%s status=%s duration_ms=%s ip=%s user_agent=%s",
                     request_id,
                     request.method,

@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from auth.errors import forbidden, unauthorised
 from auth.permissions import require_assistant_access
 from db.connection import get_db
 from routers.assistant_routes import (
@@ -64,18 +65,15 @@ def _assert_scope_access(current_user: dict[str, Any], scope: str) -> None:
     role = _normalise_role(current_user)
 
     if not role_can_access_scope(role, scope):
-        raise HTTPException(
-            status_code=403,
-            detail="Role does not have access to requested scope.",
-        )
+        raise forbidden("permission_denied", "Role does not have access to requested scope.")
 
 
 def _assert_authenticated_user(current_user: dict[str, Any]) -> None:
     if not isinstance(current_user, dict) or not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required.")
+        raise unauthorised("not_authenticated", "Authentication required.")
 
     if _safe_user_id(current_user) is None:
-        raise HTTPException(status_code=401, detail="Valid authenticated user required.")
+        raise unauthorised("session_invalid", "Valid authenticated user required.")
 
 
 def _assert_safe_message(message: str) -> None:

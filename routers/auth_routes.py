@@ -217,6 +217,15 @@ def _set_session_cookie(response: Response, token: str, remember: bool = False) 
 def _set_csrf_cookie(response: Response, csrf_token: str, remember: bool = False) -> None:
     response.set_cookie(key=settings.csrf_cookie_name, value=csrf_token, httponly=False, secure=settings.cookie_secure, samesite=settings.cookie_samesite, max_age=settings.cookie_max_age_long if remember else settings.cookie_max_age_short, path="/")
 
+def _ensure_csrf_cookie(request: Request, response: Response) -> None:
+    csrf_token = str(request.session.get("csrf_token") or "")
+    cookie_token = str(request.cookies.get(settings.csrf_cookie_name) or "")
+    if not csrf_token:
+        csrf_token = cookie_token or secrets.token_urlsafe(32)
+        request.session["csrf_token"] = csrf_token
+    if not cookie_token or not secrets.compare_digest(cookie_token, csrf_token):
+        _set_csrf_cookie(response, csrf_token, remember=bool(request.session.get("remember")))
+
 def _clear_auth_cookies(response: Response) -> None:
     response.delete_cookie(key=settings.session_cookie_name, path="/", secure=settings.cookie_secure, samesite=settings.cookie_samesite)
     response.delete_cookie(key=settings.csrf_cookie_name, path="/", secure=settings.cookie_secure, samesite=settings.cookie_samesite)
@@ -427,11 +436,12 @@ def check_auth(request: Request, authorization: str | None = Header(default=None
     return {"authenticated": True, "user_id": user["id"], "email": user["email"], **user_payload, "mfa_enabled": mfa_enabled, "mfa_verified": mfa_verified, "mfa_mandatory": _mfa_required_for_role(user.get("role")), "mfa_pending": False}
 
 @router.get("/me")
-def get_me(request: Request, authorization: str | None = Header(default=None), conn=Depends(get_db)):
+def get_me(request: Request, response: Response, authorization: str | None = Header(default=None), conn=Depends(get_db)):
     user, user_id = _get_session_user_from_request(request, conn, authorization, raise_on_missing=True)
     if user_id is None:
         raise unauthorised("session_invalid", "Invalid session")
     user = _validate_active_user(user)
+    _ensure_csrf_cookie(request, response)
     billing = _get_billing_safe(conn, user_id)
     mfa_row = _get_mfa_safe(user_id)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))

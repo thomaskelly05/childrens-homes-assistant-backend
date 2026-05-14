@@ -8,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from auth.errors import auth_error_detail
 from auth.tokens import decode_session_token
 from routers.auth_routes import settings as auth_settings
 from db.connection import get_db_connection, release_db_connection
@@ -230,7 +231,10 @@ def _deny(request: Request, user: dict[str, Any] | None, reason: str, resource: 
         request.url.path,
         request.client.host if request.client else None,
     )
-    return JSONResponse(status_code=403, content={"detail": "Access denied"})
+    return JSONResponse(
+        status_code=403,
+        content={"detail": auth_error_detail("access_denied", "Access denied", reason=reason)},
+    )
 
 
 def _log_sensitive(request: Request, user: dict[str, Any], resource: str, resource_id: Any) -> None:
@@ -286,7 +290,10 @@ class AccessScopeMiddleware(BaseHTTPMiddleware):
 
         user = _current_user_from_request(request)
         if not user:
-            return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+            return JSONResponse(
+                status_code=401,
+                content={"detail": auth_error_detail("not_authenticated", "Not authenticated")},
+            )
 
         role = _normalise_role(user.get("role"))
         user_home_id = _safe_int(user.get("home_id"))

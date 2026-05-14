@@ -1,4 +1,5 @@
 import { assistantDatabase } from '@/lib/persistence/assistant-database'
+import { isAuthFailureError } from '@/lib/auth/api'
 
 import { AssistantMessage } from './assistant-runtime'
 
@@ -48,7 +49,8 @@ export class ConversationStore {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(backendConversations))
         return backendConversations
       }
-    } catch {
+    } catch (error) {
+      if (isAuthFailureError(error)) throw error
       // fallback to local cache
     }
 
@@ -118,7 +120,8 @@ export class ConversationStore {
 
     try {
       await assistantDatabase.saveConversation(next)
-    } catch {
+    } catch (error) {
+      if (isAuthFailureError(error)) throw error
       // retain local persistence resilience
     }
   }
@@ -126,7 +129,8 @@ export class ConversationStore {
   async delete(id: string) {
     try {
       await assistantDatabase.deleteConversation(id)
-    } catch {
+    } catch (error) {
+      if (isAuthFailureError(error)) throw error
       // continue local cleanup
     }
 

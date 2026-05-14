@@ -12,26 +12,33 @@ export class ReconnectManager {
 
   constructor(private callbacks: ReconnectCallbacks = {}) {}
 
-  markDisconnected() {
-    if (!this.connected) return
+  markDisconnected(options: { retry?: boolean } = {}) {
+    const retry = options.retry ?? true
+    if (!retry) this.clearTimer()
+    if (!this.connected) {
+      if (retry && !this.reconnectTimer) this.scheduleReconnect()
+      return
+    }
 
     this.connected = false
     this.callbacks.onDisconnect?.()
     this.callbacks.onStatusChange?.(false)
 
-    this.scheduleReconnect()
+    if (retry) this.scheduleReconnect()
   }
 
   markConnected() {
     this.connected = true
     this.retryCount = 0
 
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer)
-      this.reconnectTimer = null
-    }
+    this.clearTimer()
 
     this.callbacks.onStatusChange?.(true)
+  }
+
+  cancel() {
+    this.retryCount = 0
+    this.clearTimer()
   }
 
   private scheduleReconnect() {
@@ -40,8 +47,15 @@ export class ReconnectManager {
     const delay = Math.min(1000 * Math.pow(2, this.retryCount), 15000)
 
     this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
       this.retryCount += 1
       this.callbacks.onReconnect?.()
     }, delay)
+  }
+
+  private clearTimer() {
+    if (!this.reconnectTimer) return
+    clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = null
   }
 }

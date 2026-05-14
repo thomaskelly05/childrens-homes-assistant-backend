@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.errors import unauthorised
 from auth.permissions import require_assistant_access
 from services.assistant_general_service import generate_general_assistant_stream
 from services.assistant_security import normalise_history, safe_int, safe_string
@@ -46,7 +47,7 @@ class GeneralAssistantRequest(BaseModel):
 def _safe_user_id(current_user: dict[str, Any]) -> int:
     user_id = safe_int(current_user.get("user_id") or current_user.get("id"))
     if user_id is None:
-        raise HTTPException(status_code=401, detail="Authentication required.")
+        raise unauthorised("not_authenticated", "Authentication required.")
     return user_id
 
 

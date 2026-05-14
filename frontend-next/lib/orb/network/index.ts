@@ -32,6 +32,8 @@ const MAX_RECONNECT_ATTEMPTS = 5
 const NEGOTIATION_TIMEOUT_MS = 20000
 const HEARTBEAT_MS = 15000
 
+class OrbNonRetryableError extends Error {}
+
 function delayForAttempt(attempt: number) {
   return Math.min(1000 * 2 ** Math.max(0, attempt - 1), 15000)
 }
@@ -142,7 +144,9 @@ export class OrbRealtimeClient {
       await withTimeout(this.negotiate(peer, options), NEGOTIATION_TIMEOUT_MS, 'Realtime negotiation timed out')
     } catch (error) {
       this.closePeer()
-      this.callbacks.onError(error instanceof Error ? error.message : 'Realtime voice negotiation failed', { retryable: true })
+      const retryable = !(error instanceof OrbNonRetryableError)
+      this.callbacks.onError(error instanceof Error ? error.message : 'Realtime voice negotiation failed', { retryable })
+      if (!retryable) return
       this.scheduleReconnect('negotiation_failed')
     }
   }
@@ -200,7 +204,7 @@ export class OrbRealtimeClient {
     })
     if (response.status === 401 || response.status === 403) {
       this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
-      throw new Error(`Realtime token was rejected (${response.status})`)
+      throw new OrbNonRetryableError(`Realtime token was rejected (${response.status})`)
     }
     if (!response.ok) throw new Error(`Realtime provider failed (${response.status})`)
     await peer.setRemoteDescription({ type: 'answer', sdp: await response.text() })

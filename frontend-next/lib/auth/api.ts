@@ -19,7 +19,21 @@ function detailFromPayload(payload: unknown): AuthErrorDetail | string {
     if (detail && typeof detail === 'object') return detail as AuthErrorDetail
     if (typeof detail === 'string') return detail
   }
+  if (payload && typeof payload === 'object' && 'error' in payload) {
+    const error = (payload as { error?: { code?: string; message?: string } }).error
+    if (error?.message) return { code: error.code || 'api_error', message: error.message }
+  }
   return 'Authentication request failed'
+}
+
+function assertRelativeApiPath(path: string) {
+  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(path)
+  if (!path.startsWith('/') || path.startsWith('//') || hasScheme) {
+    throw new AuthApiError(0, {
+      code: 'invalid_api_path',
+      message: 'Authenticated API requests must use same-origin relative URLs.'
+    })
+  }
 }
 
 export function getCsrfToken() {
@@ -31,19 +45,37 @@ export function getCsrfToken() {
   return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : ''
 }
 
-export async function authFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+export function isAuthFailureStatus(status: number) {
+  return status === 401 || status === 403
+}
+
+export function isAuthFailureError(error: unknown) {
+  return error instanceof AuthApiError && isAuthFailureStatus(error.status)
+}
+
+export async function authFetchResponse(path: string, init: RequestInit = {}): Promise<Response> {
+  assertRelativeApiPath(path)
   const method = (init.method || 'GET').toUpperCase()
   const csrfToken = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) ? getCsrfToken() : ''
-  const response = await fetch(path, {
+  const headers = new Headers(init.headers)
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData
+  if (!isFormData && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+  if (csrfToken) {
+    headers.set('X-CSRF-Token', csrfToken)
+  }
+
+  return fetch(path, {
     ...init,
     credentials: 'include',
     cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-      ...init.headers
-    }
+    headers
   })
+}
+
+export async function authFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await authFetchResponse(path, init)
 
   const payload = await response.json().catch(() => undefined)
 

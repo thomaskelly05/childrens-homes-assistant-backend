@@ -2,12 +2,14 @@ import { endOrbSession, interruptOrbSession, sendOrbEvent, startOrbSession } fro
 import { routeOrbMode } from './mode-router'
 import { mapNetworkStateToOrbState, OrbRealtimeClient, type OrbNetworkState, type OrbRealtimeConnectOptions } from './network'
 import { OrbAudioRecovery, isMobileOrbBrowser, prefersLowBandwidthMode, triggerOrbHaptic } from './audio'
+import { AssistantClientError } from '@/lib/assistant-core/client'
 import type {
   OrbContext,
   OrbModeDecision,
   OrbPreferences,
   OrbSelectedMode,
   OrbSessionEventData,
+  OrbSessionEventRequest,
   OrbSessionStartData,
   OrbState,
   OrbTranscriptEntry,
@@ -61,6 +63,10 @@ function fallbackDecision(selectedMode: OrbSelectedMode, context: OrbContext, ro
   return routeOrbMode({ selectedMode, context, role })
 }
 
+function isOrbAuthFailure(error: unknown) {
+  return error instanceof AssistantClientError && (error.status === 401 || error.status === 403)
+}
+
 export class OrbRuntimeController {
   private snapshot: OrbRuntimeSnapshot
   private listeners = new Set<(snapshot: OrbRuntimeSnapshot) => void>()
@@ -71,6 +77,7 @@ export class OrbRuntimeController {
   private silenceTimer: ReturnType<typeof setTimeout> | null = null
   private browserUtterance: SpeechSynthesisUtterance | null = null
   private hardStateTimer: ReturnType<typeof setTimeout> | null = null
+  private authBlocked = false
   private audioRecovery = new OrbAudioRecovery({
     onRecovery: (reason, detail) => {
       this.snapshot = {
@@ -216,8 +223,10 @@ export class OrbRuntimeController {
   }
 
   async start(context: OrbContext, role?: string | null) {
+    if (this.snapshot.loading) return
     this.activeContext = context
     this.activeRole = role
+    this.authBlocked = false
     this.abortController?.abort()
     this.abortController = new AbortController()
     this.snapshot = { ...this.snapshot, loading: true, error: undefined, state: 'connecting' }
@@ -247,6 +256,7 @@ export class OrbRuntimeController {
       this.armHardStateRecovery()
       await this.connectRealtimeIfAvailable(data)
     } catch (error) {
+      if (this.applyAuthFailure(error)) return
       this.snapshot = { ...this.snapshot, state: error instanceof DOMException && error.name === 'AbortError' ? 'idle' : 'unavailable', loading: false, connected: false, error: error instanceof Error ? error.message : 'Orb session failed.' }
     } finally {
       this.emit()
@@ -265,12 +275,13 @@ export class OrbRuntimeController {
     this.armHardStateRecovery()
     this.emit()
     try {
-      const data = await sendOrbEvent(sessionId, {
+      const data = await this.sendEvent(sessionId, {
         type: 'user_text',
         text: message,
         selected_mode: this.snapshot.selectedMode,
         context
       })
+      if (!data) return null
       this.applyEventData(data)
       if (data.assistant_turn?.content) {
         await this.speakAssistantTurn(data.assistant_turn.content)
@@ -284,11 +295,12 @@ export class OrbRuntimeController {
   }
 
   async updatePartialTranscript(text: string, context: OrbContext) {
+    if (this.authBlocked) return
     this.snapshot = { ...this.snapshot, state: 'listening', partialTranscript: text }
     this.emit()
     this.resetSilenceTimer(context)
     if (this.snapshot.sessionId) {
-      await sendOrbEvent(this.snapshot.sessionId, { type: 'partial_transcript', text, partial: true, context }).catch(() => undefined)
+      await this.sendEvent(this.snapshot.sessionId, { type: 'partial_transcript', text, partial: true, context }).catch(() => undefined)
     }
   }
 
@@ -302,7 +314,11 @@ export class OrbRuntimeController {
       this.emit()
       return
     }
-    await interruptOrbSession(this.snapshot.sessionId).catch(() => undefined)
+    let blocked = false
+    await interruptOrbSession(this.snapshot.sessionId).catch((error) => {
+      blocked = this.applyAuthFailure(error)
+    })
+    if (blocked) return
     this.snapshot = {
       ...this.snapshot,
       state: 'interrupted',
@@ -324,11 +340,12 @@ export class OrbRuntimeController {
     if (!this.snapshot.sessionId) {
       await this.start(context, role)
     }
+    if (this.authBlocked) return
     triggerOrbHaptic('tap')
     const micReady = this.snapshot.microphone === 'granted' || await this.requestMicrophone()
     if (!micReady) return
     if (this.snapshot.sessionId) {
-      await sendOrbEvent(this.snapshot.sessionId, { type: 'speech_started', context }).catch(() => undefined)
+      await this.sendEvent(this.snapshot.sessionId, { type: 'speech_started', context }).catch(() => undefined)
     }
     this.snapshot = { ...this.snapshot, state: 'listening', partialTranscript: '', error: undefined }
     this.resetSilenceTimer(context)
@@ -339,7 +356,7 @@ export class OrbRuntimeController {
     this.snapshot = { ...this.snapshot, state: muted ? 'muted' : 'idle' }
     this.emit()
     if (this.snapshot.sessionId) {
-      await sendOrbEvent(this.snapshot.sessionId, { type: muted ? 'mute' : 'unmute' }).catch(() => undefined)
+      await this.sendEvent(this.snapshot.sessionId, { type: muted ? 'mute' : 'unmute' }).catch(() => undefined)
     }
   }
 
@@ -347,13 +364,15 @@ export class OrbRuntimeController {
     const preferences = { ...this.snapshot.preferences, private_mode: privateMode }
     this.updatePreferences(preferences)
     if (this.snapshot.sessionId) {
-      await sendOrbEvent(this.snapshot.sessionId, { type: privateMode ? 'privacy_on' : 'privacy_off' }).catch(() => undefined)
+      await this.sendEvent(this.snapshot.sessionId, { type: privateMode ? 'privacy_on' : 'privacy_off' }).catch(() => undefined)
     }
   }
 
   async end() {
     if (this.snapshot.sessionId) {
-      await endOrbSession(this.snapshot.sessionId).catch(() => undefined)
+      await endOrbSession(this.snapshot.sessionId).catch((error) => {
+        this.applyAuthFailure(error)
+      })
     }
     this.audioRecovery.stopAll('logout')
     this.stream = null
@@ -379,6 +398,34 @@ export class OrbRuntimeController {
       error: undefined
     }
     this.emit()
+  }
+
+  private async sendEvent(sessionId: string, request: OrbSessionEventRequest) {
+    if (this.authBlocked) return null
+    try {
+      return await sendOrbEvent(sessionId, request)
+    } catch (error) {
+      if (this.applyAuthFailure(error)) return null
+      throw error
+    }
+  }
+
+  private applyAuthFailure(error: unknown) {
+    if (!isOrbAuthFailure(error)) return false
+    this.authBlocked = true
+    this.closeRealtime()
+    this.clearSilenceTimer()
+    this.clearHardStateRecovery()
+    this.snapshot = {
+      ...this.snapshot,
+      state: error.status === 401 ? 'expired' : 'permission_denied',
+      connected: false,
+      realtimeAvailable: false,
+      loading: false,
+      error: error.message
+    }
+    this.emit()
+    return true
   }
 
   private emit() {
@@ -419,18 +466,24 @@ export class OrbRuntimeController {
   }
 
   private async refreshRealtimeCredentials(): Promise<OrbRealtimeConnectOptions | null> {
-    if (!this.activeContext || !this.stream) return null
+    if (this.authBlocked || !this.activeContext || !this.stream) return null
     if (this.snapshot.sessionId) {
-      await sendOrbEvent(this.snapshot.sessionId, { type: 'reconnect', context: this.activeContext }).catch(() => undefined)
+      await this.sendEvent(this.snapshot.sessionId, { type: 'reconnect', context: this.activeContext }).catch(() => undefined)
     }
-    const data = await startOrbSession({
-      selected_mode: this.snapshot.selectedMode,
-      current_state: 'reconnecting',
-      context: this.activeContext,
-      voice_profile: this.snapshot.voiceProfile,
-      preferences: this.snapshot.preferences,
-      workspace_context: { role: this.activeRole, reconnect: true }
-    })
+    let data: OrbSessionStartData
+    try {
+      data = await startOrbSession({
+        selected_mode: this.snapshot.selectedMode,
+        current_state: 'reconnecting',
+        context: this.activeContext,
+        voice_profile: this.snapshot.voiceProfile,
+        preferences: this.snapshot.preferences,
+        workspace_context: { role: this.activeRole, reconnect: true }
+      })
+    } catch (error) {
+      if (this.applyAuthFailure(error)) return null
+      throw error
+    }
     this.snapshot = {
       ...this.snapshot,
       sessionId: data.session_id,
@@ -479,7 +532,7 @@ export class OrbRuntimeController {
       }
       this.resetSilenceTimer(this.activeContext)
       if (this.snapshot.sessionId) {
-        void sendOrbEvent(this.snapshot.sessionId, { type: 'speech_started', context: this.activeContext }).catch(() => undefined)
+        void this.sendEvent(this.snapshot.sessionId, { type: 'speech_started', context: this.activeContext }).catch(() => undefined)
       }
       return
     }
@@ -488,7 +541,7 @@ export class OrbRuntimeController {
       this.snapshot = { ...this.snapshot, state: 'thinking' }
       this.emit()
       if (this.snapshot.sessionId) {
-        void sendOrbEvent(this.snapshot.sessionId, { type: 'speech_stopped', context: this.activeContext }).catch(() => undefined)
+        void this.sendEvent(this.snapshot.sessionId, { type: 'speech_stopped', context: this.activeContext }).catch(() => undefined)
       }
       return
     }
@@ -519,7 +572,7 @@ export class OrbRuntimeController {
       this.snapshot = { ...this.snapshot, state: 'speaking', partialTranscript: `${this.snapshot.partialTranscript}${delta}` }
       this.emit()
       if (this.snapshot.sessionId && delta) {
-        void sendOrbEvent(this.snapshot.sessionId, { type: 'response_delta', text: delta, context: this.activeContext }).catch(() => undefined)
+        void this.sendEvent(this.snapshot.sessionId, { type: 'response_delta', text: delta, context: this.activeContext }).catch(() => undefined)
       }
       return
     }
@@ -528,7 +581,7 @@ export class OrbRuntimeController {
       this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
       this.emit()
       if (this.snapshot.sessionId) {
-        void sendOrbEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
+        void this.sendEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
       }
       return
     }
@@ -552,7 +605,7 @@ export class OrbRuntimeController {
     this.snapshot = { ...this.snapshot, state: 'speaking', partialTranscript: '' }
     this.emit()
     if (this.snapshot.sessionId) {
-      await sendOrbEvent(this.snapshot.sessionId, { type: 'response_started', context: this.activeContext }).catch(() => undefined)
+      await this.sendEvent(this.snapshot.sessionId, { type: 'response_started', context: this.activeContext }).catch(() => undefined)
     }
     if (this.realtimeClient.send({
       type: 'response.create',
@@ -583,7 +636,7 @@ export class OrbRuntimeController {
       this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
       this.emit()
       if (this.snapshot.sessionId) {
-        void sendOrbEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
+        void this.sendEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
       }
     }
     utterance.onerror = () => {
@@ -617,7 +670,7 @@ export class OrbRuntimeController {
       this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
       this.emit()
       if (this.snapshot.sessionId) {
-        void sendOrbEvent(this.snapshot.sessionId, { type: 'silence_timeout', context }).catch(() => undefined)
+        void this.sendEvent(this.snapshot.sessionId, { type: 'silence_timeout', context }).catch(() => undefined)
       }
     }, 12000)
   }
@@ -635,7 +688,7 @@ export class OrbRuntimeController {
       this.snapshot = { ...this.snapshot, state: 'idle', loading: false, partialTranscript: '', error: 'Orb recovered from a stalled voice turn. Please try again.' }
       this.emit()
       if (this.snapshot.sessionId) {
-        void sendOrbEvent(this.snapshot.sessionId, { type: 'error', state: 'idle', context: this.activeContext, metadata: { recovery: 'hard_state_timeout' } }).catch(() => undefined)
+        void this.sendEvent(this.snapshot.sessionId, { type: 'error', state: 'idle', context: this.activeContext, metadata: { recovery: 'hard_state_timeout' } }).catch(() => undefined)
       }
     }, 45000)
   }

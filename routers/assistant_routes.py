@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.errors import forbidden, unauthorised
 from auth.permissions import require_assistant_access
 from db.connection import get_db
 from services.ai_service import generate_ai_stream
@@ -169,7 +170,7 @@ def _safe_user_id(current_user: dict[str, Any]) -> int:
         or current_user.get("sub")
     )
     if user_id is None:
-        raise HTTPException(status_code=401, detail="Authentication required.")
+        raise unauthorised("not_authenticated", "Authentication required.")
     return user_id
 
 
@@ -244,13 +245,10 @@ def _assert_home_access(
         return
 
     if record_home_id is None:
-        raise HTTPException(status_code=403, detail="Home access could not be verified.")
+        raise forbidden("home_scope_missing", "Home access could not be verified.")
 
     if user_home_id != record_home_id:
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have access to this home or young person.",
-        )
+        raise forbidden("home_scope_denied", "You do not have access to this home or young person.")
 
 
 def _assert_requested_home_access(
@@ -262,17 +260,17 @@ def _assert_requested_home_access(
 
     if requested_home_id is None:
         if user_home_id is None:
-            raise HTTPException(status_code=403, detail="Home access could not be verified.")
+            raise forbidden("home_scope_missing", "Home access could not be verified.")
         return user_home_id
 
     if is_provider_level_role(role):
         return requested_home_id
 
     if user_home_id is None:
-        raise HTTPException(status_code=403, detail="Home access could not be verified.")
+        raise forbidden("home_scope_missing", "Home access could not be verified.")
 
     if requested_home_id != user_home_id:
-        raise HTTPException(status_code=403, detail="You do not have access to this home.")
+        raise forbidden("home_scope_denied", "You do not have access to this home.")
 
     return requested_home_id
 
@@ -296,13 +294,10 @@ def _resolve_quality_home_ids(
         return []
 
     if user_home_id is None:
-        raise HTTPException(status_code=403, detail="Home access could not be verified.")
+        raise forbidden("home_scope_missing", "Home access could not be verified.")
 
     if payload_home_id is not None and payload_home_id != user_home_id:
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have access to this quality scope.",
-        )
+        raise forbidden("home_scope_denied", "You do not have access to this quality scope.")
 
     return [user_home_id]
 

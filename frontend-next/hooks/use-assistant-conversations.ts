@@ -8,23 +8,35 @@ import {
 } from '@/lib/realtime/conversation-store'
 import { AssistantMessage } from '@/lib/realtime/assistant-runtime'
 
-export function useAssistantConversations() {
+type UseAssistantConversationsOptions = {
+  enabled?: boolean
+}
+
+export function useAssistantConversations(options: UseAssistantConversationsOptions = {}) {
+  const enabled = options.enabled ?? true
   const [conversations, setConversations] = useState<StoredConversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState('default')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | undefined>()
 
   const refreshConversations = useCallback(async () => {
+    if (!enabled) return
     try {
       setConversations(await conversationStore.list())
       setError(undefined)
     } catch (storeError) {
       setError(String(storeError))
     }
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     let cancelled = false
+    if (!enabled) {
+      setLoading(true)
+      return () => {
+        cancelled = true
+      }
+    }
 
     async function load() {
       try {
@@ -48,7 +60,7 @@ export function useAssistantConversations() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [enabled])
 
   const activeConversation = useMemo(() => {
     return conversations.find(
@@ -57,13 +69,16 @@ export function useAssistantConversations() {
   }, [conversations, activeConversationId])
 
   const createConversation = useCallback(async () => {
+    if (!enabled) {
+      throw new Error('Assistant session is not ready.')
+    }
     const conversation = await conversationStore.create()
 
     setConversations(await conversationStore.list())
     setActiveConversationId(conversation.id)
 
     return conversation
-  }, [])
+  }, [enabled])
 
   const selectConversation = useCallback((id: string) => {
     conversationStore.setActiveId(id)
@@ -71,9 +86,10 @@ export function useAssistantConversations() {
   }, [])
 
   const saveConversation = useCallback(async (id: string, messages: AssistantMessage[]) => {
+    if (!enabled) return
     await conversationStore.saveMessages(id, messages)
     await refreshConversations()
-  }, [refreshConversations])
+  }, [enabled, refreshConversations])
 
   return {
     conversations,
