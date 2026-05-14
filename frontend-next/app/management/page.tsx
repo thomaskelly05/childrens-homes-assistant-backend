@@ -16,13 +16,13 @@ export default async function ManagementPage() {
     ['escalated', 'Safeguarding or leadership escalation active']
   ]
   const qaActions = [
-    'Add QA comment',
-    'Return for amendment',
-    'Approve / sign off',
-    'Escalate safeguarding',
-    'Request evidence',
-    'Review chronology links',
-    'Assign follow-up action'
+    { label: 'Add QA comment', href: null },
+    { label: 'Return for amendment', href: null },
+    { label: 'Approve / sign off', href: null },
+    { label: 'Escalate safeguarding', href: '/safeguarding' },
+    { label: 'Request evidence', href: '/evidence' },
+    { label: 'Review chronology links', href: '/chronology' },
+    { label: 'Assign follow-up action', href: '/actions' }
   ]
 
   return (
@@ -53,9 +53,16 @@ export default async function ManagementPage() {
           <SectionHeader eyebrow="QA actions" title="One-click review actions" />
           <div className="grid gap-2">
             {qaActions.map((action) => (
-              <Link key={action} href="/management" className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-blue-50 hover:text-blue-800">
-                {action}
-              </Link>
+              action.href ? (
+                <Link key={action.label} href={action.href} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-blue-50 hover:text-blue-800">
+                  {action.label}
+                </Link>
+              ) : (
+                <div key={action.label} className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-black text-amber-900" role="note">
+                  {action.label}
+                  <span className="mt-1 block text-xs font-bold leading-5 text-amber-800">This review action is not live yet. No record will be changed from this control.</span>
+                </div>
+              )
             ))}
           </div>
         </Card>

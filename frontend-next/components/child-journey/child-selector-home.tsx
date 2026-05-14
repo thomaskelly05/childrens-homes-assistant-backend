@@ -31,11 +31,13 @@ export function ChildSelectorHome({
       />
       <LiveDataStatus result={result} />
 
-      <section className="grid gap-4 sm:gap-5 lg:grid-cols-2 2xl:grid-cols-3" aria-label="Young person selector">
+      <section className="grid gap-4 sm:gap-5 lg:grid-cols-2 2xl:grid-cols-3" aria-label="Young person selector" data-testid="child-selector">
         {cards.map((child) => (
           <Link
             key={child.id}
             href={`/young-people/${encodeURIComponent(child.id)}/journey`}
+            aria-label={`Enter ${child.preferredName || child.displayName}'s journey`}
+            data-testid={`child-card-${child.id}`}
             className="group block rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:border-blue-100 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 sm:rounded-[32px] sm:p-5"
           >
             <article>
@@ -86,7 +88,7 @@ export function ChildSelectorHome({
               </div>
 
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                <span className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">
+                <span className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20" data-testid={`enter-journey-button-${child.id}`}>
                   Enter Journey
                   <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-1" aria-hidden />
                 </span>

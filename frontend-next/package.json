@@ -8,6 +8,7 @@
     "start": "next start -p 3001",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "e2e": "playwright test",
     "route:audit": "node scripts/audit-routes.mjs"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
