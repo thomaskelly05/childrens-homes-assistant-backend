@@ -59,8 +59,8 @@ export class OrbRealtimeClient {
   private peer: RTCPeerConnection | null = null
   private channel: RTCDataChannel | null = null
   private audio: HTMLAudioElement | null = null
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
-  private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private reconnectTimer: number | null = null
+  private heartbeatTimer: number | null = null
   private reconnectAttempts = 0
   private stopped = false
   private current: OrbRealtimeConnectOptions | null = null
