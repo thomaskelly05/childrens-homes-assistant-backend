@@ -15,6 +15,7 @@ const publicPrefixes = [
   '/components'
 ]
 const sessionCookieNames = ['indicare_session', '__Host-indicare_session']
+const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
 function isPublicPath(pathname: string) {
   return publicPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
@@ -27,7 +28,7 @@ function hasSessionCookie(request: NextRequest) {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (!isPublicPath(pathname) && !hasSessionCookie(request)) {
+  if (!e2eAuthEnabled && !isPublicPath(pathname) && !hasSessionCookie(request)) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
     loginUrl.searchParams.set('returnUrl', `${pathname}${request.nextUrl.search}`)
