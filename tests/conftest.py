@@ -22,6 +22,7 @@ import auth.passwords as password_module  # noqa: E402
 import auth.legal_acceptance as legal_acceptance_module  # noqa: E402
 import core.lifespan as lifespan_module  # noqa: E402
 import db.legal_acceptance_db as legal_acceptance_db  # noqa: E402
+from middleware.security_middleware import CsrfProtectionMiddleware  # noqa: E402
 
 TEST_USER_ID = 5
 TEST_EMAIL = "admin1@indicare.co.uk"
@@ -67,9 +68,7 @@ def client(monkeypatch, fake_state):
     async def _bypass_csrf_dispatch(self, request, call_next):
         return await call_next(request)
 
-    csrf_middleware = getattr(app_module, "CSRFMiddleware", None)
-    if csrf_middleware is not None:
-        monkeypatch.setattr(csrf_middleware, "dispatch", _bypass_csrf_dispatch)
+    monkeypatch.setattr(CsrfProtectionMiddleware, "dispatch", _bypass_csrf_dispatch)
 
     # -----------------------------
     # App startup / shutdown mocks

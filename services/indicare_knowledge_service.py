@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
+from fastapi import HTTPException
+
 from db.connection import get_db_connection, release_db_connection
+from services.audit_event_service import record_audit_event
+from services.document_security_service import scope_matches
+from services.safe_logging import safe_log_dict
 
 SAFEGUARDING_TERMS = {
     "abuse",
@@ -49,7 +55,7 @@ class IndiCareKnowledgeService:
         if not question:
             return {"ok": False, "answer": "Please ask a question.", "citations": [], "confidence": "none"}
 
-        home_id = home_id or self._current_home_id(current_user)
+        home_id = self._authorised_home_id(current_user=current_user, young_person_id=young_person_id, home_id=home_id)
         safeguarding = self._safeguarding_signal(question)
         documents = self._search_documents(
             question=question,
@@ -211,16 +217,24 @@ class IndiCareKnowledgeService:
             if not table:
                 return
             columns = self._columns(conn, table)
+            store_raw_prompts = os.getenv("AI_STORE_PROMPTS", "false").strip().lower() == "true"
+            store_raw_transcripts = os.getenv("AI_STORE_TRANSCRIPTS", "false").strip().lower() == "true"
             payload = {
                 "user_id": self._current_user_id(current_user),
                 "home_id": home_id or self._current_home_id(current_user),
                 "young_person_id": young_person_id,
-                "question": question,
-                "prompt": question,
-                "response": result.get("answer"),
-                "answer": result.get("answer"),
+                "question": question if store_raw_prompts else None,
+                "prompt": question if store_raw_prompts else None,
+                "response": result.get("answer") if store_raw_transcripts else None,
+                "answer": result.get("answer") if store_raw_transcripts else None,
                 "citations": result.get("citations"),
-                "metadata": {"confidence": result.get("confidence"), "safeguarding_signal": result.get("safeguarding_signal")},
+                "metadata": safe_log_dict({
+                    "confidence": result.get("confidence"),
+                    "safeguarding_signal": result.get("safeguarding_signal"),
+                    "prompt_redacted": not store_raw_prompts,
+                    "response_redacted": not store_raw_transcripts,
+                    "citation_count": len(result.get("citations") or []),
+                }),
                 "created_at": "NOW()",
                 "timestamp": "NOW()",
             }
@@ -249,6 +263,45 @@ class IndiCareKnowledgeService:
             if conn is not None:
                 release_db_connection(conn)
 
+    def _authorised_home_id(self, *, current_user: dict[str, Any], young_person_id: int | None, home_id: int | None) -> int | None:
+        requested_home_id = home_id or self._current_home_id(current_user)
+        if young_person_id:
+            conn = None
+            try:
+                conn = get_db_connection()
+                with conn.cursor() as cur:
+                    cur.execute("SELECT id, home_id, provider_id FROM young_people WHERE id = %s LIMIT 1", (young_person_id,))
+                    row = cur.fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="Young person not found")
+                scope = dict(row)
+                if not scope_matches(current_user, scope):
+                    self._audit_denied(current_user, "assistant_young_person_scope_denied", "young_person", young_person_id)
+                    raise HTTPException(status_code=403, detail="You do not have access to this young person's knowledge")
+                return self._safe_int(scope.get("home_id"))
+            finally:
+                if conn is not None:
+                    release_db_connection(conn)
+
+        if requested_home_id:
+            if scope_matches(current_user, {"home_id": requested_home_id, "provider_id": self._current_provider_id(current_user)}):
+                return requested_home_id
+            self._audit_denied(current_user, "assistant_home_scope_denied", "home", requested_home_id)
+            raise HTTPException(status_code=403, detail="You do not have access to this home's knowledge")
+
+        self._audit_denied(current_user, "assistant_scope_missing", "assistant_knowledge", None)
+        raise HTTPException(status_code=403, detail="Assistant knowledge scope could not be verified")
+
+    def _audit_denied(self, current_user: dict[str, Any], action: str, resource_type: str, resource_id: Any) -> None:
+        record_audit_event(
+            event_type="assistant.permission_denied",
+            action=action,
+            outcome="denied",
+            actor=current_user,
+            resource_type=resource_type,
+            resource_id=str(resource_id) if resource_id is not None else None,
+        )
+
     def _first_existing_table(self, conn, names: list[str]) -> str | None:
         with conn.cursor() as cur:
             for name in names:
@@ -275,5 +328,18 @@ class IndiCareKnowledgeService:
         try:
             value = current_user.get("id") or current_user.get("user_id") or current_user.get("sub")
             return int(value) if value else None
+        except Exception:
+            return None
+
+    def _current_provider_id(self, current_user: dict[str, Any]) -> int | None:
+        try:
+            value = current_user.get("provider_id") or current_user.get("providerId")
+            return int(value) if value else None
+        except Exception:
+            return None
+
+    def _safe_int(self, value: Any) -> int | None:
+        try:
+            return int(value) if value not in (None, "") else None
         except Exception:
             return None

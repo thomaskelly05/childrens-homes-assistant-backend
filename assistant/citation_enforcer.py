@@ -70,17 +70,23 @@ def extract_visible_record_refs(
     refs: list[str] = []
 
     for collection in (sources or [], evidence_index or []):
-        if not isinstance(collection, dict):
-            continue
-        citation_ref = _safe_string(collection.get("citation_ref"))
-        if citation_ref and RECORD_CITATION_RE.fullmatch(citation_ref):
-            refs.append(citation_ref)
-            continue
+        if isinstance(collection, list):
+            candidates = collection
+        else:
+            candidates = [collection]
+        for item in candidates:
+            if not isinstance(item, dict):
+                continue
+            citation_ref = _safe_string(item.get("citation_ref"))
+            if citation_ref and RECORD_CITATION_RE.fullmatch(citation_ref):
+                refs.append(citation_ref)
+                continue
 
-        record_type = _safe_string(collection.get("record_type") or collection.get("type"))
-        record_id = _safe_string(collection.get("record_id") or collection.get("id"))
-        if record_type and record_id:
-            refs.append(f"[{record_type}:{record_id}]")
+            record_type = _safe_string(item.get("record_type") or item.get("type"))
+            record_id = _safe_string(item.get("record_id") or item.get("id"))
+            if record_type and record_id:
+                refs.append(f"[{record_type}:{record_id}]")
+            continue
 
     return _dedupe(refs)
 

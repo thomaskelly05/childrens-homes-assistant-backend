@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, Link2, MessageSquareHeart, Mic, Save, Sparkles, Wand2 } from 'lucide-react'
+import { getCsrfToken } from '@/lib/auth/api'
+import { getSafeDraft, removeSafeDraft, setSafeDraft } from '@/lib/security/safe-storage'
 
 import {
   buildLinkedWorkflowHref,
@@ -223,9 +225,9 @@ export function RecordingForm({
 
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem(autosaveKey)
+      const saved = getSafeDraft<Record<string, string>>(autosaveKey)
       if (!saved) return
-      const parsed = JSON.parse(saved) as { values?: Record<string, string>; savedAt?: string }
+      const parsed = { values: saved.value, savedAt: saved.savedAt }
       if (parsed.values) {
         setValues((current) => ({ ...current, ...parsed.values }))
         setDraftRestored(true)
@@ -233,14 +235,14 @@ export function RecordingForm({
         setNotice(`Unfinished draft restored${parsed.savedAt ? ` from ${new Date(parsed.savedAt).toLocaleString('en-GB')}` : ''}.`)
       }
     } catch {
-      window.localStorage.removeItem(autosaveKey)
+      removeSafeDraft(autosaveKey)
     }
   }, [autosaveKey])
 
   useEffect(() => {
     if (!dirty || submitting) return
     const handle = window.setTimeout(() => {
-      window.localStorage.setItem(autosaveKey, JSON.stringify({ values, savedAt: new Date().toISOString() }))
+      setSafeDraft(autosaveKey, values, undefined, 'confidential_child')
     }, 500)
     return () => window.clearTimeout(handle)
   }, [autosaveKey, dirty, submitting, values])
@@ -314,7 +316,7 @@ export function RecordingForm({
       const response = await fetch('/api/recording', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(getCsrfToken() ? { 'X-CSRF-Token': getCsrfToken() } : {}) },
         body: JSON.stringify({
           childId,
           workflowId: workflow.id,
@@ -328,9 +330,9 @@ export function RecordingForm({
       }
       setDirty(false)
       if (payload.status === 'draft') {
-        window.localStorage.setItem(autosaveKey, JSON.stringify({ values, savedAt: new Date().toISOString() }))
+        setSafeDraft(autosaveKey, values, undefined, 'confidential_child')
       } else {
-        window.localStorage.removeItem(autosaveKey)
+        removeSafeDraft(autosaveKey)
       }
       const params = new URLSearchParams({
         saved: payload.routeType || workflow.id,
@@ -340,7 +342,7 @@ export function RecordingForm({
       if (payload.limitation) params.set('limitation', payload.limitation)
       router.push(`/young-people/${encodeURIComponent(childId)}/journey?${params.toString()}`)
     } catch (caught) {
-      window.localStorage.setItem(autosaveKey, JSON.stringify({ values, savedAt: new Date().toISOString() }))
+      setSafeDraft(autosaveKey, values, undefined, 'confidential_child')
       const detail = caught instanceof Error ? caught.message : 'The record could not be saved. Please try again.'
       setError(`Draft saved locally. It has not yet been added to the child's record. ${detail}`)
       setSubmitting(false)

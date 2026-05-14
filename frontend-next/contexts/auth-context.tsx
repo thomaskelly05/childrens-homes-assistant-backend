@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 
 import { authFetch, AuthApiError } from '@/lib/auth/api'
 import { normaliseRole } from '@/lib/auth/permissions'
+import { clearSensitiveBrowserState, suppressProductionConsole } from '@/lib/security/privacy'
 import type { AuthMeResponse, LoginResponse, StaffUser } from '@/lib/auth/types'
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    suppressProductionConsole()
     void refreshSession()
   }, [refreshSession])
 
@@ -105,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authFetch('/auth/logout', { method: 'POST' })
     } finally {
+      clearSensitiveBrowserState()
       setUser(null)
       setStatus('unauthenticated')
       router.replace('/login')

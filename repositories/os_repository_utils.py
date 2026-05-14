@@ -216,6 +216,8 @@ def build_scope_where(
         elif allowed_home_ids:
             where.append("home_id = ANY(%s)")
             params.append(allowed_home_ids)
+        else:
+            where.append("1 = 0")
     elif home_id is not None and "home_id" in cols:
         where.append("home_id = %s")
         params.append(home_id)

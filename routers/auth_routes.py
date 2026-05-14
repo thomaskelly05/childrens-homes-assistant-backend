@@ -23,6 +23,7 @@ from db.billing_db import get_user_billing_by_user_id
 from db.connection import get_db
 from db.mfa_db import get_user_mfa, log_auth_event
 from db.passkeys_db import user_has_passkeys
+from services.session_security_service import create_session_record, revoke_session
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -329,6 +330,7 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
         _safe_session_reset(request)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Session could not be created")
 
+    session_id = create_session_record(user_id=int(user["id"]), request=request, mfa_verified=not mfa_pending)
     token = create_session_token(
         user["id"],
         email=user.get("email"),
@@ -338,6 +340,7 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
         permissions=sorted(permissions_for_role(user.get("role"))),
         mfa_verified=not mfa_pending,
         remember=remember,
+        session_id=session_id,
     )
     _set_session_cookie(response, token, remember=remember)
     _set_csrf_cookie(response, csrf_token, remember=remember)
@@ -353,6 +356,10 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
 
 @router.post("/logout")
 def logout(request: Request, response: Response):
+    token = _extract_token(request)
+    payload = decode_session_token(token) if token else None
+    if payload and payload.get("sid"):
+        revoke_session(str(payload["sid"]), reason="logout")
     _clear_auth_cookies(response)
     _safe_session_reset(request)
     return {"ok": True, "message": "Logged out"}
