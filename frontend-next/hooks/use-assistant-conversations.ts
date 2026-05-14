@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   conversationStore,
@@ -18,6 +18,7 @@ export function useAssistantConversations(options: UseAssistantConversationsOpti
   const [activeConversationId, setActiveConversationId] = useState('default')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | undefined>()
+  const loadPromiseRef = useRef<Promise<{ loaded: StoredConversation[]; active: string }> | null>(null)
 
   const refreshConversations = useCallback(async () => {
     if (!enabled) return
@@ -39,9 +40,13 @@ export function useAssistantConversations(options: UseAssistantConversationsOpti
     }
 
     async function load() {
+      const loadPromise = loadPromiseRef.current ?? conversationStore.list().then((loaded) => ({
+        loaded,
+        active: conversationStore.getActiveId()
+      }))
+      loadPromiseRef.current = loadPromise
       try {
-        const loaded = await conversationStore.list()
-        const active = conversationStore.getActiveId()
+        const { loaded, active } = await loadPromise
 
         if (!cancelled) {
           setConversations(loaded)
@@ -51,6 +56,7 @@ export function useAssistantConversations(options: UseAssistantConversationsOpti
       } catch (storeError) {
         if (!cancelled) setError(String(storeError))
       } finally {
+        if (loadPromiseRef.current === loadPromise) loadPromiseRef.current = null
         if (!cancelled) setLoading(false)
       }
     }
