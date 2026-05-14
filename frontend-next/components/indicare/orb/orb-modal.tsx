@@ -57,6 +57,15 @@ function DraftPreview({ draft, onClose }: { draft: OrbVoiceDraft; onClose: () =>
   )
 }
 
+const recordingCopilotPrompts = [
+  'Summarise this child\'s presentation today.',
+  'Help me write this incident factually.',
+  'What follow-up is missing?',
+  'Show linked safeguarding concerns.',
+  'Make this more child-centred.',
+  'Prepare handover for tonight.'
+]
+
 export function OrbModal({
   open,
   onClose,
@@ -175,6 +184,25 @@ export function OrbModal({
               onPrivateMode={(value) => void controller.setPrivateMode(value)}
               onEnd={() => void controller.end()}
             />
+            <div className="rounded-[24px] border border-purple-100 bg-purple-50 p-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-700">Recording copilot</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {recordingCopilotPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => {
+                      setInput(prompt)
+                      inputRef.current?.focus()
+                    }}
+                    className="rounded-2xl border border-purple-200 bg-white px-4 py-3 text-left text-sm font-black text-purple-800"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-xs leading-5 text-purple-900">Orb can draft, suggest links and identify gaps. Staff must explicitly save or edit any record.</p>
+            </div>
             {pendingDraft ? <DraftPreview draft={pendingDraft} onClose={() => setDraftDismissed(true)} /> : null}
             <OrbTranscript transcript={snapshot.transcript} partialTranscript={snapshot.partialTranscript} />
             <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">

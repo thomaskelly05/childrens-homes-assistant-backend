@@ -46,6 +46,11 @@ function hasSuggestion(suggestions: SuggestedLink[] | undefined, label: string) 
   return (suggestions || []).some((suggestion) => suggestion.label.toLowerCase().includes(label.toLowerCase()))
 }
 
+function linkingSummary(suggestions: SuggestedLink[] | undefined) {
+  const labels = (suggestions || []).map((suggestion) => suggestion.label).slice(0, 6)
+  return labels.length ? `Suggested links reviewed by staff: ${labels.join('; ')}.` : undefined
+}
+
 function severity(values: Record<string, string>, suggestions?: SuggestedLink[]) {
   if (hasSuggestion(suggestions, 'safeguarding') || yes(values.manager_review_required) || yes(values.risk_review_required)) return 'high'
   if (yes(values.new_concern) || yes(values.incident) || yes(values.self_harm_concern) || yes(values.exploitation_concern)) return 'high'
@@ -93,7 +98,8 @@ function dailyPayload(values: Record<string, string>, suggestions?: SuggestedLin
     manager_review_needed: yes(values.manager_review_required),
     safeguarding_concern: yes(values.new_concern) || yes(values.allegation) || yes(values.self_harm_concern) || yes(values.exploitation_concern) || hasSuggestion(suggestions, 'safeguarding'),
     link_monthly_reviews: true,
-    link_quality_standards: true
+    link_quality_standards: true,
+    manager_review_comment: linkingSummary(suggestions)
   }
 }
 
@@ -125,7 +131,7 @@ function incidentPayload(values: Record<string, string>, suggestions?: Suggested
     trauma_informed_formulation: values.de_escalation || values.safeguarding_consideration || values.risk_review_required,
     child_voice: values.child_voice || values.child_words || values.child_explanation,
     restorative_follow_up: values.follow_up_actions || actions,
-    manager_review_comment: yes(values.manager_review_required) ? 'Manager review requested from recording workflow.' : undefined,
+    manager_review_comment: [yes(values.manager_review_required) ? 'Manager review requested from recording workflow.' : undefined, linkingSummary(suggestions)].filter(Boolean).join(' ') || undefined,
     physical_intervention_used: restraintUsed,
     physical_intervention_type: restraintUsed ? values.restraint_sanction || 'Recorded in workflow' : undefined,
     body_map_required: incidentType === 'health_incident' || Boolean(values.body_map_observation),
@@ -163,7 +169,7 @@ function familyPayload(values: Record<string, string>) {
     location: undefined,
     pre_contact_presentation: values.before_presentation,
     post_contact_presentation: text(values, ['during_presentation', 'after_presentation', 'positives']),
-    child_voice: undefined,
+    child_voice: values.child_voice || values.wishes_feelings,
     concerns: values.worries || values.linked_risks_actions,
     follow_up_required: Boolean(values.follow_up_support || values.linked_risks_actions)
   }
