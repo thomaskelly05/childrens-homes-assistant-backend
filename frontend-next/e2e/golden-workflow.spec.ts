@@ -47,6 +47,7 @@ test('Jamie golden workflow is smooth, explicit, and clears sensitive state on l
   await expect(page).toHaveURL(/\/young-people\/yp-jamie\/daily-note\/new/)
   await expect(page.getByTestId('daily-note-form')).toBeVisible()
   await page.getByLabel('Daily note *').fill('Jamie disclosed feeling unsafe after family contact. Staff reassured Jamie, informed the manager, will update the social worker, and need a follow-up action and safeguarding review.')
+  await page.getByRole('tab', { name: 'Child voice and lived experience' }).click()
   await page.getByLabel('What did the child say or show?').fill('Jamie said he wanted adults to know the call made him anxious.')
   await expect(page.getByRole('button', { name: 'Add safeguarding follow-up' })).toBeVisible()
   await page.getByRole('button', { name: 'Add safeguarding follow-up' }).click()
