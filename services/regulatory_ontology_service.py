@@ -88,7 +88,7 @@ class RegulatoryOntologyService:
             sccif_area_ids=[node.id for node in nodes if node.node_type == "sccif_area"],
             source_documents=SOURCE_DOCUMENTS,
             guardrails=[
-                "Ontology links evidence to review prompts; it does not make safeguarding decisions.",
+                "No safeguarding decision is made; ontology links evidence to review prompts only.",
                 "Reg 44, Reg 45, Annex A and Ofsted outputs remain manager-reviewed drafts.",
                 "Orb may explain gaps and suggest drafting support, not final judgements.",
             ],
