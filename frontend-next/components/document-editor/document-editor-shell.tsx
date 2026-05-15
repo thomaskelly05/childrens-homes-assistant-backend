@@ -78,7 +78,7 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
         setSaveState('limited')
         setMessage(`Could not load this document. The editor is in draft-only mode: ${String(error)}`)
       })
-  }, [documentId, template.title])
+  }, [documentId, template.sections, template.title])
 
   useEffect(() => {
     if (!activeDocumentId) return

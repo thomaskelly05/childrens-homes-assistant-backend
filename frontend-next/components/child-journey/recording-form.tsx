@@ -453,7 +453,7 @@ export function RecordingForm({
         </div>
       ) : null}
       {notice ? (
-        <div className="rounded-[24px] border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold leading-6 text-blue-800" data-testid="recording-notice-message" aria-live="polite">
+        <div className="rounded-[24px] border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold leading-6 text-blue-800" data-testid="save-state-message" aria-live="polite">
           {notice}
         </div>
       ) : null}
