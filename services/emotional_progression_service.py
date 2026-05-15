@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from typing import Any
 
 
@@ -48,11 +49,13 @@ class EmotionalProgressionService:
         sequence: list[dict[str, Any]] = []
         supports: list[dict[str, Any]] = []
         triggers: list[dict[str, Any]] = []
+        state_counts: Counter[str] = Counter()
 
         for record in ordered:
             text = _record_text(record)
             mood = self._mood(record, text)
             if mood:
+                state_counts.update([mood])
                 sequence.append({
                     "record_id": _field(record, "id", "record_id"),
                     "date": _field(record, "created_at", "createdAt", "event_date", "date", "dateTime"),
@@ -68,8 +71,16 @@ class EmotionalProgressionService:
             "sequence": sequence[-8:],
             "current_state": sequence[-1]["state"] if sequence else "not_recorded",
             "what_changed": self._what_changed(sequence),
+            "what_improved": self._what_improved(sequence),
+            "what_still_needs_support": self._what_still_needs_support(sequence, triggers),
             "support_that_helped": supports[-5:],
             "recurring_triggers": triggers[-5:],
+            "recurring_emotional_themes": [
+                {"state": state, "count": count}
+                for state, count in state_counts.most_common()
+                if count >= 2
+            ],
+            "wellbeing_continuity": self._wellbeing_continuity(sequence, supports, triggers),
             "guardrail": "Emotional progression describes presentation in records; it is not a diagnosis.",
         }
 
@@ -110,6 +121,37 @@ class EmotionalProgressionService:
         if first == latest:
             return f"Presentation remains recorded as {latest} across the visible sequence."
         return f"Presentation moved from {first} to {latest} in the visible records."
+
+    def _what_improved(self, sequence: list[dict[str, Any]]) -> str:
+        if not sequence:
+            return "No visible emotional progression has been recorded yet."
+        states = [item["state"] for item in sequence]
+        if any(state in {"settled", "positive"} for state in states[-3:]):
+            return "Recent records include settled or positive presentation that staff can build on."
+        return "Positive change is not yet clear in the visible emotional sequence."
+
+    def _what_still_needs_support(self, sequence: list[dict[str, Any]], triggers: list[dict[str, Any]]) -> str:
+        if not sequence:
+            return "More daily notes are needed before support needs can be summarised."
+        latest = sequence[-1]["state"]
+        if latest in {"anxious", "heightened", "low"}:
+            return f"Recent presentation is recorded as {latest}; continuity of support into the next shift may be helpful."
+        if triggers:
+            return "Recent trigger context is visible; the next shift should check whether the same pattern continues."
+        return "No immediate emotional support theme is obvious from the visible sequence."
+
+    def _wellbeing_continuity(
+        self,
+        sequence: list[dict[str, Any]],
+        supports: list[dict[str, Any]],
+        triggers: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return {
+            "summary": self._what_changed(sequence),
+            "latest_support_marker": supports[-1] if supports else None,
+            "latest_trigger_marker": triggers[-1] if triggers else None,
+            "next_shift_prompt": "What helped, what worried adults, and what should continue into the next shift?",
+        }
 
     def _short(self, text: str) -> str:
         return " ".join(text.split())[:180]

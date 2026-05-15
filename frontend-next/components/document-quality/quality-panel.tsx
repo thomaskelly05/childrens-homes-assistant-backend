@@ -8,7 +8,7 @@ type QualityPanelProps = {
 export function DocumentQualityPanel({ completedSections, totalSections, hasUnsavedChanges, version }: QualityPanelProps) {
   const signals = [
     `${completedSections}/${totalSections} sections started`,
-    hasUnsavedChanges ? 'unconfirmed edits present' : 'latest edits confirmed',
+    hasUnsavedChanges ? 'unconfirmed edits held in editor' : 'latest edits confirmed',
     version ? `version ${version}` : 'new draft',
   ]
 
@@ -21,7 +21,7 @@ export function DocumentQualityPanel({ completedSections, totalSections, hasUnsa
           <span key={item} className="rounded-2xl bg-slate-50 px-3 py-2 font-bold">{item}</span>
         ))}
       </div>
-      <p className="mt-4 text-xs font-bold leading-5 text-slate-500">Detailed quality suggestions come from the document-system API during review; this panel only shows live editor facts.</p>
+      <p className="mt-4 text-xs font-bold leading-5 text-slate-500">Suggestions are supportive checks, not criticism. Detailed quality guidance comes from the document-system API during review; this panel only shows live editor facts.</p>
     </aside>
   )
 }

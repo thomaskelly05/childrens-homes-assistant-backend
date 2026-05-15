@@ -15,7 +15,7 @@ export function MobileNav() {
   const items = [
     { label: 'Home', href: '/home', icon: Home },
     { label: 'Child', href: childId ? `/young-people/${encodeURIComponent(childId)}/journey` : '/home', icon: UserRound },
-    { label: 'Chronology', href: childScopedHref('/chronology'), icon: FileText },
+    { label: 'Continue', href: childScopedHref('/chronology'), icon: FileText },
     { label: 'Orb', href: '/assistant', icon: MessageSquarePlus },
     { label: 'Notifs', href: '/notifications', icon: Bell }
   ]
@@ -27,7 +27,7 @@ export function MobileNav() {
       }))
     : [
         { label: 'Choose child', href: '/home', icon: ClipboardPlus },
-        { label: 'Quick record', href: '/home', icon: ClipboardPlus },
+        { label: 'Continue', href: '/home', icon: ClipboardPlus },
         { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
       ]
 

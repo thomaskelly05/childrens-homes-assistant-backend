@@ -16,7 +16,7 @@ const toneClasses: Record<WorkflowReliabilitySnapshot['state'], string> = {
 export function WorkflowSaveIndicator({ snapshot, compact = false }: { snapshot: WorkflowReliabilitySnapshot; compact?: boolean }) {
   const Icon = snapshot.state === 'saved' ? CheckCircle2 : snapshot.state === 'offline_draft' ? CloudOff : snapshot.retryable ? RefreshCw : ShieldCheck
   return (
-    <div className={`inline-flex items-start gap-3 rounded-full px-4 py-2 text-sm ring-1 ${toneClasses[snapshot.state]}`}>
+    <div className={`inline-flex items-start gap-3 rounded-full px-4 py-2 text-sm shadow-sm ring-1 ${toneClasses[snapshot.state]}`} aria-live="polite">
       <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${snapshot.state === 'saving' ? 'motion-safe:animate-spin' : ''}`} aria-hidden />
       <span>
         <span className="block font-black">{snapshot.label}</span>

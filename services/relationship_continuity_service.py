@@ -48,6 +48,7 @@ class RelationshipContinuityService:
     ) -> dict[str, Any]:
         scoped = self._scope_records(records, young_person_id=young_person_id, home_id=home_id)
         category_counts: Counter[str] = Counter()
+        tone_counts: Counter[str] = Counter()
         continuity_links: list[dict[str, Any]] = []
         repair_markers: list[dict[str, Any]] = []
 
@@ -57,11 +58,13 @@ class RelationshipContinuityService:
             if not categories:
                 continue
             category_counts.update(categories)
+            tone = self._tone(text)
+            tone_counts.update([tone])
             marker = {
                 "record_id": _field(record, "id", "record_id"),
                 "title": _field(record, "title", "summary", "record_type") or "Relationship marker",
                 "categories": categories,
-                "tone": self._tone(text),
+                "tone": tone,
             }
             continuity_links.append(marker)
             if marker["tone"] == "repair_or_strength":
@@ -75,6 +78,9 @@ class RelationshipContinuityService:
                 if count >= 2
             ],
             "repair_or_strength_markers": repair_markers[:5],
+            "relationship_stability": self._stability(tone_counts),
+            "supportive_relationships_visible": tone_counts.get("repair_or_strength", 0),
+            "relationship_worry_markers": tone_counts.get("tension_or_worry", 0),
             "summary": self._summary(category_counts),
             "guardrail": "Relationship continuity is calculated only from scoped visible records.",
         }
@@ -111,6 +117,24 @@ class RelationshipContinuityService:
             return "No visible relationship continuity markers yet."
         category, count = counts.most_common(1)[0]
         return f"{category.replace('_', ' ').title()} relationships appear in {count} scoped record(s)."
+
+    def _stability(self, tone_counts: Counter[str]) -> dict[str, Any]:
+        strengths = tone_counts.get("repair_or_strength", 0)
+        worries = tone_counts.get("tension_or_worry", 0)
+        if strengths and not worries:
+            label = "stable_or_strengthening"
+        elif strengths >= worries and strengths:
+            label = "mixed_with_repair_visible"
+        elif worries:
+            label = "needs_continuity"
+        else:
+            label = "not_enough_visible_context"
+        return {
+            "label": label,
+            "repair_or_strength_count": strengths,
+            "tension_or_worry_count": worries,
+            "prompt": "What should the next adult understand about trust, contact, repair or worry?",
+        }
 
 
 relationship_continuity_service = RelationshipContinuityService()

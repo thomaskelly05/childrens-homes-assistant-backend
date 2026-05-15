@@ -165,13 +165,13 @@ export class OrbRuntimeController {
       triggerOrbHaptic('reconnect')
       this.realtimeClient.handleBrowserOnline()
       if (this.snapshot.state === 'offline') {
-        this.snapshot = { ...this.snapshot, state: 'reconnecting', error: undefined }
+        this.snapshot = { ...this.snapshot, state: 'reconnecting', error: undefined, realtimeState: { ...this.snapshot.realtimeState, continuity_message: 'Reconnecting without changing the active child context.' } }
         this.emit()
       }
     }
     const onOffline = () => {
       this.realtimeClient.handleBrowserOffline()
-      this.snapshot = { ...this.snapshot, state: 'offline', connected: false, error: 'Orb is offline. It will reconnect when the network returns.' }
+      this.snapshot = { ...this.snapshot, state: 'offline', connected: false, error: 'Orb is offline. Typed support is still available, and the current thread will reconnect when the network returns.' }
       this.emit()
     }
     const onVisibility = () => {
@@ -585,7 +585,7 @@ export class OrbRuntimeController {
     }
     if (type === 'response.done') {
       this.clearHardStateRecovery()
-      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
+      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '', realtimeState: { ...this.snapshot.realtimeState, silence_awareness: 'present_without_pushing' } }
       this.emit()
       if (this.snapshot.sessionId) {
         void this.sendEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
@@ -692,7 +692,7 @@ export class OrbRuntimeController {
     this.clearHardStateRecovery()
     this.hardStateTimer = setTimeout(() => {
       if (!['thinking', 'speaking', 'connecting', 'reconnecting'].includes(this.snapshot.state)) return
-      this.snapshot = { ...this.snapshot, state: 'idle', loading: false, partialTranscript: '', error: "Orb recovered that turn. Let's try that again." }
+      this.snapshot = { ...this.snapshot, state: 'idle', loading: false, partialTranscript: '', error: 'Orb paused that turn safely. You can carry on from the same context.' }
       this.emit()
       if (this.snapshot.sessionId) {
         void this.sendEvent(this.snapshot.sessionId, { type: 'error', state: 'idle', context: this.activeContext, metadata: { recovery: 'hard_state_timeout' } }).catch(() => undefined)

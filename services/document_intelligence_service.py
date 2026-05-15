@@ -47,8 +47,8 @@ class DocumentIntelligenceService:
             self._indicator("child_voice", any(term in lower for term in CHILD_VOICE_TERMS), "Add the child's wishes, feelings or direct work evidence where appropriate."),
             self._indicator("strengths_based_language", any(term in lower for term in {"strength", "helped", "trusted", "proud", "managed", "preferred", "enjoyed"}), "Consider naming strengths, relationships and what helped the child."),
             self._indicator("safeguarding_prompt", not any(term in lower for term in SAFEGUARDING_TERMS) or "manager" in lower or "oversight" in lower, "Where safeguarding is referenced, include management oversight and outcome."),
-            self._indicator("weak_outcomes", not any(term in lower for term in WEAK_OUTCOME_TERMS), "Replace vague outcomes with what changed for the child."),
-            self._indicator("vague_wording", not any(term in lower for term in VAGUE_TERMS), "Replace vague wording with specific observed detail and context."),
+            self._indicator("weak_outcomes", not any(term in lower for term in WEAK_OUTCOME_TERMS), "Consider naming what changed for the child."),
+            self._indicator("vague_wording", not any(term in lower for term in VAGUE_TERMS), "Consider adding specific observed detail and context."),
             self._indicator("unsupported_claims", not self._has_unsupported_claim(lower), "Support quality claims with dates, source records or evidence links."),
             self._indicator("repetitive_language", not self._is_repetitive(clean), "Vary repeated phrases and keep professional wording specific."),
             self._indicator("chronology_linked", bool(evidence_links) or any(term in lower for term in CHRONOLOGY_TERMS), "Anchor the draft to chronology or source records before sign-off."),
@@ -59,6 +59,8 @@ class DocumentIntelligenceService:
         coverage = [term for term in expected_terms if term in lower]
         if expected_terms:
             indicators.append(self._indicator("document_type_coverage", len(coverage) >= max(1, len(expected_terms) // 2), f"Include document-specific content: {', '.join(expected_terms)}."))
+        else:
+            indicators.append(self._indicator("generic_template_context", True, "Generic template; specialist coverage is not scored."))
 
         passed = sum(1 for item in indicators if item["status"] == "ok")
         score = round((passed / max(1, len(indicators))) * 100)
@@ -77,6 +79,12 @@ class DocumentIntelligenceService:
             "evidence_sufficiency_prompts": self.evidence_sufficiency_prompts(evidence_links=evidence_links),
             "chronology_continuity_prompts": self.chronology_continuity_prompts(text=clean),
             "review_readiness_prompts": self.review_readiness_prompts(indicators=indicators),
+            "continue_writing_prompts": self.continue_writing_prompts(text=clean),
+            "quick_insert_evidence": self.quick_insert_evidence_prompts(),
+            "focused_writing_mode": {
+                "suggested": score < 75 or len(clean.split()) < 120,
+                "prompt": "Continue writing from the child's lived experience, then add source evidence and outcome.",
+            },
             "inspection_intelligence": self.inspection_intelligence(text=clean, evidence_links=evidence_links),
             "orb_document_support": [
                 "strengthen child voice",
@@ -129,6 +137,26 @@ class DocumentIntelligenceService:
             "What should the next adult understand before they offer support?",
         ]
 
+    def continue_writing_prompts(self, *, text: str) -> list[str]:
+        lower = text.lower()
+        prompts = ["Continue with what changed for the child, not only what adults did."]
+        if "because" not in lower and "evidenced" not in lower:
+            prompts.append("Add the source or reason that supports the main claim.")
+        if "follow" not in lower and "next" not in lower:
+            prompts.append("Name the next step, owner or review point if one is needed.")
+        if not any(term in lower for term in CHILD_VOICE_TERMS):
+            prompts.append("Add child voice or explain why it was not available.")
+        return prompts[:4]
+
+    def quick_insert_evidence_prompts(self) -> list[str]:
+        return [
+            "Insert chronology reference",
+            "Insert daily note evidence",
+            "Insert direct child voice",
+            "Insert manager review point",
+            "Insert what helped",
+        ]
+
     def follow_up_prompts(self, *, text: str) -> list[str]:
         lower = text.lower()
         prompts = []
@@ -153,7 +181,7 @@ class DocumentIntelligenceService:
         needs = [item["key"] for item in indicators if item["status"] == "needs_review"]
         if not needs:
             return ["Draft appears ready for manager review; human judgement remains required."]
-        return [f"Consider expanding {key.replace('_', ' ')} before manager review." for key in needs[:5]]
+        return [f"Consider gently expanding {key.replace('_', ' ')} before manager review." for key in needs[:5]]
 
     def inspection_intelligence(self, *, text: str, evidence_links: list[dict[str, Any]]) -> list[dict[str, str]]:
         lower = text.lower()

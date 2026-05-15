@@ -54,6 +54,12 @@ class RealtimeRecoveryService:
             "child_scope": {
                 "selected_young_person_id": (state.get("active_context_references") or {}).get("selected_young_person_id"),
                 "cross_child_lookup_allowed": False,
+                "scope_lock_message": "Reconnect resumes the same child context only.",
+            },
+            "continuity": {
+                "interrupted_response_available": bool(state.get("interrupted_response")),
+                "typed_fallback_available": True,
+                "copy": "Orb is reconnecting without losing the current thread.",
             },
             "bindings": orb_session_store.socket_bindings(session_id),
         }

@@ -20,6 +20,7 @@ class InspectionIntelligenceService:
             "status": "review_recommended" if quality["review_required"] or weak_sections else "monitor",
             "confidence": quality["confidence"],
             "context": quality["context"],
+            "supportive_summary": self._supportive_summary(evidence=evidence, weak_sections=weak_sections),
             "questions_answered": [pattern["question"] for pattern in patterns],
             "quality_patterns": patterns,
             "weakly_evidenced_standards": weak_sections,
@@ -31,6 +32,7 @@ class InspectionIntelligenceService:
             "what_inspectors_may_ask": self._what_inspectors_may_ask(patterns=patterns, weak_sections=weak_sections),
             "what_has_improved": self._what_has_improved(evidence=evidence),
             "what_still_needs_oversight": self._what_still_needs_oversight(evidence=evidence, weak_sections=weak_sections),
+            "practical_improvement_prompts": self._practical_improvement_prompts(evidence=evidence, weak_sections=weak_sections),
             "guardrails": [
                 "No definitive safeguarding conclusions are generated.",
                 "All outputs require professional review against source records.",
@@ -56,7 +58,7 @@ class InspectionIntelligenceService:
         return recommendations or [{
             "priority": "monitor",
             "action": "Continue sampling records for child-centred impact and manager oversight.",
-            "reason": "Visible evidence does not currently show priority gaps.",
+            "reason": "In the visible sample, evidence does not currently show priority gaps.",
         }]
 
     def _chronology_quality_indicators(self, *, evidence: dict[str, Any], patterns: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -116,6 +118,7 @@ class InspectionIntelligenceService:
             ],
             "priority_gaps": [pattern.get("question") for pattern in patterns[:5]] + [section.get("title") for section in weak_sections[:3]],
             "unsupported_conclusion_guard": "Use 'visible evidence suggests' or 'records show' only when source links are present.",
+            "tone": "supportive, practical and evidence-led; avoid fear-based scoring.",
         }
 
     def _what_inspectors_may_ask(self, *, patterns: list[dict[str, Any]], weak_sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -202,6 +205,26 @@ class InspectionIntelligenceService:
             "language": "consider expanding source evidence before inspection sampling.",
         } for section in weak_sections[:3])
         return items[:8]
+
+    def _supportive_summary(self, *, evidence: dict[str, Any], weak_sections: list[dict[str, Any]]) -> str:
+        cards = evidence.get("cards") or []
+        if weak_sections:
+            return "In the visible sample, some evidence areas would benefit from clearer source links, child voice or oversight."
+        if cards:
+            return "In the visible sample, inspection evidence is available for calm manager review."
+        return "No visible evidence sample has been provided yet; start with chronology, child voice and oversight links."
+
+    def _practical_improvement_prompts(self, *, evidence: dict[str, Any], weak_sections: list[dict[str, Any]]) -> list[str]:
+        prompts = [
+            "Open the source chronology before changing any conclusion.",
+            "Add what changed for the child after the action or support.",
+            "Name child voice where it is known, or explain why it is not available.",
+        ]
+        if weak_sections:
+            prompts.append("Choose one weak judgement area and add two source-linked examples.")
+        if len(evidence.get("cards") or []) < 3:
+            prompts.append("Increase the sample before relying on readiness language.")
+        return prompts[:5]
 
     def _links(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [

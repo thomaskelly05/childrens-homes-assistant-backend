@@ -128,7 +128,7 @@ export class OrbRealtimeClient {
             type: 'server_vad',
             threshold: 0.48,
             prefix_padding_ms: 280,
-            silence_duration_ms: 520,
+            silence_duration_ms: 680,
             create_response: false,
             interrupt_response: true
           }
@@ -219,8 +219,8 @@ export class OrbRealtimeClient {
       return
     }
     this.reconnectAttempts += 1
-    this.callbacks.onStateChange('reconnecting', { reason, attempt: this.reconnectAttempts })
     const delayMs = explicitDelay ?? delayForAttempt(this.reconnectAttempts)
+    this.callbacks.onStateChange('reconnecting', { reason, attempt: this.reconnectAttempts, next_attempt_ms: delayMs, continuity_message: 'Reconnecting calmly; typed Orb remains available.' })
     this.reconnectTimer = window.setTimeout(async () => {
       if (this.stopped) return
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
