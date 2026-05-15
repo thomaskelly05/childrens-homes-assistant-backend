@@ -21,6 +21,8 @@ AI_PHRASES = [
     r"\bthe system indicates that\s+",
     r"\bthe system indicates,?\s*",
     r"\baccording to the system,?\s*",
+    r"\bi'm just an ai,?\s*",
+    r"\bi cannot provide emotional support,?\s*",
 ]
 
 FILLER_PREFIXES = {
@@ -62,6 +64,8 @@ class OrbConversationPolicy:
             "Use a calm British female voice profile, short natural sentences, light acknowledgement, small pauses, no 'AI assistant' phrasing, no Americanisms, no theatrics, and no long preamble. "
             f"Keep spoken answers to about {max_sentences} sentence(s) unless safeguarding detail is essential. "
             "Prefer phrases like 'I've linked that into Jamie's chronology', 'There's still a follow-up outstanding from yesterday', and 'Would you like help drafting that review?' over technical analysis language. "
+            "Use subtle confirmation language when an operational action is safe to acknowledge, for example 'I've added that into the chronology' or 'I'll hold that for handover'. "
+            "Name emotional continuity carefully: what seemed settled, what still worried adults, what helped, and what the next shift should understand. "
             "If interrupted, stop cleanly, hold the unfinished thought, and continue from the user's new intent without restarting. "
             "Start with a short acknowledgement when useful, then stream the answer in small chunks with small pauses. "
             "When there is silence, stay present without pushing; use 'Take your time' or 'I'm still here'. "
@@ -113,10 +117,10 @@ class OrbConversationPolicy:
 
     def continuation_prompt(self, *, interrupted_response: str | None, user_text: str | None = None) -> str:
         if not interrupted_response:
-            return "Yeah. Go ahead."
+            return "Mm. Go ahead."
         if user_text:
-            return "Yeah, I heard you. I will follow that instead."
-        return "Yeah. I will pause there."
+            return "I heard you. I’ll follow that instead."
+        return "I’ll pause there."
 
     def event_metadata(self, *, preferences: OrbPreferences) -> dict[str, Any]:
         timing = self.timing(preferences=preferences)
@@ -129,6 +133,15 @@ class OrbConversationPolicy:
             "first_partial_ms": timing.first_partial_ms,
             "chunk_pacing_ms": timing.chunk_pacing_ms,
             "pause_after_acknowledgement_ms": 220 if preferences.quiet_mode else 170,
+            "contextual_pause_ms": max(180, timing.chunk_pacing_ms),
+            "sentence_chunking": "natural_sentence_boundaries",
+            "quiet_fallback_transition": "Typed Orb remains available; keep the current child context.",
+            "interruption_repair_prompt": self.continuation_prompt(interrupted_response="held"),
+            "subtle_confirmation_language": [
+                "I've added that into the chronology.",
+                "I'll hold that for handover.",
+                "That follow-up is still outstanding.",
+            ],
             "breathing_idle_state": True,
             "listening_shimmer": cadence.listening_motion,
             "speaking_cadence_glow": cadence.speaking_motion,
@@ -148,8 +161,8 @@ class OrbConversationPolicy:
 
     def soft_acknowledgements(self, *, preferences: OrbPreferences) -> list[str]:
         if preferences.quiet_mode:
-            return ["Mm. I am with you.", "Take your time.", "Right. I have that."]
-        return ["Yeah. I am with you.", "Right. I have that.", "I will keep it brief."]
+            return ["Mm. I’m with you.", "Take your time.", "Right. I have that.", "I’ll keep this quiet."]
+        return ["Yeah. I’m with you.", "Right. I have that.", "I’ll keep it brief.", "Okay. I’ll stay with this."]
 
     def _naturalise_opening(self, text: str) -> str:
         if not text:
@@ -165,6 +178,7 @@ class OrbConversationPolicy:
         text = re.sub(r"\b(please note that|for your information)\b,?\s*", "", text, flags=re.IGNORECASE)
         text = re.sub(r"\butilize\b", "use", text, flags=re.IGNORECASE)
         text = re.sub(r"\banalyze\b", "look at", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bI am unable to\b", "I can't", text, flags=re.IGNORECASE)
         return text
 
     def _shorten(

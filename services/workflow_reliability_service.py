@@ -28,6 +28,8 @@ class WorkflowSaveState:
     requires_review: bool = False
     stale: bool = False
     source: str = "server"
+    confidence: str = "confirmed"
+    continuity: str = "current"
     updated_at: str = field(default_factory=_now)
 
 
@@ -55,6 +57,8 @@ class WorkflowReliabilityService:
                 retryable=True,
                 source="local",
                 stale=stale_session,
+                confidence="local_only",
+                continuity="offline_queue_pending",
             )
         if stale_session:
             return WorkflowSaveState(
@@ -63,6 +67,8 @@ class WorkflowReliabilityService:
                 message="This record changed elsewhere. Review the latest version before saving again.",
                 retryable=True,
                 stale=True,
+                confidence="needs_review",
+                continuity="compare_before_save",
             )
         if failed:
             return WorkflowSaveState(
@@ -70,6 +76,8 @@ class WorkflowReliabilityService:
                 label="Save needs retry",
                 message="The last save did not complete. Nothing has been overwritten; retry is available.",
                 retryable=True,
+                confidence="retry_available",
+                continuity="idempotency_key_retained",
             )
         if retrying:
             return WorkflowSaveState(
@@ -77,6 +85,8 @@ class WorkflowReliabilityService:
                 label="Syncing",
                 message="Changes are queued and being written to the live record.",
                 retryable=False,
+                confidence="queue_replay_pending",
+                continuity="pending_reconciliation",
             )
         if status in REVIEW_STATUSES:
             return WorkflowSaveState(
@@ -84,18 +94,30 @@ class WorkflowReliabilityService:
                 label="Sent for review",
                 message="The draft is saved and waiting in the review chain.",
                 requires_review=True,
+                confidence="confirmed",
+                continuity="review_chain",
             )
         if status in DRAFT_STATUSES:
             return WorkflowSaveState(
                 state="draft",
                 label="Draft saved",
                 message="Draft is safely saved and can be continued.",
+                confidence="draft_confirmed",
+                continuity="continue_later",
             )
-        if status in SAVED_STATUSES or record:
+        if status in SAVED_STATUSES:
             return WorkflowSaveState(
                 state="saved",
                 label="Saved",
                 message="Latest changes are on the live record.",
+            )
+        if record:
+            return WorkflowSaveState(
+                state="draft",
+                label="Record available",
+                message="Record context is available; save confidence depends on the latest confirmation.",
+                confidence="context_available",
+                continuity="verify_latest_confirmation",
             )
         return WorkflowSaveState(
             state="empty",
@@ -154,6 +176,8 @@ class WorkflowReliabilityService:
             "steps": steps,
             "failed_count": len(failed),
             "calm_copy": "Your work has not been discarded.",
+            "save_confidence": "local_or_queue_safe" if offline or failed else "review_latest_before_retry" if stale_session else "confirmed",
+            "queue_replay_copy": "Queued work will replay with original idempotency keys where available.",
         }
 
 

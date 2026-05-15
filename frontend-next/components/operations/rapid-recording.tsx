@@ -80,7 +80,7 @@ export function RapidRecordingDrawer() {
               <div className="mt-2 flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">Quick-add drawer</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">Small, mobile-first entries with draft recovery, chronology preview and review guardrails.</p>
+                <p className="mt-2 text-sm leading-6 text-slate-500">Small, mobile-first entries with draft recovery, chronology preview and explicit save boundaries.</p>
                 </div>
                 <button type="button" onClick={() => setOpen(false)} className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700">Close</button>
               </div>
@@ -157,14 +157,14 @@ export function RapidRecordingDrawer() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-600"><Mic className="mb-2 h-4 w-4" />Voice dictation placeholder</div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-600"><WifiOff className="mb-2 h-4 w-4" />Offline queue foundation</div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-600"><RotateCcw className="mb-2 h-4 w-4" />Draft recovery enabled</div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-600"><Mic className="mb-2 h-4 w-4" />Use device dictation in the note field</div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-600"><WifiOff className="mb-2 h-4 w-4" />Local draft only until workflow save</div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-600"><RotateCcw className="mb-2 h-4 w-4" />Resume draft recovery enabled</div>
               </div>
 
               {saved ? (
                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
-                  Draft saved locally. Chronology preview is ready; final chronology writeback remains explicit to avoid duplicate records.
+                  Local draft held. Chronology preview is ready; final chronology writeback remains explicit to avoid duplicate records.
                 </div>
               ) : null}
               {saveError ? (
@@ -181,9 +181,9 @@ export function RapidRecordingDrawer() {
               <div className="flex gap-2">
                 <button type="button" onClick={saveDraft} className="flex min-h-12 flex-1 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white">
                   <Save className="mr-2 h-4 w-4" aria-hidden />
-                  Rapid save
+                  Hold local draft
                 </button>
-                <button type="button" onClick={() => setNote((current) => `${current}${current ? '\n' : ''}Orb draft prompt: summarise this into a factual, child-centred note for staff to review.`)} className="min-h-12 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">AI draft</button>
+                <button type="button" onClick={() => setNote((current) => `${current}${current ? '\n' : ''}Review prompt: summarise this into a factual, child-centred note for staff to review.`)} className="min-h-12 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">Add review prompt</button>
               </div>
             </footer>
           </section>

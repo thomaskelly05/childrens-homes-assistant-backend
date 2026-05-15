@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 
 from schemas.orb import OrbContext, OrbState
+from services.orb_conversation_policy import orb_conversation_policy
 from services.orb_session_store import orb_session_store
 from services.realtime_scaling_service import realtime_scaling_service
 
@@ -232,10 +233,12 @@ class OrbRealtimeConversationService:
             state.phase = "idle"
             state.last_phase_changed_at = _now()
             state.partial_user_transcript = ""
+            cadence = metadata.get("emotional_cadence") if isinstance(metadata, dict) else {}
             state.silence_awareness = {
                 "last_timeout_at": _now(),
-                "prompt": "Take your time.",
+                "prompt": (cadence or {}).get("silence_prompt") or "Take your time.",
                 "recovered_without_losing_context": True,
+                "response_style": "present_without_pushing",
             }
         elif event_type == "wake_listening_started":
             state.phase = "passive_listening"
@@ -346,7 +349,11 @@ class OrbRealtimeConversationService:
                 "created_at": _now(),
                 "preserved_interrupted_response": bool(state.interrupted_response),
                 "continuation_ready": bool(state.interrupted_response),
-                "continuation_prompt": "Yeah. I’ll follow you.",
+                "continuation_prompt": orb_conversation_policy.continuation_prompt(
+                    interrupted_response=state.interrupted_response,
+                    user_text=state.partial_user_transcript,
+                ),
+                "repair_style": "pause_resume_from_user_intent",
             }
         )
         self._persist(state)
@@ -356,6 +363,7 @@ class OrbRealtimeConversationService:
         state = self.get(session_id)
         if not state:
             return {}
+        previous_phase = state.phase
         state.reconnect_attempts += 1
         state.phase = "reconnecting"
         state.last_phase_changed_at = _now()
@@ -369,8 +377,10 @@ class OrbRealtimeConversationService:
             ),
             "context_continuation": {
                 "selected_young_person_id": state.active_context_references.get("selected_young_person_id"),
-                "last_phase": state.phase,
+                "last_phase": previous_phase,
                 "resume_without_cross_child_lookup": True,
+                "interrupted_response_available": bool(state.interrupted_response),
+                "continuity_message": "Reconnecting without changing the active child context.",
             },
         })
         self._persist(state)

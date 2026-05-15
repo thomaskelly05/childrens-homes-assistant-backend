@@ -27,6 +27,7 @@ class RetryReconciliationService:
             "claimed": [self._serialise(item) for item in items],
             "backpressure": health["backpressure"],
             "queue_health": health,
+            "confidence": "Backpressure is active; work is claimed in smaller batches." if health["backpressure"] else "Due work is being replayed in order.",
         }
 
     def reconcile_result(
@@ -40,7 +41,11 @@ class RetryReconciliationService:
         updated = operational_queue_service.mark_attempt(item, status_code=status_code, error=error, conn=conn)
         metric = "queue.completed" if updated.status == "completed" else "queue.retrying" if updated.status == "retrying" else "queue.failed"
         operational_metrics_service.increment(metric, dimensions={"operation_type": item.operation_type}, conn=conn)
-        return {"ok": updated.status == "completed", "item": self._serialise(updated)}
+        return {
+            "ok": updated.status == "completed",
+            "item": self._serialise(updated),
+            "confidence": "Completed on retry." if updated.status == "completed" else "Retry remains queued with the original operation context.",
+        }
 
     def _serialise(self, item: OperationalQueueItem) -> dict[str, Any]:
         return {

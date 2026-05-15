@@ -17,6 +17,11 @@ REFERENCE_TERMS = {
     "continue",
     "summarise that",
     "summarize that",
+    "carry on",
+    "pick that up",
+    "yesterday",
+    "that follow up",
+    "that follow-up",
     "open it",
     "show me that",
     "what about",
@@ -257,6 +262,9 @@ class OrbMemoryService:
         if "continue" in lower or "summarise" in lower or "summarize" in lower or follow_up_without_subject:
             resolved["last_topic"] = memory.last_topic
             resolved["interrupted_response"] = memory.interrupted_response
+        if "carry on" in lower or "pick that up" in lower:
+            resolved["last_topic"] = memory.last_topic
+            resolved["last_record"] = memory.last_record
         if follow_up_without_subject and memory.last_child_id is not None:
             resolved["selected_young_person_id"] = memory.last_child_id
         return {key: value for key, value in resolved.items() if value}
@@ -296,6 +304,11 @@ class OrbMemoryService:
                 "last_topic": snapshot["last_topic"],
                 "last_record": snapshot["last_record"],
                 "interrupted_response": snapshot["interrupted_response"],
+                "safe_reference_guidance": [
+                    "Resolve 'that', 'it' and 'carry on' only inside the same home and active child context.",
+                    "Use memory to continue the thread, not to search across children.",
+                    "Refer back naturally when helpful: 'from the note we were looking at' or 'from yesterday's follow-up'.",
+                ],
             }
         }
 

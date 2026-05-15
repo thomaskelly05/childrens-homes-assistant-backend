@@ -74,8 +74,8 @@ export function OrbButton({
             <h2 className="mt-3 text-4xl font-black tracking-[-0.07em]">{orbStatus}</h2>
             <p className="mt-3 max-w-md text-sm leading-6 text-slate-300">
               {childLock.active && childName
-                ? `Voice-first operational assistant. I am locked to ${childName}'s journey and will not search other children.`
-                : 'Voice-first operational assistant. Select a child before asking for child records.'}
+                ? `Voice-first operational support. I am locked to ${childName}'s journey and will not search other children.`
+                : 'Voice-first operational support. Select a child before asking for child records.'}
             </p>
             <div className="mt-5 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-cyan-100">
               {childLock.active && childName ? `Active child: ${childName}` : 'No active child context'}
@@ -155,7 +155,7 @@ export function OrbButton({
         className={`group relative inline-flex items-center justify-center rounded-full border border-white/70 bg-black/85 p-1 shadow-[0_0_42px_rgba(34,211,238,0.36)] backdrop-blur transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
           placement === 'inline' ? '' : 'min-h-16 min-w-16'
         }`}
-        aria-label={orbReady ? (snapshot.state === 'speaking' || snapshot.loading ? 'Interrupt Orb and start listening' : 'Tap Orb and talk') : authMessage}
+        aria-label={orbReady ? (snapshot.state === 'speaking' || snapshot.loading ? 'Pause Orb and start listening' : 'Tap Orb and talk') : authMessage}
         aria-pressed={snapshot.state === 'listening'}
         disabled={!orbReady}
         title={orbReady ? undefined : authMessage}
@@ -163,7 +163,7 @@ export function OrbButton({
         <span className="absolute inset-0 rounded-full bg-cyan-300/20 blur-xl transition group-hover:bg-cyan-200/30" aria-hidden />
         <OrbVisual state={snapshot.state === 'idle' ? 'idle' : snapshot.state} size="small" />
         <span className="sr-only">
-          {snapshot.state === 'speaking' || snapshot.loading ? 'Interrupt Orb' : 'Start Orb voice conversation'}
+          {snapshot.state === 'speaking' || snapshot.loading ? 'Pause Orb' : 'Start Orb voice conversation'}
         </span>
       </button>
       <div className="sr-only" aria-live="polite">

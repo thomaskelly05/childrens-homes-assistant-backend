@@ -27,7 +27,7 @@ class OfstedDocumentReadinessService:
         oversight_missing = [item for item in checked if item["qa_state"] == "missing" or item["signoff_state"] == "missing"]
         overdue = [item for item in schedule if item.get("review_required")]
         payload = {
-            "summary": "records indicate document readiness intelligence is available for manager review.",
+            "summary": "records indicate document readiness intelligence is available for calm manager review.",
             "home_id": home_id,
             "catalogue_counts": catalogue["counts"],
             "documents": checked,
@@ -61,6 +61,11 @@ class OfstedDocumentReadinessService:
             "manager_review_prompts": [
                 review_prompt("document-readiness", "review recommended: sample missing, weak and oversight-missing document evidence."),
                 review_prompt("reg44-reg45-link", "consider checking Reg 44 and Reg 45 evidence links against the catalogue."),
+            ],
+            "supportive_review_copy": [
+                "Explain the evidence trail before changing the judgement.",
+                "Treat missing dates as prompts for review, not automatic failure.",
+                "Focus on practical next actions: owner, source record, review date and outcome.",
             ],
             "decision_support_notice": SAFE_DECISION_SUPPORT_NOTICE,
         }

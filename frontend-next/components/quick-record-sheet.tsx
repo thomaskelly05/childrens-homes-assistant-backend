@@ -1,4 +1,5 @@
 import { OrbButton } from '@/components/indicare/orb/orb-button'
+import Link from 'next/link'
 
 export function QuickRecordSheet() {
   return (
@@ -38,13 +39,13 @@ export function QuickRecordSheet() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">
-            Save draft
-          </button>
+          <Link href="/home" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">
+            Choose child to save
+          </Link>
 
-          <button className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
-            Submit review
-          </button>
+          <span className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-500">
+            Review opens after a live record exists
+          </span>
         </div>
       </div>
     </section>

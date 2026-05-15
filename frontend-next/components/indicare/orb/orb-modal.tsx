@@ -117,7 +117,7 @@ export function OrbModal({
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-600">Orb powered by IndiCare</p>
               <h2 id="orb-modal-title" className="text-2xl font-black tracking-[-0.04em] text-slate-950">Orb is here with you</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-500">Status: {orbStateLabel(snapshot.state)}. Short answers, calm pauses, child-scoped context.</p>
+              <p className="mt-1 text-sm leading-6 text-slate-500">Status: {orbStateLabel(snapshot.state)}. Short answers, calm pauses, child-scoped continuity.</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-full bg-slate-100 p-3 text-slate-600 hover:bg-slate-200" aria-label="Close Orb">
@@ -135,7 +135,7 @@ export function OrbModal({
             {snapshot.mobile.reconnectBanner ? (
               <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
                 <AlertTriangle className="mr-2 inline h-4 w-4" aria-hidden />
-                {snapshot.state === 'offline' ? 'Orb is offline. It will reconnect when the network returns.' : 'Orb is reconnecting calmly. Typed Orb remains available.'}
+                {snapshot.state === 'offline' ? 'Orb is offline. Typed support stays available; reconnect keeps this thread.' : 'Orb is reconnecting calmly. Typed Orb remains available.'}
               </div>
             ) : null}
             {snapshot.mobile.lowBandwidthMode ? (
@@ -147,6 +147,7 @@ export function OrbModal({
               <OrbVisual state={snapshot.state} />
               <p className="mt-5 text-sm font-black text-slate-950">{brainLabel(snapshot.modeDecision.brain)}</p>
               <p className="mt-2 text-sm leading-6 text-slate-500">{snapshot.modeDecision.tone || 'Calm, brief and present.'}</p>
+              {snapshot.realtimeState.continuity_message ? <p className="mt-3 rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800">{String(snapshot.realtimeState.continuity_message)}</p> : null}
             </div>
 
             <div className="rounded-[24px] border border-slate-200 bg-white p-4">
@@ -220,7 +221,7 @@ export function OrbModal({
             <OrbTranscript transcript={snapshot.transcript} partialTranscript={snapshot.partialTranscript} />
             <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
               <FileText className="mr-2 inline h-4 w-4" aria-hidden />
-              Try: &quot;Start my shift&quot;, &quot;What would Ofsted challenge here?&quot;, &quot;Create a daily note for Jamie&quot;, or &quot;What Reg 44 actions remain open?&quot;
+              Try: &quot;Continue my shift&quot;, &quot;What improved for Jamie?&quot;, &quot;Draft the review calmly&quot;, or &quot;What follow-up is still outstanding?&quot;
             </div>
           </main>
         </div>

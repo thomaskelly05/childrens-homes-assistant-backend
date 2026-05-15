@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, CheckCircle2, Link2, MessageSquareHeart, Save, Sparkles, Wand2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, Link2, MessageSquareHeart, Save, Sparkles, Wand2 } from 'lucide-react'
 import { WorkflowSaveIndicator } from '@/components/system-feedback/workflow-save-indicator'
 import { getCsrfToken } from '@/lib/auth/api'
 import { getSafeDraft, removeSafeDraft, setSafeDraft } from '@/lib/security/safe-storage'
@@ -234,11 +234,14 @@ export function RecordingForm({
   const [notice, setNotice] = useState<string | null>(null)
   const [draftRestored, setDraftRestored] = useState(false)
   const [activeSectionIndex, setActiveSectionIndex] = useState(0)
+  const [supportPromptsOpen, setSupportPromptsOpen] = useState(false)
   const [saveSnapshot, setSaveSnapshot] = useState<WorkflowReliabilitySnapshot>(() => saveStateFromStatus('not_saved'))
 
   const suggestions = useMemo(() => extractSuggestedLinks(values), [values])
   const flags = useMemo(() => qualityFlags(values, workflow.primaryField), [values, workflow.primaryField])
   const activeSection = workflow.sections[Math.min(activeSectionIndex, workflow.sections.length - 1)] || workflow.sections[0]
+  const activeSectionHasText = activeSection?.fields.some((field) => String(values[field.name] || '').trim().length > 0)
+  const sectionProgress = workflow.sections.filter((section) => section.fields.some((field) => String(values[field.name] || '').trim().length > 0)).length
   const autosaveKey = `indicare-recording-draft:${childId}:${workflow.id}`
 
   useEffect(() => {
@@ -310,6 +313,14 @@ export function RecordingForm({
     }, 500)
     return () => window.clearTimeout(handle)
   }, [autosaveKey, dirty, submitting, values])
+
+  useEffect(() => {
+    const firstField = activeSection?.fields[0]
+    if (!firstField) return
+    window.setTimeout(() => {
+      formRef.current?.querySelector<HTMLElement>(`#recording-field-${firstField.name}`)?.focus()
+    }, 0)
+  }, [activeSectionIndex, activeSection])
 
   function updateField(name: string, nextValue: string) {
     setDirty(true)
@@ -424,8 +435,11 @@ export function RecordingForm({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <WorkflowSaveIndicator snapshot={saveSnapshot} />
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setActiveSectionIndex((index) => Math.min(index + 1, workflow.sections.length - 1))} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
-              Continue recording
+            <span className="rounded-full bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              {sectionProgress}/{workflow.sections.length} sections started
+            </span>
+            <button type="button" disabled={activeSectionIndex >= workflow.sections.length - 1} onClick={() => setActiveSectionIndex((index) => Math.min(index + 1, workflow.sections.length - 1))} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">
+              {activeSectionHasText ? 'Continue next section' : 'Resume section'}
             </button>
             <button type="submit" disabled={submitting} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60">
               {submitting ? 'Saving once...' : 'Save'}
@@ -434,12 +448,12 @@ export function RecordingForm({
         </div>
       </div>
       {draftRestored ? (
-        <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-bold leading-6 text-amber-800" data-testid="save-state-message">
-          Draft recovery is active. This is a local draft only until Save record confirms a live write.
+        <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-bold leading-6 text-amber-800" data-testid="draft-recovery-message">
+          Resume where you left off. This is a local draft only until Save record confirms a live write.
         </div>
       ) : null}
       {notice ? (
-        <div className="rounded-[24px] border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold leading-6 text-blue-800" data-testid="save-state-message" aria-live="polite">
+        <div className="rounded-[24px] border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold leading-6 text-blue-800" data-testid="recording-notice-message" aria-live="polite">
           {notice}
         </div>
       ) : null}
@@ -501,21 +515,29 @@ export function RecordingForm({
             </button>
           ))}
         </div>
-        <div className="mt-4 grid gap-2 md:grid-cols-2">
-          {childVoicePrompts.map((prompt) => (
-            <button key={prompt} type="button" onClick={() => addToField('child_voice', prompt)} className="rounded-2xl border border-purple-100 bg-purple-50 px-4 py-3 text-left text-sm font-bold text-purple-800">
-              <MessageSquareHeart className="mr-2 inline h-4 w-4" aria-hidden />
-              {prompt}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 grid gap-2 md:grid-cols-2">
-          {chronologyAwarePrompts.map((prompt) => (
-            <button key={prompt} type="button" onClick={() => setNotice(prompt)} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left text-sm font-bold text-blue-800">
-              {prompt}
-            </button>
-          ))}
-        </div>
+        <button type="button" onClick={() => setSupportPromptsOpen((value) => !value)} className="mt-4 inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-slate-600">
+          <ChevronDown className={`mr-2 h-4 w-4 transition ${supportPromptsOpen ? 'rotate-180' : ''}`} aria-hidden />
+          {supportPromptsOpen ? 'Hide reflective prompts' : 'Show reflective prompts'}
+        </button>
+        {supportPromptsOpen ? (
+          <>
+            <div className="mt-4 grid gap-2 md:grid-cols-2">
+              {childVoicePrompts.map((prompt) => (
+                <button key={prompt} type="button" onClick={() => addToField('child_voice', prompt)} className="rounded-2xl border border-purple-100 bg-purple-50 px-4 py-3 text-left text-sm font-bold text-purple-800">
+                  <MessageSquareHeart className="mr-2 inline h-4 w-4" aria-hidden />
+                  {prompt}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-2 md:grid-cols-2">
+              {chronologyAwarePrompts.map((prompt) => (
+                <button key={prompt} type="button" onClick={() => setNotice(prompt)} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left text-sm font-bold text-blue-800">
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
       </section>
 
       <section className="rounded-[28px] border border-white/80 bg-white p-3 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">

@@ -53,7 +53,7 @@ export function OrbControls({
           className="min-h-12 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800 transition hover:bg-amber-100 disabled:opacity-50"
         >
           <Pause className="mr-2 inline h-4 w-4" aria-hidden />
-          Interrupt
+          Pause Orb
         </button>
         <button
           type="button"
@@ -76,7 +76,7 @@ export function OrbControls({
       </div>
       {isSpeaking ? (
         <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-2 text-xs font-bold text-slate-500" aria-live="polite">
-          Orb is speaking. Tap Interrupt to take over.
+          Orb is speaking. Tap Pause Orb to take over; the thread will be held.
         </p>
       ) : null}
 
@@ -92,7 +92,7 @@ export function OrbControls({
           id="orb-text-input"
           value={input}
           onChange={(event) => onInputChange(event.target.value)}
-          placeholder='Try "Hey IndiCare, what needs manager review?"'
+          placeholder='Try "what still needs follow-up?"'
           className="min-h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
         />
         <button disabled={!input.trim() || loading} className="min-h-12 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
