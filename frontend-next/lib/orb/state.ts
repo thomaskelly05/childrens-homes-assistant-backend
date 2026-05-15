@@ -222,7 +222,7 @@ export class OrbRuntimeController {
       this.snapshot = { ...this.snapshot, microphone: 'granted', error: undefined }
       this.emit()
       return true
-    } catch (error) {
+    } catch {
       this.snapshot = { ...this.snapshot, microphone: 'denied', error: 'Microphone access looks disabled.' }
       this.emit()
       return false
