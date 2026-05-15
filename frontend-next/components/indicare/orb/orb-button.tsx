@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Captions, Keyboard, Send, Square } from 'lucide-react'
+import { Captions, Keyboard, Maximize2, Send, Square, X } from 'lucide-react'
 
 import { orbStateLabel, OrbVisual } from './orb-visual'
 import { useAuth } from '@/contexts/auth-context'
@@ -25,6 +25,7 @@ export function OrbButton({
   const [snapshot, setSnapshot] = useState<OrbRuntimeSnapshot>(controller.getSnapshot())
   const [captions, setCaptions] = useState(Boolean(controller.getSnapshot().preferences.captions_enabled))
   const [fallbackOpen, setFallbackOpen] = useState(false)
+  const [immersiveOpen, setImmersiveOpen] = useState(false)
   const [typedText, setTypedText] = useState('')
 
   useEffect(() => controller.subscribe(setSnapshot), [controller])
@@ -67,11 +68,11 @@ export function OrbButton({
   return (
     <div className={placement === 'floating' ? 'fixed bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] right-3 z-50 md:bottom-7 md:right-7' : 'relative inline-flex'}>
       {orbReady && active ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 px-4 text-white backdrop-blur-xl">
-          <section className="flex w-full max-w-xl flex-col items-center text-center">
+        <div className={`${immersiveOpen ? 'fixed inset-0 z-[70] flex items-center justify-center bg-black/90 px-4 backdrop-blur-xl' : 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6rem)] z-[70] md:left-auto md:right-7 md:w-[440px]'} text-white`}>
+          <section className={`${immersiveOpen ? 'w-full max-w-xl' : 'rounded-[34px] border border-white/10 bg-slate-950/92 p-5 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl'} flex flex-col items-center text-center`}>
             <OrbVisual state={snapshot.state} />
             <p className="mt-8 text-[11px] font-black uppercase tracking-[0.28em] text-cyan-200">IndiCare OS Orb</p>
-            <h2 className="mt-3 text-4xl font-black tracking-[-0.07em]">{orbStatus}</h2>
+            <h2 className={`${immersiveOpen ? 'text-4xl' : 'text-2xl'} mt-3 font-black tracking-[-0.07em]`}>{orbStatus}</h2>
             <p className="mt-3 max-w-md text-sm leading-6 text-slate-300">
               {childLock.active && childName
                 ? `Voice-first operational support. I am locked to ${childName}'s journey and will not search other children.`
@@ -123,6 +124,10 @@ export function OrbButton({
             ) : null}
 
             <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <button type="button" onClick={() => setImmersiveOpen((value) => !value)} className="rounded-full bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                {immersiveOpen ? <X className="mr-2 inline h-4 w-4" aria-hidden /> : <Maximize2 className="mr-2 inline h-4 w-4" aria-hidden />}
+                {immersiveOpen ? 'Ambient' : 'Immersive'}
+              </button>
               <button type="button" onClick={() => {
                 setCaptions((value) => {
                   const next = !value
@@ -137,7 +142,10 @@ export function OrbButton({
                 <Keyboard className="mr-2 inline h-4 w-4" aria-hidden />
                 Type to Orb
               </button>
-              <button type="button" onClick={() => void controller.end()} className="rounded-full bg-white px-4 py-3 text-sm font-black text-slate-950 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <button type="button" onClick={() => {
+                setImmersiveOpen(false)
+                void controller.end()
+              }} className="rounded-full bg-white px-4 py-3 text-sm font-black text-slate-950 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-300">
                 <Square className="mr-2 inline h-4 w-4" aria-hidden />
                 Close
               </button>

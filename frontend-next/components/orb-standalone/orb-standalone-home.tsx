@@ -1,6 +1,7 @@
 import { OrbRenderer } from '@/components/orb-core/orb-renderer'
 import { standaloneOrbPrompts } from '@/lib/orb/content/prompts'
 import { orbProductCopy } from '@/lib/orb/content/copy'
+import Link from 'next/link'
 
 export function OrbStandaloneHome() {
   return (
@@ -12,9 +13,9 @@ export function OrbStandaloneHome() {
         <p className="mt-4 text-sm leading-7 text-slate-300">{orbProductCopy.standaloneSubprompt}</p>
         <div className="mt-8 grid gap-3">
           {standaloneOrbPrompts.map((prompt) => (
-            <button key={prompt} type="button" className="rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-left text-sm font-bold leading-6 text-slate-100 hover:bg-white/10">
+            <Link key={prompt} href={`/assistant?prompt=${encodeURIComponent(prompt)}`} className="rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-left text-sm font-bold leading-6 text-slate-100 hover:bg-white/10">
               {prompt}
-            </button>
+            </Link>
           ))}
         </div>
       </section>

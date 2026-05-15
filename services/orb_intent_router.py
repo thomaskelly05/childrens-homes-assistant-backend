@@ -180,8 +180,17 @@ def _has_child_context(context: OrbContext | None) -> bool:
     )
 
 
+def _is_standalone_context(context: OrbContext | None) -> bool:
+    if not context:
+        return False
+    workspace = _workspace(context)
+    return workspace in {"standalone_orb", "standalone_assistant", "assistant"} or _text(context.route).startswith("/assistant")
+
+
 def _assistant_mode_for(brain: str, message: str, context: OrbContext | None) -> str:
     workspace = _workspace(context)
+    if _is_standalone_context(context) and brain in {"care_brain", "inspector_brain", "report_writer_brain", "voice_recording_brain"}:
+        return "standalone"
     if brain == "inspector_brain":
         if "reg 44" in message or "reg44" in message:
             return "reg44_action_plan"
@@ -247,19 +256,20 @@ def route_orb_intent(
     if "inspection" in workspace or "regulatory" in workspace or "ofsted" in workspace:
         safety_flags.append("inspection_context")
 
-    has_child_context = _has_child_context(context)
+    standalone_context = _is_standalone_context(context)
+    has_child_context = False if standalone_context else _has_child_context(context)
     asks_inspection = _contains_any(lower, INSPECTION_TERMS)
     asks_current = _contains_any(lower, CURRENT_TERMS)
     asks_productivity = _contains_any(lower, PRODUCTIVITY_TERMS)
     asks_report = _contains_any(lower, REPORT_TERMS)
     asks_voice_recording = _contains_any(lower, VOICE_RECORDING_TERMS)
-    asks_care = has_child_context or _contains_any(lower, CARE_RECORD_TERMS) or workspace in {
+    asks_care = not standalone_context and (has_child_context or _contains_any(lower, CARE_RECORD_TERMS) or workspace in {
         "shift_operations",
         "chronology",
         "young_person",
         "handover",
         "safeguarding",
-    }
+    })
 
     brain = "general_assistant_brain"
     reason = "The turn is an everyday assistant question and does not need IndiCare record retrieval."
@@ -295,6 +305,11 @@ def route_orb_intent(
     elif asks_care:
         brain = "care_brain"
         reason = "The turn is operational care support or asks about records in the permitted IndiCare scope."
+
+    if standalone_context and brain in {"care_brain", "inspector_brain", "report_writer_brain", "voice_recording_brain"}:
+        brain = "general_assistant_brain"
+        reason = "Standalone ORB can support general care practice but cannot retrieve IndiCare OS records."
+        safety_flags.append("standalone_no_os_access")
 
     care_scope_required = brain in {"care_brain", "inspector_brain", "report_writer_brain", "voice_recording_brain"}
     requires_citations = care_scope_required
