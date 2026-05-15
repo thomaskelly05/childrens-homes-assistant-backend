@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from openai import OpenAI
 
 from services.ai_redaction_service import ai_redaction_service
+from services.ai_usage_audit_service import ai_usage_audit_service
 from services.provider_data_intelligence_settings_service import provider_data_intelligence_settings_service
 
 logger = logging.getLogger("indicare.ai_gateway")
@@ -118,6 +119,18 @@ class AIGatewayService:
         costs = MODEL_COSTS_PER_1K_TOKENS.get(model, MODEL_COSTS_PER_1K_TOKENS.get(DEFAULT_MODEL, {"input": 0.0, "output": 0.0}))
         return round((input_tokens / 1000 * costs["input"]) + (output_tokens / 1000 * costs["output"]), 6)
 
+    def estimate_request(self, *, prompt: str, system_prompt: str | None = None, model: str = DEFAULT_MODEL, max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS) -> dict[str, Any]:
+        input_tokens = self.estimate_tokens(f"{system_prompt or ''}\n{prompt or ''}")
+        estimated_cost = self.estimate_cost(model=model, input_tokens=input_tokens, output_tokens=max_output_tokens)
+        return {
+            "model": model,
+            "estimated_input_tokens": input_tokens,
+            "estimated_output_tokens": max_output_tokens,
+            "estimated_total_tokens": input_tokens + max_output_tokens,
+            "estimated_cost_gbp": estimated_cost,
+            "within_feature_soft_limit": input_tokens + max_output_tokens <= DEFAULT_FEATURE_SOFT_LIMIT_TOKENS,
+        }
+
     def _client_or_error(self) -> OpenAI:
         if not os.getenv("OPENAI_API_KEY"):
             raise HTTPException(status_code=503, detail="External AI is not configured")
@@ -180,11 +193,14 @@ class AIGatewayService:
             "estimated_input_tokens": input_tokens,
             "estimated_output_tokens": actual_output_tokens,
             "estimated_cost_gbp": actual_cost,
+            "prompt_stored": bool(governance.get("prompt_storage")),
+            "transcript_stored": bool(governance.get("transcript_storage")),
             "started_at": started.isoformat(),
             "completed_at": datetime.now(timezone.utc).isoformat(),
             "metadata": request.metadata,
         }
         logger.info("ai_gateway_request %s", json.dumps({k: v for k, v in audit.items() if k != "metadata"}, default=str))
+        ai_usage_audit_service.record(audit)
 
         return AIGatewayResponse(
             ok=True,
