@@ -15,9 +15,7 @@ from services.ai_runtime.monthly_usage_report import monthly_usage_report_loop
 logger = logging.getLogger("indicare.app")
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    init_db_pool()
+def run_startup_migrations() -> None:
     conn = None
     try:
         conn = get_db_connection()
@@ -32,6 +30,12 @@ async def lifespan(_: FastAPI):
     finally:
         if conn is not None:
             release_db_connection(conn)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db_pool()
+    run_startup_migrations()
     init_legal_acceptance_table()
     init_mfa_tables()
     init_passkeys_table()

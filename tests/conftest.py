@@ -84,6 +84,7 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(lifespan_module, "init_mfa_tables", lambda: None)
     monkeypatch.setattr(lifespan_module, "init_passkeys_table", lambda: None)
     monkeypatch.setattr(lifespan_module, "init_partner_assistant_tables", lambda: None)
+    monkeypatch.setattr(lifespan_module, "run_startup_migrations", lambda: None)
 
     # -----------------------------
     # Health DB mocks
