@@ -10,6 +10,7 @@ from core.frontend_routes import register_frontend_routes
 from core.lifespan import lifespan
 from core.middleware import add_middlewares
 from core.router_loader import include_routers
+from routers.ai_governance_routes import router as ai_governance_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("indicare.app")
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="IndiCare API", lifespan=lifespan)
     add_middlewares(app)
     include_routers(app)
+    app.include_router(ai_governance_router)
     mount_core_static_assets(app)
 
     def health_payload(check: str = "health") -> dict:
@@ -55,6 +57,7 @@ def create_app() -> FastAPI:
                 "assistant": "/assistant",
                 "health": "/health",
                 "root": "/",
+                "ai_governance": "/api/ai/governance/status",
             },
         }
 
