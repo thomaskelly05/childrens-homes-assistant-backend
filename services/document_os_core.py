@@ -482,7 +482,7 @@ class PermissionsEngineService:
 
 class EvidenceLinkingMixin:
     LINK_TERMS = {
-        "chronology": ("chronology", "timeline", "daily note", "incident"),
+        "chronology": ("chronology", "timeline", "daily note", "daily_note", "incident", "missing"),
         "safeguarding": ("safeguarding", "risk", "harm", "missing", "exploitation", "police", "lado"),
         "risks": ("risk", "unsafe", "restraint", "self-harm", "substance"),
         "plans": ("plan", "placement", "care plan", "risk assessment", "health plan"),

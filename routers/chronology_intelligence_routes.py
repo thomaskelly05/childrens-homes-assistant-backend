@@ -30,3 +30,12 @@ def emotional_wellbeing(payload: EvidencePayload):
 @router.post("/workforce-culture")
 def workforce_culture(payload: EvidencePayload):
     return {"ok": True, "workforce": workforce_culture_intelligence_service.analyse(records=payload.records)}
+
+
+@router.get("/timeline/demo")
+def timeline_demo():
+    records = [
+        {"date": "2026-05-01", "title": "Missing episode", "summary": "Young person returned and police were informed."},
+        {"date": "2026-05-04", "title": "Achievement", "summary": "Young person was proud of education progress."},
+    ]
+    return {"ok": True, "timeline": chronology_visualisation_service.timeline(records=records)}

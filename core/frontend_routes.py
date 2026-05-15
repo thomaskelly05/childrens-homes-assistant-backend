@@ -150,3 +150,33 @@ def register_frontend_routes(app: FastAPI) -> None:
         _assert_single_os_shell(html)
         headers = {**NO_STORE_HEADERS, "X-IndiCare-Shell": COMMAND_SHELL_VERSION}
         return HTMLResponse(html, headers=headers)
+
+    @app.get("/document-os")
+    @app.get("/document-os.html")
+    async def document_os_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "document-os.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/inspection-mode")
+    @app.get("/inspection-mode.html")
+    async def inspection_mode_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "inspection-mode.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/safeguarding-flow")
+    @app.get("/safeguarding-flow.html")
+    async def safeguarding_flow_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "safeguarding-flow.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/provider-dashboard")
+    @app.get("/provider-dashboard.html")
+    async def provider_dashboard_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "provider-dashboard.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/child-journey")
+    @app.get("/child-journey.html")
+    async def child_journey_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "child-journey.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/chronology-view")
+    @app.get("/chronology-view.html")
+    async def chronology_view_page():
+        return HTMLResponse(_load_html(FRONTEND_DIR, "chronology-view.html"), headers=NO_STORE_HEADERS)

@@ -24,3 +24,9 @@ def stability(payload: EvidencePayload):
 @router.post("/relational")
 def relational(payload: EvidencePayload):
     return {"ok": True, "relational": relational_intelligence_service.analyse(records=payload.records)}
+
+
+@router.get("/demo")
+def synthesis_demo():
+    records = [{"title": "Progress", "summary": "Child described trusted adult support, education progress and feeling safer."}]
+    return {"ok": True, "summary": child_journey_synthesis_service.synthesise(records=records)}

@@ -1,13 +1,8 @@
 (() => {
   document.addEventListener("DOMContentLoaded", async () => {
-    const res = await fetch("/api/intelligence-os/chronology/timeline", {
-      method: "POST",
+    const res = await fetch("/api/intelligence-os/chronology/timeline/demo", {
       credentials: "include",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ records: [
-        { date: "2026-05-01", title: "Missing episode", summary: "Young person returned and police were informed." },
-        { date: "2026-05-04", title: "Achievement", summary: "Young person was proud of education progress." }
-      ] }),
+      headers: { Accept: "application/json" },
     });
     const data = await res.json();
     const target = document.getElementById("timeline");

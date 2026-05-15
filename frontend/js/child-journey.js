@@ -1,10 +1,10 @@
 (() => {
-  async function post(url) {
-    const res = await fetch(url, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ records: [{ title: "Progress", summary: "Child described trusted adult support, education progress and feeling safer." }] }) });
+  async function get(url) {
+    const res = await fetch(url, { credentials: "include", headers: { Accept: "application/json" } });
     return res.json();
   }
   document.addEventListener("DOMContentLoaded", async () => {
-    const data = await post("/api/intelligence-os/child-journey/synthesis");
+    const data = await get("/api/intelligence-os/child-journey/demo");
     document.getElementById("journeySections").textContent = `${data.summary.sections.length} editable child journey sections.`;
   });
 })();

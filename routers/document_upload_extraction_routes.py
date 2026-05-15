@@ -26,3 +26,8 @@ def extract_document(payload: ExtractionRequest, request: Request) -> dict[str, 
         upload=payload.upload,
         current_user=user_from_request(request),
     )
+
+
+@router.get("/demo")
+def extract_document_demo(template_id: str = "placement_plan", source_text: str = "") -> dict[str, Any]:
+    return document_extraction_service.extract(template_id=template_id, source_text=source_text)
