@@ -68,6 +68,7 @@ routers.os_shell_api_routes
 routers.assistant_partner_api
 routers.chat_routes
 routers.document_library_routes
+routers.document_engine_routes
 routers.dashboard_routes
 routers.documents_routes
 routers.handover_routes
