@@ -160,6 +160,32 @@ ROUTE_TABLES: dict[str, dict[str, str]] = {
     },
 }
 
+CANONICAL_HOME_ROUTE_KEYS = {
+    "reports",
+    "team",
+    "supervisions",
+    "training",
+    "compliance-items",
+    "quality",
+    "quality-audits",
+    "quality-audit-findings",
+    "quality-audit-actions",
+    "manager-review-queue",
+    "reg44-visits",
+    "reg44-findings",
+    "reg44-actions",
+    "reg45-reviews",
+    "reg45-actions",
+    "inspection-scores",
+    "inspection-section-scores",
+    "inspection-score-reasons",
+    "inspection-lines-of-enquiry",
+    "inspection-improvement-actions",
+}
+
+CANONICAL_TOP_LEVEL_ROUTE_KEYS = {"staff"}
+CANONICAL_API_ROUTE_KEYS = {"staff", "rota"}
+
 
 ASSISTANT_CHILD_CONTEXT_ROUTES: dict[str, dict[str, str]] = {
     # Used only inside assistant/context bundle building.
@@ -646,14 +672,17 @@ def register_route(route_key: str) -> None:
             limit=limit,
         )
 
-    router.add_api_route(f"/{route_key}", handler, methods=["GET"])
-    router.add_api_route(f"/api/{route_key}", handler, methods=["GET"])
+    if route_key not in CANONICAL_TOP_LEVEL_ROUTE_KEYS:
+        router.add_api_route(f"/{route_key}", handler, methods=["GET"])
+    if route_key not in CANONICAL_API_ROUTE_KEYS:
+        router.add_api_route(f"/api/{route_key}", handler, methods=["GET"])
 
-    router.add_api_route(
-        f"/homes/{{home_id}}/{route_key}",
-        home_handler,
-        methods=["GET"],
-    )
+    if route_key not in CANONICAL_HOME_ROUTE_KEYS:
+        router.add_api_route(
+            f"/homes/{{home_id}}/{route_key}",
+            home_handler,
+            methods=["GET"],
+        )
     router.add_api_route(
         f"/api/homes/{{home_id}}/{route_key}",
         home_handler,
@@ -676,8 +705,25 @@ for key in ROUTE_TABLES:
     register_route(key)
 
 
-@router.get("/homes")
-@router.get("/api/homes")
+@router.get("/providers")
+@router.get("/api/providers")
+async def providers(limit: int = Query(default=100)):
+    rows = select_rows(
+        table_name="providers",
+        limit=limit,
+        order_column="name",
+    )
+    return {
+        "providers": rows,
+        "items": rows,
+        "records": rows,
+        "count": len(rows),
+        "status": "ok",
+        "route": "providers",
+        "table": "providers",
+    }
+
+
 async def homes(
     request: Request,
     provider_id: int | None = Query(default=None),
@@ -698,25 +744,6 @@ async def homes(
         "status": "ok",
         "route": "homes",
         "table": "homes",
-    }
-
-
-@router.get("/providers")
-@router.get("/api/providers")
-async def providers(limit: int = Query(default=100)):
-    rows = select_rows(
-        table_name="providers",
-        limit=limit,
-        order_column="name",
-    )
-    return {
-        "providers": rows,
-        "items": rows,
-        "records": rows,
-        "count": len(rows),
-        "status": "ok",
-        "route": "providers",
-        "table": "providers",
     }
 
 

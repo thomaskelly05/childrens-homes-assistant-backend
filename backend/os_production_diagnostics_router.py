@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from core.router_loader import ROUTERS, get_failed_routers, get_route_conflicts, get_router_registry_summary
+from core.router_loader import (
+    ROUTERS,
+    get_accidental_route_conflicts,
+    get_failed_routers,
+    get_intentional_route_conflicts,
+    get_route_conflicts,
+    get_router_registry_summary,
+)
 
 router = APIRouter(prefix='/api/os-diagnostics', tags=['OS Diagnostics'])
 
@@ -44,13 +51,19 @@ EXPECTED_ENDPOINTS = [
 async def router_status():
     failed = get_failed_routers()
     conflicts = get_route_conflicts()
+    accidental_conflicts = get_accidental_route_conflicts()
+    intentional_conflicts = get_intentional_route_conflicts()
     return {
-        'ok': len(failed) == 0,
+        'ok': len(failed) == 0 and len(accidental_conflicts) == 0,
         'configured_router_count': len(ROUTERS),
         'failed_router_count': len(failed),
         'failed_routers': failed,
-        'route_conflict_count': len(conflicts),
+        'route_conflict_count': len(accidental_conflicts),
         'route_conflicts': conflicts,
+        'accidental_route_conflict_count': len(accidental_conflicts),
+        'accidental_route_conflicts': accidental_conflicts,
+        'intentional_route_conflict_count': len(intentional_conflicts),
+        'intentional_route_conflicts': intentional_conflicts,
         'registry_summary': get_router_registry_summary(),
         'configured_routers': ROUTERS,
     }

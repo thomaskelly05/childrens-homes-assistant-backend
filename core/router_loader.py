@@ -49,9 +49,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.shift_routes",
             "routers.frontend_compat",
             "routers.young_people_shell_item_compat_routes",
-            "routers.young_people_safe_routes",
             "routers.home_selector_routes",
-            "homes.routes",
             "staff.routes",
         ),
         required_routers=("routers.frontend_compat",),
@@ -170,7 +168,6 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.visibility_routes",
             "routers.document_rules_routes",
             "routers.document_ai_review_routes",
-            "routers.document_ai_routes",
             "routers.manager_routes",
             "routers.home_inspection_compat_routes",
         ),
@@ -292,6 +289,47 @@ ROUTER_DOMAIN_BY_MODULE = {
 FAILED_ROUTERS: list[dict[str, str]] = []
 ROUTER_LOAD_EVENTS: list[dict[str, object]] = []
 ROUTE_CONFLICTS: list[dict[str, object]] = []
+ROUTE_ACCIDENTAL_CONFLICTS: list[dict[str, object]] = []
+ROUTE_INTENTIONAL_CONFLICTS: list[dict[str, object]] = []
+
+INTENTIONAL_ROUTE_CONFLICTS: dict[tuple[str, str], dict[str, str]] = {
+    ("GET", "/api/os-command"): {
+        "classification": "legacy_compatibility",
+        "canonical": "backend.os_runtime_compat_router.os_command_feed",
+        "duplicate_type": "compatibility_shadow",
+        "reason": "Runtime compatibility endpoint remains first while OS command views are still optional.",
+    },
+    ("GET", "/api/os-command/provider-command-centre"): {
+        "classification": "legacy_compatibility",
+        "canonical": "backend.os_runtime_compat_router.provider_command_centre",
+        "duplicate_type": "compatibility_shadow",
+        "reason": "Runtime compatibility endpoint remains first while provider command centre views are still optional.",
+    },
+    ("POST", "/api/os-command/provider-command-centre/generate"): {
+        "classification": "legacy_compatibility",
+        "canonical": "backend.os_runtime_compat_router.generate_provider_command_centre",
+        "duplicate_type": "compatibility_shadow",
+        "reason": "Runtime compatibility endpoint remains first while provider snapshot generation is being standardised.",
+    },
+    ("GET", "/api/os-command/care-recording"): {
+        "classification": "legacy_compatibility",
+        "canonical": "backend.os_runtime_compat_router.care_recording",
+        "duplicate_type": "compatibility_shadow",
+        "reason": "Compatibility endpoint reads live daily notes/incidents directly when OS command views are absent.",
+    },
+    ("GET", "/api/os-command/young-people"): {
+        "classification": "legacy_compatibility",
+        "canonical": "backend.os_runtime_compat_router.young_people",
+        "duplicate_type": "compatibility_shadow",
+        "reason": "Compatibility endpoint keeps existing shell clients working until the command workspace route owns this path.",
+    },
+    ("GET", "/api/os-command/young-person/{young_person_id}/workspace"): {
+        "classification": "legacy_compatibility",
+        "canonical": "backend.os_runtime_compat_router.young_person_workspace",
+        "duplicate_type": "compatibility_shadow",
+        "reason": "Compatibility endpoint remains first for deployed shell clients while the command workspace route is validated.",
+    },
+}
 
 
 def include_router(app: FastAPI, module_path: str) -> list[str]:
@@ -309,35 +347,68 @@ def include_router(app: FastAPI, module_path: str) -> list[str]:
     return mounted
 
 
+def _route_descriptor(route) -> dict[str, str | None]:
+    endpoint = getattr(route, "endpoint", None)
+    module = getattr(endpoint, "__module__", None)
+    qualname = getattr(endpoint, "__qualname__", None)
+    return {
+        "name": getattr(route, "name", None) or repr(route),
+        "module": module,
+        "qualname": qualname,
+        "handler": f"{module}.{qualname}" if module and qualname else None,
+        "domain": ROUTER_DOMAIN_BY_MODULE.get(module or ""),
+    }
+
+
 def _detect_route_conflicts(app: FastAPI) -> list[dict[str, object]]:
-    seen: dict[tuple[str, str], str] = {}
+    seen: dict[tuple[str, str], dict[str, str | None]] = {}
     conflicts: list[dict[str, object]] = []
     for route in app.routes:
         path = getattr(route, "path", None)
         methods = getattr(route, "methods", None)
-        name = getattr(route, "name", None) or repr(route)
         if not path or not methods:
             continue
+        descriptor = _route_descriptor(route)
         for method in sorted(methods):
             signature = (method, path)
             if signature in seen:
+                policy = INTENTIONAL_ROUTE_CONFLICTS.get(signature)
                 conflicts.append(
                     {
                         "method": method,
                         "path": path,
-                        "first": seen[signature],
-                        "duplicate": name,
+                        "first": seen[signature]["name"],
+                        "duplicate": descriptor["name"],
+                        "canonical": seen[signature],
+                        "duplicate_handler": descriptor,
+                        "classification": policy["classification"] if policy else "accidental",
+                        "duplicate_type": policy["duplicate_type"] if policy else "accidental",
+                        "reason": policy["reason"] if policy else "No intentional route ownership policy is registered.",
+                        "canonical_handler": policy["canonical"] if policy else seen[signature].get("handler"),
                     }
                 )
             else:
-                seen[signature] = name
+                seen[signature] = descriptor
     return conflicts
+
+
+def _split_route_conflicts(conflicts: list[dict[str, object]]) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    intentional: list[dict[str, object]] = []
+    accidental: list[dict[str, object]] = []
+    for conflict in conflicts:
+        if conflict.get("classification") == "legacy_compatibility":
+            intentional.append(conflict)
+        else:
+            accidental.append(conflict)
+    return accidental, intentional
 
 
 def include_routers(app: FastAPI, routers: list[str] | None = None) -> None:
     FAILED_ROUTERS.clear()
     ROUTER_LOAD_EVENTS.clear()
     ROUTE_CONFLICTS.clear()
+    ROUTE_ACCIDENTAL_CONFLICTS.clear()
+    ROUTE_INTENTIONAL_CONFLICTS.clear()
     for route in routers or ROUTERS:
         domain = ROUTER_DOMAIN_BY_MODULE.get(route, "custom")
         try:
@@ -357,8 +428,19 @@ def include_routers(app: FastAPI, routers: list[str] | None = None) -> None:
             if route in REQUIRED_ROUTERS:
                 raise
     ROUTE_CONFLICTS.extend(_detect_route_conflicts(app))
-    if ROUTE_CONFLICTS:
-        logger.warning("Detected %s duplicate route method/path registrations", len(ROUTE_CONFLICTS))
+    accidental, intentional = _split_route_conflicts(ROUTE_CONFLICTS)
+    ROUTE_ACCIDENTAL_CONFLICTS.extend(accidental)
+    ROUTE_INTENTIONAL_CONFLICTS.extend(intentional)
+    if ROUTE_ACCIDENTAL_CONFLICTS:
+        logger.warning(
+            "Detected %s accidental duplicate route method/path registrations",
+            len(ROUTE_ACCIDENTAL_CONFLICTS),
+        )
+    if ROUTE_INTENTIONAL_CONFLICTS:
+        logger.info(
+            "Detected %s intentional compatibility route shadows",
+            len(ROUTE_INTENTIONAL_CONFLICTS),
+        )
     if FAILED_ROUTERS:
         logger.error(
             "Router startup completed with %s failed optional routers: %s",
@@ -370,7 +452,7 @@ def include_routers(app: FastAPI, routers: list[str] | None = None) -> None:
         len(ROUTER_LOAD_EVENTS),
         len(ROUTER_GROUPS),
         len(FAILED_ROUTERS),
-        len(ROUTE_CONFLICTS),
+        len(ROUTE_ACCIDENTAL_CONFLICTS),
     )
 
 
@@ -380,6 +462,14 @@ def get_failed_routers() -> list[dict[str, str]]:
 
 def get_route_conflicts() -> list[dict[str, object]]:
     return ROUTE_CONFLICTS
+
+
+def get_accidental_route_conflicts() -> list[dict[str, object]]:
+    return ROUTE_ACCIDENTAL_CONFLICTS
+
+
+def get_intentional_route_conflicts() -> list[dict[str, object]]:
+    return ROUTE_INTENTIONAL_CONFLICTS
 
 
 def get_router_registry_summary() -> dict[str, object]:
@@ -399,4 +489,6 @@ def get_router_registry_summary() -> dict[str, object]:
         "legacy_compatibility_router_count": len(LEGACY_COMPATIBILITY_ROUTERS),
         "failed": list(FAILED_ROUTERS),
         "conflicts": list(ROUTE_CONFLICTS),
+        "accidental_conflicts": list(ROUTE_ACCIDENTAL_CONFLICTS),
+        "intentional_conflicts": list(ROUTE_INTENTIONAL_CONFLICTS),
     }

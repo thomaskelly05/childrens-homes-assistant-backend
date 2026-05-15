@@ -6,6 +6,7 @@ from core.router_loader import (
     REQUIRED_ROUTERS,
     ROUTER_GROUPS,
     ROUTERS,
+    _split_route_conflicts,
     get_router_registry_summary,
     include_router,
 )
@@ -52,3 +53,25 @@ def test_router_registry_summary_reports_domains_and_compatibility():
     assert summary["required_router_count"] == len(REQUIRED_ROUTERS)
     assert summary["legacy_compatibility_router_count"] >= 1
     assert any(group["name"] == "operational-backend" for group in summary["groups"])
+    assert "accidental_conflicts" in summary
+    assert "intentional_conflicts" in summary
+
+
+def test_route_conflict_policy_splits_intentional_and_accidental():
+    conflicts = [
+        {
+            "method": "GET",
+            "path": "/api/os-command",
+            "classification": "legacy_compatibility",
+        },
+        {
+            "method": "GET",
+            "path": "/young-people",
+            "classification": "accidental",
+        },
+    ]
+
+    accidental, intentional = _split_route_conflicts(conflicts)
+
+    assert accidental == [conflicts[1]]
+    assert intentional == [conflicts[0]]
