@@ -57,6 +57,7 @@ class IntelligenceCacheService:
 
     def __init__(self) -> None:
         self._entries: dict[str, CacheEntry] = {}
+        self._invalidation_log: list[dict[str, Any]] = []
 
     def build_cache_key(
         self,
@@ -128,11 +129,23 @@ class IntelligenceCacheService:
                 continue
             removed.append(key)
             self._entries.pop(key, None)
-        return {
+        result = {
             "event_type": event_type,
             "affected_cache_types": sorted(affected_types),
             "invalidated_keys": removed,
             "scope": scope,
+            "reliable": bool(affected_types),
+            "created_at": _now(),
+        }
+        self._invalidation_log.append(result)
+        self._invalidation_log = self._invalidation_log[-100:]
+        return result
+
+    def invalidation_health(self) -> dict[str, Any]:
+        return {
+            "known_events": sorted(CACHE_EVENTS),
+            "recent_invalidations": self._invalidation_log[-20:],
+            "tracked_entries": len(self._entries),
         }
 
     def clear(self) -> None:

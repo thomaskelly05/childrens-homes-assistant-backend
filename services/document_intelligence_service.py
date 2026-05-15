@@ -77,6 +77,7 @@ class DocumentIntelligenceService:
             "evidence_sufficiency_prompts": self.evidence_sufficiency_prompts(evidence_links=evidence_links),
             "chronology_continuity_prompts": self.chronology_continuity_prompts(text=clean),
             "review_readiness_prompts": self.review_readiness_prompts(indicators=indicators),
+            "inspection_intelligence": self.inspection_intelligence(text=clean, evidence_links=evidence_links),
             "orb_document_support": [
                 "strengthen child voice",
                 "make this more reflective",
@@ -154,6 +155,24 @@ class DocumentIntelligenceService:
             return ["Draft appears ready for manager review; human judgement remains required."]
         return [f"Consider expanding {key.replace('_', ' ')} before manager review." for key in needs[:5]]
 
+    def inspection_intelligence(self, *, text: str, evidence_links: list[dict[str, Any]]) -> list[dict[str, str]]:
+        lower = text.lower()
+        signals = [
+            ("weak_child_voice_detection", not any(term in lower for term in CHILD_VOICE_TERMS), "Limited evidence found for child voice; consider adding direct words, wishes or feelings where known."),
+            ("weak_oversight_evidence", "manager" not in lower and "oversight" not in lower and "reviewed" not in lower, "Review may be helpful where leadership oversight is not visible."),
+            ("repetitive_direct_work_themes", self._repeated_theme(lower, ["keywork", "direct work", "session"]), "Direct work themes appear repetitive; consider linking what changed or what helped."),
+            ("incomplete_follow_up_detection", ("follow" in lower or "action" in lower) and not any(term in lower for term in ("completed", "outcome", "review date", "owner")), "Follow-up appears incomplete; consider naming owner, date and outcome."),
+            ("sparse_lived_experience_evidence", len(text.split()) < 80 or not evidence_links, "Limited evidence found; consider expanding lived experience and chronology links."),
+            ("weak_progress_evidence", any(term in lower for term in CLAIM_TERMS) and not any(term in lower for term in EVIDENCE_TERMS), "Progress evidence may need source dates or chronology links."),
+            ("missing_leadership_review", "leadership" not in lower and "registered manager" not in lower and "manager" not in lower, "Leadership review may be helpful before sign-off."),
+            ("weak_action_outcome_tracking", "action" in lower and "outcome" not in lower, "Action outcome tracking may need clearer impact detail."),
+        ]
+        return [
+            {"key": key, "language": "calm_review", "summary": summary}
+            for key, active, summary in signals
+            if active
+        ][:8]
+
     def _indicator(self, key: str, passed: bool, improvement: str) -> dict[str, Any]:
         return {"key": key, "status": "ok" if passed else "needs_review", "improvement": None if passed else improvement}
 
@@ -192,6 +211,9 @@ class DocumentIntelligenceService:
             return False
         counts = Counter(words)
         return any(count >= 6 for count in counts.values())
+
+    def _repeated_theme(self, lower: str, terms: list[str]) -> bool:
+        return sum(lower.count(term) for term in terms) >= 3
 
 
 document_intelligence_service = DocumentIntelligenceService()

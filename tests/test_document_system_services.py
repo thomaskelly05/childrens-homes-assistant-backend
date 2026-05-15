@@ -95,7 +95,7 @@ def test_staff_document_access_denied_to_unauthorised_users():
     assert document_permission_service.can_read(current_user=STAFF, document=document) is False
 
 
-def test_export_requires_permission_and_pdf_reports_clear_limitation():
+def test_export_requires_permission_and_pdf_generates_real_payload():
     document = _document("home_statement_of_purpose")
     document["scope"] = "home"
     document["home_id"] = 10
@@ -103,8 +103,10 @@ def test_export_requires_permission_and_pdf_reports_clear_limitation():
     document_permission_service.assert_can_export(current_user=MANAGER, document=document)
     result = document_export_service.export(document=document, profile="pdf")
 
-    assert result["ok"] is False
-    assert "not live yet" in result["message"]
+    assert result["ok"] is True
+    assert result["media_type"] == "application/pdf"
+    assert result["content_base64"]
+    assert result["byte_length"] > 1000
 
 
 def test_signature_audit_is_hash_bound_and_immutable():

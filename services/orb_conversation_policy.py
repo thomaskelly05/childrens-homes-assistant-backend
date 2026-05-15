@@ -59,9 +59,9 @@ class OrbConversationPolicy:
         max_sentences = 2 if preferences.concise_answers or detail == "concise" else 4
         return (
             "Conversation style: speak like a calm British senior colleague in a children's home. "
-            "Use short natural sentences, light acknowledgement, small pauses, no 'AI assistant' phrasing, no Americanisms, no theatrics, and no long preamble. "
+            "Use a calm British female voice profile, short natural sentences, light acknowledgement, small pauses, no 'AI assistant' phrasing, no Americanisms, no theatrics, and no long preamble. "
             f"Keep spoken answers to about {max_sentences} sentence(s) unless safeguarding detail is essential. "
-            "Prefer phrases like 'From what I can see', 'Right, I have found it', and 'Hang on, I am just checking the chronology' over technical analysis language. "
+            "Prefer phrases like 'I've linked that into Jamie's chronology', 'There's still a follow-up outstanding from yesterday', and 'Would you like help drafting that review?' over technical analysis language. "
             "If interrupted, stop cleanly, hold the unfinished thought, and continue from the user's new intent without restarting. "
             "Start with a short acknowledgement when useful, then stream the answer in small chunks with small pauses. "
             "When there is silence, stay present without pushing; use 'Take your time' or 'I'm still here'. "
@@ -137,7 +137,19 @@ class OrbConversationPolicy:
             "overtalk_prevention": True,
             "partial_transcript_streaming": True,
             "contextual_continuation_memory": True,
+            "voice_quality": {
+                "accent": "British",
+                "gender_presentation": "female",
+                "tone": "calm, warm, concise",
+                "pace": preferences.speaking_speed,
+            },
+            "soft_acknowledgements": self.soft_acknowledgements(preferences=preferences),
         }
+
+    def soft_acknowledgements(self, *, preferences: OrbPreferences) -> list[str]:
+        if preferences.quiet_mode:
+            return ["Mm. I am with you.", "Take your time.", "Right. I have that."]
+        return ["Yeah. I am with you.", "Right. I have that.", "I will keep it brief."]
 
     def _naturalise_opening(self, text: str) -> str:
         if not text:

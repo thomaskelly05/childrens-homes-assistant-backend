@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from psycopg2.extras import Json, RealDictCursor
 
 from auth.dependencies import get_current_user
+from backend.db.migration_runner import run_pending
 from db.connection import get_db
 from schemas.document_templates import DocumentCreateRequest, DocumentUpdateRequest
 from schemas.document_review import DocumentReviewAction
@@ -78,8 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_document_instance_autosaves_doc ON document_insta
 
 
 def ensure_schema(conn: Any) -> None:
-    with conn.cursor() as cur:
-        cur.execute(CREATE_SCHEMA_SQL)
+    run_pending(conn)
 
 
 def _user_id(current_user: dict[str, Any]) -> str | None:

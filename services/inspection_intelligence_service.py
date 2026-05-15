@@ -26,8 +26,11 @@ class InspectionIntelligenceService:
             "recommendations": self._recommendations(patterns, weak_sections),
             "chronology_quality_indicators": self._chronology_quality_indicators(evidence=evidence, patterns=patterns),
             "evidence_sufficiency_indicators": self._evidence_sufficiency_indicators(evidence=evidence, weak_sections=weak_sections),
+            "operational_inspection_signals": self._operational_inspection_signals(evidence=evidence),
             "inspection_narrative_builder": self._narrative_builder(patterns=patterns, weak_sections=weak_sections),
             "what_inspectors_may_ask": self._what_inspectors_may_ask(patterns=patterns, weak_sections=weak_sections),
+            "what_has_improved": self._what_has_improved(evidence=evidence),
+            "what_still_needs_oversight": self._what_still_needs_oversight(evidence=evidence, weak_sections=weak_sections),
             "guardrails": [
                 "No definitive safeguarding conclusions are generated.",
                 "All outputs require professional review against source records.",
@@ -141,6 +144,64 @@ class InspectionIntelligenceService:
                 "evidence_links": [],
             })
         return questions[:8]
+
+    def _operational_inspection_signals(self, *, evidence: dict[str, Any]) -> list[dict[str, Any]]:
+        cards = evidence.get("cards") or []
+        gaps = evidence.get("gaps") or []
+        text = " ".join(str(card.get(key, "")) for card in cards for key in ("title", "summary", "description", "outcome", "theme")).lower()
+        gap_text = " ".join(str(gap) for gap in gaps).lower()
+        checks = [
+            ("weak_child_voice", any(term in gap_text for term in ("child voice", "wishes", "feelings")) or "child said" not in text, "Limited evidence found for the child's wishes, feelings or direct work."),
+            ("weak_oversight_evidence", "manager" not in text and "oversight" not in text and "reviewed" not in text, "Review may be helpful where leadership oversight is not visible."),
+            ("incomplete_follow_up", any(term in text for term in ("follow-up", "follow up", "outstanding", "open")) and "completed" not in text, "Follow-up appears incomplete; consider adding owner, date and outcome."),
+            ("sparse_lived_experience", len(cards) < 3 or "felt" not in text, "Consider expanding lived experience evidence from daily notes, direct work or chronology."),
+            ("weak_progress_evidence", any(term in text for term in ("improved", "settled", "progress")) and not any(term in text for term in ("because", "shown by", "evidenced", "recorded")), "Progress language may need clearer source evidence."),
+            ("unresolved_safeguarding_themes", any(term in text for term in ("safeguarding", "missing", "police", "strategy")) and any(term in text for term in ("ongoing", "open", "monitor")), "Safeguarding themes appear unresolved; manager review may be helpful."),
+            ("chronology_continuity_gaps", "chronology" not in text and not any(card.get("href") or card.get("record_id") for card in cards), "Chronology continuity could be strengthened with source links."),
+            ("missing_leadership_review", "registered manager" not in text and "leadership" not in text, "Leadership review evidence appears limited in the current sample."),
+            ("weak_action_outcome_tracking", "action" in text and "outcome" not in text, "Action outcome tracking may need clearer impact detail."),
+        ]
+        return [
+            {"key": key, "status": "needs_review", "summary": summary, "evidence_links": self._links(cards)}
+            for key, condition, summary in checks
+            if condition
+        ]
+
+    def _what_has_improved(self, *, evidence: dict[str, Any]) -> list[dict[str, Any]]:
+        cards = evidence.get("cards") or []
+        improved = [
+            card for card in cards
+            if any(term in str(card).lower() for term in ("improved", "settled", "progress", "achieved", "positive", "repaired"))
+        ]
+        return [
+            {
+                "summary": card.get("summary") or card.get("title") or "Visible progress evidence found.",
+                "evidence_links": self._links([card]),
+                "language": "records show visible progress language; source review remains required.",
+            }
+            for card in improved[:5]
+        ]
+
+    def _what_still_needs_oversight(self, *, evidence: dict[str, Any], weak_sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        cards = evidence.get("cards") or []
+        unresolved = [
+            card for card in cards
+            if any(term in str(card).lower() for term in ("open", "overdue", "follow-up", "follow up", "monitor", "ongoing"))
+        ]
+        items = [
+            {
+                "summary": card.get("summary") or card.get("title") or "Follow-up may need oversight.",
+                "evidence_links": self._links([card]),
+                "language": "follow-up appears incomplete; review may be helpful.",
+            }
+            for card in unresolved[:5]
+        ]
+        items.extend({
+            "summary": f"Limited evidence found for {section.get('title')}.",
+            "evidence_links": [],
+            "language": "consider expanding source evidence before inspection sampling.",
+        } for section in weak_sections[:3])
+        return items[:8]
 
     def _links(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [

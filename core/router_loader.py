@@ -58,6 +58,7 @@ routers.realtime_alerts_routes
 routers.workspace_records_routes
 routers.child_documents_routes
 routers.operational_memory_routes
+routers.operational_health_routes
 routers.young_people_assistant_routes
 routers.operational_intelligence_routes
 routers.inspection_os_routes

@@ -44,6 +44,9 @@ def test_narrative_continuity_filters_cross_child_records_and_builds_story():
     assert continuity["unresolved_themes"]
     assert any(item["theme"] in {"education", "relationships", "wellbeing"} for item in continuity["recurring_themes"])
     assert continuity["child_voice_continuity"]
+    assert continuity["what_helped"]
+    assert continuity["what_still_needs_support"]
+    assert continuity["support_effectiveness"]["visible_support_markers"]
     assert continuity["relationship_continuity"]["markers"]
     assert continuity["emotional_wellbeing"]["current_state"] == "settled"
     assert continuity["today_mattered_because"].startswith("Today mattered because Jamie")

@@ -4,6 +4,8 @@ import html
 from datetime import datetime, timezone
 from typing import Any
 
+from services.docx_export_service import docx_export_service
+from services.pdf_export_service import pdf_export_service
 from services.document_template_service import document_template_service
 
 
@@ -12,13 +14,10 @@ class DocumentExportService:
 
     def export(self, *, document: dict[str, Any], profile: str = "print_html") -> dict[str, Any]:
         template = document_template_service.get_template(str(document.get("template_id")))
-        if profile in {"pdf", "docx"}:
-            return {
-                "ok": False,
-                "status": "unavailable",
-                "profile": profile,
-                "message": f"{profile.upper()} export is not live yet. The document has not been exported.",
-            }
+        if profile == "pdf":
+            return {**pdf_export_service.export(document=document, title=template.title), "status": "ready"}
+        if profile == "docx":
+            return {**docx_export_service.export(document=document, title=template.title), "status": "ready"}
         if profile != "print_html":
             return {"ok": False, "status": "unavailable", "profile": profile, "message": "This export profile is not available."}
         return {
