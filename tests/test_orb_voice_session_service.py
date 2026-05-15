@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException
 
-from schemas.orb import OrbContext, OrbSessionEventRequest, OrbSessionStartRequest
+from schemas.orb import OrbContext, OrbPreferences, OrbSessionEventRequest, OrbSessionStartRequest
 from services.assistant_context_service import build_shared_assistant_context
 from services.assistant_retrieval_service import AssistantRetrievalService
 from services.orb_voice_session_service import OrbVoiceSessionService
