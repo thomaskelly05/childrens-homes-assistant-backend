@@ -31,6 +31,7 @@ type OrbRealtimeClientCallbacks = {
 const MAX_RECONNECT_ATTEMPTS = 5
 const NEGOTIATION_TIMEOUT_MS = 20000
 const HEARTBEAT_MS = 15000
+const ORB_SERVER_VAD_SILENCE_MS = 520
 
 class OrbNonRetryableError extends Error {}
 
@@ -128,7 +129,7 @@ export class OrbRealtimeClient {
             type: 'server_vad',
             threshold: 0.48,
             prefix_padding_ms: 280,
-            silence_duration_ms: 680,
+            silence_duration_ms: ORB_SERVER_VAD_SILENCE_MS,
             create_response: false,
             interrupt_response: true
           }
@@ -204,7 +205,7 @@ export class OrbRealtimeClient {
     })
     if (response.status === 401 || response.status === 403) {
       this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
-      throw new OrbNonRetryableError(`Realtime token was rejected (${response.status})`)
+      throw new OrbNonRetryableError(response.status === 401 ? 'Voice access expired. Please sign in again.' : "I can't access voice in this context.")
     }
     if (!response.ok) throw new Error(process.env.NODE_ENV === 'development' ? `Realtime provider failed (${response.status})` : 'Realtime audio could not connect just now')
     await peer.setRemoteDescription({ type: 'answer', sdp: await response.text() })

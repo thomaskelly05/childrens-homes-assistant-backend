@@ -1,4 +1,5 @@
 export type OrbVoiceProfileId =
+  | 'british_female_calm'
   | 'calm_reflective'
   | 'safeguarding_cautious'
   | 'nighttime_handover'

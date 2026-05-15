@@ -4,6 +4,7 @@ from typing import Any
 
 
 VOICE_PROFILES = {
+    "british_female_calm": {"pace": "steady", "brevity": "concise", "warmth": "calm_human"},
     "calm_reflective": {"pace": "steady", "brevity": "concise", "warmth": "soft"},
     "safeguarding_cautious": {"pace": "slow", "brevity": "short", "warmth": "contained"},
     "nighttime_handover": {"pace": "slow", "brevity": "brief", "warmth": "low_stimulation"},
@@ -16,11 +17,13 @@ VOICE_PROFILES = {
 
 
 class OrbVoiceOrchestrationService:
-    def plan(self, *, profile: str = "calm_reflective", realtime_configured: bool = False, context: dict[str, Any] | None = None) -> dict[str, Any]:
-        selected = VOICE_PROFILES.get(profile, VOICE_PROFILES["calm_reflective"])
+    def plan(self, *, profile: str = "british_female_calm", realtime_configured: bool = False, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        selected = VOICE_PROFILES.get(profile, VOICE_PROFILES["british_female_calm"])
         child_present = bool((context or {}).get("child_present"))
         return {
             "voice_profile": "british_female_calm",
+            "tone_profile": "calm_concise_human",
+            "product_name": "ORB powered by IndiCare",
             "emotional_speech_profile": profile,
             "provider_route": "openai_realtime_ephemeral" if realtime_configured else "caption_text_fallback",
             "browser_api_key_exposure": False,

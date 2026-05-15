@@ -1,8 +1,6 @@
 import { ReactNode } from 'react'
 import Link from 'next/link'
 
-import { OrbStandaloneSidebar } from './orb-standalone-sidebar'
-
 export function OrbStandaloneShell({ children }: { children: ReactNode }) {
   return (
     <main className="orb-standalone-atmosphere relative min-h-screen overflow-hidden text-white">
@@ -14,14 +12,9 @@ export function OrbStandaloneShell({ children }: { children: ReactNode }) {
           <Link href="/assistant" className="orb-presence-pill px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em]">
             ORB powered by IndiCare
           </Link>
-          <details className="group relative z-50">
-            <summary className="orb-quiet-action list-none rounded-full px-4 py-3 text-sm font-black text-slate-100 marker:hidden">
-              Controls
-            </summary>
-            <div className="fixed right-4 top-20 w-[min(22rem,calc(100vw-2rem))] md:right-8">
-              <OrbStandaloneSidebar />
-            </div>
-          </details>
+          <p className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 md:block">
+            Voice-first standalone mode
+          </p>
         </header>
         <section className="mx-auto flex w-full max-w-7xl flex-1 items-center py-6 md:py-10">
           <div className="w-full">{children}</div>

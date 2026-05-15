@@ -116,7 +116,7 @@ export default async function AssistantAppPage({ params }: { params: Promise<{ a
           <h3 className="mt-3 text-2xl font-black tracking-[-0.05em]">Foundation controls</h3>
           <div className="mt-5 grid gap-3">
             {[
-              ['Open workspace', `/assistant/apps/${slug}`],
+              ['Open workspace', isVoice ? '/assistant/voice' : `/assistant/apps/${slug}`],
               ['Use assistant', '/assistant'],
               ['All apps', '/assistant/apps']
             ].map(([label, href]) => (

@@ -5,7 +5,6 @@ import { X } from 'lucide-react'
 import { OrbRenderer } from '@/components/orb-core/orb-renderer'
 import { EmbeddedOrbContextStrip } from './embedded-orb-context-strip'
 import { EmbeddedOrbImmersiveToggle } from './embedded-orb-immersive-toggle'
-import { embeddedOrbPrompts } from '@/lib/orb/content/prompts'
 
 export function EmbeddedOrbPanel({
   childName,
@@ -33,14 +32,9 @@ export function EmbeddedOrbPanel({
       <div className="mt-4">
         <OrbRenderer state={state} compact captionsEnabled caption={childName ? "I'm here if you need a hand." : 'Select a child before asking for records.'} />
       </div>
-      <div className="mt-4 grid gap-2">
-        {embeddedOrbPrompts.slice(0, 5).map((prompt) => (
-          <button key={prompt} type="button" className="orb-prompt-card rounded-2xl px-4 py-3 text-left text-sm font-bold text-slate-100">
-            {prompt}
-          </button>
-        ))}
-      </div>
-      <p className="mt-4 text-xs leading-5 text-slate-400">Drafts and suggestions only. Nothing is written without explicit confirmation.</p>
+      <p className="mt-4 rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-xs leading-5 text-slate-300">
+        Ask from the active child workspace using the docked ORB. Drafts and suggestions only; nothing is written without explicit confirmation.
+      </p>
     </section>
   )
 }

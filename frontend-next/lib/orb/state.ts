@@ -94,7 +94,7 @@ export class OrbRuntimeController {
       this.emit()
     },
     onError: (message) => {
-      this.snapshot = { ...this.snapshot, microphone: 'denied', realtimeAvailable: false, error: process.env.NODE_ENV === 'development' ? message : 'Microphone access needs checking.' }
+      this.snapshot = { ...this.snapshot, microphone: 'denied', realtimeAvailable: false, error: process.env.NODE_ENV === 'development' ? message : 'Microphone access looks disabled.' }
       this.emit()
     }
   })
@@ -102,7 +102,7 @@ export class OrbRuntimeController {
     onEvent: (raw) => this.handleRealtimeEvent(raw),
     onStateChange: (state, detail) => this.applyNetworkState(state, detail),
     onError: (message) => {
-      this.snapshot = { ...this.snapshot, connected: false, realtimeAvailable: false, error: process.env.NODE_ENV === 'development' ? message : 'Realtime audio needs a moment. You can still type to Orb.' }
+      this.snapshot = { ...this.snapshot, connected: false, realtimeAvailable: false, error: process.env.NODE_ENV === 'development' ? message : 'Voice is unavailable just now. I can continue in text.' }
       this.emit()
     },
     refreshCredentials: () => this.refreshRealtimeCredentials()
@@ -223,7 +223,7 @@ export class OrbRuntimeController {
       this.emit()
       return true
     } catch (error) {
-      this.snapshot = { ...this.snapshot, microphone: 'denied', error: error instanceof Error ? error.message : 'Microphone permission was denied.' }
+      this.snapshot = { ...this.snapshot, microphone: 'denied', error: 'Microphone access looks disabled.' }
       this.emit()
       return false
     }
@@ -448,8 +448,8 @@ export class OrbRuntimeController {
   private async realtimeOptionsFromSession(data: OrbSessionStartData): Promise<OrbRealtimeConnectOptions | null> {
     const realtime = data.realtime || {}
     if (realtime.transport !== 'webrtc' || data.provider !== 'openai_realtime' || !data.provider_configured) {
-      const status = typeof realtime.status === 'string' ? realtime.status : 'Realtime audio is not connected yet. Typed Orb remains available.'
-      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: status.includes('not connected') ? status : this.snapshot.error }
+      const status = typeof realtime.status === 'string' ? realtime.status : 'Voice is unavailable just now. I can continue in text.'
+      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: status.includes('not connected') ? 'Voice is unavailable just now. I can continue in text.' : this.snapshot.error }
       return null
     }
     const providerSession = data.provider_session as {
@@ -459,13 +459,13 @@ export class OrbRuntimeController {
     const ephemeralKey = providerSession.session?.client_secret?.value
     const model = providerSession.model || providerSession.session?.model
     if (!ephemeralKey || !model) {
-      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: 'Realtime audio is not connected yet. Typed Orb remains available.' }
+      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: 'Voice is unavailable just now. I can continue in text.' }
       return null
     }
     if (!this.stream) {
       const micReady = await this.requestMicrophone()
       if (!micReady || !this.stream) {
-        this.snapshot = { ...this.snapshot, state: this.snapshot.microphone === 'denied' ? 'permission_denied' : this.snapshot.state, realtimeAvailable: false, error: 'Microphone permission is needed for live voice. You can still type to Orb.' }
+        this.snapshot = { ...this.snapshot, state: this.snapshot.microphone === 'denied' ? 'permission_denied' : this.snapshot.state, realtimeAvailable: false, error: 'Microphone access looks disabled. I can continue in text.' }
         return null
       }
     }
@@ -593,7 +593,7 @@ export class OrbRuntimeController {
       return
     }
     if (type === 'error') {
-      this.snapshot = { ...this.snapshot, state: 'error', error: 'Realtime audio needs a moment. You can still type to Orb.' }
+      this.snapshot = { ...this.snapshot, state: 'error', error: 'Voice is unavailable just now. I can continue in text.' }
       this.emit()
     }
   }
@@ -618,7 +618,7 @@ export class OrbRuntimeController {
       type: 'response.create',
       response: {
         modalities: ['audio', 'text'],
-        instructions: `Speak this IndiCare Orb answer naturally, in a calm British female voice. Do not add citations or extra commentary. Say exactly: ${JSON.stringify(spoken)}`
+        instructions: `Speak this ORB powered by IndiCare answer naturally, in a calm British female voice. Keep the delivery brief, warm and interruptible. Do not add citations or extra commentary. Say exactly: ${JSON.stringify(spoken)}`
       }
     })) {
       return
@@ -637,6 +637,8 @@ export class OrbRuntimeController {
     utterance.lang = 'en-GB'
     utterance.rate = 0.94
     utterance.pitch = 1.02
+    const voices = window.speechSynthesis.getVoices()
+    utterance.voice = voices.find((voice) => voice.lang.toLowerCase().startsWith('en-gb') && /female|serena|samantha|kate|susan|victoria/i.test(voice.name)) || voices.find((voice) => voice.lang.toLowerCase().startsWith('en-gb')) || null
     utterance.onend = () => {
       this.clearHardStateRecovery()
       this.browserUtterance = null
