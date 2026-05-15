@@ -47,3 +47,27 @@ def test_realtime_interruption_clears_speaking_state_and_preserves_context(monke
     assert interrupted["phase"] == "interrupted"
     assert interrupted["interrupted_response"] == "Jamie escalated after dinner."
     assert interrupted["partial_assistant_transcript"] == ""
+
+
+def test_realtime_transcript_reconciliation_and_overlap_smoothing(monkeypatch):
+    monkeypatch.setenv("ORB_SESSION_STORE_BACKEND", "memory")
+    orb_session_store.reset_for_tests()
+
+    service = OrbRealtimeConversationService()
+    service.start_session(
+        session_id="orb_session_reconcile",
+        provider_name="openai_realtime",
+        provider_configured=True,
+        context=OrbContext(workspace="handover", home_id=1, selected_young_person_id=10),
+    )
+    service.assistant_response_started(session_id="orb_session_reconcile")
+    service.assistant_response_delta(session_id="orb_session_reconcile", delta="The handover still needs")
+    overlapped = service.note_event(session_id="orb_session_reconcile", event_type="speech_started")
+    service.partial_user_transcript(session_id="orb_session_reconcile", text="Jamie came back")
+    reconciled = service.reconcile_user_transcript(session_id="orb_session_reconcile", final_text="calmly after outreach")
+
+    assert overlapped["phase"] == "listening"
+    assert overlapped["interrupted_response"] == "The handover still needs"
+    assert any(event["type"] == "conversational_overlap_smoothed" for event in overlapped["recent_events"])
+    assert reconciled["text"] == "Jamie came back calmly after outreach"
+    assert reconciled["changed"] is True

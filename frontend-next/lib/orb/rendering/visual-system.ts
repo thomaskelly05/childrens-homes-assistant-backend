@@ -12,6 +12,10 @@ export type OrbVisualState =
   | 'child_present'
   | 'emotional_safety'
   | 'reduced_motion'
+  | 'night_shift'
+  | 'handover'
+  | 'inspection'
+  | 'reflective_writing'
 
 export type OrbHueProfile = {
   hueA: string
@@ -53,7 +57,11 @@ export const ORB_VISUAL_STATES: Record<OrbVisualState, OrbVisualState> = {
   safeguarding_cautious: 'safeguarding_cautious',
   child_present: 'child_present',
   emotional_safety: 'emotional_safety',
-  reduced_motion: 'reduced_motion'
+  reduced_motion: 'reduced_motion',
+  night_shift: 'night_shift',
+  handover: 'handover',
+  inspection: 'inspection',
+  reflective_writing: 'reflective_writing'
 }
 
 export const ORB_HUE_PROFILES: Record<OrbVisualState, OrbHueProfile> = {
@@ -173,6 +181,42 @@ export const ORB_HUE_PROFILES: Record<OrbVisualState, OrbHueProfile> = {
     glow: 0.28,
     motionSpeed: '18s',
     edgeOpacity: 0.16
+  },
+  night_shift: {
+    hueA: '125 211 252',
+    hueB: '99 102 241',
+    hueC: '148 163 184',
+    warm: '251 146 60',
+    glow: 0.22,
+    motionSpeed: '18s',
+    edgeOpacity: 0.14
+  },
+  handover: {
+    hueA: '103 232 249',
+    hueB: '129 140 248',
+    hueC: '251 146 60',
+    warm: '251 146 60',
+    glow: 0.42,
+    motionSpeed: '10s',
+    edgeOpacity: 0.28
+  },
+  inspection: {
+    hueA: '251 191 36',
+    hueB: '125 211 252',
+    hueC: '226 232 240',
+    warm: '251 146 60',
+    glow: 0.34,
+    motionSpeed: '12s',
+    edgeOpacity: 0.24
+  },
+  reflective_writing: {
+    hueA: '186 230 253',
+    hueB: '196 181 253',
+    hueC: '244 114 182',
+    warm: '251 146 60',
+    glow: 0.32,
+    motionSpeed: '16s',
+    edgeOpacity: 0.18
   }
 }
 
@@ -189,7 +233,11 @@ export const orbVisualStateLabels: Record<OrbVisualState, string> = {
   safeguarding_cautious: 'Safeguarding aware',
   child_present: 'Child-present mode',
   emotional_safety: 'Emotional safety',
-  reduced_motion: 'Reduced motion'
+  reduced_motion: 'Reduced motion',
+  night_shift: 'Night shift',
+  handover: 'Handover continuity',
+  inspection: 'Inspection evidence',
+  reflective_writing: 'Reflective writing'
 }
 
 const orbVisualStateTone: Record<OrbVisualState, string> = {
@@ -205,7 +253,11 @@ const orbVisualStateTone: Record<OrbVisualState, string> = {
   safeguarding_cautious: 'Careful with safeguarding context',
   child_present: 'Plain, child-aware language',
   emotional_safety: 'Soft motion and calmer contrast',
-  reduced_motion: 'Motion reduced for comfort'
+  reduced_motion: 'Motion reduced for comfort',
+  night_shift: 'Quiet, low-stimulation presence',
+  handover: 'Continuity first',
+  inspection: 'Evidence and chronology first',
+  reflective_writing: 'Reflective writing support'
 }
 
 const stateAliases: Record<string, OrbVisualState> = {
@@ -219,7 +271,8 @@ const stateAliases: Record<string, OrbVisualState> = {
   private: 'private_mode',
   error: 'offline',
   safeguarding_sensitive: 'safeguarding_cautious',
-  inspection: 'safeguarding_cautious'
+  inspection_prep: 'inspection',
+  document_writing: 'reflective_writing'
 }
 
 export function getOrbVisualState(state?: string | null, reducedMotion = false): OrbVisualState {

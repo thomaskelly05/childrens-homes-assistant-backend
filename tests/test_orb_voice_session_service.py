@@ -332,6 +332,7 @@ async def test_runtime_metadata_adapts_environment_safety_and_companionship(monk
     assert runtime["ambient_presence"]["visual_intensity"] == "soft"
     assert runtime["operational_companionship"]["nagging"] is False
     assert {prompt["id"] for prompt in prompts} == {"prepare_handover", "weak_child_voice", "open_follow_up"}
+    assert "presence_continuity_notes" in runtime
 
 
 @pytest.mark.asyncio
@@ -356,6 +357,38 @@ async def test_standalone_orb_answers_general_questions_without_os_retrieval(mon
     assert response.mode_decision.brain == "general_assistant_brain"
     assert response.mode_decision.care_scope_required is False
     assert fake.contexts == []
+
+
+@pytest.mark.asyncio
+async def test_runtime_presence_continuity_keeps_accessibility_and_unresolved_topics(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+    user = {"id": 44, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+
+    await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(workspace="handover", home_id=1, selected_young_person_id=10),
+            preferences=OrbPreferences(captions_enabled=True, response_detail="balanced"),
+            provider="mock_voice",
+            workspace_context={"recent_unresolved_topic": "return interview"},
+        ),
+        current_user=user,
+    )
+    second = await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(workspace="night_shift", home_id=1, selected_young_person_id=10),
+            provider="mock_voice",
+            workspace_context={"environment_mode": "night_shift"},
+        ),
+        current_user=user,
+    )
+
+    runtime = second.realtime_state["runtime"]
+    assert runtime["presence_memory"]["caption_preference"] == "on"
+    assert runtime["presence_memory"]["reflective_mode"] is True
+    assert runtime["environment_settings"]["background_ambience"] == "darker_quiet_gradient"
+    assert "Captions are still enabled." in runtime["presence_continuity_notes"]
+    assert any("return interview" in note for note in runtime["presence_continuity_notes"])
 
 
 @pytest.mark.asyncio

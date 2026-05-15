@@ -318,13 +318,42 @@ textarea:focus-visible {
 
 [data-orb-state='child_present'],
 [data-orb-state='emotional_safety'],
-[data-orb-state='reduced_motion'] {
+[data-orb-state='reduced_motion'],
+[data-orb-state='night_shift'],
+[data-orb-state='reflective_writing'] {
   --orb-hue-a: 186, 230, 253;
   --orb-hue-b: 196, 181, 253;
   --orb-hue-c: 226, 232, 240;
   --orb-glow: 0.26;
   --orb-motion-speed: 14s;
   --orb-edge-opacity: 0.18;
+}
+
+[data-orb-state='night_shift'] {
+  --orb-hue-a: 125, 211, 252;
+  --orb-hue-b: 99, 102, 241;
+  --orb-hue-c: 148, 163, 184;
+  --orb-glow: 0.2;
+  --orb-motion-speed: 18s;
+  --orb-edge-opacity: 0.14;
+}
+
+[data-orb-state='handover'] {
+  --orb-hue-a: 103, 232, 249;
+  --orb-hue-b: 129, 140, 248;
+  --orb-hue-c: 251, 146, 60;
+  --orb-glow: 0.42;
+  --orb-motion-speed: 10s;
+  --orb-edge-opacity: 0.28;
+}
+
+[data-orb-state='inspection'] {
+  --orb-hue-a: 251, 191, 36;
+  --orb-hue-b: 125, 211, 252;
+  --orb-hue-c: 226, 232, 240;
+  --orb-glow: 0.34;
+  --orb-motion-speed: 12s;
+  --orb-edge-opacity: 0.24;
 }
 
 [data-orb-state='offline'],
@@ -484,8 +513,10 @@ textarea:focus-visible {
 
 [data-orb-state='emotional_safety'] .orb-atmospheric-diffusion,
 [data-orb-state='reduced_motion'] .orb-atmospheric-diffusion,
+[data-orb-state='night_shift'] .orb-atmospheric-diffusion,
 .orb-atmospheric-diffusion[data-orb-state='emotional_safety'],
-.orb-atmospheric-diffusion[data-orb-state='reduced_motion'] {
+.orb-atmospheric-diffusion[data-orb-state='reduced_motion'],
+.orb-atmospheric-diffusion[data-orb-state='night_shift'] {
   opacity: 0.42;
   filter: blur(26px) saturate(0.88);
 }

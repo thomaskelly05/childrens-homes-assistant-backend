@@ -24,6 +24,9 @@ CARE_MODE_TO_ENVIRONMENT = {
     "document_writing": "document_writing",
     "reflective_writing": "reflective_writing",
     "emotional_overload": "emotional_overload",
+    "supervision": "supervision",
+    "management_review": "management_review",
+    "manager_review": "management_review",
 }
 
 
@@ -43,6 +46,8 @@ class OrbCareEnvironmentModeService:
             "response_length": "very_short" if mode in {"emotional_overload", "crisis_escalation", "crisis_mode"} else "short" if privacy_sensitive or low_stimulation else "concise",
             "evidence_posture": "review_required",
             "prompt_timing": "minimal" if privacy_sensitive else "gentle",
+            "information_density": "minimal" if low_stimulation or privacy_sensitive else "evidence_first" if environment_mode in {"inspection", "inspection_prep"} else "calm",
+            "failure_copy_style": "plain_reassuring",
         }
 
 

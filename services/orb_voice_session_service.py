@@ -530,25 +530,42 @@ class OrbVoiceSessionService:
     def _presence_preferences(self, preferences: OrbPreferences) -> dict[str, Any]:
         reduced_motion = bool(getattr(preferences, "reduced_motion", False))
         emotional_regulation = bool(getattr(preferences, "emotional_regulation_mode", False))
-        return {
+        data = {
             "preferred_response_length": preferences.response_detail,
-            "caption_preference": "on" if preferences.captions_enabled else "off",
-            "voice_caption_mode": "caption_supported" if preferences.captions_enabled else "voice_first",
             "pacing_preference": preferences.speaking_speed,
             "interaction_style": preferences.voice_style,
+            "interaction_rhythm": "slower_turns" if reduced_motion or emotional_regulation else "steady_turns",
             "tone_preference": "calm_british",
             "verbosity_preference": "brief" if preferences.concise_answers else preferences.response_detail,
             "sensory_profile": "reduced_stimulation" if reduced_motion or emotional_regulation else "ambient",
             "interruption_style": preferences.interruption_sensitivity,
             "concise_mode": preferences.concise_answers,
             "reflective_mode": preferences.response_detail == "balanced",
+            "reflective_writing_preference": preferences.response_detail == "balanced",
             "emotional_safety_preferred": emotional_regulation,
             "acknowledgement_preference": "soft",
             "mute_transition_preference": "soft_fade",
             "prefers_brief_answers": preferences.concise_answers,
-            "reduced_motion": reduced_motion,
-            "high_contrast": bool(getattr(preferences, "high_contrast", False)),
+            "preferred_response_style": "plain_stepwise" if getattr(preferences, "prefers_step_by_step", False) else "evidence_aware_concise",
+            "prefers_step_by_step": bool(getattr(preferences, "prefers_step_by_step", False)),
+            "voice_first_navigation": bool(getattr(preferences, "voice_first_navigation", True)),
         }
+        if preferences.captions_enabled:
+            data["caption_preference"] = "on"
+            data["voice_caption_mode"] = "caption_supported"
+        if reduced_motion:
+            data["reduced_motion"] = True
+            data["reduced_stimulation"] = True
+        if bool(getattr(preferences, "high_contrast", False)):
+            data["high_contrast"] = True
+        if bool(getattr(preferences, "hearing_accessibility", False)):
+            data["hearing_accessibility"] = True
+            data["caption_preference"] = "on"
+        if bool(getattr(preferences, "low_vision_preference", False)):
+            data["low_vision_preference"] = True
+        if bool(getattr(preferences, "dyslexia_preference", False)):
+            data["dyslexia_preference"] = True
+        return data
 
     def _environment_mode_for(self, context: OrbContext, decision: OrbModeDecision | None = None, workspace_context: dict[str, Any] | None = None) -> str:
         context_data = context.model_dump()
@@ -593,7 +610,19 @@ class OrbVoiceSessionService:
         decision: OrbModeDecision | None = None,
         workspace_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        interaction_preferences = orb_interaction_preference_service.normalise(self._presence_preferences(preferences))
+        recalled_presence = orb_presence_memory_service.recall(
+            product_mode=product_mode,
+            user_id=_user_id(current_user),
+            home_id=context.home_id,
+            active_child_id=context.selected_young_person_id,
+        )
+        current_presence = self._presence_preferences(preferences)
+        context_data = context.model_dump()
+        current_task = context_data.get("current_task") if isinstance(context_data.get("current_task"), dict) else {}
+        unresolved_topic = (workspace_context or {}).get("recent_unresolved_topic") or current_task.get("title")
+        if unresolved_topic:
+            current_presence["previous_unresolved_operational_topics"] = [str(unresolved_topic)]
+        interaction_preferences = orb_interaction_preference_service.normalise({**recalled_presence, **current_presence})
         presence_memory = orb_presence_memory_service.remember(
             product_mode=product_mode,
             user_id=_user_id(current_user),
@@ -607,6 +636,20 @@ class OrbVoiceSessionService:
         ambient_signals = self._ambient_signals(context=context, workspace_context=workspace_context)
         recent_failures = int((workspace_context or {}).get("recent_failures") or ambient_signals.get("recent_failures") or 0)
         emotional_state = orb_emotional_state_service.assess(signals=ambient_signals, recent_failures=recent_failures, workflow=environment_mode)
+        if emotional_state.get("non_clinical_indicators"):
+            continuity_update = {
+                **presence_memory.preferences,
+                "emotional_overload_indicators": emotional_state["non_clinical_indicators"],
+            }
+            if emotional_state["overload_detected"]:
+                continuity_update["reduced_stimulation"] = True
+            presence_memory = orb_presence_memory_service.remember(
+                product_mode=product_mode,
+                user_id=_user_id(current_user),
+                home_id=context.home_id,
+                active_child_id=context.selected_young_person_id,
+                preferences=continuity_update,
+            )
         emotional_safety = orb_emotional_safety_service.evaluate(signals={**ambient_signals, "safeguarding": environment_mode == "safeguarding", "crisis_escalation": environment_mode == "crisis_escalation"})
         emotional_safety_active = bool(emotional_safety["active"] or emotional_state["overload_detected"] or getattr(preferences, "emotional_regulation_mode", False))
         reflective = interaction_preferences.get("reflective_mode") is True or environment_mode == "reflective_writing"
@@ -622,6 +665,7 @@ class OrbVoiceSessionService:
             "interaction_preferences": interaction_preferences,
             "presence_memory": presence_memory.preferences,
             "presence_scope": presence_memory.scope_key,
+            "presence_continuity_notes": orb_presence_memory_service.continuity_notes(presence_memory.preferences),
             "latency_strategy": orb_latency_strategy_service.route(
                 realtime_configured=provider_configured,
                 network_quality=network_quality,
@@ -898,6 +942,10 @@ class OrbVoiceSessionService:
         self._assert_context_scope(context, current_user)
         selected_mode = event.selected_mode or session.selected_mode
         message = event.text or ""
+        transcript_reconciliation: dict[str, Any] | None = None
+        if event.type == "user_text" and message.strip():
+            transcript_reconciliation = orb_realtime_conversation_service.reconcile_user_transcript(session_id=session_id, final_text=message)
+            message = str(transcript_reconciliation.get("text") or message)
         decision = route_orb_intent(message=message, current_user=current_user, selected_mode=selected_mode, context=context)
         session.mode_decision = decision
         session.context = context
@@ -1133,6 +1181,7 @@ class OrbVoiceSessionService:
                 "citations_used": citations[:30],
                 "tools_used": tools_used,
                 "tool_orchestration": tool_orchestration,
+                "transcript_reconciliation": transcript_reconciliation,
                 "pending_write_confirmation": pending_draft.model_dump() if pending_draft else None,
                 "memory_scope": memory_snapshot.get("scope"),
                 "realtime_state": realtime_state,

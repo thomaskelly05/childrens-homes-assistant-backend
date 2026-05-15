@@ -30,7 +30,7 @@ export function OrbRenderer({
       <OrbPresenceIndicator label={presenceLabel} />
       <OrbSphere state={state} size={size} />
       <OrbStateLayer state={state} />
-      <OrbCaptionLayer enabled={captionsEnabled} text={caption} privacySensitive={state === 'child_present' || state === 'safeguarding_cautious'} />
+      <OrbCaptionLayer enabled={captionsEnabled} text={caption} privacySensitive={state === 'child_present' || state === 'safeguarding_cautious' || state === 'night_shift'} />
     </div>
   )
 }
