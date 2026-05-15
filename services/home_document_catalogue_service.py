@@ -35,6 +35,7 @@ CHILD_DOCUMENTS = [
     "Child Voice Evidence",
     "Consent forms",
     "Delegated authority forms",
+    "CSE/CCE Risk Assessment",
 ]
 
 HOME_REGULATORY_DOCUMENTS = [
@@ -78,9 +79,12 @@ STAFF_DOCUMENTS = [
     "Induction Records",
     "Probation Records",
     "DBS checks",
+    "DBS Tracking",
     "Safer Recruitment File",
+    "Safer Recruitment Checklist",
     "Training Records",
     "Competency Assessments",
+    "Staff Development Plan",
     "Disciplinary Records",
     "Return-to-work records",
 ]

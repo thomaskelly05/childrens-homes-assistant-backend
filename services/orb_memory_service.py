@@ -281,6 +281,8 @@ class OrbMemoryService:
                 "expires_at": memory.expires_at.isoformat(),
                 "raw_audio_stored": False,
                 "persistent_memory": False,
+                "memory_source": "orb_os_short_term",
+                "standalone_assistant_memory_used": False,
             },
             "short_term": memory.short_term_turns[-6:],
             "pinned": memory.pinned_context,

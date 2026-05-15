@@ -12,11 +12,20 @@ QUALITY_STANDARD_BY_SIGNAL: dict[str, str] = {
     "education_present": "education",
     "family_contact_present": "positive_relationships",
     "relationship_present": "positive_relationships",
+    "trauma_informed_support": "quality_and_purpose_of_care",
+    "neurodiversity_adjustment": "quality_and_purpose_of_care",
+    "sensory_factor": "health_and_wellbeing",
+    "regulation_support_present": "health_and_wellbeing",
+    "behaviour_support_present": "positive_relationships",
     "positive_progress_present": "enjoyment_and_achievement",
     "safeguarding_marker": "protection_of_children",
     "risk_marker": "protection_of_children",
+    "exploitation_possible_indicator": "protection_of_children",
     "missing_marker": "protection_of_children",
     "incident_marker": "protection_of_children",
+    "plan_update_suggested": "care_planning",
+    "risk_update_suggested": "protection_of_children",
+    "inspection_relevance": "leadership_and_management",
     "manager_review_required": "leadership_and_management",
 }
 
@@ -29,6 +38,7 @@ REGULATION_BY_STANDARD: dict[str, list[str]] = {
     "positive_relationships": ["regulation_11_positive_relationships"],
     "protection_of_children": ["regulation_12_protection_of_children"],
     "leadership_and_management": ["regulation_13_leadership_and_management"],
+    "care_planning": ["regulation_14_care_planning"],
 }
 
 SCCIF_BY_STANDARD: dict[str, str] = {
@@ -40,6 +50,7 @@ SCCIF_BY_STANDARD: dict[str, str] = {
     "positive_relationships": "sccif_experiences_and_progress",
     "protection_of_children": "sccif_help_and_protection",
     "leadership_and_management": "sccif_effectiveness_of_leaders",
+    "care_planning": "sccif_experiences_and_progress",
 }
 
 REPORT_RELEVANCE_BY_STANDARD: dict[str, list[str]] = {
@@ -48,6 +59,7 @@ REPORT_RELEVANCE_BY_STANDARD: dict[str, list[str]] = {
     "positive_relationships": ["lac_review", "reg45", "inspection_readiness"],
     "protection_of_children": ["reg44", "reg45", "safeguarding_chronology", "ofsted_evidence_pack"],
     "leadership_and_management": ["reg44", "reg45", "manager_oversight_report"],
+    "care_planning": ["lac_review", "reg45", "inspection_readiness"],
 }
 
 
@@ -97,6 +109,10 @@ class RegulatoryMetadataService:
             gaps.append("follow_up_not_manager_reviewed")
         if (care.safeguarding_marker or care.risk_marker or care.missing_marker) and not care.follow_up_required:
             gaps.append("safeguarding_follow_up_not_recorded")
+        if care.trauma_informed_support is False and (care.incident_marker or care.risk_marker):
+            gaps.append("trauma_informed_recovery_not_visible")
+        if care.neurodiversity_adjustment is False and care.sensory_factor:
+            gaps.append("neurodiversity_adjustment_not_visible")
 
         evidence_strength = self._evidence_strength(care=care, workflow_status=workflow_status)
         return RegulatoryMetadata(

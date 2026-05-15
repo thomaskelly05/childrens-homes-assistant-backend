@@ -247,8 +247,11 @@ class MetadataExtractionService:
             "family_contact": care.family_contact_present,
             "positive_progress": care.positive_progress_present,
             "relationships": care.relationship_present,
+            "trauma_informed_support": care.trauma_informed_support,
+            "neurodiversity_adjustments": care.neurodiversity_adjustment or care.sensory_factor,
             "incidents": care.incident_marker,
             "management_oversight": care.manager_review_required,
+            "handover": care.handover_relevance,
         }
         for theme, present in mapping.items():
             if present:
@@ -263,6 +266,12 @@ class MetadataExtractionService:
             suggestions.append({"type": "safeguarding_review", "prompt": "Review missing episode follow-up and chronology links."})
         if metadata.care.follow_up_required:
             suggestions.append({"type": "follow_up", "prompt": "Create or link a follow-up action."})
+        if metadata.care.trauma_informed_support is False and (metadata.care.incident_marker or metadata.care.risk_marker):
+            suggestions.append({"type": "trauma_informed_recording", "prompt": "Consider adding regulation support, recovery or repair evidence."})
+        if metadata.care.sensory_factor and not metadata.care.neurodiversity_adjustment:
+            suggestions.append({"type": "neurodiversity_adjustment", "prompt": "Review whether a sensory factor or adjustment should be recorded."})
+        if metadata.care.risk_update_suggested:
+            suggestions.append({"type": "risk_review", "prompt": "Review whether the current risk assessment needs updating."})
         return suggestions
 
 

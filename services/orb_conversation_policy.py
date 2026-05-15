@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from schemas.orb import OrbModeDecision, OrbPreferences
+from services.orb_role_definition_service import orb_role_definition_service
 
 
 AI_PHRASES = [
@@ -104,6 +105,7 @@ class OrbConversationPolicy:
         for phrase in AI_PHRASES:
             shaped = re.sub(phrase, "", shaped, flags=re.IGNORECASE)
         shaped = re.sub(r"\s+", " ", shaped)
+        shaped = orb_role_definition_service.enforce(shaped)["text"]
         shaped = self._naturalise_opening(shaped)
         shaped = self._suppress_filler(shaped)
         shaped = self._shorten(shaped, decision=decision, preferences=preferences, interrupted=interrupted)

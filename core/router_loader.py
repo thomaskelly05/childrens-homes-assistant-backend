@@ -63,6 +63,7 @@ routers.operational_health_routes
 routers.young_people_assistant_routes
 routers.operational_intelligence_routes
 routers.inspection_os_routes
+routers.inspection_readiness_routes
 routers.rm_dashboard_routes
 routers.live_alerts_routes
 routers.os_modules_routes

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from schemas.data_intelligence import CitationSnippet, DataIntelligenceMetadata, EvidencePack, IntelligenceRecord
+from services.regulatory_ontology_service import regulatory_ontology_service
 
 
 def _text(value: Any) -> str:
@@ -239,6 +240,7 @@ class RegulatoryGraphService:
             "report_type": report_type,
             "sections": sections.get(report_type, ["overview", "evidence", "gaps"]),
             "generation_strategy": "metadata_graph_first",
+            "ontology_summary": regulatory_ontology_service.summary().model_dump(mode="json"),
             "ai_role": "narrative_polishing_only",
         }
 
