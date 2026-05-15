@@ -25,6 +25,7 @@ class OfstedDocumentReadinessService:
         missing = [item for item in checked if item["missing_incomplete_status"] == "missing"]
         weak = [item for item in checked if item["evidence_sufficiency"] in {"weak", "limited"}]
         oversight_missing = [item for item in checked if item["qa_state"] == "missing" or item["signoff_state"] == "missing"]
+        overdue = [item for item in schedule if item.get("review_required")]
         payload = {
             "summary": "records indicate document readiness intelligence is available for manager review.",
             "home_id": home_id,
@@ -32,11 +33,27 @@ class OfstedDocumentReadinessService:
             "documents": checked,
             "review_schedule": schedule,
             "inspection_readiness_intelligence": [
-                *[self._message(item, "This document appears overdue.") for item in schedule if item.get("review_required")],
+                *[self._message(item, "Review may be helpful; this document appears overdue.") for item in overdue],
                 *[self._message(item, "Evidence appears weak.") for item in weak[:10]],
                 *[self._message(item, "Child voice evidence is limited.") for item in checked if "Child Voice" in str(item.get("document_type"))],
                 *[self._message(item, "Leadership oversight evidence is missing.") for item in oversight_missing[:10]],
             ],
+            "overdue_review_tracking": [self._message(item, "Review may be helpful; review date appears overdue.") for item in overdue[:10]],
+            "weak_action_outcome_tracking": [
+                self._message(item, "Follow-up appears incomplete; consider linking action outcome evidence.")
+                for item in checked
+                if item.get("linked_actions") and not item.get("linked_reports")
+            ][:10],
+            "inspection_timeline_summary": self._timeline_summary(checked),
+            "what_has_improved": [
+                self._message(item, "Visible evidence suggests this area has improved; source review remains required.")
+                for item in checked
+                if str(item.get("evidence_sufficiency")).lower() == "strong"
+            ][:10],
+            "what_still_needs_oversight": [
+                *[self._message(item, "Limited evidence found; consider expanding before inspection sampling.") for item in weak[:10]],
+                *[self._message(item, "Leadership review may be helpful before sign-off.") for item in oversight_missing[:10]],
+            ][:12],
             "evidence_gaps": [
                 evidence_gap("missing-documents", f"no evidence found: {len(missing)} required document entries appear missing."),
                 evidence_gap("weak-evidence", f"records indicate {len(weak)} document entries have limited evidence sufficiency."),
@@ -74,6 +91,15 @@ class OfstedDocumentReadinessService:
             "summary": message,
             "language": "review recommended",
             "evidence_strength": item.get("evidence_sufficiency", "limited"),
+        }
+
+    def _timeline_summary(self, items: list[dict[str, Any]]) -> dict[str, Any]:
+        reviewed = [item for item in items if item.get("last_reviewed")]
+        upcoming = [item for item in items if item.get("next_review")]
+        return {
+            "reviewed_count": len(reviewed),
+            "next_review_count": len(upcoming),
+            "summary": "Inspection timeline uses visible review dates only; missing dates are treated as review prompts, not failures.",
         }
 
 

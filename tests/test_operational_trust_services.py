@@ -87,6 +87,8 @@ def test_inspection_intelligence_stays_evidence_led():
     assert "No definitive safeguarding conclusions are generated." in readiness["guardrails"]
     assert readiness["quality_patterns"]
     assert readiness["chronology_quality_indicators"]
+    assert readiness["operational_inspection_signals"]
+    assert readiness["what_still_needs_oversight"]
     assert readiness["what_inspectors_may_ask"]
     assert readiness["inspection_narrative_builder"]["unsupported_conclusion_guard"]
 

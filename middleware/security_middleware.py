@@ -15,6 +15,7 @@ from auth.errors import auth_error_detail
 from auth.tokens import decode_session_token
 from routers.auth_routes import settings as auth_settings
 from services.audit_event_service import record_audit_event
+from services.operational_metrics_service import operational_metrics_service
 from services.safe_logging import safe_log_dict
 
 logger = logging.getLogger("indicare.security")
@@ -163,6 +164,13 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             duration_ms = round((time.perf_counter() - start) * 1000, 2)
             status_code = getattr(response, "status_code", 500)
             should_audit = path.startswith(SENSITIVE_PREFIXES) or status_code >= 400
+            if path.startswith(SENSITIVE_PREFIXES) or duration_ms >= 1000:
+                operational_metrics_service.observe_latency(
+                    "http.request",
+                    duration_ms,
+                    dimensions={"path": path, "method": request.method, "status_code": status_code},
+                    request_id=request_id,
+                )
 
             if should_audit:
                 log = logger.debug if status_code in {401, 403} else logger.info

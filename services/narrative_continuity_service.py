@@ -89,6 +89,9 @@ class NarrativeContinuityService:
             "child_id": young_person_id,
             "record_count": len(scoped),
             "what_changed": self._what_changed(ordered),
+            "what_helped": self._what_helped(ordered),
+            "what_still_needs_support": self._what_still_needs_support(unresolved),
+            "support_effectiveness": self._support_effectiveness(ordered),
             "unresolved_themes": unresolved[:6],
             "recurring_themes": [
                 {"theme": theme, "count": count}
@@ -142,6 +145,32 @@ class NarrativeContinuityService:
             return "No visible chronology has been recorded yet."
         latest = records[0]
         return str(_field(latest, "summary", "presentation", "title") or "The latest visible record should be reviewed for change.")
+
+    def _what_helped(self, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        helped = []
+        for record in records:
+            text = _record_text(record).lower()
+            if any(term in text for term in ("helped", "supported", "reassured", "listened", "space", "keywork", "routine")):
+                helped.append({**self._citation(record, []), "reason": "Visible record names support that may have helped."})
+        return helped[:5]
+
+    def _what_still_needs_support(self, unresolved: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {**item, "language": "follow-up appears incomplete; continuity into the next shift may be helpful."}
+            for item in unresolved[:5]
+        ]
+
+    def _support_effectiveness(self, records: list[dict[str, Any]]) -> dict[str, Any]:
+        helpful = self._what_helped(records)
+        progress = [
+            record for record in records
+            if any(term in _record_text(record).lower() for term in ("settled", "repaired", "regulated", "calmer", "positive", "progress"))
+        ]
+        return {
+            "visible_support_markers": helpful,
+            "positive_change_markers": [self._citation(record, []) for record in progress[:5]],
+            "summary": "Support effectiveness is described only where visible records link support to change.",
+        }
 
     def _placement_journey(self, *, child: dict[str, Any] | None, records: list[dict[str, Any]]) -> dict[str, Any]:
         child = child or {}

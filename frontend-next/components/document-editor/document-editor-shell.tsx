@@ -30,7 +30,10 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [message, setMessage] = useState('Continue writing. Nothing is saved until the backend confirms it.')
   const [version, setVersion] = useState<number | string | undefined>(undefined)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const completedSections = useMemo(() => Object.values(sections).filter((value) => value.trim().length > 0).length, [sections])
   const sectionPayload = useCallback(() => {
     return Object.fromEntries(Object.entries(sections).map(([key, value]) => [key.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''), value]))
   }, [sections])
@@ -52,6 +55,8 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
         setSections((current) => Object.keys(loaded).length ? loaded : doc.sections || current)
         setSaveState('saved')
         setMessage('Document loaded from the live document system.')
+        setHasUnsavedChanges(false)
+        setLastSavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
       })
       .catch((error) => {
         setSaveState('limited')
@@ -61,6 +66,7 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
 
   useEffect(() => {
     if (!activeDocumentId) return
+    if (!hasUnsavedChanges) return
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     autosaveTimer.current = setTimeout(() => {
       setSaveState('autosaving')
@@ -74,6 +80,8 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
           const payload = await response.json()
           if (!response.ok || payload.ok === false) throw new Error(payload.message || `${response.status} ${response.statusText}`)
           setSaveState('saved')
+          setHasUnsavedChanges(false)
+          setLastSavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
           setMessage(payload.message || 'Draft autosaved.')
         })
         .catch((error) => {
@@ -84,7 +92,18 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     }
-  }, [activeDocumentId, version, sectionPayload])
+  }, [activeDocumentId, version, sectionPayload, hasUnsavedChanges])
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        saveDocument()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  })
 
   async function ensureDocument() {
     if (activeDocumentId) return activeDocumentId
@@ -99,6 +118,8 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
     if (!response.ok || payload.ok === false) throw new Error(payload.detail || payload.message || 'Document was not created.')
     setActiveDocumentId(payload.document.document_id)
     setVersion(payload.document.version_number)
+    setHasUnsavedChanges(false)
+    setLastSavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
     return payload.document.document_id as string
   }
 
@@ -116,6 +137,8 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
       if (!response.ok || payload.ok === false) throw new Error(payload.detail || payload.message || 'Save did not complete.')
       setVersion(payload.document.version_number)
       setSaveState('saved')
+      setHasUnsavedChanges(false)
+      setLastSavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
       setMessage('Saved to the live document system.')
     } catch (error) {
       setSaveState('error')
@@ -142,6 +165,18 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
     }
   }
 
+  function downloadExport(payload: any) {
+    if (!payload.content_base64 || !payload.filename || !payload.media_type) return
+    const bytes = Uint8Array.from(atob(payload.content_base64), (character) => character.charCodeAt(0))
+    const blob = new Blob([bytes], { type: payload.media_type })
+    const url = URL.createObjectURL(blob)
+    const link = window.document.createElement('a')
+    link.href = url
+    link.download = payload.filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function requestExport() {
     try {
       const id = await ensureDocument()
@@ -149,10 +184,11 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile: 'print_html' })
+        body: JSON.stringify({ profile: 'pdf' })
       })
       const payload = await response.json()
       if (!response.ok || payload.ok === false) throw new Error(payload.message || 'Export did not complete.')
+      downloadExport(payload)
       setSaveState('saved')
       setMessage(`Export ready: ${payload.filename}`)
     } catch (error) {
@@ -170,13 +206,13 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
             <input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} className="mt-1 w-full bg-transparent text-3xl font-black tracking-[-0.06em] text-slate-950 outline-none" aria-label="Document title" />
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-slate-100 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-600">{saveState}</span>
-            <button onClick={saveDocument} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Save</button>
-            <button onClick={submitForReview} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white">Submit for review</button>
-            <button onClick={requestExport} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700">Print export</button>
+            <span className="rounded-full bg-slate-100 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-600">{hasUnsavedChanges ? 'editing' : saveState}</span>
+            <button onClick={saveDocument} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition active:scale-[0.98]">Save</button>
+            <button onClick={submitForReview} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition active:scale-[0.98]">Submit for review</button>
+            <button onClick={requestExport} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 transition active:scale-[0.98]">PDF export</button>
           </div>
         </div>
-        <p className="mt-3 text-sm font-bold text-slate-600">{message}</p>
+        <p className="mt-3 text-sm font-bold text-slate-600">{message}{lastSavedAt ? ` Last confirmed ${lastSavedAt}.` : ''} Ctrl/Cmd+S saves.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -187,16 +223,19 @@ export function DocumentEditorShell({ templateId, documentId, scope, childId, st
               <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950">{section}</h2>
               <textarea
                 value={sections[section] || ''}
-                onChange={(event) => setSections((current) => ({ ...current, [section]: event.target.value }))}
+                onChange={(event) => {
+                  setHasUnsavedChanges(true)
+                  setSections((current) => ({ ...current, [section]: event.target.value }))
+                }}
                 placeholder="Write reflectively, cite what is known, and keep the child at the centre."
                 className="mt-4 min-h-[220px] w-full resize-y rounded-[24px] border border-slate-100 bg-slate-50/70 p-5 text-base leading-8 text-slate-800 outline-none focus:border-blue-300 focus:bg-white"
               />
             </section>
           ))}
         </main>
-        <div className="space-y-5">
+        <div className="space-y-5 xl:sticky xl:top-32 xl:self-start">
           <DocumentPromptRail template={template} />
-          <DocumentQualityPanel />
+          <DocumentQualityPanel completedSections={completedSections} totalSections={template.sections.length} hasUnsavedChanges={hasUnsavedChanges} version={version} />
           <DocumentReviewPanel template={template} />
           <DocumentSignoffPanel />
           <DocumentVersionTimeline />
