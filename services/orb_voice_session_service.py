@@ -540,8 +540,6 @@ class OrbVoiceSessionService:
             "sensory_profile": "reduced_stimulation" if reduced_motion or emotional_regulation else "ambient",
             "interruption_style": preferences.interruption_sensitivity,
             "concise_mode": preferences.concise_answers,
-            "reflective_mode": preferences.response_detail == "balanced",
-            "reflective_writing_preference": preferences.response_detail == "balanced",
             "emotional_safety_preferred": emotional_regulation,
             "acknowledgement_preference": "soft",
             "mute_transition_preference": "soft_fade",
@@ -553,6 +551,9 @@ class OrbVoiceSessionService:
         if preferences.captions_enabled:
             data["caption_preference"] = "on"
             data["voice_caption_mode"] = "caption_supported"
+        if preferences.response_detail == "balanced":
+            data["reflective_mode"] = True
+            data["reflective_writing_preference"] = True
         if reduced_motion:
             data["reduced_motion"] = True
             data["reduced_stimulation"] = True
