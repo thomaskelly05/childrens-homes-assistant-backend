@@ -1,7 +1,3 @@
-import { demoChronologyEvents } from '@/lib/chronology/demo-data'
-import { demoCareActions, demoEvidenceItems } from '@/lib/evidence/demo-data'
-import { indicareData } from '@/lib/indicare/demo-data'
-
 import { mapOsChronology } from './chronology'
 import { osGet } from './client'
 import { mapOsAction } from './actions'
@@ -33,21 +29,6 @@ export type OsWorkspace = {
   evidence: ReturnType<typeof mapOsEvidence>[]
 }
 
-function demoYoungPerson(id: string): OsPersonSummary | undefined {
-  const person = indicareData.youngPeople.find((item) => item.id === id)
-  return person ? {
-    ...person,
-    id: person.id,
-    displayName: `${person.firstName} ${person.lastName}`,
-    preferredName: person.preferredName,
-    age: person.age,
-    riskLevel: person.riskLevel,
-    keyWorkerId: person.allocatedKeyWorkerId,
-    placementStatus: person.status,
-    carePlanning: person.educationStatus
-  } : undefined
-}
-
 function mapPerson(row: Record<string, any>): OsPersonSummary {
   return {
     ...row,
@@ -67,20 +48,18 @@ function mapPerson(row: Record<string, any>): OsPersonSummary {
 }
 
 export async function getOsYoungPeople(): Promise<OsApiResult<OsPersonSummary[]>> {
-  const fallback = indicareData.youngPeople.map((person) => demoYoungPerson(person.id)).filter(Boolean) as OsPersonSummary[]
-  const result = await osGet<Record<string, any>[]>('/os/young-people', fallback)
+  const result = await osGet<Record<string, any>[]>('/os/young-people', [])
   return { ...result, data: result.data.map(mapPerson) }
 }
 
 export async function getOsYoungPersonWorkspace(id: string): Promise<OsApiResult<OsWorkspace>> {
   const fallback: OsWorkspace = {
-    youngPerson: demoYoungPerson(id),
-    chronology: demoChronologyEvents.filter((event) => event.youngPersonIds.includes(id)),
-    actions: demoCareActions.filter((action) => action.youngPersonId === id),
-    evidence: demoEvidenceItems.filter((item) => item.youngPersonId === id)
+    chronology: [],
+    actions: [],
+    evidence: []
   }
   const result = await osGet<Record<string, any>>(`/os/young-people/${encodeURIComponent(id)}/workspace`, fallback as any)
-  if (result.source === 'fallback') return { ...result, data: fallback }
+  if (result.source === 'unavailable') return { ...result, data: fallback }
   return {
     ...result,
     data: {
@@ -93,9 +72,9 @@ export async function getOsYoungPersonWorkspace(id: string): Promise<OsApiResult
 }
 
 export async function getOsAdultWorkspace(id: string): Promise<OsApiResult<OsWorkspace>> {
-  const fallback: OsWorkspace = { adult: { id, displayName: `Staff ${id}` }, chronology: [], actions: [], evidence: [] }
+  const fallback: OsWorkspace = { chronology: [], actions: [], evidence: [] }
   const result = await osGet<Record<string, any>>(`/os/adults/${encodeURIComponent(id)}/workspace`, fallback as any)
-  if (result.source === 'fallback') return { ...result, data: fallback }
+  if (result.source === 'unavailable') return { ...result, data: fallback }
   return {
     ...result,
     data: {

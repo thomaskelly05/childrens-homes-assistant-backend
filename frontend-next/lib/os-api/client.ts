@@ -23,6 +23,12 @@ function developerDetail(error: unknown) {
   return process.env.NODE_ENV === 'development' ? String(error) : undefined
 }
 
+function emptyData<T>(example: T): T {
+  if (Array.isArray(example)) return [] as T
+  if (example && typeof example === 'object') return example
+  return undefined as T
+}
+
 export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
   try {
     const cookieHeader = (await cookies()).toString()
@@ -31,7 +37,7 @@ export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T
       headers: cookieHeader ? { cookie: cookieHeader } : undefined
     })
     if (!response.ok) {
-      return { data: fallback, source: 'fallback', warning: calmOsWarning(response.status), error: developerDetail(`${response.status} ${response.statusText}`) }
+      return { data: emptyData(fallback), source: 'unavailable', warning: calmOsWarning(response.status), error: developerDetail(`${response.status} ${response.statusText}`) }
     }
     const payload = (await response.json()) as OsEnvelope<T> | T
     const envelope = payload as OsEnvelope<T>
@@ -41,7 +47,7 @@ export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T
       source: 'live'
     }
   } catch (error) {
-    return { data: fallback, source: 'fallback', warning: "Let's try that again.", error: developerDetail(error) }
+    return { data: emptyData(fallback), source: 'unavailable', warning: "I couldn't load that just now.", error: developerDetail(error) }
   }
 }
 
@@ -58,7 +64,7 @@ export async function osPost<T>(path: string, body: unknown, fallback: T): Promi
       body: JSON.stringify(body)
     })
     if (!response.ok) {
-      return { data: fallback, source: 'fallback', warning: calmOsWarning(response.status), error: developerDetail(`${response.status} ${response.statusText}`) }
+      return { data: emptyData(fallback), source: 'unavailable', warning: calmOsWarning(response.status), error: developerDetail(`${response.status} ${response.statusText}`) }
     }
     const payload = (await response.json()) as OsEnvelope<T> | T
     const envelope = payload as OsEnvelope<T>
@@ -68,7 +74,7 @@ export async function osPost<T>(path: string, body: unknown, fallback: T): Promi
       source: 'live'
     }
   } catch (error) {
-    return { data: fallback, source: 'fallback', warning: "Let's try that again.", error: developerDetail(error) }
+    return { data: emptyData(fallback), source: 'unavailable', warning: "I couldn't load that just now.", error: developerDetail(error) }
   }
 }
 

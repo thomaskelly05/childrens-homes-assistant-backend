@@ -48,11 +48,11 @@ function hasSuggestion(suggestions: SuggestedLink[] | undefined, label: string) 
 
 function liveSaveError(result: ForwardResult) {
   if (process.env.NODE_ENV === 'development') {
-    return result.payload.detail || result.payload.error || `Live save failed with status ${result.status}. Nothing was silently faked.`
+    return result.payload.detail || result.payload.error || `Live save failed with status ${result.status}.`
   }
   if (result.status === 401 || result.status === 403) return "I couldn't verify access to that record just now. Nothing was saved to the live record."
-  if (result.status === 404) return 'This record workspace is ready, but the live record route is not available yet. Nothing was silently faked.'
-  return 'The live record could not be saved just now. Your local draft is still available and nothing was silently faked.'
+  if (result.status === 404) return 'This record workspace is not available yet. Nothing was saved to the live record.'
+  return 'The live record could not be saved just now. Your local draft is still available.'
 }
 
 function linkingSummary(suggestions: SuggestedLink[] | undefined) {
@@ -66,13 +66,14 @@ function severity(values: Record<string, string>, suggestions?: SuggestedLink[])
   return 'medium'
 }
 
-async function forward(path: string, body: Record<string, any>): Promise<ForwardResult> {
+async function forward(path: string, body: Record<string, any>, csrfToken?: string | null): Promise<ForwardResult> {
   const cookieHeader = (await cookies()).toString()
   const response = await fetch(`${BACKEND_ORIGIN}${path}`, {
     method: 'POST',
     cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
       ...(cookieHeader ? { cookie: cookieHeader } : {})
     },
     body: JSON.stringify(body)
@@ -276,27 +277,15 @@ export async function POST(request: Request) {
 
   if (!Number.isFinite(Number(childId)) && path.startsWith('/young-people/')) {
     return NextResponse.json({
-      ok: true,
-      status: 'draft',
-      routeType,
-      message: 'Draft captured in the recording workflow. Live persistence needs a numeric child id from the backend.',
-      limitation: 'Demo child ids cannot be written to the live young-people endpoints.'
-    })
+      ok: false,
+      error: 'Choose a child from the live children list before saving.'
+    }, { status: 400 })
   }
 
-  const result = await forward(path, payload)
+  const result = await forward(path, payload, request.headers.get('x-csrf-token'))
   const recordId = result.payload.id || result.payload.record_id || result.payload.evidence_id || result.payload.record?.id
 
   if (!result.ok) {
-    if (workflowId === 'documents') {
-      return NextResponse.json({
-        ok: true,
-        status: 'draft',
-        routeType,
-        message: 'Document evidence draft captured, but the live evidence endpoint was unavailable.',
-        limitation: result.status === 404 ? 'This workspace is ready, but no live evidence attachment route was found.' : 'The live evidence attachment could not be saved just now.'
-      })
-    }
     return NextResponse.json({
       ok: false,
       error: liveSaveError(result)

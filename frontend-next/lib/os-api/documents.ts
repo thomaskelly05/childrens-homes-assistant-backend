@@ -1,4 +1,3 @@
-import { demoHomeDocuments } from '@/lib/documents/demo-data'
 import type { ExtractedFinding, HomeDocument, HomeDocumentStatus, HomeDocumentType } from '@/lib/documents/types'
 
 import { osGet } from './client'
@@ -69,12 +68,11 @@ export function mapOsDocument(row: Record<string, any>): HomeDocument {
 }
 
 export async function getOsDocuments(): Promise<OsApiResult<HomeDocument[]>> {
-  const result = await osGet<Record<string, any>[]>('/os/documents', demoHomeDocuments)
+  const result = await osGet<Record<string, any>[]>('/os/documents', [])
   return { ...result, data: result.data.map(mapOsDocument) }
 }
 
 export async function getOsDocument(id: string): Promise<OsApiResult<HomeDocument | undefined>> {
-  const fallback = demoHomeDocuments.find((document) => document.id === id)
-  const result = await osGet<Record<string, any> | undefined>(`/os/documents/${encodeURIComponent(id)}`, fallback as any)
-  return { ...result, data: result.data ? mapOsDocument(result.data) : fallback }
+  const result = await osGet<Record<string, any> | undefined>(`/os/documents/${encodeURIComponent(id)}`, undefined)
+  return { ...result, data: result.data ? mapOsDocument(result.data) : undefined }
 }

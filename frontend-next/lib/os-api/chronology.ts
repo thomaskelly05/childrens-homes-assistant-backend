@@ -1,4 +1,3 @@
-import { demoChronologyEvents } from '@/lib/chronology/demo-data'
 import type { ChronologyEvent, ChronologyEventType, ChronologySeverity, ChronologySourceType } from '@/lib/chronology/types'
 
 import { osGet, queryString } from './client'
@@ -43,7 +42,7 @@ export function mapOsChronology(row: Record<string, any>): ChronologyEvent {
 export async function getOsChronology(params: { sourceType?: ChronologySourceType; youngPersonId?: string; search?: string } = {}): Promise<OsApiResult<ChronologyEvent[]>> {
   const result = await osGet<Record<string, any>[]>(
     `/os/chronology${queryString({ source_type: params.sourceType, young_person_id: params.youngPersonId, search: params.search })}`,
-    demoChronologyEvents
+    []
   )
   return { ...result, data: result.data.map(mapOsChronology) }
 }

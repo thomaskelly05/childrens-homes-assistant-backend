@@ -23,6 +23,7 @@ from services.assistant_security import (
     role_can_access_scope,
     safe_string,
 )
+from services.child_workspace_context_service import child_workspace_context_service
 from services.young_people_assistant_context_service import build_young_person_assistant_context
 from services.ai_reasoning_service import run_os_reasoning
 
@@ -130,6 +131,10 @@ def get_os_context(
 ):
     _assert_authenticated_user(current_user)
     _assert_scope_access(current_user, "child")
+    child_workspace_context_service.assert_child_access(
+        young_person_id=young_person_id,
+        current_user=current_user,
+    )
 
     return build_young_person_assistant_context(
         young_person_id=young_person_id
@@ -151,6 +156,10 @@ async def reason_about_child(
         raise HTTPException(status_code=400, detail="young_person_id is required")
 
     _assert_safe_message(question or "")
+    child_workspace_context_service.assert_child_access(
+        young_person_id=int(young_person_id),
+        current_user=current_user,
+    )
 
     context = build_young_person_assistant_context(
         young_person_id=int(young_person_id)

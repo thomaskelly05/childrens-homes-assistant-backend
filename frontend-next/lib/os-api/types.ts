@@ -1,4 +1,4 @@
-export type OsApiSource = 'live' | 'fallback'
+export type OsApiSource = 'live' | 'unavailable'
 
 export type OsApiResult<T> = {
   data: T

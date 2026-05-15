@@ -15,7 +15,7 @@ export function ChildSelectorHome({
   error
 }: {
   cards: ChildSelectorCard[]
-  source: 'live' | 'fallback'
+  source: 'live' | 'unavailable'
   error?: string
 }) {
   const result: OsApiResult<ChildSelectorCard[]> = { data: cards, source, error }

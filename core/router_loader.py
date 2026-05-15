@@ -56,6 +56,7 @@ routers.provider_intelligence_routes
 routers.predictive_risk_routes
 routers.realtime_alerts_routes
 routers.workspace_records_routes
+routers.child_workspace_context_routes
 routers.child_documents_routes
 routers.operational_memory_routes
 routers.operational_health_routes

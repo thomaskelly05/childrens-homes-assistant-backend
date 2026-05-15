@@ -5,7 +5,9 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, ChevronDown, Link2, MessageSquareHeart, Save, Sparkles, Wand2 } from 'lucide-react'
 import { WorkflowSaveIndicator } from '@/components/system-feedback/workflow-save-indicator'
-import { getCsrfToken } from '@/lib/auth/api'
+import { authFetch } from '@/lib/auth/api'
+import { useActiveChild } from '@/lib/context/active-child-context'
+import { waitForChildWorkspaceReady } from '@/lib/context/child-workspace-hydration'
 import { getSafeDraft, removeSafeDraft, setSafeDraft } from '@/lib/security/safe-storage'
 import { saveStateFromStatus, type WorkflowReliabilitySnapshot } from '@/lib/workflows/reliability'
 
@@ -217,6 +219,7 @@ export function RecordingForm({
   workflow: RecordingWorkflow
 }) {
   const router = useRouter()
+  const { activeChild, lockVersion, readyState } = useActiveChild()
   const formRef = useRef<HTMLFormElement>(null)
   const initialValues = useMemo(() => {
     const values: Record<string, string> = {}
@@ -390,10 +393,15 @@ export function RecordingForm({
     setError(null)
     setNotice(null)
     try {
-      const response = await fetch('/api/recording', {
+      if (activeChild?.id !== childId) {
+        throw new Error('Choose this child again before saving the record.')
+      }
+      if (!readyState.ready) {
+        const ready = await waitForChildWorkspaceReady(childId, lockVersion)
+        if (!ready) throw new Error('The child workspace is still preparing. Try again once the child context is ready.')
+      }
+      const payload = await authFetch<SaveResponse>('/api/recording', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...(getCsrfToken() ? { 'X-CSRF-Token': getCsrfToken() } : {}) },
         body: JSON.stringify({
           childId,
           workflowId: workflow.id,
@@ -401,8 +409,7 @@ export function RecordingForm({
           suggestions
         })
       })
-      const payload = (await response.json().catch(() => ({}))) as SaveResponse
-      if (!response.ok || !payload.ok) {
+      if (!payload.ok) {
         throw new Error(payload.error || payload.message || 'The record could not be saved. Check required fields and try again.')
       }
       setDirty(false)
@@ -441,8 +448,8 @@ export function RecordingForm({
             <button type="button" disabled={activeSectionIndex >= workflow.sections.length - 1} onClick={() => setActiveSectionIndex((index) => Math.min(index + 1, workflow.sections.length - 1))} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">
               {activeSectionHasText ? 'Continue next section' : 'Resume section'}
             </button>
-            <button type="submit" disabled={submitting} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting ? 'Saving once...' : 'Save'}
+            <button type="submit" disabled={submitting || !readyState.ready} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60">
+              {submitting ? 'Saving once...' : readyState.ready ? 'Save' : 'Preparing child'}
             </button>
           </div>
         </div>
@@ -663,9 +670,9 @@ export function RecordingForm({
               Chronology writeback is explicit and immutable in the backend projection. Suggestions do not create duplicate actions or chronology entries by themselves.
             </div>
             <div className="mt-5 grid gap-2">
-              <button type="submit" data-testid="save-daily-note-button" disabled={submitting} className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="submit" data-testid="save-daily-note-button" disabled={submitting || !readyState.ready} className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
                 <Save className="mr-2 h-4 w-4" aria-hidden />
-                {submitting ? 'Saving...' : 'Save record'}
+                {submitting ? 'Saving...' : readyState.ready ? 'Save record' : 'Preparing child'}
               </button>
               <button type="button" onClick={cancel} className="rounded-2xl border border-white/15 px-5 py-3 text-sm font-black text-white transition hover:bg-white/10">
                 Cancel
