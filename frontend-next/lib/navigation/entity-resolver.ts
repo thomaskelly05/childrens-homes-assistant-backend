@@ -107,11 +107,12 @@ export function resolveCitationRoute(citation: { source_type?: string; source_id
 export function getEntityActions(entity: EntityRouteInput): EntityAction[] {
   const type = entityType(entity)
   const route = getEntityRoute(entity)
+  const childId = entity.linked_child_id ? encodeURIComponent(String(entity.linked_child_id)) : null
   const actions: EntityAction[] = [
     { id: 'workspace', label: 'Open workspace', route },
-    { id: 'chronology', label: 'Linked chronology', route: '/chronology' },
-    { id: 'evidence', label: 'Evidence', route: '/evidence' },
-    { id: 'actions', label: 'Actions', route: '/actions' }
+    { id: 'chronology', label: 'Linked chronology', route: childId ? `/young-people/${childId}/chronology` : '/chronology' },
+    { id: 'evidence', label: 'Evidence', route: childId ? `/evidence?young_person_id=${childId}` : '/evidence' },
+    { id: 'actions', label: 'Actions', route: childId ? `/actions?young_person_id=${childId}` : '/actions' }
   ]
   if (['incident', 'safeguarding', 'safeguarding_concern', 'risk', 'risk_assessment'].includes(type)) {
     actions.push({ id: 'management', label: 'Manager review', route: '/management' })

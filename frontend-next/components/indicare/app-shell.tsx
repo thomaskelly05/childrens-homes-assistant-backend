@@ -110,7 +110,7 @@ function hrefForNavItem(item: NavItem, activeChildId: string | undefined, childS
     return encodedChildId ? `/young-people/${encodedChildId}/daily-note/new` : '/home'
   }
   if (item.href === '/plans') {
-    return encodedChildId ? `/young-people/${encodedChildId}/journey?focus=plans` : '/documents'
+    return encodedChildId ? `/documents?young_person_id=${encodedChildId}&scope=plans` : '/documents'
   }
   return item.scoped ? childScopedHref(item.href) : item.href
 }

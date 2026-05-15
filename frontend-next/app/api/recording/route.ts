@@ -46,6 +46,15 @@ function hasSuggestion(suggestions: SuggestedLink[] | undefined, label: string) 
   return (suggestions || []).some((suggestion) => suggestion.label.toLowerCase().includes(label.toLowerCase()))
 }
 
+function liveSaveError(result: ForwardResult) {
+  if (process.env.NODE_ENV === 'development') {
+    return result.payload.detail || result.payload.error || `Live save failed with status ${result.status}. Nothing was silently faked.`
+  }
+  if (result.status === 401 || result.status === 403) return "I couldn't verify access to that record just now. Nothing was saved to the live record."
+  if (result.status === 404) return 'This record workspace is ready, but the live record route is not available yet. Nothing was silently faked.'
+  return 'The live record could not be saved just now. Your local draft is still available and nothing was silently faked.'
+}
+
 function linkingSummary(suggestions: SuggestedLink[] | undefined) {
   const labels = (suggestions || []).map((suggestion) => suggestion.label).slice(0, 6)
   return labels.length ? `Suggested links reviewed by staff: ${labels.join('; ')}.` : undefined
@@ -285,12 +294,12 @@ export async function POST(request: Request) {
         status: 'draft',
         routeType,
         message: 'Document evidence draft captured, but the live evidence endpoint was unavailable.',
-        limitation: `Live save failed: ${result.status}`
+        limitation: result.status === 404 ? 'This workspace is ready, but no live evidence attachment route was found.' : 'The live evidence attachment could not be saved just now.'
       })
     }
     return NextResponse.json({
       ok: false,
-      error: result.payload.detail || result.payload.error || `Live save failed with status ${result.status}. Nothing was silently faked.`
+      error: liveSaveError(result)
     }, { status: result.status || 502 })
   }
 
@@ -301,6 +310,7 @@ export async function POST(request: Request) {
     routeType,
     sourceType: workflowId,
     message: result.payload.message || 'Record saved and linked to the child journey.',
-    workflow: result.payload.workflow
+    workflow: result.payload.workflow,
+    linkage: result.payload.workflow?.post_save_intelligence
   })
 }
