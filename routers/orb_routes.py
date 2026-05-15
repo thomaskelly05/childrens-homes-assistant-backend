@@ -9,6 +9,7 @@ from auth.permissions import require_assistant_access
 from db.connection import get_db
 from schemas.orb import OrbSessionEventRequest, OrbSessionStartRequest
 from services.orb_operational_events_service import orb_operational_events_service
+from services.orb_identity_service import orb_identity_service
 from services.orb_observability_service import orb_observability_service
 from services.orb_realtime_provider_service import orb_realtime_provider_service
 from services.orb_session_store import orb_session_store
@@ -205,6 +206,7 @@ async def orb_config(current_user=Depends(require_assistant_access)):
             ],
             "raw_audio_stored": False,
             "secret_keys_exposed_to_client": False,
+            "identity_contract": orb_identity_service.contract().model_dump(),
             "realtime_conversation": {
                 "microphone_streaming": "OpenAI Realtime WebRTC when configured.",
                 "turn_taking": "Server VAD with client-side silence and backend turn-state coordination.",
