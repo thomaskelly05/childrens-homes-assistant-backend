@@ -54,6 +54,7 @@ from services.orb_tool_orchestration_service import orb_tool_orchestration_servi
 from services.orb_tool_router import tools_for_decision
 from services.orb_wake_word_service import orb_wake_word_service
 from services.orb_web_search_service import orb_web_search_service
+from services.orb_voice_orchestration_service import orb_voice_orchestration_service
 from services.narrative_continuity_service import narrative_continuity_service
 
 
@@ -576,6 +577,11 @@ class OrbVoiceSessionService:
             "prosody": orb_prosody_service.shape(
                 environment_mode=environment_mode,
                 emotional_safety=bool(getattr(preferences, "emotional_regulation_mode", False)),
+            ),
+            "voice_orchestration": orb_voice_orchestration_service.plan(
+                profile="british_female_calm",
+                realtime_configured=provider_configured,
+                context=context.model_dump(),
             ),
             "conversation_timing": orb_conversation_policy.event_metadata(preferences=preferences),
             "environment_mode": environment_mode,

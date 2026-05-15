@@ -278,6 +278,72 @@ async def test_runtime_metadata_exposes_latency_prosody_and_presence_preferences
 
 
 @pytest.mark.asyncio
+async def test_voice_session_uses_calm_british_defaults_and_text_fallback(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+
+    start = await service.start_session(
+        request=OrbSessionStartRequest(context=OrbContext(route="/assistant/voice", workspace="standalone_orb"), provider="mock_voice"),
+        current_user=user,
+    )
+
+    assert start.voice_profile.profile_id == "british_female_calm"
+    assert start.voice_profile.tone_profile == "calm_concise_human"
+    assert start.voice_profile.product_name == "ORB powered by IndiCare"
+    assert start.realtime["fallback_text_mode"] is True
+    assert start.realtime_state["runtime"]["voice_orchestration"]["voice_profile"] == "british_female_calm"
+
+
+@pytest.mark.asyncio
+async def test_standalone_orb_answers_general_questions_without_os_retrieval(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    fake = CapturingAssistantResponseService(answer="This should not be called.")
+    service = OrbVoiceSessionService(assistant_response_service=fake)
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(context=OrbContext(route="/assistant/voice", workspace="standalone_orb"), provider="mock_voice"),
+        current_user=user,
+    )
+
+    response = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="What is 5 + 5?", context=OrbContext(route="/assistant/voice", workspace="standalone_orb")),
+        conn=object(),
+        current_user=user,
+    )
+
+    assert "10" in response.assistant_turn.content
+    assert response.mode_decision.brain == "general_assistant_brain"
+    assert response.mode_decision.care_scope_required is False
+    assert fake.contexts == []
+
+
+@pytest.mark.asyncio
+async def test_standalone_orb_uses_static_sector_knowledge_without_os_records(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    fake = CapturingAssistantResponseService(answer="This should not be called.")
+    service = OrbVoiceSessionService(assistant_response_service=fake)
+    user = {"id": 7, "role": "manager", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(context=OrbContext(route="/assistant/voice", workspace="standalone_orb"), provider="mock_voice"),
+        current_user=user,
+    )
+
+    response = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="Explain SCCIF in plain English.", context=OrbContext(route="/assistant/voice", workspace="standalone_orb")),
+        conn=object(),
+        current_user=user,
+    )
+
+    assert "SCCIF" in response.assistant_turn.content or "Ofsted" in response.assistant_turn.content
+    assert response.mode_decision.care_scope_required is False
+    assert response.related_records == []
+    assert fake.contexts == []
+
+
+@pytest.mark.asyncio
 async def test_orb_session_rejects_cross_user_access(monkeypatch):
     monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
     service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
