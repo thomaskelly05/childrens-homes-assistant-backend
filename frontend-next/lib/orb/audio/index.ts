@@ -7,6 +7,9 @@ export type OrbAudioRecoveryReason =
   | 'interrupt'
   | 'logout'
 
+export { OrbSoundEngine, type OrbSoundEnginePreferences, type OrbSoundHook } from './sound-engine'
+export { orbSoundHookForTransition } from './orb_audio_runtime_service'
+
 export type OrbAudioRecoveryCallbacks = {
   onRecovery?: (reason: OrbAudioRecoveryReason, detail?: Record<string, unknown>) => void
   onError?: (message: string, detail?: Record<string, unknown>) => void

@@ -15,6 +15,15 @@ SAFE_PREFERENCE_KEYS = {
     "high_contrast",
     "pacing_preference",
     "interaction_style",
+    "tone_preference",
+    "verbosity_preference",
+    "sensory_profile",
+    "interruption_style",
+    "concise_mode",
+    "reflective_mode",
+    "emotional_safety_preferred",
+    "mute_transition_preference",
+    "acknowledgement_preference",
     "recent_unresolved_topic",
     "recent_active_workflow",
     "last_used_mode",
@@ -35,7 +44,7 @@ class OrbPresenceMemory:
 
 
 class OrbPresenceMemoryService:
-    """Safe minimal preference memory; no raw audio or full transcripts."""
+    """Safe relationship-aware preference memory; no raw audio, full transcripts or clinical conclusions."""
 
     def __init__(self) -> None:
         self._store: dict[tuple[str, str, str], OrbPresenceMemory] = {}
@@ -59,6 +68,8 @@ class OrbPresenceMemoryService:
     ) -> OrbPresenceMemory:
         mode = OrbProductMode(str(product_mode))
         safe = {key: value for key, value in preferences.items() if key in SAFE_PREFERENCE_KEYS and value not in (None, "", [], {})}
+        for clinical_key in {"diagnosis", "clinical_conclusion", "risk_label", "mental_health_label"}:
+            safe.pop(clinical_key, None)
         if mode == OrbProductMode.STANDALONE:
             for key in BLOCKED_STANDALONE_KEYS:
                 safe.pop(key, None)

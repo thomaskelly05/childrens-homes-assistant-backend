@@ -248,6 +248,16 @@ textarea:focus-visible {
   100% { opacity: 0.18; filter: blur(28px); }
 }
 
+@keyframes orb-diffusion-shift {
+  0%, 100% { transform: translate3d(-2%, 1%, 0) scale(1); opacity: 0.22; }
+  50% { transform: translate3d(2%, -1.5%, 0) scale(1.08); opacity: 0.38; }
+}
+
+@keyframes orb-side-presence {
+  0%, 100% { transform: translate3d(-8%, 0, 0) scaleY(0.96); opacity: 0.16; }
+  46% { transform: translate3d(4%, 0, 0) scaleY(1.04); opacity: 0.38; }
+}
+
 @keyframes orb-text-glow {
   0%, 100% { text-shadow: 0 0 18px rgba(125, 211, 252, 0.18); }
   50% { text-shadow: 0 0 28px rgba(196, 181, 253, 0.28); }
@@ -399,6 +409,42 @@ textarea:focus-visible {
   animation: orb-halo-drift calc(var(--orb-motion-speed) * 1.4) ease-in-out infinite;
 }
 
+.orb-ambient-diffusion,
+.orb-ambient-side-pulse,
+.orb-atmospheric-diffusion {
+  position: absolute;
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+.orb-ambient-diffusion {
+  border-radius: 999px;
+  filter: blur(34px) saturate(1.18);
+  mix-blend-mode: screen;
+  animation: orb-diffusion-shift calc(var(--orb-motion-speed) * 1.8) ease-in-out infinite;
+}
+
+.orb-ambient-diffusion--near {
+  inset: 4% 12% 42%;
+  background: radial-gradient(ellipse at center, rgba(var(--orb-hue-a), 0.22), transparent 72%);
+}
+
+.orb-ambient-diffusion--far {
+  inset: 48% 7% 8%;
+  background: radial-gradient(ellipse at center, rgba(var(--orb-hue-b), 0.18), rgba(var(--orb-warm), 0.08), transparent 74%);
+  animation-duration: calc(var(--orb-motion-speed) * 2.4);
+}
+
+.orb-ambient-side-pulse {
+  inset: 18% auto 18% -2rem;
+  width: 5.5rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent, rgba(var(--orb-hue-a), 0.22), rgba(var(--orb-hue-b), 0.14), transparent);
+  filter: blur(18px);
+  animation: orb-side-presence calc(var(--orb-motion-speed) * 1.2) ease-in-out infinite;
+}
+
 .orb-screen-edge-pulse {
   pointer-events: none;
   position: fixed;
@@ -413,9 +459,35 @@ textarea:focus-visible {
   animation: orb-edge-flow calc(var(--orb-motion-speed) * 1.1) ease-in-out infinite;
 }
 
+.orb-atmospheric-diffusion {
+  position: fixed;
+  inset: -10%;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(var(--orb-hue-a), calc(var(--orb-edge-opacity) * 0.24)), transparent 30%),
+    radial-gradient(circle at 78% 30%, rgba(var(--orb-hue-b), calc(var(--orb-edge-opacity) * 0.18)), transparent 28%),
+    radial-gradient(circle at 52% 82%, rgba(var(--orb-warm), calc(var(--orb-edge-opacity) * 0.12)), transparent 35%);
+  filter: blur(18px);
+  opacity: 0.78;
+  animation: orb-diffusion-shift calc(var(--orb-motion-speed) * 2.2) ease-in-out infinite;
+}
+
 [data-orb-state='listening'] .orb-screen-edge-pulse,
 .orb-screen-edge-pulse[data-orb-state='listening'] {
   animation: orb-edge-listen 3.2s ease-in-out infinite;
+}
+
+[data-orb-state='speaking'] .orb-atmospheric-diffusion,
+.orb-atmospheric-diffusion[data-orb-state='speaking'] {
+  opacity: 0.92;
+}
+
+[data-orb-state='emotional_safety'] .orb-atmospheric-diffusion,
+[data-orb-state='reduced_motion'] .orb-atmospheric-diffusion,
+.orb-atmospheric-diffusion[data-orb-state='emotional_safety'],
+.orb-atmospheric-diffusion[data-orb-state='reduced_motion'] {
+  opacity: 0.42;
+  filter: blur(26px) saturate(0.88);
 }
 
 .orb-sphere-wrap {
@@ -607,7 +679,10 @@ textarea:focus-visible {
   .orb-sphere-liquid,
   .orb-ambient-edge,
   .orb-ambient-haze,
+  .orb-ambient-diffusion,
+  .orb-ambient-side-pulse,
   .orb-screen-edge-pulse,
+  .orb-atmospheric-diffusion,
   .orb-title-glow,
   .orb-neural-haze {
     animation-duration: 0.001ms !important;
@@ -618,7 +693,9 @@ textarea:focus-visible {
 @media (update: slow), (prefers-reduced-data: reduce) {
   .orb-sphere-liquid,
   .orb-neural-haze,
-  .orb-screen-edge-pulse { animation: none !important; }
+  .orb-screen-edge-pulse,
+  .orb-atmospheric-diffusion,
+  .orb-ambient-diffusion { animation: none !important; }
 
   .orb-sphere-aura,
   .orb-ambient-edge {
@@ -660,7 +737,24 @@ textarea:focus-visible {
 
 [data-orb-simple-layout='true'] .orb-ambient-frame,
 [data-orb-simple-layout='true'] .orb-screen-edge-pulse,
+[data-orb-simple-layout='true'] .orb-atmospheric-diffusion,
 .orb-simple-layout .orb-ambient-frame,
-.orb-simple-layout .orb-screen-edge-pulse {
+.orb-simple-layout .orb-screen-edge-pulse,
+.orb-simple-layout .orb-atmospheric-diffusion {
   display: none;
+}
+
+[data-orb-mobile='true'] .orb-floating-panel {
+  border-radius: 30px;
+}
+
+@media (max-width: 640px) {
+  .orb-screen-edge-pulse,
+  .orb-atmospheric-diffusion {
+    opacity: 0.62;
+  }
+
+  .orb-floating-panel {
+    width: calc(100vw - 1.5rem);
+  }
 }

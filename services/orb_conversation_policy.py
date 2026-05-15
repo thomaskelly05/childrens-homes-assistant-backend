@@ -12,6 +12,8 @@ AI_PHRASES = [
     r"\bas an ai assistant,?\s*",
     r"\bas an artificial intelligence,?\s*",
     r"\bi can confirm that\s+",
+    r"\bi can assist with this request\.?\s*",
+    r"\bi can help with that request\.?\s*",
     r"\bbased on the information provided,?\s*",
     r"\bbased on the records available,?\s*",
     r"\bbased on the available records,?\s*",
@@ -29,7 +31,20 @@ AI_PHRASES = [
 FILLER_PREFIXES = {
     "certainly": "Yeah",
     "sure": "Yeah",
-    "of course": "Yeah",
+    "of course": "Of course",
+}
+
+CONTRACTIONS = {
+    "I am": "I’m",
+    "I will": "I’ll",
+    "I have": "I’ve",
+    "I would": "I’d",
+    "you are": "you’re",
+    "there is": "there’s",
+    "that is": "that’s",
+    "it is": "it’s",
+    "cannot": "can’t",
+    "do not": "don’t",
 }
 
 
@@ -62,9 +77,10 @@ class OrbConversationPolicy:
         max_sentences = 2 if preferences.concise_answers or detail == "concise" else 4
         return (
             "Conversation style: speak like a calm British senior colleague in a children's home. "
-            "Use a calm British female voice profile, short natural sentences, light acknowledgement, small pauses, no 'AI assistant' phrasing, no Americanisms, no theatrics, and no long preamble. "
+            "Use a calm British female voice profile, short natural sentences, light acknowledgement, natural contractions, small reflective pauses, no 'AI assistant' phrasing, no Americanisms, no theatrics, and no long preamble. "
             f"Keep spoken answers to about {max_sentences} sentence(s) unless safeguarding detail is essential. "
             "Prefer phrases like 'I've linked that into Jamie's chronology', 'There's still a follow-up outstanding from yesterday', and 'Would you like help drafting that review?' over technical analysis language. "
+            "Use British conversational phrasing: 'I've got that', 'One second', 'I'll keep this brief', 'That sounds like a difficult evening', and 'Would you like me to draft that?' "
             "Use subtle confirmation language when an operational action is safe to acknowledge, for example 'I've added that into the chronology' or 'I'll hold that for handover'. "
             "Name emotional continuity carefully: what seemed settled, what still worried adults, what helped, and what the next shift should understand. "
             "If interrupted, stop cleanly, hold the unfinished thought, and continue from the user's new intent without restarting. "
@@ -108,6 +124,8 @@ class OrbConversationPolicy:
         shaped = orb_role_definition_service.enforce(shaped)["text"]
         shaped = self._naturalise_opening(shaped)
         shaped = self._suppress_filler(shaped)
+        shaped = self._apply_contractions(shaped)
+        shaped = self._soften_sentence_endings(shaped)
         shaped = self._shorten(shaped, decision=decision, preferences=preferences, interrupted=interrupted)
         return shaped.strip()
 
@@ -134,8 +152,11 @@ class OrbConversationPolicy:
             "max_spoken_sentences": timing.max_spoken_sentences,
             "first_partial_ms": timing.first_partial_ms,
             "chunk_pacing_ms": timing.chunk_pacing_ms,
-            "pause_after_acknowledgement_ms": 220 if preferences.quiet_mode else 170,
+            "immediate_acknowledgement_target_ms": min(500, timing.acknowledgement_ms),
+            "acknowledgement_behaviour": "soft_pulse_first_then_think_naturally",
+            "pause_after_acknowledgement_ms": 260 if preferences.quiet_mode else 170,
             "contextual_pause_ms": max(180, timing.chunk_pacing_ms),
+            "reflective_pause_ms": 360 if not preferences.concise_answers else 220,
             "sentence_chunking": "natural_sentence_boundaries",
             "quiet_fallback_transition": "Typed Orb remains available; keep the current child context.",
             "interruption_repair_prompt": self.continuation_prompt(interrupted_response="held"),
@@ -145,6 +166,7 @@ class OrbConversationPolicy:
                 "That follow-up is still outstanding.",
             ],
             "breathing_idle_state": True,
+            "silence_presence": {"timeout_prompt": cadence.silence_prompt, "pushiness": "low", "breathing_rhythm": cadence.idle_motion},
             "listening_shimmer": cadence.listening_motion,
             "speaking_cadence_glow": cadence.speaking_motion,
             "emotional_cadence": cadence.__dict__,
@@ -163,8 +185,8 @@ class OrbConversationPolicy:
 
     def soft_acknowledgements(self, *, preferences: OrbPreferences) -> list[str]:
         if preferences.quiet_mode:
-            return ["Mm. I’m with you.", "Take your time.", "Right. I have that.", "I’ll keep this quiet."]
-        return ["Yeah. I’m with you.", "Right. I have that.", "I’ll keep it brief.", "Okay. I’ll stay with this."]
+            return ["Mm. I’m with you.", "Take your time.", "Right. I’ve got that.", "I’ll keep this quiet."]
+        return ["Mm-hm.", "I’ve got that.", "One second.", "I’ll keep it brief.", "Right. I’ll stay with this."]
 
     def _naturalise_opening(self, text: str) -> str:
         if not text:
@@ -181,6 +203,17 @@ class OrbConversationPolicy:
         text = re.sub(r"\butilize\b", "use", text, flags=re.IGNORECASE)
         text = re.sub(r"\banalyze\b", "look at", text, flags=re.IGNORECASE)
         text = re.sub(r"\bI am unable to\b", "I can't", text, flags=re.IGNORECASE)
+        return text
+
+    def _apply_contractions(self, text: str) -> str:
+        for phrase, replacement in CONTRACTIONS.items():
+            text = re.sub(rf"\b{re.escape(phrase)}\b", replacement, text, flags=re.IGNORECASE)
+        return text
+
+    def _soften_sentence_endings(self, text: str) -> str:
+        text = re.sub(r"\bPlease let me know if you need anything else\.?", "Would you like me to stay with this?", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bI hope this helps\.?", "I’ll stay with it.", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bDoes that answer your question\??", "Is that enough for now?", text, flags=re.IGNORECASE)
         return text
 
     def _shorten(
@@ -214,7 +247,7 @@ class OrbConversationPolicy:
             listening_motion="shimmer_soft" if quiet else "shimmer_present",
             thinking_motion="wave_slow",
             speaking_motion="cadence_glow",
-            acknowledgement="Mm. I am with you." if quiet else "Yeah. I am with you.",
+            acknowledgement="Mm. I’m with you." if quiet else "Mm-hm. I’m with you.",
             silence_prompt="Take your time." if quiet else "I’m still here.",
             ambient_sound_hook="orb_room_tone_quiet" if quiet else "orb_room_tone_soft",
         )
